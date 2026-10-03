@@ -39,9 +39,9 @@ export const resolveLocalTable = <T extends { id: number }>(
   }
 
   for (const [id, read] of Object.entries(filters)) {
-    const values = readTableFilter(params, id)
-    if (values.length) {
-      result = result.filter((row) => values.includes(read(row)))
+    const values = new Set(readTableFilter(params, id))
+    if (values.size) {
+      result = result.filter((row) => values.has(read(row)))
     }
   }
 

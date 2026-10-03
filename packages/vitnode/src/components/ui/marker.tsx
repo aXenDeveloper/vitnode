@@ -1,25 +1,11 @@
+import type { VariantProps } from "class-variance-authority";
+
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import * as React from "react";
 
-const markerVariants = cva(
-  "group/marker text-muted-foreground [a]:hover:text-foreground relative flex min-h-4 w-full items-center gap-2 text-start text-sm [&_svg:not([class*='size-'])]:size-4 [a]:underline [a]:underline-offset-3",
-  {
-    variants: {
-      variant: {
-        default: "",
-        separator:
-          "before:bg-border after:bg-border before:me-1 before:h-px before:min-w-0 before:flex-1 after:ms-1 after:h-px after:min-w-0 after:flex-1",
-        border: "border-border border-b pb-2",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-);
+import { markerVariants } from "./marker-variants";
 
 function Marker({
   className,
@@ -70,4 +56,4 @@ function MarkerContent({ className, ...props }: React.ComponentProps<"span">) {
   );
 }
 
-export { Marker, MarkerContent, MarkerIcon, markerVariants };
+export { Marker, MarkerContent, MarkerIcon };

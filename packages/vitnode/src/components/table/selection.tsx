@@ -1,9 +1,11 @@
 import { XIcon } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "use-intl";
 
+import { MotionFeatures } from "../motion-features";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
@@ -54,8 +56,9 @@ export function SelectionProviderDataTable({
 
   if (pageKey !== prevPageKey) {
     setPrevPageKey(pageKey);
+    const visibleIds = new Set(rowIds);
     setSelected(current => {
-      const next = current.filter(id => rowIds.includes(id));
+      const next = current.filter(id => visibleIds.has(id));
 
       return next.length === current.length ? current : next;
     });
@@ -149,49 +152,51 @@ export function BulkActionsDataTable({
   }
 
   return createPortal(
-    <AnimatePresence>
-      {selected.length > 0 && (
-        <motion.div
-          animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-          exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-        >
-          <div className="bg-popover text-popover-foreground pointer-events-auto flex max-w-full items-center gap-1 rounded-lg border p-1.5 shadow-lg">
-            <span className="px-2 text-sm font-medium whitespace-nowrap">
-              {t.rich("selected_count", {
-                count: selected.length,
-                number: () => <SlidingNumber value={selected.length} />,
-              })}
-            </span>
+    <MotionFeatures>
+      <AnimatePresence>
+        {selected.length > 0 && (
+          <m.div
+            animate={{ opacity: 1, y: 0 }}
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+            exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+          >
+            <div className="bg-popover text-popover-foreground pointer-events-auto flex max-w-full items-center gap-1 rounded-lg border p-1.5 shadow-lg">
+              <span className="px-2 text-sm font-medium whitespace-nowrap">
+                {t.rich("selected_count", {
+                  count: selected.length,
+                  number: () => <SlidingNumber value={selected.length} />,
+                })}
+              </span>
 
-            <Separator
-              className="mx-0.5 data-[orientation=vertical]:h-6"
-              orientation="vertical"
-            />
+              <Separator
+                className="mx-0.5 data-[orientation=vertical]:h-6"
+                orientation="vertical"
+              />
 
-            {actions}
+              {actions}
 
-            <Separator
-              className="mx-0.5 data-[orientation=vertical]:h-6"
-              orientation="vertical"
-            />
+              <Separator
+                className="mx-0.5 data-[orientation=vertical]:h-6"
+                orientation="vertical"
+              />
 
-            <TooltipWithContent text={t("data_table.clear_selection")}>
-              <Button
-                aria-label={t("data_table.clear_selection")}
-                onClick={clear}
-                size="icon-sm"
-                variant="ghost"
-              >
-                <XIcon />
-              </Button>
-            </TooltipWithContent>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+              <TooltipWithContent text={t("data_table.clear_selection")}>
+                <Button
+                  aria-label={t("data_table.clear_selection")}
+                  onClick={clear}
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <XIcon />
+                </Button>
+              </TooltipWithContent>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </MotionFeatures>,
     container,
   );
 }

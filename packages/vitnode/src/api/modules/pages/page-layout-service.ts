@@ -273,13 +273,48 @@ const selectPageLayout = async (
   return { pageId: row.pageId, updatedAt: row.updatedAt, zones: row.zones };
 };
 
+export const PAGE_LAYOUT_CACHE_TTL_SECONDS = 60 * 60;
+
+export const pageLayoutCacheKey = (pageId: string): string =>
+  `page_layout:${pageId}`;
+
+interface CachedPageLayout {
+  row: null | (Omit<PageLayoutRow, "updatedAt"> & { updatedAt: string });
+}
+
+const toCachedPageLayout = (row: null | PageLayoutRow): CachedPageLayout => ({
+  row: row === null ? null : { ...row, updatedAt: row.updatedAt.toISOString() },
+});
+
+const fromCachedPageLayout = ({
+  row,
+}: CachedPageLayout): null | PageLayoutRow =>
+  row === null ? null : { ...row, updatedAt: new Date(row.updatedAt) };
+
 export const readPageLayout = async (
   c: Context,
   pageId: string,
-): Promise<null | PageLayoutRow> => await selectPageLayout(c.get("db"), pageId);
+): Promise<null | PageLayoutRow> =>
+  fromCachedPageLayout(
+    await c
+      .get("cache")
+      .remember(
+        pageLayoutCacheKey(pageId),
+        PAGE_LAYOUT_CACHE_TTL_SECONDS,
+        async () =>
+          toCachedPageLayout(await selectPageLayout(c.get("db"), pageId)),
+      ),
+  );
 
-export const savePageLayout = async (
+export const expirePageLayoutCache = async (
   c: Context,
+  pageId: string,
+): Promise<void> => {
+  await c.get("cache").delete(pageLayoutCacheKey(pageId));
+};
+
+const writePageLayout = async (
+  db: Context["var"]["db"],
   {
     expectedZones,
     page,
@@ -290,7 +325,7 @@ export const savePageLayout = async (
     zones: PageLayoutZones;
   },
 ): Promise<PageLayoutSave> =>
-  await c.get("db").transaction(async (tx): Promise<PageLayoutSave> => {
+  await db.transaction(async (tx): Promise<PageLayoutSave> => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${page.id}))`);
 
     const current = await selectPageLayout(tx, page.id);
@@ -356,3 +391,18 @@ export const savePageLayout = async (
 
     return { changed, row };
   });
+
+export const savePageLayout = async (
+  c: Context,
+  save: {
+    expectedZones: PageLayoutZones;
+    page: AnyEditablePageDefinition;
+    zones: PageLayoutZones;
+  },
+): Promise<PageLayoutSave> => {
+  try {
+    return await writePageLayout(c.get("db"), save);
+  } finally {
+    await expirePageLayoutCache(c, save.page.id);
+  }
+};

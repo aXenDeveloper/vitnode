@@ -7,7 +7,7 @@ import { locations } from './cascader-options'
 
 export default function CascaderAutoFormExample() {
   const formSchema = z.object({
-    office: z.string('Pick an office to continue'),
+    office: z.string({ error: 'Pick an office to continue' }),
     backupOffice: z.string().optional(),
   })
 

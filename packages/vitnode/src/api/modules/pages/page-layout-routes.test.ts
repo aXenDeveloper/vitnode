@@ -311,6 +311,46 @@ describe("GET /layout", () => {
 
     expect((await read(app, "example:settings")).status).toBe(500);
   });
+
+  it("answers a repeated read from the cache without querying the database", async () => {
+    const { app, statements } = await harness({
+      permissions: [],
+      rows: { "example:settings": { sidebar: [quote("s1", "Stored")] } },
+    });
+
+    const first = await read(app, "example:settings");
+    const second = await read(app, "example:settings");
+
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual(await first.json());
+    expect(statements).toEqual(["select"]);
+  });
+
+  it("answers the saved layout on the next read after a save", async () => {
+    const { app } = await harness();
+
+    const before = await read(app, "example:settings");
+    expect(await before.json()).toMatchObject({
+      updatedAt: null,
+      zones: { sidebar: [] },
+    });
+
+    const saved = await save(app, {
+      expectedZones: { sidebar: [] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Saved")] },
+    });
+    expect(saved.status).toBe(200);
+
+    const after = await read(app, "example:settings");
+    const body = (await after.json()) as {
+      updatedAt: null | string;
+      zones: Record<string, unknown>;
+    };
+
+    expect(body.zones.sidebar).toEqual([quote("s1", "Saved")]);
+    expect(body.updatedAt).not.toBeNull();
+  });
 });
 
 describe("PUT /layout", () => {

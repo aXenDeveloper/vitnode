@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { LockIcon, MailIcon } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import { useTranslations } from "use-intl";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
+import { MotionFeatures } from "@/components/motion-features";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFormApi } from "@/components/ui/form";
 import { InputGroupAddon } from "@/components/ui/input-group";
@@ -57,37 +59,41 @@ export const SignInFormContent = ({
 
   return (
     <div>
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            animate={REVEAL_SHOWN}
-            className="overflow-y-clip"
-            exit={
-              shouldReduceMotion
-                ? undefined
-                : { ...REVEAL_HIDDEN, transition: REVEAL_EXIT_TRANSITION }
-            }
-            initial={shouldReduceMotion ? false : REVEAL_HIDDEN}
-            key="error"
-            transition={REVEAL_TRANSITION}
-          >
-            <motion.div
-              animate={shouldReduceMotion ? undefined : SHAKE_KEYFRAMES}
-              className="pb-4"
-              key={repeat}
-              transition={{
-                ...SHAKE_TRANSITION,
-                delay: repeat === 0 ? REVEAL_TRANSITION.height.duration : 0,
-              }}
+      <MotionFeatures>
+        <AnimatePresence>
+          {error && (
+            <m.div
+              animate={REVEAL_SHOWN}
+              className="overflow-y-clip"
+              exit={
+                shouldReduceMotion
+                  ? undefined
+                  : { ...REVEAL_HIDDEN, transition: REVEAL_EXIT_TRANSITION }
+              }
+              initial={shouldReduceMotion ? false : REVEAL_HIDDEN}
+              key="error"
+              transition={REVEAL_TRANSITION}
             >
-              <Alert variant="destructive">
-                <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
-                <AlertDescription>{t(`errors.${error}.desc`)}</AlertDescription>
-              </Alert>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <m.div
+                animate={shouldReduceMotion ? undefined : SHAKE_KEYFRAMES}
+                className="pb-4"
+                key={repeat}
+                transition={{
+                  ...SHAKE_TRANSITION,
+                  delay: repeat === 0 ? REVEAL_TRANSITION.height.duration : 0,
+                }}
+              >
+                <Alert variant="destructive">
+                  <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
+                  <AlertDescription>
+                    {t(`errors.${error}.desc`)}
+                  </AlertDescription>
+                </Alert>
+              </m.div>
+            </m.div>
+          )}
+        </AnimatePresence>
+      </MotionFeatures>
 
       <AutoForm
         fields={[

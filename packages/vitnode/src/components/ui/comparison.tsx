@@ -1,47 +1,17 @@
 import { cn } from "cn";
 import { GripVerticalIcon } from "lucide-react";
-import {
-  motion,
-  type MotionValue,
-  useMotionValue,
-  useTransform,
-} from "motion/react";
+import { type MotionValue, useMotionValue, useTransform } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-const KEY_STEP = 5;
-const SHIFT_KEY_STEP = 10;
+import { MotionFeatures } from "@/components/motion-features";
 
-const clampPosition = (value: number) => Math.min(100, Math.max(0, value));
-
-export const positionFromPointer = (
-  clientX: number,
-  rect: { left: number; width: number },
-) =>
-  rect.width ? clampPosition(((clientX - rect.left) / rect.width) * 100) : 50;
-
-export const positionFromKey = (
-  key: string,
-  current: number,
-  shiftKey: boolean,
-): null | number => {
-  const step = shiftKey ? SHIFT_KEY_STEP : KEY_STEP;
-
-  switch (key) {
-    case "ArrowDown":
-    case "ArrowLeft":
-      return clampPosition(current - step);
-    case "ArrowRight":
-    case "ArrowUp":
-      return clampPosition(current + step);
-    case "End":
-      return 100;
-    case "Home":
-      return 0;
-    default:
-      return null;
-  }
-};
+import {
+  clampPosition,
+  positionFromKey,
+  positionFromPointer,
+} from "./comparison-utils";
 
 const ComparisonContext = React.createContext<null | {
   mode: "drag" | "hover";
@@ -72,7 +42,7 @@ function Comparison({
 }) {
   const t = useTranslations("core.global");
   const position = useMotionValue(clampPosition(defaultPosition));
-  const [valueNow, setValueNow] = React.useState(position.get());
+  const [valueNow, setValueNow] = React.useState(() => position.get());
   const isDraggingRef = React.useRef(false);
 
   const moveTo = (next: number) => {
@@ -97,52 +67,54 @@ function Comparison({
   const rounded = Math.round(valueNow);
 
   return (
-    <ComparisonContext value={contextValue}>
-      <div
-        aria-label={ariaLabel ?? t("comparison_slider")}
-        aria-orientation="horizontal"
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={rounded}
-        aria-valuetext={`${rounded}%`}
-        className={cn(
-          "focus-visible:ring-ring/50 relative isolate w-full touch-pan-y overflow-hidden outline-none select-none focus-visible:ring-3",
-          mode === "drag" && "cursor-ew-resize",
-          className,
-        )}
-        data-slot="comparison"
-        onKeyDown={event => {
-          const next = positionFromKey(
-            event.key,
-            position.get(),
-            event.shiftKey,
-          );
-          if (next === null) return;
+    <MotionFeatures>
+      <ComparisonContext value={contextValue}>
+        <div
+          aria-label={ariaLabel ?? t("comparison_slider")}
+          aria-orientation="horizontal"
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={rounded}
+          aria-valuetext={`${rounded}%`}
+          className={cn(
+            "focus-visible:ring-ring/50 relative isolate w-full touch-pan-y overflow-hidden outline-none select-none focus-visible:ring-3",
+            mode === "drag" && "cursor-ew-resize",
+            className,
+          )}
+          data-slot="comparison"
+          onKeyDown={event => {
+            const next = positionFromKey(
+              event.key,
+              position.get(),
+              event.shiftKey,
+            );
+            if (next === null) return;
 
-          event.preventDefault();
-          moveTo(next);
-        }}
-        onPointerCancel={() => {
-          isDraggingRef.current = false;
-        }}
-        onPointerDown={event => {
-          if (mode !== "drag") return;
+            event.preventDefault();
+            moveTo(next);
+          }}
+          onPointerCancel={() => {
+            isDraggingRef.current = false;
+          }}
+          onPointerDown={event => {
+            if (mode !== "drag") return;
 
-          isDraggingRef.current = true;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          moveToPointer(event);
-        }}
-        onPointerMove={event => {
-          if (mode === "hover" || isDraggingRef.current) moveToPointer(event);
-        }}
-        onPointerUp={() => {
-          isDraggingRef.current = false;
-        }}
-        role="slider"
-        tabIndex={0}
-        {...props}
-      />
-    </ComparisonContext>
+            isDraggingRef.current = true;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            moveToPointer(event);
+          }}
+          onPointerMove={event => {
+            if (mode === "hover" || isDraggingRef.current) moveToPointer(event);
+          }}
+          onPointerUp={() => {
+            isDraggingRef.current = false;
+          }}
+          role="slider"
+          tabIndex={0}
+          {...props}
+        />
+      </ComparisonContext>
+    </MotionFeatures>
   );
 }
 
@@ -150,7 +122,7 @@ function ComparisonItem({
   className,
   position: side,
   ...props
-}: React.ComponentProps<typeof motion.div> & {
+}: React.ComponentProps<typeof m.div> & {
   position: "left" | "right";
 }) {
   const { position } = useComparison();
@@ -159,7 +131,7 @@ function ComparisonItem({
   );
 
   return (
-    <motion.div
+    <m.div
       aria-hidden="true"
       className={cn(
         "absolute inset-0 size-full *:size-full *:object-cover",
@@ -176,12 +148,12 @@ function ComparisonHandle({
   children,
   className,
   ...props
-}: React.ComponentProps<typeof motion.div>) {
+}: React.ComponentProps<typeof m.div>) {
   const { mode, position } = useComparison();
   const left = useTransform(position, value => `${value}%`);
 
   return (
-    <motion.div
+    <m.div
       aria-hidden="true"
       className={cn(
         "pointer-events-none absolute top-0 z-10 flex h-full w-10 -translate-x-1/2 items-center justify-center",
@@ -201,7 +173,7 @@ function ComparisonHandle({
           )}
         </>
       )}
-    </motion.div>
+    </m.div>
   );
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fitZoomedRect, zoomOrigin } from "./image-zoom";
+import { fitZoomedRect, zoomOrigin } from "./image-zoom-utils";
 
 describe("fitZoomedRect", () => {
   it("fills the width of a tall viewport and centres vertically", () => {

@@ -19,13 +19,15 @@
     "i18n:check": "cd apps/api && pnpm run i18n:check",
     "i18n:delete": "cd apps/api && pnpm run i18n:delete",
     "i18n:update": "cd apps/api && pnpm run i18n:update",
-    "i18n:update:ai": "cd apps/api && pnpm run i18n:update:ai"
+    "i18n:update:ai": "cd apps/api && pnpm run i18n:update:ai",
+    "doctor": "npx react-doctor@latest"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
     "@vitnode/config": "workspace:*",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "react-doctor": "^0.9.14",
     "tsx": "^4.23.15",
     "turbo": "^2.11.5",
     "typescript": "^6.0.3",

@@ -17,6 +17,11 @@ import type {
 
 import { CONFIG } from "@/lib/config";
 import { coreFetcher } from "@/lib/fetcher/core";
+import {
+  FORWARDED_SIGNATURE_HEADER,
+  resolveForwardedIpSecret,
+  signForwardedFor,
+} from "@/lib/fetcher/forwarded-signature.server";
 import { rawApiFetch } from "@/lib/fetcher/raw";
 import { buildForwardedHeaders } from "@/lib/fetcher/request-context";
 import {
@@ -42,8 +47,7 @@ export const getForwardedApiHeaders = ({
   captchaToken,
 }: { captchaToken?: string } = {}): Record<string, string> => {
   const headers = getRequestHeaders();
-
-  return buildForwardedHeaders({
+  const forwarded = buildForwardedHeaders({
     captchaToken,
     cookie: headers.get("cookie"),
     // The header first, verbatim, chain included: that is what the API stores,
@@ -53,6 +57,16 @@ export const getForwardedApiHeaders = ({
     forwardedFor: headers.get("x-forwarded-for") ?? getRequestIP(),
     userAgent: headers.get("user-agent"),
   });
+  const secret = resolveForwardedIpSecret();
+  if (!secret) return forwarded;
+
+  return {
+    ...forwarded,
+    [FORWARDED_SIGNATURE_HEADER]: signForwardedFor({
+      forwardedFor: forwarded["x-forwarded-for"],
+      secret,
+    }),
+  };
 };
 
 export const saveApiCookies = (response: Response): void => {

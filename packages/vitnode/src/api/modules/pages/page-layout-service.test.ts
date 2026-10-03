@@ -12,6 +12,7 @@ import {
 } from "@/blocks/registry";
 import { defineEditablePage } from "@/content/editor/define";
 import { field } from "@/content/fields";
+import { createTestCache } from "@/tests/cache";
 
 import type { PageLayoutRow } from "./page-layout-service";
 
@@ -187,8 +188,12 @@ const harness = (zones?: PageLayoutZones, pageId: string = page.id) => {
     },
   };
 
+  const cache = createTestCache();
+
   return {
-    c: { get: () => db } as unknown as Context,
+    c: {
+      get: (key: string) => (key === "cache" ? cache : db),
+    } as unknown as Context,
     stored: () => row,
     written,
   };
@@ -274,6 +279,69 @@ describe("the effective layout", () => {
         zoneIds: brokenPage.zoneIds,
       }),
     ).toThrow(/shipped default of the "intro" zone/);
+  });
+});
+
+describe("the cached read", () => {
+  it("answers a second read without asking the database again", async () => {
+    const { c, written } = harness({ sidebar: [quote("s1", "Stored")] });
+
+    const first = await readPageLayout(c, page.id);
+    const second = await readPageLayout(c, page.id);
+
+    expect(second).toEqual(first);
+    expect(second?.updatedAt).toEqual(STORED_AT);
+    expect(written.log).toEqual(["select"]);
+  });
+
+  it("remembers a page that has no stored layout", async () => {
+    const { c, written } = harness();
+
+    expect(await readPageLayout(c, page.id)).toBeNull();
+    expect(await readPageLayout(c, page.id)).toBeNull();
+    expect(written.log).toEqual(["select"]);
+  });
+
+  it("answers the saved layout after a save, even over a remembered empty page", async () => {
+    const { c } = harness();
+
+    expect(await readPageLayout(c, page.id)).toBeNull();
+
+    await savePageLayout(c, {
+      expectedZones: { sidebar: [] },
+      page,
+      zones: { sidebar: [quote("s1", "Saved")] },
+    });
+
+    expect((await readPageLayout(c, page.id))?.zones).toEqual({
+      sidebar: [quote("s1", "Saved")],
+    });
+  });
+
+  it("answers the defaults after a save resets the last override", async () => {
+    const { c } = harness({ sidebar: [quote("s1", "Stored")] });
+
+    expect((await readPageLayout(c, page.id))?.zones).toEqual({
+      sidebar: [quote("s1", "Stored")],
+    });
+
+    await savePageLayout(c, {
+      expectedZones: { sidebar: [quote("s1", "Stored")] },
+      page,
+      zones: { sidebar: [] },
+    });
+
+    expect(await readPageLayout(c, page.id)).toBeNull();
+  });
+
+  it("does not remember a row it refused", async () => {
+    const { c, written } = harness({
+      sidebar: "not a list",
+    } as unknown as PageLayoutZones);
+
+    await expect(readPageLayout(c, page.id)).rejects.toThrow();
+    await expect(readPageLayout(c, page.id)).rejects.toThrow();
+    expect(written.log).toEqual(["select", "select"]);
   });
 });
 

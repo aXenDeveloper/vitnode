@@ -50,6 +50,12 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
+Most pooled strings run in transaction mode (the Supabase pooler on port
+`6543`, PgBouncer with `pool_mode = transaction`). Those need `prepare: false`
+in the same object, or queries start failing with `prepared statement "..." does
+not exist`. The [Connection pool](/docs/dev/database#connection-pool) section
+has the details and a sizing rule.
+
 </Step>
 <Step>
 

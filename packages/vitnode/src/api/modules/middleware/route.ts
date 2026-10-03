@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
-import {
-  loadPublicBottomBar,
-  loadPublicNavigation,
-} from "@/api/modules/admin/navigation/lib/cache";
+import { loadPublicNavigationMenus } from "@/api/modules/admin/navigation/lib/cache";
 import {
   zodPublicNavigationItemSchema,
   zodPublicNavigationNodeSchema,
@@ -60,6 +57,7 @@ export const routeMiddleware = buildRoute({
   },
   handler: async c => {
     const sso = c.get("core").authorization.ssoAdapters;
+    const { bottomBar, navigation } = await loadPublicNavigationMenus(c);
 
     return c.json(
       {
@@ -67,8 +65,8 @@ export const routeMiddleware = buildRoute({
         isEmail: !!c.get("core").email?.adapter,
         passkeys: c.get("core").authorization.passkeys.enabled,
         password: c.get("core").authorization.password.enabled,
-        navigation: await loadPublicNavigation(c),
-        bottomBar: await loadPublicBottomBar(c),
+        navigation,
+        bottomBar,
         sso: sso.map(s => ({ id: s.id, name: s.name, icon: s.icon })),
         captcha: c.get("core").captcha
           ? {

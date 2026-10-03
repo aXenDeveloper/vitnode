@@ -11,7 +11,7 @@ export const STAFF_PERMISSIONS_CACHE_TTL_SECONDS = 60;
 
 const EPOCH_KEY = "staff-permissions:epoch";
 
-const STAFF_TYPES = ["admin", "moderator"] as const;
+export const STAFF_TYPES = ["admin", "moderator"] as const;
 
 const readEpoch = async (c: Context): Promise<string> =>
   (await c.get("cache").getSystem<string>(EPOCH_KEY)) ?? "0";
@@ -32,19 +32,60 @@ export const readStaffPermissions = async (
       permissionsKey(await readEpoch(c), args),
     );
 
-/** Stores one resolution for {@link STAFF_PERMISSIONS_CACHE_TTL_SECONDS}. */
-export const writeStaffPermissions = async (
+const writeStaffPermissionsInEpoch = async (
   c: Context,
+  epoch: string,
   args: { type: PermissionStaffType; userId: number },
   value: ResolvedStaffPermissionSet,
 ): Promise<void> => {
   await c
     .get("cache")
     .setSystem(
-      permissionsKey(await readEpoch(c), args),
+      permissionsKey(epoch, args),
       value,
       STAFF_PERMISSIONS_CACHE_TTL_SECONDS,
     );
+};
+
+/** Stores one resolution for {@link STAFF_PERMISSIONS_CACHE_TTL_SECONDS}. */
+export const writeStaffPermissions = async (
+  c: Context,
+  args: { type: PermissionStaffType; userId: number },
+  value: ResolvedStaffPermissionSet,
+): Promise<void> => {
+  await writeStaffPermissionsInEpoch(c, await readEpoch(c), args, value);
+};
+
+export interface CachedStaffPermissionsOfUser {
+  sets: Record<PermissionStaffType, null | ResolvedStaffPermissionSet>;
+  write: (
+    type: PermissionStaffType,
+    value: ResolvedStaffPermissionSet,
+  ) => Promise<void>;
+}
+
+export const readStaffPermissionsOfUser = async (
+  c: Context,
+  userId: number,
+): Promise<CachedStaffPermissionsOfUser> => {
+  const epoch = await readEpoch(c);
+  const readType = async (type: PermissionStaffType) =>
+    await c
+      .get("cache")
+      .getSystem<ResolvedStaffPermissionSet>(
+        permissionsKey(epoch, { type, userId }),
+      );
+  const [admin, moderator] = await Promise.all([
+    readType("admin"),
+    readType("moderator"),
+  ]);
+
+  return {
+    sets: { admin, moderator },
+    write: async (type, value) => {
+      await writeStaffPermissionsInEpoch(c, epoch, { type, userId }, value);
+    },
+  };
 };
 
 /**

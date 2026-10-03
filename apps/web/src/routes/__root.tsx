@@ -20,6 +20,7 @@ import { VitNodeRootProviders } from '@vitnode/core/tanstack/layout'
 
 import type { Locale } from '@/vitnode.config'
 
+import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 import { vitNodeConfig } from '@/vitnode.config'
 
 import appCss from '../styles.css?url'
@@ -37,7 +38,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
   component: RootComponent,
   head: () => ({
     links: [
-      { href: appCss, rel: 'stylesheet' },
+      { href: withoutHmrTimestamp(appCss), rel: 'stylesheet' },
 
       {
         href: '/favicon.ico',

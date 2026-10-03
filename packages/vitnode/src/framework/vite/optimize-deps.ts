@@ -63,6 +63,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "lucide-react",
   "lucide-react/dynamicIconImports.mjs",
   "motion/react",
+  "motion/react-m",
   "react-colorful",
   "react-resizable-panels",
   "react-scan",

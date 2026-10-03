@@ -304,5 +304,5 @@ export function ReorderHeaderDataTable() {
 }
 
 export function ReorderHandleDataTable() {
-  return React.use(SortableRowHandleContext);
+  return <>{React.use(SortableRowHandleContext)}</>;
 }

@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import type { BlockAreaInstance } from "../../blocks/types";
+import type { EditorDropIndicator } from "../dnd/context";
+import type { EditorDropRejection } from "../dnd/resolve-drop";
 import type { EditorNodeRef } from "../state/types";
 import type { ZoneDropTone } from "./drop-state";
 
@@ -67,6 +69,216 @@ export interface EditableAreaFrameProps {
   zoneId: string;
 }
 
+const areaDropEdge = (
+  dropIndicator: EditorDropIndicator | null,
+  areaId: string,
+  zoneId: string,
+): EditorDropIndicator["edge"] | null =>
+  dropIndicator?.nodeId === areaId &&
+  dropIndicator.zoneId === zoneId &&
+  dropIndicator.areaId === null
+    ? dropIndicator.edge
+    : null;
+
+const AreaDeleteAction = ({
+  childCount,
+  onRemove,
+  onUnwrap,
+  removeRefused,
+  ungroupRefused,
+}: {
+  childCount: number;
+  onRemove: () => void;
+  onUnwrap: () => void;
+  removeRefused: boolean;
+  ungroupRefused: boolean;
+}): ReactElement => {
+  const t = useTranslations("core.editor");
+  const [confirming, setConfirming] = useState(false);
+  const deleteLabel = t("area.remove");
+
+  if (childCount === 0) {
+    return (
+      <TooltipWithContent text={deleteLabel}>
+        <Button
+          aria-label={deleteLabel}
+          className={NODE_DESTRUCTIVE_ACTION_CLASS}
+          disabled={removeRefused}
+          onClick={onRemove}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2Icon />
+        </Button>
+      </TooltipWithContent>
+    );
+  }
+
+  return (
+    <ConfirmActionAlertDialog
+      description={
+        <span className="flex flex-col items-start gap-3">
+          <span className="text-pretty">
+            {t("area.delete.desc", { count: childCount })}
+          </span>
+
+          <Button
+            disabled={ungroupRefused}
+            onClick={() => {
+              setConfirming(false);
+              onUnwrap();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <UngroupIcon />
+            {t("area.delete.ungroup")}
+          </Button>
+        </span>
+      }
+      icon={<Trash2Icon />}
+      onOpenChange={setConfirming}
+      onSubmit={({ onClose }) => {
+        onClose();
+        setTimeout(onRemove, DIALOG_EXIT_DELAY);
+      }}
+      open={confirming}
+      submitVariant="destructive"
+      textSubmit={t("area.delete.confirm")}
+      title={t("area.delete.title")}
+    >
+      <Button
+        aria-label={deleteLabel}
+        className={NODE_DESTRUCTIVE_ACTION_CLASS}
+        disabled={removeRefused}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <Trash2Icon />
+      </Button>
+    </ConfirmActionAlertDialog>
+  );
+};
+
+const AreaToolbar = ({
+  childCount,
+  onRemove,
+  onSelect,
+  onUnwrap,
+  removeRefused,
+  revealed,
+  ungroupRefused,
+}: {
+  childCount: number;
+  onRemove: () => void;
+  onSelect: () => void;
+  onUnwrap: () => void;
+  removeRefused: boolean;
+  revealed: boolean;
+  ungroupRefused: boolean;
+}): ReactElement => {
+  const t = useTranslations("core.editor");
+
+  return (
+    <div
+      className="contents"
+      onKeyDown={event => event.stopPropagation()}
+      onPointerDown={event => event.stopPropagation()}
+    >
+      <NodeToolbar
+        className={
+          revealed
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-1 opacity-0 group-focus-within/area:pointer-events-auto group-focus-within/area:translate-y-0 group-focus-within/area:opacity-100 group-hover/area:pointer-events-auto group-hover/area:translate-y-0 group-hover/area:opacity-100"
+        }
+      >
+        <TooltipWithContent text={t("area.settings")}>
+          <Button
+            aria-label={t("area.settings")}
+            onClick={() => {
+              onSelect();
+            }}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <Settings2Icon />
+          </Button>
+        </TooltipWithContent>
+
+        <TooltipWithContent text={t("area.ungroup")}>
+          <Button
+            aria-label={t("area.ungroup")}
+            disabled={ungroupRefused}
+            onClick={onUnwrap}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <UngroupIcon />
+          </Button>
+        </TooltipWithContent>
+
+        <NodeToolbarSeparator />
+
+        <AreaDeleteAction
+          childCount={childCount}
+          onRemove={onRemove}
+          onUnwrap={onUnwrap}
+          removeRefused={removeRefused}
+          ungroupRefused={ungroupRefused}
+        />
+      </NodeToolbar>
+    </div>
+  );
+};
+
+const AreaRejectionNotice = ({
+  rejection,
+  tone,
+}: {
+  rejection: EditorDropRejection | null;
+  tone: ZoneDropTone;
+}): null | ReactElement => {
+  const t = useTranslations("core.editor");
+
+  if (tone !== "rejected" || rejection === null) {
+    return null;
+  }
+
+  return (
+    <p className="text-destructive flex items-center gap-1.5 text-xs leading-relaxed text-pretty">
+      <BanIcon aria-hidden="true" className="size-3.5 shrink-0" />
+      {t(AREA_REJECTION_LABELS[rejection])}
+    </p>
+  );
+};
+
+const AreaOpenSlot = ({
+  full,
+  tone,
+}: {
+  full: boolean;
+  tone: ZoneDropTone;
+}): ReactElement => {
+  const t = useTranslations("core.editor");
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-4 text-center transition-colors duration-150",
+        DROP_TARGET_CLASSES[tone],
+      )}
+    >
+      <PlusIcon aria-hidden="true" className="size-5" />
+      <p className="text-xs leading-relaxed text-pretty">
+        {full ? t("zone.full") : t("area.drop_here")}
+      </p>
+    </div>
+  );
+};
+
 export const EditableAreaFrame = ({
   area,
   children,
@@ -83,7 +295,6 @@ export const EditableAreaFrame = ({
     state,
   } = useVisualEditor();
   const { dropIndicator } = useEditorDnd();
-  const [confirming, setConfirming] = useState(false);
   const nodeRef: EditorNodeRef = {
     areaId: null,
     kind: "area",
@@ -110,8 +321,6 @@ export const EditableAreaFrame = ({
   const capacity = zoneCapacity(state.zones[zoneId]);
   const full =
     capacity !== null && !fitsZoneMax(capacity.max, capacity.blocks + 1);
-  const removeRefused = refusesRemoval(capacity, area.children.length);
-  const ungroupRefused = refusesUnwrap(capacity, area.children.length);
   const layout = areaLayoutWithDefaults(area.layout);
   const selected = sameNodeRef(state.selected, nodeRef);
   const inserting =
@@ -125,13 +334,7 @@ export const EditableAreaFrame = ({
     }),
     over,
   );
-  const edge =
-    dropIndicator?.nodeId === area.id &&
-    dropIndicator.zoneId === zoneId &&
-    dropIndicator.areaId === null
-      ? dropIndicator.edge
-      : null;
-  const summary = t("area.summary", { columns: layout.columns });
+  const edge = areaDropEdge(dropIndicator, area.id, zoneId);
   const openSlots = areaOpenSlots({
     children: area.children.length,
     columns: layout.columns,
@@ -149,8 +352,6 @@ export const EditableAreaFrame = ({
   const unwrap = () => {
     dispatch({ ref: nodeRef, type: "unwrap-area" });
   };
-
-  const deleteLabel = t("area.remove");
 
   return (
     <div
@@ -191,118 +392,21 @@ export const EditableAreaFrame = ({
         >
           <Columns2Icon aria-hidden="true" className="size-3.5 shrink-0" />
           <span className="sr-only">{t("area.select")} </span>
-          {summary}
+          {t("area.summary", { columns: layout.columns })}
         </button>
 
-        <div
-          className="contents"
-          onKeyDown={event => event.stopPropagation()}
-          onPointerDown={event => event.stopPropagation()}
-        >
-          <NodeToolbar
-            className={
-              selected && !dragging
-                ? "translate-y-0 opacity-100"
-                : "pointer-events-none translate-y-1 opacity-0 group-focus-within/area:pointer-events-auto group-focus-within/area:translate-y-0 group-focus-within/area:opacity-100 group-hover/area:pointer-events-auto group-hover/area:translate-y-0 group-hover/area:opacity-100"
-            }
-          >
-            <TooltipWithContent text={t("area.settings")}>
-              <Button
-                aria-label={t("area.settings")}
-                onClick={() => {
-                  select();
-                }}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <Settings2Icon />
-              </Button>
-            </TooltipWithContent>
-
-            <TooltipWithContent text={t("area.ungroup")}>
-              <Button
-                aria-label={t("area.ungroup")}
-                disabled={ungroupRefused}
-                onClick={unwrap}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <UngroupIcon />
-              </Button>
-            </TooltipWithContent>
-
-            <NodeToolbarSeparator />
-
-            {area.children.length === 0 ? (
-              <TooltipWithContent text={deleteLabel}>
-                <Button
-                  aria-label={deleteLabel}
-                  className={NODE_DESTRUCTIVE_ACTION_CLASS}
-                  disabled={removeRefused}
-                  onClick={remove}
-                  size="icon-sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Trash2Icon />
-                </Button>
-              </TooltipWithContent>
-            ) : (
-              <ConfirmActionAlertDialog
-                description={
-                  <span className="flex flex-col items-start gap-3">
-                    <span className="text-pretty">
-                      {t("area.delete.desc", { count: area.children.length })}
-                    </span>
-
-                    <Button
-                      disabled={ungroupRefused}
-                      onClick={() => {
-                        setConfirming(false);
-                        unwrap();
-                      }}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <UngroupIcon />
-                      {t("area.delete.ungroup")}
-                    </Button>
-                  </span>
-                }
-                icon={<Trash2Icon />}
-                onOpenChange={setConfirming}
-                onSubmit={({ onClose }) => {
-                  onClose();
-                  setTimeout(remove, DIALOG_EXIT_DELAY);
-                }}
-                open={confirming}
-                submitVariant="destructive"
-                textSubmit={t("area.delete.confirm")}
-                title={t("area.delete.title")}
-              >
-                <Button
-                  aria-label={deleteLabel}
-                  className={NODE_DESTRUCTIVE_ACTION_CLASS}
-                  disabled={removeRefused}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <Trash2Icon />
-                </Button>
-              </ConfirmActionAlertDialog>
-            )}
-          </NodeToolbar>
-        </div>
+        <AreaToolbar
+          childCount={area.children.length}
+          onRemove={remove}
+          onSelect={select}
+          onUnwrap={unwrap}
+          removeRefused={refusesRemoval(capacity, area.children.length)}
+          revealed={selected && !dragging}
+          ungroupRefused={refusesUnwrap(capacity, area.children.length)}
+        />
       </div>
 
-      {tone === "rejected" && rejection !== null ? (
-        <p className="text-destructive flex items-center gap-1.5 text-xs leading-relaxed text-pretty">
-          <BanIcon aria-hidden="true" className="size-3.5 shrink-0" />
-          {t(AREA_REJECTION_LABELS[rejection])}
-        </p>
-      ) : null}
+      <AreaRejectionNotice rejection={rejection} tone={tone} />
 
       <div
         className={cn(
@@ -318,18 +422,7 @@ export const EditableAreaFrame = ({
           {children}
 
           {Array.from({ length: openSlots }, (_, slot) => (
-            <div
-              className={cn(
-                "flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border border-dashed p-4 text-center transition-colors duration-150",
-                DROP_TARGET_CLASSES[tone],
-              )}
-              key={slot}
-            >
-              <PlusIcon aria-hidden="true" className="size-5" />
-              <p className="text-xs leading-relaxed text-pretty">
-                {full ? t("zone.full") : t("area.drop_here")}
-              </p>
-            </div>
+            <AreaOpenSlot full={full} key={slot} tone={tone} />
           ))}
         </div>
 
