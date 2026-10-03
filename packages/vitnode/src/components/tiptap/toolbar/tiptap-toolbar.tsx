@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "use-intl";
 
 import { Separator } from "@/components/ui/separator";
+import { TooltipGroup } from "@/components/ui/tooltip";
 
 import { BoldAction } from "./actions/bold-action";
 import { CodeBlockAction } from "./actions/code-block-action";
@@ -24,27 +25,29 @@ export const TipTapToolbar = ({ editor }: { editor: Editor }) => {
 
   return (
     <ToolbarEditorContext value={contextValue}>
-      <div
-        aria-label={t("toolbar")}
-        className="bg-card sticky top-0 z-10 flex items-center gap-0.5 overflow-x-auto rounded-t-md border-b p-1 *:data-[slot=separator]:mx-1 *:data-[slot=separator]:h-5 sm:flex-wrap"
-        role="toolbar"
-      >
-        <HeadingsAction />
-        <Separator orientation="vertical" />
-        <BoldAction />
-        <ItalicAction />
-        <TextFormatMore />
-        <ColorAction />
-        <Separator orientation="vertical" />
-        <ListAction />
-        <Separator orientation="vertical" />
-        <LinkAction />
-        <EmojiAction />
-        <TableAction />
-        <CodeBlockAction />
-        <Separator orientation="vertical" />
-        <InsertAction />
-      </div>
+      <TooltipGroup>
+        <div
+          aria-label={t("toolbar")}
+          className="bg-card sticky top-0 z-10 flex items-center gap-0.5 overflow-x-auto rounded-t-md border-b p-1 *:data-[slot=separator]:mx-1 *:data-[slot=separator]:h-5 sm:flex-wrap"
+          role="toolbar"
+        >
+          <HeadingsAction />
+          <Separator orientation="vertical" />
+          <BoldAction />
+          <ItalicAction />
+          <TextFormatMore />
+          <ColorAction />
+          <Separator orientation="vertical" />
+          <ListAction />
+          <Separator orientation="vertical" />
+          <LinkAction />
+          <EmojiAction />
+          <TableAction />
+          <CodeBlockAction />
+          <Separator orientation="vertical" />
+          <InsertAction />
+        </div>
+      </TooltipGroup>
     </ToolbarEditorContext>
   );
 };

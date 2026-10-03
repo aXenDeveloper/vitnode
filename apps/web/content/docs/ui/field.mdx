@@ -1,0 +1,294 @@
+---
+title: Field
+description: Layout components for labels, descriptions, errors and groups of controls. AutoForm builds every field out of them.
+icon: ListChecks
+---
+
+## Preview
+
+<Preview name="field" />
+
+## Usage
+
+```ts
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+  FieldTitle,
+} from '@vitnode/core/components/ui/field'
+```
+
+```tsx
+<Field>
+  <FieldLabel htmlFor="username">Username</FieldLabel>
+  <Input id="username" />
+  <FieldDescription>Pick something your friends can type.</FieldDescription>
+</Field>
+```
+
+## Should I use this for my form?
+
+Probably not directly. In VitNode, forms are built with
+[AutoForm](/docs/ui/auto-form), and AutoForm already uses these components for
+every field's label, description and error message. You get validation, ids and
+ARIA wiring for free.
+
+Reach for `Field` when you are:
+
+- writing a [custom AutoForm field](#inside-a-custom-autoform-field), so it
+  looks like its built-in neighbours,
+- building a settings-style screen with controls that save instantly or are not
+  part of a form at all (toggles, filters, preferences).
+
+## Anatomy
+
+| Component          | What it does                                                                           |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `FieldSet`         | A semantic `<fieldset>` that groups related fields.                                    |
+| `FieldLegend`      | The `<legend>` of a `FieldSet`. Use `variant="label"` for a smaller, label-sized title. |
+| `FieldGroup`       | Stacks fields with consistent spacing and enables the `responsive` orientation.       |
+| `Field`            | One control with its label, description and error.                                     |
+| `FieldContent`     | Keeps the label and description together next to a control.                            |
+| `FieldLabel`       | The `<label>` of a control. Wrap a `Field` in it to make a choice card.                |
+| `FieldTitle`       | A label-looking title for content that is already inside a `FieldLabel`.              |
+| `FieldDescription` | Helper text in a muted colour.                                                         |
+| `FieldError`       | An error message announced to screen readers.                                          |
+| `FieldSeparator`   | A divider between fields, optionally with text in the middle.                          |
+
+## Orientation
+
+`Field` stacks everything vertically by default. Switch it to `horizontal` for
+checkboxes, switches and other compact controls that sit next to their label:
+
+```tsx
+<Field orientation="horizontal">
+  <FieldContent>
+    <FieldLabel htmlFor="digest">Weekly digest</FieldLabel>
+    <FieldDescription>A short recap, every Monday.</FieldDescription>
+  </FieldContent>
+  <Switch id="digest" />
+</Field>
+```
+
+Put the control first for a checkbox on the left, or last for a switch on the
+right. The layout follows the markup.
+
+### Responsive
+
+`responsive` is vertical on narrow screens and horizontal once its
+`FieldGroup` is wide enough. It uses a container query, so it reacts to the
+space the group has, not to the whole window. Resize your browser to watch it
+fold:
+
+<Preview name="field-responsive" />
+
+```tsx
+<FieldGroup>
+  <Field orientation="responsive">
+    <FieldContent>
+      <FieldLabel htmlFor="name">Display name</FieldLabel>
+      <FieldDescription>Shown next to your posts.</FieldDescription>
+    </FieldContent>
+    <Input id="name" />
+  </Field>
+</FieldGroup>
+```
+
+## Fieldset and legend
+
+Wrap related fields in a `FieldSet` with a `FieldLegend`. Screen readers read
+the legend before each field inside, so "Mentions" becomes "Notifications,
+Mentions". The context costs no extra words on screen.
+
+```tsx
+<FieldSet>
+  <FieldLegend>Notifications</FieldLegend>
+  <FieldDescription>Pick how loudly we should knock on your door.</FieldDescription>
+  <FieldGroup>
+    <Field orientation="horizontal">
+      <Checkbox id="mentions" />
+      <FieldLabel htmlFor="mentions">Mentions</FieldLabel>
+    </Field>
+    <FieldSeparator />
+    <Field>
+      <FieldLabel htmlFor="backup-email">Backup email</FieldLabel>
+      <Input id="backup-email" type="email" />
+    </Field>
+  </FieldGroup>
+</FieldSet>
+```
+
+Need a divider with words? Pass children: `<FieldSeparator>or</FieldSeparator>`.
+
+## Choice cards
+
+Wrap a whole `Field` in a `FieldLabel` and the label becomes a card. The full
+card is clickable, highlights when its control is checked and shows a focus
+ring when you tab into it. Use `FieldTitle` for the card's title, since
+it already lives inside a label.
+
+<Preview name="field-choice-card" />
+
+```tsx
+<RadioGroup defaultValue="team">
+  <FieldLabel htmlFor="plan-team">
+    <Field orientation="horizontal">
+      <FieldContent>
+        <FieldTitle>Team</FieldTitle>
+        <FieldDescription>Shared workspaces for up to 20 people.</FieldDescription>
+      </FieldContent>
+      <RadioGroupItem id="plan-team" value="team" />
+    </Field>
+  </FieldLabel>
+</RadioGroup>
+```
+
+Add `data-disabled` to a `Field` to fade it out, and pass `disabled` to its
+control so it cannot be picked. AutoForm's
+[Radio Group](/docs/ui/radio-group) uses exactly this for `variant="blocks"`.
+
+## Errors
+
+Mark the field with `data-invalid` and the control with `aria-invalid`, then
+render a `FieldError`:
+
+```tsx
+<Field data-invalid={isInvalid}>
+  <FieldLabel htmlFor="email">Email</FieldLabel>
+  <Input aria-describedby="email-error" aria-invalid={isInvalid} id="email" />
+  {isInvalid && <FieldError id="email-error">That is not an email.</FieldError>}
+</Field>
+```
+
+`FieldError` also takes an `errors` array. It drops duplicates, renders a single
+message as text and several as a list. It renders nothing when there is nothing
+to say.
+
+```tsx
+<FieldError errors={[{ message: 'Too short' }, { message: 'Too short' }]} />
+```
+
+## Inside a custom AutoForm field
+
+A custom AutoForm field is just a `component` function. Combine `Field` for the
+layout with AutoForm's own helpers and your field gets the same ids, ARIA and
+error handling as the built-in ones:
+
+- `AutoFormLabel` is a `FieldLabel` already pointed at the control, with the
+  "optional" hint.
+- `AutoFormDesc` renders the description text.
+- `FormControl` passes `id`, `aria-invalid` and `aria-describedby` to the
+  control inside it.
+- `FormMessage` is a `FieldError` showing the field's validation errors.
+
+```tsx
+import type { ItemAutoFormComponentProps } from '@vitnode/core/components/form/auto-form'
+import { AutoFormDesc } from '@vitnode/core/components/form/common/desc'
+import { AutoFormLabel } from '@vitnode/core/components/form/common/label'
+import { Field, FieldContent } from '@vitnode/core/components/ui/field'
+import { FormControl, FormMessage } from '@vitnode/core/components/ui/form'
+import { Switch } from '@vitnode/core/components/ui/switch'
+
+export const AutoFormSettingSwitch = ({
+  label,
+  description,
+  field,
+  otherProps: { isOptional },
+}: ItemAutoFormComponentProps) => (
+  <>
+    <Field orientation="horizontal">
+      <FieldContent>
+        {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+        {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      </FieldContent>
+      <FormControl>
+        <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+      </FormControl>
+    </Field>
+    <FormMessage />
+  </>
+)
+```
+
+```tsx
+<AutoForm
+  formSchema={z.object({ digest: z.boolean().default(true) })}
+  fields={[
+    {
+      id: 'digest',
+      component: props => (
+        <AutoFormSettingSwitch
+          {...props}
+          description="A short recap, every Monday."
+          label="Weekly digest"
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+## Accessibility
+
+- Every control needs a label. Give the control an `id` and the `FieldLabel` a
+  matching `htmlFor`. Clicking the label then focuses or toggles the control.
+- `Field` renders `role="group"`, so the control, its label and its help text
+  are announced together.
+- `FieldSet` and `FieldLegend` render a real `<fieldset>` and `<legend>`, the
+  native way to name a group of controls.
+- For errors, set `aria-invalid` on the control and point `aria-describedby` at
+  the description and the `FieldError`. `FieldError` has `role="alert"`, so new
+  messages are announced as they appear. AutoForm does all of this for you.
+- Choice cards keep the radio or checkbox inside them, so keyboard users can
+  tab in and use the arrow keys or Space as usual.
+
+## Props
+
+All components accept the props of the element they render. These are the
+extras:
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    'Field.orientation': {
+      description:
+        'How the control and its label are laid out. `responsive` follows the width of the parent `FieldGroup`.',
+      type: 'vertical | horizontal | responsive',
+      default: 'vertical',
+    },
+    'Field.data-invalid': {
+      description: 'Colours the field to signal an error.',
+      type: 'boolean',
+    },
+    'Field.data-disabled': {
+      description: 'Fades the field and its label.',
+      type: 'boolean',
+    },
+    'FieldLegend.variant': {
+      description: 'A section-sized `legend` or a smaller `label`-sized one.',
+      type: 'legend | label',
+      default: 'legend',
+    },
+    'FieldError.errors': {
+      description:
+        'Errors to show. Duplicates are removed; ignored when `children` is passed.',
+      type: '({ message?: string } | undefined)[]',
+    },
+    'FieldSeparator.children': {
+      description: 'Optional text shown in the middle of the divider.',
+      type: 'React.ReactNode',
+    },
+  }}
+/>
+
+## API Reference
+
+[shadcn/ui - Field](https://ui.shadcn.com/docs/components/base/field)

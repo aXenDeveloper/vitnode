@@ -1,0 +1,235 @@
+---
+title: Context Menu
+description: A menu that opens on right-click or long-press, with shortcuts, submenus, checkbox and radio items.
+icon: MousePointerClick
+---
+
+## Preview
+
+<Preview name="context-menu" />
+
+## Usage
+
+```ts
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from '@vitnode/core/components/ui/context-menu'
+```
+
+```tsx
+<ContextMenu>
+  <ContextMenuTrigger className="flex h-40 items-center justify-center rounded-xl border-2 border-dashed">
+    Right-click here
+  </ContextMenuTrigger>
+  <ContextMenuContent className="w-56">
+    <ContextMenuItem>
+      Reload
+      <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+    </ContextMenuItem>
+    <ContextMenuItem>Rename</ContextMenuItem>
+    <ContextMenuSeparator />
+    <ContextMenuItem variant="destructive">Delete</ContextMenuItem>
+  </ContextMenuContent>
+</ContextMenu>
+```
+
+Right-click the trigger with a mouse, or press and hold it on a phone or
+tablet. The menu opens right where your cursor or finger is, so there's no
+button to find first.
+
+## Submenus
+
+Nest a `ContextMenuSub` to tuck the rarely used stuff one level deeper. It opens
+on hover, on click, or with the arrow keys.
+
+```tsx
+import {
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+} from '@vitnode/core/components/ui/context-menu'
+
+<ContextMenuSub>
+  <ContextMenuSubTrigger>More tools</ContextMenuSubTrigger>
+  <ContextMenuSubContent className="w-48">
+    <ContextMenuItem>Save page as...</ContextMenuItem>
+    <ContextMenuItem>Developer tools</ContextMenuItem>
+  </ContextMenuSubContent>
+</ContextMenuSub>
+```
+
+## Checkbox and radio items
+
+Use `ContextMenuCheckboxItem` for independent toggles and a
+`ContextMenuRadioGroup` when exactly one option can win. Both work controlled or
+uncontrolled, just like their form siblings.
+
+```tsx
+import {
+  ContextMenuCheckboxItem,
+  ContextMenuLabel,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+} from '@vitnode/core/components/ui/context-menu'
+
+const [showBookmarks, setShowBookmarks] = React.useState(true)
+const [person, setPerson] = React.useState('pedro')
+
+<ContextMenuCheckboxItem
+  checked={showBookmarks}
+  onCheckedChange={setShowBookmarks}
+>
+  Show bookmarks bar
+</ContextMenuCheckboxItem>
+<ContextMenuSeparator />
+<ContextMenuLabel>People</ContextMenuLabel>
+<ContextMenuRadioGroup value={person} onValueChange={setPerson}>
+  <ContextMenuRadioItem value="pedro">Pedro Duarte</ContextMenuRadioItem>
+  <ContextMenuRadioItem value="colm">Colm Tuite</ContextMenuRadioItem>
+</ContextMenuRadioGroup>
+```
+
+The check mark sits at the end of the row. Add `inset` to items, labels and
+sub-triggers without an icon so their text lines up with the ones that have
+one.
+
+## Shortcuts
+
+`ContextMenuShortcut` shows a keyboard hint at the end of an item. It is only a
+label. Wire up the actual key binding yourself, or it's a promise you aren't
+keeping.
+
+```tsx
+<ContextMenuItem>
+  Save page as...
+  <ContextMenuShortcut>⇧⌘S</ContextMenuShortcut>
+</ContextMenuItem>
+```
+
+## Destructive items
+
+Set `variant="destructive"` for actions you cannot take back, so they look the
+part.
+
+```tsx
+<ContextMenuItem variant="destructive">
+  <Trash2Icon />
+  Delete
+</ContextMenuItem>
+```
+
+## Accessibility
+
+- Context menus are hidden by nature, since nothing on screen says "right-click
+  me". Every action inside one must also be reachable another way, such as a
+  toolbar, a [Dropdown Menu](/docs/ui/dropdown-menu) or a keyboard shortcut.
+  Treat the context menu as a shortcut, never as the only door.
+- The trigger is a plain, non-focusable area, so keyboard users cannot open
+  the menu at all. One more reason for the rule above. Once it is open,
+  arrow keys move between items, the right arrow opens a submenu, typing a
+  letter jumps to a matching item and `Escape` closes it.
+- On touch devices a long-press opens the menu, and the trigger sets
+  `select-none` so holding it does not start a text selection.
+- Disabled items stay visible and are announced as disabled, so nobody wonders
+  where "Forward" went.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### ContextMenu
+
+<TypeTable
+  type={{
+    open: {
+      description: 'Controls whether the menu is open.',
+      type: 'boolean',
+    },
+    defaultOpen: {
+      description: 'Whether the menu is open on the first render.',
+      type: 'boolean',
+      default: 'false',
+    },
+    onOpenChange: {
+      description: 'Called when the menu opens or closes.',
+      type: '(open: boolean, eventDetails) => void',
+    },
+    disabled: {
+      description: 'Stops the menu from opening.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+### ContextMenuContent
+
+<TypeTable
+  type={{
+    side: {
+      description:
+        'Which side of the cursor the menu prefers. It flips when there is no room.',
+      type: 'top | bottom | left | right | inline-start | inline-end',
+      default: 'bottom',
+    },
+    align: {
+      description: 'How the menu aligns against the cursor on the chosen side.',
+      type: 'start | center | end',
+      default: 'start',
+    },
+    sideOffset: {
+      description: 'Distance from the cursor in pixels.',
+      type: 'number',
+      default: '0',
+    },
+    alignOffset: {
+      description: 'Shift along the alignment axis in pixels.',
+      type: 'number',
+      default: '0',
+    },
+  }}
+/>
+
+### ContextMenuItem
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The look of the item.',
+      type: 'default | destructive',
+      default: 'default',
+    },
+    inset: {
+      description: 'Adds start padding so the text lines up with items that have an icon.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'Shows the item but makes it non-interactive.',
+      type: 'boolean',
+      default: 'false',
+    },
+    closeOnClick: {
+      description: 'Whether clicking the item closes the menu.',
+      type: 'boolean',
+      default: 'true',
+    },
+    onClick: {
+      description: 'Called when the item is chosen with a click, tap or the keyboard.',
+      type: '(event) => void',
+    },
+  }}
+/>
+
+`ContextMenuCheckboxItem` takes `checked`, `defaultChecked` and
+`onCheckedChange`; `ContextMenuRadioGroup` takes `value`, `defaultValue` and
+`onValueChange`. Both item types accept `inset` and `disabled` too.
+
+## API Reference
+
+[Base UI - Context Menu](https://base-ui.com/react/components/context-menu#api-reference)

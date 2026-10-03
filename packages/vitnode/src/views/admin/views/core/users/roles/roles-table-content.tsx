@@ -47,7 +47,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
 import {
   Popover,
   PopoverContent,
@@ -319,7 +318,13 @@ const EditRoleAction = ({
           <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
-        <React.Suspense fallback={<Loader />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <AdminRoleFormContent data={role} onSave={onSave} onSaved={onSaved} />
         </React.Suspense>
       </DialogContent>
@@ -396,7 +401,13 @@ export const CreateRoleAction = ({
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
-        <React.Suspense fallback={<Loader />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <AdminRoleFormContent onSave={onSave} onSaved={onSaved} />
         </React.Suspense>
       </DialogContent>

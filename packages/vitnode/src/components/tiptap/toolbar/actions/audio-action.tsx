@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 const AudioForm = React.lazy(async () =>
   import("./audio/audio-form").then(module => ({
@@ -37,7 +37,13 @@ export const AudioDialog = ({
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
-        <React.Suspense fallback={<Loader />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <AudioForm />
         </React.Suspense>
       </DialogContent>

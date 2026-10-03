@@ -1,0 +1,88 @@
+---
+title: Image Zoom
+description: Click an image and it grows from its spot on the page to fill the screen.
+icon: ZoomIn
+---
+
+## Preview
+
+<Preview name="image-zoom" />
+
+## Usage
+
+```ts
+import { ImageZoom } from '@vitnode/core/components/ui/image-zoom'
+```
+
+```tsx
+<ImageZoom
+  alt="The VitNode AdminCP dashboard"
+  imageClassName="w-full rounded-md border"
+  src="/screenshots/dashboard.webp"
+/>
+```
+
+Click the image (or focus it and press <kbd>Enter</kbd>) and it glides from
+where it sits to the middle of the screen over a blurred backdrop. Click
+anywhere, press <kbd>Escape</kbd> or hit the × to send it back home.
+
+## Sharper zoom
+
+Show a light thumbnail on the page and load the big version only when someone
+zooms in:
+
+```tsx
+<ImageZoom
+  alt="The VitNode AdminCP dashboard"
+  src={thumbnail}
+  zoomSrc={fullSize}
+/>
+```
+
+## Styling
+
+- `className` styles the clickable wrapper. Use it for layout and visibility
+  (`hidden dark:block` for theme-specific screenshots).
+- `imageClassName` styles the image on the page: size, border, rounded corners.
+
+The zoomed image always fits the screen without cropping.
+
+## Accessibility
+
+- The image is a real button, so it works with the keyboard and screen readers
+  announce that it opens a dialog.
+- `alt` is required. It labels the image on the page and names the zoomed view.
+- Focus is trapped while zoomed and returns to the image when you close it.
+- With reduced motion turned on, the image appears zoomed instantly instead of
+  gliding.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    src: {
+      description: 'The image shown on the page.',
+      type: 'string',
+      required: true,
+    },
+    alt: {
+      description: 'Describes the image, on the page and when zoomed.',
+      type: 'string',
+      required: true,
+    },
+    zoomSrc: {
+      description: 'A larger image to show when zoomed. Defaults to `src`.',
+      type: 'string',
+    },
+    className: {
+      description: 'Classes for the clickable wrapper.',
+      type: 'string',
+    },
+    imageClassName: {
+      description: 'Classes for the image on the page.',
+      type: 'string',
+    },
+  }}
+/>

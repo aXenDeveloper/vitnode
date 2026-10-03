@@ -14,13 +14,18 @@
     "confirm-action-alert-dialog",
     "---Forms---",
     "auto-form",
+    "cascader",
     "checkbox",
     "color",
     "combobox",
     "editor",
+    "field",
     "input",
     "input-group",
+    "input-otp",
+    "label",
     "nullable-number",
+    "number-field",
     "radio-group",
     "roles",
     "select",
@@ -28,6 +33,10 @@
     "textarea",
     "user",
     "---UI---",
-    "..."
+    "...",
+    "---Utilities---",
+    "counter",
+    "scroll-fade",
+    "shimmer"
   ]
 }

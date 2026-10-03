@@ -47,11 +47,7 @@ export const VitNodeProviders = ({
       enableSystem
       {...theme}
     >
-      <Toaster
-        closeButton
-        position={toaster?.position ?? "top-center"}
-        {...toaster}
-      />
+      <Toaster closeButton {...toaster} />
       <RateLimitListener />
       <TooltipProvider>
         <LanguagesProvider languages={locales}>

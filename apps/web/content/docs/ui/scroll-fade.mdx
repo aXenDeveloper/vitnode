@@ -1,0 +1,157 @@
+---
+title: Scroll Fade
+description: A Tailwind CSS utility that fades the edges of a scroll container, but only on the side where more content is waiting.
+icon: Blend
+---
+
+## Preview
+
+<Preview name="scroll-fade" />
+
+## Usage
+
+Scroll Fade is a Tailwind CSS utility, not a React component, so there is
+nothing to import. It ships with the `shadcn` package, and VitNode apps already pull it
+in from `src/styles.css`:
+
+```css
+@import 'shadcn/tailwind.css';
+```
+
+Add the class to the element that actually scrolls, the one with
+`overflow-y-auto` or `overflow-x-auto`:
+
+```tsx
+<div className="scroll-fade h-64 overflow-y-auto">{/* ... */}</div>
+```
+
+The fade follows the scroll position:
+
+- At rest, the start edge is crisp and the end edge fades to hint that there is
+  more below.
+- Mid-scroll, both edges fade.
+- At the end, the end edge sharpens. You have reached the bottom, congrats.
+- If the content does not overflow, nothing fades, so you can sprinkle it on any
+  list without checking first.
+
+It works with `mask-image`, so it dissolves the content itself instead of
+painting a gradient on top. There are no colors to match, so it works on any
+background.
+
+| Class              | Fades                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| `scroll-fade`      | Top and bottom (same as `scroll-fade-y`)                   |
+| `scroll-fade-y`    | Top and bottom                                             |
+| `scroll-fade-x`    | Start and end of a horizontal scroller, mirrors in RTL     |
+| `scroll-fade-t`    | Top only                                                   |
+| `scroll-fade-b`    | Bottom only                                                |
+| `scroll-fade-s`    | Inline start only, mirrors in RTL                          |
+| `scroll-fade-e`    | Inline end only, mirrors in RTL                            |
+| `scroll-fade-l`    | Left only, ignores the reading direction                   |
+| `scroll-fade-r`    | Right only, ignores the reading direction                  |
+| `scroll-fade-none` | Nothing - turns the fade off                               |
+
+## Vertical
+
+<Preview name="scroll-fade-vertical" />
+
+Keep the background and border on a wrapper and put `scroll-fade` on the inner
+scroller, so the fade dissolves the list and not your card:
+
+```tsx
+<section className="bg-card rounded-xl border">
+  <h3 className="border-b px-4 py-3">Notifications</h3>
+  <ul
+    aria-label="Notifications"
+    className="scroll-fade h-64 overflow-y-auto"
+    role="region"
+    tabIndex={0}
+  >
+    {/* ... */}
+  </ul>
+</section>
+```
+
+## Horizontal
+
+Use `scroll-fade-x` for rows of chips, cards or breadcrumbs. Pair it with
+`no-scrollbar` (from the same package) when the scrollbar would only fade along
+with the content anyway:
+
+```tsx
+<ul className="scroll-fade-x no-scrollbar flex gap-2 overflow-x-auto">
+  {/* ... */}
+</ul>
+```
+
+VitNode uses exactly this in the [Attachment](/docs/ui/attachment) list and in
+the breadcrumb trail.
+
+## One edge only
+
+Reach for the edge utilities when only one side should react. `scroll-fade-b`
+is great for a chat log that grows downward, `scroll-fade-s` / `scroll-fade-e`
+for horizontal rows that need to respect RTL:
+
+```tsx
+<div className="scroll-fade-b h-80 overflow-y-auto">{/* ... */}</div>
+```
+
+## Fade size
+
+By default the fade is 12% of the container, capped at `40px`, so tall lists
+stay subtle. Set a size on the spacing scale with `scroll-fade-<number>`, or use
+any length or percentage:
+
+```tsx
+<div className="scroll-fade scroll-fade-16 overflow-y-auto" />
+<div className="scroll-fade scroll-fade-[15%] overflow-y-auto" />
+```
+
+Need opposite edges to disagree? `scroll-fade-t-<number>`,
+`scroll-fade-b-<number>`, `scroll-fade-s-<number>` and `scroll-fade-e-<number>`
+override the size for a single edge (arbitrary values work here too):
+
+```tsx
+<div className="scroll-fade scroll-fade-t-2 scroll-fade-b-8 overflow-y-auto" />
+```
+
+The fade eases in over `96px` of scrolling rather than popping in. Tweak that
+distance with the `--scroll-fade-reveal` variable:
+
+```tsx
+<div className="scroll-fade overflow-y-auto [--scroll-fade-reveal:48px]" />
+```
+
+## Turning it off
+
+`scroll-fade-none` removes the mask, which is handy with a breakpoint or a
+state variant:
+
+```tsx
+<div className="scroll-fade-x md:scroll-fade-none overflow-x-auto" />
+```
+
+## Browser support
+
+The scroll-aware part is built on CSS scroll-driven animations
+(`animation-timeline: scroll()`), with no JavaScript and no scroll listeners. Browsers
+without scroll-driven animations get a static fade on every edge the class
+covers, all the time, even at the very top. Content is never hidden. It just
+loses the "you're at the end" polish.
+
+## Accessibility
+
+- The fade is purely visual. Every item is still in the DOM and reachable. It
+  only looks softer near the edges.
+- A scroll container without focusable children cannot be scrolled with a
+  keyboard unless it can take focus. Give it `tabIndex={0}`, `role="region"`
+  and an `aria-label`, like the examples above.
+- The mask also clips focus rings drawn on the scroller itself, so show focus
+  on a wrapper instead, for example `has-focus-visible:ring-3` on the parent.
+- Don't fade so much that the first or last item becomes hard to read; the
+  default size is a safe bet.
+
+## Reference
+
+[shadcn/ui - scroll-fade](https://ui.shadcn.com/docs/utils/scroll-fade)

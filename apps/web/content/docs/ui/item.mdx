@@ -1,0 +1,213 @@
+---
+title: Item
+description: A row for lists, settings and menus that lines up media, a title, a description and actions without the CSS headache.
+icon: LayoutList
+---
+
+## Preview
+
+<Preview name="item" />
+
+## Usage
+
+```ts
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@vitnode/core/components/ui/item'
+```
+
+```tsx
+<Item variant="outline">
+  <ItemMedia variant="icon">
+    <ShieldCheck />
+  </ItemMedia>
+  <ItemContent>
+    <ItemTitle>Two-factor authentication</ItemTitle>
+    <ItemDescription>Add a second lock to your account.</ItemDescription>
+  </ItemContent>
+  <ItemActions>
+    <Button size="sm" variant="outline">
+      Enable
+    </Button>
+  </ItemActions>
+</Item>
+```
+
+Every app ends up with a dozen slightly different "icon, text, button on the
+right" rows. `Item` is that row, built once, so you can stop rebuilding it.
+
+## Anatomy
+
+- `Item` is the row itself. Flexbox, wraps when it has to.
+- `ItemMedia` holds an icon, avatar or image on the start side. With a
+  description present it aligns itself to the top of the text.
+- `ItemContent` stacks the title and description and takes the free space.
+- `ItemTitle` is one line, truncated if it gets chatty.
+- `ItemDescription` shows up to two lines of muted text. Links inside are
+  underlined automatically.
+- `ItemActions` holds buttons, badges or a chevron on the end side.
+- `ItemHeader` and `ItemFooter` are full-width rows above and below the content.
+- `ItemGroup` wraps a list of items, and `ItemSeparator` draws a line between
+  them.
+
+## Variants
+
+`default` has no border or background, `outline` adds a border, and `muted`
+adds a soft background.
+
+<Preview name="item-variants" />
+
+```tsx
+<Item variant="default" />
+<Item variant="outline" />
+<Item variant="muted" />
+```
+
+## Sizes
+
+Going from `default` to `sm` to `xs` shrinks the padding and the gaps.
+`ItemMedia` with the `image` variant shrinks along with them, and `xs` also uses
+smaller description text.
+
+<Preview name="item-sizes" />
+
+```tsx
+<Item size="sm" variant="outline">
+  ...
+</Item>
+```
+
+## Media
+
+`ItemMedia` comes in three flavours:
+
+- `default` adds no styling at all, which suits an `Avatar`.
+- `icon` sizes a bare SVG icon to `size-4`.
+- `image` is a rounded square that crops an `img` to fit.
+
+```tsx
+<ItemMedia variant="image">
+  <img alt="" src="/cover.webp" />
+</ItemMedia>
+```
+
+## As a link
+
+Pass an element to `render` and the whole row becomes that element, whether
+that's an `<a>`, a router `Link` or a `<button>`. Rendered as a link it
+picks up a hover background for free.
+
+<Preview name="item-link" />
+
+```tsx
+<Item
+  render={
+    <a href="/docs/ui/avatar">
+      <ItemContent>
+        <ItemTitle>Read the Avatar docs</ItemTitle>
+      </ItemContent>
+      <ItemActions>
+        <ChevronRight aria-hidden className="size-4" />
+      </ItemActions>
+    </a>
+  }
+/>
+```
+
+Put the row's content inside the rendered element, as above, so the link wraps
+everything you see.
+
+## Groups
+
+Wrap items in `ItemGroup` to stack them, and drop an `ItemSeparator` between
+them when you want a line in between.
+
+<Preview name="item-group" />
+
+```tsx
+<ItemGroup aria-label="Team members">
+  <Item role="listitem">...</Item>
+  <ItemSeparator />
+  <Item role="listitem">...</Item>
+</ItemGroup>
+```
+
+## Header and footer
+
+`ItemHeader` and `ItemFooter` take the full width of the row, so a status badge
+or a timestamp can sit above or below the main content.
+
+<Preview name="item-header" />
+
+```tsx
+<Item variant="outline">
+  <ItemHeader>
+    <Badge variant="success">Active</Badge>
+  </ItemHeader>
+  <ItemContent>...</ItemContent>
+  <ItemFooter>
+    <Button size="sm">Edit</Button>
+  </ItemFooter>
+</Item>
+```
+
+## Accessibility
+
+- `ItemGroup` renders with `role="list"`. Give every `Item` inside it
+  `role="listitem"`, and an `aria-label` on the group helps screen readers
+  announce what the list is about.
+- Keep one interactive element per row. Either the whole row is a link or
+  button (via `render`), or it holds buttons in `ItemActions`. Never put a
+  button inside a link.
+- Icon-only buttons in `ItemActions` need an `aria-label` that names the row,
+  for example "Invite Ada Lovelace" rather than just "Invite".
+- Decorative icons such as a trailing chevron get `aria-hidden`. Links that
+  open a new tab say so with `sr-only` text.
+- Rows rendered as links or buttons show the focus ring on keyboard focus.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Item
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The look of the row.',
+      type: 'default | outline | muted',
+      default: 'default',
+    },
+    size: {
+      description: 'Padding and gap between the parts of the row.',
+      type: 'default | sm | xs',
+      default: 'default',
+    },
+    render: {
+      description:
+        'Replaces the `div` with your own element, such as a link or a button.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
+    },
+  }}
+/>
+
+### ItemMedia
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'How the media is styled.',
+      type: 'default | icon | image',
+      default: 'default',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

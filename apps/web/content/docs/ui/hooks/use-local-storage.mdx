@@ -1,0 +1,76 @@
+---
+title: useLocalStorage
+description: Like useState, but the value survives page reloads and stays in sync across tabs.
+icon: HardDrive
+---
+
+## Usage
+
+```ts
+import { useLocalStorage } from '@vitnode/core/hooks/use-local-storage'
+```
+
+```tsx
+export const ExampleComponent = () => {
+  const [name, setName] = useLocalStorage('name', '') // [!code ++]
+
+  return <input onChange={e => setName(e.target.value)} value={name} />
+}
+```
+
+It works like `useState`. Pass a key and a default value, and get the value and
+a setter back. Values are saved as JSON, so numbers, booleans, arrays and plain
+objects all come back exactly as you stored them.
+
+## Update from the previous value
+
+The setter also takes a function, which always receives the freshest value:
+
+```ts
+const [count, setCount] = useLocalStorage('count', 0)
+
+setCount(previous => previous + 1)
+```
+
+## Reset
+
+The third item removes the key from storage, and the hook goes back to the
+default value:
+
+```ts
+const [filters, setFilters, resetFilters] = useLocalStorage('filters', [])
+```
+
+## Good to know
+
+- **Synced everywhere.** Every component using the same key updates together,
+  in this tab and in any other tab of your site.
+- **Server-safe.** During server rendering the hook returns the default value,
+  then switches to the stored one in the browser without a hydration mismatch.
+- **No crashes.** A broken stored value falls back to the default. When storage
+  is blocked (some private windows) or full, the value lives in memory for the
+  session instead.
+- **Only for nice-to-haves.** Local storage lives in one browser on one device.
+  Use it for things like a collapsed panel or a draft, never for data that has
+  to reach the server or other people.
+
+## Returns
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    '[0] value': {
+      description: 'The stored value, or the default when nothing is stored.',
+      type: 'T',
+    },
+    '[1] setValue': {
+      description: 'Saves a new value, or a function that gets the previous one.',
+      type: '(value: T | ((previous: T) => T)) => void',
+    },
+    '[2] removeValue': {
+      description: 'Removes the key and goes back to the default value.',
+      type: '() => void',
+    },
+  }}
+/>

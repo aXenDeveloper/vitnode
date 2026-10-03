@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 export interface ContentPanelProps {
   finalFocus?: React.RefObject<HTMLElement | null>;
@@ -36,7 +36,15 @@ export const ContentPanel = ({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
 
-      <React.Suspense fallback={<Loader />}>{children}</React.Suspense>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
+        {children}
+      </React.Suspense>
     </DialogContent>
   </Dialog>
 );

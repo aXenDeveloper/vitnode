@@ -6,12 +6,17 @@ import { useTranslations } from "use-intl";
 import {
   Combobox,
   ComboboxChip,
+  ComboboxChipList,
+  ComboboxChipOverflow,
   ComboboxChips,
   ComboboxChipsInput,
+  ComboboxCollection,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
+  ComboboxLabel,
   ComboboxList,
   ComboboxValue,
   useComboboxAnchor,
@@ -20,9 +25,11 @@ import { FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
+import type { ComboboxItemGroup, ComboboxOption } from "./combobox-groups";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
+import { groupComboboxItems } from "./combobox-groups";
 
 export interface ComboboxAsyncItem {
   label: string;
@@ -37,7 +44,8 @@ export const COMBOBOX_INERT_QUERY_KEY = "combobox:no-fetcher";
 type AutoFormComboboxProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Combobox>, "items" | "value"> & {
     className?: string;
-    labels?: { label: string; value: string }[];
+    labels?: ComboboxOption[];
+    maxVisibleChips?: number;
     placeholder?: string;
     renderChip?: (item: ComboboxAsyncItem) => React.ReactNode;
     renderItem?: (item: ComboboxAsyncItem) => React.ReactNode;
@@ -71,6 +79,7 @@ export const AutoFormCombobox = ({
   otherProps,
   labels = [],
   labelRight,
+  maxVisibleChips,
   onValueChange,
   onInputValueChange,
   disabled,
@@ -113,6 +122,11 @@ export const AutoFormCombobox = ({
   }, 500);
 
   const items = isAsync ? (data ?? []) : (otherProps?.enum ?? []);
+  const staticItemLabel = (item: string) =>
+    labels.find(l => l.value === item)?.label ?? item;
+  const groupedItems = isAsync
+    ? null
+    : groupComboboxItems(otherProps?.enum ?? [], labels);
   const inputPlaceholder = isAsync
     ? (searchPlaceholder ?? placeholder ?? t("select_option"))
     : (placeholder ?? t("select_option"));
@@ -172,15 +186,26 @@ export const AutoFormCombobox = ({
       );
     }
 
-    return (
-      <ComboboxList>
-        {(item: string) => (
-          <ComboboxItem key={item} value={item}>
-            {labels.find(l => l.value === item)?.label ?? item}
-          </ComboboxItem>
-        )}
-      </ComboboxList>
+    const renderStaticItem = (item: string) => (
+      <ComboboxItem key={item} value={item}>
+        {staticItemLabel(item)}
+      </ComboboxItem>
     );
+
+    if (groupedItems) {
+      return (
+        <ComboboxList>
+          {(group: ComboboxItemGroup) => (
+            <ComboboxGroup items={group.items} key={group.value}>
+              {group.value && <ComboboxLabel>{group.value}</ComboboxLabel>}
+              <ComboboxCollection>{renderStaticItem}</ComboboxCollection>
+            </ComboboxGroup>
+          )}
+        </ComboboxList>
+      );
+    }
+
+    return <ComboboxList>{renderStaticItem}</ComboboxList>;
   };
 
   const renderContent = () => {
@@ -218,7 +243,8 @@ export const AutoFormCombobox = ({
         disabled={disabled}
         filter={comboboxFilter}
         isItemEqualToValue={comboboxItemEqual}
-        items={items}
+        items={groupedItems ?? items}
+        itemToStringLabel={isAsync ? undefined : staticItemLabel}
         multiple={isMultiple}
         onInputValueChange={onComboboxInputValueChange}
         onValueChange={onComboboxValueChange}
@@ -231,23 +257,32 @@ export const AutoFormCombobox = ({
               <ComboboxValue>
                 {(values: (ComboboxAsyncItem | string)[]) => (
                   <>
-                    {values.map(value => {
-                      const item =
-                        typeof value === "string"
-                          ? {
-                              label:
-                                labels.find(l => l.value === value)?.label ??
+                    <ComboboxChipList>
+                      {values.slice(0, maxVisibleChips).map(value => {
+                        const item =
+                          typeof value === "string"
+                            ? {
+                                label:
+                                  labels.find(l => l.value === value)?.label ??
+                                  value,
                                 value,
-                              value,
-                            }
-                          : value;
+                              }
+                            : value;
 
-                      return (
-                        <ComboboxChip key={item.value}>
-                          {renderChip ? renderChip(item) : item.label}
-                        </ComboboxChip>
-                      );
-                    })}
+                        return (
+                          <ComboboxChip key={item.value}>
+                            {renderChip ? renderChip(item) : item.label}
+                          </ComboboxChip>
+                        );
+                      })}
+                      {maxVisibleChips !== undefined &&
+                        values.length > maxVisibleChips && (
+                          <ComboboxChipOverflow
+                            count={values.length - maxVisibleChips}
+                            key="overflow"
+                          />
+                        )}
+                    </ComboboxChipList>
                     <ComboboxChipsInput
                       aria-invalid={otherProps?.["aria-invalid"] ?? false}
                       disabled={disabled}

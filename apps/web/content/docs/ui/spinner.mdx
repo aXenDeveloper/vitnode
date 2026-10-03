@@ -1,0 +1,129 @@
+---
+title: Spinner
+description: A little spinning circle that says "hold on, it's coming". It comes in four sizes and any colour.
+icon: Loader
+---
+
+## Preview
+
+<Preview name="spinner" />
+
+## Usage
+
+```ts
+import { Spinner } from '@vitnode/core/components/ui/spinner'
+```
+
+```tsx
+<Spinner />
+```
+
+## Sizes
+
+| Size      | Pixels | Good for                          |
+| --------- | ------ | --------------------------------- |
+| `sm`      | 12     | Badges, dense rows                |
+| `default` | 16     | Buttons, inputs, inline with text |
+| `lg`      | 24     | Cards and panels                  |
+| `xl`      | 40     | A whole page or section loading   |
+
+```tsx
+<Spinner size="xl" />
+```
+
+It takes the text colour of its surroundings, so `className="text-primary"`
+(or `text-success`, `text-destructive`...) is all a colour change needs.
+
+## In buttons
+
+<Preview name="spinner-buttons" />
+
+For a button that's busy, prefer `isLoading` on the [Button](/docs/ui/button).
+It swaps the label for a spinner, disables the button and announces "Loading".
+Put a `Spinner` in by hand when you want to keep the label visible:
+
+```tsx
+<Button disabled>
+  <Spinner aria-hidden="true" />
+  Uploading...
+</Button>
+```
+
+## In badges, inputs and text
+
+<Preview name="spinner-inline" />
+
+```tsx
+<Badge variant="secondary">
+  <Spinner aria-hidden="true" />
+  Syncing
+</Badge>
+
+<InputGroup>
+  <InputGroupInput aria-label="Search" />
+  <InputGroupAddon align="inline-end">
+    <Spinner aria-label="Searching" />
+  </InputGroupAddon>
+</InputGroup>
+```
+
+## Loading states
+
+<Preview name="spinner-states" />
+
+Inside an [Empty](/docs/ui/empty) state, or laid over a card that's fetching
+fresh data:
+
+```tsx
+<Card aria-busy="true" className="relative overflow-hidden">
+  ...
+  <div className="bg-background/70 absolute inset-0 flex items-center justify-center backdrop-blur-xs">
+    <Spinner size="lg" />
+  </div>
+</Card>
+```
+
+Showing a whole section while it loads? Center an `xl` spinner. VitNode does
+the same for Suspense fallbacks across the AdminCP:
+
+```tsx
+<Suspense
+  fallback={
+    <div className="flex items-center justify-center">
+      <Spinner size="xl" />
+    </div>
+  }
+>
+  <SlowThing />
+</Suspense>
+```
+
+If you know roughly what's coming, a [Skeleton](/docs/ui/skeleton) of that
+shape usually feels faster than a spinner.
+
+## Accessibility
+
+- A spinner is a `status` and is labelled "Loading" in the user's language.
+  Pass `aria-label` for something more specific, like "Searching".
+- When text right next to it already says what's happening ("Uploading..."), or
+  the button announces it, hide the spinner with `aria-hidden="true"` so screen
+  readers don't hear it twice.
+- Mark the container that's loading with `aria-busy="true"`.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    size: {
+      description: 'How big the spinner is.',
+      type: '"sm" | "default" | "lg" | "xl"',
+      default: '"default"',
+    },
+    'aria-label': {
+      description: 'What is loading. Defaults to "Loading", translated.',
+      type: 'string',
+    },
+  }}
+/>

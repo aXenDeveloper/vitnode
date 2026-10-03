@@ -1,5 +1,6 @@
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormNullableNumber } from '@vitnode/core/components/form/fields/nullable-number'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 export default function NullableNumberExample() {
@@ -10,6 +11,7 @@ export default function NullableNumberExample() {
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
           id: 'max_members',
@@ -37,6 +39,11 @@ export default function NullableNumberExample() {
         },
       ]}
       formSchema={formSchema}
+      onSubmit={(values) => {
+        toast.success('Limits saved', {
+          description: `Members: ${values.max_members ?? 'unlimited'}, auto-logout: ${values.auto_logout ?? 'never'}`,
+        })
+      }}
     />
   )
 }

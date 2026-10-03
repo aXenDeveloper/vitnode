@@ -1,6 +1,16 @@
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { cn } from "cn";
+import { motion, useReducedMotion } from "motion/react";
 import React from "react";
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipGroup,
+  TooltipGroupTrigger,
+  TooltipTrigger,
+  useIsInTooltipGroup,
+} from "./tooltip";
 
 function Avatar({
   className,
@@ -72,14 +82,66 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
 
 function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
+    <TooltipGroup>
+      <div
+        className={cn(
+          "group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2",
+          className,
+        )}
+        data-slot="avatar-group"
+        {...props}
+      />
+    </TooltipGroup>
+  );
+}
+
+const AVATAR_LIFT_TRANSITION = {
+  type: "spring",
+  stiffness: 300,
+  damping: 17,
+} as const;
+
+function AvatarGroupItem({
+  children,
+  className,
+  label,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  label?: React.ReactNode;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const isInTooltipGroup = useIsInTooltipGroup();
+  const lift = shouldReduceMotion ? undefined : { y: "-25%" };
+
+  const item = (
+    <motion.div
       className={cn(
-        "group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2",
+        "focus-visible:ring-ring/50 *:data-[slot=avatar]:ring-background relative rounded-full outline-none hover:z-10 focus-visible:z-10 focus-visible:ring-3 *:data-[slot=avatar]:ring-2",
         className,
       )}
-      data-slot="avatar-group"
-      {...props}
-    />
+      data-slot="avatar-group-item"
+      tabIndex={label ? 0 : undefined}
+      transition={AVATAR_LIFT_TRANSITION}
+      whileFocus={lift}
+      whileHover={lift}
+      whileTap={lift}
+    >
+      {children}
+    </motion.div>
+  );
+
+  if (!label) return item;
+
+  if (isInTooltipGroup) {
+    return <TooltipGroupTrigger content={label} render={item} />;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={item} />
+      <TooltipContent sideOffset={8}>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -105,5 +167,6 @@ export {
   AvatarFallback,
   AvatarGroup,
   AvatarGroupCount,
+  AvatarGroupItem,
   AvatarImage,
 };

@@ -24,7 +24,7 @@ import {
   useDialog,
 } from "@/components/ui/dialog";
 import { EmojiIcon } from "@/components/ui/emoji-icon";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
 import {
@@ -263,7 +263,13 @@ const NavigationCreateDetailsStep = ({
         </DialogDescription>
       </DialogHeader>
 
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
         <AdminNavigationFormContent
           items={items}
           kind={choice.kind}

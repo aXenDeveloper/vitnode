@@ -1,0 +1,170 @@
+---
+title: Marker
+description: Inline status lines, system notes, bordered rows and labeled separators for conversations and activity feeds.
+icon: Flag
+---
+
+## Preview
+
+<Preview name="marker" />
+
+## Usage
+
+```ts
+import {
+  Marker,
+  MarkerContent,
+  MarkerIcon,
+} from '@vitnode/core/components/ui/marker'
+```
+
+```tsx
+<Marker>
+  <MarkerIcon>
+    <Search />
+  </MarkerIcon>
+  <MarkerContent>Explored 4 files</MarkerContent>
+</Marker>
+```
+
+A marker is the quiet line between messages, like "Switched branch", "Today"
+or "Thinking...". It pairs nicely with [Bubble](/docs/ui/bubble) when you build a
+chat thread, and it is just as happy in an activity feed.
+
+```text
+Marker
+├── MarkerIcon
+└── MarkerContent
+```
+
+## Variants
+
+Pick a `variant` to change how the marker sits in the flow.
+
+```tsx
+<Marker>
+  <MarkerContent>A default marker for inline notes.</MarkerContent>
+</Marker>
+
+<Marker variant="separator">
+  <MarkerContent>Today</MarkerContent>
+</Marker>
+
+<Marker variant="border">
+  <MarkerContent>A border marker for row boundaries.</MarkerContent>
+</Marker>
+```
+
+| Variant     | What it looks like                                   |
+| ----------- | ---------------------------------------------------- |
+| `default`   | An inline line of muted text for notes and actions.  |
+| `separator` | A centered label with a divider line on each side.   |
+| `border`    | A default marker with a bottom border under the row. |
+
+Keep separator labels short, like a date or a few words. The divider lines take the
+leftover space, so a long label leaves them nothing to work with.
+
+## With an icon
+
+Wrap any icon in `MarkerIcon`. It is sized to match the text and hidden from
+screen readers, so the content does the talking. Add `flex-col` to stack the
+icon above the text:
+
+```tsx
+<Marker className="flex-col">
+  <MarkerIcon>
+    <BookOpenCheck />
+  </MarkerIcon>
+  <MarkerContent>Syncing completed</MarkerContent>
+</Marker>
+```
+
+## Status and shimmer
+
+For something that is still happening, set `role="status"` so the update gets
+announced, drop a `Spinner` in the icon slot and give the
+text the `shimmer` utility for that "working on it" glow.
+
+```tsx
+import { Spinner } from '@vitnode/core/components/ui/spinner'
+
+;<Marker role="status">
+  <MarkerIcon>
+    <Spinner />
+  </MarkerIcon>
+  <MarkerContent className="shimmer">Thinking...</MarkerContent>
+</Marker>
+```
+
+## Links and buttons
+
+The root is polymorphic. Pass `render` to turn a marker into a link or a
+button. Links get an underline for free.
+
+```tsx
+<Marker render={<a href="/admin/plugins" />}>
+  <MarkerContent>View installed plugins</MarkerContent>
+</Marker>
+
+<Marker
+  render={
+    <button
+      className="hover:text-foreground transition-colors"
+      onClick={revert}
+      type="button"
+    />
+  }
+>
+  <MarkerIcon>
+    <RotateCcw />
+  </MarkerIcon>
+  <MarkerContent>Revert this change</MarkerContent>
+</Marker>
+```
+
+## Accessibility
+
+- A marker is a plain `div` by default. Choose the semantics from what it does:
+  `role="status"` for live progress, `render` with an `a` or `button` when it is
+  clickable, nothing at all for a simple note.
+- A labeled separator needs no role. The lines are decorative pseudo-elements and
+  the label is read as ordinary text. Do not add `role="separator"`, because it
+  would hide the label from assistive tech.
+- `MarkerIcon` is `aria-hidden`, so the meaning lives in `MarkerContent`. For an
+  icon-only marker, give the root an `aria-label`.
+- Wrap a whole thread in an element with `role="log"` so new messages and
+  markers are announced in order.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Marker
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'How the marker sits between the surrounding content.',
+      type: 'default | separator | border',
+      default: 'default',
+    },
+    render: {
+      description:
+        'Replaces the root element, for example with an `a` or a `button`.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
+    },
+    role: {
+      description: 'Use `status` for markers that announce live progress.',
+      type: 'AriaRole',
+    },
+  }}
+/>
+
+### MarkerIcon and MarkerContent
+
+Both render a `span` and accept every standard `span` prop, including
+`className`.
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

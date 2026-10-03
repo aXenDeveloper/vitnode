@@ -7,6 +7,7 @@ import { useTranslations } from "use-intl";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
+import { SlidingNumber } from "../ui/sliding-number";
 import { TableRow } from "../ui/table";
 import { TooltipWithContent } from "../ui/tooltip";
 
@@ -159,7 +160,10 @@ export function BulkActionsDataTable({
         >
           <div className="bg-popover text-popover-foreground pointer-events-auto flex max-w-full items-center gap-1 rounded-lg border p-1.5 shadow-lg">
             <span className="px-2 text-sm font-medium whitespace-nowrap">
-              {t("selected_count", { count: selected.length })}
+              {t.rich("selected_count", {
+                count: selected.length,
+                number: () => <SlidingNumber value={selected.length} />,
+              })}
             </span>
 
             <Separator

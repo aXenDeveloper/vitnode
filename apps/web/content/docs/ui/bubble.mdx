@@ -1,0 +1,197 @@
+---
+title: Bubble
+description: Chat-style message bubbles with variants, alignment, grouping, reactions and clickable suggestions.
+icon: MessageCircleMore
+---
+
+## Preview
+
+<Preview name="bubble" />
+
+## Usage
+
+```ts
+import {
+  Bubble,
+  BubbleContent,
+  BubbleGroup,
+  BubbleReactions,
+} from '@vitnode/core/components/ui/bubble'
+```
+
+```tsx
+<Bubble>
+  <BubbleContent>I removed the stale route. You are welcome.</BubbleContent>
+</Bubble>
+```
+
+A bubble shrinks to fit its text and never grows past 80% of the row, so short
+replies stay short and long ones wrap politely.
+
+## Composition
+
+```text
+BubbleGroup
+├── Bubble
+│   ├── BubbleContent
+│   └── BubbleReactions
+└── Bubble
+    └── BubbleContent
+```
+
+## Variants
+
+```tsx
+<Bubble variant="muted">
+  <BubbleContent>Quiet, supporting content.</BubbleContent>
+</Bubble>
+```
+
+| Variant       | Use it for                                               |
+| ------------- | -------------------------------------------------------- |
+| `default`     | A strong primary bubble, usually the current user.       |
+| `secondary`   | The standard neutral bubble.                             |
+| `muted`       | Lower-emphasis replies.                                  |
+| `tinted`      | A soft bubble derived from your primary color.           |
+| `outline`     | A bordered bubble for suggestions or rich content.       |
+| `ghost`       | Unframed, full-width content such as assistant answers.  |
+| `destructive` | Errors and failed actions.                               |
+
+## Alignment
+
+Messages you sent go on the right, everything else on the left, like every
+chat app you have ever used.
+
+```tsx
+<Bubble align="end">
+  <BubbleContent>Sent by me.</BubbleContent>
+</Bubble>
+```
+
+## Grouping
+
+Wrap consecutive bubbles from the same sender in `BubbleGroup` to tighten the
+spacing between them. Set `align` on each `Bubble`, not on the group.
+
+```tsx
+<BubbleGroup>
+  <Bubble variant="muted">
+    <BubbleContent>First thought.</BubbleContent>
+  </Bubble>
+  <Bubble variant="muted">
+    <BubbleContent>Second thought, arriving fashionably late.</BubbleContent>
+  </Bubble>
+</BubbleGroup>
+```
+
+## Reactions
+
+`BubbleReactions` pins a small pill to the bubble's edge. Move it with `side`
+(`top` or `bottom`) and `align` (`start` or `end`). It overlaps the bubble, so
+leave a bit more `gap` between rows.
+
+```tsx
+<Bubble variant="muted">
+  <BubbleContent>Tests passed on the first try.</BubbleContent>
+  <BubbleReactions aria-label="Reactions: rocket, eyes" role="img">
+    <span>🚀</span>
+    <span>👀</span>
+  </BubbleReactions>
+</Bubble>
+```
+
+## Links and buttons
+
+Use `render` on `BubbleContent` to turn a bubble into a real link or button,
+such as a quick reply suggestion.
+
+```tsx
+<Bubble variant="outline">
+  <BubbleContent render={<button onClick={onPick} type="button" />}>
+    Show me the plugin docs
+  </BubbleContent>
+</Bubble>
+```
+
+## Use with Message
+
+Need an avatar, a sender name or a read receipt? Wrap bubbles in a
+[Message](/docs/ui/message). Set `align="end"` on the `Message` once and every
+bubble inside follows it to the end side.
+
+```tsx
+<Message align="end">
+  <MessageContent>
+    <Bubble>
+      <BubbleContent>No need to align me twice.</BubbleContent>
+    </Bubble>
+    <MessageFooter>Read</MessageFooter>
+  </MessageContent>
+</Message>
+```
+
+## Accessibility
+
+- `Bubble` is just the visual surface. Put conversation semantics such as
+  `role="log"` and an `aria-label` on the surrounding container.
+- A row of emoji reads poorly on a screen reader ("plus eight", anyone?). Give
+  `BubbleReactions` `role="img"` and a descriptive `aria-label` so it is
+  announced once. When reactions are interactive, render buttons with labels
+  instead.
+- Clickable bubbles should be a real `<button>` or `<a>` via `render`. They get
+  a visible focus ring and take their accessible name from the text.
+- Variants signal tone with color, so keep the meaning in the text too,
+  especially for `destructive` bubbles.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Bubble
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The visual treatment of the bubble.',
+      type: 'default | secondary | muted | tinted | outline | ghost | destructive',
+      default: 'default',
+    },
+    align: {
+      description: 'Which side of the conversation the bubble sits on.',
+      type: 'start | end',
+      default: 'start',
+    },
+  }}
+/>
+
+### BubbleContent
+
+<TypeTable
+  type={{
+    render: {
+      description: 'Renders the content as another element, such as a link or a button.',
+      type: 'ReactElement | function',
+    },
+  }}
+/>
+
+### BubbleReactions
+
+<TypeTable
+  type={{
+    side: {
+      description: 'The edge of the bubble the reactions are anchored to.',
+      type: 'top | bottom',
+      default: 'bottom',
+    },
+    align: {
+      description: 'The inline alignment of the reactions.',
+      type: 'start | end',
+      default: 'end',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

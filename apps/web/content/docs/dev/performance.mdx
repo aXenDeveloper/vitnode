@@ -65,7 +65,7 @@ Heavy editors (like Tiptap) or complex modals should be lazy-loaded with `React.
 
 ```tsx title="plugins/blog/src/views/admin/article-editor.tsx"
 import React, { Suspense } from 'react'
-import { Loader } from '@vitnode/core/components/ui/loader'
+import { Spinner } from '@vitnode/core/components/ui/spinner'
 
 // [!code ++:6]
 const RichEditor = React.lazy(async () =>
@@ -75,7 +75,7 @@ const RichEditor = React.lazy(async () =>
 )
 
 export const ArticleEditor = (props) => (
-  <Suspense fallback={<Loader />}>
+  <Suspense fallback={<Spinner size="xl" />}>
     <RichEditor {...props} />
   </Suspense>
 )

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { ssoConnectionIntentOfState } from "@/lib/sso-profile";
 import { ssoConnectionCallbackTarget } from "@/views/auth/settings/sso/connection-callback";
 import { useSsoConnectionNotice } from "@/views/auth/settings/sso/connection-notice";
@@ -44,7 +44,9 @@ const SsoConnectionCallbackPending = ({
       className="container mx-auto flex flex-col items-center justify-center gap-4 p-4"
       role="status"
     >
-      <Loader />
+      <div className="flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
       <p className="text-muted-foreground text-sm leading-relaxed">
         {t("pending", { provider: providerName })}
       </p>

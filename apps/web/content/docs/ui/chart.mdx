@@ -1,0 +1,268 @@
+---
+title: Chart
+description: Bar, area, line and any other Recharts chart, with tooltips, legends and colours that follow your theme.
+icon: ChartColumn
+---
+
+## Preview
+
+<Preview name="chart" />
+
+## Installation
+
+The chart components wrap [Recharts](https://recharts.github.io/), and you
+build the chart itself with Recharts components. Add it to your app next to
+`@vitnode/core`:
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install Recharts'>
+
+```bash tab="bun"
+bun i recharts
+```
+
+```bash tab="pnpm"
+pnpm i recharts
+```
+
+```bash tab="npm"
+npm i recharts
+```
+
+</Tabs>
+
+## Usage
+
+```ts
+import type { ChartConfig } from '@vitnode/core/components/ui/chart'
+
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@vitnode/core/components/ui/chart'
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
+```
+
+```tsx
+const chartData = [
+  { month: 'January', desktop: 186, mobile: 80 },
+  { month: 'February', desktop: 305, mobile: 200 },
+  { month: 'March', desktop: 237, mobile: 120 },
+]
+
+const chartConfig = {
+  desktop: { label: 'Desktop', color: 'var(--chart-1)' },
+  mobile: { label: 'Mobile', color: 'var(--chart-2)' },
+} satisfies ChartConfig
+
+<ChartContainer config={chartConfig}>
+  <BarChart accessibilityLayer data={chartData} title="Visitors">
+    <CartesianGrid vertical={false} />
+    <XAxis dataKey="month" tickLine={false} axisLine={false} />
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
+    <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
+  </BarChart>
+</ChartContainer>
+```
+
+We don't hide Recharts behind a wrapper of our own. You write plain Recharts and
+borrow only what you need: the container, the tooltip and the legend. When
+Recharts ships a new chart type, you can use it the same day.
+
+`ChartContainer` sizes the chart responsively and defaults to a 16:9 box
+(`aspect-video`). Pass a `className` such as `aspect-square` or `h-64 w-full`
+to change it.
+
+## Chart config
+
+The config is where the chart's words and colours live, kept apart from your
+data. Each key matches a `dataKey` in your data:
+
+```tsx
+import { Monitor, Smartphone } from 'lucide-react'
+
+const chartConfig = {
+  desktop: {
+    label: 'Desktop',
+    icon: Monitor,
+    color: 'var(--chart-1)',
+  },
+  mobile: {
+    label: 'Mobile',
+    icon: Smartphone,
+    theme: {
+      light: 'var(--chart-2)',
+      dark: 'var(--chart-4)',
+    },
+  },
+} satisfies ChartConfig
+```
+
+- `label` is what the tooltip and legend show, so `desktop` reads as "Desktop".
+- `icon` swaps the colour swatch in the tooltip and legend for an icon.
+- `color` sets one colour for both themes. Use `theme` instead when light and
+  dark need different colours.
+
+## Theming
+
+Your theme ships five chart colours, `--chart-1` to `--chart-5`, with values
+for light and dark mode. Use them in the config and the charts follow the
+theme on their own:
+
+```css
+:root {
+  --chart-1: oklch(0.52 0.2 264);
+  --chart-2: oklch(0.52 0.128 155);
+}
+
+.dark {
+  --chart-1: oklch(0.7 0.14 264);
+  --chart-2: oklch(0.758 0.153 155);
+}
+```
+
+For each config key, `ChartContainer` creates a `--color-<key>` variable, scoped
+to that one chart. Use it anywhere Recharts takes a colour:
+
+```tsx
+<Bar dataKey="desktop" fill="var(--color-desktop)" />
+```
+
+It works in Tailwind classes too, for example `fill-(--color-desktop)`. Two or
+three colours per chart is plenty. Your readers have eyes, not a rainbow
+decoder ring.
+
+## Area chart
+
+<Preview name="chart-area" />
+
+Stack areas with the same `stackId`, and add a fade with a `linearGradient`
+that uses the chart's colour variables:
+
+```tsx
+<AreaChart accessibilityLayer data={chartData} title="Plugin installs">
+  <defs>
+    <linearGradient id="fill-downloads" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="5%" stopColor="var(--color-downloads)" stopOpacity={0.8} />
+      <stop offset="95%" stopColor="var(--color-downloads)" stopOpacity={0.1} />
+    </linearGradient>
+  </defs>
+  <CartesianGrid vertical={false} />
+  <XAxis dataKey="month" tickLine={false} axisLine={false} />
+  <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+  <Area
+    dataKey="downloads"
+    type="natural"
+    stackId="installs"
+    fill="url(#fill-downloads)"
+    stroke="var(--color-downloads)"
+  />
+</AreaChart>
+```
+
+## Line chart
+
+<Preview name="chart-line" />
+
+```tsx
+<LineChart accessibilityLayer data={chartData} title="API response time">
+  <CartesianGrid vertical={false} />
+  <XAxis dataKey="day" tickLine={false} axisLine={false} />
+  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+  <Line
+    dataKey="responseTime"
+    type="monotone"
+    stroke="var(--color-responseTime)"
+    strokeWidth={2}
+  />
+</LineChart>
+```
+
+## Tooltip
+
+`ChartTooltip` is the Recharts `Tooltip`, and `ChartTooltipContent` gives it a
+look that matches the rest of VitNode. It reads labels, icons and colours from
+your chart config.
+
+```tsx
+<ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+```
+
+Hover over the previews above to see all three indicators: `dashed` in the bar
+chart, `dot` in the area chart and `line` in the line chart.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    indicator: {
+      description: 'The shape next to each value.',
+      type: "'dot' | 'line' | 'dashed'",
+      default: "'dot'",
+    },
+    hideLabel: {
+      description: 'Hides the tooltip heading, for example the month.',
+      type: 'boolean',
+      default: 'false',
+    },
+    hideIndicator: {
+      description: 'Hides the indicator shape.',
+      type: 'boolean',
+      default: 'false',
+    },
+    labelKey: {
+      description: 'The config or data key used for the tooltip heading.',
+      type: 'string',
+    },
+    nameKey: {
+      description: 'The config or data key used for the name of each value.',
+      type: 'string',
+    },
+    labelFormatter: {
+      description: 'Formats the tooltip heading.',
+      type: '(label, payload) => ReactNode',
+    },
+    formatter: {
+      description: 'Renders each row yourself, replacing the default layout.',
+      type: '(value, name, item, index, payload) => ReactNode',
+    },
+  }}
+/>
+
+## Legend
+
+`ChartLegend` is the Recharts `Legend`, and `ChartLegendContent` renders the
+labels and colours (or icons) from your config:
+
+```tsx
+import {
+  ChartLegend,
+  ChartLegendContent,
+} from '@vitnode/core/components/ui/chart'
+```
+
+```tsx
+<ChartLegend content={<ChartLegendContent />} />
+```
+
+Use `nameKey` to read legend labels from another key. That's handy for pie
+charts, where each slice is a row in your data rather than a series.
+
+## Accessibility
+
+- `accessibilityLayer` adds ARIA attributes and keyboard support. Tab to a
+  chart and use the arrow keys to move between points. The tooltip follows
+  along. It is on by default in Recharts 3, but writing it out makes the
+  intent clear.
+- Give each chart a `title` and a `desc`. Recharts renders them as the SVG's
+  `<title>` and `<desc>`, so screen readers get more than "graphic".
+- Keep a visible heading next to the chart (a `CardTitle` works well), and
+  never rely on colour alone. Labels in the tooltip and legend tell series
+  apart for everyone.
+
+## API Reference
+
+[Recharts - API](https://recharts.github.io/en-US/api/)

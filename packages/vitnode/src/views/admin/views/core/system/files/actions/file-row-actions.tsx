@@ -96,6 +96,7 @@ export const FileRowActions = ({
                 })
               : t("delete.desc")
           }
+          icon={<Trash2Icon />}
           onOpenChange={open => {
             if (!open) setHeldByRevisions(null);
           }}

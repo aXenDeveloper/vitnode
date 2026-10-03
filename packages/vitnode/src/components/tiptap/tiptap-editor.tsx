@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { useEditorConfig } from "@/components/editor-provider";
 
-import { Loader } from "../ui/loader";
+import { Spinner } from "../ui/spinner";
 import { TipTapDragHandle } from "./drag-handle";
 import { createTipTapExtensions } from "./extension";
 import { TipTapToolbar } from "./toolbar/tiptap-toolbar";
@@ -50,7 +50,12 @@ export const TipTapEditor = ({
     },
   });
 
-  if (!editor) return <Loader />;
+  if (!editor)
+    return (
+      <div className="flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
+    );
 
   return (
     <div

@@ -2,7 +2,7 @@ import { cn } from 'cn'
 import { FileCode2, Sparkles } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 
-import { ScreenFrame } from '@/site/marketing/screen-frame'
+import { SafariFrame } from '@/site/marketing/safari-frame'
 import { SCREENS } from '@/site/marketing/screens'
 
 const MEMBERS = ['MA', 'KW', 'OL']
@@ -128,7 +128,7 @@ export const HeroPreview = ({ ref }: { ref?: React.Ref<HTMLDivElement> }) => {
             transformOrigin: 'left center',
           }}
         >
-          <ScreenFrame
+          <SafariFrame
             priority
             screen={{ ...SCREENS.dashboard, alt: t('alt') }}
           />

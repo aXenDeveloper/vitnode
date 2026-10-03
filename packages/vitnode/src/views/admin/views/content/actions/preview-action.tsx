@@ -1,10 +1,11 @@
-import { CheckIcon, CopyIcon, ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 
 import type { ContentPanelProps } from "./content-panel";
 import type { ContentPreviewLink } from "./editorial-api";
@@ -12,44 +13,6 @@ import type { ContentPreviewLink } from "./editorial-api";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { ContentPanel } from "./content-panel";
 import { useContentEditorialTransport } from "./editorial-transport";
-
-const COPIED_FEEDBACK_MS = 2000;
-
-const CopyButton = ({ label, url }: { label: string; url: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!copied) return;
-
-    const timer = setTimeout(() => {
-      setCopied(false);
-    }, COPIED_FEEDBACK_MS);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [copied]);
-
-  return (
-    <Button
-      aria-label={label}
-      onClick={() => {
-        void navigator.clipboard.writeText(url).then(() => {
-          setCopied(true);
-        });
-      }}
-      size="icon"
-      type="button"
-      variant="outline"
-    >
-      {copied ? (
-        <CheckIcon className="size-4" />
-      ) : (
-        <CopyIcon className="size-4" />
-      )}
-    </Button>
-  );
-};
 
 const PreviewLink = ({
   contentTypeId,
@@ -108,7 +71,7 @@ const PreviewLink = ({
           readOnly
           value={preview.url}
         />
-        <CopyButton label={t("copy")} url={preview.url} />
+        <CopyButton aria-label={t("copy")} content={preview.url} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">

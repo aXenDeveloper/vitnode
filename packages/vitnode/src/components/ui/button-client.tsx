@@ -4,7 +4,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { type ButtonProps, buttonVariants } from "./button";
-import { Loader } from "./loader";
+import { Spinner } from "./spinner";
 import { TooltipWithContent } from "./tooltip";
 
 export function ClientButton({
@@ -55,7 +55,7 @@ export function ClientButton({
 
           {isLoading ? (
             <div className="animate-in fade-in slide-in-from-top-2 absolute inset-0 flex items-center justify-center duration-300 motion-reduce:animate-none">
-              <Loader small />
+              <Spinner aria-hidden="true" />
             </div>
           ) : null}
         </div>

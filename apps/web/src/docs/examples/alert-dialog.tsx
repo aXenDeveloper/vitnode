@@ -15,11 +15,11 @@ export default function AlertDialogExample() {
   return (
     <AlertDialog>
       <AlertDialogTrigger
-        render={<Button variant="outline">Show Dialog</Button>}
+        render={<Button variant="destructive">Delete account</Button>}
       />
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete your account?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete your
             account and remove your data from our servers.
@@ -27,7 +27,9 @@ export default function AlertDialogExample() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction>Continue</AlertDialogAction>
+          <AlertDialogAction variant="destructive">
+            Delete account
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

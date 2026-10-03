@@ -1,0 +1,165 @@
+---
+title: Toast
+description: Short, friendly notifications that pop into the top-right corner, with five colours, icons, avatars and actions.
+icon: BellRing
+---
+
+## Preview
+
+<Preview name="toast" />
+
+## Usage
+
+VitNode already mounts the toaster for you, so all you need is the `toast`
+function from [Sonner](https://sonner.emilkowal.ski/):
+
+```ts
+import { toast } from 'sonner'
+```
+
+```ts
+toast('Event has been created', {
+  description: 'Sunday, December 03, 2023 at 9:00 AM',
+})
+```
+
+## Variants
+
+Each variant tints the icon, the title and the action button. The card
+itself stays neutral, so a toast never shouts louder than it has to.
+
+```ts
+toast('Event has been created') // default
+toast.info('You have 2 credits left') // primary colour
+toast.success('Your plan has been upgraded')
+toast.warning('You are running low on storage')
+toast.error('Storage is full')
+```
+
+Pick the variant by what happened, not by the colour you fancy:
+
+- `success` when something finished the way the user hoped.
+- `info` for things worth knowing, nothing to worry about.
+- `warning` when nothing broke yet, but the user should take a look.
+- `error` when it failed. The description should say what to do next.
+
+After a create, edit or delete, show a toast with a `description` so people
+know exactly what changed.
+
+## With an action
+
+```ts
+toast.error('Storage is full', {
+  description: 'Remove some files to free up space.',
+  action: {
+    label: 'Remove',
+    onClick: () => openFileManager(),
+  },
+})
+```
+
+The action button takes the variant's colour too. Add `cancel` for a second,
+quieter button.
+
+## With an avatar
+
+Swap the icon for a picture with `ToastAvatar`. It suits anything a person
+did, like an invite, a mention or a new message. Without a `src`, or while the
+image is still loading, it shows the first letter of `alt`.
+
+```ts
+import { ToastAvatar } from '@vitnode/core/components/ui/sonner'
+```
+
+```tsx
+toast('Ada Lovelace invited you', {
+  description: 'Join the "Docs writers" group to start editing.',
+  icon: <ToastAvatar alt="Ada Lovelace" src={user.avatarUrl} />,
+})
+```
+
+Any other element works as `icon` as well, such as a custom Lucide icon, an emoji or
+your own badge.
+
+## Message with actions
+
+For anything that reads like a message, such as a reply, a mention or an invite, use
+`ToastMessage` with `toast.custom`. It lays out an avatar, the sender, a
+timestamp, the text and a row of buttons underneath.
+
+```ts
+import { ToastMessage } from '@vitnode/core/components/ui/sonner'
+```
+
+```tsx
+toast.custom(
+  id => (
+    <ToastMessage
+      actions={[
+        { label: 'Dismiss', onClick: () => toast.dismiss(id), variant: 'outline' },
+        { label: 'Reply', onClick: () => openReply(message) },
+      ]}
+      avatar={{ alt: 'Alex Johnson', src: user.avatarUrl }}
+      description="Hey! I've finished the design review."
+      time="2m ago"
+      title="Alex Johnson"
+    />
+  ),
+  { duration: 10000 },
+)
+```
+
+Give message toasts a longer `duration` than the usual few seconds. People
+need time to read, and to decide whether to reply.
+
+## Loading and promises
+
+`toast.promise` shows a spinner while the promise runs, then swaps to the
+success or error variant on its own:
+
+```ts
+toast.promise(publishArticle(), {
+  loading: 'Publishing your article...',
+  success: 'Article published',
+  error: 'Could not publish the article',
+})
+```
+
+## Placement
+
+Toasts show up in the **top-right** corner. To move them, pass `toaster` to
+`VitNodeProviders`:
+
+```tsx
+<VitNodeProviders config={config} toaster={{ position: 'bottom-center' }}>
+  {children}
+</VitNodeProviders>
+```
+
+Available positions: `top-left`, `top-center`, `top-right`, `bottom-left`,
+`bottom-center` and `bottom-right`. On phones the toast stretches across the
+screen, whatever you choose.
+
+## Custom styles
+
+Pass `classNames` to a single toast to restyle it. Your classes are merged with
+the defaults, not swapped for them:
+
+```ts
+toast('Saved', {
+  classNames: { title: 'font-semibold' },
+})
+```
+
+## Accessibility
+
+- Toasts are announced to screen readers through a polite live region.
+- Hovering a toast pauses its timer, so nobody has to race it. Keyboard users
+  can jump to the toasts with <kbd>Alt</kbd> + <kbd>T</kbd>.
+- The close button appears on hover and keyboard focus, and is always visible on
+  touch screens.
+- Colour is never the only signal, since every variant has its own icon too.
+
+## Documentation
+
+[Sonner Documentation](https://sonner.emilkowal.ski/)

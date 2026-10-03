@@ -80,13 +80,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Loader } from "@/components/ui/loader";
 import {
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { SlidingNumber } from "@/components/ui/sliding-number";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
 import {
@@ -446,8 +447,8 @@ const SortableNavigationRow = ({
         {name}
       </span>
       {isCollapsed && childCount > 0 ? (
-        <Badge className="tabular-nums" variant="secondary">
-          {childCount}
+        <Badge variant="secondary">
+          <SlidingNumber value={childCount} />
         </Badge>
       ) : null}
       {item.isOpenInNewTab && !isMissing ? (
@@ -632,7 +633,13 @@ const NavigationEditSheetBody = ({
         <SheetDescription className="truncate">{name}</SheetDescription>
       </SheetHeader>
 
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
         <AdminNavigationFormContent
           data={item}
           items={items}
