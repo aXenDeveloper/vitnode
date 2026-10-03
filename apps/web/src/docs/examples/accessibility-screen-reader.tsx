@@ -51,10 +51,13 @@ const Row = ({
 }) => {
   const [spoken, setSpoken] = React.useState('')
 
-  const ref = React.useCallback((node: HTMLDivElement | null) => {
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const node = ref.current
     if (!node) return
     const update = () => setSpoken(describe(node.firstElementChild))
-    update()
+    const frame = requestAnimationFrame(update)
     const observer = new MutationObserver(update)
     observer.observe(node, {
       attributes: true,
@@ -63,7 +66,10 @@ const Row = ({
       subtree: true,
     })
 
-    return () => observer.disconnect()
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [])
 
   return (

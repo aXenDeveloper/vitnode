@@ -204,6 +204,7 @@ export const FileDropzone = ({
   state: "done" | "error" | "idle" | "uploading";
 }) => {
   const t = useTranslations("core.global.file");
+  const inputId = React.useId();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const dragDepthRef = React.useRef(0);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -228,6 +229,7 @@ export const FileDropzone = ({
         className="hidden"
         data-slot="file-input"
         disabled={!isInteractive}
+        id={inputId}
         multiple={multiple}
         onChange={event => {
           pick(event.target.files);
@@ -237,7 +239,7 @@ export const FileDropzone = ({
         tabIndex={-1}
         type="file"
       />
-      <div
+      <label
         className={cn(
           "border-input ease-fluid flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors duration-150 motion-reduce:transition-none",
           isInteractive && "hover:bg-muted/50 cursor-pointer",
@@ -247,9 +249,7 @@ export const FileDropzone = ({
         )}
         data-dragging={isDragging ? "" : undefined}
         data-slot="file-dropzone"
-        onClick={() => {
-          if (isInteractive) inputRef.current?.click();
-        }}
+        htmlFor={inputId}
         onDragEnter={event => {
           if (!carriesFiles(event)) return;
 
@@ -311,6 +311,7 @@ export const FileDropzone = ({
             </span>
             <Button
               disabled={disabled}
+              onClick={() => inputRef.current?.click()}
               size="sm"
               type="button"
               variant="outline"
@@ -319,7 +320,7 @@ export const FileDropzone = ({
             </Button>
           </>
         )}
-      </div>
+      </label>
     </>
   );
 };

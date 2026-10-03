@@ -12,7 +12,7 @@ const linkClassName =
 
 export default function HoverCardMentionExample() {
   return (
-    <p className="not-prose text-muted-foreground max-w-sm text-sm leading-relaxed text-pretty">
+    <div className="not-prose text-muted-foreground max-w-sm text-sm leading-relaxed text-pretty">
       Thanks{' '}
       <HoverCard>
         <HoverCardTrigger
@@ -50,6 +50,6 @@ export default function HoverCardMentionExample() {
         </HoverCardContent>
       </HoverCard>
       .
-    </p>
+    </div>
   )
 }

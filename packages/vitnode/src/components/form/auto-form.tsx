@@ -188,6 +188,100 @@ export type AutoFormOnSubmit<T extends z.ZodObject<z.ZodRawShape>> = (
   },
 ) => Promise<void> | void;
 
+const useRevealInvalidFields = (
+  formRef: React.RefObject<HTMLFormElement | null>,
+  onRevealTab: (tab: string) => void,
+) => {
+  const shouldReduceMotion = useReducedMotion();
+
+  return () => {
+    const root = formRef.current;
+    if (!root) return;
+
+    const invalidFields = outermostInvalidFields(root);
+    const [firstInvalidField] = invalidFields;
+    if (!firstInvalidField) return;
+
+    const tabOfField = firstInvalidField.closest<HTMLElement>(
+      "[data-autoform-tab]",
+    )?.dataset.autoformTab;
+    if (tabOfField) onRevealTab(tabOfField);
+
+    requestAnimationFrame(() => {
+      focusTargetOf(firstInvalidField)?.focus();
+    });
+
+    if (shouldReduceMotion) return;
+    for (const field of invalidFields) {
+      void animate(field, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
+    }
+  };
+};
+
+const invalidTabsOf = <T extends z.ZodObject<z.ZodRawShape>>({
+  fields,
+  formMode,
+  state,
+  tabs,
+}: {
+  fields: ItemAutoFormProps<T>[];
+  formMode: FormMode;
+  state: { fieldMeta: object; submissionAttempts: number };
+  tabs?: AutoFormTab[];
+}) => {
+  if (!tabs?.length) return "";
+
+  const invalidNames = (
+    Object.entries(state.fieldMeta) as [
+      string,
+      Parameters<typeof areFieldErrorsRevealed>[1],
+    ][]
+  )
+    .filter(
+      ([, meta]) =>
+        meta.errors.length > 0 &&
+        areFieldErrorsRevealed(formMode, meta, state.submissionAttempts),
+    )
+    .map(([name]) => name);
+
+  return tabs
+    .filter(tab =>
+      fields.some(
+        item =>
+          (item.tab ?? tabs[0].value) === tab.value &&
+          invalidNames.some(name => belongsToField(name, item.id)),
+      ),
+    )
+    .map(tab => tab.value)
+    .join("\n");
+};
+
+const numberOrUndefined = (value: unknown) =>
+  typeof value === "number" ? value : undefined;
+
+const stringOrUndefined = (value: unknown) =>
+  typeof value === "string" ? value : undefined;
+
+const fieldOtherProps = ({
+  invalid,
+  isOptional,
+  params,
+}: {
+  invalid: boolean;
+  isOptional: boolean;
+  params: NonNullable<ReturnType<typeof getNestedParam>>;
+}) => ({
+  isOptional,
+  enum: Array.isArray(params.enum) ? params.enum : undefined,
+  maxLength: numberOrUndefined(params.maxLength),
+  maxItems: numberOrUndefined(params.maxItems),
+  minLength: numberOrUndefined(params.minLength),
+  ["aria-invalid"]: invalid,
+  minItems: numberOrUndefined(params.minItems),
+  pattern: stringOrUndefined(params.pattern),
+  type: stringOrUndefined(params.type),
+});
+
 const emptySubmitMeta: FormSubmitMeta = {};
 
 export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
@@ -220,32 +314,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   } = useCaptcha(captcha);
   const { setIsDirty } = useDialog();
   const t = useTranslations("core.global");
-  const shouldReduceMotion = useReducedMotion();
   const formRef = useRef<HTMLFormElement>(null);
   const [activeTab, setActiveTab] = useState(tabs?.[0]?.value);
-
-  const revealInvalidFields = () => {
-    const root = formRef.current;
-    if (!root) return;
-
-    const invalidFields = outermostInvalidFields(root);
-    const [firstInvalidField] = invalidFields;
-    if (!firstInvalidField) return;
-
-    const tabOfField = firstInvalidField.closest<HTMLElement>(
-      "[data-autoform-tab]",
-    )?.dataset.autoformTab;
-    if (tabOfField) setActiveTab(tabOfField);
-
-    requestAnimationFrame(() => {
-      focusTargetOf(firstInvalidField)?.focus();
-    });
-
-    if (shouldReduceMotion) return;
-    for (const field of invalidFields) {
-      void animate(field, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
-    }
-  };
+  const revealInvalidFields = useRevealInvalidFields(formRef, setActiveTab);
 
   const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
   const inputParams = getZodInputParams(jsonSchema);
@@ -282,33 +353,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
     hasConditionalFields ? state.values : undefined,
   );
   const formMode = mode ?? "onTouched";
-  const invalidTabs = useSelector(form.store, state => {
-    if (!tabs?.length) return "";
-
-    const invalidNames = (
-      Object.entries(state.fieldMeta) as [
-        string,
-        Parameters<typeof areFieldErrorsRevealed>[1],
-      ][]
-    )
-      .filter(
-        ([, meta]) =>
-          meta.errors.length > 0 &&
-          areFieldErrorsRevealed(formMode, meta, state.submissionAttempts),
-      )
-      .map(([name]) => name);
-
-    return tabs
-      .filter(tab =>
-        fields.some(
-          item =>
-            (item.tab ?? tabs[0].value) === tab.value &&
-            invalidNames.some(name => belongsToField(name, item.id)),
-        ),
-      )
-      .map(tab => tab.value)
-      .join("\n");
-  });
+  const invalidTabs = useSelector(form.store, state =>
+    invalidTabsOf({ fields, formMode, state, tabs }),
+  );
   const invalidTabValues = new Set(invalidTabs.split("\n"));
   const isSubmitting = useSelector(form.store, state => state.isSubmitting);
 
@@ -366,33 +413,11 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
                     ? (params.itemParams as InputParams)
                     : undefined
                 }
-                otherProps={{
+                otherProps={fieldOtherProps({
+                  invalid: fieldState.invalid,
                   isOptional: !isRequiredPath(jsonSchema, item.id),
-                  enum: Array.isArray(params.enum) ? params.enum : undefined,
-                  maxLength:
-                    typeof params.maxLength === "number"
-                      ? params.maxLength
-                      : undefined,
-                  maxItems:
-                    typeof params.maxItems === "number"
-                      ? params.maxItems
-                      : undefined,
-                  minLength:
-                    typeof params.minLength === "number"
-                      ? params.minLength
-                      : undefined,
-                  ["aria-invalid"]: fieldState.invalid,
-                  minItems:
-                    typeof params.minItems === "number"
-                      ? params.minItems
-                      : undefined,
-                  pattern:
-                    typeof params.pattern === "string"
-                      ? params.pattern
-                      : undefined,
-                  type:
-                    typeof params.type === "string" ? params.type : undefined,
-                }}
+                  params,
+                })}
               />
             </Field>
           );

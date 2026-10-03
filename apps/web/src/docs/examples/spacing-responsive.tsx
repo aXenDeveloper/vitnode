@@ -10,7 +10,10 @@ const ITEMS = ['Posts', 'Members', 'Files', 'Events', 'Polls', 'Badges']
 const useGridMetrics = () => {
   const [metrics, setMetrics] = React.useState({ columns: 1, width: 0 })
 
-  const gridRef = React.useCallback((node: HTMLUListElement | null) => {
+  const gridRef = React.useRef<HTMLUListElement>(null)
+
+  React.useEffect(() => {
+    const node = gridRef.current
     if (!node) return
 
     const update = () => {
@@ -24,7 +27,6 @@ const useGridMetrics = () => {
     }
     const observer = new ResizeObserver(update)
     observer.observe(node)
-    update()
 
     return () => observer.disconnect()
   }, [])

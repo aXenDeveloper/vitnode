@@ -43,37 +43,36 @@ export interface AutoFormFileProps extends ItemAutoFormComponentProps {
   ) => Promise<AutoFormFileValue>;
 }
 
-export const AutoFormFile = ({
-  allowedExtensions,
-  allowedMimeTypes,
-  description,
-  field,
-  file: initialFile,
-  label,
-  labelRight,
-  maxBytes,
+const fileFieldState = ({
+  hasError,
+  hasFile,
+  isPending,
+}: {
+  hasError: boolean;
+  hasFile: boolean;
+  isPending: boolean;
+}) => {
+  if (isPending) return "uploading";
+  if (hasError) return "error";
+
+  return hasFile ? "done" : "idle";
+};
+
+const useFileUpload = ({
+  constraints,
+  onStored,
   onUpload,
-  otherProps: { isOptional },
-  // Only the language-aware inputs implement this - dropped here so it never
-  // lands on the DOM element below. A file is never localized.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  multiLang,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  itemParams,
-}: AutoFormFileProps) => {
+}: {
+  constraints: Parameters<typeof validateFile>[0] & { maxBytes: number };
+  onStored: (stored: AutoFormFileValue) => void;
+  onUpload: AutoFormFileProps["onUpload"];
+}) => {
   const t = useTranslations("core.global.file");
   const failureMessage = useUploadFailureMessage();
   const [rejected, setRejected] = React.useState<null | string>(null);
-  const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
   const [progress, setProgress] = React.useState<null | number>(null);
   const controllerRef = React.useRef<AbortController | null>(null);
-
-  const [resolved] = resolveFormFiles(field.value, [initialFile, ...uploaded]);
-  const file = resolved?.file ?? null;
-
-  const constraints = { allowedExtensions, allowedMimeTypes, maxBytes };
   const formats = fileFormatLabels(constraints);
-  const accept = fileAcceptAttribute(constraints);
 
   const upload = useMutation({
     mutationFn: async (chosen: File) => {
@@ -95,9 +94,8 @@ export const AutoFormFile = ({
     },
     retry: false,
     onSuccess: stored => {
-      setUploaded(current => [...current, stored]);
       setRejected(null);
-      field.onChange(stored.id);
+      onStored(stored);
     },
   });
 
@@ -107,7 +105,7 @@ export const AutoFormFile = ({
       attempted: upload.variables,
       error: upload.error,
       formats,
-      maxBytes,
+      maxBytes: constraints.maxBytes,
     });
 
   const pick = (chosen: File | undefined) => {
@@ -123,7 +121,7 @@ export const AutoFormFile = ({
       setRejected(
         rejection.reason === "size"
           ? t("errors.too_large", {
-              max: formatBytes(maxBytes),
+              max: formatBytes(constraints.maxBytes),
               size: rejection.value,
             })
           : t("errors.wrong_format", {
@@ -149,19 +147,76 @@ export const AutoFormFile = ({
     if (upload.variables) upload.mutate(upload.variables);
   };
 
-  const remove = () => {
+  const reset = () => {
     upload.reset();
     setRejected(null);
+  };
+
+  return {
+    cancel,
+    errorMessage,
+    pick,
+    progress,
+    rejected,
+    reset,
+    retry,
+    upload,
+  };
+};
+
+export const AutoFormFile = ({
+  allowedExtensions,
+  allowedMimeTypes,
+  description,
+  field,
+  file: initialFile,
+  label,
+  labelRight,
+  maxBytes,
+  onUpload,
+  otherProps: { isOptional },
+  // Only the language-aware inputs implement this - dropped here so it never
+  // lands on the DOM element below. A file is never localized.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  multiLang,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
+}: AutoFormFileProps) => {
+  const t = useTranslations("core.global.file");
+  const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
+  const [resolved] = resolveFormFiles(field.value, [initialFile, ...uploaded]);
+  const file = resolved?.file ?? null;
+
+  const constraints = { allowedExtensions, allowedMimeTypes, maxBytes };
+  const accept = fileAcceptAttribute(constraints);
+  const {
+    cancel,
+    errorMessage,
+    pick,
+    progress,
+    rejected,
+    reset,
+    retry,
+    upload,
+  } = useFileUpload({
+    constraints,
+    onStored: stored => {
+      setUploaded(current => [...current, stored]);
+      field.onChange(stored.id);
+    },
+    onUpload,
+  });
+
+  const remove = () => {
+    reset();
     field.onChange(null);
   };
 
-  const state = upload.isPending
-    ? "uploading"
-    : errorMessage !== null
-      ? "error"
-      : resolved
-        ? "done"
-        : "idle";
+  const state = fileFieldState({
+    hasError: errorMessage !== null,
+    hasFile: !!resolved,
+    isPending: upload.isPending,
+  });
 
   return (
     <>

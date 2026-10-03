@@ -46,27 +46,6 @@ const PresentColumn = (props: React.ComponentProps<typeof m.div>) => {
   return <m.div inert={!isPresent} {...props} />;
 };
 
-const useMeasuredHeight = () => {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [height, setHeight] = React.useState<"auto" | number>("auto");
-
-  React.useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new ResizeObserver(() => {
-      setHeight(element.offsetHeight);
-    });
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  return { height, ref };
-};
-
 interface CascaderProps {
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
@@ -404,52 +383,44 @@ const CascaderDrillView = ({ cascader }: { cascader: CascaderController }) => {
   const parent = columns[level - 1]?.find(
     node => node.value === activePath[level - 1],
   );
-  const { height, ref } = useMeasuredHeight();
 
   return (
     <MotionFeatures>
-      <m.div
-        animate={{ height }}
-        className="overflow-hidden"
-        initial={false}
-        transition={transition}
-      >
-        <div className="relative" ref={ref}>
-          <AnimatePresence custom={direction} initial={false} mode="popLayout">
-            <PresentColumn
-              animate="center"
-              className="w-full"
-              custom={direction}
-              exit="exit"
-              initial="enter"
-              key={activePath.slice(0, level).join("/") || "root"}
-              transition={transition}
-              variants={DRILL_VARIANTS}
-            >
-              {parent && (
-                <button
-                  className="hover:bg-accent text-muted-foreground focus-visible:bg-accent flex w-full items-center gap-1 border-b px-2 py-2 text-start text-sm outline-none"
-                  onClick={event => {
-                    cascader.goBack(panelOf(event.currentTarget));
-                  }}
-                  type="button"
-                >
-                  <ChevronLeftIcon className="size-4 rtl:rotate-180" />
-                  <span className="sr-only">{t("go_back")}: </span>
-                  <span className="text-foreground truncate font-medium">
-                    {parent.label}
-                  </span>
-                </button>
-              )}
-              <CascaderColumn
-                cascader={cascader}
-                column={columns[level] ?? []}
-                level={level}
-              />
-            </PresentColumn>
-          </AnimatePresence>
-        </div>
-      </m.div>
+      <div className="relative overflow-hidden">
+        <AnimatePresence custom={direction} initial={false} mode="popLayout">
+          <PresentColumn
+            animate="center"
+            className="w-full"
+            custom={direction}
+            exit="exit"
+            initial="enter"
+            key={activePath.slice(0, level).join("/") || "root"}
+            transition={transition}
+            variants={DRILL_VARIANTS}
+          >
+            {parent && (
+              <button
+                className="hover:bg-accent text-muted-foreground focus-visible:bg-accent flex w-full items-center gap-1 border-b px-2 py-2 text-start text-sm outline-none"
+                onClick={event => {
+                  cascader.goBack(panelOf(event.currentTarget));
+                }}
+                type="button"
+              >
+                <ChevronLeftIcon className="size-4 rtl:rotate-180" />
+                <span className="sr-only">{t("go_back")}: </span>
+                <span className="text-foreground truncate font-medium">
+                  {parent.label}
+                </span>
+              </button>
+            )}
+            <CascaderColumn
+              cascader={cascader}
+              column={columns[level] ?? []}
+              level={level}
+            />
+          </PresentColumn>
+        </AnimatePresence>
+      </div>
     </MotionFeatures>
   );
 };

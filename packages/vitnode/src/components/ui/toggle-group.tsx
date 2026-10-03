@@ -53,16 +53,18 @@ function ToggleGroup({
     spacing?: number;
   }) {
   const indicatorId = React.useId();
+  const contextValue = React.useMemo(
+    () => ({
+      variant,
+      size,
+      spacing,
+      orientation,
+      indicatorId: multiple ? undefined : indicatorId,
+    }),
+    [variant, size, spacing, orientation, multiple, indicatorId],
+  );
   const content = (
-    <ToggleGroupContext.Provider
-      value={{
-        variant,
-        size,
-        spacing,
-        orientation,
-        indicatorId: multiple ? undefined : indicatorId,
-      }}
-    >
+    <ToggleGroupContext.Provider value={contextValue}>
       {children}
     </ToggleGroupContext.Provider>
   );

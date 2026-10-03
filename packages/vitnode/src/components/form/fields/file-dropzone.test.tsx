@@ -72,8 +72,10 @@ describe("FileDropzone", () => {
   });
 
   it("opens the file dialog once from anywhere in the zone, including its button", () => {
-    const click = vi.spyOn(HTMLInputElement.prototype, "click");
     const { zone } = renderDropzone();
+    const input = document.querySelector("[data-slot=file-input]");
+    const click = vi.fn();
+    input?.addEventListener("click", click);
 
     fireEvent.click(zone);
     expect(click).toHaveBeenCalledTimes(1);
@@ -85,9 +87,11 @@ describe("FileDropzone", () => {
   });
 
   it("does nothing while disabled", () => {
-    const click = vi.spyOn(HTMLInputElement.prototype, "click");
     const file = new File(["bytes"], "photo.webp", { type: "image/webp" });
     const { onPick, zone } = renderDropzone({ disabled: true });
+    const input = document.querySelector("[data-slot=file-input]");
+    const click = vi.fn();
+    input?.addEventListener("click", click);
 
     fireEvent.click(zone);
     fireEvent.dragEnter(zone, filesTransfer());
