@@ -6,13 +6,17 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { describe } from "vitest";
 
+import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
+
+import { coreRelations, coreSchema } from "@/database/relations";
+
 const TEST_POSTGRES_URL = process.env.VITNODE_TEST_POSTGRES_URL;
 
 export const describePostgres = (name: string, body: () => void): void => {
   describe.skipIf(!TEST_POSTGRES_URL)(name, body);
 };
 
-type TestDatabase = ReturnType<typeof drizzle>;
+type TestDatabase = EnvVariablesVitNode["db"];
 
 export interface TestDatabaseHandle {
   connect: () => TestDatabase;
@@ -28,7 +32,7 @@ const withDatabase = (url: string, database: string): string => {
 };
 
 export const createTestDatabase = async (
-  schema: Record<string, unknown>,
+  schema: Record<string, unknown> = coreSchema,
   { onQuery }: { onQuery?: () => void } = {},
 ): Promise<TestDatabaseHandle> => {
   if (!TEST_POSTGRES_URL) {
@@ -57,7 +61,7 @@ export const createTestDatabase = async (
   const connect = (): TestDatabase => {
     const client = postgres(url, {
       connection: { TimeZone: "UTC" },
-      max: 10,
+      max: 20,
       onnotice: () => {},
     });
     clients.push(client);
@@ -65,6 +69,7 @@ export const createTestDatabase = async (
     return drizzle({
       client,
       logger: onQuery ? { logQuery: () => onQuery() } : undefined,
+      relations: coreRelations,
     });
   };
 
@@ -72,13 +77,15 @@ export const createTestDatabase = async (
     connect,
     db: connect(),
     drop: async () => {
-      await Promise.all(clients.map(async client => await client.end()));
+      await Promise.all(
+        clients.map(async client => await client.end({ timeout: 5 })),
+      );
       const cleanup = postgres(TEST_POSTGRES_URL, {
         max: 1,
         onnotice: () => {},
       });
       await cleanup.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
-      await cleanup.end();
+      await cleanup.end({ timeout: 5 });
     },
   };
 };

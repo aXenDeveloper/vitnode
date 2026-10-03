@@ -1,18 +1,11 @@
 import { buildRoute } from "@vitnode/core/api/lib/route";
-import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { translateWithAi } from "@/api/lib/ai-writing";
+import {
+  TRANSLATE_FIELD_AI_ACTION,
+  zodTranslateAiSchema,
+} from "@/api/ai/actions";
 import { CONFIG_PLUGIN } from "@/const";
-
-const zodLocale = z.string().min(2).max(16);
-
-export const zodTranslateAiSchema = z.object({
-  format: z.enum(["html", "text"]),
-  from: zodLocale,
-  text: z.string().trim().min(1).max(100_000),
-  to: zodLocale,
-});
 
 export const translateAiAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -35,23 +28,19 @@ export const translateAiAdminRoute = buildRoute({
         },
         description: "The translated text",
       },
-      400: { description: "No AI model is configured" },
+      400: { description: "No AI model is configured or the input is invalid" },
+      403: { description: "No access to posts or to this AI feature" },
+      429: { description: "A personal AI limit was reached" },
+      502: { description: "The AI provider failed or answered unusably" },
+      503: { description: "AI is switched off or the site budget is used up" },
     },
   },
   handler: async c => {
-    if (!c.get("core").ai?.models.length) {
-      throw new HTTPException(400, { message: "No AI models configured" });
-    }
-
-    const { format, from, text, to } = c.req.valid("json");
-    const translated = await translateWithAi({
-      format,
-      from,
-      model: c.get("ai").model(),
-      text,
-      to,
+    const { output } = await c.get("ai").run({
+      action: TRANSLATE_FIELD_AI_ACTION,
+      input: c.req.valid("json"),
     });
 
-    return c.json({ text: translated }, 200);
+    return c.json({ text: output }, 200);
   },
 });

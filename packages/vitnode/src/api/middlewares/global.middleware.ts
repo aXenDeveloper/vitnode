@@ -40,6 +40,7 @@ import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { realtime } from "@/ws/registry";
 
+import type { AiActionRegistry } from "../lib/ai/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
@@ -56,6 +57,7 @@ import type {
 } from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
 
+import { collectAiActions } from "../lib/ai/registry";
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
 import {
@@ -111,6 +113,8 @@ export interface EnvVariablesVitNode {
   cache: CacheModel;
   core: {
     ai?: VitNodeApiConfig["ai"];
+    /** Every plugin's AI actions, validated across all plugins at boot. */
+    aiActions: AiActionRegistry;
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -272,6 +276,9 @@ export const globalMiddleware = ({
   };
 
   const cronMetadata = collectCronJobs(plugins);
+
+  // Across *all* plugins: `buildApiPlugin` only sees its own actions.
+  const aiActionsMetadata = collectAiActions(plugins);
 
   const eventsMetadata: EventListenerConfig[] = plugins.flatMap(plugin =>
     (plugin.events ?? []).map(listener => ({
@@ -435,6 +442,7 @@ export const globalMiddleware = ({
 
     c.set("core", {
       ai,
+      aiActions: aiActionsMetadata,
       i18n: i18nMetadata,
       metadata,
       email,

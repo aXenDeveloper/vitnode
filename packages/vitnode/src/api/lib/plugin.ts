@@ -17,6 +17,7 @@ import {
 } from "@/content/registry";
 
 import type { SearchIndexer } from "../models/search";
+import type { AnyAiActionDefinition } from "./ai/action";
 import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventListenerConfig } from "./events";
@@ -27,6 +28,7 @@ import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
+import { collectAiActions } from "./ai/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { collectNavigationPresets } from "./navigation-presets";
@@ -40,6 +42,8 @@ export interface BuildPluginApiReturn<
   Modules extends readonly BaseBuildModuleReturn<P>[] =
     readonly BaseBuildModuleReturn<P>[],
 > {
+  /** AI actions the plugin offers; Core runs, limits and accounts them. */
+  aiActions?: AnyAiActionDefinition[];
   blocks?: BlockPluginSource;
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
@@ -69,6 +73,7 @@ export function buildApiPlugin<
   const P extends string,
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
 >({
+  aiActions,
   blocks,
   editablePages,
   pluginId,
@@ -79,6 +84,7 @@ export function buildApiPlugin<
   permissionStaff,
   searchIndexers,
 }: {
+  aiActions?: AnyAiActionDefinition[];
   blocks?: BlockPluginSource;
   editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
@@ -106,6 +112,10 @@ export function buildApiPlugin<
   );
 
   collectNavigationPresets([{ navigation, pluginId }]);
+
+  // Duplicates inside one plugin are refused here, named by that plugin;
+  // the API boot repeats the check across every plugin.
+  collectAiActions([{ aiActions, pluginId }]);
 
   const hono = new OpenAPIHono();
   const contentModels: AnyContentModel[] = [];
@@ -172,6 +182,7 @@ export function buildApiPlugin<
 
   return {
     pluginId,
+    aiActions,
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
     messages,
