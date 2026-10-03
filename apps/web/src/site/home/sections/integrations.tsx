@@ -146,7 +146,7 @@ const DOCKER: Integration = {
   role: 'Deploy',
 }
 
-const COLUMNS: Integration[][] = [
+const WIDE_COLUMNS: Integration[][] = [
   [DOCKER],
   [NODEMAILER, TAILWIND],
   [DRIZZLE, TANSTACK_START, TURNSTILE],
@@ -154,6 +154,14 @@ const COLUMNS: Integration[][] = [
   [POSTGRESQL, REACT, S3],
   [AI_SDK, RECAPTCHA],
   [NODE_CRON],
+]
+
+const COMPACT_COLUMNS: Integration[][] = [
+  [NODEMAILER, TAILWIND],
+  [DRIZZLE, TANSTACK_START, TURNSTILE],
+  [NODE_CRON, ELASTICSEARCH, HONO, DOCKER],
+  [POSTGRESQL, REACT, S3],
+  [AI_SDK, RECAPTCHA],
 ]
 
 const TILE = 'mk-integration-tile touch-manipulation'
@@ -211,7 +219,7 @@ const TileFace = ({ integration }: { integration: Integration }) => (
 )
 
 const IntegrationMark = ({ integration }: { integration: Integration }) => {
-  const className = 'mk-integration-mark size-5 sm:size-8 lg:size-11'
+  const className = 'mk-integration-mark sm:size-8 lg:size-11'
 
   if ('glyph' in integration)
     return <integration.glyph aria-hidden className={className} />
@@ -279,6 +287,31 @@ const IntegrationTile = ({ integration }: { integration: Integration }) => (
   </Tooltip>
 )
 
+const IntegrationComb = ({
+  columns,
+  layout,
+}: {
+  columns: Integration[][]
+  layout: 'compact' | 'wide'
+}) => (
+  <div
+    aria-label="Tools VitNode is built on and integrates with"
+    className="mk-integration-comb"
+    data-layout={layout}
+    role="list"
+  >
+    {columns.map((column) => (
+      <div className="mk-integration-column" key={column[0].name}>
+        {column.map((integration) => (
+          <div key={integration.name} role="listitem">
+            <IntegrationTile integration={integration} />
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+)
+
 export const IntegrationsSection = () => (
   <MarketingSection
     className="items-center gap-12 text-center"
@@ -299,21 +332,8 @@ export const IntegrationsSection = () => (
     </div>
 
     <TooltipProvider delay={200}>
-      <div
-        aria-label="Tools VitNode is built on and integrates with"
-        className="mk-integration-comb"
-        role="list"
-      >
-        {COLUMNS.map((column) => (
-          <div className="mk-integration-column" key={column[0].name}>
-            {column.map((integration) => (
-              <div key={integration.name} role="listitem">
-                <IntegrationTile integration={integration} />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+      <IntegrationComb columns={COMPACT_COLUMNS} layout="compact" />
+      <IntegrationComb columns={WIDE_COLUMNS} layout="wide" />
     </TooltipProvider>
 
     <div className="flex flex-col items-center gap-4">

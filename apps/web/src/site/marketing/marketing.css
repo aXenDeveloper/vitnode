@@ -869,7 +869,7 @@
 }
 
 .mk-integration-comb {
-  --hex-w: 3.25rem;
+  --hex-w: min(8rem, (100vw - 2rem) / 4.35);
   --hex-gap: calc(var(--hex-w) * 0.1);
 
   display: flex;
@@ -877,9 +877,28 @@
   justify-content: center;
 }
 
+.mk-integration-comb[data-layout='wide'] {
+  display: none;
+}
+
+@media (width < 40rem) {
+  .mk-integration-mark {
+    width: calc(var(--hex-w) * 0.42);
+    height: calc(var(--hex-w) * 0.42);
+  }
+}
+
 @media (width >= 40rem) {
   .mk-integration-comb {
     --hex-w: 5.5rem;
+  }
+
+  .mk-integration-comb[data-layout='compact'] {
+    display: none;
+  }
+
+  .mk-integration-comb[data-layout='wide'] {
+    display: flex;
   }
 }
 
