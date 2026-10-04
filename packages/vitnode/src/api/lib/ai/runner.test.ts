@@ -220,6 +220,32 @@ describe("AiRunner.run", () => {
     expect(result.usage.chargedPoints).toBe("20");
   });
 
+  it("charges the user only for the call that delivered, never for a lost attempt", async () => {
+    let calls = 0;
+    const model = new MockLanguageModelV4({
+      doGenerate: async () => {
+        calls += 1;
+        if (calls === 1) throw new TypeError("socket hang up");
+
+        return Promise.resolve(generated("Done."));
+      },
+    });
+    const ledger = new MemoryAiLedger({
+      actionSettings: { [SUMMARY]: { maxRetries: 1 } },
+    });
+    const { runner } = setup({ ledger, models: [textModel(model)] });
+
+    const result = await runner.run({ action: SUMMARY, input: { text: "x" } });
+
+    // The lost attempt's cost is unknown: the site pays the whole hold,
+    // the user pays only the 20 points of the answer they got.
+    expect(result.usage).toMatchObject({
+      chargedPoints: "20",
+      costKnown: false,
+    });
+    expect(ledger.spentUsd()).toBe(ledger.runs[0].reservedUsd);
+  });
+
   it("falls back to a compatible model after the primary fails", async () => {
     const ledger = new MemoryAiLedger({
       actionSettings: {

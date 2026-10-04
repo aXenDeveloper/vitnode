@@ -1,16 +1,16 @@
 ---
 title: AI Setup
-description: Configure Vercel AI SDK providers and models in VitNode API config to use with c.get("ai").
+description: Configure Vercel AI SDK models in the VitNode API config, declare what each model can do and what it costs, then use them with c.get("ai").
 icon: Sparkles
 ---
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Register models in `vitnode.api.config.ts` once, then resolve them inside any API handler via `c.get("ai")`.
+VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Register models in `vitnode.api.config.ts` once, then use them inside any API handler via `c.get("ai")`.
 
 ## Quick start
 
-### 1. Configure Models in API Config
+### 1. Configure models in the API config
 
 You can configure models via string identifiers (using AI Gateway) or direct provider instances:
 
@@ -19,13 +19,17 @@ import { openai } from '@ai-sdk/openai'
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:10]
+  // [!code ++:13]
   ai: {
     models: [
       {
         id: 'default',
         name: 'GPT-4o Mini',
         model: openai('gpt-4o-mini'),
+        capabilities: ['text', 'structured-output', 'streaming'],
+        pricing: {
+          rates: { inputPerMillion: '0.15', outputPerMillion: '0.60' },
+        },
       },
     ],
   },
@@ -34,38 +38,140 @@ export const vitNodeApiConfig = buildApiConfig({
 
 Set `OPENAI_API_KEY` in your `.env` file.
 
+`capabilities` and `pricing` are optional, but [AI actions](/docs/dev/ai/actions) rely on them: capabilities decide which model can run an action, and pricing turns token usage into money. See [Model capabilities](#model-capabilities) and [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits).
+
 ---
 
-### 2. Use in Route Handlers
+### 2. Use it in a route handler
+
+For user-facing features, run a registered [AI action](/docs/dev/ai/actions). It checks permissions, limits and budgets, and records the cost:
 
 ```ts
-import { generateText } from 'ai'
-
 handler: async (c) => {
   // [!code ++:4]
-  const { text } = await generateText({
-    model: c.get('ai').model(), // Resolves the configured "default" model
-    prompt: 'Write a summary of this discussion.',
+  const { output } = await c.get('ai').run({
+    action: EXCERPT_AI_ACTION,
+    input: c.req.valid('json'),
   })
 
-  return c.json({ text })
+  return c.json({ text: output })
 }
 ```
 
+For internal tooling you can also resolve the raw model and call the SDK directly - see [AI Usage](/docs/dev/ai/usage).
+
 ---
 
-## Multiple Models & Embeddings
+## Model capabilities
+
+A capability says what a configured language model can do. VitNode never guesses it from the model's name. A model without `capabilities` is treated as `["text"]`.
+
+| Capability          | Meaning                                          |
+| :------------------ | :----------------------------------------------- |
+| `text`              | Text in, text out.                               |
+| `image-input`       | Accepts images in the prompt (vision).           |
+| `structured-output` | Returns reliable JSON objects (`Output.object`). |
+| `streaming`         | Streams tokens with `streamText`.                |
+
+Every [AI action](/docs/dev/ai/actions) declares the capabilities it needs. When a run starts, VitNode picks the first configured model that has all of them. If no model fits, the run fails with `AI_MODEL_INCOMPATIBLE` before anything is sent to a provider.
+
+<Callout type="warn" title="Vision is not image generation">
+  `image-input` means the model can _read_ images, which features such as image
+  ALT text need. Generating images is a different thing: register those models
+  under `imageModels` and resolve them with `c.get("ai").imageModel()`. Add
+  `image-input` only to models whose provider docs say they accept images -
+  otherwise VitNode keeps images away from them.
+</Callout>
+
+---
+
+## Model pricing
+
+`pricing` is what the model costs **on this connection**, in USD per one million tokens. Prices are decimal strings, so money never goes through floating point:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+{
+  id: 'default',
+  name: 'Claude Sonnet',
+  model: anthropic('claude-sonnet-4-5'),
+  capabilities: ['text', 'image-input', 'structured-output', 'streaming'],
+  // [!code ++:8]
+  pricing: {
+    rates: {
+      inputPerMillion: '3',
+      outputPerMillion: '15',
+      cacheReadPerMillion: '0.30',
+      cacheWritePerMillion: '3.75',
+    },
+  },
+}
+```
+
+Without pricing, a call's cost stays **unknown** - never zero. Under a budget cap, a model with no pricing is refused with `AI_PRICING_MISSING`. Tiers, flat fees, gateway vs direct pricing and admin overrides are covered in [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits#pricing).
+
+### Model options
+
+<TypeTable
+  type={{
+    id: {
+      description: 'Stable id. The first model is the default.',
+      type: 'string',
+      required: true,
+    },
+    name: {
+      description: 'Label shown in the AdminCP and model pickers.',
+      type: 'string',
+      required: true,
+    },
+    model: {
+      description: 'An AI SDK model instance, or an AI Gateway id string.',
+      type: 'LanguageModel',
+      required: true,
+    },
+    capabilities: {
+      description: 'What the model can do. Vision is never assumed.',
+      type: 'AiModelCapability[]',
+      default: '["text"]',
+    },
+    pricing: {
+      description: 'USD per million tokens on this connection.',
+      type: 'AiPricing',
+    },
+    imageInputTokens: {
+      description:
+        'Tokens one input image may count as, used to reserve budget for vision calls.',
+      type: 'number',
+      default: '2000',
+    },
+  }}
+/>
+
+`ai` also accepts `providerAdapters` - readers for providers that report their own cost. The AI Gateway and OpenRouter readers are built in. See [Provider-reported cost](/docs/dev/ai/costs-and-limits#provider-reported-cost).
+
+---
+
+## Multiple models & embeddings
 
 Configure dedicated models for fast completions, reasoning, and vector embeddings:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 ai: {
   models: [
-    { id: "default", name: "GPT-4o Mini", model: openai("gpt-4o-mini") },
-    { id: "reasoning", name: "Claude 3.5 Sonnet", model: anthropic("claude-3-5-sonnet-20241022") },
+    {
+      id: 'default',
+      name: 'GPT-4o Mini',
+      model: openai('gpt-4o-mini'),
+      capabilities: ['text', 'structured-output', 'streaming'],
+    },
+    {
+      id: 'reasoning',
+      name: 'Claude Sonnet',
+      model: 'anthropic/claude-sonnet-5', // AI Gateway id
+      capabilities: ['text', 'image-input', 'structured-output', 'streaming'],
+    },
   ],
   embeddingModels: [
-    { id: "default", name: "Text Embedding 3", model: openai.embedding("text-embedding-3-small") },
+    { id: 'default', name: 'Text Embedding 3', model: openai.embedding('text-embedding-3-small') },
   ],
 }
 ```
@@ -75,15 +181,26 @@ Resolve specific models by ID:
 ```ts
 const smartModel = c.get('ai').model('reasoning')
 const embedModel = c.get('ai').embeddingModel()
+const capabilities = c.get('ai').capabilities('reasoning') // ['text', 'image-input', ...]
 ```
+
+`model()`, `embeddingModel()`, `imageModel()` and `models()` work as before. Admins can assign a different model (and a fallback) to each action in the AdminCP; an assigned model that lacks a required capability is refused.
 
 ---
 
-## Reading the Model List in the Browser
+## Reading the model list in the browser
 
-Provider instances and API keys stay on the server. What the browser gets is the
-public half of each entry - `id`, `name`, and the provider's model id string -
-published on the middleware route and read with
+Provider instances, API keys and prices stay on the server. `c.get("ai").models()` returns only the public half of each entry:
+
+| Field          | Value                                                                 |
+| :------------- | :-------------------------------------------------------------------- |
+| `id`           | The configured id, e.g. `"default"`.                                  |
+| `name`         | The configured label.                                                 |
+| `model`        | The provider's model id string, e.g. `"gpt-4o-mini"`.                 |
+| `provider`     | `"gateway"` for AI Gateway ids, otherwise the SDK model's `provider`. |
+| `capabilities` | The declared capabilities, or `["text"]`.                             |
+
+The middleware route publishes this list, and the browser reads it with
 [`useMiddlewareConfigQuery()`](/docs/dev/fetcher#deployment-configuration):
 
 ```tsx title="plugins/writer/src/pages/model-picker.tsx"
@@ -111,9 +228,19 @@ The first entry is the default - the one `c.get("ai").model()` resolves when a
 handler is given no id. The list is empty when no `ai.models` are configured, so
 a picker can hide itself rather than offering nothing.
 
-## Learn More
+## Learn more
 
 <Cards>
+  <Card
+    title="AI Actions"
+    description="Managed AI features with permissions, limits and history"
+    href="/docs/dev/ai/actions"
+  />
+  <Card
+    title="Costs, Points & Budgets"
+    description="Pricing, AI points, budgets and what happens on failure"
+    href="/docs/dev/ai/costs-and-limits"
+  />
   <Card
     title="AI Usage"
     description="Streaming text, structured outputs, and embeddings"

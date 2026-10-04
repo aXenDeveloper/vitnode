@@ -1,6 +1,6 @@
 {
   "title": "AI",
-  "description": "Register Vercel AI SDK models once, then resolve them in any route with c.get(\"ai\")",
+  "description": "Register Vercel AI SDK models once, then run managed AI actions with permissions, budgets and history via c.get(\"ai\")",
   "icon": "Sparkles",
-  "pages": ["index", "usage"]
+  "pages": ["index", "actions", "costs-and-limits", "usage"]
 }

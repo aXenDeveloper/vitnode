@@ -4,11 +4,22 @@ description: Text generation, streaming responses, structured output, and embedd
 icon: Bot
 ---
 
-import { ImgDocs } from "@/components/fumadocs/img"
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
-import routing from "./ai-registry-routing.svg"
+import { ImgDocs } from '@/components/fumadocs/img'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import routing from './ai-registry-routing.svg'
 
 VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from `c.get("ai")` and call native SDK functions directly.
+
+<Callout
+  type="warn"
+  title="Building a feature users can trigger? Use an AI action"
+>
+  Calling `generateText` with `c.get("ai").model()` bypasses permissions,
+  budgets, AI points and run history - nobody pays attention to the bill until
+  the bill arrives. For user-facing features, define an [AI
+  action](/docs/dev/ai/actions) and run it with `c.get("ai").run()`. Keep direct
+  SDK calls for internal tooling you fully control.
+</Callout>
 
 <ImgDocs
   src={routing}
@@ -18,11 +29,11 @@ VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from 
 
 ## Model Resolvers
 
-| Resolver | Returned Type | Used By |
-| :--- | :--- | :--- |
-| `c.get("ai").model(id?)` | `LanguageModel` | `generateText`, `streamText`, `generateObject` |
-| `c.get("ai").embeddingModel(id?)` | `EmbeddingModel` | `embed`, `embedMany` |
-| `c.get("ai").imageModel(id?)` | `ImageModel` | `generateImage` |
+| Resolver                          | Returned Type    | Used By                                        |
+| :-------------------------------- | :--------------- | :--------------------------------------------- |
+| `c.get("ai").model(id?)`          | `LanguageModel`  | `generateText`, `streamText`, `generateObject` |
+| `c.get("ai").embeddingModel(id?)` | `EmbeddingModel` | `embed`, `embedMany`                           |
+| `c.get("ai").imageModel(id?)`     | `ImageModel`     | `generateImage`                                |
 
 ---
 
@@ -31,33 +42,33 @@ VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from 
 Generate text responses in a Hono API route:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/summarize.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route"
-import { generateText } from "ai"
-import { z } from "zod"
+import { buildRoute } from '@vitnode/core/api/lib/route'
+import { generateText } from 'ai'
+import { z } from 'zod'
 
 export const summarizeRoute = buildRoute({
-  pluginId: "blog",
+  pluginId: 'blog',
   route: {
-    method: "post",
-    path: "/summarize",
+    method: 'post',
+    path: '/summarize',
     request: {
       body: {
         content: {
-          "application/json": { schema: z.object({ text: z.string().min(1) }) },
+          'application/json': { schema: z.object({ text: z.string().min(1) }) },
         },
       },
     },
     responses: {
-      200: { description: "Text summary" },
+      200: { description: 'Text summary' },
     },
   },
   handler: async (c) => {
-    const { text } = c.req.valid("json")
+    const { text } = c.req.valid('json')
 
     // [!code ++:6]
     const { text: summary } = await generateText({
-      model: c.get("ai").model(),
-      system: "You are a concise summary assistant.",
+      model: c.get('ai').model(),
+      system: 'You are a concise summary assistant.',
       prompt: `Summarize the following content:
 
 ${text}`,
@@ -75,12 +86,12 @@ ${text}`,
 Stream LLM responses directly to the client:
 
 ```ts
-import { streamText } from "ai"
+import { streamText } from 'ai'
 
 handler: async (c) => {
   const result = streamText({
-    model: c.get("ai").model(),
-    prompt: "Write an introduction to WebSockets.",
+    model: c.get('ai').model(),
+    prompt: 'Write an introduction to WebSockets.',
   })
 
   // [!code ++:1]
@@ -95,8 +106,8 @@ handler: async (c) => {
 Extract strongly typed JSON from model completions using Zod:
 
 ```ts
-import { generateObject } from "ai"
-import { z } from "zod"
+import { generateObject } from 'ai'
+import { z } from 'zod'
 
 const postMetadataSchema = z.object({
   title: z.string(),
@@ -106,9 +117,9 @@ const postMetadataSchema = z.object({
 
 // [!code ++:6]
 const { object } = await generateObject({
-  model: c.get("ai").model(),
+  model: c.get('ai').model(),
   schema: postMetadataSchema,
-  prompt: "Generate SEO metadata for an article on Postgres indexing.",
+  prompt: 'Generate SEO metadata for an article on Postgres indexing.',
 })
 ```
 
@@ -119,12 +130,12 @@ const { object } = await generateObject({
 Calculate vector embeddings for semantic search:
 
 ```ts
-import { embed } from "ai"
+import { embed } from 'ai'
 
 // [!code ++:4]
 const { embedding } = await embed({
-  model: c.get("ai").embeddingModel(),
-  value: "How to configure Redis caching in VitNode",
+  model: c.get('ai').embeddingModel(),
+  value: 'How to configure Redis caching in VitNode',
 })
 ```
 

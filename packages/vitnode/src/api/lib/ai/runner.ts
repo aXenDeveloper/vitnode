@@ -884,18 +884,20 @@ export class AiRunner {
           runId,
           new Date(Date.now() + this.leaseMs(plan)),
         );
-        callId = await this.ledger.beginCall({
-          attempt: 1,
-          modelId: model.definition.id,
-          provider: model.provider,
-          providerModelId: model.providerModelId,
-          runId,
-          startedAt: new Date(),
-        });
       },
       pull: async streamController => {
         try {
           if (!activeStream) {
+            // Recorded on the first read, right before the provider call: a
+            // stream nobody reads costs nothing and records no call.
+            callId = await this.ledger.beginCall({
+              attempt: 1,
+              modelId: model.definition.id,
+              provider: model.provider,
+              providerModelId: model.providerModelId,
+              runId,
+              startedAt: new Date(),
+            });
             activeStream = streamText({
               ...promptArgs(plan.prompt),
               abortSignal: combineSignals(controller.signal, plan.timeoutMs),

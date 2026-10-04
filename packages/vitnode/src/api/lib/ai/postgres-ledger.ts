@@ -37,6 +37,7 @@ import {
 } from "../../../database/users";
 import { PG_ERROR_CODES, pgErrorCode } from "../../../lib/api/pg-error";
 import {
+  deliveredCostUsd,
   findExceededBudget,
   planBudgetItems,
   settlementCharge,
@@ -562,6 +563,13 @@ export class PostgresAiLedger implements AiLedger {
       for (const hold of holds) {
         const charge = settlementCharge({
           chargedUsd,
+          deliveredUsd: deliveredCostUsd(
+            calls.map(call => ({
+              costUsd: parseDecimalOrNull(call.costUsd),
+              status: call.status,
+            })),
+            reservedUsd,
+          ),
           delivered: settlement.delivered,
           unit: hold.unit,
         });

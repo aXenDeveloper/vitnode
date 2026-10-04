@@ -129,25 +129,44 @@ export const findExceededBudget = (
 };
 
 /**
+ * What the user is charged for: the calls that produced the delivered result.
+ * A failed attempt before it - a timeout, a provider error - is the site's
+ * cost alone. A delivered call whose cost is unknown is charged the whole
+ * hold: unknown is never free.
+ */
+export const deliveredCostUsd = (
+  calls: { costUsd: Decimal | null; status: string }[],
+  reservedUsd: Decimal,
+): Decimal => {
+  const succeeded = calls.filter(call => call.status === "succeeded");
+  if (succeeded.some(call => call.costUsd === null)) return reservedUsd;
+
+  return succeeded.reduce((total, call) => total + (call.costUsd ?? 0n), 0n);
+};
+
+/**
  * What settling one reservation moves into `spent`.
  *
  * - Money budgets always pay what the site paid. An unknown cost is charged
  *   the full reservation - never zero.
  * - Personal points and daily counts are charged only when a valid result was
- *   delivered. A provider failure or a cancellation costs the user nothing.
+ *   delivered, and points only for the calls that produced it. A provider
+ *   failure or a cancellation costs the user nothing.
  */
 export const settlementCharge = ({
   chargedUsd,
   delivered,
+  deliveredUsd,
   unit,
 }: {
   chargedUsd: Decimal;
   delivered: boolean;
+  deliveredUsd: Decimal;
   unit: AiBudgetUnit;
 }): Decimal => {
   if (unit === "usd") return chargedUsd;
   if (!delivered) return 0n;
-  if (unit === "points") return usdToPoints(chargedUsd);
+  if (unit === "points") return usdToPoints(deliveredUsd);
 
   return decimalFromInteger(1);
 };

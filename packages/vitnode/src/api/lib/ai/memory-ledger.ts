@@ -15,6 +15,7 @@ import type {
 } from "./ledger";
 
 import {
+  deliveredCostUsd,
   findExceededBudget,
   planBudgetItems,
   settlementCharge,
@@ -276,9 +277,17 @@ export class MemoryAiLedger implements AiLedger {
       });
     }
 
-    const costs = this.calls
-      .filter(call => call.runId === runId)
-      .map(call => parseDecimalOrNull(call.finish?.cost.amountUsd ?? null));
+    const runCalls = this.calls.filter(call => call.runId === runId);
+    const costs = runCalls.map(call =>
+      parseDecimalOrNull(call.finish?.cost.amountUsd ?? null),
+    );
+    const deliveredUsd = deliveredCostUsd(
+      runCalls.map(call => ({
+        costUsd: parseDecimalOrNull(call.finish?.cost.amountUsd ?? null),
+        status: call.finish?.status ?? "uncertain",
+      })),
+      run.reservedUsd,
+    );
     const known = costs.every(cost => cost !== null);
     const knownUsd = sumDecimals(costs.filter((c): c is Decimal => c !== null));
     const chargedUsd = known ? knownUsd : maxDecimal(run.reservedUsd, knownUsd);
@@ -289,6 +298,7 @@ export class MemoryAiLedger implements AiLedger {
       if (!row) continue;
       const charge = settlementCharge({
         chargedUsd,
+        deliveredUsd,
         delivered: settlement.delivered,
         unit: hold.unit,
       });

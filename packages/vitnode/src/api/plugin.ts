@@ -6,6 +6,7 @@ import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
+import { aiModule } from "./modules/ai/ai.module";
 import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
@@ -28,6 +29,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     usersModule,
     notificationsModule,
     adminModule,
+    aiModule,
     contentModule,
     cronModule,
     pagesModule,
@@ -85,6 +87,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_edit", dependsOn: ["can_view"] },
         { permission: "can_manage", dependsOn: ["can_view"] },
       ],
+      ai: ["can_view", { permission: "can_manage", dependsOn: ["can_view"] }],
       cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
       staff_moderators: [
         "can_view",

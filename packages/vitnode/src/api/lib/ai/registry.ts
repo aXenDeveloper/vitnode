@@ -1,11 +1,11 @@
+import type { z } from "zod";
+
 import type {
   AiActionDefaults,
   AiActionOutputMode,
   AiActorType,
   AnyAiActionDefinition,
 } from "./action";
-import type { z } from "zod";
-
 import type { AiModelCapability } from "./capabilities";
 
 import { AiActionDefinitionError } from "./action";

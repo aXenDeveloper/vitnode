@@ -510,6 +510,24 @@ own preferences are saved, by them or by staff on their AdminCP user page.
 pauses, deletes or resets everything, or note when staff changed how a single
 member is notified.
 
+## AI events
+
+Declared in `VitNodeEvents` in `packages/vitnode/src/api/models/events.ts` and
+emitted by the shared AI runner (see [AI Actions](/docs/dev/ai/actions)). They
+fire **after** the run was settled, so its cost and points are already in the
+history when a listener reads it. A failing listener never breaks the run.
+
+| Event              | Payload                                              | Fires when                                                               |
+| ------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| `ai.run.completed` | `{ actionKey, actorType, runId, userId }`            | A managed AI run delivered a valid result                                |
+| `ai.run.failed`    | `{ actionKey, actorType, errorCode, runId, userId }` | A run ended without a valid result: provider failure, cancel, bad output |
+
+`userId` is `null` for system work such as automatic ALT text. Prompts and
+outputs are never part of the payload.
+
+**A listener would** post a notice when an editor's AI suggestion fails, or
+count AI usage per plugin in your own analytics.
+
 ## Page layout events
 
 One name, declared in `VitNodeEvents` in

@@ -470,14 +470,29 @@ describe("budget planning", () => {
     const chargedUsd = usd("0.002");
 
     expect(
-      settlementCharge({ chargedUsd, delivered: false, unit: "points" }),
+      settlementCharge({
+        chargedUsd,
+        delivered: false,
+        deliveredUsd: chargedUsd,
+        unit: "points",
+      }),
     ).toBe(0n);
     expect(
-      settlementCharge({ chargedUsd, delivered: false, unit: "usd" }),
+      settlementCharge({
+        chargedUsd,
+        delivered: false,
+        deliveredUsd: chargedUsd,
+        unit: "usd",
+      }),
     ).toBe(chargedUsd);
     expect(
       formatDecimal(
-        settlementCharge({ chargedUsd, delivered: true, unit: "points" }),
+        settlementCharge({
+          chargedUsd,
+          delivered: true,
+          deliveredUsd: chargedUsd,
+          unit: "points",
+        }),
       ),
     ).toBe("2");
   });
