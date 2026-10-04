@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "./alert-dialog";
 import { Button } from "./button";
+import { modalScrimClassName } from "./modal-scrim";
 
 const DialogContext = React.createContext<{
   isDirty?: boolean;
@@ -30,6 +31,8 @@ const DialogContext = React.createContext<{
 });
 
 const useDialog = () => React.use(DialogContext);
+
+const alwaysRestoreFocus = () => true;
 
 function Dialog({
   onOpenChange,
@@ -104,7 +107,7 @@ function Dialog({
         onOpenChange={setOpenAlertDialogBeforeClose}
         open={openAlertDialogBeforeClose}
       >
-        <AlertDialogContent>
+        <AlertDialogContent finalFocus={alwaysRestoreFocus}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {t("are_you_sure_want_to_leave_form.title")}
@@ -120,7 +123,7 @@ function Dialog({
             <AlertDialogAction
               onClick={() => {
                 setIsDirty(false);
-                setTimeout(() => changeOpen(false), 100);
+                changeOpen(false);
               }}
             >
               {t("are_you_sure_want_to_leave_form.confirm")}
@@ -151,7 +154,8 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/30 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/60",
+        modalScrimClassName,
+        "duration-200 data-ending-style:duration-150",
         className,
       )}
       data-slot="dialog-overlay"
@@ -175,8 +179,8 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         className={cn(
-          "dark:bg-background bg-card fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl transition-[opacity,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 sm:max-w-lg",
-          "max-h-[calc(100vh-2rem)] overflow-y-scroll sm:max-h-[calc(100vh-5rem)]",
+          "bg-popover text-popover-foreground ease-fluid fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl transition-[opacity,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none sm:max-w-lg",
+          "max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-5rem)]",
           className,
         )}
         data-slot="dialog-content"
@@ -188,7 +192,12 @@ function DialogContent({
             className="absolute end-4 top-4"
             data-slot="dialog-close"
             render={
-              <Button aria-label={t("close")} size="icon-sm" variant="ghost" />
+              <Button
+                aria-label={t("close")}
+                className="pointer-coarse:size-10"
+                size="icon-sm"
+                variant="ghost"
+              />
             }
           >
             <XIcon />
@@ -222,7 +231,7 @@ function DialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "bg-muted/50 -mx-6 -mb-6 flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="dialog-footer"
@@ -242,7 +251,10 @@ function DialogFooter({
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
-      className={cn("font-heading leading-none font-medium", className)}
+      className={cn(
+        "font-heading text-lg leading-tight font-semibold text-balance",
+        className,
+      )}
       data-slot="dialog-title"
       {...props}
     />

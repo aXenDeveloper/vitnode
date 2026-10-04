@@ -1,0 +1,85 @@
+---
+title: Icons
+description: VitNode's icon system - lucide-react icons, a size scale, auto-sized icons in buttons and badges, icons loaded by name, brand logos and accessible icon-only buttons.
+icon: Shapes
+---
+
+VitNode uses [lucide-react](https://lucide.dev/icons) for icons: over 1,500
+outlined icons with one stroke style. Components size them for you, so most of
+the time you just drop one in.
+
+## Size scale
+
+<Preview name="icons-sizes" className="*:max-w-full" />
+
+`size-4` is the default. It matches `text-sm`, the size of buttons, menus and
+inputs. Go up for navigation and empty states, down for badges.
+
+## Icons in components
+
+<Preview name="icons-in-context" className="*:max-w-full" />
+
+Buttons, badges and input groups size any child `svg` that has no `size-*`
+class. Add `data-icon="inline-start"` or `"inline-end"` so the button trims
+its padding on that side.
+
+```tsx
+<Button>
+  <PlusIcon data-icon="inline-start" />
+  New post
+</Button>
+```
+
+## Stroke
+
+<Preview name="icons-stroke" className="*:max-w-full" />
+
+Keep the default `strokeWidth={2}`. It sits right next to `font-medium` text.
+Thinner or bolder strokes are for big hero icons, not your toolbar.
+
+## Icons by name
+
+<Preview name="icons-dynamic" />
+
+Store an icon as a string and render it with `DynamicIcon`. Each icon loads on
+its own, and icons rendered on the server arrive with the page, so nothing pops
+in. An unknown name renders nothing.
+
+```tsx
+import { DynamicIcon } from '@vitnode/core/components/ui/dynamic-icon'
+
+<DynamicIcon className="size-5" name="shield-check" />
+```
+
+Letting users pick one? The [Emoji & Icon Picker](/docs/ui/emoji-icon-picker)
+returns exactly this name.
+
+## Do and don't
+
+<Preview name="icons-do-dont" className="*:max-w-full" />
+
+- Lucide hides icons from screen readers by default (`aria-hidden="true"`), so
+  an icon next to text needs nothing extra.
+- Icon-only buttons need an `aria-label`. TypeScript asks for it on `size="icon"`.
+- Lucide has no brand logos. Use an inline SVG with `fill="currentColor"` and
+  `aria-hidden`.
+
+## Related
+
+<Cards>
+  <Card
+    title="Emoji & Icon Picker"
+    href="/docs/ui/emoji-icon-picker"
+    description="Let users pick an emoji or a lucide icon."
+  />
+  <Card
+    title="Typography"
+    href="/docs/ui/typography"
+    description="The text sizes your icons line up with."
+  />
+  <Card
+    title="Accessibility"
+    href="/docs/ui/accessibility"
+    description="Labels, focus and screen readers."
+  />
+</Cards>

@@ -1,0 +1,148 @@
+---
+title: Empty
+description: Empty states for lists, tables and searches with nothing to show yet - an icon, a short message and a next step.
+icon: PackageOpen
+---
+
+<Preview name="empty" />
+
+## Usage
+
+```ts
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@vitnode/core/components/ui/empty'
+```
+
+```tsx
+<Empty>
+  <EmptyHeader>
+    <EmptyMedia variant="icon">
+      <FolderCode />
+    </EmptyMedia>
+    <EmptyTitle>No projects yet</EmptyTitle>
+    <EmptyDescription>
+      Start a fresh one or import a repository.
+    </EmptyDescription>
+  </EmptyHeader>
+  <EmptyContent>
+    <Button>Create project</Button>
+  </EmptyContent>
+</Empty>
+```
+
+Use it wherever a screen would otherwise show nothing: a blank table, a fresh
+dashboard, a search with zero hits.
+
+- `Empty` centers everything and fills its parent (`flex-1`).
+- `EmptyHeader` groups media, title and description.
+- `EmptyDescription` says why it's empty. Links inside get underlined.
+- `EmptyContent` holds actions, a search box or anything clickable.
+
+## Media
+
+<Preview name="empty-avatar" />
+
+`variant="icon"` puts the icon on a muted tile and sizes it. The `default`
+variant adds no styles, so use it for avatars and illustrations.
+
+```tsx
+<EmptyMedia>
+  <Avatar size="lg">
+    <AvatarImage alt="" src={user.avatar} />
+    <AvatarFallback>AL</AvatarFallback>
+  </Avatar>
+</EmptyMedia>
+```
+
+## Outline
+
+<Preview name="empty-outline" />
+
+The dashed border style is built in. Add `border` for a drop-zone look, or
+`border-2` when it sits alone on a page.
+
+```tsx
+<Empty className="border">...</Empty>
+```
+
+## No results
+
+<Preview name="empty-search" />
+
+A search miss is not the same as "no data yet". Echo the query back and offer a
+way out.
+
+```tsx
+<EmptyDescription>Nothing matches "{query}".</EmptyDescription>
+<EmptyContent>
+  <Button onClick={() => setQuery('')} size="sm" variant="outline">
+    Clear search
+  </Button>
+</EmptyContent>
+```
+
+## Compact
+
+<Preview name="empty-compact" />
+
+The default padding is `p-6 md:p-12`. In a card, sidebar or popover, keep it at
+`p-6` and shrink the text.
+
+```tsx
+<Empty className="p-6">
+  <EmptyHeader>
+    <EmptyTitle className="text-sm">No widgets yet</EmptyTitle>
+    <EmptyDescription className="text-xs">
+      Widgets from your plugins will show up here.
+    </EmptyDescription>
+  </EmptyHeader>
+</Empty>
+```
+
+## Writing tips
+
+- **Say what's missing.** "No projects yet" beats "Nothing here".
+- **Say why.** Brand new, filtered out, or a search miss?
+- **Give one next step.** If there's nothing to do, a clear description is
+  enough.
+- **Keep it short.** Nobody reads an essay about an empty table.
+- **Skip the blame.** "No results for 'xylphone'", not "You typed it wrong".
+
+## Accessibility
+
+- `EmptyTitle` renders an `h3`. Match your outline with `render={<h2 />}`, or
+  use `render={<p />}` inside a small widget that shouldn't add a heading.
+- Icons and avatars are decorative, since the title says what's missing. Use
+  `alt=""` on images.
+- When results change as the user types, announce the count in a
+  `role="status"` region, like an `sr-only` paragraph.
+
+## Props
+
+All parts take regular `div` props. `EmptyTitle` takes `h3` props plus
+`render`.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### EmptyMedia
+
+<TypeTable
+  type={{
+    variant: {
+      description:
+        '`icon` puts the child on a muted tile and sizes it. `default` adds no styles.',
+      type: 'default | icon',
+      default: 'default',
+    },
+  }}
+/>
+
+## API Reference
+
+[shadcn/ui - Empty](https://ui.shadcn.com/docs/components/base/empty)

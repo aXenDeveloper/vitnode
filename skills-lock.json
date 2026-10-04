@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "performance-profiler": {
+      "source": "alirezarezvani/claude-skills",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/performance-profiler/SKILL.md",
+      "computedHash": "eae0d54bc40a3c8921b5724fb582e0bde7ef1e3e4a57870274c7ef39873f146d"
+    }
+  }
+}

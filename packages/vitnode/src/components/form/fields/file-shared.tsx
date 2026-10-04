@@ -2,8 +2,10 @@ import { cn } from "cn";
 import {
   FileIcon,
   LoaderCircleIcon,
+  RotateCcwIcon,
   TriangleAlertIcon,
   UploadIcon,
+  XIcon,
 } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -12,6 +14,7 @@ import type { FileRejectionReason } from "@/lib/file-constraints";
 
 import {
   Attachment,
+  AttachmentAction,
   AttachmentActions,
   AttachmentContent,
   AttachmentDescription,
@@ -19,6 +22,7 @@ import {
   AttachmentTitle,
 } from "@/components/ui/attachment";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { fileFormatLabels } from "@/lib/file-constraints";
@@ -154,13 +158,37 @@ export const FileConstraintsLine = ({
   );
 };
 
+const carriesFiles = (event: React.DragEvent) =>
+  [...event.dataTransfer.types].includes("Files");
+
+const UploadProgress = ({
+  label,
+  progress,
+}: {
+  label: string;
+  progress: number;
+}) => {
+  const percent = Math.round(progress * 100);
+
+  return (
+    <div className="flex w-full items-center gap-2" data-slot="file-progress">
+      <Progress aria-label={label} className="flex-1" value={percent} />
+      <span className="text-muted-foreground w-9 shrink-0 text-end text-xs tabular-nums">
+        {percent}%
+      </span>
+    </div>
+  );
+};
+
 export const FileDropzone = ({
   accept,
   disabled,
   disabledLabel,
   multiple = false,
+  onCancel,
   onPick,
   pending,
+  progress = null,
   promptLabel,
   state,
 }: {
@@ -168,49 +196,40 @@ export const FileDropzone = ({
   disabled?: boolean;
   disabledLabel?: string;
   multiple?: boolean;
+  onCancel?: () => void;
   onPick: (files: File[]) => void;
   pending: boolean;
+  progress?: null | number;
   promptLabel: string;
   state: "done" | "error" | "idle" | "uploading";
 }) => {
   const t = useTranslations("core.global.file");
+  const inputId = React.useId();
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const dragDepthRef = React.useRef(0);
   const [isDragging, setIsDragging] = React.useState(false);
+  const isInteractive = !disabled && !pending;
 
   const pick = (list: FileList | null) => {
-    if (disabled) return;
+    if (!isInteractive) return;
 
     const files = [...(list ?? [])];
     if (files.length > 0) onPick(files);
   };
 
+  const endDrag = () => {
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+  };
+
   return (
-    <div
-      className={cn(
-        "border-input flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors",
-        isDragging && "border-primary bg-primary/5",
-        state === "error" && "border-destructive/40",
-        disabled && "opacity-60",
-      )}
-      data-slot="file-dropzone"
-      onDragLeave={event => {
-        event.preventDefault();
-        setIsDragging(false);
-      }}
-      onDragOver={event => {
-        event.preventDefault();
-        if (!disabled) setIsDragging(true);
-      }}
-      onDrop={event => {
-        event.preventDefault();
-        setIsDragging(false);
-        pick(event.dataTransfer.files);
-      }}
-    >
+    <>
       <input
         accept={accept}
         className="hidden"
-        disabled={disabled}
+        data-slot="file-input"
+        disabled={!isInteractive}
+        id={inputId}
         multiple={multiple}
         onChange={event => {
           pick(event.target.files);
@@ -220,35 +239,89 @@ export const FileDropzone = ({
         tabIndex={-1}
         type="file"
       />
+      <label
+        className={cn(
+          "border-input ease-fluid flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors duration-150 motion-reduce:transition-none",
+          isInteractive && "hover:bg-muted/50 cursor-pointer",
+          isDragging && "border-primary bg-primary/5",
+          state === "error" && "border-destructive/40",
+          disabled && "opacity-60",
+        )}
+        data-dragging={isDragging ? "" : undefined}
+        data-slot="file-dropzone"
+        htmlFor={inputId}
+        onDragEnter={event => {
+          if (!carriesFiles(event)) return;
 
-      {pending ? (
-        <>
-          <LoaderCircleIcon
-            aria-hidden
-            className="text-muted-foreground size-5 animate-spin"
-          />
-          <span className="text-muted-foreground text-sm">
-            {t("uploading")}
-          </span>
-        </>
-      ) : (
-        <>
-          <UploadIcon aria-hidden className="text-muted-foreground size-5" />
-          <span className="text-muted-foreground text-sm">
-            {disabled ? disabledLabel : promptLabel}
-          </span>
-          <Button
-            disabled={disabled}
-            onClick={() => inputRef.current?.click()}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            {t(multiple ? "choose_many" : "choose")}
-          </Button>
-        </>
-      )}
-    </div>
+          event.preventDefault();
+          dragDepthRef.current += 1;
+          if (isInteractive) setIsDragging(true);
+        }}
+        onDragLeave={event => {
+          if (!carriesFiles(event)) return;
+
+          dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+          if (dragDepthRef.current === 0) setIsDragging(false);
+        }}
+        onDragOver={event => {
+          if (!carriesFiles(event)) return;
+
+          event.preventDefault();
+          event.dataTransfer.dropEffect = isInteractive ? "copy" : "none";
+        }}
+        onDrop={event => {
+          event.preventDefault();
+          endDrag();
+          pick(event.dataTransfer.files);
+        }}
+      >
+        {pending ? (
+          <>
+            <LoaderCircleIcon
+              aria-hidden
+              className="text-muted-foreground size-5 animate-spin motion-reduce:animate-none"
+            />
+            <span className="text-muted-foreground text-sm">
+              {t("uploading")}
+            </span>
+            {progress !== null && (
+              <div className="w-full max-w-xs">
+                <UploadProgress label={t("uploading")} progress={progress} />
+              </div>
+            )}
+            {!!onCancel && (
+              <Button
+                onClick={event => {
+                  event.stopPropagation();
+                  onCancel();
+                }}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {t("cancel_upload")}
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <UploadIcon aria-hidden className="text-muted-foreground size-5" />
+            <span className="text-muted-foreground text-sm text-balance">
+              {disabled ? disabledLabel : promptLabel}
+            </span>
+            <Button
+              disabled={disabled}
+              onClick={() => inputRef.current?.click()}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              {t(multiple ? "choose_many" : "choose")}
+            </Button>
+          </>
+        )}
+      </label>
+    </>
   );
 };
 
@@ -275,7 +348,11 @@ export const FileCard = ({
   <Attachment className="w-full" state={state}>
     {!!leading && <FileCardLeading>{leading}</FileCardLeading>}
     <AttachmentMedia variant={isImageFile(file) ? "image" : "icon"}>
-      {isImageFile(file) ? <img alt="" src={file.url} /> : <FileIcon />}
+      {isImageFile(file) ? (
+        <img alt="" decoding="async" loading="lazy" src={file.url} />
+      ) : (
+        <FileIcon />
+      )}
     </AttachmentMedia>
     <AttachmentContent>
       <AttachmentTitle>{file.name}</AttachmentTitle>
@@ -290,10 +367,14 @@ export const FileCard = ({
 export const FileCardSkeleton = ({
   leading,
   name,
+  onCancel,
+  progress = null,
   size,
 }: {
   leading?: React.ReactNode;
   name: string;
+  onCancel?: () => void;
+  progress?: null | number;
   size: number;
 }) => {
   const t = useTranslations("core.global.file");
@@ -304,26 +385,101 @@ export const FileCardSkeleton = ({
       <AttachmentMedia variant="image">
         <Skeleton className="size-full rounded-none" />
       </AttachmentMedia>
-      <AttachmentContent>
+      <AttachmentContent className="flex flex-col gap-1">
         <AttachmentTitle>{name}</AttachmentTitle>
-        <AttachmentDescription>
+        <AttachmentDescription className="mt-0">
           {t("uploading")} · {formatBytes(size)}
         </AttachmentDescription>
+        {progress !== null && (
+          <UploadProgress
+            label={t("upload_progress_named", { name })}
+            progress={progress}
+          />
+        )}
       </AttachmentContent>
-      <AttachmentActions>
-        <Spinner aria-label={t("uploading")} className="mx-1.5" />
+      <AttachmentActions className="gap-1">
+        {progress === null && (
+          <Spinner aria-label={t("uploading")} className="mx-1.5" />
+        )}
+        {!!onCancel && (
+          <AttachmentAction
+            aria-label={t("cancel_upload_named", { name })}
+            onClick={onCancel}
+            type="button"
+          >
+            <XIcon />
+          </AttachmentAction>
+        )}
       </AttachmentActions>
     </Attachment>
   );
 };
 
-export const FileError = ({ children }: { children: React.ReactNode }) => (
-  <p
-    className="text-destructive flex items-start gap-1.5 text-sm"
-    data-slot="file-error"
-    role="alert"
-  >
-    <TriangleAlertIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
-    <span>{children}</span>
-  </p>
+export const FileCardFailed = ({
+  leading,
+  message,
+  name,
+  onDismiss,
+  onRetry,
+}: {
+  leading?: React.ReactNode;
+  message: string;
+  name: string;
+  onDismiss: () => void;
+  onRetry: () => void;
+}) => {
+  const t = useTranslations("core.global.file");
+
+  return (
+    <Attachment className="w-full" state="error">
+      {!!leading && <FileCardLeading>{leading}</FileCardLeading>}
+      <AttachmentMedia>
+        <TriangleAlertIcon aria-hidden />
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>{name}</AttachmentTitle>
+        <AttachmentDescription
+          className="leading-relaxed text-pretty whitespace-normal"
+          role="alert"
+        >
+          {message}
+        </AttachmentDescription>
+      </AttachmentContent>
+      <AttachmentActions className="gap-1">
+        <AttachmentAction
+          aria-label={t("retry_named", { name })}
+          onClick={onRetry}
+          type="button"
+        >
+          <RotateCcwIcon />
+        </AttachmentAction>
+        <AttachmentAction
+          aria-label={t("dismiss_named", { name })}
+          onClick={onDismiss}
+          type="button"
+        >
+          <XIcon />
+        </AttachmentAction>
+      </AttachmentActions>
+    </Attachment>
+  );
+};
+
+export const FileError = ({
+  action,
+  children,
+}: {
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <div className="flex flex-wrap items-center gap-2" data-slot="file-error">
+    <p
+      className="text-destructive flex flex-1 items-start gap-1.5 text-sm"
+      role="alert"
+    >
+      <TriangleAlertIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+      <span>{children}</span>
+    </p>
+    {action}
+  </div>
 );

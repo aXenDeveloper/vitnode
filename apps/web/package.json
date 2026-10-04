@@ -12,8 +12,7 @@
     "check": "prettier --check .",
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
-    "lint:fix": "eslint . --fix",
-    "docs:check": "node scripts/check-docs.mjs"
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.6.3",
@@ -42,6 +41,7 @@
     "nitro": "3.0.260903-beta",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "recharts": "^3.10.1",
     "shadcn": "^4.21.0",
     "sonner": "^2.0.8",
     "tailwindcss": "^4.3.3",

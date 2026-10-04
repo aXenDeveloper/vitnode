@@ -1,24 +1,38 @@
 ---
 title: Skeleton
-description: A placeholder component for loading states.
+description: Pulsing placeholders shaped like the content that's on its way, for calmer loading states.
+icon: SquareDashed
 ---
-
-## Preview
 
 <Preview name="skeleton" />
 
 ## Usage
 
 ```ts
-import { Skeleton } from '@vitnode/core/components/ui/skeleton';
+import { Skeleton } from '@vitnode/core/components/ui/skeleton'
 ```
 
 ```tsx
-<div className="flex items-center space-x-4">
-  <Skeleton className="h-12 w-12 rounded-full" />
-  <div className="space-y-2">
-    <Skeleton className="h-4 w-[250px]" />
-    <Skeleton className="h-4 w-[200px]" />
-  </div>
-</div>
+<Skeleton className="size-12 rounded-full" />
+<Skeleton className="h-4 w-full" />
 ```
+
+Size and shape it with `className`. It's a muted block with rounded corners
+and nothing else.
+
+## Match the real layout
+
+<Preview name="skeleton-card" />
+
+Build the skeleton from the same parts as the loaded UI, so nothing jumps when
+the data arrives.
+
+```tsx
+<div aria-busy={isLoading}>{isLoading ? <ThreadSkeleton /> : <Thread />}</div>
+```
+
+## Accessibility
+
+- A skeleton is decoration and ships with `aria-hidden="true"`. Mark the
+  region that's loading with `aria-busy="true"` instead.
+- The pulse only plays when reduced motion is off. Otherwise it holds still.

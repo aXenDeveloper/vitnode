@@ -7,7 +7,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
 import type { ContentSchemas } from "../schemas";
@@ -299,6 +299,7 @@ export const createContentService = <
   definition,
   schemas,
   table,
+  translation,
 }: {
   advanced?: ContentAdvancedStore;
   c: Context;
@@ -306,6 +307,10 @@ export const createContentService = <
   definition: TDefinition;
   schemas: ContentSchemas<TDefinition>;
   table: PgTableWithColumns<TableConfig>;
+  translation?: {
+    columns: Record<string, PgColumn>;
+    table: PgTable;
+  };
 }): ContentService<TDefinition> => {
   // Shared only, everywhere in this file: this service reads and writes the base
   // table, and a localized field is not a column on it. The translation model
@@ -354,9 +359,31 @@ export const createContentService = <
     ...Object.entries(references),
     ...Object.entries(collectionReferences),
   ].filter(([, target]) => target.localizedLabel !== undefined);
-  const searchColumns = definition.admin.list.searchableFields.map(
-    name => columns[name],
-  );
+  const isSharedField = (name: string): boolean =>
+    sharedFields[name] !== undefined;
+  const searchColumns = definition.admin.list.searchableFields
+    .filter(isSharedField)
+    .map(name => columns[name]);
+  const translationSearchColumns = translation
+    ? definition.admin.list.searchableFields
+        .filter(name => !isSharedField(name))
+        .map(name => translation.columns[name])
+    : [];
+
+  const searchCondition = (term: string | undefined): SQL | undefined => {
+    const shared = buildSearchCondition(searchColumns, term);
+    const localizedMatch = buildSearchCondition(translationSearchColumns, term);
+    const localized =
+      translation && localizedMatch
+        ? sql`exists (select 1 from ${translation.table} where ${and(
+            eq(translation.columns.itemId, primaryCursor),
+            localizedMatch,
+          )})`
+        : undefined;
+
+    return shared && localized ? or(shared, localized) : (shared ?? localized);
+  };
+
   const { withCreateSlugs, withUpdateSlugs } = createSlugNormalizer(
     contentTypeId,
     fields,
@@ -763,7 +790,7 @@ export const createContentService = <
           membership: store?.membershipCondition,
           publication,
         }),
-        buildSearchCondition(searchColumns, query.search),
+        searchCondition(query.search),
       ].filter((item): item is SQL => item !== undefined);
 
       const combined =

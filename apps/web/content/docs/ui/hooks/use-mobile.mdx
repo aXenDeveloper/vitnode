@@ -1,28 +1,57 @@
 ---
-title: useMobile
-description: A custom hook to determine if the user is on a mobile device
+title: useIsMobile
+description: Check whether the viewport is narrower than 768px, for behavior that CSS breakpoints can't handle. SSR-safe and updates on resize.
+icon: Smartphone
 ---
 
-## Example
+## Preview
 
-```tsx
-import { useIsMobile } from '@vitnode/core/hooks/use-mobile';
+<Preview name="hook-use-mobile" />
+
+## Usage
+
+```ts
+import { useIsMobile } from '@vitnode/core/hooks/use-mobile'
 ```
 
 ```tsx
-import { useIsMobile } from '@vitnode/core/hooks/use-mobile';
+const isMobile = useIsMobile()
 
-export const ExampleComponent = () => {
-  const isMobile = useIsMobile(); // [!code ++]
-
-  return (
-    <div>
-      {isMobile ? (
-        <p>You are using a mobile device.</p>
-      ) : (
-        <p>You are using a desktop device.</p>
-      )}
-    </div>
-  );
-};
+return isMobile ? <PostActionsDrawer /> : <PostActionsDropdown />
 ```
+
+It returns `true` below **768px**, where Tailwind's `md:` starts, and updates
+live on resize or rotation.
+
+## Prefer CSS for layout
+
+If only the look changes, use responsive classes. CSS is right on the first
+paint and needs no JavaScript:
+
+```tsx
+<div className="flex flex-col gap-4 md:flex-row">...</div>
+```
+
+Reach for the hook when the **behavior** changes: a
+[Drawer](/docs/ui/drawer) instead of a [Dropdown Menu](/docs/ui/dropdown-menu),
+skipping a heavy component, or loading fewer items.
+
+## Server rendering
+
+The server can't see the screen, so the hook returns `false` during SSR and
+hydration, then switches without a mismatch warning. A phone may briefly see the
+desktop version. Components that mount later in the browser get the real value
+on their first render.
+
+## Returns
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    isMobile: {
+      description: 'True below 768px. Always false on the server.',
+      type: 'boolean',
+    },
+  }}
+/>

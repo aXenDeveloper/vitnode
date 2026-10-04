@@ -1,0 +1,118 @@
+---
+title: Filters
+description: Faceted multi-select filters above the table, with static or async options from your API.
+icon: ListFilter
+---
+
+## Preview
+
+<Preview name="data-table-filters" withoutBackground />
+
+## Usage
+
+Each filter is a multi-select dropdown next to the search input. It owns one
+query parameter and stores picks comma-separated, like `?roleId=1,3`. Changing a
+filter returns to page one.
+
+```tsx
+<ContentDataTable
+  id="users-table"
+  // [!code ++:9]
+  filters={[
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'banned', label: 'Banned' },
+      ],
+    },
+  ]}
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+Static `options` are searched on the client.
+
+## Async options
+
+For long lists, pass `onSearch` instead. It runs when the dropdown opens and
+400ms after typing stops. Return results already filtered and capped by the
+server.
+
+```tsx title="search-roles.tsx"
+import type { FilterOption } from '@vitnode/core/components/table/filters'
+
+import { RoleFormatContent } from '@vitnode/core/components/role-format-content'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+export const searchRoles = async (search: string): Promise<FilterOption[]> => {
+  const res = await fetcher({
+    plugin: '@vitnode/core',
+    method: 'get',
+    module: 'admin/roles',
+    path: '/list',
+    args: { query: { search, first: '20' } },
+    withPagination: true,
+  })
+
+  if (res.status !== 200) return []
+
+  const data = await res.json()
+
+  return data.edges.map((role) => ({
+    value: String(role.id),
+    label: <RoleFormatContent role={role} />,
+    keywords: role.name.map((item) => item.name),
+  }))
+}
+```
+
+```tsx
+filters={[{ id: 'roleId', label: 'Group', onSearch: searchRoles }]}
+```
+
+## Read it in the API
+
+A filter only writes to the URL. The API route reads the parameter and adds the
+`where` clause:
+
+```ts
+const roleIds = (query.roleId?.split(',') ?? [])
+  .filter(Boolean)
+  .map(Number)
+  .filter(id => !Number.isNaN(id))
+
+where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
+```
+
+## API
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    id: {
+      description: 'The query parameter this filter reads and writes.',
+      required: true,
+      type: 'string',
+    },
+    label: {
+      description: 'Trigger text and search placeholder.',
+      required: true,
+      type: 'string',
+    },
+    options: {
+      description:
+        'Static options. Add `keywords` so a node `label` is searchable.',
+      type: `{ value: string; label: ReactNode; keywords?: string[] }[]`,
+    },
+    onSearch: {
+      description: 'Async source, called on open and as the user types.',
+      type: '(search: string) => Promise<FilterOption[]>',
+    },
+  }}
+/>

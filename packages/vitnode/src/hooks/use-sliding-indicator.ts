@@ -3,7 +3,7 @@ import React from "react";
 export const SLIDING_INDICATOR_ITEM = "data-sliding-indicator-item";
 
 export const slidingIndicatorTransitionClassName =
-  "transition-[transform,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
+  "transition-[transform,width,height] duration-300 ease-fluid motion-reduce:transition-none";
 
 export const useSlidingIndicator = <Container extends HTMLElement>(
   activeIndex: number,

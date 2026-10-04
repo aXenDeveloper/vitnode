@@ -1,6 +1,7 @@
 ---
 title: Button
-description: A button component for triggering actions in your application.
+description: Buttons for every kind of action, with variants by weight, sizes, a loading state and disabled tooltips.
+icon: MousePointerClick
 ---
 
 ## Preview
@@ -10,74 +11,59 @@ description: A button component for triggering actions in your application.
 ## Usage
 
 ```ts
-import { Home } from 'lucide-react'
 import { Button } from '@vitnode/core/components/ui/button'
 ```
 
 ```tsx
 <Button>
-  <Home />
-  Default
+  <SendIcon />
+  Post reply
 </Button>
 ```
+
+A press dips the button to `active:scale-97`, so every click feels
+acknowledged. Inside a [Button Group](/docs/ui/button-group) it darkens
+instead, and menu triggers stay put.
 
 ## Variants
 
-Pick the variant by the weight of the action, not by the colour you feel like:
+Pick the variant by the weight of the action, not your favourite colour:
 
 - `default` - the one primary action on the screen.
-- `secondary` / `outline` / `ghost` - supporting actions, in descending
-  loudness.
+- `secondary`, `outline`, `ghost` - supporting actions, loudest to quietest.
 - `link` - an action that behaves like navigation.
-- `success` - confirms or completes something (approve, publish, mark as done).
-- `warning` - a risky but reversible action the user should slow down for
-  (unpublish, revoke a session).
-- `destructive` - it deletes data and it isn't coming back.
+- `success` - approves or completes something.
+- `warning` - risky but reversible, like unpublishing.
+- `destructive` - deletes data for good.
 
-`success`, `warning` and `destructive` share the same tinted shape - a soft
-coloured surface with matching text - so only the hue tells you how nervous to
-be. Colour alone never carries the meaning, so keep the label honest: a green
-button still needs to say "Approve".
+Colour never carries the meaning alone. A green button still says "Approve".
 
-```tsx
-<Button variant="success">
-  <CircleCheckIcon />
-  Approve
-</Button>
+## Sizes
 
-<Button variant="warning">
-  <TriangleAlertIcon />
-  Unpublish
-</Button>
-```
+<Preview name="button-sizes" />
 
-## Link
-
-Use the `render` prop to swap the underlying element or compose the button with
-another component, such as a link. Set `nativeButton={false}` when the rendered
-element is not a native `<button>`.
-
-```tsx
-import Link from 'next/link'
-
-;<Button nativeButton={false} render={<Link href="/home" />}>
-  Home
-</Button>
-```
+Icon-only sizes (`icon`, `icon-xs`, `icon-sm`, `icon-lg`) require an
+`aria-label`, and TypeScript will remind you. On touch screens, `icon`,
+`icon-sm` and `icon-xs` get an invisible 44px hit area.
 
 ## Loading
 
-Pass `isLoading` to render a spinner and disable the button while an action is
-in progress.
+<Preview name="button-loading" />
+
+`isLoading` swaps the content for a spinner and disables the button. Loading
+always wins: `disabled={false}` won't re-enable it, and screen readers hear
+"Loading" instead of your `aria-label`.
 
 ```tsx
-<Button isLoading>Save changes</Button>
+<Button isLoading={isPending}>Save changes</Button>
 ```
 
 ## Disabled with a reason
 
-A greyed-out button with no explanation is a riddle nobody asked for. Pass
-`disabledTooltip` next to `disabled` to tell people _why_ they can't click it.
+<Preview name="button-disabled" />
+
+A greyed-out button with no explanation is a riddle. Add `disabledTooltip` to
+say _why_.
 
 ```tsx
 <Button disabled disabledTooltip="You need the Publish permission">
@@ -85,13 +71,24 @@ A greyed-out button with no explanation is a riddle nobody asked for. Pass
 </Button>
 ```
 
-A natively disabled button swallows hover and focus, so while the tooltip is
-active the button uses `aria-disabled` instead. It stays reachable with the
-keyboard, clicks still do nothing, and screen readers hear the reason as the
-button's description.
+The button then uses `aria-disabled`, so it stays focusable, clicks do nothing,
+and screen readers read the reason as its description. The tooltip shows only
+while `disabled` is `true` and hides during `isLoading`.
 
-The tooltip only shows while `disabled` is `true`. It stays hidden while
-`isLoading` is set, since "please wait" is already the answer.
+## As a link
+
+Use `render` to compose the button with another element. Set
+`nativeButton={false}` when that element isn't a `<button>`.
+
+```ts
+import { Link } from '@tanstack/react-router'
+```
+
+```tsx
+<Button nativeButton={false} render={<Link to="/" />}>
+  Home
+</Button>
+```
 
 ## Props
 
@@ -100,32 +97,30 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     variant: {
-      description: 'The variant of the button.',
+      description: 'Visual weight of the action.',
       type: 'default | secondary | outline | ghost | link | success | warning | destructive',
       default: 'default',
     },
     size: {
-      description: 'The size of the button.',
-      type: 'default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg',
+      description: 'Height and padding. Icon sizes require aria-label.',
+      type: 'default | sm | lg | icon | icon-xs | icon-sm | icon-lg',
       default: 'default',
     },
     isLoading: {
-      description: 'Shows a loading spinner and disables the button.',
+      description: 'Shows a spinner and always disables the button.',
       type: 'boolean',
     },
     disabledTooltip: {
       description:
-        'Explains why the button is disabled. Shown as a tooltip on hover and focus while `disabled` is true.',
+        'Explains why the button is disabled. Shown on hover and focus while `disabled` is true.',
       type: 'ReactNode',
     },
     render: {
-      description:
-        'A React element to render in place of the default button element.',
+      description: 'Element to render instead of the native button.',
       type: 'ReactElement',
     },
     nativeButton: {
-      description:
-        'Whether the rendered element is a native button. Set to false when using `render` with a non-button element.',
+      description: 'Set to false when `render` is not a native button.',
       type: 'boolean',
       default: 'true',
     },

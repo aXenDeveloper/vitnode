@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { getDefaults, getNestedParam, getZodInputParams } from "./auto-form";
+import {
+  getDefaults,
+  getNestedParam,
+  getZodInputParams,
+  isRequiredPath,
+} from "./auto-form";
 
 describe("auto-form helpers", () => {
   describe("getDefaults", () => {
@@ -200,6 +205,20 @@ describe("auto-form helpers", () => {
       expect(result.role).toHaveProperty("type", "text");
       expect(result.role).toHaveProperty("enum", ["admin", "user", "guest"]);
       expect(result.role).toHaveProperty("required", true);
+    });
+
+    it("exposes the enum of an array of enums on the array field", () => {
+      const zodSchema = z.object({
+        tags: z.array(z.enum(["news", "guides", "releases"])),
+      });
+
+      const result = getZodInputParams(z.toJSONSchema(zodSchema));
+
+      expect(result.tags).toHaveProperty("enum", [
+        "news",
+        "guides",
+        "releases",
+      ]);
     });
 
     it("should handle complex password validation", () => {
@@ -413,5 +432,34 @@ describe("auto-form helpers", () => {
       const result = getNestedParam(objWithArray, "items.enum");
       expect(result).toEqual(["a", "b", "c"]); // Arrays are accessible as normal properties
     });
+  });
+});
+
+describe("isRequiredPath", () => {
+  const jsonSchema = z.toJSONSchema(
+    z.object({
+      title: z.string(),
+      subtitle: z.string().optional(),
+      member: z.object({ label: z.string(), value: z.string() }),
+      address: z
+        .object({ city: z.string(), zip: z.string().optional() })
+        .optional(),
+    }),
+  );
+
+  it("reads top-level fields, including object fields", () => {
+    expect(isRequiredPath(jsonSchema, "title")).toBe(true);
+    expect(isRequiredPath(jsonSchema, "subtitle")).toBe(false);
+    expect(isRequiredPath(jsonSchema, "member")).toBe(true);
+  });
+
+  it("reads a nested field against its own parent", () => {
+    expect(isRequiredPath(jsonSchema, "member.value")).toBe(true);
+    expect(isRequiredPath(jsonSchema, "address.city")).toBe(true);
+    expect(isRequiredPath(jsonSchema, "address.zip")).toBe(false);
+  });
+
+  it("treats unknown paths as optional", () => {
+    expect(isRequiredPath(jsonSchema, "missing")).toBe(false);
   });
 });

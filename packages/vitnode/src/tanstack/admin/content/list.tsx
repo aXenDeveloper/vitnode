@@ -15,8 +15,9 @@ import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableSkeleton } from "@/components/table/data-table-content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { buildContentColumnSpec } from "@/content/index";
+import { buildContentColumnSpec, CONTENT_PERMISSIONS } from "@/content/index";
 import { contentLabelsFrom } from "@/views/admin/views/content/content-labels";
+import { contentBulkActions } from "@/views/admin/views/content/table/bulk-actions-model";
 import {
   buildContentTableColumns,
   contentTableColumnCount,
@@ -32,6 +33,8 @@ import type {
 } from "./route-search";
 
 import { useLocale } from "../../i18n/locale";
+import { useAdminPermission } from "../permissions";
+import { ContentBulkActions } from "./bulk-actions";
 import { ContentCreateAction } from "./create-action";
 import { contentListPageQuery } from "./query";
 import {
@@ -78,6 +81,23 @@ const ContentListTable = ({
   const { data } = useSuspenseQuery(
     contentListPageQuery({ definition, locale, params, pluginId }),
   );
+  const canDelete = useAdminPermission({
+    module: definition.permissionModule,
+    permission: CONTENT_PERMISSIONS.delete,
+    plugin: pluginId,
+  });
+  const canPublish = useAdminPermission({
+    module: definition.permissionModule,
+    permission: CONTENT_PERMISSIONS.publish,
+    plugin: pluginId,
+  });
+  const isNarrowed =
+    Boolean(params.search) || Object.keys(params.filters).length > 0;
+  const bulkActions = contentBulkActions({
+    canDelete,
+    canPublish,
+    publication: definition.publication.enabled,
+  });
 
   const navigation = React.useMemo<DataTableNavigation>(
     () => ({
@@ -119,11 +139,22 @@ const ContentListTable = ({
   return (
     <DataTableNavigationProvider value={navigation}>
       <ContentDataTable<ContentRowData>
+        bulkActions={
+          bulkActions.length > 0 ? (
+            <ContentBulkActions
+              actions={bulkActions}
+              entry={entry}
+              labels={labels}
+              rows={data.edges}
+            />
+          ) : undefined
+        }
         columns={columns}
-        customNoResults={{
-          description: t("empty.desc"),
-          title: t("empty.title"),
-        }}
+        customNoResults={
+          isNarrowed
+            ? undefined
+            : { description: t("empty.desc"), title: t("empty.title") }
+        }
         edges={data.edges}
         id={`content-${definition.id}`}
         order={contentTableOrder(definition)}

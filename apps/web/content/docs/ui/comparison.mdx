@@ -1,0 +1,104 @@
+---
+title: Comparison
+description: A before/after slider. Drag, tap or use the arrow keys to reveal one image over another.
+icon: Columns2
+---
+
+## Preview
+
+<Preview name="comparison" />
+
+## Usage
+
+```ts
+import {
+  Comparison,
+  ComparisonHandle,
+  ComparisonItem,
+} from '@vitnode/core/components/ui/comparison'
+```
+
+```tsx
+<Comparison aria-label="Before and after" className="aspect-video">
+  <ComparisonItem position="left">
+    <img alt="" draggable={false} src={before} />
+  </ComparisonItem>
+  <ComparisonItem position="right">
+    <img alt="" draggable={false} src={after} />
+  </ComparisonItem>
+  <ComparisonHandle />
+</Comparison>
+```
+
+`position="left"` is the image left of the handle, `right` the one on its
+right. Images fill their item with `object-cover`, so give `Comparison` a size
+or aspect ratio.
+
+Tap somewhere new and the handle glides there, then follows your finger one to
+one. Keyboard steps glide too.
+
+## Hover mode
+
+<Preview name="comparison-hover" />
+
+With `mode="hover"` the handle follows the pointer, no click needed. Fun for
+quick looks; stick with dragging for anything precise.
+
+## Starting point and changes
+
+```tsx
+<Comparison defaultPosition={30} onPositionChange={setPosition}>
+  ...
+</Comparison>
+```
+
+`position` runs from 0 (all right image) to 100 (all left image).
+
+## Custom handle
+
+<Preview name="comparison-handle" />
+
+Pass children to `ComparisonHandle` to draw your own. It still moves with the
+slider.
+
+```tsx
+<ComparisonHandle>
+  <div className="bg-primary absolute inset-y-0 w-0.5" />
+  <div className="bg-primary text-primary-foreground relative flex size-8 items-center justify-center rounded-full">
+    <ChevronsLeftRightIcon className="size-4" />
+  </div>
+</ComparisonHandle>
+```
+
+## Accessibility
+
+- The comparison is a slider. Arrow keys move 5% (10% with <kbd>Shift</kbd>);
+  <kbd>Home</kbd> and <kbd>End</kbd> jump to the ends.
+- Screen readers hear the position as a percentage. Name it with `aria-label`.
+- Images are decorative (`alt=""`). Describe the comparison in the label or a
+  caption.
+- Dragging sideways never blocks vertical page scrolling on phones.
+- With reduced motion, the handle jumps instead of gliding.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    mode: {
+      description: 'Drag the handle, or have it follow the pointer.',
+      type: '"drag" | "hover"',
+      default: '"drag"',
+    },
+    defaultPosition: {
+      description: 'Where the handle starts, from 0 to 100.',
+      type: 'number',
+      default: '50',
+    },
+    onPositionChange: {
+      description: 'Called with the new position as it moves.',
+      type: '(position: number) => void',
+    },
+  }}
+/>

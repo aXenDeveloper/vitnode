@@ -1,6 +1,7 @@
 ---
 title: Input Group
-description: Component used for grouping related input fields together
+description: Attach icons, text, keyboard hints and buttons to an input or textarea, in a plain form or inside AutoForm fields.
+icon: RectangleEllipsis
 ---
 
 ## Preview
@@ -9,105 +10,96 @@ description: Component used for grouping related input fields together
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-
-<Tabs items={['Auto Form', 'Manual']}>
-  <Tab value="Auto Form">
-```ts
-import { z } from 'zod';
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
-import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea';
-import { InputGroupAddon, InputGroupText } from "@vitnode/core/components/ui/input-group";
-```
-
-```ts
-const formSchema = z.object({
-  search: z.string().min(1, "Search is required"),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters"),
-});
-```
-
-```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "search",
-      component: props => (
-        <AutoFormInput {...props} placeholder="Search..." label="Search">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupAddon align="inline-end">12 results</InputGroupAddon>
-        </AutoFormInput>
-      ),
-    },
-    {
-      id: "description",
-      component: props => (
-        <AutoFormTextarea
-          {...props}
-          className="min-h-24 resize-none"
-          placeholder="I'm having an issue with the login button on mobile."
-          rows={6}
-        >
-          <InputGroupAddon align="block-end">
-            <InputGroupText className="tabular-nums">
-              {props.field.value?.toString().length ?? 0} of 500 characters
-            </InputGroupText>
-          </InputGroupAddon>
-        </AutoFormTextarea>
-      ),
-    },
-  ]}
-/>
-```
-
-  </Tab>
-
-  <Tab value="Manual">
 ```ts
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
   InputGroupText,
   InputGroupTextarea,
-} from "@vitnode/core/components/ui/input-group";
-import { Search } from "lucide-react";
+} from '@vitnode/core/components/ui/input-group'
 ```
 
 ```tsx
-<div className="flex flex-col gap-8">
-  <InputGroup className="max-w-xs">
-    <InputGroupInput placeholder="Search..." />
-    <InputGroupAddon>
-      <Search />
-    </InputGroupAddon>
-    <InputGroupAddon align="inline-end">12 results</InputGroupAddon>
-  </InputGroup>
-
-  <InputGroup>
-    <InputGroupTextarea
-      className="min-h-24 resize-none"
-      placeholder="I'm having an issue with the login button on mobile."
-      rows={6}
-    />
-    <InputGroupAddon align="block-end">
-      <InputGroupText className="tabular-nums">
-        0 of 500 characters
-      </InputGroupText>
-    </InputGroupAddon>
-  </InputGroup>
-</div>
+<InputGroup>
+  <InputGroupInput aria-label="Search" placeholder="Search..." />
+  <InputGroupAddon>
+    <Search />
+  </InputGroupAddon>
+  <InputGroupAddon align="inline-end">12 results</InputGroupAddon>
+</InputGroup>
 ```
 
-  </Tab>
-</Tabs>
+Put the control first and the addons after it. `align` moves each addon into
+place, whatever the markup order.
+
+## Addons
+
+<Preview name="input-group-addons" />
+
+An addon holds an icon, `InputGroupText`, a [`Kbd`](/docs/ui/kbd) or an
+`InputGroupButton`. Icon-only buttons need an `aria-label`. Clicking an addon
+outside its buttons focuses the control.
+
+```tsx
+<InputGroup>
+  <InputGroupInput aria-label="Invite link" readOnly value={inviteUrl} />
+  <InputGroupAddon align="inline-end">
+    <InputGroupButton aria-label="Copy invite link" size="icon-xs">
+      <Copy />
+    </InputGroupButton>
+  </InputGroupAddon>
+</InputGroup>
+```
+
+Disable the control and the whole group dims with it.
+
+## Alignment
+
+| `align`                  | Position                                |
+| ------------------------ | --------------------------------------- |
+| `inline-start` (default) | Before the text                         |
+| `inline-end`             | After the text                          |
+| `block-start`            | Above the control, full width           |
+| `block-end`              | Below the control, full width (footers) |
+
+```tsx
+<InputGroup>
+  <InputGroupTextarea aria-label="Describe the issue" rows={6} />
+  <InputGroupAddon align="block-end">
+    <InputGroupText className="tabular-nums">
+      0 of 500 characters
+    </InputGroupText>
+  </InputGroupAddon>
+</InputGroup>
+```
+
+## With AutoForm
+
+Pass addons as children of `AutoFormInput` or `AutoFormTextarea`. The field
+wraps itself in an `InputGroup`.
+
+```tsx
+{
+  id: "description",
+  component: props => (
+    <AutoFormTextarea {...props} label="Description" rows={6}>
+      <InputGroupAddon align="block-end">
+        <InputGroupText className="tabular-nums">
+          {props.field.value?.toString().length ?? 0} of 500 characters
+        </InputGroupText>
+      </InputGroupAddon>
+    </AutoFormTextarea>
+  ),
+}
+```
+
+## Button sizes
+
+`InputGroupButton` defaults to `variant="ghost"` and `type="button"`. Sizes:
+`xs` (default), `sm`, `icon-xs` and `icon-sm`. All fit the default group height.
 
 ## API Reference
 
-[Shadcn UI - Input Group](https://ui.shadcn.com/docs/components/radix/input-group#api-reference)
+[shadcn/ui - Input Group](https://ui.shadcn.com/docs/components/base/input-group)

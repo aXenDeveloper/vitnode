@@ -1,0 +1,115 @@
+---
+title: useSlidingIndicator
+description: Slide a highlight between items of a segmented control, tab bar or filter group, following the active item through resizes.
+icon: SlidersHorizontal
+---
+
+## Preview
+
+<Preview name="hook-use-sliding-indicator" />
+
+## Usage
+
+```ts
+import {
+  slidingIndicatorTransitionClassName,
+  useSlidingIndicator,
+} from '@vitnode/core/hooks/use-sliding-indicator'
+```
+
+```tsx
+const [active, setActive] = React.useState(0)
+const { containerRef, indicatorRef, isReady } =
+  useSlidingIndicator<HTMLDivElement>(active)
+
+return (
+  <div
+    className="bg-muted relative flex gap-1 rounded-lg p-1"
+    ref={containerRef}
+    role="group"
+  >
+    <span
+      aria-hidden
+      className={cn(
+        'bg-background pointer-events-none absolute top-0 left-0 rounded-md opacity-0',
+        isReady && slidingIndicatorTransitionClassName,
+      )}
+      ref={indicatorRef}
+    />
+    {filters.map((label, index) => (
+      <button
+        aria-pressed={active === index}
+        className="relative rounded-md px-3 py-1.5 text-sm"
+        data-sliding-indicator-item
+        key={label}
+        onClick={() => setActive(index)}
+        type="button"
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+)
+```
+
+Mark every item with `data-sliding-indicator-item` and pass the active index.
+The hook sizes and moves the indicator to sit behind that item. VitNode's theme
+switcher and mobile navigation bar work this way.
+
+## Styling checklist
+
+- The container is `relative`. The indicator is `absolute top-0 left-0` and
+  starts at `opacity-0`. The hook sets its size, position and opacity.
+- Items are `relative`, so they sit above the indicator.
+- The indicator is `aria-hidden`. Put the active state on the items with
+  `aria-pressed`, `aria-selected` or `aria-current`.
+
+## How it behaves
+
+- **Follows resizes.** A `ResizeObserver` on the container repositions the
+  indicator, for example when labels change language.
+- **No slide on first render.** `isReady` turns `true` one frame after mount.
+  Add the transition class only then, or the indicator flies in from the corner.
+- **Hides when nothing is active.** An index with no matching item, like `-1`,
+  hides the indicator.
+- **Respects reduced motion.** The transition class slides for 300ms on
+  `ease-fluid` and turns off under `prefers-reduced-motion`.
+
+## API
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    activeIndex: {
+      description:
+        'Index of the active item among elements marked `data-sliding-indicator-item`.',
+      type: 'number',
+      required: true,
+    },
+    Container: {
+      description: 'Type parameter for the container element.',
+      type: 'HTMLElement',
+    },
+  }}
+/>
+
+Returns:
+
+<TypeTable
+  type={{
+    containerRef: {
+      description: 'Ref for the element wrapping the items and the indicator.',
+      type: 'React.RefObject<Container | null>',
+    },
+    indicatorRef: {
+      description: 'Ref for the indicator element.',
+      type: 'React.RefObject<HTMLSpanElement | null>',
+    },
+    isReady: {
+      description:
+        'True one frame after mount. Gate the transition class on it.',
+      type: 'boolean',
+    },
+  }}
+/>

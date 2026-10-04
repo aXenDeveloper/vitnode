@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isStaff } from "@/api/lib/check-staff-permission";
+import { getStaffFlags } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { getNotificationState } from "@/api/models/notifications/inbox";
 import { zodNotificationState } from "@/api/modules/notifications/schema";
@@ -53,9 +53,8 @@ export const sessionRoute = buildRoute({
     const user = c.get("user");
     if (!user) return c.json({ user: null });
 
-    const [isAdmin, isModerator, notifications] = await Promise.all([
-      isStaff(c, { type: "admin", userId: user.id }),
-      isStaff(c, { type: "moderator", userId: user.id }),
+    const [{ isAdmin, isModerator }, notifications] = await Promise.all([
+      getStaffFlags(c, user),
       getNotificationState(c.get("db"), user.id),
     ]);
 

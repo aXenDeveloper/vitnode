@@ -30,7 +30,7 @@ export const Avatar = ({
   className,
   size,
   ...props
-}: Omit<React.ComponentProps<"img">, "alt" | "height" | "src" | "width"> & {
+}: Omit<React.ComponentProps<"img">, "height" | "src" | "width"> & {
   size: number;
   user: AvatarUser;
 }) => {

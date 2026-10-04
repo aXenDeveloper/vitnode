@@ -9,19 +9,63 @@ const iconOf = (alert: HTMLElement) =>
 
 describe("Alert", () => {
   it.each([
-    ["default", "lucide-info"],
-    ["info", "lucide-info"],
-    ["success", "lucide-circle-check"],
-    ["warning", "lucide-triangle-alert"],
-    ["destructive", "lucide-circle-x"],
-  ] as const)("shows the %s icon without being given one", (variant, icon) => {
+    ["info", "status", "lucide-info"],
+    ["success", "status", "lucide-circle-check"],
+    ["warning", "alert", "lucide-triangle-alert"],
+    ["destructive", "alert", "lucide-circle-x"],
+  ] as const)(
+    "shows the %s icon without being given one",
+    (variant, role, icon) => {
+      render(
+        <Alert variant={variant}>
+          <AlertTitle>Plugins need a workspace</AlertTitle>
+        </Alert>,
+      );
+
+      expect(iconOf(screen.getByRole(role))?.classList).toContain(icon);
+    },
+  );
+
+  it("renders the neutral default notice without an icon", () => {
     render(
-      <Alert variant={variant}>
-        <AlertTitle>Plugins need a workspace</AlertTitle>
+      <Alert>
+        <AlertTitle>Sign-in is paused</AlertTitle>
       </Alert>,
     );
 
-    expect(iconOf(screen.getByRole("alert"))?.classList).toContain(icon);
+    expect(
+      screen.getByRole("status").querySelector("[data-slot=alert-icon]"),
+    ).toBeNull();
+  });
+
+  it.each([
+    ["default", "status"],
+    ["info", "status"],
+    ["success", "status"],
+    ["warning", "alert"],
+    ["destructive", "alert"],
+  ] as const)(
+    "announces the %s variant politely only when it is not urgent",
+    (variant, role) => {
+      render(
+        <Alert variant={variant}>
+          <AlertTitle>Heads up</AlertTitle>
+        </Alert>,
+      );
+
+      expect(screen.getByRole(role).textContent).toBe("Heads up");
+    },
+  );
+
+  it("lets the caller override the role", () => {
+    render(
+      <Alert role="note" variant="destructive">
+        <AlertTitle>Static note</AlertTitle>
+      </Alert>,
+    );
+
+    expect(screen.getByRole("note").textContent).toBe("Static note");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("renders a custom icon in place of the default one", () => {
@@ -31,7 +75,7 @@ describe("Alert", () => {
       </Alert>,
     );
 
-    expect(iconOf(screen.getByRole("alert"))?.classList).toContain(
+    expect(iconOf(screen.getByRole("status"))?.classList).toContain(
       "lucide-hard-drive",
     );
   });

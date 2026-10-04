@@ -1,4 +1,5 @@
 import { Button } from '@vitnode/core/components/ui/button'
+import { CopyButton } from '@vitnode/core/components/ui/copy-button'
 import {
   Dialog,
   DialogClose,
@@ -9,22 +10,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@vitnode/core/components/ui/dialog'
+import { Input } from '@vitnode/core/components/ui/input'
+import { Share2Icon } from 'lucide-react'
+
+const shareLink = 'https://vitnode.com/docs/ui/dialog'
 
 export default function DialogDemo() {
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline">Open</Button>} />
+      <DialogTrigger
+        render={
+          <Button variant="outline">
+            <Share2Icon />
+            Share
+          </Button>
+        }
+      />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Are you absolutely sure?</DialogTitle>
+          <DialogTitle>Share this page</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. This will permanently delete your
-            account and remove your data from our servers.
+            Anyone with the link can read it - no account needed. Spread the
+            word!
           </DialogDescription>
         </DialogHeader>
+        <div className="flex items-center gap-2">
+          <Input
+            aria-label="Page link"
+            className="flex-1"
+            readOnly
+            value={shareLink}
+          />
+          <CopyButton aria-label="Copy link" content={shareLink} />
+        </div>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline">Cancel</Button>} />
-          <Button variant="destructive">Yes, delete account</Button>
+          <DialogClose render={<Button>Done</Button>} />
         </DialogFooter>
       </DialogContent>
     </Dialog>

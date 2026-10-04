@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 const ContentTestAI = React.lazy(async () =>
   import("./content").then(module => ({
@@ -43,7 +43,13 @@ export const TestAIAction = ({ models }: { models: TestAIModel[] }) => {
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
-        <React.Suspense fallback={<Loader />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <ContentTestAI models={models} />
         </React.Suspense>
       </DialogContent>

@@ -86,4 +86,31 @@ describe("TipTapToolbar", () => {
       expect(current.getHTML()).toBe("<p>Loud</p>");
     });
   });
+
+  it("is one tab stop, walked with the arrow keys, Home and End", () => {
+    renderToolbar("<p>Ship it</p>");
+    const toolbar = screen.getByRole("toolbar");
+    const items = within(toolbar).getAllByRole("button");
+    const tabbable = () => items.filter(item => item.tabIndex === 0);
+    const last = items[items.length - 1];
+
+    expect(tabbable()).toEqual([items[0]]);
+
+    items[0].focus();
+    fireEvent.keyDown(items[0], { key: "ArrowRight" });
+    expect(document.activeElement).toBe(items[1]);
+    expect(tabbable()).toEqual([items[1]]);
+
+    fireEvent.keyDown(items[1], { key: "End" });
+    expect(document.activeElement).toBe(last);
+
+    fireEvent.keyDown(last, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(items[0]);
+
+    fireEvent.keyDown(items[0], { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(last);
+
+    fireEvent.keyDown(last, { key: "Home" });
+    expect(document.activeElement).toBe(items[0]);
+  });
 });

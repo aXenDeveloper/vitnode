@@ -1,9 +1,12 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
+import { AnimatePresence, MotionConfig, useIsPresent } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import { MotionFeatures } from "@/components/motion-features";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -25,12 +28,15 @@ function ComboboxTrigger({
 }: ComboboxPrimitive.Trigger.Props) {
   return (
     <ComboboxPrimitive.Trigger
-      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
+      className={cn(
+        "group/combobox-trigger [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
       data-slot="combobox-trigger"
       {...props}
     >
       {children}
-      <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4" />
+      <ChevronDownIcon className="text-muted-foreground ease-fluid pointer-events-none size-4 transition-transform duration-200 group-data-popup-open/combobox-trigger:rotate-180 motion-reduce:transition-none" />
     </ComboboxPrimitive.Trigger>
   );
 }
@@ -60,7 +66,7 @@ function ComboboxInput({
   showTrigger?: boolean;
 }) {
   return (
-    <InputGroup className={cn("w-auto", className)}>
+    <InputGroup className={cn("w-full", className)}>
       <ComboboxPrimitive.Input
         render={<InputGroupInput disabled={disabled} />}
         {...props}
@@ -108,7 +114,7 @@ function ComboboxContent({
       >
         <ComboboxPrimitive.Popup
           className={cn(
-            "group/combobox-content bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-lg shadow-lg ring-1 duration-100 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none",
+            "group/combobox-content bg-popover text-popover-foreground ring-foreground/10 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 ease-fluid relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-lg shadow-lg ring-1 transition-[opacity,scale] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-[chips=true]:min-w-(--anchor-width) *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:shadow-none motion-reduce:transition-none",
             className,
           )}
           data-chips={!!anchor}
@@ -141,7 +147,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       className={cn(
-        "data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 pointer-coarse:py-2.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="combobox-item"
@@ -222,7 +228,7 @@ function ComboboxChips({
   return (
     <ComboboxPrimitive.Chips
       className={cn(
-        "border-input focus-within:border-ring focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40 dark:bg-input/30 bg-card flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border bg-clip-padding px-2.5 py-1.5 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-3 has-aria-invalid:ring-3 has-data-[slot=combobox-chip]:px-1.5",
+        "border-input focus-within:border-ring focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40 dark:bg-input/30 bg-card relative flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border bg-clip-padding px-2.5 py-1.5 text-sm shadow-xs transition-[color,box-shadow] focus-within:ring-3 has-aria-invalid:ring-3 has-data-[slot=combobox-chip]:px-1.5",
         className,
       )}
       data-slot="combobox-chips"
@@ -231,38 +237,121 @@ function ComboboxChips({
   );
 }
 
+const CHIP_TRANSITION = { type: "spring", duration: 0.3, bounce: 0 } as const;
+const CHIP_HIDDEN = { opacity: 0, scale: 0.6 };
+const CHIP_VISIBLE = { opacity: 1, scale: 1 };
+
+const chipClassName =
+  "bg-muted text-foreground flex h-5.5 w-fit items-center justify-center gap-1 rounded-sm px-1.5 text-xs font-medium whitespace-nowrap has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0";
+
+function ComboboxChipList({ children }: { children: React.ReactNode }) {
+  return (
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence initial={false} mode="popLayout">
+        {children}
+      </AnimatePresence>
+    </MotionConfig>
+  );
+}
+
 function ComboboxChip({
   className,
   children,
+  ref,
   showRemove = true,
   ...props
-}: ComboboxPrimitive.Chip.Props & {
+}: Omit<ComboboxPrimitive.Chip.Props, "ref"> & {
+  ref?: React.Ref<HTMLDivElement>;
   showRemove?: boolean;
+}) {
+  const t = useTranslations("core.global");
+  const isPresent = useIsPresent();
+
+  return (
+    <MotionFeatures withLayoutAndDrag>
+      <m.div
+        animate={CHIP_VISIBLE}
+        className="flex"
+        data-slot="combobox-chip-motion"
+        exit={CHIP_HIDDEN}
+        initial={CHIP_HIDDEN}
+        layout="position"
+        ref={ref}
+        transition={CHIP_TRANSITION}
+      >
+        {isPresent ? (
+          <ComboboxPrimitive.Chip
+            className={cn(chipClassName, className)}
+            data-slot="combobox-chip"
+            {...props}
+          >
+            {children}
+            {showRemove && (
+              <ComboboxPrimitive.ChipRemove
+                className="-ms-1 opacity-50 hover:opacity-100"
+                data-slot="combobox-chip-remove"
+                render={
+                  <Button
+                    aria-label={t("remove")}
+                    size="icon-xs"
+                    variant="ghost"
+                  />
+                }
+              >
+                <XIcon className="pointer-events-none" />
+              </ComboboxPrimitive.ChipRemove>
+            )}
+          </ComboboxPrimitive.Chip>
+        ) : (
+          <span
+            aria-hidden="true"
+            className={cn(chipClassName, "pointer-events-none", className)}
+          >
+            {children}
+            {showRemove && (
+              <span
+                className="-ms-1 flex size-6 items-center justify-center opacity-50"
+                data-slot="combobox-chip-remove"
+              >
+                <XIcon className="size-3" />
+              </span>
+            )}
+          </span>
+        )}
+      </m.div>
+    </MotionFeatures>
+  );
+}
+
+function ComboboxChipOverflow({
+  count,
+  ref,
+}: {
+  count: number;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   const t = useTranslations("core.global");
 
   return (
-    <ComboboxPrimitive.Chip
-      className={cn(
-        "bg-muted text-foreground flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-sm px-1.5 text-xs font-medium whitespace-nowrap has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0",
-        className,
-      )}
-      data-slot="combobox-chip"
-      {...props}
-    >
-      {children}
-      {showRemove && (
-        <ComboboxPrimitive.ChipRemove
-          className="-ms-1 opacity-50 hover:opacity-100"
-          data-slot="combobox-chip-remove"
-          render={
-            <Button aria-label={t("remove")} size="icon-xs" variant="ghost" />
-          }
+    <MotionFeatures withLayoutAndDrag>
+      <m.div
+        animate={CHIP_VISIBLE}
+        className="flex"
+        data-slot="combobox-chip-motion"
+        exit={CHIP_HIDDEN}
+        initial={CHIP_HIDDEN}
+        layout="position"
+        ref={ref}
+        transition={CHIP_TRANSITION}
+      >
+        <span
+          className={cn(chipClassName, "text-muted-foreground tabular-nums")}
+          data-slot="combobox-chip-overflow"
         >
-          <XIcon className="pointer-events-none" />
-        </ComboboxPrimitive.ChipRemove>
-      )}
-    </ComboboxPrimitive.Chip>
+          {t("more_count", { count })}
+        </span>
+      </m.div>
+    </MotionFeatures>
   );
 }
 
@@ -271,11 +360,14 @@ function ComboboxChipsInput({
   ...props
 }: ComboboxPrimitive.Input.Props) {
   return (
-    <ComboboxPrimitive.Input
-      className={cn("min-w-16 flex-1 outline-none", className)}
-      data-slot="combobox-chip-input"
-      {...props}
-    />
+    <MotionFeatures withLayoutAndDrag>
+      <ComboboxPrimitive.Input
+        className={cn("min-w-16 flex-1 outline-none", className)}
+        data-slot="combobox-chip-input"
+        render={<m.input layout="position" transition={CHIP_TRANSITION} />}
+        {...props}
+      />
+    </MotionFeatures>
   );
 }
 
@@ -286,6 +378,8 @@ function useComboboxAnchor() {
 export {
   Combobox,
   ComboboxChip,
+  ComboboxChipList,
+  ComboboxChipOverflow,
   ComboboxChips,
   ComboboxChipsInput,
   ComboboxCollection,

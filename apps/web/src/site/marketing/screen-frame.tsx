@@ -31,6 +31,32 @@ const ScreenImg = ({
   />
 )
 
+export const ScreenShot = ({
+  priority = false,
+  screen,
+}: {
+  priority?: boolean
+  screen: Screen
+}) => (
+  <div
+    className="w-full"
+    style={{ aspectRatio: `${SCREEN_SIZE.width} / ${SCREEN_SIZE.height}` }}
+  >
+    <ScreenImg
+      alt={screen.alt}
+      className="block size-full object-cover object-top dark:hidden"
+      image={screen.light}
+      priority={priority}
+    />
+    <ScreenImg
+      alt={screen.alt}
+      className="hidden size-full object-cover object-top dark:block"
+      image={screen.dark}
+      priority={priority}
+    />
+  </div>
+)
+
 export const ScreenFrame = ({
   className,
   note,
@@ -59,23 +85,7 @@ export const ScreenFrame = ({
       </span>
     </div>
 
-    <div
-      className="w-full"
-      style={{ aspectRatio: `${SCREEN_SIZE.width} / ${SCREEN_SIZE.height}` }}
-    >
-      <ScreenImg
-        alt={screen.alt}
-        className="block size-full object-cover object-top dark:hidden"
-        image={screen.light}
-        priority={priority}
-      />
-      <ScreenImg
-        alt={screen.alt}
-        className="hidden size-full object-cover object-top dark:block"
-        image={screen.dark}
-        priority={priority}
-      />
-    </div>
+    <ScreenShot priority={priority} screen={screen} />
 
     {note ? (
       <span className="bg-background/90 text-muted-foreground absolute right-3 bottom-3 rounded-full border px-2.5 py-1 text-xs font-medium backdrop-blur">

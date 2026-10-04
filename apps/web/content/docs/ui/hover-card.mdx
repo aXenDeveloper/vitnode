@@ -1,6 +1,7 @@
 ---
 title: Hover Card
-description: A component for displaying additional information on hover.
+description: A preview card that appears when you hover or focus a link, like a profile peek on a mention.
+icon: MousePointer2
 ---
 
 ## Preview
@@ -14,17 +15,45 @@ import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from '@vitnode/core/components/ui/hover-card';
+} from '@vitnode/core/components/ui/hover-card'
 ```
 
 ```tsx
 <HoverCard>
-  <HoverCardTrigger>Hover</HoverCardTrigger>
-  <HoverCardContent>
-    The React Framework - created and maintained by @vercel.
-  </HoverCardContent>
+  <HoverCardTrigger href="/profile/axendev">@axendev</HoverCardTrigger>
+  <HoverCardContent>Creator of VitNode.</HoverCardContent>
 </HoverCard>
 ```
+
+`HoverCardTrigger` renders a real link, so give it an `href`. Clicking it goes
+there like any other link.
+
+## Inside text
+
+<Preview name="hover-card-mention" />
+
+Mentions and thread links in a post are the classic use. The card opens after
+600ms and closes 300ms after you leave. Tune both on the trigger.
+
+```tsx
+<HoverCardTrigger closeDelay={100} delay={200} href="/profile/maya">
+  @maya
+</HoverCardTrigger>
+```
+
+## Accessibility
+
+- Keyboard focus opens the card too.
+- Touch screens have no hover, so the card never shows there. Keep it a bonus:
+  everything in it must also live on the page the link opens.
+- Don't put buttons or forms in it. Use a [Popover](/docs/ui/popover) for
+  anything interactive.
+
+## Props
+
+`HoverCardContent` takes `side` (default `bottom`), `align` (default
+`center`), `sideOffset` (default `4`), `alignOffset` (default `0`) and
+`anchor`, like a [Popover](/docs/ui/popover). It's `w-64` by default.
 
 ## API Reference
 

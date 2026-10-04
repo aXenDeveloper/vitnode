@@ -18,7 +18,9 @@ describe("Button disabledTooltip", () => {
       </Button>,
     );
 
-    fireEvent.mouseEnter(screen.getByRole("button", { name: "Publish" }));
+    const button = screen.getByRole("button", { name: "Publish" });
+    fireEvent.mouseEnter(button);
+    fireEvent.mouseMove(button);
 
     const tooltip = await screen.findByText("You need the Publish permission", {
       selector: "[data-slot=tooltip-content]",
@@ -73,5 +75,44 @@ describe("Button disabledTooltip", () => {
 
     expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
     expect(screen.queryByText("Not yet")).toBeNull();
+  });
+});
+
+describe("Button isLoading", () => {
+  it("stays disabled while loading even when disabled is false", () => {
+    const onClick = vi.fn();
+    render(
+      <Button disabled={false} isLoading onClick={onClick}>
+        Save
+      </Button>,
+    );
+
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
+
+    expect(button.hasAttribute("disabled")).toBe(true);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("announces loading instead of the passed aria-label", () => {
+    render(
+      <Button aria-label="Save draft" isLoading>
+        Save
+      </Button>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "core.global.loading" }),
+    ).toBeTruthy();
+  });
+
+  it("uses the passed aria-label once loading is done", () => {
+    render(
+      <Button aria-label="Save draft" isLoading={false}>
+        Save
+      </Button>,
+    );
+
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeTruthy();
   });
 });

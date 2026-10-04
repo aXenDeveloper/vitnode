@@ -48,6 +48,16 @@
   --shadow-xl:
     0 8px 16px -4px rgb(0 0 0 / 0.05), 0 24px 48px -12px rgb(0 0 0 / 0.14);
   --inset-shadow-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.16);
+  --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+  --text-xs--letter-spacing: 0.01em;
+  --text-lg--letter-spacing: -0.01em;
+  --text-xl--letter-spacing: -0.012em;
+  --text-2xl--letter-spacing: -0.016em;
+  --text-3xl--letter-spacing: -0.02em;
+  --text-3xl--line-height: 1.15;
+  --text-4xl--letter-spacing: -0.022em;
+  --text-5xl--letter-spacing: -0.024em;
+  --text-6xl--letter-spacing: -0.025em;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

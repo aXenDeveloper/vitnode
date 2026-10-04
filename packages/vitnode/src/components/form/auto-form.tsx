@@ -6,8 +6,8 @@ import {
   useForm,
   useSelector,
 } from "@tanstack/react-form";
-import { useAnimate, useReducedMotion } from "motion/react";
-import { useEffect } from "react";
+import { animate, useReducedMotion } from "motion/react";
+import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import z from "zod";
 
@@ -20,12 +20,18 @@ import {
   getNestedParam,
   getZodInputParams,
   type InputParams,
+  isRequiredPath,
 } from "../../lib/helpers/auto-form";
 import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "../../lib/motion";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";
-import { Form, FormField, useFormApi } from "../ui/form";
+import {
+  areFieldErrorsRevealed,
+  Form,
+  FormField,
+  useFormApi,
+} from "../ui/form";
 import {
   Tabs,
   TabsContent,
@@ -119,26 +125,31 @@ export const AutoFormFieldSlot = ({
   component: (props: ItemAutoFormComponentProps) => React.ReactNode;
 }) => <>{component(props)}</>;
 
-function AutoFormField({
-  invalid,
-  submitCount,
-  ...props
-}: React.ComponentProps<typeof Field> & {
-  invalid: boolean;
-  submitCount: number;
-}) {
-  const [scope, animate] = useAnimate<HTMLDivElement>();
-  const shouldReduceMotion = useReducedMotion();
+const INVALID_FIELD_SELECTOR = "[data-slot=field][data-invalid=true]";
+const FOCUSABLE_SELECTOR =
+  "input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), [contenteditable=true], [tabindex]:not([tabindex='-1'])";
 
-  useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
-    if (!invalid || shouldReduceMotion || !scope.current) return;
+const outermostInvalidFields = (root: HTMLElement): HTMLElement[] =>
+  [...root.querySelectorAll<HTMLElement>(INVALID_FIELD_SELECTOR)].filter(
+    element => !element.parentElement?.closest(INVALID_FIELD_SELECTOR),
+  );
 
-    animate(scope.current, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
-  }, [invalid, submitCount, shouldReduceMotion, animate, scope]);
+const focusTargetOf = (fieldElement: HTMLElement): HTMLElement | null =>
+  fieldElement.querySelector<HTMLElement>(
+    `[aria-invalid=true]:is(${FOCUSABLE_SELECTOR})`,
+  ) ?? fieldElement.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
 
-  return <Field data-invalid={invalid} ref={scope} {...props} />;
-}
+const belongsToField = (fieldName: string, itemId: string) =>
+  fieldName === itemId ||
+  fieldName.startsWith(`${itemId}.`) ||
+  fieldName.startsWith(`${itemId}[`);
+
+type SubmitButtonProps =
+  React.ComponentProps<typeof Button> extends infer Props
+    ? Props extends unknown
+      ? Omit<Props, "isLoading" | "type">
+      : never
+    : never;
 
 export const AutoFormSubmitButton = ({
   children,
@@ -153,13 +164,11 @@ export const AutoFormSubmitButton = ({
 }) => {
   const t = useTranslations("core.global");
   const { form } = useFormApi();
-  const canSubmit = useSelector(form.store, state => state.canSubmit);
   const isSubmitting = useSelector(form.store, state => state.isSubmitting);
 
   return (
     <Button
       className={className}
-      disabled={!canSubmit}
       isLoading={isSubmitting}
       type="submit"
       value={intent}
@@ -178,6 +187,100 @@ export type AutoFormOnSubmit<T extends z.ZodObject<z.ZodRawShape>> = (
     intent?: string;
   },
 ) => Promise<void> | void;
+
+const useRevealInvalidFields = (
+  formRef: React.RefObject<HTMLFormElement | null>,
+  onRevealTab: (tab: string) => void,
+) => {
+  const shouldReduceMotion = useReducedMotion();
+
+  return () => {
+    const root = formRef.current;
+    if (!root) return;
+
+    const invalidFields = outermostInvalidFields(root);
+    const [firstInvalidField] = invalidFields;
+    if (!firstInvalidField) return;
+
+    const tabOfField = firstInvalidField.closest<HTMLElement>(
+      "[data-autoform-tab]",
+    )?.dataset.autoformTab;
+    if (tabOfField) onRevealTab(tabOfField);
+
+    requestAnimationFrame(() => {
+      focusTargetOf(firstInvalidField)?.focus();
+    });
+
+    if (shouldReduceMotion) return;
+    for (const field of invalidFields) {
+      void animate(field, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
+    }
+  };
+};
+
+const invalidTabsOf = <T extends z.ZodObject<z.ZodRawShape>>({
+  fields,
+  formMode,
+  state,
+  tabs,
+}: {
+  fields: ItemAutoFormProps<T>[];
+  formMode: FormMode;
+  state: { fieldMeta: object; submissionAttempts: number };
+  tabs?: AutoFormTab[];
+}) => {
+  if (!tabs?.length) return "";
+
+  const invalidNames = (
+    Object.entries(state.fieldMeta) as [
+      string,
+      Parameters<typeof areFieldErrorsRevealed>[1],
+    ][]
+  )
+    .filter(
+      ([, meta]) =>
+        meta.errors.length > 0 &&
+        areFieldErrorsRevealed(formMode, meta, state.submissionAttempts),
+    )
+    .map(([name]) => name);
+
+  return tabs
+    .filter(tab =>
+      fields.some(
+        item =>
+          (item.tab ?? tabs[0].value) === tab.value &&
+          invalidNames.some(name => belongsToField(name, item.id)),
+      ),
+    )
+    .map(tab => tab.value)
+    .join("\n");
+};
+
+const numberOrUndefined = (value: unknown) =>
+  typeof value === "number" ? value : undefined;
+
+const stringOrUndefined = (value: unknown) =>
+  typeof value === "string" ? value : undefined;
+
+const fieldOtherProps = ({
+  invalid,
+  isOptional,
+  params,
+}: {
+  invalid: boolean;
+  isOptional: boolean;
+  params: NonNullable<ReturnType<typeof getNestedParam>>;
+}) => ({
+  isOptional,
+  enum: Array.isArray(params.enum) ? params.enum : undefined,
+  maxLength: numberOrUndefined(params.maxLength),
+  maxItems: numberOrUndefined(params.maxItems),
+  minLength: numberOrUndefined(params.minLength),
+  ["aria-invalid"]: invalid,
+  minItems: numberOrUndefined(params.minItems),
+  pattern: stringOrUndefined(params.pattern),
+  type: stringOrUndefined(params.type),
+});
 
 const emptySubmitMeta: FormSubmitMeta = {};
 
@@ -201,10 +304,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   layout?: (renderedFields: Record<string, React.ReactNode>) => React.ReactNode;
   mode?: FormMode;
   onSubmit?: AutoFormOnSubmit<T>;
-  submitButtonProps?: Omit<
-    React.ComponentProps<typeof Button>,
-    "isLoading" | "type"
-  >;
+  submitButtonProps?: SubmitButtonProps;
   tabs?: AutoFormTab[];
 }) {
   const {
@@ -214,11 +314,15 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   } = useCaptcha(captcha);
   const { setIsDirty } = useDialog();
   const t = useTranslations("core.global");
+  const formRef = useRef<HTMLFormElement>(null);
+  const [activeTab, setActiveTab] = useState(tabs?.[0]?.value);
+  const revealInvalidFields = useRevealInvalidFields(formRef, setActiveTab);
+
   const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
   const inputParams = getZodInputParams(jsonSchema);
   const validator: AutoFormValidator<T> = formSchema;
   const form = useForm({
-    canSubmitWhenInvalid,
+    canSubmitWhenInvalid: canSubmitWhenInvalid ?? true,
     defaultValues: getDefaults<T>(jsonSchema),
     onSubmit: async ({ formApi, meta, value }) => {
       const parsedValues = formSchema.safeParse(value);
@@ -233,6 +337,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
         onResetCaptcha();
       }
     },
+    onSubmitInvalid: () => {
+      requestAnimationFrame(revealInvalidFields);
+    },
     onSubmitMeta: emptySubmitMeta,
     validators: {
       onChange: validator,
@@ -245,11 +352,11 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   const watchedValues = useSelector(form.store, state =>
     hasConditionalFields ? state.values : undefined,
   );
-  const submitCount = useSelector(
-    form.store,
-    state => state.submissionAttempts,
+  const formMode = mode ?? "onTouched";
+  const invalidTabs = useSelector(form.store, state =>
+    invalidTabsOf({ fields, formMode, state, tabs }),
   );
-  const canSubmit = useSelector(form.store, state => state.canSubmit);
+  const invalidTabValues = new Set(invalidTabs.split("\n"));
   const isSubmitting = useSelector(form.store, state => state.isSubmitting);
 
   const isFieldVisible = (item: ItemAutoFormProps<T>) => {
@@ -266,9 +373,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
       return (
         <div key={item.id}>
           {!!item.label && (
-            <span className="text-xl leading-none font-semibold tracking-tight">
+            <h3 className="text-xl leading-none font-semibold text-balance">
               {item.label}
-            </span>
+            </h3>
           )}
           {!!item.description && (
             <div className="text-muted-foreground text-sm">
@@ -289,11 +396,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
         name={item.id}
         render={({ field, fieldState }) => {
           return (
-            <AutoFormField
-              invalid={fieldState.invalid}
-              orientation="responsive"
-              submitCount={submitCount}
-            >
+            <Field data-invalid={fieldState.invalid} orientation="responsive">
               <AutoFormFieldSlot
                 component={component}
                 {...(nestedFields.length
@@ -310,35 +413,13 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
                     ? (params.itemParams as InputParams)
                     : undefined
                 }
-                otherProps={{
-                  isOptional: !params.required,
-                  enum: Array.isArray(params.enum) ? params.enum : undefined,
-                  maxLength:
-                    typeof params.maxLength === "number"
-                      ? params.maxLength
-                      : undefined,
-                  maxItems:
-                    typeof params.maxItems === "number"
-                      ? params.maxItems
-                      : undefined,
-                  minLength:
-                    typeof params.minLength === "number"
-                      ? params.minLength
-                      : undefined,
-                  ["aria-invalid"]: fieldState.invalid,
-                  minItems:
-                    typeof params.minItems === "number"
-                      ? params.minItems
-                      : undefined,
-                  pattern:
-                    typeof params.pattern === "string"
-                      ? params.pattern
-                      : undefined,
-                  type:
-                    typeof params.type === "string" ? params.type : undefined,
-                }}
+                otherProps={fieldOtherProps({
+                  invalid: fieldState.invalid,
+                  isOptional: !isRequiredPath(jsonSchema, item.id),
+                  params,
+                })}
               />
-            </AutoFormField>
+            </Field>
           );
         }}
       />
@@ -347,10 +428,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
 
   const submitButton = (
     <Button
-      disabled={!canSubmit || (captcha && !isReady)}
+      disabled={!!captcha && !isReady}
       isLoading={isSubmitting}
       {...submitButtonProps}
-      aria-label={submitButtonProps?.["aria-label"] ?? t("submit")}
       type="submit"
     >
       {submitButtonProps?.children ?? t("submit")}
@@ -359,7 +439,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
 
   if (layout) {
     return (
-      <Form form={form} mode={mode} {...props}>
+      <Form form={form} mode={formMode} ref={formRef} {...props}>
         {layout(
           Object.fromEntries(
             fields
@@ -376,13 +456,27 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   }
 
   return (
-    <Form form={form} mode={mode} {...props}>
+    <Form form={form} mode={formMode} ref={formRef} {...props}>
       {tabs?.length ? (
-        <Tabs defaultValue={tabs[0].value}>
+        <Tabs
+          onValueChange={value => {
+            setActiveTab(String(value));
+          }}
+          value={activeTab ?? tabs[0].value}
+        >
           <TabsList>
             {tabs.map(tab => (
               <TabsTrigger key={tab.value} value={tab.value}>
                 {tab.label}
+                {invalidTabValues.has(tab.value) && (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="bg-destructive size-1.5 shrink-0 rounded-full"
+                    />
+                    <span className="sr-only">{t("tab_has_errors")}</span>
+                  </>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -391,6 +485,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
             {tabs.map(tab => (
               <TabsContent
                 className="flex flex-col gap-6"
+                data-autoform-tab={tab.value}
                 keepMounted
                 key={tab.value}
                 value={tab.value}

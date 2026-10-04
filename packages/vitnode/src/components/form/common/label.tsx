@@ -26,13 +26,14 @@ export const AutoFormLabel = ({
         className,
       )}
       htmlFor={formItemId}
+      id={`${formItemId}-label`}
       {...props}
     >
       {children}
       {isOptional && (
         <span className="text-muted-foreground text-xs">{t("optional")}</span>
       )}
-      {!!labelRight && <span className="ml-auto">{labelRight}</span>}
+      {!!labelRight && <span className="ms-auto">{labelRight}</span>}
     </FieldLabel>
   );
 };

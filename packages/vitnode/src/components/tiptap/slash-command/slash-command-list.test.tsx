@@ -98,4 +98,32 @@ describe("SlashCommandList", () => {
       expect.objectContaining({ id: "table" }),
     );
   });
+
+  it("tells the editor's textbox which option is highlighted", () => {
+    const textbox = document.createElement("div");
+    const ref = React.createRef<SlashCommandListRef>();
+    const view = render(
+      <SlashCommandList
+        command={vi.fn()}
+        commands={BLOCK_COMMANDS}
+        query=""
+        ref={ref}
+        textbox={textbox}
+      />,
+    );
+    const options = screen.getAllByRole("option");
+
+    expect(textbox.getAttribute("aria-controls")).toBe(
+      screen.getByRole("listbox").id,
+    );
+    expect(textbox.getAttribute("aria-activedescendant")).toBe(options[0].id);
+
+    act(() => {
+      ref.current?.onKeyDown(keyDown("ArrowDown"));
+    });
+    expect(textbox.getAttribute("aria-activedescendant")).toBe(options[1].id);
+
+    view.unmount();
+    expect(textbox.hasAttribute("aria-activedescendant")).toBe(false);
+  });
 });

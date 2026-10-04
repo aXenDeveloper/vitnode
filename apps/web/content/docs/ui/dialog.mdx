@@ -1,6 +1,7 @@
 ---
 title: Dialog
-description: Display content in a modal dialog.
+description: A modal window for focused tasks like sharing, quick edits and forms, with a built-in unsaved-changes guard.
+icon: AppWindow
 ---
 
 ## Preview
@@ -10,7 +11,7 @@ description: Display content in a modal dialog.
 ## Usage
 
 ```ts
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from '@vitnode/core/components/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -20,27 +21,107 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@vitnode/core/components/ui/dialog';
+} from '@vitnode/core/components/ui/dialog'
 ```
 
 ```tsx
 <Dialog>
-  <DialogTrigger render={<Button variant="outline">Open</Button>} />
+  <DialogTrigger render={<Button variant="outline">Share</Button>} />
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>Are you absolutely sure?</DialogTitle>
-      <DialogDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
-      </DialogDescription>
+      <DialogTitle>Share this page</DialogTitle>
+      <DialogDescription>Anyone with the link can read it.</DialogDescription>
     </DialogHeader>
     <DialogFooter>
-      <DialogClose render={<Button variant="outline">Cancel</Button>} />
-      <Button variant="destructive">Yes, delete account</Button>
+      <DialogClose render={<Button>Done</Button>} />
     </DialogFooter>
   </DialogContent>
 </Dialog>
 ```
+
+Always add a `DialogTitle`. It names the dialog for screen readers.
+
+## Forms
+
+<Preview name="dialog-form" />
+
+Put an `AutoForm` inside and it renders a Cancel + Submit footer for you. Edit a
+field, then press <kbd>Escape</kbd>: the dialog asks before throwing your
+changes away.
+
+```tsx
+const EditCategoryForm = () => {
+  const { setOpen } = useDialog()
+
+  return (
+    <AutoForm
+      fields={fields}
+      formSchema={formSchema}
+      onSubmit={async (values) => {
+        await save(values)
+        setOpen?.(false)
+      }}
+    />
+  )
+}
+```
+
+`useDialog()` gives children `setOpen` and `setIsDirty`. Closing with `setOpen`
+skips the guard, so call it after a successful save. Lazy-load heavy forms
+with `React.lazy` and `Suspense`.
+
+## Long content
+
+<Preview name="dialog-scroll" />
+
+Content taller than the screen scrolls inside the dialog. The page behind stays
+put.
+
+## Nested dialogs
+
+<Preview name="dialog-nested" />
+
+Open an [Alert Dialog](/docs/ui/alert-dialog) from inside a dialog to confirm a
+risky step. Closing it brings you back to the first dialog.
+
+## Controlled
+
+```tsx
+<Dialog onOpenChange={setOpen} open={open}>
+  ...
+</Dialog>
+```
+
+`onOpenChange` receives just the new `boolean`. Clicking a toast never closes
+the dialog underneath.
+
+## Dialog or Alert Dialog?
+
+Dialog is for low-stakes tasks and closes on an outside click. Confirming
+something nobody can undo? Use an [Alert Dialog](/docs/ui/alert-dialog).
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    'DialogContent.showCloseButton': {
+      description: 'Shows the × button in the corner.',
+      type: 'boolean',
+      default: 'true',
+    },
+    'DialogFooter.showCloseButton': {
+      description: 'Adds an outline Close button to the footer.',
+      type: 'boolean',
+      default: 'false',
+    },
+    'Dialog.onOpenChange': {
+      description: 'Called with the new open state.',
+      type: '(open: boolean) => void',
+    },
+  }}
+/>
 
 ## API Reference
 

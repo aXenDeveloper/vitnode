@@ -1,0 +1,139 @@
+---
+title: Scroll Fade
+description: A Tailwind CSS utility that fades a scroll container's edges, only on the side where more content is waiting.
+icon: Blend
+---
+
+## Preview
+
+<Preview name="scroll-fade" />
+
+## Usage
+
+Scroll Fade is a Tailwind utility, not a component, so there's nothing to
+import. It ships with the `shadcn` package, which VitNode apps already load in
+`src/styles.css`:
+
+```css
+@import 'shadcn/tailwind.css';
+```
+
+Put the class on the element that scrolls:
+
+```tsx
+<div className="scroll-fade h-64 overflow-y-auto">...</div>
+```
+
+Only edges with hidden content fade. Nothing overflows? Nothing fades, so it's
+safe on any list. It uses `mask-image`, so it dissolves the content itself and
+works on any background.
+
+| Class              | Fades                                    |
+| ------------------ | ---------------------------------------- |
+| `scroll-fade`      | Top and bottom (same as `scroll-fade-y`) |
+| `scroll-fade-y`    | Top and bottom                           |
+| `scroll-fade-x`    | Inline start and end, mirrors in RTL     |
+| `scroll-fade-t`    | Top only                                 |
+| `scroll-fade-b`    | Bottom only                              |
+| `scroll-fade-s`    | Inline start only, mirrors in RTL        |
+| `scroll-fade-e`    | Inline end only, mirrors in RTL          |
+| `scroll-fade-l`    | Left only, ignores reading direction     |
+| `scroll-fade-r`    | Right only, ignores reading direction    |
+| `scroll-fade-none` | Nothing, turns the fade off              |
+
+## Vertical
+
+<Preview name="scroll-fade-vertical" />
+
+Keep the card's background and border on a wrapper. Put `scroll-fade` on the
+inner scroller, so the list fades and the card doesn't:
+
+```tsx
+<section className="bg-card rounded-xl border">
+  <h3 className="border-b px-4 py-3">Notifications</h3>
+  <div
+    aria-label="Notifications"
+    className="scroll-fade h-64 overflow-y-auto"
+    role="region"
+    tabIndex={0}
+  >
+    <ul>...</ul>
+  </div>
+</section>
+```
+
+## Horizontal
+
+Use `scroll-fade-x` for rows of chips or cards, as in the preview. Add
+`no-scrollbar` (same package) when the scrollbar would only fade along:
+
+```tsx
+<div className="scroll-fade-x no-scrollbar overflow-x-auto">
+  <ul className="flex w-max gap-2">...</ul>
+</div>
+```
+
+The [Attachment](/docs/ui/attachment) list and the breadcrumb trail use exactly
+this.
+
+## One edge only
+
+`scroll-fade-b` suits a chat log that grows downward. `scroll-fade-s` and
+`scroll-fade-e` respect RTL in horizontal rows.
+
+```tsx
+<div className="scroll-fade-b h-80 overflow-y-auto">...</div>
+```
+
+## Fade size
+
+The default is 12% of the container, capped at `40px`. Use the spacing scale
+(`scroll-fade-16`) or any length or percentage:
+
+```tsx
+<div className="scroll-fade scroll-fade-[15%] overflow-y-auto" />
+```
+
+`scroll-fade-t-*`, `scroll-fade-b-*`, `scroll-fade-s-*` and `scroll-fade-e-*`
+size a single edge:
+
+```tsx
+<div className="scroll-fade scroll-fade-t-2 scroll-fade-b-8 overflow-y-auto" />
+```
+
+The fade eases in over `96px` of scrolling. Change that with
+`--scroll-fade-reveal`:
+
+```tsx
+<div className="scroll-fade overflow-y-auto [--scroll-fade-reveal:48px]" />
+```
+
+## Turning it off
+
+`scroll-fade-none` removes the mask, handy with a breakpoint or state variant:
+
+```tsx
+<div className="scroll-fade-x md:scroll-fade-none overflow-x-auto" />
+```
+
+## Browser support
+
+The scroll awareness uses CSS scroll-driven animations
+(`animation-timeline: scroll()`), with no JavaScript. Browsers without them get
+a static fade on every covered edge. Content is never hidden; it just loses the
+"you've reached the end" polish.
+
+## Accessibility
+
+- The fade is visual only. Every item stays in the DOM and reachable.
+- A scroller without focusable children needs `tabIndex={0}`, `role="region"`
+  and an `aria-label`, or keyboards can't scroll it.
+- Put `role="region"` on a wrapper `div`, not on the `ul`, so the list keeps its
+  list semantics.
+- The mask clips focus rings on the scroller. Show focus on a parent instead,
+  for example `has-focus-visible:ring-3`.
+- Don't fade so much that the first or last item gets hard to read.
+
+## Reference
+
+[shadcn/ui - scroll-fade](https://ui.shadcn.com/docs/utils/scroll-fade)

@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription } from "@/components/ui/card";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { ErrorContent } from "@/views/error/error-content";
 
 import type { SSOLinkSubmit } from "../link/sso-link-form-content";
@@ -123,7 +123,9 @@ export const SSOCallbackContent = ({
 
   return (
     <div className="container mx-auto flex items-center justify-center p-4">
-      <Loader />
+      <div className="flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
     </div>
   );
 };

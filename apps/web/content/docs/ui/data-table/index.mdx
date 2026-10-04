@@ -1,0 +1,242 @@
+---
+title: Data Table
+description: A typed table with sorting, search, filters and pagination that keeps its state in the URL and reads its rows from the VitNode API.
+icon: Table
+---
+
+## Preview
+
+<Preview name="data-table" withoutBackground />
+
+## Usage
+
+```ts
+import type { ColumnDef } from '@vitnode/core/components/table/data-table-content'
+
+import { ContentDataTable } from '@vitnode/core/components/table/content'
+```
+
+```tsx
+const columns: ColumnDef<User>[] = [
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'email', header: 'Email' },
+  { accessorKey: 'status', header: 'Status', align: 'center' },
+  {
+    id: 'actions',
+    header: '',
+    align: 'right',
+    cell: ({ row }) => <EditUserButton id={row.id} />,
+  },
+]
+
+<ContentDataTable
+  id="users-table"
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+Every row needs a numeric `id`. Render the table inside a
+`DataTableNavigationProvider`, or its controls throw.
+
+## Connect it to the URL
+
+The table never talks to the router. Search, filters, sorting and the pager all
+hand a new query string to `navigate`, and the table renders whatever
+`searchParams` says.
+
+```tsx
+import type { DataTableNavigation } from '@vitnode/core/components/table/navigation'
+
+import { DataTableNavigationProvider } from '@vitnode/core/components/table/navigation'
+
+const navigation = React.useMemo<DataTableNavigation>(
+  () => ({
+    searchParams: new URLSearchParams(search),
+    navigate: async nextSearch => {
+      await navigate({
+        resetScroll: false,
+        search: Object.fromEntries(new URLSearchParams(nextSearch)),
+      })
+    },
+  }),
+  [navigate, search],
+)
+
+<DataTableNavigationProvider value={navigation}>
+  <ContentDataTable {...props} />
+</DataTableNavigationProvider>
+```
+
+The route's loader then fetches the page those params describe:
+
+```ts
+const res = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'admin/users',
+  path: '/list',
+  args: { query: search },
+  withPagination: true,
+})
+```
+
+## Columns
+
+An **accessor column** binds to a field with `accessorKey`, which only accepts
+`keyof T`, so typos fail at compile time. A **display column** (actions,
+badges) has no field and needs a string `id`.
+
+`cell` replaces the default text and gets `{ row, allData }`. `align` sets
+`'left'` (default), `'center'` or `'right'` for the header and cells. Right
+suits numbers and actions.
+
+## Sorting
+
+List sortable columns in `order.columns`. Clicking a header flips between
+ascending and descending and writes `?orderBy=&order=` to the URL.
+`defaultOrder` applies when the URL says nothing.
+
+```tsx
+order={{
+  columns: ['name', 'createdAt'],
+  defaultOrder: { column: 'createdAt', order: 'desc' },
+}}
+```
+
+## Clickable rows
+
+`rowOpens` makes the whole row a target. It's focusable, and Enter or Space
+opens it too. Clicks on links, buttons and inputs inside the row are ignored.
+
+```tsx
+rowOpens={user => navigate({ to: `/admin/core/users/${user.id}` })}
+```
+
+## Features
+
+<Cards>
+  <Card
+    title="Search"
+    href="/docs/ui/data-table/search"
+    description="A debounced search box that writes to the URL."
+  />
+  <Card
+    title="Filters"
+    href="/docs/ui/data-table/filters"
+    description="Faceted multi-select filters, static or async."
+  />
+  <Card
+    title="Pagination"
+    href="/docs/ui/data-table/pagination"
+    description="Numbered pages and a rows-per-page select."
+  />
+  <Card
+    title="Bulk actions"
+    href="/docs/ui/data-table/bulk-actions"
+    description="Tick rows and act on all of them at once."
+  />
+  <Card
+    title="Expandable rows"
+    href="/docs/ui/data-table/expandable-rows"
+    description="A detail panel under each row."
+  />
+  <Card
+    title="Draggable rows"
+    href="/docs/ui/data-table/draggable-rows"
+    description="Reorder rows and save the order."
+  />
+</Cards>
+
+## API
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    id: {
+      description: 'DOM id of the table.',
+      required: true,
+      type: 'string',
+    },
+    columns: {
+      description:
+        'Accessor columns (`accessorKey: keyof T`) or display columns (`id: string`).',
+      required: true,
+      type: `ColumnDef<T>[]`,
+    },
+    edges: {
+      description: 'The rows of the current page.',
+      required: true,
+      type: 'T[]',
+    },
+    pageInfo: {
+      description: 'Pagination info from the API, passed straight through.',
+      required: true,
+      type: `{
+        count: number;
+        totalCount: number;
+        totalPages: number;
+        pageSize: number;
+        currentPage: number | null;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+        startCursor: string | null;
+        endCursor: string | null;
+      }`,
+    },
+    order: {
+      description: 'Sortable columns and the default sort.',
+      required: true,
+      type: `{
+        columns?: (keyof T)[];
+        defaultOrder: { column: keyof T; order: 'asc' | 'desc' };
+      }`,
+    },
+    rowOpens: {
+      description: 'Makes each row clickable and keyboard-focusable.',
+      type: '(row: T) => void',
+    },
+    header: {
+      description: 'A band above the toolbar, for a title or actions.',
+      type: 'ReactNode',
+    },
+    customNoResults: {
+      description: 'Replaces the empty state.',
+      type: `{
+        title?: string;
+        description?: string;
+        icon?: ReactNode;
+        footer?: ReactNode;
+      }`,
+    },
+    search: {
+      description: 'Shows a search input.',
+      type: 'boolean',
+    },
+    searchPlaceholder: {
+      description: 'Placeholder for the search input.',
+      type: 'string',
+    },
+    filters: {
+      description: 'Faceted filters.',
+      type: 'FilterDataTable[]',
+    },
+    bulkActions: {
+      description: 'Turns on row selection.',
+      type: 'ReactNode',
+    },
+    expandable: {
+      description: 'Turns on detail panels.',
+      type: 'ExpandableDataTable<T>',
+    },
+    reorderable: {
+      description: 'Turns on drag-and-drop ordering.',
+      type: 'ReorderableDataTable<T>',
+    },
+  }}
+/>
+
+Other props go to the underlying `Table`.

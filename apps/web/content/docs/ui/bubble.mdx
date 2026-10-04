@@ -1,0 +1,158 @@
+---
+title: Bubble
+description: Chat-style message bubbles with seven variants, start or end alignment, grouping, reactions and clickable suggestions.
+icon: MessageCircleMore
+---
+
+## Preview
+
+<Preview name="bubble" />
+
+## Usage
+
+```ts
+import {
+  Bubble,
+  BubbleContent,
+  BubbleGroup,
+  BubbleReactions,
+} from '@vitnode/core/components/ui/bubble'
+```
+
+```tsx
+<Bubble>
+  <BubbleContent>I removed the stale route. You are welcome.</BubbleContent>
+</Bubble>
+```
+
+A bubble shrinks to fit its text and never grows past 80% of the row. New
+bubbles grow in from their tail corner; with reduced motion they only fade.
+
+## Variants
+
+<Preview name="bubble-variants" />
+
+`default` is usually the current user, `secondary` the standard reply. `ghost`
+drops the frame and takes the full width.
+
+## Alignment
+
+Your messages go on the end side, everyone else's on the start.
+
+```tsx
+<Bubble align="end">
+  <BubbleContent>Sent by me.</BubbleContent>
+</Bubble>
+```
+
+## Grouping
+
+`BubbleGroup` tightens the spacing between consecutive bubbles from one
+sender. Set `align` on each `Bubble`, not on the group.
+
+```tsx
+<BubbleGroup>
+  <Bubble variant="muted">
+    <BubbleContent>First thought.</BubbleContent>
+  </Bubble>
+  <Bubble variant="muted">
+    <BubbleContent>Second thought, arriving fashionably late.</BubbleContent>
+  </Bubble>
+</BubbleGroup>
+```
+
+## Reactions
+
+<Preview name="bubble-reactions" />
+
+`BubbleReactions` pins a pill to the bubble's edge. It overlaps the bubble, so
+leave extra `gap` between rows.
+
+```tsx
+<BubbleReactions aria-label="Reactions: rocket, eyes" role="img" side="top">
+  <span>🚀</span>
+  <span>👀</span>
+</BubbleReactions>
+```
+
+## Links and buttons
+
+Use `render` on `BubbleContent` to make a bubble a real link or button, like a
+quick-reply suggestion.
+
+```tsx
+<Bubble variant="outline">
+  <BubbleContent render={<button onClick={onPick} type="button" />}>
+    Show me the plugin docs
+  </BubbleContent>
+</Bubble>
+```
+
+## Use with Message
+
+For an avatar, sender name or read receipt, wrap bubbles in a
+[Message](/docs/ui/message). Bubbles inside follow the message's `align`.
+
+## Accessibility
+
+- `Bubble` is only the visual surface. Put `role="log"` and an `aria-label` on
+  the conversation container.
+- Give `BubbleReactions` `role="img"` and an `aria-label`, so screen readers
+  announce it once instead of reading every emoji. Interactive reactions should
+  be labelled buttons.
+- Clickable bubbles must be a real `<button>` or `<a>` via `render`.
+- Variants signal tone with color, so keep the meaning in the text too.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Bubble
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'Visual treatment.',
+      type: 'default | secondary | muted | tinted | outline | ghost | destructive',
+      default: 'default',
+    },
+    align: {
+      description: 'Which side of the conversation it sits on.',
+      type: 'start | end',
+      default: 'start',
+    },
+  }}
+/>
+
+### BubbleContent
+
+<TypeTable
+  type={{
+    render: {
+      description:
+        'Renders the content as another element, like a link or button.',
+      type: 'ReactElement | function',
+    },
+  }}
+/>
+
+### BubbleReactions
+
+<TypeTable
+  type={{
+    side: {
+      description: 'Edge of the bubble the reactions sit on.',
+      type: 'top | bottom',
+      default: 'bottom',
+    },
+    align: {
+      description: 'Inline position along that edge.',
+      type: 'start | end',
+      default: 'end',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

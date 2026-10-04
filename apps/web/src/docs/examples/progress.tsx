@@ -1,4 +1,8 @@
-import { Progress } from '@vitnode/core/components/ui/progress'
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from '@vitnode/core/components/ui/progress'
 import React from 'react'
 
 export default function ProgressDemo() {
@@ -10,5 +14,15 @@ export default function ProgressDemo() {
     return () => clearTimeout(timer)
   }, [])
 
-  return <Progress value={progress} />
+  return (
+    <div className="not-prose flex w-full max-w-sm flex-col gap-6">
+      <Progress value={progress}>
+        <ProgressLabel>Uploading photos</ProgressLabel>
+        <ProgressValue />
+      </Progress>
+      <Progress value={null}>
+        <ProgressLabel>Preparing export</ProgressLabel>
+      </Progress>
+    </div>
+  )
 }

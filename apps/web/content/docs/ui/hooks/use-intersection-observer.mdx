@@ -1,0 +1,90 @@
+---
+title: useIntersectionObserver
+description: Find out when an element scrolls into view. Use it for lazy loading, infinite feeds and "seen" tracking.
+icon: ScanEye
+---
+
+## Preview
+
+<Preview name="hook-use-intersection-observer" />
+
+## Usage
+
+```ts
+import { useIntersectionObserver } from '@vitnode/core/hooks/use-intersection-observer'
+```
+
+```tsx
+const [element, setElement] = React.useState<HTMLDivElement | null>(null)
+const entry = useIntersectionObserver(element, { threshold: 0.5 })
+
+return (
+  <div ref={setElement}>
+    {entry?.isIntersecting ? 'I can see you!' : 'Nobody is looking...'}
+  </div>
+)
+```
+
+It returns the latest
+[`IntersectionObserverEntry`](https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserverEntry),
+or `undefined` until the first report. On the server, and in browsers without
+`IntersectionObserver`, it stays `undefined`.
+
+Keep the element in state through a callback ref, not `useRef`. Then the hook
+notices when the node mounts late or gets swapped.
+
+## Load once, then stop
+
+`freezeOnceVisible` stops observing the first time the element shows up. A
+positive `rootMargin` starts loading just before it reaches the screen.
+
+```tsx
+const entry = useIntersectionObserver(element, {
+  freezeOnceVisible: true,
+  rootMargin: '200px',
+})
+
+return (
+  <div ref={setElement}>{entry?.isIntersecting ? <HeavyChart /> : null}</div>
+)
+```
+
+## Inside a scroll container
+
+The preview above watches its own scroll box, not the viewport. Pass that box as
+`root`, stored in state the same way:
+
+```tsx
+const [root, setRoot] = React.useState<HTMLDivElement | null>(null)
+const entry = useIntersectionObserver(element, { root })
+```
+
+## Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    threshold: {
+      description:
+        'How much of the element (0 to 1) must be visible. An array reports at each step.',
+      type: 'number | number[]',
+      default: '0',
+    },
+    rootMargin: {
+      description: 'Grows or shrinks the visible area, like CSS margin.',
+      type: 'string',
+      default: '"0%"',
+    },
+    root: {
+      description: 'The scroll container to watch. `null` is the viewport.',
+      type: 'Element | null',
+      default: 'null',
+    },
+    freezeOnceVisible: {
+      description: 'Stop observing after the first time it is visible.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>

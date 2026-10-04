@@ -1,13 +1,14 @@
 import { cn } from "cn";
 import React from "react";
 
-import { FormControl, FormMessage } from "@/components/ui/form";
+import { FormControl, FormMessage, useFormField } from "@/components/ui/form";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-} from "@/components/ui/input-group";
+  NumberField,
+  NumberFieldDecrement,
+  NumberFieldGroup,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from "@/components/ui/number-field";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
@@ -15,7 +16,11 @@ import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
 type AutoFormNumberProps = ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof InputGroupInput>, "type" | "value"> & {
+  Omit<
+    React.ComponentProps<typeof NumberField>,
+    "children" | "defaultValue" | "id" | "name" | "onValueChange" | "value"
+  > & {
+    placeholder?: string;
     unitLabel?: React.ReactNode;
   };
 
@@ -30,12 +35,11 @@ export const AutoFormNumber = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   multiLang,
   otherProps: { isOptional },
+  placeholder,
   unitLabel,
   ...props
 }: AutoFormNumberProps) => {
-  const [text, setText] = React.useState(
-    typeof field.value === "number" ? String(field.value) : "",
-  );
+  const { formItemId } = useFormField();
 
   return (
     <>
@@ -45,31 +49,33 @@ export const AutoFormNumber = ({
         </AutoFormLabel>
       )}
 
-      <InputGroup className={cn("w-48", className)}>
-        <FormControl>
-          <InputGroupInput
-            {...field}
-            inputMode="numeric"
-            onChange={event => {
-              const raw = event.target.value;
-              setText(raw);
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <NumberField
+          className={cn("w-48", className)}
+          id={formItemId}
+          name={field.name}
+          onValueChange={value => {
+            field.onChange(value);
+          }}
+          value={typeof field.value === "number" ? field.value : null}
+          {...props}
+        >
+          <NumberFieldGroup>
+            <NumberFieldDecrement />
+            <FormControl>
+              <NumberFieldInput
+                onBlur={field.onBlur}
+                placeholder={placeholder}
+              />
+            </FormControl>
+            <NumberFieldIncrement />
+          </NumberFieldGroup>
+        </NumberField>
 
-              const parsed = Number(raw);
-              field.onChange(
-                raw === "" || Number.isNaN(parsed) ? null : parsed,
-              );
-            }}
-            type="number"
-            value={text}
-            {...props}
-          />
-        </FormControl>
         {!!unitLabel && (
-          <InputGroupAddon align="inline-end">
-            <InputGroupText>{unitLabel}</InputGroupText>
-          </InputGroupAddon>
+          <span className="text-muted-foreground text-sm">{unitLabel}</span>
         )}
-      </InputGroup>
+      </div>
 
       {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />

@@ -1,6 +1,7 @@
 ---
 title: Input
-description: Component used for collecting data from users
+description: A single-line text input for usernames, emails, passwords and more, with AutoForm validation or as a plain controlled field.
+icon: TextCursorInput
 ---
 
 ## Preview
@@ -9,21 +10,22 @@ description: Component used for collecting data from users
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
-```ts
-import { z } from 'zod';
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
-```
 
-```ts
+```tsx
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormInput } from '@vitnode/core/components/form/fields/input'
+import { z } from 'zod'
+
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.email("Please enter a valid email address"),
-});
+  username: z
+    .string()
+    .min(3, 'Usernames need at least 3 characters')
+    .default(''),
+})
 ```
 
 ```tsx
@@ -31,23 +33,9 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "username",
-      component: props => (
-        <AutoFormInput
-          {...props}
-          description="This is the username for your application. It should be unique and not shared with anyone."
-          label="Username"
-        />
-      ),
-    },
-    {
-      id: "email",
-      component: props => (
-        <AutoFormInput
-          {...props}
-          description="We'll use this email to contact you."
-          label="Email Address"
-        />
+      id: 'username',
+      component: (props) => (
+        <AutoFormInput {...props} label="Username" autoComplete="username" />
       ),
     },
   ]}
@@ -55,92 +43,105 @@ const formSchema = z.object({
 ```
 
   </Tab>
-
   <Tab value="Manual">
-```ts
-import { Input } from '@vitnode/core/components/ui/input';
+
+```tsx
+import { Input } from '@vitnode/core/components/ui/input'
 ```
 
 ```tsx
-<Input />
+<Input aria-label="Username" autoComplete="username" />
 ```
 
   </Tab>
 </Tabs>
 
-## Multi-language
+## States
 
-Set the `multiLang` prop to collect the value in every enabled language. The
-field renders a language **select** (shown only when more than one language is
-enabled) that switches which language you are editing - it does **not** change
-the app-wide locale, only the value inside this input.
+<Preview name="input-states" />
 
-The value becomes an array matching the `core_languages_words` table, one entry
-per language you edited:
+Set `aria-invalid` for the error style and `disabled` to dim it. `type="file"`
+gets a styled picker button. Wrap it in a [Field](/docs/ui/field) for the
+label, description and error.
 
-```ts
-[
-  { languageCode: "en", value: "Category" },
-  { languageCode: "pl", value: "Kategoria" },
-];
+```tsx
+<Input aria-invalid aria-describedby="email-error" id="email" type="email" />
 ```
 
-Declare the field with the `multiLangValueSchema` helper so the schema matches
-the array shape (its `minLength` / `maxLength` apply to each language's value):
+## Addons
+
+Pass `InputGroupAddon` children to `AutoFormInput` and it renders an
+[Input Group](/docs/ui/input-group): icons, prefixes, buttons.
+
+```tsx
+<AutoFormInput {...props} label="Search">
+  <InputGroupAddon>
+    <Search />
+  </InputGroupAddon>
+</AutoFormInput>
+```
+
+## Multi-language
+
+`multiLang` collects one value per enabled language. A language select appears
+inside the input when there's more than one.
 
 ```ts
-import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+import { multiLangValueSchema } from '@vitnode/core/lib/helpers/multi-lang'
 
 const formSchema = z.object({
   name: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
-});
+})
 ```
 
 ```tsx
-{
-  id: "name",
-  component: props => <AutoFormInput {...props} label="Name" multiLang />,
-}
+<AutoFormInput {...props} label="Name" multiLang />
 ```
 
-On the backend, persist the array with `saveLanguageWords` - it fills the
-remaining `core_languages_words` columns. See
-[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
+The value is `{ languageCode, value }[]`. See
+[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields)
+for saving it.
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+`AutoFormInput` also accepts every native `<input>` prop.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description:
-        "The label for the input field. This is displayed above the input.",
-      type: "string",
-      default: "",
+      description: 'Shown above the input.',
+      type: 'ReactNode',
+    },
+    labelRight: {
+      description: "Content pinned to the label's right edge.",
+      type: 'ReactNode',
     },
     description: {
       description:
-        "A short description of the input field. This is displayed below the input.",
-      type: "string",
-      default: "",
+        "Shown below the input. Defaults to the schema's `.describe()`.",
+      type: 'ReactNode',
     },
     type: {
-      description:
-        "The type of the input field. This is passed to the native input element.",
-      type: "string",
-      default: "text",
+      description: 'Native input type.',
+      type: 'string',
+      default: '"text"',
     },
     placeholder: {
-      description: "Placeholder text to display when the input is empty.",
-      type: "string",
-      default: "",
+      description: 'Hint shown while empty. Not a label replacement.',
+      type: 'string',
     },
     multiLang: {
       description:
-        "Collect the value per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
-      type: "boolean",
-      default: "false",
+        'Collect one value per language as `{ languageCode, value }[]`.',
+      type: 'boolean',
+      default: 'false',
+    },
+    children: {
+      description:
+        '`InputGroupAddon` elements. Turns the input into an input group.',
+      type: 'ReactNode',
     },
   }}
 />

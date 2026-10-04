@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowUp, ChevronsUpDown } from "lucide-react";
 import React from "react";
 
 import type {
@@ -9,7 +9,7 @@ import type {
 } from "./data-table-content";
 
 import { Button } from "../ui/button";
-import { Loader } from "../ui/loader";
+import { Spinner } from "../ui/spinner";
 import { useDataTableUrl } from "./navigation";
 import { readTableOrder, toggleTableOrder } from "./url-state";
 
@@ -34,9 +34,16 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
 
   let icon: React.ReactNode;
   if (isPending) {
-    icon = <Loader small />;
+    icon = <Spinner />;
   } else if (isActive) {
-    icon = current.order === "asc" ? <ArrowUp /> : <ArrowDown />;
+    icon = (
+      <ArrowUp
+        className={cn(
+          "ease-fluid transition-transform duration-200 motion-reduce:transition-none",
+          current.order === "desc" && "rotate-180",
+        )}
+      />
+    );
   } else {
     icon = <ChevronsUpDown />;
   }

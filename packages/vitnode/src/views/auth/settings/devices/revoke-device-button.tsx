@@ -30,6 +30,7 @@ export const RevokeDeviceButton = ({
       <Tooltip>
         <ConfirmActionAlertDialog
           description={t("desc", { os })}
+          icon={<LogOutIcon />}
           onSubmit={async ({ onClose }) => {
             const result = await onRevoke({ publicId });
 

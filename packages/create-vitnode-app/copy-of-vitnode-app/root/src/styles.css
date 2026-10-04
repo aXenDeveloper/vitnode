@@ -4,6 +4,7 @@
 @import "@vitnode/core/styles/tiptap.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));
 
 :root:not(.dark) {
   color-scheme: light;
@@ -28,10 +29,10 @@
   --input: oklch(0.9 0 0);
   --ring: oklch(0.52 0.2 264);
   --chart-1: oklch(0.52 0.2 264);
-  --chart-2: oklch(0.52 0.128 155);
-  --chart-3: oklch(0.565 0.209 27);
-  --chart-4: oklch(0.55 0.145 50);
-  --chart-5: oklch(0.6 0 0);
+  --chart-2: oklch(0.72 0.15 55);
+  --chart-3: oklch(0.6 0 0);
+  --chart-4: oklch(0.45 0.11 155);
+  --chart-5: oklch(0.63 0.2 27);
   --sidebar: oklch(0.955 0 0);
   --sidebar-foreground: oklch(0.46 0 0);
   --sidebar-primary: oklch(0.52 0.2 264);
@@ -65,10 +66,10 @@
   --input: oklch(0.348 0.013 264);
   --ring: oklch(0.7 0.14 264);
   --chart-1: oklch(0.7 0.14 264);
-  --chart-2: oklch(0.758 0.153 155);
-  --chart-3: oklch(0.709 0.17 27);
-  --chart-4: oklch(0.78 0.142 50);
-  --chart-5: oklch(0.626 0.01 264);
+  --chart-2: oklch(0.82 0.13 55);
+  --chart-3: oklch(0.6 0.01 264);
+  --chart-4: oklch(0.62 0.14 155);
+  --chart-5: oklch(0.74 0.16 27);
   --sidebar: oklch(0.199 0.011 264);
   --sidebar-foreground: oklch(0.855 0.004 264);
   --sidebar-primary: oklch(0.7 0.14 264);
@@ -132,6 +133,16 @@
   --shadow-xl:
     0 8px 16px -4px rgb(0 0 0 / 0.05), 0 24px 48px -12px rgb(0 0 0 / 0.14);
   --inset-shadow-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.16);
+  --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+  --text-xs--letter-spacing: 0.01em;
+  --text-lg--letter-spacing: -0.01em;
+  --text-xl--letter-spacing: -0.012em;
+  --text-2xl--letter-spacing: -0.016em;
+  --text-3xl--letter-spacing: -0.02em;
+  --text-3xl--line-height: 1.15;
+  --text-4xl--letter-spacing: -0.022em;
+  --text-5xl--letter-spacing: -0.024em;
+  --text-6xl--letter-spacing: -0.025em;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

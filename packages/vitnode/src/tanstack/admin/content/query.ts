@@ -86,6 +86,26 @@ export const invalidateContentAfterWrite = async (
   ]);
 };
 
+export const invalidateContentAfterBulkWrite = async (
+  queryClient: QueryClient,
+  {
+    contentTypeId,
+    itemIds,
+    removed,
+  }: { contentTypeId: string; itemIds: readonly number[]; removed: boolean },
+): Promise<void> => {
+  removeContentOptions(queryClient, contentTypeId);
+
+  await Promise.all([
+    ...itemIds.map(async itemId => {
+      if (removed) removeContentItem(queryClient, contentTypeId, itemId);
+      else await invalidateContentItem(queryClient, contentTypeId, itemId);
+    }),
+    invalidateContentList(queryClient, contentTypeId),
+    queryClient.invalidateQueries({ queryKey: SEARCH_QUERY_ROOT }),
+  ]);
+};
+
 export { invalidateContentList };
 
 export interface ContentRowWriteArgs extends ContentRowMutationArgs {

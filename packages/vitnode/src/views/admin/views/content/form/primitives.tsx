@@ -78,6 +78,7 @@ const ContentFormPublicationToggle = () => {
           <span className="text-foreground font-bold">{title ?? singular}</span>
         ),
       })}
+      icon={<Icon />}
       onSubmit={async ({ onClose }) => {
         if (await transition(action)) onClose();
       }}

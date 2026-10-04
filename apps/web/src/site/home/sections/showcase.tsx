@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
-import { ScreenFrame } from '@/site/marketing/screen-frame'
+import { SafariFrame } from '@/site/marketing/safari-frame'
 import { SCREENS } from '@/site/marketing/screens'
 import {
   ActionLink,
@@ -20,7 +20,7 @@ const ShowcaseStill = () => {
 
   return (
     <figure className="flex flex-col gap-4">
-      <ScreenFrame screen={SCREENS[screen]} />
+      <SafariFrame screen={SCREENS[screen]} />
       <figcaption className="text-muted-foreground mx-auto max-w-2xl text-center text-sm leading-relaxed text-pretty">
         {caption}
       </figcaption>

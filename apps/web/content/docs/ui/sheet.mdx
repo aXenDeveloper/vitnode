@@ -1,6 +1,7 @@
 ---
 title: Sheet
-description: A sheet component for displaying additional content in a modal-like overlay.
+description: A panel that slides in from any edge of the screen for settings, filters and side tasks.
+icon: PanelRight
 ---
 
 ## Preview
@@ -10,7 +11,7 @@ description: A sheet component for displaying additional content in a modal-like
 ## Usage
 
 ```ts
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from '@vitnode/core/components/ui/button'
 import {
   Sheet,
   SheetClose,
@@ -20,27 +21,64 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@vitnode/core/components/ui/sheet';
+} from '@vitnode/core/components/ui/sheet'
 ```
 
 ```tsx
 <Sheet>
-  <SheetTrigger render={<Button variant="outline">Open</Button>} />
+  <SheetTrigger render={<Button variant="outline">Notifications</Button>} />
   <SheetContent>
     <SheetHeader>
-      <SheetTitle>Are you absolutely sure?</SheetTitle>
-      <SheetDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
-      </SheetDescription>
+      <SheetTitle>Notifications</SheetTitle>
+      <SheetDescription>Pick what lands in your inbox.</SheetDescription>
     </SheetHeader>
     <SheetFooter>
-      <Button variant="destructive">Yes, delete account</Button>
-      <SheetClose render={<Button variant="outline">Cancel</Button>} />
+      <SheetClose render={<Button variant="outline">Done</Button>} />
     </SheetFooter>
   </SheetContent>
 </Sheet>
 ```
+
+`SheetHeader` and `SheetFooter` bring their own padding. Give the content
+between them `px-4` to line up.
+
+## Side
+
+<Preview name="sheet-side" />
+
+`side` picks the edge: `right` (default), `left`, `top` or `bottom`. Left and
+right sheets take 3/4 of a phone screen and cap at `max-w-sm` from `sm` up.
+
+```tsx
+<SheetContent side="left">...</SheetContent>
+```
+
+## Sheet or Drawer?
+
+A sheet is a dialog that slides. A [Drawer](/docs/ui/drawer) also follows your
+finger and closes with a swipe, which feels better on phones.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    side: {
+      description: 'Edge the sheet slides in from.',
+      type: '"top" | "right" | "bottom" | "left"',
+      default: '"right"',
+    },
+    showCloseButton: {
+      description: 'Shows the × button in the corner.',
+      type: 'boolean',
+      default: 'true',
+    },
+  }}
+/>
+
+Both props live on `SheetContent`. `Sheet` takes `open` and `onOpenChange` like
+a [Dialog](/docs/ui/dialog).
 
 ## API Reference
 

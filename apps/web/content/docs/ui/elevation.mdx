@@ -1,0 +1,89 @@
+---
+title: Radius & Elevation
+description: VitNode's corner radius scale, concentric corners, soft shadow scale and surface layers that show depth in light and dark mode.
+icon: Layers
+---
+
+One variable sets every corner, six soft shadows set every height, and in dark
+mode the surfaces themselves get lighter as they rise. Depth without the drama.
+
+## Radius scale
+
+<Preview name="elevation-radius-scale" className="*:max-w-full" />
+
+Every `rounded-*` class is a multiple of `--radius` (`0.75rem`). Drag the slider
+to feel it: change the one variable in `src/styles.css` and the whole UI gets
+rounder or sharper.
+
+```css
+:root {
+  --radius: 0.75rem;
+}
+```
+
+## Corners nest
+
+<Preview name="elevation-concentric" className="*:max-w-full" />
+
+Inner radius = outer radius − padding. Copy the outer radius onto the inner box
+and the corners bulge like a badly packed suitcase. That's why menus are
+`rounded-lg` with `p-1` and their items are `rounded-sm`.
+
+```tsx
+<div className="rounded-lg p-1">
+  <button className="rounded-sm px-2 py-1.5">Edit</button>
+</div>
+```
+
+## Shadow scale
+
+<Preview name="elevation-shadows" className="*:max-w-full" />
+
+Shadows are soft and low-alpha: they hint at height instead of shouting it. The
+higher something floats, the bigger its shadow. Flip to dark mode and they almost
+vanish. That's on purpose, see below.
+
+## Where things live
+
+<Preview name="elevation-layers" className="*:max-w-full" />
+
+Each level has its own surface, radius and shadow. In light mode the shadow
+carries the depth. In dark mode shadows disappear, so each layer gets lighter
+instead: `background` → `card` → `popover`. Dialogs share one scrim from
+`modal-scrim.ts`, so every modal dims the page the same way.
+
+| Level             | Surface      | Radius       | Shadow                 |
+| ----------------- | ------------ | ------------ | ---------------------- |
+| Controls          | `bg-card`    | `rounded-md` | `shadow-xs`            |
+| Cards             | `bg-card`    | `rounded-xl` | `shadow-xs` + `ring-1` |
+| Menus and selects | `bg-popover` | `rounded-lg` | `shadow-lg` + `ring-1` |
+| Popovers          | `bg-popover` | `rounded-xl` | `shadow-lg` + `ring-1` |
+| Dialogs           | `bg-popover` | `rounded-xl` | `shadow-xl` + scrim    |
+
+## Border or shadow?
+
+<Preview name="elevation-border-shadow" className="*:max-w-full" />
+
+Content that stays in the page flow gets a hairline `border`. Anything that
+floats above it gets a shadow and a faint `ring-1 ring-foreground/10`, so it
+still has an edge in dark mode.
+
+## Related
+
+<Cards>
+  <Card
+    title="Colors"
+    href="/docs/ui/colors"
+    description="Surface tokens and how they stack in dark mode."
+  />
+  <Card
+    title="Spacing"
+    href="/docs/ui/spacing"
+    description="The spacing scale behind padding and nested corners."
+  />
+  <Card
+    title="Motion"
+    href="/docs/ui/motion"
+    description="How floating layers enter and leave the screen."
+  />
+</Cards>

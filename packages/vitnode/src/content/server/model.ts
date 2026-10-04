@@ -174,6 +174,10 @@ export const createContentModel = <
     ? contentTranslationTableColumns(definition, translationTable)
     : null;
   const translationSchemas = schemas.translation;
+  const translationSearch =
+    translationTable && translationColumns
+      ? { columns: translationColumns, table: translationTable }
+      : undefined;
 
   const buildTranslations = (
     c: Context,
@@ -313,6 +317,7 @@ export const createContentModel = <
               definition,
               schemas,
               table,
+              translation: translationSearch,
             }),
             translations,
           });
@@ -351,6 +356,7 @@ export const createContentModel = <
         definition,
         schemas,
         table,
+        translation: translationSearch,
       }),
     table,
     translationColumns,

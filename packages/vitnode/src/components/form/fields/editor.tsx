@@ -1,7 +1,7 @@
 import type React from "react";
 
 import { Editor } from "@/components/ui/editor";
-import { FormControl, FormMessage } from "@/components/ui/form";
+import { FormControl, FormMessage, useFormField } from "@/components/ui/form";
 import { stripHtml } from "@/lib/strip-html";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
@@ -15,6 +15,12 @@ import {
 } from "./multi-lang";
 
 const hasHtmlText = (html: string): boolean => stripHtml(html) !== "";
+
+const useEditorLabelledBy = (label: React.ReactNode): string | undefined => {
+  const { formItemId } = useFormField();
+
+  return label ? `${formItemId}-label` : undefined;
+};
 
 type AutoFormEditorProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Editor>, "onChange" | "value"> & {
@@ -37,6 +43,7 @@ const MultiLangEditor = ({
   }) => {
   const { languages, selected, setSelected, currentValue, setValue } =
     useMultiLangField(field, { isFilled: hasHtmlText });
+  const labelledBy = useEditorLabelledBy(label);
 
   return (
     <>
@@ -57,6 +64,7 @@ const MultiLangEditor = ({
 
       <FormControl>
         <Editor
+          aria-labelledby={labelledBy}
           key={selected}
           onBlur={field.onBlur}
           onChange={setValue}
@@ -82,6 +90,8 @@ export const AutoFormEditor = ({
   multiLang,
   ...props
 }: AutoFormEditorProps) => {
+  const labelledBy = useEditorLabelledBy(label);
+
   if (multiLang) {
     return (
       <MultiLangEditor
@@ -105,6 +115,7 @@ export const AutoFormEditor = ({
 
       <FormControl>
         <Editor
+          aria-labelledby={labelledBy}
           onBlur={field.onBlur}
           onChange={field.onChange}
           value={field.value ?? ""}

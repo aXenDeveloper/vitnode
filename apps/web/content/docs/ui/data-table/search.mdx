@@ -1,0 +1,32 @@
+---
+title: Search
+description: Let people search the table. The term lives in the URL, so the API does the heavy lifting.
+icon: TextSearch
+---
+
+## Preview
+
+<Preview name="data-table-search" withoutBackground />
+
+## Usage
+
+```tsx
+<ContentDataTable
+  id="users-table"
+  // [!code ++:2]
+  search
+  searchPlaceholder="Search users..."
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+The input writes `?search=` to the URL 500ms after typing stops. Terms shorter
+than 3 characters clear it. Your route then loads the matching rows.
+
+<Callout type="info" title="Configure the API route">
+  `search` only renders the input. The API route decides which columns are
+  searched. See the [Search](/docs/dev/database/search) guide.
+</Callout>

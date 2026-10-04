@@ -1,41 +1,24 @@
 import { Badge } from '@vitnode/core/components/ui/badge'
-import { BadgeCheckIcon } from 'lucide-react'
+
+const variants = [
+  { variant: 'default', label: 'New' },
+  { variant: 'secondary', label: 'Moderator' },
+  { variant: 'outline', label: 'Archived' },
+  { variant: 'ghost', label: 'Hidden' },
+  { variant: 'link', label: 'v2.0' },
+  { variant: 'success', label: 'Published' },
+  { variant: 'warning', label: 'Pending' },
+  { variant: 'destructive', label: 'Banned' },
+] as const
 
 export default function BadgeDemo() {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex w-full flex-wrap gap-2">
-        <Badge>Badge</Badge>
-        <Badge variant="secondary">Secondary</Badge>
-        <Badge variant="success">Success</Badge>
-        <Badge variant="warning">Warning</Badge>
-        <Badge variant="destructive">Destructive</Badge>
-        <Badge variant="outline">Outline</Badge>
-      </div>
-      <div className="flex w-full flex-wrap gap-2">
-        <Badge
-          className="bg-blue-500 text-white dark:bg-blue-600"
-          variant="secondary"
-        >
-          <BadgeCheckIcon />
-          Verified
+    <div className="not-prose flex flex-wrap justify-center gap-2">
+      {variants.map(({ variant, label }) => (
+        <Badge key={variant} variant={variant}>
+          {label}
         </Badge>
-        <Badge className="h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
-          8
-        </Badge>
-        <Badge
-          className="h-5 min-w-5 rounded-full px-1 font-mono tabular-nums"
-          variant="destructive"
-        >
-          99
-        </Badge>
-        <Badge
-          className="h-5 min-w-5 rounded-full px-1 font-mono tabular-nums"
-          variant="outline"
-        >
-          20+
-        </Badge>
-      </div>
+      ))}
     </div>
   )
 }

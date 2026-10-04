@@ -1,0 +1,206 @@
+---
+title: Cascader
+description: Pick one option from a tree, one level at a time. Think continent, then country, then city.
+icon: ListTree
+---
+
+## Preview
+
+<Preview name="cascader" />
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+<Preview name="cascader-auto-form" />
+
+```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormCascader } from '@vitnode/core/components/form/fields/cascader'
+
+const formSchema = z.object({
+  office: z.string({ error: 'Pick an office to continue' }),
+  backupOffice: z.string().optional(),
+})
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'office',
+      component: (props) => (
+        <AutoFormCascader
+          {...props}
+          label="Office"
+          options={locations}
+          searchable
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+The form stores the **picked leaf's value** (`"krakow"`), not the path. Optional
+fields get a clear button automatically.
+
+  </Tab>
+
+  <Tab value="Manual">
+
+```tsx
+import { Cascader } from '@vitnode/core/components/ui/cascader'
+
+const [office, setOffice] = React.useState<string | null>(null)
+
+<Cascader
+  aria-labelledby="office-label"
+  onValueChange={setOffice}
+  options={locations}
+  value={office}
+/>
+```
+
+  </Tab>
+</Tabs>
+
+## Options
+
+A plain tree. An option with `children` is a branch that opens the next level;
+one without is a pickable leaf.
+
+```ts
+import type { CascaderOption } from '@vitnode/core/components/ui/cascader'
+
+const locations: CascaderOption[] = [
+  {
+    label: 'Europe',
+    value: 'europe',
+    children: [
+      {
+        label: 'Poland',
+        value: 'poland',
+        children: [
+          { label: 'Warsaw', value: 'warsaw' },
+          { label: 'Kraków', value: 'krakow' },
+        ],
+      },
+      { label: 'Iceland', value: 'iceland', disabled: true },
+    ],
+  },
+]
+```
+
+Need "Europe / Poland" too? `onValueChange` also gets the full path:
+
+```tsx
+<Cascader
+  onValueChange={(value, path) => setTrail(path.map((option) => option.label))}
+  options={locations}
+/>
+```
+
+## Search
+
+`searchable` adds a box that searches every leaf at once. Type "krak" in the
+preview and "Europe / Poland / Kraków" is one click away. Accents don't matter:
+"sao" finds São Paulo.
+
+## Columns
+
+<Preview name="cascader-columns" />
+
+By default a branch **replaces the list** with its children, with a back button
+on top. The popup stays the field's width.
+
+`layout="columns"` shows each level in a new column, and the popup widens to
+fit. Add `expandTrigger="hover"` to open branches on hover. Phones always drill
+down: there's no room for columns at 375px.
+
+```tsx
+<Cascader expandTrigger="hover" layout="columns" options={locations} />
+```
+
+Levels slide in from the direction you moved. The popup's height (drill) or
+width (columns) animates with them, mirrored in RTL. Reduced motion switches
+everything instantly.
+
+## Accessibility
+
+- Each level is a keyboard listbox: <kbd>↑</kbd> <kbd>↓</kbd> move,
+  <kbd>→</kbd> (<kbd>←</kbd> in RTL) or <kbd>Enter</kbd> opens a branch,
+  <kbd>←</kbd> goes back, <kbd>Home</kbd> / <kbd>End</kbd> jump,
+  <kbd>Escape</kbd> closes.
+- Branches announce whether they're open, and the picked path is marked
+  selected.
+- Label it. `AutoFormCascader` does it for you; a standalone `Cascader` needs
+  `aria-labelledby`.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    options: {
+      description: 'The tree of options.',
+      type: 'CascaderOption[]',
+      required: true,
+    },
+    value: {
+      description: 'Picked leaf value (controlled).',
+      type: 'string | null',
+    },
+    defaultValue: {
+      description: 'Starting value when uncontrolled.',
+      type: 'string | null',
+      default: 'null',
+    },
+    onValueChange: {
+      description: 'Called with the leaf value and its full path.',
+      type: '(value: string | null, path: CascaderOption[]) => void',
+    },
+    searchable: {
+      description: 'Adds a search box across every leaf.',
+      type: 'boolean',
+      default: 'false',
+    },
+    layout: {
+      description: 'One level at a time, or every level side by side.',
+      type: '"drill" | "columns"',
+      default: '"drill"',
+    },
+    expandTrigger: {
+      description: 'Columns layout: open branches on click or on hover.',
+      type: '"click" | "hover"',
+      default: '"click"',
+    },
+    showClear: {
+      description:
+        'Shows a clear button. AutoForm turns it on for optional fields.',
+      type: 'boolean',
+      default: 'false',
+    },
+    separator: {
+      description: 'Between labels in the trigger and search results.',
+      type: 'string',
+      default: '" / "',
+    },
+    placeholder: {
+      description: 'Shown while nothing is picked.',
+      type: 'string',
+      default: '"Select an option"',
+    },
+    disabled: {
+      description: 'Disables the trigger.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>

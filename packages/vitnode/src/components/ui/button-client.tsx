@@ -4,7 +4,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { type ButtonProps, buttonVariants } from "./button";
-import { Loader } from "./loader";
+import { Spinner } from "./spinner";
 import { TooltipWithContent } from "./tooltip";
 
 export function ClientButton({
@@ -28,6 +28,7 @@ export function ClientButton({
 
   const button = (
     <ButtonPrimitive
+      {...props}
       aria-describedby={
         hasDisabledTooltip
           ? [ariaDescribedBy, disabledReasonId].filter(Boolean).join(" ")
@@ -36,9 +37,8 @@ export function ClientButton({
       aria-label={isLoading ? t("loading") : props["aria-label"]}
       className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
-      disabled={isLoading ?? props.disabled}
+      disabled={isLoading === true || props.disabled}
       focusableWhenDisabled={hasDisabledTooltip || focusableWhenDisabled}
-      {...props}
     >
       {isLoading === undefined ? (
         children
@@ -46,16 +46,16 @@ export function ClientButton({
         <div className="relative flex items-center justify-center">
           <div
             className={cn(
-              "flex items-center justify-center gap-2 transition-opacity duration-300",
-              isLoading ? "opacity-0" : "opacity-100",
+              "ease-fluid flex items-center justify-center gap-2 transition-[opacity,scale,filter] duration-150 motion-reduce:scale-100 motion-reduce:blur-none motion-reduce:transition-opacity",
+              isLoading ? "scale-75 opacity-0 blur-xs" : "opacity-100",
             )}
           >
             {children}
           </div>
 
           {isLoading ? (
-            <div className="animate-in fade-in slide-in-from-top-2 absolute inset-0 flex items-center justify-center duration-300 motion-reduce:animate-none">
-              <Loader small />
+            <div className="ease-fluid absolute inset-0 flex items-center justify-center transition-[opacity,scale,filter] duration-150 motion-reduce:transition-opacity starting:scale-75 starting:opacity-0 starting:blur-xs motion-reduce:starting:scale-100 motion-reduce:starting:blur-none">
+              <Spinner aria-hidden="true" />
             </div>
           ) : null}
         </div>

@@ -1,28 +1,39 @@
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 export default function TextareaExample() {
   const formSchema = z.object({
-    desc: z.string().min(10, 'Description must be at least 10 characters'),
+    about: z
+      .string()
+      .min(10, 'Tell people a bit more. At least 10 characters.')
+      .max(500)
+      .default(''),
   })
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
-          id: 'desc',
+          id: 'about',
           component: (props) => (
             <AutoFormTextarea
-              description="Write a short description of your application."
-              label="Description"
-              placeholder="My application is..."
               {...props}
+              description="Shown at the top of your community's home page."
+              label="About"
+              placeholder="A cozy corner for night owls who build things."
             />
           ),
         },
       ]}
       formSchema={formSchema}
+      onSubmit={() => {
+        toast.success('About section saved', {
+          description: 'Your home page is up to date.',
+        })
+      }}
     />
   )
 }

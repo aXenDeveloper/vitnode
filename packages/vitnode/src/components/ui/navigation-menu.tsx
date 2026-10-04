@@ -155,7 +155,7 @@ function NavigationMenuList({
     >
       <span
         aria-hidden
-        className="bg-muted pointer-events-none absolute top-0 left-0 rounded-md opacity-0 transition-[translate,width,height,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] data-instant:transition-none data-visible:opacity-100 motion-reduce:transition-none"
+        className="bg-muted ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 transition-[translate,width,height,opacity] duration-300 data-instant:transition-none data-visible:opacity-100 motion-reduce:transition-none"
         data-slot="navigation-menu-highlight"
         ref={highlightRef}
       />
@@ -178,7 +178,7 @@ function NavigationMenuItem({
 }
 
 const navigationMenuTriggerStyle = cva(
-  "group/navigation-menu-trigger relative inline-flex h-9 w-max items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-all outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-popup-open:after:absolute data-popup-open:after:inset-y-0 data-popup-open:after:-inset-x-(--navigation-menu-gap) data-popup-open:after:content-['']",
+  "group/navigation-menu-trigger relative inline-flex h-9 w-max items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-[color,background-color,box-shadow] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-popup-open:after:absolute data-popup-open:after:inset-y-0 data-popup-open:after:-inset-x-(--navigation-menu-gap) data-popup-open:after:content-['']",
 );
 
 function NavigationMenuTrigger({
@@ -195,7 +195,7 @@ function NavigationMenuTrigger({
       {children}{" "}
       <ChevronDownIcon
         aria-hidden="true"
-        className="relative top-px ms-1 size-3 shrink-0 transition duration-300 group-data-popup-open/navigation-menu-trigger:rotate-180"
+        className="ease-fluid relative top-px ms-1 size-3 shrink-0 transition-transform duration-300 group-data-popup-open/navigation-menu-trigger:rotate-180 motion-reduce:transition-none"
         data-slot="navigation-menu-chevron"
       />
     </NavigationMenuPrimitive.Trigger>
@@ -210,7 +210,7 @@ function NavigationMenuContent({
   return (
     <NavigationMenuPrimitive.Content
       className={cn(
-        "h-full w-full p-2 transition-[opacity,transform,translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:data-[activation-direction=left]:translate-x-[50%] data-starting-style:data-[activation-direction=left]:translate-x-[-50%] data-ending-style:data-[activation-direction=right]:translate-x-[-50%] data-starting-style:data-[activation-direction=right]:translate-x-[50%] **:data-[slot=navigation-menu-link]:focus:ring-0 **:data-[slot=navigation-menu-link]:focus:outline-none motion-reduce:transition-none",
+        "ease-fluid h-full w-full p-2 transition-[opacity,transform,translate] duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:data-[activation-direction=left]:translate-x-[50%] data-starting-style:data-[activation-direction=left]:translate-x-[-50%] data-ending-style:data-[activation-direction=right]:translate-x-[-50%] data-starting-style:data-[activation-direction=right]:translate-x-[50%] **:data-[slot=navigation-menu-link]:focus:ring-0 **:data-[slot=navigation-menu-link]:focus:outline-none motion-reduce:transition-none",
         className,
       )}
       data-slot="navigation-menu-content"
@@ -235,7 +235,7 @@ function NavigationMenuPositioner({
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          "isolate z-50 h-(--positioner-height) w-(--positioner-width) max-w-(--available-width) transition-[top,left,right,bottom] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] data-instant:transition-none",
+          "ease-fluid isolate z-50 h-(--positioner-height) w-(--positioner-width) max-w-(--available-width) transition-[top,left,right,bottom] duration-300 data-instant:transition-none",
           className,
         )}
         collisionPadding={collisionPadding}
@@ -243,7 +243,7 @@ function NavigationMenuPositioner({
         sideOffset={sideOffset}
         {...props}
       >
-        <NavigationMenuPrimitive.Popup className="origin-top-center bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:zoom-in-95 data-open:fade-in-0 data-closed:animate-out data-closed:zoom-out-95 data-closed:fade-out-0 relative h-(--popup-height) w-(--popup-width) origin-(--transform-origin) overflow-hidden rounded-lg shadow ring-1 transition-[width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none">
+        <NavigationMenuPrimitive.Popup className="bg-popover text-popover-foreground ring-foreground/10 ease-fluid relative h-(--popup-height) w-(--popup-width) origin-(--transform-origin) overflow-hidden rounded-lg shadow ring-1 transition-[opacity,scale,width,height] duration-300 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none">
           <NavigationMenuPrimitive.Viewport className="relative size-full overflow-hidden" />
         </NavigationMenuPrimitive.Popup>
       </NavigationMenuPrimitive.Positioner>
@@ -258,7 +258,7 @@ function NavigationMenuLink({
   return (
     <NavigationMenuPrimitive.Link
       className={cn(
-        "focus-visible:ring-ring/50 in-data-[slot=navigation-menu-content]:hover:bg-muted in-data-[slot=navigation-menu-content]:focus:bg-muted in-data-[slot=navigation-menu-content]:data-active:bg-muted/50 relative flex items-center gap-2 rounded-md p-2 text-sm transition-all outline-none focus-visible:ring-3 focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4",
+        "focus-visible:ring-ring/50 in-data-[slot=navigation-menu-content]:hover:bg-muted in-data-[slot=navigation-menu-content]:focus:bg-muted in-data-[slot=navigation-menu-content]:data-active:bg-muted/50 relative flex items-center gap-2 rounded-md p-2 text-sm transition-[color,background-color,box-shadow] outline-none focus-visible:ring-3 focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="navigation-menu-link"

@@ -23,7 +23,7 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list relative inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-[orientation=horizontal]/tabs:h-9 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none",
+  "group/tabs-list relative inline-flex w-fit items-center justify-center rounded-lg p-0.75 text-muted-foreground group-data-[orientation=horizontal]/tabs:h-9 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {
@@ -45,9 +45,9 @@ function TabsIndicator({
     <TabsPrimitive.Indicator
       className={cn(
         "pointer-events-none absolute top-0 left-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) rounded-md",
-        "transition-[translate,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "ease-fluid transition-[translate,width,height] duration-300 motion-reduce:transition-none",
         "group-data-[variant=default]/tabs-list:bg-card dark:group-data-[variant=default]/tabs-list:border-input dark:group-data-[variant=default]/tabs-list:bg-input/30 group-data-[variant=default]/tabs-list:border group-data-[variant=default]/tabs-list:border-transparent group-data-[variant=default]/tabs-list:shadow-sm",
-        "after:bg-foreground after:absolute after:opacity-0 group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-end-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:after:opacity-100",
+        "after:bg-foreground after:absolute after:opacity-0 group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:-bottom-1.25 group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-end-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:after:opacity-100",
         className,
       )}
       data-slot="tabs-indicator"
@@ -84,7 +84,7 @@ function TabsTrigger({
   return (
     <TabsPrimitive.Tab
       className={cn(
-        "text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:text-muted-foreground dark:hover:text-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-colors group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pe-1.5 has-data-[icon=inline-start]:ps-1.5 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:text-muted-foreground dark:hover:text-foreground ease-fluid relative inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,scale] duration-150 group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start focus-visible:ring-3 focus-visible:outline-1 active:scale-97 disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pe-1.5 has-data-[icon=inline-start]:ps-1.5 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         "data-active:text-foreground dark:data-active:text-foreground",
         className,
       )}
@@ -139,7 +139,7 @@ function TabsPanels({
   return (
     <div
       className={cn(
-        "-m-2 box-content overflow-hidden p-2 transition-[height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "ease-fluid -m-2 box-content overflow-hidden p-2 transition-[height] duration-300 motion-reduce:transition-none",
         className,
       )}
       data-slot="tabs-panels"
@@ -164,13 +164,13 @@ function TabsContent({
     <TabsPrimitive.Panel
       className={cn(
         "flex-1 text-sm outline-none",
-        "transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "ease-fluid transition-[opacity,translate] duration-300",
         "data-ending-style:absolute data-ending-style:inset-x-0 data-ending-style:top-0",
         "data-ending-style:opacity-0 data-starting-style:opacity-0",
-        "data-ending-style:data-[activation-direction=right]:-translate-x-[110%] data-starting-style:data-[activation-direction=right]:translate-x-[110%]",
-        "data-ending-style:data-[activation-direction=left]:translate-x-[110%] data-starting-style:data-[activation-direction=left]:-translate-x-[110%]",
-        "data-ending-style:data-[activation-direction=down]:-translate-y-[110%] data-starting-style:data-[activation-direction=down]:translate-y-[110%]",
-        "data-ending-style:data-[activation-direction=up]:translate-y-[110%] data-starting-style:data-[activation-direction=up]:-translate-y-[110%]",
+        "motion-safe:data-ending-style:data-[activation-direction=right]:-translate-x-8 motion-safe:data-starting-style:data-[activation-direction=right]:translate-x-8",
+        "motion-safe:data-ending-style:data-[activation-direction=left]:translate-x-8 motion-safe:data-starting-style:data-[activation-direction=left]:-translate-x-8",
+        "motion-safe:data-ending-style:data-[activation-direction=down]:-translate-y-8 motion-safe:data-starting-style:data-[activation-direction=down]:translate-y-8",
+        "motion-safe:data-ending-style:data-[activation-direction=up]:translate-y-8 motion-safe:data-starting-style:data-[activation-direction=up]:-translate-y-8",
         className,
       )}
       data-slot="tabs-content"

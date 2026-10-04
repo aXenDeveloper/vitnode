@@ -7,33 +7,46 @@ import {
 } from "lucide-react";
 import React from "react";
 
-const ALERT_VARIANTS = {
+const ALERT_VARIANTS: Record<
+  "default" | "destructive" | "info" | "success" | "warning",
+  {
+    bar: string;
+    Icon: null | React.ComponentType;
+    icon: string;
+    role: "alert" | "status";
+  }
+> = {
   default: {
     bar: "bg-muted-foreground/50",
     icon: "[&_svg]:fill-muted-foreground",
-    Icon: InfoIcon,
+    Icon: null,
+    role: "status",
   },
   info: {
     bar: "bg-primary/50",
     icon: "[&_svg]:fill-primary",
     Icon: InfoIcon,
+    role: "status",
   },
   success: {
     bar: "bg-success/50",
     icon: "[&_svg]:fill-success",
     Icon: CircleCheckIcon,
+    role: "status",
   },
   warning: {
     bar: "bg-warn/50",
     icon: "[&_svg]:fill-warn",
     Icon: TriangleAlertIcon,
+    role: "alert",
   },
   destructive: {
     bar: "bg-destructive/50",
     icon: "[&_svg]:fill-destructive",
     Icon: CircleXIcon,
+    role: "alert",
   },
-} as const;
+};
 
 export type AlertVariant = keyof typeof ALERT_VARIANTS;
 
@@ -47,17 +60,18 @@ function Alert({
   icon?: React.ReactNode;
   variant?: AlertVariant;
 }) {
-  const { bar, icon: iconClassName, Icon } = ALERT_VARIANTS[variant];
+  const { bar, icon: iconClassName, Icon, role } = ALERT_VARIANTS[variant];
+  const resolvedIcon = icon === undefined ? Icon && <Icon /> : icon;
 
   return (
     <div
       className={cn(
-        "group/alert bg-card text-card-foreground relative flex w-full gap-2 rounded-xl border p-3 ps-1 text-start text-sm shadow-md has-data-[slot=alert-action]:pe-12",
+        "group/alert bg-card text-card-foreground relative flex w-full gap-2 rounded-xl border p-3 ps-1 text-start text-sm shadow-xs has-data-[slot=alert-action]:pe-12",
         className,
       )}
       data-slot="alert"
       data-variant={variant}
-      role="alert"
+      role={role}
       {...props}
     >
       <div
@@ -65,7 +79,7 @@ function Alert({
         data-slot="alert-bar"
         role="none"
       />
-      {icon !== null && (
+      {resolvedIcon !== null && (
         <span
           aria-hidden="true"
           className={cn(
@@ -74,7 +88,7 @@ function Alert({
           )}
           data-slot="alert-icon"
         >
-          {icon ?? <Icon />}
+          {resolvedIcon}
         </span>
       )}
       <div

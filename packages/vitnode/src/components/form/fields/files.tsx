@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import React from "react";
+import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { FormControl, FormMessage } from "@/components/ui/form";
@@ -13,7 +14,7 @@ import { formatBytes } from "@/lib/format-bytes";
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { FileGalleryRow } from "./file-gallery";
 import type { AutoFormFileValue } from "./file-shared";
-import type { FileUploadQueue } from "./file-upload-queue";
+import type { FileUploadOptions, FileUploadQueue } from "./file-upload-queue";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
@@ -39,7 +40,10 @@ export interface AutoFormFilesProps extends ItemAutoFormComponentProps {
   maxBytes: number;
   maxItems: number;
   minItems?: number;
-  onUpload: (file: File) => Promise<AutoFormFileValue>;
+  onUpload: (
+    file: File,
+    options: FileUploadOptions,
+  ) => Promise<AutoFormFileValue>;
   ordered?: boolean;
 }
 
@@ -91,37 +95,18 @@ export const AutoFormFiles = ({
   };
 
   const upload = useMutation({
-    mutationFn: async (file: File) => await onUpload(file),
+    mutationFn: async ({
+      file,
+      options,
+    }: {
+      file: File;
+      options: FileUploadOptions;
+    }) => await onUpload(file, options),
     retry: false,
   });
 
-  const settle = ({
-    error,
-    file,
-    stored,
-  }: {
-    error?: unknown;
-    file: File;
-    stored?: AutoFormFileValue;
-  }) => {
-    if (stored) {
-      setUploaded(current => [...current, stored]);
-
-      return;
-    }
-
-    const message = failureMessage({
-      attempted: file,
-      error,
-      formats,
-      maxBytes,
-    });
-    if (message === null) return;
-
-    setRejections(current => [
-      ...current,
-      t("errors.named", { message, name: file.name }),
-    ]);
+  const settle = ({ stored }: { stored?: AutoFormFileValue }) => {
+    if (stored) setUploaded(current => [...current, stored]);
   };
 
   const latestRef = React.useRef({ commit, settle, upload });
@@ -139,7 +124,8 @@ export const AutoFormFiles = ({
       latestRef.current.settle(result);
     },
     onStateChange: setQueued,
-    upload: async file => await latestRef.current.upload.mutateAsync(file),
+    upload: async (file, options) =>
+      await latestRef.current.upload.mutateAsync({ file, options }),
   });
   const queue = queueRef.current;
 
@@ -185,17 +171,36 @@ export const AutoFormFiles = ({
       );
     }
 
-    if (refused.length > 0) setRejections(refused);
+    if (refused.length > 0) setRejections([...new Set(refused)]);
 
     queue.enqueue(accepted);
   };
 
-  const remove = (id: number) => {
-    setRejections([]);
-    commit(removeFileId(ids, id));
+  const descriptors = new Map(resolved.map(entry => [entry.id, entry.file]));
+
+  const restore = (id: number, index: number) => {
+    const current = idsRef.current;
+    if (current.includes(id) || current.length >= maxItems) return;
+
+    commit([...current.slice(0, index), id, ...current.slice(index)]);
   };
 
-  const descriptors = new Map(resolved.map(entry => [entry.id, entry.file]));
+  const remove = (id: number) => {
+    setRejections([]);
+    const index = ids.indexOf(id);
+    const name = descriptors.get(id)?.name ?? t("stored");
+    commit(removeFileId(ids, id));
+
+    toast(t("removed"), {
+      action: {
+        label: t("undo"),
+        onClick: () => {
+          restore(id, index);
+        },
+      },
+      description: t("removed_desc", { name }),
+    });
+  };
   const pendingByOrder = new Map(pending.map(entry => [entry.order, entry]));
   const rows = planFileGallery({
     anchorId: queued.anchorId,
@@ -217,16 +222,30 @@ export const AutoFormFiles = ({
             kind: "pending" as const,
             name: entry.name,
             order: entry.order,
+            progress: entry.progress,
             size: entry.size,
           },
         ]
       : [];
   });
+  const failedRows = queued.failed.map<FileGalleryRow>(entry => ({
+    kind: "failed",
+    message:
+      failureMessage({
+        attempted: entry.file,
+        error: entry.error,
+        formats,
+        maxBytes,
+      }) ?? t("errors.upload_failed"),
+    name: entry.file.name,
+    order: entry.order,
+  }));
+  const galleryRows = [...rows, ...failedRows];
 
   const state =
     pending.length > 0
       ? "uploading"
-      : rejections.length > 0
+      : rejections.length > 0 || failedRows.length > 0
         ? "error"
         : ids.length > 0
           ? "done"
@@ -260,13 +279,22 @@ export const AutoFormFiles = ({
             state={state}
           />
 
-          {rows.length > 0 && (
+          {galleryRows.length > 0 && (
             <FileGallery
               canRemove={ids.length > minItems}
+              onCancel={order => {
+                queue.cancel(order);
+              }}
+              onDismiss={order => {
+                queue.dismiss(order);
+              }}
               onRemove={remove}
               onReorder={commit}
+              onRetry={order => {
+                if (remaining > 0) queue.retry(order);
+              }}
               ordered={ordered}
-              rows={rows}
+              rows={galleryRows}
             />
           )}
 

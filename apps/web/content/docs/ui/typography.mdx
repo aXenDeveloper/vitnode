@@ -1,16 +1,77 @@
 ---
 title: Typography
-description: A collection of text styles and components for consistent typography across your application.
+description: VitNode's type system - the native system font, a type scale with built-in letter spacing, hierarchy, balanced headings and tabular numbers, shown live.
 icon: Type
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+VitNode uses each device's own system font and a type scale that already knows
+its letter spacing. Zero font downloads, zero layout shift.
 
-| Style     | Example                                                               |
-| --------- | --------------------------------------------------------------------- |
-| Heading 1 | <h1 className="text-4xl font-bold">Heading 1</h1>                     |
-| Heading 2 | <h2 className="text-3xl font-semibold">Heading 2</h2>                 |
-| Heading 3 | <h3 className="text-2xl font-medium">Heading 3</h3>                   |
-| Paragraph | <p className="text-base">This is a paragraph with base text size.</p> |
+## Font
+
+<Preview name="typography-specimen" className="*:max-w-full" />
+
+`font-sans` is the system UI stack: San Francisco on Apple devices, Segoe UI on
+Windows, Roboto on Android. Swap `--font-sans` in `src/styles.css` for a brand
+font. Stick to three weights: `font-normal`, `font-medium`, `font-semibold`.
+
+## Type scale
+
+<Preview name="typography-scale" className="*:max-w-full" />
+
+Every `text-*` size carries its own tracking: tighter as it grows, a little air
+at `text-xs`. Pick the size and you're done. Don't add `tracking-tight` on top.
+Sizes are `rem`, so the UI scales with the reader's browser font size.
+
+## Hierarchy
+
+<Preview name="typography-hierarchy" className="*:max-w-full" />
+
+A few clear steps beat many similar ones. Weight and color do as much work as
+size.
+
+```tsx
+<h2 className="text-2xl font-semibold text-balance">Notifications</h2>
+<p className="text-muted-foreground text-sm leading-relaxed">
+  Choose what lands in your inbox.
+</p>
+```
+
+## Balanced headings
+
+<Preview name="typography-balance" className="*:max-w-full" />
+
+`text-balance` evens out heading lines, so no word is left alone. Use
+`text-pretty` on paragraphs.
+
+## Numbers that change
+
+<Preview name="typography-numbers" className="*:max-w-full" />
+
+`tabular-nums` gives every digit the same width, so counters, prices and table
+columns stop jiggling.
+
+```tsx
+<span className="tabular-nums">{onlineCount} online</span>
+```
+
+## Body text rules
+
+- `leading-relaxed` on paragraphs, never below `text-sm` (14px) for reading.
+- `max-w-prose` for long text.
+- `text-xs` only for labels, badges and timestamps.
+
+## Related
+
+<Cards>
+  <Card
+    title="Colors"
+    href="/docs/ui/colors"
+    description="Semantic color tokens for text and surfaces."
+  />
+  <Card
+    title="Introduction"
+    href="/docs/ui"
+    description="Design principles and every foundation in one place."
+  />
+</Cards>

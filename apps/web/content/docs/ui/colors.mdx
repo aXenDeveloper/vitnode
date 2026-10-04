@@ -1,8 +1,96 @@
 ---
 title: Colors
-description: A collection of color utilities and components for consistent theming across your application.
+description: VitNode's semantic color tokens in OKLCH - surfaces, primary blue, status colors, borders and the chart palette, live in light and dark mode.
+icon: Palette
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+Colors are **semantic tokens**: they name a job (`card`, `primary`), not a hue,
+so every component follows your theme and dark mode for free. Flip the theme
+and watch the values below change.
+
+## Tokens
+
+<Preview name="colors-tokens" className="*:max-w-full" />
+
+Each token is a CSS variable in `src/styles.css` and a Tailwind color:
+`bg-card`, `text-card-foreground`, `border-input`. Click a swatch's copy button
+to grab its class.
+
+## Written in OKLCH
+
+```css
+--primary: oklch(0.52 0.2 264);
+```
+
+| `L` Lightness         | `C` Chroma               | `H` Hue                             |
+| --------------------- | ------------------------ | ----------------------------------- |
+| `0` black - `1` white | `0` gray - `~0.37` vivid | `27` red · `155` green · `264` blue |
+
+Same `L` means the same perceived brightness, so contrast is predictable: tune
+`L` for readability, keep `H` for brand.
+
+## Surfaces stack
+
+<Preview name="colors-layers" />
+
+`background` → `card` → `popover`. In dark mode each layer gets lighter as it
+rises. Always pair a surface with its `-foreground` text.
+
+```tsx
+<div className="bg-card text-card-foreground rounded-lg border p-4">
+  <p className="text-muted-foreground">3 drafts waiting for review</p>
+</div>
+```
+
+## Status
+
+<Preview name="colors-status" />
+
+Status colors have no `-foreground`. Use them as text on a soft tint of
+themselves, or let the component pick for you.
+
+```tsx
+<span className="bg-success/10 text-success dark:bg-success/20 rounded-md px-2 py-1 text-sm">
+  Published
+</span>
+```
+
+## Chart palette
+
+<Preview name="colors-chart" className="*:max-w-full" />
+
+Use `chart-1` to `chart-5` in order: blue, orange, gray, green, red. Green and
+red are never neighbors and differ in lightness, so they stay apart for
+color-blind readers.
+
+```ts
+const chartConfig = {
+  posts: { label: 'Posts', color: 'var(--chart-1)' },
+  replies: { label: 'Replies', color: 'var(--chart-2)' },
+}
+```
+
+## Do and don't
+
+<Preview name="colors-do-dont" className="*:max-w-full" />
+
+- Keep a screen to 3-5 colors: neutrals, primary and one status.
+- Never use purple prominently, and never change `--primary`. VitNode blue
+  stays blue.
+- Filled `primary` is for short labels. Its dark-mode contrast is too low for
+  paragraphs.
+
+## Related
+
+<Cards>
+  <Card
+    title="Typography"
+    href="/docs/ui/typography"
+    description="Font stack, type scale and text rules."
+  />
+  <Card
+    title="Introduction"
+    href="/docs/ui"
+    description="Design principles and every foundation in one place."
+  />
+</Cards>

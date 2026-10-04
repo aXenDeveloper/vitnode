@@ -9,9 +9,9 @@ import { Search } from 'lucide-react'
 
 export default function InputGroupDemo() {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="not-prose flex w-full flex-col gap-8">
       <InputGroup>
-        <InputGroupInput placeholder="Search..." />
+        <InputGroupInput aria-label="Search" placeholder="Search..." />
         <InputGroupAddon>
           <Search />
         </InputGroupAddon>
@@ -20,6 +20,7 @@ export default function InputGroupDemo() {
 
       <InputGroup>
         <InputGroupTextarea
+          aria-label="Describe the issue"
           className="min-h-24 resize-none"
           placeholder="I'm having an issue with the login button on mobile."
           rows={6}

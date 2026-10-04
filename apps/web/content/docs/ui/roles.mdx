@@ -1,47 +1,46 @@
 ---
 title: Roles
-description: Search and pick roles for an Auto Form field - one, or as many as you like.
+description: Search and pick one role or many in an Auto Form field, with each role's color and name in the reader's language.
+icon: ShieldUser
 ---
 
 ## Preview
 
 <Preview name="roles" />
 
+Each role shows a color dot (when it has a color) and its name.
+
 ## Usage
 
 ```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormRoles } from "@vitnode/core/components/form/fields/input-roles";
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormRoles } from '@vitnode/core/components/form/fields/input-roles'
+import { searchAdminRolesInBrowser } from '@vitnode/core/tanstack/admin/roles'
 ```
 
-One component covers both shapes, because the difference is the value and
-nothing else - the search, the colour, the language resolution and the empty
-state are identical, and two copies is how they drift.
+`search` is required. In the AdminCP, use `searchAdminRolesInBrowser`: it
+reads the roles list (AdminCP session required) and skips the **guest** role.
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Single', 'Multiple']}>
   <Tab value="Single">
 
-```ts
-const formSchema = z.object({
-  roleId: z.number(),
-});
-```
-
 ```tsx
+const formSchema = z.object({ roleId: z.number() })
+
 <AutoForm
   formSchema={formSchema}
   fields={[
     {
-      id: "roleId",
+      id: 'roleId',
       component: props => (
         <AutoFormRoles
           {...props}
-          description="One role, replaced each time you pick."
           label="Primary role"
           placeholder="Select a role"
+          search={searchAdminRolesInBrowser}
         />
       ),
     },
@@ -49,30 +48,27 @@ const formSchema = z.object({
 />
 ```
 
-The value is a single id, and picking again replaces it.
+The value is one id. Picking again replaces it.
 
   </Tab>
 
   <Tab value="Multiple">
 
-```ts
-const formSchema = z.object({
-  roleIds: z.array(z.number()).min(1),
-});
-```
-
 ```tsx
+const formSchema = z.object({ roleIds: z.array(z.number()).min(1) })
+
 <AutoForm
   formSchema={formSchema}
   fields={[
     {
-      id: "roleIds",
+      id: 'roleIds',
       component: props => (
         <AutoFormRoles
           {...props}
           label="Additional roles"
           multiple
           placeholder="Add a role"
+          search={searchAdminRolesInBrowser}
         />
       ),
     },
@@ -80,71 +76,62 @@ const formSchema = z.object({
 />
 ```
 
-The value is an array of ids. Chosen roles appear above the picker as removable
-chips, and the picker **appends** rather than replaces - picking one that is
-already chosen removes it, which is what the tick beside it in the list means.
+The value is an array of ids, shown as removable chips. Picking a chosen role
+again removes it.
 
   </Tab>
 </Tabs>
 
-Out of the box it searches the AdminCP roles list. The **guest** role is never
-offered: it is the role a request has when it has no account, so it is not
-something to assign to anybody.
-
 ## Editing an existing record
 
-Same rule as [User](/docs/ui/user): the picker can only name ids it has seen, so
-an edit form passes the roles it already knows about.
+Pass the saved roles as `selected`, or the chips show raw ids.
 
 ```tsx
-<AutoFormRoles {...props} multiple label="Roles" selected={user.roles} />
+<AutoFormRoles {...props} multiple search={search} selected={user.roles} />
 ```
 
-## Keeping a role out of the list
+## Excluding roles
 
-`excludeIds` drops options another field already owns - a primary-role picker
-and a secondary-role picker should not both offer the same one:
+`excludeIds` hides roles another field already owns.
 
 ```tsx
 <AutoFormRoles
   {...props}
-  multiple
   excludeIds={[primaryRoleId]}
-  label="Additional roles"
+  multiple
+  search={search}
 />
 ```
 
-## Names are resolved per reader
+## Names per language
 
-A role carries one name per language. The field renders the active locale's, and
-falls back to the first translation rather than to the id - a role with no
-translation in your language is still a role somebody named:
+The field shows the active locale's name, then the first translation, then
+the id.
 
 ```ts
-import { roleOptionName } from "@vitnode/core/components/form/fields/input-roles";
+import { roleOptionName } from '@vitnode/core/components/form/fields/input-roles'
 
-roleOptionName(role, "pl"); // "Administrator PL", or the first name it has
+roleOptionName(role, 'pl')
 ```
 
 ## Props
 
 | Prop                | Type                                       | Default            | What it does                                 |
 | ------------------- | ------------------------------------------ | ------------------ | -------------------------------------------- |
+| `search`            | `(value: string) => Promise<RoleOption[]>` | required           | Looks up roles                               |
 | `multiple`          | `boolean`                                  | `false`            | `number[]` instead of `number`, with chips   |
 | `label`             | `ReactNode`                                | -                  | Field label                                  |
 | `description`       | `ReactNode`                                | -                  | Help text under the control                  |
 | `placeholder`       | `string`                                   | `Select an option` | Shown while nothing is chosen                |
 | `searchPlaceholder` | `string`                                   | `Search...`        | Placeholder inside the search box            |
-| `selected`          | `RoleOption[]`                             | `[]`               | Roles the field opens on                     |
+| `selected`          | `RoleOption[]`                             | `[]`               | Roles the field already knows                |
 | `excludeIds`        | `number[]`                                 | `[]`               | Roles the picker must not offer              |
-| `search`            | `(value: string) => Promise<RoleOption[]>` | AdminCP roles list | Replaces the lookup                          |
 | `disabled`          | `boolean`                                  | `false`            | Blocks opening the picker and removing chips |
 
-`RoleOption` is `{ id, color, name }`, where `name` is the raw
-`{ languageCode, name }[]` - the server has no business deciding which language
-the person clicking reads in.
+`RoleOption` is `{ id, color, name }`, with `name` as
+`{ languageCode, name }[]`.
 
 ## See also
 
 - [User](/docs/ui/user) - the same idea for people.
-- [Combobox](/docs/ui/combobox) - when the options are strings rather than records.
+- [Combobox](/docs/ui/combobox) - when the options are strings, not records.

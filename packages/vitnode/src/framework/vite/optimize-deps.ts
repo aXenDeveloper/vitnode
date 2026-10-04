@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { Plugin, Rolldown } from "vite";
 
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -63,6 +63,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "lucide-react",
   "lucide-react/dynamicIconImports.mjs",
   "motion/react",
+  "motion/react-m",
   "react-colorful",
   "react-resizable-panels",
   "react-scan",
@@ -71,7 +72,6 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "sonner",
   "use-debounce",
   "use-intl",
-  "vaul",
   "zod",
 ] as const;
 
@@ -118,12 +118,38 @@ export const tanStackRouterDepsInclude = (root: string): string[] =>
     includeThrough(root, owner, specifier),
   );
 
+const POSTCSS_BROWSER_EMPTY_IMPORTS = /^(?:fs|path|source-map-js|url)$/;
+const POSTCSS_IMPORTER = /[\\/]node_modules[\\/]postcss[\\/]/;
+const EMPTY_MODULE_PREFIX = "\0vitnode:browser-empty:";
+
+export const postcssBrowserEmptyImports = (): Rolldown.Plugin => ({
+  load: {
+    filter: { id: new RegExp(`^${EMPTY_MODULE_PREFIX}`) },
+    handler: () => "module.exports = {};",
+  },
+  name: "vitnode:postcss-browser-empty-imports",
+  resolveId: {
+    filter: { id: POSTCSS_BROWSER_EMPTY_IMPORTS },
+    handler: (id, importer) =>
+      importer && POSTCSS_IMPORTER.test(importer)
+        ? `${EMPTY_MODULE_PREFIX}${id}`
+        : null,
+  },
+});
+
 export const vitNodeOptimizeDeps = (): Plugin => ({
   apply: "serve",
   config: userConfig => {
     const root = userConfig.root ?? process.cwd();
 
     return {
+      environments: {
+        client: {
+          optimizeDeps: {
+            rolldownOptions: { plugins: [postcssBrowserEmptyImports()] },
+          },
+        },
+      },
       optimizeDeps: {
         include: [
           ...vitNodeClientDepsInclude(root),

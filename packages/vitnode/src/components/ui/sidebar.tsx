@@ -20,8 +20,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
+  TooltipGroup,
+  TooltipGroupTrigger,
   TooltipProvider,
   TooltipTrigger,
+  useIsInTooltipGroup,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -239,7 +242,9 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
         >
-          {children}
+          <TooltipGroup side={side === "left" ? "right" : "left"}>
+            {children}
+          </TooltipGroup>
         </div>
       </div>
     </div>
@@ -508,6 +513,18 @@ function SidebarMenuButton({
     tooltip?: React.ComponentProps<typeof TooltipContent> | string;
   }) {
   const { isMobile, state } = useSidebar();
+  const isInTooltipGroup = useIsInTooltipGroup();
+  const tooltipText = typeof tooltip === "string" ? tooltip : tooltip?.children;
+  const showsGroupTooltip =
+    isInTooltipGroup && !!tooltip && state === "collapsed" && !isMobile;
+
+  const getTriggerRender = () => {
+    if (!tooltip) return render;
+    if (!isInTooltipGroup) return <TooltipTrigger render={render} />;
+    if (!showsGroupTooltip) return render;
+
+    return <TooltipGroupTrigger content={tooltipText} render={render} />;
+  };
 
   const button = useRender({
     defaultTagName: "button",
@@ -517,7 +534,7 @@ function SidebarMenuButton({
       },
       props,
     ),
-    render: !tooltip ? render : <TooltipTrigger render={render} />,
+    render: getTriggerRender(),
     state: {
       slot: "sidebar-menu-button",
       sidebar: "menu-button",
@@ -526,15 +543,12 @@ function SidebarMenuButton({
     },
   });
 
-  if (!tooltip) {
+  if (!tooltip || isInTooltipGroup) {
     return button;
   }
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    };
-  }
+  const tooltipProps =
+    typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
   return (
     <TooltipProvider>
@@ -544,7 +558,7 @@ function SidebarMenuButton({
           align="center"
           hidden={state !== "collapsed" || isMobile}
           side="right"
-          {...tooltip}
+          {...tooltipProps}
         />
       </Tooltip>
     </TooltipProvider>

@@ -2,12 +2,18 @@ import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
 import { type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 
+import { MotionFeatures } from "@/components/motion-features";
 import { toggleVariants } from "@/components/ui/toggle";
+
+const INDICATOR_SPRING = { type: "spring", duration: 0.3, bounce: 0 } as const;
 
 const ToggleGroupContext = React.createContext<
   VariantProps<typeof toggleVariants> & {
+    indicatorId?: string;
     orientation?: "horizontal" | "vertical";
     spacing?: number;
   }
@@ -18,12 +24,27 @@ const ToggleGroupContext = React.createContext<
   orientation: "horizontal",
 });
 
+const SelectionIndicator = ({ layoutId }: { layoutId: string }) => {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <m.span
+      aria-hidden="true"
+      className="bg-muted pointer-events-none absolute inset-0 -z-10 rounded-[inherit] shadow-xs"
+      data-slot="toggle-group-indicator"
+      layoutId={layoutId}
+      transition={shouldReduceMotion ? { duration: 0 } : INDICATOR_SPRING}
+    />
+  );
+};
+
 function ToggleGroup({
   className,
   variant,
   size,
   spacing = 0,
   orientation = "horizontal",
+  multiple = false,
   children,
   ...props
 }: ToggleGroupPrimitive.Props &
@@ -31,6 +52,23 @@ function ToggleGroup({
     orientation?: "horizontal" | "vertical";
     spacing?: number;
   }) {
+  const indicatorId = React.useId();
+  const contextValue = React.useMemo(
+    () => ({
+      variant,
+      size,
+      spacing,
+      orientation,
+      indicatorId: multiple ? undefined : indicatorId,
+    }),
+    [variant, size, spacing, orientation, multiple, indicatorId],
+  );
+  const content = (
+    <ToggleGroupContext.Provider value={contextValue}>
+      {children}
+    </ToggleGroupContext.Provider>
+  );
+
   return (
     <ToggleGroupPrimitive
       className={cn(
@@ -42,14 +80,15 @@ function ToggleGroup({
       data-slot="toggle-group"
       data-spacing={spacing}
       data-variant={variant}
+      multiple={multiple}
       style={{ "--gap": spacing } as React.CSSProperties}
       {...props}
     >
-      <ToggleGroupContext.Provider
-        value={{ variant, size, spacing, orientation }}
-      >
-        {children}
-      </ToggleGroupContext.Provider>
+      {multiple ? (
+        content
+      ) : (
+        <MotionFeatures withLayoutAndDrag>{content}</MotionFeatures>
+      )}
     </ToggleGroupPrimitive>
   );
 }
@@ -62,6 +101,7 @@ function ToggleGroupItem({
   ...props
 }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
   const context = React.use(ToggleGroupContext);
+  const { indicatorId } = context;
 
   return (
     <TogglePrimitive
@@ -71,12 +111,24 @@ function ToggleGroupItem({
           variant: context.variant ?? variant,
           size: context.size ?? size,
         }),
+        indicatorId &&
+          "relative isolate aria-pressed:bg-transparent aria-pressed:shadow-none",
         className,
       )}
       data-size={context.size ?? size}
       data-slot="toggle-group-item"
       data-spacing={context.spacing}
       data-variant={context.variant ?? variant}
+      render={
+        indicatorId
+          ? ({ children: itemChildren, ...buttonProps }, { pressed }) => (
+              <button {...buttonProps}>
+                {pressed ? <SelectionIndicator layoutId={indicatorId} /> : null}
+                {itemChildren}
+              </button>
+            )
+          : undefined
+      }
       {...props}
     >
       {children}

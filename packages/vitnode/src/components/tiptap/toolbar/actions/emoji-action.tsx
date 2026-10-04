@@ -3,12 +3,12 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 const EmojiPicker = React.lazy(async () =>
@@ -36,8 +36,10 @@ export const EmojiAction = () => {
       <PopoverContent className="w-76 gap-0 p-0">
         <React.Suspense
           fallback={
-            <div className="flex h-80 items-center justify-center">
-              <Loader />
+            <div className="flex h-94 items-center justify-center">
+              <div className="flex items-center justify-center">
+                <Spinner size="xl" />
+              </div>
             </div>
           }
         >

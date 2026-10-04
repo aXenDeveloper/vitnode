@@ -9,13 +9,14 @@ import type { ContentFormSpec } from "@/content/admin/spec";
 import type {
   ContentRevisionMeta,
   ContentRevisionOperation,
+  ContentRevisionSnapshot,
 } from "@/content/revisions";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
 import { contentRevisionQueryOptions } from "../editorial-query";
@@ -96,6 +97,140 @@ const useRevisionSnapshot = ({
   });
 };
 
+const RevisionRestoreAction = ({
+  contentTypeId,
+  currentVersion,
+  id,
+  onRestored,
+  revision,
+  singular,
+  title,
+}: {
+  contentTypeId: string;
+  currentVersion: number;
+  id: number;
+  onRestored: () => void;
+  revision: ContentRevisionMeta;
+  singular: string;
+  title: string;
+}) => {
+  const t = useTranslations("core.content.history");
+  const tErrors = useTranslations("core.global.errors");
+  const tContentErrors = useTranslations("core.content.errors");
+  const transport = useContentEditorialTransport();
+
+  return (
+    <ConfirmActionAlertDialog
+      description={t.rich("restore.desc", {
+        nextVersion: currentVersion + 1,
+        title: () => <span className="text-foreground font-bold">{title}</span>,
+        version: revision.version,
+      })}
+      icon={<RotateCcwIcon />}
+      onSubmit={async ({ onClose }) => {
+        const mutation = await transport.restoreRevision(
+          contentTypeId,
+          id,
+          revision.id,
+          currentVersion,
+        );
+
+        if (mutation.error !== undefined) {
+          const errorKey = contentErrorKey(mutation.status, mutation);
+
+          toast.error(tErrors("title"), {
+            description: errorKey
+              ? tContentErrors(errorKey)
+              : tErrors("internal_server_error"),
+          });
+
+          return;
+        }
+
+        await transport.settled({
+          contentTypeId,
+          itemId: id,
+          scope: "record",
+        });
+
+        toast.success(t("restore.success", { name: singular }), {
+          description: t("restore.success_desc", {
+            version: revision.version,
+          }),
+        });
+        onClose();
+        onRestored();
+      }}
+      textSubmit={t("restore.confirm")}
+      title={t("restore.title", { version: revision.version })}
+    >
+      <Button
+        aria-label={t("restore.title", { version: revision.version })}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <RotateCcwIcon aria-hidden />
+        {t("restore.action")}
+      </Button>
+    </ConfirmActionAlertDialog>
+  );
+};
+
+const RevisionChangesToggle = ({
+  onToggle,
+  open,
+}: {
+  onToggle: () => void;
+  open: boolean;
+}) => {
+  const t = useTranslations("core.content.history");
+
+  return (
+    <Button
+      aria-expanded={open}
+      onClick={onToggle}
+      size="sm"
+      type="button"
+      variant="ghost"
+    >
+      <ChevronDownIcon
+        aria-hidden
+        className={cn("transition-transform", open && "rotate-180")}
+      />
+      {open ? t("hide_changes") : t("show_changes")}
+    </Button>
+  );
+};
+
+const RevisionChangesBody = ({
+  after,
+  before,
+  settled,
+  spec,
+}: {
+  after: ContentRevisionSnapshot | null;
+  before: ContentRevisionSnapshot | null;
+  settled: boolean;
+  spec: ContentFormSpec;
+}) => {
+  const t = useTranslations("core.content.history");
+
+  if (after) {
+    return <RevisionDiff after={after} before={before} spec={spec} />;
+  }
+
+  if (settled) {
+    return <p className="text-muted-foreground text-sm">{t("load_failed")}</p>;
+  }
+
+  return (
+    <div className="text-muted-foreground flex justify-center py-2">
+      <Spinner />
+    </div>
+  );
+};
+
 export const RevisionRow = ({
   canRestore,
   contentTypeId,
@@ -122,9 +257,6 @@ export const RevisionRow = ({
   title: string;
 }) => {
   const t = useTranslations("core.content.history");
-  const tErrors = useTranslations("core.global.errors");
-  const tContentErrors = useTranslations("core.content.errors");
-  const transport = useContentEditorialTransport();
   const [open, setOpen] = React.useState(false);
 
   const hasChanges = revision.changedFields.length > 0;
@@ -183,79 +315,24 @@ export const RevisionRow = ({
 
           <div className="ms-auto flex items-center gap-1.5">
             {hasChanges ? (
-              <Button
-                aria-expanded={open}
-                onClick={() => {
+              <RevisionChangesToggle
+                onToggle={() => {
                   setOpen(!open);
                 }}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                <ChevronDownIcon
-                  aria-hidden
-                  className={cn("transition-transform", open && "rotate-180")}
-                />
-                {open ? t("hide_changes") : t("show_changes")}
-              </Button>
+                open={open}
+              />
             ) : null}
 
             {canRestore && !isCurrent ? (
-              <ConfirmActionAlertDialog
-                description={t.rich("restore.desc", {
-                  nextVersion: currentVersion + 1,
-                  title: () => (
-                    <span className="text-foreground font-bold">{title}</span>
-                  ),
-                  version: revision.version,
-                })}
-                onSubmit={async ({ onClose }) => {
-                  const mutation = await transport.restoreRevision(
-                    contentTypeId,
-                    id,
-                    revision.id,
-                    currentVersion,
-                  );
-
-                  if (mutation.error !== undefined) {
-                    const errorKey = contentErrorKey(mutation.status, mutation);
-
-                    toast.error(tErrors("title"), {
-                      description: errorKey
-                        ? tContentErrors(errorKey)
-                        : tErrors("internal_server_error"),
-                    });
-
-                    return;
-                  }
-
-                  await transport.settled({
-                    contentTypeId,
-                    itemId: id,
-                    scope: "record",
-                  });
-
-                  toast.success(t("restore.success", { name: singular }), {
-                    description: t("restore.success_desc", {
-                      version: revision.version,
-                    }),
-                  });
-                  onClose();
-                  onRestored();
-                }}
-                textSubmit={t("restore.confirm")}
-                title={t("restore.title", { version: revision.version })}
-              >
-                <Button
-                  aria-label={t("restore.title", { version: revision.version })}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <RotateCcwIcon aria-hidden />
-                  {t("restore.action")}
-                </Button>
-              </ConfirmActionAlertDialog>
+              <RevisionRestoreAction
+                contentTypeId={contentTypeId}
+                currentVersion={currentVersion}
+                id={id}
+                onRestored={onRestored}
+                revision={revision}
+                singular={singular}
+                title={title}
+              />
             ) : null}
           </div>
         </div>
@@ -270,21 +347,12 @@ export const RevisionRow = ({
               })}
             </p>
 
-            {detail ? (
-              <RevisionDiff
-                after={detail.snapshot}
-                before={earlier.data?.revision?.snapshot ?? null}
-                spec={spec}
-              />
-            ) : settled ? (
-              <p className="text-muted-foreground text-sm">
-                {t("load_failed")}
-              </p>
-            ) : (
-              <div className="text-muted-foreground flex justify-center py-2">
-                <Loader small />
-              </div>
-            )}
+            <RevisionChangesBody
+              after={detail?.snapshot ?? null}
+              before={earlier.data?.revision?.snapshot ?? null}
+              settled={settled}
+              spec={spec}
+            />
           </div>
         ) : null}
       </div>

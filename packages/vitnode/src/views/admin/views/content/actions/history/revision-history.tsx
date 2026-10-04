@@ -7,7 +7,7 @@ import type { ContentFormSpec } from "@/content/admin/spec";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 
 import { useContentFormNavigation } from "../../form/navigation";
@@ -65,7 +65,9 @@ export const RevisionHistory = ({
   if (history.isPending) {
     return (
       <HistoryNotice>
-        <Loader />
+        <div className="flex items-center justify-center">
+          <Spinner size="xl" />
+        </div>
       </HistoryNotice>
     );
   }

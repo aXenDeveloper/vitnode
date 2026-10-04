@@ -3,6 +3,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cn } from "cn";
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 function Breadcrumb({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -93,19 +94,19 @@ function BreadcrumbEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const t = useTranslations("core.global");
+
   return (
     <span
-      aria-hidden="true"
       className={cn(
         "flex size-5 items-center justify-center [&>svg]:size-4",
         className,
       )}
       data-slot="breadcrumb-ellipsis"
-      role="presentation"
       {...props}
     >
-      <MoreHorizontalIcon />
-      <span className="sr-only">More</span>
+      <MoreHorizontalIcon aria-hidden="true" />
+      <span className="sr-only">{t("more_navigation")}</span>
     </span>
   );
 }

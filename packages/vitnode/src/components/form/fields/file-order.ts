@@ -1,3 +1,5 @@
+import type { UniqueIdentifier } from "@dnd-kit/core";
+
 import { arrayMove } from "@dnd-kit/sortable";
 
 /** One upload that has landed: the slot it was queued in, and what it stored. */
@@ -153,4 +155,21 @@ export const moveFileId = (
   if (from === -1 || to === -1 || from === to) return [...ids];
 
   return arrayMove([...ids], from, to);
+};
+
+export const fileGalleryDrop = (
+  ids: readonly number[],
+  {
+    active,
+    over,
+  }: {
+    active: { id: UniqueIdentifier };
+    over: null | { id: UniqueIdentifier };
+  },
+): null | number[] => {
+  if (!over || active.id === over.id) return null;
+
+  const next = moveFileId(ids, Number(active.id), Number(over.id));
+
+  return next.some((id, at) => id !== ids[at]) ? next : null;
 };

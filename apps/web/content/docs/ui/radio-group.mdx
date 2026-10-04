@@ -1,6 +1,7 @@
 ---
 title: Radio Group
-description: Pick one option from a list.
+description: Let people pick exactly one option from a short list, as a plain list or as clickable cards, with descriptions and disabled options.
+icon: CircleDot
 ---
 
 ## Preview
@@ -9,20 +10,19 @@ description: Pick one option from a list.
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
-```ts
-import { z } from 'zod';
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormRadioGroup } from '@vitnode/core/components/form/fields/radio-group';
-```
 
-```ts
+```tsx
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormRadioGroup } from '@vitnode/core/components/form/fields/radio-group'
+import { z } from 'zod'
+
 const formSchema = z.object({
-  options: z.enum(["option1", "option2", "option3"]),
-});
+  sort: z.enum(['latest', 'top', 'unanswered']).default('latest'),
+})
 ```
 
 ```tsx
@@ -30,28 +30,19 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "options",
-      component: props => (
+      id: 'sort',
+      component: (props) => (
         <AutoFormRadioGroup
           {...props}
-          description="By checking this box, you agree to the terms and conditions."
-          label="I agree to the terms and conditions"
+          label="Default sort"
           labels={[
             {
-              value: "option1",
-              label: "Option 1",
-              description: "This is the description for option 1",
+              value: 'latest',
+              label: 'Latest activity',
+              description: 'New replies float up.',
             },
-            {
-              value: "option2",
-              label: "Option 2",
-            },
-            {
-              value: "option3",
-              label: "Option 3",
-              description: "This is the description for option 3",
-              disabled: true,
-            },
+            { value: 'top', label: 'Most liked' },
+            { value: 'unanswered', label: 'Unanswered first', disabled: true },
           ]}
         />
       ),
@@ -60,46 +51,37 @@ const formSchema = z.object({
 />
 ```
 
-  </Tab>
+Options come from the `z.enum()`. `labels` only adds text: an enum value
+without a label shows the raw value.
 
+  </Tab>
   <Tab value="Manual">
-```ts
+
+```tsx
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from '@vitnode/core/components/ui/field'
 import {
   RadioGroup,
   RadioGroupItem,
-} from '@vitnode/core/components/ui/radio-group';
-import { Field, FieldLabel } from "@vitnode/core/components/ui/field"
+} from '@vitnode/core/components/ui/radio-group'
 ```
 
 ```tsx
-<RadioGroup defaultValue="option-one">
+<RadioGroup aria-label="Default sort" defaultValue="latest">
   <Field orientation="horizontal">
-    <RadioGroupItem value="option-one" id="option-one" />
+    <RadioGroupItem id="latest" value="latest" />
     <FieldContent>
-      <FieldLabel htmlFor="option-one">Option One</FieldLabel>
-      <FieldDescription>
-        This is the description for option one. It provides more information
-        about the option.
-      </FieldDescription>
+      <FieldLabel htmlFor="latest">Latest activity</FieldLabel>
+      <FieldDescription>New replies float up.</FieldDescription>
     </FieldContent>
   </Field>
-
-  <Field orientation="horizontal">
-    <RadioGroupItem value="option-two" id="option-two" />
-    <FieldContent>
-      <FieldLabel htmlFor="option-two">Option Two</FieldLabel>
-    </FieldContent>
-  </Field>
-
-  <Field orientation="horizontal" data-disabled>
-    <RadioGroupItem value="option-three" id="option-three" disabled />
-    <FieldContent>
-      <FieldLabel htmlFor="option-three">Option Three</FieldLabel>
-      <FieldDescription>
-        This is the description for option three. It provides more information
-        about the option.
-      </FieldDescription>
-    </FieldContent>
+  <Field data-disabled orientation="horizontal">
+    <RadioGroupItem disabled id="unanswered" value="unanswered" />
+    <FieldLabel htmlFor="unanswered">Unanswered first</FieldLabel>
   </Field>
 </RadioGroup>
 ```
@@ -107,76 +89,56 @@ import { Field, FieldLabel } from "@vitnode/core/components/ui/field"
   </Tab>
 </Tabs>
 
-### variant="block"
+Arrow keys move between options and select them. Tab leaves the group.
 
-You can also use the `block` variant to display the radio buttons in a block style.
+## Blocks
+
+<Preview name="radio-group-blocks" />
+
+`variant="blocks"` turns each option into a clickable card. It's built from
+[Field choice cards](/docs/ui/field#choice-cards).
 
 ```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "options",
-      component: props => (
-        <AutoFormRadioGroup
-          {...props}
-          description="By checking this box, you agree to the terms and conditions."
-          label="I agree to the terms and conditions"
-          // [!code ++]
-          variant="block"
-          labels={[
-            {
-              value: "option1",
-              label: "Option 1",
-              description: "This is the description for option 1",
-            },
-            {
-              value: "option2",
-              label: "Option 2",
-            },
-            {
-              value: "option3",
-              label: "Option 3",
-              description: "This is the description for option 3",
-              disabled: true,
-            },
-          ]}
-        />
-      ),
-    },
-  ]}
+<AutoFormRadioGroup
+  {...props}
+  label="Registration"
+  labels={labels}
+  variant="blocks"
 />
 ```
 
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+`AutoFormRadioGroup` also accepts every
+[Base UI Radio Group](https://base-ui.com/react/components/radio#api-reference)
+prop.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description:
-        "The label for the input field. This is displayed above the input.",
-      type: "string",
-      default: "",
+      description: 'Shown above the options.',
+      type: 'ReactNode',
+    },
+    labelRight: {
+      description: "Content pinned to the label's right edge.",
+      type: 'ReactNode',
     },
     description: {
-      description:
-        "A short description of the input field. This is displayed below the input.",
-      type: "string",
-      default: "",
+      description: 'Shown between the label and the options.',
+      type: 'ReactNode',
     },
     labels: {
-      description:
-        "An array of objects representing the radio button options. Each object should have a `value` and a `label` property.",
-      type: "{ value: string; label: string }[]",
-      default: "[]",
+      description: 'Text for each enum value. Unlisted values show as-is.',
+      type: '{ value: string; label: string; description?: string; disabled?: boolean }[]',
+      default: '[]',
     },
     variant: {
       description:
-        "The variant of the radio group. The `default` variant displays the radio buttons in a horizontal layout, while the `block` variant displays them in a block layout.",
-      type: "'default' | 'block'",
-      default: "'default'",
+        '`default` is a list with the radio on the left. `blocks` renders cards.',
+      type: '"default" | "blocks"',
+      default: '"default"',
     },
   }}
 />

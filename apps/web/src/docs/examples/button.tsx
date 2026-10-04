@@ -1,72 +1,50 @@
 import { Button } from '@vitnode/core/components/ui/button'
-import { Card } from '@vitnode/core/components/ui/card'
 import {
-  ArrowRight,
-  CheckCircle,
+  ArrowRightIcon,
   CircleCheckIcon,
-  Eye,
-  Home,
-  Lock,
-  Star,
-  Trash2,
+  EyeIcon,
+  PencilIcon,
+  ReplyIcon,
+  SendIcon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react'
-import React from 'react'
 
 export default function ButtonExample() {
-  const [isLoading, setIsLoading] = React.useState(false)
-
   return (
-    <Card className="flex flex-row flex-wrap items-center justify-center gap-6 p-8">
-      <Button isLoading={isLoading} size="lg">
-        <Home />
-        Default
+    <div className="not-prose flex flex-wrap items-center justify-center gap-3">
+      <Button>
+        <SendIcon />
+        Post reply
       </Button>
-      <Button isLoading={isLoading} variant="secondary">
-        <Star />
-        Secondary
+      <Button variant="secondary">
+        <PencilIcon />
+        Edit
       </Button>
-      <Button isLoading={isLoading} variant="outline">
-        <Eye />
-        Outline
+      <Button variant="outline">
+        <EyeIcon />
+        Preview
       </Button>
-      <Button isLoading={isLoading} variant="ghost">
-        <CheckCircle />
-        Ghost
+      <Button variant="ghost">
+        <ReplyIcon />
+        Quote
       </Button>
-      <Button isLoading={isLoading} variant="link">
-        <ArrowRight />
-        Link
+      <Button variant="link">
+        View thread
+        <ArrowRightIcon />
       </Button>
-      <Button isLoading={isLoading} variant="success">
+      <Button variant="success">
         <CircleCheckIcon />
-        Success
+        Approve
       </Button>
-      <Button isLoading={isLoading} variant="warning">
+      <Button variant="warning">
         <TriangleAlertIcon />
-        Warning
+        Unpublish
       </Button>
-      <Button isLoading={isLoading} size="sm" variant="destructive">
-        <Trash2 />
-        Destructive
+      <Button variant="destructive">
+        <Trash2Icon />
+        Delete
       </Button>
-      <Button
-        aria-label="Delete"
-        isLoading={isLoading}
-        size="icon"
-        variant="destructive"
-      >
-        <Trash2 />
-      </Button>
-      <Button
-        disabled
-        disabledTooltip="You need the Publish permission"
-        variant="outline"
-      >
-        <Lock />
-        Publish
-      </Button>
-      <Button onClick={() => setIsLoading(!isLoading)}>Toggle Loading</Button>
-    </Card>
+    </div>
   )
 }
