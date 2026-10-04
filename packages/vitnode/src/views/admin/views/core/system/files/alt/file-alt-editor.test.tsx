@@ -58,7 +58,6 @@ const renderEditor = async (canEdit = true) => {
       <FileAltEditor {...props} />
     </IntlProvider>,
   );
-  // The form fields resolve a lazy piece on first render.
   await screen.findByText("English");
 
   return props;

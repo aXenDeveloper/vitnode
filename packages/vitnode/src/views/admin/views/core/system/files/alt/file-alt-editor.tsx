@@ -106,7 +106,7 @@ const AltTextForm = ({
         },
       ]}
       formSchema={formSchema}
-      layout={async fields => fields.text}
+      layout={fields => <>{fields.text}</>}
       onSubmit={onSubmit}
     >
       <div className="flex justify-end">
