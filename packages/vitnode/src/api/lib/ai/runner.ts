@@ -22,7 +22,6 @@ import type {
   AiActorType,
   AiPrompt,
   AiResourceRef,
-  AnyAiActionDefinition,
 } from "./action";
 import type { AiModelCapability } from "./capabilities";
 import type { Decimal } from "./decimal";

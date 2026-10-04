@@ -260,9 +260,9 @@ const ContentFormFields = ({
     const savedId = mutation.id ?? data?.id;
     if (savedId !== undefined) {
       await Promise.all(
-        [...savedListeners.current].map(async listener => {
+        [...savedListenersRef.current].map(async listener => {
           try {
-            await listener({ itemId: Number(savedId) });
+            await listener({ itemId: savedId });
           } catch {
             /* a listener never fails the save */
           }
@@ -278,15 +278,15 @@ const ContentFormFields = ({
     return true;
   };
 
-  const savedListeners = React.useRef(
+  const savedListenersRef = React.useRef(
     new Set<(saved: { itemId: number }) => Promise<void> | void>(),
   );
   const onSaved = React.useCallback(
     (listener: (saved: { itemId: number }) => Promise<void> | void) => {
-      savedListeners.current.add(listener);
+      savedListenersRef.current.add(listener);
 
       return () => {
-        savedListeners.current.delete(listener);
+        savedListenersRef.current.delete(listener);
       };
     },
     [],

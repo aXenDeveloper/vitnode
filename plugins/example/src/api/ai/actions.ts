@@ -35,7 +35,11 @@ export const articleExcerptAiAction = defineAiAction({
       ...(instructions ? [instructions] : []),
     ].join("\n"),
   }),
-  defaults: { maxInputCharacters: 400, maxOutputTokens: 120, timeoutMs: 20_000 },
+  defaults: {
+    maxInputCharacters: 400,
+    maxOutputTokens: 120,
+    timeoutMs: 20_000,
+  },
   description: "Suggests a teaser for an example article.",
   id: "article.excerpt",
   inputSchema: z.object({
