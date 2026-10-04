@@ -364,6 +364,33 @@ describe("hosted checkout", () => {
     );
   });
 
+  it("tells a declined delayed payment apart from one still processing", async () => {
+    const completed = (intentStatus: string) =>
+      fakeStripe(() => ({
+        body: {
+          ...session,
+          payment_intent: {
+            id: "pi_1",
+            object: "payment_intent",
+            status: intentStatus,
+          },
+          payment_status: "unpaid",
+          status: "complete",
+        },
+      }));
+
+    const processing = completed("processing");
+    const declined = completed("requires_payment_method");
+
+    await expect(
+      provider(processing.client).checkout.retrieve("cs_test_1"),
+    ).resolves.toMatchObject({ paymentId: "pi_1", paymentStatus: "unpaid" });
+    await expect(
+      provider(declined.client).checkout.retrieve("cs_test_1"),
+    ).resolves.toMatchObject({ paymentStatus: "failed" });
+    expect(declined.requests[0].url).toContain("expand[0]=payment_intent");
+  });
+
   it("reports a Stripe outage as an uncertain result, not a failure", async () => {
     const { client } = fakeStripe(() => ({
       body: { error: { message: "Internal", type: "api_error" } },
