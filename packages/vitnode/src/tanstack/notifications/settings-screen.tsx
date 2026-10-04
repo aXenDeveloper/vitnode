@@ -3,6 +3,7 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
+import type { NotificationEmailMode } from "@/lib/notifications/types";
 import type {
   NotificationPreferencesView,
   NotificationPreferenceTypeView,
@@ -25,7 +26,6 @@ import { NotificationTypeItem } from "@/views/notifications/settings/type-item";
 
 import { sessionQueryOptions } from "../auth/session-query";
 
-type EmailMode = NotificationPreferenceTypeView["value"]["email"];
 type UpdateBody = Parameters<typeof updateNotificationPreferencesInBrowser>[0];
 
 const usePreferenceSaver = (userId: number) => {
@@ -81,9 +81,9 @@ export const NotificationSettingsPanel = ({ userId }: { userId: number }) => {
   const { data: session } = useSuspenseQuery(sessionQueryOptions());
   const save = usePreferenceSaver(userId);
   const [openId, setOpenId] = React.useState<null | string>(null);
-  const [emailBeforeStop, setEmailBeforeStop] = React.useState<null | Record<
+  const emailBeforeStopRef = React.useRef<null | Record<
     string,
-    EmailMode
+    NotificationEmailMode
   >>(null);
 
   const groups = [
@@ -102,18 +102,19 @@ export const NotificationSettingsPanel = ({ userId }: { userId: number }) => {
 
   const setEmail = (on: boolean) => {
     if (on) {
+      const emailBeforeStop = emailBeforeStopRef.current;
       void save(
         { types: emailOnPatch(data.types, emailBeforeStop) },
         emailBeforeStop
           ? t("channels.email.restored_toast_desc")
           : t("channels.email.on_toast_desc"),
       );
-      setEmailBeforeStop(null);
+      emailBeforeStopRef.current = null;
 
       return;
     }
 
-    setEmailBeforeStop(emailSnapshot(data.types));
+    emailBeforeStopRef.current = emailSnapshot(data.types);
     void save(
       { types: emailOffPatch(data.types) },
       t("channels.email.stopped_toast_desc"),

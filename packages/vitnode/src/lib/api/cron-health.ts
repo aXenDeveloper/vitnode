@@ -1,6 +1,6 @@
 import { getNextCronRunDate } from "./get-next-cron-run-date";
 
-export const CRON_OVERDUE_GRACE_MS = 15 * 60 * 1000;
+const CRON_OVERDUE_GRACE_MS = 15 * 60 * 1000;
 
 export interface CronJobTiming {
   createdAt: Date;

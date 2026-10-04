@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 
 import type {
   NotificationState,
@@ -31,12 +32,9 @@ type StateUpdate = NotificationStateMessage & { userId: number };
 export const UNREAD_SQL = sql`${core_notifications.archivedAt} IS NULL AND ${core_notifications.readSeq} < ${core_notifications.activitySeq}`;
 
 export interface NotificationListItem {
-  /** Pass back to `markRead` - the read boundary of what was shown. */
   activitySeq: number;
-  /** Distinct actors across every grouped event. */
   actorCount: number;
   actors: NotificationActor[];
-  /** `false` when the content is gone, access was lost or the plugin is uninstalled. */
   available: boolean;
   body: null | string;
   category: string;
@@ -58,34 +56,26 @@ export interface NotificationListPage {
   nextCursor: null | string;
 }
 
-interface Cursor {
-  id: number;
-  t: number;
-}
+const cursorSchema = z.object({ id: z.number().int(), t: z.number().int() });
 
-const encodeCursor = (cursor: Cursor): string =>
+const encodeCursor = (cursor: z.infer<typeof cursorSchema>): string =>
   Buffer.from(JSON.stringify(cursor)).toString("base64url");
 
-const decodeCursor = (raw: string): Cursor => {
+const parseCursorJson = (raw: string): unknown => {
   try {
-    const parsed: unknown = JSON.parse(
-      Buffer.from(raw, "base64url").toString("utf8"),
-    );
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "id" in parsed &&
-      "t" in parsed &&
-      Number.isSafeInteger(parsed.id) &&
-      Number.isSafeInteger(parsed.t)
-    ) {
-      return parsed as Cursor;
-    }
+    return JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
   } catch {
-    // fall through
+    return null;
+  }
+};
+
+const decodeCursor = (raw: string) => {
+  const cursor = cursorSchema.safeParse(parseCursorJson(raw));
+  if (!cursor.success) {
+    throw new HTTPException(400, { message: "Invalid pagination cursor." });
   }
 
-  throw new HTTPException(400, { message: "Invalid pagination cursor." });
+  return { id: cursor.data.id, lastActivityAt: new Date(cursor.data.t) };
 };
 
 export const getNotificationState = async (
@@ -104,13 +94,6 @@ export const getNotificationState = async (
   return row ?? { revision: 0, unread: 0 };
 };
 
-/**
- * One page of a user's inbox, newest activity first. Every item is re-checked
- * against its type before anything is returned: an item whose content is gone,
- * whose access was revoked or whose plugin is uninstalled comes back as an
- * `available: false` placeholder - no title, link or actors - so it can still
- * be read or archived instead of silently inflating the count.
- */
 export const listNotifications = async (
   c: NotificationsContext,
   {
@@ -132,7 +115,6 @@ export const listNotifications = async (
   },
 ): Promise<NotificationListPage> => {
   const after = cursor ? decodeCursor(cursor) : null;
-  const afterDate = after ? new Date(after.t) : null;
 
   const rows = await c
     .get("db")
@@ -152,11 +134,11 @@ export const listNotifications = async (
         unreadOnly ? UNREAD_SQL : undefined,
         category ? eq(core_notifications.category, category) : undefined,
         type ? eq(core_notifications.type, type) : undefined,
-        after && afterDate
+        after
           ? or(
-              lt(core_notifications.lastActivityAt, afterDate),
+              lt(core_notifications.lastActivityAt, after.lastActivityAt),
               and(
-                eq(core_notifications.lastActivityAt, afterDate),
+                eq(core_notifications.lastActivityAt, after.lastActivityAt),
                 lt(core_notifications.id, after.id),
               ),
             )
@@ -261,16 +243,14 @@ export const listNotifications = async (
 
 type ItemRow = typeof core_notifications.$inferSelect;
 
+const USERS_PER_RECONCILE_BATCH = 200;
+const USERS_PER_REMOVE_BATCH = 50;
+
 const isCounted = (
   item: Pick<ItemRow, "activitySeq" | "archivedAt" | "readSeq">,
 ) => item.archivedAt === null && item.readSeq < item.activitySeq;
 
-/**
- * Runs one item change under the user's state lock and applies the change to
- * the canonical count in the same transaction. Returns the new state, which is
- * pushed to the user's connections only after commit.
- */
-const changeItem = async (
+const changeItemUnderUserLock = async (
   c: NotificationsContext,
   {
     change,
@@ -284,10 +264,9 @@ const changeItem = async (
     userId: number;
   },
 ): Promise<NotificationState> => {
-  const result = await c.get("db").transaction(async tx => {
+  const { state, update } = await c.get("db").transaction(async tx => {
     await lockUserStates(tx, [userId]);
 
-    // Scoped by user: someone else's id is indistinguishable from a missing one.
     const [item] = await tx
       .select()
       .from(core_notifications)
@@ -319,27 +298,19 @@ const changeItem = async (
       item.id,
     );
 
-    return {
-      state: update ?? (await getNotificationState(tx, userId)),
-      update,
-    };
+    return { state: update, update };
   });
 
-  if (result.update) sendNotificationStates(c, [result.update]);
+  if (update) sendNotificationStates(c, [update]);
 
-  return { revision: result.state.revision, unread: result.state.unread };
+  return { revision: state.revision, unread: state.unread };
 };
 
-/**
- * Marks an item read up to `throughSeq` - the `activitySeq` the user saw. A
- * grouped event that arrived after the item was rendered pushes `activitySeq`
- * past that boundary, so the item correctly stays unread.
- */
 export const markNotificationRead = async (
   c: NotificationsContext,
   args: { notificationId: number; throughSeq?: number; userId: number },
 ): Promise<NotificationState> =>
-  await changeItem(c, {
+  await changeItemUnderUserLock(c, {
     change: (item, now) => {
       const boundary = Math.min(
         args.throughSeq ?? item.activitySeq,
@@ -358,7 +329,7 @@ export const markNotificationUnread = async (
   c: NotificationsContext,
   args: { notificationId: number; userId: number },
 ): Promise<NotificationState> =>
-  await changeItem(c, {
+  await changeItemUnderUserLock(c, {
     change: item =>
       item.readSeq < item.activitySeq
         ? null
@@ -372,27 +343,22 @@ export const archiveNotification = async (
   c: NotificationsContext,
   args: { notificationId: number; userId: number },
 ): Promise<NotificationState> =>
-  await changeItem(c, {
+  await changeItemUnderUserLock(c, {
     change: (item, now) => (item.archivedAt ? null : { archivedAt: now }),
     notificationId: args.notificationId,
     reason: "archived",
     userId: args.userId,
   });
 
-/**
- * Marks everything read in one statement, after taking the user's state lock.
- * That lock is the boundary: a fan-out that committed before it is included,
- * one still running waits for it and then adds its item as unread.
- */
 export const markAllNotificationsRead = async (
   c: NotificationsContext,
   { category, userId }: { category?: string; userId: number },
 ): Promise<NotificationState & { marked: number }> => {
-  const result = await c.get("db").transaction(async tx => {
+  const { marked, state, update } = await c.get("db").transaction(async tx => {
     await lockUserStates(tx, [userId]);
     const now = new Date();
 
-    const marked = await tx
+    const markedItems = await tx
       .update(core_notifications)
       .set({ readAt: now, readSeq: sql`${core_notifications.activitySeq}` })
       .where(
@@ -404,7 +370,7 @@ export const markAllNotificationsRead = async (
       )
       .returning({ id: core_notifications.id });
 
-    if (marked.length === 0) {
+    if (markedItems.length === 0) {
       return {
         marked: 0,
         state: await getNotificationState(tx, userId),
@@ -414,26 +380,18 @@ export const markAllNotificationsRead = async (
 
     const [update] = await applyUnreadDeltas(
       tx,
-      new Map([[userId, -marked.length]]),
+      new Map([[userId, -markedItems.length]]),
       "read_all",
     );
 
-    return { marked: marked.length, state: update, update };
+    return { marked: markedItems.length, state: update, update };
   });
 
-  if (result.update) sendNotificationStates(c, [result.update]);
+  if (update) sendNotificationStates(c, [update]);
 
-  return {
-    marked: result.marked,
-    revision: result.state.revision,
-    unread: result.state.unread,
-  };
+  return { marked, revision: state.revision, unread: state.unread };
 };
 
-/**
- * Recounts unread items for each user from scratch and fixes the stored count
- * where it drifted. For diagnostics and recovery, not the hot path.
- */
 export const reconcileNotificationCounts = async (
   c: NotificationsContext,
   userIds: number[],
@@ -441,8 +399,12 @@ export const reconcileNotificationCounts = async (
   let corrected = 0;
   const updates: StateUpdate[] = [];
 
-  for (let index = 0; index < userIds.length; index += 200) {
-    const chunk = userIds.slice(index, index + 200);
+  for (
+    let index = 0;
+    index < userIds.length;
+    index += USERS_PER_RECONCILE_BATCH
+  ) {
+    const chunk = userIds.slice(index, index + USERS_PER_RECONCILE_BATCH);
     const changed = await c.get("db").transaction(async tx => {
       await lockUserStates(tx, chunk);
 
@@ -490,21 +452,9 @@ export const reconcileNotificationCounts = async (
   return { checked: userIds.length, corrected };
 };
 
-/**
- * Removes inbox items - when access is revoked, content is deleted or by
- * retention - and takes their unread share off each owner's count in the same
- * transaction.
- */
 export const removeNotificationItems = async (
   c: NotificationsContext,
-  {
-    reason = "removed",
-    where,
-  }: {
-    reason?: NotificationStateMessage["reason"];
-    where: ReturnType<typeof and>;
-  },
-  { batchSize = 500 }: { batchSize?: number } = {},
+  { where }: { where: ReturnType<typeof and> },
 ): Promise<number> => {
   let removed = 0;
 
@@ -515,11 +465,11 @@ export const removeNotificationItems = async (
       .from(core_notifications)
       .where(where)
       .groupBy(core_notifications.userId)
-      .limit(Math.max(1, Math.floor(batchSize / 10)));
+      .limit(USERS_PER_REMOVE_BATCH);
     if (targets.length === 0) break;
 
     const userIds = targets.map(row => row.userId);
-    const result = await c.get("db").transaction(async tx => {
+    const batch = await c.get("db").transaction(async tx => {
       await lockUserStates(tx, userIds);
 
       const deleted = await tx
@@ -542,13 +492,13 @@ export const removeNotificationItems = async (
 
       return {
         count: deleted.length,
-        updates: await applyUnreadDeltas(tx, deltas, reason),
+        updates: await applyUnreadDeltas(tx, deltas, "removed"),
       };
     });
 
-    sendNotificationStates(c, result.updates);
-    removed += result.count;
-    if (result.count === 0) break;
+    sendNotificationStates(c, batch.updates);
+    removed += batch.count;
+    if (batch.count === 0) break;
   }
 
   return removed;

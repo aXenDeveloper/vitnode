@@ -48,11 +48,7 @@ export const NodemailerEmailAdapter = ({
         html,
       });
 
-      // SMTP has no idempotency: a crash after the server accepted a message
-      // and before this returned can mean a retry delivers it twice.
-      return {
-        id: typeof info.messageId === "string" ? info.messageId : undefined,
-      };
+      return { id: info.messageId };
     },
   };
 };

@@ -1,5 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
+import type { NotificationEmailMode } from "@/lib/notifications/types";
+
 import { CONFIG_PLUGIN } from "@/config";
 import {
   OPERATIONAL_STALE_TIME,
@@ -50,7 +52,6 @@ export class NotificationsRequestError extends Error {
   readonly status: number;
 }
 
-/** Everything private to the signed-in user - dropped on sign-out. */
 export const NOTIFICATIONS_IDENTITY_ROOT = ["notifications", "user"] as const;
 
 export const notificationsListRoot = (userId: number) =>
@@ -92,10 +93,9 @@ export const fetchNotificationsPage = async ({
   return await response.json();
 };
 
-export const NOTIFICATIONS_PAGE_SIZE = 20;
-export const NOTIFICATIONS_RECENT_SIZE = 8;
+const NOTIFICATIONS_PAGE_SIZE = 20;
+const NOTIFICATIONS_RECENT_SIZE = 8;
 
-/** The full Notifications Center list. */
 export const notificationsInfiniteQueryOptions = ({
   filter,
   userId,
@@ -123,10 +123,6 @@ export const notificationsInfiniteQueryOptions = ({
     staleTime: OPERATIONAL_STALE_TIME,
   });
 
-/**
- * The few items the bell's dropdown shows. Only fetched when the dropdown
- * opens - the bell's number comes from the session, never from this list.
- */
 export const recentNotificationsQueryOptions = ({
   userId,
 }: {
@@ -143,9 +139,6 @@ export const recentNotificationsQueryOptions = ({
     staleTime: OPERATIONAL_STALE_TIME,
   });
 
-export const notificationStateQueryKey = (userId: number) =>
-  [...NOTIFICATIONS_IDENTITY_ROOT, userId, "state"] as const;
-
 export const fetchNotificationState = async () => {
   const response = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
@@ -161,9 +154,9 @@ export const fetchNotificationState = async () => {
 export interface NotificationPreferenceTypeView {
   category: string;
   categoryLabel: string;
-  defaultEmail: "daily" | "immediate" | "none" | "weekly";
+  defaultEmail: NotificationEmailMode;
   description: null | string;
-  emailModes: ("daily" | "immediate" | "none" | "weekly")[];
+  emailModes: NotificationEmailMode[];
   id: string;
   inAppAvailable: boolean;
   label: string;
@@ -172,7 +165,7 @@ export interface NotificationPreferenceTypeView {
   pluginId: string;
   pushAvailable: boolean;
   value: {
-    email: "daily" | "immediate" | "none" | "weekly";
+    email: NotificationEmailMode;
     inApp: boolean;
     push: boolean;
   };

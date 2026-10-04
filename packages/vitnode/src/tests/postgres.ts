@@ -6,30 +6,18 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { describe } from "vitest";
 
-/**
- * Integration tests that need real Postgres semantics - row locks, `ON
- * CONFLICT`, concurrent transactions - run against the server named here and
- * are skipped without it:
- *
- *   VITNODE_TEST_POSTGRES_URL=postgresql://root@localhost:5432/postgres pnpm test
- *
- * Each `createTestDatabase` call makes a throwaway database, so test files can
- * run in parallel and never see each other's rows.
- */
-export const TEST_POSTGRES_URL = process.env.VITNODE_TEST_POSTGRES_URL;
+const TEST_POSTGRES_URL = process.env.VITNODE_TEST_POSTGRES_URL;
 
 export const describePostgres = (name: string, body: () => void): void => {
   describe.skipIf(!TEST_POSTGRES_URL)(name, body);
 };
 
-export type TestDatabase = ReturnType<typeof drizzle>;
+type TestDatabase = ReturnType<typeof drizzle>;
 
 export interface TestDatabaseHandle {
-  /** A second, independent connection pool - for genuinely concurrent work. */
   connect: () => TestDatabase;
   db: TestDatabase;
   drop: () => Promise<void>;
-  url: string;
 }
 
 const withDatabase = (url: string, database: string): string => {
@@ -39,7 +27,6 @@ const withDatabase = (url: string, database: string): string => {
   return parsed.toString();
 };
 
-/** Creates a database holding exactly the tables in `schema`. */
 export const createTestDatabase = async (
   schema: Record<string, unknown>,
   { onQuery }: { onQuery?: () => void } = {},
@@ -93,6 +80,5 @@ export const createTestDatabase = async (
       await cleanup.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
       await cleanup.end();
     },
-    url,
   };
 };

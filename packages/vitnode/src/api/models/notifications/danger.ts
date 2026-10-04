@@ -1,19 +1,20 @@
-import { and, eq, inArray, isNull, notExists, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import {
   core_notification_deliveries,
   core_notification_events,
   core_notification_receipts,
-  core_notification_settings,
   core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
 
 import type { NotificationsContext } from "./shared";
 
+import { upsertNotificationSetting } from "./admin";
 import { dispatchEmailDrain } from "./email-queue";
 import { applyUnreadDeltas, lockUserStates } from "./fanout";
 import { removeNotificationItems, UNREAD_SQL } from "./inbox";
+import { deleteUnreferencedEvents } from "./maintenance";
 import {
   GLOBAL_SETTINGS_KEY,
   loadNotificationSettings,
@@ -23,19 +24,13 @@ import {
 } from "./shared";
 
 const USERS_PER_BATCH = 200;
-const DELETE_BATCH = 1000;
 
 const setPaused = async (c: NotificationsContext, paused: boolean) => {
   const { global } = await loadNotificationSettings(c.get("db"));
-  const value = { ...global, paused };
-  await c
-    .get("db")
-    .insert(core_notification_settings)
-    .values({ key: GLOBAL_SETTINGS_KEY, updatedAt: new Date(), value })
-    .onConflictDoUpdate({
-      set: { updatedAt: new Date(), value },
-      target: core_notification_settings.key,
-    });
+  await upsertNotificationSetting(c, GLOBAL_SETTINGS_KEY, {
+    ...global,
+    paused,
+  });
 };
 
 export const pauseNotifications = async (c: NotificationsContext) => {
@@ -54,14 +49,16 @@ export const resumeNotifications = async (
     .from(core_notification_events)
     .where(inArray(core_notification_events.status, ["pending", "processing"]));
 
-  for (const { id } of waiting) {
-    await c.get("queue").dispatch({
-      name: QUEUE_NOTIFICATIONS_FANOUT,
-      payload: { eventId: id },
-      pluginId: NOTIFICATIONS_PLUGIN_ID,
-      priority: 10,
-    });
-  }
+  await Promise.all(
+    waiting.map(async ({ id }) =>
+      c.get("queue").dispatch({
+        name: QUEUE_NOTIFICATIONS_FANOUT,
+        payload: { eventId: id },
+        pluginId: NOTIFICATIONS_PLUGIN_ID,
+        priority: 10,
+      }),
+    ),
+  );
   await dispatchEmailDrain(c);
   await c
     .get("events")
@@ -90,12 +87,13 @@ export const cancelQueuedNotificationEmails = async (
       .where(
         and(
           eq(core_notification_receipts.emailPending, true),
-          rows.length === 0
-            ? isNull(core_notification_receipts.emailDeliveryId)
-            : sql`(${core_notification_receipts.emailDeliveryId} IS NULL OR ${inArray(
-                core_notification_receipts.emailDeliveryId,
-                rows.map(row => row.id),
-              )})`,
+          or(
+            isNull(core_notification_receipts.emailDeliveryId),
+            inArray(
+              core_notification_receipts.emailDeliveryId,
+              rows.map(row => row.id),
+            ),
+          ),
         ),
       );
 
@@ -125,7 +123,7 @@ export const markEverythingRead = async (
     if (targets.length === 0) break;
 
     const userIds = targets.map(row => row.userId);
-    const result = await c.get("db").transaction(async tx => {
+    const batch = await c.get("db").transaction(async tx => {
       await lockUserStates(tx, userIds);
       const marked = await tx
         .update(core_notifications)
@@ -146,10 +144,10 @@ export const markEverythingRead = async (
       };
     });
 
-    sendNotificationStates(c, result.updates);
-    items += result.count;
-    members += result.updates.length;
-    if (result.count === 0) break;
+    sendNotificationStates(c, batch.updates);
+    items += batch.count;
+    members += batch.updates.length;
+    if (batch.count === 0) break;
   }
 
   await c.get("events").emit("notifications.read_all", { items, members });
@@ -160,45 +158,8 @@ export const markEverythingRead = async (
 export const deleteAllNotifications = async (
   c: NotificationsContext,
 ): Promise<{ events: number; items: number }> => {
-  const db = c.get("db");
   const items = await removeNotificationItems(c, { where: sql`true` });
-
-  let events = 0;
-  for (;;) {
-    const deleted = await db
-      .delete(core_notification_events)
-      .where(
-        inArray(
-          core_notification_events.id,
-          db
-            .select({ id: core_notification_events.id })
-            .from(core_notification_events)
-            .where(
-              and(
-                inArray(core_notification_events.status, [
-                  "completed",
-                  "failed",
-                ]),
-                notExists(
-                  db
-                    .select({ one: sql`1` })
-                    .from(core_notifications)
-                    .where(
-                      eq(
-                        core_notifications.latestEventId,
-                        core_notification_events.id,
-                      ),
-                    ),
-                ),
-              ),
-            )
-            .limit(DELETE_BATCH),
-        ),
-      )
-      .returning({ id: core_notification_events.id });
-    events += deleted.length;
-    if (deleted.length < DELETE_BATCH) break;
-  }
+  const events = await deleteUnreferencedEvents(c.get("db"));
 
   await c.get("events").emit("notifications.deleted_all", { items });
 

@@ -17,7 +17,6 @@ export const updateTimeZoneInBrowser: UpdateTimeZone = async timeZone => {
       args: { body: { timeZone } },
       method: "put",
       module: "users",
-      options: { credentials: "include" },
       path: "/me/time-zone",
     });
 
@@ -28,6 +27,9 @@ export const updateTimeZoneInBrowser: UpdateTimeZone = async timeZone => {
     return { error: { status: 500 } };
   }
 };
+
+export const timeZoneLabel = (timeZone: string): string =>
+  timeZone.replace(/_/g, " ");
 
 export const supportedTimeZones = (): string[] => {
   try {

@@ -30,7 +30,7 @@ import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { collectNavigationPresets } from "./navigation-presets";
-import { createNotificationRegistry } from "./notifications/registry";
+import { validateNotificationTypes } from "./notifications/registry";
 import { applyModuleTags } from "./openapi-tags";
 
 export type { ApiPluginContract };
@@ -84,7 +84,6 @@ export function buildApiPlugin<
   messages?: LocaleMessagesMap;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
-  /** Notification types this plugin publishes; see `buildNotificationType`. */
   notificationTypes?: AnyNotificationTypeDefinition[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
@@ -115,7 +114,9 @@ export function buildApiPlugin<
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
   const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
-  const types: AnyNotificationTypeDefinition[] = [...(notificationTypes ?? [])];
+  const pluginNotificationTypes: AnyNotificationTypeDefinition[] = [
+    ...(notificationTypes ?? []),
+  ];
   const openApiTags: string[] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
@@ -128,7 +129,9 @@ export function buildApiPlugin<
     contentTypes.push(...collectContentTypes(handler));
     publicContentTypes.push(...collectPublicContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
-    types.push(...collectModuleTree(handler, m => m.notificationTypes));
+    pluginNotificationTypes.push(
+      ...collectModuleTree(handler, m => m.notificationTypes),
+    );
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -153,10 +156,8 @@ export function buildApiPlugin<
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
-  // Caught here too, so a plugin registering a type twice is named as the one
-  // that made the mistake; the global middleware re-checks across plugins.
-  createNotificationRegistry(
-    types.map(definition => ({ definition, pluginId })),
+  validateNotificationTypes(
+    pluginNotificationTypes.map(definition => ({ definition, pluginId })),
   );
 
   const publishing = new Map<string, AnyContentTypeDefinition>();
@@ -184,7 +185,7 @@ export function buildApiPlugin<
     cronJobs,
     events,
     queueTasks,
-    notificationTypes: types,
+    notificationTypes: pluginNotificationTypes,
     searchIndexers: indexers,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete
@@ -234,7 +235,6 @@ function collectSearchIndexers(module: BaseBuildModuleReturn): SearchIndexer[] {
   ];
 }
 
-/** Collects one list from a module and every module nested inside it. */
 function collectModuleTree<T>(
   module: BaseBuildModuleReturn,
   pick: (module: BaseBuildModuleReturn) => T[] | undefined,

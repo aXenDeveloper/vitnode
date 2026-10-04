@@ -2,13 +2,10 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import { getNotificationsOverview } from "@/api/models/notifications/admin";
+import { zodNotificationEmailMode } from "@/api/modules/notifications/schema";
 import { CONFIG_PLUGIN } from "@/config";
-import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
 
-const zodEmailMode = z.enum(NOTIFICATION_EMAIL_MODES);
 const zodCounts = z.record(z.string(), z.number());
-
-export const zodNotificationGlobalSettings = z.object({ paused: z.boolean() });
 
 export const getNotificationsOverviewRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -40,7 +37,7 @@ export const getNotificationsOverviewRoute = buildRoute({
                 oldestPendingEventAt: z.date().nullable(),
                 queue: zodCounts,
               }),
-              settings: zodNotificationGlobalSettings,
+              settings: z.object({ paused: z.boolean() }),
               workers: z.object({
                 emailBatchSize: z.number(),
                 emailConcurrency: z.number(),
@@ -51,7 +48,7 @@ export const getNotificationsOverviewRoute = buildRoute({
                 z.object({
                   category: z.string(),
                   defaults: z.object({
-                    email: zodEmailMode,
+                    email: zodNotificationEmailMode,
                     inApp: z.boolean(),
                   }),
                   emailAvailable: z.boolean(),
@@ -65,7 +62,7 @@ export const getNotificationsOverviewRoute = buildRoute({
                     allowEmail: z.boolean(),
                     allowInApp: z.boolean(),
                     allowPush: z.boolean(),
-                    email: zodEmailMode.nullable(),
+                    email: zodNotificationEmailMode.nullable(),
                     enabled: z.boolean(),
                     inApp: z.boolean().nullable(),
                     memberCanEdit: z.boolean(),

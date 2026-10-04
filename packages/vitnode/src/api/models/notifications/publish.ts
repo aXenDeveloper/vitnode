@@ -17,38 +17,20 @@ import {
   QUEUE_NOTIFICATIONS_FANOUT,
 } from "./shared";
 
-export const MAX_EXPLICIT_RECIPIENTS = 100_000;
+const MAX_EXPLICIT_RECIPIENTS = 100_000;
 
 export interface PublishNotificationArgs<TData> {
-  /**
-   * Who caused it. Defaults to the signed-in admin or user of the request;
-   * pass `null` for system notifications.
-   */
   actorId?: null | number;
-  /**
-   * Deliver to the actor too. Off by default - nobody needs to be told about
-   * their own comment - but right for "your export is ready" style messages.
-   */
   allowSelf?: boolean;
   data: NoInfer<TData>;
-  /**
-   * Stable for one real-world happening, e.g. `comment:42`. Publishing the
-   * same key twice for a type is a no-op that returns the first event.
-   */
   idempotencyKey: string;
-  /** Candidate user ids chosen by the plugin's business rules. */
   recipients?: readonly number[];
   subject?: NotificationSubject;
-  /**
-   * Join the producer's transaction: the event, and the durable task that
-   * delivers it, commit or roll back with the producer's own write.
-   */
   tx?: NotificationsDb;
   type: NotificationTypeDefinition<TData> | string;
 }
 
 export interface PublishNotificationResult {
-  /** `true` when the idempotency key had already been published. */
   duplicate: boolean;
   eventId: number;
 }
@@ -76,7 +58,7 @@ const normalizeSubject = (
   return { id, type: subject.type };
 };
 
-export const resolveGroupKey = (
+const resolveGroupKey = (
   definition: AnyNotificationTypeDefinition,
   data: unknown,
   subject: null | { id: string; type: string },
@@ -91,7 +73,6 @@ export const resolveGroupKey = (
   return key ? key.slice(0, 200) : null;
 };
 
-/** Validates, deduplicates and durably records one event. */
 export const publishNotification = async <TData>(
   c: NotificationsContext,
   args: PublishNotificationArgs<TData>,
@@ -205,8 +186,6 @@ export const publishNotification = async <TData>(
       .limit(1);
 
     if (!existing) {
-      // Only reachable when a concurrent transaction holds the key and has
-      // not committed yet; the caller's retry will see it.
       throw new NotificationPublishError(
         `Event "${typeId}" with key "${idempotencyKey}" is being published concurrently.`,
       );

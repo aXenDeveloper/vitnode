@@ -1,8 +1,3 @@
-/**
- * Collapses a burst of calls into one: it fires `wait` ms after the last call,
- * but never later than `maxWait` ms after the first, so a steady stream of
- * notifications still refreshes the list instead of postponing it forever.
- */
 export const createCoalescer = (
   run: () => void,
   { maxWait, wait }: { maxWait: number; wait: number },

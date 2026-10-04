@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import type { NotificationSubject } from "@/lib/notifications/types";
 
+import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
 import { core_notifications } from "@/database/notifications";
 
 import type {
@@ -12,15 +13,9 @@ import type { NotificationsContext } from "./shared";
 
 import { getNotificationState, removeNotificationItems } from "./inbox";
 import { publishNotification } from "./publish";
-import { runQueuedTasksNow } from "./run-now";
 
 export type { PublishNotificationArgs, PublishNotificationResult };
 
-/**
- * The Notifications Center on the API context: `c.get("notifications")`.
- * Plugins decide *who* might care; this decides who actually receives what,
- * and delivers it.
- */
 export class NotificationsModel {
   constructor(c: NotificationsContext) {
     this.c = c;
@@ -29,45 +24,19 @@ export class NotificationsModel {
   protected readonly c: NotificationsContext;
   private readonly queued: number[] = [];
 
-  /**
-   * Starts delivering what this request published as soon as the response is
-   * on its way, rather than on the next queue tick. Claims go through the
-   * queue's own row locks, so this never double-processes; anything it cannot
-   * claim (rolled back, already taken) is left to the worker.
-   */
   flushAfterResponse(): void {
     const ids = this.queued.splice(0);
     if (ids.length === 0) return;
 
-    void runQueuedTasksNow(this.c, ids).catch(async (error: unknown) => {
+    void processQueueTasksByIds(this.c, ids).catch(async (error: unknown) => {
       await this.c
         .get("log")
-        ?.warn(
+        .warn(
           `[Notifications] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
         );
     });
   }
 
-  /**
-   * Durably records an event and queues its delivery. With `tx` it joins the
-   * producer's transaction, so a rolled-back write never notifies anyone and a
-   * committed one always does, even if the process dies right after.
-   *
-   * @example
-   * ```ts
-   * await c.get("db").transaction(async tx => {
-   *   const [comment] = await tx.insert(comments).values(values).returning();
-   *   await c.get("notifications").publish({
-   *     type: commentNotification,
-   *     tx,
-   *     recipients: [post.authorId],
-   *     subject: { type: "blog.post", id: post.id },
-   *     data: { postId: post.id, title: post.title },
-   *     idempotencyKey: `comment:${comment.id}`,
-   *   });
-   * });
-   * ```
-   */
   async publish<TData>(
     args: PublishNotificationArgs<TData>,
   ): Promise<PublishNotificationResult> {
@@ -76,12 +45,6 @@ export class NotificationsModel {
     );
   }
 
-  /**
-   * Removes inbox items about a subject - after the content is deleted or a
-   * group of users lost access - keeping every owner's unread count right.
-   * Narrow it with `type` and `userIds`; with neither, every recipient's item
-   * about the subject goes.
-   */
   async remove({
     subject,
     type,

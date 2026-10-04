@@ -38,6 +38,11 @@ import { NOTIFICATIONS_NAMESPACES } from "./namespaces";
 
 const ALL = "all";
 
+type NotificationsScreenProps = NotificationsRouteData & {
+  navigate: (options: { search: NotificationsRouteSearch }) => unknown;
+  search: NotificationsRouteSearch;
+};
+
 const NotificationsList = ({
   search,
   userId,
@@ -133,17 +138,13 @@ const NotificationsList = ({
   );
 };
 
-/** The full Notifications Center. Viewing it never marks anything read. */
 export const NotificationsRouteContent = ({
   description,
   navigate,
   search,
   title,
   userId,
-}: NotificationsRouteData & {
-  navigate: (options: { search: NotificationsRouteSearch }) => unknown;
-  search: NotificationsRouteSearch;
-}) => (
+}: NotificationsScreenProps) => (
   <RouteMessages namespaces={NOTIFICATIONS_NAMESPACES}>
     <NotificationsScreen
       description={description}
@@ -161,10 +162,7 @@ const NotificationsScreen = ({
   search,
   title,
   userId,
-}: NotificationsRouteData & {
-  navigate: (options: { search: NotificationsRouteSearch }) => unknown;
-  search: NotificationsRouteSearch;
-}) => {
+}: NotificationsScreenProps) => {
   const t = useTranslations("core.notifications");
   const actions = useNotificationActions(userId);
   const state = useNotificationState(userId);

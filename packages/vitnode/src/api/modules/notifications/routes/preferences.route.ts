@@ -64,7 +64,7 @@ export const getNotificationPreferencesRoute = buildRoute({
   },
 });
 
-export const zodUpdateNotificationPreferences = z.object({
+const zodUpdateNotificationPreferences = z.object({
   types: z
     .record(
       z.string().max(100),

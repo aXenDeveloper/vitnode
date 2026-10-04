@@ -12,12 +12,12 @@ export const zodNotificationState = z.object({
   unread: z.number(),
 });
 
-export const zodNotificationSubject = z.object({
+const zodNotificationSubject = z.object({
   id: z.string(),
   type: z.string(),
 });
 
-export const zodNotificationActor = z.object({
+const zodNotificationActor = z.object({
   avatarColor: z.string(),
   avatarUrl: z.string().nullable(),
   id: z.number(),
@@ -47,8 +47,6 @@ export const zodNotificationItem = z.object({
 
 export const zodNotificationEmailMode = z.enum(NOTIFICATION_EMAIL_MODES);
 
-export const zodSubscriptionState = z.enum(["following", "muted", "none"]);
-
 export const zodNotificationIdParams = z.object({
   id: z.coerce.number().int().positive(),
 });
@@ -57,14 +55,9 @@ export const unauthorizedResponse = {
   401: { description: "Not signed in" },
 } as const;
 
-/** The signed-in user - every inbox route acts on them and nobody else. */
 export const requireNotificationUser = (c: Context<EnvVitNode>) => {
   const user = c.get("user");
   if (!user) throw new HTTPException(401, { message: "Unauthorized" });
 
   return user;
 };
-
-export const jsonContent = <T extends z.ZodType>(schema: T) => ({
-  content: { "application/json": { schema } },
-});

@@ -31,8 +31,6 @@ export const ResendEmailAdapter = ({
           replyTo,
           html,
         },
-        // Resend drops a second send with the same key for 24 hours, which is
-        // what makes a retry after an unconfirmed send safe.
         idempotencyKey ? { idempotencyKey } : undefined,
       );
 
@@ -40,7 +38,7 @@ export const ResendEmailAdapter = ({
         throw new Error(`[${error.name}]: ${error.message}`);
       }
 
-      return { id: data?.id };
+      return { id: data.id };
     },
   };
 };

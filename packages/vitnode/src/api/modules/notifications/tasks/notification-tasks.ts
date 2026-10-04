@@ -26,8 +26,6 @@ export const notificationsFanoutTask = buildQueueTask({
     const { eventId } = fanoutPayloadSchema.parse(payload);
     const result = await processNotificationEvent(c, eventId);
 
-    // Out of time with recipients left: progress is saved on the event, so a
-    // fresh task picks up at the next batch.
     if (!result.done) {
       await c.get("queue").dispatch({
         name: QUEUE_NOTIFICATIONS_FANOUT,

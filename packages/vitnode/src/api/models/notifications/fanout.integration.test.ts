@@ -140,7 +140,6 @@ describePostgres("notification fan-out", () => {
     expect(again).toEqual({ duplicate: true, eventId: first.eventId });
 
     await h.drainQueue();
-    // A retry of the whole event after it completed changes nothing.
     await processNotificationEvent(h.c, first.eventId);
 
     expect(await unreadOf(a)).toBe(1);
@@ -170,8 +169,6 @@ describePostgres("notification fan-out", () => {
     });
     await h.drainQueue();
 
-    // Simulate a worker that committed the batch but died before recording
-    // completion: rewind the event's cursor and process it again.
     await h.c
       .get("db")
       .update(core_notification_events)

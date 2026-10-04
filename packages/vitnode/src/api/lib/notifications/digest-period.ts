@@ -8,7 +8,6 @@ export interface LocalDate {
 
 export interface DigestPeriod {
   end: Date;
-  /** The local calendar date the digest belongs to, e.g. `2026-10-04`. */
   key: string;
   start: Date;
 }
@@ -54,7 +53,7 @@ interface WallClock extends LocalDate {
   weekday: number;
 }
 
-export const wallClockAt = (instant: Date, timeZone: string): WallClock => {
+const wallClockAt = (instant: Date, timeZone: string): WallClock => {
   const parts = Object.fromEntries(
     formatterFor(timeZone)
       .formatToParts(instant)
@@ -86,12 +85,6 @@ const offsetAt = (instant: number, timeZone: string): number => {
   return asUtc - Math.floor(instant / 1000) * 1000;
 };
 
-/**
- * The instant a local wall-clock hour happens in `timeZone`. On the night
- * clocks jump forward the hour may not exist; the answer is then the first
- * instant after the gap. On the night they fall back it happens twice; the
- * earlier one wins. Either way each local date maps to exactly one instant.
- */
 export const zonedHourToUtc = (
   date: LocalDate,
   hour: number,
@@ -101,17 +94,20 @@ export const zonedHourToUtc = (
   const before = offsetAt(wall - 12 * 60 * 60 * 1000, timeZone);
   const after = offsetAt(wall + 12 * 60 * 60 * 1000, timeZone);
 
-  const candidates = [
+  const [earliestMatchingInstant] = [
     wall - Math.max(before, after),
     wall - Math.min(before, after),
   ]
     .filter(instant => offsetAt(instant, timeZone) === wall - instant)
     .sort((a, b) => a - b);
 
-  if (candidates[0] !== undefined) return new Date(candidates[0]);
+  if (earliestMatchingInstant !== undefined) {
+    return new Date(earliestMatchingInstant);
+  }
 
-  // A gap: the wall time never happens. Use the instant clocks jump to.
-  return new Date(wall - before);
+  const instantClocksJumpForwardTo = wall - before;
+
+  return new Date(instantClocksJumpForwardTo);
 };
 
 const addDays = (date: LocalDate, days: number): LocalDate => {
@@ -129,12 +125,6 @@ const addDays = (date: LocalDate, days: number): LocalDate => {
 const formatLocalDate = (date: LocalDate): string =>
   `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
 
-/**
- * The most recent digest period that has already ended at `now`. A daily digest
- * ends every local day at `hour`; a weekly one on `weekday` at `hour`. Periods
- * are contiguous, so on DST days a daily period is 23 or 25 hours long rather
- * than skipping or repeating a day.
- */
 export const latestEndedDigestPeriod = ({
   hour,
   mode,

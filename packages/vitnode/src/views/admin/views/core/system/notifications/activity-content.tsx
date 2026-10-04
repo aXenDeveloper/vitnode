@@ -79,9 +79,11 @@ const SWAP_EXIT = {
   y: -4,
 } satisfies TargetAndTransition;
 
+const SNAPPY_EASE = [0.32, 0.72, 0, 1] as const;
+
 const SWAP_TRANSITION = {
   duration: 0.2,
-  ease: [0.32, 0.72, 0, 1],
+  ease: SNAPPY_EASE,
 } satisfies Transition;
 
 const Swap = ({
@@ -181,8 +183,6 @@ const SparkTooltip = ({
   );
 };
 
-const TOOLTIP_EASE = [0.32, 0.72, 0, 1] as const;
-
 const SparkTooltipLayer = ({
   children,
   glide,
@@ -228,10 +228,10 @@ const SparkTooltipLayer = ({
           ? { duration: 0 }
           : {
               default: open
-                ? { duration: 0.15, ease: TOOLTIP_EASE }
+                ? { duration: 0.15, ease: SNAPPY_EASE }
                 : { duration: 0.1, ease: "easeIn" },
               x: glide
-                ? { duration: 0.14, ease: TOOLTIP_EASE }
+                ? { duration: 0.14, ease: SNAPPY_EASE }
                 : { duration: 0 },
             }
       }
@@ -434,6 +434,7 @@ const StatTile = ({
 }) => {
   const format = useFormatter();
   const current = valueOf(stats.totals, metric);
+  const previous = valueOf(stats.previous, metric);
   const value =
     metric === "failureRate"
       ? format.number(current / 100, {
@@ -449,11 +450,11 @@ const StatTile = ({
         <p className="text-2xl font-semibold tracking-tight tabular-nums">
           <Swap swapKey={value}>{value}</Swap>
         </p>
-        <Swap swapKey={`${current}:${valueOf(stats.previous, metric)}`}>
+        <Swap swapKey={`${current}:${previous}`}>
           <Delta
             current={current}
             goodWhenUp={goodWhenUp}
-            previous={valueOf(stats.previous, metric)}
+            previous={previous}
           />
         </Swap>
         <Sparkline

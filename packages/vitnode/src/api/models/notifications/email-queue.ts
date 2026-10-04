@@ -6,11 +6,6 @@ import type { NotificationsContext, NotificationsDb } from "./shared";
 
 import { NOTIFICATIONS_PLUGIN_ID, QUEUE_NOTIFICATIONS_EMAIL } from "./shared";
 
-/**
- * Makes sure one email drain is queued. Drains are idempotent - each claims
- * deliveries with `SKIP LOCKED` - so a second one racing in is harmless; this
- * only keeps a burst from queueing hundreds of them.
- */
 export const dispatchEmailDrain = async (
   c: NotificationsContext,
   tx?: NotificationsDb,

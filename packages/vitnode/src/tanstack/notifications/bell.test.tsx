@@ -47,7 +47,6 @@ const mount = async () => {
   queryClient.setQueryData(SESSION_QUERY_KEY, {
     user: { id: USER_ID, notifications: { revision: 4, unread: 2 } },
   });
-  // What the dropdown shows once it opens.
   queryClient.setQueryData(
     recentNotificationsQueryOptions({ userId: USER_ID }).queryKey,
     {
@@ -78,7 +77,7 @@ const mount = async () => {
 };
 
 describe("NotificationsBell", () => {
-  const fetchMock = vi.fn(
+  const fetchMock = vi.fn<typeof fetch>(
     async () =>
       await Promise.resolve(
         new Response(JSON.stringify({ revision: 5, unread: 1 }), {
@@ -121,15 +120,11 @@ describe("NotificationsBell", () => {
     fireEvent.click(await screen.findByText("Two new replies"));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [
-      string | URL,
-      RequestInit,
-    ];
+    const [url, init] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
     expect(String(url)).toMatch(/\/notifications\/11\/read$/);
     expect(init.method?.toUpperCase()).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ throughSeq: 2 });
 
-    // The answer's absolute count replaces the badge.
     await waitFor(() =>
       expect(screen.getByTestId("notifications-badge").textContent).toBe("1"),
     );

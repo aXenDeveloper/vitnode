@@ -2,11 +2,6 @@ const MAX_TARGET_LENGTH = 2048;
 const MAX_TEXT_LENGTH = 500;
 const MAX_ERROR_LENGTH = 500;
 
-/**
- * Accepts only a path on this site. Rejects absolute URLs, protocol-relative
- * `//host`, backslash tricks browsers normalise into `//`, and control
- * characters - so a notification can never send someone off-site.
- */
 export const safeNotificationTarget = (target: unknown): null | string => {
   if (typeof target !== "string") return null;
   if (target.length === 0 || target.length > MAX_TARGET_LENGTH) return null;
@@ -26,7 +21,6 @@ export const safeNotificationTarget = (target: unknown): null | string => {
   }
 };
 
-/** Plain, single-paragraph text: no markup survives, length is bounded. */
 export const plainNotificationText = (value: unknown): string => {
   if (typeof value !== "string") return "";
 
@@ -40,10 +34,6 @@ export const plainNotificationText = (value: unknown): string => {
   );
 };
 
-/**
- * Provider errors can echo the recipient address, API keys in URLs or whole
- * SMTP transcripts. Diagnostics only need the gist.
- */
 export const sanitizeDeliveryError = (error: unknown): string => {
   const raw =
     error instanceof Error

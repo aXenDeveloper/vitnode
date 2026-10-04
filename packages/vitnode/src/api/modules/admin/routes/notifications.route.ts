@@ -56,16 +56,13 @@ export const sendNotificationRoute = buildRoute({
 
     const { userId, title, description, type } = c.req.valid("json");
 
-    // The toast this route always sent, unchanged: delivered only to that
-    // user's open connections, across all their browsers.
+    // Delivered only to that user's connections, across all their browsers.
     c.get("realtime").sendToUser(userId, notificationsChannel, {
       description,
       title,
       type,
     });
 
-    // New: the same message is kept in their inbox, so a user who was offline
-    // (or closed the toast) still sees it. Each send is its own message.
     await c.get("notifications").publish({
       type: adminMessageNotification,
       actorId: admin.id,

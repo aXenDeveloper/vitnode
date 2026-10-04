@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import { updateNotificationTypePolicy } from "@/api/models/notifications/admin";
+import { zodNotificationEmailMode } from "@/api/modules/notifications/schema";
 import { CONFIG_PLUGIN } from "@/config";
-import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
 
 export const updateNotificationTypePolicyRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -23,7 +23,7 @@ export const updateNotificationTypePolicyRoute = buildRoute({
               allowEmail: z.boolean().optional(),
               allowInApp: z.boolean().optional(),
               allowPush: z.boolean().optional(),
-              email: z.enum(NOTIFICATION_EMAIL_MODES).optional(),
+              email: zodNotificationEmailMode.optional(),
               enabled: z.boolean().optional(),
               inApp: z.boolean().optional(),
               memberCanEdit: z.boolean().optional(),

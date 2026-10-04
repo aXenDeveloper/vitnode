@@ -145,7 +145,7 @@ const DangerRow = ({
   <li>
     {confirm(
       <button
-        className="focus-visible:ring-ring/50 [@media(hover:hover)]:hover:bg-muted/50 flex min-h-12 w-full items-center gap-3 px-4 py-3 text-start outline-none focus-visible:ring-[3px] focus-visible:ring-inset"
+        className="focus-visible:ring-ring/50 [@media(hover:hover)]:hover:bg-muted/50 flex min-h-12 w-full items-center gap-3 px-4 py-3 text-start outline-none focus-visible:ring-3 focus-visible:ring-inset"
         type="button"
       >
         <span

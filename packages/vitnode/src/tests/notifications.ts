@@ -48,12 +48,9 @@ export interface NotificationsHarness {
   c: Context<EnvVitNode>;
   createUsers: (count: number, language?: string) => Promise<number[]>;
   database: TestDatabaseHandle;
-  /** Runs queued tasks until nothing due is left. */
   drainQueue: (now?: Date) => Promise<number>;
   emitted: { name: string; payload: unknown }[];
-  /** A context on its own connection pool, for concurrent work. */
   forkContext: () => Context<EnvVitNode>;
-  /** Queries sent through any connection since the harness was created. */
   queryCount: () => number;
   realtime: RealtimeRecord[];
   sentEmails: SentEmailRecord[];
@@ -97,9 +94,7 @@ export const createNotificationsHarness = async ({
   await database.db
     .insert(core_languages)
     .values({ code: "en", name: "English", timezone: "UTC" });
-  await database.db
-    .insert(core_roles)
-    .values({ id: 1, name: "Member", root: false } as never);
+  await database.db.insert(core_roles).values({ id: 1 });
 
   const realtime: RealtimeRecord[] = [];
   const emitted: NotificationsHarness["emitted"] = [];

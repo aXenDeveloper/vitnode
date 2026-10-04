@@ -20,7 +20,6 @@ const SignedInBell = ({
   const [open, setOpen] = React.useState(false);
   const state = useNotificationState(userId);
   const actions = useNotificationActions(userId);
-  // Fetched only while open: the bell's number never needs the list.
   const recent = useQuery({
     ...recentNotificationsQueryOptions({ userId }),
     enabled: open,
@@ -46,7 +45,6 @@ const SignedInBell = ({
   );
 };
 
-/** The header bell for the signed-in user; nothing for guests. */
 export const NotificationsBell = () => {
   const { data: session } = useSessionQuery();
   const user = session?.user;

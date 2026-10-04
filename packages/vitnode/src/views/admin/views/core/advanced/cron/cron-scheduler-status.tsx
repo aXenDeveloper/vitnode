@@ -15,6 +15,12 @@ const STATE_ICON = {
   stopped: CircleXIcon,
 } as const;
 
+const STATE_TONE = {
+  ok: "bg-success/10 text-success",
+  overdue: "bg-warn/10 text-warn",
+  stopped: "bg-destructive/10 text-destructive",
+} as const;
+
 const DocsLink = ({ children }: { children: React.ReactNode }) => (
   <a
     className="text-primary underline-offset-4 hover:underline"
@@ -39,13 +45,71 @@ const Fact = ({
   </div>
 );
 
+const schedulerStateOf = (health: CronHealth): SchedulerState => {
+  if (health.stale) return "stopped";
+
+  return health.overdueJobs > 0 ? "overdue" : "ok";
+};
+
+const StatusTitle = ({
+  health,
+  state,
+}: {
+  health: CronHealth;
+  state: SchedulerState;
+}) => {
+  const t = useTranslations("admin.advanced.cron.health");
+
+  if (state === "stopped") return t("stale.title");
+  if (state === "overdue") {
+    return t("overdue.title", { count: health.overdueJobs });
+  }
+
+  return t("ok.title");
+};
+
+const StatusDescription = ({
+  lastRun,
+  state,
+}: {
+  lastRun: CronHealth["lastRun"];
+  state: SchedulerState;
+}) => {
+  const t = useTranslations("admin.advanced.cron.health");
+
+  if (state === "overdue") return t("overdue.desc");
+  if (state === "ok") return t("ok.desc");
+  if (!lastRun) return t("stale.desc_never");
+
+  return (
+    <>
+      {t.rich("stale.desc", {
+        date: () => <DateFormat date={lastRun} showFullDate />,
+      })}
+    </>
+  );
+};
+
+const StatusHelp = ({ health }: { health: CronHealth }) => {
+  const t = useTranslations("admin.advanced.cron.health");
+
+  return (
+    <p className="text-sm leading-relaxed text-pretty">
+      {health.secretRejected ? (
+        <>{t("secret_rejected")} </>
+      ) : (
+        !health.active && <>{t("no_adapter")} </>
+      )}
+      {t.rich("stale.help", {
+        docs: text => <DocsLink>{text}</DocsLink>,
+      })}
+    </p>
+  );
+};
+
 export const CronSchedulerStatus = ({ health }: { health: CronHealth }) => {
   const t = useTranslations("admin.advanced.cron.health");
-  const state: SchedulerState = health.stale
-    ? "stopped"
-    : health.overdueJobs > 0
-      ? "overdue"
-      : "ok";
+  const state = schedulerStateOf(health);
   const Icon = STATE_ICON[state];
   const lastRun = health.lastRun;
 
@@ -59,9 +123,7 @@ export const CronSchedulerStatus = ({ health }: { health: CronHealth }) => {
         <span
           className={cn(
             "flex size-10 shrink-0 items-center justify-center rounded-full [&_svg]:size-5",
-            state === "stopped" && "bg-destructive/10 text-destructive",
-            state === "overdue" && "bg-warn/10 text-warn",
-            state === "ok" && "bg-success/10 text-success",
+            STATE_TONE[state],
           )}
         >
           <Icon aria-hidden />
@@ -72,36 +134,15 @@ export const CronSchedulerStatus = ({ health }: { health: CronHealth }) => {
             className="text-lg font-semibold text-balance"
             id="cron-scheduler-status"
           >
-            {state === "stopped"
-              ? t("stale.title")
-              : state === "overdue"
-                ? t("overdue.title", { count: health.overdueJobs })
-                : t("ok.title")}
+            <StatusTitle health={health} state={state} />
           </h2>
 
           <p className="text-muted-foreground max-w-prose text-sm leading-relaxed text-pretty">
-            {state === "stopped"
-              ? lastRun
-                ? t.rich("stale.desc", {
-                    date: () => <DateFormat date={lastRun} showFullDate />,
-                  })
-                : t("stale.desc_never")
-              : state === "overdue"
-                ? t("overdue.desc")
-                : t("ok.desc")}
+            <StatusDescription lastRun={lastRun} state={state} />
           </p>
 
           {(state === "stopped" || health.secretRejected) && (
-            <p className="text-sm leading-relaxed text-pretty">
-              {health.secretRejected ? (
-                <>{t("secret_rejected")} </>
-              ) : (
-                !health.active && <>{t("no_adapter")} </>
-              )}
-              {t.rich("stale.help", {
-                docs: text => <DocsLink>{text}</DocsLink>,
-              })}
-            </p>
+            <StatusHelp health={health} />
           )}
         </div>
       </div>

@@ -8,7 +8,6 @@ import { EmailButton } from "./ui/button";
 export interface NotificationEmailEntry {
   body?: string;
   title: string;
-  /** Absolute URL, already restricted to this site. */
   url: null | string;
 }
 
@@ -21,11 +20,6 @@ export interface NotificationEmailProps extends DefaultTemplateEmailProps {
   preferencesUrl: string;
 }
 
-/**
- * One template for an immediate email (one entry) and a digest (many). All
- * text arrives as plain strings, so React escapes it - nothing a plugin or an
- * actor wrote can inject markup.
- */
 export default function NotificationEmailTemplate({
   actionLabel,
   entries,
@@ -44,7 +38,6 @@ export default function NotificationEmailTemplate({
         {intro ? <Text className="text-muted-foreground">{intro}</Text> : null}
 
         {entries.map((entry, index) => (
-          // A rendered email is never re-ordered, and titles may repeat.
           // eslint-disable-next-line @eslint-react/no-array-index-key
           <Section key={index}>
             {index > 0 ? <Hr className="border-border" /> : null}

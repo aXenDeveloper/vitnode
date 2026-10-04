@@ -29,26 +29,17 @@ interface EmailModelSendArgsWithEmail {
 export interface EmailApiPlugin {
   sendEmail: (args: {
     html: string;
-    /**
-     * Stable per logical email. Adapters whose provider deduplicates on a key
-     * should forward it, so a retry after an unconfirmed send is not delivered
-     * twice. Optional - providers without the feature can ignore it.
-     */
     idempotencyKey?: string;
     metadata: ContextVariableMap["core"]["metadata"];
     replyTo?: string;
     subject: string;
     text: string;
     to: string;
-    // `void` on purpose: adapters written before this returned nothing, and
-    // must keep compiling.
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   }) => Promise<EmailSendResult | void>;
 }
 
-/** What a provider reports back, when it reports anything. */
 export interface EmailSendResult {
-  /** The provider's id for the accepted message, for delivery diagnostics. */
   id?: string;
 }
 
@@ -152,7 +143,7 @@ export class EmailModel {
   ): Promise<EmailSendResult> {
     const provider = this.requireProvider();
 
-    const result = await provider.sendEmail({
+    const sendResult = await provider.sendEmail({
       html: email.html,
       idempotencyKey,
       to: email.to,
@@ -162,7 +153,7 @@ export class EmailModel {
       text: email.text,
     });
 
-    return result ?? {};
+    return sendResult ?? {};
   }
 
   async send(args: EmailModelSendArgs): Promise<void> {

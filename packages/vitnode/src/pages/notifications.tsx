@@ -24,7 +24,6 @@ export const route = defineAuthenticatedRoute<
   NotificationsRouteData,
   NotificationsRouteSearch
 >({
-  // `head` after `load`, always.
   load: async ({ context, search, t }) =>
     await loadNotificationsRoute({ ...context, search, t }),
   head: ({ loaderData }) => ({ robots: "noindex, nofollow", ...loaderData }),

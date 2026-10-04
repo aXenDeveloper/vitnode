@@ -7,7 +7,6 @@ describe("notification state store", () => {
     const store = createNotificationStateStore();
 
     expect(store.apply(1, { revision: 5, unread: 3 })).toBe(true);
-    // A WebSocket update overtook the session request that is now arriving.
     expect(store.apply(1, { revision: 7, unread: 4 })).toBe(true);
     expect(store.apply(1, { revision: 6, unread: 9 })).toBe(false);
     expect(store.apply(1, { revision: 7, unread: 9 })).toBe(false);

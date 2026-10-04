@@ -50,8 +50,7 @@ const pingType = buildNotificationType({
   present: ({ data }) => ({ title: `Ping ${data.n}` }),
 });
 
-/** Turns the access check on and off at runtime, like revoking a permission. */
-let revoked = new Set<number>();
+let revokedUserIds = new Set<number>();
 const privateType = buildNotificationType({
   id: "test.private",
   version: 1,
@@ -59,7 +58,7 @@ const privateType = buildNotificationType({
   category: "content",
   label: "test.private.label",
   defaults: { email: "none", inApp: true },
-  access: ({ userIds }) => userIds.filter(id => !revoked.has(id)),
+  access: ({ userIds }) => userIds.filter(id => !revokedUserIds.has(id)),
   present: ({ data }) => ({
     title: `Secret: ${data.secret}`,
     target: "/secret",
@@ -127,7 +126,6 @@ describePostgres("notification inbox state", () => {
     });
     expect(read.unread).toBe(0);
 
-    // Repeating the read never decrements again.
     const again = await markNotificationRead(h.c, {
       notificationId: item.id,
       userId: user,
@@ -189,7 +187,6 @@ describePostgres("notification inbox state", () => {
     await reply(owner, a);
     const [rendered] = await itemsOf(owner);
 
-    // Another reply joins the group after the user saw it, before the click.
     await reply(owner, b);
     const after = await markNotificationRead(h.c, {
       notificationId: rendered.id,
@@ -203,7 +200,6 @@ describePostgres("notification inbox state", () => {
     expect(item.readSeq).toBe(1);
     expect(item.activitySeq).toBe(2);
 
-    // Read with the new boundary: now it is read, and new activity re-opens it once.
     await markNotificationRead(h.c, {
       notificationId: item.id,
       throughSeq: item.activitySeq,
@@ -232,7 +228,6 @@ describePostgres("notification inbox state", () => {
   it("starts a new item once the grouping window has passed", async () => {
     const [owner, actor] = await h.createUsers(2);
     await reply(owner, actor);
-    // Age the first group by two windows.
     await h.c
       .get("db")
       .update(core_notifications)
@@ -249,32 +244,31 @@ describePostgres("notification inbox state", () => {
     await ping(user);
     await ping(user);
 
-    // Hold the user's lock in another connection as if a fan-out were mid-way:
-    // mark-all must wait for it and then include what it committed.
-    const other = h.forkContext();
-    let release: () => void = () => undefined;
-    const held = new Promise<void>(resolve => {
-      release = resolve;
+    const fanoutInProgress = h.forkContext();
+    let releaseUserLock: () => void = () => undefined;
+    const userLockHeld = new Promise<void>(resolve => {
+      releaseUserLock = resolve;
     });
-    const blocker = other.get("db").transaction(async tx => {
-      await tx
-        .select()
-        .from(core_notification_user_state)
-        .where(eq(core_notification_user_state.userId, user))
-        .for("update");
-      await held;
-    });
+    const fanoutHoldingUserLock = fanoutInProgress
+      .get("db")
+      .transaction(async tx => {
+        await tx
+          .select()
+          .from(core_notification_user_state)
+          .where(eq(core_notification_user_state.userId, user))
+          .for("update");
+        await userLockHeld;
+      });
 
     const markAll = markAllNotificationsRead(h.c, { userId: user });
     await new Promise(resolve => setTimeout(resolve, 100));
-    release();
-    await blocker;
+    releaseUserLock();
+    await fanoutHoldingUserLock;
     const result = await markAll;
 
     expect(result.marked).toBe(2);
     expect(result.unread).toBe(0);
 
-    // Delivered after the boundary: stays unread.
     await ping(user);
     expect((await state(user)).unread).toBe(1);
   });
@@ -297,7 +291,6 @@ describePostgres("notification inbox state", () => {
       ),
     );
 
-    // Deliver concurrently from three connections while reading.
     await Promise.all(
       published.map(async ({ eventId }, index) => {
         await processNotificationEvent(forks[index % forks.length], eventId);
@@ -353,11 +346,10 @@ describePostgres("notification inbox state", () => {
       title: "Secret: plans",
     });
 
-    revoked = new Set([alice]);
+    revokedUserIds = new Set([alice]);
     const hidden = await listNotifications(h.c, { limit: 20, userId: alice });
-    revoked = new Set();
+    revokedUserIds = new Set();
 
-    // Still listed - so it can be cleared - but with nothing private in it.
     expect(hidden.items[0]).toMatchObject({
       actors: [],
       available: false,

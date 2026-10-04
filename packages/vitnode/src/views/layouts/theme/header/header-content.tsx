@@ -14,7 +14,6 @@ export interface HeaderLayoutContentProps extends Omit<
   mobileUser?: React.ReactNode;
   moreNavigationLabel: string;
   navigation: HeaderNavItem[];
-  /** Shown on every screen size, before the user menu. */
   notifications?: React.ReactNode;
   user?: React.ReactNode;
 }

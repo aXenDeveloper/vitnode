@@ -11,12 +11,12 @@ import {
 } from "@/api/models/notifications/danger";
 import { CONFIG_PLUGIN } from "@/config";
 
-const permission = {
+const canManageNotifications = {
   module: "notifications",
   permission: "can_manage",
 } as const;
 
-const json = <T extends z.ZodType>(schema: T, description: string) =>
+const dangerResponses = <T extends z.ZodType>(schema: T, description: string) =>
   ({
     200: { content: { "application/json": { schema } }, description },
     403: { description: "Access Denied" },
@@ -24,13 +24,13 @@ const json = <T extends z.ZodType>(schema: T, description: string) =>
 
 export const pauseNotificationsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: permission,
+  adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
     description:
       "Stop fanning out and sending notifications. New events are still stored and wait until notifications resume.",
     path: "/pause",
-    responses: json(z.object({ success: z.boolean() }), "Paused"),
+    responses: dangerResponses(z.object({ success: z.boolean() }), "Paused"),
   },
   handler: async c => {
     await pauseNotifications(c);
@@ -41,39 +41,45 @@ export const pauseNotificationsRoute = buildRoute({
 
 export const resumeNotificationsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: permission,
+  adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
     description:
       "Resume notifications and queue every event that waited while they were paused.",
     path: "/resume",
-    responses: json(z.object({ requeuedEvents: z.number() }), "Resumed"),
+    responses: dangerResponses(
+      z.object({ requeuedEvents: z.number() }),
+      "Resumed",
+    ),
   },
   handler: async c => c.json(await resumeNotifications(c)),
 });
 
 export const cancelQueuedNotificationEmailsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: permission,
+  adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
     description:
       "Skip every email that has not gone out yet, including the next digests. In-app notifications stay.",
     path: "/emails/cancel",
-    responses: json(z.object({ cancelled: z.number() }), "Cancelled"),
+    responses: dangerResponses(
+      z.object({ cancelled: z.number() }),
+      "Cancelled",
+    ),
   },
   handler: async c => c.json(await cancelQueuedNotificationEmails(c)),
 });
 
 export const markEverythingReadRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: permission,
+  adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
     description:
       "Mark every unread notification as read for every member and zero their badges.",
     path: "/read-all",
-    responses: json(
+    responses: dangerResponses(
       z.object({ items: z.number(), members: z.number() }),
       "Marked as read",
     ),
@@ -83,13 +89,13 @@ export const markEverythingReadRoute = buildRoute({
 
 export const deleteAllNotificationsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: permission,
+  adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
     description:
       "Delete every member's notifications. Types, preferences, settings and email history are kept.",
     path: "/delete-all",
-    responses: json(
+    responses: dangerResponses(
       z.object({ events: z.number(), items: z.number() }),
       "Deleted",
     ),
@@ -99,13 +105,13 @@ export const deleteAllNotificationsRoute = buildRoute({
 
 export const resetMemberNotificationPreferencesRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: permission,
+  adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
     description:
       "Drop every member's own notification choices and digest schedule so they follow the installation defaults.",
     path: "/members/reset-preferences",
-    responses: json(z.object({ members: z.number() }), "Reset"),
+    responses: dangerResponses(z.object({ members: z.number() }), "Reset"),
   },
   handler: async c => c.json(await resetMemberNotificationPreferences(c)),
 });

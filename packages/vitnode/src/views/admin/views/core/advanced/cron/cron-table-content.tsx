@@ -67,11 +67,9 @@ export const CronTableContent = ({
                   )}
                 />
                 <span
-                  className={cn(
-                    status === "overdue"
-                      ? "text-warn"
-                      : "text-muted-foreground",
-                  )}
+                  className={
+                    status === "overdue" ? "text-warn" : "text-muted-foreground"
+                  }
                 >
                   {t(`list.status.${status}`)}
                 </span>

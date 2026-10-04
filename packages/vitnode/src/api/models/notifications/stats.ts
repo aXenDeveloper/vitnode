@@ -1,4 +1,13 @@
-import { and, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  gte,
+  inArray,
+  isNull,
+  ne,
+  or,
+  sql,
+  type SQLWrapper,
+} from "drizzle-orm";
 
 import {
   core_notification_deliveries,
@@ -169,7 +178,7 @@ export const getNotificationStats = async (
     now.getTime() - (count * 2 + 2) * (unit === "day" ? DAY : HOUR),
   );
   const format = unit === "day" ? "YYYY-MM-DD" : 'YYYY-MM-DD"T"HH24';
-  const bucketOf = (column: unknown) =>
+  const bucketOf = (column: SQLWrapper) =>
     sql<string>`to_char(date_trunc(${unit}, (${column} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone}), ${format})`;
   const finishedAt = sql`coalesce(${core_notification_deliveries.sentAt}, ${core_notification_deliveries.updatedAt})`;
 
@@ -214,11 +223,9 @@ export const getNotificationStats = async (
       count: row.count,
       key: row.key,
       metric:
-        row.status === "sent"
-          ? ("sent" as const)
-          : row.status === "failed"
-            ? ("failed" as const)
-            : ("skipped" as const),
+        row.status === "sent" || row.status === "failed"
+          ? row.status
+          : ("skipped" as const),
     })),
     ...eventRows.map(row => ({
       count: row.count,

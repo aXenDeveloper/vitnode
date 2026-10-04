@@ -40,11 +40,6 @@ const announcementType = buildNotificationType({
   present: ({ data }) => ({ title: data.title }),
 });
 
-/**
- * The 1,000-recipient case, with duplicates in the list and one recipient who
- * turned the type off. Timings are printed for the record, never asserted -
- * they depend on the machine.
- */
 describePostgres("notification fan-out with 1,000 recipients", () => {
   let h: NotificationsHarness;
   let users: number[] = [];
@@ -84,12 +79,11 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
     });
     const publishMs = performance.now() - started;
 
-    // Two workers race on the same event; the event row lock serializes them.
-    const fork = h.forkContext();
+    const racingWorker = h.forkContext();
     const fanoutStarted = performance.now();
     await Promise.all([
       processNotificationEvent(h.c, eventId),
-      processNotificationEvent(fork, eventId),
+      processNotificationEvent(racingWorker, eventId),
     ]);
     const fanoutMs = performance.now() - fanoutStarted;
     const fanoutQueries = h.queryCount() - queriesBefore;
@@ -118,8 +112,6 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
       status: "completed",
     });
 
-    // Repeated processing: rewind the cursors as a crashed worker would leave
-    // them, run it again twice, and nothing may change.
     await h.c
       .get("db")
       .update(core_notification_events)
@@ -148,10 +140,8 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
       .from(core_notification_deliveries);
     expect(deliveries[0]?.count).toBe(expected);
 
-    // Bounded work: the access check ran once per batch, not per recipient,
-    // and the whole fan-out took a fixed number of queries per batch.
-    const batches = Math.ceil(RECIPIENTS / BATCH);
-    expect(accessCalls).toBeLessThanOrEqual(batches * 2 + 4);
+    const batchesPerWorker = Math.ceil(RECIPIENTS / BATCH);
+    expect(accessCalls).toBeLessThanOrEqual(batchesPerWorker * 2 + 4);
     expect(fanoutQueries).toBeLessThan(RECIPIENTS);
 
     // eslint-disable-next-line no-console

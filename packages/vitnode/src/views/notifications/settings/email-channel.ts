@@ -1,10 +1,9 @@
+import type { NotificationEmailMode } from "@/lib/notifications/types";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
-
-type EmailMode = NotificationPreferenceTypeView["value"]["email"];
 
 export type EmailChannelState = "off" | "on" | "unavailable";
 
-export const emailEditableTypes = (types: NotificationPreferenceTypeView[]) =>
+const emailEditableTypes = (types: NotificationPreferenceTypeView[]) =>
   types.filter(type => !type.locked && type.emailModes.length > 0);
 
 export const emailChannelState = (
@@ -16,7 +15,9 @@ export const emailChannelState = (
   return editable.some(type => type.value.email !== "none") ? "on" : "off";
 };
 
-const turnOnMode = (type: NotificationPreferenceTypeView): EmailMode => {
+const turnOnMode = (
+  type: NotificationPreferenceTypeView,
+): NotificationEmailMode => {
   if (type.defaultEmail !== "none") return type.defaultEmail;
 
   return type.emailModes.includes("daily") ? "daily" : "immediate";
@@ -24,8 +25,8 @@ const turnOnMode = (type: NotificationPreferenceTypeView): EmailMode => {
 
 export const emailOnPatch = (
   types: NotificationPreferenceTypeView[],
-  before: null | Record<string, EmailMode>,
-): Record<string, { email: EmailMode }> =>
+  before: null | Record<string, NotificationEmailMode>,
+): Record<string, { email: NotificationEmailMode }> =>
   Object.fromEntries(
     emailEditableTypes(types).map(type => {
       const previous = before?.[type.id];

@@ -124,7 +124,6 @@ describePostgres("notification email", () => {
     expect(failed.availableAt.getTime()).toBeGreaterThan(Date.now());
     expect(sentTo(user)).toHaveLength(0);
 
-    // Not due yet: a drain right now sends nothing.
     await drainNotificationEmails(h.c);
     expect(sentTo(user)).toHaveLength(0);
 
@@ -177,8 +176,6 @@ describePostgres("notification email", () => {
     const readOne = await publish(newsType, user, "Already seen");
     await h.drainQueue();
 
-    // Europe moved its clocks forward on 29 March 2026: 08:00 in Warsaw was
-    // 07:00 UTC on the 28th and 06:00 UTC on the 29th.
     const setCreated = async (eventId: number, at: string) =>
       await h.c
         .get("db")
@@ -204,6 +201,8 @@ describePostgres("notification email", () => {
       userId: user,
     });
 
+    const warsawEightAmBeforeDstChange = new Date("2026-03-28T07:00:00Z");
+    const warsawEightAmAfterDstChange = new Date("2026-03-29T06:00:00Z");
     const firstRun = new Date("2026-03-29T10:00:00Z");
     await planNotificationDigests(h.c, { now: firstRun });
     await planNotificationDigests(h.c, { now: firstRun });
@@ -216,8 +215,8 @@ describePostgres("notification email", () => {
     expect(digests[0]).toMatchObject({
       idempotencyKey: `daily:${user}:2026-03-29`,
       itemCount: 1,
-      periodEnd: new Date("2026-03-29T06:00:00Z"),
-      periodStart: new Date("2026-03-28T07:00:00Z"),
+      periodEnd: warsawEightAmAfterDstChange,
+      periodStart: warsawEightAmBeforeDstChange,
       status: "sent",
     });
     expect(
@@ -226,7 +225,6 @@ describePostgres("notification email", () => {
         ?.entries.map(entry => entry.title),
     ).toEqual(["Saturday news"]);
 
-    // The next period picks up only what the first did not claim.
     const secondRun = new Date("2026-03-30T07:00:00Z");
     await planNotificationDigests(h.c, { now: secondRun });
     await drainNotificationEmails(h.c, { now: secondRun });
@@ -237,7 +235,6 @@ describePostgres("notification email", () => {
         ?.entries.map(entry => entry.title),
     ).toEqual(["Sunday news"]);
 
-    // Nothing is left to send, and running again sends nothing.
     const sent = sentTo(user).length;
     await planNotificationDigests(h.c, {
       now: new Date("2026-03-31T07:00:00Z"),
@@ -272,7 +269,6 @@ describePostgres("notification email", () => {
     await drainNotificationEmails(h.c, { now });
     h.setEmailFailure(null);
 
-    // A new event after the claim must not slip into the retried digest.
     await publish(newsType, user, "Three");
     await h.drainQueue();
     await drainNotificationEmails(h.c, {

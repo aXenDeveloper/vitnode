@@ -23,11 +23,10 @@ import type { NotificationItemView } from "./notifications-query";
 
 import { NotificationItem } from "./notification-item";
 
-export const NOTIFICATIONS_HREF = "/notifications";
+const NOTIFICATIONS_HREF = "/notifications";
 export const NOTIFICATION_SETTINGS_HREF = "/settings/notifications";
 
-/** `99+` past 99, so the badge never outgrows the icon. */
-export const formatUnreadBadge = (count: number): null | string => {
+const formatUnreadBadge = (count: number): null | string => {
   if (count <= 0) return null;
 
   return count > 99 ? "99+" : String(count);
@@ -47,11 +46,6 @@ export interface NotificationsBellContentProps {
   unread: number;
 }
 
-/**
- * The header bell. Its number comes from the session and realtime state, never
- * from the list; the list is fetched only once the dropdown opens, and opening
- * it never marks anything read.
- */
 export const NotificationsBellContent = ({
   onMarkAllRead,
   onOpenChange,

@@ -11,7 +11,11 @@ import { Button } from "@/components/ui/button";
 
 import type { UpdateTimeZone } from "./time-zone-update";
 
-import { deviceTimeZone, supportedTimeZones } from "./time-zone-update";
+import {
+  deviceTimeZone,
+  supportedTimeZones,
+  timeZoneLabel,
+} from "./time-zone-update";
 
 export const TimeZoneEditor = ({
   onClose,
@@ -42,7 +46,7 @@ export const TimeZoneEditor = ({
 
     toast.success(t("timeZoneSaved"), {
       description: timeZone
-        ? t("timeZoneSavedDesc", { timeZone: timeZone.replace(/_/g, " ") })
+        ? t("timeZoneSavedDesc", { timeZone: timeZoneLabel(timeZone) })
         : t("timeZoneAuto"),
     });
     onClose();
@@ -91,9 +95,7 @@ export const TimeZoneEditor = ({
                 type="button"
                 variant="link"
               >
-                {t("timeZoneUseDevice", {
-                  timeZone: device.replace(/_/g, " "),
-                })}
+                {t("timeZoneUseDevice", { timeZone: timeZoneLabel(device) })}
               </Button>
             ) : (
               <span />

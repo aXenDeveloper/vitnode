@@ -35,14 +35,13 @@ export interface NotificationActor {
   nameCode: string;
 }
 
-export interface ActorSummary {
+interface ActorSummary {
   actorCount: number;
   actors: NotificationActor[];
 }
 
 const ACTOR_PREVIEW_LIMIT = 3;
 
-/** Loads users for actor previews in one query. */
 export const loadActors = async (
   c: NotificationsContext,
   ids: number[],
@@ -71,10 +70,6 @@ export const loadActors = async (
   );
 };
 
-/**
- * The newest distinct actors of each inbox item, and how many distinct actors
- * it has in total - one grouped query for a whole page of items.
- */
 export const loadActorSummaries = async (
   c: NotificationsContext,
   notificationIds: number[],
@@ -135,14 +130,13 @@ export const loadActorSummaries = async (
   );
 };
 
-export const subjectOf = (
+const subjectOf = (
   row: Pick<NotificationEventRow, "subjectId" | "subjectType">,
 ): NotificationSubject | null =>
   row.subjectType && row.subjectId
     ? { id: row.subjectId, type: row.subjectType }
     : null;
 
-/** Which of `userIds` the type still lets see this event. */
 export const checkNotificationAccess = async ({
   c,
   data,
@@ -162,15 +156,11 @@ export const checkNotificationAccess = async ({
   return new Set(await access({ c, data, subject: subjectOf(event), userIds }));
 };
 
-export interface ResolvedEvent {
+interface ResolvedEvent {
   data: unknown;
   registered: RegisteredNotificationType;
 }
 
-/**
- * The registered type and parsed data of an event, or `null` when it can no
- * longer be shown: its plugin is gone, or its data no longer parses.
- */
 export const resolveEvent = (
   c: NotificationsContext,
   event: NotificationEventRow,
@@ -214,7 +204,6 @@ const presentArgs = ({
   t,
 });
 
-/** In-app text for one item, sanitized. `null` if the type failed to render. */
 export const presentNotification = (
   c: NotificationsContext,
   args: PresentArgs,
@@ -232,7 +221,7 @@ export const presentNotification = (
   } catch (error) {
     void c
       .get("log")
-      ?.error(
+      .error(
         `[Notifications] "${args.registered.definition.id}" failed to render: ${error instanceof Error ? error.message : String(error)}`,
       );
 
@@ -277,7 +266,6 @@ export const presentNotificationEmail = (
   }
 };
 
-/** Translators per locale, created once per operation. */
 export const createTranslatorCache = (c: NotificationsContext) => {
   const cache = new Map<string, Promise<Translator>>();
 

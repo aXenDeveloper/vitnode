@@ -21,7 +21,7 @@ import { core_queue } from "@/database/queue";
 import type { NotificationsContext } from "./shared";
 
 import { dispatchEmailDrain } from "./email-queue";
-import { reconcileNotificationCounts } from "./inbox";
+import { reconcileNotificationCounts, UNREAD_SQL } from "./inbox";
 import { translateOr } from "./preferences";
 import { createTranslatorCache } from "./render";
 import {
@@ -33,23 +33,21 @@ import {
   typeSettingsKey,
 } from "./shared";
 
-const countBy = <K extends string>(rows: { count: number; key: K }[]) =>
-  Object.fromEntries(rows.map(row => [row.key, row.count])) as Partial<
-    Record<K, number>
-  >;
+const countBy = <K extends string>(rows: { count: number; key: K }[]) => {
+  const counts: Partial<Record<K, number>> = {};
+  for (const row of rows) counts[row.key] = row.count;
 
-/**
- * Everything the AdminCP overview shows. Only aggregates and type metadata -
- * no notification content and no recipient data.
- */
+  return counts;
+};
+
 export const getNotificationsOverview = async (c: NotificationsContext) => {
   const db = c.get("db");
   const core = c.get("core");
-  const settings = await loadNotificationSettings(db);
   const emailConfigured = isEmailConfigured(c);
-  const { t } = await createTranslatorCache(c)(c.get("admin")?.user.language);
 
   const [
+    settings,
+    { t },
     queueRows,
     deliveryRows,
     eventRows,
@@ -58,6 +56,8 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     [inbox],
     [members],
   ] = await Promise.all([
+    loadNotificationSettings(db),
+    createTranslatorCache(c)(c.get("admin")?.user.language),
     db
       .select({
         count: count(),
@@ -91,10 +91,9 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     db
       .select({
         items: count(),
-        unread:
-          sql<number>`count(*) filter (where ${core_notifications.archivedAt} IS NULL AND ${core_notifications.readSeq} < ${core_notifications.activitySeq})`.mapWith(
-            Number,
-          ),
+        unread: sql<number>`count(*) filter (where ${UNREAD_SQL})`.mapWith(
+          Number,
+        ),
       })
       .from(core_notifications),
     db
@@ -105,10 +104,10 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
 
   return {
     counts: {
-      customizedMembers: members?.customized ?? 0,
-      inboxItems: inbox?.items ?? 0,
+      customizedMembers: members.customized,
+      inboxItems: inbox.items,
       queuedEmails: countBy(deliveryRows).pending ?? 0,
-      unreadItems: inbox?.unread ?? 0,
+      unreadItems: inbox.unread,
     },
     email: {
       adapterConfigured: !!core.email?.adapter,
@@ -158,7 +157,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
   };
 };
 
-const upsertSetting = async (
+export const upsertNotificationSetting = async (
   c: NotificationsContext,
   key: string,
   value: Record<string, unknown>,
@@ -202,17 +201,12 @@ export const updateNotificationTypePolicy = async (
     if (patch[key] !== undefined) Object.assign(merged, { [key]: patch[key] });
   }
 
-  await upsertSetting(c, typeSettingsKey(typeId), { ...merged });
+  await upsertNotificationSetting(c, typeSettingsKey(typeId), { ...merged });
   await c.get("events").emit("notifications.type.updated", { typeId });
 
   return merged;
 };
 
-/**
- * Delivery records for diagnosis. Deliberately leaves out addresses, subjects
- * and content: the type, mode, attempts and a sanitized error are what an
- * admin needs to find the fault, and the recipient stays a user id.
- */
 export const listNotificationDeliveries = async (
   c: NotificationsContext,
   {
@@ -264,11 +258,6 @@ export const listNotificationDeliveries = async (
   };
 };
 
-/**
- * Puts a failed delivery back in line with a fresh set of attempts. It keeps
- * its row and idempotency key, so the provider sees the same key and the
- * same receipts are rendered - a retry can never fan out into a second email.
- */
 export const retryNotificationDelivery = async (
   c: NotificationsContext,
   deliveryId: number,
@@ -299,7 +288,6 @@ export const retryNotificationDelivery = async (
   await dispatchEmailDrain(c);
 };
 
-/** Queues a test notification email to the signed-in admin - nobody else. */
 export const queueNotificationTestEmail = async (
   c: NotificationsContext,
   adminUserId: number,
@@ -332,8 +320,7 @@ export const queueNotificationTestEmail = async (
 
 const MISMATCH_SCAN_LIMIT = 500;
 
-/** Users whose stored unread count disagrees with their inbox. */
-export const findNotificationCountMismatches = async (
+const findNotificationCountMismatches = async (
   c: NotificationsContext,
   userId?: number,
 ) => {
@@ -344,9 +331,7 @@ export const findNotificationCountMismatches = async (
       userId: core_notifications.userId,
     })
     .from(core_notifications)
-    .where(
-      sql`${core_notifications.archivedAt} IS NULL AND ${core_notifications.readSeq} < ${core_notifications.activitySeq}`,
-    )
+    .where(UNREAD_SQL)
     .groupBy(core_notifications.userId)
     .as("actual");
 

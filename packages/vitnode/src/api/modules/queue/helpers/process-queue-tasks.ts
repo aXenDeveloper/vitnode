@@ -12,16 +12,10 @@ const QUEUE_BATCH_SIZE = 25;
 const QUEUE_LOCK_KEY = "queue:process";
 const QUEUE_LOCK_TTL_SECONDS = 55;
 const QUEUE_RETENTION_DAYS = 7;
-/**
- * A task still `processing` after this long belonged to a worker that died
- * mid-run. Handlers must stay well under it - long work saves progress and
- * re-queues itself instead.
- */
-export const QUEUE_STALE_PROCESSING_MINUTES = 15;
+const QUEUE_STALE_PROCESSING_MINUTES = 15;
 
 type QueueRow = typeof core_queue.$inferSelect;
 
-/** Claims due tasks matching `where`, skipping rows another worker holds. */
 const claimQueueTasks = async (
   c: Context<EnvVitNode>,
   where: SQL | undefined,
@@ -107,27 +101,22 @@ const runClaimedQueueTasks = async (
   }
 };
 
-/**
- * Puts tasks whose worker died mid-run back in line - or fails them once
- * they have used every attempt - so a crash never strands a task in
- * `processing` forever.
- */
-export const reclaimStaleQueueTasks = async (
+const reclaimStaleQueueTasks = async (
   c: Context<EnvVitNode>,
-  now: Date = new Date(),
-): Promise<number> => {
+  now: Date,
+): Promise<void> => {
   const stale = lt(
     core_queue.reservedAt,
     new Date(now.getTime() - QUEUE_STALE_PROCESSING_MINUTES * 60_000),
   );
-  const message = "The worker stopped before the task finished.";
+  const staleTaskError = "The worker stopped before the task finished.";
   const db = c.get("db");
 
-  const failed = await db
+  await db
     .update(core_queue)
     .set({
       completedAt: now,
-      lastError: message,
+      lastError: staleTaskError,
       reservedAt: null,
       status: "failed",
     })
@@ -137,28 +126,19 @@ export const reclaimStaleQueueTasks = async (
         stale,
         sql`${core_queue.attempts} >= ${core_queue.maxAttempts}`,
       ),
-    )
-    .returning({ id: core_queue.id });
+    );
 
-  const retried = await db
+  await db
     .update(core_queue)
     .set({
       availableAt: now,
-      lastError: message,
+      lastError: staleTaskError,
       reservedAt: null,
       status: "pending",
     })
-    .where(and(eq(core_queue.status, "processing"), stale))
-    .returning({ id: core_queue.id });
-
-  return failed.length + retried.length;
+    .where(and(eq(core_queue.status, "processing"), stale));
 };
 
-/**
- * Runs specific tasks right away, outside the worker's tick - used to start a
- * request's own work once its response is sent. Uses the same claim, so a task
- * the worker already took (or that never committed) is simply skipped.
- */
 export const processQueueTasksByIds = async (
   c: Context<EnvVitNode>,
   ids: number[],

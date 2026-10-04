@@ -1,4 +1,7 @@
-import type { NotificationState } from "@/lib/notifications/types";
+import type {
+  NotificationEmailMode,
+  NotificationState,
+} from "@/lib/notifications/types";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
@@ -9,7 +12,6 @@ const failed = (response: { status: number }): never => {
   throw new NotificationsRequestError(response.status);
 };
 
-/** Marks one item read through the activity the user saw. */
 export const markNotificationReadInBrowser = async ({
   id,
   throughSeq,
@@ -22,7 +24,6 @@ export const markNotificationReadInBrowser = async ({
     args: { body: { throughSeq }, params: { id } },
     method: "post",
     module: "notifications",
-    options: { credentials: "include" },
     path: "/{id}/read",
   });
 
@@ -39,7 +40,6 @@ export const markNotificationUnreadInBrowser = async ({
     args: { params: { id } },
     method: "post",
     module: "notifications",
-    options: { credentials: "include" },
     path: "/{id}/unread",
   });
 
@@ -56,7 +56,6 @@ export const archiveNotificationInBrowser = async ({
     args: { params: { id } },
     method: "post",
     module: "notifications",
-    options: { credentials: "include" },
     path: "/{id}/archive",
   });
 
@@ -73,7 +72,6 @@ export const markAllNotificationsReadInBrowser = async ({
     args: { body: { category } },
     method: "post",
     module: "notifications",
-    options: { credentials: "include" },
     path: "/read-all",
   });
 
@@ -84,7 +82,7 @@ export interface UpdateNotificationPreferencesBody {
   types?: Record<
     string,
     {
-      email?: "daily" | "immediate" | "none" | "weekly";
+      email?: NotificationEmailMode;
       inApp?: boolean;
       push?: boolean;
     }
@@ -99,7 +97,6 @@ export const updateNotificationPreferencesInBrowser = async (
     args: { body },
     method: "put",
     module: "notifications",
-    options: { credentials: "include" },
     path: "/preferences",
   });
   if (!response.ok) failed(response);

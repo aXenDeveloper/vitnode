@@ -28,7 +28,6 @@ export interface NotificationTypePreferenceView {
   categoryLabel: string;
   defaultEmail: NotificationEmailMode;
   description: null | string;
-  /** The modes this type may use here - empty when email is unavailable. */
   emailModes: NotificationEmailMode[];
   id: string;
   inAppAvailable: boolean;
@@ -37,7 +36,6 @@ export interface NotificationTypePreferenceView {
   mandatory: boolean;
   pluginId: string;
   pushAvailable: boolean;
-  /** What the user gets now, after defaults and installation policy. */
   value: { email: NotificationEmailMode; inApp: boolean; push: boolean };
 }
 
@@ -57,25 +55,20 @@ export const translateOr = (
   return fallback;
 };
 
-/**
- * One row per registered type the installation has not switched off, in the
- * user's language. Rows are generated from the definitions, never stored: a
- * new plugin's types appear without a migration.
- */
 export const getNotificationPreferences = async (
   c: NotificationsContext,
   { language, userId }: { language?: string; userId: number },
 ): Promise<NotificationPreferencesView> => {
   const db = c.get("db");
-  const [settings, [state]] = await Promise.all([
+  const [settings, [state], { t }] = await Promise.all([
     loadNotificationSettings(db),
     db
       .select()
       .from(core_notification_user_state)
       .where(eq(core_notification_user_state.userId, userId))
       .limit(1),
+    createTranslatorCache(c)(language),
   ]);
-  const { t } = await createTranslatorCache(c)(language);
   const emailConfigured = isEmailConfigured(c);
   const preferences = state?.preferences ?? {};
 
@@ -143,11 +136,6 @@ export interface UpdateNotificationPreferencesArgs {
   types?: Record<string, NotificationTypePreference>;
 }
 
-/**
- * Saves the user's choices, refusing anything the installation does not
- * offer: unknown types, email for a type without email, and changes to
- * mandatory types.
- */
 export const updateNotificationPreferences = async (
   c: NotificationsContext,
   userId: number,
@@ -204,7 +192,7 @@ export const updateNotificationPreferences = async (
 
   await db.transaction(async tx => {
     const [current] = await lockUserStates(tx, [userId]);
-    const merged = { ...current?.preferences };
+    const merged = { ...current.preferences };
     for (const [typeId, preference] of Object.entries(patch)) {
       merged[typeId] = { ...merged[typeId], ...preference };
     }

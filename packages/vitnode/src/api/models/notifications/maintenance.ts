@@ -8,7 +8,7 @@ import {
 } from "@/database/notifications";
 import { core_queue } from "@/database/queue";
 
-import type { NotificationsContext } from "./shared";
+import type { NotificationsContext, NotificationsDb } from "./shared";
 
 import { planNotificationDigests, reclaimStaleDeliveries } from "./email";
 import { dispatchEmailDrain } from "./email-queue";
@@ -22,28 +22,13 @@ import {
 
 const DAY = 24 * 60 * 60 * 1000;
 const STALLED_EVENT_MINUTES = 10;
-/** Digest receipts nobody claimed in this long are dropped from email. */
-const PENDING_EMAIL_MAX_DAYS = 14;
+const UNCLAIMED_EMAIL_RECEIPT_MAX_DAYS = 14;
 const DELETE_BATCH = 1000;
 
-/**
- * Removes inbox items, events and delivery records older than the retention
- * period. Items go through `removeNotificationItems`, so unread ones come off
- * their owner's count in the same transaction; events are only deleted once
- * no inbox item points at them.
- */
-export const runNotificationCleanup = async (
-  c: NotificationsContext,
-  { now = new Date() }: { now?: Date } = {},
-): Promise<{ deliveries: number; events: number; items: number }> => {
-  const db = c.get("db");
-  const { retentionDays } = getNotificationWorkers(c);
-  const cutoff = new Date(now.getTime() - retentionDays * DAY);
-
-  const items = await removeNotificationItems(c, {
-    where: lt(core_notifications.lastActivityAt, cutoff),
-  });
-
+export const deleteUnreferencedEvents = async (
+  db: NotificationsDb,
+  { createdBefore }: { createdBefore?: Date } = {},
+): Promise<number> => {
   let events = 0;
   for (;;) {
     const deleted = await db
@@ -56,7 +41,9 @@ export const runNotificationCleanup = async (
             .from(core_notification_events)
             .where(
               and(
-                lt(core_notification_events.createdAt, cutoff),
+                createdBefore
+                  ? lt(core_notification_events.createdAt, createdBefore)
+                  : undefined,
                 inArray(core_notification_events.status, [
                   "completed",
                   "failed",
@@ -81,6 +68,23 @@ export const runNotificationCleanup = async (
     events += deleted.length;
     if (deleted.length < DELETE_BATCH) break;
   }
+
+  return events;
+};
+
+export const runNotificationCleanup = async (
+  c: NotificationsContext,
+  { now = new Date() }: { now?: Date } = {},
+): Promise<{ deliveries: number; events: number; items: number }> => {
+  const db = c.get("db");
+  const { retentionDays } = getNotificationWorkers(c);
+  const cutoff = new Date(now.getTime() - retentionDays * DAY);
+
+  const items = await removeNotificationItems(c, {
+    where: lt(core_notifications.lastActivityAt, cutoff),
+  });
+
+  const events = await deleteUnreferencedEvents(db, { createdBefore: cutoff });
 
   let deliveries = 0;
   for (;;) {
@@ -119,7 +123,7 @@ export const runNotificationCleanup = async (
         isNull(core_notification_receipts.emailDeliveryId),
         lt(
           core_notification_receipts.createdAt,
-          new Date(now.getTime() - PENDING_EMAIL_MAX_DAYS * DAY),
+          new Date(now.getTime() - UNCLAIMED_EMAIL_RECEIPT_MAX_DAYS * DAY),
         ),
       ),
     );
@@ -127,11 +131,7 @@ export const runNotificationCleanup = async (
   return { deliveries, events, items };
 };
 
-/**
- * Re-queues fan-out for events left unfinished with no task to finish them -
- * e.g. their task ran out of attempts while the database was down.
- */
-export const recoverStalledEvents = async (
+const recoverStalledEvents = async (
   c: NotificationsContext,
   now = new Date(),
 ): Promise<number> => {
@@ -175,7 +175,6 @@ export const recoverStalledEvents = async (
   return stalled.length;
 };
 
-/** The periodic tick: recovery first, then digests, then make sure email drains. */
 export const runNotificationSchedule = async (
   c: NotificationsContext,
   { now = new Date() }: { now?: Date } = {},

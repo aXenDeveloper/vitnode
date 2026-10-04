@@ -16,6 +16,7 @@ import {
 } from "@/database/notifications";
 import { core_users } from "@/database/users";
 
+import type { NotificationEventRow } from "./render";
 import type {
   NotificationsContext,
   NotificationsDb,
@@ -23,6 +24,7 @@ import type {
 } from "./shared";
 
 import { dispatchEmailDrain } from "./email-queue";
+import { checkNotificationAccess } from "./render";
 import {
   getNotificationRegistry,
   getNotificationWorkers,
@@ -31,31 +33,24 @@ import {
   sendNotificationStates,
 } from "./shared";
 
-type EventRow = typeof core_notification_events.$inferSelect;
 type StateUpdate = NotificationStateMessage & { userId: number };
 
-/** `(a, b), (c, d)` - rows for a `VALUES` list. */
 export const valuesList = (rows: SQL[][]): SQL =>
   sql.join(
     rows.map(row => sql`(${sql.join(row, sql`, `)})`),
     sql`, `,
   );
 
-/**
- * Creates the user-state rows a batch needs and locks them, always in user id
- * order. Every inbox write takes these locks first, so two writers touching
- * the same users can never deadlock, and a user's inbox changes serialize.
- */
 export const lockUserStates = async (
   tx: NotificationsDb,
   userIds: number[],
 ) => {
-  const sorted = [...new Set(userIds)].sort((a, b) => a - b);
-  if (sorted.length === 0) return [];
+  const userIdsInLockOrder = [...new Set(userIds)].sort((a, b) => a - b);
+  if (userIdsInLockOrder.length === 0) return [];
 
   await tx
     .insert(core_notification_user_state)
-    .values(sorted.map(userId => ({ userId })))
+    .values(userIdsInLockOrder.map(userId => ({ userId })))
     .onConflictDoNothing();
 
   return await tx
@@ -64,15 +59,11 @@ export const lockUserStates = async (
       userId: core_notification_user_state.userId,
     })
     .from(core_notification_user_state)
-    .where(inArray(core_notification_user_state.userId, sorted))
+    .where(inArray(core_notification_user_state.userId, userIdsInLockOrder))
     .orderBy(asc(core_notification_user_state.userId))
     .for("update");
 };
 
-/**
- * Applies unread-count deltas to rows already locked by `lockUserStates`,
- * bumping each user's revision exactly once.
- */
 export const applyUnreadDeltas = async (
   tx: NotificationsDb,
   deltas: Map<number, number>,
@@ -120,7 +111,10 @@ interface Candidates {
   userIds: number[];
 }
 
-const nextCandidates = (event: EventRow, batchSize: number): Candidates => {
+const nextCandidates = (
+  event: NotificationEventRow,
+  batchSize: number,
+): Candidates => {
   const userIds = event.recipientIds.slice(
     event.recipientCursor,
     event.recipientCursor + batchSize,
@@ -147,7 +141,6 @@ const failEvent = async (tx: NotificationsDb, id: number, error: string) => {
     .where(eq(core_notification_events.id, id));
 };
 
-/** Narrows candidates to who may and wants to receive this event. */
 const filterRecipients = async ({
   c,
   candidates,
@@ -158,7 +151,7 @@ const filterRecipients = async ({
   c: NotificationsContext;
   candidates: number[];
   data: unknown;
-  event: EventRow;
+  event: NotificationEventRow;
   registered: RegisteredNotificationType;
 }) => {
   const notSelf = candidates.filter(
@@ -166,27 +159,23 @@ const filterRecipients = async ({
   );
   if (notSelf.length === 0) return [];
 
-  const db = c.get("db");
-  const existing = await db
+  const existing = await c
+    .get("db")
     .select({ id: core_users.id })
     .from(core_users)
     .where(inArray(core_users.id, notSelf));
-  let eligible = existing.map(row => row.id);
+  const eligible = existing.map(row => row.id);
+  if (eligible.length === 0) return [];
 
-  const subject =
-    event.subjectType && event.subjectId
-      ? { id: event.subjectId, type: event.subjectType }
-      : null;
+  const allowed = await checkNotificationAccess({
+    c,
+    data,
+    event,
+    registered,
+    userIds: eligible,
+  });
 
-  const { access } = registered.definition;
-  if (access && eligible.length > 0) {
-    const allowed = new Set(
-      await access({ c, data, subject, userIds: [...eligible] }),
-    );
-    eligible = eligible.filter(id => allowed.has(id));
-  }
-
-  return eligible;
+  return eligible.filter(id => allowed.has(id));
 };
 
 const processBatch = async (
@@ -273,10 +262,12 @@ const processBatch = async (
       .onConflictDoNothing()
       .returning({ userId: core_notification_receipts.userId });
 
-    // Only users whose receipt is new go further: a retry of a batch that
-    // already committed finds every receipt in place and changes nothing.
-    const fresh = inserted.map(row => row.userId).sort((a, b) => a - b);
-    const inApp = fresh.filter(userId => channels.get(userId)?.inApp);
+    const firstTimeRecipients = inserted
+      .map(row => row.userId)
+      .sort((a, b) => a - b);
+    const inApp = firstTimeRecipients.filter(
+      userId => channels.get(userId)?.inApp,
+    );
 
     if (inApp.length > 0) {
       const groupKey = event.groupKey ?? `event:${event.id}`;
@@ -374,7 +365,7 @@ const processBatch = async (
       delivered = inApp.length;
     }
 
-    const immediate = fresh.filter(
+    const immediate = firstTimeRecipients.filter(
       userId => channels.get(userId)?.email === "immediate",
     );
     if (immediate.length > 0) {
@@ -429,19 +420,13 @@ const processBatch = async (
   return { delivered, done: candidates.done, states };
 };
 
-export interface FanoutResult {
+interface FanoutResult {
   batches: number;
   delivered: number;
   done: boolean;
   paused?: boolean;
 }
 
-/**
- * Delivers an event batch by batch, each in its own short transaction that
- * also saves the cursor - a crash or retry resumes after the last committed
- * batch. Stops after `timeBudgetMs` so one huge audience cannot hold the
- * queue worker; the caller re-queues the rest.
- */
 export const processNotificationEvent = async (
   c: NotificationsContext,
   eventId: number,
@@ -450,21 +435,21 @@ export const processNotificationEvent = async (
   const db = c.get("db");
   const settings = await loadNotificationSettings(db);
   const deadline = Date.now() + timeBudgetMs;
-  const result: FanoutResult = { batches: 0, delivered: 0, done: false };
-  if (settings.global.paused) return { ...result, done: true, paused: true };
+  const progress: FanoutResult = { batches: 0, delivered: 0, done: false };
+  if (settings.global.paused) return { ...progress, done: true, paused: true };
 
-  while (!result.done) {
+  while (!progress.done) {
     const batch = await db.transaction(
       async tx => await processBatch(c, tx, eventId, settings),
     );
     sendNotificationStates(c, batch.states);
 
-    result.batches += 1;
-    result.delivered += batch.delivered;
-    result.done = batch.done;
+    progress.batches += 1;
+    progress.delivered += batch.delivered;
+    progress.done = batch.done;
 
-    if (!result.done && Date.now() >= deadline) break;
+    if (!progress.done && Date.now() >= deadline) break;
   }
 
-  return result;
+  return progress;
 };

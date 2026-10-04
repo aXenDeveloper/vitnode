@@ -8,7 +8,6 @@ import type { NotificationsAdminActions } from "@/views/admin/views/core/system/
 import { notificationsAdminActionsInBrowser } from "@/views/admin/views/core/system/notifications/notifications-mutations";
 import { notificationsAdminQueryRoot } from "@/views/admin/views/core/system/notifications/notifications-query";
 
-/** Refreshes the overview and every cached activity range. */
 export const invalidateNotificationsAdmin = async (
   queryClient: QueryClient,
 ): Promise<void> =>
@@ -16,15 +15,11 @@ export const invalidateNotificationsAdmin = async (
     queryKey: notificationsAdminQueryRoot,
   });
 
-/**
- * The screen's writes, each followed by a refresh of what it changed. A failed
- * write refreshes nothing - the cache still describes the server.
- */
 export const useNotificationsAdminActions = (): NotificationsAdminActions => {
   const queryClient = useQueryClient();
 
   return React.useMemo<NotificationsAdminActions>(() => {
-    const refreshing =
+    const refreshOnSuccess =
       <Args extends unknown[], Result extends { error?: string }>(
         action: (...args: Args) => Promise<Result>,
       ) =>
@@ -40,14 +35,14 @@ export const useNotificationsAdminActions = (): NotificationsAdminActions => {
     const browser = notificationsAdminActionsInBrowser;
 
     return {
-      cancelQueuedEmails: refreshing(browser.cancelQueuedEmails),
-      deleteAll: refreshing(browser.deleteAll),
-      markEverythingRead: refreshing(browser.markEverythingRead),
-      pause: refreshing(browser.pause),
-      resetMemberPreferences: refreshing(browser.resetMemberPreferences),
-      resume: refreshing(browser.resume),
-      sendTestEmail: refreshing(browser.sendTestEmail),
-      updateTypePolicy: refreshing(browser.updateTypePolicy),
+      cancelQueuedEmails: refreshOnSuccess(browser.cancelQueuedEmails),
+      deleteAll: refreshOnSuccess(browser.deleteAll),
+      markEverythingRead: refreshOnSuccess(browser.markEverythingRead),
+      pause: refreshOnSuccess(browser.pause),
+      resetMemberPreferences: refreshOnSuccess(browser.resetMemberPreferences),
+      resume: refreshOnSuccess(browser.resume),
+      sendTestEmail: refreshOnSuccess(browser.sendTestEmail),
+      updateTypePolicy: refreshOnSuccess(browser.updateTypePolicy),
     };
   }, [queryClient]);
 };

@@ -3,7 +3,6 @@ import type { NotificationEmailMode } from "@/lib/notifications/types";
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
-/** What every write on this screen resolves to - never a throw. */
 export type NotificationsMutationResult<T> =
   | { data: T; error?: never; status?: never }
   | { data?: never; error: string; status: number };
@@ -18,7 +17,6 @@ export interface NotificationTypePolicyPatch {
   memberCanEdit?: boolean;
 }
 
-/** The writes the screen can perform, as the host hands them in. */
 export interface NotificationsAdminActions {
   cancelQueuedEmails: () => Promise<
     NotificationsMutationResult<{ cancelled: number }>
@@ -52,10 +50,6 @@ const failure = async (response: {
   text: () => Promise<string>;
 }) => ({ error: await response.text(), status: response.status });
 
-const options = { credentials: "include" } as const;
-
-// Each call catches: the client throws on a 500 with the server's own text,
-// which the server has already logged. The screen only needs to know it failed.
 export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   cancelQueuedEmails: async () => {
     try {
@@ -63,7 +57,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/emails/cancel",
       });
       if (!response.ok) return await failure(response);
@@ -79,7 +72,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/delete-all",
       });
       if (!response.ok) return await failure(response);
@@ -95,7 +87,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/read-all",
       });
       if (!response.ok) return await failure(response);
@@ -111,7 +102,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/pause",
       });
       if (!response.ok) return await failure(response);
@@ -127,7 +117,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/members/reset-preferences",
       });
       if (!response.ok) return await failure(response);
@@ -143,7 +132,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/resume",
       });
       if (!response.ok) return await failure(response);
@@ -159,7 +147,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options,
         path: "/test-email",
       });
       if (!response.ok) return await failure(response);
@@ -176,7 +163,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         args: { body, params: { type } },
         method: "put",
         module: "admin/notifications",
-        options,
         path: "/types/{type}",
       });
       if (!response.ok) return await failure(response);

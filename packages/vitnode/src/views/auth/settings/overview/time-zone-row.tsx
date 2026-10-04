@@ -11,6 +11,7 @@ import {
   SETTINGS_ROW_LABEL,
   SettingsGroup,
 } from "../settings-group";
+import { timeZoneLabel } from "./time-zone-update";
 
 const TimeZoneEditor = React.lazy(async () =>
   import("./time-zone-editor").then(module => ({
@@ -66,7 +67,7 @@ export const TimeZoneGroup = ({
           >
             <span className={SETTINGS_ROW_LABEL}>{t("timeZone")}</span>
             <span className="text-muted-foreground min-w-0 flex-1 truncate text-end text-sm">
-              {timeZone ? timeZone.replace(/_/g, " ") : t("timeZoneAuto")}
+              {timeZone ? timeZoneLabel(timeZone) : t("timeZoneAuto")}
             </span>
             <span className="sr-only">{t("edit")}</span>
             <ChevronRightIcon

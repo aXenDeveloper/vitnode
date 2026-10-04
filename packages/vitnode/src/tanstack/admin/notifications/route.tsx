@@ -10,23 +10,16 @@ import type { AdminScreenContext } from "../screen";
 import { getIntlRuntime } from "../../i18n/runtime";
 import { requireAdminPermission } from "../screen";
 
-/**
- * `/admin/core/system/notifications`, as everything a TanStack Start route
- * needs and nothing a route owns.
- */
-
 export const ADMIN_NOTIFICATIONS_NAMESPACES = [
   "admin.system.notifications",
   "core.global",
 ] as const;
 
-/** What {@link loadAdminNotificationsRoute} returns - and what `head` receives. */
 export interface AdminNotificationsRouteData {
   description: string;
   title: string;
 }
 
-/** The core plugin's permission module every tuple on this screen uses. */
 export const NOTIFICATIONS_MODULE = "notifications";
 
 const NOTIFICATIONS_VIEW_PERMISSION = {

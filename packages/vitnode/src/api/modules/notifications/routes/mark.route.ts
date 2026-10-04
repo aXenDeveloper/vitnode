@@ -39,7 +39,6 @@ export const markNotificationReadRoute = buildRoute({
         content: {
           "application/json": {
             schema: z.object({
-              /** The `activitySeq` the client rendered. */
               throughSeq: z.number().int().min(1).optional(),
             }),
           },

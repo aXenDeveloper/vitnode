@@ -5,7 +5,6 @@ export interface NotificationsRouteSearch {
 
 const CATEGORY = /^[a-z0-9_-]{1,50}$/;
 
-/** Only the two filters the page understands survive; anything else drops. */
 export const normalizeNotificationsRouteSearch = (
   input: Record<string, unknown>,
 ): NotificationsRouteSearch => ({

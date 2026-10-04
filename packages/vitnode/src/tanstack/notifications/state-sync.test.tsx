@@ -13,6 +13,7 @@ import { SESSION_QUERY_KEY } from "../auth/state";
 import { NotificationStateSync } from "./state-sync";
 
 const USER_ID = 7;
+const SAME_ORIGIN_API_URL = "http://localhost:3000";
 
 class FakeWebSocket {
   constructor(url: string) {
@@ -116,7 +117,6 @@ describe("NotificationStateSync", () => {
     act(() => sockets[0]?.push({ reason: "read", revision: 7, unread: 3 }));
     expect(screen.getByRole("status").textContent).toBe("4@8");
 
-    // A session request sent before those updates resolves late: ignored.
     act(() => {
       queryClient.setQueryData(SESSION_QUERY_KEY, {
         user: { id: USER_ID, notifications: { revision: 6, unread: 2 } },
@@ -135,7 +135,6 @@ describe("NotificationStateSync", () => {
     act(() => sockets[0]?.open());
     await waitFor(() => expect(fetchState).toHaveBeenCalledTimes(1));
 
-    // Offline for a while: the server moved on without us.
     act(() => sockets[0]?.drop());
     await waitFor(() => expect(sockets).toHaveLength(2), { timeout: 4_000 });
     act(() => sockets[1]?.open());
@@ -147,8 +146,7 @@ describe("NotificationStateSync", () => {
   });
 
   it("polls the count every minute when there is no socket to listen on", () => {
-    // Same origin for web and API: this deployment opens no WebSocket.
-    vi.stubEnv("VITNODE_API_URL", "http://localhost:3000");
+    vi.stubEnv("VITNODE_API_URL", SAME_ORIGIN_API_URL);
     vi.useFakeTimers();
     const fetchState = vi.fn(
       async () => await Promise.resolve({ revision: 9, unread: 3 }),

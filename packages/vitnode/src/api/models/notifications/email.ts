@@ -62,7 +62,9 @@ const absoluteUrl = (target: null | string): null | string =>
 const preferencesUrl = () =>
   new URL("/settings/notifications", CONFIG.web).href;
 
-/** The email mode the user would get for this event right now. */
+const providerIdempotencyKey = (delivery: DeliveryRow) =>
+  `vitnode-notification-${delivery.idempotencyKey}`;
+
 const currentEmailMode = ({
   c,
   event,
@@ -93,11 +95,10 @@ interface ClaimedReceipt {
   seq: null | number;
 }
 
-/** Drops receipts from email for good, or hands them back to the planner. */
 const settleReceipts = async (
   c: NotificationsContext,
   userId: number,
-  { dropped, released }: { dropped: number[]; released: number[] },
+  { dropped, replan }: { dropped: number[]; replan: number[] },
 ) => {
   const db = c.get("db");
   if (dropped.length > 0) {
@@ -111,20 +112,20 @@ const settleReceipts = async (
         ),
       );
   }
-  if (released.length > 0) {
+  if (replan.length > 0) {
     await db
       .update(core_notification_receipts)
       .set({ emailDeliveryId: null })
       .where(
         and(
           eq(core_notification_receipts.userId, userId),
-          inArray(core_notification_receipts.eventId, released),
+          inArray(core_notification_receipts.eventId, replan),
         ),
       );
   }
 };
 
-const isAlreadyRead = async (
+const loadEventIdsHandledByUser = async (
   c: NotificationsContext,
   receipts: ClaimedReceipt[],
 ): Promise<Set<number>> => {
@@ -133,7 +134,7 @@ const isAlreadyRead = async (
     .filter(id => id !== null);
   if (ids.length === 0) return new Set();
 
-  const items = await c
+  const notifications = await c
     .get("db")
     .select({
       archivedAt: core_notifications.archivedAt,
@@ -142,7 +143,9 @@ const isAlreadyRead = async (
     })
     .from(core_notifications)
     .where(inArray(core_notifications.id, ids));
-  const byId = new Map(items.map(item => [item.id, item]));
+  const notificationById = new Map(
+    notifications.map(notification => [notification.id, notification]),
+  );
 
   return new Set(
     receipts
@@ -150,22 +153,19 @@ const isAlreadyRead = async (
         if (receipt.notificationId === null || receipt.seq === null) {
           return false;
         }
-        const item = byId.get(receipt.notificationId);
+        const notification = notificationById.get(receipt.notificationId);
+        const removed = !notification;
 
-        // Read past this event, archived, or removed: the user dealt with it.
-        if (!item) return true;
-
-        return item.archivedAt !== null || item.readSeq >= receipt.seq;
+        return (
+          removed ||
+          notification.archivedAt !== null ||
+          notification.readSeq >= receipt.seq
+        );
       })
       .map(receipt => receipt.eventId),
   );
 };
 
-/**
- * Re-checks every claimed receipt against current preferences, mutes, access
- * and read state, then renders what is left. Nothing is decided from the
- * state at fan-out time - a delayed email reflects the user's settings now.
- */
 const deliverNotificationEmail = async (
   c: NotificationsContext,
   delivery: DeliveryRow,
@@ -221,7 +221,7 @@ const deliverNotificationEmail = async (
       to: user.email,
     });
     const sent = await emailModel.deliver(built, {
-      idempotencyKey: `vitnode-notification-${delivery.idempotencyKey}`,
+      idempotencyKey: providerIdempotencyKey(delivery),
     });
 
     return { providerMessageId: sent.id, status: "sent" };
@@ -253,10 +253,10 @@ const deliverNotificationEmail = async (
 
   if (claimed.length === 0) return { reason: "empty", status: "skipped" };
 
-  const read = await isAlreadyRead(c, claimed);
+  const handledByUser = await loadEventIdsHandledByUser(c, claimed);
   const preferences = user.preferences ?? {};
   const dropped: number[] = [];
-  const released: number[] = [];
+  const replan: number[] = [];
   const kept: { event: NotificationEventRow; receipt: ClaimedReceipt }[] = [];
 
   for (const receipt of claimed) {
@@ -267,10 +267,10 @@ const deliverNotificationEmail = async (
       settings,
     });
 
-    if (mode !== delivery.mode) {
-      // The user switched modes since this was queued; the planner routes it.
-      (mode === "none" ? dropped : released).push(receipt.eventId);
-    } else if (read.has(receipt.eventId)) {
+    const modeChangedSinceQueued = mode !== delivery.mode;
+    if (modeChangedSinceQueued) {
+      (mode === "none" ? dropped : replan).push(receipt.eventId);
+    } else if (handledByUser.has(receipt.eventId)) {
       dropped.push(receipt.eventId);
     } else {
       kept.push({ event: receipt.event, receipt });
@@ -322,7 +322,7 @@ const deliverNotificationEmail = async (
     });
   }
 
-  await settleReceipts(c, user.id, { dropped, released });
+  await settleReceipts(c, user.id, { dropped, replan });
   if (entries.length === 0) return { reason: "empty", status: "skipped" };
 
   const first = entries[0];
@@ -355,10 +355,8 @@ const deliverNotificationEmail = async (
     to: user.email,
   });
 
-  // Same key on every attempt: a provider that deduplicates drops the second
-  // send if the first was accepted but its answer never reached us.
   const sent = await emailModel.deliver(built, {
-    idempotencyKey: `vitnode-notification-${delivery.idempotencyKey}`,
+    idempotencyKey: providerIdempotencyKey(delivery),
   });
 
   await db
@@ -394,12 +392,6 @@ const runWithConcurrency = async <T>(
     }),
   );
 };
-
-/**
- * Sends up to `emailBatchSize` due deliveries, `emailConcurrency` at a time.
- * In-app delivery never waits on this: email runs in its own queue task, so a
- * slow or failing provider only delays email.
- */
 
 export const drainNotificationEmails = async (
   c: NotificationsContext,
@@ -488,7 +480,7 @@ export const drainNotificationEmails = async (
         if (exhausted) stats.failed += 1;
         await c
           .get("log")
-          ?.warn(
+          .warn(
             `[Notifications] Email delivery ${delivery.id} failed (attempt ${delivery.attempts}/${delivery.maxAttempts}): ${lastError}`,
           );
       }
@@ -522,13 +514,6 @@ export const drainNotificationEmails = async (
   return stats;
 };
 
-/**
- * A worker that died mid-send leaves a delivery in `sending`. After a grace
- * period it goes back to `pending`. The provider may already have accepted the
- * message - with an idempotency-capable provider the retry is dropped, with
- * plain SMTP it can arrive twice. That window is the one unavoidable
- * uncertainty; nothing here claims exactly-once email.
- */
 export const reclaimStaleDeliveries = async (
   c: NotificationsContext,
   now = new Date(),
@@ -560,13 +545,6 @@ interface PlannedDelivery {
   userId: number;
 }
 
-/**
- * Turns pending email receipts into deliveries: one digest per user and
- * period, or an immediate email for receipts whose user switched to immediate.
- * A digest delivery's key is the user, mode and local date of its period, so a
- * period is claimed once however often this runs; receipts it claimed are
- * never offered to another digest.
- */
 export const planNotificationDigests = async (
   c: NotificationsContext,
   { now = new Date() }: { now?: Date } = {},
@@ -669,8 +647,8 @@ export const planNotificationDigests = async (
         timeZone: profile.timeZone ?? profile.languageTimeZone ?? "UTC",
         weekday: NOTIFICATION_DIGEST_SCHEDULE.weekday,
       });
-      // Not due yet: it belongs to the period still running.
-      if (receipt.createdAt >= period.end) continue;
+      const belongsToRunningPeriod = receipt.createdAt >= period.end;
+      if (belongsToRunningPeriod) continue;
 
       const key = `${mode}:${receipt.userId}:${period.key}`;
       const plan = plans.get(key) ?? {
@@ -699,13 +677,13 @@ export const planNotificationDigests = async (
         `);
       }
 
-      const list = [...plans.values()];
-      if (list.length === 0) return 0;
+      const planned = [...plans.values()];
+      if (planned.length === 0) return 0;
 
       const inserted = await tx
         .insert(core_notification_deliveries)
         .values(
-          list.map(plan => ({
+          planned.map(plan => ({
             availableAt: now,
             channel: "email" as const,
             createdAt: now,
@@ -724,18 +702,21 @@ export const planNotificationDigests = async (
           idempotencyKey: core_notification_deliveries.idempotencyKey,
         });
 
-      const claims = inserted.flatMap(row => {
-        const plan = plans.get(row.idempotencyKey);
+      const insertedIdByKey = new Map(
+        inserted.map(row => [row.idempotencyKey, row.id]),
+      );
+      const claims = planned.flatMap(plan => {
+        const deliveryId = insertedIdByKey.get(plan.idempotencyKey);
+        if (deliveryId === undefined) return [];
 
-        return (plan?.eventIds ?? []).map(eventId => [
+        return plan.eventIds.map(eventId => [
           sql`${eventId}::bigint`,
-          sql`${plan?.userId ?? 0}::integer`,
-          sql`${row.id}::bigint`,
+          sql`${plan.userId}::integer`,
+          sql`${deliveryId}::bigint`,
         ]);
       });
 
       if (claims.length > 0) {
-        // `IS NULL` guards against a concurrent planner having claimed first.
         await tx.execute(sql`
           UPDATE ${core_notification_receipts} AS r SET "emailDeliveryId" = v.did
           FROM (VALUES ${valuesList(claims)}) AS v(eid, uid, did)
@@ -744,18 +725,16 @@ export const planNotificationDigests = async (
         `);
       }
 
-      // An immediate delivery that already existed means this event already
-      // had its one immediate email; it is not sent again.
-      const conflicted = list.filter(
+      const immediateAlreadyDelivered = planned.filter(
         plan =>
           plan.mode === "immediate" &&
-          !inserted.some(row => row.idempotencyKey === plan.idempotencyKey),
+          !insertedIdByKey.has(plan.idempotencyKey),
       );
-      if (conflicted.length > 0) {
+      if (immediateAlreadyDelivered.length > 0) {
         await tx.execute(sql`
           UPDATE ${core_notification_receipts} AS r SET "emailPending" = false
           FROM (VALUES ${valuesList(
-            conflicted.map(plan => [
+            immediateAlreadyDelivered.map(plan => [
               sql`${plan.eventIds[0]}::bigint`,
               sql`${plan.userId}::integer`,
             ]),

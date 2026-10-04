@@ -1,7 +1,5 @@
 import type { Context } from "hono";
 
-import { inArray } from "drizzle-orm";
-
 import type {
   NotificationGlobalSettings,
   NotificationTypePolicy,
@@ -18,7 +16,6 @@ import {
 import { core_notification_settings } from "@/database/notifications";
 import { notificationsStateChannel } from "@/ws/notifications";
 
-/** A database handle or a transaction - anything that can run a query. */
 export type NotificationsDb = Omit<EnvVitNode["Variables"]["db"], "$client">;
 
 export type NotificationsContext = Context<EnvVitNode>;
@@ -29,7 +26,9 @@ export const QUEUE_NOTIFICATIONS_EMAIL = "notifications-email";
 export const QUEUE_NOTIFICATIONS_CLEANUP = "notifications-cleanup";
 
 export const GLOBAL_SETTINGS_KEY = "global";
-export const typeSettingsKey = (type: string): string => `type:${type}`;
+const TYPE_SETTINGS_KEY_PREFIX = "type:";
+export const typeSettingsKey = (type: string): string =>
+  `${TYPE_SETTINGS_KEY_PREFIX}${type}`;
 
 export const getNotificationRegistry = (
   c: NotificationsContext,
@@ -45,17 +44,15 @@ export interface NotificationSettingsSnapshot {
   policies: Map<string, NotificationTypePolicy>;
 }
 
-export const normalizeGlobalSettings = (
+const normalizeGlobalSettings = (
   value: Record<string, unknown> | undefined,
-): NotificationGlobalSettings => {
-  const defaults = DEFAULT_NOTIFICATION_SETTINGS;
+): NotificationGlobalSettings => ({
+  paused:
+    typeof value?.paused === "boolean"
+      ? value.paused
+      : DEFAULT_NOTIFICATION_SETTINGS.paused,
+});
 
-  return {
-    paused: typeof value?.paused === "boolean" ? value.paused : defaults.paused,
-  };
-};
-
-/** One query: the global settings and every type policy. */
 export const loadNotificationSettings = async (
   db: NotificationsDb,
 ): Promise<NotificationSettingsSnapshot> => {
@@ -65,8 +62,8 @@ export const loadNotificationSettings = async (
 
   for (const row of rows) {
     if (row.key === GLOBAL_SETTINGS_KEY) global = row.value;
-    else if (row.key.startsWith("type:")) {
-      policies.set(row.key.slice(5), row.value);
+    else if (row.key.startsWith(TYPE_SETTINGS_KEY_PREFIX)) {
+      policies.set(row.key.slice(TYPE_SETTINGS_KEY_PREFIX.length), row.value);
     }
   }
 
@@ -78,14 +75,9 @@ export const getNotificationWorkers = (
 ): NotificationWorkerSettings =>
   c.get("core").notificationWorkers ?? resolveNotificationWorkerSettings();
 
-/** Whether notification emails can be sent at all on this installation. */
 export const isEmailConfigured = (c: NotificationsContext): boolean =>
   !!c.get("core").email?.adapter;
 
-/**
- * Sends each user their committed unread state. Call only after the
- * transaction that produced `states` has committed.
- */
 export const sendNotificationStates = (
   c: NotificationsContext,
   states: Iterable<NotificationStateMessage & { userId: number }>,
@@ -95,14 +87,3 @@ export const sendNotificationStates = (
     realtime.sendToUser(userId, notificationsStateChannel, message);
   }
 };
-
-export const loadSettingsForKeys = async (
-  db: NotificationsDb,
-  keys: string[],
-) =>
-  keys.length === 0
-    ? []
-    : await db
-        .select()
-        .from(core_notification_settings)
-        .where(inArray(core_notification_settings.key, keys));

@@ -1,10 +1,12 @@
 import type { PluginRouteTranslator } from "@/routing";
 import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-query";
 
+import { cronHealthQueryOptions } from "@/views/admin/views/core/advanced/cron/cron-query";
+
 import type { AdminScreenContext } from "../screen";
 
 import { requireAdminPermission } from "../screen";
-import { cronHealthQuery, cronQuery } from "./query";
+import { cronQuery } from "./query";
 
 export const ADMIN_CRON_NAMESPACES = [
   "admin.advanced.cron",
@@ -40,7 +42,7 @@ export const loadAdminCronRoute = async ({
       staleTime: "static",
     }),
     queryClient.query({
-      ...cronHealthQuery(),
+      ...cronHealthQueryOptions(),
       staleTime: "static",
     }),
   ]);

@@ -6,14 +6,11 @@ import {
   retryNotificationDelivery,
 } from "@/api/models/notifications/admin";
 import { CONFIG_PLUGIN } from "@/config";
+import { core_notification_deliveries } from "@/database/notifications";
 
-const DELIVERY_STATUSES = [
-  "pending",
-  "sending",
-  "sent",
-  "failed",
-  "skipped",
-] as const;
+const zodDeliveryStatus = z.enum(
+  core_notification_deliveries.status.enumValues,
+);
 
 export const listNotificationDeliveriesRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -27,7 +24,7 @@ export const listNotificationDeliveriesRoute = buildRoute({
       query: z.object({
         cursor: z.coerce.number().int().positive().optional(),
         limit: z.coerce.number().int().min(1).max(100).default(25),
-        status: z.enum(DELIVERY_STATUSES).optional(),
+        status: zodDeliveryStatus.optional(),
       }),
     },
     responses: {
@@ -44,11 +41,11 @@ export const listNotificationDeliveriesRoute = buildRoute({
                   itemCount: z.number(),
                   lastError: z.string().nullable(),
                   maxAttempts: z.number(),
-                  mode: z.enum(["immediate", "daily", "weekly", "test"]),
+                  mode: z.enum(core_notification_deliveries.mode.enumValues),
                   providerMessageId: z.string().nullable(),
                   sentAt: z.date().nullable(),
                   skipReason: z.string().nullable(),
-                  status: z.enum(DELIVERY_STATUSES),
+                  status: zodDeliveryStatus,
                   type: z.string().nullable(),
                   updatedAt: z.date(),
                   userId: z.number(),

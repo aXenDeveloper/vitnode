@@ -8,13 +8,6 @@ export interface NotificationStateSnapshot extends NotificationState {
 
 type Listener = () => void;
 
-/**
- * The unread count the bell shows, owned by nobody but this store. Three
- * sources feed it - the session payload, realtime messages and explicit
- * refreshes - and each carries the server's per-user revision. Whatever
- * arrives, only a strictly newer revision replaces what is here, so a slow
- * session response can never undo a realtime update that overtook it.
- */
 export const createNotificationStateStore = () => {
   let snapshot: NotificationStateSnapshot | null = null;
   const listeners = new Set<Listener>();
@@ -22,7 +15,6 @@ export const createNotificationStateStore = () => {
   const emit = () => listeners.forEach(listener => listener());
 
   return {
-    /** Returns `true` when `next` was newer and replaced the snapshot. */
     apply: (userId: number, next: NotificationState): boolean => {
       if (snapshot?.userId === userId && next.revision <= snapshot.revision) {
         return false;
@@ -38,7 +30,6 @@ export const createNotificationStateStore = () => {
       return true;
     },
     get: () => snapshot,
-    /** Forget everything - on sign-out, or when another user signs in. */
     reset: () => {
       if (snapshot === null) return;
       snapshot = null;
@@ -54,27 +45,20 @@ export const createNotificationStateStore = () => {
   };
 };
 
-export type NotificationStateStore = ReturnType<
-  typeof createNotificationStateStore
->;
-
-/** One per browser tab. Tabs stay in step through the shared WebSocket. */
 export const notificationStateStore = createNotificationStateStore();
 
-/** The current user's unread state, or `null` before anything arrived. */
+const NO_SERVER_SNAPSHOT = () => null;
+
 export const useNotificationState = (
-  userId: null | number | undefined,
-  store: NotificationStateStore = notificationStateStore,
+  userId: number,
 ): NotificationState | null => {
-  // The server never holds anyone's count, so hydration always starts from
-  // `null` - matching the HTML - and picks up the live value right after.
   const snapshot = React.useSyncExternalStore(
-    store.subscribe,
-    store.get,
-    () => null,
+    notificationStateStore.subscribe,
+    notificationStateStore.get,
+    NO_SERVER_SNAPSHOT,
   );
 
-  return snapshot && snapshot.userId === userId
+  return snapshot?.userId === userId
     ? { revision: snapshot.revision, unread: snapshot.unread }
     : null;
 };

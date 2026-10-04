@@ -22,11 +22,6 @@ import {
   patchCachedNotification,
 } from "./cache";
 
-/**
- * Inbox actions for one user. Each applies the server's answer - an absolute
- * count and revision - to the shared store, and on any failure re-reads the
- * authoritative state, so a lost request never leaves the bell wrong.
- */
 export const useNotificationActions = (userId: number) => {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -39,11 +34,8 @@ export const useNotificationActions = (userId: number) => {
 
     const recover = async () => {
       toast.error(tErrors("title"), { description: t("action_failed") });
-      try {
-        apply(await fetchNotificationState());
-      } catch {
-        // The next realtime message or session read corrects it.
-      }
+      const latest = await fetchNotificationState().catch(() => null);
+      if (latest) apply(latest);
       await invalidateNotificationLists(queryClient, userId);
     };
 
@@ -79,11 +71,6 @@ export const useNotificationActions = (userId: number) => {
         if (ok)
           toast.success(t("all_read"), { description: t("all_read_desc") });
       },
-      /**
-       * The only way a click marks something read. `throughSeq` is the
-       * activity the user saw, so a grouped event that arrived meanwhile keeps
-       * the item unread.
-       */
       open: (item: NotificationItemView, { newTab }: { newTab: boolean }) => {
         if (item.unread) {
           void run(

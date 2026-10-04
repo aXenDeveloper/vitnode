@@ -3,17 +3,12 @@ import type { NotificationEmailMode } from "@/lib/notifications/types";
 
 import type { AnyNotificationTypeDefinition } from "./registry";
 
-/** Installation-wide policy for one type, edited in the AdminCP. */
 export interface NotificationTypePolicy {
-  /** `false` keeps the type off email whatever users choose. */
   allowEmail?: boolean;
   allowInApp?: boolean;
   allowPush?: boolean;
-  /** Default email mode for users who never chose one. */
   email?: NotificationEmailMode;
-  /** `false` stops the type entirely (mandatory types ignore it). */
   enabled?: boolean;
-  /** Default in-app setting for users who never chose one. */
   inApp?: boolean;
   memberCanEdit?: boolean;
 }
@@ -29,17 +24,13 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationGlobalSettings = {
 };
 
 export interface NotificationWorkerSettings {
-  /** Upper bound on emails one drain run sends. */
   emailBatchSize: number;
-  /** Emails sent in parallel within one drain run. */
   emailConcurrency: number;
-  /** Recipients handled per fan-out transaction. */
   fanoutBatchSize: number;
-  /** Inbox items older than this many days are removed by cleanup. */
   retentionDays: number;
 }
 
-export const NOTIFICATION_WORKER_LIMITS = {
+const NOTIFICATION_WORKER_LIMITS = {
   emailBatchSize: { default: 50, max: 500, min: 1 },
   emailConcurrency: { default: 4, max: 20, min: 1 },
   fanoutBatchSize: { default: 500, max: 5000, min: 10 },
@@ -77,7 +68,6 @@ export interface NotificationChannels {
 
 const OFF: NotificationChannels = { email: "none", inApp: false, push: false };
 
-/** Whether this type can email at all on this installation. */
 export const isNotificationInAppAvailable = ({
   definition,
   policy,
@@ -104,24 +94,11 @@ export const isNotificationEmailAvailable = ({
   policy,
 }: {
   definition: AnyNotificationTypeDefinition;
-  /** An email adapter exists and notification email is switched on. */
   emailConfigured: boolean;
   policy?: NotificationTypePolicy;
 }): boolean =>
   emailConfigured && !!definition.email && policy?.allowEmail !== false;
 
-/**
- * The single place that decides what a user receives, in this order:
- *
- * 1. Installation policy disables the type → nothing (mandatory types excepted).
- * 2. Mandatory types → always in-app; email follows the installation default.
- * 3. The user's own choice for the type, unless the type is locked for members.
- * 4. The installation default for the type.
- * 5. The type's own default.
- *
- * Email is additionally limited to what the type and installation offer, and
- * never depends on the in-app choice.
- */
 export const resolveNotificationChannels = ({
   definition,
   emailConfigured,

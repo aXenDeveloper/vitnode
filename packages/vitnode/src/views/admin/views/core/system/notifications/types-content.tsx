@@ -8,11 +8,11 @@ import {
   MailIcon,
   SmartphoneIcon,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
+import { RevealPanel } from "@/components/reveal-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -25,12 +25,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import {
-  REVEAL_EXIT_TRANSITION,
-  REVEAL_HIDDEN,
-  REVEAL_SHOWN,
-  REVEAL_TRANSITION,
-} from "@/lib/motion";
 
 import type {
   NotificationsAdminActions,
@@ -135,6 +129,95 @@ const ChoiceGroup = <V extends string>({
   );
 };
 
+const TypeBadges = ({
+  choices,
+  missingEmailTemplate,
+  sentNowhere,
+  type,
+}: {
+  choices: TypeChoices;
+  missingEmailTemplate: boolean;
+  sentNowhere: boolean;
+  type: AdminNotificationType;
+}) => {
+  const t = useTranslations("admin.system.notifications.types");
+  const lockBadge = type.mandatory
+    ? t("badges.mandatory")
+    : choices.memberCanEdit
+      ? null
+      : t("badges.locked");
+
+  if (!lockBadge && !sentNowhere && !type.grouped && !missingEmailTemplate) {
+    return null;
+  }
+
+  return (
+    <span className="flex flex-wrap gap-1">
+      {lockBadge ? (
+        <Badge variant="outline">
+          <LockIcon aria-hidden />
+          {lockBadge}
+        </Badge>
+      ) : null}
+      {sentNowhere ? (
+        <Badge variant="secondary">{t("badges.nowhere")}</Badge>
+      ) : null}
+      {type.grouped ? (
+        <Badge variant="secondary">{t("badges.grouped")}</Badge>
+      ) : null}
+      {missingEmailTemplate ? (
+        <Badge variant="warning">{t("badges.no_template")}</Badge>
+      ) : null}
+    </span>
+  );
+};
+
+const TypeSummaryChips = ({
+  choices,
+  type,
+}: {
+  choices: TypeChoices;
+  type: AdminNotificationType;
+}) => {
+  const t = useTranslations("admin.system.notifications.types");
+  const short = {
+    available: t("summary.available"),
+    default_off: t("summary.off"),
+    default_on: t("summary.on"),
+    disabled: t("summary.disabled"),
+  };
+
+  return (
+    <ul
+      aria-label={t("summary.label", { type: type.label })}
+      className="flex flex-wrap gap-1.5"
+    >
+      <SummaryChip
+        Icon={ListIcon}
+        label={t("summary.list")}
+        muted={choices.list === "disabled"}
+        value={short[choices.list]}
+      />
+      <SummaryChip
+        Icon={SmartphoneIcon}
+        label={t("summary.push")}
+        muted={choices.push === "disabled"}
+        value={short[choices.push]}
+      />
+      <SummaryChip
+        Icon={MailIcon}
+        label={t("summary.email")}
+        muted={choices.email === null || choices.email === "disabled"}
+        value={
+          choices.email === null
+            ? t("summary.unsupported")
+            : short[choices.email]
+        }
+      />
+    </ul>
+  );
+};
+
 const TypeItem = ({
   canEdit,
   isOpen,
@@ -152,10 +235,12 @@ const TypeItem = ({
   const tError = useTranslations("core.global.errors");
   const panelId = React.useId();
   const memberId = React.useId();
-  const shouldReduceMotion = useReducedMotion();
   const [, startTransition] = React.useTransition();
   const [type, applyOptimistic] = React.useOptimistic(initial, applyPatch);
-  const choices: TypeChoices = choicesOf(type);
+  const choices = choicesOf(type);
+  const sentNowhere = isSentNowhere(choices);
+  const missingEmailTemplate =
+    type.emailSupported && !type.emailAvailable && choices.email !== "disabled";
   const locked = !canEdit;
 
   const save = (patch: NotificationTypePolicyPatch) => {
@@ -177,12 +262,6 @@ const TypeItem = ({
     });
   };
 
-  const short = {
-    available: t("summary.available"),
-    default_off: t("summary.off"),
-    default_on: t("summary.on"),
-    disabled: t("summary.disabled"),
-  };
   const listOptions = LIST_CHOICES.map(value => ({
     hint: t(`list.${value}.hint`),
     label: t(`list.${value}.label`),
@@ -201,12 +280,12 @@ const TypeItem = ({
 
   return (
     <li className="border-b last:border-b-0">
-      <div className="has-focus-visible:ring-ring/50 [@media(hover:hover)]:hover:bg-muted/40 relative flex flex-col gap-3 px-4 py-4 has-focus-visible:ring-[3px] has-focus-visible:ring-inset sm:px-6 md:flex-row md:items-center md:justify-between">
+      <div className="has-focus-visible:ring-ring/50 [@media(hover:hover)]:hover:bg-muted/40 relative flex flex-col gap-3 px-4 py-4 has-focus-visible:ring-3 has-focus-visible:ring-inset sm:px-6 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
           <h4
             className={cn(
               "text-sm leading-snug font-medium text-pretty break-words",
-              isSentNowhere(choices) && "text-muted-foreground",
+              sentNowhere && "text-muted-foreground",
             )}
           >
             <button
@@ -222,67 +301,15 @@ const TypeItem = ({
           <span className="text-muted-foreground font-mono text-xs break-all">
             {type.id}
           </span>
-          {type.mandatory ||
-          !choices.memberCanEdit ||
-          isSentNowhere(choices) ||
-          type.grouped ||
-          (type.emailSupported &&
-            !type.emailAvailable &&
-            choices.email !== "disabled") ? (
-            <span className="flex flex-wrap gap-1">
-              {type.mandatory ? (
-                <Badge variant="outline">
-                  <LockIcon aria-hidden />
-                  {t("badges.mandatory")}
-                </Badge>
-              ) : !choices.memberCanEdit ? (
-                <Badge variant="outline">
-                  <LockIcon aria-hidden />
-                  {t("badges.locked")}
-                </Badge>
-              ) : null}
-              {isSentNowhere(choices) ? (
-                <Badge variant="secondary">{t("badges.nowhere")}</Badge>
-              ) : null}
-              {type.grouped ? (
-                <Badge variant="secondary">{t("badges.grouped")}</Badge>
-              ) : null}
-              {type.emailSupported &&
-              !type.emailAvailable &&
-              choices.email !== "disabled" ? (
-                <Badge variant="warning">{t("badges.no_template")}</Badge>
-              ) : null}
-            </span>
-          ) : null}
+          <TypeBadges
+            choices={choices}
+            missingEmailTemplate={missingEmailTemplate}
+            sentNowhere={sentNowhere}
+            type={type}
+          />
         </div>
         <div className="flex items-center justify-between gap-3 md:justify-end">
-          <ul
-            aria-label={t("summary.label", { type: type.label })}
-            className="flex flex-wrap gap-1.5"
-          >
-            <SummaryChip
-              Icon={ListIcon}
-              label={t("summary.list")}
-              muted={choices.list === "disabled"}
-              value={short[choices.list]}
-            />
-            <SummaryChip
-              Icon={SmartphoneIcon}
-              label={t("summary.push")}
-              muted={choices.push === "disabled"}
-              value={short[choices.push]}
-            />
-            <SummaryChip
-              Icon={MailIcon}
-              label={t("summary.email")}
-              muted={choices.email === null || choices.email === "disabled"}
-              value={
-                choices.email === null
-                  ? t("summary.unsupported")
-                  : short[choices.email]
-              }
-            />
-          </ul>
+          <TypeSummaryChips choices={choices} type={type} />
           <ChevronDownIcon
             aria-hidden
             className={cn(
@@ -293,103 +320,87 @@ const TypeItem = ({
         </div>
       </div>
 
-      <AnimatePresence initial={false}>
-        {isOpen ? (
-          <motion.div
-            animate={REVEAL_SHOWN}
-            className="overflow-y-clip"
-            exit={
-              shouldReduceMotion
-                ? undefined
-                : { ...REVEAL_HIDDEN, transition: REVEAL_EXIT_TRANSITION }
-            }
-            id={panelId}
-            initial={shouldReduceMotion ? false : REVEAL_HIDDEN}
-            key="panel"
-            transition={REVEAL_TRANSITION}
-          >
-            <div className="bg-muted/30 flex flex-col gap-6 border-t px-4 py-5 sm:px-6">
-              <div className="flex items-start justify-between gap-4">
-                <Label
-                  className="flex flex-col items-start gap-1 font-normal"
-                  htmlFor={memberId}
-                >
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <LockIcon
-                      aria-hidden
-                      className="text-muted-foreground size-4"
-                    />
-                    {t("member_can_edit.label")}
-                  </span>
-                  <span className="text-muted-foreground text-xs leading-relaxed text-pretty">
-                    {type.mandatory
-                      ? t("member_can_edit.mandatory")
-                      : t("member_can_edit.desc")}
-                  </span>
-                </Label>
-                <Switch
-                  checked={choices.memberCanEdit}
-                  disabled={locked || type.mandatory}
-                  id={memberId}
-                  onCheckedChange={memberCanEdit => {
-                    save({ memberCanEdit });
-                  }}
+      <RevealPanel className="overflow-y-clip" id={panelId} open={isOpen}>
+        <div className="bg-muted/30 flex flex-col gap-6 border-t px-4 py-5 sm:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <Label
+              className="flex flex-col items-start gap-1 font-normal"
+              htmlFor={memberId}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <LockIcon
+                  aria-hidden
+                  className="text-muted-foreground size-4"
                 />
-              </div>
+                {t("member_can_edit.label")}
+              </span>
+              <span className="text-muted-foreground text-xs leading-relaxed text-pretty">
+                {type.mandatory
+                  ? t("member_can_edit.mandatory")
+                  : t("member_can_edit.desc")}
+              </span>
+            </Label>
+            <Switch
+              checked={choices.memberCanEdit}
+              disabled={locked || type.mandatory}
+              id={memberId}
+              onCheckedChange={memberCanEdit => {
+                save({ memberCanEdit });
+              }}
+            />
+          </div>
 
-              <div className="grid gap-6 lg:grid-cols-3">
-                <ChoiceGroup
-                  disabled={locked || type.mandatory}
-                  Icon={ListIcon}
-                  legend={t("list.legend")}
-                  note={type.mandatory ? t("list.mandatory") : undefined}
-                  onChange={choice => {
-                    save(listPatch(choice));
-                  }}
-                  options={listOptions}
-                  value={choices.list}
-                />
-                <ChoiceGroup
-                  disabled={locked}
-                  Icon={SmartphoneIcon}
-                  legend={t("push.legend")}
-                  note={t("push.note")}
-                  onChange={choice => {
-                    save(pushPatch(choice));
-                  }}
-                  options={pushOptions}
-                  value={choices.push}
-                />
-                {choices.email === null ? (
-                  <div className="flex min-w-0 flex-col">
-                    <p className="mb-3 flex items-center gap-2 text-sm font-medium">
-                      <MailIcon
-                        aria-hidden
-                        className="text-muted-foreground size-4"
-                      />
-                      {t("email.legend")}
-                    </p>
-                    <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-sm leading-relaxed">
-                      {t("email.unsupported")}
-                    </p>
-                  </div>
-                ) : (
-                  <ChoiceGroup
-                    disabled={locked}
-                    Icon={MailIcon}
-                    legend={t("email.legend")}
-                    onChange={choice => {
-                      save(emailPatch(choice, type));
-                    }}
-                    options={emailOptions}
-                    value={choices.email}
+          <div className="grid gap-6 lg:grid-cols-3">
+            <ChoiceGroup
+              disabled={locked || type.mandatory}
+              Icon={ListIcon}
+              legend={t("list.legend")}
+              note={type.mandatory ? t("list.mandatory") : undefined}
+              onChange={choice => {
+                save(listPatch(choice));
+              }}
+              options={listOptions}
+              value={choices.list}
+            />
+            <ChoiceGroup
+              disabled={locked}
+              Icon={SmartphoneIcon}
+              legend={t("push.legend")}
+              note={t("push.note")}
+              onChange={choice => {
+                save(pushPatch(choice));
+              }}
+              options={pushOptions}
+              value={choices.push}
+            />
+            {choices.email === null ? (
+              <div className="flex min-w-0 flex-col">
+                <p className="mb-3 flex items-center gap-2 text-sm font-medium">
+                  <MailIcon
+                    aria-hidden
+                    className="text-muted-foreground size-4"
                   />
-                )}
+                  {t("email.legend")}
+                </p>
+                <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-sm leading-relaxed">
+                  {t("email.unsupported")}
+                </p>
               </div>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+            ) : (
+              <ChoiceGroup
+                disabled={locked}
+                Icon={MailIcon}
+                legend={t("email.legend")}
+                onChange={choice => {
+                  save(emailPatch(choice, type));
+                }}
+                options={emailOptions}
+                value={choices.email}
+              />
+            )}
+          </div>
+        </div>
+      </RevealPanel>
     </li>
   );
 };

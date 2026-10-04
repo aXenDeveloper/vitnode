@@ -21,15 +21,13 @@ describe("zonedHourToUtc", () => {
     ).toEqual(new Date("2026-07-15T06:00:00Z"));
   });
 
-  it("moves an hour that does not exist to the end of the gap", () => {
-    // 02:00-03:00 on 29 March 2026 never happened in Warsaw.
+  it("moves Warsaw's skipped 02:00 on 29 March 2026 to the end of the gap", () => {
     expect(
       zonedHourToUtc({ day: 29, month: 3, year: 2026 }, 2, "Europe/Warsaw"),
     ).toEqual(new Date("2026-03-29T01:00:00Z"));
   });
 
-  it("picks the first of an hour that happens twice", () => {
-    // 01:00 happened twice in New York on 1 November 2026.
+  it("picks the first of New York's repeated 01:00 on 1 November 2026", () => {
     expect(
       zonedHourToUtc({ day: 1, month: 11, year: 2026 }, 1, "America/New_York"),
     ).toEqual(new Date("2026-11-01T05:00:00Z"));
@@ -65,16 +63,16 @@ describe("latestEndedDigestPeriod", () => {
     );
   });
 
-  it("lands on the local date, not the UTC one", () => {
-    // 23:30 UTC on the 9th is already the 10th in Tokyo.
+  it("lands on the local date, not the UTC one (23:30 UTC on the 9th is the 10th in Tokyo)", () => {
     expect(daily("2026-06-09T23:30:00Z", "Asia/Tokyo").key).toBe("2026-06-10");
   });
 
   it("ends weekly periods on the chosen weekday, a week apart", () => {
+    const thursdayNoonUtc = new Date("2026-10-08T12:00:00Z");
     const period = latestEndedDigestPeriod({
       hour: 9,
       mode: "weekly",
-      now: new Date("2026-10-08T12:00:00Z"), // a Thursday
+      now: thursdayNoonUtc,
       timeZone: "UTC",
       weekday: 1,
     });

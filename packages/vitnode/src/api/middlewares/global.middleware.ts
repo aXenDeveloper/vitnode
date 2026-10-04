@@ -155,7 +155,6 @@ export interface EnvVariablesVitNode {
     };
     /** Every prebuilt main-menu item the installed plugins offer. */
     navigation: NavigationPreset[];
-    /** Every notification type and subject the installed plugins register. */
     notifications?: NotificationRegistry;
     notificationWorkers?: NotificationWorkerSettings;
     permissionStaff: PermissionStaffCatalogEntry[];
@@ -381,7 +380,6 @@ export const globalMiddleware = ({
   const navigationMetadata: NavigationPreset[] =
     collectNavigationPresets(plugins);
 
-  // Validated across *all* plugins: `buildApiPlugin` only sees its own types.
   const notificationsMetadata = createNotificationRegistry(
     plugins.flatMap(plugin =>
       (plugin.notificationTypes ?? []).map(definition => ({
@@ -503,8 +501,6 @@ export const globalMiddleware = ({
 
     await next();
 
-    // By now the handler returned, so any transaction it published inside has
-    // committed or rolled back. Delivery starts without delaying the response.
     c.get("notifications").flushAfterResponse();
   };
 };

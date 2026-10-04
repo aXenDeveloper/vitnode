@@ -11,11 +11,6 @@ import type { NotificationItemView } from "./notifications-query";
 export interface NotificationItemProps {
   item: NotificationItemView;
   onArchive?: (item: NotificationItemView) => void;
-  /**
-   * Called on activation. It marks the item read and navigates; for a
-   * modified click (new tab) the browser follows the link itself and this
-   * only marks it read.
-   */
   onOpen: (item: NotificationItemView, options: { newTab: boolean }) => void;
   onToggleRead?: (item: NotificationItemView) => void;
   variant?: "compact" | "full";
@@ -28,18 +23,17 @@ const isModifiedClick = (event: React.MouseEvent) =>
   event.altKey ||
   event.button !== 0;
 
-export const NotificationItem = ({
+const NotificationItemContent = ({
   item,
-  onArchive,
-  onOpen,
-  onToggleRead,
-  variant = "full",
-}: NotificationItemProps) => {
+  variant,
+}: {
+  item: NotificationItemView;
+  variant: NonNullable<NotificationItemProps["variant"]>;
+}) => {
   const t = useTranslations("core.global.notifications");
   const actor = item.actors.at(0);
-  const linkable = item.available && item.target !== null;
 
-  const content = (
+  return (
     <>
       <span className="relative shrink-0">
         {actor && item.available ? (
@@ -86,9 +80,56 @@ export const NotificationItem = ({
       ) : null}
     </>
   );
+};
 
-  const itemClassName =
-    "hover:bg-accent focus-visible:ring-ring flex min-w-0 flex-1 items-start gap-3 rounded-md p-2 text-start outline-none focus-visible:ring-2";
+const NotificationItemActions = ({
+  item,
+  onArchive,
+  onToggleRead,
+}: Pick<NotificationItemProps, "item" | "onArchive" | "onToggleRead">) => {
+  const t = useTranslations("core.global.notifications");
+  const toggleReadLabel = item.unread ? t("mark_read") : t("mark_unread");
+
+  return (
+    <span className="flex shrink-0 items-center gap-1 p-1">
+      {onToggleRead ? (
+        <Button
+          aria-label={toggleReadLabel}
+          onClick={() => onToggleRead(item)}
+          size="icon-sm"
+          title={toggleReadLabel}
+          variant="ghost"
+        >
+          {item.unread ? <MailOpenIcon /> : <MailIcon />}
+        </Button>
+      ) : null}
+      {onArchive ? (
+        <Button
+          aria-label={t("archive")}
+          onClick={() => onArchive(item)}
+          size="icon-sm"
+          title={t("archive")}
+          variant="ghost"
+        >
+          <ArchiveIcon />
+        </Button>
+      ) : null}
+    </span>
+  );
+};
+
+const itemClassName =
+  "hover:bg-accent focus-visible:ring-ring flex min-w-0 flex-1 items-start gap-3 rounded-md p-2 text-start outline-none focus-visible:ring-2";
+
+export const NotificationItem = ({
+  item,
+  onArchive,
+  onOpen,
+  onToggleRead,
+  variant = "full",
+}: NotificationItemProps) => {
+  const linkTarget = item.available ? item.target : null;
+  const content = <NotificationItemContent item={item} variant={variant} />;
 
   return (
     <li
@@ -97,10 +138,10 @@ export const NotificationItem = ({
         item.unread && "bg-primary/5",
       )}
     >
-      {linkable ? (
+      {linkTarget !== null ? (
         <a
           className={itemClassName}
-          href={item.target ?? undefined}
+          href={linkTarget}
           onClick={event => {
             const newTab = isModifiedClick(event);
             if (!newTab) event.preventDefault();
@@ -120,30 +161,11 @@ export const NotificationItem = ({
       )}
 
       {variant === "full" && (onToggleRead || onArchive) ? (
-        <span className="flex shrink-0 items-center gap-1 p-1">
-          {onToggleRead ? (
-            <Button
-              aria-label={item.unread ? t("mark_read") : t("mark_unread")}
-              onClick={() => onToggleRead(item)}
-              size="icon-sm"
-              title={item.unread ? t("mark_read") : t("mark_unread")}
-              variant="ghost"
-            >
-              {item.unread ? <MailOpenIcon /> : <MailIcon />}
-            </Button>
-          ) : null}
-          {onArchive ? (
-            <Button
-              aria-label={t("archive")}
-              onClick={() => onArchive(item)}
-              size="icon-sm"
-              title={t("archive")}
-              variant="ghost"
-            >
-              <ArchiveIcon />
-            </Button>
-          ) : null}
-        </span>
+        <NotificationItemActions
+          item={item}
+          onArchive={onArchive}
+          onToggleRead={onToggleRead}
+        />
       ) : null}
     </li>
   );

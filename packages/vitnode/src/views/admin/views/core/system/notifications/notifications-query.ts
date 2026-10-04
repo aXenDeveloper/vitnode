@@ -124,7 +124,6 @@ export const fetchNotificationStats = async ({
   return await response.json();
 };
 
-/** The root every cache entry of the notifications screen hangs off. */
 export const notificationsAdminQueryRoot = adminQueryRoot("notifications");
 
 export const notificationsOverviewQueryKey = [
@@ -142,7 +141,6 @@ export const notificationsOverviewQueryOptions = () =>
     queryFn: async () => await fetchNotificationsOverview(),
     queryKey: notificationsOverviewQueryKey,
     retry: false,
-    /** {@link OPERATIONAL_STALE_TIME} - Health counts move while nobody touches anything. */
     staleTime: OPERATIONAL_STALE_TIME,
   });
 

@@ -5,11 +5,6 @@ import type { NotificationEmailMode } from "@/lib/notifications/types";
 
 import { core_users } from "./users";
 
-/**
- * One published notification event, stored once however many people receive
- * it. `recipientIds` are the candidates the publisher named; the fan-out
- * cursor records how far delivery got, so a retry resumes there.
- */
 export const core_notification_events = camelCase.table.withRLS(
   "core_notification_events",
   t => ({
@@ -38,7 +33,6 @@ export const core_notification_events = camelCase.table.withRLS(
       })
       .notNull()
       .default("pending"),
-    /** Index into `recipientIds` processed so far. */
     recipientCursor: t.integer().notNull().default(0),
     deliveredCount: t.integer().notNull().default(0),
     lastError: t.text(),
@@ -56,11 +50,6 @@ export const core_notification_events = camelCase.table.withRLS(
   ],
 );
 
-/**
- * A recipient's inbox entry. Ungrouped events get one row each; grouped events
- * share one row per recipient, type, group key and time bucket. Unread means
- * `readSeq < activitySeq` on a row that is not archived.
- */
 export const core_notifications = camelCase.table.withRLS(
   "core_notifications",
   t => ({
@@ -76,8 +65,6 @@ export const core_notifications = camelCase.table.withRLS(
     groupBucket: t.bigint({ mode: "number" }).notNull().default(0),
     subjectType: t.varchar({ length: 100 }),
     subjectId: t.varchar({ length: 100 }),
-    // Restrict, not cascade: deleting an event must never drop unread items
-    // behind the counter's back. Cleanup removes items first, then events.
     latestEventId: t
       .bigint({ mode: "number" })
       .references(() => core_notification_events.id, { onDelete: "restrict" })
@@ -110,11 +97,6 @@ export const core_notifications = camelCase.table.withRLS(
   ],
 );
 
-/**
- * One row per event and recipient: the deduplication key for fan-out, the
- * membership of an event in a grouped inbox item, and the email state of that
- * event for that person.
- */
 export const core_notification_receipts = camelCase.table.withRLS(
   "core_notification_receipts",
   t => ({
@@ -126,13 +108,10 @@ export const core_notification_receipts = camelCase.table.withRLS(
       .integer()
       .references(() => core_users.id, { onDelete: "cascade" })
       .notNull(),
-    /** `null` when the user takes this type by email only. */
     notificationId: t
       .bigint({ mode: "number" })
       .references(() => core_notifications.id, { onDelete: "cascade" }),
-    /** `activitySeq` of the inbox item right after this event joined it. */
     seq: t.integer(),
-    /** Waiting for an email (immediate or digest) that has not claimed it. */
     emailPending: t.boolean().notNull().default(false),
     emailDeliveryId: t.bigint({ mode: "number" }),
     createdAt: t.timestamp().notNull().defaultNow(),
@@ -156,11 +135,6 @@ export interface NotificationTypePreference {
   push?: boolean;
 }
 
-/**
- * Everything notifications keep per user in one row: the canonical unread
- * count and its revision, digest schedule, and per-type preferences. Every
- * inbox write locks this row first, which serializes a user's inbox changes.
- */
 export const core_notification_user_state = camelCase.table.withRLS(
   "core_notification_user_state",
   t => ({
@@ -180,7 +154,6 @@ export const core_notification_user_state = camelCase.table.withRLS(
   t => [index("core_notification_user_state_unread_idx").on(t.unreadCount)],
 );
 
-/** One email send - immediate, digest or test - and its attempts. */
 export const core_notification_deliveries = camelCase.table.withRLS(
   "core_notification_deliveries",
   t => ({
@@ -226,7 +199,6 @@ export const core_notification_deliveries = camelCase.table.withRLS(
   ],
 );
 
-/** Installation policy: `global`, and one `type:{typeId}` per type. */
 export const core_notification_settings = camelCase.table.withRLS(
   "core_notification_settings",
   t => ({

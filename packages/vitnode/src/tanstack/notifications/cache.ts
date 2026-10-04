@@ -24,7 +24,6 @@ const mapPages = (
   return { ...data, items: map(data.items) };
 };
 
-/** Patches one item in every cached list - the bell's and the page's. */
 export const patchCachedNotification = (
   queryClient: QueryClient,
   userId: number,

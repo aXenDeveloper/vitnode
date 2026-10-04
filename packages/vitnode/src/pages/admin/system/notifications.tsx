@@ -12,12 +12,7 @@ const AdminNotificationsPage = ({
   <AdminNotificationsRouteContent {...loaderData} />
 );
 
-/**
- * The heading's strings come from the loader, so the `<h1>` and the `<title>`
- * are the same string by construction.
- */
 export const route = defineAdminRoute<AdminNotificationsRouteData>({
-  // `head` after `load`, always.
   load: async ({ context, t }) =>
     await loadAdminNotificationsRoute({ ...context, t }),
   head: ({ loaderData }) => ({ ...loaderData }),
