@@ -5,52 +5,40 @@ import {
   AccordionTrigger,
 } from '@vitnode/core/components/ui/accordion'
 
+const FAQ = [
+  {
+    value: 'register',
+    question: 'How do I create an account?',
+    answer:
+      'Click Sign up in the top bar, fill in your email and pick a password. A confirmation link lands in your inbox within a minute.',
+  },
+  {
+    value: 'moderator',
+    question: 'Can I become a moderator?',
+    answer:
+      'Moderators are picked from active members. Post helpful replies for a while and the staff will reach out.',
+  },
+  {
+    value: 'delete',
+    question: 'How do I delete my account?',
+    answer:
+      'Go to Settings, then Account, then Delete account. Your posts stay, but your name is replaced with "Guest".',
+  },
+]
+
 export default function AccordionExample() {
   return (
-    <Accordion className="w-full" defaultValue={['item-1']}>
-      <AccordionItem value="item-1">
-        <AccordionTrigger>Product Information</AccordionTrigger>
-        <AccordionContent className="flex flex-col gap-4 text-balance">
-          <p>
-            Our flagship product combines cutting-edge technology with sleek
-            design. Built with premium materials, it offers unparalleled
-            performance and reliability.
-          </p>
-          <p>
-            Key features include advanced processing capabilities, and an
-            intuitive user interface designed for both beginners and experts.
-          </p>
-        </AccordionContent>
-      </AccordionItem>
-      <AccordionItem value="item-2">
-        <AccordionTrigger>Shipping Details</AccordionTrigger>
-        <AccordionContent className="flex flex-col gap-4 text-balance">
-          <p>
-            We offer worldwide shipping through trusted courier partners.
-            Standard delivery takes 3-5 business days, while express shipping
-            ensures delivery within 1-2 business days.
-          </p>
-          <p>
-            All orders are carefully packaged and fully insured. Track your
-            shipment in real-time through our dedicated tracking portal.
-          </p>
-        </AccordionContent>
-      </AccordionItem>
-      <AccordionItem value="item-3">
-        <AccordionTrigger>Return Policy</AccordionTrigger>
-        <AccordionContent className="flex flex-col gap-4 text-balance">
-          <p>
-            We stand behind our products with a comprehensive 30-day return
-            policy. If you&apos;re not completely satisfied, simply return the
-            item in its original condition.
-          </p>
-          <p>
-            Our hassle-free return process includes free return shipping and
-            full refunds processed within 48 hours of receiving the returned
-            item.
-          </p>
-        </AccordionContent>
-      </AccordionItem>
+    <Accordion className="not-prose w-full" defaultValue={['register']}>
+      {FAQ.map(({ value, question, answer }) => (
+        <AccordionItem key={value} value={value}>
+          <AccordionTrigger>{question}</AccordionTrigger>
+          <AccordionContent>
+            <p className="text-muted-foreground leading-relaxed text-pretty">
+              {answer}
+            </p>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
     </Accordion>
   )
 }

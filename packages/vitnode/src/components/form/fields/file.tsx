@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { AttachmentAction } from "@/components/ui/attachment";
+import { Button } from "@/components/ui/button";
 import { FormControl, FormMessage } from "@/components/ui/form";
 import {
   fileAcceptAttribute,
@@ -14,6 +15,7 @@ import { formatBytes } from "@/lib/format-bytes";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { AutoFormFileValue } from "./file-shared";
+import type { FileUploadOptions } from "./file-upload-queue";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
@@ -27,6 +29,7 @@ import {
 } from "./file-shared";
 
 export type { AutoFormFileValue } from "./file-shared";
+export type { FileUploadOptions } from "./file-upload-queue";
 
 export interface AutoFormFileProps extends ItemAutoFormComponentProps {
   allowedExtensions?: readonly string[];
@@ -34,8 +37,132 @@ export interface AutoFormFileProps extends ItemAutoFormComponentProps {
   file?: AutoFormFileValue | null;
   label?: React.ReactNode;
   maxBytes: number;
-  onUpload: (file: File) => Promise<AutoFormFileValue>;
+  onUpload: (
+    file: File,
+    options: FileUploadOptions,
+  ) => Promise<AutoFormFileValue>;
 }
+
+const fileFieldState = ({
+  hasError,
+  hasFile,
+  isPending,
+}: {
+  hasError: boolean;
+  hasFile: boolean;
+  isPending: boolean;
+}) => {
+  if (isPending) return "uploading";
+  if (hasError) return "error";
+
+  return hasFile ? "done" : "idle";
+};
+
+const useFileUpload = ({
+  constraints,
+  onStored,
+  onUpload,
+}: {
+  constraints: Parameters<typeof validateFile>[0] & { maxBytes: number };
+  onStored: (stored: AutoFormFileValue) => void;
+  onUpload: AutoFormFileProps["onUpload"];
+}) => {
+  const t = useTranslations("core.global.file");
+  const failureMessage = useUploadFailureMessage();
+  const [rejected, setRejected] = React.useState<null | string>(null);
+  const [progress, setProgress] = React.useState<null | number>(null);
+  const controllerRef = React.useRef<AbortController | null>(null);
+  const formats = fileFormatLabels(constraints);
+
+  const upload = useMutation({
+    mutationFn: async (chosen: File) => {
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      setProgress(null);
+
+      const stored = await onUpload(chosen, {
+        onProgress: fraction => {
+          if (!controller.signal.aborted) {
+            setProgress(Math.min(1, Math.max(0, fraction)));
+          }
+        },
+        signal: controller.signal,
+      });
+      controller.signal.throwIfAborted();
+
+      return stored;
+    },
+    retry: false,
+    onSuccess: stored => {
+      setRejected(null);
+      onStored(stored);
+    },
+  });
+
+  const errorMessage =
+    rejected ??
+    failureMessage({
+      attempted: upload.variables,
+      error: upload.error,
+      formats,
+      maxBytes: constraints.maxBytes,
+    });
+
+  const pick = (chosen: File | undefined) => {
+    if (!chosen) return;
+
+    const rejection = validateFile(constraints, {
+      mimeType: chosen.type,
+      name: chosen.name,
+      size: chosen.size,
+    });
+    if (rejection) {
+      upload.reset();
+      setRejected(
+        rejection.reason === "size"
+          ? t("errors.too_large", {
+              max: formatBytes(constraints.maxBytes),
+              size: rejection.value,
+            })
+          : t("errors.wrong_format", {
+              formats: formats.join(", "),
+              value: rejection.value,
+            }),
+      );
+
+      return;
+    }
+
+    setRejected(null);
+    upload.mutate(chosen);
+  };
+
+  const cancel = () => {
+    controllerRef.current?.abort();
+    upload.reset();
+    setProgress(null);
+  };
+
+  const retry = () => {
+    if (upload.variables) upload.mutate(upload.variables);
+  };
+
+  const reset = () => {
+    upload.reset();
+    setRejected(null);
+  };
+
+  return {
+    cancel,
+    errorMessage,
+    pick,
+    progress,
+    rejected,
+    reset,
+    retry,
+    upload,
+  };
+};
 
 export const AutoFormFile = ({
   allowedExtensions,
@@ -56,78 +183,40 @@ export const AutoFormFile = ({
   itemParams,
 }: AutoFormFileProps) => {
   const t = useTranslations("core.global.file");
-  const failureMessage = useUploadFailureMessage();
-  const [rejected, setRejected] = React.useState<null | string>(null);
   const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
-
   const [resolved] = resolveFormFiles(field.value, [initialFile, ...uploaded]);
   const file = resolved?.file ?? null;
 
   const constraints = { allowedExtensions, allowedMimeTypes, maxBytes };
-  const formats = fileFormatLabels(constraints);
   const accept = fileAcceptAttribute(constraints);
-
-  const upload = useMutation({
-    mutationFn: onUpload,
-    retry: false,
-    onSuccess: stored => {
+  const {
+    cancel,
+    errorMessage,
+    pick,
+    progress,
+    rejected,
+    reset,
+    retry,
+    upload,
+  } = useFileUpload({
+    constraints,
+    onStored: stored => {
       setUploaded(current => [...current, stored]);
-      setRejected(null);
       field.onChange(stored.id);
     },
+    onUpload,
   });
 
-  const errorMessage =
-    rejected ??
-    failureMessage({
-      attempted: upload.variables,
-      error: upload.error,
-      formats,
-      maxBytes,
-    });
-
-  const pick = (chosen: File | undefined) => {
-    if (!chosen) return;
-
-    const rejection = validateFile(constraints, {
-      mimeType: chosen.type,
-      name: chosen.name,
-      size: chosen.size,
-    });
-    if (rejection) {
-      upload.reset();
-      setRejected(
-        rejection.reason === "size"
-          ? t("errors.too_large", {
-              max: formatBytes(maxBytes),
-              size: rejection.value,
-            })
-          : t("errors.wrong_format", {
-              formats: formats.join(", "),
-              value: rejection.value,
-            }),
-      );
-
-      return;
-    }
-
-    setRejected(null);
-    upload.mutate(chosen);
-  };
-
   const remove = () => {
-    upload.reset();
-    setRejected(null);
+    reset();
     field.onChange(null);
   };
 
-  const state = upload.isPending
-    ? "uploading"
-    : errorMessage !== null
-      ? "error"
-      : resolved
-        ? "done"
-        : "idle";
+  const state = fileFieldState({
+    hasError: errorMessage !== null,
+    hasFile: !!resolved,
+    isPending: upload.isPending,
+  });
 
   return (
     <>
@@ -164,14 +253,34 @@ export const AutoFormFile = ({
           ) : (
             <FileDropzone
               accept={accept}
+              onCancel={cancel}
               onPick={files => pick(files[0])}
               pending={upload.isPending}
+              progress={progress}
               promptLabel={t("drop")}
               state={state}
             />
           )}
 
-          {errorMessage !== null && <FileError>{errorMessage}</FileError>}
+          {errorMessage !== null && (
+            <FileError
+              action={
+                rejected === null && upload.isError ? (
+                  <Button
+                    onClick={retry}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <RotateCcwIcon aria-hidden />
+                    {t("retry")}
+                  </Button>
+                ) : null
+              }
+            >
+              {errorMessage}
+            </FileError>
+          )}
         </div>
       </FormControl>
 

@@ -1,5 +1,6 @@
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormColor } from '@vitnode/core/components/form/fields/color'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 export default function ColorExample() {
@@ -9,22 +10,25 @@ export default function ColorExample() {
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
           id: 'color',
           component: (props) => (
             <AutoFormColor
-              description="Pick a color. The value is stored as an HSL string."
-              label="Color"
               {...props}
+              allowRemoveColor
+              description="Shown next to the category name in the forum list."
+              label="Category color"
             />
           ),
         },
       ]}
       formSchema={formSchema}
       onSubmit={(values) => {
-        // eslint-disable-next-line no-console
-        console.log(values.color)
+        toast.success('Category saved', {
+          description: `Color: ${values.color || 'theme default'}`,
+        })
       }}
     />
   )

@@ -1,0 +1,202 @@
+---
+title: Button Group
+description: Glue related buttons, inputs and menus into one tidy row or column with shared borders and rounded ends.
+icon: Group
+---
+
+## Preview
+
+<Preview name="button-group" />
+
+## Usage
+
+```ts
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+  ButtonGroupText,
+} from '@vitnode/core/components/ui/button-group'
+```
+
+```tsx
+<ButtonGroup aria-label="Message actions">
+  <Button variant="outline">Archive</Button>
+  <Button variant="outline">Report</Button>
+  <Button variant="outline">Snooze</Button>
+</ButtonGroup>
+```
+
+Inner borders merge and only the outer corners stay round. The buttons need no
+extra props.
+
+## Orientation
+
+```tsx
+<ButtonGroup aria-label="Zoom" orientation="vertical">
+  <Button aria-label="Zoom in" size="icon-sm" variant="outline">
+    <ZoomInIcon />
+  </Button>
+  <Button aria-label="Zoom out" size="icon-sm" variant="outline">
+    <ZoomOutIcon />
+  </Button>
+</ButtonGroup>
+```
+
+## Nested groups
+
+Groups inside a group get a small gap between them, the classic toolbar look.
+
+```tsx
+<ButtonGroup aria-label="Message actions">
+  <ButtonGroup>
+    <Button aria-label="Go back" size="icon" variant="outline">
+      <ArrowLeftIcon />
+    </Button>
+  </ButtonGroup>
+  <ButtonGroup>
+    <Button variant="outline">Archive</Button>
+    <Button variant="outline">Report</Button>
+  </ButtonGroup>
+</ButtonGroup>
+```
+
+## Separator
+
+Borderless variants like `secondary` blur into one blob. Put a
+`ButtonGroupSeparator` between them.
+
+```tsx
+<ButtonGroup aria-label="Text alignment">
+  <Button aria-label="Align left" size="icon" variant="secondary">
+    <AlignLeftIcon />
+  </Button>
+  <ButtonGroupSeparator />
+  <Button aria-label="Align center" size="icon" variant="secondary">
+    <AlignCenterIcon />
+  </Button>
+</ButtonGroup>
+```
+
+Inside a vertical group, use `<ButtonGroupSeparator orientation="horizontal" />`.
+
+## With text
+
+`ButtonGroupText` is a non-interactive segment, like a counter. Use `render`
+to swap the element, for example to a `<label>`.
+
+```tsx
+<ButtonGroup aria-label="Quantity">
+  <Button aria-label="Decrease quantity" size="icon" variant="outline">
+    <MinusIcon />
+  </Button>
+  <ButtonGroupText aria-live="polite">{quantity}</ButtonGroupText>
+  <Button aria-label="Increase quantity" size="icon" variant="outline">
+    <PlusIcon />
+  </Button>
+</ButtonGroup>
+```
+
+## With input
+
+An `Input` stretches to fill the free space.
+
+```tsx
+<ButtonGroup className="w-full max-w-sm">
+  <Input aria-label="Search members" placeholder="Search members..." />
+  <Button aria-label="Search" size="icon" variant="outline">
+    <SearchIcon />
+  </Button>
+</ButtonGroup>
+```
+
+## Split button
+
+Pair a button with a [Dropdown Menu](/docs/ui/dropdown-menu) trigger.
+
+```tsx
+<ButtonGroup>
+  <Button variant="outline">Snooze</Button>
+  <DropdownMenu>
+    <DropdownMenuTrigger
+      render={
+        <Button
+          aria-label="More snooze options"
+          size="icon"
+          variant="outline"
+        />
+      }
+    >
+      <ChevronDownIcon />
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuItem>Later today</DropdownMenuItem>
+      <DropdownMenuItem>Next week</DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+</ButtonGroup>
+```
+
+## Sizes
+
+The group follows its buttons. Use the same `size` on all of them so heights
+match.
+
+## Accessibility
+
+- The group has `role="group"`. Give it an `aria-label` or `aria-labelledby`.
+- Icon-only buttons need their own `aria-label`.
+- A focused button lifts above its neighbours, so the focus ring never hides.
+- Borders and corners flip correctly in right-to-left languages.
+- Need a selected state, like a segmented control? Use
+  [Toggle Group](/docs/ui/toggle-group).
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### ButtonGroup
+
+<TypeTable
+  type={{
+    orientation: {
+      description: 'Lays the items out in a row or a column.',
+      type: 'horizontal | vertical',
+      default: 'horizontal',
+    },
+    'aria-label': {
+      description: 'Describes what the group does.',
+      type: 'string',
+    },
+  }}
+/>
+
+### ButtonGroupText
+
+<TypeTable
+  type={{
+    render: {
+      description:
+        'Replaces the default `<div>`, for example with a `<label>`.',
+      type: 'ReactElement | (props, state) => ReactElement',
+    },
+  }}
+/>
+
+### ButtonGroupSeparator
+
+<TypeTable
+  type={{
+    orientation: {
+      description:
+        'Direction of the line. Use `horizontal` in a vertical group.',
+      type: 'horizontal | vertical',
+      default: 'vertical',
+    },
+  }}
+/>
+
+All parts accept `className`.
+
+## API Reference
+
+[shadcn/ui - Button Group](https://ui.shadcn.com/docs/components/base/button-group)

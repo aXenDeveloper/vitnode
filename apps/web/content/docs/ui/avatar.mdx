@@ -1,0 +1,144 @@
+---
+title: Avatar
+description: Profile pictures with initials fallback, status badges, groups that lift on hover and colored letter avatars for members.
+icon: CircleUserRound
+---
+
+## Preview
+
+<Preview name="avatar" />
+
+## Usage
+
+```ts
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@vitnode/core/components/ui/avatar'
+```
+
+```tsx
+<Avatar>
+  <AvatarImage alt="Ada Lovelace" src={user.avatarUrl} />
+  <AvatarFallback>AL</AvatarFallback>
+</Avatar>
+```
+
+## Fallback
+
+<Preview name="avatar-fallback" />
+
+The fallback shows while the image loads and stays if it never arrives. Once
+loaded, the image fades in instead of popping.
+
+## Sizes
+
+```tsx
+<Avatar size="sm" />
+<Avatar />
+<Avatar size="lg" />
+```
+
+## Badge
+
+`AvatarBadge` adds a status dot. Give it a semantic background:
+
+```tsx
+<Avatar>
+  <AvatarImage alt="Ada Lovelace" src={user.avatarUrl} />
+  <AvatarFallback>AL</AvatarFallback>
+  <AvatarBadge className="bg-success" />
+</Avatar>
+```
+
+A dot alone doesn't tell everyone someone is online. Say it in text too, or
+give the badge an `aria-label`.
+
+## Group
+
+`AvatarGroup` stacks avatars. Wrap each in `AvatarGroupItem` to lift it on
+hover and show a tooltip, and end with `AvatarGroupCount`:
+
+```ts
+import {
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarGroupItem,
+} from '@vitnode/core/components/ui/avatar'
+```
+
+```tsx
+<AvatarGroup>
+  {users.map((user) => (
+    <AvatarGroupItem key={user.id} label={user.name}>
+      <Avatar>
+        <AvatarImage alt={user.name} src={user.avatarUrl} />
+        <AvatarFallback>{user.initials}</AvatarFallback>
+      </Avatar>
+    </AvatarGroupItem>
+  ))}
+  <AvatarGroupCount>+3</AvatarGroupCount>
+</AvatarGroup>
+```
+
+The whole group shares one tooltip, so it glides from face to face. Plain
+`Avatar`s inside a group make a quiet stack with no hover effect.
+
+## Member avatars
+
+<Preview name="avatar-letter" />
+
+For VitNode users, reach for `Avatar` from `@vitnode/core/components/avatar`.
+It shows the stored picture, or the first letter of `nameCode` on the
+member's `avatarColor` in white.
+
+```ts
+import { Avatar } from '@vitnode/core/components/avatar'
+```
+
+```tsx
+<Avatar size={32} user={user} />
+```
+
+`user` needs `name`, `nameCode`, `avatarColor` (hex without `#`) and an
+optional `avatarUrl`. A broken `avatarUrl` falls back to the letter.
+
+## Accessibility
+
+- Always pass `alt` to `AvatarImage`. The person's name is usually perfect.
+- An `AvatarGroupItem` with a `label` is focusable, and its tooltip opens on
+  focus as well as hover.
+- With reduced motion, group avatars stay put and only the tooltip appears.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Avatar
+
+<TypeTable
+  type={{
+    size: {
+      description: 'Size of the avatar.',
+      type: '"sm" | "default" | "lg"',
+      default: '"default"',
+    },
+  }}
+/>
+
+### AvatarGroupItem
+
+<TypeTable
+  type={{
+    label: {
+      description:
+        "Tooltip on hover and focus. Without it, the avatar still lifts but isn't focusable.",
+      type: 'ReactNode',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - Avatar](https://base-ui.com/react/components/avatar)

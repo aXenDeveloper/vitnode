@@ -1,0 +1,113 @@
+---
+title: Accessibility
+description: How VitNode UI stays usable for everyone - keyboard focus rings, roomy touch targets, WCAG contrast, screen reader text, live announcements and reduced motion, shown live.
+icon: Accessibility
+---
+
+Every interactive component sits on a [Base UI](https://base-ui.com) primitive,
+so keyboard support, focus management and ARIA come built in. Your job is mostly
+not to break it. Try the demos with a keyboard or a screen reader.
+
+## Keyboard focus
+
+<Preview name="accessibility-focus" className="*:max-w-full" />
+
+Rings use `:focus-visible`, so they show up for keyboards and stay out of the
+way for mice. Text fields always get one, since you're about to type. Custom
+controls should borrow the same classes.
+
+```tsx
+<div
+  tabIndex={0}
+  className="outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+/>
+```
+
+## Touch targets
+
+<Preview name="accessibility-touch-targets" className="*:max-w-full" />
+
+Small controls keep their compact look but get an invisible `::after` hit area
+of at least 44px. `Checkbox`, `RadioGroupItem` and `Switch` always have it; the
+smaller icon `Button` sizes and `NumberField` steppers add it on touch screens via
+`pointer-coarse:`.
+
+## Contrast
+
+<Preview name="accessibility-contrast" className="*:max-w-full" />
+
+The ratio is computed from the live theme tokens, so flip dark mode and watch it
+change. `muted-foreground` passes AA on `background` and `card` in both themes.
+Filled `primary` with white text drops to about 3.8:1 in dark mode, so keep it
+for short button labels.
+
+## Screen reader text
+
+<Preview name="accessibility-screen-reader" className="*:max-w-full" />
+
+Icons are decoration; words carry the meaning. Icon-only `Button` sizes require
+an `aria-label` at the type level, and `sr-only` adds context that sighted users
+get from the layout.
+
+```tsx
+<Badge>
+  {unread}
+  <span className="sr-only"> unread</span>
+</Badge>
+```
+
+## Announcements
+
+<Preview name="accessibility-announcements" className="*:max-w-full" />
+
+Changes that happen without a page load need to be said out loud. `role="status"`
+waits politely for a pause; `role="alert"` interrupts. `Alert` picks for you:
+`warning` and `destructive` are alerts, everything else is a status.
+`FieldError` is an alert, `Spinner` is a labelled status, and a loading `Button`
+renames itself to "Loading".
+
+## Motion and transparency
+
+<Preview name="accessibility-preferences" className="*:max-w-full" />
+
+These are your device's settings right now. Components respect them with
+`motion-reduce:`, `reduced-transparency:` and `pointer-coarse:`, so nobody
+gets a spinning headache or a blurry dialog they asked not to have. More in
+[Motion](/docs/ui/motion).
+
+## Semantic HTML
+
+```tsx
+<header>…</header>
+<nav aria-label="Main">…</nav>
+<main>
+  <h1>Settings</h1>
+  <img alt="Your avatar" src={avatarUrl} />
+  <img alt="" src="/divider.svg" />
+</main>
+```
+
+- Use `header`, `nav`, `main` and real headings in order. Screen reader users
+  jump between them like chapters.
+- Every image needs `alt`. Use `alt=""` only when it is purely decorative.
+- A `button` does things, a link goes places. Never put `onClick` on a `div`.
+
+## Related
+
+<Cards>
+  <Card
+    title="Colors"
+    href="/docs/ui/colors"
+    description="Semantic tokens with contrast you can predict."
+  />
+  <Card
+    title="Typography"
+    href="/docs/ui/typography"
+    description="Readable sizes, line heights and text rules."
+  />
+  <Card
+    title="Motion"
+    href="/docs/ui/motion"
+    description="Animation rules, including reduced motion."
+  />
+</Cards>

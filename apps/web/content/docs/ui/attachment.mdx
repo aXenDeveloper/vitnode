@@ -1,0 +1,200 @@
+---
+title: Attachment
+description: Upload one file or a sortable gallery, with drag and drop, progress, cancel, retry and undo.
+icon: Paperclip
+---
+
+## Preview
+
+<Preview name="attachment-auto-form" />
+
+Pick a file and watch the progress bar. Hit × mid-upload to cancel.
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+`AutoFormFile` takes one file, `AutoFormFiles` takes many. The form stores
+**file ids**: a number for one file, an array of numbers for many.
+
+```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormFile } from '@vitnode/core/components/form/fields/file'
+import { AutoFormFiles } from '@vitnode/core/components/form/fields/files'
+
+const formSchema = z.object({
+  avatar: z.number().nullable().default(null),
+  gallery: z.array(z.number()).max(4).default([]),
+})
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'avatar',
+      component: (props) => (
+        <AutoFormFile
+          {...props}
+          allowedExtensions={['.png', '.jpg', '.webp']}
+          label="Avatar"
+          maxBytes={5 * 1024 * 1024}
+          onUpload={uploadFile}
+        />
+      ),
+    },
+    {
+      id: 'gallery',
+      component: (props) => (
+        <AutoFormFiles
+          {...props}
+          label="Gallery"
+          maxBytes={5 * 1024 * 1024}
+          maxItems={4}
+          onUpload={uploadFile}
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+
+<Preview name="attachment" />
+
+```ts
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from '@vitnode/core/components/ui/attachment'
+```
+
+```tsx
+<Attachment>
+  <AttachmentMedia variant="image">
+    <img alt="" src={file.url} />
+  </AttachmentMedia>
+  <AttachmentContent>
+    <AttachmentTitle>{file.name}</AttachmentTitle>
+    <AttachmentDescription>48 KB</AttachmentDescription>
+  </AttachmentContent>
+  <AttachmentActions>
+    <AttachmentAction aria-label={`Remove ${file.name}`} onClick={remove}>
+      <XIcon />
+    </AttachmentAction>
+  </AttachmentActions>
+</Attachment>
+```
+
+  </Tab>
+</Tabs>
+
+## Uploading
+
+`onUpload(file, { onProgress, signal })` uploads the picked `File` and returns
+the stored file (`{ id, name, size, url, mimeType? }`). The field saves its `id`.
+
+- Call `onProgress(fraction)` with `0` to `1` to show a percentage. Skip it and
+  the card shimmers instead.
+- Pass `signal` to your request. Cancelling from the card aborts it, and any late
+  response is ignored.
+- Throw to fail. The file stays as an error card with a **Try again** button.
+
+`fetch` can't report upload progress, so use `XMLHttpRequest` for the bar:
+
+```ts
+import type {
+  AutoFormFileValue,
+  FileUploadOptions,
+} from '@vitnode/core/components/form/fields/file'
+
+const uploadFile = async (
+  file: File,
+  { onProgress, signal }: FileUploadOptions,
+): Promise<AutoFormFileValue> =>
+  await new Promise((resolve, reject) => {
+    const body = new FormData()
+    body.append('file', file)
+
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', '/api/my-plugin/uploads')
+    xhr.responseType = 'json'
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total)
+    }
+    xhr.onload = () =>
+      xhr.status < 300
+        ? resolve(xhr.response)
+        : reject(new Error('Upload failed'))
+    xhr.onerror = () => reject(new Error('Upload failed'))
+    signal.addEventListener('abort', () => xhr.abort())
+    xhr.send(body)
+  })
+```
+
+## Removing and existing files
+
+Removing a file from `AutoFormFiles` shows a toast with **Undo**, which puts it
+back in the same spot. Misclicks shouldn't cost a re-upload.
+
+Editing a record with files? Pass `file={existing}` or `files={existing}` to
+show them.
+
+## Limits
+
+Files are checked **before** upload, so nobody waits on a 2 GB video just to
+hear it's too big.
+
+| Prop                | Field           | Example                        |
+| ------------------- | --------------- | ------------------------------ |
+| `maxBytes`          | both, required  | `5 * 1024 * 1024`              |
+| `allowedExtensions` | both            | `['.pdf', '.png']` (lowercase) |
+| `allowedMimeTypes`  | both            | `['image/png']`                |
+| `maxItems`          | files, required | `4`                            |
+| `minItems`          | files           | `1`                            |
+| `ordered`           | files           | `false` turns off reordering   |
+
+Files reorder by drag or keyboard. Check the same limits on your server: the
+browser check can't stop someone determined.
+
+## States
+
+<Preview name="attachment-states" />
+
+Set `state` on `Attachment`: `idle`, `uploading`, `processing`, `done`
+(default) or `error`. In `error`, say what went wrong.
+
+## Layouts
+
+<Preview name="attachment-layouts" className="*:max-w-full" />
+
+- `size`: `default`, `sm` or `xs` for chat composers and tight lists.
+- `orientation="vertical"` turns it into a card with a big preview.
+- `AttachmentGroup` makes a horizontal scroll row that fades at the edges.
+- `AttachmentTrigger` makes the whole attachment clickable. Render it as a link
+  to open the file. Focus shows one ring on the attachment, not two.
+- `AttachmentTitle` keeps the extension visible and truncates the rest:
+  `quarterly-rep….pdf`.
+
+## Accessibility
+
+- Give every `AttachmentAction` an `aria-label` naming the file: "Remove
+  report.pdf". Plain "Remove" is a riddle when there are five files.
+- Previews sit next to the file name, so `alt=""` is right.
+- The fields announce reordering and list each rejected file with the reason.
+- The whole drop zone is clickable. It only lights up when the drag carries
+  files.
+- On touch screens, actions and drag handles grow to a 40px hit area.

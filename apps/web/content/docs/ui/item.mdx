@@ -1,0 +1,185 @@
+---
+title: Item
+description: A row for lists, settings and menus that lines up media, a title, a description and actions without the CSS headache.
+icon: LayoutList
+---
+
+<Preview name="item" />
+
+## Usage
+
+```ts
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@vitnode/core/components/ui/item'
+```
+
+```tsx
+<Item variant="outline">
+  <ItemMedia variant="icon">
+    <ShieldCheck />
+  </ItemMedia>
+  <ItemContent>
+    <ItemTitle>Two-factor authentication</ItemTitle>
+    <ItemDescription>Add a second lock to your account.</ItemDescription>
+  </ItemContent>
+  <ItemActions>
+    <Button size="sm" variant="outline">
+      Enable
+    </Button>
+  </ItemActions>
+</Item>
+```
+
+Every app grows a dozen "icon, text, button on the right" rows. `Item` is that
+row, built once.
+
+- `ItemContent` stacks title and description and takes the free space.
+- `ItemTitle` is one line and truncates.
+- `ItemDescription` shows up to two muted lines. Links inside get underlined.
+- `ItemActions` holds buttons, badges or a chevron at the end.
+
+## Variants
+
+<Preview name="item-variants" />
+
+```tsx
+<Item variant="muted">...</Item>
+```
+
+## Sizes
+
+<Preview name="item-sizes" />
+
+`sm` and `xs` shrink padding and gaps. Image media shrinks too, and `xs` also
+uses smaller description text.
+
+```tsx
+<Item size="sm">...</Item>
+```
+
+## Media
+
+<Preview name="item-media" />
+
+With a description present, media aligns to the top of the text.
+
+```tsx
+<ItemMedia variant="image">
+  <img alt="" src="/cover.webp" />
+</ItemMedia>
+```
+
+## As a link
+
+<Preview name="item-link" />
+
+Pass an element to `render`, such as an `<a>`, a router `Link` or a `<button>`.
+Put the row's content inside it so the link wraps everything. Links get a hover
+background.
+
+```tsx
+<Item
+  render={
+    <a href="/docs/ui/avatar">
+      <ItemContent>
+        <ItemTitle>Read the Avatar docs</ItemTitle>
+      </ItemContent>
+      <ItemActions>
+        <ChevronRight aria-hidden className="size-4" />
+      </ItemActions>
+    </a>
+  }
+/>
+```
+
+## Groups
+
+<Preview name="item-group" />
+
+`ItemGroup` stacks items. `ItemSeparator` draws a line between them.
+
+```tsx
+<ItemGroup aria-label="Team members">
+  <Item role="listitem">...</Item>
+  <ItemSeparator />
+  <Item role="listitem">...</Item>
+</ItemGroup>
+```
+
+## Header and footer
+
+<Preview name="item-header" />
+
+`ItemHeader` and `ItemFooter` span the full width, above or below the content.
+
+```tsx
+<Item variant="outline">
+  <ItemHeader>
+    <Badge variant="success">Active</Badge>
+  </ItemHeader>
+  <ItemContent>...</ItemContent>
+  <ItemFooter>
+    <Button size="sm">Edit</Button>
+  </ItemFooter>
+</Item>
+```
+
+## Accessibility
+
+- `ItemGroup` has `role="list"`. Give each `Item` `role="listitem"` and the
+  group an `aria-label`.
+- One interactive element per row: either the whole row is a link or button,
+  or it holds buttons in `ItemActions`. Never a button inside a link.
+- Icon-only buttons need an `aria-label` that names the row, like "Invite Ada
+  Lovelace", not "Invite".
+- Decorative icons get `aria-hidden`. Links that open a new tab say so in
+  `sr-only` text.
+- Rows rendered as links or buttons show a focus ring.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Item
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The look of the row.',
+      type: 'default | outline | muted',
+      default: 'default',
+    },
+    size: {
+      description: 'Padding and gaps.',
+      type: 'default | sm | xs',
+      default: 'default',
+    },
+    render: {
+      description: 'Replaces the `div`, such as with a link or button.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
+    },
+  }}
+/>
+
+### ItemMedia
+
+<TypeTable
+  type={{
+    variant: {
+      description:
+        '`default` adds no styles, `icon` sizes an SVG, `image` crops an `img` to a rounded square.',
+      type: 'default | icon | image',
+      default: 'default',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

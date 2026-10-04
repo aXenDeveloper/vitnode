@@ -1,0 +1,117 @@
+---
+title: Kbd
+description: Show keyboard keys and shortcuts like ⌘ K in a way both eyes and screen readers understand.
+icon: Keyboard
+---
+
+## Preview
+
+<Preview name="kbd" />
+
+## Usage
+
+```ts
+import { Kbd, KbdGroup } from '@vitnode/core/components/ui/kbd'
+```
+
+```tsx
+<Kbd>Esc</Kbd>
+```
+
+`Kbd` renders a real `<kbd>`, so browsers and assistive tech know it's a key.
+
+## Shortcuts
+
+`KbdGroup` wraps a combination. It's a `<kbd>` too, which is how HTML
+describes a key combo.
+
+```tsx
+<KbdGroup>
+  <Kbd>Ctrl</Kbd>
+  <Kbd>K</Kbd>
+</KbdGroup>
+```
+
+Want a visible plus? Hide it from screen readers, since they already hear two
+keys:
+
+```tsx
+<KbdGroup>
+  <Kbd>Ctrl</Kbd>
+  <span aria-hidden="true">+</span>
+  <Kbd>C</Kbd>
+</KbdGroup>
+```
+
+## In buttons, tooltips and inputs
+
+`Kbd` sizes itself to fit small buttons. Inside a [Tooltip](/docs/ui/tooltip)
+it switches to a translucent style that stays readable in both themes. Next to
+an [Input Group](/docs/ui/input-group) addon, it makes the classic "press ⌘ K
+to search" field. No props needed for any of them.
+
+```tsx
+<Button size="sm" variant="outline">
+  Accept
+  <Kbd>Enter</Kbd>
+</Button>
+```
+
+## ⌘ on Mac, Ctrl everywhere else
+
+Detect the platform on the client, but render the same thing on the server and
+during hydration. `useSyncExternalStore` does both: its third argument is used
+for the server and hydration, then React switches to the real value.
+
+```tsx
+const subscribeToNothing = () => () => {}
+
+const useIsApple = () =>
+  React.useSyncExternalStore(
+    subscribeToNothing,
+    () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent),
+    () => true,
+  )
+
+const ModifierKey = () => (useIsApple() ? <Kbd>⌘</Kbd> : <Kbd>Ctrl</Kbd>)
+```
+
+## Accessibility
+
+- Keep the `<kbd>` element. A styled `<span>` doesn't say "this is a key".
+- Screen readers announce ⌘ and ⇧ inconsistently. Pair each symbol with
+  visually hidden text, since `aria-label` on a `<kbd>` isn't reliably read:
+
+  ```tsx
+  <Kbd title="Command">
+    <span aria-hidden="true">⌘</span>
+    <span className="sr-only">Command</span>
+  </Kbd>
+  ```
+
+- `Kbd` is a hint, not a control (`pointer-events-none`, `select-none`). Put
+  the action on a real button and listen for the key itself.
+- Never make a shortcut the only way to do something.
+
+## Props
+
+Both components accept every native `<kbd>` prop.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    Kbd: {
+      description: 'A single key. Renders `<kbd data-slot="kbd">`.',
+      type: "React.ComponentProps<'kbd'>",
+    },
+    KbdGroup: {
+      description: 'A key combination. Renders `<kbd data-slot="kbd-group">`.',
+      type: "React.ComponentProps<'kbd'>",
+    },
+  }}
+/>
+
+## API Reference
+
+[MDN - The Keyboard Input element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/kbd)

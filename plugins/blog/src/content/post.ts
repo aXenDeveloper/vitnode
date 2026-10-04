@@ -133,6 +133,7 @@ export const blogPostContentType = defineContentType({
     edit: { mode: "page" },
     list: {
       columns: ["title", "authorId", "status", "publishedAt", "updatedAt"],
+      searchableFields: ["title"],
       thumbnailField: "coverImage",
     },
   },

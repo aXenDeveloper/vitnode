@@ -1,0 +1,99 @@
+---
+title: Spinner
+description: A little spinning circle that says "hold on, it's coming", in four sizes and any color.
+icon: Loader
+---
+
+<Preview name="spinner" />
+
+## Usage
+
+```ts
+import { Spinner } from '@vitnode/core/components/ui/spinner'
+```
+
+```tsx
+<Spinner size="lg" className="text-primary" />
+```
+
+It takes the text color around it, so a color change is one `text-*` class.
+
+| Size      | Pixels | Good for                          |
+| --------- | ------ | --------------------------------- |
+| `sm`      | 12     | Badges, dense rows                |
+| `default` | 16     | Buttons, inputs, inline with text |
+| `lg`      | 24     | Cards and panels                  |
+| `xl`      | 40     | A whole page or section           |
+
+## In buttons
+
+<Preview name="spinner-buttons" />
+
+Prefer `isLoading` on [Button](/docs/ui/button). It swaps the label for a
+spinner, disables the button and announces "Loading". Add a `Spinner` by hand
+to keep the label visible.
+
+```tsx
+<Button disabled>
+  <Spinner aria-hidden="true" />
+  Uploading...
+</Button>
+```
+
+## In badges, inputs and text
+
+<Preview name="spinner-inline" />
+
+```tsx
+<InputGroupAddon align="inline-end">
+  <Spinner aria-label="Searching" />
+</InputGroupAddon>
+```
+
+## Loading states
+
+<Preview name="spinner-states" />
+
+Put it in an [Empty](/docs/ui/empty) state, or over a card that's refreshing.
+For a Suspense fallback, center an `xl` spinner, like the AdminCP does.
+
+```tsx
+<Suspense
+  fallback={
+    <div className="flex items-center justify-center">
+      <Spinner size="xl" />
+    </div>
+  }
+>
+  <SlowThing />
+</Suspense>
+```
+
+Know what's coming? A [Skeleton](/docs/ui/skeleton) of that shape usually feels
+faster.
+
+## Accessibility
+
+- A spinner has `role="status"` and the label "Loading", translated. Pass
+  `aria-label` for something specific, like "Searching".
+- If nearby text already says what's happening, add `aria-hidden="true"` so
+  screen readers don't hear it twice.
+- Mark the loading container with `aria-busy="true"`.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    size: {
+      description: 'How big the spinner is.',
+      type: '"sm" | "default" | "lg" | "xl"',
+      default: '"default"',
+    },
+    'aria-label': {
+      description: 'What is loading. Defaults to "Loading", translated.',
+      type: 'string',
+    },
+  }}
+/>

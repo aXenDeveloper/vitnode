@@ -1,3 +1,5 @@
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
@@ -5,7 +7,7 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-lg border-dashed p-12 text-center text-balance",
+        "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-lg border-dashed p-6 text-center text-balance md:p-12",
         className,
       )}
       data-slot="empty"
@@ -25,7 +27,7 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const emptyMediaVariants = cva(
-  "mb-2 flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -54,20 +56,33 @@ function EmptyMedia({
   );
 }
 
-function EmptyTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn(
-        "font-heading text-lg font-medium tracking-tight",
-        className,
-      )}
-      data-slot="empty-title"
-      {...props}
-    />
-  );
+function EmptyTitle({
+  className,
+  render,
+  ...props
+}: useRender.ComponentProps<"h3">) {
+  return useRender({
+    defaultTagName: "h3",
+    props: mergeProps<"h3">(
+      {
+        className: cn(
+          "font-heading text-lg font-medium text-balance",
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: "empty-title",
+    },
+  });
 }
 
-function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
+function EmptyDescription({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(

@@ -1,0 +1,102 @@
+---
+title: Label
+description: An accessible text label for form controls - click it and the control it names responds, and screen readers announce it on focus.
+icon: TextInitial
+---
+
+## Preview
+
+<Preview name="label" />
+
+## Usage
+
+```ts
+import { Label } from '@vitnode/core/components/ui/label'
+```
+
+```tsx
+<Label htmlFor="email">Email</Label>
+<Input id="email" type="email" />
+```
+
+`Label` is a styled native `<label>`. Point `htmlFor` at the control's `id`:
+the label becomes a click target and screen readers read it on focus.
+
+<Callout>
+  [AutoForm](/docs/ui/auto-form) fields render their own label from the `label`
+  prop. Don't add a `Label` next to one, or you'll get two. For a label with a
+  description and error, use [Field](/docs/ui/field).
+</Callout>
+
+## With a checkbox
+
+Put the control first. Gap and alignment are built in.
+
+```tsx
+<div className="flex items-center gap-3">
+  <Checkbox id="terms" />
+  <Label htmlFor="terms">I promise I read the terms</Label>
+</div>
+```
+
+## Wrapping the control
+
+No `id` handy? Wrap the control. A `<label>` names whatever is inside it.
+
+```tsx
+<Label>
+  <Checkbox />
+  Remember me
+</Label>
+```
+
+## Disabled controls
+
+A disabled control dims its label and shows a `not-allowed` cursor, as in the
+preview's last row.
+
+```tsx
+<div className="flex items-center gap-3">
+  <Checkbox disabled id="newsletter" />
+  <Label htmlFor="newsletter">Weekly newsletter (coming soon)</Label>
+</div>
+```
+
+This needs the control **before** the label, as a sibling with the `peer`
+class. `Checkbox`, `Switch` and `RadioGroupItem` already have it. Label
+elsewhere? Put `group` and `data-disabled="true"` on a shared parent, which is
+what [Field](/docs/ui/field) does.
+
+## Accessibility
+
+- Always connect label and control, with `htmlFor` + `id` or by wrapping. A
+  label merely next to an input is plain text to a screen reader.
+- Placeholders are not labels. They vanish as soon as someone types.
+- The label is part of the hit area, so keep it right next to small controls.
+
+## Props
+
+Accepts every native `<label>` prop.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    htmlFor: {
+      description: 'The `id` of the control this label names.',
+      type: 'string',
+    },
+    children: {
+      description: 'The label text. Can also wrap the control.',
+      type: 'React.ReactNode',
+    },
+    className: {
+      description: 'Extra classes merged with the defaults.',
+      type: 'string',
+    },
+  }}
+/>
+
+## API Reference
+
+[MDN - The Label element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label)

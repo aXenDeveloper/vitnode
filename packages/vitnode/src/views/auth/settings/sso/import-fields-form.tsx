@@ -55,7 +55,7 @@ export const ImportFieldsForm = ({
 
   return (
     <AutoForm
-      className="flex flex-col gap-4 space-y-0"
+      className="flex flex-col gap-4"
       fields={supported.map(field => ({
         component: props => (
           <AutoFormCheckbox

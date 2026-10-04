@@ -1,0 +1,187 @@
+---
+title: Input OTP
+description: A one-time password input with separate slots, a blinking caret and digits that pop into place as you type.
+icon: KeyRound
+---
+
+## Preview
+
+<Preview name="input-otp" />
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormInputOTP } from '@vitnode/core/components/form/fields/input-otp'
+```
+
+```tsx
+const formSchema = z.object({
+  code: z.string().length(6, 'Enter all 6 digits').regex(/^\d+$/, 'Only digits, please'),
+})
+
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'code',
+      component: props => (
+        <AutoFormInputOTP
+          {...props}
+          description="We sent a 6-digit code to your email."
+          label="Verify your account"
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+`.length(6)` sets the slot count and `.regex()` becomes the `pattern`.
+
+  </Tab>
+
+  <Tab value="Manual">
+
+```ts
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from '@vitnode/core/components/ui/input-otp'
+```
+
+```tsx
+<InputOTP maxLength={6} onChange={setValue} value={value}>
+  <InputOTPGroup>
+    <InputOTPSlot index={0} />
+    <InputOTPSlot index={1} />
+    <InputOTPSlot index={2} />
+  </InputOTPGroup>
+  <InputOTPSeparator />
+  <InputOTPGroup>
+    <InputOTPSlot index={3} />
+    <InputOTPSlot index={4} />
+    <InputOTPSlot index={5} />
+  </InputOTPGroup>
+</InputOTP>
+```
+
+  </Tab>
+</Tabs>
+
+One real `<input>` sits underneath, so paste, password managers and SMS
+autofill just work.
+
+## Groups and patterns
+
+<Preview name="input-otp-groups" />
+
+`AutoFormInputOTP` halves even codes of 6+ characters and keeps the rest in
+one group. Pass `groups` to choose.
+
+```tsx
+<AutoFormInputOTP {...props} groups={[2, 2, 2]} label="Backup code" />
+```
+
+Without a schema, set `pattern`. Common regexes are re-exported:
+
+```ts
+import { REGEXP_ONLY_DIGITS } from '@vitnode/core/components/ui/input-otp'
+```
+
+```tsx
+<InputOTP maxLength={4} pattern={REGEXP_ONLY_DIGITS}>
+  …
+</InputOTP>
+```
+
+`REGEXP_ONLY_CHARS` and `REGEXP_ONLY_DIGITS_AND_CHARS` too.
+
+## Submit when complete
+
+`onComplete` fires when every slot is filled, on both components.
+
+```tsx
+<AutoFormInputOTP {...props} onComplete={(code) => verify(code)} />
+```
+
+## Wrong code
+
+A wrong code comes from your API. `setFormFieldError` turns every slot red
+and shows the message. Try it in the [preview](#preview).
+
+```ts
+import { setFormFieldError } from '@vitnode/core/components/ui/form'
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  onSubmit={async (values, form) => {
+    const res = await verifyCode(values.code)
+    if (!res.ok) setFormFieldError(form, 'code', "That code doesn't match.")
+  }}
+  fields={[...]}
+/>
+```
+
+## Accessibility
+
+- `AutoFormInputOTP` wires the label, description and error to the input.
+- With `InputOTP` alone, add an `id` and a `<Label htmlFor>`. Link help text
+  and errors with `aria-describedby`, and set `aria-invalid` on errors.
+- Slots are hidden from screen readers, so no digit is read twice.
+- Characters animate in, except with reduced motion.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+`AutoFormInputOTP` takes every `InputOTP` prop except `value` and `children`,
+plus:
+
+<TypeTable
+  type={{
+    label: { description: 'Label above the slots.', type: 'ReactNode' },
+    description: {
+      description: 'Help text below the slots.',
+      type: 'ReactNode',
+    },
+    groups: {
+      description:
+        'Slots per group. Default: two halves for even lengths of 6+, else one group.',
+      type: 'number[]',
+    },
+    maxLength: {
+      description:
+        'Code length. Default: the schema `.length()` / `.max()`, then 6.',
+      type: 'number',
+    },
+    onChange: {
+      description: 'Called with the new value on every change.',
+      type: '(value: string) => void',
+    },
+    onComplete: {
+      description: 'Called once every slot is filled.',
+      type: '(value: string) => void',
+    },
+    pattern: {
+      description:
+        'Regex the value must match. Default: the schema `.regex()`.',
+      type: 'string',
+    },
+    disabled: { description: 'Disables the input.', type: 'boolean' },
+  }}
+/>
+
+## API Reference
+
+[input-otp](https://github.com/guilhermerodz/input-otp)

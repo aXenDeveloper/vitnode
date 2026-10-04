@@ -59,7 +59,7 @@ export const core_admin_sessions = camelCase.table.withRLS(
       .notNull(),
   }),
   t => [
-    index("core_admin_sessions_token_idx").on(t.token),
     index("core_admin_sessions_user_id_idx").on(t.userId),
+    index("core_admin_sessions_device_id_idx").on(t.deviceId),
   ],
 );

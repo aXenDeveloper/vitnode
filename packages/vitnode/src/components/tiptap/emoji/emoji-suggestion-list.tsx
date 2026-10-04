@@ -8,6 +8,11 @@ import { cn } from "cn";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import {
+  SUGGESTION_POPUP_CLASS,
+  useActiveDescendant,
+} from "../suggestion-popup";
+
 export interface EmojiSuggestionListRef {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 }
@@ -16,13 +21,18 @@ export const EmojiSuggestionList = ({
   command,
   items,
   ref,
+  textbox,
 }: Pick<SuggestionProps<EmojiItem>, "command" | "items"> & {
   ref?: React.Ref<EmojiSuggestionListRef>;
+  textbox?: HTMLElement;
 }) => {
   const t = useTranslations("core.global.editor.emoji");
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [renderedItems, setRenderedItems] = React.useState(items);
   const listRef = React.useRef<HTMLDivElement>(null);
+  const baseId = React.useId();
+  const listId = `${baseId}-list`;
+  const optionIdOf = (index: number) => `${baseId}-option-${index}`;
 
   if (renderedItems !== items) {
     setRenderedItems(items);
@@ -62,6 +72,12 @@ export const EmojiSuggestionList = ({
     },
   }));
 
+  useActiveDescendant({
+    activeId: items[activeIndex] ? optionIdOf(activeIndex) : undefined,
+    listId,
+    textbox,
+  });
+
   React.useEffect(() => {
     listRef.current
       ?.querySelector("[data-active='true']")
@@ -70,7 +86,13 @@ export const EmojiSuggestionList = ({
 
   if (items.length === 0) {
     return (
-      <div className="bg-popover text-muted-foreground ring-foreground/10 rounded-md p-3 text-sm shadow-md ring-1">
+      <div
+        className={cn(
+          SUGGESTION_POPUP_CLASS,
+          "text-muted-foreground p-3 text-sm",
+        )}
+        role="status"
+      >
         {t("empty")}
       </div>
     );
@@ -78,7 +100,12 @@ export const EmojiSuggestionList = ({
 
   return (
     <div
-      className="bg-popover text-popover-foreground ring-foreground/10 max-h-64 w-72 overflow-y-auto rounded-md p-1 shadow-md ring-1"
+      aria-label={t("label")}
+      className={cn(
+        SUGGESTION_POPUP_CLASS,
+        "flex max-h-64 flex-col gap-1 overflow-y-auto p-1",
+      )}
+      id={listId}
       ref={listRef}
       role="listbox"
     >
@@ -86,10 +113,11 @@ export const EmojiSuggestionList = ({
         <button
           aria-selected={index === activeIndex}
           className={cn(
-            "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-start text-sm",
+            "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm",
             index === activeIndex && "bg-accent text-accent-foreground",
           )}
           data-active={index === activeIndex}
+          id={optionIdOf(index)}
           key={item.name}
           onClick={() => select(index)}
           onMouseEnter={() => setActiveIndex(index)}

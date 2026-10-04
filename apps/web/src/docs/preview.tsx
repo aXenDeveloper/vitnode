@@ -1,4 +1,4 @@
-import { Loader } from '@vitnode/core/components/ui/loader'
+import { Spinner } from '@vitnode/core/components/ui/spinner'
 import { cn } from 'cn'
 import React from 'react'
 
@@ -31,7 +31,14 @@ export const Preview = ({
   if (withoutBackground) {
     return (
       <div className="[&_p]:m-0 [&_table]:my-0 [&_table]:rounded-md [&_table]:border-none [&_table]:bg-transparent">
-        <React.Suspense fallback={<Loader />} key={name}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+          key={name}
+        >
           <Example />
         </React.Suspense>
       </div>
@@ -45,7 +52,14 @@ export const Preview = ({
         className,
       )}
     >
-      <React.Suspense fallback={<Loader />} key={name}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+        key={name}
+      >
         <Example />
       </React.Suspense>
     </div>

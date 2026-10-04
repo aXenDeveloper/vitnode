@@ -5,12 +5,17 @@ import { ReactRenderer } from "@tiptap/react";
 
 import type { EmojiSuggestionListRef } from "./emoji-suggestion-list";
 
+import {
+  mountSuggestionPopup,
+  SUGGESTION_POPUP_WRAPPER_CLASS,
+} from "../suggestion-popup";
 import { EmojiSuggestionList } from "./emoji-suggestion-list";
 import { matchEmojis } from "./match-emojis";
 
 interface EmojiSuggestionProps {
   command: (props: { name: string }) => void;
   items: EmojiItem[];
+  textbox?: HTMLElement;
 }
 
 export const emojiSuggestion: Omit<
@@ -28,14 +33,22 @@ export const emojiSuggestion: Omit<
     return {
       onStart: props => {
         component = new ReactRenderer(EmojiSuggestionList, {
-          className: "z-50",
+          className: SUGGESTION_POPUP_WRAPPER_CLASS,
           editor: props.editor,
-          props: { command: props.command, items: props.items },
+          props: {
+            command: props.command,
+            items: props.items,
+            textbox: props.editor.view.dom,
+          },
         });
-        unmount = props.mount(component.element);
+        unmount = mountSuggestionPopup(props.mount, component.element);
       },
       onUpdate: props => {
-        component?.updateProps({ command: props.command, items: props.items });
+        component?.updateProps({
+          command: props.command,
+          items: props.items,
+          textbox: props.editor.view.dom,
+        });
       },
       onKeyDown: props => component?.ref?.onKeyDown(props) ?? false,
       onExit: () => {

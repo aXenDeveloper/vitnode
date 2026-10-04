@@ -1,0 +1,66 @@
+---
+title: Expandable Rows
+description: Rows that slide open a detail panel right underneath them.
+icon: UnfoldVertical
+---
+
+## Preview
+
+<Preview name="data-table-expandable" withoutBackground />
+
+## Usage
+
+For rows with more to say than a cell holds, like an order's line items or a
+job's error log. Each row gets a chevron that opens a panel in place.
+
+```tsx
+<ContentDataTable
+  id="orders-table"
+  // [!code ++:4]
+  expandable={{
+    render: (order) => <OrderDetail order={order} />,
+    canExpand: (order) => order.items.length > 0,
+  }}
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'number', order: 'asc' } }}
+/>
+```
+
+- **Several rows can be open.** Open state lives in the component, not the URL,
+  and rows that leave the page are forgotten.
+- **The chevron is a real button** with `aria-expanded` and `aria-controls`.
+  Enter and Space work, and `rowOpens` clicks still work on the rest of the row.
+- **Works with `bulkActions`.** The chevron sits right after the checkbox.
+- **Polite motion.** The panel springs open in about 300ms. With reduced motion
+  it only fades.
+
+<Callout type="info" title="Fetch heavy details in the panel">
+  `render` runs only while a row is open. If the panel needs data the list
+  didn't load, fetch it inside the panel with TanStack Query, so re-opening is
+  instant.
+</Callout>
+
+## API
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    render: {
+      description: 'Renders the detail panel for an open row.',
+      required: true,
+      type: '(row: T) => ReactNode',
+    },
+    canExpand: {
+      description:
+        "Return false to hide a row's chevron. All rows expand by default.",
+      type: '(row: T) => boolean',
+    },
+    defaultExpanded: {
+      description: 'Row ids open on the first render.',
+      type: 'number[]',
+    },
+  }}
+/>

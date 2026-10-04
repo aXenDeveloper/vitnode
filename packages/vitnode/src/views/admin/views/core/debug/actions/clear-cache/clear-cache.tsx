@@ -16,6 +16,7 @@ export const ClearCacheAction = ({
   return (
     <ConfirmActionAlertDialog
       description={t("desc")}
+      icon={<BrushCleaningIcon />}
       onSubmit={async ({ onClose }) => {
         try {
           await onClearCache();

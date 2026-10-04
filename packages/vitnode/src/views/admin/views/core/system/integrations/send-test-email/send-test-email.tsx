@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 import type { SendTestEmail } from "./send-test-email-mutation";
 
@@ -40,7 +40,13 @@ export const SendTestEmailAction = ({ onSend }: { onSend: SendTestEmail }) => {
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
-        <React.Suspense fallback={<Loader />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <ContentSendTestEmail onSend={onSend} />
         </React.Suspense>
       </DialogContent>

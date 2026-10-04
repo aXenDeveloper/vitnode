@@ -1,44 +1,74 @@
 ---
 title: Badge
-description: Display small labels or indicators.
+description: Small labels for status, counts and tags - Published, Pending, 99+ - in eight variants.
+icon: Tag
 ---
-
-## Preview
 
 <Preview name="badge" />
 
 ## Usage
 
 ```ts
-import { Home } from 'lucide-react'
 import { Badge } from '@vitnode/core/components/ui/badge'
 ```
 
 ```tsx
-<Badge>
-  <Home /> Default
-</Badge>
+<Badge variant="success">Published</Badge>
 ```
 
 ## Variants
 
-A badge labels a state, so let the word do the work and the colour reinforce it:
+Let the word carry the meaning and the color back it up.
 
-- `default` - a neutral, prominent label.
-- `secondary` / `outline` / `ghost` - quieter labels that sit inside dense UI
-  like tables.
-- `success` - a healthy or finished state (Published, Active, Paid).
-- `warning` - something needs attention but nothing is broken yet (Pending,
-  Expiring, Draft).
-- `destructive` - a failed or blocked state (Failed, Banned, Overdue).
+| Variant                           | Use it for                                  |
+| --------------------------------- | ------------------------------------------- |
+| `default`                         | A prominent, neutral label.                 |
+| `secondary` / `outline` / `ghost` | Quiet labels in dense UI like tables.       |
+| `link`                            | A label that looks like a text link.        |
+| `success`                         | Healthy or done: Published, Active, Paid.   |
+| `warning`                         | Needs attention: Pending, Expiring, Draft.  |
+| `destructive`                     | Failed or blocked: Failed, Banned, Overdue. |
 
-The three status variants use the same tinted surface as their button
-counterparts, so a `success` badge and a `success` button read as the same idea.
+Status variants share their tint with the matching button, so a `success`
+badge and a `success` button read as the same idea.
+
+## With an icon
+
+<Preview name="badge-icon" />
+
+Icons shrink to 12px. Mark them `data-icon="inline-start"` or
+`data-icon="inline-end"` to tighten the padding on that side.
 
 ```tsx
-<Badge variant="success">Published</Badge>
-<Badge variant="warning">Pending</Badge>
-<Badge variant="destructive">Failed</Badge>
+<Badge variant="success">
+  <BadgeCheck data-icon="inline-start" />
+  Verified
+</Badge>
+```
+
+## Counter
+
+<Preview name="badge-counter" />
+
+Numbers are tabular, so counts don't jiggle. Add `min-w-5 px-1` for a round
+pill, and `sr-only` text so "8" means something to screen readers.
+
+```tsx
+<Badge className="min-w-5 px-1">
+  8<span className="sr-only">unread messages</span>
+</Badge>
+```
+
+## As a link
+
+<Preview name="badge-link" />
+
+Pass `render` to make the badge a link. Links get a hover state.
+
+```tsx
+<Badge render={<a href="/tags/announcements" />} variant="secondary">
+  #announcements
+</Badge>
 ```
 
 ## Props
@@ -48,9 +78,13 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     variant: {
-      description: 'The variant of the badge.',
+      description: 'The look of the badge.',
       type: 'default | secondary | outline | ghost | link | success | warning | destructive',
       default: 'default',
+    },
+    render: {
+      description: 'Replaces the `span`, such as with an `a`.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
     },
   }}
 />

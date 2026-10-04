@@ -1,21 +1,109 @@
 ---
 title: Progress
-description: A progress component for indicating the completion of a task.
+description: A progress bar for uploads, exports and setup steps, with a label, a formatted value and an indeterminate mode.
+icon: Hourglass
 ---
-
-## Preview
 
 <Preview name="progress" />
 
 ## Usage
 
 ```ts
-import { Progress } from '@vitnode/core/components/ui/progress';
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from '@vitnode/core/components/ui/progress'
 ```
 
 ```tsx
-<Progress value={50} />
+<Progress value={42}>
+  <ProgressLabel>Uploading photos</ProgressLabel>
+  <ProgressValue />
+</Progress>
 ```
+
+`ProgressLabel` names the bar for screen readers. `ProgressValue` uses tabular
+numbers, so digits don't wiggle as they count.
+
+The bar grows with a `scaleX` transform, so frequent updates stay smooth. With
+reduced motion it jumps straight to the new value.
+
+## Indeterminate
+
+Don't know how long it takes? Pass `value={null}`. A segment sweeps across in
+the reading direction. With reduced motion the track shows a static tint
+instead.
+
+```tsx
+<Progress value={null}>
+  <ProgressLabel>Preparing export</ProgressLabel>
+</Progress>
+```
+
+## Custom range and format
+
+<Preview name="progress-format" />
+
+Set `min` and `max` for any range. `format` takes `Intl.NumberFormat` options,
+and `ProgressValue` takes a function for full control. Use
+`getAriaValueText` when the spoken value needs more context.
+
+```tsx
+<Progress max={10} value={7}>
+  <ProgressLabel>Onboarding steps</ProgressLabel>
+  <ProgressValue>{(_, value) => `${value} of 10`}</ProgressValue>
+</Progress>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Progress
+
+<TypeTable
+  type={{
+    value: {
+      description: 'Current value. `null` makes the bar indeterminate.',
+      type: 'number | null',
+      required: true,
+    },
+    min: {
+      description: 'Lowest value.',
+      type: 'number',
+      default: '0',
+    },
+    max: {
+      description: 'Highest value.',
+      type: 'number',
+      default: '100',
+    },
+    format: {
+      description: 'Number format for the value.',
+      type: 'Intl.NumberFormatOptions',
+    },
+    locale: {
+      description: 'Locale for the number format.',
+      type: 'Intl.LocalesArgument',
+    },
+    getAriaValueText: {
+      description: 'Builds the text screen readers announce.',
+      type: '(formattedValue, value) => string',
+    },
+  }}
+/>
+
+### ProgressValue
+
+<TypeTable
+  type={{
+    children: {
+      description: 'Renders the value yourself.',
+      type: '(formattedValue, value) => ReactNode',
+    },
+  }}
+/>
 
 ## API Reference
 

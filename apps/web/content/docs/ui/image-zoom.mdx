@@ -1,0 +1,92 @@
+---
+title: Image Zoom
+description: Click an image and it grows from its spot on the page to fill the screen. Drag or flick it away to close.
+icon: ZoomIn
+---
+
+## Preview
+
+<Preview name="image-zoom" />
+
+## Usage
+
+```ts
+import { ImageZoom } from '@vitnode/core/components/ui/image-zoom'
+```
+
+```tsx
+<ImageZoom
+  alt="The VitNode AdminCP dashboard"
+  imageClassName="w-full rounded-md border"
+  src="/screenshots/dashboard.webp"
+/>
+```
+
+Click the image, or focus it and press <kbd>Enter</kbd>, and it glides to the
+middle of the screen. Click anywhere, press <kbd>Escape</kbd> or hit × to send
+it back.
+
+## Drag to dismiss
+
+Grab the zoomed image and drag or flick it in any direction to close. Let go
+early and it springs back to the middle. The backdrop fades as you drag, so you
+can see where you're headed.
+
+## Sharper zoom
+
+Show a light thumbnail and load the big file only on zoom:
+
+```tsx
+<ImageZoom
+  alt="The VitNode AdminCP dashboard"
+  src={thumbnail}
+  zoomSrc={fullSize}
+/>
+```
+
+## Styling
+
+- `className` styles the clickable wrapper. Use it for layout and visibility,
+  like `hidden dark:block` for theme-specific screenshots.
+- `imageClassName` styles the image on the page.
+
+The zoomed image always fits the screen without cropping.
+
+## Accessibility
+
+- The image is a real button that opens a dialog.
+- `alt` is required. It labels the image and names the zoomed view.
+- Focus is trapped while zoomed and returns to the image on close.
+- Reduced motion zooms instantly. Reduced transparency swaps the blurred
+  backdrop for a solid one.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    src: {
+      description: 'The image shown on the page.',
+      type: 'string',
+      required: true,
+    },
+    alt: {
+      description: 'Describes the image, on the page and when zoomed.',
+      type: 'string',
+      required: true,
+    },
+    zoomSrc: {
+      description: 'A larger image for the zoomed view. Defaults to `src`.',
+      type: 'string',
+    },
+    className: {
+      description: 'Classes for the clickable wrapper.',
+      type: 'string',
+    },
+    imageClassName: {
+      description: 'Classes for the image on the page.',
+      type: 'string',
+    },
+  }}
+/>

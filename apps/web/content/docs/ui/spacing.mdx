@@ -1,0 +1,103 @@
+---
+title: Spacing & Layout
+description: VitNode's spacing and layout rules - the 4px Tailwind spacing scale, gap over space-*, grouping by proximity, container queries, and RTL-safe logical properties, shown live.
+icon: Ruler
+---
+
+Every gap, padding and margin in VitNode comes from one scale. Pick a step,
+never a pixel, and layouts line up on their own.
+
+## Spacing scale
+
+<Preview name="spacing-scale" className="*:max-w-full" />
+
+One unit is `0.25rem` (4px), so `p-4` is 16px and `gap-6` is 24px. Stay on the
+scale: `p-4`, never `p-[16px]`.
+
+## Gap, not space-\*
+
+<Preview name="spacing-gap-vs-space" className="*:max-w-full" />
+
+Hit **Add tags** until the rows wrap. `space-x-*` puts margins on children, so
+wrapped rows touch and hidden items leave holes. `gap-*` belongs to the parent
+and just works.
+
+```tsx
+<ul className="flex flex-wrap gap-2">{tags}</ul>
+```
+
+Never mix margin or padding with `gap` on the same element. One job, one tool.
+
+## Group by proximity
+
+<Preview name="spacing-proximity" className="*:max-w-full" />
+
+Distance is meaning. Things that belong together sit closer than things that
+don't: `gap-1` for a title and its hint, `gap-2` for a label and its input,
+`gap-8` between sections.
+
+## Cards bring their own padding
+
+<Preview name="spacing-card" className="*:max-w-full" />
+
+`Card` sets `--card-spacing` once (24px, or 16px with `size="sm"`) and every
+part reuses it. Don't pad the card again, use `CardHeader` and `CardContent`.
+
+## Responsive layout
+
+<Preview name="spacing-responsive" className="*:max-w-full" />
+
+Drag the handle. Container queries (`@container` + `@md:`) react to the box a
+component lives in, so the same widget works in a sidebar and a full page.
+
+Page layouts use viewport breakpoints, mobile first: write the phone layout,
+then add `sm:`, `md:`, `lg:` on top.
+
+| `sm`   | `md`   | `lg`   | `xl`   | `2xl`  |
+| ------ | ------ | ------ | ------ | ------ |
+| 640px  | 768px  | 1024px | 1280px | 1536px |
+
+`useIsMobile()` flips at `md` (768px), so CSS and JS agree on what a phone is.
+
+## Logical properties for RTL
+
+<Preview name="spacing-rtl" className="*:max-w-full" />
+
+Switch to `pl-` / `ml-` and watch the Arabic row break. `ps-`, `pe-`, `ms-`,
+`me-`, `start-` and `border-s` follow the reading direction, so one class list
+serves both.
+
+```tsx
+<div className="flex items-center gap-3 border-s-4 ps-3">
+  <ChevronRightIcon className="ms-auto rtl:rotate-180" />
+</div>
+```
+
+## Layout rules
+
+- `flex` and `grid` with `gap-*` for layout. No floats, and absolute
+  positioning only for real overlays.
+- Semantic alignment: `items-center`, `justify-between`, `self-end`.
+- Mobile first: the base class is the phone, prefixes add space.
+- `max-w-prose` (65ch) on long paragraphs, so lines stay easy to follow on a
+  wide monitor.
+
+## Related
+
+<Cards>
+  <Card
+    title="Typography"
+    href="/docs/ui/typography"
+    description="Font stack, type scale and text rules."
+  />
+  <Card
+    title="Colors"
+    href="/docs/ui/colors"
+    description="Semantic color tokens for text and surfaces."
+  />
+  <Card
+    title="Accessibility"
+    href="/docs/ui/accessibility"
+    description="Focus, contrast, touch targets and screen readers."
+  />
+</Cards>

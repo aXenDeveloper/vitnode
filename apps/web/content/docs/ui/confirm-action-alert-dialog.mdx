@@ -1,16 +1,11 @@
 ---
 title: Confirm Action Alert Dialog
-description: A dialog component for confirming destructive actions like delete operations, built on top of the Alert Dialog.
+description: A ready-made Alert Dialog that confirms deletes and other irreversible actions, with a loading state and error handling built in.
+icon: ShieldAlert
 ---
 
-The Confirm Action Alert Dialog is a specialized dialog component built on top of the [Alert Dialog](/docs/ui/alert-dialog) that provides a consistent way to confirm potentially destructive or irreversible actions before they're executed.
-
-It's particularly useful for:
-
-- Deleting items (e.g., categories, posts, users)
-- Performing actions that cannot be undone (e.g., clearing data, resetting settings)
-- Confirming critical operations (e.g., account deletion, data migration)
-- Any action where user confirmation is necessary to prevent accidental execution
+An [Alert Dialog](/docs/ui/alert-dialog) with the boring parts done: async
+submit, spinner, locked Cancel, and a dialog that stays open when things fail.
 
 ## Preview
 
@@ -19,67 +14,97 @@ It's particularly useful for:
 ## Usage
 
 ```tsx
-import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog';
-import { Button } from '@vitnode/core/components/ui/button';
+import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog'
+import { Button } from '@vitnode/core/components/ui/button'
 ```
 
 ```tsx
 <ConfirmActionAlertDialog
+  icon={<Trash2Icon />}
   onSubmit={async ({ onClose }) => {
-    const result = await deleteCategoryApi(id);
-
-    if (result?.error) {
-      toast.error(tGlobal('errors.title'), {
-        description: tGlobal('errors.internal_server_error'),
-      });
-      return; // Keep dialog open on error
-    }
-
-    toast.success(t('success'), {
-      description: title,
-    });
-    onClose(); // Close dialog on success
+    await deleteCategory(id)
+    onClose()
   }}
+  title="Delete General discussion?"
 >
-  <Button variant="destructive">Delete Category</Button>
+  <Button variant="destructive">Delete category</Button>
 </ConfirmActionAlertDialog>
+```
+
+The child becomes the trigger. Passing an `icon` switches to the compact,
+centered layout.
+
+## Async and errors
+
+<Preview name="confirm-action-alert-dialog-async" />
+
+While `onSubmit` runs, the confirm button spins and Cancel is locked. Nothing
+closes until you call `onClose()`, so on an error just show a toast and return.
+
+```tsx
+onSubmit={async ({ onClose }) => {
+  const result = await deleteCategoryApi(id)
+
+  if (result?.error) {
+    toast.error(tGlobal('errors.title'), {
+      description: tGlobal('errors.internal_server_error'),
+    })
+
+    return
+  }
+
+  toast.success(t('success'), { description: title })
+  onClose()
+}}
 ```
 
 ## Props
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
-    children: {
-      description:
-        'The trigger element that opens the dialog. This should be a button or clickable element.',
-      type: 'ReactNode',
+    onSubmit: {
+      description: 'Runs on confirm. Call `onClose` to close the dialog.',
+      type: '(params: { onClose: () => void }) => Promise<void> | void',
       required: true,
     },
-    onSubmit: {
-      description:
-        'Function called when the user confirms the action. Receives an object with `onClose` callback.',
-      type: '(params: { onClose: () => void }) => Promise<void>',
-      required: true,
+    children: {
+      description: 'The trigger. Leave it out when you control `open`.',
+      type: 'ReactElement',
     },
     title: {
-      description:
-        'Custom title for the dialog. Defaults to translated "Are you sure?"',
-      type: 'string',
-      default: 'Are you sure?',
+      description: 'Dialog title.',
+      type: 'ReactNode',
+      default: '"Are you sure?"',
     },
     description: {
-      description:
-        'Custom description explaining what will happen when the action is confirmed.',
+      description: 'What happens on confirm.',
       type: 'ReactNode',
-      default: 'This action cannot be undone.',
+      default: '"This action cannot be undone."',
+    },
+    icon: {
+      description:
+        'Icon above the title. Switches to the compact, centered layout.',
+      type: 'ReactNode',
     },
     textSubmit: {
-      description:
-        'Custom text for the submit button. Defaults to translated "Confirm".',
+      description: 'Confirm button text.',
       type: 'string',
-      default: 'Confirm',
+      default: '"Yes, confirm"',
+    },
+    submitVariant: {
+      description:
+        'Confirm button variant. `destructive` also tints the icon tile red.',
+      type: 'Button["variant"]',
+      default: '"destructive"',
+    },
+    finalFocus: {
+      description: 'Where focus goes after the dialog closes.',
+      type: 'AlertDialogContent["finalFocus"]',
     },
   }}
 />
+
+It also takes every `AlertDialog` prop, such as `open` and `onOpenChange`.
+Default texts are translated.

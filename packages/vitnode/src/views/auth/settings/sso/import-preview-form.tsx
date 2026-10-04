@@ -212,7 +212,7 @@ export const ImportPreviewForm = ({
 
   return (
     <AutoForm
-      className="flex flex-col gap-4 space-y-0"
+      className="flex flex-col gap-4"
       fields={selectable.map(field => ({
         component: props => (
           <AutoFormCheckbox

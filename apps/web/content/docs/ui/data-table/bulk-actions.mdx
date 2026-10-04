@@ -1,0 +1,106 @@
+---
+title: Bulk Actions
+description: Tick a few rows and act on all of them at once from a floating bar.
+icon: CheckCheck
+---
+
+## Preview
+
+<Preview name="data-table-bulk-actions" withoutBackground />
+
+## Usage
+
+Passing `bulkActions` turns selection on. Each row gets a checkbox, and the
+header checkbox ticks the whole page. While anything is ticked, a bar floats at
+the bottom of the viewport with the count, your actions and a clear button.
+
+```tsx
+<ContentDataTable
+  id="users-table"
+  // [!code ++]
+  bulkActions={<DeleteBulkAction />}
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+Actions render inside the bar, so they read the ticked ids with
+`useDataTableSelection()`. No props to thread through.
+
+```tsx title="delete-bulk-action.tsx"
+import { useDataTableSelection } from '@vitnode/core/components/table/selection'
+import { Button } from '@vitnode/core/components/ui/button'
+
+export const DeleteBulkAction = () => {
+  const { clear, selected } = useDataTableSelection()
+
+  return (
+    <Button
+      onClick={async () => {
+        await deleteUsers(selected)
+        clear()
+      }}
+      variant="destructive"
+    >
+      <Trash2Icon />
+      Delete
+    </Button>
+  )
+}
+```
+
+## Selection is per page
+
+Selection only covers the rows on screen. When paging, search or a filter
+brings different rows, ticks on rows that left are dropped. A bulk action never
+touches a row nobody can see.
+
+After a partial success, revalidate. Rows that were refused stay on screen and
+stay ticked, so the bar points at the work that's left.
+
+<Callout type="warn" title="There is no bulk endpoint">
+  `bulkActions` hands you ids, nothing more. If your action loops a single-row
+  endpoint, cap the fan-out and report outcomes per reason, so a partial success
+  can say so.
+</Callout>
+
+## useDataTableSelection
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    selected: {
+      description: 'Ticked row ids, in the order they were ticked.',
+      type: 'number[]',
+    },
+    isSelected: {
+      description: 'Whether one row is ticked.',
+      type: '(id: number) => boolean',
+    },
+    allSelected: {
+      description: 'Every row on the page is ticked.',
+      type: 'boolean',
+    },
+    someSelected: {
+      description: 'Some but not all rows are ticked.',
+      type: 'boolean',
+    },
+    toggle: {
+      description: 'Ticks or unticks one row.',
+      type: '(id: number) => void',
+    },
+    toggleAll: {
+      description: 'Ticks or unticks every row on the page.',
+      type: '(next: boolean) => void',
+    },
+    clear: {
+      description: 'Unticks everything and hides the bar.',
+      type: '() => void',
+    },
+  }}
+/>
+
+The hook throws outside a table with `bulkActions`.

@@ -1,6 +1,7 @@
 ---
 title: Textarea
-description: Input for multi-line text input.
+description: A multi-line text input that grows with its content, for bios, replies and descriptions, with AutoForm validation or as a plain field.
+icon: NotepadText
 ---
 
 ## Preview
@@ -9,21 +10,19 @@ description: Input for multi-line text input.
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
-```
+```tsx
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea'
+import { z } from 'zod'
 
-```ts
 const formSchema = z.object({
-  desc: z.string().min(10, "Description must be at least 10 characters"),
-});
+  about: z.string().min(10, 'At least 10 characters').max(500).default(''),
+})
 ```
 
 ```tsx
@@ -31,13 +30,12 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "desc",
-      component: props => (
+      id: 'about',
+      component: (props) => (
         <AutoFormTextarea
           {...props}
-          description="Write a short description of your application."
-          placeholder="My application is..."
-          label="Description"
+          label="About"
+          description="Shown on your community's home page."
         />
       ),
     },
@@ -46,41 +44,78 @@ const formSchema = z.object({
 ```
 
   </Tab>
-
   <Tab value="Manual">
-```ts
-import { Textarea } from '@vitnode/core/components/ui/textarea';
+
+```tsx
+import { Textarea } from '@vitnode/core/components/ui/textarea'
 ```
 
 ```tsx
-<Textarea />
+<Textarea aria-label="Reply" placeholder="Keep it kind." />
 ```
 
   </Tab>
 </Tabs>
 
+## States
+
+<Preview name="textarea-states" />
+
+The textarea grows with its content (`field-sizing: content`), starting at
+`min-h-16`. Add `max-h-*` to cap it. Set `aria-invalid` for the error style and `disabled` to dim it.
+
+```tsx
+<Textarea aria-invalid aria-describedby="report-error" id="report" />
+```
+
+## Character counter
+
+Pass `InputGroupAddon` children to `AutoFormTextarea` for a footer, like a
+live counter. See [Input Group](/docs/ui/input-group#with-autoform).
+
+## Multi-language
+
+`multiLang` works here too. A language select appears next to the label. See
+[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
+
+```tsx
+<AutoFormTextarea {...props} label="Rules" multiLang />
+```
+
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+`AutoFormTextarea` also accepts every native `<textarea>` prop.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description:
-        "The label for the input field. This is displayed above the input.",
-      type: "string",
-      default: "",
+      description: 'Shown above the textarea.',
+      type: 'ReactNode',
+    },
+    labelRight: {
+      description: "Content pinned to the label's right edge.",
+      type: 'ReactNode',
     },
     description: {
-      description:
-        "A short description of the input field. This is displayed below the input.",
-      type: "string",
-      default: "",
+      description: "Shown below. Defaults to the schema's `.describe()`.",
+      type: 'ReactNode',
     },
     placeholder: {
-      description: "Placeholder text to display when the input is empty.",
-      type: "string",
-      default: "",
+      description: 'Hint shown while empty.',
+      type: 'string',
+    },
+    multiLang: {
+      description:
+        'Collect one value per language as `{ languageCode, value }[]`.',
+      type: 'boolean',
+      default: 'false',
+    },
+    children: {
+      description:
+        '`InputGroupAddon` elements, rendered inside an input group.',
+      type: 'ReactNode',
     },
   }}
 />

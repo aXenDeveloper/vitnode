@@ -8,7 +8,7 @@ import {
 
 export default function TabsDemo() {
   return (
-    <Tabs className="w-full" defaultValue="overview">
+    <Tabs className="not-prose w-full" defaultValue="overview">
       <TabsList className="w-full">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="activity">Activity</TabsTrigger>

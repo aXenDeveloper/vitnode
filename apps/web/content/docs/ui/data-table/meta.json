@@ -1,0 +1,13 @@
+{
+  "title": "Data Table",
+  "icon": "Table",
+  "pages": [
+    "index",
+    "search",
+    "filters",
+    "pagination",
+    "bulk-actions",
+    "expandable-rows",
+    "draggable-rows"
+  ]
+}

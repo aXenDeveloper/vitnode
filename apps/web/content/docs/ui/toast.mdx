@@ -1,0 +1,141 @@
+---
+title: Toast
+description: Short notifications that pop into the top-right corner, with five variants, actions, avatars, message toasts and promise states.
+icon: BellRing
+---
+
+## Preview
+
+<Preview name="toast" />
+
+## Usage
+
+VitNode mounts the toaster for you. Call `toast` from
+[Sonner](https://sonner.emilkowal.ski/):
+
+```ts
+import { toast } from 'sonner'
+
+toast.success('Post published', {
+  description: 'Your reply is live in "Login fails after reset".',
+})
+```
+
+## Variants
+
+A variant tints the icon, title and action button. The card stays neutral.
+
+```ts
+toast('Thread moved')
+toast.info('Maintenance tonight')
+toast.success('Post published')
+toast.warning('Running low on storage')
+toast.error('Could not save the post')
+```
+
+- `success`: it worked the way the user hoped.
+- `info`: good to know, nothing to worry about.
+- `warning`: nothing broke yet, but take a look.
+- `error`: it failed. Say what to do next in the `description`.
+
+After a create, edit or delete, always add a `description` saying what changed.
+
+## Actions
+
+<Preview name="toast-action" />
+
+`action` adds a button in the variant's colour. `cancel` adds a quieter second
+one.
+
+```ts
+toast('Thread archived', {
+  action: { label: 'Undo', onClick: () => restoreThread(id) },
+})
+```
+
+## Avatars and messages
+
+<Preview name="toast-avatar" />
+
+`ToastAvatar` swaps the icon for a picture, for things a person did. Without a
+`src`, or while loading, it shows the first letter of `alt`. Any element works
+as `icon`.
+
+```tsx
+import { ToastAvatar, ToastMessage } from '@vitnode/core/components/ui/sonner'
+
+toast('Ada Lovelace invited you', {
+  icon: <ToastAvatar alt="Ada Lovelace" src={user.avatarUrl} />,
+})
+```
+
+For replies, mentions and DMs, render `ToastMessage` with `toast.custom`. It
+lays out avatar, sender, time, text and buttons. Give it a longer `duration`:
+people need time to read and decide.
+
+```tsx
+toast.custom(
+  (id) => (
+    <ToastMessage
+      actions={[
+        {
+          label: 'Dismiss',
+          onClick: () => toast.dismiss(id),
+          variant: 'outline',
+        },
+        { label: 'Reply', onClick: () => openReply(message) },
+      ]}
+      avatar={{ alt: 'Alex Johnson', src: user.avatarUrl }}
+      description="Hey! I've finished the design review."
+      time="2m ago"
+      title="Alex Johnson"
+    />
+  ),
+  { duration: 10000 },
+)
+```
+
+## Promises
+
+<Preview name="toast-promise" />
+
+`toast.promise` spins while the promise runs, then switches to success or error.
+
+```ts
+toast.promise(publishArticle(), {
+  loading: 'Publishing your article...',
+  success: 'Article published',
+  error: 'Could not publish the article',
+})
+```
+
+## Placement and styles
+
+Toasts live in the **top-right** corner and stretch full width on phones.
+`VitNodeRootProviders` in `src/routes/__root.tsx` takes a `toaster` prop to
+move them (`top-left`, `top-center`, `bottom-left`, `bottom-center`,
+`bottom-right`):
+
+```tsx
+<VitNodeRootProviders config={config} toaster={{ position: 'bottom-center' }}>
+  {children}
+</VitNodeRootProviders>
+```
+
+Pass `classNames` to restyle one toast. Your classes merge with the defaults:
+
+```ts
+toast('Saved', { classNames: { title: 'font-semibold' } })
+```
+
+## Accessibility
+
+- Toasts are announced through a polite live region.
+- Hovering pauses the timer. <kbd>Alt</kbd> + <kbd>T</kbd> jumps to the toasts.
+- The close button shows on hover and focus, always on touch, with a hit area
+  up to 44px.
+- Every variant has its own icon, so colour is never the only signal.
+
+## Documentation
+
+[Sonner Documentation](https://sonner.emilkowal.ski/)

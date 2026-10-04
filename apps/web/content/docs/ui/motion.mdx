@@ -1,0 +1,111 @@
+---
+title: Motion
+description: VitNode's motion rules - instant press feedback, the ease-fluid curve, interruptible transitions, critically damped springs, trigger-aware origins and reduced motion, shown live.
+icon: Wind
+---
+
+Motion in VitNode answers one question: _where did that come from, and where
+did it go?_ Everything reacts on press, moves along a real path and can change
+its mind halfway. Nothing bounces for fun.
+
+## Respond on press
+
+<Preview name="motion-press" className="*:max-w-full" />
+
+A press shows up in under 150ms, or it feels broken. `Button` dips to
+`active:scale-97`; tiny targets like `Checkbox` go further, to `scale-90`, so
+the dip is still visible under a thumb.
+
+## Easing
+
+<Preview name="motion-easing" className="*:max-w-full" />
+
+`ease-fluid` starts at full speed and spends its time settling, so the UI looks
+like it moved the instant you asked. `ease-in` waits before reacting, which
+feels like lag. `linear` is for progress bars and spinners only.
+
+```css
+--ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+```
+
+## Timing
+
+| What                           | Enter   | Exit    |
+| ------------------------------ | ------- | ------- |
+| Tooltip, popover, menu         | 150ms   | 100ms   |
+| Dialog, alert dialog           | 200ms   | 150ms   |
+| Sheet, drawer, big panels      | 300ms   | 200ms   |
+| Press feedback, hover, toggles | ≤ 150ms | ≤ 150ms |
+
+Exits are shorter than entrances: once you're done with something, it should
+get out of the way.
+
+## Interruptible
+
+<Preview name="motion-interruptible" className="*:max-w-full" />
+
+A transition always starts from wherever the element is right now, so it can
+reverse mid-flight. A keyframe animation restarts from frame one. VitNode
+overlays use transitions keyed on Base UI's `data-starting-style` and
+`data-ending-style` instead of `@keyframes`.
+
+```tsx
+<div className="ease-fluid transition-[opacity,scale] duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 motion-reduce:transition-none" />
+```
+
+## Springs
+
+<Preview name="motion-spring" className="*:max-w-full" />
+
+When a component needs a spring (`Switch`, `ToggleGroup`, `Combobox` chips), it
+uses `motion/react` with a critically damped spring: fast, no wobble. Save
+`bounce` for when a gesture carried momentum into the release, like flinging a
+drawer away.
+
+```tsx
+const SPRING = { type: 'spring', duration: 0.3, bounce: 0 } as const
+
+<m.span layout transition={shouldReduceMotion ? { duration: 0 } : SPRING} />
+```
+
+## Grow from the trigger
+
+<Preview name="motion-origin" className="*:max-w-full" />
+
+Popovers, menus and tooltips scale out of their trigger with
+`origin-(--transform-origin)`, which Base UI sets from the side and alignment.
+Leave and return along the same path: a sheet slides back to the edge it came
+from.
+
+## Reduced motion
+
+<Preview name="motion-reduced" className="*:max-w-full" />
+
+With reduced motion on, slides become crossfades and springs run with
+`duration: 0`. Fading is fine, travel isn't. CSS gets `motion-reduce:`, motion
+code reads `useReducedMotion()`, and frosted surfaces drop their blur with
+`reduced-transparency:`.
+
+```tsx
+<div className="bg-background/80 backdrop-blur-md motion-reduce:transition-none reduced-transparency:bg-background reduced-transparency:backdrop-blur-none" />
+```
+
+## Related
+
+<Cards>
+  <Card
+    title="Accessibility"
+    href="/docs/ui/accessibility"
+    description="Focus, labels, contrast and user preferences."
+  />
+  <Card
+    title="Elevation"
+    href="/docs/ui/elevation"
+    description="Surfaces, shadows and how layers stack."
+  />
+  <Card
+    title="Colors"
+    href="/docs/ui/colors"
+    description="Semantic color tokens for text and surfaces."
+  />
+</Cards>

@@ -144,13 +144,24 @@
     "global": {
       "close": "Close",
       "confirm": "Confirm",
+      "clear": "Clear",
+      "comparison_slider": "Comparison slider",
+      "copy": "Copy",
+      "decrease": "Decrease",
+      "increase": "Increase",
+      "copied": "Copied",
+      "copy_failed": "Couldn't copy to the clipboard. Try selecting the text instead.",
+      "more_count": "+{count} more",
       "previous": "Previous",
       "next": "Next",
       "current_page": "Current page",
       "go_to_page": "Go to page",
       "previous_page": "Previous page",
+      "more_pages": "More pages",
+      "pagination": "Pagination",
       "next_page": "Next page",
       "remove": "Remove",
+      "remove_named": "Remove {name}",
       "editor": {
         "paragraph": "Paragraph",
         "heading": "Heading {level}",
@@ -332,12 +343,26 @@
       },
       "search_placeholder": "Search...",
       "results_not_found": "No results found",
-      "selected_count": "{count} selected",
+      "selected_count": "<number>{count}</number> selected",
       "clear_filters": "Clear filters",
       "data_table": {
         "select_all": "Select all rows",
         "select_row": "Select row",
-        "clear_selection": "Clear selection"
+        "clear_selection": "Clear selection",
+        "expand_row": "Expand row",
+        "collapse_row": "Collapse row",
+        "row_details": "Row details",
+        "reorder_column": "Reorder",
+        "reorder_row": "Reorder {name}",
+        "row_fallback": "row {position}",
+        "reorder_instructions": "Press space bar or enter to pick up a row. Use the arrow keys to move it. Press space bar or enter again to drop it in its new place, or escape to cancel.",
+        "reorder_started": "Picked up {name}. It is in place {position} of {total}.",
+        "reorder_over": "{name} moved to place {position} of {total}.",
+        "reorder_ended": "Dropped {name} in place {position} of {total}.",
+        "reorder_cancelled": "Reordering cancelled. {name} is back in place {position} of {total}.",
+        "reorder_unavailable": "Clear the search, filters and sorting to reorder rows.",
+        "reorder_failed": "Could not save the new order",
+        "reorder_failed_desc": "The rows are back where they were. Try again in a moment."
       },
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
@@ -356,6 +381,7 @@
       "select_options": "Select options",
       "select_language": "Select language",
       "pick_color": "Pick a color",
+      "color_value": "Color value",
       "color_presets": {
         "label": "Preset colors",
         "default": "Default",
@@ -393,7 +419,8 @@
         "hint_emoji": "Pick an emoji",
         "hint_icon": "Pick an icon",
         "no_icons": "No icons found.",
-        "loading_icons": "Loading icons…"
+        "loading_icons": "Loading icons…",
+        "skin_tone": "Skin tone"
       },
       "icon_picker": {
         "placeholder": "Pick an icon",
@@ -423,8 +450,18 @@
           "too_large": "That file is {size}. The maximum is {max}.",
           "wrong_format": "\"{value}\" is not an accepted format. Accepted: {formats}.",
           "named": "{name}: {message}",
-          "too_many": "\"{name}\" was not added - this field holds at most {max} files."
-        }
+          "too_many": "\"{name}\" was not added - this field holds at most {max} files.",
+          "upload_failed": "The upload did not finish. Check your connection and try again."
+        },
+        "cancel_upload": "Cancel upload",
+        "cancel_upload_named": "Cancel uploading {name}",
+        "upload_progress_named": "Uploading {name}",
+        "retry": "Try again",
+        "retry_named": "Try uploading {name} again",
+        "dismiss_named": "Dismiss {name}",
+        "removed": "File removed",
+        "removed_desc": "{name} is out of this field. Changed your mind? Undo it.",
+        "undo": "Undo"
       },
       "go_to_prev_page": "Go to previous page",
       "go_to_next_page": "Go to next page",
@@ -485,7 +522,8 @@
       },
       "showing_range": "Showing {from}–{to} of {total}",
       "rows_per_page": "Rows per page",
-      "page_of": "Page {page} of {total}"
+      "page_of": "Page {page} of {total}",
+      "tab_has_errors": "Has errors"
     },
     "navigation": {
       "discover": {
@@ -1087,6 +1125,29 @@
           "title": "This record changed",
           "desc": "Someone saved it after this page loaded, so it was not deleted. Refresh the list, check what changed, and delete it again if you still want to."
         }
+      },
+      "bulk": {
+        "publish": {
+          "title": "Publish {count} {name}",
+          "desc": "{count, plural, one {It becomes} other {They become}} visible to everyone.",
+          "confirm": "Yes, publish",
+          "success": "{count} {name} published."
+        },
+        "unpublish": {
+          "title": "Unpublish {count} {name}",
+          "desc": "{count, plural, one {It disappears from public pages but is} other {They disappear from public pages but are}} not deleted.",
+          "confirm": "Yes, unpublish",
+          "success": "{count} {name} unpublished."
+        },
+        "delete": {
+          "title": "Delete {count} {name}",
+          "desc": "{count, plural, one {It is} other {They are}} gone for good. This action cannot be undone.",
+          "confirm": "Yes, delete",
+          "success": "{count} {name} deleted."
+        },
+        "conflict": "{count, plural, one {# was skipped: someone changed it, or other content still needs it.} other {# were skipped: someone changed them, or other content still needs them.}}",
+        "failed": "{count} could not be updated. Try again.",
+        "more": "+{count} more"
       },
       "publish": {
         "title": "Publish {name}",

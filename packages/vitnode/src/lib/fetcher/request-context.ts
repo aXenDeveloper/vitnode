@@ -16,6 +16,29 @@ export interface ForwardedRequestContext {
   userAgent?: null | string;
 }
 
+export const resolveVisitorIp = ({
+  forwardedFor,
+  socketAddress,
+  trustedProxyHops,
+}: {
+  forwardedFor?: null | string;
+  socketAddress?: string;
+  trustedProxyHops: number;
+}): string | undefined => {
+  if (!socketAddress) return undefined;
+  if (trustedProxyHops <= 0) return socketAddress;
+
+  const hops = [
+    ...(forwardedFor ?? "")
+      .split(",")
+      .map(hop => hop.trim())
+      .filter(hop => hop.length > 0),
+    socketAddress,
+  ];
+
+  return hops[Math.max(hops.length - 1 - trustedProxyHops, 0)];
+};
+
 export const buildForwardedHeaders = ({
   captchaToken,
   cookie,

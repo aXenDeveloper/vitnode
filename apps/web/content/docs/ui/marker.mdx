@@ -1,0 +1,151 @@
+---
+title: Marker
+description: Inline status lines, system notes, bordered rows and labeled separators for chat threads and activity feeds.
+icon: Flag
+---
+
+<Preview name="marker" />
+
+## Usage
+
+```ts
+import {
+  Marker,
+  MarkerContent,
+  MarkerIcon,
+} from '@vitnode/core/components/ui/marker'
+```
+
+```tsx
+<Marker>
+  <MarkerIcon>
+    <Search />
+  </MarkerIcon>
+  <MarkerContent>Explored 4 files</MarkerContent>
+</Marker>
+```
+
+A marker is the quiet line between messages: "Switched branch", "Today",
+"Thinking...". It pairs well with [Bubble](/docs/ui/bubble) in a chat thread.
+
+## Variants
+
+<Preview name="marker-variants" />
+
+`default` is an inline note. `separator` centers a label between two lines.
+`border` adds a line under the row.
+
+```tsx
+<Marker variant="separator">
+  <MarkerContent>Yesterday</MarkerContent>
+</Marker>
+```
+
+Keep separator labels short. The lines only get the space the label leaves.
+
+## Tones
+
+<Preview name="marker-tones" />
+
+Set `tone` when the note carries good or bad news. Colors match `Alert` and
+`Badge`, mixed toward the foreground to stay readable in both themes.
+
+```tsx
+<Marker tone="success">
+  <MarkerIcon>
+    <CircleCheck />
+  </MarkerIcon>
+  <MarkerContent>Build passed</MarkerContent>
+</Marker>
+```
+
+Color is a bonus, not the message. Pair it with an icon or words.
+
+## Stacked icon
+
+<Preview name="marker-stacked" />
+
+`MarkerIcon` sizes any icon to the text. Add `flex-col` to put it above the
+text.
+
+```tsx
+<Marker className="flex-col">...</Marker>
+```
+
+## Status and shimmer
+
+For work in progress, set `role="status"`, put a `Spinner` in the icon slot and
+add the `shimmer` utility to the text. See the last line of the preview.
+
+```tsx
+<Marker role="status">
+  <MarkerIcon>
+    <Spinner />
+  </MarkerIcon>
+  <MarkerContent className="shimmer">Thinking...</MarkerContent>
+</Marker>
+```
+
+## Links and buttons
+
+Pass `render` to turn the marker into a link or a button. Links get an
+underline for free.
+
+```tsx
+<Marker render={<a href="/admin/plugins" />}>
+  <MarkerContent>View installed plugins</MarkerContent>
+</Marker>
+
+<Marker
+  render={<button className="hover:text-foreground" onClick={revert} type="button" />}
+>
+  <MarkerContent>Revert this change</MarkerContent>
+</Marker>
+```
+
+## Accessibility
+
+- A marker is a plain `div`. Add `role="status"` for live progress, `render` an
+  `a` or `button` when it's clickable, and nothing for a plain note.
+- Don't add `role="separator"` to a labeled separator. It would hide the label
+  from assistive tech. The lines are decorative pseudo-elements.
+- `MarkerIcon` is `aria-hidden`. Give an icon-only marker an `aria-label`.
+- Wrap a thread in `role="log"` so new messages and markers are announced in
+  order.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### Marker
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'How the marker sits between content.',
+      type: 'default | separator | border',
+      default: 'default',
+    },
+    tone: {
+      description: 'Text color, shared with Alert and Badge.',
+      type: 'neutral | info | success | warning | destructive',
+      default: 'neutral',
+    },
+    render: {
+      description: 'Replaces the root element, such as an `a` or `button`.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
+    },
+    role: {
+      description: 'Use `status` for live progress.',
+      type: 'AriaRole',
+    },
+  }}
+/>
+
+### MarkerIcon and MarkerContent
+
+Both render a `span` and take every `span` prop.
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

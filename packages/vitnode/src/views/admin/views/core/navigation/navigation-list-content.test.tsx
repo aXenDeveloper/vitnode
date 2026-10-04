@@ -11,10 +11,8 @@ import type { NavigationPreset } from "../../../../../lib/navigation";
 import type { AdminNavigationItem } from "./navigation-query";
 
 import { AdminStaffPermissionProvider } from "../../../../../components/staff-permission/provider";
-import {
-  NavigationAdminListContent,
-  usedNavigationPresetKeys,
-} from "./navigation-list-content";
+import { usedNavigationPresetKeys } from "./navigation-availability";
+import { NavigationAdminListContent } from "./navigation-list-content";
 
 const at = new Date("2026-09-20T10:00:00Z");
 

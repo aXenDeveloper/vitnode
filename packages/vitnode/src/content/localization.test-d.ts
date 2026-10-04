@@ -304,17 +304,16 @@ describe("localization", () => {
       });
     });
 
-    it("still rejects a localized field as a searchable one", () => {
+    it("accepts a localized field as a searchable one", () => {
       defineContentType({
-        id: "test.badsearch",
-        tableName: "test_bad_searches",
+        id: "test.localizedsearch",
+        tableName: "test_localized_searches",
         localization: { enabled: true, defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),
         },
         admin: {
-          // @ts-expect-error - an admin list search is a predicate on the row.
           list: { searchableFields: ["title"] },
         },
       });

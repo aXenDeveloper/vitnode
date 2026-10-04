@@ -8,8 +8,8 @@ import { colorToHslString } from "@/lib/colors";
 import { Button } from "./button";
 import { ColorPresetPicker } from "./color-preset-picker";
 import { Input } from "./input";
-import { Loader } from "./loader";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Spinner } from "./spinner";
 
 // react-colorful only ships in the bundle once the picker is actually opened.
 const HslStringColorPicker = React.lazy(async () => ({
@@ -59,17 +59,21 @@ export const ColorPicker = ({
         <React.Suspense
           fallback={
             <div className="flex size-50 items-center justify-center">
-              <Loader />
+              <div className="flex items-center justify-center">
+                <Spinner size="xl" />
+              </div>
             </div>
           }
         >
           <HslStringColorPicker
+            className="[&_.react-colorful\_\_last-control]:rounded-b-md! [&_.react-colorful\_\_saturation]:rounded-t-md!"
             color={colorToHslString(value) ?? FALLBACK_PICKER_COLOR}
             onChange={onChange}
           />
         </React.Suspense>
 
         <Input
+          aria-label={t("color_value")}
           className="w-full"
           onChange={event => onChange?.(event.target.value)}
           placeholder={placeholder ?? "hsl(215, 81%, 52%)"}

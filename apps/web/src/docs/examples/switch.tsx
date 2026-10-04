@@ -1,28 +1,36 @@
 import { AutoForm } from '@vitnode/core/components/form/auto-form'
 import { AutoFormSwitch } from '@vitnode/core/components/form/fields/switch'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 export default function SwitchExample() {
   const formSchema = z.object({
-    acceptTerms: z.boolean().refine((val) => val, {
-      message: 'You must accept the terms and conditions',
-    }),
+    maintenance: z.boolean().default(false),
   })
 
   return (
     <AutoForm
+      className="w-full"
       fields={[
         {
-          id: 'acceptTerms',
+          id: 'maintenance',
           component: (props) => (
             <AutoFormSwitch
-              label="I accept the terms and conditions"
               {...props}
+              description="Only staff can browse the community while it's on."
+              label="Maintenance mode"
             />
           ),
         },
       ]}
       formSchema={formSchema}
+      onSubmit={(values) => {
+        toast.success('Settings saved', {
+          description: values.maintenance
+            ? 'Maintenance mode is on.'
+            : 'Your community is open.',
+        })
+      }}
     />
   )
 }

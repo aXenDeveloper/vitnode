@@ -1,0 +1,155 @@
+---
+title: Page Title
+description: The page header with a heading, optional subtitle, description and back link, plus room for actions.
+icon: Heading
+---
+
+## Preview
+
+<Preview className="*:max-w-3xl" name="page-title" />
+
+## Usage
+
+```ts
+import { PageTitle } from '@vitnode/core/components/ui/page-title'
+```
+
+```tsx
+<PageTitle desc="Group users and decide what each group can do." h1="Roles">
+  <Button>
+    <PlusIcon />
+    Create role
+  </Button>
+</PageTitle>
+```
+
+`children` become actions on the right. On phones everything stacks and the
+actions go full width. From `sm` up, heading left, actions right.
+
+## h1 or h2
+
+Pass exactly one of `h1` or `h2`. TypeScript complains about both or neither.
+
+- `h1` is the page heading (`text-2xl sm:text-3xl`). One per page.
+- `h2` is a section inside a page that already has an `h1`, like a settings
+  panel (`text-xl sm:text-2xl`).
+
+```tsx
+<PageTitle h2="Danger zone" />
+```
+
+The previews use `h2`, since this page already has an `h1`.
+
+## Subtitle
+
+<Preview className="*:max-w-3xl" name="page-title-subtitle" />
+
+A small muted line above the heading. Use it for where the page lives.
+
+```tsx
+<PageTitle
+  desc="Sign in faster with accounts you already have."
+  h1="Connected accounts"
+  subtitle="Settings"
+/>
+```
+
+## Back link
+
+<Preview className="*:max-w-3xl" name="page-title-back" />
+
+`back` adds an arrow link above the heading (and above `subtitle`). Good for
+edit and detail pages under a list. It's a TanStack Router `Link`, so it
+navigates client-side and preloads. The actions side stays free.
+
+```tsx
+<PageTitle
+  back={{ href: '/admin/core/users', label: 'Back to users' }}
+  desc="Edit the details shown on the public profile."
+  h1="Edit user"
+>
+  <Button>Save changes</Button>
+</PageTitle>
+```
+
+## Multiple actions
+
+<Preview className="*:max-w-3xl" name="page-title-actions" />
+
+Pass as many `children` as you need; they wrap on small screens. Keep one
+primary button and make the rest `outline` or `ghost`.
+
+```tsx
+<PageTitle
+  desc="Everything published on the site, newest first."
+  h1="Blog posts"
+>
+  <Button variant="outline">
+    <DownloadIcon />
+    Export
+  </Button>
+  <Button>
+    <PlusIcon />
+    New post
+  </Button>
+</PageTitle>
+```
+
+## Spacing
+
+`PageTitle` has a built-in `mb-6`. Drop it when the parent already uses `gap-*`:
+
+```tsx
+<div className="flex flex-col gap-4">
+  <PageTitle className="mb-0" h1="Devices" />
+  <DevicesList />
+</div>
+```
+
+## Accessibility
+
+- The heading is a real `h1` or `h2`, so it appears in heading navigation.
+- `subtitle` is a `p`, not a heading, so it stays out of the outline.
+- Give icon-only actions an `aria-label` or `sr-only` text.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    h1: {
+      description:
+        'Page heading, rendered as `h1`. Use `h1` or `h2`, not both.',
+      type: 'ReactNode',
+    },
+    h2: {
+      description: 'Section heading, rendered as a smaller `h2`.',
+      type: 'ReactNode',
+    },
+    subtitle: {
+      description: 'Small muted line above the heading.',
+      type: 'ReactNode',
+    },
+    desc: {
+      description: 'Muted text below the heading.',
+      type: 'ReactNode',
+    },
+    back: {
+      description: 'Arrow link above the heading.',
+      type: '{ href: string; label: ReactNode }',
+    },
+    children: {
+      description: 'Actions next to the heading.',
+      type: 'ReactNode',
+    },
+    className: {
+      description: 'Extra wrapper classes, for example `mb-0`.',
+      type: 'string',
+    },
+    ref: {
+      description: 'Ref callback for the wrapper `div`.',
+      type: 'RefCallback<HTMLDivElement>',
+    },
+  }}
+/>

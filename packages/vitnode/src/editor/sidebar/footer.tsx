@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
 import { cn } from "cn";
-import { EyeIcon, LogOutIcon, SaveIcon } from "lucide-react";
+import { EyeIcon, LogOutIcon, SaveIcon, Undo2Icon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
@@ -100,6 +100,7 @@ export const EditorSidebarFooter = (): ReactElement => {
 
         <ConfirmActionAlertDialog
           description={t("discard_confirm")}
+          icon={<Undo2Icon />}
           onSubmit={({ onClose }) => {
             discard();
             onClose();

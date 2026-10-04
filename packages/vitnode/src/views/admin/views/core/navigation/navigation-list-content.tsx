@@ -80,13 +80,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Loader } from "@/components/ui/loader";
 import {
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { SlidingNumber } from "@/components/ui/sliding-number";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
 import {
@@ -123,8 +124,6 @@ import {
   shiftNavigationItem,
   withoutNavigationChildrenOf,
 } from "./navigation-tree";
-
-export { usedNavigationPresetKeys } from "./navigation-create-dialog";
 
 const AdminNavigationFormContent = React.lazy(async () =>
   import("./navigation-form-content").then(module => ({
@@ -384,6 +383,137 @@ const NavigationRowMenu = ({
   );
 };
 
+const canOpenNavigationRowMenu = (
+  permissions: NavigationRowPermissions,
+  depth: NavigationDepth,
+): boolean =>
+  permissions.canEdit ||
+  permissions.canDelete ||
+  (permissions.canCreate && permissions.canNest && depth === 0);
+
+const NavigationRowLabel = ({
+  childCount,
+  isCollapsed,
+  item,
+  name,
+}: {
+  childCount: number;
+  isCollapsed: boolean;
+  item: AdminNavigationItem;
+  name: string;
+}) => {
+  const t = useTranslations("admin.navigation.list");
+  const isPreset = item.kind === "preset";
+  const isMissing = isPreset && item.preset === null;
+  const href = isPreset ? item.preset?.href : item.href;
+
+  return (
+    <>
+      <NavigationItemGlyph
+        className="text-muted-foreground shrink-0"
+        item={item}
+      />
+      <span
+        className={cn(
+          "truncate text-sm font-medium",
+          isMissing && "text-muted-foreground",
+        )}
+      >
+        {name}
+      </span>
+      {isCollapsed && childCount > 0 ? (
+        <Badge variant="secondary">
+          <SlidingNumber value={childCount} />
+        </Badge>
+      ) : null}
+      {item.isOpenInNewTab && !isMissing ? (
+        <ExternalLinkIcon
+          aria-label={t("opensInNewTab")}
+          className="text-muted-foreground size-3.5 shrink-0"
+          role="img"
+        />
+      ) : null}
+      <span className="text-muted-foreground ms-auto hidden max-w-xs min-w-0 truncate ps-4 font-mono text-xs lg:block">
+        {isMissing ? "—" : href}
+      </span>
+    </>
+  );
+};
+
+const NavigationRowExpander = ({
+  childCount,
+  depth,
+  isCollapsed,
+  name,
+  onToggle,
+}: {
+  childCount: number;
+  depth: NavigationDepth;
+  isCollapsed: boolean;
+  name: string;
+  onToggle: () => void;
+}) => {
+  const t = useTranslations("admin.navigation.list");
+
+  if (childCount === 0) {
+    return depth === 0 ? (
+      <span aria-hidden className="size-6 shrink-0" />
+    ) : null;
+  }
+
+  return (
+    <Button
+      aria-expanded={!isCollapsed}
+      aria-label={t(isCollapsed ? "showChildren" : "hideChildren", {
+        name,
+      })}
+      className="text-muted-foreground aria-expanded:bg-transparent pointer-coarse:size-10"
+      onClick={onToggle}
+      size="icon-xs"
+      type="button"
+      variant="ghost"
+    >
+      <ChevronRightIcon
+        className={cn(
+          "transition-transform duration-150 motion-reduce:transition-none",
+          !isCollapsed && "rotate-90",
+        )}
+      />
+    </Button>
+  );
+};
+
+const NavigationRowEditTarget = ({
+  canEdit,
+  children,
+  onEdit,
+}: {
+  canEdit: boolean;
+  children: React.ReactNode;
+  onEdit: () => void;
+}) => {
+  const t = useTranslations("admin.navigation.list");
+
+  if (!canEdit) {
+    return (
+      <span className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-1.5">
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      className="focus-visible:ring-ring/50 flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md px-1.5 text-start outline-none focus-visible:ring-3"
+      onClick={onEdit}
+      type="button"
+    >
+      <span className="sr-only">{t("edit")}</span>
+      {children}
+    </button>
+  );
+};
+
 const SortableNavigationRow = ({
   actions,
   childCount,
@@ -423,45 +553,6 @@ const SortableNavigationRow = ({
   });
 
   const { item } = entry;
-  const isPreset = item.kind === "preset";
-  const isMissing = isPreset && item.preset === null;
-  const href = isPreset ? item.preset?.href : item.href;
-  const hasMenu =
-    permissions.canEdit ||
-    permissions.canDelete ||
-    (permissions.canCreate && permissions.canNest && entry.depth === 0);
-
-  const label = (
-    <>
-      <NavigationItemGlyph
-        className="text-muted-foreground shrink-0"
-        item={item}
-      />
-      <span
-        className={cn(
-          "truncate text-sm font-medium",
-          isMissing && "text-muted-foreground",
-        )}
-      >
-        {name}
-      </span>
-      {isCollapsed && childCount > 0 ? (
-        <Badge className="tabular-nums" variant="secondary">
-          {childCount}
-        </Badge>
-      ) : null}
-      {item.isOpenInNewTab && !isMissing ? (
-        <ExternalLinkIcon
-          aria-label={t("opensInNewTab")}
-          className="text-muted-foreground size-3.5 shrink-0"
-          role="img"
-        />
-      ) : null}
-      <span className="text-muted-foreground ms-auto hidden max-w-xs min-w-0 truncate ps-4 font-mono text-xs lg:block">
-        {isMissing ? "—" : href}
-      </span>
-    </>
-  );
 
   return (
     <li
@@ -501,53 +592,35 @@ const SortableNavigationRow = ({
           </Button>
         ) : null}
 
-        {childCount > 0 ? (
-          <Button
-            aria-expanded={!isCollapsed}
-            aria-label={t(isCollapsed ? "showChildren" : "hideChildren", {
-              name,
-            })}
-            className="text-muted-foreground aria-expanded:bg-transparent pointer-coarse:size-10"
-            onClick={() => {
-              actions.onToggle(item.id);
-            }}
-            size="icon-xs"
-            type="button"
-            variant="ghost"
-          >
-            <ChevronRightIcon
-              className={cn(
-                "transition-transform duration-150 motion-reduce:transition-none",
-                !isCollapsed && "rotate-90",
-              )}
-            />
-          </Button>
-        ) : depth === 0 ? (
-          <span aria-hidden className="size-6 shrink-0" />
-        ) : null}
+        <NavigationRowExpander
+          childCount={childCount}
+          depth={depth}
+          isCollapsed={isCollapsed}
+          name={name}
+          onToggle={() => {
+            actions.onToggle(item.id);
+          }}
+        />
 
-        {permissions.canEdit ? (
-          <button
-            className="focus-visible:ring-ring/50 flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md px-1.5 text-start outline-none focus-visible:ring-3"
-            onClick={() => {
-              actions.onEdit(item.id);
-            }}
-            type="button"
-          >
-            <span className="sr-only">{t("edit")}</span>
-            {label}
-          </button>
-        ) : (
-          <span className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-1.5">
-            {label}
-          </span>
-        )}
+        <NavigationRowEditTarget
+          canEdit={permissions.canEdit}
+          onEdit={() => {
+            actions.onEdit(item.id);
+          }}
+        >
+          <NavigationRowLabel
+            childCount={childCount}
+            isCollapsed={isCollapsed}
+            item={item}
+            name={name}
+          />
+        </NavigationRowEditTarget>
 
         <span className="hidden w-32 shrink-0 truncate text-end sm:block">
           <NavigationSourceTag item={item} />
         </span>
 
-        {hasMenu ? (
+        {canOpenNavigationRowMenu(permissions, entry.depth) ? (
           <NavigationRowMenu
             actions={actions}
             entry={entry}
@@ -632,7 +705,13 @@ const NavigationEditSheetBody = ({
         <SheetDescription className="truncate">{name}</SheetDescription>
       </SheetHeader>
 
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
         <AdminNavigationFormContent
           data={item}
           items={items}

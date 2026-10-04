@@ -1,11 +1,11 @@
 ---
 title: Alert Dialog
-description: Display important messages to users in a modal dialog.
+description: A modal that interrupts for an important decision and only closes through one of its actions.
+icon: MessageSquareWarning
 ---
 
-A modal dialog that interrupts the user with important content and expects a
-response. Unlike a regular [Dialog](/docs/ui/dialog), it can only be dismissed
-through one of its actions.
+Unlike a [Dialog](/docs/ui/dialog), clicking outside does nothing. People
+answer with a button, or back out with <kbd>Escape</kbd>.
 
 ## Preview
 
@@ -24,28 +24,85 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@vitnode/core/components/ui/alert-dialog';
-import { Button } from '@vitnode/core/components/ui/button';
+} from '@vitnode/core/components/ui/alert-dialog'
+import { Button } from '@vitnode/core/components/ui/button'
 ```
 
 ```tsx
 <AlertDialog>
-  <AlertDialogTrigger render={<Button variant="outline">Show Dialog</Button>} />
+  <AlertDialogTrigger
+    render={<Button variant="destructive">Delete thread</Button>}
+  />
   <AlertDialogContent>
     <AlertDialogHeader>
-      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+      <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
       <AlertDialogDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
+        All 42 replies go with it. This can't be undone.
       </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction>Continue</AlertDialogAction>
+      <AlertDialogAction variant="destructive">Delete thread</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
 </AlertDialog>
 ```
+
+Both `AlertDialogAction` and `AlertDialogCancel` close the dialog. Put your
+logic in the action's `onClick`.
+
+## Icon and compact size
+
+<Preview name="alert-dialog-media" />
+
+`AlertDialogMedia` adds an icon tile. With `size="sm"` the dialog gets narrower,
+centers its text and splits the footer into two equal buttons.
+
+```tsx
+<AlertDialogContent size="sm">
+  <AlertDialogHeader>
+    <AlertDialogMedia>
+      <LogOutIcon />
+    </AlertDialogMedia>
+    <AlertDialogTitle>Sign out of all devices?</AlertDialogTitle>
+  </AlertDialogHeader>
+</AlertDialogContent>
+```
+
+Waiting on an API call before closing? [Confirm Action Alert
+Dialog](/docs/ui/confirm-action-alert-dialog) handles the spinner and errors
+for you.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    'AlertDialogContent.size': {
+      description: 'Compact, centered layout with `sm`.',
+      type: '"default" | "sm"',
+      default: '"default"',
+    },
+    'AlertDialogAction.variant': {
+      description: 'Button variant of the confirm button.',
+      type: 'Button["variant"]',
+      default: '"default"',
+    },
+    'AlertDialogCancel.variant': {
+      description: 'Button variant of the cancel button.',
+      type: 'Button["variant"]',
+      default: '"outline"',
+    },
+    'AlertDialog.onOpenChange': {
+      description: 'Called with the new open state.',
+      type: '(open: boolean) => void',
+    },
+  }}
+/>
+
+`AlertDialogAction` and `AlertDialogCancel` also take `size`. Read the open
+state from children with `useAlertDialog()`.
 
 ## API Reference
 

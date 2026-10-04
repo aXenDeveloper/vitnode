@@ -364,6 +364,7 @@ export const AreaPropertiesPanelContent = ({
             </>
           )
         }
+        icon={<Trash2Icon />}
         onOpenChange={setConfirming}
         onSubmit={({ onClose }) => {
           afterDialogExit(onClose, () => {

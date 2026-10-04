@@ -1,0 +1,258 @@
+---
+title: Resizable
+description: Resizable panel groups with draggable, keyboard-friendly handles, collapsible panels and layouts that survive a reload.
+icon: SquareSplitHorizontal
+---
+
+## Preview
+
+<Preview name="resizable" />
+
+## Usage
+
+```ts
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@vitnode/core/components/ui/resizable'
+```
+
+```tsx
+<div className="h-80">
+  <ResizablePanelGroup className="rounded-lg border">
+    <ResizablePanel defaultSize="35%">Sidebar</ResizablePanel>
+    <ResizableHandle />
+    <ResizablePanel>Content</ResizablePanel>
+  </ResizablePanelGroup>
+</div>
+```
+
+The group sets an inline `height: 100%`, so a height class on it is ignored.
+Give the **parent** a height instead.
+
+Groups nest: put a `ResizablePanelGroup` inside a `ResizablePanel` to split it
+again, like the terminal in the preview.
+
+## Vertical
+
+<Preview name="resizable-vertical" />
+
+```tsx
+<ResizablePanelGroup orientation="vertical">
+```
+
+## With handle
+
+<Preview name="resizable-handle" />
+
+`withHandle` adds a grip, so people know the divider can be grabbed.
+
+```tsx
+<ResizableHandle withHandle />
+```
+
+## Sizes
+
+The value's type decides the unit:
+
+- a **string** without a unit is a percentage: `"30"` equals `"30%"`;
+- a **number** is pixels: `minSize={180}` is 180px, not 180%;
+- other CSS units work too: `"12rem"`, `"20vw"`.
+
+```tsx
+<ResizablePanel defaultSize="25%" maxSize="40%" minSize={180}>
+```
+
+Panels without `defaultSize` share the leftover space. Double-click a handle to
+reset its panel to `defaultSize`.
+
+## Collapsible
+
+<Preview name="resizable-collapsible" />
+
+A `collapsible` panel snaps to `collapsedSize` once dragged below `minSize`.
+For a toggle button, call `collapse()` or `expand()` on its `panelRef`.
+
+```tsx
+<ResizablePanel collapsedSize="8%" collapsible defaultSize="35%" minSize="25%">
+```
+
+## Persisting the layout
+
+<Preview name="resizable-persist" />
+
+`defaultLayout` takes a map of panel `id` to percentage. `onLayoutChanged`
+fires after every finished resize. Wire both to storage, and give each panel a
+stable `id`.
+
+```tsx
+const storageKey = 'my-layout'
+
+const readLayout = () => {
+  try {
+    return localStorage.getItem(storageKey)
+  } catch {
+    return null
+  }
+}
+
+export const RememberedLayout = () => {
+  const stored = React.useSyncExternalStore(
+    () => () => {},
+    readLayout,
+    () => null,
+  )
+
+  return (
+    <ResizablePanelGroup
+      defaultLayout={stored ? JSON.parse(stored) : undefined}
+      onLayoutChanged={(layout, meta) => {
+        if (!meta.isUserInteraction) return
+
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(meta.requestedLayout ?? layout),
+        )
+      }}
+    >
+      <ResizablePanel defaultSize="40%" id="sidebar">
+        Sidebar
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel id="content">Content</ResizablePanel>
+    </ResizablePanelGroup>
+  )
+}
+```
+
+The `null` server snapshot keeps SSR happy: the server renders default sizes,
+then the browser swaps in the saved ones. Save `meta.requestedLayout` when it
+exists. It's what the user asked for, before a small screen squeezed it.
+
+## Accessibility
+
+- Each handle is a focusable `role="separator"` with `aria-valuenow`,
+  `aria-valuemin`, `aria-valuemax` and `aria-controls`.
+- Arrow keys resize by 5% along the group's orientation.
+- `Home` and `End` jump to the minimum or maximum size.
+- `Enter` collapses or expands a `collapsible` panel.
+- `F6` moves to the next handle, `Shift + F6` to the previous one.
+- Touch dragging only claims the resize axis, so panels still scroll the other
+  way.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### ResizablePanelGroup
+
+<TypeTable
+  type={{
+    orientation: {
+      description: 'Direction panels are laid out and resized in.',
+      type: '"horizontal" | "vertical"',
+      default: '"horizontal"',
+    },
+    defaultLayout: {
+      description: 'Initial layout as panel id → percentage (0-100).',
+      type: 'Record<string, number>',
+    },
+    onLayoutChange: {
+      description: 'Fires on every change, including each drag move.',
+      type: '(layout: Layout) => void',
+    },
+    onLayoutChanged: {
+      description: 'Fires once a resize finishes. The place to save a layout.',
+      type: '(layout: Layout, meta: { isUserInteraction: boolean; requestedLayout?: Layout }) => void',
+    },
+    disabled: {
+      description: 'Turns resizing off for the whole group.',
+      type: 'boolean',
+      default: 'false',
+    },
+    groupRef: {
+      description: 'Imperative API: `getLayout()`, `setLayout(layout)`.',
+      type: 'Ref<GroupImperativeHandle>',
+    },
+    id: {
+      description: 'Unique group id. Falls back to `useId`.',
+      type: 'string | number',
+    },
+  }}
+/>
+
+### ResizablePanel
+
+<TypeTable
+  type={{
+    id: {
+      description: 'Unique id inside the group. Required to persist a layout.',
+      type: 'string | number',
+    },
+    defaultSize: {
+      description: 'Initial size. Strings are percentages, numbers are pixels.',
+      type: 'string | number',
+    },
+    minSize: {
+      description: 'Smallest allowed size.',
+      type: 'string | number',
+      default: '"0%"',
+    },
+    maxSize: {
+      description: 'Largest allowed size.',
+      type: 'string | number',
+      default: '"100%"',
+    },
+    collapsible: {
+      description: 'Collapses when dragged below `minSize`.',
+      type: 'boolean',
+      default: 'false',
+    },
+    collapsedSize: {
+      description: 'Size when collapsed.',
+      type: 'string | number',
+      default: '"0%"',
+    },
+    disabled: {
+      description: 'Cannot be resized, directly or by a neighbour.',
+      type: 'boolean',
+      default: 'false',
+    },
+    onResize: {
+      description: 'Fires with the new size on every resize.',
+      type: '(size: { asPercentage: number; inPixels: number }) => void',
+    },
+    panelRef: {
+      description:
+        'Imperative API: `collapse()`, `expand()`, `getSize()`, `isCollapsed()`, `resize(size)`.',
+      type: 'Ref<PanelImperativeHandle>',
+    },
+  }}
+/>
+
+### ResizableHandle
+
+<TypeTable
+  type={{
+    withHandle: {
+      description: 'Shows a grip in the middle of the divider.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'This handle cannot resize its panels.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disableDoubleClick: {
+      description: 'Stops double-click from resetting to default sizes.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+## API Reference
+
+[react-resizable-panels](https://react-resizable-panels.vercel.app/)

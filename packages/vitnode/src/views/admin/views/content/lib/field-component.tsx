@@ -13,6 +13,7 @@ import { AutoFormFile } from "@/components/form/fields/file";
 import { AutoFormFiles } from "@/components/form/fields/files";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
+import { AutoFormNumber } from "@/components/form/fields/number";
 import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
 import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
@@ -69,6 +70,127 @@ const fileList = (
   return Array.isArray(value) ? value : [];
 };
 
+type ContentKindFieldProps = ItemAutoFormComponentProps & {
+  spec: ContentFormFieldSpec;
+};
+
+const ContentEnumField = ({ spec, ...props }: ContentKindFieldProps) => {
+  const t = useTranslations("core.content.form");
+  const labels = spec.options ?? [];
+
+  return spec.display === "radio" ? (
+    <AutoFormRadioGroup label={spec.label} labels={labels} {...props} />
+  ) : (
+    <AutoFormSelect
+      label={spec.label}
+      labels={labels}
+      placeholder={t("relation.placeholder")}
+      {...props}
+    />
+  );
+};
+
+const ContentFileField = ({
+  files,
+  spec,
+  uploadFile,
+  ...props
+}: ContentKindFieldProps & Pick<ContentFieldProps, "files" | "uploadFile">) => {
+  const t = useTranslations("core.content.form");
+  const upload = async (file: File) =>
+    uploadFile
+      ? await uploadFile({ field: spec.name, file })
+      : Promise.reject(new Error(t("file.unavailable")));
+
+  if (spec.multiple) {
+    return (
+      <AutoFormFiles
+        allowedExtensions={spec.allowedExtensions}
+        allowedMimeTypes={spec.allowedMimeTypes}
+        files={fileList(files, spec.name)}
+        label={spec.label}
+        maxBytes={spec.maxBytes ?? 0}
+        maxItems={spec.maxItems ?? 0}
+        minItems={spec.minItems}
+        onUpload={upload}
+        ordered={spec.ordered !== false}
+        {...props}
+      />
+    );
+  }
+
+  return (
+    <AutoFormFile
+      allowedExtensions={spec.allowedExtensions}
+      allowedMimeTypes={spec.allowedMimeTypes}
+      file={fileValue(files, spec.name)}
+      label={spec.label}
+      maxBytes={spec.maxBytes ?? 0}
+      onUpload={upload}
+      {...props}
+    />
+  );
+};
+
+const ContentNumberField = ({ spec, ...props }: ContentKindFieldProps) => {
+  const t = useTranslations("core.content.form");
+
+  return spec.nullable ? (
+    <AutoFormNullableNumber
+      label={spec.label}
+      max={spec.max}
+      min={spec.min}
+      toggleLabel={t("boolean.off")}
+      {...props}
+    />
+  ) : (
+    <AutoFormNumber
+      label={spec.label}
+      max={spec.max}
+      min={spec.min}
+      step={spec.integer ? 1 : "any"}
+      {...props}
+    />
+  );
+};
+
+const ContentRelationField = ({
+  loadOptions,
+  spec,
+  ...props
+}: ContentKindFieldProps & Pick<ContentFieldProps, "loadOptions">) => {
+  const t = useTranslations("core.content.form");
+  // A picker's labels are read in the administrator's language - see
+  // `contentOptionsQueryKey` for why that has to be part of the cache key.
+  const locale = useLocale();
+
+  if (spec.multiple) {
+    return (
+      <ContentRelationSetField
+        loadOptions={loadOptions}
+        spec={spec}
+        {...props}
+      />
+    );
+  }
+
+  return (
+    <AutoFormCombobox
+      fetchData={async ({ search }) =>
+        await loadOptions({ field: spec.name, search })
+      }
+      id={`content-${spec.name}`}
+      label={spec.label}
+      placeholder={t("relation.placeholder")}
+      queryKey={contentOptionsQueryKey(spec, locale)}
+      renderItem={item => <ContentOptionSwatch option={item} />}
+      searchPlaceholder={t("relation.search_placeholder")}
+      showClear={spec.nullable}
+      {...props}
+    />
+  );
+};
+
 export const ContentField = ({
   files,
   loadOptions,
@@ -76,10 +198,6 @@ export const ContentField = ({
   uploadFile,
   ...rest
 }: ContentFieldProps) => {
-  const t = useTranslations("core.content.form");
-  // A picker's labels are read in the administrator's language - see
-  // `contentOptionsQueryKey` for why that has to be part of the cache key.
-  const locale = useLocale();
   const multiLang = spec.localized === true;
   const isOptional = !spec.required && (spec.minItems ?? 0) === 0;
   const props = {
@@ -94,56 +212,18 @@ export const ContentField = ({
     case "dateTime":
       return <AutoFormDateTime label={spec.label} {...props} />;
 
-    case "enum": {
-      const labels = spec.options ?? [];
+    case "enum":
+      return <ContentEnumField spec={spec} {...props} />;
 
-      return spec.display === "radio" ? (
-        <AutoFormRadioGroup label={spec.label} labels={labels} {...props} />
-      ) : (
-        <AutoFormSelect
-          label={spec.label}
-          labels={labels}
-          placeholder={t("relation.placeholder")}
-          {...props}
-        />
-      );
-    }
-
-    case "file": {
-      const upload = async (file: File) =>
-        uploadFile
-          ? await uploadFile({ field: spec.name, file })
-          : Promise.reject(new Error(t("file.unavailable")));
-
-      if (spec.multiple) {
-        return (
-          <AutoFormFiles
-            allowedExtensions={spec.allowedExtensions}
-            allowedMimeTypes={spec.allowedMimeTypes}
-            files={fileList(files, spec.name)}
-            label={spec.label}
-            maxBytes={spec.maxBytes ?? 0}
-            maxItems={spec.maxItems ?? 0}
-            minItems={spec.minItems}
-            onUpload={upload}
-            ordered={spec.ordered !== false}
-            {...props}
-          />
-        );
-      }
-
+    case "file":
       return (
-        <AutoFormFile
-          allowedExtensions={spec.allowedExtensions}
-          allowedMimeTypes={spec.allowedMimeTypes}
-          file={fileValue(files, spec.name)}
-          label={spec.label}
-          maxBytes={spec.maxBytes ?? 0}
-          onUpload={upload}
+        <ContentFileField
+          files={files}
+          spec={spec}
+          uploadFile={uploadFile}
           {...props}
         />
       );
-    }
 
     case "group":
       return (
@@ -151,48 +231,13 @@ export const ContentField = ({
       );
 
     case "number":
-      return spec.nullable ? (
-        <AutoFormNullableNumber
-          label={spec.label}
-          max={spec.max}
-          min={spec.min}
-          toggleLabel={t("boolean.off")}
-          {...props}
-        />
-      ) : (
-        <AutoFormInput
-          label={spec.label}
-          max={spec.max}
-          min={spec.min}
-          step={spec.integer ? 1 : "any"}
-          type="number"
-          {...props}
-        />
-      );
+      return <ContentNumberField spec={spec} {...props} />;
 
     case "relation":
-      if (spec.multiple) {
-        return (
-          <ContentRelationSetField
-            loadOptions={loadOptions}
-            spec={spec}
-            {...props}
-          />
-        );
-      }
-
       return (
-        <AutoFormCombobox
-          fetchData={async ({ search }) =>
-            await loadOptions({ field: spec.name, search })
-          }
-          id={`content-${spec.name}`}
-          label={spec.label}
-          placeholder={t("relation.placeholder")}
-          queryKey={contentOptionsQueryKey(spec, locale)}
-          renderItem={item => <ContentOptionSwatch option={item} />}
-          searchPlaceholder={t("relation.search_placeholder")}
-          showClear={spec.nullable}
+        <ContentRelationField
+          loadOptions={loadOptions}
+          spec={spec}
           {...props}
         />
       );

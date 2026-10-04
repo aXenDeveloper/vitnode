@@ -31,6 +31,11 @@ export const CONFIG = {
   get node_development(): boolean {
     return process.env.NODE_ENV === "development";
   },
+  get trustedProxyHops(): number {
+    const hops = Number(process.env.VITNODE_TRUSTED_PROXY_HOPS ?? 0);
+
+    return Number.isSafeInteger(hops) && hops > 0 ? hops : 0;
+  },
   get web(): URL {
     return new URL(process.env.VITNODE_WEB_URL ?? "http://localhost:3000");
   },

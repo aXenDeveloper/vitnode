@@ -6,31 +6,28 @@ import {
 
 export default function AlertDemo() {
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="not-prose flex w-full flex-col gap-4">
+      <Alert>
+        <AlertTitle>Drafts are private</AlertTitle>
+        <AlertDescription>
+          Only you and staff can see a topic until you publish it.
+        </AlertDescription>
+      </Alert>
       <Alert variant="info">
         <AlertTitle>Reindexing runs in the background</AlertTitle>
         <AlertDescription>
-          You can keep editing content while the search index rebuilds.
+          Keep editing while the search index rebuilds.
         </AlertDescription>
       </Alert>
-
       <Alert variant="success">
         <AlertTitle>Changes saved</AlertTitle>
-        <AlertDescription>
-          Your search index settings have been updated.
-        </AlertDescription>
       </Alert>
-
       <Alert variant="warning">
-        <AlertTitle>
-          Background jobs require a configured cron adapter
-        </AlertTitle>
+        <AlertTitle>Cron adapter missing</AlertTitle>
         <AlertDescription>
-          A rebuild won&apos;t run until cron is active. Configure an adapter in
-          Integrations to enable scheduled reindexing.
+          Scheduled jobs won&apos;t run until you configure one in Integrations.
         </AlertDescription>
       </Alert>
-
       <Alert variant="destructive">
         <AlertTitle>Unable to reach the search engine</AlertTitle>
         <AlertDescription>

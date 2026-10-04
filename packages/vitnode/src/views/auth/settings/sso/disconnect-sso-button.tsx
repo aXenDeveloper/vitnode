@@ -32,6 +32,7 @@ export const DisconnectSsoButton = ({
           </span>
         </span>
       }
+      icon={<UnlinkIcon />}
       onSubmit={async ({ onClose }) => {
         const result = await onDisconnect({ providerId });
 

@@ -1,332 +1,27 @@
 ---
 title: Auto Form
-description: Component creates form based on Zod schemas & TanStack Form with validation
+description: Build validated forms from a Zod schema with AutoForm - field types, tabs, conditional fields, arrays, custom layouts and submit handling on TanStack Form.
+icon: ClipboardPen
 ---
 
 ## Preview
 
-<Preview className="bg-card" name="auto-form" />
+<Preview name="auto-form" className="*:max-w-full" />
 
 ## Usage
 
 ```tsx
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox";
-import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
-import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
-import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
-import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
-import { AutoFormArray } from "@vitnode/core/components/form/fields/array";
-import { InputGroupAddon } from "@vitnode/core/components/ui/input-group";
-import { Search } from "lucide-react";
-import { z } from "zod";
-```
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormInput } from '@vitnode/core/components/form/fields/input'
+import { z } from 'zod'
 
-```ts
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z
-    .email("Please enter a valid email address")
-    .describe("We'll use this email to contact you. (from zod schema)"),
-  user_type: z.enum(["admin", "editor", "viewer"]),
-  links: z
-    .array(
-      z.object({
-        title: z.string().min(1, "Title is required"),
-        url: z.string().url(),
-      }),
-    )
-    .optional(),
-  accept_terms: z.boolean().refine(val => val, {
-    message: "You must accept the terms and conditions",
-  }),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  content: z
+  username: z
     .string()
-    .min(1, "Content is required")
-    .default("<p>Write your content here...</p>"),
-  search: z.string().optional(),
-});
-```
-
-```tsx
-<AutoForm
-  fields={[
-    {
-      id: "username",
-      component: props => (
-        <AutoFormInput
-          {...props}
-          description="This is the username for your application. It should be unique and not shared with anyone."
-          label="Username"
-        />
-      ),
-    },
-    {
-      id: "email",
-      component: props => <AutoFormInput {...props} label="Email Address" />,
-    },
-    {
-      id: "user_type",
-      component: props => (
-        <AutoFormSelect
-          {...props}
-          description="Select the type of user."
-          label="User Type"
-          labels={[
-            { value: "admin", label: "Admin" },
-            { value: "editor", label: "Editor" },
-            { value: "viewer", label: "Viewer" },
-          ]}
-        />
-      ),
-    },
-    {
-      id: "links",
-      component: props => (
-        <AutoFormArray
-          {...props}
-          label="Profile Links"
-          fields={[
-            {
-              id: "title",
-              component: subProps => (
-                <AutoFormInput {...subProps} label="Title" />
-              ),
-            },
-            {
-              id: "url",
-              component: subProps => (
-                <AutoFormInput {...subProps} label="URL" />
-              ),
-            },
-          ]}
-        />
-      ),
-    },
-    {
-      id: "accept_terms",
-      component: props => (
-        <AutoFormCheckbox
-          {...props}
-          label="I accept the terms and conditions"
-        />
-      ),
-    },
-    {
-      id: "description",
-      component: props => (
-        <AutoFormTextarea
-          {...props}
-          description="Write a short description of your application."
-          label="Description"
-          placeholder="My application is..."
-        />
-      ),
-    },
-    {
-      id: "content",
-      component: props => (
-        <AutoFormEditor
-          {...props}
-          description="Rich text content powered by the Editor."
-          label="Content"
-        />
-      ),
-    },
-    {
-      id: "search",
-      component: props => (
-        <AutoFormInput {...props} placeholder="Search..." label="Search">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupAddon align="inline-end">12 results</InputGroupAddon>
-        </AutoFormInput>
-      ),
-    },
-  ]}
-  formSchema={formSchema}
-/>
-```
-
-## Zod Schema Configuration
-
-Auto Form is deeply integrated with Zod, supporting Zod validators. HTML input attributes are automatically applied based on your schema constraints.
-
-### Required vs Optional Fields
-
-By default, all fields are required. Make a field optional using the `optional` method:
-
-```ts
-const formSchema = z.object({
-  username: z.string(), // Required field
-  bio: z.string().optional(), // Optional field
-});
-```
-
-### Labels
-
-Set field labels using the `label` property in the field definition:
-
-```tsx
-{
-  id: 'username',
-  component: props => (
-    <AutoFormInput {...props} label="Username" />
-  ),
-}
-```
-
-#### Right Labels
-
-You can also add a label on the right side of the field using the `labelRight` property:
-
-```tsx
-{
-  id: 'username',
-  component: props => (
-    <AutoFormInput {...props} label="Username" labelRight="Required" />
-  ),
-}
-```
-
-### Descriptions
-
-Add descriptions to fields using the `description` property:
-
-```tsx
-{
-  id: 'username',
-  component: props => (
-    <AutoFormInput
-      {...props}
-      label="Username"
-      description="This is the username for your application."
-    />
-  ),
-}
-```
-
-or using the `describe` method in Zod:
-
-```ts
-const formSchema = z.object({
-  username: z.string().describe("This is the username for your application."),
-});
-```
-
-### Default Values
-
-Set default values for fields using the `default` method:
-
-```ts
-const formSchema = z.object({
-  username: z.string().default("user123"),
-  role: z.enum(["user", "admin"]).default("user"),
-});
-```
-
-### Arrays
-
-You can create dynamic list of fields using `AutoFormArray` component working with `z.array(z.object(...))` schema:
-
-```ts
-const formSchema = z.object({
-  guests: z
-    .array(
-      z.object({
-        name: z.string(),
-        email: z.string().email(),
-      }),
-    )
-    .min(1),
-});
-```
-
-```tsx
-{
-  id: "guests",
-  component: props => (
-    <AutoFormArray
-      {...props}
-      label="Guests"
-      fields={[
-        { id: "name", component: p => <AutoFormInput {...p} label="Name" /> },
-        { id: "email", component: p => <AutoFormInput {...p} label="Email" /> },
-      ]}
-    />
-  )
-}
-```
-
-You can customize the wrapper, items layout, and Add/Remove buttons logic through `className`, `addButtonLabel` props:
-
-```tsx
-{
-  id: "guests",
-  component: props => (
-    <AutoFormArray
-      {...props}
-      label="Guests"
-      fields={[
-        { id: "name", className: "flex-1", component: p => <AutoFormInput {...p} label="Name" /> },
-        { id: "email", component: p => <AutoFormInput {...p} label="Email" /> },
-      ]}
-    />
-  )
-}
-```
-
-### Advanced Validation
-
-Auto Form supports all Zod validators:
-
-```ts
-const formSchema = z.object({
-  username: z.string().min(3).max(20),
-  email: z.email(),
-  age: z.number().min(18).max(120),
-  password: z
-    .string()
-    .min(8)
-    .refine(val => /[A-Z]/.test(val), {
-      message: "Password must contain at least one uppercase letter",
-    }),
-});
-```
-
-## Multi-language fields
-
-Some values - a category name, a page title - need a translation per language.
-`AutoFormInput` and `AutoFormEditor` accept a `multiLang` prop that collects the
-value in every enabled language. The field renders a language **select** (shown
-only when more than one language is enabled) that switches which language you
-are editing; it does **not** change the app-wide locale, only the value inside
-that field.
-
-The select starts on the first language that has text: your current language,
-then the form's default language (Content Engine forms use the content type's
-`defaultLocale`), then any other language. If every language is empty, it
-starts on your current language. `AutoFormEditor` ignores empty markup like
-`<p></p>`, so a blank editor never counts as translated.
-
-"Enabled" here means every locale in your [`i18n.locales`](/docs/dev/i18n) config
-that is not marked [`enabled: false`](/docs/dev/i18n#disabling-one) - a disabled
-language is not offered in the select.
-
-The value is stored as an array matching the
-[`core_languages_words`](/docs/dev/working-with-users/roles) table - one
-`{ languageCode, value }` entry per language. Declare the field with the
-`multiLangValueSchema` helper so the Zod schema matches that array shape (its
-`minLength` / `maxLength` apply to each language's value):
-
-```ts
-import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
-
-const formSchema = z.object({
-  name: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
-});
+    .min(3, 'Usernames need at least 3 characters')
+    .default(''),
+  email: z.email().describe('Only used for notifications.').default(''),
+})
 ```
 
 ```tsx
@@ -334,407 +29,445 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "name",
-      component: props => <AutoFormInput {...props} label="Name" multiLang />,
+      id: 'username',
+      component: (props) => <AutoFormInput {...props} label="Username" />,
+    },
+    {
+      id: 'email',
+      component: (props) => (
+        <AutoFormInput {...props} label="Email" type="email" />
+      ),
     },
   ]}
-  onSubmit={values => {
-    // values.name => [{ languageCode: "en", value: "News" }, ...]
+  onSubmit={(values) => {
+    toast.success('Account created', { description: values.username })
   }}
 />
 ```
 
-### Saving to the backend
+The schema drives validation, defaults and HTML attributes. Each field's `id`
+points at a schema key, and `component` decides how it looks.
 
-The form only produces `{ languageCode, value }[]`. On the backend, persist it
-with `saveLanguageWords`, which fills the remaining `core_languages_words`
-columns - the `(pluginCode, tableName, variable, itemId)` tuple that identifies
-the field - and replaces the existing rows in a single transaction:
+## Field types
 
-```ts title="plugins/{plugin_name}/src/api/routes/create-category.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
-import { saveLanguageWords } from "@vitnode/core/api/lib/save-language-words";
+Import each one from `@vitnode/core/components/form/fields/<file>`. Spread
+`props` first, then your own props. Spread it last and the schema's empty
+`description` overwrites yours.
 
-export const createCategoryRoute = buildRoute({
-  handler: async c => {
-    const { name } = c.req.valid("json");
+| Component                | File              | Docs                                              |
+| ------------------------ | ----------------- | ------------------------------------------------- |
+| `AutoFormInput`          | `input`           | [Input](/docs/ui/input)                           |
+| `AutoFormTextarea`       | `textarea`        | [Textarea](/docs/ui/textarea)                     |
+| `AutoFormCheckbox`       | `checkbox`        | [Checkbox](/docs/ui/checkbox)                     |
+| `AutoFormSwitch`         | `switch`          | [Switch](/docs/ui/switch)                         |
+| `AutoFormRadioGroup`     | `radio-group`     | [Radio Group](/docs/ui/radio-group)               |
+| `AutoFormSelect`         | `select`          | [Select](/docs/ui/select)                         |
+| `AutoFormCombobox`       | `combobox`        | [Combobox](/docs/ui/combobox)                     |
+| `AutoFormCascader`       | `cascader`        | [Cascader](/docs/ui/cascader)                     |
+| `AutoFormNumber`         | `number`          | [Number Field](/docs/ui/number-field)             |
+| `AutoFormNullableNumber` | `nullable-number` | [Nullable Number](/docs/ui/nullable-number)       |
+| `AutoFormInputOTP`       | `input-otp`       | [Input OTP](/docs/ui/input-otp)                   |
+| `AutoFormColor`          | `color`           | [Color](/docs/ui/color)                           |
+| `AutoFormEmojiIcon`      | `emoji-icon`      | [Emoji & Icon Picker](/docs/ui/emoji-icon-picker) |
+| `AutoFormEditor`         | `editor`          | [Editor](/docs/ui/editor)                         |
+| `AutoFormFile`           | `file`            | [Attachment](/docs/ui/attachment)                 |
+| `AutoFormFiles`          | `files`           | [Attachment](/docs/ui/attachment)                 |
+| `AutoFormRoles`          | `input-roles`     | [Roles](/docs/ui/roles)                           |
+| `AutoFormUser`           | `input-users`     | [User](/docs/ui/user)                             |
+| `AutoFormDateTime`       | `date-time`       | -                                                 |
+| `AutoFormArray`          | `array`           | [Arrays](#arrays)                                 |
 
-    const [category] = await c
-      .get("db")
-      .insert(blog_categories)
-      .values({})
-      .returning({ id: blog_categories.id });
+Every field takes `label`, `labelRight` (content pinned to the label's right
+edge) and `description`.
 
-    await saveLanguageWords(c, {
-      pluginCode: "blog",
-      tableName: "blog_categories",
-      variable: "name",
-      itemId: category.id,
-      values: name, // the { languageCode, value }[] from the form
-    });
-
-    return c.json({ id: category.id }, 201);
-  },
-});
-```
-
-To read the translations back for an edit form, query `core_languages_words` by
-the same tuple and return `{ languageCode, value }[]` - the shape
-[`resolveRoleNames`](/docs/dev/working-with-users/roles) produces for role names.
-
-## Custom Fields
-
-Because Auto Form fields are controlled entirely by the `component` property function, creating a custom field component is just a matter of rendering your own UI using the provided props. The props passed to the `component` function contain the field properties managed by TanStack Form along with Zod validation details.
-
-Here is an example of creating a custom color picker input:
+## Schema
 
 ```ts
 const formSchema = z.object({
-  custom_color: z
-    .string()
-    .default("#000000")
-    .describe("Pick your favorite color."),
-});
+  username: z.string().min(3).max(20).default('captain'),
+  bio: z.string().describe('Shown on your profile card.').optional(),
+  role: z.enum(['member', 'admin']).default('member'),
+})
 ```
+
+- Fields are required unless the schema says `.optional()`. Optional fields get
+  an "Optional" hint next to the label.
+- `.default()` sets the starting value. Give required strings `.default('')`:
+  without it an untouched field says "expected string, received undefined"
+  instead of your `.min()` message.
+- `.describe()` becomes the description, unless you pass `description`.
+- String `.min()`, `.max()` and `.regex()` become `minLength`, `maxLength` and
+  `pattern` on the control. `z.enum()` values feed selects and radio groups.
+- Any Zod check works, `.refine()` included. Its `message` is what users see.
+
+## Validation
+
+<Preview name="auto-form-validation" className="*:max-w-full" />
+
+By default a message appears once you leave a field, then updates live as you
+type. Switch the modes above to feel the difference.
+
+| `mode`                  | A field's message appears…     |
+| ----------------------- | ------------------------------ |
+| `"onTouched"` (default) | once the field has been left   |
+| `"onBlur"`              | once the field has been left   |
+| `"onChange"` / `"all"`  | as soon as the field is edited |
+| `"onSubmit"`            | after the first submit attempt |
+
+The submit button stays enabled while the form is invalid. Pressing it never
+calls `onSubmit`. Instead every message appears, invalid fields shake, and
+focus jumps to the first one.
+
+```tsx
+<AutoForm formSchema={formSchema} fields={fields} mode="onChange" />
+```
+
+## Submit
+
+`onSubmit` receives the parsed values, the TanStack Form instance, and
+`{ captchaToken, intent }`. While it runs, the button shows a spinner.
+
+```tsx
+import type { AutoFormOnSubmit } from '@vitnode/core/components/form/auto-form'
+
+const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form) => {
+  await saveProfile(values)
+  form.reset()
+  toast.success('Profile saved', { description: values.username })
+}
+```
+
+Restyle the button with `submitButtonProps`:
 
 ```tsx
 <AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "custom_color",
-      component: props => (
-        <div className="flex w-full flex-col gap-3">
-          <div className="text-sm leading-none font-medium">
-            Custom Color Picker
-          </div>
-          <input
-            {...props.field}
-            value={(props.field.value as string) ?? "#000000"}
-            className="h-10 w-24 cursor-pointer rounded-md border p-1"
-            type="color"
-          />
-          {props.description && (
-            <div className="text-muted-foreground text-sm">
-              {props.description}
-            </div>
-          )}
-        </div>
-      ),
-    },
-  ]}
-  onSubmit={values => console.log(values)}
+  submitButtonProps={{ children: 'Save changes', variant: 'outline' }}
 />
 ```
 
-### Typing the value
+Pass a route's `captcha` config and the button waits for the captcha to load.
+Send `captchaToken` along with your request.
 
-`AutoForm` picks the control from your Zod schema while the page runs, so the props it hands your `component` function cannot know what the value holds - that is why the example above casts `props.field.value`.
+<Callout>
+  Inside a [Dialog](/docs/ui/dialog), AutoForm renders a footer with Cancel and
+  Submit. Any form with unsaved changes asks before the page unloads.
+</Callout>
 
-Move the control into its own component and it can say what it expects. `FormFieldApi<TValue>` types the value you read **and** the change you send back, so a wrong shape is a build error instead of a validation message:
+### Errors from the server
+
+<Preview name="auto-form-server-error" className="*:max-w-full" />
+
+The API said no? Put its message on the field with `setFormFieldError`. It
+focuses the field, blocks submit while the rejected value stays, and clears
+once the user edits it.
 
 ```tsx
-import type { FormFieldApi } from "@vitnode/core/components/form/auto-form";
+import { setFormFieldError } from "@vitnode/core/components/form/auto-form";
 
-const ColorPicker = ({
-  field,
-}: {
-  field: FormFieldApi<string | undefined>;
-}) => (
-  <input
-    {...field}
-    className="h-10 w-24 cursor-pointer rounded-md border p-1"
-    type="color"
-    value={field.value ?? "#000000"}
-  />
-);
-
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "custom_color",
-      component: props => <ColorPicker field={props.field} />,
-    },
-  ]}
-  onSubmit={values => console.log(values)}
-/>;
+onSubmit={async (values, form) => {
+  const res = await updateUsername(values);
+  if (res.status === 409) {
+    setFormFieldError(form, "username", "That username is taken");
+  }
+}}
 ```
-
-`field.onChange` still takes either the value itself or the DOM change event - it unwraps the event for you, so `onChange={field.onChange}` keeps working.
 
 ## Tabs
 
-Group fields into tabs by passing the `tabs` prop and tagging each field with a
-`tab`. Fields without a `tab` fall into the first tab. Every tab panel stays
-mounted, so field values and validation are preserved when switching tabs.
+<Preview name="auto-form-tabs" className="*:max-w-full" />
+
+Pass `tabs` and tag fields with `tab`. Untagged fields go to the first tab. All
+panels stay mounted, so values survive tab switches.
+
+Press Save on **General** above. The error lives on **SEO**, so AutoForm
+switches there, and tabs hiding an error get a red dot.
 
 ```tsx
 <AutoForm
-  formSchema={formSchema}
-  // [!code ++]
   tabs={[
-    // [!code ++]
-    { value: "general", label: "General" },
-    // [!code ++]
-    { value: "content", label: "Content" },
-    // [!code ++]
+    { value: 'general', label: 'General' },
+    { value: 'seo', label: 'SEO' },
   ]}
   fields={[
     {
-      id: "username",
-      tab: "general", // [!code ++]
-      component: props => <AutoFormInput {...props} label="Username" />,
+      id: 'name',
+      component: (props) => <AutoFormInput {...props} label="Name" />,
     },
     {
-      id: "content",
-      tab: "content", // [!code ++]
-      component: props => <AutoFormEditor {...props} label="Content" />,
+      id: 'metaTitle',
+      tab: 'seo',
+      component: (props) => <AutoFormInput {...props} label="Meta title" />,
     },
   ]}
 />
 ```
 
-## Conditional Fields
+## Conditional fields
 
-Show or hide a field based on the current form values with the `hidden`
-predicate. It receives the live form values and returns `true` to hide the
-field.
+<Preview name="auto-form-conditional" className="*:max-w-full" />
+
+`hidden` gets the live values. Return `true` to hide the field.
+
+```tsx
+{
+  id: "password",
+  hidden: values => values.visibility !== "password",
+  component: props => <AutoFormInput {...props} label="Forum password" type="password" />,
+}
+```
 
 <Callout type="warn">
-  Hidden fields still submit their (default) values, so keep them optional or
-  give them a `default` in the schema. Otherwise a hidden-but-invalid field can
-  keep the submit button disabled with no visible error.
+  Hidden fields still submit. Make them `.optional()` or give them a
+  `.default()`, or an invisible error blocks the form.
 </Callout>
 
-```ts
-const formSchema = z.object({
-  allow_uploads: z.boolean().default(false),
-  // Optional so it never blocks submission while hidden.
-  max_storage: z.number().int().min(0).nullable().default(null),
-});
-```
-
-```tsx
-import { AutoFormSwitch } from "@vitnode/core/components/form/fields/switch";
-```
-
-```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
-    {
-      id: "allow_uploads",
-      component: props => <AutoFormSwitch {...props} label="Allow uploads" />,
-    },
-    {
-      id: "max_storage",
-      // Only shown once uploads are enabled. // [!code ++]
-      hidden: values => !values.allow_uploads, // [!code ++]
-      component: props => <AutoFormInput {...props} label="Max storage" />,
-    },
-  ]}
-/>
-```
-
-### Nested Fields
-
-A toggle and the settings it unlocks belong together, so let them share one
-card. Pass those settings as `children` and they render inside the switch's
-border, expanding and collapsing with it - no `hidden` predicate required, the
-switch is the one asking the question.
+### Nested fields
 
 <Preview name="auto-form-nested-fields" />
 
+A switch and the settings it unlocks can share one card. Pass them as
+`children` of an `AutoFormSwitch` field: they expand when it's on.
+
 ```tsx
-<AutoForm
-  formSchema={formSchema}
-  fields={[
+{
+  id: "allow_uploads",
+  component: props => <AutoFormSwitch {...props} label="Allow uploads" />,
+  children: [
     {
-      id: "allow_uploads",
-      component: props => <AutoFormSwitch {...props} label="Allow uploads" />,
-      children: [ // [!code ++]
-        { // [!code ++]
-          id: "max_storage", // [!code ++]
-          component: props => <AutoFormInput {...props} label="Max storage" />, // [!code ++]
-        }, // [!code ++]
-      ], // [!code ++]
+      id: "max_storage",
+      component: props => <AutoFormNumber {...props} label="Maximum file size" />,
     },
-  ]}
-/>
+  ],
+}
 ```
 
-<Callout>
-  Nested fields unmount while the switch is off, so give them a `default` in the
-  schema just like conditional fields. They can still carry their own `hidden`
-  predicate for extra conditions, and their `tab` is ignored - a child lives in
-  whatever tab its parent does.
-</Callout>
+Children unmount while the switch is off, so give them a `.default()`. They can
+have their own `hidden`. Their `tab` is ignored: they live in the parent's tab.
 
-## Form Submission
+## Arrays
 
-To activate submit button and handle form submission with the `onSubmit` callback:
+<Preview name="auto-form-array" className="*:max-w-full" />
+
+`AutoFormArray` edits a `z.array(z.object(...))` as rows you can add and
+remove. Schema `.min()` and `.max()` limit the rows.
+
+```tsx
+{
+  id: "links",
+  component: props => (
+    <AutoFormArray
+      {...props}
+      label="Sidebar links"
+      addButtonLabel="Add link"
+      fields={[
+        { id: "title", component: p => <AutoFormInput {...p} label="Title" /> },
+        { id: "url", component: p => <AutoFormInput {...p} label="URL" /> },
+      ]}
+    />
+  ),
+}
+```
+
+| Prop               | Type                              | Default                |
+| ------------------ | --------------------------------- | ---------------------- |
+| `fields`           | `{ id, component, className? }[]` | required               |
+| `addButtonLabel`   | `string`                          | `"Add Item"`           |
+| `minItems`         | `number`                          | schema `.min()` or `0` |
+| `maxItems`         | `number`                          | schema `.max()`        |
+| `showRemoveButton` | `boolean`                         | `true`                 |
+| `className`        | `string`                          | -                      |
+
+## Layout
+
+For a simple grid, `className` is enough:
+
+```tsx
+<AutoForm className="grid grid-cols-1 gap-4 md:grid-cols-2" />
+```
+
+<Preview name="auto-form-layout" className="*:max-w-full" />
+
+For full control, `layout` receives every rendered field by `id`. You place
+the submit button yourself with `AutoFormSubmitButton`. Give it an `intent` to
+tell buttons apart in `onSubmit`.
+
+```tsx
+import {
+  AutoForm,
+  AutoFormSubmitButton,
+} from '@vitnode/core/components/form/auto-form'
+```
 
 ```tsx
 <AutoForm
-  fields={[
-    {
-      id: "username",
-      component: props => (
-        <AutoFormInput
-          {...props}
-          description="This is the username for your application."
-          label="Username"
-        />
-      ),
-    },
-  ]}
-  formSchema={formSchema}
-  // [!code ++]
-  onSubmit={values => {
-    // [!code ++]
-    // Handle form submission
-    // [!code ++]
-  }}
+  layout={(rendered) => (
+    <>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {rendered.firstName}
+        {rendered.lastName}
+      </div>
+      <AutoFormSubmitButton intent="draft" variant="ghost">
+        Save draft
+      </AutoFormSubmitButton>
+      <AutoFormSubmitButton intent="publish">Publish</AutoFormSubmitButton>
+    </>
+  )}
+  onSubmit={(values, form, { intent }) => {}}
 />
 ```
 
-### When Validation Messages Appear
+## Custom fields
 
-Auto Form always knows whether the values satisfy the schema - that is what keeps the submit button disabled until they do - but it holds the messages back until they are useful. By default it says nothing until the first submit attempt. Pass `mode` to speak up sooner:
+<Preview name="auto-form-custom-field" className="*:max-w-full" />
 
-| `mode`                    | A field's message appears...      |
-| ------------------------- | --------------------------------- |
-| `"onSubmit"` *(default)*  | after the first submit attempt    |
-| `"onBlur"` / `"onTouched"`| once the field has been left      |
-| `"onChange"` / `"all"`    | as soon as the field is edited    |
+A field is any component. Build it from AutoForm's parts and it gets the same
+ids, ARIA and errors as the built-in ones:
 
-```tsx
-<AutoForm
-  fields={
-    [
-      /* ...field definitions */
-    ]
-  }
-  formSchema={formSchema}
-  mode="all"
-  onSubmit={values => {}}
-/>
-```
+- `AutoFormLabel` and `AutoFormDesc` render the label and description.
+- `FormControl` passes `id`, `aria-invalid` and `aria-describedby` to its child.
+- `FormMessage` shows the field's errors.
 
-### Accessing the Form Instance
-
-The `onSubmit` callback provides access to the TanStack Form instance as a second parameter, so you can read and write the form's state after the values have been handed over:
+Type `field` with `FormFieldApi<TValue>` so a wrong value is a build error.
+`field.onChange` takes the value or a DOM change event.
 
 ```tsx
-<AutoForm
-  fields={
-    [
-      /* ...field definitions */
-    ]
-  }
-  formSchema={formSchema}
-  onSubmit={(values, form) => {
-    form.setFieldValue("username", values.username.trim());
-    form.reset();
-  }}
-/>
+import type {
+  FormFieldApi,
+  ItemAutoFormComponentProps,
+} from '@vitnode/core/components/form/auto-form'
+import { AutoFormDesc } from '@vitnode/core/components/form/common/desc'
+import { AutoFormLabel } from '@vitnode/core/components/form/common/label'
+import { FormControl, FormMessage } from '@vitnode/core/components/ui/form'
+
+const SlowModeField = ({
+  label,
+  description,
+  field,
+}: Omit<ItemAutoFormComponentProps, 'field'> & {
+  field: FormFieldApi<number>
+}) => (
+  <>
+    <AutoFormLabel>{label}</AutoFormLabel>
+    <FormControl>
+      <input
+        type="range"
+        max={120}
+        name={field.name}
+        value={field.value}
+        onBlur={field.onBlur}
+        onChange={(e) => field.onChange(Number(e.target.value))}
+      />
+    </FormControl>
+    {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
+    <FormMessage />
+  </>
+)
 ```
 
-### Showing a Refusal the Server Named
+For a two-column settings row, wrap the parts in [Field](/docs/ui/field#inside-a-custom-autoform-field).
 
-When the API turns a submission down for a reason it can point at a field - a username that is already taken, say - put that message on the field with `setFormFieldError`. It focuses the field, blocks submission while the rejected value is still in it, and clears itself the moment the field is edited:
+## Multi-language fields
 
-```tsx
-import { setFormFieldError } from "@vitnode/core/components/ui/form";
-
-<AutoForm
-  fields={
-    [
-      /* ...field definitions */
-    ]
-  }
-  formSchema={formSchema}
-  onSubmit={(values, form) => {
-    setFormFieldError(form, "username", "Username already taken");
-  }}
-/>;
-```
-
-You can also define the submission handler separately:
+`AutoFormInput`, `AutoFormTextarea` and `AutoFormEditor` take `multiLang`. The
+value becomes `{ languageCode, value }[]`, and a language select appears when
+more than one language is enabled. It only switches what you're editing, not
+the app locale.
 
 ```ts
-import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+import { multiLangValueSchema } from '@vitnode/core/lib/helpers/multi-lang'
+
+const formSchema = z.object({
+  name: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
+})
 ```
 
 ```tsx
-const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form) => {
-  const result = await saveData(values);
-
-  if (result.conflict) {
-    setFormFieldError(form, "username", "Username already taken");
-
-    return;
-  }
-
-  toast.success("Form submitted successfully");
-};
-
-// Then in your component
-<AutoForm
-  fields={
-    [
-      /* ...field definitions */
-    ]
-  }
-  formSchema={formSchema}
-  onSubmit={onSubmit}
-/>;
+{ id: "name", component: props => <AutoFormInput {...props} label="Name" multiLang /> }
 ```
 
-## Customizing the Submit Button
+- `minLength` and `maxLength` apply to each language's value.
+- Languages come from [`i18n.locales`](/docs/dev/i18n), minus any with
+  [`enabled: false`](/docs/dev/i18n#disabling-one).
+- The select opens on the first language with text: yours, then the form's
+  default (a content type's `defaultLocale`), then any other. Empty editor
+  markup like `<p></p>` counts as empty.
 
-Customize the submit button using the `submitButtonProps`:
+### Saving to the backend
 
-```tsx
-<AutoForm
-  fields={
-    [
-      /* ...field definitions */
-    ]
-  }
-  formSchema={formSchema}
-  // [!code ++]
-  submitButtonProps={{
-    // [!code ++]
-    variant: "outline",
-    // [!code ++]
-    size: "lg",
-    // [!code ++]
-    children: "Save Changes",
-    // [!code ++]
-    className: "w-full mt-4",
-    // [!code ++]
-  }}
-  onSubmit={values => {
-    console.log("Form submitted", values);
+`saveLanguageWords` stores the array in `core_languages_words`, replacing the
+old rows in one transaction.
+
+```ts title="plugins/{plugin_name}/src/api/routes/create-category.route.ts"
+import { saveLanguageWords } from '@vitnode/core/api/lib/save-language-words'
+
+await saveLanguageWords(c, {
+  pluginCode: 'blog',
+  tableName: 'blog_categories',
+  variable: 'name',
+  itemId: category.id,
+  values: name,
+})
+```
+
+To prefill an edit form, query `core_languages_words` by the same
+`(pluginCode, tableName, variable, itemId)` and return
+`{ languageCode, value }[]`, like
+[`resolveRoleNames`](/docs/dev/working-with-users/roles) does.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    formSchema: {
+      description:
+        'Zod object that drives validation, defaults and attributes.',
+      type: 'z.ZodObject',
+      required: true,
+    },
+    fields: {
+      description: 'Field definitions, rendered in order.',
+      type: '{ id, component, tab?, hidden?, children? }[]',
+      required: true,
+    },
+    onSubmit: {
+      description: 'Runs with valid values only.',
+      type: '(values, form, { captchaToken, intent }) => void | Promise<void>',
+    },
+    mode: {
+      description: 'When field messages appear.',
+      type: '"onTouched" | "onBlur" | "onChange" | "all" | "onSubmit"',
+      default: '"onTouched"',
+    },
+    tabs: {
+      description: 'Splits fields into tabs. Fields pick one with `tab`.',
+      type: '{ value: string; label: ReactNode }[]',
+    },
+    layout: {
+      description:
+        'Places rendered fields yourself. No submit button is added, use `AutoFormSubmitButton`.',
+      type: '(rendered: Record<string, ReactNode>) => ReactNode',
+    },
+    submitButtonProps: {
+      description: 'Props for the default submit button.',
+      type: 'ButtonProps',
+    },
+    captcha: {
+      description: "The route's captcha config. Adds the widget and a token.",
+      type: 'RouteCaptcha',
+    },
+    canSubmitWhenInvalid: {
+      description: "Passed to TanStack Form's option of the same name.",
+      type: 'boolean',
+      default: 'true',
+    },
+    children: {
+      description: 'Rendered after the fields, before the submit button.',
+      type: 'ReactNode',
+    },
   }}
 />
-```
 
-## Form Layout and Styling
-
-You can control the form layout using standard CSS techniques:
-
-```tsx
-<AutoForm
-  // [!code ++]
-  className="grid grid-cols-1 gap-4 md:grid-cols-2"
-  fields={
-    [
-      /* ...field definitions */
-    ]
-  }
-  formSchema={formSchema}
-/>
-```
+Any other `<form>` prop (`className`, `id`, `onKeyDown`) goes to the form
+element.

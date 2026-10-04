@@ -6,6 +6,7 @@ import type { FileUploadQueueState } from "./file-upload-queue";
 import { planFileGallery, removeFileId } from "./file-order";
 import {
   createFileUploadQueue,
+  EMPTY_FILE_UPLOAD_QUEUE_STATE,
   FILE_UPLOAD_CONCURRENCY,
 } from "./file-upload-queue";
 
@@ -47,7 +48,9 @@ const harness = ({
   const waiting = new Map<string, Deferred>();
   const failed: string[] = [];
   const stored: number[] = [];
-  let state: FileUploadQueueState = { anchorId: null, pending: [], placed: [] };
+  let state: FileUploadQueueState = EMPTY_FILE_UPLOAD_QUEUE_STATE;
+  const progress = new Map<string, (fraction: number) => void>();
+  const signals = new Map<string, AbortSignal>();
 
   const queue = createFileUploadQueue({
     concurrency,
@@ -62,7 +65,9 @@ const harness = ({
     onStateChange: next => {
       state = next;
     },
-    upload: async file => {
+    upload: async (file, { onProgress, signal }) => {
+      progress.set(file.name, onProgress);
+      signals.set(file.name, signal);
       running.add(file.name);
       peak = Math.max(peak, running.size);
 
@@ -78,7 +83,28 @@ const harness = ({
     },
   });
 
+  const orderOf = (name: string) =>
+    [
+      ...state.pending,
+      ...state.failed.map(entry => ({ ...entry, name: entry.file.name })),
+    ].find(entry => entry.name === name)?.order ?? -1;
+
   return {
+    cancel: async (name: string) => {
+      queue.cancel(orderOf(name));
+      await flush();
+    },
+    dismiss: (name: string) => {
+      queue.dismiss(orderOf(name));
+    },
+    progress: (name: string, fraction: number) => {
+      progress.get(name)?.(fraction);
+    },
+    retry: async (name: string) => {
+      queue.retry(orderOf(name));
+      await flush();
+    },
+    signalOf: (name: string) => signals.get(name),
     /** Where the in-flight cards would be drawn right now. */
     get gallery() {
       return planFileGallery({
@@ -185,7 +211,14 @@ describe("createFileUploadQueue", () => {
     expect(files.ids).toEqual([8, 9, 101, 102]);
     expect(files.failed).toEqual(["C.webp"]);
     // And the run is closed, so the next selection anchors itself afresh.
-    expect(files.state).toEqual({ anchorId: null, pending: [], placed: [] });
+    expect(files.state).toMatchObject({
+      anchorId: null,
+      pending: [],
+      placed: [],
+    });
+    expect(files.state.failed.map(entry => entry.file.name)).toEqual([
+      "C.webp",
+    ]);
   });
 
   it("keeps a second selection behind the first one", async () => {
@@ -214,7 +247,7 @@ describe("createFileUploadQueue", () => {
     await files.resolve("B.webp", 102);
 
     expect(files.ids).toEqual([101, 102]);
-    expect(files.state).toEqual({ anchorId: null, pending: [], placed: [] });
+    expect(files.state).toEqual(EMPTY_FILE_UPLOAD_QUEUE_STATE);
   });
 
   it("does not add the same file twice", async () => {
@@ -306,5 +339,75 @@ describe("createFileUploadQueue", () => {
 
     expect(files.state.pending).toEqual([]);
     expect(files.inFlight).toBe(0);
+  });
+
+  it("reports how far each upload has got", async () => {
+    const files = harness();
+    await files.pick("A.webp", "B.webp");
+
+    expect(files.state.pending.map(entry => entry.progress)).toEqual([
+      null,
+      null,
+    ]);
+
+    files.progress("A.webp", 0.42);
+    files.progress("B.webp", 3);
+
+    expect(files.state.pending.map(entry => entry.progress)).toEqual([0.42, 1]);
+  });
+
+  it("cancels an upload in flight: aborts it, drops its card and ignores its answer", async () => {
+    const files = harness();
+    await files.pick("A.webp", "B.webp");
+
+    await files.cancel("A.webp");
+
+    expect(files.signalOf("A.webp")?.aborted).toBe(true);
+    expect(files.state.pending.map(entry => entry.name)).toEqual(["B.webp"]);
+
+    await files.resolve("A.webp", 101);
+    await files.resolve("B.webp", 102);
+
+    expect(files.ids).toEqual([102]);
+    expect(files.stored).toEqual([102]);
+    expect(files.state).toEqual(EMPTY_FILE_UPLOAD_QUEUE_STATE);
+  });
+
+  it("cancels an upload still waiting for a slot without ever starting it", async () => {
+    const files = harness({ concurrency: 1 });
+    await files.pick("A.webp", "B.webp");
+
+    await files.cancel("B.webp");
+    await files.resolve("A.webp", 101);
+
+    expect(files.running).toEqual([]);
+    expect(files.signalOf("B.webp")).toBeUndefined();
+    expect(files.ids).toEqual([101]);
+  });
+
+  it("keeps a failed upload around until it is retried or dismissed", async () => {
+    const files = harness();
+    await files.pick("A.webp", "B.webp");
+
+    await files.reject("A.webp");
+    await files.reject("B.webp");
+
+    expect(files.state.failed.map(entry => entry.file.name)).toEqual([
+      "A.webp",
+      "B.webp",
+    ]);
+
+    await files.retry("A.webp");
+
+    expect(files.state.failed.map(entry => entry.file.name)).toEqual([
+      "B.webp",
+    ]);
+    expect(files.state.pending.map(entry => entry.name)).toEqual(["A.webp"]);
+
+    await files.resolve("A.webp", 101);
+    files.dismiss("B.webp");
+
+    expect(files.ids).toEqual([101]);
+    expect(files.state).toEqual(EMPTY_FILE_UPLOAD_QUEUE_STATE);
   });
 });

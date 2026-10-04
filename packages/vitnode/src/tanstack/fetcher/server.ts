@@ -17,8 +17,16 @@ import type {
 
 import { CONFIG } from "@/lib/config";
 import { coreFetcher } from "@/lib/fetcher/core";
+import {
+  FORWARDED_SIGNATURE_HEADER,
+  resolveForwardedIpSecret,
+  signForwardedFor,
+} from "@/lib/fetcher/forwarded-signature.server";
 import { rawApiFetch } from "@/lib/fetcher/raw";
-import { buildForwardedHeaders } from "@/lib/fetcher/request-context";
+import {
+  buildForwardedHeaders,
+  resolveVisitorIp,
+} from "@/lib/fetcher/request-context";
 import {
   parseSetCookies,
   shouldSaveApiCookies,
@@ -42,17 +50,26 @@ export const getForwardedApiHeaders = ({
   captchaToken,
 }: { captchaToken?: string } = {}): Record<string, string> => {
   const headers = getRequestHeaders();
-
-  return buildForwardedHeaders({
+  const forwarded = buildForwardedHeaders({
     captchaToken,
     cookie: headers.get("cookie"),
-    // The header first, verbatim, chain included: that is what the API stores,
-    // and re-deriving it would log this server's hop as the visitor's IP. `getRequestIP()` is the fallback for a
-    // directly-exposed server, where there is no proxy to have written one -
-    // better than the `0.0.0.0` the header's absence would otherwise mean.
-    forwardedFor: headers.get("x-forwarded-for") ?? getRequestIP(),
+    forwardedFor: resolveVisitorIp({
+      forwardedFor: headers.get("x-forwarded-for"),
+      socketAddress: getRequestIP(),
+      trustedProxyHops: CONFIG.trustedProxyHops,
+    }),
     userAgent: headers.get("user-agent"),
   });
+  const secret = resolveForwardedIpSecret();
+  if (!secret) return forwarded;
+
+  return {
+    ...forwarded,
+    [FORWARDED_SIGNATURE_HEADER]: signForwardedFor({
+      forwardedFor: forwarded["x-forwarded-for"],
+      secret,
+    }),
+  };
 };
 
 export const saveApiCookies = (response: Response): void => {

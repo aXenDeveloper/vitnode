@@ -3,6 +3,7 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { getTableName, SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
@@ -442,6 +443,36 @@ describe("content service", () => {
       await expect(
         articles.service(c).findMany({ filters: { author: null } }),
       ).resolves.toMatchObject({ edges: [] });
+    });
+
+    it("searches a localized field across every translation", async () => {
+      const notes = createContentModel(
+        defineContentType({
+          id: "test.searchable-note",
+          tableName: "test_searchable_notes",
+          localization: { enabled: true, defaultLocale: "en" },
+          fields: {
+            title: field.text({ localized: true, required: true }),
+            code: field.text({ nullable: true }),
+          },
+          admin: { list: { searchableFields: ["title", "code"] } },
+        }),
+      );
+      const { c, calls } = createDbMock(page([]));
+
+      await notes.service(c).findMany({ query: { search: "50%" } });
+
+      const { params, sql } = new PgDialect().sqlToQuery(
+        opsOf(calls, "where")[0] as SQL,
+      );
+      expect(sql).toContain('"test_searchable_notes"."code" ilike');
+      expect(sql).toContain(
+        'exists (select 1 from "test_searchable_notes_translations"',
+      );
+      expect(sql).toContain(
+        '"test_searchable_notes_translations"."title" ilike',
+      );
+      expect(params).toEqual(["%50\\%%", "%50\\%%"]);
     });
   });
 

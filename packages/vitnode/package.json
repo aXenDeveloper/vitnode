@@ -266,8 +266,7 @@
     "shadcn": "^4.21.0",
     "sharp": "^0.35.5",
     "use-debounce": "^10.1.1",
-    "use-intl": "^4.14.8",
-    "vaul": "^1.1.2"
+    "use-intl": "^4.14.8"
   },
   "peerDependenciesMeta": {
     "@tanstack/react-query": {

@@ -7,21 +7,21 @@ import type { EmojiIconValue } from "@/lib/emoji-icon";
 
 import { humanizeIconName } from "@/lib/emoji-icon";
 
+import type { EmojiIconPickerKind } from "./emoji-icon-picker-kinds";
+
 import { Button } from "./button";
 import { EmojiIcon } from "./emoji-icon";
-import { Loader } from "./loader";
+import { EMOJI_ICON_PICKER_KINDS } from "./emoji-icon-picker-kinds";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Spinner } from "./spinner";
+
+export type { EmojiIconPickerKind } from "./emoji-icon-picker-kinds";
 
 const EmojiIconPickerPanel = React.lazy(async () =>
   import("./emoji-icon-picker-panel").then(module => ({
     default: module.EmojiIconPickerPanel,
   })),
 );
-
-/** Both kinds, unless a caller narrows it - see the `allow` prop. */
-export const EMOJI_ICON_PICKER_KINDS = ["emoji", "icon"] as const;
-
-export type EmojiIconPickerKind = (typeof EMOJI_ICON_PICKER_KINDS)[number];
 
 export const EmojiIconPicker = ({
   allow = EMOJI_ICON_PICKER_KINDS,
@@ -77,8 +77,15 @@ export const EmojiIconPicker = ({
         <PopoverContent className="w-76 gap-0 p-0">
           <React.Suspense
             fallback={
-              <div className="flex h-108 items-center justify-center">
-                <Loader />
+              <div
+                className={cn(
+                  "flex items-center justify-center",
+                  allow.length > 1 ? "h-108" : "h-94",
+                )}
+              >
+                <div className="flex items-center justify-center">
+                  <Spinner size="xl" />
+                </div>
               </div>
             }
           >
@@ -98,7 +105,7 @@ export const EmojiIconPicker = ({
       {canRemove ? (
         <Button
           aria-label={t("remove")}
-          className="text-muted-foreground absolute end-1 size-7"
+          className="text-muted-foreground absolute end-1 size-7 after:absolute after:-inset-1 pointer-coarse:after:-inset-2"
           onClick={() => onChange(undefined)}
           size="icon"
           type="button"

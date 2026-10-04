@@ -21,6 +21,7 @@ export const RemoveCollectionDocumentsAction = ({
   return (
     <ConfirmActionAlertDialog
       description={t("removeConfirmDescription")}
+      icon={<Trash2Icon />}
       onSubmit={async ({ onClose }) => {
         const result = await onClear(itemType);
 

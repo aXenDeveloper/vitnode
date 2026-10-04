@@ -22,7 +22,10 @@ export const core_sessions = camelCase.table.withRLS(
       })
       .notNull(),
   }),
-  t => [index("core_sessions_user_id_idx").on(t.userId)],
+  t => [
+    index("core_sessions_user_id_idx").on(t.userId),
+    index("core_sessions_device_id_idx").on(t.deviceId),
+  ],
 );
 
 export const core_sessions_known_devices = camelCase.table.withRLS(

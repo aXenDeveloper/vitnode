@@ -17,6 +17,8 @@ import type {
 import { hasStaffPermission, staffPermissionKey } from "./staff-permission";
 import {
   readStaffPermissions,
+  readStaffPermissionsOfUser,
+  STAFF_TYPES,
   writeStaffPermissions,
 } from "./staff-permission-cache";
 
@@ -43,12 +45,13 @@ export const getUserRoleIds = async (
   return [...new Set([user.roleId, ...secondary.map(row => row.roleId)])];
 };
 
-const loadStaffPermissions = async (
-  c: Context,
-  { type, user }: { type: PermissionStaffType; user: StaffUser },
-): Promise<ResolvedStaffPermissionSet> => {
-  const roleIds = await getUserRoleIds(c, user);
+const rootStaffPermissions = (): ResolvedStaffPermissionSet => ({
+  root: true,
+  permissions: [],
+  staff: true,
+});
 
+const hasRootRole = async (c: Context, roleIds: number[]): Promise<boolean> => {
   const rootRoles = await c
     .get("db")
     .select({ id: core_roles.id })
@@ -56,22 +59,34 @@ const loadStaffPermissions = async (
     .where(and(inArray(core_roles.id, roleIds), eq(core_roles.root, true)))
     .limit(1);
 
-  if (rootRoles.length > 0) {
-    return { root: true, permissions: [], staff: true };
-  }
+  return rootRoles.length > 0;
+};
 
+const findStaffEntries = async (
+  c: Context,
+  {
+    roleIds,
+    type,
+    userId,
+  }: { roleIds: number[]; type: PermissionStaffType; userId: number },
+) => {
   const table = tableByType[type];
-  const entries = await c
+
+  return await c
     .get("db")
     .select({
       unrestricted: table.unrestricted,
       permissions: table.permissions,
     })
     .from(table)
-    .where(or(eq(table.userId, user.id), inArray(table.roleId, roleIds)));
+    .where(or(eq(table.userId, userId), inArray(table.roleId, roleIds)));
+};
 
+const toStaffPermissionSet = (
+  entries: Awaited<ReturnType<typeof findStaffEntries>>,
+): ResolvedStaffPermissionSet => {
   if (entries.some(entry => entry.unrestricted)) {
-    return { root: true, permissions: [], staff: true };
+    return rootStaffPermissions();
   }
 
   const seen = new Set<string>();
@@ -86,6 +101,19 @@ const loadStaffPermissions = async (
   }
 
   return { root: false, permissions, staff: entries.length > 0 };
+};
+
+const loadStaffPermissions = async (
+  c: Context,
+  { type, user }: { type: PermissionStaffType; user: StaffUser },
+): Promise<ResolvedStaffPermissionSet> => {
+  const roleIds = await getUserRoleIds(c, user);
+
+  if (await hasRootRole(c, roleIds)) return rootStaffPermissions();
+
+  return toStaffPermissionSet(
+    await findStaffEntries(c, { roleIds, type, userId: user.id }),
+  );
 };
 
 const loadAndCacheStaffPermissions = async (
@@ -142,6 +170,60 @@ export const isStaff = async (
     : await loadAndCacheStaffPermissions(c, { type, user });
 
   return resolved.staff;
+};
+
+export interface StaffFlags {
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
+const loadMissingStaffPermissions = async (
+  c: Context,
+  { types, user }: { types: PermissionStaffType[]; user: StaffUser },
+): Promise<[PermissionStaffType, ResolvedStaffPermissionSet][]> => {
+  const roleIds = await getUserRoleIds(c, user);
+  const [root, entriesByType] = await Promise.all([
+    hasRootRole(c, roleIds),
+    Promise.all(
+      types.map(
+        async type =>
+          [
+            type,
+            await findStaffEntries(c, { roleIds, type, userId: user.id }),
+          ] as const,
+      ),
+    ),
+  ]);
+
+  return entriesByType.map(([type, entries]) => [
+    type,
+    root ? rootStaffPermissions() : toStaffPermissionSet(entries),
+  ]);
+};
+
+export const getStaffFlags = async (
+  c: Context,
+  user: StaffUser,
+): Promise<StaffFlags> => {
+  const cached = await readStaffPermissionsOfUser(c, user.id);
+  const sets = { ...cached.sets };
+  const missing = STAFF_TYPES.filter(type => !sets[type]);
+
+  if (missing.length > 0) {
+    const loaded = await loadMissingStaffPermissions(c, {
+      types: missing,
+      user,
+    });
+    for (const [type, set] of loaded) sets[type] = set;
+    await Promise.all(
+      loaded.map(async ([type, set]) => await cached.write(type, set)),
+    );
+  }
+
+  return {
+    isAdmin: sets.admin?.staff ?? false,
+    isModerator: sets.moderator?.staff ?? false,
+  };
 };
 
 export const checkStaffPermission = async (

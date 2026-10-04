@@ -24,7 +24,7 @@ import {
   useDialog,
 } from "@/components/ui/dialog";
 import { EmojiIcon } from "@/components/ui/emoji-icon";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
 import {
@@ -36,6 +36,10 @@ import {
 import type { AdminNavigationFormProps } from "./navigation-form-content";
 import type { AdminNavigationItem } from "./navigation-query";
 
+import {
+  isNavigationLocationFull,
+  usedNavigationPresetKeys,
+} from "./navigation-availability";
 import { presetLabelSource, useNavigationTranslate } from "./navigation-labels";
 
 const AdminNavigationFormContent = React.lazy(async () =>
@@ -44,31 +48,10 @@ const AdminNavigationFormContent = React.lazy(async () =>
   })),
 );
 
-export const usedNavigationPresetKeys = (
-  items: readonly AdminNavigationItem[],
-  except?: number,
-): string[] =>
-  items.flatMap(item =>
-    item.kind === "preset" &&
-    item.pluginId &&
-    item.presetId &&
-    item.id !== except
-      ? [navigationPresetKey(item.pluginId, item.presetId)]
-      : [],
-  );
-
 interface NavigationCreateChoice {
   kind: NavigationKind;
   preset?: NavigationPreset;
 }
-
-export const isNavigationLocationFull = (
-  location: NavigationLocation,
-  items: readonly AdminNavigationItem[],
-): boolean =>
-  location === "bottom_bar" &&
-  items.filter(item => item.parentId === null).length >=
-    NAVIGATION_BOTTOM_BAR_MAX_ITEMS;
 
 export interface NavigationCreateDialogProps {
   items: AdminNavigationItem[];
@@ -263,7 +246,13 @@ const NavigationCreateDetailsStep = ({
         </DialogDescription>
       </DialogHeader>
 
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
         <AdminNavigationFormContent
           items={items}
           kind={choice.kind}

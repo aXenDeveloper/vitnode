@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -5,24 +6,20 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooterSkeleton,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-
-const ContentConfirmAction = React.lazy(async () =>
-  import("./content").then(module => ({
-    default: module.ContentConfirmAction,
-  })),
-);
+import { ContentConfirmAction } from "./content";
 
 export const ConfirmActionAlertDialog = ({
   children,
   title,
   description,
   finalFocus,
-  submitVariant,
+  icon,
+  submitVariant = "destructive",
   textSubmit,
   onSubmit,
   ...props
@@ -31,6 +28,7 @@ export const ConfirmActionAlertDialog = ({
     children?: React.ReactElement;
     description?: React.ReactNode;
     finalFocus?: React.ComponentProps<typeof AlertDialogContent>["finalFocus"];
+    icon?: React.ReactNode;
     title?: React.ReactNode;
   }) => {
   const t = useTranslations("core.global.confirm_action");
@@ -39,21 +37,32 @@ export const ConfirmActionAlertDialog = ({
     <AlertDialog {...props}>
       {children ? <AlertDialogTrigger render={children} /> : null}
 
-      <AlertDialogContent finalFocus={finalFocus}>
+      <AlertDialogContent
+        finalFocus={finalFocus}
+        size={icon ? "sm" : "default"}
+      >
         <AlertDialogHeader>
+          {icon ? (
+            <AlertDialogMedia
+              className={cn(
+                submitVariant === "destructive" &&
+                  "bg-destructive/10 text-destructive dark:bg-destructive/20",
+              )}
+            >
+              {icon}
+            </AlertDialogMedia>
+          ) : null}
           <AlertDialogTitle>{title ?? t("title")}</AlertDialogTitle>
           <AlertDialogDescription>
             {description ?? t("desc")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <React.Suspense fallback={<AlertDialogFooterSkeleton />}>
-          <ContentConfirmAction
-            onSubmit={onSubmit}
-            submitVariant={submitVariant}
-            textSubmit={textSubmit}
-          />
-        </React.Suspense>
+        <ContentConfirmAction
+          onSubmit={onSubmit}
+          submitVariant={submitVariant}
+          textSubmit={textSubmit}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

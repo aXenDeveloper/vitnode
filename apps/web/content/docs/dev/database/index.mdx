@@ -87,6 +87,71 @@ npm run build:plugins && npm run db:migrate
   If your table represents an editorial entity (articles, FAQs, products), consider [Content Engine](/docs/dev/content-engine/defining-a-content-type) to generate your Drizzle table, API routes, and AdminCP screens from one definition.
 </Callout>
 
+## Connection pool
+
+VitNode talks to Postgres through [`postgres.js`](https://github.com/porsager/postgres), and the default config hands it a bare connection string:
+
+```ts title="src/vitnode.api.config.ts"
+dbProvider: drizzle({
+  connection: POSTGRES_URL,
+  relations: coreRelations,
+}),
+```
+
+That means `postgres.js` defaults: up to **10** connections per process, idle connections kept **forever** (`idle_timeout: 0`), and automatic prepared statements (`prepare: true`). Perfectly fine on your laptop. In production you probably want to pick the numbers yourself.
+
+Swap the string for an object - `url` plus any [`postgres.js` option](https://github.com/porsager/postgres#all-postgres-options):
+
+### Long-running server
+
+A Node server, a Docker container, a VPS. One process lives for days and handles plenty of requests at once, so give it room:
+
+```ts title="src/vitnode.api.config.ts"
+dbProvider: drizzle({
+  connection: POSTGRES_URL, // [!code --]
+  connection: { url: POSTGRES_URL, max: 20, idle_timeout: 20 }, // [!code ++]
+  relations: coreRelations,
+}),
+```
+
+| Option         | Default | What it does                                                                                  |
+| :------------- | :------ | :-------------------------------------------------------------------------------------------- |
+| `max`          | `10`    | The most connections this process will hold open. Queries beyond it wait their turn.          |
+| `idle_timeout` | `0`     | Seconds before an unused connection is closed. `0` never closes it; `20` frees quiet periods. |
+| `prepare`      | `true`  | Creates named prepared statements automatically. Turn it off behind a transaction pooler.     |
+
+**Sizing rule of thumb:** every process opens its own pool, and Postgres has a hard ceiling (`SHOW max_connections;` - often `100`). So:
+
+```text
+max ≈ (max_connections − headroom) ÷ number of processes
+```
+
+Keep 10-20 connections of headroom for migrations, `db:studio`, backups and you poking around in `psql`. With `max_connections = 100`, 4 instances and 20 spare, that is `max: 20` each. Scale out to 8 instances and the same math says `max: 10` - forget to redo it and the fifth instance greets you with `too many connections`.
+
+### Serverless
+
+On Vercel, Netlify and friends every concurrent request may be its own process, so `max × processes` grows faster than you would like. Use your provider's pooled connection string, or keep each process to a single connection with `max: 1`. The [Vercel guide](/docs/dev/deployments/cloud/vercel#bring-a-managed-postgres) has the full setup.
+
+### Behind a transaction pooler
+
+<Callout type="warn" title="Set prepare: false for transaction-mode poolers">
+  The Supabase pooler on port `6543`, PgBouncer with `pool_mode = transaction`
+  and similar poolers hand you a different backend connection for every
+  transaction. A prepared statement created on one backend does not exist on
+  the next, so queries fail at random with `prepared statement "..." does not
+  exist`. Turn automatic prepared statements off:
+
+```ts title="src/vitnode.api.config.ts"
+dbProvider: drizzle({
+  connection: { url: POSTGRES_URL, prepare: false },
+  relations: coreRelations,
+}),
+```
+
+</Callout>
+
+Direct connections and session-mode poolers keep `prepare: true` - it is the faster option. VitNode's own locks are transaction-scoped (`pg_advisory_xact_lock`), so they work behind either mode.
+
 ## Learn More
 
 <Cards>

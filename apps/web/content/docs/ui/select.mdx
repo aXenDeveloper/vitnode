@@ -1,6 +1,7 @@
 ---
 title: Select
-description: Choose an option from a list of options.
+description: Pick one option from a short list, in an Auto Form field or as a composable Base UI select.
+icon: SquareChevronDown
 ---
 
 ## Preview
@@ -9,21 +10,22 @@ description: Choose an option from a list of options.
 
 ## Usage
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
-```ts
-import { z } from "zod";
-import { AutoForm } from "@vitnode/core/components/form/auto-form";
-import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
-```
+Options come from the `z.enum`. `labels` names them; a value without a label
+shows as is.
 
 ```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormSelect } from '@vitnode/core/components/form/fields/select'
+
 const formSchema = z.object({
-  options: z.enum(["option1", "option2", "option3"]).default("option1"),
-});
+  visibility: z.enum(['public', 'members', 'staff']).default('public'),
+})
 ```
 
 ```tsx
@@ -31,25 +33,15 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: "options",
-      component: props => (
+      id: 'visibility',
+      component: (props) => (
         <AutoFormSelect
           {...props}
-          description="Choose one of the options."
-          label="Select an option"
+          label="Visibility"
           labels={[
-            {
-              value: "option1",
-              label: "Option 1",
-            },
-            {
-              value: "option2",
-              label: "Option 2",
-            },
-            {
-              value: "option3",
-              label: "Option 3",
-            },
+            { value: 'public', label: 'Everyone' },
+            { value: 'members', label: 'Signed-in members' },
+            { value: 'staff', label: 'Staff only' },
           ]}
         />
       ),
@@ -61,25 +53,24 @@ const formSchema = z.object({
   </Tab>
 
   <Tab value="Manual">
-```ts
+
+```tsx
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@vitnode/core/components/ui/select';
-```
+} from '@vitnode/core/components/ui/select'
 
-```tsx
 const items = [
-  { label: "Option One", value: "option-one" },
-  { label: "Option Two", value: "option-two" },
-];
+  { label: 'Everyone', value: 'public' },
+  { label: 'Staff only', value: 'staff' },
+]
 
-<Select items={items}>
+;<Select items={items}>
   <SelectTrigger>
-    <SelectValue placeholder="Select example" />
+    <SelectValue placeholder="Pick visibility" />
   </SelectTrigger>
   <SelectContent>
     {items.map((item) => (
@@ -91,45 +82,68 @@ const items = [
 </Select>
 ```
 
-> Pass an `items` array to `Select` so `SelectValue` can render the selected
-> option's label. Without it, the raw `value` is displayed instead.
+Pass `items` to `Select` so `SelectValue` shows the label. Without it you get
+the raw `value`.
 
   </Tab>
 </Tabs>
 
+## Groups and sizes
+
+<Preview name="select-groups" />
+
+`SelectGroup` + `SelectLabel` add headings, `SelectSeparator` draws a line.
+`SelectTrigger` takes `size="sm"` for toolbars and filters.
+
+```tsx
+<SelectTrigger size="sm">
+  <SelectValue />
+</SelectTrigger>
+<SelectContent>
+  <SelectGroup>
+    <SelectLabel>Members</SelectLabel>
+    <SelectItem value="newest">Newest first</SelectItem>
+  </SelectGroup>
+  <SelectSeparator />
+</SelectContent>
+```
+
+Give a manual select a label, for example with `aria-labelledby` on the
+trigger. `AutoFormSelect` does it for you.
+
+## Motion and touch
+
+- The chevron flips and the list scales in from the trigger. Reduced motion
+  turns both off.
+- On touch screens the trigger's tap area grows to 44px and options get taller.
+- Scrolling a long list never drags the page along.
+
 ## Props
 
-import { TypeTable } from "fumadocs-ui/components/type-table";
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
     label: {
-      description:
-        "The label for the input field. This is displayed above the input.",
-      type: "string",
-      default: "",
+      description: 'Shown above the select.',
+      type: 'ReactNode',
     },
     description: {
-      description:
-        "A short description of the input field. This is displayed below the input.",
-      type: "string",
-      default: "",
+      description: 'Shown below the select.',
+      type: 'ReactNode',
     },
     labels: {
-      description:
-        "An array of objects representing the radio button options. Each object should have a `value` and a `label` property.",
-      type: "{ value: string; label: string }[]",
-      default: "[]",
+      description: 'Readable label for each enum value.',
+      type: '{ value: string; label: string }[]',
+      default: '[]',
     },
     placeholder: {
-      description:
-        "A short hint that describes the expected value of the input field. This is displayed inside the input field when it is empty.",
-      type: "string",
-      default: "",
+      description: 'Shown while nothing is picked.',
+      type: 'string',
+      default: '"Select an option"',
     },
   }}
 />
 
-## API Reference
-
-[Base UI - Select](https://base-ui.com/react/components/select#api-reference)
+`AutoFormSelect` also passes [Base UI Select](https://base-ui.com/react/components/select#api-reference)
+root props through, like `disabled` and `onValueChange`.

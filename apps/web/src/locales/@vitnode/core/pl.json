@@ -1396,6 +1396,14 @@
         "yellow": "Żółty"
       },
       "confirm": "Potwierdź",
+      "clear": "Wyczyść",
+      "comparison_slider": "Suwak porównania",
+      "copied": "Skopiowano",
+      "copy": "Kopiuj",
+      "copy_failed": "Nie udało się skopiować do schowka. Spróbuj zaznaczyć tekst.",
+      "decrease": "Zmniejsz",
+      "increase": "Zwiększ",
+      "more_count": "+{count} więcej",
       "confirm_action": {
         "cancel": "Anuluj",
         "confirm": "Tak, potwierdzam",
@@ -1405,6 +1413,20 @@
       "current_page": "Bieżąca strona",
       "data_table": {
         "clear_selection": "Wyczyść zaznaczenie",
+        "collapse_row": "Zwiń wiersz",
+        "expand_row": "Rozwiń wiersz",
+        "reorder_cancelled": "Anulowano zmianę kolejności. {name} wraca na miejsce {position} z {total}.",
+        "reorder_column": "Kolejność",
+        "reorder_ended": "Upuszczono {name} na miejscu {position} z {total}.",
+        "reorder_failed": "Nie udało się zapisać nowej kolejności",
+        "reorder_failed_desc": "Wiersze wróciły na swoje miejsca. Spróbuj ponownie za chwilę.",
+        "reorder_instructions": "Naciśnij spację lub enter, aby podnieść wiersz. Przesuwaj go strzałkami. Naciśnij spację lub enter ponownie, aby upuścić go w nowym miejscu, albo escape, aby anulować.",
+        "reorder_over": "{name} przeniesiono na miejsce {position} z {total}.",
+        "reorder_row": "Zmień kolejność: {name}",
+        "reorder_started": "Podniesiono {name}. Jest na miejscu {position} z {total}.",
+        "reorder_unavailable": "Wyczyść wyszukiwanie, filtry i sortowanie, aby zmienić kolejność wierszy.",
+        "row_details": "Szczegóły wiersza",
+        "row_fallback": "wiersz {position}",
         "select_all": "Zaznacz wszystkie wiersze",
         "select_row": "Zaznacz wiersz"
       },
@@ -1565,7 +1587,8 @@
         "placeholder": "Wybierz emoji lub ikonę",
         "remove": "Usuń",
         "search_emoji": "Szukaj emoji…",
-        "search_icons": "Szukaj ikon…"
+        "search_icons": "Szukaj ikon…",
+        "skin_tone": "Odcień skóry"
       },
       "errors": {
         "400": {
@@ -1608,12 +1631,22 @@
         "drop": "Przeciągnij plik tutaj",
         "errors": {
           "too_large": "Ten plik ma {size}. Maksimum to {max}.",
-          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}."
+          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}.",
+          "upload_failed": "Przesyłanie nie zostało ukończone. Sprawdź połączenie i spróbuj ponownie."
         },
         "max_size": "Maksymalny rozmiar pliku: {size}",
         "remove": "Usuń plik",
         "replace": "Zmień plik",
-        "uploading": "Przesyłanie..."
+        "uploading": "Przesyłanie...",
+        "cancel_upload": "Anuluj przesyłanie",
+        "cancel_upload_named": "Anuluj przesyłanie {name}",
+        "upload_progress_named": "Przesyłanie {name}",
+        "retry": "Spróbuj ponownie",
+        "retry_named": "Prześlij {name} ponownie",
+        "dismiss_named": "Odrzuć {name}",
+        "removed": "Plik usunięty",
+        "removed_desc": "{name} zniknął z tego pola. Zmiana planów? Cofnij to.",
+        "undo": "Cofnij"
       },
       "go_back": "Wróć",
       "go_to_next_page": "Przejdź do następnej strony",
@@ -1655,18 +1688,22 @@
       "optional": "Opcjonalne",
       "or": "lub",
       "pick_color": "Wybierz kolor",
+      "color_value": "Wartość koloru",
       "preferences": "Preferencje",
       "previous": "Wstecz",
       "previous_page": "Poprzednia strona",
+      "more_pages": "Więcej stron",
+      "pagination": "Paginacja",
       "register": "Zarejestruj się",
       "remove": "Usuń",
+      "remove_named": "Usuń {name}",
       "results_not_found": "Brak wyników",
       "save": "Zapisz",
       "search_placeholder": "Szukaj...",
       "select_language": "Wybierz język",
       "select_option": "Wybierz opcję",
       "select_options": "Wybierz opcje",
-      "selected_count": "Zaznaczono: {count}",
+      "selected_count": "Zaznaczono: <number>{count}</number>",
       "submit": "Wyślij",
       "theme": {
         "dark": "Ciemny",
@@ -1684,7 +1721,8 @@
         "mod_cp": "Panel moderatora",
         "my_profile": "Mój profil",
         "settings": "Ustawienia"
-      }
+      },
+      "tab_has_errors": "Zawiera błędy"
     },
     "navigation": {
       "discover": {

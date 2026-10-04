@@ -1,6 +1,6 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { cn } from "cn";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 import React from "react";
 
 function Accordion({
@@ -38,7 +38,7 @@ function AccordionTrigger({
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         className={cn(
-          "group/accordion-trigger focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:after:border-ring **:data-[slot=accordion-trigger-icon]:text-muted-foreground relative flex flex-1 items-start justify-between rounded-md border border-transparent py-4 text-start text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-3 aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ms-auto **:data-[slot=accordion-trigger-icon]:size-4",
+          "group/accordion-trigger focus-visible:border-ring focus-visible:ring-ring/50 **:data-[slot=accordion-trigger-icon]:text-muted-foreground hover:text-foreground ease-fluid relative flex flex-1 items-start justify-between rounded-md border border-transparent py-4 text-start text-sm font-medium transition-[color,opacity] duration-150 outline-none focus-visible:ring-3 active:opacity-70 aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ms-auto **:data-[slot=accordion-trigger-icon]:size-4",
           className,
         )}
         data-slot="accordion-trigger"
@@ -46,11 +46,7 @@ function AccordionTrigger({
       >
         {children}
         <ChevronDownIcon
-          className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
-          data-slot="accordion-trigger-icon"
-        />
-        <ChevronUpIcon
-          className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
+          className="ease-fluid pointer-events-none shrink-0 transition-transform duration-200 group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none"
           data-slot="accordion-trigger-icon"
         />
       </AccordionPrimitive.Trigger>
@@ -65,7 +61,7 @@ function AccordionContent({
 }: React.ComponentProps<typeof AccordionPrimitive.Panel>) {
   return (
     <AccordionPrimitive.Panel
-      className="h-(--accordion-panel-height) overflow-hidden text-sm transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0"
+      className="ease-fluid h-(--accordion-panel-height) overflow-hidden text-sm transition-[height,opacity] duration-200 data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-[opacity]"
       data-slot="accordion-content"
       {...props}
     >

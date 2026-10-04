@@ -17,6 +17,25 @@ import { roleOptionName } from "./roles";
 export type { RoleOption, RoleSearch };
 export { roleOptionName };
 
+const RoleLabel = ({
+  children,
+  color,
+}: {
+  children: React.ReactNode;
+  color?: null | string;
+}) => (
+  <span className="flex min-w-0 items-center gap-2">
+    {color ? (
+      <span
+        aria-hidden="true"
+        className="size-2 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    ) : null}
+    <span className="text-foreground truncate font-medium">{children}</span>
+  </span>
+);
+
 /** What the role field takes. `search` is the whole of its host coupling. */
 export type AutoFormRolesProps = ItemAutoFormComponentProps & {
   disabled?: boolean;
@@ -99,12 +118,9 @@ export const AutoFormRoles = ({
         );
       }}
       renderOption={option => (
-        <span
-          className="truncate font-medium"
-          style={option.color ? { color: option.color } : undefined}
-        >
+        <RoleLabel color={option.color}>
           {roleOptionName(option, locale)}
-        </span>
+        </RoleLabel>
       )}
       search={async value =>
         (await search(value)).filter(role => !excludeIds.includes(role.id))
@@ -113,12 +129,7 @@ export const AutoFormRoles = ({
       selectedIds={ids}
       trigger={
         !multiple && ids.length > 0 ? (
-          <span
-            className="truncate font-medium"
-            style={colorOf(ids[0]) ? { color: colorOf(ids[0]) } : undefined}
-          >
-            {nameOf(ids[0])}
-          </span>
+          <RoleLabel color={colorOf(ids[0])}>{nameOf(ids[0])}</RoleLabel>
         ) : (
           <span className="text-muted-foreground truncate">
             {placeholder ?? t("select_option")}
@@ -147,13 +158,11 @@ export const AutoFormRoles = ({
         <ul className="flex flex-wrap gap-2">
           {ids.map(id => (
             <li key={id}>
-              <Badge className="gap-1 pe-1" variant="outline">
-                <span style={colorOf(id) ? { color: colorOf(id) } : undefined}>
-                  {nameOf(id)}
-                </span>
+              <Badge className="gap-1 overflow-visible pe-1" variant="outline">
+                <RoleLabel color={colorOf(id)}>{nameOf(id)}</RoleLabel>
                 <Button
-                  aria-label={t("remove")}
-                  className="size-4"
+                  aria-label={t("remove_named", { name: nameOf(id) })}
+                  className="relative size-5 after:absolute after:-inset-1"
                   disabled={disabled}
                   onClick={() => {
                     remove(id);

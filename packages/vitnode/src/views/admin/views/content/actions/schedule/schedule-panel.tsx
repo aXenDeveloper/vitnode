@@ -15,7 +15,7 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 import { contentScheduleTimingError } from "@/content/schedules";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
@@ -136,7 +136,12 @@ export const SchedulePanel = ({
     });
   };
 
-  if (schedules.isPending) return <Loader />;
+  if (schedules.isPending)
+    return (
+      <div className="flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
+    );
 
   const edges = schedules.data?.edges ?? [];
   const pending = edges.filter(entry => entry.status === "pending");

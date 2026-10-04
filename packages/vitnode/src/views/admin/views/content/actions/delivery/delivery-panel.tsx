@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
-import { Loader } from "@/components/ui/loader";
+import { Spinner } from "@/components/ui/spinner";
 
 import { contentDeliveryQueryOptions } from "../editorial-query";
 import { useContentEditorialTransport } from "../editorial-transport";
@@ -29,7 +29,12 @@ export const DeliveryPanel = ({
     }),
   );
 
-  if (isPending) return <Loader />;
+  if (isPending)
+    return (
+      <div className="flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
+    );
 
   if (!data?.data) {
     return (

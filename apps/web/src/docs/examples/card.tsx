@@ -1,6 +1,6 @@
+import { Button } from '@vitnode/core/components/ui/button'
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -10,16 +10,21 @@ import {
 
 export default function CardExample() {
   return (
-    <Card>
+    <Card className="not-prose w-full max-w-xs">
       <CardHeader>
-        <CardTitle>Card Title</CardTitle>
-        <CardDescription>Card Description</CardDescription>
+        <CardTitle>Weekly digest</CardTitle>
+        <CardDescription>Sent every Monday at 9:00</CardDescription>
       </CardHeader>
       <CardContent>
-        This is the content of the card. You can put any content here.
+        <p className="leading-relaxed">
+          A roundup of the top threads, new members and unanswered questions
+          from your community.
+        </p>
       </CardContent>
       <CardFooter>
-        <CardAction>Action Button</CardAction>
+        <Button className="w-full" variant="outline">
+          Preview email
+        </Button>
       </CardFooter>
     </Card>
   )
