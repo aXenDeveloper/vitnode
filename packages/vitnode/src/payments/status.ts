@@ -126,14 +126,14 @@ export const purchaseDisplayState = (purchase: {
   switch (purchase.paymentStatus) {
     case "awaiting_payment":
       return "awaiting_payment";
-    case "processing":
-      return "processing";
     case "canceled":
     case "expired":
     case "failed":
       return "failed";
     case "paid":
       break;
+    case "processing":
+      return "processing";
   }
 
   if (purchase.refundStatus === "full") return "refunded";

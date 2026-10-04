@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import { must } from "@/tests/payments";
+
 import type { PaymentsConfig } from "./config";
 import type { PaymentOffer } from "./offer";
 import type { PaymentProvider } from "./provider";
@@ -86,7 +88,10 @@ describe("resolvePaymentsConfig", () => {
   it("refuses duplicate provider ids", () => {
     expect(() =>
       resolvePaymentsConfig(
-        config({ defaultProvider: "stripe", providers: [provider(), provider()] }),
+        config({
+          defaultProvider: "stripe",
+          providers: [provider(), provider()],
+        }),
       ),
     ).toThrow(/registered twice/);
   });
@@ -169,7 +174,11 @@ describe("purchasablePrices", () => {
 
     // EUR is priced but not enabled; USD is enabled but the provider refuses it.
     expect(
-      purchasablePrices(resolved!, resolved!.defaultProvider, lifetime),
+      purchasablePrices(
+        must(resolved),
+        must(resolved).defaultProvider,
+        lifetime,
+      ),
     ).toEqual([{ amount: 1900, currency: "PLN", interval: null }]);
   });
 
@@ -186,9 +195,11 @@ describe("purchasablePrices", () => {
     );
 
     expect(
-      purchasablePrices(resolved!, resolved!.defaultProvider, lifetime).map(
-        price => price.currency,
-      ),
+      purchasablePrices(
+        must(resolved),
+        must(resolved).defaultProvider,
+        lifetime,
+      ).map(price => price.currency),
     ).toEqual(["PLN"]);
   });
 
@@ -203,9 +214,9 @@ describe("purchasablePrices", () => {
       returnPath: "/example/payments",
     });
 
-    expect(purchasablePrices(resolved!, resolved!.defaultProvider, plan)).toEqual(
-      [],
-    );
+    expect(
+      purchasablePrices(must(resolved), must(resolved).defaultProvider, plan),
+    ).toEqual([]);
   });
 });
 
@@ -245,8 +256,16 @@ describe("createPaymentsRegistry", () => {
     ["a decimal price", { prices: { PLN: 19.99 } }, /whole number/],
     ["an unknown currency", { prices: { ZZZ: 100 } }, /ISO 4217/],
     ["no fulfillment handler", { onPaid: undefined }, /"onPaid" handler/],
-    ["an external return URL", { returnPath: "https://evil.example" }, /returnPath/],
-    ["a protocol-relative return URL", { returnPath: "//evil.example" }, /returnPath/],
+    [
+      "an external return URL",
+      { returnPath: "https://evil.example" },
+      /returnPath/,
+    ],
+    [
+      "a protocol-relative return URL",
+      { returnPath: "//evil.example" },
+      /returnPath/,
+    ],
     ["an invalid id", { id: "Lifetime Offer" }, /lowercase/],
   ])("refuses an offer with %s", (_, override, error) => {
     expect(() =>

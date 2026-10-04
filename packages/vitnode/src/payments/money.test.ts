@@ -50,9 +50,9 @@ describe("formatMoney", () => {
   it("keeps the billing currency when only the UI locale changes", () => {
     const money = { amount: 1900, currency: "PLN" };
 
-    expect(formatMoney(money, { currencyDisplay: "code", locale: "en-US" })).toBe(
-      nbsp("PLN 19.00"),
-    );
+    expect(
+      formatMoney(money, { currencyDisplay: "code", locale: "en-US" }),
+    ).toBe(nbsp("PLN 19.00"));
   });
 
   it("formats three-decimal currencies with three places", () => {

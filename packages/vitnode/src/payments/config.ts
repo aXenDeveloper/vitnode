@@ -4,7 +4,11 @@ import type { PaymentProvider, PaymentProviderCapabilities } from "./provider";
 import type { BillingInterval } from "./status";
 
 import { assertCurrencyCode, CURRENCY_DISPLAYS } from "./money";
-import { offerPricesFor, paymentOfferKey, validatePaymentOffers } from "./offer";
+import {
+  offerPricesFor,
+  paymentOfferKey,
+  validatePaymentOffers,
+} from "./offer";
 import { PaymentsConfigError, providerCapabilities } from "./provider";
 
 export interface PaymentsCurrencyConfig {
@@ -105,7 +109,7 @@ export const resolvePaymentsConfig = (
 
   if (!currencies.some(currency => currency.code === config.defaultCurrency)) {
     throw new PaymentsConfigError(
-      `payments.defaultCurrency "${String(config.defaultCurrency)}" is not one of the enabled currencies (${currencies.map(currency => currency.code).join(", ")}).`,
+      `payments.defaultCurrency "${config.defaultCurrency}" is not one of the enabled currencies (${currencies.map(currency => currency.code).join(", ")}).`,
     );
   }
 
@@ -122,7 +126,7 @@ export const resolvePaymentsConfig = (
   for (const provider of providers) {
     if (typeof provider?.id !== "string" || !PROVIDER_ID.test(provider.id)) {
       throw new PaymentsConfigError(
-        `Provider id "${String(provider?.id)}" must be 1-32 lowercase letters, digits or dashes.`,
+        `Provider id "${provider?.id ?? "(missing)"}" must be 1-32 lowercase letters, digits or dashes.`,
       );
     }
 
@@ -251,7 +255,8 @@ export const purchasablePrices = (
     Object.entries(offerPricesFor(offer, interval) ?? {})
       .map(([currency, amount]) => ({ amount, currency, interval }))
       .filter(
-        price => priceUnavailableReason(config, provider, offer, price) === null,
+        price =>
+          priceUnavailableReason(config, provider, offer, price) === null,
       ),
   );
 };

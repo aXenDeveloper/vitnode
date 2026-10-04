@@ -43,9 +43,9 @@ describe("purchaseDisplayState", () => {
   };
 
   it("shows a paid purchase whose fulfillment failed as paid, not failed", () => {
-    expect(
-      purchaseDisplayState({ ...paid, fulfillmentStatus: "failed" }),
-    ).toBe("fulfillment_failed");
+    expect(purchaseDisplayState({ ...paid, fulfillmentStatus: "failed" })).toBe(
+      "fulfillment_failed",
+    );
   });
 
   it("distinguishes pending fulfillment", () => {
@@ -90,10 +90,16 @@ describe("subscriptionDisplayState", () => {
 describe("isPurchaseSettled", () => {
   it("keeps polling while paid but not yet fulfilled", () => {
     expect(
-      isPurchaseSettled({ fulfillmentStatus: "pending", paymentStatus: "paid" }),
+      isPurchaseSettled({
+        fulfillmentStatus: "pending",
+        paymentStatus: "paid",
+      }),
     ).toBe(false);
     expect(
-      isPurchaseSettled({ fulfillmentStatus: "fulfilled", paymentStatus: "paid" }),
+      isPurchaseSettled({
+        fulfillmentStatus: "fulfilled",
+        paymentStatus: "paid",
+      }),
     ).toBe(true);
     expect(
       isPurchaseSettled({
