@@ -9,6 +9,7 @@ import {
 } from "@/api/lib/with-pagination";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
+import { isCronJobOverdue } from "@/lib/api/cron-health";
 
 export const getCronsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -21,6 +22,7 @@ export const getCronsRoute = buildRoute({
       query: zodPaginationQuery.extend({
         order: z.enum(["asc", "desc"]).optional(),
         orderBy: z.enum(["createdAt", "lastRun", "nextRun"]).optional(),
+        search: z.string().optional(),
       }),
     },
     responses: {
@@ -38,6 +40,7 @@ export const getCronsRoute = buildRoute({
                   module: z.string(),
                   lastRun: z.date().nullable(),
                   nextRun: z.date().nullable(),
+                  overdue: z.boolean(),
                   schedule: z.string(),
                 }),
               ),
@@ -57,6 +60,12 @@ export const getCronsRoute = buildRoute({
       },
       c,
       primaryCursor: core_cron.id,
+      search: [
+        core_cron.name,
+        core_cron.description,
+        core_cron.pluginId,
+        core_cron.module,
+      ],
       query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get("db")
@@ -73,6 +82,14 @@ export const getCronsRoute = buildRoute({
       },
     });
 
-    return c.json(data);
+    const now = new Date();
+
+    return c.json({
+      ...data,
+      edges: data.edges.map(edge => ({
+        ...edge,
+        overdue: isCronJobOverdue(edge, now),
+      })),
+    });
   },
 });

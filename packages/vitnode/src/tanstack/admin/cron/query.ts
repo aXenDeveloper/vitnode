@@ -10,6 +10,7 @@ import type {
 } from "@/views/admin/views/core/advanced/cron/run-action/run-cron";
 
 import {
+  cronHealthQueryOptions,
   cronQueryOptions,
   cronQueryRoot,
   fetchCronPage,
@@ -18,6 +19,8 @@ import { runCronInBrowser } from "@/views/admin/views/core/advanced/cron/run-act
 
 export const cronQuery = ({ params }: { params: CronParams }) =>
   cronQueryOptions({ fetchPage: fetchCronPage, params });
+
+export const cronHealthQuery = () => cronHealthQueryOptions();
 
 export const invalidateCron = async (queryClient: QueryClient): Promise<void> =>
   await queryClient.invalidateQueries({ queryKey: cronQueryRoot });

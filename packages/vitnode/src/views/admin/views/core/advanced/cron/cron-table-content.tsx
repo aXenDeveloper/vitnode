@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
@@ -7,6 +8,21 @@ import type { CronJobRow, CronPage } from "./cron-query";
 import type { RunCron } from "./run-action/run-cron";
 
 import { RunActionCronTable } from "./run-action/run-action";
+
+type CronJobStatus = "on_schedule" | "overdue" | "waiting";
+
+const jobStatus = (row: CronJobRow): CronJobStatus => {
+  if (row.overdue) return "overdue";
+  if (!row.lastRun) return "waiting";
+
+  return "on_schedule";
+};
+
+const STATUS_DOT: Record<CronJobStatus, string> = {
+  on_schedule: "bg-success",
+  overdue: "bg-warn",
+  waiting: "bg-muted-foreground/50",
+};
 
 export const CronTableContent = ({
   data,
@@ -35,11 +51,54 @@ export const CronTableContent = ({
             </div>
           ),
         },
-        { accessorKey: "pluginId", header: t("list.pluginId") },
-        { accessorKey: "module", header: t("list.module") },
+        {
+          id: "status",
+          header: t("list.status.title"),
+          cell: ({ row }) => {
+            const status = jobStatus(row);
+
+            return (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "size-2 shrink-0 rounded-full",
+                    STATUS_DOT[status],
+                  )}
+                />
+                <span
+                  className={cn(
+                    status === "overdue"
+                      ? "text-warn"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {t(`list.status.${status}`)}
+                </span>
+              </span>
+            );
+          },
+        },
+        {
+          accessorKey: "pluginId",
+          header: t("list.plugin"),
+          cell: ({ row }) => (
+            <div className="flex flex-col">
+              <span>{row.pluginId}</span>
+              <span className="text-muted-foreground text-sm">
+                {row.module}
+              </span>
+            </div>
+          ),
+        },
         {
           accessorKey: "schedule",
           header: t("list.schedule"),
+          cell: ({ row }) => (
+            <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs whitespace-nowrap">
+              {row.schedule}
+            </code>
+          ),
         },
         {
           accessorKey: "lastRun",
@@ -82,6 +141,8 @@ export const CronTableContent = ({
         },
       }}
       pageInfo={data.pageInfo}
+      search
+      searchPlaceholder={t("list.search")}
     />
   );
 };

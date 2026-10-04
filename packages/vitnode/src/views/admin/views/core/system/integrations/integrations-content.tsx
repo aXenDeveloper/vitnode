@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "use-intl";
 
+import { DateFormat } from "@/components/date-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DOCS_URLS } from "@/lib/docs-links";
 
@@ -51,11 +52,16 @@ export const IntegrationsContent = ({
     ? "active"
     : "inactive";
 
-  const cronStatus: IntegrationStatus = !data.cron.active
-    ? "inactive"
-    : data.cron.stale || !data.cron.secure
-      ? "warning"
-      : "active";
+  const cronHasRun = data.cron.active || data.cron.lastRun !== null;
+  const cronFailing = cronHasRun && data.cron.overdueJobs > 0;
+  const cronStatus: IntegrationStatus = cronFailing
+    ? "warning"
+    : !data.cron.active
+      ? "inactive"
+      : !data.cron.secure
+        ? "warning"
+        : "active";
+  const cronLastRun = data.cron.lastRun;
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -141,12 +147,20 @@ export const IntegrationsContent = ({
         href={DOCS_URLS.cron}
         Icon={ClockIcon}
         meta={
-          !data.cron.active ? (
-            <span>{t("cron.not_configured")}</span>
-          ) : data.cron.stale ? (
-            <span className="text-amber-700 dark:text-amber-400">
-              {t("cron.stale")}
+          cronFailing && data.cron.stale ? (
+            <span className="text-destructive">
+              {cronLastRun
+                ? t.rich("cron.stale", {
+                    date: () => <DateFormat date={cronLastRun} />,
+                  })
+                : t("cron.stale_never")}
             </span>
+          ) : cronFailing ? (
+            <span className="text-amber-700 dark:text-amber-400">
+              {t("cron.overdue", { count: data.cron.overdueJobs })}
+            </span>
+          ) : !data.cron.active ? (
+            <span>{t("cron.not_configured")}</span>
           ) : !data.cron.secure ? (
             <span className="text-amber-700 dark:text-amber-400">
               {t("cron.insecure")}

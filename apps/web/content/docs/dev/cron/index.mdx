@@ -85,6 +85,24 @@ Manage and inspect cron jobs in the AdminCP at **Core → Advanced → Cron Jobs
 - View status, schedules, and last execution logs.
 - Click **Run Now** to execute any job manually on demand.
 
+### Health warnings
+
+Cron fails quietly by nature: nobody notices a job that didn't run. So VitNode watches for it.
+
+A job is **overdue** when its next scheduled run is more than 15 minutes in the past. Never-run jobs count from the moment they were registered.
+
+The scheduler card at the top of the page sums it up:
+
+| What you see | What it means |
+| --- | --- |
+| Red **Scheduler stopped** | A job is overdue and nothing has run since. The scheduler is stopped or misconfigured, and the queue isn't draining either. |
+| Amber **N cron jobs are overdue** | The scheduler ticks, but some jobs aren't finishing. A job that throws keeps its last successful run, so look for its error in the server logs. |
+| Green **All jobs on schedule** | Everything ran on time. Go make a coffee. |
+
+Next to it you get the last run, the next run and how many jobs are registered. The table below lists every job with an **Overdue**, **On schedule** or **Waiting for first run** status.
+
+The same check powers the **Cron Jobs** and **Queue Tasks** cards at **Core → System → Integrations**.
+
 ---
 
 ## `buildCron` Options

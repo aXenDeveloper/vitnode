@@ -4,7 +4,7 @@ import type { CronParams } from "@/views/admin/views/core/advanced/cron/cron-que
 import type { AdminScreenContext } from "../screen";
 
 import { requireAdminPermission } from "../screen";
-import { cronQuery } from "./query";
+import { cronHealthQuery, cronQuery } from "./query";
 
 export const ADMIN_CRON_NAMESPACES = [
   "admin.advanced.cron",
@@ -34,10 +34,16 @@ export const loadAdminCronRoute = async ({
 }): Promise<AdminCronRouteData> => {
   requireAdminPermission(adminAccess, CRON_VIEW_PERMISSION);
 
-  await queryClient.query({
-    ...cronQuery({ params }),
-    staleTime: "static",
-  });
+  await Promise.all([
+    queryClient.query({
+      ...cronQuery({ params }),
+      staleTime: "static",
+    }),
+    queryClient.query({
+      ...cronHealthQuery(),
+      staleTime: "static",
+    }),
+  ]);
 
   return {
     description: t("admin.advanced.cron.desc"),

@@ -8,7 +8,7 @@ import {
   isNotificationInAppAvailable,
   isNotificationLockedForMembers,
 } from "@/api/lib/notifications/preferences";
-import { core_cron } from "@/database/cron";
+import { loadCronHealth } from "@/api/modules/cron/helpers/load-cron-health";
 import {
   core_notification_deliveries,
   core_notification_events,
@@ -17,7 +17,6 @@ import {
   core_notifications,
 } from "@/database/notifications";
 import { core_queue } from "@/database/queue";
-import { isCronStale } from "@/lib/api/is-cron-stale";
 
 import type { NotificationsContext } from "./shared";
 
@@ -55,7 +54,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     deliveryRows,
     eventRows,
     [oldestPending],
-    [cron],
+    cronHealth,
     [inbox],
     [members],
   ] = await Promise.all([
@@ -88,13 +87,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
       )
       .orderBy(core_notification_events.createdAt)
       .limit(1),
-    db
-      .select({
-        lastActivity: sql<
-          null | string
-        >`max(coalesce(${core_cron.lastRun}, ${core_cron.createdAt}))`,
-      })
-      .from(core_cron),
+    loadCronHealth(db),
     db
       .select({
         items: count(),
@@ -122,9 +115,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     },
     health: {
       cronActive: core.hasCronAdapter,
-      cronStale: isCronStale(
-        cron?.lastActivity ? new Date(cron.lastActivity) : null,
-      ),
+      cronStale: cronHealth.stale,
       deliveries: countBy(deliveryRows),
       events: countBy(eventRows),
       oldestPendingEventAt: oldestPending?.createdAt ?? null,

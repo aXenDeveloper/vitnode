@@ -9,7 +9,17 @@ import {
   useReducedMotion,
 } from "motion/react";
 import React from "react";
-import { Area, AreaChart } from "recharts";
+import { createPortal } from "react-dom";
+import {
+  Area,
+  AreaChart,
+  Tooltip,
+  useActiveTooltipCoordinate,
+  useActiveTooltipLabel,
+  useChartWidth,
+  useIsTooltipActive,
+  XAxis,
+} from "recharts";
 import { useFormatter, useTimeZone, useTranslations } from "use-intl";
 
 import type { ChartConfig } from "@/components/ui/chart";
@@ -101,45 +111,270 @@ const Swap = ({
   );
 };
 
-const Sparkline = ({
-  animate,
+type Unit = AdminNotificationStats["unit"];
+
+const bucketStart = (key: string) => {
+  const [date = "", hour] = key.split("T");
+  const [year = 1970, month = 1, day = 1] = date.split("-").map(Number);
+
+  return new Date(Date.UTC(year, month - 1, day, hour ? Number(hour) : 0));
+};
+
+const SparkTooltip = ({
   metric,
-  points,
+  point,
+  unit,
 }: {
-  animate: boolean;
   metric: Metric;
-  points: AdminNotificationStats["points"];
+  point: AdminNotificationStats["points"][number];
+  unit: Unit;
 }) => {
-  const id = React.useId().replace(/:/g, "");
-  const color = TONE[metric];
-  const config = { value: { color } } satisfies ChartConfig;
-  const data = points.map(point => ({ value: valueOf(point, metric) }));
+  const t = useTranslations("admin.system.notifications.activity.tooltip");
+  const format = useFormatter();
+  const start = bucketStart(point.key);
+  const when =
+    unit === "hour"
+      ? format.dateTimeRange(
+          start,
+          new Date(start.getTime() + 60 * 60 * 1000),
+          {
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            month: "short",
+            timeZone: "UTC",
+          },
+        )
+      : format.dateTime(start, {
+          day: "numeric",
+          month: "short",
+          timeZone: "UTC",
+          weekday: "short",
+        });
+  const attempted = point.sent + point.failed;
+  const value =
+    metric === "failureRate"
+      ? attempted === 0
+        ? t("failure_none")
+        : t("failure", {
+            failed: point.failed,
+            rate: format.number(point.failed / attempted, {
+              maximumFractionDigits: 1,
+              style: "percent",
+            }),
+            total: attempted,
+          })
+      : t(metric, { count: point[metric] });
 
   return (
-    <ChartContainer
-      aria-hidden
-      className="aspect-auto h-10 w-full"
-      config={config}
-    >
-      <AreaChart data={data} margin={{ bottom: 2, left: 0, right: 0, top: 2 }}>
-        <defs>
-          <linearGradient id={`spark-${id}`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.2} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area
-          animationDuration={300}
-          animationEasing="ease-out"
-          dataKey="value"
-          fill={`url(#spark-${id})`}
-          isAnimationActive={animate}
-          stroke={color}
-          strokeWidth={1.5}
-          type="monotone"
+    <div className="bg-popover text-popover-foreground ring-foreground/10 flex w-max max-w-48 flex-col gap-0.5 rounded-md px-2.5 py-1.5 text-xs leading-snug shadow-md ring-1">
+      <span className="text-muted-foreground">{when}</span>
+      <span className="flex items-center gap-1.5 font-medium tabular-nums">
+        <span
+          aria-hidden
+          className="size-2 shrink-0 rounded-full"
+          style={{ backgroundColor: TONE[metric] }}
         />
-      </AreaChart>
-    </ChartContainer>
+        {value}
+      </span>
+    </div>
+  );
+};
+
+const TOOLTIP_EASE = [0.32, 0.72, 0, 1] as const;
+
+const SparkTooltipLayer = ({
+  children,
+  glide,
+  open,
+  width,
+  x,
+}: {
+  children: React.ReactNode;
+  glide: boolean;
+  open: boolean;
+  width: number;
+  x: number;
+}) => {
+  const shouldReduceMotion = useReducedMotion();
+  const [size, setSize] = React.useState(0);
+  const observerRef = React.useRef<null | ResizeObserver>(null);
+  const measure = React.useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    if (!node) return;
+    observerRef.current = new ResizeObserver(([entry]) => {
+      setSize(entry?.borderBoxSize[0]?.inlineSize ?? node.offsetWidth);
+    });
+    observerRef.current.observe(node);
+  }, []);
+  const left = Math.min(Math.max(x - size / 2, 0), Math.max(width - size, 0));
+
+  return (
+    <motion.div
+      animate={{
+        opacity: open ? 1 : 0,
+        scale: open ? 1 : 0.97,
+        x: left,
+        y: open ? 0 : 2,
+      }}
+      aria-hidden={!open}
+      className="pointer-events-none absolute bottom-full left-0 z-10 mb-1.5 origin-bottom"
+      initial={
+        shouldReduceMotion ? false : { opacity: 0, scale: 0.97, x: left, y: 2 }
+      }
+      ref={measure}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : {
+              default: open
+                ? { duration: 0.15, ease: TOOLTIP_EASE }
+                : { duration: 0.1, ease: "easeIn" },
+              x: glide
+                ? { duration: 0.14, ease: TOOLTIP_EASE }
+                : { duration: 0 },
+            }
+      }
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+const SparkTooltipPortal = ({
+  container,
+  glideAllowed,
+  metric,
+  points,
+  unit,
+}: {
+  container: HTMLDivElement | null;
+  glideAllowed: boolean;
+  metric: Metric;
+  points: AdminNotificationStats["points"];
+  unit: Unit;
+}) => {
+  const active = useIsTooltipActive();
+  const label = useActiveTooltipLabel();
+  const x = useActiveTooltipCoordinate()?.x;
+  const width = useChartWidth() ?? 0;
+  const key = typeof label === "string" ? label : undefined;
+  const open = active && key !== undefined;
+  const [shown, setShown] = React.useState({
+    glide: false,
+    key: undefined as string | undefined,
+    open: false,
+    x: 0,
+  });
+
+  if (
+    open !== shown.open ||
+    (key !== undefined && key !== shown.key) ||
+    (x !== undefined && x !== shown.x)
+  ) {
+    setShown({
+      glide: shown.open && open,
+      key: key ?? shown.key,
+      open,
+      x: x ?? shown.x,
+    });
+  }
+
+  const point = points.find(item => item.key === shown.key);
+  if (!container || !point) return null;
+
+  return createPortal(
+    <SparkTooltipLayer
+      glide={shown.glide && glideAllowed}
+      open={shown.open}
+      width={width}
+      x={shown.x}
+    >
+      <SparkTooltip metric={metric} point={point} unit={unit} />
+    </SparkTooltipLayer>,
+    container,
+  );
+};
+
+const Sparkline = ({
+  animate,
+  label,
+  metric,
+  points,
+  unit,
+}: {
+  animate: boolean;
+  label: string;
+  metric: Metric;
+  points: AdminNotificationStats["points"];
+  unit: Unit;
+}) => {
+  const t = useTranslations("admin.system.notifications.activity");
+  const id = React.useId().replace(/:/g, "");
+  const [input, setInput] = React.useState<"keyboard" | "pointer">("pointer");
+  const [layer, setLayer] = React.useState<HTMLDivElement | null>(null);
+  const color = TONE[metric];
+  const config = { value: { color } } satisfies ChartConfig;
+  const data = points.map(point => ({
+    key: point.key,
+    value: valueOf(point, metric),
+  }));
+
+  return (
+    <div className="relative" ref={setLayer}>
+      <ChartContainer
+        className="aspect-auto h-10 w-full"
+        config={config}
+        onKeyDown={() => {
+          setInput("keyboard");
+        }}
+        onPointerMove={() => {
+          setInput("pointer");
+        }}
+      >
+        <AreaChart
+          data={data}
+          margin={{ bottom: 2, left: 0, right: 0, top: 2 }}
+          title={t("trend", { label })}
+        >
+          <defs>
+            <linearGradient id={`spark-${id}`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="key" hide />
+          <Tooltip
+            content={() => null}
+            cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+            isAnimationActive={false}
+          />
+          <SparkTooltipPortal
+            container={layer}
+            glideAllowed={input === "pointer"}
+            metric={metric}
+            points={points}
+            unit={unit}
+          />
+          <Area
+            activeDot={{
+              fill: color,
+              r: 3,
+              stroke: "var(--card)",
+              strokeWidth: 2,
+            }}
+            animationDuration={300}
+            animationEasing="ease-out"
+            dataKey="value"
+            fill={`url(#spark-${id})`}
+            isAnimationActive={animate}
+            stroke={color}
+            strokeWidth={1.5}
+            type="monotone"
+          />
+        </AreaChart>
+      </ChartContainer>
+    </div>
   );
 };
 
@@ -221,7 +456,13 @@ const StatTile = ({
             previous={valueOf(stats.previous, metric)}
           />
         </Swap>
-        <Sparkline animate={animate} metric={metric} points={stats.points} />
+        <Sparkline
+          animate={animate}
+          label={label}
+          metric={metric}
+          points={stats.points}
+          unit={stats.unit}
+        />
       </CardContent>
     </Card>
   );

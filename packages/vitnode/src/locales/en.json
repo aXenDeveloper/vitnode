@@ -1705,8 +1705,13 @@
         "desc": "Manage and monitor scheduled tasks.",
         "list": {
           "name": "Name",
-          "pluginId": "Plugin ID",
-          "module": "Module",
+          "status": {
+            "title": "Status",
+            "on_schedule": "On schedule",
+            "overdue": "Overdue",
+            "waiting": "Waiting for first run"
+          },
+          "plugin": "Plugin",
           "schedule": "Schedule",
           "lastRun": {
             "title": "Last Run",
@@ -1721,7 +1726,32 @@
               "label": "Run Job Now",
               "success": "Cron job executed successfully."
             }
-          }
+          },
+          "search": "Search jobs…"
+        },
+        "health": {
+          "stale": {
+            "title": "Scheduler stopped",
+            "desc": "Nothing has run since <date></date>. The queue, scheduled notifications and cleanups are on hold until the scheduler is back.",
+            "desc_never": "No job has run yet. The queue, scheduled notifications and cleanups are on hold until the scheduler starts.",
+            "help": "Check your <docs>cron setup</docs> and the server logs."
+          },
+          "overdue": {
+            "title": "{count, plural, one {# cron job is} other {# cron jobs are}} overdue",
+            "desc": "The scheduler is running, but some jobs haven't finished on time. A job that throws keeps its last successful run, so look for its error in the server logs."
+          },
+          "ok": {
+            "title": "All jobs on schedule",
+            "desc": "Every job ran at its last scheduled time."
+          },
+          "no_adapter": "No cron adapter is configured, so jobs only run when an external scheduler calls the cron endpoint.",
+          "facts": {
+            "last_run": "Last run",
+            "next_run": "Next up",
+            "jobs": "Jobs",
+            "never": "Never"
+          },
+          "secret_rejected": "The cron endpoint refuses every run because CRON_SECRET is missing or still a built-in default. Set CRON_SECRET to a random value in your API environment and restart it."
         }
       },
       "queue": {
@@ -2044,7 +2074,14 @@
           "skipped": "Emails skipped",
           "vs_previous": "vs previous period",
           "no_previous": "Nothing to compare yet",
-          "trend": "{label} over the selected range"
+          "trend": "{label} over the selected range",
+          "tooltip": {
+            "sent": "{count, plural, =0 {No emails delivered} one {# email delivered} other {# emails delivered}}",
+            "events": "{count, plural, =0 {No events published} one {# event published} other {# events published}}",
+            "skipped": "{count, plural, =0 {No emails skipped} one {# email skipped} other {# emails skipped}}",
+            "failure": "{rate} failed - {failed} of {total, plural, one {# email} other {# emails}}",
+            "failure_none": "No emails sent"
+          }
         },
         "types": {
           "title": "Notification types",
@@ -2209,7 +2246,7 @@
         "status": {
           "active": "Active",
           "inactive": "Inactive",
-          "warning": "Unreachable"
+          "warning": "Needs attention"
         },
         "ai": {
           "title": "AI",
@@ -2298,8 +2335,10 @@
           "desc": "Scheduled background tasks such as clearing expired sessions and tokens.",
           "insecure": "Using the default CRON_SECRET - set a secure one in production.",
           "not_configured": "No cron adapter configured - jobs won't run automatically.",
-          "stale": "No job has run in over 6 hours - cron may be misconfigured or stopped. Check your cron setup.",
-          "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
+          "stale": "Stopped - no job has run since <date></date>. Check your cron setup.",
+          "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}",
+          "stale_never": "Stopped - no job has run yet. Check your cron setup.",
+          "overdue": "{count, plural, one {# job is} other {# jobs are}} overdue - check the server logs."
         },
         "content_preview": {
           "title": "Content Preview",
