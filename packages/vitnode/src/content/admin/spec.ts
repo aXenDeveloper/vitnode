@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type {
   AnyContentTypeDefinition,
+  ContentFieldAiAssist,
   ContentFieldDescriptor,
   ContentFieldKind,
 } from "../types";
@@ -27,6 +28,8 @@ import {
 import { humanizeFieldName } from "./labels";
 
 export interface ContentFormFieldSpec {
+  /** `text`/`textarea` fields only: the AI assistance the field offers. */
+  ai?: ContentFieldAiAssist;
   allowedExtensions?: string[];
   /** `file` fields only: the media types the field accepts, lowercased. */
   allowedMimeTypes?: string[];
@@ -237,6 +240,15 @@ export const projectFormField = (
     case "textarea":
       return {
         ...base,
+        ...(fieldValue.ai
+          ? {
+              ai: {
+                action: fieldValue.ai.action,
+                mode: fieldValue.ai.mode,
+                sourceFields: [...fieldValue.ai.sourceFields],
+              },
+            }
+          : {}),
         defaultValue: fieldValue.defaultValue,
         maxLength: fieldValue.maxLength,
         minLength: fieldValue.minLength,

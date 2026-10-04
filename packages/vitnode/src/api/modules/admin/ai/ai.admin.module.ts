@@ -9,7 +9,13 @@ import {
 } from "./routes/access.route";
 import { listAiActionsAdminRoute } from "./routes/actions.route";
 import { getAltStatusAdminRoute, sweepAltAdminRoute } from "./routes/alt.route";
+import {
+  assistStreamAiAdminRoute,
+  estimateAiAdminRoute,
+} from "./routes/assist-stream.route";
 import { assistAiAdminRoute } from "./routes/assist.route";
+import { availableAiActionsAdminRoute } from "./routes/available.route";
+import { aiFeedbackAdminRoute } from "./routes/feedback.route";
 import {
   listAiHistoryAdminRoute,
   showAiRunAdminRoute,
@@ -47,6 +53,10 @@ export const aiAdminModule = buildModule({
     listAiHistoryAdminRoute,
     showAiRunAdminRoute,
     assistAiAdminRoute,
+    assistStreamAiAdminRoute,
+    estimateAiAdminRoute,
+    availableAiActionsAdminRoute,
+    aiFeedbackAdminRoute,
     getAltStatusAdminRoute,
     sweepAltAdminRoute,
   ],

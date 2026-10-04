@@ -8,6 +8,10 @@ import {
   altGenerateAiAction,
   altTranslateAiAction,
 } from "./lib/ai/alt-actions";
+import {
+  editorQuickAskAiAction,
+  editorRewriteAiAction,
+} from "./lib/ai/editor-actions";
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
 import { aiModule } from "./modules/ai/ai.module";
@@ -22,7 +26,12 @@ import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
-  aiActions: [altGenerateAiAction, altTranslateAiAction],
+  aiActions: [
+    altGenerateAiAction,
+    altTranslateAiAction,
+    editorRewriteAiAction,
+    editorQuickAskAiAction,
+  ],
   blocks,
   editablePages: [settingsPage],
   navigation: [

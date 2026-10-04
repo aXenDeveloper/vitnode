@@ -1,3 +1,7 @@
+import {
+  AiRequestError,
+  requestAiAssist,
+} from "@vitnode/core/lib/ai/assist-client";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { CONFIG_PLUGIN } from "@/const";
@@ -32,21 +36,30 @@ export const translateArticleText = async (body: {
   return text;
 };
 
-export const writeArticleExcerpt = async (body: {
+/**
+ * Writes an excerpt through Core's shared AI assist route - the same action
+ * and mechanism the generic `ai` field option uses, so limits, history and
+ * accounting are identical wherever the button is.
+ */
+export const writeArticleExcerpt = async (input: {
   content: string;
   locale: string;
   title: string;
 }): Promise<string> => {
-  const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
-    method: "post",
-    module: "admin/ai",
-    path: "/excerpt",
-    args: { body },
-  });
-  if (response.status !== 200) throw new ArticleAiError(response.status);
+  try {
+    const { output } = await requestAiAssist({
+      action: `${CONFIG_PLUGIN.pluginId}:excerpt.generate`,
+      input,
+    });
+    if (typeof output !== "string") throw new ArticleAiError(502);
 
-  const { text } = await response.json();
-
-  return text;
+    return output;
+  } catch (error) {
+    if (error instanceof AiRequestError) {
+      throw new ArticleAiError(
+        error.code === "AI_NOT_CONFIGURED" ? 400 : error.status,
+      );
+    }
+    throw error;
+  }
 };

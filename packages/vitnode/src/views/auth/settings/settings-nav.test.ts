@@ -28,4 +28,18 @@ describe("visibleSettingsNavItems", () => {
       ),
     ).toEqual(["overview", "notifications", "devices"]);
   });
+
+  it("shows AI usage only while the site has an AI model configured", () => {
+    expect(
+      visibleSettingsNavItems({
+        ai: { models: [{ id: "fast" }] },
+        passkeys: false,
+      }).map(item => item.key),
+    ).toEqual(["overview", "devices", "ai"]);
+    expect(
+      visibleSettingsNavItems({ ai: { models: [] }, passkeys: false }).map(
+        item => item.key,
+      ),
+    ).toEqual(["overview", "devices"]);
+  });
 });

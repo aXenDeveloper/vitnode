@@ -176,3 +176,35 @@ export const collectAiActions = (
 
   return new AiActionRegistry(registered);
 };
+
+/**
+ * Every content field that asks for AI assistance names an action that
+ * exists and can run for users. Checked at boot, when both registries are
+ * complete - a typo fails the start, not the first editor who clicks.
+ */
+export const assertContentAiActions = (
+  contentTypes: {
+    definition: {
+      fields: Record<string, { ai?: { action: string }; kind: string }>;
+      id: string;
+    };
+  }[],
+  registry: AiActionRegistry,
+): void => {
+  for (const { definition } of contentTypes) {
+    for (const [name, field] of Object.entries(definition.fields)) {
+      if (!field.ai) continue;
+      const action = registry.find(field.ai.action);
+      if (!action) {
+        throw new AiActionDefinitionError(
+          `Content type "${definition.id}" field "${name}" uses AI action "${field.ai.action}", which no installed plugin registers.`,
+        );
+      }
+      if (!action.definition.actors.includes("user")) {
+        throw new AiActionDefinitionError(
+          `Content type "${definition.id}" field "${name}" uses AI action "${field.ai.action}", which only the system may run.`,
+        );
+      }
+    }
+  }
+};

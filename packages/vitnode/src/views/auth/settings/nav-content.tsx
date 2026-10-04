@@ -6,6 +6,7 @@ import {
   LinkIcon,
   MenuIcon,
   MonitorSmartphoneIcon,
+  SparklesIcon,
   UserRoundIcon,
   XIcon,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const ICONS: Record<
   SettingsNavKey,
   React.ComponentType<{ className?: string }>
 > = {
+  ai: SparklesIcon,
   devices: MonitorSmartphoneIcon,
   notifications: BellIcon,
   overview: UserRoundIcon,

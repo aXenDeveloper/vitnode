@@ -177,6 +177,13 @@ export class AIModel {
     return found.model;
   }
 
+  /** The upper bound a run could cost the signed-in user, without running it. */
+  async estimate(
+    request: AiRunRequest,
+  ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
+    return await this.runner().estimate(request);
+  }
+
   /**
    * Resolve an image model to pass into `generateImage`. Omit `id` for the
    * first configured image model.
@@ -223,7 +230,6 @@ export class AIModel {
       provider: providerIdOf(entry.model),
     }));
   }
-
   /**
    * Runs a registered action for the signed-in user through the shared
    * runner: authorization, limits, accounting and validation included.
@@ -235,7 +241,6 @@ export class AIModel {
   async run(request: AiRunRequest): Promise<AiRunResult<unknown>> {
     return await this.runner().run(request);
   }
-
   /** Runs an action as the trusted system actor. Server code only. */
   async runAsSystem<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,

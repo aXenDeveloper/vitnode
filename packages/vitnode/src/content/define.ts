@@ -46,6 +46,7 @@ import { resolveAdmin } from "./define-admin";
 import { resolveEditorial } from "./define-editorial";
 import {
   assertField,
+  assertFieldAiAssist,
   assertFieldKind,
   assertFieldName,
   assertSlugSources,
@@ -302,6 +303,7 @@ export const defineContentType = <
   }
 
   assertSlugSources(id, fieldMap);
+  assertFieldAiAssist(id, fieldMap);
 
   // First, because every resolver below is stated in terms of what it produces:
   // the generated table names, and above all the one leaf-path -> column mapping

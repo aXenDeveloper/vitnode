@@ -130,6 +130,8 @@ describe("core's route tree", () => {
     expect(declared).toContain("@vitnode/core:page#/admin/content/*");
 
     for (const path of [
+      "/admin/core/ai",
+      "/admin/core/ai/history",
       "/admin/core/advanced/cron",
       "/admin/core/advanced/queue",
       "/admin/core/system/files",

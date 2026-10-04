@@ -1025,6 +1025,23 @@ export class AiRunner {
     return parsed.success ? { ok: true, output: parsed.data } : { ok: false };
   }
 
+  /**
+   * The most a run could cost the signed-in user, before running it - the
+   * same upper bound the reservation would hold. A bound, never a price:
+   * the real charge is usually far lower. `null` when no pricing bounds it.
+   */
+  async estimate(
+    request: AiRunRequest,
+  ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
+    const plan = await this.prepare(request, this.currentUser());
+    const usd = this.reservationUsd(plan);
+
+    return {
+      maxPoints: usd === null ? null : formatDecimal(usdToPoints(usd)),
+      maxUsd: usd === null ? null : formatDecimal(usd),
+    };
+  }
+
   /** Runs an action for the signed-in user (AdminCP session first). */
   async run(request: AiRunRequest): Promise<AiRunResult<unknown>> {
     return await this.execute(request, this.currentUser());

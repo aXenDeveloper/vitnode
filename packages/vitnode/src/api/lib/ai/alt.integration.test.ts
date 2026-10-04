@@ -353,7 +353,7 @@ describePostgres("automatic ALT (real PostgreSQL)", () => {
   it("sweeps in bounded batches, skips opted-out files and wraps around", async () => {
     await database.db.delete(core_queue);
     await database.db.delete(core_files);
-    const ids = [];
+    const ids: number[] = [];
     for (let index = 0; index < 3; index++) ids.push(await insertFile());
     await insertFile({ altPolicy: "disabled" });
     await insertFile({ mimeType: "application/pdf" });

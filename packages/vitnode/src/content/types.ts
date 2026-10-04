@@ -48,6 +48,27 @@ export type Prettify<T> = { [K in keyof T]: T[K] } & {};
 // derived from them.
 // ---------------------------------------------------------------------------
 
+/**
+ * AI assistance on a text field: a registered AI action that writes a
+ * suggestion for it from other fields. Plain JSON - the definition also
+ * reaches the browser. Storage is the field's own; nothing AI-specific is
+ * stored with the content.
+ */
+export interface ContentFieldAiAssist {
+  /** Canonical AI action key, `<pluginId>:<localId>`. */
+  action: `${string}:${string}`;
+  /**
+   * `suggestion`: the editor previews the result and accepts or discards it.
+   * Nothing is ever written to the field without that acceptance.
+   */
+  mode: "suggestion";
+  /**
+   * Fields the action reads, in the locale being edited. The action's input
+   * is `{ [field]: value, locale }` - one key per source field.
+   */
+  sourceFields: readonly string[];
+}
+
 export interface ContentFieldShared<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
@@ -68,6 +89,7 @@ export interface ContentTextField<
   TDefault extends string | undefined = string | undefined,
   TLocalized extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
+  ai?: ContentFieldAiAssist;
   // Declared non-optional (but possibly `undefined`) so `HasColumnDefault` can
   // tell "no default" from "defaulted": an optional property would always
   // include `undefined` in its type and the distinction would be lost.
@@ -104,6 +126,7 @@ export interface ContentTextareaField<
   TDefault extends string | undefined = string | undefined,
   TLocalized extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
+  ai?: ContentFieldAiAssist;
   defaultValue: TDefault;
   kind: "textarea";
   localized: TLocalized;

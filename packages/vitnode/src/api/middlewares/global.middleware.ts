@@ -57,7 +57,7 @@ import type {
 } from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
 
-import { collectAiActions } from "../lib/ai/registry";
+import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
 import {
@@ -384,6 +384,8 @@ export const globalMiddleware = ({
       ),
     ),
   );
+
+  assertContentAiActions(contentTypesMetadata, aiActionsMetadata);
 
   const navigationMetadata: NavigationPreset[] =
     collectNavigationPresets(plugins);
