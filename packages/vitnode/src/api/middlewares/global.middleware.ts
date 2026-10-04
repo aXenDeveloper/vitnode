@@ -9,6 +9,7 @@ import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { NavigationPreset } from "@/lib/navigation";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
+import type { PaymentsRegistry } from "@/payments/config";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
@@ -38,6 +39,7 @@ import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
+import { createPaymentsRegistry } from "@/payments/config";
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
@@ -157,6 +159,8 @@ export interface EnvVariablesVitNode {
     navigation: NavigationPreset[];
     notifications?: NotificationRegistry;
     notificationWorkers?: NotificationWorkerSettings;
+    /** Resolved `payments` config (`null` when off) and every plugin's offers. */
+    payments: PaymentsRegistry;
     permissionStaff: PermissionStaffCatalogEntry[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
@@ -217,6 +221,7 @@ export const globalMiddleware = ({
   plugins,
   i18n,
   notifications,
+  payments,
   search,
   storage,
   users,
@@ -233,6 +238,7 @@ export const globalMiddleware = ({
   | "events"
   | "i18n"
   | "notifications"
+  | "payments"
   | "plugins"
   | "search"
   | "storage"
@@ -389,6 +395,18 @@ export const globalMiddleware = ({
     ),
   );
 
+  // At boot, so a malformed `payments` block or two plugins selling the same
+  // offer id stop the API before it takes a request rather than at checkout.
+  const paymentsMetadata = createPaymentsRegistry({
+    config: payments,
+    offers: plugins.flatMap(plugin =>
+      (plugin.paymentOffers ?? []).map(offer => ({
+        offer,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  });
+
   const passkeysMetadata = resolvePasskeysConfig({
     config: authorization?.passkeys,
     rpNameFallback: metadata.shortTitle ?? metadata.title,
@@ -478,6 +496,7 @@ export const globalMiddleware = ({
       navigation: navigationMetadata,
       notifications: notificationsMetadata,
       notificationWorkers,
+      payments: paymentsMetadata,
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,

@@ -24,6 +24,7 @@ import type {
   VitNodeI18nConfig,
 } from "./lib/i18n/types";
 import type { VitNodeMetadata } from "./lib/metadata";
+import type { PaymentsConfig } from "./payments/config";
 import type { BuildPluginReturn } from "./lib/plugin";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
 
@@ -118,6 +119,12 @@ export interface VitNodeApiConfig {
   maxBodySize?: number;
   metadata: VitNodeMetadata;
   notifications?: Partial<NotificationWorkerSettings>;
+  /**
+   * Payments - currencies, providers and checkout settings. Leave it out and
+   * Payments is off: every payment route answers that it is disabled, and
+   * nothing else changes. API-only: never import this config into the browser.
+   */
+  payments?: PaymentsConfig;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
 
