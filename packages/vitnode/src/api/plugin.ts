@@ -4,6 +4,10 @@ import { blocks } from "@/blocks/built-in";
 import { CONFIG_PLUGIN } from "@/config";
 import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
+import {
+  altGenerateAiAction,
+  altTranslateAiAction,
+} from "./lib/ai/alt-actions";
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
 import { aiModule } from "./modules/ai/ai.module";
@@ -18,6 +22,7 @@ import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
+  aiActions: [altGenerateAiAction, altTranslateAiAction],
   blocks,
   editablePages: [settingsPage],
   navigation: [
@@ -72,6 +77,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
       ],
       files: [
         "can_view",
+        { permission: "can_edit_alt", dependsOn: ["can_view"] },
         { permission: "can_download", dependsOn: ["can_view"] },
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],

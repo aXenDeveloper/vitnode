@@ -27,6 +27,12 @@ export interface VitNodeEvents {
     changedZones: string[];
     pageId: string;
   };
+  /** Default ALT text of an image in core_files was written. */
+  "files.alt.updated": {
+    fileId: number;
+    languageCodes: string[];
+    origin: "ai" | "human";
+  };
   "navigation.created": {
     navigationId: number;
   };

@@ -236,7 +236,9 @@ describePostgres("AI routes (real PostgreSQL)", () => {
         .where(eq(core_ai_runs.userId, ALICE))
     ).map(row => row.id);
 
-    expect(alice.items.map(item => item.id).sort()).toEqual(aliceRunIds.sort());
+    expect(alice.items.map(item => item.id).sort((a, b) => a - b)).toEqual(
+      aliceRunIds.sort((a, b) => a - b),
+    );
     expect(bob.items).toHaveLength(2);
     // A cursor from someone else's history widens nothing.
     const sneaky = (await (
@@ -244,8 +246,8 @@ describePostgres("AI routes (real PostgreSQL)", () => {
         user: ALICE,
       })
     ).json()) as { items: { id: number }[] };
-    expect(sneaky.items.map(item => item.id).sort()).toEqual(
-      aliceRunIds.sort(),
+    expect(sneaky.items.map(item => item.id).sort((a, b) => a - b)).toEqual(
+      aliceRunIds.sort((a, b) => a - b),
     );
 
     const usage = (await (

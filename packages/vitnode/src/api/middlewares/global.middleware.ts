@@ -295,6 +295,7 @@ export const globalMiddleware = ({
       handler: task.handler,
       description: task.description,
       maxAttempts: task.maxAttempts,
+      leaseSeconds: task.leaseSeconds,
     })),
   );
 

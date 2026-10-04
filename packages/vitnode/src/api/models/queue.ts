@@ -4,6 +4,11 @@ import { core_queue } from "@/database/queue";
 
 export interface QueueDispatchArgs {
   availableAt?: Date;
+  /**
+   * Durable deduplication: while a task with this key is pending or running,
+   * dispatching it again adds nothing. Enforced by a unique index.
+   */
+  dedupeKey?: string;
   maxAttempts?: number;
   name: string;
   payload?: Record<string, unknown>;
@@ -23,6 +28,7 @@ export class QueueModel {
   protected readonly c: Context;
 
   async dispatch({
+    dedupeKey,
     name,
     payload = {},
     pluginId: explicitPluginId,
@@ -31,7 +37,7 @@ export class QueueModel {
     maxAttempts,
     availableAt,
     tx,
-  }: QueueDispatchArgs): Promise<{ id: number }> {
+  }: QueueDispatchArgs): Promise<{ deduplicated: boolean; id: null | number }> {
     const pluginId =
       explicitPluginId ?? this.c.get("plugin")?.id ?? "@vitnode/core";
 
@@ -47,11 +53,15 @@ export class QueueModel {
         queue,
         payload,
         priority,
+        dedupeKey: dedupeKey ?? null,
         maxAttempts: maxAttempts ?? registeredTask?.maxAttempts ?? 3,
         availableAt: availableAt ?? new Date(),
       })
+      .onConflictDoNothing()
       .returning({ id: core_queue.id });
 
-    return row;
+    return row
+      ? { deduplicated: false, id: row.id }
+      : { deduplicated: true, id: null };
   }
 }

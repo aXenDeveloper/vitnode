@@ -23,6 +23,11 @@ export {
 } from "./file-rules";
 
 export interface ContentFileDescriptor {
+  /**
+   * The image's default ALT text per language code (Core Files). An occurrence
+   * override still wins - see `resolveImageAlt`.
+   */
+  alts?: Record<string, string>;
   height?: number;
   id: number;
   mimeType: null | string;
@@ -33,6 +38,7 @@ export interface ContentFileDescriptor {
 }
 
 export const zodContentFileDescriptor = z.strictObject({
+  alts: z.record(z.string(), z.string()).optional(),
   height: z.number().int().positive().optional(),
   id: z.number().int().positive(),
   mimeType: z.string().nullable(),

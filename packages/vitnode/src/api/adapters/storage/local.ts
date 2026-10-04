@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import type {
@@ -34,6 +34,17 @@ export const LocalStorageAdapter = ({
       await rm(resolvePath(key), { force: true });
     },
     getUrl,
+    read: async (key: string, { maxBytes }: { maxBytes: number }) => {
+      const filePath = resolvePath(key);
+      try {
+        const { size } = await stat(filePath);
+        if (size > maxBytes) return null;
+
+        return await readFile(filePath);
+      } catch {
+        return null;
+      }
+    },
     static: {
       mountPath,
       root: "./public/uploads",

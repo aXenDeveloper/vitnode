@@ -1,6 +1,7 @@
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { EditorContent } from "@vitnode/core/components/ui/editor-content";
 import { zodContentFileDescriptor } from "@vitnode/core/content";
+import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import {
   definePluginRoute,
   type PluginRoutePageProps,
@@ -10,6 +11,7 @@ import {
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -104,7 +106,16 @@ const BlogPostPage = ({
 
       {item.coverImage ? (
         <img
-          alt={item.coverImageAlt ?? ""}
+          alt={
+            // The article's own ALT wins; otherwise the image's default ALT
+            // from Core Files in this page's language, then the site's.
+            resolveImageAlt({
+              alts: item.coverImage.alts,
+              fallbackLocales: [getIntlRuntime().defaultLocale],
+              locale: metadata.locale ?? getIntlRuntime().defaultLocale,
+              occurrence: { alt: item.coverImageAlt },
+            }).alt
+          }
           className="bg-muted aspect-video w-full rounded-lg object-cover"
           fetchPriority="high"
           height={item.coverImage.height}

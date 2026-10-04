@@ -8,6 +8,7 @@ import {
   updateAiUserOverrideAdminRoute,
 } from "./routes/access.route";
 import { listAiActionsAdminRoute } from "./routes/actions.route";
+import { getAltStatusAdminRoute, sweepAltAdminRoute } from "./routes/alt.route";
 import { assistAiAdminRoute } from "./routes/assist.route";
 import {
   listAiHistoryAdminRoute,
@@ -46,5 +47,7 @@ export const aiAdminModule = buildModule({
     listAiHistoryAdminRoute,
     showAiRunAdminRoute,
     assistAiAdminRoute,
+    getAltStatusAdminRoute,
+    sweepAltAdminRoute,
   ],
 });

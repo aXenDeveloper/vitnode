@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 import type { StorageFileUploadResult } from "../../api/models/storage";
 import type {
@@ -12,7 +12,7 @@ import type {
 import type { AnyContentTypeDefinition, ContentFileField } from "../types";
 import type { ContentDatabase } from "./service";
 
-import { core_files } from "../../database/files";
+import { core_files, core_files_alt } from "../../database/files";
 import { parseImageDimensions } from "../../lib/api/upload";
 import { CONTENT_FILE_CODES } from "../const";
 import { ContentInputError } from "../errors";
@@ -48,6 +48,14 @@ export const contentFileCollectionFields = (
 
 /** The columns a descriptor is built from. Never `key`, and never `metadata`. */
 const fileSelection = {
+  // Default ALT texts travel with image descriptors, so every page that shows
+  // the image can resolve one in its own language. Folded into the same
+  // statement: a page of descriptors stays one round trip.
+  alts: sql<null | Record<string, string>>`(
+    SELECT jsonb_object_agg(${core_files_alt.languageCode}, ${core_files_alt.text})
+    FROM ${core_files_alt}
+    WHERE ${core_files_alt.fileId} = ${core_files.id}
+  )`,
   id: core_files.id,
   key: core_files.key,
   metadata: core_files.metadata,
@@ -57,6 +65,7 @@ const fileSelection = {
 };
 
 interface ContentFileRow {
+  alts?: null | Record<string, string>;
   id: number;
   key: string;
   metadata: null | Record<string, unknown>;
@@ -77,6 +86,9 @@ const toDescriptor = (
     name: row.name,
     size: row.size,
     url: url(row.key),
+    ...(row.alts && row.mimeType?.startsWith("image/")
+      ? { alts: row.alts }
+      : {}),
     ...(dimensions
       ? { height: dimensions.height, width: dimensions.width }
       : {}),

@@ -47,7 +47,8 @@
           },
           "alt": {
             "placeholder": "What the image shows",
-            "hint": "Read aloud by screen readers instead of the image."
+            "hint": "Read aloud by screen readers instead of the image.",
+            "file_default": "Left empty, the image's default ALT text shown above is used."
           },
           "counter": {
             "title": "Search results show about {max} characters.",
