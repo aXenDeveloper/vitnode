@@ -423,6 +423,7 @@ const PaymentsPage = ({
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">{tCheckout("currency")}</span>
             <NativeSelect
+              className="w-28"
               onChange={event => {
                 void navigate({
                   resetScroll: false,
@@ -488,7 +489,7 @@ const PaymentsPage = ({
               {t("lifetime.desc")}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-1 flex-col gap-4">
             {lifetimePrice ? (
               <PriceLine {...lifetimePrice} interval={null} />
             ) : settings.enabled ? (
@@ -508,7 +509,7 @@ const PaymentsPage = ({
               </p>
             )}
           </CardContent>
-          {owned ? null : (
+          {owned || !settings.enabled ? null : (
             <CardFooter>
               <Button
                 disabled={
@@ -534,6 +535,7 @@ const PaymentsPage = ({
         <PlanCard
           busy={busy && checkout.variables?.offerId === EXAMPLE_OFFERS.plan}
           canBuy={settings.enabled && !!planPrice && userId !== null}
+          enabled={settings.enabled}
           interval={interval}
           onIntervalChange={setInterval}
           onManage={() => {
@@ -646,6 +648,7 @@ const SubscriptionSummary = ({
 const PlanCard = ({
   busy,
   canBuy,
+  enabled,
   interval,
   onIntervalChange,
   onManage,
@@ -658,6 +661,7 @@ const PlanCard = ({
 }: {
   busy: boolean;
   canBuy: boolean;
+  enabled: boolean;
   interval: Interval;
   onIntervalChange: (interval: Interval) => void;
   onManage: () => void;
@@ -688,7 +692,7 @@ const PlanCard = ({
           {t("plan.desc")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-1 flex-col gap-4">
         {intervals.length > 1 ? (
           <ToggleGroup
             aria-label={tCheckout("interval")}
@@ -703,7 +707,7 @@ const PlanCard = ({
           >
             {intervals.map(item => (
               <ToggleGroupItem
-                className="aria-pressed:bg-card flex-1"
+                className="text-muted-foreground hover:text-foreground aria-pressed:bg-card aria-pressed:text-foreground flex-1 transition-[background-color,color,box-shadow] duration-150 hover:bg-transparent aria-pressed:shadow-sm"
                 key={item}
                 size="sm"
                 value={item}
@@ -715,9 +719,9 @@ const PlanCard = ({
         ) : null}
         {planPrice ? (
           <PriceLine {...planPrice} interval={interval} />
-        ) : (
+        ) : enabled ? (
           <p className="text-muted-foreground">{tCheckout("unavailable")}</p>
-        )}
+        ) : null}
         {userId === null ? null : (
           <React.Suspense fallback={<Skeleton className="h-16 w-full" />}>
             <PlanSubscriptionSlot userId={userId} />
@@ -732,24 +736,26 @@ const PlanCard = ({
           </p>
         )}
       </CardContent>
-      <CardFooter className="flex flex-wrap gap-2">
-        {subscribed || userId === null ? null : (
-          <Button disabled={!canBuy} isLoading={busy} onClick={onSubscribe}>
-            <CreditCardIcon aria-hidden="true" />
-            {busy ? tCheckout("redirecting") : tCheckout("subscribe")}
-          </Button>
-        )}
-        {userId !== null && subscribed ? (
-          <Button
-            isLoading={portalPending}
-            onClick={onManage}
-            variant="outline"
-          >
-            <ExternalLinkIcon aria-hidden="true" />
-            {tState("billing.manage")}
-          </Button>
-        ) : null}
-      </CardFooter>
+      {enabled ? (
+        <CardFooter className="flex flex-wrap gap-2">
+          {subscribed || userId === null ? null : (
+            <Button disabled={!canBuy} isLoading={busy} onClick={onSubscribe}>
+              <CreditCardIcon aria-hidden="true" />
+              {busy ? tCheckout("redirecting") : tCheckout("subscribe")}
+            </Button>
+          )}
+          {userId !== null && subscribed ? (
+            <Button
+              isLoading={portalPending}
+              onClick={onManage}
+              variant="outline"
+            >
+              <ExternalLinkIcon aria-hidden="true" />
+              {tState("billing.manage")}
+            </Button>
+          ) : null}
+        </CardFooter>
+      ) : null}
     </Card>
   );
 };
