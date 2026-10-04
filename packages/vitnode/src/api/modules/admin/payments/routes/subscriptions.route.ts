@@ -52,7 +52,9 @@ export const listSubscriptionsAdminRoute = buildRoute({
             schema: z.object({
               edges: z.array(
                 zodSubscription.extend({
+                  id: z.number(),
                   lastError: z.string().nullable(),
+                  publicId: z.string(),
                   purchaseId: z.string(),
                   user: z
                     .object({ id: z.number(), name: z.string() })
@@ -116,7 +118,9 @@ export const listSubscriptionsAdminRoute = buildRoute({
     return c.json({
       edges: page.edges.map(row => ({
         ...serializeSubscription(row),
+        id: row.id,
         lastError: row.lastError,
+        publicId: row.publicId,
         purchaseId: row.purchasePublicId,
         user:
           row.userId === null

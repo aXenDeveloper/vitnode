@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import {
   BellIcon,
+  CreditCardIcon,
   KeyRoundIcon,
   LinkIcon,
   MenuIcon,
@@ -31,6 +32,7 @@ const ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   ai: SparklesIcon,
+  billing: CreditCardIcon,
   devices: MonitorSmartphoneIcon,
   notifications: BellIcon,
   overview: UserRoundIcon,

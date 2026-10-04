@@ -38,7 +38,10 @@ import {
 } from "../filters";
 
 const zodAdminPurchase = zodPurchase.extend({
+  /** Internal row id - AdminCP tables key rows by it. */
+  id: z.number(),
   lastError: z.string().nullable(),
+  publicId: z.string(),
   providerScope: z.string(),
   user: z.object({ id: z.number(), name: z.string() }).nullable(),
 });
@@ -123,7 +126,9 @@ export const listPurchasesAdminRoute = buildRoute({
     return c.json({
       edges: page.edges.map(row => ({
         ...serializePurchase(row),
+        id: row.id,
         lastError: row.lastError,
+        publicId: row.publicId,
         providerScope: row.providerScope,
         user:
           row.userId === null
@@ -319,7 +324,9 @@ export const showPurchaseAdminRoute = buildRoute({
         .payments.offers.has(`${row.pluginId}:${row.offerId}`),
       purchase: {
         ...serializePurchase(row),
+        id: row.id,
         lastError: row.lastError,
+        publicId: row.publicId,
         providerScope: row.providerScope,
         user:
           row.userId === null

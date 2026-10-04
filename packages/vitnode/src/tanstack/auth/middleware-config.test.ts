@@ -44,6 +44,7 @@ describe("loadMiddlewareConfig", () => {
       navigation: [],
       passkeys: false,
       password: true,
+      payments: false,
       sso: [],
     });
     const queryClient = seeded(known);

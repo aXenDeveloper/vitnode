@@ -5,6 +5,7 @@ export const SETTINGS_ROOT_HREF = "/settings";
 
 export type SettingsNavKey =
   | "ai"
+  | "billing"
   | "devices"
   | "notifications"
   | "overview"
@@ -24,24 +25,28 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: "/settings/security", key: "security" },
   { href: "/settings/sso", key: "sso" },
   { href: "/settings/ai", key: "ai" },
+  { href: "/settings/billing", key: "billing" },
 ];
 
 export const visibleSettingsNavItems = ({
   ai,
   aiFeatures = true,
   passkeys,
+  payments = false,
   sso = [],
 }: {
   ai?: { models: readonly unknown[] };
   aiFeatures?: boolean;
   passkeys: boolean;
+  payments?: boolean;
   sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
   SETTINGS_NAV_ITEMS.filter(
     item =>
       (item.key !== "security" || passkeys) &&
       (item.key !== "sso" || sso.length > 0) &&
-      (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)),
+      (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)) &&
+      (item.key !== "billing" || payments),
   );
 
 /** Whether one navigation item is the panel `pathname` is showing. */
