@@ -1,0 +1,80 @@
+---
+title: Payments
+description: How VitNode Payments splits work between core, the payment provider and your plugin - one-time purchases and monthly or yearly subscriptions with Stripe.
+icon: CreditCard
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import billingSettings from './billing-settings.png'
+import examplePage from './example-page.png'
+
+VitNode Payments lets any plugin sell something: a one-time purchase or a
+fixed-price monthly or yearly subscription. Core takes the money and keeps the
+books. Your plugin decides what the purchase unlocks.
+
+<ImgDocs
+  src={examplePage}
+  alt="The /example/payments page with a lifetime pass priced in PLN and a Pro plan with a Monthly/Yearly toggle"
+  withoutBackground
+/>
+
+The screenshot is `/example/payments` from the `@vitnode/example` plugin - the
+working reference for everything on these pages.
+
+## Who owns what
+
+| Part         | Owns                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Core**     | Checkout, purchase and subscription records, the webhook inbox, the queue jobs, reconciliation, the billing settings screen and the AdminCP |
+| **Provider** | Talking to the payment service: hosted checkout, signatures, customer portal. `@vitnode/stripe` is the first one                           |
+| **Plugin**   | Its offers, prices, who may buy, and what a payment unlocks - written in its own tables                                                    |
+
+A plugin never talks to Stripe and never sees a Stripe object. It declares an
+offer, and core calls the offer's handlers with plain snapshots when something
+happened.
+
+## How a purchase flows
+
+1. The signed-in buyer picks an offer, a currency and (for a plan) an interval.
+2. Core resolves the price on the server, checks eligibility and stores the purchase.
+3. Core creates a hosted checkout and sends the buyer to it.
+4. The provider calls the webhook. Core verifies it, stores it and queues the work.
+5. The queue re-reads the payment from the provider and marks the purchase paid.
+6. Your offer's handler runs once, in a transaction, and grants access.
+
+The buyer's return from the checkout page proves nothing on its own. The page
+asks the server, and the server asks the provider. See
+[Reliability](/docs/dev/payments/reliability).
+
+## What is included
+
+- One-time purchases and fixed-price monthly/yearly subscriptions
+- Several currencies with explicit prices, formatted with `Intl.NumberFormat`
+- Stripe-hosted Checkout and the Stripe Customer Portal
+- Refund and dispute tracking for payments made in Stripe
+- Billing history in **Settings → Billing** and an AdminCP **Payments** section
+
+<ImgDocs
+  src={billingSettings}
+  alt="Settings, Billing panel for a member with no subscriptions or purchases yet, and a note that receipts come from the payment provider"
+  withoutBackground
+/>
+
+Not included: coupons, sales, trials, wallets or credits, carts, guest checkout,
+metered billing, plan changes or proration, paid roles, refunds from the
+AdminCP, and manual or offline payments.
+
+<Callout type="warn" title="Not a tax or invoicing system">
+  Payments collects money. It does not calculate tax and does not issue legal
+  invoices. Receipts come from the provider. Check what your country requires
+  before selling.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Configure Payments" href="/docs/dev/payments/configuration" />
+  <Card title="Set up Stripe" href="/docs/dev/payments/stripe" />
+  <Card title="Sell a one-time purchase" href="/docs/dev/payments/one-time-purchase" />
+  <Card title="Sell a subscription" href="/docs/dev/payments/subscriptions" />
+</Cards>

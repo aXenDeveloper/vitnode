@@ -1,0 +1,172 @@
+---
+title: Sell a subscription
+description: Offer a fixed-price monthly or yearly subscription from a VitNode plugin - prices per interval, access from verified payments, renewals, failed renewals, cancellation at period end and the Stripe Customer Portal.
+icon: Repeat
+---
+
+This guide builds the Pro plan from `@vitnode/example`: monthly or yearly,
+renewed automatically, cancelled from the Stripe Customer Portal. It assumes
+you have read [Sell a one-time purchase](/docs/dev/payments/one-time-purchase).
+
+<Steps>
+
+<Step>
+
+### Declare prices per interval
+
+```ts title="plugins/example/src/api/payments/offers.ts"
+export const proPlanOffer = definePaymentOffer({
+  id: 'pro-plan',
+  mode: 'subscription',
+  name: 'Example Pro plan',
+  returnPath: '/example/payments',
+  intervals: {
+    month: { EUR: 449, PLN: 1900, USD: 499 },
+    year: { EUR: 4490, PLN: 19000, USD: 4990 },
+  },
+  onSubscriptionChanged: async ({ subscription, tx }) => {
+    if (subscription.userId === null) return
+
+    const accessUntil = subscriptionAccessUntil(subscription)
+    if (!accessUntil) return // no verified payment yet
+
+    await tx
+      .insert(example_payments_access)
+      .values({
+        accessUntil,
+        offerId: subscription.offerId,
+        purchaseId: subscription.purchaseId,
+        userId: subscription.userId,
+      })
+      .onConflictDoUpdate({
+        set: { accessUntil, purchaseId: subscription.purchaseId, revokedAt: null },
+        target: [example_payments_access.userId, example_payments_access.offerId],
+      })
+  },
+})
+```
+
+Only `month` and `year` exist. Register it on a module's `paymentOffers`, like
+any offer.
+
+</Step>
+
+<Step>
+
+### Grant access from the paid period
+
+`onSubscriptionChanged` receives a snapshot whenever something a plugin can act
+on changed: the first payment, a renewal, a failed renewal, a scheduled
+cancellation, the end. Set access from it - never add to it, because the same
+state can arrive more than once.
+
+`paidThrough` is the end of the latest period a **verified, paid** invoice
+covers. It is not "now + one month", and an active status alone does not move
+it. The example's policy:
+
+```ts title="plugins/example/src/api/payments/policy.ts"
+export const subscriptionAccessUntil = ({ endedAt, paidThrough }) => {
+  if (!paidThrough) return null
+  if (endedAt && endedAt < paidThrough) return endedAt
+
+  return paidThrough
+}
+```
+
+| What happened                    | `paidThrough`         | Example access          |
+| -------------------------------- | --------------------- | ----------------------- |
+| First payment confirmed          | End of first period   | Until that date         |
+| Renewal paid                     | Moves to the new end  | Extended once           |
+| Renewal failed                   | Unchanged             | Kept until the old end  |
+| Cancellation scheduled           | Unchanged             | Kept until the old end  |
+| Period ended without a payment   | Unchanged             | Expires on its own      |
+
+</Step>
+
+<Step>
+
+### Check expiry when you read
+
+A job does not need to run at midnight to end access. Compare with the clock
+on every read:
+
+```ts
+export const hasActiveAccess = (grant, now = new Date()) =>
+  !!grant &&
+  grant.revokedAt === null &&
+  (grant.accessUntil === null || grant.accessUntil > now)
+```
+
+</Step>
+
+<Step>
+
+### Start the checkout with an interval
+
+```tsx
+checkout.mutate({
+  currency: 'USD',
+  interval: 'year',
+  offerId: 'pro-plan',
+  pluginId: '@vitnode/example',
+})
+```
+
+A buyer can hold one live subscription per offer. A second checkout - even from
+two tabs at once - answers `409 already_subscribed`. Switching interval is a
+plan change, which is not supported; the buyer cancels and subscribes again.
+
+**Expected:** after paying, `/example/payments` shows the plan as **Active**
+with **Paid through** and **Renews on** dates, and **Settings → Billing** lists it.
+
+</Step>
+
+<Step>
+
+### Let subscribers manage billing
+
+```tsx
+import { useBillingPortal } from '@vitnode/core/tanstack/payments'
+
+const portal = useBillingPortal()
+
+portal.mutate({ offerId: 'pro-plan', pluginId: '@vitnode/example' })
+```
+
+The server opens the Stripe Customer Portal for the signed-in user's own
+customer and returns them to the offer's `returnPath`. Call it with no argument
+to return to **Settings → Billing**. Configure the portal as described in
+[Set up Stripe](/docs/dev/payments/stripe#configure-the-customer-portal).
+
+**Expected:** cancel in the portal and come back - the plan shows
+**Cancellation scheduled** and **Ends on** the period end, and the feature stays
+unlocked until then.
+
+</Step>
+
+</Steps>
+
+## Renewals and missed webhooks
+
+Every renewal is its own invoice record, processed idempotently. If a renewal
+webhook is lost, reconciliation checks each active subscription just after its
+period ends and picks the payment up from Stripe. See
+[Reliability](/docs/dev/payments/reliability#reconciliation).
+
+## Price changes
+
+A subscription keeps the price it was bought at - Stripe holds it on the
+subscription. Changing `intervals` affects new checkouts only.
+
+## Refunds
+
+Refunding one subscription invoice in Stripe is recorded on that invoice. It
+does not cancel the subscription and does not call `onSubscriptionChanged`;
+cancelling is a separate action in Stripe or the portal.
+
+<Callout type="warn" title="Uninstalling with active subscribers">
+  Stripe keeps billing subscriptions whether or not your plugin is installed.
+  Before you remove a plugin or the Stripe provider, cancel its subscriptions in
+  Stripe or migrate them. VitNode never cancels anything on startup; work it
+  cannot finish shows up in **AdminCP → Payments**.
+</Callout>
