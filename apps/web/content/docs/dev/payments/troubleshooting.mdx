@@ -18,13 +18,13 @@ answer `"enabled": true`. See [Configure Payments](/docs/dev/payments/configurat
 
 The message names the problem:
 
-| Message mentions                    | Fix                                                          |
-| ----------------------------------- | ------------------------------------------------------------ |
-| `STRIPE_SECRET_KEY`                 | Set a secret key (`sk_test_...`), not a publishable one      |
-| `STRIPE_WEBHOOK_SECRET`             | Set the endpoint's signing secret (`whsec_...`)              |
-| `defaultCurrency ... not one of`    | Add the default currency to `currencies`                     |
-| `registered twice`                  | Two providers or two offers share an id                      |
-| `cannot charge in`                  | Remove the currency from the Stripe provider's `currencies`  |
+| Message mentions                 | Fix                                                         |
+| -------------------------------- | ----------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`              | Set a secret key (`sk_test_...`), not a publishable one     |
+| `STRIPE_WEBHOOK_SECRET`          | Set the endpoint's signing secret (`whsec_...`)             |
+| `defaultCurrency ... not one of` | Add the default currency to `currencies`                    |
+| `registered twice`               | Two providers or two offers share an id                     |
+| `cannot charge in`               | Remove the currency from the Stripe provider's `currencies` |
 
 ## Webhooks answer 400
 
