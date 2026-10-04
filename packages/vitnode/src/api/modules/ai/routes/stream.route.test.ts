@@ -80,8 +80,8 @@ const createApp = (
     c.set("ai", new AIModel(c as unknown as Context, { ledger }));
     await next();
   });
-  app.openapi(streamAiRoute.route, streamAiRoute.handler);
-  app.openapi(estimateAiRoute.route, estimateAiRoute.handler);
+  app.openapi(streamAiRoute.route, streamAiRoute.handler as never);
+  app.openapi(estimateAiRoute.route, estimateAiRoute.handler as never);
 
   return { app, ledger };
 };

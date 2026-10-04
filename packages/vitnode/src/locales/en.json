@@ -1716,6 +1716,38 @@
         "AI_UNAUTHORIZED": "You do not have access to this AI feature or this content.",
         "AI_USER_LIMIT_REACHED": "You used all your AI points for this month.",
         "unknown": "Something went wrong. Try again."
+      },
+      "quick_ask": {
+        "label": "Quick Ask (AI)",
+        "writing": "Writing…",
+        "stop": "Stop",
+        "discard": "Discard",
+        "insert_below": "Insert below",
+        "replace": "Replace selection",
+        "stale": "The selected text changed while the answer was written. Insert it below, or close and try again.",
+        "tone": "Change the tone",
+        "select_text": "Select some text to rewrite it.",
+        "operation": {
+          "shorten": "Shorten",
+          "correct": "Correct writing",
+          "simplify": "Simplify",
+          "continue": "Continue writing"
+        },
+        "tones": {
+          "friendly": "Friendly",
+          "formal": "Formal",
+          "confident": "Confident",
+          "neutral": "Neutral"
+        },
+        "custom_label": "Or ask anything about the selection",
+        "custom_placeholder": "e.g. Turn this into a bulleted summary",
+        "ask": "Ask",
+        "estimate": "One request costs at most {points} AI points - usually much less.",
+        "applied": {
+          "title": "AI text added",
+          "desc": "Nothing is saved until you save the form.",
+          "undo": "Undo"
+        }
       }
     }
   },

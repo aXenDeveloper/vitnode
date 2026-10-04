@@ -2714,6 +2714,38 @@
         "AI_UNAUTHORIZED": "Nie masz dostępu do tej funkcji AI lub tej treści.",
         "AI_USER_LIMIT_REACHED": "Wykorzystano wszystkie punkty AI w tym miesiącu.",
         "unknown": "Coś poszło nie tak. Spróbuj ponownie."
+      },
+      "quick_ask": {
+        "label": "Szybkie pytanie (AI)",
+        "writing": "Piszę…",
+        "stop": "Zatrzymaj",
+        "discard": "Odrzuć",
+        "insert_below": "Wstaw poniżej",
+        "replace": "Zastąp zaznaczenie",
+        "stale": "Zaznaczony tekst zmienił się w trakcie pisania odpowiedzi. Wstaw ją poniżej albo zamknij i spróbuj ponownie.",
+        "tone": "Zmień ton",
+        "select_text": "Zaznacz tekst, aby go przepisać.",
+        "operation": {
+          "shorten": "Skróć",
+          "correct": "Popraw pisownię",
+          "simplify": "Uprość",
+          "continue": "Pisz dalej"
+        },
+        "tones": {
+          "friendly": "Przyjazny",
+          "formal": "Formalny",
+          "confident": "Pewny siebie",
+          "neutral": "Neutralny"
+        },
+        "custom_label": "Albo zapytaj o cokolwiek w sprawie zaznaczenia",
+        "custom_placeholder": "np. Zamień to w listę punktów",
+        "ask": "Zapytaj",
+        "estimate": "Jedno żądanie kosztuje najwyżej {points} punktów AI – zwykle znacznie mniej.",
+        "applied": {
+          "title": "Dodano tekst AI",
+          "desc": "Nic nie jest zapisane, dopóki nie zapiszesz formularza.",
+          "undo": "Cofnij"
+        }
       }
     }
   },

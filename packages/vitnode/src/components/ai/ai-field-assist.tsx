@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { SparklesIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -17,7 +16,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   aiErrorCodeOf,
   requestAiAssist,
@@ -30,29 +28,12 @@ import {
   fieldTextOf,
   suggestionFreshness,
 } from "@/lib/ai/suggestion";
-import { fetcher } from "@/tanstack/fetcher";
 import {
   useContentFormValues,
   useSetContentFormValue,
 } from "@/views/admin/views/content/form/values";
 
-/** The AI actions this admin may start; cached for the session. */
-export const useAvailableAiActions = () =>
-  useQuery({
-    queryFn: async () => {
-      const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
-        method: "get",
-        module: "admin/ai",
-        path: "/assist/available",
-      });
-      if (!response.ok) return [] as string[];
-
-      return (await response.json()).actions;
-    },
-    queryKey: ["ai", "assist", "available"],
-    staleTime: 5 * 60_000,
-  });
+import { useAvailableAiActions } from "./use-available-ai-actions";
 
 /**
  * The AI button of a text field with `ai` assistance. It asks the field's
