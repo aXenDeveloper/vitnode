@@ -100,6 +100,8 @@ export const core_payments_purchases = camelCase.table.withRLS(
     lastError: t.text(),
     /** When reconciliation should next ask the provider about this one. */
     nextCheckAt: t.timestamp(),
+    /** Last provider read asked for by the buyer's browser - a throttle. */
+    refreshCheckedAt: t.timestamp(),
     paidAt: t.timestamp(),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t

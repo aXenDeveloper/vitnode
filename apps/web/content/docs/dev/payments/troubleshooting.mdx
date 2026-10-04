@@ -77,6 +77,16 @@ by reconciliation.
 This screenshot comes from a sandbox that could not reach Stripe at all - which
 is exactly the case the `unknown` state exists for.
 
+## "A second checkout ... was also paid"
+
+Rare, but possible: the buyer paid an old checkout in one tab and a new one in
+another before the old one closed. The purchase keeps the first payment and
+grants once. Refund the second payment in the Stripe Dashboard - the error on
+the purchase names it.
+
+"A second subscription ... was created" is the same story for a plan: cancel
+and refund the extra subscription in Stripe. VitNode keeps tracking the first.
+
 ## "Not available in your currency yet"
 
 The offer has no price in that currency, the currency is not in

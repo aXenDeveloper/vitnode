@@ -105,6 +105,7 @@ CREATE TABLE "core_payments_purchases" (
 	"requestHash" varchar(64) NOT NULL,
 	"lastError" text,
 	"nextCheckAt" timestamp,
+	"refreshCheckedAt" timestamp,
 	"paidAt" timestamp,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL

@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type { PaymentOffer } from "@/payments/offer";
 import type { PaymentProvider, ProviderCheckout } from "@/payments/provider";
@@ -11,6 +11,7 @@ import {
   core_payments_purchases,
   core_payments_subscriptions,
 } from "@/database/payments";
+import { CONFIG } from "@/lib/config";
 import { findPaymentProvider, priceUnavailableReason } from "@/payments/config";
 import { assertMinorUnits } from "@/payments/money";
 import { offerPricesFor } from "@/payments/offer";
@@ -25,6 +26,7 @@ import {
   findRegisteredOffer,
   hashCheckoutRequest,
   paymentsHttpError,
+  PaymentsPermanentError,
   providerForRow,
   requirePaymentsConfig,
   webUrl,
@@ -58,11 +60,13 @@ interface CheckoutUser {
 
 /**
  * How long an attempt whose create call ended without an answer may still be
- * replayed with the same idempotency key. Stripe requires an expiry at least 30
- * minutes away, and replays the original answer for a day; past this window a
- * fresh attempt is safer than a replay the provider might reject.
+ * replayed with the same idempotency key. The replay sends the attempt's
+ * original expiry, and Stripe refuses one less than 30 minutes away - so the
+ * window is what is left of the checkout lifetime after those 30 minutes and a
+ * margin, and never more than 20 minutes.
  */
-const UNCERTAIN_REPLAY_WINDOW_MS = 20 * 60_000;
+const replayWindowMs = (checkoutExpiresInMinutes: number): number =>
+  Math.max(0, Math.min(20, checkoutExpiresInMinutes - 35)) * 60_000;
 
 /** An open checkout this close to expiring is not handed out again. */
 const OPEN_CHECKOUT_MARGIN_MS = 2 * 60_000;
@@ -114,7 +118,14 @@ export const ensureBillingCustomer = async (
 
   const { customerId } = await provider.customers.create(
     { email: user.email, name: user.name, userId: user.id },
-    { idempotencyKey: `vitnode-customer-${provider.scope}-${user.id}` },
+    {
+      // Per site, not just per user id: two installs sharing one Stripe account
+      // must never be handed each other's customer by an idempotent replay.
+      idempotencyKey: `vitnode-customer-${createHash("sha256")
+        .update(CONFIG.web.origin)
+        .digest("hex")
+        .slice(0, 16)}-${provider.scope}-${user.id}`,
+    },
   );
 
   await db
@@ -131,6 +142,12 @@ export const ensureBillingCustomer = async (
     .select({ externalId: core_payments_customers.externalId })
     .from(core_payments_customers)
     .where(where);
+
+  if (!stored) {
+    throw new PaymentsPermanentError(
+      `Provider customer ${customerId} is already linked to another account on this site.`,
+    );
+  }
 
   return stored.externalId;
 };
@@ -447,7 +464,11 @@ const claimAttempt = async (
   c: PaymentsContext,
   provider: PaymentProvider,
   purchase: PurchaseRow,
-): Promise<{ attempt: CheckoutRow; reuse: boolean } | { url: string }> => {
+): Promise<
+  | { attempt: CheckoutRow; reuse: boolean }
+  | { supersede: CheckoutRow }
+  | { url: string }
+> => {
   const config = requirePaymentsConfig(c);
 
   return await c.get("db").transaction(async tx => {
@@ -468,10 +489,17 @@ const claimAttempt = async (
       return { url: latest.url };
     }
 
+    // About to expire but still payable: it is closed at the provider before
+    // a new one exists, so the buyer can never pay both.
+    if (latest?.status === "open" && latest.externalId) {
+      return { supersede: latest };
+    }
+
     if (
       latest &&
       (latest.status === "creating" || latest.status === "unknown") &&
-      Date.now() - latest.createdAt.getTime() < UNCERTAIN_REPLAY_WINDOW_MS
+      Date.now() - latest.createdAt.getTime() <
+        replayWindowMs(config.checkoutExpiresInMinutes)
     ) {
       return { attempt: latest, reuse: true };
     }
@@ -517,11 +545,52 @@ const openCheckout = async (
     return { checkoutUrl: null, purchase };
   }
 
-  const claimed = await claimAttempt(c, provider, purchase);
+  const db = c.get("db");
+  let claimed = await claimAttempt(c, provider, purchase);
   if ("url" in claimed) return { checkoutUrl: claimed.url, purchase };
 
+  if ("supersede" in claimed) {
+    const previous = claimed.supersede;
+    let state: ProviderCheckout;
+
+    try {
+      state = await provider.checkout.expire(previous.externalId ?? "");
+    } catch (error) {
+      if (isPaymentProviderError(error) && error.kind === "rejected") {
+        // Usually "already complete" - whatever happened there wins.
+        return {
+          checkoutUrl: null,
+          purchase: await refreshPurchase(c, provider, purchase),
+        };
+      }
+
+      throw error;
+    }
+
+    if (state.status === "complete") {
+      const applied = await applyCheckoutState(c, provider, state);
+
+      return { checkoutUrl: null, purchase: applied.purchase };
+    }
+
+    await db
+      .update(core_payments_checkouts)
+      .set({ status: "expired", url: null })
+      .where(eq(core_payments_checkouts.id, previous.id));
+
+    claimed = await claimAttempt(c, provider, purchase);
+    if ("url" in claimed) return { checkoutUrl: claimed.url, purchase };
+    if ("supersede" in claimed) {
+      throw paymentsHttpError(
+        409,
+        "checkout_in_progress",
+        "Another checkout for this purchase is being prepared. Try again in a moment.",
+        { purchaseId: purchase.publicId },
+      );
+    }
+  }
+
   const { attempt } = claimed;
-  const db = c.get("db");
   const returnParams = { purchase: purchase.publicId };
   let checkout: ProviderCheckout;
 

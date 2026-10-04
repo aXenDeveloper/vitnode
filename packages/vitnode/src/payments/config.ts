@@ -18,7 +18,7 @@ export interface PaymentsCurrencyConfig {
 
 /** `payments` in `buildApiConfig`. Leave it out and Payments is off. */
 export interface PaymentsConfig {
-  /** How long a hosted checkout stays payable, 30-1440 minutes. Default 60. */
+  /** How long a hosted checkout stays payable, 45-1440 minutes. Default 60. */
   checkoutExpiresInMinutes?: number;
   /** Every currency new purchases may use. Removing one keeps its history. */
   currencies: Record<string, PaymentsCurrencyConfig>;
@@ -160,7 +160,9 @@ export const resolvePaymentsConfig = (
     checkoutExpiresInMinutes: wholeInRange(
       config.checkoutExpiresInMinutes,
       DEFAULT_CHECKOUT_EXPIRES_IN_MINUTES,
-      [30, 1440],
+      // Stripe refuses an expiry under 30 minutes away; the margin covers the
+      // time a create can be retried with the attempt's original expiry.
+      [45, 1440],
       "payments.checkoutExpiresInMinutes",
     ),
     currencies,
