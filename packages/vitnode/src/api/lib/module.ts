@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
+import type { PaymentOffer } from "@/payments/offer";
 
 import type { SearchIndexer } from "../models/search";
 import type { BuildCronReturn } from "./cron";
@@ -30,6 +31,8 @@ export interface BaseBuildModuleReturn<
   modules?: BaseBuildModuleReturn<P>[];
   name: M;
   notificationTypes?: AnyNotificationTypeDefinition[];
+  /** Offers this module sells. Collected from every depth of the module tree. */
+  paymentOffers?: PaymentOffer[];
   pluginId: P;
   publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks: BuildQueueTaskReturn[];
@@ -60,6 +63,7 @@ export function buildModule<
   contentModels,
   contentTypes,
   notificationTypes,
+  paymentOffers,
   publicContentTypes,
   cronJobs = [],
   events = [],
@@ -74,6 +78,7 @@ export function buildModule<
   modules?: Modules;
   name: M;
   notificationTypes?: AnyNotificationTypeDefinition[];
+  paymentOffers?: PaymentOffer[];
   pluginId: P;
   publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks?: BuildQueueTaskReturn[];
@@ -106,6 +111,7 @@ export function buildModule<
     cronJobs,
     events,
     notificationTypes,
+    paymentOffers,
     publicContentTypes,
     queueTasks,
     searchIndexers,
