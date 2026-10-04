@@ -1,49 +1,9 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
-import {
-  updateNotificationGlobalSettings,
-  updateNotificationTypePolicy,
-} from "@/api/models/notifications/admin";
+import { updateNotificationTypePolicy } from "@/api/models/notifications/admin";
 import { CONFIG_PLUGIN } from "@/config";
 import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
-
-import {
-  zodEditableNotificationSettings,
-  zodNotificationGlobalSettings,
-} from "./overview.route";
-
-export const updateNotificationSettingsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: { module: "notifications", permission: "can_edit" },
-  route: {
-    method: "put",
-    description:
-      "Update installation-wide notification settings: email switch, hourly email cap and default digest schedule. Retention and worker sizes come from `notifications` in the API config.",
-    path: "/settings",
-    request: {
-      body: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: zodEditableNotificationSettings.partial(),
-          },
-        },
-      },
-    },
-    responses: {
-      200: {
-        content: {
-          "application/json": { schema: zodNotificationGlobalSettings },
-        },
-        description: "Saved settings",
-      },
-      403: { description: "Access Denied" },
-    },
-  },
-  handler: async c =>
-    c.json(await updateNotificationGlobalSettings(c, c.req.valid("json"))),
-});
 
 export const updateNotificationTypePolicyRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,

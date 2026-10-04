@@ -3,15 +3,11 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  buildNotificationSubject,
-  buildNotificationType,
-} from "@/api/lib/notifications/registry";
+import { buildNotificationType } from "@/api/lib/notifications/registry";
 import {
   core_notification_deliveries,
   core_notification_events,
   core_notification_receipts,
-  core_notification_subscriptions,
   core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
@@ -44,12 +40,10 @@ const announcementType = buildNotificationType({
   present: ({ data }) => ({ title: data.title }),
 });
 
-const topicSubject = buildNotificationSubject({ type: "test.topic" });
-
 /**
- * The 1,000-recipient case: half the audience named by the plugin, the rest
- * streamed from followers of a subject, with overlap between the two. Timings
- * are printed for the record, never asserted - they depend on the machine.
+ * The 1,000-recipient case, with duplicates in the list and one recipient who
+ * turned the type off. Timings are printed for the record, never asserted -
+ * they depend on the machine.
  */
 describePostgres("notification fan-out with 1,000 recipients", () => {
   let h: NotificationsHarness;
@@ -57,35 +51,18 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
 
   beforeAll(async () => {
     h = await createNotificationsHarness({
-      subjects: [topicSubject],
       types: [announcementType],
       workers: { fanoutBatchSize: BATCH },
     });
     users = await h.createUsers(RECIPIENTS + 1);
 
-    // Users 1-600 follow the topic; 400-1000 are named explicitly (overlap 400-600).
     await h.c
       .get("db")
-      .insert(core_notification_subscriptions)
-      .values(
-        users.slice(1, 601).map(userId => ({
-          state: "following" as const,
-          subjectId: "1",
-          subjectType: "test.topic",
-          userId,
-        })),
-      );
-    // One follower muted the topic: they must get nothing.
-    await h.c
-      .get("db")
-      .insert(core_notification_subscriptions)
+      .insert(core_notification_user_state)
       .values({
-        state: "muted",
-        subjectId: "1",
-        subjectType: "test.topic",
+        preferences: { "test.announcement": { email: "none", inApp: false } },
         userId: users[700],
-      })
-      .onConflictDoNothing();
+      });
   }, 60_000);
 
   afterAll(async () => {
@@ -100,9 +77,8 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
     const { eventId } = await h.c.get("notifications").publish({
       actorId: actor,
       data: { title: "Big news" },
-      followersOf: [{ id: 1, type: "test.topic" }],
       idempotencyKey: "announcement-1",
-      recipients: [actor, ...users.slice(400)],
+      recipients: [actor, ...users.slice(1), ...users.slice(400, 600)],
       subject: { id: 1, type: "test.topic" },
       type: announcementType,
     });
@@ -118,7 +94,7 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
     const fanoutMs = performance.now() - fanoutStarted;
     const fanoutQueries = h.queryCount() - queriesBefore;
 
-    const expected = RECIPIENTS - 1; // everyone but the muted follower; the actor is skipped
+    const expected = RECIPIENTS - 1;
     const countRows = async (
       table: typeof core_notification_receipts | typeof core_notifications,
     ) =>
@@ -148,8 +124,6 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
       .get("db")
       .update(core_notification_events)
       .set({
-        followerSubjectCursor: 0,
-        followerUserCursor: 0,
         recipientCursor: 0,
         status: "processing",
       })
@@ -166,7 +140,7 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
       })
       .from(core_notification_user_state);
     expect(total).toBe(expected);
-    expect(wrong).toBe(1); // the muted follower holds a 0
+    expect(wrong).toBe(1);
 
     const deliveries = await h.c
       .get("db")
@@ -176,7 +150,7 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
 
     // Bounded work: the access check ran once per batch, not per recipient,
     // and the whole fan-out took a fixed number of queries per batch.
-    const batches = Math.ceil(600 / BATCH) + Math.ceil(601 / BATCH);
+    const batches = Math.ceil(RECIPIENTS / BATCH);
     expect(accessCalls).toBeLessThanOrEqual(batches * 2 + 4);
     expect(fanoutQueries).toBeLessThan(RECIPIENTS);
 

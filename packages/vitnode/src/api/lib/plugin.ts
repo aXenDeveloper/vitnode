@@ -21,10 +21,7 @@ import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventListenerConfig } from "./events";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
-import type {
-  AnyNotificationTypeDefinition,
-  NotificationSubjectDefinition,
-} from "./notifications/registry";
+import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
@@ -53,7 +50,6 @@ export interface BuildPluginApiReturn<
   messages?: LocaleMessagesMap;
   modules: Modules;
   navigation?: NavigationPresetDeclaration[];
-  notificationSubjects?: NotificationSubjectDefinition[];
   notificationTypes?: AnyNotificationTypeDefinition[];
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
@@ -79,7 +75,6 @@ export function buildApiPlugin<
   messages,
   modules = [] as unknown as Modules,
   navigation,
-  notificationSubjects,
   notificationTypes,
   permissionStaff,
   searchIndexers,
@@ -89,8 +84,6 @@ export function buildApiPlugin<
   messages?: LocaleMessagesMap;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
-  /** Subjects users can follow or mute; see `buildNotificationSubject`. */
-  notificationSubjects?: NotificationSubjectDefinition[];
   /** Notification types this plugin publishes; see `buildNotificationType`. */
   notificationTypes?: AnyNotificationTypeDefinition[];
   permissionStaff?: PermissionStaffConfig;
@@ -123,9 +116,6 @@ export function buildApiPlugin<
   const events: BuildPluginApiReturn["events"] = [];
   const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
   const types: AnyNotificationTypeDefinition[] = [...(notificationTypes ?? [])];
-  const subjects: NotificationSubjectDefinition[] = [
-    ...(notificationSubjects ?? []),
-  ];
   const openApiTags: string[] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
@@ -139,7 +129,6 @@ export function buildApiPlugin<
     publicContentTypes.push(...collectPublicContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
     types.push(...collectModuleTree(handler, m => m.notificationTypes));
-    subjects.push(...collectModuleTree(handler, m => m.notificationSubjects));
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -168,7 +157,6 @@ export function buildApiPlugin<
   // that made the mistake; the global middleware re-checks across plugins.
   createNotificationRegistry(
     types.map(definition => ({ definition, pluginId })),
-    subjects.map(definition => ({ definition, pluginId })),
   );
 
   const publishing = new Map<string, AnyContentTypeDefinition>();
@@ -196,7 +184,6 @@ export function buildApiPlugin<
     cronJobs,
     events,
     queueTasks,
-    notificationSubjects: subjects,
     notificationTypes: types,
     searchIndexers: indexers,
     webSockets,

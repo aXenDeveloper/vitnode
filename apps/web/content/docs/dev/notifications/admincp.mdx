@@ -14,11 +14,11 @@ tidy up when you need to.
 
 The screen uses the core `notifications` staff permission module:
 
-| Permission                 | Allows                                                                                   |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `notifications.can_view`   | Open the screen and the settings sheet, read-only                                        |
-| `notifications.can_edit`   | Change settings and what each type does by default                                       |
-| `notifications.can_manage` | Tools (test email, cleanup), the danger zone and **Reset all members to defaults**       |
+| Permission                 | Allows                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `notifications.can_view`   | Open the screen and the settings sheet, read-only                                  |
+| `notifications.can_edit`   | Change settings and what each type does by default                                 |
+| `notifications.can_manage` | Tools (test email, cleanup), the danger zone and **Reset all members to defaults** |
 
 Grant them in **Staff → Administrators** (`/admin/core/staff/admins`). See
 [Staff permissions](/docs/dev/working-with-users/staff-permissions).
@@ -44,12 +44,12 @@ If notifications are [paused](#danger-zone), a banner at the top says so.
 Every registered type, grouped by plugin. Each row shows what members get today
 at a glance - notification list, push and email - and opens to change it:
 
-| Choice                | Options                                                         |
-| --------------------- | --------------------------------------------------------------- |
+| Choice                | Options                                                             |
+| --------------------- | ------------------------------------------------------------------- |
 | **Member can edit**   | Off locks the type: members still get it, they just can't change it |
-| **Notification list** | Enabled by default · Not enabled by default · Disabled          |
-| **Push**              | Available · Disabled                                            |
-| **Email**             | Enabled by default · Not enabled by default · Disabled          |
+| **Notification list** | Enabled by default · Not enabled by default · Disabled              |
+| **Push**              | Available · Disabled                                                |
+| **Email**             | Enabled by default · Not enabled by default · Disabled              |
 
 - **Enabled by default** - members get it unless they turn it off.
 - **Not enabled by default** - members get it only after turning it on.
@@ -72,46 +72,42 @@ daily or weekly) the type had before.
 ### Reset all members to defaults
 
 The button next to **Notification types** wipes every member's own choices -
-muted types, email choices and their digest schedule - so everyone follows the
-defaults on this page again. The confirmation says how many members picked
+list, push and email choices - so everyone follows
+the defaults on this page again. The confirmation says how many members picked
 their own settings. It can't be undone.
 
-Follows and muted subjects (like a muted blog category) are kept.
+A member's time zone is part of their account, so a reset keeps it.
 
 ## Settings
 
-The **Settings** button opens a sheet. Every row shows its current value; tap
-it to change that one value and save. Switches save right away.
+The **Settings** button opens a sheet with tools and the danger zone. Only
+staff with the `can_manage` permission see it.
 
-| Setting                    | Default | Range   | Effect                                                                                       |
-| -------------------------- | ------- | ------- | -------------------------------------------------------------------------------------------- |
-| Send notification emails   | On      | -       | Off keeps every notification in the list, whatever members picked. Account email is unaffected |
-| Emails per member per hour | No limit | 0-500  | Immediate emails over the limit wait until the hour is up. Digests are never held back       |
-| Daily digest time          | 08:00   | 0-23    | For members who haven't picked their own, in their time zone                                 |
-| Weekly digest day          | Monday  | -       | For members who haven't picked their own                                                     |
-
-Retention and worker batch sizes are deployment settings, set in your API
-config rather than here - see
+There is no installation-wide email switch or hourly limit: email is decided
+per type, in [Notification types](#notification-types). Retention and worker
+batch sizes are deployment settings, set in your API config - see
 [Queue and scale → Configuration](/docs/dev/notifications/queue-and-scale#configuration).
 The sheet shows the current retention period at the bottom.
 
 ### Tools
 
 - **Send a test email to me** queues a sample notification email to your own
-  address. It can't be sent to anyone else.
-- **Run cleanup now** removes notifications older than the configured
-  retention period now instead of waiting for 03:17.
+  address. It can't be sent to anyone else. It only shows when an email
+  adapter is configured.
+
+Old notifications are removed every night at 02:00 by the
+`notifications-cleanup` cron.
 
 ### Danger zone
 
 Each action affects every member at once and asks before it runs:
 
-| Action                                   | What happens                                                                                          |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Pause all notifications**              | Nothing is fanned out or emailed. New events wait in the queue. **Resume** sends everything that waited |
+| Action                                   | What happens                                                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Pause all notifications**              | Nothing is fanned out or emailed. New events wait in the queue. **Resume** sends everything that waited  |
 | **Cancel all queued emails**             | Emails that haven't gone out yet, including pending digests, are skipped. Notifications stay in the list |
-| **Mark everything as read for everyone** | Every unread notification becomes read and every badge drops to zero, live                            |
-| **Delete all notifications**             | Empties every member's notification list. You type `delete all notifications` to confirm              |
+| **Mark everything as read for everyone** | Every unread notification becomes read and every badge drops to zero, live                               |
+| **Delete all notifications**             | Empties every member's notification list. You type `delete all notifications` to confirm                 |
 
 Deleting keeps types, preferences, settings and email history. It can't be
 undone.
@@ -125,10 +121,8 @@ All routes live under `/api/@vitnode/core/admin/notifications`:
 | `GET`  | `/overview`                  | `can_view`   |
 | `GET`  | `/stats`                     | `can_view`   |
 | `GET`  | `/deliveries`                | `can_view`   |
-| `PUT`  | `/settings`                  | `can_edit`   |
 | `PUT`  | `/types/{type}`              | `can_edit`   |
 | `POST` | `/test-email`                | `can_manage` |
-| `POST` | `/cleanup`                   | `can_manage` |
 | `POST` | `/reconcile`                 | `can_manage` |
 | `POST` | `/deliveries/{id}/retry`     | `can_manage` |
 | `POST` | `/pause`                     | `can_manage` |

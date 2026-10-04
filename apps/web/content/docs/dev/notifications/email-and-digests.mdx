@@ -19,25 +19,17 @@ slows email - never the inbox.
 Each email is rendered in the user's language with a link to the item and a
 **Manage notification preferences** link to `/settings/notifications`.
 
-### Hourly limit
-
-**Emails per member per hour** in the AdminCP caps immediate emails. Ones over
-the limit aren't dropped: they wait until the oldest email of that hour is an
-hour old, then go out. Digests are never held back. `0` (the default) means no
-limit.
-
 ## Daily and weekly digests
 
 Events for digest users wait as pending email receipts. Every 5 minutes the
 `notifications-schedule` cron plans the digests whose period has ended:
 
 - **Periods are local.** A daily digest covers one calendar day in the user's
-  time zone and goes out at their `digestHour`. A weekly one covers seven days
-  ending on their `digestWeekday`. Members who never picked follow the
-  installation default from the [AdminCP](/docs/dev/notifications/admincp#settings) -
-  08:00, Monday out of the box.
-- **Time zone fallback.** The user's own time zone, then the time zone of their
-  language, then UTC.
+  time zone and goes out at 08:00. A weekly one covers seven days and goes out
+  on Monday at 08:00. The schedule is the same for everyone - only the time
+  zone is personal.
+- **Time zone fallback.** The time zone the member set on `/settings`, then the
+  time zone of their language, then UTC.
 - **DST-safe.** Periods are contiguous. On the night clocks change, a "day" is
   23 or 25 hours long - no day is skipped or sent twice.
 - **Claimed once.** A digest's key is the user, mode and local date of its
@@ -55,8 +47,8 @@ are waiting.
 Nothing is decided from the state at fan-out time. Right before any email or
 digest goes out, core checks each notification again:
 
-- the user's current email mode for the type, and their mutes;
-- the installation policy and the global email switch;
+- the user's current email mode for the type;
+- the type's installation policy;
 - the type's `access` callback;
 - whether the user already read it.
 
@@ -90,7 +82,7 @@ then 20, 40 and 80. After the fifth attempt it is `failed`. The stored error is
 sanitized: email addresses, tokens and keys are redacted, and it is cut to 500
 characters.
 
-[Retrying from the AdminCP](/docs/dev/notifications/admincp#deliveries) reuses
+[Retrying with `POST /deliveries/{id}/retry`](/docs/dev/notifications/admincp#admin-api) reuses
 the same row, the same idempotency key and the same notifications - a retry can
 never turn into a second, different email.
 

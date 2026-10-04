@@ -1,18 +1,20 @@
-import { and, asc, eq, gt, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { createElement } from "react";
 
 import type { NotificationTypePreference } from "@/database/notifications";
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
 import { latestEndedDigestPeriod } from "@/api/lib/notifications/digest-period";
-import { resolveNotificationChannels } from "@/api/lib/notifications/preferences";
+import {
+  NOTIFICATION_DIGEST_SCHEDULE,
+  resolveNotificationChannels,
+} from "@/api/lib/notifications/preferences";
 import { sanitizeDeliveryError } from "@/api/lib/notifications/safe";
 import { core_languages } from "@/database/languages";
 import {
   core_notification_deliveries,
   core_notification_events,
   core_notification_receipts,
-  core_notification_subscriptions,
   core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
@@ -29,7 +31,6 @@ import type {
   NotificationSettingsSnapshot,
 } from "./shared";
 
-import { splitByHourlyEmailCap } from "./email-cap";
 import { dispatchEmailDrain } from "./email-queue";
 import { valuesList } from "./fanout";
 import {
@@ -61,66 +62,24 @@ const absoluteUrl = (target: null | string): null | string =>
 const preferencesUrl = () =>
   new URL("/settings/notifications", CONFIG.web).href;
 
-const mutedKey = (userId: number, type: string, id: string) =>
-  `${userId}|${type}|${id}`;
-
-const loadMuted = async (
-  c: NotificationsContext,
-  userIds: number[],
-): Promise<Set<string>> => {
-  if (userIds.length === 0) return new Set();
-  const rows = await c
-    .get("db")
-    .select({
-      subjectId: core_notification_subscriptions.subjectId,
-      subjectType: core_notification_subscriptions.subjectType,
-      userId: core_notification_subscriptions.userId,
-    })
-    .from(core_notification_subscriptions)
-    .where(
-      and(
-        inArray(core_notification_subscriptions.userId, userIds),
-        eq(core_notification_subscriptions.state, "muted"),
-      ),
-    );
-
-  return new Set(
-    rows.map(row => mutedKey(row.userId, row.subjectType, row.subjectId)),
-  );
-};
-
-const isMuted = (
-  muted: Set<string>,
-  userId: number,
-  event: Pick<NotificationEventRow, "subjectId" | "subjectType">,
-) =>
-  !!event.subjectType &&
-  !!event.subjectId &&
-  muted.has(mutedKey(userId, event.subjectType, event.subjectId));
-
 /** The email mode the user would get for this event right now. */
 const currentEmailMode = ({
   c,
   event,
-  muted,
   preferences,
   settings,
-  userId,
 }: {
   c: NotificationsContext;
   event: NotificationEventRow;
-  muted: Set<string>;
   preferences: Record<string, NotificationTypePreference>;
   settings: NotificationSettingsSnapshot;
-  userId: number;
 }): NotificationEmailMode => {
   const resolved = resolveEvent(c, event);
   if (!resolved) return "none";
 
   return resolveNotificationChannels({
     definition: resolved.registered.definition,
-    emailConfigured: isEmailConfigured(c, settings),
-    muted: isMuted(muted, userId, event),
+    emailConfigured: isEmailConfigured(c),
     policy: settings.policies.get(event.type),
     preference: preferences[event.type],
   }).email;
@@ -230,7 +189,7 @@ const deliverNotificationEmail = async (
     .where(eq(core_users.id, delivery.userId))
     .limit(1);
   if (!user) return { reason: "user_missing", status: "skipped" };
-  if (!isEmailConfigured(c, settings)) {
+  if (!isEmailConfigured(c)) {
     return { reason: "email_disabled", status: "skipped" };
   }
 
@@ -294,7 +253,6 @@ const deliverNotificationEmail = async (
 
   if (claimed.length === 0) return { reason: "empty", status: "skipped" };
 
-  const muted = await loadMuted(c, [user.id]);
   const read = await isAlreadyRead(c, claimed);
   const preferences = user.preferences ?? {};
   const dropped: number[] = [];
@@ -305,10 +263,8 @@ const deliverNotificationEmail = async (
     const mode = currentEmailMode({
       c,
       event: receipt.event,
-      muted,
       preferences,
       settings,
-      userId: user.id,
     });
 
     if (mode !== delivery.mode) {
@@ -444,74 +400,6 @@ const runWithConcurrency = async <T>(
  * In-app delivery never waits on this: email runs in its own queue task, so a
  * slow or failing provider only delays email.
  */
-const holdOverHourlyCap = async (
-  c: NotificationsContext,
-  claimed: DeliveryRow[],
-  settings: NotificationSettingsSnapshot,
-  now: Date,
-): Promise<DeliveryRow[]> => {
-  const cap = settings.global.emailCapPerHour;
-  const userIds = [
-    ...new Set(
-      claimed.filter(row => row.mode === "immediate").map(row => row.userId),
-    ),
-  ];
-  if (cap === 0 || userIds.length === 0) return claimed;
-
-  const db = c.get("db");
-  const recent = await db
-    .select({
-      sentAt: core_notification_deliveries.sentAt,
-      userId: core_notification_deliveries.userId,
-    })
-    .from(core_notification_deliveries)
-    .where(
-      and(
-        eq(core_notification_deliveries.mode, "immediate"),
-        eq(core_notification_deliveries.status, "sent"),
-        inArray(core_notification_deliveries.userId, userIds),
-        gt(
-          core_notification_deliveries.sentAt,
-          new Date(now.getTime() - 60 * 60 * 1000),
-        ),
-      ),
-    );
-
-  const sentInLastHour = new Map<number, Date[]>();
-  for (const row of recent) {
-    if (!row.sentAt) continue;
-    sentInLastHour.set(row.userId, [
-      ...(sentInLastHour.get(row.userId) ?? []),
-      row.sentAt,
-    ]);
-  }
-
-  const { deferred } = splitByHourlyEmailCap({
-    cap,
-    deliveries: claimed,
-    now,
-    sentInLastHour,
-  });
-
-  for (const [id, availableAt] of deferred) {
-    await db
-      .update(core_notification_deliveries)
-      .set({
-        attempts: sql`greatest(${core_notification_deliveries.attempts} - 1, 0)`,
-        availableAt,
-        status: "pending",
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(core_notification_deliveries.id, id),
-          eq(core_notification_deliveries.status, "sending"),
-        ),
-      );
-  }
-
-  return claimed.filter(row => !deferred.has(row.id));
-};
 
 export const drainNotificationEmails = async (
   c: NotificationsContext,
@@ -564,10 +452,9 @@ export const drainNotificationEmails = async (
 
   const stats = { claimed: claimed.length, failed: 0, sent: 0, skipped: 0 };
   const translator = createTranslatorCache(c);
-  const sendable = await holdOverHourlyCap(c, claimed, settings, now);
 
   await runWithConcurrency(
-    sendable,
+    claimed,
     getNotificationWorkers(c).emailConcurrency,
     async delivery => {
       let patch: Partial<DeliveryRow>;
@@ -709,14 +596,12 @@ export const planNotificationDigests = async (
     cursor = userIds.at(-1) ?? cursor;
     users += userIds.length;
 
-    const [profiles, receipts, muted] = await Promise.all([
+    const [profiles, receipts] = await Promise.all([
       db
         .select({
-          digestHour: core_notification_user_state.digestHour,
-          digestWeekday: core_notification_user_state.digestWeekday,
           languageTimeZone: core_languages.timezone,
           preferences: core_notification_user_state.preferences,
-          timeZone: core_notification_user_state.timeZone,
+          timeZone: core_users.timeZone,
           userId: core_users.id,
         })
         .from(core_users)
@@ -744,7 +629,6 @@ export const planNotificationDigests = async (
             isNull(core_notification_receipts.emailDeliveryId),
           ),
         ),
-      loadMuted(c, userIds),
     ]);
 
     const profileOf = new Map(profiles.map(row => [row.userId, row]));
@@ -757,10 +641,8 @@ export const planNotificationDigests = async (
         ? currentEmailMode({
             c,
             event: receipt.event,
-            muted,
             preferences: profile.preferences ?? {},
             settings,
-            userId: receipt.userId,
           })
         : "none";
 
@@ -781,11 +663,11 @@ export const planNotificationDigests = async (
       }
 
       const period = latestEndedDigestPeriod({
-        hour: profile.digestHour ?? settings.global.digestHour,
+        hour: NOTIFICATION_DIGEST_SCHEDULE.hour,
         mode,
         now,
         timeZone: profile.timeZone ?? profile.languageTimeZone ?? "UTC",
-        weekday: profile.digestWeekday ?? settings.global.digestWeekday,
+        weekday: NOTIFICATION_DIGEST_SCHEDULE.weekday,
       });
       // Not due yet: it belongs to the period still running.
       if (receipt.createdAt >= period.end) continue;

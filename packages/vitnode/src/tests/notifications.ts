@@ -4,10 +4,7 @@ import type { ReactElement } from "react";
 import { and, eq, lte } from "drizzle-orm";
 import { createTranslator } from "use-intl";
 
-import type {
-  AnyNotificationTypeDefinition,
-  NotificationSubjectDefinition,
-} from "@/api/lib/notifications/registry";
+import type { AnyNotificationTypeDefinition } from "@/api/lib/notifications/registry";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { NotificationEmailProps } from "@/emails/notification";
 
@@ -76,13 +73,11 @@ const notificationTasks = [
 export const createNotificationsHarness = async ({
   email = true,
   messages = {},
-  subjects = [],
   types,
   workers,
 }: {
   email?: boolean;
   messages?: Record<string, unknown>;
-  subjects?: NotificationSubjectDefinition[];
   types: AnyNotificationTypeDefinition[];
   workers?: Partial<NotificationWorkerSettings>;
 }): Promise<NotificationsHarness> => {
@@ -112,7 +107,6 @@ export const createNotificationsHarness = async ({
   let emailFailure: Error | null = null;
   const registry = createNotificationRegistry(
     types.map(definition => ({ definition, pluginId: "@acme/test" })),
-    subjects.map(definition => ({ definition, pluginId: "@acme/test" })),
   );
   const translator = createTranslator({
     locale: "en",

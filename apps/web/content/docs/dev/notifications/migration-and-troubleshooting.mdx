@@ -12,17 +12,16 @@ work - persistent notifications now have a proper home.
 
 ## Apply the database migration
 
-The Notifications Center adds seven tables to core:
+The Notifications Center adds six tables to core:
 
-| Table                             | Holds                                                   |
-| --------------------------------- | ------------------------------------------------------- |
-| `core_notification_events`        | One row per published event, with its fan-out cursor    |
-| `core_notifications`              | Inbox items, one per recipient (or per group)           |
-| `core_notification_receipts`      | One row per event and recipient, and its email state    |
-| `core_notification_user_state`    | Unread count, revision, digest schedule and preferences |
-| `core_notification_subscriptions` | Follows and mutes                                       |
-| `core_notification_deliveries`    | Email sends and their attempts                          |
-| `core_notification_settings`      | Installation settings and per-type policy               |
+| Table                          | Holds                                                |
+| ------------------------------ | ---------------------------------------------------- |
+| `core_notification_events`     | One row per published event, with its fan-out cursor |
+| `core_notifications`           | Inbox items, one per recipient (or per group)        |
+| `core_notification_receipts`   | One row per event and recipient, and its email state |
+| `core_notification_user_state` | Unread count, revision and preferences               |
+| `core_notification_deliveries` | Email sends and their attempts                       |
+| `core_notification_settings`   | Installation settings and per-type policy            |
 
 Build the plugins and migrate:
 
@@ -151,9 +150,11 @@ Delivery starts right after the publishing request's response. Anything that
 misses that is delivered by the queue worker, which runs from cron every
 minute. If notifications never arrive, or arrive much later:
 
-- the **Background worker** card in
-  [AdminCP → System → Notifications](/docs/dev/notifications/admincp#health)
-  says "Not configured" or "Stale" - fix your [cron adapter](/docs/dev/cron);
+- your [cron adapter](/docs/dev/cron) isn't calling the queue worker - in
+  development there is no `CRON_SECRET`, so queued tasks wait until you run
+  them;
+- notifications are [paused](/docs/dev/notifications/admincp#danger-zone) -
+  the AdminCP shows a banner;
 - **AdminCP → Advanced → Queue** shows failed `notifications-fanout` tasks -
   the error says why.
 
@@ -161,24 +162,25 @@ minute. If notifications never arrive, or arrive much later:
 
 Check, in this order:
 
-1. An [email adapter](/docs/dev/email) is configured - the **Notification
-   email** card says "Ready".
-2. **Send notification emails** is on in the installation settings.
-3. The type's policy has **Allow email** on.
-4. The user picked an email mode for the type - the default may be `none`.
-5. The **deliveries** list: `failed` shows a sanitized error, and `skipped`
-   shows a reason such as `empty` (everything was already read).
+1. An [email adapter](/docs/dev/email) is configured - **Send a test email**
+   in the AdminCP [Settings tools](/docs/dev/notifications/admincp#tools)
+   proves it.
+2. The type's email isn't _Disabled_ in
+   [Notification types](/docs/dev/notifications/admincp#notification-types).
+3. The user picked an email mode for the type - the default may be `none`.
+4. `GET /deliveries` in the [Admin API](/docs/dev/notifications/admincp#admin-api):
+   `failed` shows a sanitized error, and `skipped` shows a reason such as
+   `empty` (everything was already read).
 
 Remember digests only go out after the period ends in the user's time zone, and
 only include notifications that are still unread.
 
 ### The unread count looks wrong
 
-Open **AdminCP → System → Notifications → Maintenance** and click **Check
-unread counts**. If anyone differs, **Fix unread counts** recalculates them from
-the inbox and pushes the corrected badge. Please report how you got there - the
-count is updated in the same transaction as every inbox change, so drift means
-a bug.
+`POST /reconcile` in the [Admin API](/docs/dev/notifications/admincp#admin-api)
+recalculates every count from the inbox and pushes the corrected badge. Please
+report how you got there - the count is updated in the same transaction as
+every inbox change, so drift means a bug.
 
 ### Items say "This notification is no longer available"
 
@@ -189,9 +191,10 @@ Users can still read or archive it. Plugins can tidy these up with
 
 ### The digest came at the wrong time
 
-Digests follow the user's time zone from `/settings/notifications`. Without
-one, the time zone of their language is used, then UTC. The default hour is
-08:00, and weekly digests go out on Monday. The scheduler runs every 5 minutes,
+Digests follow the time zone the member set under **Region** on `/settings`.
+Without one, the time zone of their language is used, then UTC. Daily digests
+go out at 08:00 and weekly ones on Monday at 08:00. The scheduler runs every 5
+minutes,
 so a digest can arrive up to 5 minutes after the hour.
 
 ## Testing

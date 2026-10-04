@@ -3,10 +3,7 @@ import type { PluginRoutePageProps } from "@/routing";
 import { NotificationSettingsPanel } from "@/tanstack/notifications/settings-screen";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
-import {
-  notificationPreferencesQueryOptions,
-  notificationSubscriptionsQueryOptions,
-} from "@/views/notifications/notifications-query";
+import { notificationPreferencesQueryOptions } from "@/views/notifications/notifications-query";
 
 interface NotificationSettingsData {
   userId: number;
@@ -22,16 +19,10 @@ export const route = defineAuthenticatedRoute<NotificationSettingsData>({
   load: async ({ context }) => {
     const userId = context.auth.user.id;
 
-    await Promise.all([
-      context.queryClient.query({
-        ...notificationPreferencesQueryOptions({ userId }),
-        staleTime: "static",
-      }),
-      context.queryClient.query({
-        ...notificationSubscriptionsQueryOptions({ userId }),
-        staleTime: "static",
-      }),
-    ]);
+    await context.queryClient.query({
+      ...notificationPreferencesQueryOptions({ userId }),
+      staleTime: "static",
+    });
 
     return { userId };
   },

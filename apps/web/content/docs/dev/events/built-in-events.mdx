@@ -42,22 +42,22 @@ Fourteen names, all declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
 the write it describes has committed.
 
-| Event                 | Payload                                  | Fires when                                                                                           |
-| --------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `user.created`        | `{ userId, email, name, emailVerified }` | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                            |
-| `user.updated`        | `{ userId, email, name }`                | A user is edited in the AdminCP (profile fields and/or role assignments)                             |
-| `user.deleted`        | `{ userId, email }`                      | Never - the name is declared for plugins, core has no deletion flow                                  |
-| `user.sso.linked`     | `{ userId, email, providerId }`          | An SSO identity is linked to an existing account - at login with its password, or from **Settings → Connected accounts** |
-| `user.sso.unlinked`   | `{ userId, providerId }`                 | A member disconnects a provider in **Settings → Connected accounts**                                 |
-| `user.sso.profile_synced` | `{ userId, providerId, fields, trigger }` | Profile fields were copied from a provider - by **Sync now**, **Import** or an opted-in sign-in     |
-| `user.passkey.created` | `{ userId, passkeyId }`                 | A member adds a [passkey](/docs/dev/passkeys) in **Settings → Security**                              |
-| `user.passkey.updated` | `{ userId, passkeyId, name }`           | A member renames one of their passkeys                                                               |
-| `user.passkey.deleted` | `{ userId, passkeyId }`                 | A member removes one of their passkeys                                                               |
-| `user.avatar.updated` | `{ userId, fileId }`                     | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP          |
-| `user.cover.updated`  | `{ userId, fileId }`                     | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP    |
-| `role.created`        | `{ roleId }`                             | A role is created in the AdminCP                                                                     |
-| `role.updated`        | `{ roleId }`                             | A role is edited in the AdminCP                                                                      |
-| `role.deleted`        | `{ roleId }`                             | A role is deleted in the AdminCP                                                                     |
+| Event                     | Payload                                   | Fires when                                                                                                               |
+| ------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `user.created`            | `{ userId, email, name, emailVerified }`  | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                                                |
+| `user.updated`            | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile or time zone in **Settings → Overview**             |
+| `user.deleted`            | `{ userId, email }`                       | Never - the name is declared for plugins, core has no deletion flow                                                      |
+| `user.sso.linked`         | `{ userId, email, providerId }`           | An SSO identity is linked to an existing account - at login with its password, or from **Settings → Connected accounts** |
+| `user.sso.unlinked`       | `{ userId, providerId }`                  | A member disconnects a provider in **Settings → Connected accounts**                                                     |
+| `user.sso.profile_synced` | `{ userId, providerId, fields, trigger }` | Profile fields were copied from a provider - by **Sync now**, **Import** or an opted-in sign-in                          |
+| `user.passkey.created`    | `{ userId, passkeyId }`                   | A member adds a [passkey](/docs/dev/passkeys) in **Settings → Security**                                                 |
+| `user.passkey.updated`    | `{ userId, passkeyId, name }`             | A member renames one of their passkeys                                                                                   |
+| `user.passkey.deleted`    | `{ userId, passkeyId }`                   | A member removes one of their passkeys                                                                                   |
+| `user.avatar.updated`     | `{ userId, fileId }`                      | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP                              |
+| `user.cover.updated`      | `{ userId, fileId }`                      | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP                        |
+| `role.created`            | `{ roleId }`                              | A role is created in the AdminCP                                                                                         |
+| `role.updated`            | `{ roleId }`                              | A role is edited in the AdminCP                                                                                          |
+| `role.deleted`            | `{ roleId }`                              | A role is deleted in the AdminCP                                                                                         |
 
 <Accordions>
 <Accordion title="user.created">
@@ -109,8 +109,8 @@ export const welcomeListener = buildEventListener({
 <Accordion title="user.updated">
 
 Emitted by the AdminCP user `PATCH` after it commits - profile fields (email,
-name, name code) and/or role assignments. The payload carries the user's
-**current** values.
+name, name code) and/or role assignments - and when a member saves their own
+profile fields or time zone. The payload carries the user's **current** values.
 
 <TypeTable
   type={{
@@ -404,21 +404,20 @@ or the bottom bar, never both.
 
 ## Notification events
 
-Eight names, declared in `VitNodeEvents` in
+Seven names, declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Each fires **after** an
 administrator's change in [AdminCP → Notifications](/docs/dev/notifications/admincp)
 has been saved. The envelope's `actor` is that administrator.
 
-| Event                              | Payload                  | Fires when                                                                       |
-| ---------------------------------- | ------------------------ | -------------------------------------------------------------------------------- |
-| `notifications.settings.updated`   | `{ keys }`               | Installation settings are saved - `keys` lists the settings that were sent       |
-| `notifications.type.updated`       | `{ typeId }`             | What a type does by default (list, push, email, member can edit) changes         |
-| `notifications.preferences_reset`  | `{ members }`            | **Reset all members to defaults** ran - `members` is how many were reset         |
-| `notifications.paused`             | `{}`                     | Notifications were paused from the danger zone                                   |
-| `notifications.resumed`            | `{ requeuedEvents }`     | Notifications were resumed - `requeuedEvents` waited while paused                |
-| `notifications.emails_cancelled`   | `{ count }`              | Queued emails were cancelled - `count` is how many deliveries were skipped       |
-| `notifications.read_all`           | `{ items, members }`     | Everything was marked as read for everyone                                       |
-| `notifications.deleted_all`        | `{ items }`              | Every member's notifications were deleted                                        |
+| Event                             | Payload              | Fires when                                                                 |
+| --------------------------------- | -------------------- | -------------------------------------------------------------------------- |
+| `notifications.type.updated`      | `{ typeId }`         | What a type does by default (list, push, email, member can edit) changes   |
+| `notifications.preferences_reset` | `{ members }`        | **Reset all members to defaults** ran - `members` is how many were reset   |
+| `notifications.paused`            | `{}`                 | Notifications were paused from the danger zone                             |
+| `notifications.resumed`           | `{ requeuedEvents }` | Notifications were resumed - `requeuedEvents` waited while paused          |
+| `notifications.emails_cancelled`  | `{ count }`          | Queued emails were cancelled - `count` is how many deliveries were skipped |
+| `notifications.read_all`          | `{ items, members }` | Everything was marked as read for everyone                                 |
+| `notifications.deleted_all`       | `{ items }`          | Every member's notifications were deleted                                  |
 
 **A listener would** post an audit entry to your staff channel when someone
 pauses, deletes or resets everything.
@@ -831,9 +830,10 @@ handler: async (c, payload) => {
 An interactive publish is emitted once, by the route that performed it, and
 carries no `scheduleId`.
 
-The blog's own `content.blog.post.published` listener shows the other way out:
-it announces the article with a notification idempotency key, so a second run
-is a no-op. See [Example: blog category followers](/docs/dev/notifications/blog-example).
+The other way out is an idempotency key on whatever the listener writes. A
+notification published with `idempotencyKey: \`post:${payload.contentId}\``
+turns a second run into a no-op. See
+[Idempotency keys](/docs/dev/notifications/publishing#choose-an-idempotency-key).
 
 ### The envelope's owner is the content type's plugin
 

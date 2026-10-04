@@ -1,10 +1,7 @@
 import { and, count, desc, eq, inArray, like, lt, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import type {
-  NotificationGlobalSettings,
-  NotificationTypePolicy,
-} from "@/api/lib/notifications/preferences";
+import type { NotificationTypePolicy } from "@/api/lib/notifications/preferences";
 
 import {
   isNotificationEmailAvailable,
@@ -31,12 +28,9 @@ import { createTranslatorCache } from "./render";
 import {
   getNotificationRegistry,
   getNotificationWorkers,
-  GLOBAL_SETTINGS_KEY,
   isEmailConfigured,
   loadNotificationSettings,
-  normalizeGlobalSettings,
   NOTIFICATIONS_PLUGIN_ID,
-  QUEUE_NOTIFICATIONS_CLEANUP,
   typeSettingsKey,
 } from "./shared";
 
@@ -53,7 +47,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
   const db = c.get("db");
   const core = c.get("core");
   const settings = await loadNotificationSettings(db);
-  const emailConfigured = isEmailConfigured(c, settings);
+  const emailConfigured = isEmailConfigured(c);
   const { t } = await createTranslatorCache(c)(c.get("admin")?.user.language);
 
   const [
@@ -113,9 +107,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     db
       .select({ customized: count() })
       .from(core_notification_user_state)
-      .where(
-        sql`${core_notification_user_state.preferences} <> '{}'::jsonb OR ${core_notification_user_state.digestHour} IS NOT NULL OR ${core_notification_user_state.digestWeekday} IS NOT NULL`,
-      ),
+      .where(sql`${core_notification_user_state.preferences} <> '{}'::jsonb`),
   ]);
 
   return {
@@ -127,7 +119,6 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     },
     email: {
       adapterConfigured: !!core.email?.adapter,
-      enabled: settings.global.emailEnabled,
     },
     health: {
       cronActive: core.hasCronAdapter,
@@ -189,20 +180,6 @@ const upsertSetting = async (
       set: { updatedAt: new Date(), value },
       target: core_notification_settings.key,
     });
-};
-
-export const updateNotificationGlobalSettings = async (
-  c: NotificationsContext,
-  patch: Partial<NotificationGlobalSettings>,
-): Promise<NotificationGlobalSettings> => {
-  const { global } = await loadNotificationSettings(c.get("db"));
-  const next = normalizeGlobalSettings({ ...global, ...patch });
-  await upsertSetting(c, GLOBAL_SETTINGS_KEY, { ...next });
-  await c.get("events").emit("notifications.settings.updated", {
-    keys: Object.keys(patch),
-  });
-
-  return next;
 };
 
 const POLICY_KEYS = [
@@ -336,8 +313,7 @@ export const queueNotificationTestEmail = async (
   c: NotificationsContext,
   adminUserId: number,
 ): Promise<{ deliveryId: number }> => {
-  const settings = await loadNotificationSettings(c.get("db"));
-  if (!isEmailConfigured(c, settings)) {
+  if (!isEmailConfigured(c)) {
     throw new HTTPException(400, {
       message: "Notification email is not configured.",
     });
@@ -419,11 +395,4 @@ export const reconcileNotifications = async (
   );
 
   return { corrected, mismatched: mismatches.length };
-};
-
-export const queueNotificationCleanup = async (c: NotificationsContext) => {
-  await c.get("queue").dispatch({
-    name: QUEUE_NOTIFICATIONS_CLEANUP,
-    pluginId: NOTIFICATIONS_PLUGIN_ID,
-  });
 };

@@ -8,15 +8,7 @@ import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
 const zodEmailMode = z.enum(NOTIFICATION_EMAIL_MODES);
 const zodCounts = z.record(z.string(), z.number());
 
-export const zodEditableNotificationSettings = z.object({
-  digestHour: z.number().int().min(0).max(23),
-  digestWeekday: z.number().int().min(0).max(6),
-  emailCapPerHour: z.number().int().min(0).max(500),
-  emailEnabled: z.boolean(),
-});
-
-export const zodNotificationGlobalSettings =
-  zodEditableNotificationSettings.extend({ paused: z.boolean() });
+export const zodNotificationGlobalSettings = z.object({ paused: z.boolean() });
 
 export const getNotificationsOverviewRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -39,7 +31,6 @@ export const getNotificationsOverviewRoute = buildRoute({
               }),
               email: z.object({
                 adapterConfigured: z.boolean(),
-                enabled: z.boolean(),
               }),
               health: z.object({
                 cronActive: z.boolean(),

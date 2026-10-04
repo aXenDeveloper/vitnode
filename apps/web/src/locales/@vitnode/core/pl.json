@@ -937,7 +937,15 @@
           "savedDesc": "Twój profil od razu pokazuje nowe dane.",
           "secondaryRoles": "Role dodatkowe",
           "showRealName": "Pokazuj moje prawdziwe imię",
-          "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim."
+          "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim.",
+          "regionTitle": "Region",
+          "regionDesc": "Godziny podsumowań i daty są w tej strefie czasowej.",
+          "timeZone": "Strefa czasowa",
+          "timeZoneDesc": "Szukaj po mieście, np. Warsaw lub New York.",
+          "timeZoneAuto": "Automatycznie - z Twojego języka",
+          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})",
+          "timeZoneSaved": "Zapisano strefę czasową",
+          "timeZoneSavedDesc": "Podsumowania i daty są teraz w strefie {timeZone}."
         },
         "passkeys": {
           "add": "Dodaj klucz dostępu",
@@ -1160,43 +1168,65 @@
         },
         "notifications": {
           "title": "Powiadomienia",
-          "desc": "Wybierz, co do Ciebie trafia i czy pojawia się w skrzynce, od razu w e-mailu, czy w codziennym lub cotygodniowym podsumowaniu.",
-          "in_app": "W aplikacji",
-          "email": "E-mail",
-          "email_unavailable": "Bez e-maila",
-          "mandatory": "Wymagane",
-          "saved": "Zapisano preferencje",
-          "saved_desc": "Nowe powiadomienia będą zgodne z nowymi ustawieniami.",
+          "desc": "Wybierz, co do Ciebie trafia i gdzie - na liście powiadomień, jako push albo e-mailem.",
+          "saved": "Zapisano",
+          "saved_desc": "Ustawienia powiadomień są aktualne.",
+          "locked": "Ustawione przez administratora",
+          "channels": {
+            "title": "Gdzie docierają powiadomienia",
+            "push": {
+              "title": "Push",
+              "desc": "Wysyłane na to urządzenie, nawet gdy nie przeglądasz strony.",
+              "enable": "Włącz push w tej przeglądarce",
+              "enabled": "Włączone",
+              "denied": "Zablokowane przez przeglądarkę. Zezwól tej stronie na powiadomienia w jej ustawieniach, aby włączyć push.",
+              "unsupported": "Ta przeglądarka nie obsługuje powiadomień push.",
+              "soon": "Wysyłka push jest w drodze - wybory poniżej zapiszemy na czas, gdy ruszy.",
+              "enabled_toast": "Push włączony",
+              "enabled_toast_desc": "Ta przeglądarka może teraz otrzymywać Twoje powiadomienia.",
+              "enable_short": "Włącz"
+            },
+            "email": {
+              "title": "E-mail",
+              "desc": "Wysyłane na <email></email>.",
+              "stop_title": "Wyłączyć wszystkie e-maile z powiadomieniami?",
+              "stop_desc": "Nie dostaniesz już e-maili z powiadomieniami ani podsumowań. Alerty bezpieczeństwa nadal przyjdą e-mailem - chronią Twoje konto. Lista powiadomień się nie zmienia.",
+              "stop_cancel": "Zostaw e-maile",
+              "stop_submit": "Wyłącz wszystkie e-maile",
+              "stopped_toast_desc": "Koniec e-maili z powiadomieniami. Alerty bezpieczeństwa nadal do Ciebie trafią.",
+              "restored_toast_desc": "E-maile wróciły do poprzednich ustawień.",
+              "desc_off": "Wyłączone - na <email></email> trafiają tylko alerty bezpieczeństwa.",
+              "unavailable": "Żadne z Twoich powiadomień nie jest teraz wysyłane e-mailem.",
+              "on_toast_desc": "E-maile z powiadomieniami znowu działają."
+            }
+          },
+          "types": {
+            "title": "O czym dostajesz powiadomienia",
+            "empty": "Na razie nie ma czego ustawiać.",
+            "summary": {
+              "list": "Lista powiadomień",
+              "push": "Push",
+              "email": "E-mail",
+              "on": "włączone",
+              "off": "wyłączone",
+              "unavailable": "niedostępne"
+            },
+            "mandatory": "Alert bezpieczeństwa - zawsze do Ciebie trafia.",
+            "locked": "Ustawione przez administratora, więc nie zmienisz tego tutaj.",
+            "list_desc": "Pokaż pod dzwonkiem, gdy odwiedzasz stronę.",
+            "push_desc": "Wyślij na urządzenia, na których włączono push.",
+            "email_off": "Bez e-maili dla tego typu.",
+            "frequency_label": "Jak często wysyłać e-mail: {type}",
+            "email_immediate": "Wysyłane od razu.",
+            "email_daily": "Trafia do dziennego podsumowania.",
+            "email_weekly": "Trafia do tygodniowego podsumowania."
+          },
           "email_modes": {
-            "none": "Bez e-maila",
-            "immediate": "E-mail od razu",
+            "none": "Wyłączone",
+            "immediate": "Od razu",
             "daily": "Podsumowanie dzienne",
             "weekly": "Podsumowanie tygodniowe"
-          },
-          "schedule": {
-            "title": "Harmonogram podsumowań",
-            "desc": "Kiedy wysyłamy podsumowania dzienne i tygodniowe, w Twojej strefie czasowej.",
-            "time_zone": "Strefa czasowa",
-            "time_zone_desc": "Podsumowania trzymają się tego zegara, łącznie ze zmianą czasu.",
-            "hour": "Wysyłaj o",
-            "hour_desc": "O tej godzinie wychodzą podsumowania dzienne.",
-            "weekday": "Dzień podsumowania tygodniowego",
-            "weekday_desc": "W tym dniu, o tej samej godzinie, wychodzą podsumowania tygodniowe.",
-            "submit": "Zapisz harmonogram"
-          },
-          "subscriptions": {
-            "title": "Obserwowane i wyciszone",
-            "desc": "Obserwowane rzeczy dodają powiadomień, wyciszone milkną.",
-            "empty": "Niczego jeszcze nie obserwujesz ani nie wyciszasz.",
-            "following": "Obserwujesz",
-            "muted": "Wyciszone",
-            "unfollow": "Przestań obserwować",
-            "unmute": "Wyłącz wyciszenie",
-            "unfollowed": "Nie obserwujesz",
-            "unmuted": "Wyciszenie wyłączone",
-            "error": "Nie udało się tego zmienić. Spróbuj ponownie."
-          },
-          "locked": "Ustawione przez administratora"
+          }
         }
       },
       "sign_in": {
@@ -1750,19 +1780,7 @@
         "empty_desc": "Tutaj pojawi się nowa aktywność.",
         "view_all": "Zobacz wszystkie powiadomienia",
         "settings": "Ustawienia powiadomień",
-        "action_failed": "Nie udało się. Powiadomienia zostały odświeżone.",
-        "follow": {
-          "follow": "Obserwuj",
-          "following": "Obserwujesz",
-          "mute": "Wycisz powiadomienia",
-          "unmute": "Wyłącz wyciszenie",
-          "followed": "Obserwujesz",
-          "muted": "Wyciszono",
-          "cleared": "Powiadomienia jak zwykle",
-          "following_desc": "Dostaniesz powiadomienie o nowej aktywności.",
-          "muted_desc": "Nie dostaniesz już powiadomień na ten temat.",
-          "none_desc": "Znów obowiązują Twoje zwykłe ustawienia powiadomień."
-        }
+        "action_failed": "Nie udało się. Powiadomienia zostały odświeżone."
       }
     },
     "navigation": {

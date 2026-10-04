@@ -34,15 +34,15 @@ export const AdminNotificationsRouteContent = ({
     <RouteMessages namespaces={ADMIN_NOTIFICATIONS_NAMESPACES}>
       <div className="p-6">
         <PageTitle desc={description} h1={title}>
-          <NotificationsSettingsSheet
-            actions={actions}
-            canEdit={canEdit}
-            canManage={canManage}
-            counts={data.counts}
-            emailConfigured={data.email.adapterConfigured && data.email.enabled}
-            settings={data.settings}
-            workers={data.workers}
-          />
+          {canManage ? (
+            <NotificationsSettingsSheet
+              actions={actions}
+              counts={data.counts}
+              emailConfigured={data.email.adapterConfigured}
+              settings={data.settings}
+              workers={data.workers}
+            />
+          ) : null}
         </PageTitle>
 
         <NotificationsContent

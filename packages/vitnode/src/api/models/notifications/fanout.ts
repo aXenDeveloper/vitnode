@@ -1,6 +1,6 @@
 import type { SQL } from "drizzle-orm";
 
-import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import type { RegisteredNotificationType } from "@/api/lib/notifications/registry";
 import type { NotificationStateMessage } from "@/lib/notifications/types";
@@ -11,7 +11,6 @@ import {
   core_notification_deliveries,
   core_notification_events,
   core_notification_receipts,
-  core_notification_subscriptions,
   core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
@@ -116,64 +115,21 @@ export const applyUnreadDeltas = async (
 };
 
 interface Candidates {
-  cursors: Pick<
-    EventRow,
-    "followerSubjectCursor" | "followerUserCursor" | "recipientCursor"
-  >;
   done: boolean;
+  recipientCursor: number;
   userIds: number[];
 }
 
-const nextCandidates = async (
-  tx: NotificationsDb,
-  event: EventRow,
-  batchSize: number,
-): Promise<Candidates> => {
-  if (event.recipientCursor < event.recipientIds.length) {
-    const userIds = event.recipientIds.slice(
-      event.recipientCursor,
-      event.recipientCursor + batchSize,
-    );
-    const recipientCursor = event.recipientCursor + userIds.length;
-
-    return {
-      cursors: { ...event, recipientCursor },
-      done:
-        recipientCursor >= event.recipientIds.length &&
-        event.followersOf.length === 0,
-      userIds,
-    };
-  }
-
-  const subject = event.followersOf[event.followerSubjectCursor];
-  if (!subject) return { cursors: event, done: true, userIds: [] };
-
-  const rows = await tx
-    .select({ userId: core_notification_subscriptions.userId })
-    .from(core_notification_subscriptions)
-    .where(
-      and(
-        eq(core_notification_subscriptions.subjectType, subject.type),
-        eq(core_notification_subscriptions.subjectId, subject.id),
-        eq(core_notification_subscriptions.state, "following"),
-        gt(core_notification_subscriptions.userId, event.followerUserCursor),
-      ),
-    )
-    .orderBy(asc(core_notification_subscriptions.userId))
-    .limit(batchSize);
-
-  const userIds = rows.map(row => row.userId);
-  const exhausted = userIds.length < batchSize;
-  const followerSubjectCursor =
-    event.followerSubjectCursor + (exhausted ? 1 : 0);
+const nextCandidates = (event: EventRow, batchSize: number): Candidates => {
+  const userIds = event.recipientIds.slice(
+    event.recipientCursor,
+    event.recipientCursor + batchSize,
+  );
+  const recipientCursor = event.recipientCursor + userIds.length;
 
   return {
-    cursors: {
-      followerSubjectCursor,
-      followerUserCursor: exhausted ? 0 : (userIds.at(-1) ?? 0),
-      recipientCursor: event.recipientCursor,
-    },
-    done: exhausted && followerSubjectCursor >= event.followersOf.length,
+    done: recipientCursor >= event.recipientIds.length,
+    recipientCursor,
     userIds,
   };
 };
@@ -208,7 +164,7 @@ const filterRecipients = async ({
   const notSelf = candidates.filter(
     id => event.allowSelf || id !== event.actorId,
   );
-  if (notSelf.length === 0) return { eligible: [], muted: new Set<number>() };
+  if (notSelf.length === 0) return [];
 
   const db = c.get("db");
   const existing = await db
@@ -222,22 +178,6 @@ const filterRecipients = async ({
       ? { id: event.subjectId, type: event.subjectType }
       : null;
 
-  const muted = new Set<number>();
-  if (subject && eligible.length > 0) {
-    const rows = await db
-      .select({ userId: core_notification_subscriptions.userId })
-      .from(core_notification_subscriptions)
-      .where(
-        and(
-          eq(core_notification_subscriptions.subjectType, subject.type),
-          eq(core_notification_subscriptions.subjectId, subject.id),
-          eq(core_notification_subscriptions.state, "muted"),
-          inArray(core_notification_subscriptions.userId, eligible),
-        ),
-      );
-    rows.forEach(row => muted.add(row.userId));
-  }
-
   const { access } = registered.definition;
   if (access && eligible.length > 0) {
     const allowed = new Set(
@@ -246,7 +186,7 @@ const filterRecipients = async ({
     eligible = eligible.filter(id => allowed.has(id));
   }
 
-  return { eligible, muted };
+  return eligible;
 };
 
 const processBatch = async (
@@ -284,12 +224,11 @@ const processBatch = async (
     return { delivered: 0, done: true, states: [] };
   }
 
-  const candidates = await nextCandidates(
-    tx,
+  const candidates = nextCandidates(
     event,
     getNotificationWorkers(c).fanoutBatchSize,
   );
-  const { eligible, muted } = await filterRecipients({
+  const eligible = await filterRecipients({
     c,
     candidates: candidates.userIds,
     data,
@@ -302,7 +241,7 @@ const processBatch = async (
   let delivered = 0;
 
   const locked = await lockUserStates(tx, eligible);
-  const emailConfigured = isEmailConfigured(c, settings);
+  const emailConfigured = isEmailConfigured(c);
   const policy = settings.policies.get(definition.id);
   const channels = new Map(
     locked.map(row => [
@@ -310,7 +249,6 @@ const processBatch = async (
       resolveNotificationChannels({
         definition,
         emailConfigured,
-        muted: muted.has(row.userId),
         policy,
         preference: row.preferences[definition.id],
       }),
@@ -480,10 +418,10 @@ const processBatch = async (
   await tx
     .update(core_notification_events)
     .set({
-      ...candidates.cursors,
       completedAt: candidates.done ? now : null,
       deliveredCount: sql`${core_notification_events.deliveredCount} + ${delivered}`,
       lastError: null,
+      recipientCursor: candidates.recipientCursor,
       status: candidates.done ? "completed" : "processing",
     })
     .where(eq(core_notification_events.id, event.id));

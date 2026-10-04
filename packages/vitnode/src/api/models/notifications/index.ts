@@ -9,12 +9,10 @@ import type {
   PublishNotificationResult,
 } from "./publish";
 import type { NotificationsContext } from "./shared";
-import type { NotificationSubscriptionState } from "./subscriptions";
 
 import { getNotificationState, removeNotificationItems } from "./inbox";
 import { publishNotification } from "./publish";
 import { runQueuedTasksNow } from "./run-now";
-import { getSubscriptionState, setSubscriptionState } from "./subscriptions";
 
 export type { PublishNotificationArgs, PublishNotificationResult };
 
@@ -48,14 +46,6 @@ export class NotificationsModel {
           `[Notifications] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
         );
     });
-  }
-
-  async follow(userId: number, subject: NotificationSubject): Promise<void> {
-    await setSubscriptionState(this.c, userId, subject, "following");
-  }
-
-  async mute(userId: number, subject: NotificationSubject): Promise<void> {
-    await setSubscriptionState(this.c, userId, subject, "muted");
   }
 
   /**
@@ -113,24 +103,5 @@ export class NotificationsModel {
 
   async state(userId: number) {
     return await getNotificationState(this.c.get("db"), userId);
-  }
-
-  async subscription(
-    userId: number,
-    subject: NotificationSubject,
-  ): Promise<NotificationSubscriptionState> {
-    return await getSubscriptionState(this.c, userId, subject);
-  }
-
-  async unfollow(userId: number, subject: NotificationSubject): Promise<void> {
-    if ((await this.subscription(userId, subject)) === "following") {
-      await setSubscriptionState(this.c, userId, subject, "none");
-    }
-  }
-
-  async unmute(userId: number, subject: NotificationSubject): Promise<void> {
-    if ((await this.subscription(userId, subject)) === "muted") {
-      await setSubscriptionState(this.c, userId, subject, "none");
-    }
   }
 }

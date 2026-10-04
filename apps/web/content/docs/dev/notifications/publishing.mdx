@@ -1,6 +1,6 @@
 ---
 title: Publish notifications
-description: Publish a notification from a VitNode plugin with c.get("notifications").publish() - inside your transaction, with an idempotency key, to named recipients or followers of a subject.
+description: Publish a notification from a VitNode plugin with c.get("notifications").publish() - inside your transaction, with an idempotency key, to the users your plugin names.
 icon: Send
 ---
 
@@ -22,8 +22,7 @@ await c.get('db').transaction(async (tx) => {
   await c.get('notifications').publish({
     type: topicReplyNotification,
     tx,
-    recipients: [topic.authorId],
-    followersOf: [{ type: 'forum.topic', id: topic.id }],
+    recipients: [topic.authorId, ...topic.participantIds],
     subject: { type: 'forum.topic', id: topic.id },
     data: { topicId: topic.id, topicTitle: topic.title },
     idempotencyKey: `reply:${reply.id}`,
@@ -63,14 +62,9 @@ dies right after the commit.
         'Candidate user ids chosen by your business rules. At most 100,000.',
       type: 'readonly number[]',
     },
-    followersOf: {
-      description:
-        'Everyone following any of these subjects is a candidate too. At most 20 subjects.',
-      type: '{ type: string; id: number | string }[]',
-    },
     subject: {
       description:
-        "What the notification is about. Drives muting, grouping and remove(). Must match the type's subjectType.",
+        "What the notification is about. Drives grouping and remove(). Must match the type's subjectType.",
       type: '{ type: string; id: number | string }',
     },
     tx: {
@@ -114,25 +108,21 @@ administrator sending the same text twice on purpose.
 
 ## Pick the audience
 
-There are two ways to name candidates, and you can use both in one call:
+`recipients` holds the user ids your plugin picked: the topic author, the
+people who replied, the mentioned users, the members of a group. Up to 100,000
+per event - core walks them in batches, so a big list costs your request
+nothing.
 
-- **`recipients`** - user ids your plugin picked: the topic author, the
-  mentioned users, the members of a group.
-- **`followersOf`** - subjects users follow. Core streams the follower list
-  itself, in batches, so a topic with 50,000 followers costs your code nothing.
-
-A user who is in both lists, or follows two of the subjects, gets the
-notification once. Candidates are only candidates. Core still drops:
+A user listed twice gets the notification once. Candidates are only
+candidates. Core still drops:
 
 - the actor, unless `allowSelf: true`;
 - user ids that do not exist;
-- users who muted the `subject`;
 - users who switched the type off, or an installation policy that disabled it
   (see [Preferences](/docs/dev/notifications/preferences));
 - users your type's `access` callback leaves out.
 
-A publish with no `recipients` and no `followersOf` is stored as completed and
-delivers nothing.
+A publish with no `recipients` is stored as completed and delivers nothing.
 
 ### Actor and `allowSelf`
 
@@ -163,8 +153,7 @@ actor or `null` yourself.
 - `idempotencyKey` is empty or longer than 255 characters;
 - `subject` has another type than the type's `subjectType`, or an invalid
   type or id;
-- there are more than 20 `followersOf` subjects or more than 100,000
-  `recipients`.
+- there are more than 100,000 `recipients`.
 
 Inside a transaction the error rolls back your write too. Catch it if the
 notification is optional for that write.
@@ -232,28 +221,14 @@ removes every item about the subject for everyone.
 You do not have to call `remove()` for correctness: an item whose `access` now
 says no already renders as a placeholder. Call it to keep inboxes tidy.
 
-## Follow and mute from code
-
-The model exposes the same follow and mute state the UI uses:
+## Read a user's unread count
 
 ```ts
-const notifications = c.get('notifications')
-const subject = { type: 'forum.topic', id: topic.id }
-
-await notifications.follow(user.id, subject)
-await notifications.mute(user.id, subject)
-await notifications.unmute(user.id, subject)
-await notifications.unfollow(user.id, subject)
-
-const state = await notifications.subscription(user.id, subject)
-// "following" | "muted" | "none"
+const { unread, revision } = await c.get('notifications').state(user.id)
 ```
 
-A typical use is auto-following a topic for its author when it is created.
-`follow()` checks the subject's `canFollow` and throws a 403 when it refuses,
-or a 400 for an unknown or mute-only subject type.
-`unfollow()` and `unmute()` only clear the matching state. `state(userId)`
-returns a user's `{ unread, revision }`.
+`revision` goes up with every change, so a client can tell a fresh count from
+a stale one.
 
 ## Related
 
@@ -266,5 +241,4 @@ returns a user's `{ unread, revision }`.
     title="Inbox and realtime"
     href="/docs/dev/notifications/inbox-and-realtime"
   />
-  <Card title="Blog example" href="/docs/dev/notifications/blog-example" />
 </Cards>

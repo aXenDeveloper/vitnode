@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
-  buildNotificationSubject,
   buildNotificationType,
   createNotificationRegistry,
   parseStoredNotificationData,
@@ -64,31 +63,6 @@ describe("createNotificationRegistry", () => {
         { definition: { ...comment }, pluginId: "@acme/b" },
       ]),
     ).toThrow(/Duplicate notification type "blog.comment"/);
-  });
-
-  it("refuses a subject registered twice", () => {
-    const subject = buildNotificationSubject({ type: "blog.category" });
-
-    expect(() =>
-      createNotificationRegistry(
-        [],
-        [
-          { definition: subject, pluginId: "@acme/a" },
-          { definition: subject, pluginId: "@acme/b" },
-        ],
-      ),
-    ).toThrow(/Duplicate notification subject/);
-  });
-
-  it("makes a type's undeclared subject mutable but not followable", () => {
-    const registry = createNotificationRegistry([
-      {
-        definition: { ...comment, subjectType: "blog.post" },
-        pluginId: "@acme/a",
-      },
-    ]);
-
-    expect(registry.getSubject("blog.post")?.definition.followable).toBe(false);
   });
 });
 

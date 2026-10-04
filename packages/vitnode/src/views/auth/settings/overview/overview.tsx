@@ -13,6 +13,7 @@ import { SelfUserImageDialog } from "@/views/profile/images/self-image-dialog";
 
 import type { PersonalInformationUser } from "./personal-content";
 import type { UpdatePersonalInformation } from "./personal-update";
+import type { UpdateTimeZone } from "./time-zone-update";
 
 import {
   SETTINGS_ROW,
@@ -21,6 +22,7 @@ import {
 } from "../settings-group";
 import { PersonalInformationContent } from "./personal-content";
 import { RealNameRow } from "./real-name-row";
+import { TimeZoneGroup } from "./time-zone-row";
 
 export interface SettingsOverviewUser extends PersonalInformationUser {
   avatarColor: string;
@@ -28,17 +30,20 @@ export interface SettingsOverviewUser extends PersonalInformationUser {
   name: string;
   nameCode: string;
   role: ProfileRole;
+  timeZone: null | string;
 }
 
 export const OverviewSettingsContent = ({
   canEditPersonalInfo,
   editor,
   personalFields,
+  onTimeZoneUpdate,
   onUpdate,
   user,
 }: {
   canEditPersonalInfo: boolean;
   editor?: UserImageEditor;
+  onTimeZoneUpdate: UpdateTimeZone;
   onUpdate: UpdatePersonalInformation;
   personalFields: PersonalInformationFields;
   user: SettingsOverviewUser;
@@ -101,6 +106,8 @@ export const OverviewSettingsContent = ({
         onUpdate={onUpdate}
         user={user}
       />
+
+      <TimeZoneGroup onUpdate={onTimeZoneUpdate} timeZone={user.timeZone} />
 
       <SettingsGroup title={t("accountTitle")}>
         <li className={SETTINGS_ROW}>

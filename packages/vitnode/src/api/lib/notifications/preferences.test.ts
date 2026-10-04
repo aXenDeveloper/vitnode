@@ -27,29 +27,23 @@ const resolve = (
   resolveNotificationChannels({
     definition: type,
     emailConfigured: true,
-    muted: false,
     ...args,
   });
 
 describe("resolveNotificationChannels", () => {
   it("falls back from the user, to the installation, to the type", () => {
-    expect(resolve({})).toEqual({ email: "daily", inApp: true });
+    expect(resolve({})).toEqual({ email: "daily", inApp: true, push: true });
     expect(resolve({ policy: { email: "weekly", inApp: false } })).toEqual({
       email: "weekly",
       inApp: false,
+      push: true,
     });
     expect(
       resolve({
         policy: { email: "weekly", inApp: false },
         preference: { email: "immediate", inApp: true },
       }),
-    ).toEqual({ email: "immediate", inApp: true });
-  });
-
-  it("lets a mute beat the user's own preferences", () => {
-    expect(
-      resolve({ muted: true, preference: { email: "immediate", inApp: true } }),
-    ).toEqual({ email: "none", inApp: false });
+    ).toEqual({ email: "immediate", inApp: true, push: true });
   });
 
   it("lets installation policy beat everything but mandatory types", () => {
@@ -58,14 +52,14 @@ describe("resolveNotificationChannels", () => {
     ).toEqual({
       email: "none",
       inApp: false,
+      push: false,
     });
     expect(
       resolve({
         definition: mandatory,
-        muted: true,
         policy: { enabled: false },
       }),
-    ).toEqual({ email: "daily", inApp: true });
+    ).toEqual({ email: "daily", inApp: true, push: true });
   });
 
   it("only offers email where the type, installation and policy all allow it", () => {
@@ -83,6 +77,7 @@ describe("resolveNotificationChannels", () => {
     expect(resolve({ preference: { inApp: false } })).toEqual({
       email: "daily",
       inApp: false,
+      push: true,
     });
   });
 
@@ -92,7 +87,7 @@ describe("resolveNotificationChannels", () => {
         policy: { email: "weekly", inApp: false, memberCanEdit: false },
         preference: { email: "immediate", inApp: true },
       }),
-    ).toEqual({ email: "weekly", inApp: false });
+    ).toEqual({ email: "weekly", inApp: false, push: true });
   });
 
   it("keeps a type out of the notification list when in-app is disabled", () => {
@@ -101,9 +96,22 @@ describe("resolveNotificationChannels", () => {
         policy: { allowInApp: false },
         preference: { inApp: true },
       }),
-    ).toEqual({ email: "daily", inApp: false });
+    ).toEqual({ email: "daily", inApp: false, push: true });
     expect(
       resolve({ definition: mandatory, policy: { allowInApp: false } }).inApp,
+    ).toBe(true);
+  });
+
+  it("offers push unless the installation disables it, and lets members turn it off", () => {
+    expect(resolve({}).push).toBe(true);
+    expect(resolve({ preference: { push: false } }).push).toBe(false);
+    expect(
+      resolve({ policy: { allowPush: false }, preference: { push: true } })
+        .push,
+    ).toBe(false);
+    expect(
+      resolve({ policy: { memberCanEdit: false }, preference: { push: false } })
+        .push,
     ).toBe(true);
   });
 });

@@ -9,10 +9,6 @@ import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
 
 export interface AdminNotificationSettings {
-  digestHour: number;
-  digestWeekday: number;
-  emailCapPerHour: number;
-  emailEnabled: boolean;
   paused: boolean;
 }
 
@@ -22,11 +18,6 @@ export interface AdminNotificationWorkers {
   fanoutBatchSize: number;
   retentionDays: number;
 }
-
-export type AdminNotificationEditableSettings = Omit<
-  AdminNotificationSettings,
-  "paused"
->;
 
 export interface AdminNotificationTypePolicy {
   allowEmail: boolean;
@@ -59,7 +50,7 @@ export interface AdminNotificationsOverview {
     queuedEmails: number;
     unreadItems: number;
   };
-  email: { adapterConfigured: boolean; enabled: boolean };
+  email: { adapterConfigured: boolean };
   health: {
     cronActive: boolean;
     cronStale: boolean;

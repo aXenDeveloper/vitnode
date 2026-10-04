@@ -45,6 +45,7 @@ export const core_users = camelCase.table.withRLS(
       .references(() => core_roles.id)
       .notNull(),
     birthday: t.timestamp(),
+    timeZone: t.varchar({ length: 64 }),
     ipAddress: t.varchar({ length: 40 }).notNull(),
     language: t
       .varchar({ length: 32 })

@@ -7,9 +7,9 @@ import { buildNotificationType } from "@/api/lib/notifications/registry";
 import {
   core_notification_deliveries,
   core_notification_receipts,
-  core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
+import { core_users } from "@/database/users";
 import {
   createNotificationsHarness,
   type NotificationsHarness,
@@ -168,12 +168,9 @@ describePostgres("notification email", () => {
     const [user] = await h.createUsers(1);
     await h.c
       .get("db")
-      .insert(core_notification_user_state)
-      .values({ digestHour: 8, timeZone: "Europe/Warsaw", userId: user })
-      .onConflictDoUpdate({
-        set: { digestHour: 8, timeZone: "Europe/Warsaw" },
-        target: core_notification_user_state.userId,
-      });
+      .update(core_users)
+      .set({ timeZone: "Europe/Warsaw" })
+      .where(eq(core_users.id, user));
 
     const inside = await publish(newsType, user, "Saturday news");
     const after = await publish(newsType, user, "Sunday news");

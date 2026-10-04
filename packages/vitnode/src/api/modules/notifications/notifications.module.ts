@@ -15,11 +15,6 @@ import {
 } from "./routes/preferences.route";
 import { notificationStateRoute } from "./routes/state.route";
 import {
-  getSubscriptionRoute,
-  listSubscriptionsRoute,
-  setSubscriptionRoute,
-} from "./routes/subscriptions.route";
-import {
   notificationsCleanupCron,
   notificationsCleanupTask,
   notificationsEmailTask,
@@ -39,9 +34,6 @@ export const notificationsModule = buildModule({
     archiveNotificationRoute,
     getNotificationPreferencesRoute,
     updateNotificationPreferencesRoute,
-    listSubscriptionsRoute,
-    getSubscriptionRoute,
-    setSubscriptionRoute,
   ],
   cronJobs: [notificationsScheduleCron, notificationsCleanupCron],
   queueTasks: [

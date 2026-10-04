@@ -1,6 +1,6 @@
 ---
 title: Notification types
-description: Reference for buildNotificationType and buildNotificationSubject - ids, schema versions, presentation, access checks, grouping, email and mandatory types.
+description: Reference for buildNotificationType - ids, schema versions, presentation, access checks, grouping, email and mandatory types.
 icon: Shapes
 ---
 
@@ -8,8 +8,6 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 A notification type describes one kind of notification: what data it stores,
 how it reads in the inbox, who may see it and how users receive it by default.
-A subject is something users can follow or mute, such as a forum topic or a
-blog category.
 
 ## Declare a type
 
@@ -47,7 +45,7 @@ export const topicReplyNotification = buildNotificationType({
 The returned object is what you register **and** what you pass to `publish()`,
 so `data` is type-checked against `schema` at every call site.
 
-## Register types and subjects
+## Register types
 
 Pass them to `buildApiPlugin()`:
 
@@ -57,7 +55,6 @@ export const forumApiPlugin = () =>
     pluginId: CONFIG_PLUGIN.pluginId,
     messages: apiMessages,
     notificationTypes: [topicReplyNotification],
-    notificationSubjects: [forumTopicSubject],
     modules: [topicsModule],
   })
 ```
@@ -70,13 +67,12 @@ export const topicsModule = buildModule({
   name: 'topics',
   routes: [replyRoute],
   notificationTypes: [topicReplyNotification], // [!code ++]
-  notificationSubjects: [forumTopicSubject], // [!code ++]
 })
 ```
 
-Core collects both lists from every installed plugin when the API starts. The
-same type id or subject type registered twice - by one plugin or by two -
-stops startup with an error naming both owners.
+Core collects the types from every installed plugin when the API starts. The
+same type id registered twice - by one plugin or by two - stops startup with
+an error naming both owners.
 
 ## `buildNotificationType` options
 
@@ -149,7 +145,7 @@ stops startup with an error naming both owners.
     },
     mandatory: {
       description:
-        'Account and security messages: always in-app, cannot be muted or changed by the user.',
+        'Account and security messages: always in-app, cannot be changed by the user.',
       type: 'boolean',
       default: 'false',
     },
@@ -292,52 +288,6 @@ Data that cannot be upgraded - no `migrate`, a newer stored version, a thrown
 error or a failed parse - is never shown. Undelivered events fail, and inbox
 items render as placeholders.
 
-## Declare a subject
-
-A subject is anything users can follow or mute. Following puts a user in the
-audience whenever a publisher names the subject in `followersOf`. Muting
-silences every notification about it.
-
-```ts title="plugins/forum/src/api/lib/notifications.ts"
-import { buildNotificationSubject } from '@vitnode/core/api/lib/notifications/registry'
-
-export const forumTopicSubject = buildNotificationSubject({
-  type: 'forum.topic',
-  canFollow: async ({ c, id, userId }) =>
-    (await canReadTopic(c, Number(id), [userId])).length > 0,
-  resolveLabels: async ({ c, ids }) => await loadTopicTitles(c, ids),
-})
-```
-
-<TypeTable
-  type={{
-    type: {
-      description:
-        'Subject type such as "forum.topic". Lowercase segments separated by dots, at most 100 characters.',
-      type: 'string',
-      required: true,
-    },
-    canFollow: {
-      description:
-        'Whether userId may follow subject id - usually whether they can see it. Not called for mute, unmute or unfollow.',
-      type: '(args: { c, id: string, userId: number }) => boolean | Promise<boolean>',
-    },
-    followable: {
-      description: 'Set false for subjects that can only be muted.',
-      type: 'boolean',
-      default: 'true',
-    },
-    resolveLabels: {
-      description:
-        'Human-readable names for the follow and mute lists on the settings page. Ids it leaves out show as raw ids.',
-      type: '(args: { c, ids: string[], locale: string }) => Record<string, string> | Promise<Record<string, string>>',
-    },
-  }}
-/>
-
-A type's `subjectType` that no plugin declared becomes a **mute-only** subject
-automatically, so users can always mute whatever a notification is about.
-
 ## Mandatory types
 
 ```ts
@@ -345,7 +295,7 @@ mandatory: true,
 ```
 
 Use `mandatory` for account and security notices users must not miss in the
-inbox: always delivered in-app, never muted, and fixed on the preferences page.
+inbox: always delivered in-app and fixed on the preferences page.
 Its email follows the installation default. Password resets and sign-in codes
 are **not** notifications - keep sending them with `c.get("email").send()`. See
 [Mandatory types and account email](/docs/dev/notifications/preferences#mandatory-types-and-account-email).

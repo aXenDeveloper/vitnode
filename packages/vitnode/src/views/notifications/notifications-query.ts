@@ -1,7 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
-import type { NotificationSubject } from "@/lib/notifications/types";
-
 import { CONFIG_PLUGIN } from "@/config";
 import {
   OPERATIONAL_STALE_TIME,
@@ -163,6 +161,7 @@ export const fetchNotificationState = async () => {
 export interface NotificationPreferenceTypeView {
   category: string;
   categoryLabel: string;
+  defaultEmail: "daily" | "immediate" | "none" | "weekly";
   description: null | string;
   emailModes: ("daily" | "immediate" | "none" | "weekly")[];
   id: string;
@@ -171,13 +170,15 @@ export interface NotificationPreferenceTypeView {
   locked: boolean;
   mandatory: boolean;
   pluginId: string;
-  value: { email: "daily" | "immediate" | "none" | "weekly"; inApp: boolean };
+  pushAvailable: boolean;
+  value: {
+    email: "daily" | "immediate" | "none" | "weekly";
+    inApp: boolean;
+    push: boolean;
+  };
 }
 
 export interface NotificationPreferencesView {
-  digestHour: number;
-  digestWeekday: number;
-  timeZone: null | string;
   types: NotificationPreferenceTypeView[];
 }
 
@@ -202,71 +203,6 @@ export const notificationPreferencesQueryOptions = ({
       return await response.json();
     },
     queryKey: notificationPreferencesQueryKey(userId),
-    retry: false,
-    staleTime: RECORD_STALE_TIME,
-  });
-
-export interface NotificationSubscriptionView {
-  createdAt: Date | string;
-  label: null | string;
-  state: "following" | "muted";
-  subjectId: string;
-  subjectType: string;
-}
-
-export const notificationSubscriptionsQueryKey = (userId: number) =>
-  [...NOTIFICATIONS_IDENTITY_ROOT, userId, "subscriptions"] as const;
-
-export const notificationSubscriptionsQueryOptions = ({
-  userId,
-}: {
-  userId: number;
-}) =>
-  queryOptions({
-    queryFn: async (): Promise<NotificationSubscriptionView[]> => {
-      const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
-        args: { query: {} },
-        method: "get",
-        module: "notifications",
-        path: "/subscriptions",
-      });
-      if (!response.ok) throw new NotificationsRequestError(response.status);
-
-      return (await response.json()).items;
-    },
-    queryKey: notificationSubscriptionsQueryKey(userId),
-    retry: false,
-    staleTime: RECORD_STALE_TIME,
-  });
-
-export const notificationSubscriptionQueryOptions = ({
-  subject,
-  userId,
-}: {
-  subject: NotificationSubject;
-  userId: number;
-}) =>
-  queryOptions({
-    queryFn: async () => {
-      const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
-        args: {
-          params: { subjectId: String(subject.id), subjectType: subject.type },
-        },
-        method: "get",
-        module: "notifications",
-        path: "/subscriptions/{subjectType}/{subjectId}",
-      });
-      if (!response.ok) throw new NotificationsRequestError(response.status);
-
-      return (await response.json()).state;
-    },
-    queryKey: [
-      ...notificationSubscriptionsQueryKey(userId),
-      subject.type,
-      String(subject.id),
-    ] as const,
     retry: false,
     staleTime: RECORD_STALE_TIME,
   });

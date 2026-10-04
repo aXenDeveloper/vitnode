@@ -510,19 +510,7 @@
         "empty_desc": "New activity will show up here.",
         "view_all": "View all notifications",
         "settings": "Notification settings",
-        "action_failed": "That didn't work. Your notifications were refreshed.",
-        "follow": {
-          "follow": "Follow",
-          "following": "Following",
-          "mute": "Mute notifications",
-          "unmute": "Unmute notifications",
-          "followed": "Following",
-          "muted": "Muted",
-          "cleared": "Notifications back to normal",
-          "following_desc": "You'll be notified about new activity here.",
-          "muted_desc": "You won't get notifications about this anymore.",
-          "none_desc": "Your usual notification settings apply again."
-        }
+        "action_failed": "That didn't work. Your notifications were refreshed."
       }
     },
     "navigation": {
@@ -828,7 +816,15 @@
           "notSet": "Not set",
           "save": "Save changes",
           "saved": "Personal information updated.",
-          "savedDesc": "Your profile shows the new details right away."
+          "savedDesc": "Your profile shows the new details right away.",
+          "regionTitle": "Region",
+          "regionDesc": "Digest emails and dates follow this time zone.",
+          "timeZone": "Time zone",
+          "timeZoneDesc": "Search by city, like Warsaw or New York.",
+          "timeZoneAuto": "Automatic - from your language",
+          "timeZoneUseDevice": "Use this device's time zone ({timeZone})",
+          "timeZoneSaved": "Time zone saved",
+          "timeZoneSavedDesc": "Digests and dates now follow {timeZone}."
         },
         "devices": {
           "title": "Devices",
@@ -1073,43 +1069,65 @@
         },
         "notifications": {
           "title": "Notifications",
-          "desc": "Choose what reaches you, and whether it arrives in your inbox, by email right away, or in a daily or weekly summary.",
-          "in_app": "In-app",
-          "email": "Email",
-          "email_unavailable": "No email",
-          "mandatory": "Required",
-          "saved": "Preferences saved",
-          "saved_desc": "New notifications will follow your updated settings.",
+          "desc": "Choose what reaches you and where - in your notifications, as push, or by email.",
+          "saved": "Saved",
+          "saved_desc": "Your notification settings are up to date.",
+          "locked": "Set by the admin",
+          "channels": {
+            "title": "Where notifications reach you",
+            "push": {
+              "title": "Push",
+              "desc": "Sent to this device even when you're not browsing.",
+              "enable": "Turn on push in this browser",
+              "enabled": "On",
+              "denied": "Blocked by your browser. Allow notifications for this site in its settings to turn push on.",
+              "unsupported": "This browser can't receive push notifications.",
+              "soon": "Push delivery is on its way - the choices below are saved for when it lands.",
+              "enabled_toast": "Push is on",
+              "enabled_toast_desc": "This browser can now get your notifications.",
+              "enable_short": "Turn on"
+            },
+            "email": {
+              "title": "Email",
+              "desc": "Sent to <email></email>.",
+              "stop_title": "Stop all email notifications?",
+              "stop_desc": "You won't get notification emails or digests any more. Security alerts still arrive by email - they keep your account safe. Your notification list isn't affected.",
+              "stop_cancel": "Keep emails",
+              "stop_submit": "Stop all emails",
+              "stopped_toast_desc": "No more notification emails. Security alerts still reach you.",
+              "restored_toast_desc": "Your emails are back the way they were.",
+              "desc_off": "Off - only security alerts go to <email></email>.",
+              "unavailable": "None of your notifications are sent by email right now.",
+              "on_toast_desc": "Notification emails are back on."
+            }
+          },
+          "types": {
+            "title": "What you get notified about",
+            "empty": "There's nothing to set up yet.",
+            "summary": {
+              "list": "Notification list",
+              "push": "Push",
+              "email": "Email",
+              "on": "on",
+              "off": "off",
+              "unavailable": "not available"
+            },
+            "mandatory": "A security alert - it always reaches you.",
+            "locked": "Set by the admin, so it can't be changed here.",
+            "list_desc": "Show it under the bell when you visit.",
+            "push_desc": "Send it to devices where you turned push on.",
+            "email_off": "No emails for this one.",
+            "frequency_label": "How often to email {type}",
+            "email_immediate": "Emailed right away.",
+            "email_daily": "Goes into your daily digest.",
+            "email_weekly": "Goes into your weekly digest."
+          },
           "email_modes": {
-            "none": "No email",
-            "immediate": "Email right away",
-            "daily": "Daily summary",
-            "weekly": "Weekly summary"
-          },
-          "schedule": {
-            "title": "Summary schedule",
-            "desc": "When daily and weekly summaries are sent, in your time zone.",
-            "time_zone": "Time zone",
-            "time_zone_desc": "Summaries follow this clock, daylight saving included.",
-            "hour": "Send at",
-            "hour_desc": "Daily summaries go out at this hour.",
-            "weekday": "Weekly summary day",
-            "weekday_desc": "Weekly summaries go out on this day, at the same hour.",
-            "submit": "Save schedule"
-          },
-          "subscriptions": {
-            "title": "Followed and muted",
-            "desc": "Things you follow add to what you hear about; muted ones stay quiet.",
-            "empty": "You aren't following or muting anything yet.",
-            "following": "Following",
-            "muted": "Muted",
-            "unfollow": "Unfollow",
-            "unmute": "Unmute",
-            "unfollowed": "Unfollowed",
-            "unmuted": "Unmuted",
-            "error": "We couldn't update that. Please try again."
-          },
-          "locked": "Set by the admin"
+            "none": "Off",
+            "immediate": "Right away",
+            "daily": "Daily digest",
+            "weekly": "Weekly digest"
+          }
         }
       }
     },
@@ -2109,7 +2127,7 @@
         "reset_members": {
           "button": "Reset all members to defaults",
           "title": "Reset everyone's notification preferences?",
-          "desc": "{count, plural, =0 {No member has changed their notification preferences yet.} one {# member picked their own notification settings.} other {# members picked their own notification settings.}} Muted types, email choices and digest schedules are replaced with the defaults on this page.",
+          "desc": "{count, plural, =0 {No member has changed their notification preferences yet.} one {# member picked their own notification settings.} other {# members picked their own notification settings.}} Their list, push and email choices are replaced with the defaults on this page.",
           "warning": "This can't be undone.",
           "submit": "Reset all members",
           "success": "Preferences reset",
@@ -2118,36 +2136,10 @@
         "settings": {
           "button": "Settings",
           "title": "Notification settings",
-          "desc": "Every change saves on its own and applies to everyone.",
-          "read_only": "You can see these settings, but changing them needs the \"Can edit\" notifications permission.",
+          "desc": "Tools and actions that reach every member.",
           "groups": {
-            "email": "Email",
             "tools": "Tools",
             "danger": "Danger zone"
-          },
-          "edit": "Edit {label}",
-          "save": "Save",
-          "cancel": "Cancel",
-          "success": "Saved",
-          "success_desc": "{label}: {value}.",
-          "on": "On",
-          "off": "Off",
-          "emailEnabled": {
-            "label": "Send notification emails",
-            "desc": "Off keeps everything in the notification list, whatever members picked."
-          },
-          "emailCapPerHour": {
-            "label": "Emails per member per hour",
-            "desc": "Immediate emails over the limit wait until the hour is up. 0 means no limit.",
-            "none": "No limit"
-          },
-          "digestHour": {
-            "label": "Daily digest time",
-            "desc": "For members who haven't picked their own, in their time zone."
-          },
-          "digestWeekday": {
-            "label": "Weekly digest day",
-            "desc": "For members who haven't picked their own."
           },
           "config_note": "Notifications are kept for {days, plural, one {# day} other {# days}}. Retention and worker batch sizes are set in the API config (vitnode.api.config.ts), under notifications."
         },
@@ -2160,12 +2152,6 @@
             "success": "Test email queued",
             "success_desc": "Delivery #{id} goes to your own address.",
             "not_configured": "Notification email isn't set up yet, so there's nothing to test."
-          },
-          "cleanup": {
-            "label": "Run cleanup now",
-            "desc": "Removes notifications older than {count, plural, one {# day} other {# days}} now instead of tonight.",
-            "success": "Cleanup started",
-            "success_desc": "Old notifications are being removed in the background."
           }
         },
         "danger": {

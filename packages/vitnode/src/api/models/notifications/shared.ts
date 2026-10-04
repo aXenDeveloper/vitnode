@@ -45,34 +45,12 @@ export interface NotificationSettingsSnapshot {
   policies: Map<string, NotificationTypePolicy>;
 }
 
-const clampInt = (
-  value: unknown,
-  min: number,
-  max: number,
-  fallback: number,
-) =>
-  typeof value === "number" && Number.isInteger(value)
-    ? Math.min(max, Math.max(min, value))
-    : fallback;
-
 export const normalizeGlobalSettings = (
   value: Record<string, unknown> | undefined,
 ): NotificationGlobalSettings => {
   const defaults = DEFAULT_NOTIFICATION_SETTINGS;
 
   return {
-    digestHour: clampInt(value?.digestHour, 0, 23, defaults.digestHour),
-    digestWeekday: clampInt(value?.digestWeekday, 0, 6, defaults.digestWeekday),
-    emailCapPerHour: clampInt(
-      value?.emailCapPerHour,
-      0,
-      500,
-      defaults.emailCapPerHour,
-    ),
-    emailEnabled:
-      typeof value?.emailEnabled === "boolean"
-        ? value.emailEnabled
-        : defaults.emailEnabled,
     paused: typeof value?.paused === "boolean" ? value.paused : defaults.paused,
   };
 };
@@ -101,10 +79,8 @@ export const getNotificationWorkers = (
   c.get("core").notificationWorkers ?? resolveNotificationWorkerSettings();
 
 /** Whether notification emails can be sent at all on this installation. */
-export const isEmailConfigured = (
-  c: NotificationsContext,
-  settings: NotificationSettingsSnapshot,
-): boolean => !!c.get("core").email?.adapter && settings.global.emailEnabled;
+export const isEmailConfigured = (c: NotificationsContext): boolean =>
+  !!c.get("core").email?.adapter;
 
 /**
  * Sends each user their committed unread state. Call only after the

@@ -70,7 +70,7 @@ export const notificationsScheduleCron = buildCron({
 export const notificationsCleanupCron = buildCron({
   name: "notifications-cleanup",
   description: "Queue the daily notification retention cleanup.",
-  schedule: "17 3 * * *",
+  schedule: "0 2 * * *",
   handler: async c => {
     await c.get("queue").dispatch({
       name: QUEUE_NOTIFICATIONS_CLEANUP,

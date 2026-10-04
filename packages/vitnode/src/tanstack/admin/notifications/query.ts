@@ -41,14 +41,12 @@ export const useNotificationsAdminActions = (): NotificationsAdminActions => {
 
     return {
       cancelQueuedEmails: refreshing(browser.cancelQueuedEmails),
-      cleanup: refreshing(browser.cleanup),
       deleteAll: refreshing(browser.deleteAll),
       markEverythingRead: refreshing(browser.markEverythingRead),
       pause: refreshing(browser.pause),
       resetMemberPreferences: refreshing(browser.resetMemberPreferences),
       resume: refreshing(browser.resume),
       sendTestEmail: refreshing(browser.sendTestEmail),
-      updateSettings: refreshing(browser.updateSettings),
       updateTypePolicy: refreshing(browser.updateTypePolicy),
     };
   }, [queryClient]);

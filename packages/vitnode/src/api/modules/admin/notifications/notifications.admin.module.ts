@@ -15,14 +15,10 @@ import {
 } from "./routes/deliveries.route";
 import {
   reconcileNotificationCountsRoute,
-  runNotificationCleanupRoute,
   sendNotificationTestEmailRoute,
 } from "./routes/maintenance.route";
 import { getNotificationsOverviewRoute } from "./routes/overview.route";
-import {
-  updateNotificationSettingsRoute,
-  updateNotificationTypePolicyRoute,
-} from "./routes/settings.route";
+import { updateNotificationTypePolicyRoute } from "./routes/settings.route";
 import { getNotificationStatsRoute } from "./routes/stats.route";
 
 export const notificationsAdminModule = buildModule({
@@ -30,13 +26,11 @@ export const notificationsAdminModule = buildModule({
   name: "notifications",
   routes: [
     getNotificationsOverviewRoute,
-    updateNotificationSettingsRoute,
     updateNotificationTypePolicyRoute,
     listNotificationDeliveriesRoute,
     retryNotificationDeliveryRoute,
     sendNotificationTestEmailRoute,
     reconcileNotificationCountsRoute,
-    runNotificationCleanupRoute,
     getNotificationStatsRoute,
     pauseNotificationsRoute,
     resumeNotificationsRoute,

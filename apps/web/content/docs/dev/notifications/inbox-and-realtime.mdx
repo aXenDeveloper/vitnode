@@ -139,19 +139,16 @@ See [Redis](/docs/dev/advanced/redis) and [WebSocket](/docs/dev/websocket).
 All routes act on the signed-in user and return `401` for guests. Paths are
 relative to `/api/@vitnode/core/notifications`.
 
-| Method | Path                                       | Does                                                                                           |
-| ------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `GET`  | `/`                                        | One page, newest activity first. Query: `limit` (1-50), `cursor`, `unread`, `category`, `type` |
-| `GET`  | `/state`                                   | `{ unread, revision }`                                                                         |
-| `POST` | `/{id}/read`                               | Mark read, optional body `{ throughSeq }`                                                      |
-| `POST` | `/{id}/unread`                             | Mark unread again                                                                              |
-| `POST` | `/{id}/archive`                            | Hide from the inbox                                                                            |
-| `POST` | `/read-all`                                | Mark all read, optional body `{ category }`                                                    |
-| `GET`  | `/preferences`                             | Types, channels, digest schedule and time zone                                                 |
-| `PUT`  | `/preferences`                             | Save them                                                                                      |
-| `GET`  | `/subscriptions`                           | Followed and muted subjects, optional `state` filter                                           |
-| `GET`  | `/subscriptions/{subjectType}/{subjectId}` | One subject's state                                                                            |
-| `PUT`  | `/subscriptions`                           | Body `{ subjectType, subjectId, state }`, state is `following`, `muted` or `none`              |
+| Method | Path            | Does                                                                                           |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------- |
+| `GET`  | `/`             | One page, newest activity first. Query: `limit` (1-50), `cursor`, `unread`, `category`, `type` |
+| `GET`  | `/state`        | `{ unread, revision }`                                                                         |
+| `POST` | `/{id}/read`    | Mark read, optional body `{ throughSeq }`                                                      |
+| `POST` | `/{id}/unread`  | Mark unread again                                                                              |
+| `POST` | `/{id}/archive` | Hide from the inbox                                                                            |
+| `POST` | `/read-all`     | Mark all read, optional body `{ category }`                                                    |
+| `GET`  | `/preferences`  | Types and their channels                                                                       |
+| `PUT`  | `/preferences`  | Save them                                                                                      |
 
 Mark routes return the new `{ unread, revision }`. Another user's item id
 answers `404`, exactly like a missing one.
@@ -171,26 +168,12 @@ const response = await fetcher({
 
 Core ships the whole UI. Nothing needs wiring in a default theme.
 
-| Piece                   | Where                                                                    |
-| ----------------------- | ------------------------------------------------------------------------ |
-| Bell with unread badge  | Site header, every screen size. Loads the recent list only when opened.  |
-| Notifications Center    | `/notifications` - all or unread, category filter, infinite scroll       |
-| Preferences             | `/settings/notifications` - per type, digest schedule, follows and mutes |
-| `NotificationStateSync` | Mounted with the realtime listeners. Keeps the count in step             |
-| `FollowSubjectButton`   | Drop it on your own plugin pages                                         |
-
-Add follow and mute controls to any page:
-
-```tsx title="plugins/forum/src/pages/topic-page.tsx"
-import { FollowSubjectButton } from '@vitnode/core/tanstack/notifications'
-
-export const FollowTopic = ({ topicId }: { topicId: number }) => (
-  <FollowSubjectButton subject={{ type: 'forum.topic', id: topicId }} />
-)
-```
-
-It renders nothing for guests. Pass `canMute={false}` to hide the mute toggle.
-The subject type must be registered with `buildNotificationSubject()`.
+| Piece                   | Where                                                                   |
+| ----------------------- | ----------------------------------------------------------------------- |
+| Bell with unread badge  | Site header, every screen size. Loads the recent list only when opened. |
+| Notifications Center    | `/notifications` - all or unread, category filter, infinite scroll      |
+| Preferences             | `/settings/notifications` - channels and per type choices               |
+| `NotificationStateSync` | Mounted with the realtime listeners. Keeps the count in step            |
 
 {/* Image prompt: The VitNode Notifications Center page at /notifications on a phone, 390x844, light theme. A heading "Notifications", tabs "All" and "Unread", a category select, and a list of notification rows with avatars, bold unread titles, a muted body line, relative times and a small overflow menu with "Mark as unread" and "Archive". */}
 

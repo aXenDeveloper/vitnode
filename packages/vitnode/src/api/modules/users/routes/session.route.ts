@@ -27,6 +27,7 @@ export const sessionRoute = buildRoute({
                   phone: z.string().nullable(),
                   headline: z.string().nullable(),
                   showRealName: z.boolean(),
+                  timeZone: z.string().nullable(),
                   createdAt: z.date(),
                   newsletter: z.boolean(),
                   avatarColor: z.string(),

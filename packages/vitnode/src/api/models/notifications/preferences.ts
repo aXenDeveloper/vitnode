@@ -4,11 +4,11 @@ import { HTTPException } from "hono/http-exception";
 import type { NotificationTypePreference } from "@/database/notifications";
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
-import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
 import {
   isNotificationEmailAvailable,
   isNotificationInAppAvailable,
   isNotificationLockedForMembers,
+  isNotificationPushAvailable,
   resolveNotificationChannels,
 } from "@/api/lib/notifications/preferences";
 import { core_notification_user_state } from "@/database/notifications";
@@ -26,6 +26,7 @@ import {
 export interface NotificationTypePreferenceView {
   category: string;
   categoryLabel: string;
+  defaultEmail: NotificationEmailMode;
   description: null | string;
   /** The modes this type may use here - empty when email is unavailable. */
   emailModes: NotificationEmailMode[];
@@ -35,14 +36,12 @@ export interface NotificationTypePreferenceView {
   locked: boolean;
   mandatory: boolean;
   pluginId: string;
+  pushAvailable: boolean;
   /** What the user gets now, after defaults and installation policy. */
-  value: { email: NotificationEmailMode; inApp: boolean };
+  value: { email: NotificationEmailMode; inApp: boolean; push: boolean };
 }
 
 export interface NotificationPreferencesView {
-  digestHour: number;
-  digestWeekday: number;
-  timeZone: null | string;
   types: NotificationTypePreferenceView[];
 }
 
@@ -77,7 +76,7 @@ export const getNotificationPreferences = async (
       .limit(1),
   ]);
   const { t } = await createTranslatorCache(c)(language);
-  const emailConfigured = isEmailConfigured(c, settings);
+  const emailConfigured = isEmailConfigured(c);
   const preferences = state?.preferences ?? {};
 
   const types = getNotificationRegistry(c)
@@ -108,6 +107,11 @@ export const getNotificationPreferences = async (
           ],
           definition.category,
         ),
+        defaultEmail: resolveNotificationChannels({
+          definition,
+          emailConfigured,
+          policy,
+        }).email,
         description: definition.description
           ? translateOr(t, [definition.description], definition.description)
           : null,
@@ -120,10 +124,10 @@ export const getNotificationPreferences = async (
         locked,
         mandatory: !!definition.mandatory,
         pluginId,
+        pushAvailable: isNotificationPushAvailable(policy),
         value: resolveNotificationChannels({
           definition,
           emailConfigured,
-          muted: false,
           policy,
           preference: preferences[definition.id],
         }),
@@ -131,17 +135,11 @@ export const getNotificationPreferences = async (
     });
 
   return {
-    digestHour: state?.digestHour ?? settings.global.digestHour,
-    digestWeekday: state?.digestWeekday ?? settings.global.digestWeekday,
-    timeZone: state?.timeZone ?? null,
     types,
   };
 };
 
 export interface UpdateNotificationPreferencesArgs {
-  digestHour?: number;
-  digestWeekday?: number;
-  timeZone?: null | string;
   types?: Record<string, NotificationTypePreference>;
 }
 
@@ -158,11 +156,7 @@ export const updateNotificationPreferences = async (
   const registry = getNotificationRegistry(c);
   const db = c.get("db");
   const settings = await loadNotificationSettings(db);
-  const emailConfigured = isEmailConfigured(c, settings);
-
-  if (args.timeZone && !isValidTimeZone(args.timeZone)) {
-    throw new HTTPException(400, { message: "Unknown time zone." });
-  }
+  const emailConfigured = isEmailConfigured(c);
 
   const patch: Record<string, NotificationTypePreference> = {};
   for (const [typeId, preference] of Object.entries(args.types ?? {})) {
@@ -196,9 +190,15 @@ export const updateNotificationPreferences = async (
         message: `"${typeId}" has no email channel.`,
       });
     }
+    if (preference.push === true && !isNotificationPushAvailable(policy)) {
+      throw new HTTPException(400, {
+        message: `"${typeId}" is not sent as push.`,
+      });
+    }
     patch[typeId] = {
       ...(preference.email === undefined ? {} : { email: preference.email }),
       ...(preference.inApp === undefined ? {} : { inApp: preference.inApp }),
+      ...(preference.push === undefined ? {} : { push: preference.push }),
     };
   }
 
@@ -214,13 +214,6 @@ export const updateNotificationPreferences = async (
       .set({
         preferences: sql`${JSON.stringify(merged)}::jsonb`,
         updatedAt: new Date(),
-        ...(args.timeZone === undefined ? {} : { timeZone: args.timeZone }),
-        ...(args.digestHour === undefined
-          ? {}
-          : { digestHour: args.digestHour }),
-        ...(args.digestWeekday === undefined
-          ? {}
-          : { digestWeekday: args.digestWeekday }),
       })
       .where(eq(core_notification_user_state.userId, userId));
   });

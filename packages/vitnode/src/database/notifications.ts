@@ -7,8 +7,8 @@ import { core_users } from "./users";
 
 /**
  * One published notification event, stored once however many people receive
- * it. `recipientIds` and `followersOf` are the candidates the publisher named;
- * the fan-out cursor records how far delivery got, so a retry resumes there.
+ * it. `recipientIds` are the candidates the publisher named; the fan-out
+ * cursor records how far delivery got, so a retry resumes there.
  */
 export const core_notification_events = camelCase.table.withRLS(
   "core_notification_events",
@@ -30,11 +30,6 @@ export const core_notification_events = camelCase.table.withRLS(
       .array()
       .notNull()
       .default(sql`'{}'::integer[]`),
-    followersOf: t
-      .jsonb()
-      .$type<{ id: string; type: string }[]>()
-      .notNull()
-      .default([]),
     allowSelf: t.boolean().notNull().default(false),
     status: t
       .varchar({
@@ -45,10 +40,6 @@ export const core_notification_events = camelCase.table.withRLS(
       .default("pending"),
     /** Index into `recipientIds` processed so far. */
     recipientCursor: t.integer().notNull().default(0),
-    /** Index into `followersOf` currently being streamed. */
-    followerSubjectCursor: t.integer().notNull().default(0),
-    /** Last follower user id processed within that subject. */
-    followerUserCursor: t.integer().notNull().default(0),
     deliveredCount: t.integer().notNull().default(0),
     lastError: t.text(),
     createdAt: t.timestamp().notNull().defaultNow(),
@@ -162,6 +153,7 @@ export const core_notification_receipts = camelCase.table.withRLS(
 export interface NotificationTypePreference {
   email?: NotificationEmailMode;
   inApp?: boolean;
+  push?: boolean;
 }
 
 /**
@@ -178,10 +170,6 @@ export const core_notification_user_state = camelCase.table.withRLS(
       .references(() => core_users.id, { onDelete: "cascade" }),
     unreadCount: t.integer().notNull().default(0),
     revision: t.bigint({ mode: "number" }).notNull().default(0),
-    timeZone: t.varchar({ length: 64 }),
-    digestHour: t.smallint(),
-    /** 0 = Sunday ... 6 = Saturday. */
-    digestWeekday: t.smallint(),
     preferences: t
       .jsonb()
       .$type<Record<string, NotificationTypePreference>>()
@@ -190,30 +178,6 @@ export const core_notification_user_state = camelCase.table.withRLS(
     updatedAt: t.timestamp().notNull().defaultNow(),
   }),
   t => [index("core_notification_user_state_unread_idx").on(t.unreadCount)],
-);
-
-/** A user following or muting one subject, such as a blog category. */
-export const core_notification_subscriptions = camelCase.table.withRLS(
-  "core_notification_subscriptions",
-  t => ({
-    userId: t
-      .integer()
-      .references(() => core_users.id, { onDelete: "cascade" })
-      .notNull(),
-    subjectType: t.varchar({ length: 100 }).notNull(),
-    subjectId: t.varchar({ length: 100 }).notNull(),
-    state: t.varchar({ enum: ["following", "muted"], length: 20 }).notNull(),
-    createdAt: t.timestamp().notNull().defaultNow(),
-  }),
-  t => [
-    primaryKey({ columns: [t.userId, t.subjectType, t.subjectId] }),
-    index("core_notification_subscriptions_subject_idx").on(
-      t.subjectType,
-      t.subjectId,
-      t.state,
-      t.userId,
-    ),
-  ],
 );
 
 /** One email send - immediate, digest or test - and its attempts. */

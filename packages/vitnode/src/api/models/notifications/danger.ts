@@ -212,14 +212,10 @@ export const resetMemberNotificationPreferences = async (
     .get("db")
     .update(core_notification_user_state)
     .set({
-      digestHour: null,
-      digestWeekday: null,
       preferences: sql`'{}'::jsonb`,
       updatedAt: new Date(),
     })
-    .where(
-      sql`${core_notification_user_state.preferences} <> '{}'::jsonb OR ${core_notification_user_state.digestHour} IS NOT NULL OR ${core_notification_user_state.digestWeekday} IS NOT NULL`,
-    )
+    .where(sql`${core_notification_user_state.preferences} <> '{}'::jsonb`)
     .returning({ userId: core_notification_user_state.userId });
 
   await c

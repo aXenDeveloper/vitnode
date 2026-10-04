@@ -14,13 +14,11 @@ import {
 } from "../schema";
 
 const zodPreferences = z.object({
-  digestHour: z.number(),
-  digestWeekday: z.number(),
-  timeZone: z.string().nullable(),
   types: z.array(
     z.object({
       category: z.string(),
       categoryLabel: z.string(),
+      defaultEmail: zodNotificationEmailMode,
       description: z.string().nullable(),
       emailModes: z.array(zodNotificationEmailMode),
       id: z.string(),
@@ -29,7 +27,12 @@ const zodPreferences = z.object({
       locked: z.boolean(),
       mandatory: z.boolean(),
       pluginId: z.string(),
-      value: z.object({ email: zodNotificationEmailMode, inApp: z.boolean() }),
+      pushAvailable: z.boolean(),
+      value: z.object({
+        email: zodNotificationEmailMode,
+        inApp: z.boolean(),
+        push: z.boolean(),
+      }),
     }),
   ),
 });
@@ -62,15 +65,13 @@ export const getNotificationPreferencesRoute = buildRoute({
 });
 
 export const zodUpdateNotificationPreferences = z.object({
-  digestHour: z.number().int().min(0).max(23).optional(),
-  digestWeekday: z.number().int().min(0).max(6).optional(),
-  timeZone: z.string().max(64).nullable().optional(),
   types: z
     .record(
       z.string().max(100),
       z.object({
         email: zodNotificationEmailMode.optional(),
         inApp: z.boolean().optional(),
+        push: z.boolean().optional(),
       }),
     )
     .optional(),

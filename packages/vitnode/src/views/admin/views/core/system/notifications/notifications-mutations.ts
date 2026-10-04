@@ -3,11 +3,6 @@ import type { NotificationEmailMode } from "@/lib/notifications/types";
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
-import type {
-  AdminNotificationEditableSettings,
-  AdminNotificationSettings,
-} from "./notifications-query";
-
 /** What every write on this screen resolves to - never a throw. */
 export type NotificationsMutationResult<T> =
   | { data: T; error?: never; status?: never }
@@ -28,7 +23,6 @@ export interface NotificationsAdminActions {
   cancelQueuedEmails: () => Promise<
     NotificationsMutationResult<{ cancelled: number }>
   >;
-  cleanup: () => Promise<NotificationsMutationResult<{ success: boolean }>>;
   deleteAll: () => Promise<
     NotificationsMutationResult<{ events: number; items: number }>
   >;
@@ -45,9 +39,6 @@ export interface NotificationsAdminActions {
   sendTestEmail: () => Promise<
     NotificationsMutationResult<{ deliveryId: number }>
   >;
-  updateSettings: (
-    body: Partial<AdminNotificationEditableSettings>,
-  ) => Promise<NotificationsMutationResult<AdminNotificationSettings>>;
   updateTypePolicy: (
     type: string,
     body: NotificationTypePolicyPatch,
@@ -74,22 +65,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         module: "admin/notifications",
         options,
         path: "/emails/cancel",
-      });
-      if (!response.ok) return await failure(response);
-
-      return { data: await response.json() };
-    } catch {
-      return FAILED;
-    }
-  },
-  cleanup: async () => {
-    try {
-      const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
-        method: "post",
-        module: "admin/notifications",
-        options,
-        path: "/cleanup",
       });
       if (!response.ok) return await failure(response);
 
@@ -186,23 +161,6 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         module: "admin/notifications",
         options,
         path: "/test-email",
-      });
-      if (!response.ok) return await failure(response);
-
-      return { data: await response.json() };
-    } catch {
-      return FAILED;
-    }
-  },
-  updateSettings: async body => {
-    try {
-      const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
-        args: { body },
-        method: "put",
-        module: "admin/notifications",
-        options,
-        path: "/settings",
       });
       if (!response.ok) return await failure(response);
 

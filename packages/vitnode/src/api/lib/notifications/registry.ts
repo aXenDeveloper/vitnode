@@ -117,56 +117,6 @@ export interface RegisteredNotificationType {
   pluginId: string;
 }
 
-/**
- * Something users can follow or mute, such as a blog category. Following adds
- * a user to the audience whenever a publisher names the subject in
- * `followersOf`; muting silences every notification about it.
- */
-export interface NotificationSubjectDefinition {
-  /**
-   * Whether `userId` may follow subject `id` - typically "can they see it".
-   * Not called for mutes and unfollows, which only ever reduce what a user
-   * receives.
-   */
-  canFollow?: (args: {
-    c: Context<EnvVitNode>;
-    id: string;
-    userId: number;
-  }) => boolean | Promise<boolean>;
-  /** `false` for subjects that can only be muted. */
-  followable?: boolean;
-  /**
-   * Human-readable names for the settings page's follow and mute lists, e.g.
-   * category titles. Ids it leaves out show as their raw id.
-   */
-  resolveLabels?: (args: {
-    c: Context<EnvVitNode>;
-    ids: string[];
-    locale: string;
-  }) => Promise<Record<string, string>> | Record<string, string>;
-  type: string;
-}
-
-export interface RegisteredNotificationSubject {
-  definition: NotificationSubjectDefinition;
-  pluginId: string;
-}
-
-export function buildNotificationSubject(
-  definition: NotificationSubjectDefinition,
-): NotificationSubjectDefinition {
-  if (
-    !SUBJECT_TYPE_PATTERN.test(definition.type) ||
-    definition.type.length > 100
-  ) {
-    throw new NotificationRegistryError(
-      `Invalid notification subject type "${definition.type}".`,
-    );
-  }
-
-  return definition;
-}
-
 export type NotificationDataOf<T> =
   T extends NotificationTypeDefinition<infer D> ? D : never;
 
@@ -285,48 +235,18 @@ export const notificationTypeKey = (pluginId: string, type: string): string =>
 
 export interface NotificationRegistry {
   get: (type: string) => RegisteredNotificationType | undefined;
-  getSubject: (type: string) => RegisteredNotificationSubject | undefined;
   list: RegisteredNotificationType[];
-  subjects: RegisteredNotificationSubject[];
 }
 
-/**
- * Builds the installation-wide registry. A type's `subjectType` that no plugin
- * declared becomes a mute-only subject, so anything a notification is about
- * can always be muted.
- */
 export const createNotificationRegistry = (
   entries: readonly RegisteredNotificationType[],
-  subjects: readonly RegisteredNotificationSubject[] = [],
 ): NotificationRegistry => {
   const list = validateNotificationTypes(entries);
   const byId = new Map(list.map(entry => [entry.definition.id, entry]));
 
-  const bySubject = new Map<string, RegisteredNotificationSubject>();
-  for (const subject of subjects) {
-    const owner = bySubject.get(subject.definition.type);
-    if (owner) {
-      throw new NotificationRegistryError(
-        `Duplicate notification subject "${subject.definition.type}": registered by both "${owner.pluginId}" and "${subject.pluginId}".`,
-      );
-    }
-    bySubject.set(subject.definition.type, subject);
-  }
-  for (const entry of list) {
-    const type = entry.definition.subjectType;
-    if (type && !bySubject.has(type)) {
-      bySubject.set(type, {
-        definition: { followable: false, type },
-        pluginId: entry.pluginId,
-      });
-    }
-  }
-
   return {
     get: type => byId.get(type),
-    getSubject: type => bySubject.get(type),
     list,
-    subjects: [...bySubject.values()],
   };
 };
 

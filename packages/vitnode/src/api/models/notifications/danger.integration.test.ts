@@ -17,10 +17,7 @@ import {
 } from "@/tests/notifications";
 import { describePostgres } from "@/tests/postgres";
 
-import {
-  updateNotificationGlobalSettings,
-  updateNotificationTypePolicy,
-} from "./admin";
+import { updateNotificationTypePolicy } from "./admin";
 import {
   cancelQueuedNotificationEmails,
   deleteAllNotifications,
@@ -29,6 +26,7 @@ import {
   resetMemberNotificationPreferences,
   resumeNotifications,
 } from "./danger";
+import { processNotificationEvent } from "./fanout";
 import { getNotificationState } from "./inbox";
 import {
   getNotificationPreferences,
@@ -134,6 +132,43 @@ describePostgres("notification admin actions", () => {
     });
   });
 
+  it("saves a member's push choice and refuses push the installation turned off", async () => {
+    const [user] = await h.createUsers(1);
+    await updateNotificationPreferences(h.c, user, {
+      types: { "test.news": { push: false } },
+    });
+
+    const view = await getNotificationPreferences(h.c, { userId: user });
+    expect(view.types.find(type => type.id === "test.news")).toMatchObject({
+      pushAvailable: true,
+      value: { push: false },
+    });
+
+    await updateNotificationTypePolicy(h.c, "test.news", { allowPush: false });
+    await expect(
+      updateNotificationPreferences(h.c, user, {
+        types: { "test.news": { push: true } },
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    await updateNotificationTypePolicy(h.c, "test.news", { allowPush: true });
+  });
+
+  it("shows a member the installation's email default next to their own choice", async () => {
+    const [user] = await h.createUsers(1);
+    await updateNotificationPreferences(h.c, user, {
+      types: { "test.news": { email: "none" } },
+    });
+    await updateNotificationTypePolicy(h.c, "test.news", { email: "weekly" });
+
+    const view = await getNotificationPreferences(h.c, { userId: user });
+    expect(view.types.find(type => type.id === "test.news")).toMatchObject({
+      defaultEmail: "weekly",
+      value: { email: "none" },
+    });
+
+    await updateNotificationTypePolicy(h.c, "test.news", { email: "daily" });
+  });
+
   it("holds every event while paused and delivers them on resume", async () => {
     const [user] = await h.createUsers(1);
     await pauseNotifications(h.c);
@@ -154,45 +189,44 @@ describePostgres("notification admin actions", () => {
     );
   });
 
-  it("holds immediate emails over the hourly cap, then cancels what is still queued", async () => {
+  it("cancels every queued email and pending digest, and keeps the inbox", async () => {
     const [user] = await h.createUsers(1);
-    await updateNotificationGlobalSettings(h.c, { emailCapPerHour: 1 });
-    await publish(alertType, user);
-    await publish(alertType, user);
-    await publish(newsType, user);
-    await settle();
+    seq += 1;
+    const immediate = await h.c.get("notifications").publish({
+      actorId: null,
+      data: { text: `n${seq}` },
+      idempotencyKey: `admin-${seq}`,
+      recipients: [user],
+      type: alertType,
+    });
+    seq += 1;
+    const digest = await h.c.get("notifications").publish({
+      actorId: null,
+      data: { text: `n${seq}` },
+      idempotencyKey: `admin-${seq}`,
+      recipients: [user],
+      type: newsType,
+    });
+    await processNotificationEvent(h.c, immediate.eventId);
+    await processNotificationEvent(h.c, digest.eventId);
 
-    const deliveries = await deliveriesOf(user);
-    expect(deliveries.filter(row => row.status === "sent")).toHaveLength(1);
-    const held = deliveries.find(row => row.status === "pending");
-    expect(held?.availableAt.getTime()).toBeGreaterThan(
-      Date.now() + 50 * 60 * 1000,
-    );
-    expect(held?.attempts).toBe(0);
-
-    const [other] = await h.createUsers(1);
-    await publish(alertType, other);
-    await settle();
-    expect((await deliveriesOf(other)).map(row => row.status)).toEqual([
-      "sent",
-    ]);
+    const [queued] = await deliveriesOf(user);
+    expect(queued?.status).toBe("pending");
 
     const { cancelled } = await cancelQueuedNotificationEmails(h.c);
     expect(cancelled).toBeGreaterThanOrEqual(1);
 
-    const after = await deliveriesOf(user);
-    expect(after.find(row => row.id === held?.id)).toMatchObject({
+    expect((await deliveriesOf(user))[0]).toMatchObject({
       skipReason: "cancelled",
       status: "skipped",
     });
-    const pendingReceipts = await h.c
+    const receipts = await h.c
       .get("db")
       .select()
       .from(core_notification_receipts)
       .where(eq(core_notification_receipts.userId, user));
-    expect(pendingReceipts.every(row => !row.emailPending)).toBe(true);
-
-    await updateNotificationGlobalSettings(h.c, { emailCapPerHour: 0 });
+    expect(receipts.every(row => !row.emailPending)).toBe(true);
+    expect(await itemsOf(user)).toHaveLength(2);
   });
 
   it("marks everything read for everyone and zeroes every badge", async () => {
@@ -213,20 +247,28 @@ describePostgres("notification admin actions", () => {
   });
 
   it("reports activity per bucket in the viewer's time zone", async () => {
+    const [first, second] = await h.createUsers(2);
+    const before = await getNotificationStats(h.c, {
+      range: "24h",
+      timeZone: "Europe/Warsaw",
+    });
+    await publish(alertType, first);
+    await publish(alertType, second);
+    await settle();
+
     const stats = await getNotificationStats(h.c, {
       range: "24h",
       timeZone: "Europe/Warsaw",
     });
 
     expect(stats.points).toHaveLength(24);
-    expect(stats.totals.events).toBeGreaterThanOrEqual(7);
-    expect(stats.totals.sent).toBeGreaterThanOrEqual(2);
+    expect(stats.totals.events).toBe(before.totals.events + 2);
+    expect(stats.totals.sent).toBe(before.totals.sent + 2);
   });
 
   it("resets every member's own choices to the installation defaults", async () => {
     const [user] = await h.createUsers(1);
     await updateNotificationPreferences(h.c, user, {
-      digestHour: 20,
       types: { "test.news": { inApp: false } },
     });
 
@@ -239,8 +281,6 @@ describePostgres("notification admin actions", () => {
       .where(eq(core_notification_user_state.userId, user));
     expect(members).toBeGreaterThanOrEqual(1);
     expect(state).toMatchObject({
-      digestHour: null,
-      digestWeekday: null,
       preferences: {},
     });
   });

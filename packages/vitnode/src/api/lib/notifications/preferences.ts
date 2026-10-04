@@ -19,19 +19,12 @@ export interface NotificationTypePolicy {
 }
 
 export interface NotificationGlobalSettings {
-  digestHour: number;
-  digestWeekday: number;
-  emailCapPerHour: number;
-  /** Master switch for notification email - account email is unaffected. */
-  emailEnabled: boolean;
   paused: boolean;
 }
 
+export const NOTIFICATION_DIGEST_SCHEDULE = { hour: 8, weekday: 1 } as const;
+
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationGlobalSettings = {
-  digestHour: 8,
-  digestWeekday: 1,
-  emailCapPerHour: 0,
-  emailEnabled: true,
   paused: false,
 };
 
@@ -79,9 +72,10 @@ export const resolveNotificationWorkerSettings = (
 export interface NotificationChannels {
   email: NotificationEmailMode;
   inApp: boolean;
+  push: boolean;
 }
 
-const OFF: NotificationChannels = { email: "none", inApp: false };
+const OFF: NotificationChannels = { email: "none", inApp: false, push: false };
 
 /** Whether this type can email at all on this installation. */
 export const isNotificationInAppAvailable = ({
@@ -91,6 +85,10 @@ export const isNotificationInAppAvailable = ({
   definition: AnyNotificationTypeDefinition;
   policy?: NotificationTypePolicy;
 }): boolean => !!definition.mandatory || policy?.allowInApp !== false;
+
+export const isNotificationPushAvailable = (
+  policy?: NotificationTypePolicy,
+): boolean => policy?.allowPush !== false;
 
 export const isNotificationLockedForMembers = ({
   definition,
@@ -117,10 +115,9 @@ export const isNotificationEmailAvailable = ({
  *
  * 1. Installation policy disables the type → nothing (mandatory types excepted).
  * 2. Mandatory types → always in-app; email follows the installation default.
- * 3. The user muted the subject → nothing.
- * 4. The user's own choice for the type, unless the type is locked for members.
- * 5. The installation default for the type.
- * 6. The type's own default.
+ * 3. The user's own choice for the type, unless the type is locked for members.
+ * 4. The installation default for the type.
+ * 5. The type's own default.
  *
  * Email is additionally limited to what the type and installation offer, and
  * never depends on the in-app choice.
@@ -128,13 +125,11 @@ export const isNotificationEmailAvailable = ({
 export const resolveNotificationChannels = ({
   definition,
   emailConfigured,
-  muted,
   policy,
   preference,
 }: {
   definition: AnyNotificationTypeDefinition;
   emailConfigured: boolean;
-  muted: boolean;
   policy?: NotificationTypePolicy;
   preference?: NotificationTypePreference;
 }): NotificationChannels => {
@@ -147,11 +142,15 @@ export const resolveNotificationChannels = ({
   });
   const defaultEmail = policy?.email ?? definition.defaults.email;
 
-  if (definition.mandatory) {
-    return { email: emailAvailable ? defaultEmail : "none", inApp: true };
-  }
+  const pushAvailable = isNotificationPushAvailable(policy);
 
-  if (muted) return OFF;
+  if (definition.mandatory) {
+    return {
+      email: emailAvailable ? defaultEmail : "none",
+      inApp: true,
+      push: pushAvailable,
+    };
+  }
 
   const choice = isNotificationLockedForMembers({ definition, policy })
     ? undefined
@@ -162,5 +161,6 @@ export const resolveNotificationChannels = ({
     inApp:
       isNotificationInAppAvailable({ definition, policy }) &&
       (choice?.inApp ?? policy?.inApp ?? definition.defaults.inApp),
+    push: pushAvailable && (choice?.push ?? true),
   };
 };

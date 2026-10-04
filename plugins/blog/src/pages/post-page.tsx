@@ -10,14 +10,12 @@ import {
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { FollowSubjectButton } from "@vitnode/core/tanstack/notifications";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
 
 const zodBlogPost = z.object({
-  categoryId: z.array(z.number()).catch([]),
   content: z.string(),
   coverImage: zodContentFileDescriptor.nullable(),
   coverImageAlt: z.string().nullable(),
@@ -102,17 +100,6 @@ const BlogPostPage = ({
         <h1 className="text-foreground text-3xl font-semibold tracking-tight text-balance md:text-4xl">
           {item.title}
         </h1>
-
-        {item.categoryId[0] === undefined ? null : (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              {t("follow_category")}
-            </p>
-            <FollowSubjectButton
-              subject={{ id: item.categoryId[0], type: "blog.category" }}
-            />
-          </div>
-        )}
       </header>
 
       {item.coverImage ? (

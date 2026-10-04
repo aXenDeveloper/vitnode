@@ -2,9 +2,11 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 
 import type { UpdatePersonalInformation } from "@/views/auth/settings/overview/personal-update";
+import type { UpdateTimeZone } from "@/views/auth/settings/overview/time-zone-update";
 
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
+import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 
@@ -46,12 +48,23 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
     [queryClient, refresh],
   );
 
+  const onTimeZoneUpdate: UpdateTimeZone = React.useCallback(
+    async timeZone => {
+      const result = await updateTimeZoneInBrowser(timeZone);
+      if (result.data) await invalidateSession(queryClient);
+
+      return result;
+    },
+    [queryClient],
+  );
+
   if (!session.user) return null;
 
   return (
     <OverviewSettingsContent
       canEditPersonalInfo={policy.canEdit}
       editor={editor}
+      onTimeZoneUpdate={onTimeZoneUpdate}
       onUpdate={onUpdate}
       personalFields={policy.fields}
       user={{
@@ -64,6 +77,7 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
         name: session.user.name,
         phone: session.user.phone,
         showRealName: session.user.showRealName,
+        timeZone: session.user.timeZone,
       }}
     />
   );

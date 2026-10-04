@@ -1,6 +1,6 @@
 ---
 title: Notifications
-description: Add persistent notifications to a VitNode plugin - an inbox, a live unread count, follow and mute, email and daily or weekly digests, all from one publish call.
+description: Add persistent notifications to a VitNode plugin - an inbox, a live unread count, push and email choices, daily or weekly digests, all from one publish call.
 icon: Bell
 ---
 
@@ -103,7 +103,7 @@ The topic author sees it in the bell a moment after the response is sent. See
 
 ### Apply the database migration
 
-The Notifications Center adds seven `core_notification_*` tables. Build and
+The Notifications Center adds six `core_notification*` tables. Build and
 migrate once after upgrading:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
@@ -128,14 +128,14 @@ npm run build:plugins && npm run db:migrate
 
 ## Who does what
 
-| Your plugin                                                | Core                                                              |
-| ---------------------------------------------------------- | ----------------------------------------------------------------- |
-| Declares types and subjects                                | Builds the preferences page from them                             |
-| Picks candidates: `recipients` and `followersOf`           | Removes the actor, deleted users, muted users and opted-out users |
-| Answers "who may see this?" in `access`                    | Calls it in batches, again before email, and when listing         |
-| Renders plain text in `present`                            | Strips markup, drops unsafe links, localizes per recipient        |
-| Publishes once per real-world happening (`idempotencyKey`) | Deduplicates, retries and never delivers twice in-app             |
-|                                                            | Unread counts, realtime, grouping, email, digests and cleanup     |
+| Your plugin                                                | Core                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------- |
+| Declares notification types                                | Builds the preferences page from them                         |
+| Picks candidates: `recipients`                             | Removes the actor, deleted users and opted-out users          |
+| Answers "who may see this?" in `access`                    | Calls it in batches, again before email, and when listing     |
+| Renders plain text in `present`                            | Strips markup, drops unsafe links, localizes per recipient    |
+| Publishes once per real-world happening (`idempotencyKey`) | Deduplicates, retries and never delivers twice in-app         |
+|                                                            | Unread counts, realtime, grouping, email, digests and cleanup |
 
 ## How a notification travels
 
@@ -144,7 +144,7 @@ publish()                          one row in core_notification_events
   │                                + a "notifications-fanout" queue task
   │                                  (same transaction when you pass tx)
   ▼
-fan-out, in batches of 500         candidates → muted? opted out? access?
+fan-out, in batches of 500         candidates → opted out? access?
   │
   ├─► receipt per event and user   the "already delivered" guard
   ├─► inbox item (or grouped)      core_notifications
@@ -169,7 +169,7 @@ fan-out, in batches of 500         candidates → muted? opted out? access?
 <Cards>
   <Card
     title="Notification types"
-    description="Every field of buildNotificationType and buildNotificationSubject"
+    description="Every field of buildNotificationType"
     href="/docs/dev/notifications/notification-types"
   />
   <Card
@@ -191,10 +191,5 @@ fan-out, in batches of 500         candidates → muted? opted out? access?
     title="Email and digests"
     description="Immediate email, daily and weekly digests, retries"
     href="/docs/dev/notifications/email-and-digests"
-  />
-  <Card
-    title="Blog example"
-    description="A real integration, from type to follow button"
-    href="/docs/dev/notifications/blog-example"
   />
 </Cards>

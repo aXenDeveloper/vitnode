@@ -17,9 +17,7 @@ import {
   QUEUE_NOTIFICATIONS_FANOUT,
 } from "./shared";
 
-/** Above this, name the audience with `followersOf` and let core stream it. */
 export const MAX_EXPLICIT_RECIPIENTS = 100_000;
-const MAX_FOLLOWER_SUBJECTS = 20;
 
 export interface PublishNotificationArgs<TData> {
   /**
@@ -33,8 +31,6 @@ export interface PublishNotificationArgs<TData> {
    */
   allowSelf?: boolean;
   data: NoInfer<TData>;
-  /** Everyone following any of these subjects is a candidate too. */
-  followersOf?: NotificationSubject[];
   /**
    * Stable for one real-world happening, e.g. `comment:42`. Publishing the
    * same key twice for a type is a no-op that returns the first event.
@@ -142,13 +138,6 @@ export const publishNotification = async <TData>(
     );
   }
 
-  const followersOf = (args.followersOf ?? []).map(normalizeSubject);
-  if (followersOf.length > MAX_FOLLOWER_SUBJECTS) {
-    throw new NotificationPublishError(
-      `followersOf accepts at most ${MAX_FOLLOWER_SUBJECTS} subjects.`,
-    );
-  }
-
   const actorId =
     args.actorId === undefined
       ? (c.get("admin")?.user.id ?? c.get("user")?.id ?? null)
@@ -167,12 +156,12 @@ export const publishNotification = async <TData>(
 
   if (recipientIds.length > MAX_EXPLICIT_RECIPIENTS) {
     throw new NotificationPublishError(
-      `At most ${MAX_EXPLICIT_RECIPIENTS} explicit recipients per event; use followersOf for larger audiences.`,
+      `At most ${MAX_EXPLICIT_RECIPIENTS} recipients per event.`,
     );
   }
 
   const db = args.tx ?? c.get("db");
-  const hasAudience = recipientIds.length > 0 || followersOf.length > 0;
+  const hasAudience = recipientIds.length > 0;
   const now = new Date();
 
   const [created] = await db
@@ -183,7 +172,6 @@ export const publishNotification = async <TData>(
       completedAt: hasAudience ? null : now,
       createdAt: now,
       data: parsed.data as Record<string, unknown>,
-      followersOf,
       groupKey: resolveGroupKey(definition, parsed.data, subject),
       idempotencyKey,
       pluginId,

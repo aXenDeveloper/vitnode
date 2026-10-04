@@ -3,21 +3,10 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import {
-  queueNotificationCleanup,
   queueNotificationTestEmail,
   reconcileNotifications,
 } from "@/api/models/notifications/admin";
 import { CONFIG_PLUGIN } from "@/config";
-
-const success = {
-  200: {
-    content: {
-      "application/json": { schema: z.object({ success: z.boolean() }) },
-    },
-    description: "Queued",
-  },
-  403: { description: "Access Denied" },
-} as const;
 
 export const sendNotificationTestEmailRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -83,21 +72,4 @@ export const reconcileNotificationCountsRoute = buildRoute({
   },
   handler: async c =>
     c.json(await reconcileNotifications(c, c.req.valid("json"))),
-});
-
-export const runNotificationCleanupRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: { module: "notifications", permission: "can_manage" },
-  route: {
-    method: "post",
-    description:
-      "Queue the retention cleanup now instead of waiting for the nightly run.",
-    path: "/cleanup",
-    responses: success,
-  },
-  handler: async c => {
-    await queueNotificationCleanup(c);
-
-    return c.json({ success: true });
-  },
 });

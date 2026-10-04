@@ -52,9 +52,7 @@ export const NotificationsSettingsSheet = (
         <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md">
           <SheetHeader className="border-b">
             <SheetTitle>{t("title")}</SheetTitle>
-            <SheetDescription>
-              {props.canEdit ? t("desc") : t("read_only")}
-            </SheetDescription>
+            <SheetDescription>{t("desc")}</SheetDescription>
           </SheetHeader>
           <div className="bg-muted/30 flex-1 overflow-y-auto">
             <React.Suspense fallback={<SheetBodySkeleton />}>

@@ -1,7 +1,4 @@
-import type {
-  NotificationState,
-  NotificationSubject,
-} from "@/lib/notifications/types";
+import type { NotificationState } from "@/lib/notifications/types";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
@@ -84,12 +81,13 @@ export const markAllNotificationsReadInBrowser = async ({
 };
 
 export interface UpdateNotificationPreferencesBody {
-  digestHour?: number;
-  digestWeekday?: number;
-  timeZone?: null | string;
   types?: Record<
     string,
-    { email?: "daily" | "immediate" | "none" | "weekly"; inApp?: boolean }
+    {
+      email?: "daily" | "immediate" | "none" | "weekly";
+      inApp?: boolean;
+      push?: boolean;
+    }
   >;
 }
 
@@ -105,31 +103,4 @@ export const updateNotificationPreferencesInBrowser = async (
     path: "/preferences",
   });
   if (!response.ok) failed(response);
-};
-
-export type NotificationSubscriptionState = "following" | "muted" | "none";
-
-export const setNotificationSubscriptionInBrowser = async ({
-  state,
-  subject,
-}: {
-  state: NotificationSubscriptionState;
-  subject: NotificationSubject;
-}): Promise<NotificationSubscriptionState> => {
-  const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
-    args: {
-      body: {
-        state,
-        subjectId: String(subject.id),
-        subjectType: subject.type,
-      },
-    },
-    method: "put",
-    module: "notifications",
-    options: { credentials: "include" },
-    path: "/subscriptions",
-  });
-
-  return response.ok ? (await response.json()).state : failed(response);
 };

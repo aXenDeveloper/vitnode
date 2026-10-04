@@ -42,9 +42,6 @@ export interface VitNodeEvents {
   "notifications.resumed": {
     requeuedEvents: number;
   };
-  "notifications.settings.updated": {
-    keys: string[];
-  };
   "notifications.type.updated": {
     typeId: string;
   };

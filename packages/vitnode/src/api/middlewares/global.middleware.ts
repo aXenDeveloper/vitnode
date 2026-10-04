@@ -103,6 +103,7 @@ export interface EnvVariablesVitNode {
       phone: null | string;
       roleId: number;
       showRealName: boolean;
+      timeZone: null | string;
     };
   };
   adminSessionExpiresAt: Date | null;
@@ -200,6 +201,7 @@ export interface EnvVariablesVitNode {
     phone: null | string;
     roleId: number;
     showRealName: boolean;
+    timeZone: null | string;
   };
 }
 
@@ -383,12 +385,6 @@ export const globalMiddleware = ({
   const notificationsMetadata = createNotificationRegistry(
     plugins.flatMap(plugin =>
       (plugin.notificationTypes ?? []).map(definition => ({
-        definition,
-        pluginId: plugin.pluginId,
-      })),
-    ),
-    plugins.flatMap(plugin =>
-      (plugin.notificationSubjects ?? []).map(definition => ({
         definition,
         pluginId: plugin.pluginId,
       })),
