@@ -39,8 +39,15 @@ export const proPlanOffer = definePaymentOffer({
         userId: subscription.userId,
       })
       .onConflictDoUpdate({
-        set: { accessUntil, purchaseId: subscription.purchaseId, revokedAt: null },
-        target: [example_payments_access.userId, example_payments_access.offerId],
+        set: {
+          accessUntil,
+          purchaseId: subscription.purchaseId,
+          revokedAt: null,
+        },
+        target: [
+          example_payments_access.userId,
+          example_payments_access.offerId,
+        ],
       })
   },
 })
@@ -73,13 +80,13 @@ export const subscriptionAccessUntil = ({ endedAt, paidThrough }) => {
 }
 ```
 
-| What happened                    | `paidThrough`         | Example access          |
-| -------------------------------- | --------------------- | ----------------------- |
-| First payment confirmed          | End of first period   | Until that date         |
-| Renewal paid                     | Moves to the new end  | Extended once           |
-| Renewal failed                   | Unchanged             | Kept until the old end  |
-| Cancellation scheduled           | Unchanged             | Kept until the old end  |
-| Period ended without a payment   | Unchanged             | Expires on its own      |
+| What happened                  | `paidThrough`        | Example access         |
+| ------------------------------ | -------------------- | ---------------------- |
+| First payment confirmed        | End of first period  | Until that date        |
+| Renewal paid                   | Moves to the new end | Extended once          |
+| Renewal failed                 | Unchanged            | Kept until the old end |
+| Cancellation scheduled         | Unchanged            | Kept until the old end |
+| Period ended without a payment | Unchanged            | Expires on its own     |
 
 </Step>
 

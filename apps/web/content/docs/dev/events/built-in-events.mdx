@@ -409,13 +409,13 @@ has committed. They are notifications for other plugins - analytics, a thank-you
 email, a Discord ping. Granting access belongs in the offer's own handlers,
 which run in a transaction and are retried; a listener is best effort.
 
-| Event                           | Payload                                                         | Fires when                                                           |
-| ------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `payments.purchase.created`     | `{ purchaseId, pluginId, offerId, userId }`                     | A buyer starts a new checkout                                        |
-| `payments.purchase.paid`        | `{ purchaseId, pluginId, offerId, userId, amount, currency }`   | The provider confirmed the payment (once per purchase)               |
-| `payments.purchase.fulfilled`   | `{ purchaseId, pluginId, offerId }`                             | A one-time offer's `onPaid` handler committed                        |
-| `payments.purchase.refunded`    | `{ purchaseId, refundedAmount, currency, refundStatus }`        | The refunded total of a one-time purchase changed                    |
-| `payments.subscription.updated` | `{ subscriptionId, pluginId, offerId, status, paidThrough }`    | Status, paid-through date, scheduled cancellation or end changed     |
+| Event                           | Payload                                                       | Fires when                                                       |
+| ------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `payments.purchase.created`     | `{ purchaseId, pluginId, offerId, userId }`                   | A buyer starts a new checkout                                    |
+| `payments.purchase.paid`        | `{ purchaseId, pluginId, offerId, userId, amount, currency }` | The provider confirmed the payment (once per purchase)           |
+| `payments.purchase.fulfilled`   | `{ purchaseId, pluginId, offerId }`                           | A one-time offer's `onPaid` handler committed                    |
+| `payments.purchase.refunded`    | `{ purchaseId, refundedAmount, currency, refundStatus }`      | The refunded total of a one-time purchase changed                |
+| `payments.subscription.updated` | `{ subscriptionId, pluginId, offerId, status, paidThrough }`  | Status, paid-through date, scheduled cancellation or end changed |
 
 `purchaseId` and `subscriptionId` are public ids (UUIDs). `amount` and
 `refundedAmount` are in minor units - `1900` is 19.00 PLN.

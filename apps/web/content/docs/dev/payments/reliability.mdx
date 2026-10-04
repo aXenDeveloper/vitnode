@@ -20,7 +20,7 @@ signature is its authentication.
 1. **Bounded body.** Anything over 512 KB is refused before it is read.
 2. **Raw bytes.** The signature is checked over the exact bytes received -
    never over re-serialised JSON, which would not match.
-3. **Normalized.** The adapter reduces the event to *which object changed*
+3. **Normalized.** The adapter reduces the event to _which object changed_
    (`checkout`, `invoice`, `subscription` or `payment`) and drops the rest. The
    raw payload is never stored or logged.
 4. **One transaction.** The event row goes into `core_payments_webhook_events`
@@ -33,7 +33,7 @@ finds its row and queues nothing.
 ## Processing re-reads the provider
 
 The queue job does not trust the event's snapshot. It fetches the checkout,
-invoice, subscription or payment from Stripe and applies *that*. So:
+invoice, subscription or payment from Stripe and applies _that_. So:
 
 - Two different events about one payment (`checkout.session.completed` and
   `checkout.session.async_payment_succeeded`) produce one paid purchase.
@@ -43,12 +43,12 @@ invoice, subscription or payment from Stripe and applies *that*. So:
 
 ## Four kinds of state
 
-| State        | Values                                                                   |
-| ------------ | ------------------------------------------------------------------------ |
-| Checkout     | creating, unknown, open, complete, expired, failed                      |
-| Payment      | awaiting payment, processing, paid, failed, expired, canceled            |
-| Fulfillment  | not started, pending, fulfilled, failed                                  |
-| Subscription | incomplete, active, past due, unpaid, paused, canceled, expired unpaid   |
+| State        | Values                                                                 |
+| ------------ | ---------------------------------------------------------------------- |
+| Checkout     | creating, unknown, open, complete, expired, failed                     |
+| Payment      | awaiting payment, processing, paid, failed, expired, canceled          |
+| Fulfillment  | not started, pending, fulfilled, failed                                |
+| Subscription | incomplete, active, past due, unpaid, paused, canceled, expired unpaid |
 
 Refunds and disputes are tracked beside them. A failed fulfillment never makes
 a paid payment look failed - the purchase is "Paid, delivery delayed".
@@ -113,6 +113,9 @@ without any risk of granting twice.
 ## Related
 
 <Cards>
-  <Card title="Provider reference" href="/docs/dev/payments/provider-reference" />
+  <Card
+    title="Provider reference"
+    href="/docs/dev/payments/provider-reference"
+  />
   <Card title="Troubleshooting" href="/docs/dev/payments/troubleshooting" />
 </Cards>

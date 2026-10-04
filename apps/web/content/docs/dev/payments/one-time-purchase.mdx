@@ -24,7 +24,7 @@ import { camelCase, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const example_payments_access = camelCase.table.withRLS(
   'example_payments_access',
-  t => ({
+  (t) => ({
     id: t.serial().primaryKey(),
     userId: t
       .integer()
@@ -35,8 +35,11 @@ export const example_payments_access = camelCase.table.withRLS(
     accessUntil: t.timestamp(), // null = forever
     revokedAt: t.timestamp(),
   }),
-  t => [
-    uniqueIndex('example_payments_access_user_offer_unique').on(t.userId, t.offerId),
+  (t) => [
+    uniqueIndex('example_payments_access_user_offer_unique').on(
+      t.userId,
+      t.offerId,
+    ),
   ],
 )
 ```
@@ -82,10 +85,17 @@ export const lifetimePassOffer = definePaymentOffer({
 
     await tx
       .insert(example_payments_access)
-      .values({ offerId: purchase.offerId, purchaseId: purchase.id, userId: purchase.userId })
+      .values({
+        offerId: purchase.offerId,
+        purchaseId: purchase.id,
+        userId: purchase.userId,
+      })
       .onConflictDoUpdate({
         set: { accessUntil: null, purchaseId: purchase.id, revokedAt: null },
-        target: [example_payments_access.userId, example_payments_access.offerId],
+        target: [
+          example_payments_access.userId,
+          example_payments_access.offerId,
+        ],
       })
   },
 })
@@ -188,13 +198,15 @@ Never send protected content and hide it with CSS. Check access in the route
 that returns it, on every request:
 
 ```ts title="plugins/example/src/api/modules/payments/payments.module.ts"
-handler: async c => {
+handler: async (c) => {
   const user = c.get('user')
   if (!user) throw new HTTPException(401)
 
   const grant = await readGrant(c, user.id, offerId)
   if (!grant || !hasActiveAccess(grant)) {
-    throw new HTTPException(403, { message: 'This feature unlocks after a confirmed payment.' })
+    throw new HTTPException(403, {
+      message: 'This feature unlocks after a confirmed payment.',
+    })
   }
 
   return c.json({ holder: user.name /* ... */ })
@@ -245,5 +257,8 @@ failed in the AdminCP instead of granting something else.
 <Cards>
   <Card title="Sell a subscription" href="/docs/dev/payments/subscriptions" />
   <Card title="Reliability" href="/docs/dev/payments/reliability" />
-  <Card title="Provider reference" href="/docs/dev/payments/provider-reference" />
+  <Card
+    title="Provider reference"
+    href="/docs/dev/payments/provider-reference"
+  />
 </Cards>

@@ -23,11 +23,11 @@ working reference for everything on these pages.
 
 ## Who owns what
 
-| Part         | Owns                                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Part         | Owns                                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Core**     | Checkout, purchase and subscription records, the webhook inbox, the queue jobs, reconciliation, the billing settings screen and the AdminCP |
-| **Provider** | Talking to the payment service: hosted checkout, signatures, customer portal. `@vitnode/stripe` is the first one                           |
-| **Plugin**   | Its offers, prices, who may buy, and what a payment unlocks - written in its own tables                                                    |
+| **Provider** | Talking to the payment service: hosted checkout, signatures, customer portal. `@vitnode/stripe` is the first one                            |
+| **Plugin**   | Its offers, prices, who may buy, and what a payment unlocks - written in its own tables                                                     |
 
 A plugin never talks to Stripe and never sees a Stripe object. It declares an
 offer, and core calls the offer's handlers with plain snapshots when something
@@ -75,6 +75,9 @@ AdminCP, and manual or offline payments.
 <Cards>
   <Card title="Configure Payments" href="/docs/dev/payments/configuration" />
   <Card title="Set up Stripe" href="/docs/dev/payments/stripe" />
-  <Card title="Sell a one-time purchase" href="/docs/dev/payments/one-time-purchase" />
+  <Card
+    title="Sell a one-time purchase"
+    href="/docs/dev/payments/one-time-purchase"
+  />
   <Card title="Sell a subscription" href="/docs/dev/payments/subscriptions" />
 </Cards>

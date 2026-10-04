@@ -94,7 +94,7 @@ Other events are acknowledged and ignored. Each endpoint has its own signing
 secret - copy the one shown for this endpoint into `STRIPE_WEBHOOK_SECRET`.
 
 The adapter pins Stripe API version `2026-09-30.endive` (exported as
-`STRIPE_API_VERSION`). Events are only used to learn *which* object changed;
+`STRIPE_API_VERSION`). Events are only used to learn _which_ object changed;
 VitNode then reads that object again with the pinned version, so an endpoint on
 an older version still works. Matching versions is still the tidy choice.
 
