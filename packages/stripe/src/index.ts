@@ -192,7 +192,8 @@ const checkoutPaymentStatus = (
     session.status === "complete" &&
     typeof intent === "object" &&
     intent !== null &&
-    (intent.status === "requires_payment_method" || intent.status === "canceled")
+    (intent.status === "requires_payment_method" ||
+      intent.status === "canceled")
   ) {
     return "failed";
   }
