@@ -127,3 +127,26 @@ Everything the configured plugins export, discovered in one pass. Every generate
 
 **Cookie relay**:
 A host server copying the API's session cookies onto its own response. Core auth never needs one.
+
+## Payments
+
+**Offer**:
+Something a plugin sells - one-time or a monthly/yearly subscription - with explicit prices per currency and the handlers that grant it. Identified by plugin id and offer id.
+_Avoid_: product, SKU, plan (unless it is a subscription offer)
+
+**Purchase**:
+One buyer's attempt to buy one offer, with a snapshot of the offer's name, price and currency at that moment. It keeps its payment, fulfillment and refund states separately.
+_Avoid_: order, transaction
+
+**Checkout attempt**:
+One hosted checkout created for a purchase. A purchase may have several when creating one failed.
+
+**Fulfillment**:
+One business effect of a purchase - the grant, a refund, a subscription change - run by the offer's handler exactly once per effect.
+_Avoid_: delivery, provisioning
+
+**Paid through**:
+The end of the latest billing period a verified, paid invoice covers. Access for a subscription is set from it, never added to.
+
+**Provider scope**:
+The account or environment a provider reference belongs to - for Stripe `test` or `live`. Stored next to every provider id.
