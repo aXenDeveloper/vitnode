@@ -11,7 +11,7 @@ import { AIModel } from "@vitnode/core/api/models/ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
 
-import { blogAiActions } from "@/api/ai/actions";
+import { ARTICLE_REVIEW_AI_ACTION, blogAiActions } from "@/api/ai/actions";
 
 import { excerptAiAdminRoute } from "./routes/excerpt.route";
 import { translateAiAdminRoute } from "./routes/translate.route";
@@ -278,6 +278,82 @@ describe("blog AI admin routes", () => {
     expect(response.status).toBe(429);
     expect(await response.json()).toMatchObject({
       code: "AI_USER_LIMIT_REACHED",
+    });
+    expect(model.doGenerateCalls).toHaveLength(0);
+  });
+
+  it("returns a structured, validated review and never claims to check facts", async () => {
+    const review = {
+      suggestions: [
+        { area: "clarity", message: "Define RLS first.", priority: "high" },
+      ],
+      summary: "Clear overall.",
+    };
+    const model = modelAnswering(JSON.stringify(review));
+    const app = new OpenAPIHono();
+    app.use("*", async (c, next) => {
+      c.set("admin" as never, { user: { id: EDITOR_ID } } as never);
+      c.set("cache" as never, cache as never);
+      c.set(
+        "core" as never,
+        {
+          ai: {
+            models: [
+              {
+                capabilities: ["text", "structured-output"],
+                id: "default",
+                model,
+                name: "Test",
+                pricing: {
+                  rates: { inputPerMillion: "3", outputPerMillion: "15" },
+                },
+              },
+            ],
+          },
+          aiActions: collectAiActions([
+            { aiActions: blogAiActions, pluginId: "@vitnode/blog" },
+          ]),
+        } as never,
+      );
+      c.set(
+        "ai" as never,
+        new AIModel(c as Context, { ledger: new MemoryAiLedger() }) as never,
+      );
+      await next();
+    });
+    app.post("/review", async c => {
+      const result = await c.get("ai").run({
+        action: ARTICLE_REVIEW_AI_ACTION,
+        input: { content: "<p>Body</p>", locale: "en", title: "Title" },
+      });
+
+      return c.json(result.output);
+    });
+    const cache = createCache();
+    await grant(cache, true);
+
+    const response = await app.request("/review", { method: "POST" });
+
+    expect(await response.json()).toEqual(review);
+    expect(promptOf(model.doGenerateCalls[0])).toContain("cannot verify them");
+  });
+
+  it("refuses the review on a model without structured output", async () => {
+    const { app, model } = await createApp();
+    app.post("/review", async c => {
+      await c.get("ai").run({
+        action: ARTICLE_REVIEW_AI_ACTION,
+        input: { content: "<p>Body</p>", locale: "en", title: "Title" },
+      });
+
+      return c.json({});
+    });
+
+    const response = await app.request("/review", { method: "POST" });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      code: "AI_MODEL_INCOMPATIBLE",
     });
     expect(model.doGenerateCalls).toHaveLength(0);
   });

@@ -175,7 +175,9 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
             setValue(event.target.value);
           }}
           placeholder={
-            fileAlt?.trim() ? fileAlt : t("admin.article.editor.alt.placeholder")
+            fileAlt?.trim()
+              ? fileAlt
+              : t("admin.article.editor.alt.placeholder")
           }
           value={currentValue}
         />

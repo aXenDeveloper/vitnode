@@ -25,6 +25,10 @@ import { aiOverviewAdminRoute } from "./routes/overview.route";
 import { getAiSettingsAdminRoute } from "./routes/settings.route";
 import { syncAiPricingAdminRoute } from "./routes/sync-pricing.route";
 import { testAiActionAdminRoute } from "./routes/test-action.route";
+import {
+  getTranslationSourcesAdminRoute,
+  saveTranslationSourcesAdminRoute,
+} from "./routes/translation-sources.route";
 import { updateAiActionAdminRoute } from "./routes/update-action.route";
 import {
   deleteAiPricingAdminRoute,
@@ -58,6 +62,8 @@ export const aiAdminModule = buildModule({
     availableAiActionsAdminRoute,
     aiFeedbackAdminRoute,
     getAltStatusAdminRoute,
+    getTranslationSourcesAdminRoute,
+    saveTranslationSourcesAdminRoute,
     sweepAltAdminRoute,
   ],
 });

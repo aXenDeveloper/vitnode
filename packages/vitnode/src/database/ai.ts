@@ -358,3 +358,42 @@ export const core_ai_reservations = camelCase.table.withRLS(
     index("core_ai_reservations_status_idx").on(t.status),
   ],
 );
+
+/**
+ * Which version of the source a translated field was made from: the source
+ * field's fingerprint at the time, per item, locale and field. Comparing it
+ * with today's source tells exactly which translated fields are outdated -
+ * no guessing from timestamps.
+ */
+export const core_ai_translation_sources = camelCase.table.withRLS(
+  "core_ai_translation_sources",
+  t => ({
+    id: t.serial().primaryKey(),
+    contentTypeId: t.varchar({ length: 255 }).notNull(),
+    itemId: t.integer().notNull(),
+    locale: t.varchar({ length: 32 }).notNull(),
+    field: t.varchar({ length: 255 }).notNull(),
+    sourceLocale: t.varchar({ length: 32 }).notNull(),
+    sourceFingerprint: t.varchar({ length: 64 }).notNull(),
+    /** The translated text as saved, to tell a later human edit apart. */
+    targetFingerprint: t.varchar({ length: 64 }).notNull(),
+    /** `ai` for an accepted AI translation, `human` for a reviewed one. */
+    origin: t.varchar({ enum: ["ai", "human"], length: 10 }).notNull(),
+    updatedById: t.integer().references(() => core_users.id, {
+      onDelete: "set null",
+    }),
+    updatedAt: t
+      .timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  }),
+  t => [
+    uniqueIndex("core_ai_translation_sources_unique").on(
+      t.contentTypeId,
+      t.itemId,
+      t.locale,
+      t.field,
+    ),
+  ],
+);

@@ -46,14 +46,17 @@ const ArticleEditorSkeleton = () => {
   );
 };
 
-export const BlogArticleFormLayout = (_props: ContentFormLayoutProps) => {
+export const BlogArticleFormLayout = ({
+  contentTypeId,
+  itemId,
+}: ContentFormLayoutProps) => {
   const { skeleton } = useContentForm();
 
   if (skeleton) return <ArticleEditorSkeleton />;
 
   return (
     <React.Suspense fallback={<ArticleEditorSkeleton />}>
-      <ArticleEditor />
+      <ArticleEditor contentTypeId={contentTypeId} itemId={itemId} />
     </React.Suspense>
   );
 };

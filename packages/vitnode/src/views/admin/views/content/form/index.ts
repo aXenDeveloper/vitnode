@@ -24,4 +24,5 @@ export {
   type ContentFormSkeletonControl,
 } from "./skeleton";
 export { ContentFormStatusSwitch } from "./status-switch";
+export { useTranslationFreshness } from "./translation-freshness";
 export { useContentFormValues, useSetContentFormValue } from "./values";

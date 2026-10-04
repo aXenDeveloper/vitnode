@@ -78,7 +78,17 @@
               "missing": "Missing",
               "unavailable": "Nothing to translate"
             },
-            "field_into": "Translate into {language}"
+            "field_into": "Translate into {language}",
+            "outdated_fields": "Changed in {language} since translated: {fields}.",
+            "update_changed": "Update changed fields with AI",
+            "mark_reviewed": "Mark as up to date",
+            "fields": {
+              "title": "title",
+              "content": "content",
+              "excerpt": "excerpt",
+              "coverImageAlt": "image ALT text",
+              "friendlyUrl": "URL"
+            }
           },
           "ai": {
             "write_excerpt": "Write with AI",
@@ -117,6 +127,20 @@
             },
             "details": "Details",
             "cover": "Cover image"
+          },
+          "review": {
+            "title": "AI review (optional)",
+            "run": "Review with AI",
+            "again": "Review again",
+            "disclaimer": "Suggestions about clarity and completeness. It does not check facts and never blocks publishing.",
+            "nothing": "No suggestions - nice work.",
+            "high": "Worth fixing",
+            "areas": {
+              "clarity": "Clarity",
+              "completeness": "Completeness",
+              "structure": "Structure",
+              "tone": "Tone"
+            }
           }
         }
       },
