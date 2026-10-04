@@ -14,6 +14,7 @@ import { requireAdminPermission } from "../screen";
 import {
   adminAiAccessQuery,
   adminAiActionsQuery,
+  adminAiAltStatusQuery,
   adminAiHistoryQuery,
   adminAiModelsQuery,
   adminAiOverviewQuery,
@@ -82,10 +83,16 @@ export const loadAdminAiSettingsRoute = async (
 ): Promise<AdminAiRouteData> => {
   const adminUserId = enter(context);
 
-  await context.queryClient.query({
-    ...adminAiSettingsQuery({ adminUserId }),
-    ...STATIC,
-  });
+  await Promise.all([
+    context.queryClient.query({
+      ...adminAiSettingsQuery({ adminUserId }),
+      ...STATIC,
+    }),
+    context.queryClient.query({
+      ...adminAiAltStatusQuery({ adminUserId }),
+      ...STATIC,
+    }),
+  ]);
 
   return {
     adminUserId,

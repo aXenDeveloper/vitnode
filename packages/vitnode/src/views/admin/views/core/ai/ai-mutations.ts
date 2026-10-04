@@ -48,7 +48,28 @@ export interface AdminAiTestResult {
   usage: { chargedPoints: string; costKnown: boolean; modelId: string };
 }
 
+export interface AdminAiAltSweepResult {
+  enqueued: number;
+  scanned: number;
+}
+
 const ok = () => true as const;
+
+export const sweepAdminAiAlt = async (): Promise<
+  AdminMutationResult<AdminAiAltSweepResult>
+> =>
+  await runAdminApiMutation({
+    expected: 200,
+    parse: async response => (await response.json()) as AdminAiAltSweepResult,
+    request: async () =>
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "post",
+        module: "admin/ai",
+        options: { credentials: "include" },
+        path: "/alt/sweep",
+      }),
+  });
 
 export const updateAdminAiSettings = async (
   body: AdminAiSettingsInput,

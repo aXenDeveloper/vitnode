@@ -77,6 +77,20 @@ export interface AdminAiOverview {
 }
 
 export type AdminAiSettings = z.infer<typeof zodAiSettingsResponse>;
+
+/** `GET /admin/ai/alt` - automatic ALT progress. */
+export interface AdminAiAltStatus {
+  counts: {
+    completed: number;
+    failed: number;
+    pending: number;
+    skipped: number;
+    waitingBudget: number;
+  };
+  eligibleImages: number;
+  enabled: boolean;
+  languages: string[];
+}
 export type AdminAiModel = z.infer<typeof zodAiModel>;
 export type AdminAiPricing = z.infer<typeof zodAiPricing>;
 export type AdminAiAction = z.infer<typeof zodAiAction>;
@@ -232,6 +246,23 @@ export const fetchAdminAiSettings: AdminAiSettingsFetcher = async () => {
   return await response.json();
 };
 
+export type AdminAiAltStatusFetcher = () => Promise<AdminAiAltStatus>;
+
+export const fetchAdminAiAltStatus: AdminAiAltStatusFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/ai",
+    path: "/alt",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the ALT text progress");
+  }
+
+  return await response.json();
+};
+
 export type AdminAiModelsFetcher = () => Promise<{ models: AdminAiModel[] }>;
 
 export const fetchAdminAiModels: AdminAiModelsFetcher = async () => {
@@ -361,6 +392,19 @@ export const adminAiSettingsQueryOptions = ({
     queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "settings"),
     retry: false,
     staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiAltStatusQueryOptions = ({
+  adminUserId,
+}: {
+  adminUserId: AdminIdentity;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiAltStatus(),
+    queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "alt"),
+    retry: false,
+    /** {@link OPERATIONAL_STALE_TIME} - The worker drains the queue every minute. */
+    staleTime: OPERATIONAL_STALE_TIME,
   });
 
 export const adminAiModelsQueryOptions = ({

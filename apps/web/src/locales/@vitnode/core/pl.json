@@ -681,7 +681,49 @@
           "description": "Pliki przesłane w obrębie witryny pojawią się tutaj.",
           "title": "Nie przesłano żadnych plików"
         },
-        "title": "Pliki"
+        "title": "Pliki",
+        "alt": {
+          "open": "Edytuj tekst ALT",
+          "title": "Tekst ALT",
+          "languages": "Opis w każdym języku",
+          "empty_hint": "Czytniki ekranu odczytują go na głos. Zapisz pusty tekst, aby oznaczyć obraz jako dekoracyjny - celowo nie będzie miał opisu, a automatyczny ALT go nie ruszy.",
+          "intentionally_empty": "Celowo bez opisu (obraz dekoracyjny).",
+          "text_label": "Tekst ALT: {language}",
+          "save": "Zapisz",
+          "saved": {
+            "title": "Zapisano tekst ALT",
+            "desc": "Opis w języku {language} jest teraz Twój; automatyczny ALT go nie nadpisze.",
+            "desc_empty": "Obraz oznaczono jako dekoracyjny w języku {language}."
+          },
+          "origin": {
+            "ai": "AI",
+            "human": "Napisany przez człowieka",
+            "missing": "Brak",
+            "stale": "Nieaktualny"
+          },
+          "remove": {
+            "button": "Usuń",
+            "hint": "Po usunięciu automatyczny ALT może napisać go ponownie.",
+            "success": "Usunięto tekst ALT",
+            "success_desc": "Automatyczny ALT może ponownie opisać obraz w języku {language}."
+          },
+          "policy": {
+            "label": "Automatyczny ALT dla tego obrazu",
+            "saved": "Zapisano ustawienie ALT",
+            "automatic": {
+              "label": "Automatyczny",
+              "desc": "AI pisze opis w każdym języku, w którym go brakuje. Tekst napisany przez człowieka nigdy nie jest nadpisywany."
+            },
+            "manual": {
+              "label": "Tylko ręcznie",
+              "desc": "Opisy dla tego obrazu piszą wyłącznie ludzie."
+            },
+            "disabled": {
+              "label": "Wyłączony",
+              "desc": "Obraz nigdy nie jest wysyłany do zewnętrznej AI. Używaj dla prywatnych lub wrażliwych obrazów."
+            }
+          }
+        }
       },
       "integrations": {
         "ai": {
@@ -1186,14 +1228,34 @@
             "placeholder": "en, pl"
           },
           "batch_size": {
-            "label": "Obrazów w partii",
-            "desc": "Ile obrazów opisuje jedno zadanie w tle."
+            "label": "Obrazów w kolejce na przegląd",
+            "desc": "Ile obrazów bez tekstu ALT dodaje do kolejki jeden cogodzinny przegląd. Następnie zadanie opisuje je po dwa, co minutę."
           }
         },
         "submit": "Zapisz ustawienia",
         "saved": {
           "title": "Zapisano ustawienia AI",
           "desc": "Nowe limity obowiązują od następnej operacji AI."
+        },
+        "alt_status": {
+          "title": "Postęp automatycznego ALT",
+          "on": "Wł.",
+          "off": "Wył.",
+          "desc": "{eligible, plural, one {# obraz ma} few {# obrazy mają} many {# obrazów ma} other {# obrazu ma}} automatyczny tekst ALT.",
+          "counts": {
+            "pending": "Oczekujące",
+            "completed": "Gotowe",
+            "failed": "Błędy",
+            "waitingBudget": "Czeka na budżet",
+            "skipped": "Pominięte"
+          },
+          "languages": "Języki",
+          "no_languages": "Brak języków do opisania.",
+          "sweep": {
+            "button": "Znajdź brakujące ALT teraz",
+            "success": "Sprawdzono brakujące teksty ALT",
+            "success_desc": "{enqueued, plural, =0 {Nic nowego do kolejki} one {# obraz w kolejce} few {# obrazy w kolejce} many {# obrazów w kolejce} other {# obrazu w kolejce}} po sprawdzeniu {scanned, plural, one {# obrazu} other {# obrazów}}."
+          }
         }
       },
       "models": {
@@ -1896,6 +1958,10 @@
             "near_limit": {
               "title": "Wykorzystano ponad 80% punktów AI",
               "desc": "Gospodaruj resztą rozważnie - limit odnowi się {resetsAt}."
+            },
+            "no_allowance": {
+              "title": "Twoja rola nie obejmuje jeszcze punktów AI",
+              "desc": "Funkcje AI wymagają miesięcznego limitu punktów, a Twój wynosi obecnie zero. Jeśli chcesz je wypróbować, zapytaj administratora."
             }
           },
           "points": {
@@ -2713,7 +2779,8 @@
         "AI_TIMEOUT": "Dostawca AI odpowiadał zbyt długo. Nic nie zostało pobrane.",
         "AI_UNAUTHORIZED": "Nie masz dostępu do tej funkcji AI lub tej treści.",
         "AI_USER_LIMIT_REACHED": "Wykorzystano wszystkie punkty AI w tym miesiącu.",
-        "unknown": "Coś poszło nie tak. Spróbuj ponownie."
+        "unknown": "Coś poszło nie tak. Spróbuj ponownie.",
+        "AI_DUPLICATE_REQUEST": "To żądanie zostało już wysłane. Spróbuj ponownie, aby wysłać nowe."
       },
       "quick_ask": {
         "label": "Szybkie pytanie (AI)",

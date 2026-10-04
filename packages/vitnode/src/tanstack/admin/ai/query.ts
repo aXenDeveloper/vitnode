@@ -9,6 +9,7 @@ import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope"
 import {
   deleteAdminAiPricing,
   deleteAdminAiUserOverride,
+  sweepAdminAiAlt,
   syncAdminAiPricing,
   testAdminAiAction,
   updateAdminAiAction,
@@ -20,6 +21,7 @@ import {
 import {
   adminAiAccessQueryOptions,
   adminAiActionsQueryOptions,
+  adminAiAltStatusQueryOptions,
   adminAiHistoryQueryOptions,
   adminAiModelsQueryOptions,
   adminAiOverviewQueryOptions,
@@ -32,6 +34,7 @@ import { useAdminIdentity } from "../identity";
 
 export const adminAiOverviewQuery = adminAiOverviewQueryOptions;
 export const adminAiSettingsQuery = adminAiSettingsQueryOptions;
+export const adminAiAltStatusQuery = adminAiAltStatusQueryOptions;
 export const adminAiModelsQuery = adminAiModelsQueryOptions;
 export const adminAiActionsQuery = adminAiActionsQueryOptions;
 export const adminAiAccessQuery = adminAiAccessQueryOptions;
@@ -58,6 +61,7 @@ type Mutation<TArgs extends unknown[], TData> = (
 export interface AdminAiMutations {
   deletePricing: typeof deleteAdminAiPricing;
   deleteUserOverride: typeof deleteAdminAiUserOverride;
+  sweepAlt: typeof sweepAdminAiAlt;
   syncPricing: typeof syncAdminAiPricing;
   testAction: typeof testAdminAiAction;
   updateAction: typeof updateAdminAiAction;
@@ -88,6 +92,7 @@ export const useAdminAiMutations = (): AdminAiMutations => {
     return {
       deletePricing: settled(deleteAdminAiPricing),
       deleteUserOverride: settled(deleteAdminAiUserOverride),
+      sweepAlt: settled(sweepAdminAiAlt),
       syncPricing: settled(syncAdminAiPricing),
       testAction: settled(testAdminAiAction),
       updateAction: settled(updateAdminAiAction),

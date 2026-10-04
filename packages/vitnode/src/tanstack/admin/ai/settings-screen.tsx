@@ -4,12 +4,17 @@ import { useTranslations } from "use-intl";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { PageTitle } from "@/components/ui/page-title";
 import { ADMIN_AI_PERMISSIONS } from "@/views/admin/views/core/ai/ai-permissions";
+import { AiAltStatusContent } from "@/views/admin/views/core/ai/settings/alt-status-content";
 import { AiSettingsFormContent } from "@/views/admin/views/core/ai/settings/settings-form-content";
 
 import type { AdminAiRouteData } from "./route";
 
 import { RouteMessages } from "../../i18n/route-messages";
-import { adminAiSettingsQuery, useAdminAiMutations } from "./query";
+import {
+  adminAiAltStatusQuery,
+  adminAiSettingsQuery,
+  useAdminAiMutations,
+} from "./query";
 import { ADMIN_AI_NAMESPACES } from "./route";
 
 const AiSettingsBody = ({
@@ -17,7 +22,10 @@ const AiSettingsBody = ({
 }: Pick<AdminAiRouteData, "adminUserId">) => {
   const t = useTranslations("admin.ai.settings");
   const { data } = useSuspenseQuery(adminAiSettingsQuery({ adminUserId }));
-  const { updateSettings } = useAdminAiMutations();
+  const { data: altStatus } = useSuspenseQuery(
+    adminAiAltStatusQuery({ adminUserId }),
+  );
+  const { sweepAlt, updateSettings } = useAdminAiMutations();
   const canManage = useAdminStaffPermission(ADMIN_AI_PERMISSIONS.manage);
 
   return (
@@ -29,6 +37,11 @@ const AiSettingsBody = ({
         canManage={canManage}
         data={data}
         onSave={updateSettings}
+      />
+      <AiAltStatusContent
+        canManage={canManage}
+        data={altStatus}
+        onSweep={sweepAlt}
       />
     </div>
   );

@@ -1,83 +1,100 @@
 # VitNode AI – implementation progress
 
 Development checkpoint for the shared AI system. User-facing docs live in
-`apps/web/content/docs/dev/ai/`.
+`apps/web/content/docs/dev/ai/` (index, actions, costs-and-limits, admin,
+automatic-alt, fields-and-editor, usage, future).
 
 ## Current stage
 
-Stage 5 – AdminCP and account usage UI (next). Stages 1–4 core done.
+Stages 1–10 implemented. Final integration verification, review and draft PR.
 
 ## Base branch
 
 `refactor/edit_articles` (PR #842, article translation + excerpt) is not in
 `canary`. This branch was fast-forwarded onto it so the blog AI work is
-extended rather than recreated. The draft PR is stacked on
-`refactor/edit_articles`.
+extended rather than recreated. The draft PR targets `refactor/edit_articles`.
 
 ## Architecture decisions
 
-- Server-only AI code lives in `packages/vitnode/src/api/lib/ai/`.
-  Tables in `packages/vitnode/src/database/ai.ts`.
-- Canonical action identity: `<pluginId>:<localId>`, e.g.
-  `@vitnode/blog:excerpt.generate`.
-- Model capabilities are explicit config metadata (`capabilities`), default
-  `["text"]`. Vision is `image-input`; image generation stays `imageModel()`.
-- Money: decimal strings, fixed-point `bigint` arithmetic (12 decimal places),
-  PostgreSQL `numeric(24,12)`. 1 AI point = 0.001 USD (conversion version 1).
-- Persistence goes through an `AiLedger` interface: `PostgresAiLedger`
-  (production, proven with real PostgreSQL concurrency tests) and
-  `MemoryAiLedger` (unit-test seam).
-- Budgets: one `core_ai_budget_periods` table keyed by `scopeKey` + period
-  start (global USD, system USD, user points, user×permission daily count).
-  Reservation locks rows in sorted `scopeKey` order inside a short
-  transaction; provider calls never run inside a transaction.
+- Server-only AI code: `packages/vitnode/src/api/lib/ai/`. Tables:
+  `packages/vitnode/src/database/ai.ts`, ALT tables in `database/files.ts`.
+- Canonical action identity `<pluginId>:<localId>`; `aiActionRef` gives typed
+  keys so `c.get("ai").run()` infers input and output.
+- Model capabilities are explicit (`capabilities`, default `["text"]`).
+  Vision = `image-input`; streaming requires `streaming`; object output
+  requires `structured-output`. Nothing is inferred from model names.
+- Money: decimal strings, `bigint` fixed point (12 places),
+  `numeric(24,12)`. 1 AI point = 0.001 USD (conversion version 1).
+- Cost order: provider-reported → effective pricing (admin manual override
+  replaces synced/config catalog) → unknown. Unknown is never zero: an unknown
+  cost charges the site budget its full reservation.
+- Users are charged points only for the call that delivered a valid result.
+- Budgets: `core_ai_budget_periods` rows per scope per period (global USD,
+  system USD, user points, user×permission daily count), locked in sorted
+  `scopeKey` order inside one short transaction; no transaction during
+  provider calls; reservation = full upper bound (all retries, steps,
+  fallback). Settlement flips `settlement` exactly once under a row lock.
+- Persistence via `AiLedger`: `PostgresAiLedger` (production) and
+  `MemoryAiLedger` (test seam, same pure rules in `budget.ts`).
+- Role policies: any granting role grants; largest allowance wins (never
+  summed); user override replaces; root roles unlimited.
+- Global defaults: AI on, no site cap, `defaultMonthlyPoints` 0, automatic
+  ALT off and refused without a site budget.
+- ALT: per-language `core_files_alt` (human/ai origin, file fingerprint),
+  one base analysis per fingerprint, translations per language, conditional
+  writes that never overwrite human rows. Descriptors carry `alts`; the blog
+  resolves occurrence override → file ALT → default language → empty.
+- Queue: durable `dedupeKey`, lease recovery, `QueueDeferError` (no attempt
+  burned), dedicated `ai` queue worker (2 per minute).
+- Field AI: `ai: { action, sourceFields, mode: "suggestion" }` on
+  text/textarea, validated at definition and boot; shared assist routes;
+  review-before-accept UI with stale-source and newer-edit detection.
+- Quick Ask: NDJSON streaming, bounded context, plain-text nodes, one-step
+  undo, upper-bound estimate before running.
+- Translation freshness: `core_ai_translation_sources` source/target
+  fingerprints, recorded only after a save (`onSaved` on the content form).
 
 ## Completed
 
-- Stage 1: `defineAiAction` (`api/lib/ai/action.ts`), capability metadata on
-  model entries (`capabilities`, default `["text"]`), `AiActionRegistry`
-  with validation (duplicates, defaults, capabilities, unknown lookups),
-  `aiActionRef` typed keys, `buildApiPlugin({ aiActions })`, boot-time
-  cross-plugin validation (`core.aiActions`). Blog `field.translate` and
-  `excerpt.generate` registered.
-- Stage 2: `AiUsage`/`AiCost` discriminated union, decimal money
-  (`decimal.ts`), pricing rules with cache/tier/flat units (`pricing.ts`),
-  provider adapters for AI Gateway and OpenRouter + default
-  (`usage-cost.ts`), cost order provider → effective pricing (manual
-  override replaces catalog) → unknown.
-- Stage 3: `AiRunner` (`runner.ts`) with run / runAsSystem / stream; calls
-  recorded before they start (crash → uncertain); retries + fallback;
-  output validation; idempotent settlement; stable `AiError` codes;
-  `ai.run.completed` / `ai.run.failed` events. Blog routes moved to the
-  runner, response contract unchanged; HTML translations validated
-  structurally (`html-structure.ts`).
-- Stage 4: points (1 pt = 0.001 USD, version 1), global/system/user/daily
-  budget periods, rate + concurrency limits, role policy resolution (largest
-  allowance, any-role grant, user override, root unlimited), atomic
-  reservations in `PostgresAiLedger`.
-- Migration `apps/api/migrations/20261003234938_ai_core`.
+- Stage 1–4: registry, usageCost/pricing, runner, history, budgets, points,
+  policies, reservations (commit `40b10c79`).
+- Stage 5: AdminCP (overview, models & pricing, actions, access, history,
+  settings) and `/settings/ai`; admin/user APIs; maintenance cron (lease
+  expiry, cost reconciliation with audited adjustments, retention).
+- Stage 6–7: multilingual ALT, resolver, automatic generation, sweep, queue
+  reliability, S3/Supabase/Local trusted reads.
+- Stage 8: shared AI field assistance (blog excerpt, example plugin article).
+- Stage 9: Quick Ask.
+- Stage 10: translation freshness and optional pre-publication AI review.
+- CI: PostgreSQL service so integration tests run.
 
 ## Checks
 
-- `packages/vitnode`: `tsc --noEmit` clean; eslint clean on AI files.
-- AI unit tests: 68 passed (accounting, registry, runner incl. streaming).
-- Type test `action.test-d.ts`: passed.
-- Real PostgreSQL integration (`VITNODE_TEST_DATABASE_URL=… vitest run
-  src/api/lib/ai/postgres-ledger.integration.test.ts`): 9 passed. Removing
-  the `FOR UPDATE` lock makes 2 of them fail (mutation-checked).
-- Blog AI route tests: 8 passed.
-- Baseline before changes: core suite 8334 passed.
+- `packages/vitnode`: `tsc --noEmit` clean; eslint clean on changed files.
+- Core suite with real PostgreSQL: 8469 passed before the last fixes; AI
+  suites re-run after every change (see final report for the last full run).
+- Real PostgreSQL integration: ledger concurrency (9), routes and
+  maintenance (10), ALT end to end (10). Removing the `FOR UPDATE` lock makes
+  the concurrency tests fail (mutation-checked).
+- Blog plugin: tsc clean, eslint clean, 22 tests passed.
+- Browser (Playwright, Chromium): all six AdminCP AI pages and `/settings/ai`
+  render at 1280px and 390px without horizontal scroll.
+- Docs: all AI pages compile as MDX; prettier clean.
 
 ## Known limitations
 
 - Streaming does not retry or fall back once a stream has started.
-- Reservations hold the full upper bound up front (all retries and the
-  fallback), so no mid-run extension is needed; this is conservative.
-- CI has no PostgreSQL service; the integration tests skip without
-  `VITNODE_TEST_DATABASE_URL`.
+- Gateway prices sync only when an admin clicks "Sync gateway prices".
+  Synced prices have no long-context tiers; use a manual override for them.
+- ALT base descriptions are written in English, then translated.
+- A crash mid-call may pay for one repeated call; exactly-once is not
+  promised. Uncertain calls are settled by maintenance at full reservation
+  and corrected if the provider reports the billed cost later.
+- The AdminCP assist/translation-source routes rely on the action's AI
+  permission + `authorize()` / content `can_edit` instead of a separate
+  `ai:*` staff permission (documented in code).
+- Long-context price tiers can't be edited in the AdminCP (kept as is).
 
 ## Next task
 
-Reconciliation + maintenance cron (lease expiry → uncertain, gateway cost
-lookup adjustments, history retention), pricing sync, then admin/account
-API routes and UI (Stage 5).
+Final full-suite run, diff review, draft PR against `refactor/edit_articles`.

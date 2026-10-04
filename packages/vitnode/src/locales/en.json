@@ -1190,6 +1190,10 @@
             "near_limit": {
               "title": "You've used over 80% of your AI points",
               "desc": "Spend the rest wisely - your allowance refills on {resetsAt}."
+            },
+            "no_allowance": {
+              "title": "Your role doesn't include AI points yet",
+              "desc": "AI features need a monthly allowance, and yours is currently zero. Ask an administrator if you'd like to try them."
             }
           },
           "points": {
@@ -1715,7 +1719,8 @@
         "AI_TIMEOUT": "The AI provider took too long. Nothing was charged to you.",
         "AI_UNAUTHORIZED": "You do not have access to this AI feature or this content.",
         "AI_USER_LIMIT_REACHED": "You used all your AI points for this month.",
-        "unknown": "Something went wrong. Try again."
+        "unknown": "Something went wrong. Try again.",
+        "AI_DUPLICATE_REQUEST": "This request was already sent. Try again for a new one."
       },
       "quick_ask": {
         "label": "Quick Ask (AI)",
@@ -2760,6 +2765,48 @@
         "noResults": {
           "title": "No files uploaded",
           "description": "Files uploaded across the site will appear here."
+        },
+        "alt": {
+          "open": "Edit ALT text",
+          "title": "ALT text",
+          "languages": "Description per language",
+          "empty_hint": "Screen readers read this aloud. Save an empty text to mark the image as decorative - it then intentionally has no description, and automatic ALT leaves it alone.",
+          "intentionally_empty": "Intentionally left without a description (decorative image).",
+          "text_label": "ALT text in {language}",
+          "save": "Save",
+          "saved": {
+            "title": "ALT text saved",
+            "desc": "The {language} description is now yours; automatic ALT won't overwrite it.",
+            "desc_empty": "The image is marked as decorative in {language}."
+          },
+          "origin": {
+            "ai": "AI",
+            "human": "Written by a person",
+            "missing": "Missing",
+            "stale": "Outdated"
+          },
+          "remove": {
+            "button": "Remove",
+            "hint": "Removing lets automatic ALT write it again.",
+            "success": "ALT text removed",
+            "success_desc": "Automatic ALT may describe the image in {language} again."
+          },
+          "policy": {
+            "label": "Automatic ALT for this image",
+            "saved": "ALT setting saved",
+            "automatic": {
+              "label": "Automatic",
+              "desc": "AI writes a description in every language that is missing one. Text written by a person is never overwritten."
+            },
+            "manual": {
+              "label": "Manual only",
+              "desc": "Only people write descriptions for this image."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "desc": "The image is never sent to an external AI. Use it for private or sensitive images."
+            }
+          }
         }
       }
     },
@@ -3081,14 +3128,34 @@
             "placeholder": "en, pl"
           },
           "batch_size": {
-            "label": "Images per batch",
-            "desc": "How many images one background job describes."
+            "label": "Images queued per sweep",
+            "desc": "How many images missing ALT text one hourly sweep queues. The worker then describes them two at a time, every minute."
           }
         },
         "submit": "Save settings",
         "saved": {
           "title": "AI settings saved",
           "desc": "New limits apply to the next AI operation."
+        },
+        "alt_status": {
+          "title": "Automatic ALT progress",
+          "on": "On",
+          "off": "Off",
+          "desc": "{eligible, plural, one {# image is} other {# images are}} set to automatic ALT text.",
+          "counts": {
+            "pending": "Pending",
+            "completed": "Completed",
+            "failed": "Failed",
+            "waitingBudget": "Waiting for budget",
+            "skipped": "Skipped"
+          },
+          "languages": "Languages",
+          "no_languages": "No languages to write in.",
+          "sweep": {
+            "button": "Find missing ALT now",
+            "success": "Looked for missing ALT text",
+            "success_desc": "{enqueued, plural, =0 {Nothing new to queue} one {# image queued} other {# images queued}} after checking {scanned, plural, one {# image} other {# images}}."
+          }
         }
       },
       "models": {

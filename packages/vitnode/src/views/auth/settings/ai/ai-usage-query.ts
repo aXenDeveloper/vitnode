@@ -8,6 +8,7 @@ export const AI_USAGE_NOTICES = [
   "none",
   "near_limit",
   "exhausted",
+  "no_allowance",
   "site_paused",
 ] as const;
 export type AiUsageNotice = (typeof AI_USAGE_NOTICES)[number];

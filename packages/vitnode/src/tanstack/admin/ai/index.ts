@@ -6,6 +6,7 @@ export { AdminAiOverviewRouteContent } from "./overview-screen";
 export {
   adminAiAccessQuery,
   adminAiActionsQuery,
+  adminAiAltStatusQuery,
   adminAiHistoryQuery,
   adminAiModelsQuery,
   adminAiOverviewQuery,

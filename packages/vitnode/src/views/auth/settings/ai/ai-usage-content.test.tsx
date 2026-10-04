@@ -71,6 +71,21 @@ describe("AiUsageContent", () => {
     expect(screen.queryByText(`${NOTICE}.near_limit.title`)).toBeNull();
   });
 
+  it("tells a member with no allowance to ask, not that they used it up", () => {
+    renderInIntl(
+      <AiUsageContent
+        usage={usage({
+          notice: "no_allowance",
+          points: { available: "0", reserved: "0", total: "0", used: "0" },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(`${NOTICE}.no_allowance.title`)).toBeTruthy();
+    expect(screen.queryByText(`${NOTICE}.exhausted.title`)).toBeNull();
+    expect(screen.queryByText(`${NOTICE}.exhausted.desc`)).toBeNull();
+  });
+
   it("shows no notice while there is room left", () => {
     renderInIntl(<AiUsageContent usage={usage()} />);
 
