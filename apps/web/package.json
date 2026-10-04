@@ -28,6 +28,8 @@
     "@vitnode/blog": "workspace:*",
     "@vitnode/core": "workspace:*",
     "@vitnode/example": "workspace:*",
+    "@vitnode/node-cron": "workspace:*",
+    "@vitnode/stripe": "workspace:*",
     "@vitnode/supabase-storage": "workspace:*",
     "dotenv": "^18.0.5",
     "drizzle-kit": "1.0.0-rc.4",

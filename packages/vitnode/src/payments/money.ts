@@ -10,7 +10,12 @@ export interface Money {
 }
 
 /** How a currency is named next to an amount - `Intl.NumberFormat`'s option. */
-export const CURRENCY_DISPLAYS = ["code", "symbol", "narrowSymbol", "name"] as const;
+export const CURRENCY_DISPLAYS = [
+  "code",
+  "symbol",
+  "narrowSymbol",
+  "name",
+] as const;
 export type CurrencyDisplay = (typeof CURRENCY_DISPLAYS)[number];
 
 /**
@@ -74,9 +79,7 @@ const NON_TENDER = new Set([
 let knownCurrencies: ReadonlySet<string> | undefined;
 
 const supportedByRuntime = (): ReadonlySet<string> => {
-  if (!knownCurrencies) {
-    knownCurrencies = new Set(Intl.supportedValuesOf("currency"));
-  }
+  knownCurrencies ??= new Set(Intl.supportedValuesOf("currency"));
 
   return knownCurrencies;
 };

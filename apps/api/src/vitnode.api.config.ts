@@ -9,6 +9,7 @@ import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
+import { StripePaymentProvider } from "@vitnode/stripe";
 // import { S3StorageAdapter } from "@vitnode/s3";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { config } from "dotenv";
@@ -53,6 +54,25 @@ export const vitNodeApiConfig = buildApiConfig({
     relations: coreRelations,
   }),
   cron: NodeCronAdapter(),
+  // Payments stay off until Stripe test keys are in `.env`, so the repository
+  // runs without a Stripe account. With STRIPE_SECRET_KEY set, a missing
+  // STRIPE_WEBHOOK_SECRET stops the API at startup instead of failing later.
+  payments: process.env.STRIPE_SECRET_KEY
+    ? {
+        defaultCurrency: "PLN",
+        currencies: {
+          PLN: { currencyDisplay: "code" },
+          USD: { currencyDisplay: "symbol" },
+          EUR: { currencyDisplay: "symbol" },
+        },
+        providers: [
+          StripePaymentProvider({
+            secretKey: process.env.STRIPE_SECRET_KEY,
+            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+          }),
+        ],
+      }
+    : undefined,
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,

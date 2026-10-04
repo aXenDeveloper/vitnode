@@ -1,0 +1,26 @@
+{
+  "$schema": "https://swc.rs/schema.json",
+  "exclude": ["\\.test\\.tsx?$"],
+  "minify": true,
+  "jsc": {
+    "baseUrl": "./",
+    "target": "esnext",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "parser": {
+      "syntax": "typescript",
+      "tsx": true
+    },
+    "transform": {
+      "react": {
+        "runtime": "automatic"
+      }
+    }
+  },
+  "module": {
+    "type": "nodenext",
+    "strict": true,
+    "resolveFully": true
+  }
+}

@@ -14,16 +14,18 @@ import { PaymentsConfigError } from "./provider";
 import { BILLING_INTERVALS } from "./status";
 
 /** The transaction a payment handler writes through. Roll it back by throwing. */
-export type PaymentsTransaction = Omit<EnvVitNode["Variables"]["db"], "$client">;
+export type PaymentsTransaction = Omit<
+  EnvVitNode["Variables"]["db"],
+  "$client"
+>;
 
 /** Explicit prices, one per currency code, in minor units. No conversion. */
 export type OfferPrices = Readonly<Record<string, number>>;
 
 export type PaymentOfferEligibility =
-  | { eligible: false; reason: string }
-  | { eligible: true };
+  { eligible: false; reason: string } | { eligible: true };
 
-interface PaymentOfferEligibilityArgs {
+export interface PaymentOfferEligibilityArgs {
   c: Context<EnvVitNode>;
   interval: BillingInterval | null;
   /** Reads inside the checkout's lock, so two clicks cannot both pass. */
@@ -63,7 +65,7 @@ export interface PaymentSubscriptionSnapshot {
   userId: null | number;
 }
 
-interface PaymentHandlerArgs {
+export interface PaymentHandlerArgs {
   c: Context<EnvVitNode>;
   /**
    * Write the business effect through this. It commits together with the
@@ -73,7 +75,7 @@ interface PaymentHandlerArgs {
   tx: PaymentsTransaction;
 }
 
-interface PaymentOfferBase {
+export interface PaymentOfferBase {
   /** Stable within the plugin - stored on every purchase. Never rename it. */
   id: string;
   /**
@@ -148,7 +150,7 @@ export const isSafeReturnPath = (path: string): boolean =>
   path.startsWith("/") &&
   !path.startsWith("//") &&
   !path.includes("\\") &&
-  !/[\s\u0000-\u001f]/.test(path) &&
+  ![...path].some(char => char.trim() === "" || char.charCodeAt(0) < 32) &&
   !/^\/[^/]*:/.test(path);
 
 const assertPrices = (prices: OfferPrices, where: string): void => {
@@ -175,7 +177,7 @@ export const validatePaymentOffer = (
   offer: PaymentOffer,
   pluginId: string,
 ): void => {
-  const where = `Offer "${paymentOfferKey(pluginId, String(offer.id))}"`;
+  const where = `Offer "${paymentOfferKey(pluginId, offer.id)}"`;
 
   if (typeof offer.id !== "string" || !OFFER_ID.test(offer.id)) {
     throw new PaymentsConfigError(
@@ -187,7 +189,10 @@ export const validatePaymentOffer = (
     throw new PaymentsConfigError(`${where}: "name" is required.`);
   }
 
-  if (typeof offer.returnPath !== "string" || !isSafeReturnPath(offer.returnPath)) {
+  if (
+    typeof offer.returnPath !== "string" ||
+    !isSafeReturnPath(offer.returnPath)
+  ) {
     throw new PaymentsConfigError(
       `${where}: "returnPath" must be a path in this app, such as "/example/payments".`,
     );

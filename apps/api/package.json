@@ -27,6 +27,7 @@
     "@hono/zod-validator": "^0.9.1",
     "@vitnode/core": "workspace:*",
     "@vitnode/node-cron": "workspace:*",
+    "@vitnode/stripe": "workspace:*",
     "@vitnode/supabase-storage": "workspace:*",
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",

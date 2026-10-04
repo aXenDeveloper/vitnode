@@ -24,9 +24,9 @@ import type {
   VitNodeI18nConfig,
 } from "./lib/i18n/types";
 import type { VitNodeMetadata } from "./lib/metadata";
-import type { PaymentsConfig } from "./payments/config";
 import type { BuildPluginReturn } from "./lib/plugin";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
+import type { PaymentsConfig } from "./payments/config";
 
 export type { LocaleConfig };
 

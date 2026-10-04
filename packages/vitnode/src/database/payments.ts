@@ -352,10 +352,7 @@ export const core_payments_webhook_events = camelCase.table.withRLS(
       t.providerScope,
       t.externalId,
     ),
-    index("core_payments_webhook_events_status_idx").on(
-      t.status,
-      t.receivedAt,
-    ),
+    index("core_payments_webhook_events_status_idx").on(t.status, t.receivedAt),
   ],
 );
 
@@ -375,7 +372,11 @@ export const core_payments_fulfillments = camelCase.table.withRLS(
       .references(() => core_payments_purchases.id, { onDelete: "cascade" })
       .notNull(),
     effect: t.varchar({ length: 100 }).notNull(),
-    payload: t.jsonb().$type<Record<string, number | string>>().notNull().default({}),
+    payload: t
+      .jsonb()
+      .$type<Record<string, number | string>>()
+      .notNull()
+      .default({}),
     status: t
       .varchar({ enum: ["pending", "completed", "failed"], length: 20 })
       .notNull()

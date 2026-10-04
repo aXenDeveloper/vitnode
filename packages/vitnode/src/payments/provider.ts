@@ -17,6 +17,11 @@ import type {
  * provider that counts a currency differently converts inside the adapter.
  */
 export interface PaymentProvider {
+  /**
+   * Provider-specific limits on one charge. Returns why `money` cannot be
+   * charged, or `null` when it can.
+   */
+  checkAmount?: (money: Money) => null | string;
   checkout: {
     create: (
       input: ProviderCheckoutInput,
@@ -26,11 +31,6 @@ export interface PaymentProvider {
     expire: (checkoutId: string) => Promise<ProviderCheckout>;
     retrieve: (checkoutId: string) => Promise<ProviderCheckout>;
   };
-  /**
-   * Provider-specific limits on one charge. Returns why `money` cannot be
-   * charged, or `null` when it can.
-   */
-  checkAmount?: (money: Money) => null | string;
   /** Codes this provider can charge in. Intersected with the install's own. */
   currencies: readonly string[];
   customers: {
@@ -106,9 +106,9 @@ export interface ProviderCheckoutInput {
   /** Shown on the hosted page. */
   item: Money & { interval?: BillingInterval; name: string };
   locale?: string;
-  mode: OfferMode;
   /** Small, non-sensitive strings copied onto provider objects. */
   metadata: Record<string, string>;
+  mode: OfferMode;
   /** Core's opaque purchase id, echoed back on every related object. */
   reference: string;
   successUrl: string;
@@ -123,7 +123,11 @@ export interface ProviderCheckout {
   id: string;
   /** The payment the checkout created, for one-time purchases. */
   paymentId: null | string;
-  paymentStatus: "no_payment_required" | "paid" | "unpaid";
+  /**
+   * `failed` when the checkout completed but its asynchronous payment was
+   * declined - a provider must tell that apart from still-processing.
+   */
+  paymentStatus: "failed" | "no_payment_required" | "paid" | "unpaid";
   reference: null | string;
   status: "complete" | "expired" | "open";
   subscriptionId: null | string;
@@ -184,7 +188,7 @@ export interface ProviderDispute {
 
 export interface ProviderPayment {
   amount: number;
-  /** Total refunded that has succeeded or is on its way. */
+  /** Total of refunds that succeeded. */
   amountRefunded: number;
   currency: string;
   disputes: ProviderDispute[];
@@ -194,12 +198,12 @@ export interface ProviderPayment {
 
 /** The object a webhook is about - core re-reads it before acting. */
 export type ProviderWebhookTarget =
+  | { id: string; kind: "checkout" }
   | {
       id: string;
       kind: "invoice";
       signal: "action_required" | "paid" | "payment_failed" | "updated";
     }
-  | { id: string; kind: "checkout" }
   | { id: string; kind: "payment" }
   | { id: string; kind: "subscription" };
 
@@ -216,13 +220,13 @@ export interface ProviderWebhookEvent {
 
 export type PaymentProviderErrorKind =
   /** The provider refused the request; repeating it will not help. */
-  | "rejected"
-  /** The object does not exist (in this account/environment). */
   | "not_found"
+  /** The object does not exist (in this account/environment). */
+  | "rejected"
   /** No answer: the request may or may not have taken effect. */
-  | "uncertain"
+  | "unavailable"
   /** Throttled or down; safe to try again later. */
-  | "unavailable";
+  | "uncertain";
 
 export class PaymentProviderError extends Error {
   constructor(
