@@ -1,8 +1,9 @@
-import { cn } from "cn";
+import { CircleCheckIcon, ClockIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { ContentDataTable } from "@/components/table/content";
+import { Badge } from "@/components/ui/badge";
 
 import type { CronJobRow, CronPage } from "./cron-query";
 import type { RunCron } from "./run-action/run-cron";
@@ -18,10 +19,30 @@ const jobStatus = (row: CronJobRow): CronJobStatus => {
   return "on_schedule";
 };
 
-const STATUS_DOT: Record<CronJobStatus, string> = {
-  on_schedule: "bg-success",
-  overdue: "bg-warn",
-  waiting: "bg-muted-foreground/50",
+const CronStatusBadge = ({ status }: { status: CronJobStatus }) => {
+  const t = useTranslations("admin.advanced.cron.list.status");
+
+  if (status === "on_schedule") {
+    return (
+      <Badge className="border-success/50" variant="success">
+        <CircleCheckIcon /> {t(status)}
+      </Badge>
+    );
+  }
+
+  if (status === "overdue") {
+    return (
+      <Badge className="border-warn/50" variant="warning">
+        <TriangleAlertIcon /> {t(status)}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="secondary">
+      <ClockIcon /> {t(status)}
+    </Badge>
+  );
 };
 
 export const CronTableContent = ({
@@ -54,28 +75,7 @@ export const CronTableContent = ({
         {
           id: "status",
           header: t("list.status.title"),
-          cell: ({ row }) => {
-            const status = jobStatus(row);
-
-            return (
-              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                <span
-                  aria-hidden
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    STATUS_DOT[status],
-                  )}
-                />
-                <span
-                  className={
-                    status === "overdue" ? "text-warn" : "text-muted-foreground"
-                  }
-                >
-                  {t(`list.status.${status}`)}
-                </span>
-              </span>
-            );
-          },
+          cell: ({ row }) => <CronStatusBadge status={jobStatus(row)} />,
         },
         {
           accessorKey: "pluginId",

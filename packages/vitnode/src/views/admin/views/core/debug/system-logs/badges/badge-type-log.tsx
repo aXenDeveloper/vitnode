@@ -12,7 +12,7 @@ export const BadgeTypeLog = ({
 
   if (type === "warn") {
     return (
-      <Badge className="bg-warn/10 border-warn/50 text-warn">
+      <Badge className="border-warn/50" variant="warning">
         <TriangleAlertIcon /> {t(type)}
       </Badge>
     );
@@ -20,7 +20,7 @@ export const BadgeTypeLog = ({
 
   if (type === "error") {
     return (
-      <Badge className="bg-destructive/10 border-destructive/50 text-destructive">
+      <Badge className="border-destructive/50" variant="destructive">
         <XIcon /> {t(type)}
       </Badge>
     );
