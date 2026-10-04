@@ -1,4 +1,5 @@
 import {
+  CreditCardIcon,
   FileTextIcon,
   LayoutDashboardIcon,
   ServerIcon,
@@ -215,6 +216,28 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.staff.admins"),
           href: "/admin/core/staff/admins",
           permission: core("staff_admins"),
+        },
+      ],
+    },
+    {
+      href: "/admin/core/payments",
+      title: key("admin.global.nav.payments.title"),
+      icon: <CreditCardIcon />,
+      items: [
+        {
+          title: key("admin.global.nav.payments.overview"),
+          href: "/admin/core/payments",
+          permission: core("payments"),
+        },
+        {
+          title: key("admin.global.nav.payments.subscriptions"),
+          href: "/admin/core/payments/subscriptions",
+          permission: core("payments"),
+        },
+        {
+          title: key("admin.global.nav.payments.events"),
+          href: "/admin/core/payments/events",
+          permission: core("payments"),
         },
       ],
     },

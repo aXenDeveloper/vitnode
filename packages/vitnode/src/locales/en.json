@@ -36,6 +36,9 @@
   "@vitnode/core:navigation:can_delete": "Remove main menu items",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
+  "@vitnode/core:payments": "Payments",
+  "@vitnode/core:payments:can_view": "View purchases, subscriptions and webhook events",
+  "@vitnode/core:payments:can_retry": "Retry failed payment processing",
   "@vitnode/core:notifications": "Notifications",
   "@vitnode/core:notifications:can_view": "View notification settings and delivery health",
   "@vitnode/core:notifications:can_edit": "Edit notification settings",
@@ -831,7 +834,8 @@
           "devices": "Devices",
           "security": "Security",
           "sso": "Connected accounts",
-          "notifications": "Notifications"
+          "notifications": "Notifications",
+          "billing": "Billing"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -1617,6 +1621,95 @@
       "empty_title": "Nothing here yet",
       "empty_unread_title": "No unread notifications",
       "empty_desc": "When something needs your attention, it lands here."
+    },
+    "payments": {
+      "interval": {
+        "month": "Monthly",
+        "year": "Yearly"
+      },
+      "per_interval": {
+        "month": "{price} / month",
+        "year": "{price} / year"
+      },
+      "purchase_state": {
+        "awaiting_payment": "Awaiting payment",
+        "processing": "Processing payment",
+        "paid": "Paid",
+        "failed": "Not completed",
+        "fulfillment_pending": "Paid, being delivered",
+        "fulfillment_failed": "Paid, delivery delayed",
+        "fulfilled": "Paid",
+        "refunded": "Refunded",
+        "partially_refunded": "Partially refunded"
+      },
+      "subscription_state": {
+        "active": "Active",
+        "needs_attention": "Renewal needs attention",
+        "cancellation_scheduled": "Cancellation scheduled",
+        "ended": "Ended",
+        "incomplete": "Waiting for the first payment"
+      },
+      "disputed": "Disputed",
+      "billing": {
+        "title": "Billing",
+        "desc": "Everything you bought on this site, and the subscriptions you pay for.",
+        "manage": "Manage billing",
+        "managing": "Opening billing management…",
+        "portal_error": "Billing management could not be opened",
+        "tax_note": "Receipts come from the payment provider. This site does not issue tax invoices.",
+        "purchases": {
+          "title": "Purchases",
+          "empty": "No purchases yet. When you buy something, it shows up here.",
+          "item": "Item",
+          "amount": "Amount",
+          "date": "Date",
+          "status": "Status",
+          "refunded": "{amount} refunded",
+          "more": "Show more",
+          "error": "Your purchases could not be loaded."
+        },
+        "subscriptions": {
+          "title": "Subscriptions",
+          "empty": "No subscriptions yet.",
+          "paid_through": "Paid through {date}",
+          "renews": "Renews on {date}",
+          "ends": "Ends on {date}",
+          "ended": "Ended on {date}",
+          "attention": "The last renewal payment did not go through. Update your payment method to keep this subscription.",
+          "more": "Show more",
+          "error": "Your subscriptions could not be loaded."
+        }
+      },
+      "checkout": {
+        "buy": "Buy now",
+        "subscribe": "Subscribe",
+        "redirecting": "Opening secure checkout…",
+        "currency": "Currency",
+        "interval": "Billing period",
+        "continue": "Continue checkout",
+        "cancel": "Cancel checkout",
+        "canceled": "Checkout canceled",
+        "canceled_desc": "You can start again whenever you like.",
+        "error": "Checkout could not start",
+        "retry_hint": "Nothing was charged. Try again in a moment.",
+        "unavailable": "Not available in your currency yet."
+      },
+      "return": {
+        "checking": "Confirming your payment…",
+        "processing": "Your payment is processing. Some payment methods take a few minutes.",
+        "paid": "Payment confirmed. Unlocking your purchase…",
+        "fulfilled": "Payment confirmed. Enjoy!",
+        "fulfillment_failed": "Payment confirmed. Unlocking is delayed - we will finish it automatically.",
+        "failed": "The payment did not complete. You have not been charged.",
+        "canceled": "Checkout canceled. You have not been charged.",
+        "slow": "This is taking longer than usual. Your payment is safe - check again in a moment.",
+        "check_again": "Check again",
+        "error": "We could not check this payment right now."
+      },
+      "disabled": {
+        "title": "Payments are not enabled",
+        "desc": "This site has no payment provider configured yet. An administrator can enable Payments in the API configuration - the developer documentation explains how."
+      }
     }
   },
   "admin": {
@@ -1741,6 +1834,12 @@
           "cron": "Cron Jobs",
           "queue": "Queue Tasks",
           "search": "Search"
+        },
+        "payments": {
+          "title": "Payments",
+          "overview": "Overview",
+          "subscriptions": "Subscriptions",
+          "events": "Webhook events"
         }
       },
       "search": {
@@ -2648,6 +2747,144 @@
         "bottomBar": "Bottom bar",
         "headerDesc": "In the header on tablets and desktops, and in the side menu on phones.",
         "bottomBarDesc": "Up to three links at the bottom of the screen on phones, plus a Menu tab with the rest of the header menu."
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "desc": "Purchases, payment processing and fulfillment across every plugin.",
+      "disabled": "Payments are not configured. History stays readable; new purchases are off.",
+      "overview": {
+        "totals": "Collected",
+        "totals_desc": "Totals are kept per currency and never added together.",
+        "one_time": "One-time",
+        "recurring": "Recurring",
+        "refunded": "Refunded",
+        "no_totals": "Nothing collected yet.",
+        "attention": "Needs attention",
+        "fulfillments_failed": "Failed fulfillments",
+        "fulfillments_pending": "Fulfillments in progress",
+        "events_failed": "Failed webhook events",
+        "processing": "Payments processing",
+        "disputes": "Open disputes",
+        "subscriptions_attention": "Subscriptions needing attention",
+        "worker": "Background worker",
+        "worker_ok": "The queue worker is running.",
+        "worker_stale": "The cron worker has not run recently. Accepted payment events wait until it does.",
+        "worker_lagging": "{count} payment jobs are waiting for the worker.",
+        "worker_no_adapter": "No cron adapter in this API. Call the cron endpoint from a scheduler, or set one up - see the cron docs.",
+        "last_run": "Last run {date}",
+        "never_run": "Never ran",
+        "providers": "Providers",
+        "scope": "{scope} mode"
+      },
+      "purchases": {
+        "title": "Purchases",
+        "offer": "Offer",
+        "buyer": "Buyer",
+        "amount": "Amount",
+        "status": "Payment",
+        "fulfillment": "Fulfillment",
+        "provider": "Provider",
+        "created": "Created",
+        "deleted_user": "Deleted user"
+      },
+      "subscriptions": {
+        "title": "Subscriptions",
+        "desc": "Every subscription and the period its last verified payment covers.",
+        "plan": "Plan",
+        "subscriber": "Subscriber",
+        "price": "Price",
+        "status": "Status",
+        "paid_through": "Paid through",
+        "created": "Created"
+      },
+      "events": {
+        "title": "Webhook events",
+        "desc": "Verified provider events and whether processing them worked. Raw payloads are never stored.",
+        "type": "Event",
+        "target": "Object",
+        "status": "Status",
+        "attempts": "Attempts",
+        "received": "Received",
+        "error": "Last error",
+        "retry": "Retry",
+        "retried": "Event queued again",
+        "retried_desc": "Processing re-reads the provider, so retrying is safe.",
+        "retry_error": "The event could not be queued"
+      },
+      "detail": {
+        "title": "Purchase",
+        "back": "Back to purchases",
+        "summary": "Summary",
+        "offer_missing": "This offer is no longer registered. History stays readable, but new fulfillment work cannot run until the plugin is back.",
+        "checkouts": "Checkout attempts",
+        "fulfillments": "Fulfillment",
+        "effect": "Effect",
+        "attempts": "Attempts",
+        "retry": "Retry",
+        "retried": "Fulfillment queued again",
+        "retried_desc": "It runs through the queue and never grants twice.",
+        "retry_error": "The fulfillment could not be queued",
+        "adjustments": "Refunds and disputes",
+        "invoices": "Billing history",
+        "period": "Period",
+        "subscription": "Subscription",
+        "references": "Provider references",
+        "none": "None",
+        "last_error": "Last error",
+        "refund": "Refund",
+        "dispute": "Dispute"
+      },
+      "filters": {
+        "status": "Status",
+        "fulfillment": "Fulfillment",
+        "currency": "Currency",
+        "provider": "Provider",
+        "period": "Created",
+        "periods": {
+          "7d": "Last 7 days",
+          "30d": "Last 30 days",
+          "90d": "Last 90 days",
+          "365d": "Last year"
+        }
+      },
+      "payment_status": {
+        "awaiting_payment": "Awaiting payment",
+        "processing": "Processing",
+        "paid": "Paid",
+        "failed": "Failed",
+        "expired": "Expired",
+        "canceled": "Canceled"
+      },
+      "fulfillment_status": {
+        "not_started": "Not started",
+        "pending": "Pending",
+        "fulfilled": "Fulfilled",
+        "failed": "Failed"
+      },
+      "refund_status": {
+        "none": "Not refunded",
+        "partial": "Partially refunded",
+        "full": "Refunded"
+      },
+      "subscription_status": {
+        "incomplete": "Incomplete",
+        "active": "Active",
+        "past_due": "Past due",
+        "unpaid": "Unpaid",
+        "paused": "Paused",
+        "canceled": "Canceled",
+        "incomplete_expired": "Expired before payment"
+      },
+      "event_status": {
+        "pending": "Pending",
+        "processed": "Processed",
+        "failed": "Failed"
+      },
+      "work_status": {
+        "pending": "Pending",
+        "completed": "Completed",
+        "failed": "Failed"
       }
     }
   }

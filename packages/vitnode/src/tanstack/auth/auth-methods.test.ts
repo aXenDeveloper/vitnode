@@ -13,6 +13,7 @@ const config = (
   navigation: [],
   passkeys: true,
   password: true,
+  payments: false,
   sso: [],
   ...overrides,
 });

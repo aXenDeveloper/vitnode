@@ -9,6 +9,7 @@ import {
 import type { ExampleSearch } from "./pages/example-page";
 
 import { browseSearch } from "./pages/browse-search";
+import { paymentsSearch } from "./pages/payments/payments-search";
 import { zonesSearch } from "./pages/zones-search";
 
 export const routes = definePluginRoutes([
@@ -23,6 +24,12 @@ export const routes = definePluginRoutes([
     component: lazy(() => import("./pages/browse-page")),
     messages: ["@vitnode/example.browse"],
     search: browseSearch,
+  }),
+
+  page("/example/payments", {
+    component: lazy(() => import("./pages/payments/payments-page")),
+    messages: ["@vitnode/example.payments", "core.payments"],
+    search: paymentsSearch,
   }),
 
   page("/example/zones", {
