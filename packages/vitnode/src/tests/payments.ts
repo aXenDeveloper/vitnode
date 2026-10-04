@@ -23,6 +23,7 @@ import {
   processPaymentEventTask,
 } from "@/api/modules/payments/tasks/payments.tasks";
 import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
+import { core_cron } from "@/database/cron";
 import { core_files } from "@/database/files";
 import { core_languages } from "@/database/languages";
 import * as paymentTables from "@/database/payments";
@@ -408,8 +409,9 @@ export interface PaymentsHarness {
    * `user` decides who is signed in for each request.
    */
   middleware: (options?: {
+    admin?: () => null | { id: number };
     queue?: () => unknown;
-    user?: () => null | { id: number };
+    user?: () => null | { id: number; language?: string; name?: string };
   }) => MiddlewareHandler;
   setHandlerFailure: (error: Error | null) => void;
 }
@@ -424,6 +426,7 @@ export const createPaymentsHarness = async ({
   payments?: boolean;
 } = {}): Promise<PaymentsHarness> => {
   const database = await createTestDatabase({
+    core_cron,
     core_files,
     core_languages,
     core_queue,
@@ -558,7 +561,11 @@ export const createPaymentsHarness = async ({
     vars.set("cache", createTestCache());
     vars.set("user", null);
     vars.set("admin", null);
-    vars.set("core", { payments: registry, queue: queueTasks });
+    vars.set("core", {
+      hasCronAdapter: false,
+      payments: registry,
+      queue: queueTasks,
+    });
     vars.set("i18n", {
       getTranslator: async () => await Promise.resolve(translator),
     });
@@ -588,7 +595,7 @@ export const createPaymentsHarness = async ({
   let userSeq = 0;
 
   const middleware: PaymentsHarness["middleware"] =
-    ({ queue, user } = {}) =>
+    ({ admin, queue, user } = {}) =>
     async (target, next) => {
       for (const key of [
         "db",
@@ -602,6 +609,11 @@ export const createPaymentsHarness = async ({
         target.set(key as never, c.get(key as never));
       }
       target.set("user" as never, (user?.() ?? null) as never);
+      const adminUser = admin?.() ?? null;
+      target.set(
+        "admin" as never,
+        (adminUser ? { user: adminUser } : null) as never,
+      );
       target.set(
         "queue" as never,
         (queue?.() ?? new QueueModel(target)) as never,
