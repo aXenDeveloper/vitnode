@@ -1,0 +1,151 @@
+---
+title: Set up Stripe
+description: Connect VitNode Payments to Stripe - test keys, hosted Checkout, forwarding webhooks with the Stripe CLI, the exact events to subscribe to, Customer Portal settings and keeping test and live apart.
+icon: Wallet
+---
+
+`@vitnode/stripe` uses Stripe-hosted Checkout for payments and the Stripe
+Customer Portal for managing cards and cancellations. The buyer's card details
+never touch your server.
+
+<Steps>
+
+<Step>
+
+### Get test keys
+
+In the Stripe Dashboard, switch to **test mode** and copy the secret key
+(`sk_test_...`) from **Developers → API keys**. A restricted key (`rk_test_...`)
+works too.
+
+```bash title=".env"
+STRIPE_SECRET_KEY=sk_test_...
+```
+
+A publishable key (`pk_...`) is refused at startup - it is for browsers, and
+VitNode never needs one.
+
+</Step>
+
+<Step>
+
+### Forward webhooks to your machine
+
+Install the [Stripe CLI](https://docs.stripe.com/stripe-cli), then:
+
+```bash
+stripe login
+stripe listen --forward-to localhost:3000/api/@vitnode/core/payments/webhooks/stripe
+```
+
+Use port `8000` instead when `apps/api` runs separately. The command prints a
+signing secret - put it in `.env` and restart the API:
+
+```bash title=".env"
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+**Expected:** the API starts, and `GET /api/@vitnode/core/payments/settings`
+answers `"enabled": true`.
+
+</Step>
+
+<Step>
+
+### Make a test purchase
+
+Sign in, open `/example/payments` and click **Buy now**. On the Stripe page pay
+with `4242 4242 4242 4242`, any future date and any CVC.
+
+**Expected:** Stripe sends you back to `/example/payments`, the page shows
+"Confirming your payment…" and then "Payment confirmed", and the lifetime pass
+card shows its certificate. `stripe listen` prints `checkout.session.completed`
+with a `200` answer.
+
+</Step>
+
+</Steps>
+
+## Webhook events to subscribe to
+
+For a production endpoint, add
+`https://your-domain/api/@vitnode/core/payments/webhooks/stripe` in
+**Developers → Webhooks** and select exactly these events. The list is exported
+as `STRIPE_WEBHOOK_EVENTS` from `@vitnode/stripe`.
+
+| Event                                      | Why                                                     |
+| ------------------------------------------ | ------------------------------------------------------- |
+| `checkout.session.completed`               | The buyer finished the hosted checkout                  |
+| `checkout.session.async_payment_succeeded` | A delayed payment method (bank debit) settled           |
+| `checkout.session.async_payment_failed`    | A delayed payment method failed                         |
+| `checkout.session.expired`                 | An abandoned checkout closed                            |
+| `customer.subscription.updated`            | Status, cancellation or period changed - Portal changes |
+| `customer.subscription.deleted`            | A subscription ended                                    |
+| `invoice.paid`                             | A first payment or a renewal was paid                   |
+| `invoice.payment_failed`                   | A renewal payment failed                                |
+| `invoice.payment_action_required`          | The bank needs the customer to confirm a renewal        |
+| `charge.refunded`                          | A refund was issued in the Stripe Dashboard             |
+| `refund.updated`                           | A refund changed state, for example failed              |
+| `charge.dispute.created`                   | A customer disputed a payment                           |
+| `charge.dispute.updated`                   | A dispute changed                                       |
+| `charge.dispute.closed`                    | A dispute was won or lost                               |
+
+Other events are acknowledged and ignored. Each endpoint has its own signing
+secret - copy the one shown for this endpoint into `STRIPE_WEBHOOK_SECRET`.
+
+The adapter pins Stripe API version `2026-09-30.endive` (exported as
+`STRIPE_API_VERSION`). Events are only used to learn *which* object changed;
+VitNode then reads that object again with the pinned version, so an endpoint on
+an older version still works. Matching versions is still the tidy choice.
+
+## Configure the Customer Portal
+
+**Manage billing** opens the Stripe Customer Portal for the signed-in user's
+own customer. Set it up in the Dashboard under **Settings → Billing → Customer
+portal**:
+
+- **Payment methods:** allow updating them.
+- **Invoice history:** show it.
+- **Cancel subscriptions:** allow, and choose **at the end of the billing period**.
+- **Switch plans / update quantities:** turn off. Plan changes are not supported.
+
+The portal returns to **Settings → Billing**, or to the offer's page when opened
+from there. To use a specific portal configuration, pass its id:
+
+```ts
+StripePaymentProvider({
+  secretKey: process.env.STRIPE_SECRET_KEY,
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  portalConfigurationId: 'bpc_...',
+})
+```
+
+## Test renewals without waiting a month
+
+Use Stripe [test clocks](https://docs.stripe.com/billing/testing/test-clocks):
+create a subscription on a customer attached to a clock, then advance the clock
+past the period end. Stripe sends `invoice.paid` (or `invoice.payment_failed`
+with the `4000 0000 0000 0341` card) exactly as it would a month later.
+
+**Expected:** the subscription's **Paid through** date in **Settings → Billing**
+moves to the end of the new period - once, however often Stripe resends the event.
+
+## Keep test and live apart
+
+The scope comes from the key: `sk_test_` is `test`, `sk_live_` is `live`. Every
+stored Stripe id is saved with its scope, so test and live ids can never
+collide, and an event from the other mode is acknowledged and ignored.
+
+Switching an install from test to live keys leaves test purchases readable in
+history; their ongoing work (for example a test subscription) reports that it
+belongs to the `test` environment instead of acting on it.
+
+## Supported currencies
+
+The adapter charges in `AUD`, `BRL`, `CAD`, `CHF`, `CZK`, `DKK`, `EUR`, `GBP`,
+`HKD`, `JPY`, `KRW`, `MXN`, `NOK`, `NZD`, `PLN`, `RON`, `SEK`, `SGD` and `USD` -
+currencies where Stripe's smallest unit equals the ISO minor unit VitNode uses.
+Currencies Stripe counts differently are left out rather than converted on a
+guess. Narrow the list with `currencies: ['PLN', 'EUR']`. One payment is
+limited to Stripe's eight-digit maximum; Stripe enforces its per-currency
+minimum when the checkout is created.
