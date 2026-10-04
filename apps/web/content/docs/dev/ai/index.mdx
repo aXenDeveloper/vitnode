@@ -66,12 +66,12 @@ For internal tooling you can also resolve the raw model and call the SDK directl
 
 A capability says what a configured language model can do. VitNode never guesses it from the model's name. A model without `capabilities` is treated as `["text"]`.
 
-| Capability          | Meaning                                          |
-| :------------------ | :----------------------------------------------- |
-| `text`              | Text in, text out.                               |
-| `image-input`       | Accepts images in the prompt (vision).           |
-| `structured-output` | Returns reliable JSON objects (`Output.object`). |
-| `streaming`         | Streams tokens with `streamText`.                |
+| Capability          | Meaning                                                            |
+| :------------------ | :----------------------------------------------------------------- |
+| `text`              | Text in, text out.                                                 |
+| `image-input`       | Accepts images in the prompt (vision).                             |
+| `structured-output` | Returns reliable JSON objects (`Output.object`).                   |
+| `streaming`         | Streams tokens - required by `c.get("ai").stream()` and Quick Ask. |
 
 Every [AI action](/docs/dev/ai/actions) declares the capabilities it needs. When a run starts, VitNode picks the first configured model that has all of them. If no model fits, the run fails with `AI_MODEL_INCOMPATIBLE` before anything is sent to a provider.
 
@@ -242,9 +242,29 @@ a picker can hide itself rather than offering nothing.
     href="/docs/dev/ai/costs-and-limits"
   />
   <Card
+    title="AdminCP & Account Usage"
+    description="Budgets, pricing, role access, history and the member's /settings/ai page"
+    href="/docs/dev/ai/admin"
+  />
+  <Card
+    title="Automatic Image ALT Text"
+    description="Background ALT text in every site language, under a budget"
+    href="/docs/dev/ai/automatic-alt"
+  />
+  <Card
+    title="AI in Fields & the Editor"
+    description="AI suggestions on content fields, Quick Ask and translation freshness"
+    href="/docs/dev/ai/fields-and-editor"
+  />
+  <Card
     title="AI Usage"
     description="Streaming text, structured outputs, and embeddings"
     href="/docs/dev/ai/usage"
+  />
+  <Card
+    title="Future Ideas"
+    description="What is not built yet, and today's known limitations"
+    href="/docs/dev/ai/future"
   />
   <Card
     title="Search & Discovery"

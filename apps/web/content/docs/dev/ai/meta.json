@@ -2,5 +2,14 @@
   "title": "AI",
   "description": "Register Vercel AI SDK models once, then run managed AI actions with permissions, budgets and history via c.get(\"ai\")",
   "icon": "Sparkles",
-  "pages": ["index", "actions", "costs-and-limits", "usage"]
+  "pages": [
+    "index",
+    "actions",
+    "costs-and-limits",
+    "admin",
+    "automatic-alt",
+    "fields-and-editor",
+    "usage",
+    "future"
+  ]
 }

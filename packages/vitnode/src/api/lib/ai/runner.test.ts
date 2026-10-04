@@ -638,6 +638,14 @@ describe("AiRunner.stream", () => {
         }),
     });
 
+  it("never streams from a model that does not declare streaming", async () => {
+    const { runner } = setup({ models: [textModel(streaming(["x"]))] });
+
+    expect(
+      await codeOf(runner.stream({ action: SUMMARY, input: { text: "x" } })),
+    ).toBe("AI_MODEL_INCOMPATIBLE");
+  });
+
   const readAll = async (stream: ReadableStream<string>) => {
     let text = "";
     const reader = stream.getReader();
@@ -650,7 +658,11 @@ describe("AiRunner.stream", () => {
 
   it("streams text and settles once the full answer is valid", async () => {
     const { ledger, runner } = setup({
-      models: [textModel(streaming(["Hello", ", world"]))],
+      models: [
+        textModel(streaming(["Hello", ", world"]), {
+          capabilities: ["text", "streaming"],
+        }),
+      ],
     });
 
     const { result, textStream } = await runner.stream({
@@ -668,7 +680,11 @@ describe("AiRunner.stream", () => {
 
   it("charges no points when the reader cancels, and still records the run", async () => {
     const { ledger, runner } = setup({
-      models: [textModel(streaming(["Hello", " there", " friend"]))],
+      models: [
+        textModel(streaming(["Hello", " there", " friend"]), {
+          capabilities: ["text", "streaming"],
+        }),
+      ],
     });
 
     const { result, textStream } = await runner.stream({

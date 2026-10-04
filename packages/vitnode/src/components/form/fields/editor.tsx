@@ -13,6 +13,7 @@ import {
   MultiLangSelect,
   useMultiLangField,
 } from "./multi-lang";
+import { MultiLangSelectedContext } from "./multi-lang-language";
 
 const hasHtmlText = (html: string): boolean => stripHtml(html) !== "";
 
@@ -69,14 +70,17 @@ const MultiLangEditor = ({
       </div>
 
       <FormControl>
-        <Editor
-          aria-labelledby={labelledBy}
-          key={selected}
-          onBlur={field.onBlur}
-          onChange={setValue}
-          value={currentValue}
-          {...props}
-        />
+        {/* Tells editor tools (Quick Ask) which language this text is in. */}
+        <MultiLangSelectedContext value={selected}>
+          <Editor
+            aria-labelledby={labelledBy}
+            key={selected}
+            onBlur={field.onBlur}
+            onChange={setValue}
+            value={currentValue}
+            {...props}
+          />
+        </MultiLangSelectedContext>
       </FormControl>
 
       {!!description && <AutoFormDesc>{description}</AutoFormDesc>}

@@ -60,6 +60,7 @@ const createApp = (
         ai: {
           models: [
             {
+              capabilities: ["text", "streaming"],
               id: "default",
               model,
               name: "Test",

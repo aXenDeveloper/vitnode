@@ -1,0 +1,65 @@
+---
+title: Future Ideas (not implemented)
+description: AI features VitNode might build on top of AI actions later - semantic related content, site answers with citations, discussion summaries, moderator help, bulk editorial workflows, a shared glossary - plus the known limitations of today's AI system. None of these ideas exist yet.
+icon: Lightbulb
+---
+
+<Callout type="warn" title="Nothing on this page is built">
+  These are ideas, not features. There is no code, no API, no setting and no
+  release date behind any of them. Do not plan a project around them - if you
+  need one today, build it as your own [AI action](/docs/dev/ai/actions).
+</Callout>
+
+Every idea below would reuse what already exists: [AI actions](/docs/dev/ai/actions) for permissions, limits and history, and [budgets](/docs/dev/ai/costs-and-limits) for cost control.
+
+## Ideas
+
+### Semantic related content and internal links
+
+Suggest related articles and internal links from embeddings of published content, so editors stop hunting for "that post we wrote last year". Suggestions only - a person would place every link.
+
+### Site answers with citations
+
+Answer a visitor's question from the site's own content, with a link to every source used. Retrieval would have to be **permission-aware**: an answer could only draw on content the asking user is allowed to read, so private or unpublished content never leaks into a public answer.
+
+### Discussion summaries
+
+Summarize a long comment thread or forum topic so a latecomer can catch up. A summary would link back to the posts it draws from and would never replace them.
+
+### Moderator assistance
+
+Help moderators triage reports: group similar reports, suggest which rule a post may break, draft a reply. A moderator would always make the decision - the AI would never hide, delete or ban on its own.
+
+### Bulk editorial workflows
+
+Run an action over many items at once - translate a category into a new language, write missing excerpts - as system work under the background jobs budget, with a review queue before anything is published.
+
+### Shared editorial glossary and style system
+
+One place for house style, preferred terms and words never to translate, used by every action's prompt. Today each action has its own **Editorial instructions** field in **AI → Actions**.
+
+## Known limitations of today's AI system
+
+These describe what _is_ built, and where it stops:
+
+- **Streams make one attempt.** A streamed run (Quick Ask) gets one attempt on the primary model - no retries, no fallback model. Non-streamed runs can retry (`maxRetries`) and try an admin-assigned fallback model.
+- **Reservations are conservative.** A run reserves its worst case up front - every retry, every step and the fallback model. A nearly spent budget can refuse a run whose real cost would have fit.
+- **No exactly-once for background work.** A process that crashes mid-call can cause one repeated provider call for automatic ALT text. See [Automatic Image ALT Text](/docs/dev/ai/automatic-alt#how-it-works).
+- **Automatic ALT text describes images in English first** and translates from there. It does not migrate legacy `metadata.alt` values.
+- **Gateway prices sync on demand.** **Sync gateway prices** runs only when an admin clicks it.
+- **The cron is required.** Lease recovery, cost reconciliation, history pruning and ALT text all run from VitNode's cron, which the host has to trigger - see [Running the cron](/docs/dev/ai/automatic-alt#running-the-cron).
+
+## Learn more
+
+<Cards>
+  <Card
+    title="AI Actions"
+    description="Build your own AI feature today"
+    href="/docs/dev/ai/actions"
+  />
+  <Card
+    title="AI Setup"
+    description="Configure models, capabilities and pricing"
+    href="/docs/dev/ai"
+  />
+</Cards>

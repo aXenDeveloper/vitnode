@@ -16,7 +16,13 @@ export const zodAiUserUsage = z.object({
     }),
   ),
   enabled: z.boolean(),
-  notice: z.enum(["exhausted", "near_limit", "none", "site_paused"]),
+  notice: z.enum([
+    "exhausted",
+    "near_limit",
+    "no_allowance",
+    "none",
+    "site_paused",
+  ]),
   points: z.object({
     available: z.string().nullable(),
     reserved: z.string(),

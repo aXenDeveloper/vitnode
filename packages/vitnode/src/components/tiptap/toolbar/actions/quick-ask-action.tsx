@@ -9,6 +9,10 @@ import type { QuickAskSnapshot } from "@/components/tiptap/quick-ask/quick-ask-e
 
 import { useAvailableAiActions } from "@/components/ai/use-available-ai-actions";
 import {
+  useMultiLangLanguage,
+  useMultiLangSelected,
+} from "@/components/form/fields/multi-lang-language";
+import {
   applyQuickAskResult,
   isQuickAskStale,
   takeQuickAskSnapshot,
@@ -61,7 +65,13 @@ const TONES = ["friendly", "formal", "confident", "neutral"] as const;
 export const QuickAskAction = () => {
   const t = useTranslations("core.ai_assist.quick_ask");
   const tError = useTranslations("core.ai_assist.error");
-  const locale = useLocale();
+  // The language of the text being edited - a multi-language field's tab -
+  // and only then the interface language.
+  const lockedLanguage = useMultiLangLanguage();
+  const selectedLanguage = useMultiLangSelected();
+  const contentLanguage = lockedLanguage ?? selectedLanguage;
+  const interfaceLocale = useLocale();
+  const locale = contentLanguage ?? interfaceLocale;
   const { editor } = useToolbarEditor();
   const scope = aiAssistScope();
   const { data: available = [] } = useAvailableAiActions(scope);
@@ -119,7 +129,7 @@ export const QuickAskAction = () => {
     if (!next) {
       abortRef.current?.abort();
       if (phase.kind === "result") {
-        void sendAiFeedback({ accepted: false, runId: phase.runId });
+        void sendAiFeedback({ accepted: false, runId: phase.runId, scope });
       }
       setPhase({ kind: "idle" });
       setOpen(false);
@@ -177,7 +187,7 @@ export const QuickAskAction = () => {
       to: snapshot.to,
     });
     if (!applied) return;
-    void sendAiFeedback({ accepted: true, runId: phase.runId });
+    void sendAiFeedback({ accepted: true, runId: phase.runId, scope });
     setPhase({ kind: "idle" });
     setOpen(false);
     toast.success(t("applied.title"), {

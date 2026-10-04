@@ -24,7 +24,7 @@ export interface AiUserUsage {
   actions: AiUserActionUsage[];
   /** `false` when an admin switched AI off for everyone. */
   enabled: boolean;
-  notice: "exhausted" | "near_limit" | "none" | "site_paused";
+  notice: "exhausted" | "near_limit" | "no_allowance" | "none" | "site_paused";
   points: {
     available: null | string;
     reserved: string;
@@ -148,6 +148,8 @@ export const loadUserAiUsage = async (
 
   let notice: AiUserUsage["notice"] = "none";
   if (sitePaused) notice = "site_paused";
+  // Never had points this period: not "used up" - there was nothing to use.
+  else if (total === 0n) notice = "no_allowance";
   else if (total !== null && available === 0n) notice = "exhausted";
   else if (
     total !== null &&

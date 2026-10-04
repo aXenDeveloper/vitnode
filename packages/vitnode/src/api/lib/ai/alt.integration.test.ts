@@ -374,4 +374,46 @@ describePostgres("automatic ALT (real PostgreSQL)", () => {
     const [settings] = await database.db.select().from(core_ai_settings);
     expect(settings.altScanCursor).toBe(0);
   });
+
+  it("records a configuration problem once instead of burning retries", async () => {
+    const fileId = await insertFile();
+    // A text-only model cannot read images: no retry will change that.
+    models = [{ ...models[0], capabilities: ["text"] }];
+
+    await expect(processAltForFile(context(), fileId)).resolves.toEqual({
+      written: [],
+    });
+    const [state] = await database.db
+      .select()
+      .from(core_files_alt_state)
+      .where(eq(core_files_alt_state.fileId, fileId));
+    expect(state).toMatchObject({
+      lastError: "AI_MODEL_INCOMPATIBLE",
+      status: "failed",
+    });
+    expect(calls.vision).toBe(0);
+  });
+
+  it("lets a recently failed file wait its back-off in the sweep", async () => {
+    await database.db.delete(core_queue);
+    await database.db.delete(core_files);
+    const failed = await insertFile();
+    const fresh = await insertFile();
+    await database.db.insert(core_files_alt_state).values({
+      fileId: failed,
+      lastError: "AI_PROVIDER_FAILED",
+      status: "failed",
+    });
+    await database.db
+      .update(core_ai_settings)
+      .set({ altBatchSize: 10, altScanCursor: 0 })
+      .where(eq(core_ai_settings.id, 1));
+
+    await detectMissingAlt(context());
+
+    const queued = (await database.db.select().from(core_queue)).map(
+      row => (row.payload as { fileId: number }).fileId,
+    );
+    expect(queued).toEqual([fresh]);
+  });
 });

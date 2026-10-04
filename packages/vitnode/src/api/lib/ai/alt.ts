@@ -175,6 +175,32 @@ export const detectMissingAlt = async (
     .orderBy(asc(core_files.id))
     .limit(ALT_SCAN_WINDOW);
 
+  const states =
+    files.length === 0
+      ? []
+      : await db
+          .select({
+            fileId: core_files_alt_state.fileId,
+            status: core_files_alt_state.status,
+            updatedAt: core_files_alt_state.updatedAt,
+          })
+          .from(core_files_alt_state)
+          .where(
+            inArray(
+              core_files_alt_state.fileId,
+              files.map(file => file.id),
+            ),
+          );
+  const backOff = new Set(
+    states
+      .filter(
+        state =>
+          (state.status === "failed" || state.status === "skipped") &&
+          Date.now() - state.updatedAt.getTime() < ALT_RETRY_AFTER_MS,
+      )
+      .map(state => state.fileId),
+  );
+
   const rows =
     files.length === 0
       ? []
@@ -198,6 +224,9 @@ export const detectMissingAlt = async (
   for (const file of files) {
     if (enqueued >= settings.altBatchSize) break;
     lastId = file.id;
+    // A file that just failed or was unreadable waits its back-off, so the
+    // sweep never spends the budget on the same broken file every hour.
+    if (backOff.has(file.id)) continue;
     const missing = missingAltLanguages(
       rows.filter(entry => entry.fileId === file.id),
       languages,
@@ -323,6 +352,15 @@ const deferForBudget = async (
 };
 
 const BUDGET_CODES = new Set(["AI_BUDGET_EXHAUSTED", "AI_DISABLED"]);
+const CONFIG_CODES = new Set([
+  "AI_ACTION_DISABLED",
+  "AI_MODEL_INCOMPATIBLE",
+  "AI_NOT_CONFIGURED",
+  "AI_PRICING_MISSING",
+]);
+
+/** Files that failed or could not be read are revisited at most this often. */
+export const ALT_RETRY_AFTER_MS = 24 * 3_600_000;
 
 /**
  * One image, end to end: check, read, describe once, translate into the
@@ -471,20 +509,19 @@ export const processAltForFile = async (
         await writeAiAlt(db, { fileId, fingerprint, languageCode, runId, text })
       ) {
         written.push(languageCode);
+        // Per language, as it lands: a later failure must not hide it.
+        await c
+          .get("events")
+          ?.emit("files.alt.updated", {
+            fileId,
+            languageCodes: [languageCode],
+            origin: "ai",
+          })
+          .catch(() => undefined);
       }
     }
 
     await setAltState(db, fileId, "completed");
-    if (written.length > 0) {
-      await c
-        .get("events")
-        ?.emit("files.alt.updated", {
-          fileId,
-          languageCodes: written,
-          origin: "ai",
-        })
-        .catch(() => undefined);
-    }
 
     return { written };
   } catch (error) {
@@ -492,6 +529,14 @@ export const processAltForFile = async (
       return await deferForBudget(db, fileId, settings);
     }
     if (error instanceof QueueDeferError) throw error;
+    // Configuration problems no retry can fix: record them and stop, instead
+    // of spending the queue's attempts. An admin fixes the setup; the sweep
+    // picks the file up again after its back-off.
+    if (isAiError(error) && CONFIG_CODES.has(error.code)) {
+      await setAltState(db, fileId, "failed", error.code);
+
+      return { written: [] };
+    }
     const message = isAiError(error) ? error.code : "ALT generation failed";
     await setAltState(db, fileId, "failed", message);
     throw error;

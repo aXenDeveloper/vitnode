@@ -1,0 +1,277 @@
+---
+title: Automatic Image ALT Text
+description: VitNode can describe uploaded images in the background and translate the ALT text into every site language - under a budget, never overwriting text a person wrote. How it works, how to render it, and how to run its cron.
+icon: Image
+---
+
+Automatic ALT text describes images in Core Files with a vision model, once per image, and translates that description into each site language. It runs in the background as the **system actor**, so it never spends a member's AI points. It is **off by default**.
+
+```tsx title="plugins/blog/src/pages/post-page.tsx"
+import { resolveImageAlt } from '@vitnode/core/lib/files/resolve-alt'
+
+;<img
+  alt={
+    resolveImageAlt({
+      alts: item.coverImage.alts, // the file's ALT per language
+      fallbackLocales: [defaultLocale],
+      locale,
+      occurrence: { alt: item.coverImageAlt }, // this article's own ALT
+    }).alt
+  }
+  src={item.coverImage.url}
+/>
+```
+
+## Turn it on
+
+<Steps>
+
+<Step>
+
+### Configure a vision model with pricing
+
+At least one model must declare `image-input` (the description) and `text` (the translations), and both need [pricing](/docs/dev/ai#model-pricing) - the feature always runs under a budget, and an unpriced model is refused with `AI_PRICING_MISSING`.
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+{
+  id: 'default',
+  name: 'GPT-4o Mini',
+  model: openai('gpt-4o-mini'),
+  capabilities: ['text', 'image-input', 'structured-output', 'streaming'], // [!code highlight]
+  pricing: { rates: { inputPerMillion: '0.15', outputPerMillion: '0.60' } },
+}
+```
+
+</Step>
+
+<Step>
+
+### Set a site budget
+
+In **AI → Settings → Budget**, set **Monthly site budget**. Automatic ALT cannot be switched on without one: the API answers `400` and the form shows _"Set a monthly site budget before turning on automatic ALT text."_ Optionally set **Background jobs budget** to cap system work separately - it counts inside the site budget.
+
+</Step>
+
+<Step>
+
+### Switch it on
+
+In **AI → Settings → ALT text**:
+
+- **Write ALT text automatically** - the switch.
+- **Languages** - comma-separated codes, e.g. `en, pl`. Empty means every language in `core_languages`.
+- **Images per batch** - how many images one hourly sweep queues (default `10`, max `100`).
+
+</Step>
+
+<Step>
+
+### Make sure the cron runs
+
+Nothing happens until the host runs VitNode's cron. See [Running the cron](#running-the-cron).
+
+</Step>
+
+</Steps>
+
+## How it works
+
+1. **Upload.** A new JPEG, PNG, GIF or WebP in `core_files` is queued right away when the feature is on. A failure to queue never fails the upload.
+2. **Sweep.** The `ai-alt-detect` cron (hourly) looks for images still missing ALT in a configured language and queues them.
+3. **Work.** The `ai-queue` cron (every minute) takes up to **2** queued images and describes them.
+4. **Describe once.** The image gets one base description in English, per file fingerprint.
+5. **Translate.** Each missing language gets a translation of that base description. English uses it as-is.
+6. **Write.** Each language is written to `core_files_alt` - only if no person wrote it and the file is still the same version.
+7. **Notify.** `files.alt.updated` is emitted with the languages that were written.
+
+### One description per image, translations per language
+
+The base description is stored in `core_files_alt_analysis`, keyed by the file and its **fingerprint** (SHA-256 of the stored bytes). When you add a language later, the sweep notices the gap and only the translation runs - the image is not sent to the vision model again.
+
+When a file's bytes change, its fingerprint changes. AI texts written for the old fingerprint count as missing, so the image is described again. The file ALT API marks such texts as `stale` until then.
+
+### People always win
+
+A row with `origin: "human"` is never overwritten - not by a new run, not by a retry, not after the file changes. That includes an **empty** human text: an empty string means "a person decided this image needs no description", which is different from no row at all.
+
+To let the job write a language again, delete that language's ALT row.
+
+### Per-file policy
+
+Each file has an `altPolicy`:
+
+| Policy      | Behavior                                                                 |
+| :---------- | :----------------------------------------------------------------------- |
+| `automatic` | Default. The job may describe the image.                                 |
+| `manual`    | The job skips it. People write ALT by hand.                              |
+| `disabled`  | The job skips it, and the file is never sent to an external AI provider. |
+
+The policy is checked again at write time, so a policy changed mid-run still wins.
+
+### The sweep
+
+The sweep walks `core_files` in id order from a stored cursor, at most 200 files per run, and queues up to **Images per batch** of them. When it reaches the end, it wraps to the start - so every image is revisited and a new language or a missed upload is always found again.
+
+Queuing is deduplicated: a file that is already pending or processing in the queue is not queued twice.
+
+### Budget waits are not failures
+
+When the site budget, the background jobs budget or the global switch stops a run, the task is **deferred**, not failed. It goes back to `pending` without spending a retry, with the file's state set to `waiting_budget`. It wakes at the start of the next budget month or in one hour, whichever comes first - so raising the budget mid-month resumes work within the hour.
+
+Other failures (provider error, invalid output, timeout) use the normal queue retries: 3 attempts, then the file's state is `failed`. The next sweep wrap queues it again.
+
+### Its own queue
+
+ALT tasks run on a dedicated `ai` queue. The general `process-queue` worker skips it, and `ai-queue` processes it under its own lock with a batch of 2 - a slow vision model never delays e-mails or other queue work.
+
+Each task has a 15-minute lease. A worker that dies mid-task leaves it `processing`; once the lease expires it goes back to `pending` (the attempt is spent), or to `failed` when no attempts are left. The AI run it started is settled as `uncertain` by `ai-maintenance` and charged at its reservation.
+
+<Callout type="warn" title="No exactly-once promise">
+  Results are saved as soon as they exist, and a retry reuses the stored base
+  description. A second worker waits while another one is describing the same
+  image version. But a process that crashes mid-call can still cause one
+  repeated provider call - at most the call that was in flight.
+</Callout>
+
+### Image bytes stay private
+
+The job reads the image **server-side** and sends bytes to the provider, never a URL:
+
+- through the storage adapter's optional `read(key, { maxBytes })` method (the Local adapter has one);
+- otherwise by a bounded server-side `fetch()` of the adapter's URL.
+
+Files over 20 MB are skipped. With `sharp` installed, the copy sent to the provider is resized to at most 1024 px and re-encoded as WebP. A private file never has to be made public for the AI provider.
+
+## Render the ALT text
+
+Content Engine file descriptors carry the file's ALT as `alts` - a map of language code to text - for images that have any:
+
+```ts
+{
+  id: 42,
+  name: 'bike.jpg',
+  url: 'https://example.com/uploads/bike.jpg',
+  mimeType: 'image/jpeg',
+  alts: { en: 'A red bicycle leaning on a brick wall', pl: 'Czerwony rower oparty o ceglaną ścianę' },
+  // ...
+}
+```
+
+`resolveImageAlt()` from `@vitnode/core/lib/files/resolve-alt` picks the text for one place the image appears, in this order:
+
+| Order | Source                       | Result                                                       |
+| :---- | :--------------------------- | :----------------------------------------------------------- |
+| 1     | `occurrence.decorative`      | `""` - screen readers skip the image. `source: "decorative"` |
+| 2     | `occurrence.alt` (non-empty) | That text. `source: "occurrence"`                            |
+| 3     | `alts[locale]`               | The file's ALT, even an intentional `""`. `source: "file"`   |
+| 4     | `alts[fallbackLocale]`       | First match in `fallbackLocales`. `source: "fallback"`       |
+| 5     | Nothing                      | `""` with `source: "missing"` - flag it to editors           |
+
+The article's own ALT text always wins over the file's default. The blog's post page (`plugins/blog/src/pages/post-page.tsx`) is a complete example.
+
+## Running the cron
+
+ALT text depends on three cron jobs registered by `@vitnode/core`:
+
+| Job              | Schedule       | Does                                                 |
+| :--------------- | :------------- | :--------------------------------------------------- |
+| `ai-queue`       | `* * * * *`    | Works the `ai` queue, 2 tasks per run.               |
+| `ai-alt-detect`  | `0 * * * *`    | The sweep: queues images missing ALT text.           |
+| `ai-maintenance` | `*/10 * * * *` | Settles dead runs, reconciles costs, prunes history. |
+
+Registering a cron job does not run it. The host must call VitNode's cron endpoint - pick one:
+
+**In-process.** On a long-running server, register the Node CRON adapter. It calls the endpoint every minute:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { NodeCronAdapter } from '@vitnode/node-cron'
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  cron: NodeCronAdapter(), // [!code ++]
+  // ...
+})
+```
+
+**External scheduler.** On serverless hosting nothing stays alive to hold a timer, so an external scheduler must call the endpoint - ideally once a minute:
+
+```bash
+curl -X POST https://example.com/api/@vitnode/core/cron \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Set a real `CRON_SECRET`. Each call runs every job whose schedule came due since its last run, so a slower tick still runs the hourly sweep - it just works the queue less often (2 images per tick). Check **Last Run** at `/admin/core/advanced/cron`. See [Cron over REST](/docs/dev/cron/rest-api) and [Node CRON adapter](/docs/dev/cron/node-cron).
+
+## Edit ALT text through the API
+
+The file ALT routes live in the `admin/files` module and use the `files` staff permissions:
+
+| Route                              | Permission           | Purpose                                                                |
+| :--------------------------------- | :------------------- | :--------------------------------------------------------------------- |
+| `GET /admin/files/{id}/alt`        | `files:can_view`     | ALT per site language, with `origin` and `stale`.                      |
+| `PUT /admin/files/{id}/alt`        | `files:can_edit_alt` | Set one language as a human text (`""` allowed).                       |
+| `DELETE /admin/files/{id}/alt`     | `files:can_edit_alt` | Remove one language (`?languageCode=`), so the job may write it again. |
+| `PUT /admin/files/{id}/alt-policy` | `files:can_edit_alt` | Set `automatic`, `manual` or `disabled`.                               |
+| `GET /admin/ai/alt`                | `ai:can_view`        | Progress: pending, completed, failed, skipped, waiting budget.         |
+| `POST /admin/ai/alt/sweep`         | `ai:can_manage`      | Run the sweep now instead of waiting for the hour.                     |
+
+```ts
+await fetcher({
+  plugin: '@vitnode/core',
+  method: 'put',
+  module: 'admin/files',
+  path: '/{id}/alt',
+  args: {
+    params: { id: 42 },
+    body: { languageCode: 'pl', text: 'Czerwony rower' },
+  },
+})
+```
+
+## React to new ALT text
+
+`files.alt.updated` fires when a file's default ALT is written - by the job (`origin: "ai"`) or by a person (`origin: "human"`):
+
+```ts title="plugins/gallery/src/api/lib/events.ts"
+import { buildEventListener } from '@vitnode/core/api/lib/events'
+
+export const altUpdatedListener = buildEventListener({
+  event: 'files.alt.updated',
+  name: 'refresh-gallery-alt',
+  handler: async (c, { fileId, languageCodes, origin }) => {
+    await c
+      .get('log')
+      .info(`ALT for file ${fileId} (${languageCodes.join(', ')}) by ${origin}`)
+  },
+})
+```
+
+See [Built-in events](/docs/dev/events/built-in-events#ai-events).
+
+## Limits and gotchas
+
+- **Images only:** `image/jpeg`, `image/png`, `image/gif` and `image/webp`. Other files are never analysed.
+- **Base language is English.** Other languages are translations of the English description.
+- **Legacy `metadata.alt` is not migrated.** An ALT a plugin stored in the free-form `core_files.metadata` column has no language, and VitNode does not guess one. The job treats those images as missing ALT text. Copy such values into `core_files_alt` yourself with `PUT /admin/files/{id}/alt` if you know their language.
+- **Cost:** see the **Automatic ALT text** card on **AI → Overview** for images described, translations and the known cost per image and per translation.
+
+## Learn more
+
+<Cards>
+  <Card
+    title="AdminCP & Account Usage"
+    description="Budgets, settings and the AI overview"
+    href="/docs/dev/ai/admin"
+  />
+  <Card
+    title="Costs, Points & Budgets"
+    description="System budget, reservations and who pays what"
+    href="/docs/dev/ai/costs-and-limits"
+  />
+  <Card
+    title="Background Queues"
+    description="Queue tasks, retries and leases"
+    href="/docs/dev/advanced/queue"
+  />
+</Cards>

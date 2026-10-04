@@ -126,11 +126,20 @@ export const updateFileAltAdminRoute = buildRoute({
     const { id } = c.req.valid("param");
     const { languageCode, text } = c.req.valid("json");
     const db = c.get("db");
-    const [file] = await db
-      .select({ fingerprint: core_files.fingerprint })
-      .from(core_files)
-      .where(eq(core_files.id, id));
+    const [[file], [language]] = await Promise.all([
+      db
+        .select({ fingerprint: core_files.fingerprint })
+        .from(core_files)
+        .where(eq(core_files.id, id)),
+      db
+        .select({ code: core_languages.code })
+        .from(core_languages)
+        .where(eq(core_languages.code, languageCode)),
+    ]);
     if (!file) throw new HTTPException(404, { message: "File not found" });
+    if (!language) {
+      throw new HTTPException(404, { message: "Unknown language" });
+    }
 
     const values = {
       fileFingerprint: file.fingerprint,
@@ -183,7 +192,7 @@ export const deleteFileAltAdminRoute = buildRoute({
   handler: async c => {
     const { id } = c.req.valid("param");
     const { languageCode } = c.req.valid("query");
-    await c
+    const removed = await c
       .get("db")
       .delete(core_files_alt)
       .where(
@@ -191,7 +200,18 @@ export const deleteFileAltAdminRoute = buildRoute({
           eq(core_files_alt.fileId, id),
           eq(core_files_alt.languageCode, languageCode),
         ),
-      );
+      )
+      .returning({ origin: core_files_alt.origin });
+    if (removed.length > 0) {
+      await c
+        .get("events")
+        .emit("files.alt.updated", {
+          fileId: id,
+          languageCodes: [languageCode],
+          origin: removed[0].origin,
+        })
+        .catch(() => undefined);
+    }
 
     return c.json({ ok: true as const }, 200);
   },

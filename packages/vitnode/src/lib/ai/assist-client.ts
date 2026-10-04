@@ -9,6 +9,7 @@ export const AI_CLIENT_ERROR_CODES = [
   "AI_CONCURRENCY_LIMITED",
   "AI_DAILY_LIMIT_REACHED",
   "AI_DISABLED",
+  "AI_DUPLICATE_REQUEST",
   "AI_INPUT_TOO_LARGE",
   "AI_INVALID_INPUT",
   "AI_INVALID_OUTPUT",
@@ -94,19 +95,34 @@ export const requestAiAssist = async ({
 export const sendAiFeedback = async ({
   accepted,
   runId,
+  scope = "admin",
 }: {
   accepted: boolean;
   runId: number;
+  /** The session the run belongs to - AdminCP or the public site. */
+  scope?: "admin" | "user";
 }): Promise<void> => {
   try {
-    await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
-      args: { body: { accepted }, params: { id: runId } },
-      method: "post",
-      module: "admin/ai",
-      options: { credentials: "include" },
-      path: "/assist/runs/{id}/feedback",
-    });
+    const args = { body: { accepted }, params: { id: runId } };
+    if (scope === "admin") {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        args,
+        method: "post",
+        module: "admin/ai",
+        options: { credentials: "include" },
+        path: "/assist/runs/{id}/feedback",
+      });
+    } else {
+      await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        args,
+        method: "post",
+        module: "ai",
+        options: { credentials: "include" },
+        path: "/runs/{id}/feedback",
+      });
+    }
   } catch {
     /* tracking only */
   }

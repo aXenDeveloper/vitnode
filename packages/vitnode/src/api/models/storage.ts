@@ -90,7 +90,10 @@ export interface StorageApiPlugin {
    * `maxBytes` (`null`). Optional: without it the object is fetched from its
    * server-reachable URL - the URL itself is never handed to anyone else.
    */
-  read?: (key: string, options: { maxBytes: number }) => Promise<Buffer | null>;
+  read?: (
+    key: string,
+    options: { maxBytes: number },
+  ) => Promise<null | Uint8Array>;
   static?: StorageStaticConfig;
   upload: (args: StorageUploadArgs) => Promise<StorageUploadResult>;
 }
@@ -434,7 +437,11 @@ export class StorageModel {
    */
   async readBytes(key: string, maxBytes: number): Promise<Buffer | null> {
     const provider = this.requireProvider();
-    if (provider.read) return await provider.read(key, { maxBytes });
+    if (provider.read) {
+      const bytes = await provider.read(key, { maxBytes });
+
+      return bytes && bytes.byteLength <= maxBytes ? Buffer.from(bytes) : null;
+    }
 
     const response = await fetch(provider.getUrl(key));
     if (!response.ok || !response.body) return null;

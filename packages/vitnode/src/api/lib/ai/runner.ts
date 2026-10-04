@@ -24,6 +24,7 @@ import type {
   AiResourceRef,
   AnyAiActionDefinition,
 } from "./action";
+import type { AiModelCapability } from "./capabilities";
 import type { Decimal } from "./decimal";
 import type { AiErrorCode } from "./errors";
 import type {
@@ -521,6 +522,7 @@ export class AiRunner {
   private async prepare(
     request: AiRunRequest,
     actor: Actor,
+    { streaming = false }: { streaming?: boolean } = {},
   ): Promise<ExecutionPlan> {
     const action = this.registry.find(request.action);
     if (!action) {
@@ -604,16 +606,20 @@ export class AiRunner {
       );
     }
 
+    // Streaming is a declared capability like any other: a model whose entry
+    // does not say it streams is never asked to.
+    const required: readonly AiModelCapability[] = streaming
+      ? [...definition.requiredCapabilities, "streaming"]
+      : definition.requiredCapabilities;
     const primary = await this.resolveModel(
-      definition,
+      required,
       actionSettings?.modelId ?? null,
     );
     // An incompatible or removed fallback is skipped, never used blindly.
     const fallback = actionSettings?.fallbackModelId
-      ? await this.resolveModel(
-          definition,
-          actionSettings.fallbackModelId,
-        ).catch(() => null)
+      ? await this.resolveModel(required, actionSettings.fallbackModelId).catch(
+          () => null,
+        )
       : null;
 
     const prompt = definition.buildPrompt(input, {
@@ -736,7 +742,7 @@ export class AiRunner {
   }
 
   private async resolveModel(
-    definition: AnyAiActionDefinition,
+    requiredCapabilities: readonly AiModelCapability[],
     modelId: null | string,
   ): Promise<ResolvedModel> {
     const capabilitiesOf = (entry: AIModelDefinition) =>
@@ -746,21 +752,19 @@ export class AiRunner {
       ? this.models.find(model => model.id === modelId)
       : this.models.find(
           model =>
-            missingCapabilities(
-              definition.requiredCapabilities,
-              capabilitiesOf(model),
-            ).length === 0,
+            missingCapabilities(requiredCapabilities, capabilitiesOf(model))
+              .length === 0,
         );
     if (!entry) {
       throw new AiError(
         "AI_MODEL_INCOMPATIBLE",
         modelId
           ? `AI model "${modelId}" is not configured.`
-          : `No configured AI model has the capabilities this action needs: ${definition.requiredCapabilities.join(", ")}.`,
+          : `No configured AI model has the capabilities this action needs: ${requiredCapabilities.join(", ")}.`,
       );
     }
     const missing = missingCapabilities(
-      definition.requiredCapabilities,
+      requiredCapabilities,
       capabilitiesOf(entry),
     );
     if (missing.length > 0) {
@@ -1057,7 +1061,9 @@ export class AiRunner {
 
   /** Streams a text action for the signed-in user. */
   async stream(request: AiRunRequest): Promise<AiStreamResult<unknown>> {
-    const plan = await this.prepare(request, this.currentUser());
+    const plan = await this.prepare(request, this.currentUser(), {
+      streaming: true,
+    });
     if (plan.action.definition.output !== "text") {
       throw new AiError(
         "AI_INVALID_INPUT",

@@ -4,7 +4,7 @@ description: Declare recurring background jobs in VitNode plugins and execute th
 icon: Clock
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 A cron job in VitNode consists of a named handler and a standard 5-field cron expression. Cron definitions are automatically registered in the `core_cron` database table and manageable through the AdminCP.
 
@@ -15,14 +15,14 @@ A cron job in VitNode consists of a named handler and a standard 5-field cron ex
 Create a cron definition in your plugin:
 
 ```ts title="plugins/blog/src/api/cron/cleanup.cron.ts"
-import { buildCron } from "@vitnode/core/api/lib/cron"
+import { buildCron } from '@vitnode/core/api/lib/cron'
 
 export const cleanupCron = buildCron({
-  name: "cleanup-drafts",
-  description: "Remove expired post drafts every midnight",
-  schedule: "0 0 * * *", // Standard cron syntax
+  name: 'cleanup-drafts',
+  description: 'Remove expired post drafts every midnight',
+  schedule: '0 0 * * *', // Standard cron syntax
   handler: async (c) => {
-    await c.get("log").info("Running midnight cleanup...")
+    await c.get('log').info('Running midnight cleanup...')
   },
 })
 ```
@@ -34,11 +34,11 @@ export const cleanupCron = buildCron({
 Attach the cron job to a module in `src/api/modules/`:
 
 ```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module"
-import { cleanupCron } from "../../cron/cleanup.cron"
+import { buildModule } from '@vitnode/core/api/lib/module'
+import { cleanupCron } from '../../cron/cleanup.cron'
 
 export const postsModule = buildModule({
-  name: "posts",
+  name: 'posts',
   routes: [listPostsRoute],
   cronJobs: [cleanupCron], // [!code ++]
 })
@@ -57,13 +57,11 @@ VitNode does not hold persistent timers in the HTTP worker. Instead, jobs are tr
 Best for single-instance or local development. Configure in `vitnode.api.config.ts`:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
+import { NodeCronAdapter } from '@vitnode/node-cron'
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
-  cron: {
-    adapter: NodeCronAdapter(), // [!code ++]
-  },
+  cron: NodeCronAdapter(), // [!code ++]
 })
 ```
 
@@ -82,6 +80,7 @@ curl -X POST https://your-domain.com/api/@vitnode/core/cron   -H "Authorization:
 {/* Image prompt: VitNode AdminCP Cron management page at /admin/core/advanced/cron. Data table displaying scheduled jobs with columns: Name, Schedule, Status, Last Run, Next Run, and an action button "Run Now". Dark theme, 1440x900. */}
 
 Manage and inspect cron jobs in the AdminCP at **Core → Advanced → Cron Jobs** (`/admin/core/advanced/cron`):
+
 - View status, schedules, and last execution logs.
 - Click **Run Now** to execute any job manually on demand.
 
@@ -110,23 +109,24 @@ The same check powers the **Cron Jobs** and **Queue Tasks** cards at **Core → 
 <TypeTable
   type={{
     name: {
-      description: "Unique identifier within the plugin (e.g. 'cleanup-drafts').",
+      description:
+        "Unique identifier within the plugin (e.g. 'cleanup-drafts').",
       required: true,
-      type: "string",
+      type: 'string',
     },
     schedule: {
-      description: "Standard 5-part cron pattern (minute hour dom month dow).",
+      description: 'Standard 5-part cron pattern (minute hour dom month dow).',
       required: true,
-      type: "string",
+      type: 'string',
     },
     handler: {
-      description: "Async function executed when the job is triggered.",
+      description: 'Async function executed when the job is triggered.',
       required: true,
-      type: "(c: Context) => Promise<void>",
+      type: '(c: Context) => Promise<void>',
     },
     description: {
-      description: "Human-readable purpose shown in AdminCP list.",
-      type: "string",
+      description: 'Human-readable purpose shown in AdminCP list.',
+      type: 'string',
     },
   }}
 />

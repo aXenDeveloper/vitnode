@@ -1,0 +1,241 @@
+---
+title: AdminCP & Account Usage
+description: Manage AI in the VitNode AdminCP - the global switch, monthly budgets in USD, model pricing, per-action settings, role access, history - and how members see their AI points at /settings/ai.
+icon: LayoutDashboard
+---
+
+The AdminCP **AI** section (`/admin/core/ai`) is where admins decide how much the site may spend on AI, which models run which features, and who may use them. Members see their own allowance at **Settings → AI usage** (`/settings/ai`).
+
+| Page             | URL                       | What it is for                                             |
+| :--------------- | :------------------------ | :--------------------------------------------------------- |
+| Overview         | `/admin/core/ai`          | This month's spend, budget, cost coverage and breakdowns.  |
+| Models & pricing | `/admin/core/ai/models`   | Configured models, their capabilities and their price.     |
+| Actions          | `/admin/core/ai/actions`  | Every registered AI feature: switch, model, limits, test.  |
+| Access & limits  | `/admin/core/ai/access`   | Role permissions, monthly points and user exceptions.      |
+| History          | `/admin/core/ai/history`  | Every run: who, which model, tokens and cost.              |
+| Settings         | `/admin/core/ai/settings` | Global switch, budgets, rate limits, retention, ALT text.  |
+| AI usage         | `/settings/ai` (member)   | A member's own points, daily limits and recent operations. |
+
+## First-time setup
+
+Models come from code - see [AI Setup](/docs/dev/ai). Everything after that happens in the AdminCP.
+
+<Steps>
+
+<Step>
+
+### Set a monthly site budget
+
+Open **AI → Settings → Budget** and set **Monthly site budget** in USD. Without it, nothing caps what the whole site spends. Automatic ALT text refuses to turn on until a budget exists.
+
+</Step>
+
+<Step>
+
+### Check model capabilities and pricing
+
+Open **AI → Models & pricing**. Every model should show a price. A model with **No price** makes every run's cost unknown, and under a budget cap it is refused with `AI_PRICING_MISSING`. For AI Gateway models, click **Sync gateway prices**; for direct connections, add `pricing` in config or set a manual price.
+
+</Step>
+
+<Step>
+
+### Grant roles access and points
+
+Open **AI → Access & limits → Roles → Edit access**. Give the role a monthly allowance (or **Unlimited points**) and allow the features it should use. The default monthly points are `0`, so only root roles can run priced features until you do this.
+
+</Step>
+
+<Step>
+
+### Optionally turn on automatic ALT text
+
+Open **AI → Settings → ALT text** and switch on **Write ALT text automatically**. You need a vision model (`image-input`) with pricing and a running cron - see [Automatic Image ALT Text](/docs/dev/ai/automatic-alt).
+
+</Step>
+
+</Steps>
+
+## Staff permissions
+
+The AI screens use two staff permissions in the `ai` module of `@vitnode/core`. Grant them in **Staff → Administrators** like any other [staff permission](/docs/dev/working-with-users/staff-permissions).
+
+| Permission      | Allows                                                                                                                                                     |
+| :-------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai:can_view`   | Open every AI page, read overview, models, actions, access, history and ALT progress.                                                                      |
+| `ai:can_manage` | Change settings, prices, action settings, role access and user exceptions; run **Sync gateway prices**, test runs and an ALT sweep. Depends on `can_view`. |
+
+Without `can_manage`, the pages are read-only: forms are disabled and write buttons are hidden.
+
+<Callout type="info" title="Staff permissions are not AI permissions">
+  `ai:can_manage` lets an admin _configure_ AI. Whether that admin may _use_ a
+  feature - an excerpt button, Quick Ask - is decided by their roles on **Access
+  & limits**, like for everyone else.
+</Callout>
+
+## Settings
+
+**AI → Settings** holds the rules every run follows. Changes apply from the next run.
+
+| Setting                  | Default    | Meaning                                                                              |
+| :----------------------- | :--------- | :----------------------------------------------------------------------------------- |
+| AI features              | On         | The global switch. Off refuses every new run - members and background jobs alike.    |
+| Monthly site budget      | No limit   | USD the whole site may spend per month. When it runs out, every AI feature pauses.   |
+| Background jobs budget   | No limit   | An extra USD cap for system work such as ALT text. It counts inside the site budget. |
+| Default monthly points   | `0`        | A member's allowance when no role gives more. 1 point = 0.001 USD.                   |
+| Requests per minute      | `10`       | Runs one member may start per minute.                                                |
+| Parallel runs per member | `2`        | Runs one member may have in flight.                                                  |
+| Parallel background runs | `2`        | System runs in flight across the site.                                               |
+| Keep history for         | `365` days | How long run records are kept (7 – 3,650).                                           |
+
+Budgets and allowances are calendar months in the **site's time zone** (the default language's). The settings page shows which one.
+
+Budgets are in **USD**, because that is what providers bill. Members are charged in **AI points**. [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits) explains the conversion and what happens on failure.
+
+## Models & pricing
+
+Each card shows a configured model: its provider, its declared capabilities (Text, Image input, Structured output, Streaming) and its effective price per one million tokens.
+
+The price badge tells you where the price comes from:
+
+| Badge           | Source   | Set by                                                                            |
+| :-------------- | :------- | :-------------------------------------------------------------------------------- |
+| From config     | `config` | `pricing` on the model in `vitnode.api.config.ts`.                                |
+| From AI Gateway | `sync`   | **Sync gateway prices** - the AI Gateway's published price list.                  |
+| Manual override | `manual` | **Edit price** in the AdminCP. Replaces the catalog price until you **Reset** it. |
+| No price        | -        | Nothing. Costs are unknown and charged at their reservation, never shown as `$0`. |
+
+**Sync gateway prices** copies prices onto **AI Gateway models only** - models configured with a string id such as `'anthropic/claude-sonnet-5'`. A direct provider connection is never priced from the gateway catalog. The sync runs only when an admin clicks the button; there is no scheduled sync.
+
+Every price change is a new version. Runs already charged keep the price they were charged at.
+
+## Actions
+
+**AI → Actions** lists every [AI action](/docs/dev/ai/actions) installed plugins register, with its canonical key, who runs it (Members or Background jobs), its compatible models and its daily limit. **Configure** opens:
+
+- **Enabled** - a disabled action refuses to run for anyone.
+- **Model** and **Fallback model** - only models with every capability the action needs are listed. **Site default** is the first compatible model.
+- **Editorial instructions** - up to 2,000 characters appended to the prompt, e.g. house style.
+- **Limits** - runs per member per day, max input characters, max output tokens, retries, steps and timeout. Each one can fall back to the plugin's default.
+
+An action whose **Compatible models** says _None_ cannot run until a model with the right capabilities is configured.
+
+### Test runs are real runs
+
+**Test** sends a JSON input to an action, exactly as a plugin would. It is shown only for actions members can run.
+
+<Callout type="warn" title="A test run is billed">
+  A test goes through the same permission, limits and accounting as any other
+  run. It is charged to the site budget and to **your own** AI points, and it
+  appears in History. Your role needs the action's permission and an allowance -
+  or be root.
+</Callout>
+
+## Access & limits
+
+A member's run must pass four separate controls. They answer different questions, so check the right one when somebody is refused:
+
+| Control        | Question                                   | Where                                   | Error when refused       |
+| :------------- | :----------------------------------------- | :-------------------------------------- | :----------------------- |
+| Permission     | May this role use this feature at all?     | Roles → Features                        | `AI_UNAUTHORIZED`        |
+| Monthly points | How much may this member spend this month? | Roles → Allowance, or a user exception  | `AI_USER_LIMIT_REACHED`  |
+| Daily count    | How often may this feature run per day?    | Roles → Features, or the action's limit | `AI_DAILY_LIMIT_REACHED` |
+| Site spending  | Can the whole site still afford it?        | Settings → Monthly site budget          | `AI_BUDGET_EXHAUSTED`    |
+
+The permission does not replace content access. An excerpt action still checks that the admin may edit the article.
+
+### Roles
+
+**Edit access** on a role sets:
+
+- **Allowance** - monthly points, **Unlimited points**, or the site default.
+- **Features** - per permission: _Default_, _Allow_ or _Deny_, plus an optional daily limit.
+
+A member with several roles gets the **largest** allowance (never the sum), the broadest permissions and the largest daily limit. Root roles always have access and no point cap - the site budget still applies to them.
+
+### User exceptions
+
+**Add exception** gives one member their own rule, ahead of their roles: **Block AI features**, **Unlimited points**, or a personal monthly allowance. It replaces what their roles give until you remove it.
+
+## History
+
+**AI → History** lists every run with its action, status, origin (Members or Background jobs), model, cost and points. Filter by status, origin, action or model. **Details** shows:
+
+- tokens in and out, cost, cost source and what was charged or reserved;
+- every provider call - retries and fallbacks are separate calls;
+- cost corrections made by reconciliation;
+- whether an editor accepted the suggestion (tracking only, never billing).
+
+<Callout type="info" title="Prompts and outputs are never stored">
+  History records what a run took and what it cost - never the prompt, the input
+  text or the generated text. The same is true on the member's page.
+</Callout>
+
+Run statuses: `reserved`, `running`, `succeeded`, `failed`, `canceled` and `uncertain` (the process died mid-call; the maintenance cron settles it). History older than **Keep history for** is pruned by the `ai-maintenance` cron.
+
+## Overview
+
+**AI → Overview** shows this month or last month:
+
+- **Charged to the budget** - spent of the limit, what is left, and what is reserved for runs in progress.
+- **Operations**, failure rate, average cost per operation and tokens.
+- **How sure are these numbers?** - the share of runs whose cost was provider-reported, estimated or unknown. Unknown costs are charged at their reservation and left out of averages.
+- **Automatic ALT text** - images described, translations, and the known cost per image and per translation.
+- **Where it goes** - spend by action, by model and by origin.
+
+## Member page: /settings/ai
+
+Every signed-in member has **Settings → AI usage**. It reads only the member's own data:
+
+- **Monthly allowance** - points used of the total, available, reserved for runs in progress, and the reset date. Unused points do not roll over.
+- **Daily limits per feature** - how many runs of each feature they used today, for the features they may use.
+- **Recent operations** - their own runs with status and points. Prompts and generated text are never stored.
+
+A notice at the top explains why AI may not be working, checked in this order:
+
+| Notice                       | When                                                                             |
+| :--------------------------- | :------------------------------------------------------------------------------- |
+| AI features are switched off | The global switch is off.                                                        |
+| AI features are paused       | The site budget is used up. The message says it is _not_ the member's allowance. |
+| You've used all your points  | The member's allowance is used up. Shows the reset date.                         |
+| Over 80% used                | Used plus reserved points reached 80% of the allowance.                          |
+
+## API routes
+
+Every screen is backed by an API route under `@vitnode/core`. Use them with [`fetcher`](/docs/dev/fetcher), e.g. `fetcher({ plugin: '@vitnode/core', method: 'get', module: 'admin/ai', path: '/overview' })`.
+
+| Route                                         | Staff permission | Purpose                                |
+| :-------------------------------------------- | :--------------- | :------------------------------------- |
+| `GET /admin/ai/overview`                      | `ai:can_view`    | Overview numbers                       |
+| `GET /admin/ai/settings`, `PUT …/settings`    | view / manage    | Site-wide settings                     |
+| `GET /admin/ai/models`                        | `ai:can_view`    | Models, capabilities, pricing          |
+| `PUT`, `DELETE /admin/ai/models/pricing`      | `ai:can_manage`  | Set or remove a manual price           |
+| `POST /admin/ai/models/sync-pricing`          | `ai:can_manage`  | Sync AI Gateway prices                 |
+| `GET /admin/ai/actions`, `PUT …/actions`      | view / manage    | Action list and per-action settings    |
+| `POST /admin/ai/actions/test`                 | `ai:can_manage`  | Billed test run                        |
+| `GET /admin/ai/access`                        | `ai:can_view`    | Roles, policies and user exceptions    |
+| `PUT /admin/ai/access/roles`                  | `ai:can_manage`  | A role's allowance and permissions     |
+| `PUT`, `DELETE /admin/ai/access/users`        | `ai:can_manage`  | A user exception                       |
+| `GET /admin/ai/history`, `GET …/history/{id}` | `ai:can_view`    | Runs and one run's details             |
+| `GET /ai/usage`                               | signed in        | The member's own allowance and notices |
+| `GET /ai/history`                             | signed in        | The member's own recent runs           |
+
+## Learn more
+
+<Cards>
+  <Card
+    title="Costs, Points & Budgets"
+    description="How runs are priced, reserved and charged"
+    href="/docs/dev/ai/costs-and-limits"
+  />
+  <Card
+    title="Automatic Image ALT Text"
+    description="Background ALT text in every site language"
+    href="/docs/dev/ai/automatic-alt"
+  />
+  <Card
+    title="AI Actions"
+    description="Define the features that appear on the Actions page"
+    href="/docs/dev/ai/actions"
+  />
+</Cards>

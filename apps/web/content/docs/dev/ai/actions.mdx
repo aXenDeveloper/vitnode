@@ -239,7 +239,7 @@ export const TOPIC_TAGS_AI_ACTION = aiActionRef(
 
 ### Images
 
-For a vision action, require `image-input` and pass images as message parts:
+For a vision action, require `image-input` and pass the image **bytes** as a `file` part - read them server-side (for example with `c.get("storage").readBytes(key, maxBytes)`), so no private file ever has to be made public for the provider:
 
 ```ts
 buildPrompt: (input) => ({
@@ -248,7 +248,7 @@ buildPrompt: (input) => ({
       role: 'user',
       content: [
         { type: 'text', text: 'Describe this image in one sentence.' },
-        { type: 'image', image: new URL(input.imageUrl) },
+        { type: 'file', data: input.image, mediaType: input.mediaType },
       ],
     },
   ],
