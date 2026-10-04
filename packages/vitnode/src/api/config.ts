@@ -152,6 +152,7 @@ export function VitNodeAPI({
       content: vitNodeApiConfig.content,
       cron: vitNodeApiConfig.cron,
       events: vitNodeApiConfig.events,
+      notifications: vitNodeApiConfig.notifications,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,
       users: vitNodeApiConfig.users,

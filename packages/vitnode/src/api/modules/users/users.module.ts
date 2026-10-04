@@ -15,6 +15,7 @@ import { sessionRoute } from "./routes/session.route";
 import { signInRoute } from "./routes/sign-in.route";
 import { signOutRoute } from "./routes/sign-out.route";
 import { signUpRoute } from "./routes/sign-up.route";
+import { updateMyTimeZoneRoute } from "./routes/time-zone.route";
 import { updateMeRoute } from "./routes/update-me.route";
 import { ssoUserModule } from "./sso/sso.module";
 
@@ -34,6 +35,7 @@ export const usersModule = buildModule({
     profileRoute,
     mePolicyRoute,
     updateMeRoute,
+    updateMyTimeZoneRoute,
   ],
   modules: [
     ssoUserModule,

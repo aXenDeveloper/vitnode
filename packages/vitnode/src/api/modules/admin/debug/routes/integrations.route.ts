@@ -1,11 +1,10 @@
 import { inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { loadCronHealth } from "@/api/modules/cron/helpers/load-cron-health";
 import { CONFIG_PLUGIN } from "@/config";
-import { core_cron } from "@/database/cron";
 import { core_queue } from "@/database/queue";
 import { getQueueStatus } from "@/lib/api/get-queue-status";
-import { isCronStale } from "@/lib/api/is-cron-stale";
 import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
 
@@ -54,12 +53,10 @@ export const integrationsDebugAdminRoute = buildRoute({
                 // ISO timestamp of the most recent cron execution, or `null`
                 // when no job has run yet.
                 lastRun: z.string().nullable(),
+                overdueJobs: z.number(),
                 // `false` when `CRON_SECRET` is left at its well-known default,
                 // which leaves the cron endpoint effectively unauthenticated.
                 secure: z.boolean(),
-                // `true` when no job has run within the staleness window, i.e.
-                // the scheduler looks misconfigured or stopped even though jobs
-                // are registered.
                 stale: z.boolean(),
               }),
               email: z.object({
@@ -122,30 +119,14 @@ export const integrationsDebugAdminRoute = buildRoute({
     const queueProcessing =
       queueGrouped.find(row => row.status === "processing")?.count ?? 0;
 
-    // Freshest cron heartbeat: a job's last successful run, or its creation
-    // time while it's never run so a brand-new install isn't flagged stale
-    // during the grace period before the first tick.
-    const [cronActivity] = await c
-      .get("db")
-      .select({
-        lastRun: sql<Date | null>`max(${core_cron.lastRun})`,
-        lastActivity: sql<Date | null>`max(coalesce(${core_cron.lastRun}, ${core_cron.createdAt}))`,
-      })
-      .from(core_cron);
-
-    const cronLastRun = cronActivity?.lastRun
-      ? new Date(cronActivity.lastRun)
-      : null;
-    const cronStale = isCronStale(
-      cronActivity?.lastActivity ? new Date(cronActivity.lastActivity) : null,
-    );
+    const cronHealth = await loadCronHealth(c.get("db"));
     const cronActive = core.hasCronAdapter;
     const previewContentTypes = core.contentTypes.filter(
       entry => entry.definition.editorial.preview.enabled,
     ).length;
     const queueStatus = getQueueStatus({
       cronActive,
-      cronStale,
+      cronStale: cronHealth.stale,
       hasTaskHandlers: core.queue.length > 0,
     });
 
@@ -169,11 +150,12 @@ export const integrationsDebugAdminRoute = buildRoute({
         cron: {
           active: cronActive,
           jobs: core.cron.length,
-          lastRun: cronLastRun ? cronLastRun.toISOString() : null,
+          lastRun: cronHealth.lastRun?.toISOString() ?? null,
+          overdueJobs: cronHealth.overdueJobs,
           secure:
             !!core.cronSecret &&
             core.cronSecret !== INSECURE_DEFAULT_CRON_SECRET,
-          stale: cronStale,
+          stale: cronHealth.stale,
         },
         email: {
           active: !!core.email?.adapter,

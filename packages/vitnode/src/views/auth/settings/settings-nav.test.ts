@@ -6,13 +6,13 @@ describe("visibleSettingsNavItems", () => {
   it("shows Security while passkeys are on", () => {
     expect(
       visibleSettingsNavItems({ passkeys: true }).map(item => item.key),
-    ).toEqual(["overview", "devices", "security"]);
+    ).toEqual(["overview", "notifications", "devices", "security"]);
   });
 
   it("hides Security when passkeys are switched off", () => {
     expect(
       visibleSettingsNavItems({ passkeys: false }).map(item => item.key),
-    ).toEqual(["overview", "devices"]);
+    ).toEqual(["overview", "notifications", "devices"]);
   });
 
   it("shows Connected accounts only while an SSO provider is configured", () => {
@@ -21,11 +21,11 @@ describe("visibleSettingsNavItems", () => {
         passkeys: false,
         sso: [{ id: "google", name: "Google" }],
       }).map(item => item.key),
-    ).toEqual(["overview", "devices", "sso"]);
+    ).toEqual(["overview", "notifications", "devices", "sso"]);
     expect(
       visibleSettingsNavItems({ passkeys: false, sso: [] }).map(
         item => item.key,
       ),
-    ).toEqual(["overview", "devices"]);
+    ).toEqual(["overview", "notifications", "devices"]);
   });
 });

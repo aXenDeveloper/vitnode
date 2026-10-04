@@ -1,6 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { adminMessageNotification } from "@/api/lib/notifications/core-types";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { notificationsChannel } from "@/ws/notifications";
@@ -23,7 +24,8 @@ export const sendNotificationRoute = buildRoute({
   adminStaffPermission: { module: "dashboard", permission: "can_edit" },
   route: {
     method: "post",
-    description: "Send a notification to a user",
+    description:
+      "Send a notification to a user: a toast on their open tabs and an entry in their inbox",
     path: "/notifications/send",
     request: {
       body: {
@@ -48,7 +50,7 @@ export const sendNotificationRoute = buildRoute({
       },
     },
   },
-  handler: c => {
+  handler: async c => {
     const admin = c.get("admin")?.user;
     if (!admin) throw new HTTPException(403);
 
@@ -59,6 +61,15 @@ export const sendNotificationRoute = buildRoute({
       description,
       title,
       type,
+    });
+
+    await c.get("notifications").publish({
+      type: adminMessageNotification,
+      actorId: admin.id,
+      allowSelf: true,
+      recipients: [userId],
+      data: { description, title },
+      idempotencyKey: `admin-message:${crypto.randomUUID()}`,
     });
 
     return c.json({ success: true });

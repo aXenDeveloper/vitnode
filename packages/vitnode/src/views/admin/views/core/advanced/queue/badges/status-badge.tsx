@@ -15,7 +15,10 @@ export const QueueStatusBadge = ({ status }: { status: QueueTaskStatus }) => {
 
   if (status === "processing") {
     return (
-      <Badge className="border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400">
+      <Badge
+        className="border-primary/50 bg-primary/10 text-primary"
+        variant="outline"
+      >
         <LoaderIcon className="animate-spin" /> {t("processing")}
       </Badge>
     );
@@ -23,7 +26,7 @@ export const QueueStatusBadge = ({ status }: { status: QueueTaskStatus }) => {
 
   if (status === "completed") {
     return (
-      <Badge className="border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400">
+      <Badge className="border-success/50" variant="success">
         <CircleCheckIcon /> {t("completed")}
       </Badge>
     );
@@ -31,7 +34,7 @@ export const QueueStatusBadge = ({ status }: { status: QueueTaskStatus }) => {
 
   if (status === "failed") {
     return (
-      <Badge className="border-destructive/50 bg-destructive/10 text-destructive">
+      <Badge className="border-destructive/50" variant="destructive">
         <CircleXIcon /> {t("failed")}
       </Badge>
     );

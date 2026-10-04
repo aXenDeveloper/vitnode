@@ -21,7 +21,12 @@ export interface EmailApiPlugin {
     text: string
     metadata: { title: string; shortTitle?: string }
     replyTo?: string
-  }) => Promise<void>
+    idempotencyKey?: string
+  }) => Promise<EmailSendResult | void>
+}
+
+export interface EmailSendResult {
+  id?: string // the provider's message id
 }
 ```
 
@@ -119,8 +124,30 @@ export const vitNodeApiConfig = buildApiConfig({
       description: "Optional reply-to email address.",
       type: "string",
     },
+    idempotencyKey: {
+      description: "Stable per logical email, the same on every retry. Forward it if your provider deduplicates on a key; ignore it otherwise.",
+      type: "string",
+    },
   }}
 />
+
+## Idempotency and the Return Value
+
+Callers such as [notification emails](/docs/dev/notifications/email-and-digests) retry a send that failed or never got an answer, with the same `idempotencyKey`. Forward it to a provider that deduplicates on a key, and a retry after an accepted-but-unconfirmed send is dropped instead of delivered twice. Resend does this; SMTP cannot, so Nodemailer ignores the key.
+
+Return `{ id }` with the provider's message id when you have one - it shows up in the AdminCP delivery list. Returning nothing is still valid.
+
+```ts
+sendEmail: async ({ to, subject, html, text, metadata, idempotencyKey }) => {
+  const res = await fetch("https://api.postmarkapp.com/email", {
+    /* ...as above, plus your provider's idempotency field if it has one */
+  })
+  if (!res.ok) throw new Error(`Postmark error: ${res.statusText}`)
+
+  const { MessageID } = (await res.json()) as { MessageID: string }
+  return { id: MessageID } // [!code ++]
+},
+```
 
 ## Learn More
 

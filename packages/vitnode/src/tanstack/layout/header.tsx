@@ -27,6 +27,7 @@ import {
 import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
+import { NotificationsBell } from "../notifications/bell";
 import { MobileUserMenu } from "./mobile-user-menu";
 
 const asNavigationNodes = (
@@ -93,6 +94,7 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
         }
         moreNavigationLabel={t("more_navigation")}
         navigation={navigation}
+        notifications={<NotificationsBell />}
         user={user}
       />
       <MobileNavBar items={bottomBar} menuNavigation={menuNavigation} />

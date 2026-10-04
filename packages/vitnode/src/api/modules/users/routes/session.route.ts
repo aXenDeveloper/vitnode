@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { getStaffFlags } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
+import { getNotificationState } from "@/api/models/notifications/inbox";
+import { zodNotificationState } from "@/api/modules/notifications/schema";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionRoute = buildRoute({
@@ -26,6 +28,7 @@ export const sessionRoute = buildRoute({
                   phone: z.string().nullable(),
                   headline: z.string().nullable(),
                   showRealName: z.boolean(),
+                  timeZone: z.string().nullable(),
                   createdAt: z.date(),
                   newsletter: z.boolean(),
                   avatarColor: z.string(),
@@ -36,6 +39,7 @@ export const sessionRoute = buildRoute({
                   birthday: z.date().nullable(),
                   isAdmin: z.boolean(),
                   isModerator: z.boolean(),
+                  notifications: zodNotificationState,
                 })
                 .nullable(),
             }),
@@ -49,8 +53,11 @@ export const sessionRoute = buildRoute({
     const user = c.get("user");
     if (!user) return c.json({ user: null });
 
-    const { isAdmin, isModerator } = await getStaffFlags(c, user);
+    const [{ isAdmin, isModerator }, notifications] = await Promise.all([
+      getStaffFlags(c, user),
+      getNotificationState(c.get("db"), user.id),
+    ]);
 
-    return c.json({ user: { ...user, isAdmin, isModerator } });
+    return c.json({ user: { ...user, isAdmin, isModerator, notifications } });
   },
 });

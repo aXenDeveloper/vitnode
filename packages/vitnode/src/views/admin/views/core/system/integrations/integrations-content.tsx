@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "use-intl";
 
+import { DateFormat } from "@/components/date-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DOCS_URLS } from "@/lib/docs-links";
 
@@ -24,6 +25,82 @@ import { TestStorageAction } from "./test-storage/test-storage";
 
 const toStatus = (active: boolean): IntegrationStatus =>
   active ? "active" : "inactive";
+
+const CronMeta = ({
+  cron,
+  failing,
+}: {
+  cron: AdminIntegrations["cron"];
+  failing: boolean;
+}) => {
+  const t = useTranslations("admin.system.integrations.cron");
+  const lastRun = cron.lastRun;
+
+  if (failing && cron.stale) {
+    return (
+      <span className="text-destructive">
+        {lastRun
+          ? t.rich("stale", { date: () => <DateFormat date={lastRun} /> })
+          : t("stale_never")}
+      </span>
+    );
+  }
+  if (failing) {
+    return (
+      <span className="text-amber-700 dark:text-amber-400">
+        {t("overdue", { count: cron.overdueJobs })}
+      </span>
+    );
+  }
+  if (!cron.active) return <span>{t("not_configured")}</span>;
+  if (!cron.secure) {
+    return (
+      <span className="text-amber-700 dark:text-amber-400">
+        {t("insecure")}
+      </span>
+    );
+  }
+
+  return <span>{t("jobs", { count: cron.jobs })}</span>;
+};
+
+const cronStatusOf = (
+  cron: AdminIntegrations["cron"],
+  failing: boolean,
+): IntegrationStatus => {
+  if (failing) return "warning";
+  if (!cron.active) return "inactive";
+
+  return cron.secure ? "active" : "warning";
+};
+
+const CronIntegrationCard = ({ cron }: { cron: AdminIntegrations["cron"] }) => {
+  const t = useTranslations("admin.system.integrations");
+  const hasRun = cron.active || cron.lastRun !== null;
+  const failing = hasRun && cron.overdueJobs > 0;
+  const status = cronStatusOf(cron, failing);
+
+  return (
+    <IntegrationCard
+      description={t("cron.desc")}
+      href={DOCS_URLS.cron}
+      Icon={ClockIcon}
+      meta={<CronMeta cron={cron} failing={failing} />}
+      readMoreLabel={t("read_more")}
+      status={status}
+      statusLabel={t(`status.${status}`)}
+      title={t("cron.title")}
+    />
+  );
+};
+
+const redisStatusOf = (
+  redis: AdminIntegrations["redis"],
+): IntegrationStatus => {
+  if (redis.active) return "active";
+
+  return redis.configuredButDown ? "warning" : "inactive";
+};
 
 export const IntegrationsContent = ({
   canSendTestEmail,
@@ -41,21 +118,11 @@ export const IntegrationsContent = ({
   const t = useTranslations("admin.system.integrations");
   const statusLabel = (status: IntegrationStatus) => t(`status.${status}`);
 
-  const redisStatus: IntegrationStatus = data.redis.active
-    ? "active"
-    : data.redis.configuredButDown
-      ? "warning"
-      : "inactive";
+  const redisStatus = redisStatusOf(data.redis);
 
   const contentPreviewStatus: IntegrationStatus = data.contentPreview.active
     ? "active"
     : "inactive";
-
-  const cronStatus: IntegrationStatus = !data.cron.active
-    ? "inactive"
-    : data.cron.stale || !data.cron.secure
-      ? "warning"
-      : "active";
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -136,30 +203,7 @@ export const IntegrationsContent = ({
         title={t("storage.title")}
       />
 
-      <IntegrationCard
-        description={t("cron.desc")}
-        href={DOCS_URLS.cron}
-        Icon={ClockIcon}
-        meta={
-          !data.cron.active ? (
-            <span>{t("cron.not_configured")}</span>
-          ) : data.cron.stale ? (
-            <span className="text-amber-700 dark:text-amber-400">
-              {t("cron.stale")}
-            </span>
-          ) : !data.cron.secure ? (
-            <span className="text-amber-700 dark:text-amber-400">
-              {t("cron.insecure")}
-            </span>
-          ) : (
-            <span>{t("cron.jobs", { count: data.cron.jobs })}</span>
-          )
-        }
-        readMoreLabel={t("read_more")}
-        status={cronStatus}
-        statusLabel={statusLabel(cronStatus)}
-        title={t("cron.title")}
-      />
+      <CronIntegrationCard cron={data.cron} />
 
       <IntegrationCard
         description={t("content_preview.desc")}

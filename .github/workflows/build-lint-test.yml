@@ -70,6 +70,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Real Postgres for the integration tests that need row locks and
+    # `ON CONFLICT` (notifications). Each test file creates its own database.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U root"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      VITNODE_TEST_POSTGRES_URL: postgresql://root:root@localhost:5432/postgres
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7

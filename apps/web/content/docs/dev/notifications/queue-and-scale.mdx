@@ -1,0 +1,171 @@
+---
+title: Queue and scale
+description: How VitNode delivers notifications to large audiences - queue tasks, cron jobs, batched fan-out with saved cursors, crash recovery, lock ordering and measured numbers for 1,000 recipients.
+icon: Gauge
+---
+
+Notifications run on VitNode's database-backed [queue](/docs/dev/advanced/queue)
+and [cron](/docs/dev/cron). No extra service is needed: a working queue worker
+is all it takes.
+
+## Queue tasks
+
+| Task                    | Attempts | Does                                                  |
+| ----------------------- | -------- | ----------------------------------------------------- |
+| `notifications-fanout`  | 10       | Delivers one event to its recipients, batch by batch  |
+| `notifications-email`   | 5        | Sends due immediate emails and digests                |
+| `notifications-cleanup` | 3        | Removes notifications older than the retention period |
+
+All three belong to `@vitnode/core` and show up in
+**AdminCP → Advanced → Queue**.
+
+## Cron jobs
+
+| Cron                     | Schedule      | Does                                                                                               |
+| ------------------------ | ------------- | -------------------------------------------------------------------------------------------------- |
+| `notifications-schedule` | `*/5 * * * *` | Reclaims stale email sends, re-queues stalled events, plans digests, queues the email drain if due |
+| `notifications-cleanup`  | `0 2 * * *`   | Queues the daily retention cleanup at 02:00                                                        |
+
+The queue worker itself runs every minute. Without a cron adapter nothing moves
+in the background - see [Troubleshooting](/docs/dev/notifications/migration-and-troubleshooting#troubleshooting).
+
+## Batched fan-out
+
+The fan-out task works through candidates in batches of `fanoutBatchSize`
+(default 500, from 10 to 5,000 - see [Configuration](#configuration)), in the
+order your `recipients` list gives them. Duplicates are dropped before the first
+batch.
+
+Each batch is **one short transaction** that:
+
+1. locks the event row;
+2. filters the batch - deleted users, opted-out users, one `access` call;
+3. locks the batch's user state rows;
+4. writes receipts, inbox items, unread counts and immediate email deliveries;
+5. saves the cursor on the event.
+
+Realtime messages go out after the batch commits. A crash loses at most the
+batch in flight, and the retry resumes after the last committed one.
+
+**Receipts make retries safe.** There is one receipt per event and user, and
+only users with a new receipt go further. A batch that runs twice finds every
+receipt in place and changes nothing.
+
+**Time budget.** One task stops after 20 seconds and queues a fresh task for
+the rest, so a 100,000-recipient announcement never blocks the queue for other
+work.
+
+## Recovery
+
+| Stuck thing                                   | Recovered by                                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Queue task left `processing` by a dead worker | The core queue worker, after 15 minutes: back to `pending`, or `failed` if out of attempts |
+| Event unfinished with no task to finish it    | `notifications-schedule`, after 10 minutes: queues a new fan-out task                      |
+| Email delivery left `sending`                 | `notifications-schedule`, after 15 minutes: back to `pending`                              |
+| Two workers on one event                      | The event row lock: the second waits, then sees the saved cursor                           |
+
+## 1,000 recipients, measured
+
+The integration test `fanout.load.integration.test.ts` publishes one event to
+1,000 members plus the actor, with 200 of them listed twice and one member who
+switched the type off.
+
+| Measurement                                  | Result                                            |
+| -------------------------------------------- | ------------------------------------------------- |
+| Inbox items created                          | 999 - the opted-out member and the actor got none |
+| `publish()`                                  | 5 ms                                              |
+| Fan-out with two workers racing on the event | 457 ms                                            |
+| SQL queries, batch size 200                  | 71 in total for 999 recipients                    |
+| `access` calls                               | One per batch                                     |
+| Replay twice after rewinding every cursor    | No duplicates, every unread count still exactly 1 |
+
+These numbers come from a dev container with a local PostgreSQL 16. They are
+indicative, not a benchmark - what matters is that queries grow per batch, not
+per recipient.
+
+## Lock ordering
+
+Every inbox write - fan-out, mark read, mark all read, remove, reconcile -
+locks the affected user state rows **in user id order** before touching
+anything else. Two writers that share users always take locks in the same
+order, so they wait for each other instead of deadlocking, and each user's
+inbox changes happen one at a time.
+
+## Indexes
+
+The migration adds the indexes the hot paths need:
+
+| Table                          | Index serves                                                                                             |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `core_notifications`           | Inbox and unread lists (partial, per user by last activity), grouping upsert, subject removal, retention |
+| `core_notification_events`     | Idempotency (unique plugin, type, key), status scans, retention                                          |
+| `core_notification_receipts`   | Primary key on event and user, digest planning (partial on pending email), actor previews                |
+| `core_notification_deliveries` | Claiming due sends (partial on `pending`), status lists, idempotency key                                 |
+| `core_notification_user_state` | Primary key on user - the row every write locks                                                          |
+
+## Retention
+
+`notifications-cleanup` removes, in batches:
+
+- inbox items whose last activity is older than `retentionDays` (default 90,
+  see [Configuration](#configuration)), taking unread ones off their owner's count;
+- events older than that which no inbox item points at;
+- finished delivery records older than that;
+- pending email for events no digest claimed within 14 days - those stop
+  waiting for an email, and the inbox items stay.
+
+Run it on demand from the [AdminCP](/docs/dev/notifications/admincp#maintenance).
+
+## Configuration
+
+How much work each run does and how long notifications are kept are deployment
+decisions, so they live in your API config rather than the AdminCP. Add a
+`notifications` block to `buildApiConfig` in `vitnode.api.config.ts`:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  notifications: {
+    retentionDays: 30,
+    fanoutBatchSize: 1000,
+    emailBatchSize: 100,
+    emailConcurrency: 8,
+  },
+})
+```
+
+Every key is optional:
+
+| Key                | Default | Range   | What it does                                                     |
+| ------------------ | ------- | ------- | ---------------------------------------------------------------- |
+| `retentionDays`    | `90`    | 1-3650  | Notifications older than this are removed by the nightly cleanup |
+| `fanoutBatchSize`  | `500`   | 10-5000 | Recipients handled in one fan-out transaction                    |
+| `emailBatchSize`   | `50`    | 1-500   | Emails one worker run picks up                                   |
+| `emailConcurrency` | `4`     | 1-20    | Emails sent at the same time during a run                        |
+
+A value outside its range is clamped to the nearest limit, and anything that
+isn't a whole number falls back to the default - a typo never stops
+notifications. Restart the API to apply a change.
+
+<Callout title="When to change them">
+  The defaults suit most sites. Raise `fanoutBatchSize` if one announcement to a
+  huge audience takes too many runs, and `emailConcurrency` if your email
+  provider allows more parallel sends. Lower `emailBatchSize` if a slow provider
+  makes runs time out.
+</Callout>
+
+The AdminCP shows the retention period in the
+[Settings sheet](/docs/dev/notifications/admincp#settings) but can't change it.
+
+## Related
+
+<Cards>
+  <Card title="Queue tasks" href="/docs/dev/advanced/queue" />
+  <Card title="Cron jobs" href="/docs/dev/cron" />
+  <Card
+    title="Email and digests"
+    href="/docs/dev/notifications/email-and-digests"
+  />
+</Cards>

@@ -18,9 +18,9 @@ import { adminQueryRoot } from "@/views/admin/table/query";
 export const CRON_ORDER_BY = ["createdAt", "lastRun", "nextRun"] as const;
 export type CronOrderBy = (typeof CRON_ORDER_BY)[number];
 
-/** The cron table's URL contract: sortable columns, no search, no filter. */
 export const CRON_TABLE_CONTRACT: AdminTableContract<CronOrderBy> = {
   orderBy: CRON_ORDER_BY,
+  search: true,
 };
 
 export type CronParams = AdminTableParams<CronOrderBy>;
@@ -33,6 +33,7 @@ export interface CronJobRow {
   module: string;
   name: string;
   nextRun: Date | null | string;
+  overdue: boolean;
   pluginId: string;
   schedule: string;
 }
@@ -81,5 +82,38 @@ export const cronQueryOptions = ({
     queryKey: cronQueryKey(params),
     retry: false,
     /** {@link OPERATIONAL_STALE_TIME} - A cron job's next run and last result move without anybody pressing anything. */
+    staleTime: OPERATIONAL_STALE_TIME,
+  });
+
+export interface CronHealth {
+  active: boolean;
+  jobs: number;
+  lastRun: null | string;
+  nextRun: null | string;
+  overdueJobs: number;
+  secretRejected: boolean;
+  stale: boolean;
+}
+
+export const fetchCronHealth = async (): Promise<CronHealth> => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/advanced/cron",
+    path: "/health",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the cron health");
+  }
+
+  return await response.json();
+};
+
+export const cronHealthQueryOptions = () =>
+  queryOptions({
+    queryFn: fetchCronHealth,
+    queryKey: [...cronQueryRoot, "health"] as const,
+    retry: false,
     staleTime: OPERATIONAL_STALE_TIME,
   });

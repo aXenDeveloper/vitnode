@@ -2,6 +2,7 @@ import { NotificationListener } from "@/views/layouts/theme/notification-listene
 import { WebSocketAuthSync } from "@/views/layouts/theme/web-socket-auth-sync";
 
 import { useSessionQuery } from "../auth/session-query";
+import { NotificationStateSync } from "../notifications/state-sync";
 import { socketUserIdFromSession } from "./session";
 
 export const RealtimeListeners = () => {
@@ -10,6 +11,7 @@ export const RealtimeListeners = () => {
   return (
     <>
       <NotificationListener />
+      <NotificationStateSync />
       <WebSocketAuthSync userId={socketUserIdFromSession(session)} />
     </>
   );

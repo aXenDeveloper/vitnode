@@ -29,12 +29,18 @@ interface EmailModelSendArgsWithEmail {
 export interface EmailApiPlugin {
   sendEmail: (args: {
     html: string;
+    idempotencyKey?: string;
     metadata: ContextVariableMap["core"]["metadata"];
     replyTo?: string;
     subject: string;
     text: string;
     to: string;
-  }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  }) => Promise<EmailSendResult | void>;
+}
+
+export interface EmailSendResult {
+  id?: string;
 }
 
 export type EmailModelSendArgs = {
@@ -131,17 +137,23 @@ export class EmailModel {
     };
   }
 
-  async deliver(email: BuiltEmail): Promise<void> {
+  async deliver(
+    email: BuiltEmail,
+    { idempotencyKey }: { idempotencyKey?: string } = {},
+  ): Promise<EmailSendResult> {
     const provider = this.requireProvider();
 
-    await provider.sendEmail({
+    const sendResult = await provider.sendEmail({
       html: email.html,
+      idempotencyKey,
       to: email.to,
       subject: email.subject,
       replyTo: email.replyTo,
       metadata: this.c.get("core").metadata,
       text: email.text,
     });
+
+    return sendResult ?? {};
   }
 
   async send(args: EmailModelSendArgs): Promise<void> {

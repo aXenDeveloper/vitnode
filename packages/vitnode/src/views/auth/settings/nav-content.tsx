@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import {
+  BellIcon,
   KeyRoundIcon,
   LinkIcon,
   MenuIcon,
@@ -29,6 +30,7 @@ const ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   devices: MonitorSmartphoneIcon,
+  notifications: BellIcon,
   overview: UserRoundIcon,
   security: KeyRoundIcon,
   sso: LinkIcon,

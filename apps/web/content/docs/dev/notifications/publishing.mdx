@@ -1,0 +1,244 @@
+---
+title: Publish notifications
+description: Publish a notification from a VitNode plugin with c.get("notifications").publish() - inside your transaction, with an idempotency key, to the users your plugin names.
+icon: Send
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+Call `c.get("notifications").publish()` from a Hono route, event listener or
+queue task. Pass your transaction as `tx`, and the notification commits or
+rolls back with your own write.
+
+## Publish inside your transaction
+
+```ts title="plugins/forum/src/api/modules/topics/routes/reply.route.ts"
+await c.get('db').transaction(async (tx) => {
+  const [reply] = await tx
+    .insert(forum_replies)
+    .values({ topicId: topic.id, content, authorId: user.id })
+    .returning()
+
+  await c.get('notifications').publish({
+    type: topicReplyNotification,
+    tx,
+    recipients: [topic.authorId, ...topic.participantIds],
+    subject: { type: 'forum.topic', id: topic.id },
+    data: { topicId: topic.id, topicTitle: topic.title },
+    idempotencyKey: `reply:${reply.id}`,
+  })
+})
+```
+
+`publish()` writes one event row and one queue task in `tx`. A rolled-back
+reply notifies nobody. A committed one always notifies, even if the process
+dies right after the commit.
+
+`publish()` returns `{ eventId, duplicate }`. It does not wait for delivery.
+
+## Options
+
+<TypeTable
+  type={{
+    type: {
+      description:
+        'The registered definition, or its id. A different object with the same id is rejected.',
+      type: 'NotificationTypeDefinition<TData> | string',
+      required: true,
+    },
+    data: {
+      description: "Validated against the type's schema.",
+      type: 'TData',
+      required: true,
+    },
+    idempotencyKey: {
+      description:
+        'Stable for one real-world happening, 1-255 characters. Unique per plugin and type.',
+      type: 'string',
+      required: true,
+    },
+    recipients: {
+      description:
+        'Candidate user ids chosen by your business rules. At most 100,000.',
+      type: 'readonly number[]',
+    },
+    subject: {
+      description:
+        "What the notification is about. Drives grouping and remove(). Must match the type's subjectType.",
+      type: '{ type: string; id: number | string }',
+    },
+    tx: {
+      description:
+        'Your transaction. The event and its delivery task commit with your write.',
+      type: 'Transaction',
+    },
+    actorId: {
+      description:
+        'Who caused it. Defaults to the signed-in admin or user of the request. Pass null for system notifications.',
+      type: 'number | null',
+    },
+    allowSelf: {
+      description: 'Deliver to the actor too.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+## Choose an idempotency key
+
+The key names **the happening**, not the attempt. Publishing the same type and
+key twice is a no-op that returns the first event with `duplicate: true`, so
+retries, double clicks and replayed listeners never notify twice.
+
+| Happening                      | Good key                    | Bad key                  |
+| ------------------------------ | --------------------------- | ------------------------ |
+| A reply was posted             | `reply:${reply.id}`         | `reply:${Date.now()}`    |
+| An article was first published | `post-published:${post.id}` | `post-${post.updatedAt}` |
+| An export finished             | `export:${job.id}`          | `crypto.randomUUID()`    |
+
+A random key is only right when every call really is a new message, like an
+administrator sending the same text twice on purpose.
+
+<Callout type="info" title="Concurrent duplicates">
+  If two transactions publish the same key at the same moment and the first has
+  not committed yet, the second throws a `NotificationPublishError`. Retrying it
+  after the first commits returns `duplicate: true`.
+</Callout>
+
+## Pick the audience
+
+`recipients` holds the user ids your plugin picked: the topic author, the
+people who replied, the mentioned users, the members of a group. Up to 100,000
+per event - core walks them in batches, so a big list costs your request
+nothing.
+
+A user listed twice gets the notification once. Candidates are only
+candidates. Core still drops:
+
+- the actor, unless `allowSelf: true`;
+- user ids that do not exist;
+- users who switched the type off, or an installation policy that disabled it
+  (see [Preferences](/docs/dev/notifications/preferences));
+- users your type's `access` callback leaves out.
+
+A publish with no `recipients` is stored as completed and delivers nothing.
+
+### Actor and `allowSelf`
+
+`actorId` defaults to the signed-in admin, then the signed-in user. Nobody needs
+to hear about their own reply, so the actor is skipped. Set `allowSelf: true`
+for messages about the actor's own work:
+
+```ts
+await c.get('notifications').publish({
+  type: exportReadyNotification,
+  recipients: [user.id],
+  allowSelf: true,
+  data: { exportId: job.id },
+  idempotencyKey: `export:${job.id}`,
+})
+```
+
+In a queue task or a scheduled job there is no signed-in user, so pass the real
+actor or `null` yourself.
+
+## Validation errors
+
+`publish()` throws a `NotificationPublishError` before writing anything when:
+
+- the type is not registered, or `type` is a different object than the
+  registered one;
+- `data` fails the schema - the message lists each failing path;
+- `idempotencyKey` is empty or longer than 255 characters;
+- `subject` has another type than the type's `subjectType`, or an invalid
+  type or id;
+- there are more than 100,000 `recipients`.
+
+Inside a transaction the error rolls back your write too. Catch it if the
+notification is optional for that write.
+
+## When delivery happens
+
+A request that published starts delivery as soon as its response is sent - it
+never delays the response. Anything not started that way - a task another
+worker already claimed, or a publish outside a request - is picked up by the
+queue worker, which runs every minute. A rolled-back `tx` leaves nothing to
+deliver. See
+[Queue and scale](/docs/dev/notifications/queue-and-scale).
+
+## Check access in batches
+
+`access` receives a bounded batch of candidate ids, never the whole audience.
+Answer for the whole batch with one query:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+import { and, eq, inArray } from "drizzle-orm";
+
+access: async ({ c, data, userIds }) => {
+  const members = await c
+    .get("db")
+    .select({ userId: forum_topic_members.userId })
+    .from(forum_topic_members)
+    .where(
+      and(
+        eq(forum_topic_members.topicId, data.topicId),
+        inArray(forum_topic_members.userId, userIds),
+      ),
+    );
+
+  return members.map(member => member.userId);
+},
+```
+
+When everyone shares one answer - "is the article still published?" - check
+once and return `userIds` or `[]`.
+
+Core calls `access` again before every email and when a user lists their inbox,
+so revoked access hides the item and stops the email even after delivery. A
+throw during fan-out fails that batch, and the queue retries it.
+
+## Remove notifications
+
+When content is deleted or a group of users loses access, take the items out
+of their inboxes. Unread counts update in the same transaction:
+
+```ts
+await c.get('notifications').remove({
+  subject: { type: 'forum.topic', id: topic.id },
+})
+
+await c.get('notifications').remove({
+  subject: { type: 'forum.topic', id: topic.id },
+  type: 'forum.topic_reply',
+  userIds: removedMemberIds,
+})
+```
+
+`remove()` returns how many items it deleted. Without `type` and `userIds`, it
+removes every item about the subject for everyone.
+
+You do not have to call `remove()` for correctness: an item whose `access` now
+says no already renders as a placeholder. Call it to keep inboxes tidy.
+
+## Read a user's unread count
+
+```ts
+const { unread, revision } = await c.get('notifications').state(user.id)
+```
+
+`revision` goes up with every change, so a client can tell a fresh count from
+a stale one.
+
+## Related
+
+<Cards>
+  <Card
+    title="Notification types"
+    href="/docs/dev/notifications/notification-types"
+  />
+  <Card
+    title="Inbox and realtime"
+    href="/docs/dev/notifications/inbox-and-realtime"
+  />
+</Cards>

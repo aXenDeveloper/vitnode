@@ -19,6 +19,7 @@ import { AIModel } from "@/api/models/ai";
 import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
 import { I18nModel } from "@/api/models/i18n";
+import { NotificationsModel } from "@/api/models/notifications";
 import { QueueModel } from "@/api/models/queue";
 import {
   assertSearchProviderCapabilities,
@@ -42,6 +43,8 @@ import { realtime } from "@/ws/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
+import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
+import type { NotificationRegistry } from "../lib/notifications/registry";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
@@ -65,6 +68,8 @@ import {
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
 import { collectNavigationPresets } from "../lib/navigation-presets";
+import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
+import { createNotificationRegistry } from "../lib/notifications/registry";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
@@ -98,6 +103,7 @@ export interface EnvVariablesVitNode {
       phone: null | string;
       roleId: number;
       showRealName: boolean;
+      timeZone: null | string;
     };
   };
   adminSessionExpiresAt: Date | null;
@@ -149,6 +155,8 @@ export interface EnvVariablesVitNode {
     };
     /** Every prebuilt main-menu item the installed plugins offer. */
     navigation: NavigationPreset[];
+    notifications?: NotificationRegistry;
+    notificationWorkers?: NotificationWorkerSettings;
     permissionStaff: PermissionStaffCatalogEntry[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
@@ -165,6 +173,7 @@ export interface EnvVariablesVitNode {
   i18n: I18nModel;
   ipAddress: string;
   log: LoggerMiddlewareType;
+  notifications: NotificationsModel;
   plugin: {
     id: string;
   };
@@ -191,6 +200,7 @@ export interface EnvVariablesVitNode {
     phone: null | string;
     roleId: number;
     showRealName: boolean;
+    timeZone: null | string;
   };
 }
 
@@ -206,6 +216,7 @@ export const globalMiddleware = ({
   events,
   plugins,
   i18n,
+  notifications,
   search,
   storage,
   users,
@@ -221,6 +232,7 @@ export const globalMiddleware = ({
   | "email"
   | "events"
   | "i18n"
+  | "notifications"
   | "plugins"
   | "search"
   | "storage"
@@ -229,6 +241,7 @@ export const globalMiddleware = ({
   Pick<VitNodeConfig, "metadata"> & {
     cacheClient: CacheClient | null;
   }) => {
+  const notificationWorkers = resolveNotificationWorkerSettings(notifications);
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -367,6 +380,15 @@ export const globalMiddleware = ({
   const navigationMetadata: NavigationPreset[] =
     collectNavigationPresets(plugins);
 
+  const notificationsMetadata = createNotificationRegistry(
+    plugins.flatMap(plugin =>
+      (plugin.notificationTypes ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
   const passkeysMetadata = resolvePasskeysConfig({
     config: authorization?.passkeys,
     rpNameFallback: metadata.shortTitle ?? metadata.title,
@@ -398,6 +420,7 @@ export const globalMiddleware = ({
     c.set("email", new EmailModel(c));
     c.set("events", new EventsModel(c));
     c.set("i18n", new I18nModel(c));
+    c.set("notifications", new NotificationsModel(c as Context<EnvVitNode>));
     c.set("queue", new QueueModel(c));
     c.set("search", new SearchModel(c));
     c.set("storage", new StorageModel(c));
@@ -453,6 +476,8 @@ export const globalMiddleware = ({
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
       navigation: navigationMetadata,
+      notifications: notificationsMetadata,
+      notificationWorkers,
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
@@ -475,6 +500,8 @@ export const globalMiddleware = ({
     c.set("log", loggerMiddleware(c));
 
     await next();
+
+    c.get("notifications").flushAfterResponse();
   };
 };
 

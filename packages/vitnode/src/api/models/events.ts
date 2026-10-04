@@ -25,6 +25,26 @@ export interface VitNodeEvents {
   "navigation.updated": {
     navigationId: number;
   };
+  "notifications.deleted_all": {
+    items: number;
+  };
+  "notifications.emails_cancelled": {
+    count: number;
+  };
+  "notifications.paused": Record<string, never>;
+  "notifications.preferences_reset": {
+    members: number;
+  };
+  "notifications.read_all": {
+    items: number;
+    members: number;
+  };
+  "notifications.resumed": {
+    requeuedEvents: number;
+  };
+  "notifications.type.updated": {
+    typeId: string;
+  };
   "role.created": {
     roleId: number;
   };

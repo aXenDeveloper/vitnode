@@ -1,3 +1,5 @@
+import type { NotificationStateMessage } from "@/lib/notifications/types";
+
 import { CONFIG_PLUGIN } from "@/config";
 
 import { createWebSocketChannel } from "./types";
@@ -16,6 +18,15 @@ export const notificationsChannel = createWebSocketChannel<
   VitNodeNotification
 >({
   id: "inbox",
+  module: "notifications",
+  pluginId: CONFIG_PLUGIN.pluginId,
+});
+
+export const notificationsStateChannel = createWebSocketChannel<
+  never,
+  NotificationStateMessage
+>({
+  id: "state",
   module: "notifications",
   pluginId: CONFIG_PLUGIN.pluginId,
 });

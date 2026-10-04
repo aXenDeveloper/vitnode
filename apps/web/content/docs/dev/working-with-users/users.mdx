@@ -107,6 +107,7 @@ The canonical user table contains:
 | `avatarId`      | `integer`      | Uploaded avatar, a `core_files` row (nullable)        |
 | `coverId`       | `integer`      | Uploaded profile cover, a `core_files` row (nullable) |
 | `language`      | `varchar(32)`  | Preferred UI locale (defaults to `en`)                |
+| `timeZone`      | `varchar(64)`  | IANA time zone, set by the user (nullable)            |
 | `emailVerified` | `boolean`      | Verification status                                   |
 
 Every user payload the API hands out - the session, the public profile, the
@@ -139,6 +140,22 @@ cleared. Writing invalidates the user's cached session and emits
 numbers are written with (`+`, spaces, `-`, `(` and `)`), up to 32 characters.
 Anything else is rejected by the form and by the route. It is **not** on the
 public profile payload - only the account's own session carries it.
+
+### Time zone
+
+`timeZone` sits under **Region** on **Settings → Overview**. It takes any IANA
+name, like `Europe/Warsaw`, and **Use this device's time zone** fills it in from
+the browser in one click. `null` means "follow my language", then UTC.
+Notification digests go out in this time zone, and the session carries it, so
+`c.get("user")?.timeZone` is there for anything else that wants local time.
+
+| Method | Path                                    | Who                                  |
+| :----- | :-------------------------------------- | :----------------------------------- |
+| `PUT`  | `/api/@vitnode/core/users/me/time-zone` | The signed-in user, on their own row |
+
+The body is `{ timeZone: string | null }`. An unknown name answers `400`.
+Saving invalidates the cached session and emits
+[`user.updated`](/docs/dev/events/built-in-events).
 
 ### Which name the public sees
 
