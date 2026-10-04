@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isStaff } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
+import { getNotificationState } from "@/api/models/notifications/inbox";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionRoute = buildRoute({
@@ -36,6 +37,15 @@ export const sessionRoute = buildRoute({
                   birthday: z.date().nullable(),
                   isAdmin: z.boolean(),
                   isModerator: z.boolean(),
+                  /**
+                   * The canonical unread count and its revision. A client keeps
+                   * whichever state - this or a WebSocket update - has the
+                   * higher revision.
+                   */
+                  notifications: z.object({
+                    revision: z.number(),
+                    unread: z.number(),
+                  }),
                 })
                 .nullable(),
             }),
@@ -49,11 +59,14 @@ export const sessionRoute = buildRoute({
     const user = c.get("user");
     if (!user) return c.json({ user: null });
 
-    const [isAdmin, isModerator] = await Promise.all([
+    const [isAdmin, isModerator, notifications] = await Promise.all([
       isStaff(c, { type: "admin", userId: user.id }),
       isStaff(c, { type: "moderator", userId: user.id }),
+      // One primary-key read - never cached with the session user, so a
+      // count changed by another tab or device is never served stale.
+      getNotificationState(c.get("db"), user.id),
     ]);
 
-    return c.json({ user: { ...user, isAdmin, isModerator } });
+    return c.json({ user: { ...user, isAdmin, isModerator, notifications } });
   },
 });

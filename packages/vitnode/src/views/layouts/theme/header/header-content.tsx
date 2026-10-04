@@ -14,6 +14,8 @@ export interface HeaderLayoutContentProps extends Omit<
   mobileUser?: React.ReactNode;
   moreNavigationLabel: string;
   navigation: HeaderNavItem[];
+  /** Shown on every screen size, before the user menu. */
+  notifications?: React.ReactNode;
   user?: React.ReactNode;
 }
 
@@ -23,6 +25,7 @@ export const HeaderLayoutContent = ({
   mobileUser,
   moreNavigationLabel,
   navigation,
+  notifications,
   user,
   ...props
 }: HeaderLayoutContentProps) => (
@@ -43,6 +46,7 @@ export const HeaderLayoutContent = ({
       />
 
       <div className="ms-auto flex shrink-0 items-center gap-2">
+        {notifications}
         <div
           className={cn(
             "flex items-center gap-2",

@@ -14,6 +14,33 @@
           "expire_time": "This link will expire on {date}"
         }
       }
+    },
+    "notifications": {
+      "unavailable": "This notification is no longer available.",
+      "categories": {
+        "account": "Account",
+        "content": "Content",
+        "social": "Social",
+        "system": "System"
+      },
+      "types": {
+        "admin_message": {
+          "label": "Messages from administrators",
+          "description": "Announcements an administrator sends you directly."
+        }
+      },
+      "email": {
+        "action": "View",
+        "preferences": "Manage notification preferences",
+        "digest_subject_daily": "Your daily summary: {count, plural, one {# notification} other {# notifications}}",
+        "digest_subject_weekly": "Your weekly summary: {count, plural, one {# notification} other {# notifications}}",
+        "digest_heading_daily": "Here's what happened today",
+        "digest_heading_weekly": "Here's what happened this week",
+        "digest_more": "And {count, plural, one {# more notification} other {# more notifications}} waiting for you.",
+        "test_subject": "Test notification email",
+        "test_title": "Notification emails work",
+        "test_body": "If you can read this, notification emails from this site reach your inbox. No action needed."
+      }
     }
   }
 }

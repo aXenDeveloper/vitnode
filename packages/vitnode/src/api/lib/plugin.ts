@@ -21,6 +21,10 @@ import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventListenerConfig } from "./events";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
+import type {
+  AnyNotificationTypeDefinition,
+  NotificationSubjectDefinition,
+} from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
@@ -29,6 +33,7 @@ import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { collectNavigationPresets } from "./navigation-presets";
+import { createNotificationRegistry } from "./notifications/registry";
 import { applyModuleTags } from "./openapi-tags";
 
 export type { ApiPluginContract };
@@ -48,6 +53,8 @@ export interface BuildPluginApiReturn<
   messages?: LocaleMessagesMap;
   modules: Modules;
   navigation?: NavigationPresetDeclaration[];
+  notificationSubjects?: NotificationSubjectDefinition[];
+  notificationTypes?: AnyNotificationTypeDefinition[];
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
@@ -72,6 +79,8 @@ export function buildApiPlugin<
   messages,
   modules = [] as unknown as Modules,
   navigation,
+  notificationSubjects,
+  notificationTypes,
   permissionStaff,
   searchIndexers,
 }: {
@@ -80,6 +89,10 @@ export function buildApiPlugin<
   messages?: LocaleMessagesMap;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
+  /** Subjects users can follow or mute; see `buildNotificationSubject`. */
+  notificationSubjects?: NotificationSubjectDefinition[];
+  /** Notification types this plugin publishes; see `buildNotificationType`. */
+  notificationTypes?: AnyNotificationTypeDefinition[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
   searchIndexers?: SearchIndexer[];
@@ -109,6 +122,10 @@ export function buildApiPlugin<
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
   const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
+  const types: AnyNotificationTypeDefinition[] = [...(notificationTypes ?? [])];
+  const subjects: NotificationSubjectDefinition[] = [
+    ...(notificationSubjects ?? []),
+  ];
   const openApiTags: string[] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
@@ -121,6 +138,8 @@ export function buildApiPlugin<
     contentTypes.push(...collectContentTypes(handler));
     publicContentTypes.push(...collectPublicContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
+    types.push(...collectModuleTree(handler, m => m.notificationTypes));
+    subjects.push(...collectModuleTree(handler, m => m.notificationSubjects));
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -144,6 +163,13 @@ export function buildApiPlugin<
   );
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
+
+  // Caught here too, so a plugin registering a type twice is named as the one
+  // that made the mistake; the global middleware re-checks across plugins.
+  createNotificationRegistry(
+    types.map(definition => ({ definition, pluginId })),
+    subjects.map(definition => ({ definition, pluginId })),
+  );
 
   const publishing = new Map<string, AnyContentTypeDefinition>();
   for (const definition of [
@@ -170,6 +196,8 @@ export function buildApiPlugin<
     cronJobs,
     events,
     queueTasks,
+    notificationSubjects: subjects,
+    notificationTypes: types,
     searchIndexers: indexers,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete
@@ -216,5 +244,16 @@ function collectSearchIndexers(module: BaseBuildModuleReturn): SearchIndexer[] {
   return [
     ...(module.searchIndexers ?? []),
     ...(module.modules ?? []).flatMap(collectSearchIndexers),
+  ];
+}
+
+/** Collects one list from a module and every module nested inside it. */
+function collectModuleTree<T>(
+  module: BaseBuildModuleReturn,
+  pick: (module: BaseBuildModuleReturn) => T[] | undefined,
+): T[] {
+  return [
+    ...(pick(module) ?? []),
+    ...(module.modules ?? []).flatMap(child => collectModuleTree(child, pick)),
   ];
 }

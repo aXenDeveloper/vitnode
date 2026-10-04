@@ -9,6 +9,7 @@ import { adminModule } from "./modules/admin/admin.module";
 import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
+import { notificationsModule } from "./modules/notifications/notifications.module";
 import { pagesModule } from "./modules/pages/pages.module";
 import { queueModule } from "./modules/queue/queue.module";
 import { searchModule } from "./modules/search/search.module";
@@ -25,6 +26,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
   modules: [
     middlewareModule,
     usersModule,
+    notificationsModule,
     adminModule,
     contentModule,
     cronModule,
@@ -78,6 +80,11 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],
+      notifications: [
+        "can_view",
+        { permission: "can_edit", dependsOn: ["can_view"] },
+        { permission: "can_manage", dependsOn: ["can_view"] },
+      ],
       cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
       staff_moderators: [
         "can_view",

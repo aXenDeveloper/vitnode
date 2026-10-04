@@ -810,6 +810,10 @@ handler: async (c, payload) => {
 An interactive publish is emitted once, by the route that performed it, and
 carries no `scheduleId`.
 
+The blog's own `content.blog.post.published` listener shows the other way out:
+it announces the article with a notification idempotency key, so a second run
+is a no-op. See [Example: blog category followers](/docs/dev/notifications/blog-example).
+
 ### The envelope's owner is the content type's plugin
 
 `pluginId` on the envelope answers "whose event is this", not "who was running

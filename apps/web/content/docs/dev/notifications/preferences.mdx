@@ -1,0 +1,122 @@
+---
+title: Preferences
+description: How VitNode decides which notifications each user receives in-app and by email - installation policy, mandatory types, mutes, user choices, digest schedule and time zone.
+icon: SlidersHorizontal
+---
+
+Users choose, per notification type, whether they get it in-app and how they
+get it by email. Core builds the preferences page at `/settings/notifications`
+from the registered types, so a new plugin's types appear there with no
+migration and no UI code.
+
+{/* Image prompt: The VitNode settings page at /settings/notifications on desktop, light theme, 1440x900. Cards grouped by category ("Content", "Social", "System"); each row shows a type label, a one-line description, an "In-app" switch and an "Email" select with None, Immediately, Daily digest and Weekly digest. Below, a "Digest schedule" card with time zone, hour and weekday selects, and a "Following and muted" card listing "Blog: Releases" with an Unfollow button. */}
+
+## How core decides
+
+One function decides what a user receives, in this order:
+
+1. **Installation policy disabled the type** → nothing. Mandatory types ignore
+   this.
+2. **Mandatory type** → always in-app. Email follows the installation default.
+3. **The user muted the subject** → nothing.
+4. **The user's own choice** for the type.
+5. **The installation default** for the type, set in the
+   [AdminCP](/docs/dev/notifications/admincp).
+6. **The type's own `defaults`.**
+
+In-app and email are resolved separately. A user can take a type by email only,
+in-app only, both or neither.
+
+### When email is available
+
+A type can email only when all four allow it:
+
+- the type declares `email`;
+- an [email adapter](/docs/dev/email) is configured;
+- notification email is switched on in the AdminCP;
+- the type's policy does not set "allow email" off.
+
+When any of them says no, the user sees no email choice for that type and gets
+`none`.
+
+### Example
+
+`forum.topic_reply` defaults to `{ inApp: true, email: "daily" }`. An
+administrator changed its email default to `weekly`.
+
+| User                              | In-app | Email                         |
+| --------------------------------- | ------ | ----------------------------- |
+| Never opened preferences          | yes    | weekly - installation default |
+| Chose `immediate`                 | yes    | immediate - their choice      |
+| Turned in-app off                 | no     | weekly - email is independent |
+| Muted the topic                   | no     | none                          |
+| Any user, after "allow email" off | yes    | none                          |
+
+## What users can change
+
+`PUT /api/@vitnode/core/notifications/preferences` accepts a partial update:
+
+```json
+{
+  "types": {
+    "forum.topic_reply": { "inApp": true, "email": "weekly" }
+  },
+  "timeZone": "Europe/Warsaw",
+  "digestHour": 8,
+  "digestWeekday": 1
+}
+```
+
+The route answers `400` for an unknown type, a change to a mandatory type, an
+email mode for a type that cannot email, or an unknown time zone. Choices are
+stored per user and merged, so saving one type never resets another.
+
+## Digest schedule and time zone
+
+| Setting         | Values                        | Default                                        |
+| --------------- | ----------------------------- | ---------------------------------------------- |
+| `timeZone`      | Any IANA name, or `null`      | The user's language time zone, then UTC        |
+| `digestHour`    | `0`-`23`                      | `8` - daily and weekly digests go out at 08:00 |
+| `digestWeekday` | `0` (Sunday) - `6` (Saturday) | `1` - weekly digests go out on Monday          |
+
+Digest periods are calendar days and weeks in that time zone. See
+[Email and digests](/docs/dev/notifications/email-and-digests#daily-and-weekly-digests).
+
+## Follow and mute
+
+Each user has one state per subject: `following`, `muted` or none. Muting a
+followed subject unfollows it, and following a muted one unmutes it.
+
+- **Follow** adds the user to every audience that names the subject in
+  `followersOf`. The subject's `canFollow` must agree.
+- **Mute** silences every notification about the subject - in-app and email -
+  even when the user was named in `recipients`.
+
+Users follow and mute with [`FollowSubjectButton`](/docs/dev/notifications/inbox-and-realtime#frontend-pieces)
+on plugin pages, and unfollow or unmute from `/settings/notifications`. Plugins
+can do the same from code with
+[`follow()` and `mute()`](/docs/dev/notifications/publishing#follow-and-mute-from-code).
+
+## Mandatory types and account email
+
+A type with `mandatory: true` is for notices users must not miss in their inbox,
+like "your account role changed". It is always delivered in-app, cannot be
+muted, and shows as fixed on the preferences page. Its email follows the
+installation default, as long as email is available.
+
+<Callout type="warn" title="Account email is not a notification">
+  Password resets, email verification and sign-in codes stay on
+  `c.get("email").send()`. They never pass through notification preferences, the
+  global email switch or digests, so a user who turned every notification off
+  still receives them.
+</Callout>
+
+## Related
+
+<Cards>
+  <Card
+    title="Email and digests"
+    href="/docs/dev/notifications/email-and-digests"
+  />
+  <Card title="AdminCP" href="/docs/dev/notifications/admincp" />
+</Cards>

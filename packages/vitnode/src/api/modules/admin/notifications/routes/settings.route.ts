@@ -1,0 +1,87 @@
+import { z } from "zod";
+
+import { buildRoute } from "@/api/lib/route";
+import {
+  updateNotificationGlobalSettings,
+  updateNotificationTypePolicy,
+} from "@/api/models/notifications/admin";
+import { CONFIG_PLUGIN } from "@/config";
+import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
+
+import { zodNotificationGlobalSettings } from "./overview.route";
+
+export const updateNotificationSettingsRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "notifications", permission: "can_edit" },
+  route: {
+    method: "put",
+    description:
+      "Update installation-wide notification settings: email switch, batch sizes and retention.",
+    path: "/settings",
+    request: {
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: zodNotificationGlobalSettings.partial(),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": { schema: zodNotificationGlobalSettings },
+        },
+        description: "Saved settings",
+      },
+      403: { description: "Access Denied" },
+    },
+  },
+  handler: async c =>
+    c.json(await updateNotificationGlobalSettings(c, c.req.valid("json"))),
+});
+
+export const updateNotificationTypePolicyRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "notifications", permission: "can_edit" },
+  route: {
+    method: "put",
+    description:
+      "Set the installation policy for one type: on/off, whether it may email, and the defaults for users who never chose.",
+    path: "/types/{type}",
+    request: {
+      params: z.object({ type: z.string().max(100) }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              allowEmail: z.boolean().optional(),
+              email: z.enum(NOTIFICATION_EMAIL_MODES).optional(),
+              enabled: z.boolean().optional(),
+              inApp: z.boolean().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": { schema: z.object({ success: z.boolean() }) },
+        },
+        description: "Saved",
+      },
+      400: { description: "Email for a type without an email channel" },
+      403: { description: "Access Denied" },
+      404: { description: "Unknown type" },
+    },
+  },
+  handler: async c => {
+    const { type } = c.req.valid("param");
+    await updateNotificationTypePolicy(c, type, c.req.valid("json"));
+
+    return c.json({ success: true });
+  },
+});

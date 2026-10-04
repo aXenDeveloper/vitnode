@@ -1,0 +1,12 @@
+{
+  "@vitnode/blog": {
+    "notifications": {
+      "post_published": {
+        "label": "New articles in categories you follow",
+        "description": "When an article is published in a blog category you follow.",
+        "title": "New article: {title}",
+        "body": "Fresh off the press in a category you follow."
+      }
+    }
+  }
+}

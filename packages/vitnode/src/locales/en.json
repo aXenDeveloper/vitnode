@@ -36,6 +36,10 @@
   "@vitnode/core:navigation:can_delete": "Remove main menu items",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
+  "@vitnode/core:notifications": "Notifications",
+  "@vitnode/core:notifications:can_view": "View notification settings and delivery health",
+  "@vitnode/core:notifications:can_edit": "Edit notification settings",
+  "@vitnode/core:notifications:can_manage": "Retry deliveries, send test emails and run maintenance",
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
@@ -485,7 +489,41 @@
       },
       "showing_range": "Showing {from}–{to} of {total}",
       "rows_per_page": "Rows per page",
-      "page_of": "Page {page} of {total}"
+      "page_of": "Page {page} of {total}",
+      "notifications": {
+        "title": "Notifications",
+        "bell_label": "Notifications",
+        "bell_label_unread": "Notifications, {count, plural, one {# unread} other {# unread}}",
+        "recent": "Recent notifications",
+        "mark_all_read": "Mark all as read",
+        "all_read": "All caught up",
+        "all_read_desc": "Every notification is marked as read.",
+        "mark_read": "Mark as read",
+        "mark_unread": "Mark as unread",
+        "archive": "Archive",
+        "archived": "Notification archived",
+        "unread": "Unread",
+        "loading": "Loading notifications…",
+        "load_error": "We couldn't load your notifications.",
+        "retry": "Try again",
+        "empty_title": "You're all caught up",
+        "empty_desc": "New activity will show up here.",
+        "view_all": "View all notifications",
+        "settings": "Notification settings",
+        "action_failed": "That didn't work. Your notifications were refreshed.",
+        "follow": {
+          "follow": "Follow",
+          "following": "Following",
+          "mute": "Mute notifications",
+          "unmute": "Unmute notifications",
+          "followed": "Following",
+          "muted": "Muted",
+          "cleared": "Notifications back to normal",
+          "following_desc": "You'll be notified about new activity here.",
+          "muted_desc": "You won't get notifications about this anymore.",
+          "none_desc": "Your usual notification settings apply again."
+        }
+      }
     },
     "navigation": {
       "discover": {
@@ -766,7 +804,8 @@
           "overview": "Overview",
           "devices": "Devices",
           "security": "Security",
-          "sso": "Connected accounts"
+          "sso": "Connected accounts",
+          "notifications": "Notifications"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -1030,6 +1069,45 @@
             "from": "From {provider}",
             "saved_from": "{field} now follows {provider}",
             "saved_manual": "{field} is now manual"
+          }
+        },
+        "notifications": {
+          "title": "Notifications",
+          "desc": "Choose what reaches you, and whether it arrives in your inbox, by email right away, or in a daily or weekly summary.",
+          "in_app": "In-app",
+          "email": "Email",
+          "email_unavailable": "No email",
+          "mandatory": "Required",
+          "saved": "Preferences saved",
+          "saved_desc": "New notifications will follow your updated settings.",
+          "email_modes": {
+            "none": "No email",
+            "immediate": "Email right away",
+            "daily": "Daily summary",
+            "weekly": "Weekly summary"
+          },
+          "schedule": {
+            "title": "Summary schedule",
+            "desc": "When daily and weekly summaries are sent, in your time zone.",
+            "time_zone": "Time zone",
+            "time_zone_desc": "Summaries follow this clock, daylight saving included.",
+            "hour": "Send at",
+            "hour_desc": "Daily summaries go out at this hour.",
+            "weekday": "Weekly summary day",
+            "weekday_desc": "Weekly summaries go out on this day, at the same hour.",
+            "submit": "Save schedule"
+          },
+          "subscriptions": {
+            "title": "Followed and muted",
+            "desc": "Things you follow add to what you hear about; muted ones stay quiet.",
+            "empty": "You aren't following or muting anything yet.",
+            "following": "Following",
+            "muted": "Muted",
+            "unfollow": "Unfollow",
+            "unmute": "Unmute",
+            "unfollowed": "Unfollowed",
+            "unmuted": "Unmuted",
+            "error": "We couldn't update that. Please try again."
           }
         }
       }
@@ -1441,6 +1519,24 @@
         },
         "full": "This area already holds as many widgets as it can."
       }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "desc": "Everything that happened while you were away. Opening this page never marks anything as read.",
+      "list_label": "Notifications",
+      "filter_all": "All",
+      "filter_unread": "Unread",
+      "all_categories": "All categories",
+      "category_label": "Filter by category",
+      "mark_all_read": "Mark all as read",
+      "settings": "Notification settings",
+      "loading": "Loading…",
+      "load_more": "Load more",
+      "load_error": "We couldn't load your notifications. Check your connection and try again.",
+      "retry": "Try again",
+      "empty_title": "Nothing here yet",
+      "empty_unread_title": "No unread notifications",
+      "empty_desc": "When something needs your attention, it lands here."
     }
   },
   "admin": {
@@ -1557,7 +1653,8 @@
           "title": "System",
           "integrations": "Integrations",
           "navigation": "Navigation",
-          "files": "Files"
+          "files": "Files",
+          "notifications": "Notifications"
         },
         "advanced": {
           "title": "Advanced",
@@ -1898,6 +1995,193 @@
       }
     },
     "system": {
+      "notifications": {
+        "title": "Notifications",
+        "desc": "Keep an eye on delivery health, decide which notification types run here, and tidy up when something drifts.",
+        "load_error": {
+          "title": "Couldn't load this part",
+          "desc": "The server didn't answer the way we hoped. Give it another go in a moment."
+        },
+        "status": {
+          "pending": "Pending",
+          "processing": "Processing",
+          "completed": "Completed",
+          "sending": "Sending",
+          "sent": "Sent",
+          "failed": "Failed",
+          "skipped": "Skipped"
+        },
+        "health": {
+          "title": "Health",
+          "email": {
+            "title": "Notification email",
+            "ready": "Ready",
+            "disabled": "Turned off",
+            "missing": "No adapter",
+            "ready_desc": "An email adapter is configured and notification emails are on.",
+            "disabled_desc": "An email adapter is configured, but notification emails are turned off below.",
+            "missing_desc": "No email adapter is configured, so notifications stay in-app only."
+          },
+          "worker": {
+            "title": "Background worker",
+            "active": "Running",
+            "stale": "Stale",
+            "inactive": "Not configured",
+            "active_desc": "Cron is ticking, so fan-out and email batches keep moving.",
+            "stale_desc": "Cron hasn't run recently - queued work is waiting.",
+            "inactive_desc": "No cron adapter is configured, so queued work never runs on its own."
+          },
+          "events": {
+            "title": "Events",
+            "desc": "Notifications waiting to reach their recipients."
+          },
+          "deliveries": {
+            "title": "Email deliveries",
+            "desc": "Every email the notification system has tried to send."
+          },
+          "oldest": {
+            "title": "Oldest pending event",
+            "none": "Nothing waiting",
+            "none_desc": "The fan-out queue is empty. Lovely.",
+            "desc": "The longer this gets, the later people hear about things."
+          },
+          "failed_queue": "{count, plural, one {# notification queue task failed} other {# notification queue tasks failed}}",
+          "warnings": {
+            "title": "Heads up",
+            "cron_inactive": "No cron adapter is configured. Notifications are created, but fan-out and emails won't run until it is.",
+            "cron_stale": "Cron hasn't run recently. Check that your scheduler is still calling the cron endpoint.",
+            "email_adapter_missing": "No email adapter is configured, so nobody gets notification emails. In-app notifications still work.",
+            "failed_deliveries": "{count, plural, one {# email delivery failed} other {# email deliveries failed}}. Filter the deliveries below by \"Failed\" to inspect and retry.",
+            "failed_events": "{count, plural, one {# event failed} other {# events failed}} to fan out. Check the queue tasks for details."
+          }
+        },
+        "settings": {
+          "title": "Installation settings",
+          "desc": "Apply to everyone on this installation.",
+          "read_only": "You can see these settings, but changing them needs the \"Can edit\" notifications permission.",
+          "enabled": "On",
+          "disabled": "Off",
+          "submit": "Save settings",
+          "success": "Settings saved",
+          "success_desc": "The new notification settings apply from the next batch.",
+          "emailEnabled": {
+            "label": "Send notification emails",
+            "desc": "Turn this off to keep every notification in-app, whatever people picked."
+          },
+          "retentionDays": {
+            "label": "Keep notifications for",
+            "desc": "Older notifications are removed by the nightly cleanup. Between 1 and 3650 days.",
+            "unit": "days"
+          },
+          "fanoutBatchSize": {
+            "label": "Fan-out batch size",
+            "desc": "Recipients handled per fan-out step. Between 10 and 5000."
+          },
+          "emailBatchSize": {
+            "label": "Email batch size",
+            "desc": "Deliveries picked up per email run. Between 1 and 500."
+          },
+          "emailConcurrency": {
+            "label": "Email concurrency",
+            "desc": "Emails sent in parallel during a run. Between 1 and 20."
+          }
+        },
+        "types": {
+          "title": "Notification types",
+          "desc": "Every type registered by core and your plugins. Defaults apply to people who never changed their preferences.",
+          "empty": {
+            "title": "No notification types yet",
+            "desc": "Core and plugins register their types here. Nothing has signed up so far."
+          },
+          "in_app": "In-app",
+          "email": "Email",
+          "email_unavailable": "Email unavailable",
+          "grouped": "Grouped",
+          "mandatory": "Mandatory",
+          "version": "v{version}",
+          "enabled": "Enabled",
+          "enabled_mandatory": "Mandatory types are always on.",
+          "allow_email": "Allow email",
+          "default_in_app": "In-app by default",
+          "default_email": "Default email",
+          "email_modes": {
+            "none": "None",
+            "immediate": "Immediately",
+            "daily": "Daily digest",
+            "weekly": "Weekly digest"
+          },
+          "read_only": "Changing type policies needs the \"Can edit\" notifications permission.",
+          "success": "Type updated",
+          "success_desc": "\"{type}\" now follows the new policy."
+        },
+        "deliveries": {
+          "title": "Email deliveries",
+          "desc": "Newest first. Recipients show as user ids - addresses and content never leave the server.",
+          "filter": "Status",
+          "all": "All",
+          "caption": "Email delivery records",
+          "id": "ID",
+          "type": "Type",
+          "mode": "Mode",
+          "state": "Status",
+          "attempts": "Attempts",
+          "error": "Error",
+          "user": "User",
+          "updated": "Updated",
+          "actions": "Actions",
+          "user_id": "#{id}",
+          "test_type": "Test email",
+          "items": "{count, plural, one {# item} other {# items}}",
+          "modes": {
+            "immediate": "Immediate",
+            "daily": "Daily",
+            "weekly": "Weekly",
+            "test": "Test"
+          },
+          "load_more": "Load more",
+          "empty": {
+            "title": "No deliveries here",
+            "desc": "Nothing matches this filter. Quiet inboxes are happy inboxes."
+          },
+          "retry": {
+            "label": "Retry delivery #{id}",
+            "success": "Delivery queued again",
+            "success_desc": "Delivery #{id} goes out with the next email run, using the same idempotency key.",
+            "conflict": "Only failed deliveries can be retried. This one has already moved on."
+          }
+        },
+        "maintenance": {
+          "title": "Maintenance",
+          "desc": "Handy one-off jobs for when something looks off.",
+          "read_only": "Maintenance tools need the \"Can manage\" notifications permission.",
+          "retention": "Notifications older than {days, plural, one {# day} other {# days}} are cleaned up every night. Running it now just skips the wait.",
+          "test_email": {
+            "label": "Send test email to me",
+            "desc": "Queues a sample notification email to your own address - and only yours.",
+            "success": "Test email queued",
+            "success_desc": "Delivery #{id} is on its way to your own address. Watch it in the deliveries list below.",
+            "not_configured": "Notification email isn't configured yet, so there's nothing to test."
+          },
+          "reconcile": {
+            "title": "Unread counts",
+            "desc": "Compares each person's stored unread badge with their actual inbox.",
+            "check": "Check unread counts",
+            "fix": "Fix unread counts",
+            "result_ok": "All unread counts match. Nothing to fix.",
+            "result_mismatched": "{count, plural, one {# person has} other {# people have}} a stored unread count that doesn't match their inbox.",
+            "confirm_title": "Fix unread counts?",
+            "confirm_desc": "Every mismatched unread count is recalculated from the inbox. People's badges update right away.",
+            "confirm_submit": "Fix counts",
+            "fixed": "Unread counts fixed",
+            "fixed_desc": "{count, plural, =0 {Everything already matched.} one {# person's count was corrected.} other {# people's counts were corrected.}}"
+          },
+          "cleanup": {
+            "label": "Run cleanup now",
+            "success": "Cleanup queued",
+            "success_desc": "Old notifications are removed by the next queue run."
+          }
+        }
+      },
       "integrations": {
         "title": "Integrations",
         "desc": "Status of the core services that power this instance.",

@@ -4,7 +4,8 @@
   "tasks": {
     "test": {
       "dependsOn": ["^test"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["VITNODE_TEST_POSTGRES_URL"]
     },
     "test:types": {
       "dependsOn": ["^test:types"],

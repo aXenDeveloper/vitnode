@@ -10,9 +10,9 @@ VitNode provides a unified, multiplexed WebSocket connection at `/api/ws`. Brows
 
 ## Quick start
 
-### 1. Send User Notification
+### 1. Send a Toast to a User
 
-Push real-time notifications to any signed-in user from any Hono route or service:
+Push a transient toast to any signed-in user from any Hono route or service:
 
 ```ts
 import { notificationsChannel } from "@vitnode/core/ws/notifications"
@@ -26,6 +26,15 @@ c.get("realtime").sendToUser(userId, notificationsChannel, {
 ```
 
 The user receives an immediate `sonner` toast in all open tabs across devices.
+
+<Callout type="info" title="Need it to stick around? Use the Notifications Center">
+  `notificationsChannel` is for transient toasts: they reach open tabs only and
+  are gone on reload. For anything users should find later - with an inbox,
+  unread count, email and preferences - publish a persistent notification with
+  `c.get("notifications").publish()`. See
+  [Notifications](/docs/dev/notifications). The bell's unread count travels over
+  this same connection on `notificationsStateChannel`.
+</Callout>
 
 ---
 
@@ -46,8 +55,7 @@ c.get("realtime").broadcast(myChannel, {
 Create typed channels in your plugin:
 
 ```ts title="plugins/chat/src/ws/chat.channel.ts"
-import { defineWebSocketChannel } from "@vitnode/core/ws"
-import { z } from "zod"
+import { createWebSocketChannel } from "@vitnode/core/ws/types"
 
 export interface MessagePayload {
   roomId: string
@@ -55,35 +63,37 @@ export interface MessagePayload {
   senderId: number
 }
 
-// [!code ++:6]
-export const chatChannel = defineWebSocketChannel<MessagePayload>({
-  id: "chat_room_messages",
-  schema: z.object({
-    roomId: z.string(),
-    message: z.string(),
-    senderId: z.number(),
-  }),
+// [!code ++:5]
+export const chatChannel = createWebSocketChannel<never, MessagePayload>({
+  pluginId: "@acme/chat",
+  module: "rooms",
+  id: "messages",
 })
 ```
+
+The first type parameter is what the client sends, the second what it receives.
+The channel id becomes `{pluginId}_{module}_{id}`.
 
 ---
 
 ## Client-Side Consumption
 
-Listen for incoming channel messages with `useWebSocketChannel`:
+Listen for incoming channel messages with `useVitNodeWebSocket`:
 
 ```tsx title="plugins/chat/src/views/chat-room.tsx"
-import { useWebSocketChannel } from "@vitnode/core/hooks/use-websocket-channel"
+import { useVitNodeWebSocket } from "@vitnode/core/ws/use-websocket"
 import { chatChannel } from "../ws/chat.channel"
 
 export const ChatRoom = ({ roomId }: { roomId: string }) => {
   const [messages, setMessages] = React.useState<string[]>([])
 
-  // [!code ++:6]
-  useWebSocketChannel(chatChannel, (payload) => {
-    if (payload.roomId === roomId) {
-      setMessages((prev) => [...prev, payload.message])
-    }
+  // [!code ++:7]
+  useVitNodeWebSocket(chatChannel, {
+    onMessage: (payload) => {
+      if (payload.roomId === roomId) {
+        setMessages((prev) => [...prev, payload.message])
+      }
+    },
   })
 
   return (
@@ -103,10 +113,16 @@ export const ChatRoom = ({ roomId }: { roomId: string }) => {
 - **Single Connection**: Only one `/api/ws` socket is opened per client. All features share it via message multiplexing.
 - **Tab Leader Election**: When a user opens multiple tabs, a Web Lock elects one leader tab to hold the socket, distributing messages across tabs via `BroadcastChannel`.
 - **Automatic Reconnect**: Backoff retry automatically re-establishes dropped connections within seconds.
+- **Multiple Instances**: With `REDIS_URL` set, `sendToUser` and `broadcast` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
 
 ## Learn More
 
 <Cards>
+  <Card
+    title="Notifications"
+    description="Persistent inbox, unread count, email and digests"
+    href="/docs/dev/notifications"
+  />
   <Card
     title="Events"
     description="In-process domain events across plugins"

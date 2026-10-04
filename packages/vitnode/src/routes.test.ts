@@ -95,6 +95,7 @@ describe("core's route tree", () => {
     expect(guarded).toEqual({
       "/admin": "admin-guest",
       "/files": "authenticated",
+      "/notifications": "authenticated",
       "/login": "guest",
       "/register": "guest",
       "/settings": "authenticated",
@@ -136,6 +137,7 @@ describe("core's route tree", () => {
       "/admin/core/users/roles",
       "/files",
       "/login",
+      "/notifications",
       "/search",
     ]) {
       expect(declared).toContain(`@vitnode/core:page#${path}`);

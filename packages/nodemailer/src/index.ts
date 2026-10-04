@@ -42,11 +42,17 @@ export const NodemailerEmailAdapter = ({
         },
       );
 
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         to,
         subject,
         html,
       });
+
+      // SMTP has no idempotency: a crash after the server accepted a message
+      // and before this returned can mean a retry delivers it twice.
+      return {
+        id: typeof info.messageId === "string" ? info.messageId : undefined,
+      };
     },
   };
 };

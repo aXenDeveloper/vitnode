@@ -54,7 +54,8 @@
       }
     },
     "post": {
-      "published": "Published"
+      "published": "Published",
+      "follow_category": "Want to hear about new articles in this category?"
     }
   },
   "@vitnode/blog:posts": "Articles",

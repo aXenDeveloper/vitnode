@@ -20,6 +20,10 @@
   "@vitnode/core:navigation:can_delete": "Usuwanie pozycji menu głównego",
   "@vitnode/core:navigation:can_edit": "Edytowanie i zmiana kolejności pozycji menu głównego",
   "@vitnode/core:navigation:can_view": "Wyświetlanie menu głównego",
+  "@vitnode/core:notifications": "Powiadomienia",
+  "@vitnode/core:notifications:can_edit": "Edycja ustawień powiadomień",
+  "@vitnode/core:notifications:can_manage": "Ponawianie wysyłek, testowe e-maile i konserwacja",
+  "@vitnode/core:notifications:can_view": "Podgląd ustawień i stanu dostarczania powiadomień",
   "@vitnode/core:queue": "Zadania w kolejce",
   "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
   "@vitnode/core:roles": "Role",
@@ -909,7 +913,8 @@
           "devices": "Urządzenia",
           "overview": "Przegląd",
           "security": "Bezpieczeństwo",
-          "sso": "Połączone konta"
+          "sso": "Połączone konta",
+          "notifications": "Powiadomienia"
         },
         "overview": {
           "accountTitle": "Konto",
@@ -1151,6 +1156,45 @@
             "from": "Z {provider}",
             "saved_from": "{field}: teraz z {provider}",
             "saved_manual": "{field}: teraz ręcznie"
+          }
+        },
+        "notifications": {
+          "title": "Powiadomienia",
+          "desc": "Wybierz, co do Ciebie trafia i czy pojawia się w skrzynce, od razu w e-mailu, czy w codziennym lub cotygodniowym podsumowaniu.",
+          "in_app": "W aplikacji",
+          "email": "E-mail",
+          "email_unavailable": "Bez e-maila",
+          "mandatory": "Wymagane",
+          "saved": "Zapisano preferencje",
+          "saved_desc": "Nowe powiadomienia będą zgodne z nowymi ustawieniami.",
+          "email_modes": {
+            "none": "Bez e-maila",
+            "immediate": "E-mail od razu",
+            "daily": "Podsumowanie dzienne",
+            "weekly": "Podsumowanie tygodniowe"
+          },
+          "schedule": {
+            "title": "Harmonogram podsumowań",
+            "desc": "Kiedy wysyłamy podsumowania dzienne i tygodniowe, w Twojej strefie czasowej.",
+            "time_zone": "Strefa czasowa",
+            "time_zone_desc": "Podsumowania trzymają się tego zegara, łącznie ze zmianą czasu.",
+            "hour": "Wysyłaj o",
+            "hour_desc": "O tej godzinie wychodzą podsumowania dzienne.",
+            "weekday": "Dzień podsumowania tygodniowego",
+            "weekday_desc": "W tym dniu, o tej samej godzinie, wychodzą podsumowania tygodniowe.",
+            "submit": "Zapisz harmonogram"
+          },
+          "subscriptions": {
+            "title": "Obserwowane i wyciszone",
+            "desc": "Obserwowane rzeczy dodają powiadomień, wyciszone milkną.",
+            "empty": "Niczego jeszcze nie obserwujesz ani nie wyciszasz.",
+            "following": "Obserwujesz",
+            "muted": "Wyciszone",
+            "unfollow": "Przestań obserwować",
+            "unmute": "Wyłącz wyciszenie",
+            "unfollowed": "Nie obserwujesz",
+            "unmuted": "Wyciszenie wyłączone",
+            "error": "Nie udało się tego zmienić. Spróbuj ponownie."
           }
         }
       },
@@ -1684,6 +1728,40 @@
         "mod_cp": "Panel moderatora",
         "my_profile": "Mój profil",
         "settings": "Ustawienia"
+      },
+      "notifications": {
+        "title": "Powiadomienia",
+        "bell_label": "Powiadomienia",
+        "bell_label_unread": "Powiadomienia, {count, plural, one {# nieprzeczytane} few {# nieprzeczytane} many {# nieprzeczytanych} other {# nieprzeczytanych}}",
+        "recent": "Ostatnie powiadomienia",
+        "mark_all_read": "Oznacz wszystkie jako przeczytane",
+        "all_read": "Wszystko przeczytane",
+        "all_read_desc": "Wszystkie powiadomienia są oznaczone jako przeczytane.",
+        "mark_read": "Oznacz jako przeczytane",
+        "mark_unread": "Oznacz jako nieprzeczytane",
+        "archive": "Archiwizuj",
+        "archived": "Powiadomienie zarchiwizowane",
+        "unread": "Nieprzeczytane",
+        "loading": "Wczytywanie powiadomień…",
+        "load_error": "Nie udało się wczytać powiadomień.",
+        "retry": "Spróbuj ponownie",
+        "empty_title": "Jesteś na bieżąco",
+        "empty_desc": "Tutaj pojawi się nowa aktywność.",
+        "view_all": "Zobacz wszystkie powiadomienia",
+        "settings": "Ustawienia powiadomień",
+        "action_failed": "Nie udało się. Powiadomienia zostały odświeżone.",
+        "follow": {
+          "follow": "Obserwuj",
+          "following": "Obserwujesz",
+          "mute": "Wycisz powiadomienia",
+          "unmute": "Wyłącz wyciszenie",
+          "followed": "Obserwujesz",
+          "muted": "Wyciszono",
+          "cleared": "Powiadomienia jak zwykle",
+          "following_desc": "Dostaniesz powiadomienie o nowej aktywności.",
+          "muted_desc": "Nie dostaniesz już powiadomień na ten temat.",
+          "none_desc": "Znów obowiązują Twoje zwykłe ustawienia powiadomień."
+        }
       }
     },
     "navigation": {
@@ -1817,6 +1895,24 @@
         "overview": "Przegląd",
         "timeline": "Oś czasu"
       }
+    },
+    "notifications": {
+      "title": "Powiadomienia",
+      "desc": "Wszystko, co wydarzyło się pod Twoją nieobecność. Otwarcie tej strony niczego nie oznacza jako przeczytanego.",
+      "list_label": "Powiadomienia",
+      "filter_all": "Wszystkie",
+      "filter_unread": "Nieprzeczytane",
+      "all_categories": "Wszystkie kategorie",
+      "category_label": "Filtruj według kategorii",
+      "mark_all_read": "Oznacz wszystkie jako przeczytane",
+      "settings": "Ustawienia powiadomień",
+      "loading": "Wczytywanie…",
+      "load_more": "Wczytaj więcej",
+      "load_error": "Nie udało się wczytać powiadomień. Sprawdź połączenie i spróbuj ponownie.",
+      "retry": "Spróbuj ponownie",
+      "empty_title": "Na razie pusto",
+      "empty_unread_title": "Brak nieprzeczytanych powiadomień",
+      "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj."
     }
   }
 }

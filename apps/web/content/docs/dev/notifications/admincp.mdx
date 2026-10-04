@@ -1,0 +1,124 @@
+---
+title: Notifications in the AdminCP
+description: Monitor and manage VitNode notifications in the AdminCP - delivery health, installation settings, per-type policy, email deliveries with retry, test email, unread count repair and cleanup.
+icon: LayoutDashboard
+---
+
+Open **AdminCP → System → Notifications** (`/admin/core/system/notifications`)
+to see whether notifications are flowing, decide which types run on your site,
+and fix things when they drift.
+
+{/* Image prompt: The VitNode AdminCP page at /admin/core/system/notifications, light theme, 1440x900. Top row of health cards: "Notification email: Ready", "Background worker: Running", "Events" with small status counts, "Email deliveries" with sent/failed counts, "Oldest pending event: Nothing waiting". Below, an "Installation settings" card with a "Send notification emails" switch and number inputs, then a "Notification types" list with In-app/Email controls per type. */}
+
+## Permissions
+
+The screen uses the core `notifications` staff permission module:
+
+| Permission                 | Allows                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `notifications.can_view`   | Open the screen: health, settings, types and deliveries, read-only            |
+| `notifications.can_edit`   | Change installation settings and per-type policy                              |
+| `notifications.can_manage` | Retry deliveries, send a test email, check and fix unread counts, run cleanup |
+
+Grant them in **Staff → Administrators** (`/admin/core/staff/admins`). See
+[Staff permissions](/docs/dev/working-with-users/staff-permissions).
+
+## Health
+
+The health cards answer "is anything stuck?":
+
+- **Notification email** - ready, turned off, or no adapter configured.
+- **Background worker** - running, stale or not configured. Nothing is
+  delivered without a working [cron adapter](/docs/dev/cron).
+- **Events** - how many are pending, processing, completed or failed.
+- **Email deliveries** - counts per status.
+- **Oldest pending event** - the longer this gets, the later people hear about
+  things.
+
+A warning banner lists failed deliveries, failed events, failed notification
+queue tasks and a missing or stale cron.
+
+## Installation settings
+
+| Setting                  | Default | Range   | Effect                                                                                  |
+| ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------- |
+| Send notification emails | On      | -       | Off keeps every notification in-app, whatever users picked. Account email is unaffected |
+| Keep notifications for   | 90 days | 1-3650  | Inbox items older than this are removed by the nightly cleanup                          |
+| Fan-out batch size       | 500     | 10-5000 | Recipients handled per fan-out transaction                                              |
+| Email batch size         | 50      | 1-500   | Deliveries picked up per email run                                                      |
+| Email concurrency        | 4       | 1-20    | Emails sent in parallel during a run                                                    |
+
+Changes apply from the next batch.
+
+## Per-type policy
+
+Every registered type is listed with its plugin, category, version and whether
+it is grouped or mandatory. For each type you can set:
+
+- **Enabled** - off stops the type for everyone. Mandatory types are always on.
+- **Allow email** - off removes the email channel for this type.
+- **In-app by default** and **Default email** - the installation default for
+  users who never chose.
+
+Users' own choices still win over the defaults. See
+[How core decides](/docs/dev/notifications/preferences#how-core-decides).
+
+## Deliveries
+
+A list of email delivery records, newest first, filterable by status. Each row
+shows the type, mode (immediate, daily, weekly or test), attempts, item count,
+a sanitized error and the recipient's **user id**.
+
+**Retry** puts a failed delivery back in line with fresh attempts. It keeps the
+same row and idempotency key, so the provider sees the same key and the same
+notifications are rendered. See
+[Email and digests](/docs/dev/notifications/email-and-digests#delivery-records).
+
+## Maintenance
+
+- **Send test email to me** queues a sample notification email to the signed-in
+  administrator's own address. It cannot be sent to anyone else.
+- **Check unread counts** compares every stored unread count with the actual
+  inbox and reports how many people differ. It changes nothing.
+- **Fix unread counts** recalculates every mismatched count from the inbox and
+  pushes the corrected badge to those users right away.
+- **Run cleanup now** queues the retention cleanup instead of waiting for 03:17.
+
+## What diagnostics hide
+
+The screen is built for finding faults without reading anyone's mail:
+
+- recipients show as user ids - never email addresses;
+- no notification titles, bodies or email subjects are shown;
+- provider errors are stored with email addresses, tokens and keys redacted.
+
+## Admin API
+
+All routes live under `/api/@vitnode/core/admin/notifications`:
+
+| Method | Path                     | Permission   |
+| ------ | ------------------------ | ------------ |
+| `GET`  | `/overview`              | `can_view`   |
+| `GET`  | `/deliveries`            | `can_view`   |
+| `PUT`  | `/settings`              | `can_edit`   |
+| `PUT`  | `/types/{type}`          | `can_edit`   |
+| `POST` | `/deliveries/{id}/retry` | `can_manage` |
+| `POST` | `/test-email`            | `can_manage` |
+| `POST` | `/reconcile`             | `can_manage` |
+| `POST` | `/cleanup`               | `can_manage` |
+
+`POST /reconcile` takes `{ "dryRun": true }` to check only, and an optional
+`userId` to look at one user.
+
+## Related
+
+<Cards>
+  <Card
+    title="Queue and scale"
+    href="/docs/dev/notifications/queue-and-scale"
+  />
+  <Card
+    title="Troubleshooting"
+    href="/docs/dev/notifications/migration-and-troubleshooting#troubleshooting"
+  />
+</Cards>
