@@ -1,4 +1,4 @@
-import { and, eq, getColumns } from "drizzle-orm";
+import { and, eq, getColumns, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import type {
@@ -36,6 +36,32 @@ import {
 
 /** How often one purchase may trigger a provider read from the browser. */
 const REFRESH_THROTTLE_SECONDS = 5;
+
+// An atomic row claim, so the throttle holds across instances without Redis.
+const claimRefresh = async (
+  c: PaymentsContext,
+  purchaseId: number,
+): Promise<boolean> => {
+  const [claimed] = await c
+    .get("db")
+    .update(core_payments_purchases)
+    .set({ refreshCheckedAt: new Date() })
+    .where(
+      and(
+        eq(core_payments_purchases.id, purchaseId),
+        or(
+          isNull(core_payments_purchases.refreshCheckedAt),
+          lt(
+            core_payments_purchases.refreshCheckedAt,
+            new Date(Date.now() - REFRESH_THROTTLE_SECONDS * 1000),
+          ),
+        ),
+      ),
+    )
+    .returning({ id: core_payments_purchases.id });
+
+  return !!claimed;
+};
 
 /**
  * The purchase only if the signed-in user owns it. Not owning it reads exactly
@@ -177,13 +203,7 @@ export const showPurchaseRoute = buildRoute({
       (purchase.paymentStatus === "awaiting_payment" ||
         purchase.paymentStatus === "processing") &&
       c.get("core").payments.config &&
-      // Not released: the lock doubles as a per-purchase throttle.
-      (await c
-        .get("cache")
-        .acquireLock(
-          `payments:refresh:${purchase.id}`,
-          REFRESH_THROTTLE_SECONDS,
-        ))
+      (await claimRefresh(c, purchase.id))
     ) {
       try {
         purchase = await refreshPurchase(

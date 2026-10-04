@@ -8,6 +8,7 @@ import type { ProviderWebhookEvent } from "@/payments/provider";
 
 import { webhookRoute } from "@/api/modules/payments/routes/webhook.route";
 import {
+  core_payments_adjustments,
   core_payments_fulfillments,
   core_payments_purchases,
   core_payments_webhook_events,
@@ -517,6 +518,53 @@ describePostgres("fulfillment", () => {
 
     expect((await row(purchase.id)).refundStatus).toBe("none");
     expect(await h.access(user.id)).toHaveLength(1);
+  });
+
+  it("never moves a succeeded refund back from a stale read, but records one that failed", async () => {
+    const { checkout, purchase } = await buy();
+    await refreshPurchase(h.c, h.fake.provider, purchase);
+    await h.drainQueue();
+    const paymentId = `pi_${checkout.id}`;
+    const { syncPayment } = await import("./sync");
+    const refundId = h.fake.refund(paymentId, 900);
+    await syncPayment(h.c, h.fake.provider, paymentId);
+    await h.drainQueue();
+    const payment = must(h.fake.payments.get(paymentId));
+    const refundCalls = () =>
+      h.handlerCalls.filter(
+        call =>
+          call.kind === "refunded" && call.purchaseId === purchase.publicId,
+      ).length;
+    const adjustment = async () =>
+      must(
+        (
+          await h.database.db
+            .select()
+            .from(core_payments_adjustments)
+            .where(eq(core_payments_adjustments.externalId, refundId))
+        )[0],
+      );
+
+    payment.refunds[0].status = "pending";
+    payment.amountRefunded = 0;
+    await syncPayment(h.c, h.fake.provider, paymentId);
+    await h.drainQueue();
+
+    expect((await adjustment()).status).toBe("succeeded");
+    expect(await row(purchase.id)).toMatchObject({
+      refundedAmount: 900,
+      refundStatus: "partial",
+    });
+    expect(refundCalls()).toBe(1);
+
+    payment.refunds[0].status = "failed";
+    await syncPayment(h.c, h.fake.provider, paymentId);
+
+    expect((await adjustment()).status).toBe("failed");
+    expect(await row(purchase.id)).toMatchObject({
+      refundedAmount: 0,
+      refundStatus: "none",
+    });
   });
 });
 

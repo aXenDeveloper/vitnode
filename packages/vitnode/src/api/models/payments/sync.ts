@@ -1,4 +1,4 @@
-import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import type {
   PaymentProvider,
@@ -118,8 +118,46 @@ export const applyCheckoutState = async (
       .where(eq(core_payments_purchases.id, found.id))
       .for("update");
 
-    const next = nextPurchasePaymentStatus(current.paymentStatus, observed);
+    // Only the purchase's newest checkout may end it. An older session that
+    // was superseded can still report "expired" after its replacement opened.
+    const attempts = await tx
+      .select({
+        externalId: core_payments_checkouts.externalId,
+        id: core_payments_checkouts.id,
+      })
+      .from(core_payments_checkouts)
+      .where(eq(core_payments_checkouts.purchaseId, current.id))
+      .orderBy(desc(core_payments_checkouts.id));
+    const latest = attempts.at(0);
+    const matched = attempts.find(
+      attempt => attempt.externalId === checkout.id,
+    );
+    const fromLatest =
+      !latest ||
+      latest.externalId === checkout.id ||
+      (!matched && latest.externalId === null);
+    const endsPurchase =
+      observed === "expired" ||
+      observed === "failed" ||
+      observed === "awaiting_payment";
+
+    const next =
+      endsPurchase && !fromLatest
+        ? current.paymentStatus
+        : nextPurchasePaymentStatus(current.paymentStatus, observed);
     becamePaid = next === "paid" && current.paymentStatus !== "paid";
+
+    // A second session for the same purchase was paid as well. Its payment
+    // is reported, never merged into this purchase's records.
+    const paidTwice =
+      current.paymentStatus === "paid" &&
+      observed === "paid" &&
+      ((checkout.paymentId !== null &&
+        current.externalPaymentId !== null &&
+        checkout.paymentId !== current.externalPaymentId) ||
+        (!fromLatest && !!matched))
+        ? `A second checkout (${checkout.id}) for this purchase was also paid. Refund it in the provider.`
+        : null;
 
     // A charge that does not match the snapshot is recorded, never fulfilled
     // automatically: something outside this code changed the price.
@@ -135,8 +173,10 @@ export const applyCheckoutState = async (
       .update(core_payments_purchases)
       .set({
         externalCustomerId: checkout.customerId ?? current.externalCustomerId,
-        externalPaymentId: checkout.paymentId ?? current.externalPaymentId,
-        lastError: mismatch ?? current.lastError,
+        externalPaymentId: paidTwice
+          ? current.externalPaymentId
+          : (checkout.paymentId ?? current.externalPaymentId),
+        lastError: paidTwice ?? mismatch ?? current.lastError,
         nextCheckAt:
           next === "processing"
             ? new Date(Date.now() + PROCESSING_RECHECK_MS)
@@ -291,6 +331,8 @@ export const syncSubscription = async (
   { checkoutPurchase }: { checkoutPurchase?: PurchaseRow } = {},
 ): Promise<SubscriptionRow> => {
   const api = requireSubscriptions(provider);
+  // Taken before the read: a write that lands later reflects a newer read.
+  const readAt = new Date();
   const state = await api.retrieve(subscriptionId);
   const db = c.get("db");
 
@@ -311,6 +353,7 @@ export const syncSubscription = async (
       .id;
 
   let changed = false;
+  let duplicateOf: null | string = null;
 
   const row = await db.transaction(async tx => {
     const [owner] = await tx
@@ -322,7 +365,25 @@ export const syncSubscription = async (
     const [before] = await tx
       .select()
       .from(core_payments_subscriptions)
-      .where(eq(core_payments_subscriptions.purchaseId, owner.id));
+      .where(eq(core_payments_subscriptions.purchaseId, owner.id))
+      .for("update");
+
+    if (before && before.externalId !== state.id) {
+      duplicateOf = before.externalId;
+
+      return before;
+    }
+
+    // A slower sync that read the provider earlier must not overwrite a newer
+    // one, and an ended subscription never comes back to life.
+    if (
+      before &&
+      (before.syncedAt > readAt ||
+        (TERMINAL_SUBSCRIPTION_STATUSES.includes(before.status) &&
+          !TERMINAL_SUBSCRIPTION_STATUSES.includes(state.status)))
+    ) {
+      return before;
+    }
 
     const values = {
       cancelAt: state.cancelAt,
@@ -336,7 +397,7 @@ export const syncSubscription = async (
       nextCheckAt: nextSubscriptionCheck(state),
       providerStatus: state.providerStatus,
       status: state.status,
-      syncedAt: new Date(),
+      syncedAt: readAt,
     };
 
     const [stored] = before
@@ -387,6 +448,17 @@ export const syncSubscription = async (
 
     return stored;
   });
+
+  if (duplicateOf) {
+    const message = `A second subscription (${state.id}) was created for this purchase, which already has ${duplicateOf}. Cancel and refund the extra one in the provider.`;
+
+    await db
+      .update(core_payments_purchases)
+      .set({ lastError: message })
+      .where(eq(core_payments_purchases.id, purchaseId));
+
+    throw new PaymentsPermanentError(message);
+  }
 
   if (changed) await afterSubscriptionChange(c, row);
 
@@ -481,6 +553,13 @@ export const syncInvoice = async (
   let purchasePaid: null | PurchaseRow = null;
 
   const row = await db.transaction(async tx => {
+    // Same order as every other writer: purchase, then subscription.
+    await tx
+      .select({ id: core_payments_purchases.id })
+      .from(core_payments_purchases)
+      .where(eq(core_payments_purchases.id, subscription.purchaseId))
+      .for("update");
+
     const [locked] = await tx
       .select()
       .from(core_payments_subscriptions)
@@ -655,19 +734,18 @@ export const syncPayment = async (
   let refundedPurchase: null | PurchaseRow = null;
 
   await db.transaction(async tx => {
-    if (purchase) {
-      await tx
-        .select({ id: core_payments_purchases.id })
-        .from(core_payments_purchases)
-        .where(eq(core_payments_purchases.id, purchase.id))
-        .for("update");
-    } else {
-      await tx
-        .select({ id: core_payments_invoices.id })
-        .from(core_payments_invoices)
-        .where(eq(core_payments_invoices.id, invoice.id))
-        .for("update");
-    }
+    const [current] = purchase
+      ? await tx
+          .select({ refundedAmount: core_payments_purchases.refundedAmount })
+          .from(core_payments_purchases)
+          .where(eq(core_payments_purchases.id, purchase.id))
+          .for("update")
+      : await tx
+          .select({ refundedAmount: core_payments_invoices.refundedAmount })
+          .from(core_payments_invoices)
+          .where(eq(core_payments_invoices.id, invoice.id))
+          .for("update");
+    let refundFailed = false;
 
     const owner = purchase
       ? { invoiceId: null, purchaseId: purchase.id }
@@ -703,6 +781,23 @@ export const syncPayment = async (
           ),
         );
 
+      // A stale read can still say "pending" after the refund succeeded.
+      const status =
+        adjustment.kind === "refund" &&
+        before?.status === "succeeded" &&
+        (adjustment.status === "pending" ||
+          adjustment.status === "requires_action")
+          ? before.status
+          : adjustment.status;
+
+      if (
+        adjustment.kind === "refund" &&
+        (status === "failed" || status === "canceled") &&
+        before?.status !== status
+      ) {
+        refundFailed = true;
+      }
+
       await tx
         .insert(core_payments_adjustments)
         .values({
@@ -714,10 +809,10 @@ export const syncPayment = async (
           provider: provider.id,
           providerScope: provider.scope,
           reason: adjustment.reason,
-          status: adjustment.status,
+          status,
         })
         .onConflictDoUpdate({
-          set: { reason: adjustment.reason, status: adjustment.status },
+          set: { reason: adjustment.reason, status },
           target: [
             core_payments_adjustments.provider,
             core_payments_adjustments.providerScope,
@@ -735,7 +830,12 @@ export const syncPayment = async (
       }
     }
 
-    const refundedAmount = assertMinorUnits(facts.amountRefunded);
+    // Only a refund that just failed may lower the total; otherwise a stale
+    // read never shrinks it.
+    const reported = assertMinorUnits(facts.amountRefunded);
+    const refundedAmount = refundFailed
+      ? reported
+      : Math.max(reported, current.refundedAmount);
 
     if (purchase) {
       const [updated] = await tx

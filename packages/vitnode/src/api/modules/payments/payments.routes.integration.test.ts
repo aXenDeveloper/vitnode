@@ -1,10 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // @vitest-environment node
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { paymentsAdminModule } from "@/api/modules/admin/payments/payments.admin.module";
+import { core_payments_purchases } from "@/database/payments";
 import {
   createPaymentsHarness,
   must,
@@ -222,6 +224,30 @@ describePostgres("payments routes", () => {
           .purchase.paymentStatus,
       ).toBe("paid");
       await h.drainQueue();
+    });
+
+    it("asks the provider at most once every few seconds, without Redis", async () => {
+      const user = await h.createUser();
+      const { purchase } = await buy(user);
+      const retrieve = vi.spyOn(h.fake.provider.checkout, "retrieve");
+      const refresh = async () =>
+        await app.request(`/payments/purchases/${purchase.id}?refresh=true`);
+
+      as(user);
+      const polls = await Promise.all([refresh(), refresh(), refresh()]);
+      await refresh();
+
+      expect(polls.map(response => response.status)).toEqual([200, 200, 200]);
+      expect(retrieve).toHaveBeenCalledTimes(1);
+
+      await h.database.db
+        .update(core_payments_purchases)
+        .set({ refreshCheckedAt: new Date(Date.now() - 10_000) })
+        .where(eq(core_payments_purchases.publicId, purchase.id));
+      await refresh();
+
+      expect(retrieve).toHaveBeenCalledTimes(2);
+      retrieve.mockRestore();
     });
   });
 

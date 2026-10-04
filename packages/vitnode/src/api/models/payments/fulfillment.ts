@@ -185,6 +185,16 @@ export const runFulfillment = async (
 
   try {
     await db.transaction(async tx => {
+      // Purchase first, like every payment writer, so two writers never wait
+      // on each other's second lock.
+      const [purchase] = await tx
+        .select()
+        .from(core_payments_purchases)
+        .where(eq(core_payments_purchases.id, row.purchaseId))
+        .for("update");
+
+      if (!purchase) return;
+
       const [locked] = await tx
         .select()
         .from(core_payments_fulfillments)
@@ -192,14 +202,6 @@ export const runFulfillment = async (
         .for("update");
 
       if (!locked || locked.completedGeneration >= locked.generation) return;
-
-      const [purchase] = await tx
-        .select()
-        .from(core_payments_purchases)
-        .where(eq(core_payments_purchases.id, locked.purchaseId))
-        .for("update");
-
-      if (!purchase) return;
 
       if (locked.effect === FULFILLMENT_EFFECTS.grant) {
         if (offer.mode !== "one_time") {
@@ -301,6 +303,19 @@ export const retryFulfillment = async (
   fulfillmentId: number,
 ): Promise<boolean> =>
   await c.get("db").transaction(async tx => {
+    const [target] = await tx
+      .select({ purchaseId: core_payments_fulfillments.purchaseId })
+      .from(core_payments_fulfillments)
+      .where(eq(core_payments_fulfillments.id, fulfillmentId));
+
+    if (!target) return false;
+
+    await tx
+      .select({ id: core_payments_purchases.id })
+      .from(core_payments_purchases)
+      .where(eq(core_payments_purchases.id, target.purchaseId))
+      .for("update");
+
     const [row] = await tx
       .update(core_payments_fulfillments)
       .set({ status: "pending" })

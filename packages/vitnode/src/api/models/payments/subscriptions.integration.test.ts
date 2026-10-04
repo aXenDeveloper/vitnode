@@ -205,6 +205,67 @@ describePostgres("subscriptions", () => {
     expect((await h.access(user.id))[0].accessUntil).toEqual(endedAt);
   });
 
+  it("never brings an ended subscription back from a stale read", async () => {
+    const { subscriptionId } = await subscribe();
+    const remote = must(h.fake.subscriptions.get(subscriptionId));
+    remote.status = "canceled";
+    remote.providerStatus = "canceled";
+    remote.endedAt = new Date();
+    await syncSubscription(h.c, h.fake.provider, subscriptionId);
+
+    remote.status = "active";
+    remote.providerStatus = "active";
+    remote.endedAt = null;
+    await syncSubscription(h.c, h.fake.provider, subscriptionId);
+
+    expect((await local(subscriptionId)).status).toBe("canceled");
+  });
+
+  it("keeps a newer sync when an older read finishes last", async () => {
+    const { subscriptionId } = await subscribe();
+    const newer = new Date(Date.now() + 60_000);
+    await h.database.db
+      .update(core_payments_subscriptions)
+      .set({ syncedAt: newer })
+      .where(eq(core_payments_subscriptions.externalId, subscriptionId));
+    const remote = must(h.fake.subscriptions.get(subscriptionId));
+    remote.cancelAtPeriodEnd = true;
+
+    await syncSubscription(h.c, h.fake.provider, subscriptionId);
+
+    expect(await local(subscriptionId)).toMatchObject({
+      cancelAtPeriodEnd: false,
+      syncedAt: newer,
+    });
+  });
+
+  it("flags a second provider subscription for the same purchase", async () => {
+    const { purchase, subscriptionId } = await subscribe();
+    const extra = {
+      ...must(h.fake.subscriptions.get(subscriptionId)),
+      id: `${subscriptionId}_extra`,
+      latestInvoiceId: null,
+    };
+    h.fake.subscriptions.set(extra.id, extra);
+
+    await expect(
+      syncSubscription(h.c, h.fake.provider, extra.id),
+    ).rejects.toThrow(/second subscription/);
+
+    const [stored] = await h.database.db
+      .select()
+      .from(core_payments_purchases)
+      .where(eq(core_payments_purchases.id, purchase.id));
+    expect(stored.lastError).toMatch(extra.id);
+    expect((await local(subscriptionId)).status).toBe("active");
+    expect(
+      await h.database.db
+        .select()
+        .from(core_payments_subscriptions)
+        .where(eq(core_payments_subscriptions.externalId, extra.id)),
+    ).toHaveLength(0);
+  });
+
   it("refuses a second subscription to the same plan, even concurrently", async () => {
     const user = await h.createUser();
     const request = {

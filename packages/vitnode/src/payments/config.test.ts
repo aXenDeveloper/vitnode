@@ -113,7 +113,7 @@ describe("resolvePaymentsConfig", () => {
   it("refuses an out-of-range checkout lifetime", () => {
     expect(() =>
       resolvePaymentsConfig(config({ checkoutExpiresInMinutes: 5 })),
-    ).toThrow(/between 30 and 1440/);
+    ).toThrow(/between 45 and 1440/);
   });
 
   it("refuses an empty provider list", () => {

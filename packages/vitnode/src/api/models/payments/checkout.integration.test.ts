@@ -17,7 +17,7 @@ import {
 import { describePostgres } from "@/tests/postgres";
 
 import { cancelPurchase, startCheckout } from "./checkout";
-import { refreshPurchase } from "./sync";
+import { applyCheckoutState, refreshPurchase } from "./sync";
 
 const errorOf = async (promise: Promise<unknown>) => {
   try {
@@ -307,6 +307,38 @@ describePostgres("checkout", () => {
     expect(await errorOf(startCheckout(h.c, user, lifetime()))).toMatchObject({
       code: "not_eligible",
       status: 409,
+    });
+  });
+
+  it("closes a checkout about to expire before opening the next one", async () => {
+    const user = await h.createUser();
+    const first = await startCheckout(h.c, user, lifetime());
+    const [old] = await h.database.db
+      .select()
+      .from(core_payments_checkouts)
+      .where(eq(core_payments_checkouts.purchaseId, first.purchase.id));
+    await h.database.db
+      .update(core_payments_checkouts)
+      .set({ expiresAt: new Date(Date.now() + 60_000) })
+      .where(eq(core_payments_checkouts.id, old.id));
+
+    const second = await startCheckout(h.c, user, lifetime());
+    const oldId = must(old.externalId);
+
+    expect(second.purchase.id).toBe(first.purchase.id);
+    expect(second.checkoutUrl).not.toBe(first.checkoutUrl);
+    expect(must(h.fake.checkouts.get(oldId)).status).toBe("expired");
+
+    // The old session's "expired" webhook lands after the new one opened.
+    const applied = await applyCheckoutState(
+      h.c,
+      h.fake.provider,
+      await h.fake.provider.checkout.retrieve(oldId),
+    );
+
+    expect(applied.purchase.paymentStatus).toBe("awaiting_payment");
+    expect(await startCheckout(h.c, user, lifetime())).toMatchObject({
+      checkoutUrl: second.checkoutUrl,
     });
   });
 

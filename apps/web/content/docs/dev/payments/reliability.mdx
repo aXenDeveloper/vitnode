@@ -40,6 +40,11 @@ invoice, subscription or payment from Stripe and applies _that_. So:
 - An older event processed last still sees the current state.
 - Statuses only move forward: nothing moves a paid purchase back, and a
   renewal's paid period only ever grows.
+- A slow read never overwrites a newer one. An ended subscription stays ended,
+  a refund that succeeded never goes back to pending, and the refunded total
+  only shrinks when the provider says a refund failed.
+- A checkout about to expire is closed at the provider before a new one opens,
+  and a late "expired" event from the old one does not touch the purchase.
 
 ## Four kinds of state
 
@@ -69,7 +74,8 @@ a paid payment look failed - the purchase is "Paid, delivery delayed".
 ## Fulfillment runs once per effect
 
 Each business effect - `grant`, `refund:<id>`, `subscription` - is one row in
-`core_payments_fulfillments`, unique per purchase. The job locks the row, runs
+`core_payments_fulfillments`, unique per purchase. The job locks the purchase
+and then the row (every payment writer locks in that order), runs
 your handler with a transaction, and marks it completed in the same
 transaction.
 
