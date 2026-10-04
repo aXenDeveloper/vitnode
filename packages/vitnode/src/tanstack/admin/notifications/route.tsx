@@ -1,12 +1,13 @@
 import type { PluginRouteTranslator } from "@/routing";
 
 import {
-  notificationDeliveriesQueryOptions,
   notificationsOverviewQueryOptions,
+  notificationStatsQueryOptions,
 } from "@/views/admin/views/core/system/notifications/notifications-query";
 
 import type { AdminScreenContext } from "../screen";
 
+import { getIntlRuntime } from "../../i18n/runtime";
 import { requireAdminPermission } from "../screen";
 
 /**
@@ -47,8 +48,11 @@ export const loadAdminNotificationsRoute = async ({
       ...notificationsOverviewQueryOptions(),
       staleTime: "static",
     }),
-    queryClient.infiniteQuery({
-      ...notificationDeliveriesQueryOptions({}),
+    queryClient.query({
+      ...notificationStatsQueryOptions({
+        range: "7d",
+        timeZone: getIntlRuntime().timeZone ?? "UTC",
+      }),
       staleTime: "static",
     }),
   ]);

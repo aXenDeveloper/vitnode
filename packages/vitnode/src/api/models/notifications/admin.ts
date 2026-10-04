@@ -6,7 +6,11 @@ import type {
   NotificationTypePolicy,
 } from "@/api/lib/notifications/preferences";
 
-import { isNotificationEmailAvailable } from "@/api/lib/notifications/preferences";
+import {
+  isNotificationEmailAvailable,
+  isNotificationInAppAvailable,
+  isNotificationLockedForMembers,
+} from "@/api/lib/notifications/preferences";
 import { core_cron } from "@/database/cron";
 import {
   core_notification_deliveries,
@@ -22,8 +26,11 @@ import type { NotificationsContext } from "./shared";
 
 import { dispatchEmailDrain } from "./email-queue";
 import { reconcileNotificationCounts } from "./inbox";
+import { translateOr } from "./preferences";
+import { createTranslatorCache } from "./render";
 import {
   getNotificationRegistry,
+  getNotificationWorkers,
   GLOBAL_SETTINGS_KEY,
   isEmailConfigured,
   loadNotificationSettings,
@@ -47,48 +54,77 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
   const core = c.get("core");
   const settings = await loadNotificationSettings(db);
   const emailConfigured = isEmailConfigured(c, settings);
+  const { t } = await createTranslatorCache(c)(c.get("admin")?.user.language);
 
-  const [queueRows, deliveryRows, eventRows, [oldestPending], [cron]] =
-    await Promise.all([
-      db
-        .select({
-          count: count(),
-          key: sql<string>`${core_queue.name} || ':' || ${core_queue.status}`,
-        })
-        .from(core_queue)
-        .where(
-          and(
-            eq(core_queue.pluginId, NOTIFICATIONS_PLUGIN_ID),
-            like(core_queue.name, "notifications-%"),
+  const [
+    queueRows,
+    deliveryRows,
+    eventRows,
+    [oldestPending],
+    [cron],
+    [inbox],
+    [members],
+  ] = await Promise.all([
+    db
+      .select({
+        count: count(),
+        key: sql<string>`${core_queue.name} || ':' || ${core_queue.status}`,
+      })
+      .from(core_queue)
+      .where(
+        and(
+          eq(core_queue.pluginId, NOTIFICATIONS_PLUGIN_ID),
+          like(core_queue.name, "notifications-%"),
+        ),
+      )
+      .groupBy(core_queue.name, core_queue.status),
+    db
+      .select({ count: count(), key: core_notification_deliveries.status })
+      .from(core_notification_deliveries)
+      .groupBy(core_notification_deliveries.status),
+    db
+      .select({ count: count(), key: core_notification_events.status })
+      .from(core_notification_events)
+      .groupBy(core_notification_events.status),
+    db
+      .select({ createdAt: core_notification_events.createdAt })
+      .from(core_notification_events)
+      .where(
+        inArray(core_notification_events.status, ["pending", "processing"]),
+      )
+      .orderBy(core_notification_events.createdAt)
+      .limit(1),
+    db
+      .select({
+        lastActivity: sql<
+          null | string
+        >`max(coalesce(${core_cron.lastRun}, ${core_cron.createdAt}))`,
+      })
+      .from(core_cron),
+    db
+      .select({
+        items: count(),
+        unread:
+          sql<number>`count(*) filter (where ${core_notifications.archivedAt} IS NULL AND ${core_notifications.readSeq} < ${core_notifications.activitySeq})`.mapWith(
+            Number,
           ),
-        )
-        .groupBy(core_queue.name, core_queue.status),
-      db
-        .select({ count: count(), key: core_notification_deliveries.status })
-        .from(core_notification_deliveries)
-        .groupBy(core_notification_deliveries.status),
-      db
-        .select({ count: count(), key: core_notification_events.status })
-        .from(core_notification_events)
-        .groupBy(core_notification_events.status),
-      db
-        .select({ createdAt: core_notification_events.createdAt })
-        .from(core_notification_events)
-        .where(
-          inArray(core_notification_events.status, ["pending", "processing"]),
-        )
-        .orderBy(core_notification_events.createdAt)
-        .limit(1),
-      db
-        .select({
-          lastActivity: sql<
-            null | string
-          >`max(coalesce(${core_cron.lastRun}, ${core_cron.createdAt}))`,
-        })
-        .from(core_cron),
-    ]);
+      })
+      .from(core_notifications),
+    db
+      .select({ customized: count() })
+      .from(core_notification_user_state)
+      .where(
+        sql`${core_notification_user_state.preferences} <> '{}'::jsonb OR ${core_notification_user_state.digestHour} IS NOT NULL OR ${core_notification_user_state.digestWeekday} IS NOT NULL`,
+      ),
+  ]);
 
   return {
+    counts: {
+      customizedMembers: members?.customized ?? 0,
+      inboxItems: inbox?.items ?? 0,
+      queuedEmails: countBy(deliveryRows).pending ?? 0,
+      unreadItems: inbox?.unread ?? 0,
+    },
     email: {
       adapterConfigured: !!core.email?.adapter,
       enabled: settings.global.emailEnabled,
@@ -104,6 +140,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
       queue: countBy(queueRows),
     },
     settings: settings.global,
+    workers: getNotificationWorkers(c),
     types: getNotificationRegistry(c).list.map(({ definition, pluginId }) => {
       const policy = settings.policies.get(definition.id) ?? {};
 
@@ -118,14 +155,20 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
         emailSupported: !!definition.email,
         grouped: !!definition.grouping,
         id: definition.id,
-        label: definition.label,
+        label: translateOr(t, [definition.label], definition.id),
         mandatory: !!definition.mandatory,
         pluginId,
         policy: {
           allowEmail: policy.allowEmail ?? true,
+          allowInApp: isNotificationInAppAvailable({ definition, policy }),
+          allowPush: policy.allowPush ?? true,
           email: policy.email ?? null,
           enabled: policy.enabled ?? true,
           inApp: policy.inApp ?? null,
+          memberCanEdit: !isNotificationLockedForMembers({
+            definition,
+            policy,
+          }),
         },
         version: definition.version,
       };
@@ -155,31 +198,46 @@ export const updateNotificationGlobalSettings = async (
   const { global } = await loadNotificationSettings(c.get("db"));
   const next = normalizeGlobalSettings({ ...global, ...patch });
   await upsertSetting(c, GLOBAL_SETTINGS_KEY, { ...next });
+  await c.get("events").emit("notifications.settings.updated", {
+    keys: Object.keys(patch),
+  });
 
   return next;
 };
 
+const POLICY_KEYS = [
+  "allowEmail",
+  "allowInApp",
+  "allowPush",
+  "email",
+  "enabled",
+  "inApp",
+  "memberCanEdit",
+] as const satisfies readonly (keyof NotificationTypePolicy)[];
+
 export const updateNotificationTypePolicy = async (
   c: NotificationsContext,
   typeId: string,
-  policy: NotificationTypePolicy,
-): Promise<void> => {
+  patch: NotificationTypePolicy,
+): Promise<NotificationTypePolicy> => {
   const registered = getNotificationRegistry(c).get(typeId);
   if (!registered) throw new HTTPException(404);
-  if (policy.email && policy.email !== "none" && !registered.definition.email) {
+  if (patch.email && patch.email !== "none" && !registered.definition.email) {
     throw new HTTPException(400, {
       message: "This type has no email channel.",
     });
   }
 
-  await upsertSetting(c, typeSettingsKey(typeId), {
-    ...(policy.allowEmail === undefined
-      ? {}
-      : { allowEmail: policy.allowEmail }),
-    ...(policy.email === undefined ? {} : { email: policy.email }),
-    ...(policy.enabled === undefined ? {} : { enabled: policy.enabled }),
-    ...(policy.inApp === undefined ? {} : { inApp: policy.inApp }),
-  });
+  const { policies } = await loadNotificationSettings(c.get("db"));
+  const merged: NotificationTypePolicy = { ...policies.get(typeId) };
+  for (const key of POLICY_KEYS) {
+    if (patch[key] !== undefined) Object.assign(merged, { [key]: patch[key] });
+  }
+
+  await upsertSetting(c, typeSettingsKey(typeId), { ...merged });
+  await c.get("events").emit("notifications.type.updated", { typeId });
+
+  return merged;
 };
 
 /**

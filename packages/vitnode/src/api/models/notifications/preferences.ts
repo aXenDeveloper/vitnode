@@ -7,6 +7,8 @@ import type { NotificationEmailMode } from "@/lib/notifications/types";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
 import {
   isNotificationEmailAvailable,
+  isNotificationInAppAvailable,
+  isNotificationLockedForMembers,
   resolveNotificationChannels,
 } from "@/api/lib/notifications/preferences";
 import { core_notification_user_state } from "@/database/notifications";
@@ -28,7 +30,9 @@ export interface NotificationTypePreferenceView {
   /** The modes this type may use here - empty when email is unavailable. */
   emailModes: NotificationEmailMode[];
   id: string;
+  inAppAvailable: boolean;
   label: string;
+  locked: boolean;
   mandatory: boolean;
   pluginId: string;
   /** What the user gets now, after defaults and installation policy. */
@@ -42,7 +46,7 @@ export interface NotificationPreferencesView {
   types: NotificationTypePreferenceView[];
 }
 
-const translateOr = (
+export const translateOr = (
   t: Awaited<ReturnType<ReturnType<typeof createTranslatorCache>>>["t"],
   keys: string[],
   fallback: string,
@@ -79,14 +83,20 @@ export const getNotificationPreferences = async (
   const types = getNotificationRegistry(c)
     .list.filter(({ definition }) => {
       const policy = settings.policies.get(definition.id);
+      if (definition.mandatory) return true;
 
-      return policy?.enabled !== false || definition.mandatory;
+      return (
+        policy?.enabled !== false &&
+        (isNotificationInAppAvailable({ definition, policy }) ||
+          isNotificationEmailAvailable({ definition, emailConfigured, policy }))
+      );
     })
     .map(({ definition, pluginId }): NotificationTypePreferenceView => {
       const policy = settings.policies.get(definition.id);
+      const locked = isNotificationLockedForMembers({ definition, policy });
       const emailAvailable =
         isNotificationEmailAvailable({ definition, emailConfigured, policy }) &&
-        !definition.mandatory;
+        !locked;
 
       return {
         category: definition.category,
@@ -105,7 +115,9 @@ export const getNotificationPreferences = async (
           ? ["none", "immediate", "daily", "weekly"]
           : [],
         id: definition.id,
+        inAppAvailable: isNotificationInAppAvailable({ definition, policy }),
         label: translateOr(t, [definition.label], definition.id),
+        locked,
         mandatory: !!definition.mandatory,
         pluginId,
         value: resolveNotificationChannels({
@@ -119,8 +131,8 @@ export const getNotificationPreferences = async (
     });
 
   return {
-    digestHour: state?.digestHour ?? 8,
-    digestWeekday: state?.digestWeekday ?? 1,
+    digestHour: state?.digestHour ?? settings.global.digestHour,
+    digestWeekday: state?.digestWeekday ?? settings.global.digestWeekday,
     timeZone: state?.timeZone ?? null,
     types,
   };
@@ -161,19 +173,24 @@ export const updateNotificationPreferences = async (
       });
     }
     const { definition } = registered;
-    if (definition.mandatory) {
+    const policy = settings.policies.get(typeId);
+    if (isNotificationLockedForMembers({ definition, policy })) {
       throw new HTTPException(400, {
         message: `"${typeId}" cannot be changed.`,
       });
     }
     if (
+      preference.inApp === true &&
+      !isNotificationInAppAvailable({ definition, policy })
+    ) {
+      throw new HTTPException(400, {
+        message: `"${typeId}" is not shown in the notification list.`,
+      });
+    }
+    if (
       preference.email !== undefined &&
       preference.email !== "none" &&
-      !isNotificationEmailAvailable({
-        definition,
-        emailConfigured,
-        policy: settings.policies.get(typeId),
-      })
+      !isNotificationEmailAvailable({ definition, emailConfigured, policy })
     ) {
       throw new HTTPException(400, {
         message: `"${typeId}" has no email channel.`,

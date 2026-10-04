@@ -3,7 +3,10 @@ import type { NotificationEmailMode } from "@/lib/notifications/types";
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
-import type { AdminNotificationSettings } from "./notifications-query";
+import type {
+  AdminNotificationEditableSettings,
+  AdminNotificationSettings,
+} from "./notifications-query";
 
 /** What every write on this screen resolves to - never a throw. */
 export type NotificationsMutationResult<T> =
@@ -12,27 +15,38 @@ export type NotificationsMutationResult<T> =
 
 export interface NotificationTypePolicyPatch {
   allowEmail?: boolean;
+  allowInApp?: boolean;
+  allowPush?: boolean;
   email?: NotificationEmailMode;
   enabled?: boolean;
   inApp?: boolean;
+  memberCanEdit?: boolean;
 }
 
 /** The writes the screen can perform, as the host hands them in. */
 export interface NotificationsAdminActions {
-  cleanup: () => Promise<NotificationsMutationResult<{ success: boolean }>>;
-  reconcile: (body: {
-    dryRun: boolean;
-  }) => Promise<
-    NotificationsMutationResult<{ corrected: number; mismatched: number }>
+  cancelQueuedEmails: () => Promise<
+    NotificationsMutationResult<{ cancelled: number }>
   >;
-  retryDelivery: (
-    id: number,
-  ) => Promise<NotificationsMutationResult<{ success: boolean }>>;
+  cleanup: () => Promise<NotificationsMutationResult<{ success: boolean }>>;
+  deleteAll: () => Promise<
+    NotificationsMutationResult<{ events: number; items: number }>
+  >;
+  markEverythingRead: () => Promise<
+    NotificationsMutationResult<{ items: number; members: number }>
+  >;
+  pause: () => Promise<NotificationsMutationResult<{ success: boolean }>>;
+  resetMemberPreferences: () => Promise<
+    NotificationsMutationResult<{ members: number }>
+  >;
+  resume: () => Promise<
+    NotificationsMutationResult<{ requeuedEvents: number }>
+  >;
   sendTestEmail: () => Promise<
     NotificationsMutationResult<{ deliveryId: number }>
   >;
   updateSettings: (
-    body: Partial<AdminNotificationSettings>,
+    body: Partial<AdminNotificationEditableSettings>,
   ) => Promise<NotificationsMutationResult<AdminNotificationSettings>>;
   updateTypePolicy: (
     type: string,
@@ -47,16 +61,34 @@ const failure = async (response: {
   text: () => Promise<string>;
 }) => ({ error: await response.text(), status: response.status });
 
+const options = { credentials: "include" } as const;
+
 // Each call catches: the client throws on a 500 with the server's own text,
 // which the server has already logged. The screen only needs to know it failed.
 export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
+  cancelQueuedEmails: async () => {
+    try {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "post",
+        module: "admin/notifications",
+        options,
+        path: "/emails/cancel",
+      });
+      if (!response.ok) return await failure(response);
+
+      return { data: await response.json() };
+    } catch {
+      return FAILED;
+    }
+  },
   cleanup: async () => {
     try {
       const response = await fetcherClient({
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options: { credentials: "include" },
+        options,
         path: "/cleanup",
       });
       if (!response.ok) return await failure(response);
@@ -66,15 +98,14 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
       return FAILED;
     }
   },
-  reconcile: async body => {
+  deleteAll: async () => {
     try {
       const response = await fetcherClient({
         plugin: CONFIG_PLUGIN.pluginId,
-        args: { body },
         method: "post",
         module: "admin/notifications",
-        options: { credentials: "include" },
-        path: "/reconcile",
+        options,
+        path: "/delete-all",
       });
       if (!response.ok) return await failure(response);
 
@@ -83,15 +114,62 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
       return FAILED;
     }
   },
-  retryDelivery: async id => {
+  markEverythingRead: async () => {
     try {
       const response = await fetcherClient({
         plugin: CONFIG_PLUGIN.pluginId,
-        args: { params: { id: id } },
         method: "post",
         module: "admin/notifications",
-        options: { credentials: "include" },
-        path: "/deliveries/{id}/retry",
+        options,
+        path: "/read-all",
+      });
+      if (!response.ok) return await failure(response);
+
+      return { data: await response.json() };
+    } catch {
+      return FAILED;
+    }
+  },
+  pause: async () => {
+    try {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "post",
+        module: "admin/notifications",
+        options,
+        path: "/pause",
+      });
+      if (!response.ok) return await failure(response);
+
+      return { data: await response.json() };
+    } catch {
+      return FAILED;
+    }
+  },
+  resetMemberPreferences: async () => {
+    try {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "post",
+        module: "admin/notifications",
+        options,
+        path: "/members/reset-preferences",
+      });
+      if (!response.ok) return await failure(response);
+
+      return { data: await response.json() };
+    } catch {
+      return FAILED;
+    }
+  },
+  resume: async () => {
+    try {
+      const response = await fetcherClient({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "post",
+        module: "admin/notifications",
+        options,
+        path: "/resume",
       });
       if (!response.ok) return await failure(response);
 
@@ -106,7 +184,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         plugin: CONFIG_PLUGIN.pluginId,
         method: "post",
         module: "admin/notifications",
-        options: { credentials: "include" },
+        options,
         path: "/test-email",
       });
       if (!response.ok) return await failure(response);
@@ -123,7 +201,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         args: { body },
         method: "put",
         module: "admin/notifications",
-        options: { credentials: "include" },
+        options,
         path: "/settings",
       });
       if (!response.ok) return await failure(response);
@@ -140,7 +218,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
         args: { body, params: { type } },
         method: "put",
         module: "admin/notifications",
-        options: { credentials: "include" },
+        options,
         path: "/types/{type}",
       });
       if (!response.ok) return await failure(response);

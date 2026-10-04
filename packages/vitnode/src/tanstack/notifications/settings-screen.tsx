@@ -122,6 +122,11 @@ const PreferenceRow = ({
               <LockIcon />
               {t("mandatory")}
             </Badge>
+          ) : type.locked ? (
+            <Badge variant="secondary">
+              <LockIcon />
+              {t("locked")}
+            </Badge>
           ) : null}
         </span>
         {type.description ? (
@@ -132,15 +137,17 @@ const PreferenceRow = ({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={type.value.inApp}
-            disabled={type.mandatory}
-            id={switchId}
-            onCheckedChange={checked => onChange({ inApp: checked })}
-          />
-          <Label htmlFor={switchId}>{t("in_app")}</Label>
-        </div>
+        {type.inAppAvailable ? (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={type.value.inApp}
+              disabled={type.locked}
+              id={switchId}
+              onCheckedChange={checked => onChange({ inApp: checked })}
+            />
+            <Label htmlFor={switchId}>{t("in_app")}</Label>
+          </div>
+        ) : null}
 
         {modes.length > 0 ? (
           <div className="flex items-center gap-2">
@@ -168,7 +175,7 @@ const PreferenceRow = ({
           </div>
         ) : (
           <span className="text-muted-foreground text-sm">
-            {type.mandatory && type.value.email !== "none"
+            {type.locked && type.value.email !== "none"
               ? t(`email_modes.${type.value.email}`)
               : t("email_unavailable")}
           </span>
@@ -207,9 +214,12 @@ const ScheduleForm = ({
   });
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
+    const digestHour = Number(values.digestHour);
+    const digestWeekday = Number(values.digestWeekday);
+
     await save({
-      digestHour: Number(values.digestHour),
-      digestWeekday: Number(values.digestWeekday),
+      ...(digestHour === preferences.digestHour ? {} : { digestHour }),
+      ...(digestWeekday === preferences.digestWeekday ? {} : { digestWeekday }),
       timeZone: values.timeZone,
     });
   };

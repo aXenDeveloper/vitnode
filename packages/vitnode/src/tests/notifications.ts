@@ -11,6 +11,10 @@ import type {
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { NotificationEmailProps } from "@/emails/notification";
 
+import {
+  type NotificationWorkerSettings,
+  resolveNotificationWorkerSettings,
+} from "@/api/lib/notifications/preferences";
 import { createNotificationRegistry } from "@/api/lib/notifications/registry";
 import { NotificationsModel } from "@/api/models/notifications";
 import { QueueModel } from "@/api/models/queue";
@@ -49,6 +53,7 @@ export interface NotificationsHarness {
   database: TestDatabaseHandle;
   /** Runs queued tasks until nothing due is left. */
   drainQueue: (now?: Date) => Promise<number>;
+  emitted: { name: string; payload: unknown }[];
   /** A context on its own connection pool, for concurrent work. */
   forkContext: () => Context<EnvVitNode>;
   /** Queries sent through any connection since the harness was created. */
@@ -73,11 +78,13 @@ export const createNotificationsHarness = async ({
   messages = {},
   subjects = [],
   types,
+  workers,
 }: {
   email?: boolean;
   messages?: Record<string, unknown>;
   subjects?: NotificationSubjectDefinition[];
   types: AnyNotificationTypeDefinition[];
+  workers?: Partial<NotificationWorkerSettings>;
 }): Promise<NotificationsHarness> => {
   let queries = 0;
   const database = await createTestDatabase(
@@ -100,6 +107,7 @@ export const createNotificationsHarness = async ({
     .values({ id: 1, name: "Member", root: false } as never);
 
   const realtime: RealtimeRecord[] = [];
+  const emitted: NotificationsHarness["emitted"] = [];
   const sentEmails: SentEmailRecord[] = [];
   let emailFailure: Error | null = null;
   const registry = createNotificationRegistry(
@@ -128,6 +136,7 @@ export const createNotificationsHarness = async ({
         : undefined,
       metadata: { title: "Test" },
       notifications: registry,
+      notificationWorkers: resolveNotificationWorkerSettings(workers),
       queue: notificationTasks,
     });
     vars.set("realtime", {
@@ -181,6 +190,18 @@ export const createNotificationsHarness = async ({
       info: async () => {},
       warn: async () => {},
     });
+    vars.set("events", {
+      emit: async (name: string, payload: unknown) => {
+        emitted.push({ name, payload });
+
+        return await Promise.resolve({
+          delivered: 0,
+          eventId: `event-${emitted.length}`,
+          failures: [],
+          status: "delivered",
+        });
+      },
+    });
     vars.set("queue", new QueueModel(c));
     vars.set("notifications", new NotificationsModel(c));
 
@@ -215,6 +236,7 @@ export const createNotificationsHarness = async ({
       return rows.map(row => row.id);
     },
     database,
+    emitted,
     drainQueue: async (now = new Date()) => {
       let runs = 0;
       for (let round = 0; round < 200; round++) {

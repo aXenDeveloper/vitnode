@@ -22,7 +22,7 @@
   "@vitnode/core:navigation:can_view": "Wyświetlanie menu głównego",
   "@vitnode/core:notifications": "Powiadomienia",
   "@vitnode/core:notifications:can_edit": "Edycja ustawień powiadomień",
-  "@vitnode/core:notifications:can_manage": "Ponawianie wysyłek, testowe e-maile i konserwacja",
+  "@vitnode/core:notifications:can_manage": "Testowe e-maile, czyszczenie i strefa zagrożenia: wstrzymanie, anulowanie e-maili, oznaczanie jako przeczytane, usuwanie i reset preferencji",
   "@vitnode/core:notifications:can_view": "Podgląd ustawień i stanu dostarczania powiadomień",
   "@vitnode/core:queue": "Zadania w kolejce",
   "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
@@ -1195,7 +1195,8 @@
             "unfollowed": "Nie obserwujesz",
             "unmuted": "Wyciszenie wyłączone",
             "error": "Nie udało się tego zmienić. Spróbuj ponownie."
-          }
+          },
+          "locked": "Ustawione przez administratora"
         }
       },
       "sign_in": {

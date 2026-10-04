@@ -179,9 +179,9 @@ export const core_notification_user_state = camelCase.table.withRLS(
     unreadCount: t.integer().notNull().default(0),
     revision: t.bigint({ mode: "number" }).notNull().default(0),
     timeZone: t.varchar({ length: 64 }),
-    digestHour: t.smallint().notNull().default(8),
+    digestHour: t.smallint(),
     /** 0 = Sunday ... 6 = Saturday. */
-    digestWeekday: t.smallint().notNull().default(1),
+    digestWeekday: t.smallint(),
     preferences: t
       .jsonb()
       .$type<Record<string, NotificationTypePreference>>()

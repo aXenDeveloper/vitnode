@@ -8,7 +8,7 @@ import type { NotificationsAdminActions } from "@/views/admin/views/core/system/
 import { notificationsAdminActionsInBrowser } from "@/views/admin/views/core/system/notifications/notifications-mutations";
 import { notificationsAdminQueryRoot } from "@/views/admin/views/core/system/notifications/notifications-query";
 
-/** Refreshes the overview and every cached page of deliveries. */
+/** Refreshes the overview and every cached activity range. */
 export const invalidateNotificationsAdmin = async (
   queryClient: QueryClient,
 ): Promise<void> =>
@@ -40,9 +40,13 @@ export const useNotificationsAdminActions = (): NotificationsAdminActions => {
     const browser = notificationsAdminActionsInBrowser;
 
     return {
+      cancelQueuedEmails: refreshing(browser.cancelQueuedEmails),
       cleanup: refreshing(browser.cleanup),
-      reconcile: refreshing(browser.reconcile),
-      retryDelivery: refreshing(browser.retryDelivery),
+      deleteAll: refreshing(browser.deleteAll),
+      markEverythingRead: refreshing(browser.markEverythingRead),
+      pause: refreshing(browser.pause),
+      resetMemberPreferences: refreshing(browser.resetMemberPreferences),
+      resume: refreshing(browser.resume),
       sendTestEmail: refreshing(browser.sendTestEmail),
       updateSettings: refreshing(browser.updateSettings),
       updateTypePolicy: refreshing(browser.updateTypePolicy),

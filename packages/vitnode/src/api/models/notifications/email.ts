@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { createElement } from "react";
 
 import type { NotificationTypePreference } from "@/database/notifications";
@@ -29,6 +29,7 @@ import type {
   NotificationSettingsSnapshot,
 } from "./shared";
 
+import { splitByHourlyEmailCap } from "./email-cap";
 import { dispatchEmailDrain } from "./email-queue";
 import { valuesList } from "./fanout";
 import {
@@ -38,7 +39,11 @@ import {
   presentNotificationEmail,
   resolveEvent,
 } from "./render";
-import { isEmailConfigured, loadNotificationSettings } from "./shared";
+import {
+  getNotificationWorkers,
+  isEmailConfigured,
+  loadNotificationSettings,
+} from "./shared";
 
 type DeliveryRow = typeof core_notification_deliveries.$inferSelect;
 type DeliveryOutcome =
@@ -439,6 +444,75 @@ const runWithConcurrency = async <T>(
  * In-app delivery never waits on this: email runs in its own queue task, so a
  * slow or failing provider only delays email.
  */
+const holdOverHourlyCap = async (
+  c: NotificationsContext,
+  claimed: DeliveryRow[],
+  settings: NotificationSettingsSnapshot,
+  now: Date,
+): Promise<DeliveryRow[]> => {
+  const cap = settings.global.emailCapPerHour;
+  const userIds = [
+    ...new Set(
+      claimed.filter(row => row.mode === "immediate").map(row => row.userId),
+    ),
+  ];
+  if (cap === 0 || userIds.length === 0) return claimed;
+
+  const db = c.get("db");
+  const recent = await db
+    .select({
+      sentAt: core_notification_deliveries.sentAt,
+      userId: core_notification_deliveries.userId,
+    })
+    .from(core_notification_deliveries)
+    .where(
+      and(
+        eq(core_notification_deliveries.mode, "immediate"),
+        eq(core_notification_deliveries.status, "sent"),
+        inArray(core_notification_deliveries.userId, userIds),
+        gt(
+          core_notification_deliveries.sentAt,
+          new Date(now.getTime() - 60 * 60 * 1000),
+        ),
+      ),
+    );
+
+  const sentInLastHour = new Map<number, Date[]>();
+  for (const row of recent) {
+    if (!row.sentAt) continue;
+    sentInLastHour.set(row.userId, [
+      ...(sentInLastHour.get(row.userId) ?? []),
+      row.sentAt,
+    ]);
+  }
+
+  const { deferred } = splitByHourlyEmailCap({
+    cap,
+    deliveries: claimed,
+    now,
+    sentInLastHour,
+  });
+
+  for (const [id, availableAt] of deferred) {
+    await db
+      .update(core_notification_deliveries)
+      .set({
+        attempts: sql`greatest(${core_notification_deliveries.attempts} - 1, 0)`,
+        availableAt,
+        status: "pending",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(core_notification_deliveries.id, id),
+          eq(core_notification_deliveries.status, "sending"),
+        ),
+      );
+  }
+
+  return claimed.filter(row => !deferred.has(row.id));
+};
+
 export const drainNotificationEmails = async (
   c: NotificationsContext,
   { now = new Date() }: { now?: Date } = {},
@@ -450,6 +524,9 @@ export const drainNotificationEmails = async (
 }> => {
   const db = c.get("db");
   const settings = await loadNotificationSettings(db);
+  if (settings.global.paused) {
+    return { claimed: 0, failed: 0, sent: 0, skipped: 0 };
+  }
 
   const claimed = await db.transaction(async tx => {
     const due = await tx
@@ -465,7 +542,7 @@ export const drainNotificationEmails = async (
         asc(core_notification_deliveries.availableAt),
         asc(core_notification_deliveries.id),
       )
-      .limit(settings.global.emailBatchSize)
+      .limit(getNotificationWorkers(c).emailBatchSize)
       .for("update", { skipLocked: true });
     if (due.length === 0) return [];
 
@@ -487,10 +564,11 @@ export const drainNotificationEmails = async (
 
   const stats = { claimed: claimed.length, failed: 0, sent: 0, skipped: 0 };
   const translator = createTranslatorCache(c);
+  const sendable = await holdOverHourlyCap(c, claimed, settings, now);
 
   await runWithConcurrency(
-    claimed,
-    settings.global.emailConcurrency,
+    sendable,
+    getNotificationWorkers(c).emailConcurrency,
     async delivery => {
       let patch: Partial<DeliveryRow>;
       try {
@@ -703,11 +781,11 @@ export const planNotificationDigests = async (
       }
 
       const period = latestEndedDigestPeriod({
-        hour: profile.digestHour ?? 8,
+        hour: profile.digestHour ?? settings.global.digestHour,
         mode,
         now,
         timeZone: profile.timeZone ?? profile.languageTimeZone ?? "UTC",
-        weekday: profile.digestWeekday ?? 1,
+        weekday: profile.digestWeekday ?? settings.global.digestWeekday,
       });
       // Not due yet: it belongs to the period still running.
       if (receipt.createdAt >= period.end) continue;

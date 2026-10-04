@@ -32,7 +32,7 @@ in the background - see [Troubleshooting](/docs/dev/notifications/migration-and-
 ## Batched fan-out
 
 The fan-out task works through candidates in batches of `fanoutBatchSize`
-(default 500, configurable from 10 to 5,000 in the AdminCP). Named
+(default 500, from 10 to 5,000 - see [Configuration](#configuration)). Named
 `recipients` come first, then each `followersOf` subject's followers, streamed
 in user id order.
 
@@ -109,14 +109,57 @@ The migration adds the indexes the hot paths need:
 
 `notifications-cleanup` removes, in batches:
 
-- inbox items whose last activity is older than `retentionDays` (default 90),
-  taking unread ones off their owner's count;
+- inbox items whose last activity is older than `retentionDays` (default 90,
+  see [Configuration](#configuration)), taking unread ones off their owner's count;
 - events older than that which no inbox item points at;
 - finished delivery records older than that;
 - pending email for events no digest claimed within 14 days - those stop
   waiting for an email, and the inbox items stay.
 
 Run it on demand from the [AdminCP](/docs/dev/notifications/admincp#maintenance).
+
+## Configuration
+
+How much work each run does and how long notifications are kept are deployment
+decisions, so they live in your API config rather than the AdminCP. Add a
+`notifications` block to `buildApiConfig` in `vitnode.api.config.ts`:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  notifications: {
+    retentionDays: 30,
+    fanoutBatchSize: 1000,
+    emailBatchSize: 100,
+    emailConcurrency: 8,
+  },
+});
+```
+
+Every key is optional:
+
+| Key                | Default | Range    | What it does                                                    |
+| ------------------ | ------- | -------- | --------------------------------------------------------------- |
+| `retentionDays`    | `90`    | 1-3650   | Notifications older than this are removed by the nightly cleanup |
+| `fanoutBatchSize`  | `500`   | 10-5000  | Recipients handled in one fan-out transaction                   |
+| `emailBatchSize`   | `50`    | 1-500    | Emails one worker run picks up                                  |
+| `emailConcurrency` | `4`     | 1-20     | Emails sent at the same time during a run                       |
+
+A value outside its range is clamped to the nearest limit, and anything that
+isn't a whole number falls back to the default - a typo never stops
+notifications. Restart the API to apply a change.
+
+<Callout title="When to change them">
+  The defaults suit most sites. Raise `fanoutBatchSize` if one announcement to
+  a huge audience takes too many runs, and `emailConcurrency` if your email
+  provider allows more parallel sends. Lower `emailBatchSize` if a slow
+  provider makes runs time out.
+</Callout>
+
+The AdminCP shows the retention period in the
+[Settings sheet](/docs/dev/notifications/admincp#settings) but can't change it.
 
 ## Related
 

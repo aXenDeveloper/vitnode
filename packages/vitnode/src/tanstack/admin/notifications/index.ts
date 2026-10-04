@@ -14,13 +14,12 @@ export type {
   NotificationTypePolicyPatch,
 } from "@/views/admin/views/core/system/notifications/notifications-mutations";
 export type {
-  AdminNotificationDeliveriesPage,
-  AdminNotificationDelivery,
   AdminNotificationsOverview,
+  AdminNotificationStats,
   AdminNotificationType,
 } from "@/views/admin/views/core/system/notifications/notifications-query";
 export {
-  notificationDeliveriesQueryOptions,
   notificationsAdminQueryRoot,
   notificationsOverviewQueryOptions,
+  notificationStatsQueryOptions,
 } from "@/views/admin/views/core/system/notifications/notifications-query";

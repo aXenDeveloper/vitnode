@@ -1,121 +1,168 @@
 ---
 title: Notifications in the AdminCP
-description: Monitor and manage VitNode notifications in the AdminCP - delivery health, installation settings, per-type policy, email deliveries with retry, test email, unread count repair and cleanup.
+description: Manage VitNode notifications in the AdminCP - activity at a glance, what members get by default per type, installation settings, maintenance tools and a danger zone to pause, cancel, mark read or delete everything.
 icon: LayoutDashboard
 ---
 
 Open **AdminCP → System → Notifications** (`/admin/core/system/notifications`)
-to see whether notifications are flowing, decide which types run on your site,
-and fix things when they drift.
+to see how notifications are doing, decide what members get by default, and
+tidy up when you need to.
 
-{/* Image prompt: The VitNode AdminCP page at /admin/core/system/notifications, light theme, 1440x900. Top row of health cards: "Notification email: Ready", "Background worker: Running", "Events" with small status counts, "Email deliveries" with sent/failed counts, "Oldest pending event: Nothing waiting". Below, an "Installation settings" card with a "Send notification emails" switch and number inputs, then a "Notification types" list with In-app/Email controls per type. */}
+{/* Image prompt: The VitNode AdminCP page at /admin/core/system/notifications, light theme, 1440x900. Title "Notifications" with a "Settings" button top right. An "Activity" row of four stat cards (Emails delivered, Failure rate, Events published, Emails skipped) each with a percentage change and a small sparkline, and 24h / 7d / 30d tabs. Below, "Notification types" grouped by plugin; one row is open, showing a "Member can edit" switch and three columns of radio cards: Notification list, Push, Email. */}
 
 ## Permissions
 
 The screen uses the core `notifications` staff permission module:
 
-| Permission                 | Allows                                                                        |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| `notifications.can_view`   | Open the screen: health, settings, types and deliveries, read-only            |
-| `notifications.can_edit`   | Change installation settings and per-type policy                              |
-| `notifications.can_manage` | Retry deliveries, send a test email, check and fix unread counts, run cleanup |
+| Permission                 | Allows                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `notifications.can_view`   | Open the screen and the settings sheet, read-only                                        |
+| `notifications.can_edit`   | Change settings and what each type does by default                                       |
+| `notifications.can_manage` | Tools (test email, cleanup), the danger zone and **Reset all members to defaults**       |
 
 Grant them in **Staff → Administrators** (`/admin/core/staff/admins`). See
 [Staff permissions](/docs/dev/working-with-users/staff-permissions).
 
-## Health
+## Activity
 
-The health cards answer "is anything stuck?":
+Four numbers for the last 24 hours, 7 days or 30 days, each compared with the
+period before it and drawn as a small trend line:
 
-- **Notification email** - ready, turned off, or no adapter configured.
-- **Background worker** - running, stale or not configured. Nothing is
-  delivered without a working [cron adapter](/docs/dev/cron).
-- **Events** - how many are pending, processing, completed or failed.
-- **Email deliveries** - counts per status.
-- **Oldest pending event** - the longer this gets, the later people hear about
-  things.
+- **Emails delivered** - notification emails that went out (test emails don't count).
+- **Failure rate** - failed emails out of everything that was attempted.
+- **Events published** - notifications plugins and core published.
+- **Emails skipped** - emails that were due but not sent, for example because the
+  member turned email off or the notification was already read.
 
-A warning banner lists failed deliveries, failed events, failed notification
-queue tasks and a missing or stale cron.
+Days and hours follow the site's time zone, so "today" means the same thing to
+everyone on the screen.
 
-## Installation settings
+If notifications are [paused](#danger-zone), a banner at the top says so.
 
-| Setting                  | Default | Range   | Effect                                                                                  |
-| ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------- |
-| Send notification emails | On      | -       | Off keeps every notification in-app, whatever users picked. Account email is unaffected |
-| Keep notifications for   | 90 days | 1-3650  | Inbox items older than this are removed by the nightly cleanup                          |
-| Fan-out batch size       | 500     | 10-5000 | Recipients handled per fan-out transaction                                              |
-| Email batch size         | 50      | 1-500   | Deliveries picked up per email run                                                      |
-| Email concurrency        | 4       | 1-20    | Emails sent in parallel during a run                                                    |
+## Notification types
 
-Changes apply from the next batch.
+Every registered type, grouped by plugin. Each row shows what members get today
+at a glance - notification list, push and email - and opens to change it:
 
-## Per-type policy
+| Choice                | Options                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| **Member can edit**   | Off locks the type: members still get it, they just can't change it |
+| **Notification list** | Enabled by default · Not enabled by default · Disabled          |
+| **Push**              | Available · Disabled                                            |
+| **Email**             | Enabled by default · Not enabled by default · Disabled          |
 
-Every registered type is listed with its plugin, category, version and whether
-it is grouped or mandatory. For each type you can set:
+- **Enabled by default** - members get it unless they turn it off.
+- **Not enabled by default** - members get it only after turning it on.
+- **Disabled** - nobody gets it on that channel and the option disappears from
+  members' settings.
 
-- **Enabled** - off stops the type for everyone. Mandatory types are always on.
-- **Allow email** - off removes the email channel for this type.
-- **In-app by default** and **Default email** - the installation default for
-  users who never chose.
-
-Users' own choices still win over the defaults. See
+Changes save as you click and apply to members who never chose for themselves.
+Members' own choices still win, unless the type is locked. See
 [How core decides](/docs/dev/notifications/preferences#how-core-decides).
 
-## Deliveries
+<Callout title="Push is a placeholder for now">
+  VitNode doesn't deliver push notifications yet. The **Push** choice is saved
+  with the type so it's ready when push lands.
+</Callout>
 
-A list of email delivery records, newest first, filterable by status. Each row
-shows the type, mode (immediate, daily, weekly or test), attempts, item count,
-a sanitized error and the recipient's **user id**.
+Mandatory types always show in the notification list and are always locked.
+Switching email back to **Enabled by default** keeps the frequency (immediate,
+daily or weekly) the type had before.
 
-**Retry** puts a failed delivery back in line with fresh attempts. It keeps the
-same row and idempotency key, so the provider sees the same key and the same
-notifications are rendered. See
-[Email and digests](/docs/dev/notifications/email-and-digests#delivery-records).
+### Reset all members to defaults
 
-## Maintenance
+The button next to **Notification types** wipes every member's own choices -
+muted types, email choices and their digest schedule - so everyone follows the
+defaults on this page again. The confirmation says how many members picked
+their own settings. It can't be undone.
 
-- **Send test email to me** queues a sample notification email to the signed-in
-  administrator's own address. It cannot be sent to anyone else.
-- **Check unread counts** compares every stored unread count with the actual
-  inbox and reports how many people differ. It changes nothing.
-- **Fix unread counts** recalculates every mismatched count from the inbox and
-  pushes the corrected badge to those users right away.
-- **Run cleanup now** queues the retention cleanup instead of waiting for 03:17.
+Follows and muted subjects (like a muted blog category) are kept.
 
-## What diagnostics hide
+## Settings
 
-The screen is built for finding faults without reading anyone's mail:
+The **Settings** button opens a sheet. Every row shows its current value; tap
+it to change that one value and save. Switches save right away.
 
-- recipients show as user ids - never email addresses;
-- no notification titles, bodies or email subjects are shown;
-- provider errors are stored with email addresses, tokens and keys redacted.
+| Setting                    | Default | Range   | Effect                                                                                       |
+| -------------------------- | ------- | ------- | -------------------------------------------------------------------------------------------- |
+| Send notification emails   | On      | -       | Off keeps every notification in the list, whatever members picked. Account email is unaffected |
+| Emails per member per hour | No limit | 0-500  | Immediate emails over the limit wait until the hour is up. Digests are never held back       |
+| Daily digest time          | 08:00   | 0-23    | For members who haven't picked their own, in their time zone                                 |
+| Weekly digest day          | Monday  | -       | For members who haven't picked their own                                                     |
+
+Retention and worker batch sizes are deployment settings, set in your API
+config rather than here - see
+[Queue and scale → Configuration](/docs/dev/notifications/queue-and-scale#configuration).
+The sheet shows the current retention period at the bottom.
+
+### Tools
+
+- **Send a test email to me** queues a sample notification email to your own
+  address. It can't be sent to anyone else.
+- **Run cleanup now** removes notifications older than the configured
+  retention period now instead of waiting for 03:17.
+
+### Danger zone
+
+Each action affects every member at once and asks before it runs:
+
+| Action                                   | What happens                                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Pause all notifications**              | Nothing is fanned out or emailed. New events wait in the queue. **Resume** sends everything that waited |
+| **Cancel all queued emails**             | Emails that haven't gone out yet, including pending digests, are skipped. Notifications stay in the list |
+| **Mark everything as read for everyone** | Every unread notification becomes read and every badge drops to zero, live                            |
+| **Delete all notifications**             | Empties every member's notification list. You type `delete all notifications` to confirm              |
+
+Deleting keeps types, preferences, settings and email history. It can't be
+undone.
 
 ## Admin API
 
 All routes live under `/api/@vitnode/core/admin/notifications`:
 
-| Method | Path                     | Permission   |
-| ------ | ------------------------ | ------------ |
-| `GET`  | `/overview`              | `can_view`   |
-| `GET`  | `/deliveries`            | `can_view`   |
-| `PUT`  | `/settings`              | `can_edit`   |
-| `PUT`  | `/types/{type}`          | `can_edit`   |
-| `POST` | `/deliveries/{id}/retry` | `can_manage` |
-| `POST` | `/test-email`            | `can_manage` |
-| `POST` | `/reconcile`             | `can_manage` |
-| `POST` | `/cleanup`               | `can_manage` |
+| Method | Path                         | Permission   |
+| ------ | ---------------------------- | ------------ |
+| `GET`  | `/overview`                  | `can_view`   |
+| `GET`  | `/stats`                     | `can_view`   |
+| `GET`  | `/deliveries`                | `can_view`   |
+| `PUT`  | `/settings`                  | `can_edit`   |
+| `PUT`  | `/types/{type}`              | `can_edit`   |
+| `POST` | `/test-email`                | `can_manage` |
+| `POST` | `/cleanup`                   | `can_manage` |
+| `POST` | `/reconcile`                 | `can_manage` |
+| `POST` | `/deliveries/{id}/retry`     | `can_manage` |
+| `POST` | `/pause`                     | `can_manage` |
+| `POST` | `/resume`                    | `can_manage` |
+| `POST` | `/emails/cancel`             | `can_manage` |
+| `POST` | `/read-all`                  | `can_manage` |
+| `POST` | `/delete-all`                | `can_manage` |
+| `POST` | `/members/reset-preferences` | `can_manage` |
 
-`POST /reconcile` takes `{ "dryRun": true }` to check only, and an optional
-`userId` to look at one user.
+`GET /stats` takes `range` (`24h`, `7d` or `30d`) and `timeZone` (an IANA name,
+like `Europe/Warsaw`). `PUT /types/{type}` merges what you send into the stored
+policy:
+
+```json
+{
+  "allowInApp": true,
+  "inApp": false,
+  "allowPush": true,
+  "allowEmail": true,
+  "email": "daily",
+  "memberCanEdit": false
+}
+```
+
+The deliveries list, retry and unread count repair have no buttons on this
+screen any more - the routes stay for scripts and for the debug panel.
 
 ## Related
 
 <Cards>
+  <Card title="Preferences" href="/docs/dev/notifications/preferences" />
   <Card
-    title="Queue and scale"
-    href="/docs/dev/notifications/queue-and-scale"
+    title="Email and digests"
+    href="/docs/dev/notifications/email-and-digests"
   />
   <Card
     title="Troubleshooting"

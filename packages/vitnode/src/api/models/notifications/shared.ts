@@ -10,7 +10,11 @@ import type { NotificationRegistry } from "@/api/lib/notifications/registry";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { NotificationStateMessage } from "@/lib/notifications/types";
 
-import { DEFAULT_NOTIFICATION_SETTINGS } from "@/api/lib/notifications/preferences";
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  type NotificationWorkerSettings,
+  resolveNotificationWorkerSettings,
+} from "@/api/lib/notifications/preferences";
 import { core_notification_settings } from "@/database/notifications";
 import { notificationsStateChannel } from "@/ws/notifications";
 
@@ -57,34 +61,19 @@ export const normalizeGlobalSettings = (
   const defaults = DEFAULT_NOTIFICATION_SETTINGS;
 
   return {
-    emailBatchSize: clampInt(
-      value?.emailBatchSize,
-      1,
+    digestHour: clampInt(value?.digestHour, 0, 23, defaults.digestHour),
+    digestWeekday: clampInt(value?.digestWeekday, 0, 6, defaults.digestWeekday),
+    emailCapPerHour: clampInt(
+      value?.emailCapPerHour,
+      0,
       500,
-      defaults.emailBatchSize,
-    ),
-    emailConcurrency: clampInt(
-      value?.emailConcurrency,
-      1,
-      20,
-      defaults.emailConcurrency,
+      defaults.emailCapPerHour,
     ),
     emailEnabled:
       typeof value?.emailEnabled === "boolean"
         ? value.emailEnabled
         : defaults.emailEnabled,
-    fanoutBatchSize: clampInt(
-      value?.fanoutBatchSize,
-      10,
-      5000,
-      defaults.fanoutBatchSize,
-    ),
-    retentionDays: clampInt(
-      value?.retentionDays,
-      1,
-      3650,
-      defaults.retentionDays,
-    ),
+    paused: typeof value?.paused === "boolean" ? value.paused : defaults.paused,
   };
 };
 
@@ -105,6 +94,11 @@ export const loadNotificationSettings = async (
 
   return { global: normalizeGlobalSettings(global), policies };
 };
+
+export const getNotificationWorkers = (
+  c: NotificationsContext,
+): NotificationWorkerSettings =>
+  c.get("core").notificationWorkers ?? resolveNotificationWorkerSettings();
 
 /** Whether notification emails can be sent at all on this installation. */
 export const isEmailConfigured = (

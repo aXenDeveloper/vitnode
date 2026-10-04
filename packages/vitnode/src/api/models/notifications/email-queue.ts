@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { core_queue } from "@/database/queue";
 
@@ -18,17 +18,28 @@ export const dispatchEmailDrain = async (
 ): Promise<void> => {
   const db = tx ?? c.get("db");
   const [queued] = await db
-    .select({ id: core_queue.id })
+    .select({ availableAt: core_queue.availableAt, id: core_queue.id })
     .from(core_queue)
     .where(
       and(
         eq(core_queue.pluginId, NOTIFICATIONS_PLUGIN_ID),
         eq(core_queue.name, QUEUE_NOTIFICATIONS_EMAIL),
-        inArray(core_queue.status, ["pending"]),
+        eq(core_queue.status, "pending"),
       ),
     )
+    .orderBy(asc(core_queue.availableAt))
     .limit(1);
-  if (queued) return;
+  if (queued) {
+    const wanted = availableAt ?? new Date();
+    if (queued.availableAt > wanted) {
+      await db
+        .update(core_queue)
+        .set({ availableAt: wanted })
+        .where(eq(core_queue.id, queued.id));
+    }
+
+    return;
+  }
 
   await c.get("queue").dispatch({
     availableAt,

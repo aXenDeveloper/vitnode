@@ -26,6 +26,7 @@ import type {
 import { dispatchEmailDrain } from "./email-queue";
 import {
   getNotificationRegistry,
+  getNotificationWorkers,
   isEmailConfigured,
   loadNotificationSettings,
   sendNotificationStates,
@@ -286,7 +287,7 @@ const processBatch = async (
   const candidates = await nextCandidates(
     tx,
     event,
-    settings.global.fanoutBatchSize,
+    getNotificationWorkers(c).fanoutBatchSize,
   );
   const { eligible, muted } = await filterRecipients({
     c,
@@ -494,6 +495,7 @@ export interface FanoutResult {
   batches: number;
   delivered: number;
   done: boolean;
+  paused?: boolean;
 }
 
 /**
@@ -511,6 +513,7 @@ export const processNotificationEvent = async (
   const settings = await loadNotificationSettings(db);
   const deadline = Date.now() + timeBudgetMs;
   const result: FanoutResult = { batches: 0, delivered: 0, done: false };
+  if (settings.global.paused) return { ...result, done: true, paused: true };
 
   while (!result.done) {
     const batch = await db.transaction(

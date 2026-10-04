@@ -8,13 +8,15 @@ import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
 const zodEmailMode = z.enum(NOTIFICATION_EMAIL_MODES);
 const zodCounts = z.record(z.string(), z.number());
 
-export const zodNotificationGlobalSettings = z.object({
-  emailBatchSize: z.number().int().min(1).max(500),
-  emailConcurrency: z.number().int().min(1).max(20),
+export const zodEditableNotificationSettings = z.object({
+  digestHour: z.number().int().min(0).max(23),
+  digestWeekday: z.number().int().min(0).max(6),
+  emailCapPerHour: z.number().int().min(0).max(500),
   emailEnabled: z.boolean(),
-  fanoutBatchSize: z.number().int().min(10).max(5000),
-  retentionDays: z.number().int().min(1).max(3650),
 });
+
+export const zodNotificationGlobalSettings =
+  zodEditableNotificationSettings.extend({ paused: z.boolean() });
 
 export const getNotificationsOverviewRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -29,6 +31,12 @@ export const getNotificationsOverviewRoute = buildRoute({
         content: {
           "application/json": {
             schema: z.object({
+              counts: z.object({
+                customizedMembers: z.number(),
+                inboxItems: z.number(),
+                queuedEmails: z.number(),
+                unreadItems: z.number(),
+              }),
               email: z.object({
                 adapterConfigured: z.boolean(),
                 enabled: z.boolean(),
@@ -42,6 +50,12 @@ export const getNotificationsOverviewRoute = buildRoute({
                 queue: zodCounts,
               }),
               settings: zodNotificationGlobalSettings,
+              workers: z.object({
+                emailBatchSize: z.number(),
+                emailConcurrency: z.number(),
+                fanoutBatchSize: z.number(),
+                retentionDays: z.number(),
+              }),
               types: z.array(
                 z.object({
                   category: z.string(),
@@ -58,9 +72,12 @@ export const getNotificationsOverviewRoute = buildRoute({
                   pluginId: z.string(),
                   policy: z.object({
                     allowEmail: z.boolean(),
+                    allowInApp: z.boolean(),
+                    allowPush: z.boolean(),
                     email: zodEmailMode.nullable(),
                     enabled: z.boolean(),
                     inApp: z.boolean().nullable(),
+                    memberCanEdit: z.boolean(),
                   }),
                   version: z.number(),
                 }),

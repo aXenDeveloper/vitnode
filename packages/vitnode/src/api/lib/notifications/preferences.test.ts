@@ -85,4 +85,25 @@ describe("resolveNotificationChannels", () => {
       inApp: false,
     });
   });
+
+  it("ignores the member's own choice when the type is locked for members", () => {
+    expect(
+      resolve({
+        policy: { email: "weekly", inApp: false, memberCanEdit: false },
+        preference: { email: "immediate", inApp: true },
+      }),
+    ).toEqual({ email: "weekly", inApp: false });
+  });
+
+  it("keeps a type out of the notification list when in-app is disabled", () => {
+    expect(
+      resolve({
+        policy: { allowInApp: false },
+        preference: { inApp: true },
+      }),
+    ).toEqual({ email: "daily", inApp: false });
+    expect(
+      resolve({ definition: mandatory, policy: { allowInApp: false } }).inApp,
+    ).toBe(true);
+  });
 });

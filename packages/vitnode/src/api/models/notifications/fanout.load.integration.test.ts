@@ -11,7 +11,6 @@ import {
   core_notification_deliveries,
   core_notification_events,
   core_notification_receipts,
-  core_notification_settings,
   core_notification_subscriptions,
   core_notification_user_state,
   core_notifications,
@@ -60,12 +59,9 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
     h = await createNotificationsHarness({
       subjects: [topicSubject],
       types: [announcementType],
+      workers: { fanoutBatchSize: BATCH },
     });
     users = await h.createUsers(RECIPIENTS + 1);
-    await h.c
-      .get("db")
-      .insert(core_notification_settings)
-      .values({ key: "global", value: { fanoutBatchSize: BATCH } });
 
     // Users 1-600 follow the topic; 400-1000 are named explicitly (overlap 400-600).
     await h.c

@@ -8,7 +8,10 @@ import {
 import { CONFIG_PLUGIN } from "@/config";
 import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
 
-import { zodNotificationGlobalSettings } from "./overview.route";
+import {
+  zodEditableNotificationSettings,
+  zodNotificationGlobalSettings,
+} from "./overview.route";
 
 export const updateNotificationSettingsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -16,14 +19,14 @@ export const updateNotificationSettingsRoute = buildRoute({
   route: {
     method: "put",
     description:
-      "Update installation-wide notification settings: email switch, batch sizes and retention.",
+      "Update installation-wide notification settings: email switch, hourly email cap and default digest schedule. Retention and worker sizes come from `notifications` in the API config.",
     path: "/settings",
     request: {
       body: {
         required: true,
         content: {
           "application/json": {
-            schema: zodNotificationGlobalSettings.partial(),
+            schema: zodEditableNotificationSettings.partial(),
           },
         },
       },
@@ -48,7 +51,7 @@ export const updateNotificationTypePolicyRoute = buildRoute({
   route: {
     method: "put",
     description:
-      "Set the installation policy for one type: on/off, whether it may email, and the defaults for users who never chose.",
+      "Set the installation policy for one type: which channels it may use, the defaults for members who never chose, and whether members may change them.",
     path: "/types/{type}",
     request: {
       params: z.object({ type: z.string().max(100) }),
@@ -58,9 +61,12 @@ export const updateNotificationTypePolicyRoute = buildRoute({
           "application/json": {
             schema: z.object({
               allowEmail: z.boolean().optional(),
+              allowInApp: z.boolean().optional(),
+              allowPush: z.boolean().optional(),
               email: z.enum(NOTIFICATION_EMAIL_MODES).optional(),
               enabled: z.boolean().optional(),
               inApp: z.boolean().optional(),
+              memberCanEdit: z.boolean().optional(),
             }),
           },
         },

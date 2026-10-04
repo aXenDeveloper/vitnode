@@ -19,6 +19,13 @@ slows email - never the inbox.
 Each email is rendered in the user's language with a link to the item and a
 **Manage notification preferences** link to `/settings/notifications`.
 
+### Hourly limit
+
+**Emails per member per hour** in the AdminCP caps immediate emails. Ones over
+the limit aren't dropped: they wait until the oldest email of that hour is an
+hour old, then go out. Digests are never held back. `0` (the default) means no
+limit.
+
 ## Daily and weekly digests
 
 Events for digest users wait as pending email receipts. Every 5 minutes the
@@ -26,7 +33,9 @@ Events for digest users wait as pending email receipts. Every 5 minutes the
 
 - **Periods are local.** A daily digest covers one calendar day in the user's
   time zone and goes out at their `digestHour`. A weekly one covers seven days
-  ending on their `digestWeekday`. Defaults: 08:00, Monday.
+  ending on their `digestWeekday`. Members who never picked follow the
+  installation default from the [AdminCP](/docs/dev/notifications/admincp#settings) -
+  08:00, Monday out of the box.
 - **Time zone fallback.** The user's own time zone, then the time zone of their
   language, then UTC.
 - **DST-safe.** Periods are contiguous. On the night clocks change, a "day" is

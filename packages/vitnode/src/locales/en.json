@@ -39,7 +39,7 @@
   "@vitnode/core:notifications": "Notifications",
   "@vitnode/core:notifications:can_view": "View notification settings and delivery health",
   "@vitnode/core:notifications:can_edit": "Edit notification settings",
-  "@vitnode/core:notifications:can_manage": "Retry deliveries, send test emails and run maintenance",
+  "@vitnode/core:notifications:can_manage": "Test emails, cleanup and the danger zone: pause, cancel queued emails, mark everything read, delete all and reset member preferences",
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
@@ -1108,7 +1108,8 @@
             "unfollowed": "Unfollowed",
             "unmuted": "Unmuted",
             "error": "We couldn't update that. Please try again."
-          }
+          },
+          "locked": "Set by the admin"
         }
       }
     },
@@ -1997,188 +1998,221 @@
     "system": {
       "notifications": {
         "title": "Notifications",
-        "desc": "Keep an eye on delivery health, decide which notification types run here, and tidy up when something drifts.",
+        "desc": "See how notifications are doing, decide what members get by default, and tidy up when you need to.",
         "load_error": {
           "title": "Couldn't load this part",
           "desc": "The server didn't answer the way we hoped. Give it another go in a moment."
         },
-        "status": {
-          "pending": "Pending",
-          "processing": "Processing",
-          "completed": "Completed",
-          "sending": "Sending",
-          "sent": "Sent",
-          "failed": "Failed",
-          "skipped": "Skipped"
+        "paused": {
+          "title": "Notifications are paused",
+          "desc": "Nothing reaches members until you resume them in Settings, under Danger zone."
         },
-        "health": {
-          "title": "Health",
-          "email": {
-            "title": "Notification email",
-            "ready": "Ready",
-            "disabled": "Turned off",
-            "missing": "No adapter",
-            "ready_desc": "An email adapter is configured and notification emails are on.",
-            "disabled_desc": "An email adapter is configured, but notification emails are turned off below.",
-            "missing_desc": "No email adapter is configured, so notifications stay in-app only."
+        "activity": {
+          "title": "Activity",
+          "range_label": "Time range",
+          "ranges": {
+            "24h": "Last 24 hours",
+            "7d": "Last 7 days",
+            "30d": "Last 30 days"
           },
-          "worker": {
-            "title": "Background worker",
-            "active": "Running",
-            "stale": "Stale",
-            "inactive": "Not configured",
-            "active_desc": "Cron is ticking, so fan-out and email batches keep moving.",
-            "stale_desc": "Cron hasn't run recently - queued work is waiting.",
-            "inactive_desc": "No cron adapter is configured, so queued work never runs on its own."
+          "ranges_short": {
+            "24h": "24h",
+            "7d": "7d",
+            "30d": "30d"
           },
-          "events": {
-            "title": "Events",
-            "desc": "Notifications waiting to reach their recipients."
-          },
-          "deliveries": {
-            "title": "Email deliveries",
-            "desc": "Every email the notification system has tried to send."
-          },
-          "oldest": {
-            "title": "Oldest pending event",
-            "none": "Nothing waiting",
-            "none_desc": "The fan-out queue is empty. Lovely.",
-            "desc": "The longer this gets, the later people hear about things."
-          },
-          "failed_queue": "{count, plural, one {# notification queue task failed} other {# notification queue tasks failed}}",
-          "warnings": {
-            "title": "Heads up",
-            "cron_inactive": "No cron adapter is configured. Notifications are created, but fan-out and emails won't run until it is.",
-            "cron_stale": "Cron hasn't run recently. Check that your scheduler is still calling the cron endpoint.",
-            "email_adapter_missing": "No email adapter is configured, so nobody gets notification emails. In-app notifications still work.",
-            "failed_deliveries": "{count, plural, one {# email delivery failed} other {# email deliveries failed}}. Filter the deliveries below by \"Failed\" to inspect and retry.",
-            "failed_events": "{count, plural, one {# event failed} other {# events failed}} to fan out. Check the queue tasks for details."
-          }
-        },
-        "settings": {
-          "title": "Installation settings",
-          "desc": "Apply to everyone on this installation.",
-          "read_only": "You can see these settings, but changing them needs the \"Can edit\" notifications permission.",
-          "enabled": "On",
-          "disabled": "Off",
-          "submit": "Save settings",
-          "success": "Settings saved",
-          "success_desc": "The new notification settings apply from the next batch.",
-          "emailEnabled": {
-            "label": "Send notification emails",
-            "desc": "Turn this off to keep every notification in-app, whatever people picked."
-          },
-          "retentionDays": {
-            "label": "Keep notifications for",
-            "desc": "Older notifications are removed by the nightly cleanup. Between 1 and 3650 days.",
-            "unit": "days"
-          },
-          "fanoutBatchSize": {
-            "label": "Fan-out batch size",
-            "desc": "Recipients handled per fan-out step. Between 10 and 5000."
-          },
-          "emailBatchSize": {
-            "label": "Email batch size",
-            "desc": "Deliveries picked up per email run. Between 1 and 500."
-          },
-          "emailConcurrency": {
-            "label": "Email concurrency",
-            "desc": "Emails sent in parallel during a run. Between 1 and 20."
-          }
+          "sent": "Emails delivered",
+          "failure_rate": "Failure rate",
+          "events": "Events published",
+          "skipped": "Emails skipped",
+          "vs_previous": "vs previous period",
+          "no_previous": "Nothing to compare yet",
+          "trend": "{label} over the selected range"
         },
         "types": {
           "title": "Notification types",
-          "desc": "Every type registered by core and your plugins. Defaults apply to people who never changed their preferences.",
+          "desc": "What members get by default, and whether they can change it. Changes save on their own and only apply to members who never touched their own preferences.",
           "empty": {
             "title": "No notification types yet",
             "desc": "Core and plugins register their types here. Nothing has signed up so far."
           },
-          "in_app": "In-app",
-          "email": "Email",
-          "email_unavailable": "Email unavailable",
-          "grouped": "Grouped",
-          "mandatory": "Mandatory",
-          "version": "v{version}",
-          "enabled": "Enabled",
-          "enabled_mandatory": "Mandatory types are always on.",
-          "allow_email": "Allow email",
-          "default_in_app": "In-app by default",
-          "default_email": "Default email",
-          "email_modes": {
-            "none": "None",
-            "immediate": "Immediately",
-            "daily": "Daily digest",
-            "weekly": "Weekly digest"
-          },
           "read_only": "Changing type policies needs the \"Can edit\" notifications permission.",
-          "success": "Type updated",
-          "success_desc": "\"{type}\" now follows the new policy."
-        },
-        "deliveries": {
-          "title": "Email deliveries",
-          "desc": "Newest first. Recipients show as user ids - addresses and content never leave the server.",
-          "filter": "Status",
-          "all": "All",
-          "caption": "Email delivery records",
-          "id": "ID",
-          "type": "Type",
-          "mode": "Mode",
-          "state": "Status",
-          "attempts": "Attempts",
-          "error": "Error",
-          "user": "User",
-          "updated": "Updated",
-          "actions": "Actions",
-          "user_id": "#{id}",
-          "test_type": "Test email",
-          "items": "{count, plural, one {# item} other {# items}}",
-          "modes": {
-            "immediate": "Immediate",
-            "daily": "Daily",
-            "weekly": "Weekly",
-            "test": "Test"
+          "badges": {
+            "mandatory": "Always on",
+            "locked": "Locked for members",
+            "nowhere": "Not sent anywhere",
+            "no_template": "No email template",
+            "grouped": "Grouped"
           },
-          "load_more": "Load more",
-          "empty": {
-            "title": "No deliveries here",
-            "desc": "Nothing matches this filter. Quiet inboxes are happy inboxes."
+          "summary": {
+            "label": "{type} defaults",
+            "list": "Notification list",
+            "push": "Push",
+            "email": "Email",
+            "on": "On",
+            "off": "Off",
+            "available": "Available",
+            "disabled": "Disabled",
+            "unsupported": "Not supported"
           },
-          "retry": {
-            "label": "Retry delivery #{id}",
-            "success": "Delivery queued again",
-            "success_desc": "Delivery #{id} goes out with the next email run, using the same idempotency key.",
-            "conflict": "Only failed deliveries can be retried. This one has already moved on."
-          }
+          "member_can_edit": {
+            "label": "Member can edit",
+            "desc": "Off locks this type to the defaults below. Members still get it, they just can't change it.",
+            "mandatory": "Mandatory types are always on and can't be changed by members."
+          },
+          "list": {
+            "legend": "Notification list",
+            "default_on": {
+              "label": "Enabled by default",
+              "hint": "Members get it unless they turn it off."
+            },
+            "default_off": {
+              "label": "Not enabled by default",
+              "hint": "Members get it only after turning it on."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "hint": "Nobody gets it and the option is hidden."
+            },
+            "mandatory": "Mandatory types always show in the notification list."
+          },
+          "push": {
+            "legend": "Push",
+            "available": {
+              "label": "Available",
+              "hint": "Members who allowed push can get it."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "hint": "Never sent as a push notification."
+            },
+            "note": "Push delivery isn't built yet. This choice is saved for when it is."
+          },
+          "email": {
+            "legend": "Email",
+            "default_on": {
+              "label": "Enabled by default",
+              "hint": "Members get an email unless they turn it off."
+            },
+            "default_off": {
+              "label": "Not enabled by default",
+              "hint": "Members get an email only after turning it on."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "hint": "Never sent by email and the option is hidden."
+            },
+            "unsupported": "This type has no email version, so it can't be emailed."
+          },
+          "success": "Saved",
+          "success_desc": "\"{type}\" uses the new defaults for members who never chose for themselves."
         },
-        "maintenance": {
-          "title": "Maintenance",
-          "desc": "Handy one-off jobs for when something looks off.",
-          "read_only": "Maintenance tools need the \"Can manage\" notifications permission.",
-          "retention": "Notifications older than {days, plural, one {# day} other {# days}} are cleaned up every night. Running it now just skips the wait.",
+        "reset_members": {
+          "button": "Reset all members to defaults",
+          "title": "Reset everyone's notification preferences?",
+          "desc": "{count, plural, =0 {No member has changed their notification preferences yet.} one {# member picked their own notification settings.} other {# members picked their own notification settings.}} Muted types, email choices and digest schedules are replaced with the defaults on this page.",
+          "warning": "This can't be undone.",
+          "submit": "Reset all members",
+          "success": "Preferences reset",
+          "success_desc": "{count, plural, =0 {Everyone already used the defaults.} one {# member now uses the defaults.} other {# members now use the defaults.}}"
+        },
+        "settings": {
+          "button": "Settings",
+          "title": "Notification settings",
+          "desc": "Every change saves on its own and applies to everyone.",
+          "read_only": "You can see these settings, but changing them needs the \"Can edit\" notifications permission.",
+          "groups": {
+            "email": "Email",
+            "tools": "Tools",
+            "danger": "Danger zone"
+          },
+          "edit": "Edit {label}",
+          "save": "Save",
+          "cancel": "Cancel",
+          "success": "Saved",
+          "success_desc": "{label}: {value}.",
+          "on": "On",
+          "off": "Off",
+          "emailEnabled": {
+            "label": "Send notification emails",
+            "desc": "Off keeps everything in the notification list, whatever members picked."
+          },
+          "emailCapPerHour": {
+            "label": "Emails per member per hour",
+            "desc": "Immediate emails over the limit wait until the hour is up. 0 means no limit.",
+            "none": "No limit"
+          },
+          "digestHour": {
+            "label": "Daily digest time",
+            "desc": "For members who haven't picked their own, in their time zone."
+          },
+          "digestWeekday": {
+            "label": "Weekly digest day",
+            "desc": "For members who haven't picked their own."
+          },
+          "config_note": "Notifications are kept for {days, plural, one {# day} other {# days}}. Retention and worker batch sizes are set in the API config (vitnode.api.config.ts), under notifications."
+        },
+        "tools": {
+          "run": "Run",
+          "run_label": "Run: {label}",
           "test_email": {
-            "label": "Send test email to me",
-            "desc": "Queues a sample notification email to your own address - and only yours.",
+            "label": "Send a test email to me",
+            "desc": "Goes to your own address, and only yours.",
             "success": "Test email queued",
-            "success_desc": "Delivery #{id} is on its way to your own address. Watch it in the deliveries list below.",
-            "not_configured": "Notification email isn't configured yet, so there's nothing to test."
-          },
-          "reconcile": {
-            "title": "Unread counts",
-            "desc": "Compares each person's stored unread badge with their actual inbox.",
-            "check": "Check unread counts",
-            "fix": "Fix unread counts",
-            "result_ok": "All unread counts match. Nothing to fix.",
-            "result_mismatched": "{count, plural, one {# person has} other {# people have}} a stored unread count that doesn't match their inbox.",
-            "confirm_title": "Fix unread counts?",
-            "confirm_desc": "Every mismatched unread count is recalculated from the inbox. People's badges update right away.",
-            "confirm_submit": "Fix counts",
-            "fixed": "Unread counts fixed",
-            "fixed_desc": "{count, plural, =0 {Everything already matched.} one {# person's count was corrected.} other {# people's counts were corrected.}}"
+            "success_desc": "Delivery #{id} goes to your own address.",
+            "not_configured": "Notification email isn't set up yet, so there's nothing to test."
           },
           "cleanup": {
             "label": "Run cleanup now",
-            "success": "Cleanup queued",
-            "success_desc": "Old notifications are removed by the next queue run."
+            "desc": "Removes notifications older than {count, plural, one {# day} other {# days}} now instead of tonight.",
+            "success": "Cleanup started",
+            "success_desc": "Old notifications are being removed in the background."
+          }
+        },
+        "danger": {
+          "intro": "These affect every member at once. Each one asks before it runs.",
+          "paused_badge": "Paused",
+          "pause": {
+            "title": "Pause all notifications",
+            "desc": "Stop sending everything for a while, for example during a migration or a spam wave.",
+            "confirm_desc": "Members get nothing - no notification list, no email - until you resume. New events wait in the queue, nothing is lost.",
+            "submit": "Pause notifications",
+            "success": "Notifications paused",
+            "success_desc": "New events wait in the queue until you resume."
+          },
+          "resume": {
+            "title": "Resume all notifications",
+            "desc": "Notifications are paused. Resume to send everything that waited.",
+            "confirm_desc": "Everything queued while paused goes out over the next few worker runs.",
+            "submit": "Resume notifications",
+            "success": "Notifications resumed",
+            "success_desc": "{count, plural, =0 {Nothing was waiting.} one {# waiting event is on its way.} other {# waiting events are on their way.}}"
+          },
+          "cancel_emails": {
+            "title": "Cancel all queued emails",
+            "desc": "Drop emails that are waiting to be sent, including the next digests.",
+            "confirm_desc": "{count, plural, =0 {No emails are waiting right now.} one {# email that hasn't gone out yet is dropped, along with pending digests.} other {# emails that haven't gone out yet are dropped, along with pending digests.}} In-app notifications stay.",
+            "submit": "Cancel queued emails",
+            "success": "Email queue cleared",
+            "success_desc": "{count, plural, =0 {Nothing was waiting.} one {# queued email was dropped.} other {# queued emails were dropped.}}"
+          },
+          "read_all": {
+            "title": "Mark everything as read for everyone",
+            "desc": "Clear the unread badge for every member at once.",
+            "confirm_desc": "{count, plural, =0 {Nothing is unread right now.} one {# unread notification becomes read} other {# unread notifications become read}} and every unread badge drops to zero.",
+            "submit": "Mark all as read",
+            "success": "Everything marked as read",
+            "success_desc": "{count, plural, =0 {Nothing was unread.} one {# notification is now read.} other {# notifications are now read.}}"
+          },
+          "delete_all": {
+            "title": "Delete all notifications",
+            "desc": "Empty every member's notification list. Types, preferences and settings are kept.",
+            "confirm_desc": "{count, plural, =0 {There are no notifications to delete.} one {# notification is deleted for every member.} other {# notifications are deleted for every member.}} Emails already sent stay in people's inboxes. This can't be undone.",
+            "phrase": "delete all notifications",
+            "phrase_label": "Type <phrase></phrase> to confirm",
+            "phrase_error": "Type the phrase exactly as shown.",
+            "submit": "Delete all notifications",
+            "success": "All notifications deleted",
+            "success_desc": "{count, plural, =0 {There was nothing to delete.} one {# notification was deleted.} other {# notifications were deleted.}}"
           }
         }
       },

@@ -4,6 +4,7 @@ import { PageTitle } from "@/components/ui/page-title";
 import { CONFIG_PLUGIN } from "@/config";
 import { NotificationsContent } from "@/views/admin/views/core/system/notifications/notifications-content";
 import { notificationsOverviewQueryOptions } from "@/views/admin/views/core/system/notifications/notifications-query";
+import { NotificationsSettingsSheet } from "@/views/admin/views/core/system/notifications/settings-sheet";
 
 import type { AdminNotificationsRouteData } from "./route";
 
@@ -32,7 +33,17 @@ export const AdminNotificationsRouteContent = ({
   return (
     <RouteMessages namespaces={ADMIN_NOTIFICATIONS_NAMESPACES}>
       <div className="p-6">
-        <PageTitle desc={description} h1={title} />
+        <PageTitle desc={description} h1={title}>
+          <NotificationsSettingsSheet
+            actions={actions}
+            canEdit={canEdit}
+            canManage={canManage}
+            counts={data.counts}
+            emailConfigured={data.email.adapterConfigured && data.email.enabled}
+            settings={data.settings}
+            workers={data.workers}
+          />
+        </PageTitle>
 
         <NotificationsContent
           actions={actions}

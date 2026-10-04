@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
@@ -8,24 +8,34 @@ import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
 
-import type { NotificationDeliveryStatus } from "./statuses";
-
-export type NotificationDeliveryMode =
-  "daily" | "immediate" | "test" | "weekly";
-
 export interface AdminNotificationSettings {
+  digestHour: number;
+  digestWeekday: number;
+  emailCapPerHour: number;
+  emailEnabled: boolean;
+  paused: boolean;
+}
+
+export interface AdminNotificationWorkers {
   emailBatchSize: number;
   emailConcurrency: number;
-  emailEnabled: boolean;
   fanoutBatchSize: number;
   retentionDays: number;
 }
 
+export type AdminNotificationEditableSettings = Omit<
+  AdminNotificationSettings,
+  "paused"
+>;
+
 export interface AdminNotificationTypePolicy {
   allowEmail: boolean;
+  allowInApp: boolean;
+  allowPush: boolean;
   email: NotificationEmailMode | null;
   enabled: boolean;
   inApp: boolean | null;
+  memberCanEdit: boolean;
 }
 
 export interface AdminNotificationType {
@@ -43,6 +53,12 @@ export interface AdminNotificationType {
 }
 
 export interface AdminNotificationsOverview {
+  counts: {
+    customizedMembers: number;
+    inboxItems: number;
+    queuedEmails: number;
+    unreadItems: number;
+  };
   email: { adapterConfigured: boolean; enabled: boolean };
   health: {
     cronActive: boolean;
@@ -54,32 +70,27 @@ export interface AdminNotificationsOverview {
   };
   settings: AdminNotificationSettings;
   types: AdminNotificationType[];
+  workers: AdminNotificationWorkers;
 }
 
-export interface AdminNotificationDelivery {
-  attempts: number;
-  availableAt: Date | string;
-  createdAt: Date | string;
-  id: number;
-  itemCount: number;
-  lastError: null | string;
-  maxAttempts: number;
-  mode: NotificationDeliveryMode;
-  providerMessageId: null | string;
-  sentAt: Date | null | string;
-  skipReason: null | string;
-  status: NotificationDeliveryStatus;
-  type: null | string;
-  updatedAt: Date | string;
-  userId: number;
+export const NOTIFICATION_STATS_RANGES = ["24h", "7d", "30d"] as const;
+export type NotificationStatsRange = (typeof NOTIFICATION_STATS_RANGES)[number];
+
+export interface NotificationStatsTotals {
+  events: number;
+  failed: number;
+  sent: number;
+  skipped: number;
 }
 
-export interface AdminNotificationDeliveriesPage {
-  items: AdminNotificationDelivery[];
-  nextCursor: null | number;
+export interface AdminNotificationStats {
+  points: (NotificationStatsTotals & { key: string })[];
+  previous: NotificationStatsTotals;
+  range: NotificationStatsRange;
+  timeZone: string;
+  totals: NotificationStatsTotals;
+  unit: "day" | "hour";
 }
-
-export const DELIVERIES_PAGE_SIZE = 25;
 
 export const fetchNotificationsOverview =
   async (): Promise<AdminNotificationsOverview> => {
@@ -100,36 +111,23 @@ export const fetchNotificationsOverview =
     return await response.json();
   };
 
-export const fetchNotificationDeliveries = async ({
-  cursor,
-  signal,
-  status,
+export const fetchNotificationStats = async ({
+  range,
+  timeZone,
 }: {
-  cursor: null | number;
-  signal?: AbortSignal;
-  status?: NotificationDeliveryStatus;
-}): Promise<AdminNotificationDeliveriesPage> => {
+  range: NotificationStatsRange;
+  timeZone: string;
+}): Promise<AdminNotificationStats> => {
   const response = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
-    args: {
-      query: {
-        cursor: cursor ?? undefined,
-        limit: DELIVERIES_PAGE_SIZE,
-        status,
-      },
-    },
+    args: { query: { range, timeZone } },
     method: "get",
     module: "admin/notifications",
-    options: { signal },
-    path: "/deliveries",
+    path: "/stats",
   });
 
   if (!response.ok) {
-    throw new AdminRequestError(
-      response.status,
-      "the notification deliveries",
-      status ? `status=${status}` : undefined,
-    );
+    throw new AdminRequestError(response.status, "the notification activity");
   }
 
   return await response.json();
@@ -143,9 +141,9 @@ export const notificationsOverviewQueryKey = [
   "overview",
 ] as const;
 
-export const notificationDeliveriesQueryRoot = [
+export const notificationStatsQueryRoot = [
   ...notificationsAdminQueryRoot,
-  "deliveries",
+  "stats",
 ] as const;
 
 export const notificationsOverviewQueryOptions = () =>
@@ -157,18 +155,16 @@ export const notificationsOverviewQueryOptions = () =>
     staleTime: OPERATIONAL_STALE_TIME,
   });
 
-export const notificationDeliveriesQueryOptions = ({
-  status,
+export const notificationStatsQueryOptions = ({
+  range,
+  timeZone,
 }: {
-  status?: NotificationDeliveryStatus;
+  range: NotificationStatsRange;
+  timeZone: string;
 }) =>
-  infiniteQueryOptions({
-    getNextPageParam: (page: AdminNotificationDeliveriesPage) =>
-      page.nextCursor ?? undefined,
-    initialPageParam: null as null | number,
-    queryFn: async ({ pageParam, signal }) =>
-      await fetchNotificationDeliveries({ cursor: pageParam, signal, status }),
-    queryKey: [...notificationDeliveriesQueryRoot, status ?? "all"] as const,
+  queryOptions({
+    queryFn: async () => await fetchNotificationStats({ range, timeZone }),
+    queryKey: [...notificationStatsQueryRoot, range, timeZone] as const,
     retry: false,
     staleTime: OPERATIONAL_STALE_TIME,
   });

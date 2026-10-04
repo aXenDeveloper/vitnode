@@ -43,6 +43,7 @@ import { realtime } from "@/ws/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
+import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
 import type { NotificationRegistry } from "../lib/notifications/registry";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
@@ -67,6 +68,7 @@ import {
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
 import { collectNavigationPresets } from "../lib/navigation-presets";
+import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
@@ -154,6 +156,7 @@ export interface EnvVariablesVitNode {
     navigation: NavigationPreset[];
     /** Every notification type and subject the installed plugins register. */
     notifications?: NotificationRegistry;
+    notificationWorkers?: NotificationWorkerSettings;
     permissionStaff: PermissionStaffCatalogEntry[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
@@ -212,6 +215,7 @@ export const globalMiddleware = ({
   events,
   plugins,
   i18n,
+  notifications,
   search,
   storage,
   users,
@@ -227,6 +231,7 @@ export const globalMiddleware = ({
   | "email"
   | "events"
   | "i18n"
+  | "notifications"
   | "plugins"
   | "search"
   | "storage"
@@ -235,6 +240,7 @@ export const globalMiddleware = ({
   Pick<VitNodeConfig, "metadata"> & {
     cacheClient: CacheClient | null;
   }) => {
+  const notificationWorkers = resolveNotificationWorkerSettings(notifications);
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -477,6 +483,7 @@ export const globalMiddleware = ({
       permissionStaff: permissionStaffMetadata,
       navigation: navigationMetadata,
       notifications: notificationsMetadata,
+      notificationWorkers,
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,

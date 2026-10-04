@@ -402,6 +402,27 @@ or the bottom bar, never both.
 </Accordion>
 </Accordions>
 
+## Notification events
+
+Eight names, declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts`. Each fires **after** an
+administrator's change in [AdminCP → Notifications](/docs/dev/notifications/admincp)
+has been saved. The envelope's `actor` is that administrator.
+
+| Event                              | Payload                  | Fires when                                                                       |
+| ---------------------------------- | ------------------------ | -------------------------------------------------------------------------------- |
+| `notifications.settings.updated`   | `{ keys }`               | Installation settings are saved - `keys` lists the settings that were sent       |
+| `notifications.type.updated`       | `{ typeId }`             | What a type does by default (list, push, email, member can edit) changes         |
+| `notifications.preferences_reset`  | `{ members }`            | **Reset all members to defaults** ran - `members` is how many were reset         |
+| `notifications.paused`             | `{}`                     | Notifications were paused from the danger zone                                   |
+| `notifications.resumed`            | `{ requeuedEvents }`     | Notifications were resumed - `requeuedEvents` waited while paused                |
+| `notifications.emails_cancelled`   | `{ count }`              | Queued emails were cancelled - `count` is how many deliveries were skipped       |
+| `notifications.read_all`           | `{ items, members }`     | Everything was marked as read for everyone                                       |
+| `notifications.deleted_all`        | `{ items }`              | Every member's notifications were deleted                                        |
+
+**A listener would** post an audit entry to your staff channel when someone
+pauses, deletes or resets everything.
+
 ## Page layout events
 
 One name, declared in `VitNodeEvents` in

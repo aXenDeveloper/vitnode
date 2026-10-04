@@ -14,6 +14,7 @@ import { planNotificationDigests, reclaimStaleDeliveries } from "./email";
 import { dispatchEmailDrain } from "./email-queue";
 import { removeNotificationItems } from "./inbox";
 import {
+  getNotificationWorkers,
   loadNotificationSettings,
   NOTIFICATIONS_PLUGIN_ID,
   QUEUE_NOTIFICATIONS_FANOUT,
@@ -36,8 +37,8 @@ export const runNotificationCleanup = async (
   { now = new Date() }: { now?: Date } = {},
 ): Promise<{ deliveries: number; events: number; items: number }> => {
   const db = c.get("db");
-  const { global } = await loadNotificationSettings(db);
-  const cutoff = new Date(now.getTime() - global.retentionDays * DAY);
+  const { retentionDays } = getNotificationWorkers(c);
+  const cutoff = new Date(now.getTime() - retentionDays * DAY);
 
   const items = await removeNotificationItems(c, {
     where: lt(core_notifications.lastActivityAt, cutoff),
@@ -179,6 +180,11 @@ export const runNotificationSchedule = async (
   c: NotificationsContext,
   { now = new Date() }: { now?: Date } = {},
 ) => {
+  const { global } = await loadNotificationSettings(c.get("db"));
+  if (global.paused) {
+    return { digests: { deliveries: 0, users: 0 }, reclaimed: 0, recovered: 0 };
+  }
+
   const reclaimed = await reclaimStaleDeliveries(c, now);
   const recovered = await recoverStalledEvents(c, now);
   const digests = await planNotificationDigests(c, { now });

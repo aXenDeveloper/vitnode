@@ -166,7 +166,9 @@ export interface NotificationPreferenceTypeView {
   description: null | string;
   emailModes: ("daily" | "immediate" | "none" | "weekly")[];
   id: string;
+  inAppAvailable: boolean;
   label: string;
+  locked: boolean;
   mandatory: boolean;
   pluginId: string;
   value: { email: "daily" | "immediate" | "none" | "weekly"; inApp: boolean };

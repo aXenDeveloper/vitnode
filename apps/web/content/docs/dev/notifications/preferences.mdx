@@ -19,10 +19,17 @@ One function decides what a user receives, in this order:
    this.
 2. **Mandatory type** → always in-app. Email follows the installation default.
 3. **The user muted the subject** → nothing.
-4. **The user's own choice** for the type.
+4. **The user's own choice** for the type - skipped when the type is locked
+   for members (**Member can edit** off in the
+   [AdminCP](/docs/dev/notifications/admincp#notification-types)).
 5. **The installation default** for the type, set in the
    [AdminCP](/docs/dev/notifications/admincp).
 6. **The type's own `defaults`.**
+
+When the AdminCP sets the **notification list** to _Disabled_ for a type, it
+never lands in the list, whatever the user picked - email can still go out.
+Locked types show a "Set by the admin" badge in the member's settings, and the
+API refuses changes to them with `400`.
 
 In-app and email are resolved separately. A user can take a type by email only,
 in-app only, both or neither.
