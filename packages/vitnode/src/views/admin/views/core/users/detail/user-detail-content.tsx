@@ -1,13 +1,9 @@
-import { Link } from "@tanstack/react-router";
-import { ExternalLinkIcon } from "lucide-react";
+import { BellIcon, HistoryIcon, LockIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
+import type { VerifyAdminUserEmail } from "@/views/admin/views/core/users/list/users-table-content";
 import type { AdminRoleSearch } from "@/views/admin/views/core/users/roles/roles-query";
 
-import { Avatar } from "@/components/avatar";
-import { DateFormat } from "@/components/date-format";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Tabs,
   TabsContent,
@@ -15,7 +11,6 @@ import {
   TabsPanels,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { UserCoverImage } from "@/components/user-cover-image";
 
 import type { UpdateAdminUser } from "./user-fields-content";
 import type {
@@ -25,165 +20,100 @@ import type {
 import type { AdminUserDetail } from "./user-query";
 import type { UpdateAdminUserRoles } from "./user-roles-content";
 
-import {
-  EditNameCodeContent,
-  EditUserFieldContent,
-} from "./user-fields-content";
-import { AdminUserImageDialog } from "./user-images-content";
+import { UserIdentityCard } from "./user-identity-card";
+import { UserPersonalCard, UserPreferencesCard } from "./user-profile-cards";
 import { UserRolesCardContent } from "./user-roles-content";
 
 export interface UserDetailProps {
   canEdit: boolean;
+  connectedAccounts: React.ReactNode;
+  devices: React.ReactNode;
+  notifications: React.ReactNode;
   onRemoveImage: RemoveAdminUserImage;
   onUpdate: UpdateAdminUser;
   onUpdateRoles: UpdateAdminUserRoles;
   onUploadImage: UploadAdminUserImage;
+  onVerifyEmail: VerifyAdminUserEmail;
   searchRoles: AdminRoleSearch;
+  security: React.ReactNode;
   timeline: React.ReactNode;
   user: AdminUserDetail;
 }
 
 export const UserDetailContent = ({
   canEdit,
+  connectedAccounts,
+  devices,
+  notifications,
   onRemoveImage,
   onUpdate,
   onUpdateRoles,
   onUploadImage,
+  onVerifyEmail,
   searchRoles,
+  security,
   timeline,
   user,
 }: UserDetailProps) => {
-  const t = useTranslations("admin.user.show");
-  const tSearch = useTranslations("core.search");
+  const t = useTranslations("admin.user.show.tabs");
 
   return (
-    <Tabs className="mx-auto w-full max-w-lg gap-4" defaultValue="overview">
-      <TabsList className="w-full">
-        <TabsTrigger value="overview">
-          {tSearch("userTab.overview")}
-        </TabsTrigger>
-        <TabsTrigger value="timeline">
-          {tSearch("userTab.timeline")}
-        </TabsTrigger>
-      </TabsList>
+    <div className="mx-auto grid w-full max-w-7xl items-start gap-6 lg:grid-cols-[24rem_minmax(0,1fr)]">
+      <aside
+        aria-label={t("profileLabel")}
+        className="flex min-w-0 flex-col gap-6"
+      >
+        <UserIdentityCard
+          canEdit={canEdit}
+          onRemoveImage={onRemoveImage}
+          onUpdate={onUpdate}
+          onUploadImage={onUploadImage}
+          onVerifyEmail={onVerifyEmail}
+          user={user}
+        />
+        <UserPersonalCard canEdit={canEdit} onUpdate={onUpdate} user={user} />
+        <UserPreferencesCard
+          canEdit={canEdit}
+          onUpdate={onUpdate}
+          user={user}
+        />
+        <UserRolesCardContent
+          canEdit={canEdit}
+          id={user.id}
+          onUpdateRoles={onUpdateRoles}
+          role={user.role}
+          searchRoles={searchRoles}
+          secondaryRoles={user.secondaryRoles}
+        />
+        {connectedAccounts}
+        {devices}
+      </aside>
 
-      <TabsPanels>
-        <TabsContent value="overview">
-          <div className="flex w-full flex-col gap-4">
-            <Card className="w-full overflow-hidden pt-0">
-              <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
-                <UserCoverImage url={user.coverUrl} />
-                {user.coverUrl ? null : (
-                  <span className="sr-only">{t("coverPlaceholder")}</span>
-                )}
-                {canEdit && (
-                  <div className="absolute inset-e-3 top-3">
-                    <AdminUserImageDialog
-                      hasImage={user.coverUrl !== null}
-                      id={user.id}
-                      kind="cover"
-                      limit={user.imagePolicy.cover}
-                      onRemove={onRemoveImage}
-                      onUpload={onUploadImage}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <CardContent className="flex flex-col">
-                <div className="-mt-16 mb-4 flex justify-center">
-                  <div className="relative">
-                    <Avatar
-                      className="border-card size-32 border-4"
-                      loading="eager"
-                      size={128}
-                      user={user}
-                    />
-                    {canEdit && (
-                      <div className="absolute inset-e-0 bottom-0">
-                        <AdminUserImageDialog
-                          hasImage={user.avatarUrl !== null}
-                          id={user.id}
-                          kind="avatar"
-                          limit={user.imagePolicy.avatar}
-                          onRemove={onRemoveImage}
-                          onUpload={onUploadImage}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <EditUserFieldContent
-                  as="h2"
-                  canEdit={canEdit}
-                  field="name"
-                  id={user.id}
-                  label={t("editName")}
-                  onUpdate={onUpdate}
-                  showUnverified={!user.emailVerified}
-                  value={user.name}
-                  valueClassName="text-foreground truncate text-2xl font-bold"
-                />
-
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground truncate text-sm">
-                    @{user.nameCode}
-                  </span>
-                  {canEdit && (
-                    <EditNameCodeContent
-                      id={user.id}
-                      nameCode={user.nameCode}
-                      onUpdate={onUpdate}
-                    />
-                  )}
-                </div>
-
-                <div className="mt-3">
-                  <EditUserFieldContent
-                    canEdit={canEdit}
-                    field="email"
-                    id={user.id}
-                    label={t("editEmail")}
-                    onUpdate={onUpdate}
-                    type="email"
-                    value={user.email}
-                    valueClassName="text-foreground truncate font-medium"
-                  />
-                </div>
-
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {t("joined")} <DateFormat date={user.createdAt} />
-                </p>
-
-                <div className="mt-6">
-                  <Button
-                    className="w-full"
-                    nativeButton={false}
-                    render={
-                      <Link target="_blank" to={`/users/${user.nameCode}`} />
-                    }
-                    variant="ghost"
-                  >
-                    {t("goToProfile")} <ExternalLinkIcon />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <UserRolesCardContent
-              canEdit={canEdit}
-              id={user.id}
-              onUpdateRoles={onUpdateRoles}
-              role={user.role}
-              searchRoles={searchRoles}
-              secondaryRoles={user.secondaryRoles}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="timeline">{timeline}</TabsContent>
-      </TabsPanels>
-    </Tabs>
+      <Tabs className="min-w-0 gap-4" defaultValue="activity">
+        <h2 className="sr-only">{t("detailsLabel")}</h2>
+        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+          <TabsList className="w-full min-w-max">
+            <TabsTrigger value="activity">
+              <HistoryIcon />
+              {t("activity")}
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <BellIcon />
+              {t("notifications")}
+            </TabsTrigger>
+            <TabsTrigger value="security">
+              <LockIcon />
+              <span className="sm:hidden">{t("securityShort")}</span>
+              <span className="hidden sm:inline">{t("security")}</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsPanels>
+          <TabsContent value="activity">{timeline}</TabsContent>
+          <TabsContent value="notifications">{notifications}</TabsContent>
+          <TabsContent value="security">{security}</TabsContent>
+        </TabsPanels>
+      </Tabs>
+    </div>
   );
 };

@@ -37,7 +37,9 @@ export const DateFormat = ({
   if (now.getTime() - dateToFormat.getTime() < 604800000) {
     return (
       <TooltipWithContent text={fullDate}>
-        <span>{format.relativeTime(dateToFormat, now)}</span>
+        <span suppressHydrationWarning>
+          {format.relativeTime(dateToFormat, now)}
+        </span>
       </TooltipWithContent>
     );
   }

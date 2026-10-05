@@ -13,7 +13,7 @@ import {
   zodNotificationEmailMode,
 } from "../schema";
 
-const zodPreferences = z.object({
+export const zodNotificationPreferences = z.object({
   types: z.array(
     z.object({
       category: z.string(),
@@ -46,7 +46,7 @@ export const getNotificationPreferencesRoute = buildRoute({
     path: "/preferences",
     responses: {
       200: {
-        content: { "application/json": { schema: zodPreferences } },
+        content: { "application/json": { schema: zodNotificationPreferences } },
         description: "Notification preferences",
       },
       ...unauthorizedResponse,
@@ -64,7 +64,7 @@ export const getNotificationPreferencesRoute = buildRoute({
   },
 });
 
-const zodUpdateNotificationPreferences = z.object({
+export const zodUpdateNotificationPreferences = z.object({
   types: z
     .record(
       z.string().max(100),

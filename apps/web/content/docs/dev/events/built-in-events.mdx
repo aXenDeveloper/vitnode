@@ -38,26 +38,29 @@ core event as for one of your own.
 
 ## Core events (`@vitnode/core`)
 
-Fourteen names, all declared in `VitNodeEvents` in
+Seventeen names, all declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
 the write it describes has committed.
 
-| Event                     | Payload                                   | Fires when                                                                                                               |
-| ------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `user.created`            | `{ userId, email, name, emailVerified }`  | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                                                |
-| `user.updated`            | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile or time zone in **Settings → Overview**             |
-| `user.deleted`            | `{ userId, email }`                       | Never - the name is declared for plugins, core has no deletion flow                                                      |
-| `user.sso.linked`         | `{ userId, email, providerId }`           | An SSO identity is linked to an existing account - at login with its password, or from **Settings → Connected accounts** |
-| `user.sso.unlinked`       | `{ userId, providerId }`                  | A member disconnects a provider in **Settings → Connected accounts**                                                     |
-| `user.sso.profile_synced` | `{ userId, providerId, fields, trigger }` | Profile fields were copied from a provider - by **Sync now**, **Import** or an opted-in sign-in                          |
-| `user.passkey.created`    | `{ userId, passkeyId }`                   | A member adds a [passkey](/docs/dev/passkeys) in **Settings → Security**                                                 |
-| `user.passkey.updated`    | `{ userId, passkeyId, name }`             | A member renames one of their passkeys                                                                                   |
-| `user.passkey.deleted`    | `{ userId, passkeyId }`                   | A member removes one of their passkeys                                                                                   |
-| `user.avatar.updated`     | `{ userId, fileId }`                      | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP                              |
-| `user.cover.updated`      | `{ userId, fileId }`                      | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP                        |
-| `role.created`            | `{ roleId }`                              | A role is created in the AdminCP                                                                                         |
-| `role.updated`            | `{ roleId }`                              | A role is edited in the AdminCP                                                                                          |
-| `role.deleted`            | `{ roleId }`                              | A role is deleted in the AdminCP                                                                                         |
+| Event                          | Payload                                   | Fires when                                                                                                               |
+| ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `user.created`                 | `{ userId, email, name, emailVerified }`  | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                                                |
+| `user.updated`                 | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile or time zone in **Settings → Overview**             |
+| `user.deleted`                 | `{ userId, email }`                       | Never - the name is declared for plugins, core has no deletion flow                                                      |
+| `user.password.updated`        | `{ userId }`                              | A password is set - by a member completing a reset, or by staff on the AdminCP user page                                 |
+| `user.sessions.revoked`        | `{ userId, deviceId, sessions }`          | A user is signed out remotely - one device or all of them, by the member or by staff, or after a password change         |
+| `user.sso.linked`              | `{ userId, email, providerId }`           | An SSO identity is linked to an existing account - at login with its password, or from **Settings → Connected accounts** |
+| `user.sso.unlinked`            | `{ userId, providerId }`                  | A provider is disconnected - by the member in **Settings → Connected accounts**, or by staff in the AdminCP              |
+| `user.sso.preferences_updated` | `{ userId, sources, sync }`               | Profile-field sources or sync-on-sign-in settings are saved - by the member or by staff                                  |
+| `user.sso.profile_synced`      | `{ userId, providerId, fields, trigger }` | Profile fields were copied from a provider - by **Sync now**, **Import** or an opted-in sign-in                          |
+| `user.passkey.created`         | `{ userId, passkeyId }`                   | A member adds a [passkey](/docs/dev/passkeys) in **Settings → Security**                                                 |
+| `user.passkey.updated`         | `{ userId, passkeyId, name }`             | A passkey is renamed - by its owner or by staff                                                                          |
+| `user.passkey.deleted`         | `{ userId, passkeyId }`                   | A passkey is removed - by its owner or by staff                                                                          |
+| `user.avatar.updated`          | `{ userId, fileId }`                      | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP                              |
+| `user.cover.updated`           | `{ userId, fileId }`                      | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP                        |
+| `role.created`                 | `{ roleId }`                              | A role is created in the AdminCP                                                                                         |
+| `role.updated`                 | `{ roleId }`                              | A role is edited in the AdminCP                                                                                          |
+| `role.deleted`                 | `{ roleId }`                              | A role is deleted in the AdminCP                                                                                         |
 
 <Accordions>
 <Accordion title="user.created">
@@ -268,6 +271,87 @@ avatar that failed to download never counts. A name change also emits
 **A listener would** refresh a search index or a cached member card.
 
 </Accordion>
+<Accordion title="user.password.updated">
+
+Emitted after a new password hash is stored - when a member completes a
+password reset, or when staff set one from the AdminCP user page. The staff
+route answers `403` while password sign-in is turned off, so this never fires
+for a password nobody could use. Both paths then sign the account out
+everywhere, so `user.sessions.revoked` follows right after.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the account whose password changed.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** email the account owner that their password changed, and
+use the envelope's `actor` to say whether they or an administrator did it.
+
+</Accordion>
+<Accordion title="user.sessions.revoked">
+
+Emitted by `revokeSessions` once a user's sessions are deleted and their cached
+copies dropped. It covers both session kinds - the site session and the AdminCP
+session - and fires from every place that signs somebody out remotely: a member
+ending one of their own devices, staff ending one device or all of them, and a
+password change.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the account that was signed out.',
+      type: 'number',
+    },
+    deviceId: {
+      description:
+        'The device that was signed out, or `null` when every device was.',
+      type: 'number | null',
+    },
+    sessions: {
+      description:
+        'How many sessions were deleted, site and AdminCP together. Can be `0` when there was nothing left to end.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** write a security audit entry, or warn the member when
+staff signed them out.
+
+</Accordion>
+<Accordion title="user.sso.preferences_updated">
+
+Emitted by `SsoConnectionModel.savePreferences` after the profile-field sources
+and the per-provider sync switches are saved - from **Settings → Connected
+accounts** or from the AdminCP user page. It fires on every successful save,
+even when nothing changed.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the account the settings belong to.',
+      type: 'number',
+    },
+    sources: {
+      description:
+        'The submitted source per profile field - a provider id, or `null` for managed manually. Fields left out were not changed.',
+      type: "Partial<Record<'avatar' | 'firstName' | 'lastName', string | null>>",
+    },
+    sync: {
+      description: 'The submitted sync-on-sign-in switch per provider id.',
+      type: 'Record<string, boolean>',
+    },
+  }}
+/>
+
+**A listener would** audit-log who changed where an account's profile comes
+from.
+
+</Accordion>
 <Accordion title="user.deleted (declared, never emitted)">
 
 The name and payload live on the `VitNodeEvents` map so listeners type-check,
@@ -404,23 +488,27 @@ or the bottom bar, never both.
 
 ## Notification events
 
-Seven names, declared in `VitNodeEvents` in
-`packages/vitnode/src/api/models/events.ts`. Each fires **after** an
+Eight names, declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts`. Seven of them fire **after** an
 administrator's change in [AdminCP → Notifications](/docs/dev/notifications/admincp)
-has been saved. The envelope's `actor` is that administrator.
+has been saved, and the envelope's `actor` is that administrator.
+`notifications.preferences_updated` is about one member: it fires when their
+own preferences are saved, by them or by staff on their AdminCP user page.
 
-| Event                             | Payload              | Fires when                                                                 |
-| --------------------------------- | -------------------- | -------------------------------------------------------------------------- |
-| `notifications.type.updated`      | `{ typeId }`         | What a type does by default (list, push, email, member can edit) changes   |
-| `notifications.preferences_reset` | `{ members }`        | **Reset all members to defaults** ran - `members` is how many were reset   |
-| `notifications.paused`            | `{}`                 | Notifications were paused from the danger zone                             |
-| `notifications.resumed`           | `{ requeuedEvents }` | Notifications were resumed - `requeuedEvents` waited while paused          |
-| `notifications.emails_cancelled`  | `{ count }`          | Queued emails were cancelled - `count` is how many deliveries were skipped |
-| `notifications.read_all`          | `{ items, members }` | Everything was marked as read for everyone                                 |
-| `notifications.deleted_all`       | `{ items }`          | Every member's notifications were deleted                                  |
+| Event                               | Payload               | Fires when                                                                 |
+| ----------------------------------- | --------------------- | -------------------------------------------------------------------------- |
+| `notifications.type.updated`        | `{ typeId }`          | What a type does by default (list, push, email, member can edit) changes   |
+| `notifications.preferences_updated` | `{ userId, typeIds }` | One member's preferences are saved - `typeIds` are the types in the save   |
+| `notifications.preferences_reset`   | `{ members }`         | **Reset all members to defaults** ran - `members` is how many were reset   |
+| `notifications.paused`              | `{}`                  | Notifications were paused from the danger zone                             |
+| `notifications.resumed`             | `{ requeuedEvents }`  | Notifications were resumed - `requeuedEvents` waited while paused          |
+| `notifications.emails_cancelled`    | `{ count }`           | Queued emails were cancelled - `count` is how many deliveries were skipped |
+| `notifications.read_all`            | `{ items, members }`  | Everything was marked as read for everyone                                 |
+| `notifications.deleted_all`         | `{ items }`           | Every member's notifications were deleted                                  |
 
 **A listener would** post an audit entry to your staff channel when someone
-pauses, deletes or resets everything.
+pauses, deletes or resets everything, or note when staff changed how a single
+member is notified.
 
 ## Page layout events
 

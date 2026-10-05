@@ -1,14 +1,25 @@
 import { z } from "@hono/zod-openapi";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
+import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
 import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
 import { matchesEmail } from "@/api/lib/user-email-lookup";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
+import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { CONFIG_PLUGIN } from "@/config";
+import { core_languages } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 import { canonicalizeEmail } from "@/lib/email-canonical";
+import {
+  personalInformationChanges,
+  USER_FIRST_NAME_MAX_LENGTH,
+  USER_HEADLINE_MAX_LENGTH,
+  USER_LAST_NAME_MAX_LENGTH,
+  USER_PHONE_MAX_LENGTH,
+  USER_PHONE_PATTERN,
+} from "@/lib/user-personal-information";
 
 import {
   assertCanAssignRoles,
@@ -16,6 +27,21 @@ import {
 } from "../lib/assert-edit-user-permission";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
+const CALENDAR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const nullableText = (max: number) => z.string().max(max).nullable();
+
+const utcMidnightOf = (date: string): Date => new Date(`${date}T00:00:00.000Z`);
+
+const isCalendarDate = (value: string): boolean => {
+  if (!CALENDAR_DATE_PATTERN.test(value)) return false;
+
+  const date = utcMidnightOf(value);
+
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+};
 
 export const zodUpdateUserAdminSchema = z
   .object({
@@ -39,6 +65,34 @@ export const zodUpdateUserAdminSchema = z
     secondaryRoleIds: z
       .array(z.number().int().positive())
       .openapi({ example: [2, 3] }),
+    firstName: nullableText(USER_FIRST_NAME_MAX_LENGTH).openapi({
+      example: "Emirhan",
+    }),
+    lastName: nullableText(USER_LAST_NAME_MAX_LENGTH).openapi({
+      example: "Boruch",
+    }),
+    phone: z
+      .string()
+      .max(USER_PHONE_MAX_LENGTH)
+      .refine(value => value === "" || USER_PHONE_PATTERN.test(value), {
+        message: "Invalid phone number",
+      })
+      .nullable()
+      .openapi({ example: "+48 600 700 800" }),
+    headline: nullableText(USER_HEADLINE_MAX_LENGTH).openapi({
+      example: "Team Manager",
+    }),
+    showRealName: z.boolean().openapi({ example: true }),
+    birthday: z
+      .string()
+      .refine(isCalendarDate, { message: "Invalid birthday" })
+      .nullable()
+      .openapi({ example: "1990-04-21" }),
+    language: z.string().min(1).max(32).openapi({ example: "en" }),
+    timeZone: z.string().max(64).nullable().openapi({
+      example: "Europe/Warsaw",
+    }),
+    newsletter: z.boolean().openapi({ example: false }),
   })
   .partial()
   .refine(body => Object.values(body).some(value => value !== undefined), {
@@ -50,7 +104,8 @@ export const updateUserAdminRoute = buildRoute({
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "patch",
-    description: "Update a user's name or email by id (Admin only)",
+    description:
+      "Update a user's account, roles, personal information and preferences by id (Admin only)",
     path: "/{id}",
     request: {
       params: z.object({
@@ -85,7 +140,7 @@ export const updateUserAdminRoute = buildRoute({
             schema: z.object({ error: z.string() }),
           },
         },
-        description: "Invalid role",
+        description: "Invalid role, language or time zone",
       },
       403: {
         description: "Access Denied",
@@ -181,6 +236,40 @@ export const updateUserAdminRoute = buildRoute({
       values.nameCode = body.nameCode;
     }
 
+    if (body.language !== undefined) {
+      const [language] = await db
+        .select({ code: core_languages.code })
+        .from(core_languages)
+        .where(eq(core_languages.code, body.language))
+        .limit(1);
+
+      if (!language) {
+        return c.json({ error: "Invalid language" }, 400);
+      }
+
+      values.language = language.code;
+    }
+
+    if (body.timeZone !== undefined) {
+      if (body.timeZone !== null && !isValidTimeZone(body.timeZone)) {
+        return c.json({ error: "Invalid time zone" }, 400);
+      }
+
+      values.timeZone = body.timeZone;
+    }
+
+    if (body.birthday !== undefined) {
+      values.birthday =
+        body.birthday === null ? null : utcMidnightOf(body.birthday);
+    }
+
+    if (body.newsletter !== undefined) {
+      values.newsletter = body.newsletter;
+    }
+
+    const personalValues = personalInformationChanges(body);
+    Object.assign(values, personalValues);
+
     const effectivePrimaryId = body.roleId ?? user.roleId;
     const secondaryRoleIds =
       body.secondaryRoleIds !== undefined
@@ -254,6 +343,13 @@ export const updateUserAdminRoute = buildRoute({
           nameCode: core_users.nameCode,
         });
 
+      await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
+        fields: (["firstName", "lastName"] as const).filter(
+          field => field in personalValues,
+        ),
+        userId: user.id,
+      });
+
       if (rolesChanged) {
         // Both caches, not just the permission one. `resolveStaffPermissions`
         // reads the primary role off the *cached user object*, so recomputing
@@ -263,6 +359,8 @@ export const updateUserAdminRoute = buildRoute({
           invalidateStaffPermissionsForUser(c, user.id),
           invalidateSessionCacheForUser(c, user.id),
         ]);
+      } else {
+        await invalidateSessionCacheForUser(c, user.id);
       }
 
       await c.get("events").emit("user.updated", {

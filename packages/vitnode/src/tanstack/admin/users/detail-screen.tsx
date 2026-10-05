@@ -5,8 +5,12 @@ import { useTranslations } from "use-intl";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { useAdminStaffPermissions } from "@/components/staff-permission/provider";
+import { UserConnectedAccountsCard } from "@/views/admin/views/core/users/detail/user-connected-accounts";
 import { UserDetailContent } from "@/views/admin/views/core/users/detail/user-detail-content";
+import { UserDevicesCard } from "@/views/admin/views/core/users/detail/user-devices";
+import { UserNotificationsPanel } from "@/views/admin/views/core/users/detail/user-notifications";
 import { canEditAdminUser } from "@/views/admin/views/core/users/detail/user-query";
+import { UserSecurityPanel } from "@/views/admin/views/core/users/detail/user-security";
 import { adminUserTimelineQueryOptions } from "@/views/admin/views/core/users/detail/user-timeline-query";
 import { searchAdminRolesInBrowser } from "@/views/admin/views/core/users/roles/roles-query";
 import { SearchFeedList } from "@/views/search/search-feed-content";
@@ -38,14 +42,41 @@ const UserTimeline = ({
 const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const t = useTranslations("admin.user.show.images");
   const { data: user } = useSuspenseQuery(adminUserQuery({ adminUserId, id }));
-  const { onRemoveImage, onUpdate, onUpdateRoles, onUploadImage } =
-    useAdminUserMutations();
+  const {
+    onRemoveImage,
+    onUpdate,
+    onUpdateRoles,
+    onUploadImage,
+    onVerifyEmail,
+  } = useAdminUserMutations();
   const permissions = useAdminStaffPermissions();
+  const canEdit = canEditAdminUser(permissions, user);
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <UserDetailContent
-        canEdit={canEditAdminUser(permissions, user)}
+        canEdit={canEdit}
+        connectedAccounts={
+          <UserConnectedAccountsCard
+            adminUserId={adminUserId}
+            canEdit={canEdit}
+            user={user}
+          />
+        }
+        devices={
+          <UserDevicesCard
+            adminUserId={adminUserId}
+            canEdit={canEdit}
+            user={user}
+          />
+        }
+        notifications={
+          <UserNotificationsPanel
+            adminUserId={adminUserId}
+            canEdit={canEdit}
+            user={user}
+          />
+        }
         onRemoveImage={async (userId, kind) => {
           await onRemoveImage(userId, kind);
           toast.success(t(`${kind}.removed`), {
@@ -60,7 +91,15 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
             description: t("uploadedDesc"),
           });
         }}
+        onVerifyEmail={onVerifyEmail}
         searchRoles={searchAdminRolesInBrowser}
+        security={
+          <UserSecurityPanel
+            adminUserId={adminUserId}
+            canEdit={canEdit}
+            user={user}
+          />
+        }
         timeline={
           <UserTimeline
             adminUserId={adminUserId}

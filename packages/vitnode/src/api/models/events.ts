@@ -35,6 +35,10 @@ export interface VitNodeEvents {
   "notifications.preferences_reset": {
     members: number;
   };
+  "notifications.preferences_updated": {
+    typeIds: string[];
+    userId: number;
+  };
   "notifications.read_all": {
     items: number;
     members: number;
@@ -89,9 +93,22 @@ export interface VitNodeEvents {
     passkeyId: number;
     userId: number;
   };
+  "user.password.updated": {
+    userId: number;
+  };
+  "user.sessions.revoked": {
+    deviceId: null | number;
+    sessions: number;
+    userId: number;
+  };
   "user.sso.linked": {
     email: string;
     providerId: string;
+    userId: number;
+  };
+  "user.sso.preferences_updated": {
+    sources: Partial<Record<SsoProfileField, null | string>>;
+    sync: Record<string, boolean>;
     userId: number;
   };
   "user.sso.profile_synced": {
