@@ -1,5 +1,9 @@
 import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 
+import { defineChart } from '@tanstack/charts'
+import { pie, polar, radialArc } from '@tanstack/charts/polar'
+import { Chart } from '@tanstack/charts/react/tooltip'
+import { tooltip } from '@tanstack/charts/tooltip'
 import {
   Card,
   CardContent,
@@ -8,19 +12,17 @@ import {
   CardTitle,
 } from '@vitnode/core/components/ui/card'
 import {
+  chartColor,
   ChartContainer,
   ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
-import { Pie, PieChart } from 'recharts'
 
 const chartData = [
-  { category: 'general', threads: 412, fill: 'var(--color-general)' },
-  { category: 'support', threads: 286, fill: 'var(--color-support)' },
-  { category: 'offTopic', threads: 173, fill: 'var(--color-offTopic)' },
-  { category: 'plugins', threads: 139, fill: 'var(--color-plugins)' },
+  { category: 'general', threads: 412 },
+  { category: 'support', threads: 286 },
+  { category: 'offTopic', threads: 173 },
+  { category: 'plugins', threads: 139 },
 ]
 
 const chartConfig = {
@@ -31,6 +33,27 @@ const chartConfig = {
   plugins: { label: 'Plugins', color: 'var(--chart-4)' },
 } satisfies ChartConfig
 
+const definition = defineChart({
+  marks: [
+    polar({
+      inset: 8,
+      marks: [
+        radialArc(pie(chartData, { value: 'threads' }), {
+          innerRadius: ({ radius }) => radius * 0.5,
+          cornerRadius: 4,
+          color: 'category',
+          key: 'category',
+        }),
+      ],
+      scales: { angle: null, radius: null },
+    }),
+  ],
+  scales: { x: null, y: null },
+  color: chartColor(chartConfig),
+  tooltip,
+  svgAnimation: true,
+})
+
 export default function ChartPieExample() {
   return (
     <Card className="not-prose w-full">
@@ -39,31 +62,22 @@ export default function ChartPieExample() {
         <CardDescription>Last 30 days</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          className="mx-auto aspect-square max-h-72"
-          config={chartConfig}
-        >
-          <PieChart
-            accessibilityLayer
-            desc="Share of new forum threads per category in the last 30 days"
-            title="Threads by category"
-          >
-            <ChartTooltip
-              content={<ChartTooltipContent hideLabel nameKey="category" />}
-            />
-            <Pie
-              data={chartData}
-              dataKey="threads"
-              innerRadius="50%"
-              nameKey="category"
-            />
-            <ChartLegend
-              content={
-                <ChartLegendContent className="flex-wrap" nameKey="category" />
-              }
-              itemSorter={null}
-            />
-          </PieChart>
+        <ChartContainer config={chartConfig}>
+          <Chart
+            ariaDescription="Share of new forum threads per category in the last 30 days"
+            ariaLabel="Threads by category"
+            definition={definition}
+            height={260}
+            renderTooltipBody={({ points }) => (
+              <ChartTooltipContent
+                hideLabel
+                nameKey="category"
+                points={points}
+                valueKey="threads"
+              />
+            )}
+          />
+          <ChartLegend />
         </ChartContainer>
       </CardContent>
     </Card>

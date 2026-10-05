@@ -1,5 +1,12 @@
 import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 
+import { defineChart, lineY } from '@tanstack/charts'
+import { crosshair } from '@tanstack/charts/crosshair'
+import { d3Curve } from '@tanstack/charts/d3/shape'
+import { Chart } from '@tanstack/charts/react/tooltip'
+import { scaleLinear } from '@tanstack/charts/scales/linear'
+import { scalePoint } from '@tanstack/charts/scales/point'
+import { tooltip } from '@tanstack/charts/tooltip'
 import {
   Card,
   CardContent,
@@ -9,10 +16,9 @@ import {
 } from '@vitnode/core/components/ui/card'
 import {
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
-import { CartesianGrid, Line, LineChart, XAxis } from 'recharts'
+import { curveMonotoneX } from 'd3-shape'
 
 const chartData = [
   { day: 'Monday', responseTime: 182 },
@@ -33,6 +39,31 @@ const chartConfig = {
 
 const shortDay = (day: string) => day.slice(0, 3)
 
+const definition = defineChart({
+  marks: [
+    crosshair({ x: true, y: false }),
+    lineY(chartData, {
+      x: 'day',
+      y: 'responseTime',
+      stroke: 'var(--color-responseTime)',
+      strokeWidth: 2,
+      points: true,
+      curve: d3Curve(curveMonotoneX),
+    }),
+  ],
+  scales: {
+    x: {
+      scale: () => scalePoint().padding(0.3),
+      axis: { line: false, ticks: { size: 0, format: shortDay } },
+    },
+    y: { scale: scaleLinear, nice: true, grid: true, axis: false },
+  },
+  focus: 'nearest-x',
+  maxFocusDistance: Number.POSITIVE_INFINITY,
+  tooltip,
+  svgAnimation: true,
+})
+
 export default function ChartLineExample() {
   return (
     <Card className="not-prose w-full">
@@ -41,38 +72,20 @@ export default function ChartLineExample() {
         <CardDescription>Median in milliseconds, last week</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          className="aspect-4/3 sm:aspect-video"
-          config={chartConfig}
-        >
-          <LineChart
-            accessibilityLayer
-            data={chartData}
-            desc="Median API response time in milliseconds per day, Monday to Sunday"
-            margin={{ left: 20, right: 20, top: 12 }}
-            title="API response time"
-          >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              axisLine={false}
-              dataKey="day"
-              tickFormatter={shortDay}
-              tickLine={false}
-              tickMargin={8}
-            />
-            <ChartTooltip
-              content={<ChartTooltipContent indicator="line" />}
-              cursor={false}
-            />
-            <Line
-              activeDot={{ r: 6 }}
-              dataKey="responseTime"
-              dot={{ fill: 'var(--color-responseTime)' }}
-              stroke="var(--color-responseTime)"
-              strokeWidth={2}
-              type="monotone"
-            />
-          </LineChart>
+        <ChartContainer config={chartConfig}>
+          <Chart
+            ariaDescription="Median API response time in milliseconds per day, Monday to Sunday"
+            ariaLabel="API response time"
+            definition={definition}
+            height={280}
+            renderTooltipBody={({ points }) => (
+              <ChartTooltipContent
+                indicator="line"
+                nameKey="responseTime"
+                points={points}
+              />
+            )}
+          />
         </ChartContainer>
       </CardContent>
     </Card>
