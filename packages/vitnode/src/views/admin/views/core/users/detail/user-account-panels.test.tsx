@@ -6,8 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SsoConnectionsApi } from "@/views/auth/settings/sso/sso-connections-query";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
+import { adminUserFixture } from "@/tests/admin-user";
+
 import type { AdminUserDevice } from "./user-account-query";
-import type { AdminUserDetail } from "./user-query";
 
 import {
   adminUserDevicesQueryKey,
@@ -22,13 +23,7 @@ const ADMIN_ID = 1;
 const USER_ID = 7;
 const KEY = { adminUserId: ADMIN_ID, userId: USER_ID };
 
-const user = {
-  avatarUrl: null,
-  firstName: null,
-  id: USER_ID,
-  lastName: null,
-  name: "Target",
-} as AdminUserDetail;
+const user = adminUserFixture({ id: USER_ID, name: "Target" });
 
 const device = (publicId: string, browser: string): AdminUserDevice => ({
   browser,

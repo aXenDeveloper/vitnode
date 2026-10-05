@@ -117,25 +117,3 @@ export const revokeSessions = async (
 
   await deleteSessionCacheKeys(c, { adminSessions, sessions });
 };
-
-export const revokeSessionsCounted = async (
-  c: Context,
-  scope: SessionScope,
-): Promise<number> => {
-  const db = c.get("db");
-
-  const [sessions, adminSessions] = await Promise.all([
-    db
-      .delete(core_sessions)
-      .where(userSessionsIn(scope))
-      .returning(userSessionColumns),
-    db
-      .delete(core_admin_sessions)
-      .where(adminSessionsIn(scope))
-      .returning(adminSessionColumns),
-  ]);
-
-  await deleteSessionCacheKeys(c, { adminSessions, sessions });
-
-  return sessions.length + adminSessions.length;
-};

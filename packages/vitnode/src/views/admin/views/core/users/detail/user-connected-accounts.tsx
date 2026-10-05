@@ -43,6 +43,7 @@ import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 import type { AdminUserDetail } from "./user-query";
 
 import { EditSheetContent } from "./edit-sheet-content";
+import { useFailureToast } from "./use-failure-toast";
 import {
   disconnectAdminUserSso,
   updateAdminUserSsoPreferences,
@@ -56,6 +57,15 @@ import { adminUserQueryKey } from "./user-query";
 
 type Provider = SsoConnectionsApi["providers"][number];
 
+type ConnectedProvider = Provider & {
+  connection: NonNullable<Provider["connection"]>;
+};
+
+const connectedProviders = (data: SsoConnectionsApi): ConnectedProvider[] =>
+  data.providers.filter(
+    (provider): provider is ConnectedProvider => provider.connection !== null,
+  );
+
 const sourcedFields = (data: SsoConnectionsApi, providerId: string) =>
   SSO_PROFILE_FIELDS.filter(field => data.sources[field] === providerId);
 
@@ -64,7 +74,7 @@ const SyncSwitch = ({
   provider,
 }: {
   onToggle: (checked: boolean) => Promise<void>;
-  provider: Provider;
+  provider: ConnectedProvider;
 }) => {
   const tSso = useTranslations("core.auth.settings.sso");
   const [isSaving, setIsSaving] = React.useState(false);
@@ -72,12 +82,15 @@ const SyncSwitch = ({
   return (
     <Switch
       aria-label={tSso("sync.on_sign_in", { provider: provider.name })}
-      checked={provider.connection?.syncOnSignIn ?? false}
+      checked={provider.connection.syncOnSignIn}
       disabled={isSaving}
       onCheckedChange={async checked => {
         setIsSaving(true);
-        await onToggle(checked);
-        setIsSaving(false);
+        try {
+          await onToggle(checked);
+        } finally {
+          setIsSaving(false);
+        }
       }}
     />
   );
@@ -94,8 +107,8 @@ const EditSsoDialog = ({
 }) => {
   const t = useTranslations("admin.user.show.sso");
   const tSso = useTranslations("core.auth.settings.sso");
-  const tError = useTranslations("core.global.errors");
-  const connected = data.providers.filter(provider => provider.connection);
+  const showFailure = useFailureToast();
+  const connected = connectedProviders(data);
   const views = normalizeSSOProviders(
     data.providers.map(({ icon, id, name }) => ({ icon, id, name })),
   );
@@ -112,8 +125,8 @@ const EditSsoDialog = ({
         </DialogTrigger>
       </TooltipWithContent>
       <EditSheetContent
-        description={<>{t("editDesc", { name: user.name })}</>}
-        title={<>{t("editTitle")}</>}
+        description={t("editDesc", { name: user.name })}
+        title={t("editTitle")}
       >
         <div className="flex flex-col gap-6">
           <SsoFieldsGroup
@@ -172,9 +185,7 @@ const EditSsoDialog = ({
                         { sources: {}, sync: { [provider.id]: checked } },
                       );
                       if ("error" in result) {
-                        toast.error(tError("title"), {
-                          description: tError("internal_server_error"),
-                        });
+                        showFailure();
 
                         return;
                       }
@@ -260,7 +271,7 @@ export const UserConnectedAccountsCard = ({
 }) => {
   const t = useTranslations("admin.user.show.sso");
   const tSso = useTranslations("core.auth.settings.sso");
-  const tError = useTranslations("core.global.errors");
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const key = { adminUserId, userId: user.id };
   const { data, isError, isPending } = useQuery(adminUserSsoQueryOptions(key));
@@ -271,8 +282,7 @@ export const UserConnectedAccountsCard = ({
     });
   };
 
-  const connected =
-    data?.providers.filter(provider => provider.connection) ?? [];
+  const connected = data ? connectedProviders(data) : [];
   const views = normalizeSSOProviders(
     (data?.providers ?? []).map(({ icon, id, name }) => ({ icon, id, name })),
   );
@@ -308,8 +318,7 @@ export const UserConnectedAccountsCard = ({
           <ul className="divide-border -my-3 flex flex-col divide-y">
             {connected.map(provider => {
               const fields = sourcedFields(data, provider.id);
-              const connection = provider.connection;
-              if (!connection) return null;
+              const { connection } = provider;
 
               return (
                 <li className="flex items-start gap-3 py-3" key={provider.id}>
@@ -366,17 +375,13 @@ export const UserConnectedAccountsCard = ({
                           provider.id,
                         );
                         if ("error" in result) {
-                          toast.error(
-                            result.error.status === 409
-                              ? t("lastMethod")
-                              : tError("title"),
-                            {
-                              description:
-                                result.error.status === 409
-                                  ? t("lastMethodDesc")
-                                  : tError("internal_server_error"),
-                            },
-                          );
+                          if (result.error.status === 409) {
+                            toast.error(t("lastMethod"), {
+                              description: t("lastMethodDesc"),
+                            });
+                          } else {
+                            showFailure();
+                          }
 
                           return;
                         }

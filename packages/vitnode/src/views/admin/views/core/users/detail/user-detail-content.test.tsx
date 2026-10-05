@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StaffPermissionSet } from "@/api/lib/permission-staff";
 
+import { adminUserFixture } from "@/tests/admin-user";
+
 import type { AdminUserDetail } from "./user-query";
 
 import { UserDetailContent } from "./user-detail-content";
@@ -22,41 +24,6 @@ const permissionSet = (...permissions: string[]): StaffPermissionSet => ({
     plugin: "@vitnode/core",
   })),
   root: false,
-});
-
-const MEMBER_ROLE = { color: null, id: 3, name: [] };
-
-const userFixture = (
-  isStaff: boolean,
-  overrides: Partial<AdminUserDetail> = {},
-): AdminUserDetail => ({
-  avatarColor: "#123456",
-  avatarUrl: null,
-  birthday: null,
-  coverUrl: null,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  email: "moderator@example.com",
-  emailVerified: true,
-  firstName: null,
-  headline: null,
-  id: 7,
-  imagePolicy: {
-    avatar: { allowed: true, maxBytes: 1_000_000 },
-    cover: { allowed: true, maxBytes: 1_000_000 },
-  },
-  isStaff,
-  language: "en",
-  lastName: null,
-  name: "Moderator",
-  nameCode: "moderator",
-  newsletter: false,
-  phone: null,
-  role: MEMBER_ROLE,
-  roleId: MEMBER_ROLE.id,
-  secondaryRoles: [],
-  showRealName: false,
-  timeZone: null,
-  ...overrides,
 });
 
 const mount = async ({
@@ -134,7 +101,7 @@ describe("UserDetailContent edit controls for a staff target", () => {
   it("hides them for a moderator when the viewer lacks users:can_edit_admin", async () => {
     await mount({
       permissions: permissionSet("can_edit"),
-      user: userFixture(true),
+      user: adminUserFixture({ isStaff: true }),
     });
 
     for (const control of editControls()) {
@@ -145,7 +112,7 @@ describe("UserDetailContent edit controls for a staff target", () => {
   it("shows them for a moderator when the viewer holds users:can_edit_admin", async () => {
     await mount({
       permissions: permissionSet("can_edit", "can_edit_admin"),
-      user: userFixture(true),
+      user: adminUserFixture({ isStaff: true }),
     });
 
     for (const control of editControls()) {
@@ -156,7 +123,7 @@ describe("UserDetailContent edit controls for a staff target", () => {
   it("shows them for a member with users:can_edit alone", async () => {
     await mount({
       permissions: permissionSet("can_edit"),
-      user: userFixture(false),
+      user: adminUserFixture(),
     });
 
     for (const control of editControls()) {
@@ -167,7 +134,7 @@ describe("UserDetailContent edit controls for a staff target", () => {
   it("offers to verify the email only while it is unverified", async () => {
     await mount({
       permissions: permissionSet("can_edit"),
-      user: userFixture(false, { emailVerified: false }),
+      user: adminUserFixture({ emailVerified: false }),
     });
 
     expect(
@@ -181,7 +148,7 @@ describe("UserDetailContent edit controls for a staff target", () => {
   it("does not offer to verify an already verified email", async () => {
     await mount({
       permissions: permissionSet("can_edit"),
-      user: userFixture(false),
+      user: adminUserFixture(),
     });
 
     expect(
@@ -192,7 +159,7 @@ describe("UserDetailContent edit controls for a staff target", () => {
   it("shows the activity tab first and switches to the notifications tab", async () => {
     await mount({
       permissions: permissionSet("can_edit"),
-      user: userFixture(false),
+      user: adminUserFixture(),
     });
 
     expect(screen.getByText("timeline slot")).not.toBeNull();

@@ -38,6 +38,7 @@ import type { UpdateAdminUser } from "./user-fields-content";
 import type { AdminUserDetail } from "./user-query";
 
 import { EditSheetContent } from "./edit-sheet-content";
+import { useFailureToast } from "./use-failure-toast";
 
 const AUTOMATIC_TIME_ZONE = "auto";
 
@@ -101,21 +102,11 @@ const EditGroupDialog = ({
         <PencilIcon />
       </DialogTrigger>
     </TooltipWithContent>
-    <EditSheetContent description={<>{description}</>} title={<>{title}</>}>
+    <EditSheetContent description={description} title={title}>
       {children}
     </EditSheetContent>
   </Dialog>
 );
-
-const useSaveFailureToast = () => {
-  const tError = useTranslations("core.global.errors");
-
-  return () => {
-    toast.error(tError("title"), {
-      description: tError("internal_server_error"),
-    });
-  };
-};
 
 const PersonalForm = ({
   onUpdate,
@@ -127,7 +118,7 @@ const PersonalForm = ({
   const t = useTranslations("admin.user.show.personal");
   const tError = useTranslations("core.global.errors");
   const { setIsDirty, setOpen } = useDialog();
-  const showFailure = useSaveFailureToast();
+  const showFailure = useFailureToast();
 
   const formSchema = z.object({
     firstName: z
@@ -327,7 +318,7 @@ const PreferencesForm = ({
 }) => {
   const t = useTranslations("admin.user.show.preferences");
   const { setIsDirty, setOpen } = useDialog();
-  const showFailure = useSaveFailureToast();
+  const showFailure = useFailureToast();
   const languages = useLanguages();
   const zones = React.useMemo(() => supportedTimeZones(), []);
   const options =

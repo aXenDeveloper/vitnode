@@ -87,7 +87,6 @@ export const fetchAdminUserPasskeys = async (
     module: "admin/users",
     path: "/{id}/passkeys",
   });
-  if (response.status === 404) return [];
   if (!response.ok) {
     throw new AdminRequestError(
       response.status,

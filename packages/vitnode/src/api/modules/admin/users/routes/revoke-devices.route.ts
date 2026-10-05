@@ -1,10 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/lib/route";
-import {
-  invalidateSessionCacheForUser,
-  revokeSessionsCounted,
-} from "@/api/models/session-revoke";
+import { revokeSessions } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
@@ -30,10 +27,7 @@ export const revokeUserDevicesAdminRoute = buildRoute({
       200: {
         content: {
           "application/json": {
-            schema: z.object({
-              ok: z.literal(true),
-              revoked: z.number().int(),
-            }),
+            schema: z.object({ ok: z.literal(true) }),
           },
         },
         description: "Every session of the user ended",
@@ -51,9 +45,8 @@ export const revokeUserDevicesAdminRoute = buildRoute({
 
     await assertCanEditAdminTarget(c, userId);
 
-    const revoked = await revokeSessionsCounted(c, { userId });
-    await invalidateSessionCacheForUser(c, userId);
+    await revokeSessions(c, { userId });
 
-    return c.json({ ok: true as const, revoked }, 200);
+    return c.json({ ok: true as const }, 200);
   },
 });

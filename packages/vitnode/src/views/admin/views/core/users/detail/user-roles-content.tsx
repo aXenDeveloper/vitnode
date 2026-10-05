@@ -385,7 +385,7 @@ export const UserRolesCardContent = ({
               </TooltipWithContent>
 
               <EditSheetContent
-                description={<>{t("editRolesDesc")}</>}
+                description={t("editRolesDesc")}
                 title={
                   <>
                     <UsersIcon className="size-5" />

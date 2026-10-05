@@ -299,7 +299,7 @@ describe("DELETE /admin/users/{id}/devices", () => {
     const response = await h.request(`/${TARGET_ID}/devices`, "DELETE");
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, revoked: 5 });
+    expect(await response.json()).toEqual({ ok: true });
     expect(h.sessionsOf(TARGET_ID)).toEqual({ admin: [], user: [] });
     expect(h.sessionsOf(OTHER_ID).user).toEqual([TABLET.id]);
     expect(await h.isCached()).toEqual({ admin: false, user: false });

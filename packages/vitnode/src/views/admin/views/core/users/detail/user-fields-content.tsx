@@ -284,7 +284,7 @@ export const EditNameCodeContent = ({
       </TooltipWithContent>
 
       <EditSheetContent
-        description={<>{t("editNameCodeDesc")}</>}
+        description={t("editNameCodeDesc")}
         title={
           <>
             <LinkIcon className="size-5" />

@@ -12,6 +12,7 @@ import { NotificationTypeItem } from "@/views/notifications/settings/type-item";
 import type { AdminUserNotificationPatch } from "./user-account-mutations";
 import type { AdminUserDetail } from "./user-query";
 
+import { useFailureToast } from "./use-failure-toast";
 import { updateAdminUserNotificationPreferences } from "./user-account-mutations";
 import {
   adminUserNotificationsQueryKey,
@@ -23,7 +24,7 @@ interface NotificationGroup {
   types: NotificationPreferenceTypeView[];
 }
 
-export const groupNotificationTypes = (
+const groupNotificationTypes = (
   types: NotificationPreferenceTypeView[],
 ): NotificationGroup[] => [
   ...types
@@ -49,7 +50,7 @@ export const UserNotificationsPanel = ({
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show.notifications");
-  const tError = useTranslations("core.global.errors");
+  const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const key = { adminUserId, userId: user.id };
   const queryKey = adminUserNotificationsQueryKey(key);
@@ -77,9 +78,7 @@ export const UserNotificationsPanel = ({
 
     if ("error" in result) {
       queryClient.setQueryData(queryKey, previous);
-      toast.error(tError("title"), {
-        description: tError("internal_server_error"),
-      });
+      showFailure();
 
       return;
     }

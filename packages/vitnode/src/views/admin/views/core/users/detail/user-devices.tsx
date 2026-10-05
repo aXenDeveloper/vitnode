@@ -32,6 +32,7 @@ import {
 import type { AdminUserDevice } from "./user-account-query";
 import type { AdminUserDetail } from "./user-query";
 
+import { useFailureToast } from "./use-failure-toast";
 import {
   revokeAdminUserDevice,
   revokeAdminUserDevices,
@@ -42,7 +43,7 @@ import {
 } from "./user-account-query";
 import { DetailCardTitle } from "./user-profile-cards";
 
-export const VISIBLE_DEVICES = 3;
+const VISIBLE_DEVICES = 3;
 
 const DEVICE_ICONS = {
   desktop: LaptopIcon,
@@ -95,6 +96,126 @@ const RevokeDeviceButton = ({
   );
 };
 
+const DeviceRow = ({
+  canEdit,
+  device,
+  onRevoke,
+  userName,
+}: {
+  canEdit: boolean;
+  device: AdminUserDevice;
+  onRevoke: () => Promise<void>;
+  userName: string;
+}) => {
+  const t = useTranslations("admin.user.show.devices");
+  const deviceName = useDeviceName();
+  const Icon = DEVICE_ICONS[device.deviceType];
+
+  return (
+    <li className="flex items-center gap-3">
+      <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
+        <Icon aria-hidden className="size-4" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col text-sm">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="text-foreground truncate font-medium">
+            {deviceName(device)}
+          </span>
+          {device.sessionKinds.includes("admin") && (
+            <Badge variant="secondary">{t("admincp")}</Badge>
+          )}
+        </span>
+        <span className="text-muted-foreground truncate text-xs">
+          <span className="tabular-nums">{device.ipAddress}</span>
+          {" · "}
+          <DateFormat date={device.lastSeen} />
+        </span>
+      </div>
+      {canEdit && (
+        <RevokeDeviceButton
+          device={device}
+          onRevoke={onRevoke}
+          userName={userName}
+        />
+      )}
+    </li>
+  );
+};
+
+const SignOutAllButton = ({
+  count,
+  onSignOutAll,
+  userName,
+}: {
+  count: number;
+  onSignOutAll: () => Promise<boolean>;
+  userName: string;
+}) => {
+  const t = useTranslations("admin.user.show.devices");
+
+  return (
+    <ConfirmActionAlertDialog
+      description={t("signOutAllDesc", { count })}
+      icon={<LogOutIcon />}
+      onSubmit={async ({ onClose }) => {
+        if (await onSignOutAll()) onClose();
+      }}
+      textSubmit={t("signOutAll")}
+      title={t("signOutAllTitle", { name: userName })}
+    >
+      <Button size="xs" variant="outline">
+        <LogOutIcon />
+        {t("signOutAll")}
+      </Button>
+    </ConfirmActionAlertDialog>
+  );
+};
+
+const DeviceList = ({
+  canEdit,
+  devices,
+  onRevoke,
+  userName,
+}: {
+  canEdit: boolean;
+  devices: AdminUserDevice[];
+  onRevoke: (device: AdminUserDevice) => Promise<void>;
+  userName: string;
+}) => {
+  const t = useTranslations("admin.user.show.devices");
+  const [showAll, setShowAll] = React.useState(false);
+
+  return (
+    <>
+      <ul className="flex flex-col gap-3">
+        {(showAll ? devices : devices.slice(0, VISIBLE_DEVICES)).map(device => (
+          <DeviceRow
+            canEdit={canEdit}
+            device={device}
+            key={device.publicId}
+            onRevoke={async () => {
+              await onRevoke(device);
+            }}
+            userName={userName}
+          />
+        ))}
+      </ul>
+      {devices.length > VISIBLE_DEVICES && (
+        <Button
+          className="mt-3 w-full"
+          onClick={() => {
+            setShowAll(value => !value);
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          {showAll ? t("showFewer") : t("showAll", { count: devices.length })}
+        </Button>
+      )}
+    </>
+  );
+};
+
 export const UserDevicesCard = ({
   adminUserId,
   canEdit,
@@ -105,17 +226,15 @@ export const UserDevicesCard = ({
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show.devices");
-  const tError = useTranslations("core.global.errors");
   const queryClient = useQueryClient();
   const deviceName = useDeviceName();
+  const showFailure = useFailureToast();
   const key = { adminUserId, userId: user.id };
   const {
     data: devices,
     isError,
     isPending,
   } = useQuery(adminUserDevicesQueryOptions(key));
-  const [showAll, setShowAll] = React.useState(false);
-  const visible = showAll ? devices : devices?.slice(0, VISIBLE_DEVICES);
 
   const refresh = async () => {
     await queryClient.invalidateQueries({
@@ -123,10 +242,32 @@ export const UserDevicesCard = ({
     });
   };
 
-  const showFailure = () => {
-    toast.error(tError("title"), {
-      description: tError("internal_server_error"),
+  const revokeDevice = async (device: AdminUserDevice) => {
+    const result = await revokeAdminUserDevice(user.id, device.publicId);
+    if ("error" in result) {
+      showFailure();
+
+      return;
+    }
+    await refresh();
+    toast.success(t("signedOut"), {
+      description: t("signedOutDesc", { device: deviceName(device) }),
     });
+  };
+
+  const signOutAll = async () => {
+    const result = await revokeAdminUserDevices(user.id);
+    if ("error" in result) {
+      showFailure();
+
+      return false;
+    }
+    await refresh();
+    toast.success(t("signedOutAll"), {
+      description: t("signedOutAllDesc", { name: user.name }),
+    });
+
+    return true;
   };
 
   return (
@@ -137,30 +278,11 @@ export const UserDevicesCard = ({
         </DetailCardTitle>
         {canEdit && devices && devices.length > 0 && (
           <CardAction>
-            <ConfirmActionAlertDialog
-              description={t("signOutAllDesc", { count: devices.length })}
-              icon={<LogOutIcon />}
-              onSubmit={async ({ onClose }) => {
-                const result = await revokeAdminUserDevices(user.id);
-                if ("error" in result) {
-                  showFailure();
-
-                  return;
-                }
-                await refresh();
-                toast.success(t("signedOutAll"), {
-                  description: t("signedOutAllDesc", { name: user.name }),
-                });
-                onClose();
-              }}
-              textSubmit={t("signOutAll")}
-              title={t("signOutAllTitle", { name: user.name })}
-            >
-              <Button size="xs" variant="outline">
-                <LogOutIcon />
-                {t("signOutAll")}
-              </Button>
-            </ConfirmActionAlertDialog>
+            <SignOutAllButton
+              count={devices.length}
+              onSignOutAll={signOutAll}
+              userName={user.name}
+            />
           </CardAction>
         )}
       </CardHeader>
@@ -180,73 +302,12 @@ export const UserDevicesCard = ({
             {t("empty")}
           </p>
         ) : (
-          <>
-            <ul className="flex flex-col gap-3">
-              {(visible ?? []).map(device => {
-                const Icon = DEVICE_ICONS[device.deviceType];
-
-                return (
-                  <li className="flex items-center gap-3" key={device.publicId}>
-                    <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
-                      <Icon aria-hidden className="size-4" />
-                    </span>
-                    <div className="flex min-w-0 flex-1 flex-col text-sm">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="text-foreground truncate font-medium">
-                          {deviceName(device)}
-                        </span>
-                        {device.sessionKinds.includes("admin") && (
-                          <Badge variant="secondary">{t("admincp")}</Badge>
-                        )}
-                      </span>
-                      <span className="text-muted-foreground truncate text-xs">
-                        <span className="tabular-nums">{device.ipAddress}</span>
-                        {" · "}
-                        <DateFormat date={device.lastSeen} />
-                      </span>
-                    </div>
-                    {canEdit && (
-                      <RevokeDeviceButton
-                        device={device}
-                        onRevoke={async () => {
-                          const result = await revokeAdminUserDevice(
-                            user.id,
-                            device.publicId,
-                          );
-                          if ("error" in result) {
-                            showFailure();
-
-                            return;
-                          }
-                          await refresh();
-                          toast.success(t("signedOut"), {
-                            description: t("signedOutDesc", {
-                              device: deviceName(device),
-                            }),
-                          });
-                        }}
-                        userName={user.name}
-                      />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {devices.length > VISIBLE_DEVICES && (
-              <Button
-                className="mt-3 w-full"
-                onClick={() => {
-                  setShowAll(value => !value);
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                {showAll
-                  ? t("showFewer")
-                  : t("showAll", { count: devices.length })}
-              </Button>
-            )}
-          </>
+          <DeviceList
+            canEdit={canEdit}
+            devices={devices}
+            onRevoke={revokeDevice}
+            userName={user.name}
+          />
         )}
       </CardContent>
     </Card>
