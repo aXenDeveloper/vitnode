@@ -417,6 +417,9 @@ const evaluate = (
       if (["bigint", "int", "integer", "numeric"].includes(node.to)) {
         return Number(value);
       }
+      if (node.to === "jsonb") {
+        return typeof value === "string" ? JSON.parse(value) : value;
+      }
 
       return unsupported(`a cast to ${node.to}`);
     }
@@ -895,6 +898,7 @@ export const createMemoryDb = (seed: [Table, readonly object[]][] = []) => {
 
       const query = {
         ...thenable(run),
+        for: () => query,
         from: (from: Table) => {
           source = from;
 

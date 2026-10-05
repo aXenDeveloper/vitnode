@@ -37,22 +37,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  useDialog,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, useDialog } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
+import { TooltipWithContent } from "@/components/ui/tooltip";
+
+import { EditSheetContent } from "./edit-sheet-content";
 
 export type UpdateAdminUserRoles = (
   id: number,
@@ -340,11 +334,11 @@ const EditRolesForm = ({
         />
       </div>
 
-      <DialogFooter>
+      <div className="flex justify-end">
         <Button isLoading={isPending} onClick={onSubmit} type="button">
           {t("saveRoles")}
         </Button>
-      </DialogFooter>
+      </div>
     </>
   );
 };
@@ -376,27 +370,29 @@ export const UserRolesCardContent = ({
         {canEdit && (
           <CardAction>
             <Dialog>
-              <DialogTrigger
-                render={
-                  <Button
-                    aria-label={t("editRoles")}
-                    size="icon-sm"
-                    variant="ghost"
-                  />
-                }
-              >
-                <PencilIcon />
-              </DialogTrigger>
+              <TooltipWithContent text={t("editRoles")}>
+                <DialogTrigger
+                  render={
+                    <Button
+                      aria-label={t("editRoles")}
+                      size="icon-sm"
+                      variant="ghost"
+                    />
+                  }
+                >
+                  <PencilIcon />
+                </DialogTrigger>
+              </TooltipWithContent>
 
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+              <EditSheetContent
+                description={<>{t("editRolesDesc")}</>}
+                title={
+                  <>
                     <UsersIcon className="size-5" />
                     {t("editRoles")}
-                  </DialogTitle>
-                  <DialogDescription>{t("editRolesDesc")}</DialogDescription>
-                </DialogHeader>
-
+                  </>
+                }
+              >
                 <EditRolesForm
                   id={id}
                   onUpdateRoles={onUpdateRoles}
@@ -404,7 +400,7 @@ export const UserRolesCardContent = ({
                   searchRoles={searchRoles}
                   secondaryRoles={secondaryRoles}
                 />
-              </DialogContent>
+              </EditSheetContent>
             </Dialog>
           </CardAction>
         )}

@@ -12,18 +12,12 @@ import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  useDialog,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, useDialog } from "@/components/ui/dialog";
 import { setFormFieldError } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+
+import { EditSheetContent } from "./edit-sheet-content";
 
 /** How the page performs a user update. Supplied by whichever app mounts this. */
 export type UpdateAdminUser = (
@@ -119,26 +113,30 @@ export const EditUserFieldContent = ({
           type={type}
           value={draft}
         />
-        <Button
-          aria-label={tGlobal("save")}
-          isLoading={isPending}
-          size="icon-sm"
-          type="submit"
-        >
-          <CheckIcon />
-        </Button>
-        <Button
-          aria-label={tGlobal("cancel")}
-          disabled={isPending}
-          onClick={() => {
-            setIsEditing(false);
-          }}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          <XIcon />
-        </Button>
+        <TooltipWithContent text={tGlobal("save")}>
+          <Button
+            aria-label={tGlobal("save")}
+            isLoading={isPending}
+            size="icon-sm"
+            type="submit"
+          >
+            <CheckIcon />
+          </Button>
+        </TooltipWithContent>
+        <TooltipWithContent text={tGlobal("cancel")}>
+          <Button
+            aria-label={tGlobal("cancel")}
+            disabled={isPending}
+            onClick={() => {
+              setIsEditing(false);
+            }}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <XIcon />
+          </Button>
+        </TooltipWithContent>
       </form>
     );
   }
@@ -154,17 +152,19 @@ export const EditUserFieldContent = ({
         )}
       </div>
       {canEdit && (
-        <Button
-          aria-label={label}
-          onClick={() => {
-            setDraft(value);
-            setIsEditing(true);
-          }}
-          size="icon-sm"
-          variant="secondary"
-        >
-          <PencilIcon />
-        </Button>
+        <TooltipWithContent text={label}>
+          <Button
+            aria-label={label}
+            onClick={() => {
+              setDraft(value);
+              setIsEditing(true);
+            }}
+            size="icon-sm"
+            variant="secondary"
+          >
+            <PencilIcon />
+          </Button>
+        </TooltipWithContent>
       )}
     </div>
   );
@@ -269,34 +269,36 @@ export const EditNameCodeContent = ({
 
   return (
     <Dialog>
-      <DialogTrigger
-        render={
-          <Button
-            aria-label={t("editNameCode")}
-            size="icon-xs"
-            variant="ghost"
-          />
-        }
-      >
-        <PencilIcon />
-      </DialogTrigger>
+      <TooltipWithContent text={t("editNameCode")}>
+        <DialogTrigger
+          render={
+            <Button
+              aria-label={t("editNameCode")}
+              size="icon-xs"
+              variant="ghost"
+            />
+          }
+        >
+          <PencilIcon />
+        </DialogTrigger>
+      </TooltipWithContent>
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <EditSheetContent
+        description={<>{t("editNameCodeDesc")}</>}
+        title={
+          <>
             <LinkIcon className="size-5" />
             {t("editNameCode")}
-          </DialogTitle>
-          <DialogDescription>{t("editNameCodeDesc")}</DialogDescription>
-        </DialogHeader>
-
+          </>
+        }
+      >
         <Alert variant="warning">
           <AlertTitle>{t("editNameCodeWarningTitle")}</AlertTitle>
           <AlertDescription>{t("editNameCodeWarning")}</AlertDescription>
         </Alert>
 
         <NameCodeForm id={id} nameCode={nameCode} onUpdate={onUpdate} />
-      </DialogContent>
+      </EditSheetContent>
     </Dialog>
   );
 };
