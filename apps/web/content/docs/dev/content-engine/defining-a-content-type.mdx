@@ -1,271 +1,225 @@
 ---
-title: Defining a Content Type
-description: Declare a Content Engine content type once to get a Postgres table, typed CRUD routes, and interactive AdminCP screens.
+title: Create your first content type
+description: Build a recipes content type with the VitNode Content Engine. Declare fields once, run one migration, and get a Postgres table, AdminCP screens, CRUD routes and staff permissions.
 icon: FileCode
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
-import { TypeTable } from 'fumadocs-ui/components/type-table'
+import { ImgDocs } from '@/components/fumadocs/img'
+import emptyList from './recipes-admin-empty.png'
+import createDialog from './recipe-create-dialog.png'
+import recipeList from './recipes-admin-list.png'
+import staffPermissions from './staff-permissions-recipes.png'
 
-Content Engine eliminates repetitive boilerplate for structured data. From a single TypeScript declaration, it produces a PostgreSQL table, Zod validation schemas, API endpoints, staff permissions, and AdminCP management screens.
+In this tutorial you add a **recipes** section to a plugin. You describe a recipe once with `defineContentType`, and the Content Engine turns that description into a Postgres table, an AdminCP list with a create form, staff-only CRUD routes and four staff permissions. It takes about fifteen minutes, most of it spent naming dishes.
 
-This tutorial guides you through building a complete, working content type end-to-end using an article entity in a plugin named `@vitnode/example`.
+The code uses `@vitnode/example` as the plugin id, because the screenshots come from VitNode's example plugin. Use your own package name everywhere you see it.
 
----
+## Before you begin
 
-## Tutorial: Building a Complete Content Type
+You need a plugin that your app already loads, with `src/config.api.ts` and `src/config.tsx`. [Create a plugin](/docs/dev/plugins/create) generates exactly that. You also need a running PostgreSQL database and an AdminCP account.
 
 <Steps>
+
 <Step>
 
-### 1. Define the Content Type
+### Declare the content type
 
-Declare your content type in `src/content/article.ts` using `defineContentType` and `field` descriptor helpers.
+Create `src/content/recipe.ts` in your plugin:
 
-```ts title="plugins/example/src/content/article.ts"
-import { defineContentType, field } from '@vitnode/core/content'
+```ts title="plugins/example/src/content/recipe.ts"
+import { defineContentType, field } from "@vitnode/core/content";
 
-export const articleContentType = defineContentType({
-  id: 'example.article',
-  tableName: 'example_articles',
-  publication: { enabled: true },
+export const recipeContentType = defineContentType({
+  id: "example.recipe",
+  tableName: "example_recipes",
   fields: {
-    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    slug: field.slug({ source: 'title' }),
-    content: field.textarea({ required: true }),
-    views: field.number({ integer: true, defaultValue: 0, min: 0 }),
+    title: field.text({ required: true, minLength: 3, maxLength: 120 }),
+    slug: field.slug({ source: "title" }),
+    summary: field.textarea({ maxLength: 300, nullable: true }),
+    cookingTime: field.number({ integer: true, min: 1, required: true }),
+    difficulty: field.enum({
+      values: ["easy", "medium", "hard"],
+      defaultValue: "easy",
+    }),
+    vegetarian: field.boolean({ defaultValue: false }),
   },
   admin: {
-    path: 'example/articles',
-    titleField: 'title',
-    form: {
-      sections: [
-        {
-          name: 'main',
-          fields: ['title', 'slug', 'content'],
-        },
-        {
-          name: 'settings',
-          fields: ['views'],
-        },
-      ],
-    },
+    path: "example/recipes",
+    titleField: "title",
     list: {
-      columns: ['status', 'title', 'slug', 'views', 'publishedAt', 'updatedAt'],
-      searchableFields: ['title', 'slug'],
-      orderableFields: ['title', 'views'],
-      defaultOrderBy: 'updatedAt',
-      defaultOrder: 'desc',
+      columns: ["title", "difficulty", "cookingTime", "vegetarian", "updatedAt"],
+      searchableFields: ["title", "summary"],
+      orderableFields: ["title", "cookingTime"],
     },
   },
-  publicApi: {
-    enabled: true,
-    path: 'articles',
-    fields: ['title', 'slug', 'content', 'views', 'publishedAt'],
-    searchableFields: ['title', 'content'],
-    orderableFields: ['publishedAt', 'views'],
-    defaultOrderBy: 'publishedAt',
-    defaultOrder: 'desc',
-  },
-})
+});
 ```
 
-`slug` uses `source: 'title'` to automatically generate clean URLs from the article title. `admin.form.sections` groups fields into titled form cards, while `admin.list` configures the AdminCP data table.
+- `id` is `plugin.entity`: lowercase, dot separated. The part after the first dot (`recipe`) names the translations and the permissions.
+- `tableName` is the Postgres table, in snake_case.
+- `slug` with `source: "title"` fills itself from the title when a record is created without one. It never changes on later edits, so renaming a recipe does not move its URL.
+- `admin.path` sets the AdminCP URL: `/admin/content/example/recipes`.
+
+A field that is neither `required` nor `nullable` needs a `defaultValue`, otherwise `defineContentType` throws. Every field helper is listed in [Fields](/docs/dev/content-engine/fields).
 
 </Step>
+
 <Step>
 
-### 2. Create the Database Model and Export Tables
+### Create the database model
 
-Compile the definition into a Drizzle model with `createContentModel` in `src/database/articles.ts`. Drizzle Kit scans the built plugin exports to generate migrations, so you must export the generated table:
+Create `src/database/recipes.ts`. `createContentModel` turns the definition into a Drizzle table, Zod schemas and a service:
 
-```ts title="plugins/example/src/database/articles.ts"
-import { createContentModel } from '@vitnode/core/content/server'
-import { articleContentType } from '@/content/article'
+```ts title="plugins/example/src/database/recipes.ts"
+import { createContentModel } from "@vitnode/core/content/server";
 
-export const articleContent = createContentModel(articleContentType)
+import { recipeContentType } from "@/content/recipe";
 
-export const example_articles = articleContent.table
+export const recipeContent = createContentModel(recipeContentType);
+
+export const example_recipes = recipeContent.table;
 ```
 
-<Callout type="info" title="Exporting Generated Tables">
-  Always export the compiled Drizzle table (`articleContent.table`). When localization is enabled, also export `articleContent.translationTable`. For to-many relations or repeatable fields, export the junction or child tables from `articleContent.advancedTables`.
-</Callout>
+Export the table. Drizzle Kit finds tables by reading the exports of your plugin's built `dist/src/database/*.js` files, so a table without an export never reaches a migration.
 
 </Step>
+
 <Step>
 
-### 3. Register Content Modules in the Plugin API
+### Add the staff CRUD routes
 
-VitNode provides two helper functions to wire Content Engine endpoints into your Hono API:
-- `buildContentAdminModule` generates staff CRUD routes (`can_view`, `can_create`, `can_edit`, `can_delete`, `can_publish`).
-- `buildContentPublicModule` generates the public read-only endpoint.
-
-Add the admin module under your plugin's `adminModule`:
+Create an admin module and add the content type to it with `buildContentAdminModule`:
 
 ```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
-import { buildModule } from '@vitnode/core/api/lib/module'
-import { buildContentAdminModule } from '@vitnode/core/content/server'
-import { CONFIG_PLUGIN } from '@/const'
-import { articleContent } from '@/database/articles'
+import { buildModule } from "@vitnode/core/api/lib/module";
+import { buildContentAdminModule } from "@vitnode/core/content/server";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { recipeContent } from "@/database/recipes";
 
 export const adminModule = buildModule({
   pluginId: CONFIG_PLUGIN.pluginId,
-  name: 'admin',
+  name: "admin",
   routes: [],
   modules: [
     buildContentAdminModule({
       pluginId: CONFIG_PLUGIN.pluginId,
-      contentTypes: [articleContent],
+      contentTypes: [recipeContent],
     }),
   ],
-})
+});
 ```
 
-Next, add `buildContentPublicModule` to `src/config.api.ts`:
+Then register the module in your API plugin:
 
 ```ts title="plugins/example/src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
-import { buildContentPublicModule } from '@vitnode/core/content/server'
-import { adminModule } from '@/api/modules/admin/admin.module'
-import { CONFIG_PLUGIN } from '@/const'
-import { articleContent } from '@/database/articles'
+import { adminModule } from "@/api/modules/admin/admin.module"; // [!code ++]
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
-    modules: [
-      adminModule,
-      buildContentPublicModule({
-        pluginId: CONFIG_PLUGIN.pluginId,
-        contentTypes: [articleContent],
-      }),
-    ],
-  })
+    modules: [helloModule, adminModule], // [!code highlight]
+  });
 ```
 
+The routes live under `/api/@vitnode/example/admin/content/recipe` and only answer staff signed in to the AdminCP. Keep the module named `admin`: the AdminCP session is only checked on paths that contain `/admin/`.
+
 </Step>
+
 <Step>
 
-### 4. Register AdminCP Navigation
+### Add the AdminCP screen
 
-Create `src/admin/nav.tsx` to register the sidebar navigation item. This file is kept lightweight so navigation loads without pulling in editing components:
+Two small files connect the content type to the AdminCP. `src/admin/nav.tsx` adds the sidebar entry:
 
 ```tsx title="plugins/example/src/admin/nav.tsx"
-import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
-import { FileTextIcon } from 'lucide-react'
-import { CONFIG_PLUGIN } from '@/const'
-import { articleContentType } from '@/content/article'
+import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
 
-export const articleNav = {
-  definition: articleContentType,
-  icon: <FileTextIcon />,
-}
+import { SoupIcon } from "lucide-react";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { recipeContentType } from "@/content/recipe";
+
+export const recipeNav = {
+  definition: recipeContentType,
+  icon: <SoupIcon />,
+};
 
 export const adminNav = {
   pluginId: CONFIG_PLUGIN.pluginId,
-  contentTypes: [articleNav],
-} satisfies AdminNavPluginSource
+  contentTypes: [recipeNav],
+} satisfies AdminNavPluginSource;
 ```
 
-</Step>
-<Step>
-
-### 5. Register the AdminCP Content Module
-
-Create `src/admin/content.tsx` using `contentTypeAdmin`. The build imports this module lazily when an administrator navigates to the content screen:
+`src/admin/content.tsx` registers the screen itself:
 
 ```tsx title="plugins/example/src/admin/content.tsx"
-import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
-import { contentTypeAdmin } from '@vitnode/core/lib/plugin'
-import { CONFIG_PLUGIN } from '@/const'
-import { articleNav } from './nav'
+import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import { recipeNav } from "./nav";
 
 export const adminContent = {
   pluginId: CONFIG_PLUGIN.pluginId,
-  contentTypes: [
-    contentTypeAdmin({
-      ...articleNav,
-    }),
-  ],
-} satisfies ContentFrontendPluginSource
+  contentTypes: [recipeNav],
+} satisfies ContentFrontendPluginSource;
 ```
 
-</Step>
-<Step>
-
-### 6. Configure Package Exports
-
-Ensure `plugins/example/package.json` exposes the admin navigation and content modules so the Vite plugin can discover them:
-
-```json title="plugins/example/package.json"
-{
-  "name": "@vitnode/example",
-  "exports": {
-    "./locales/*.json": "./src/locales/*.json",
-    "./*": {
-      "import": "./dist/src/*.js",
-      "types": "./dist/src/*.d.ts",
-      "default": "./dist/src/*.js"
-    }
-  }
-}
-```
+Keep both files and both export names (`adminNav`, `adminContent`). The app's build finds them through your package's `./*` export, which a generated plugin already has. The sidebar loads `admin/nav` on every AdminCP page, while `admin/content` loads only when someone opens a content screen. Do not import either file from `config.tsx`. [Plugin files](/docs/dev/content-engine/plugin-registration) explains why.
 
 </Step>
+
 <Step>
 
-### 7. Add Plugin Translations
+### Name everything
 
-Content Engine resolves names, field labels, form sections, and permissions from the plugin's locale file. Entity keys follow the content type ID without the plugin segment (`example.article` -> `article`).
+Labels come from your plugin's `src/locales/en.json`. Content type strings live under `content.recipe`, and each staff permission gets a top-level key:
 
 ```json title="plugins/example/src/locales/en.json"
 {
   "@vitnode/example": {
+    "title": "Example",
     "content": {
-      "article": {
-        "label": "{count, plural, one {Article} other {Articles}}",
-        "title": "Articles",
-        "desc": "Manage your knowledge base articles.",
+      "recipe": {
+        "label": "{count, plural, one {Recipe} other {Recipes}}",
+        "title": "Recipes",
+        "desc": "Dishes your community can cook tonight.",
         "fields": {
           "title": "Title",
           "slug": "Slug",
-          "content": "Content",
-          "views": "Views",
-          "status": "Status",
-          "publishedAt": "Published",
+          "summary": "Summary",
+          "cookingTime": "Cooking time (minutes)",
+          "difficulty": "Difficulty",
+          "vegetarian": "Vegetarian",
           "updatedAt": "Updated"
         },
-        "form": {
-          "main": {
-            "title": "Article Content",
-            "desc": "Primary information and body text."
-          },
-          "settings": {
-            "title": "Settings",
-            "desc": "Article statistics and settings."
-          }
+        "enums": {
+          "difficulty": { "easy": "Easy", "medium": "Medium", "hard": "Hard" }
         }
       }
     }
   },
-  "@vitnode/example:article": "Articles",
-  "@vitnode/example:article:can_view": "View articles",
-  "@vitnode/example:article:can_create": "Create articles",
-  "@vitnode/example:article:can_edit": "Edit articles",
-  "@vitnode/example:article:can_delete": "Delete articles",
-  "@vitnode/example:article:can_publish": "Publish and unpublish articles"
+  "@vitnode/example:recipe": "Recipes",
+  "@vitnode/example:recipe:can_view": "View recipes",
+  "@vitnode/example:recipe:can_create": "Create recipes",
+  "@vitnode/example:recipe:can_edit": "Edit recipes",
+  "@vitnode/example:recipe:can_delete": "Delete recipes"
 }
 ```
 
+`label` is an ICU plural, so languages with more than two plural forms translate it correctly. `title` is the sidebar group of your plugin. Every key is optional: a missing one falls back to a readable version of the field or value name, and a missing permission label shows its raw id.
+
 </Step>
+
 <Step>
 
-### 8. Build Plugins & Run Migrations
+### Build and migrate
 
-Compile your TypeScript definitions and apply the generated migration to PostgreSQL:
+Run this from the workspace root:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
 
 ```bash tab="bun"
 bun run build:plugins && bun run db:migrate
@@ -281,110 +235,86 @@ npm run build:plugins && npm run db:migrate
 
 </Tabs>
 
-</Step>
-<Step>
+`db:migrate` does not build anything, so always run `build:plugins` first. It generates a migration in `apps/api/migrations/` and applies it. For this content type, the generated SQL is:
 
-### 9. Open the AdminCP Screen
-
-Start your development server and navigate to:
-
-```text
-http://localhost:3000/admin/content/example/articles
+```sql title="apps/api/migrations/<timestamp>_<name>/migration.sql (breakpoints removed)"
+CREATE TABLE "example_recipes" (
+	"id" serial PRIMARY KEY,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	"title" varchar(120) NOT NULL,
+	"slug" varchar(160) NOT NULL,
+	"summary" text,
+	"cookingTime" integer NOT NULL,
+	"difficulty" varchar(64) DEFAULT 'easy' NOT NULL,
+	"vegetarian" boolean DEFAULT false NOT NULL
+);
+ALTER TABLE "example_recipes" ENABLE ROW LEVEL SECURITY;
+CREATE UNIQUE INDEX "example_recipes_slug_key" ON "example_recipes" ("slug");
+CREATE INDEX "example_recipes_created_at_idx" ON "example_recipes" ("createdAt");
+CREATE INDEX "example_recipes_updated_at_idx" ON "example_recipes" ("updatedAt");
 ```
 
-The AdminCP displays a full data table with column headers, sorting, search inputs, and status badges. Click **Create article**, fill in the title and content, and click **Save**. The new article appears in the list, and a toast notification confirms the change.
+You did not declare `id`, `createdAt`, `updatedAt` or the slug index. The Content Engine adds them to every content type.
 
 </Step>
+
 <Step>
 
-### 10. Verify the Generated API
+### Restart the dev server
 
-Test the generated routes:
+Stop `pnpm dev` and start it again. The app generates its list of plugin AdminCP screens when it starts, and the API registers new routes only at startup.
 
-1. **Admin CRUD**: Requires staff authentication and permissions.
-   ```bash
-   GET /api/@vitnode/example/admin/content/article
-   ```
-2. **Public API**: Returns published records without authentication.
-   ```bash
-   GET /api/@vitnode/example/articles
-   ```
+Open **AdminCP → Example → Recipes**. You get an empty list with every column you asked for:
 
-</Step>
-</Steps>
-
----
-
-## `defineContentType` Options
-
-<TypeTable
-  type={{
-    id: {
-      description: "Unique identifier matching 'plugin.entity' format (lowercase, dot-separated).",
-      required: true,
-      type: 'string',
-    },
-    tableName: {
-      description: 'Postgres table name in snake_case starting with a letter.',
-      required: true,
-      type: 'string',
-    },
-    fields: {
-      description: 'Record of field descriptors created with field.* helpers.',
-      required: true,
-      type: 'Record<string, ContentFieldDescriptor>',
-    },
-    publication: {
-      description: 'Opts into the draft/published lifecycle with status and publishedAt columns.',
-      type: '{ enabled: true }',
-    },
-    editorial: {
-      description: 'Enables revision histories, signed reviewer preview URLs, and scheduled publishing.',
-      type: '{ enabled: true, revisions?: { retention?: number }, preview?: { enabled: true, expiresInMinutes?: number }, scheduling?: { enabled: true } }',
-    },
-    localization: {
-      description: 'Enables multi-language support with generated translations tables.',
-      type: '{ enabled: true, defaultLocale: string, fallback?: "default" | "none" }',
-    },
-    admin: {
-      description: 'AdminCP display settings, form section groupings, and list table options.',
-      type: 'ContentAdminConfig',
-    },
-    publicApi: {
-      description: 'Read-only public API configuration with field allowlists and filters.',
-      type: 'ContentPublicApiConfig',
-    },
-    search: {
-      description: 'Automatic synchronization with the VitNode search and discovery engine.',
-      type: 'ContentSearchConfig',
-    },
-    delivery: {
-      description: 'Canonical URLs, slug redirect history, sitemaps, and SEO head metadata.',
-      type: 'ContentDeliveryConfig',
-    },
-    indexes: {
-      description: 'Custom single or composite database indexes on table columns.',
-      type: 'ContentIndexInput[]',
-    },
-  }}
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={emptyList}
+  alt="AdminCP sidebar with a new Recipes entry under Example, and an empty Recipes list with Title, Difficulty, Cooking time, Vegetarian and Updated columns"
 />
 
-## Learn More
+</Step>
 
-<Cards>
-  <Card
-    title="Field Reference"
-    description="All available field types and options"
-    href="/docs/dev/content-engine/fields"
-  />
-  <Card
-    title="AdminCP Integration"
-    description="Custom table layouts, filters, and AutoForm dialogs"
-    href="/docs/dev/content-engine/admincp"
-  />
-  <Card
-    title="Content Delivery & SEO"
-    description="Render content items on the public website with TanStack Start"
-    href="/docs/dev/content-engine/content-delivery-and-seo"
-  />
-</Cards>
+<Step>
+
+### Create a few recipes
+
+Click **Create Recipe**. The form is generated from your fields: a text input for the title, a textarea for the summary, a number input, a select for the enum and a switch for the boolean. Leave **Slug** empty to have it filled from the title.
+
+<ImgDocs
+  src={createDialog}
+  alt="Create Recipe dialog with Title, Slug, Summary, Cooking time, Difficulty and Vegetarian fields, and Cancel and Create buttons"
+/>
+
+Click **Create**. A toast says "Recipe has been created." and the list refreshes. Add a few more so there is something to sort.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+The list now shows your recipes. Click the **Title** or **Cooking time** header to sort, or type in the search box to match titles and summaries.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={recipeList}
+  alt="Recipes list with four rows: Beef wellington, Mushroom risotto, Shakshuka for two and Midnight ramen, showing difficulty badges, cooking times and vegetarian checkmarks"
+/>
+
+Finally, open **AdminCP → Staff → Administrators** and edit a restricted administrator. Your plugin now has a **Recipes** group with the four permissions the Content Engine generated. Every generated route checks them, so an administrator without **Delete recipes** gets a `403` from the delete route.
+
+<ImgDocs
+  src={staffPermissions}
+  alt="Staff permission editor for the Example plugin with a Recipes group listing View, Create, Edit and Delete recipes"
+/>
+
+The `advanced_article` and `localized_article` groups next to it have no permission labels in the example plugin. That is what a missing key looks like.
+
+## Next steps
+
+- [Publish recipes with a public API](/docs/dev/content-engine/public-api-and-caching) adds drafts, a **Publish** button and read-only endpoints.
+- [Show content on a public page](/docs/dev/content-engine/content-delivery-and-seo) gives each recipe its own URL with SEO metadata.
+- [Customize the AdminCP](/docs/dev/content-engine/admincp) changes columns, form sections and field components.

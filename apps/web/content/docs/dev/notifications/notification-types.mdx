@@ -1,92 +1,40 @@
 ---
 title: Notification types
-description: Reference for buildNotificationType - ids, schema versions, presentation, access checks, grouping, email and mandatory types.
+description: Reference for buildNotificationType in VitNode. Every option, the arguments of present, how output is cleaned, grouping, schema versions and mandatory types.
 icon: Shapes
 ---
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-A notification type describes one kind of notification: what data it stores,
-how it reads in the inbox, who may see it and how users receive it by default.
+A notification type describes one kind of notification: the data it stores, how it reads in the inbox, who may see it and what members get by default. You build it with `buildNotificationType()` and register it on your API plugin. For a guided first type, see [Publish notifications](/docs/dev/notifications/publishing).
 
-## Declare a type
+## Signature
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts
 import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
-import { z } from 'zod'
 
-export const topicReplyNotification = buildNotificationType({
-  id: 'forum.topic_reply',
-  version: 1,
-  schema: z.object({
-    topicId: z.number().int().positive(),
-    topicTitle: z.string().max(255),
-  }),
-  category: 'social',
-  label: '@acme/forum.notifications.topic_reply.label',
-  description: '@acme/forum.notifications.topic_reply.description',
-  subjectType: 'forum.topic',
-  defaults: { inApp: true, email: 'daily' },
-  email: true,
-  grouping: { windowMinutes: 60 },
-  access: async ({ c, data, userIds }) =>
-    await canReadTopic(c, data.topicId, userIds),
-  present: ({ actors, actorCount, data, t }) => ({
-    title: t('@acme/forum.notifications.topic_reply.title', {
-      name: actors[0]?.name ?? '',
-      others: actorCount - 1,
-      title: data.topicTitle,
-    }),
-    target: `/forum/topics/${data.topicId}`,
-  }),
-})
+buildNotificationType<TData>(
+  definition: NotificationTypeDefinition<TData>,
+): NotificationTypeDefinition<TData>
 ```
 
-The returned object is what you register **and** what you pass to `publish()`,
-so `data` is type-checked against `schema` at every call site.
+It returns the definition unchanged after checking it. Pass that same object to `notificationTypes` and to `publish({ type })`, so TypeScript checks `data` against `schema` at every call site.
 
-## Register types
+Register types on `buildApiPlugin({ notificationTypes })`, or on any module with `buildModule({ notificationTypes })`. Core collects them from every installed plugin when the API starts.
 
-Pass them to `buildApiPlugin()`:
-
-```ts title="plugins/forum/src/config.api.ts"
-export const forumApiPlugin = () =>
-  buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    messages: apiMessages,
-    notificationTypes: [topicReplyNotification],
-    modules: [topicsModule],
-  })
-```
-
-Or to any module, nested ones included, with `buildModule()`:
-
-```ts title="plugins/forum/src/api/modules/topics/topics.module.ts"
-export const topicsModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
-  name: 'topics',
-  routes: [replyRoute],
-  notificationTypes: [topicReplyNotification], // [!code ++]
-})
-```
-
-Core collects the types from every installed plugin when the API starts. The
-same type id registered twice - by one plugin or by two - stops startup with
-an error naming both owners.
-
-## `buildNotificationType` options
+## Options
 
 <TypeTable
   type={{
     id: {
       description:
-        'Plugin-scoped, dot-separated id such as "forum.topic_reply". Lowercase letters, digits, "_" and "-", at least two segments, at most 100 characters. Never rename it - stored events refer to it.',
+        'Dot-separated id such as "forum.topic_reply": at least two segments of lowercase letters, digits, "_" or "-", at most 100 characters. Stored notifications refer to it, so never rename it.',
       type: 'string',
       required: true,
     },
     version: {
       description:
-        'Integer, 1 or more. Bump it when schema changes shape and add migrate.',
+        'Integer, 1 or more. Increase it when schema changes shape, and add migrate.',
       type: 'number',
       required: true,
     },
@@ -98,54 +46,54 @@ an error naming both owners.
     },
     category: {
       description:
-        'Groups types on the preferences page and in inbox filters. 1-50 characters of a-z, 0-9, "_" or "-". Core translates account, content, social and system.',
+        'Groups types on the preferences page and in inbox filters. 1 to 50 characters of a-z, 0-9, "_" or "-". Core translates account, content, social and system.',
       type: 'string',
       required: true,
     },
     label: {
-      description: 'API message key of the name shown on the preferences page.',
+      description: 'API message key for the type name on the preferences page.',
       type: 'string',
       required: true,
     },
     description: {
-      description: 'API message key of a one-line explanation under the label.',
+      description:
+        'API message key for a one-line explanation under the label.',
       type: 'string',
     },
     defaults: {
       description:
-        'What a user gets before they change anything. Admins can override it per installation.',
+        'What a member gets before changing anything. Administrators can override it in the AdminCP.',
       type: '{ inApp: boolean; email: "none" | "immediate" | "daily" | "weekly" }',
       required: true,
     },
     present: {
       description:
-        "Renders one inbox item as plain text, in the recipient's language.",
+        "Renders one inbox item as plain text in the recipient's language.",
       type: '(args: NotificationPresentArgs<TData>) => { title: string; body?: string; target?: string | null }',
       required: true,
     },
     email: {
       description:
-        'Turns on the email channel. true reuses present; a function words the email separately. Required when defaults.email is not none.',
-      type: 'boolean | (args) => { subject: string; title: string; body?: string; actionLabel?: string }',
+        'Turns on email for this type. true reuses present. A function writes the email separately. Required when defaults.email is not "none".',
+      type: 'boolean | (args: NotificationPresentArgs<TData>) => { subject: string; title: string; body?: string; actionLabel?: string }',
     },
     access: {
       description:
-        'Returns which of userIds may see the notification. Called in bounded batches - answer with one query.',
+        'Returns which of userIds may see the notification. Without it, every recipient may.',
       type: '(args: { c, data, subject, userIds }) => number[] | Promise<number[]>',
     },
     grouping: {
       description:
-        'Merges related events that land in the same time window into one inbox item.',
+        'Merges related notifications that arrive in the same time window into one inbox item.',
       type: '{ windowMinutes: number; key?: (args: { data, subject }) => string | null }',
     },
     subjectType: {
       description:
-        'The kind of subject this type is about, such as forum.topic. publish() rejects any other subject type.',
+        'The only subject type publish() accepts for this type, such as "forum.topic".',
       type: 'string',
     },
     mandatory: {
-      description:
-        'Account and security messages: always in-app, cannot be changed by the user.',
+      description: 'Always delivered to the inbox. Members cannot change it.',
       type: 'boolean',
       default: 'false',
     },
@@ -157,119 +105,81 @@ an error naming both owners.
   }}
 />
 
-`buildNotificationType()` throws at import time when an option is invalid: a
-bad id or category, a version below 1, a grouping window outside 1-10,080
-minutes (one week), or an email default without `email`.
+`buildNotificationType()` throws a `NotificationRegistryError` when the module loads if the id, category or subject type is invalid, `version` is below 1, `grouping.windowMinutes` is outside 1 to 10,080 (one week), or `defaults.email` is not `"none"` while `email` is missing. Two registered types with the same `id` stop the API from starting.
 
-## Render the inbox item with `present`
+## `present` arguments
 
-`present` runs on the server every time an item is listed or emailed, in the
-recipient's language. It receives:
+`present` runs on the API each time an item is listed or emailed. It receives:
 
 <TypeTable
   type={{
     data: {
-      description: 'The event data, parsed with the current schema.',
+      description: 'The stored data, parsed with the current schema.',
       type: 'TData',
     },
     t: {
       description:
-        "Server translator for the recipient's locale. Reads your plugin's API messages.",
+        "Translator for the recipient's language. Reads your plugin's API messages.",
       type: 'Translator',
     },
     locale: {
-      description: "The recipient's resolved locale, e.g. en.",
+      description: "The recipient's language code, such as en.",
       type: 'string',
     },
     subject: {
-      description: 'The subject the event is about, or null.',
+      description: 'What the notification is about, or null.',
       type: '{ type: string; id: number | string } | null',
     },
     actors: {
-      description:
-        'Newest distinct actors of the item, newest first, at most 3.',
+      description: 'Up to 3 people who caused the item, newest first.',
       type: '{ id: number; name: string }[]',
     },
     actorCount: {
-      description: 'Distinct actors across every event in the item.',
+      description: 'Distinct people across every notification in the item.',
       type: 'number',
     },
     eventCount: {
       description:
-        'Events grouped into the item. Always 1 for ungrouped types.',
+        'Notifications grouped into the item. Always 1 without grouping.',
       type: 'number',
     },
   }}
 />
 
-Put the strings in your plugin's API messages, next to the type:
+A missing `label` translation shows the type id instead. Category names are looked up as `core.notifications.categories.<category>`, then `<pluginId>.notifications.categories.<category>`.
 
-```json title="plugins/forum/src/locales/api/en.json"
-{
-  "@acme/forum": {
-    "notifications": {
-      "topic_reply": {
-        "label": "Replies to your topics",
-        "description": "When someone replies to a topic you started.",
-        "title": "{others, plural, =0 {{name} replied} one {{name} and # other replied} other {{name} and # others replied}} to {title}"
-      }
-    }
-  }
-}
-```
+## How core cleans `present` output
 
-A missing `label` key shows the type id instead, so a forgotten translation is
-visible, not broken. Category names are looked up as
-`core.notifications.categories.<category>` and then
-`<pluginId>.notifications.categories.<category>`.
+Core cleans what `present` returns before anyone sees it:
 
-### Output is plain text with safe links
+- `title` and `body` are plain text. Markup is never rendered, whitespace is collapsed and each string is cut at 500 characters.
+- `target` must be a path on the same site, such as `/forum/topics/42`. Absolute URLs, `//host`, `javascript:` and backslashes are dropped, and the item renders without a link.
+- If `present` throws or returns an empty title, the item shows "This notification is no longer available." and the error is logged.
 
-Core cleans whatever `present` returns before anyone sees it:
+## `access`
 
-- **No HTML.** `title` and `body` are plain text. Markup is never rendered,
-  whitespace is collapsed and each string is capped at 500 characters.
-- **Same-site targets only.** `target` must be a path such as `/forum/topics/42`.
-  Absolute URLs, `//host`, `javascript:` and backslash tricks are dropped, and
-  the item renders without a link.
-- **Failures are contained.** If `present` throws or returns an empty title,
-  that item becomes an "unavailable" placeholder and the error is logged.
+Core calls `access` once per delivery batch, again before each email or digest, and each time a member's inbox loads. It receives a bounded batch of user ids, never the whole audience. A worked example is in [Limit who sees a notification](/docs/dev/notifications/access).
 
-## Check access with `access`
+## `grouping`
 
-`access` answers "which of these users may see this?". Core calls it:
-
-- during fan-out, once per batch of recipients (up to `fanoutBatchSize`);
-- before an email or digest goes out, for that one user;
-- whenever a user lists their inbox, for each item.
-
-Write it to answer for many users with one query. See
-[Batch access checks](/docs/dev/notifications/publishing#check-access-in-batches)
-for an example. Without `access`, every candidate may see the notification.
-
-## Group related events with `grouping`
-
-```ts
+```ts title="plugins/forum/src/api/lib/notifications.ts"
 grouping: {
   windowMinutes: 60,
   key: ({ data }) => `topic:${data.topicId}`,
 },
 ```
 
-Events with the same type and key, for the same user, in the same
-`windowMinutes` window, join one inbox item: "Alex and 4 others replied to
-Shipping day". The key defaults to the event's subject. An event without a
-subject, or a `key` that returns `null`, is never grouped. See
-[Grouping](/docs/dev/notifications/inbox-and-realtime#grouping) for how grouped
-items behave.
+Notifications with the same type and key, for the same member, in the same window join one inbox item, such as "Alex and 4 others replied to Shipping day". Windows are fixed UTC slots: with 60 minutes, 14:00 to 14:59 is one window. The key defaults to the subject. A notification without a subject, or a `key` that returns `null`, is never grouped. Use `actors`, `actorCount` and `eventCount` in `present` to word a grouped item:
 
-## Change the data shape with `version` and `migrate`
+```json title="plugins/forum/src/locales/api/en.json"
+"title": "{others, plural, =0 {{name} replied} one {{name} and # other replied} other {{name} and # others replied}} to {title}"
+```
 
-Events are stored for weeks. When `schema` changes, bump `version` and teach
-`migrate` to upgrade the old shape. Here version 1 stored `title`, and version 2
-renamed it to `topicTitle`:
+## `version` and `migrate`
 
-```ts
+Stored notifications outlive your code. When `schema` changes shape, increase `version` and make `migrate` upgrade the old data. Here version 1 stored `title`, and version 2 renames it to `topicTitle`:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
 export const topicReplyNotification = buildNotificationType({
   id: 'forum.topic_reply',
   version: 2,
@@ -280,32 +190,14 @@ export const topicReplyNotification = buildNotificationType({
 
     return { topicId: old.topicId, topicTitle: old.title }
   },
-  // ...
+  // other options unchanged
 })
 ```
 
-Data that cannot be upgraded - no `migrate`, a newer stored version, a thrown
-error or a failed parse - is never shown. Undelivered events fail, and inbox
-items render as placeholders.
+Data that cannot be upgraded is never shown. That covers a missing `migrate`, a stored version newer than the code, a thrown error or a failed parse. A notification not yet delivered is marked failed, and inbox items show the "no longer available" placeholder.
 
-## Mandatory types
+## `mandatory`
 
-```ts
-mandatory: true,
-```
+Set `mandatory: true` for account notices members must not miss, such as "Your role changed". The type always reaches the inbox, ignores AdminCP policies that would disable it, and shows as locked on the preferences page. Its email follows the installation default.
 
-Use `mandatory` for account and security notices users must not miss in the
-inbox: always delivered in-app and fixed on the preferences page.
-Its email follows the installation default. Password resets and sign-in codes
-are **not** notifications - keep sending them with `c.get("email").send()`. See
-[Mandatory types and account email](/docs/dev/notifications/preferences#mandatory-types-and-account-email).
-
-## Related
-
-<Cards>
-  <Card
-    title="Publish notifications"
-    href="/docs/dev/notifications/publishing"
-  />
-  <Card title="Server-side translations" href="/docs/dev/i18n/server" />
-</Cards>
+Password resets, email verification and sign-in codes are not notifications. Keep sending them with `c.get("email").send()`, so they arrive even for members who turned every notification off.

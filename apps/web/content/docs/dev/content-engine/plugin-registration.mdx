@@ -1,121 +1,80 @@
 ---
-title: Plugin Frontend Modules
-description: How plugins export AdminCP navigation, Content Engine screens, and runtime configs with optimized code splitting.
+title: Plugin files
+description: The files and exports a VitNode plugin needs for Content Engine content types, which part of the app reads each one, and why AdminCP code stays out of config.tsx.
 icon: Package
 ---
 
-To keep the AdminCP sidebar light while lazy-loading heavy rich text editors on demand, plugins separate frontend code into three clean modules.
+A plugin's content types are read from several small files instead of one big config. Each file is loaded by a different part of the app, so a public page never downloads the AdminCP's form and editor code. This page lists those files; [Create your first content type](/docs/dev/content-engine/defining-a-content-type) writes each one step by step.
 
-## The Three Frontend Modules
+## Files at a glance
 
-| Module          | Location                | Purpose                                                                                       |
-| :-------------- | :---------------------- | :-------------------------------------------------------------------------------------------- |
-| `admin/nav`     | `src/admin/nav.tsx`     | Lightweight sidebar navigation entries and Lucide icons                                       |
-| `admin/content` | `src/admin/content.tsx` | Content Engine editing screens, custom fields, and form layouts                               |
-| `config`        | `src/config.tsx`        | The plugin's identity, locale barrel and route declarations - plain data the browser may hold |
+| File                         | Export          | Read by                                     | Holds                                                         |
+| ---------------------------- | --------------- | ------------------------------------------- | ------------------------------------------------------------- |
+| `src/content/<type>.ts`      | any name        | everything below                            | The `defineContentType` definition. Safe in the browser       |
+| `src/database/<type>.ts`     | the tables      | Drizzle Kit, from `dist/src/database/*.js`  | `createContentModel` and every generated table                |
+| `src/config.api.ts`          | the API plugin  | the API                                     | `buildContentPublicModule`, and the admin module with `buildContentAdminModule` |
+| `src/admin/nav.tsx`          | `adminNav`      | the AdminCP sidebar, on every AdminCP page  | `{ definition, icon }` per content type                       |
+| `src/admin/content.tsx`      | `adminContent`  | the content screens, loaded on demand       | Screen registrations, custom cells, fields and layouts        |
+| `src/content.ts`             | `contentTypes`  | the web build and the API at startup        | Every content type with `delivery` or `search`                |
+| `src/config.tsx`             | the plugin      | the app's `vitnode.config.ts`               | Plugin id, messages, `localeFiles` and routes only            |
 
-One more, for plugins whose content types publish public URLs (delivery or search): `content` (`src/content.ts`) exports those definitions as `contentTypes`. The web build reads it to check that a page route serves every URL. When the API boots, it loads the same module and refuses to start if the plugin publishes a content URL that the module doesn't declare, or declares differently. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+A content type needs an entry in both `admin/nav` and `admin/content`: the first adds the sidebar link, the second the screen behind it.
 
----
+## How the app finds them
 
-## 1. `admin/nav.tsx` (Sidebar Navigation)
+The app's Vite plugin resolves `<pluginId>/admin/nav`, `<pluginId>/admin/content`, `<pluginId>/content` and `<pluginId>/routes` for every plugin in `vitnode.config.ts`, and writes the results into generated files such as `src/admin-nav.gen.ts` and `src/content-registry.gen.ts`. It does this each time `vite dev` or `vite build` starts, so restart the dev server after adding one of these files. A subpath that does not resolve is skipped without an error, which is the usual reason a new screen does not show up.
 
-Kept deliberately minimal so the AdminCP shell loads navigation without pulling in heavy editing components:
+This only works when the plugin id equals the npm package name, and the package exports its `dist` folder. A generated plugin already has the right `exports`:
 
-```tsx title="plugins/blog/src/admin/nav.tsx"
-import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
-import { FileTextIcon } from 'lucide-react'
-import { postContentType } from '@/content/post'
-
-export const postNav = {
-  definition: postContentType,
-  icon: <FileTextIcon />,
-}
-
-export const adminNav = {
-  pluginId: 'blog',
-  contentTypes: [postNav],
-} satisfies AdminNavPluginSource
-```
-
----
-
-## 2. `admin/content.tsx` (Editing Screens & Overrides)
-
-Loaded only when an administrator navigates into Content Engine screens:
-
-```tsx title="plugins/blog/src/admin/content.tsx"
-import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
-import { contentTypeAdmin } from '@vitnode/core/lib/plugin'
-import { postNav } from './nav'
-
-export const adminContent = {
-  pluginId: 'blog',
-  contentTypes: [
-    contentTypeAdmin({
-      ...postNav,
-      // Optional column, field, or form layout overrides
-    }),
-  ],
-} satisfies ContentFrontendPluginSource
-```
-
----
-
-## 3. `config.tsx` (Root Plugin Config)
-
-The factory a host registers in `vitnode.config.ts`. It is bundled for the
-browser with the document shell, so it carries only what a browser may hold:
-the plugin id, its locale barrel and its route declarations.
-
-```tsx title="plugins/blog/src/config.tsx"
-import { buildPlugin } from '@vitnode/core/lib/plugin'
-import messages from './locales'
-import { routes } from './routes'
-
-export const blogPlugin = () =>
-  buildPlugin({
-    pluginId: 'blog',
-    messages,
-    routes,
-  })
-```
-
-Do not spread `admin/nav` or `admin/content` into it. The build generates one
-literal import of each per configured plugin - `admin/nav` with the AdminCP
-shell, `admin/content` behind a dynamic `import()` - so an editing screen arrives
-with the route that renders it. Spreading them into the factory puts the whole
-editing stack, rich text editor included, into every public page's bundle. See
-[Configuration](/docs/dev/configuration).
-
----
-
-## Package Exports Configuration
-
-Declare the subpaths in your plugin's `package.json`:
-
-```json title="plugins/blog/package.json"
+```json title="plugins/example/package.json"
 {
+  "name": "@vitnode/example",
   "exports": {
-    "./config": "./dist/src/config.js",
-    "./admin/nav": "./dist/src/admin/nav.js",
-    "./admin/content": "./dist/src/admin/content.js",
-    "./content": "./dist/src/content.js"
+    "./locales/*.json": "./src/locales/*.json",
+    "./*": {
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts",
+      "default": "./dist/src/*.js"
+    }
   }
 }
 ```
 
-## Learn More
+Tables are the exception: Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly, for every plugin in the API config. Export each table from those files, or it never reaches a migration.
 
-<Cards>
-  <Card
-    title="Create a Plugin"
-    description="Scaffolding and registering plugins in your app"
-    href="/docs/dev/plugins/create"
-  />
-  <Card
-    title="AdminCP Integration"
-    description="Custom table layouts, filters, and AutoForm dialogs"
-    href="/docs/dev/content-engine/admincp"
-  />
-</Cards>
+## Keep `config.tsx` small
+
+`config.tsx` is bundled with the document shell of every public page:
+
+```tsx title="plugins/example/src/config.tsx"
+import { buildPlugin } from "@vitnode/core/lib/plugin";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import messages from "./locales";
+import { routes } from "./routes";
+
+export const examplePlugin = () =>
+  buildPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    localeFiles: {
+      en: "@vitnode/example/locales/en.json",
+    },
+    messages,
+    routes,
+  });
+```
+
+Do not import `admin/nav` or `admin/content` here. The build imports `admin/nav` with the AdminCP shell and `admin/content` behind a dynamic `import()`, so the form code arrives only with the screen that needs it. Spreading them into `buildPlugin` would put the whole editing stack, rich text editor included, into every public page. `localeFiles` is what lets the app load your plugin's translations. Without it nothing fails, but every label from your locale file is missing.
+
+## `content.ts` and public URLs
+
+A content type with `delivery` or `search` publishes URLs. List those content types in `src/content.ts`:
+
+```ts title="plugins/example/src/content.ts"
+import { recipeContentType } from "@/content/recipe";
+
+export const contentTypes = [recipeContentType];
+```
+
+The web build checks that a plugin page serves each `delivery.path` and `search.pathTemplate`, and stops with `content-url-without-page` otherwise. The API loads the same module at startup and refuses to start when the plugin publishes a URL the module does not declare, or declares differently. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).

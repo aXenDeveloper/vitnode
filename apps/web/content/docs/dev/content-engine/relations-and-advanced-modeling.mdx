@@ -1,217 +1,123 @@
 ---
-title: Relations & Advanced Modeling
-description: Connect content types with foreign keys, junction tables, field groups, and repeatable child records.
+title: Relations and advanced fields
+description: Link Content Engine records with foreign keys and junction tables, group related fields into one object, and store repeatable rows in a real child table.
 icon: Network
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+The Content Engine stores structured data in real tables, not JSON blobs. A relation is a foreign key, a to-many relation is an indexed junction table, a group is a set of columns and a repeatable field is a child table. This guide extends the recipes from [Create your first content type](/docs/dev/content-engine/defining-a-content-type) with a category, tags, a nutrition group and a list of ingredients.
 
-Content Engine uses real relational modeling rather than unstructured JSON blobs. To-many relations generate indexed junction tables, repeatables generate child tables with foreign keys, and groups map to structured columns.
+## Link to one record
 
-## Quick start: To-One Relation
+Point a recipe at a category with `field.relation`. `target` is a function, so two content types can refer to each other without an import cycle:
 
-Connect an article to a single category:
+```ts title="plugins/example/src/content/recipe.ts"
+import { categoryContentType } from "./category";
 
-### 1. Declare the Field
-
-```ts title="plugins/blog/src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content"
-import { categoryContentType } from "./category"
-
-export const articleContentType = defineContentType({
-  id: "blog.article",
-  tableName: "blog_articles",
-  fields: {
-    title: field.text({ required: true }),
-    // [!code ++:5]
-    category: field.relation({
-      required: true,
-      onDelete: "restrict",
-      target: () => categoryContentType,
-    }),
-  },
-})
-```
-
-### 2. Connect Drizzle References
-
-When a relation targets another content type, provide the referenced primary key column in `createContentModel`:
-
-```ts title="plugins/blog/src/database/articles.ts"
-import { createContentModel } from "@vitnode/core/content/server"
-import { articleContentType } from "../content/article"
-import { blogCategoriesTable } from "./categories"
-
-export const articleContent = createContentModel(articleContentType, {
-  // [!code ++:3]
-  references: {
-    category: () => blogCategoriesTable.id,
-  },
-})
-
-export const blogArticlesTable = articleContent.table
-```
-
-Self-referencing relations (`self: true`), `field.user`, and `field.file` resolve their references automatically and do not require entries in `references`.
-
----
-
-## Relation Shapes
-
-| Shape | Declaration | Database Structure |
-| :--- | :--- | :--- |
-| **To-One** | `field.relation({ target })` | Foreign key column on base table (`categoryId`). |
-| **To-Many** | `field.relation({ target, multiple: true })` | Auto-generated junction table (`{tableName}_{field}`). |
-| **Self-Referencing** | `field.relation({ self: true })` | Foreign key referencing the same table's `id`. |
-| **User Relation** | `field.user({ multiple?: boolean })` | FK to `core_users.id` (or junction table if `multiple: true`). |
-| **File Relation** | `field.file({ multiple?: boolean })` | FK to `core_files.id` (or junction table if `multiple: true`). |
-
----
-
-## To-Many Relations & Junction Tables
-
-Support multi-category selection or ordered co-authors:
-
-```ts title="plugins/blog/src/content/post.ts"
 fields: {
-  // [!code ++:10]
-  categories: field.relation({
-    multiple: true,
-    min: 1, // Enforce at least 1 selected
-    onDelete: "cascade", // "cascade" or "restrict" (cannot be "set null" on junction)
+  category: field.relation({ // [!code ++:5]
     target: () => categoryContentType,
+    required: true,
+    onDelete: "restrict",
   }),
-  authors: field.user({
+}
+```
+
+Then tell `createContentModel` which column the foreign key references:
+
+```ts title="plugins/example/src/database/recipes.ts"
+import { example_categories } from "./categories";
+
+export const recipeContent = createContentModel(recipeContentType, {
+  references: { category: () => example_categories.id }, // [!code ++]
+});
+```
+
+`references` needs exactly one entry per relation field. A missing or extra key is a type error, and a missing entry also throws when the model is created. `field.user()`, `field.file()` and `self: true` relations resolve their table themselves and need no entry.
+
+The AdminCP form shows a searchable picker for the category.
+
+## Link to many records
+
+Add `multiple: true` for tags, co-authors or a gallery:
+
+```ts title="plugins/example/src/content/recipe.ts"
+fields: {
+  tags: field.relation({ // [!code ++:5]
+    target: () => tagContentType,
     multiple: true,
-    ordered: true, // Preserves drag-and-drop order
-  }),
-}
-```
-
-### Exporting Junction Tables for Migrations
-
-To-many relations generate junction tables accessible via `model.advancedTables.junctions`. Export them so Drizzle Kit generates their schema migrations:
-
-```ts title="plugins/blog/src/database/posts.ts"
-import { createContentModel } from "@vitnode/core/content/server"
-import { postContentType } from "../content/post"
-import { blogCategoriesTable } from "./categories"
-
-export const postContent = createContentModel(postContentType, {
-  references: {
-    categories: () => blogCategoriesTable.id,
-  },
-})
-
-export const blogPostsTable = postContent.table
-// [!code ++:2]
-export const blogPostsCategoriesJunctionTable =
-  postContent.advancedTables.junctions.categories
-```
-
----
-
-## Field Groups (`field.group`)
-
-Group related fields into a single nested object:
-
-```ts
-fields: {
-  // [!code ++:7]
-  seo: field.group({
-    fields: {
-      metaTitle: field.text({ maxLength: 70 }),
-      metaDescription: field.textarea({ maxLength: 160 }),
-      noIndex: field.boolean({ defaultValue: false }),
-    },
-  }),
-}
-```
-
-Columns are created with snake_case prefixes on the base table (`seo_meta_title`, `seo_meta_description`, `seo_no_index`).
-
----
-
-## Repeatable Child Rows (`field.repeatable`)
-
-Create structured arrays backed by a real child database table:
-
-```ts
-fields: {
-  // [!code ++:7]
-  faqItems: field.repeatable({
     min: 1,
-    max: 10, // Defaults to 100
-    fields: {
-      question: field.text({ required: true }),
-      answer: field.textarea({ required: true }),
-    },
   }),
+  cooks: field.user({ multiple: true, ordered: true }), // [!code ++]
 }
 ```
 
-### Exporting Repeatable Tables for Migrations
+Each to-many field gets a junction table with `itemId`, `relatedItemId`, `position` and `createdAt`. `ordered: true` keeps the order editors drag the items into. Export the junction tables, or Drizzle Kit leaves them out of the migration:
 
-Repeatable child tables are stored under `model.advancedTables.repeatables`. Export them alongside your base table:
-
-```ts title="plugins/blog/src/database/posts.ts"
-export const blogPostsTable = postContent.table
-// [!code ++:2]
-export const blogPostsFaqItemsChildTable =
-  postContent.advancedTables.repeatables.faqItems
+```ts title="plugins/example/src/database/recipes.ts"
+export const example_recipes = recipeContent.table;
+export const example_recipes_tags = recipeContent.advancedTables.junctions.tags; // [!code ++:2]
+export const example_recipes_cooks = recipeContent.advancedTables.junctions.cooks;
 ```
 
-Each repeatable row carries `id`, `itemId` (FK cascading to the parent record), `position`, `createdAt`, and the child field columns.
+To-many fields cannot set `required`, `nullable` or `onDelete: "set null"`. Use `min` to demand at least one item.
 
----
+## Group fields
 
-## `field.relation` Options
+`field.group` keeps related fields together under one key:
 
-<TypeTable
-  type={{
-    target: {
-      description: "Function returning the target ContentTypeDefinition.",
-      type: "() => ContentTypeDefinition",
-    },
-    multiple: {
-      default: "false",
-      description: "Whether the field allows selecting multiple target records.",
-      type: "boolean",
-    },
-    self: {
-      default: "false",
-      description: "Creates a recursive foreign key to this same content type.",
-      type: "boolean",
-    },
-    onDelete: {
-      default: "'restrict'",
-      description: "Postgres referential action on target deletion. Junction tables reject 'set null'.",
-      type: "'cascade' | 'restrict' | 'set null'",
-    },
-    ordered: {
-      default: "false",
-      description: "Preserves user-defined order in junction tables.",
-      type: "boolean",
-    },
-    min: {
-      default: "undefined",
-      description: "Minimum number of related items required when multiple is true.",
-      type: "number",
-    },
-  }}
-/>
+```ts
+nutrition: field.group({
+  fields: {
+    calories: field.number({ integer: true, min: 0, nullable: true }),
+    protein: field.number({ integer: false, min: 0, nullable: true }),
+    notes: field.textarea({ nullable: true }),
+  },
+}),
+```
 
-## Learn More
+A group adds one column per leaf to the main table, named in camelCase: `nutritionCalories`, `nutritionProtein`, `nutritionNotes`. The API reads and writes it as `{ nutrition: { calories, protein, notes } }`. Leaves can be text, textarea, number, boolean, enum or dateTime fields. A group that is not required needs leaves that are nullable or have a default. Refer to a leaf elsewhere with a path such as `"nutrition.calories"`.
 
-<Cards>
-  <Card
-    title="Defining a Content Type"
-    description="Full lifecycle of creating content types, tables, and screens"
-    href="/docs/dev/content-engine/defining-a-content-type"
-  />
-  <Card
-    title="Field Reference"
-    description="Explore primitive, date, and file field types"
-    href="/docs/dev/content-engine/fields"
-  />
-</Cards>
+## Repeatable rows
+
+`field.repeatable` stores an ordered list in a child table, which suits ingredients, steps or FAQ entries:
+
+```ts
+ingredients: field.repeatable({
+  min: 1,
+  max: 40,
+  fields: {
+    name: field.text({ required: true, maxLength: 120 }),
+    amount: field.text({ maxLength: 40, nullable: true }),
+  },
+}),
+```
+
+The child table `example_recipes_ingredients` has `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per field. Deleting a recipe deletes its rows. `max` defaults to 100. Export the table as well:
+
+```ts title="plugins/example/src/database/recipes.ts"
+export const example_recipes_ingredients =
+  recipeContent.advancedTables.repeatables.ingredients;
+```
+
+## Check the result
+
+Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The generated migration should contain one table per junction and repeatable field. Open the create form: the category has a picker, tags accept several values, the nutrition fields sit in their own card and ingredients can be added, removed and reordered.
+
+## Relation options
+
+| Name       | Type                                        | Default        | Description                                                  |
+| ---------- | ------------------------------------------- | -------------- | ------------------------------------------------------------ |
+| `target`   | `() => ContentTypeDefinition`               |                | The linked content type. Use either `target` or `self`       |
+| `self`     | `true`                                      |                | Links to the same content type, for parents or "related" lists |
+| `required` | `boolean`                                   | `false`        | Single relations only                                        |
+| `nullable` | `boolean`                                   | `false`        | Single relations only. Set `required` or `nullable`          |
+| `multiple` | `boolean`                                   | `false`        | Uses a junction table                                        |
+| `ordered`  | `boolean`                                   | `false`        | Keeps editor order. Needs `multiple`                         |
+| `min`      | `number`                                    |                | Fewest items, from 1 to 500. Needs `multiple`                |
+| `onDelete` | `"restrict"` \| `"cascade"` \| `"set null"` | `"restrict"`   | What deleting the target does. `"set null"` needs a nullable single relation |
+
+A to-many relation accepts at most 500 items per record.
+
+## Service helpers
+
+The [content service](/docs/dev/content-engine/services-and-api) has helpers for these fields: `relations.tags.add()`, `.remove()`, `.set()`, `.reorder()` and `.get()`, and `repeatable.ingredients.create()`, `.update()`, `.delete()`, `.reorder()`, `.set()` and `.list()`.

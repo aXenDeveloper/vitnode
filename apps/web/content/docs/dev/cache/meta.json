@@ -1,0 +1,6 @@
+{
+  "title": "Cache",
+  "description": "Cache API responses in the app with TanStack Query and expensive reads in the API with Redis",
+  "icon": "Zap",
+  "pages": ["index", "app", "api", "reference"]
+}

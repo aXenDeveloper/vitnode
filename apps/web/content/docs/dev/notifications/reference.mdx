@@ -1,0 +1,197 @@
+---
+title: Notifications API reference
+description: Reference for c.get("notifications") in VitNode (publish, remove and state), its errors, the member and AdminCP REST endpoints, and the realtime channel.
+icon: BookOpen
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+`c.get("notifications")` is available in every Hono route, event listener and queue task. This page lists its methods, the REST endpoints behind the bell and the AdminCP screen, and the WebSocket channel that carries the unread count. For the type definition, see [Notification types](/docs/dev/notifications/notification-types).
+
+## Methods
+
+| Method          | Returns                                            | Behavior                                                                 |
+| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
+| `publish(args)` | `Promise<{ eventId: number; duplicate: boolean }>` | Stores one event and queues its delivery. Does not wait for delivery     |
+| `remove(args)`  | `Promise<number>`                                  | Deletes matching inbox items and lowers unread counts. Returns the count |
+| `state(userId)` | `Promise<{ unread: number; revision: number }>`    | Reads one member's stored unread count                                   |
+
+### `publish`
+
+<TypeTable
+  type={{
+    type: {
+      description:
+        'The registered definition, or its id. A different object with the same id is rejected.',
+      type: 'NotificationTypeDefinition<TData> | string',
+      required: true,
+    },
+    data: {
+      description: "Checked against the type's schema.",
+      type: 'TData',
+      required: true,
+    },
+    idempotencyKey: {
+      description:
+        'Names the real-world event, 1 to 255 characters. Unique per plugin and type.',
+      type: 'string',
+      required: true,
+    },
+    recipients: {
+      description:
+        'Candidate user ids, at most 100,000 after duplicates are removed. Without it, the event is stored and delivers nothing.',
+      type: 'readonly number[]',
+    },
+    subject: {
+      description:
+        "What the notification is about. Used by grouping and remove(). Must match the type's subjectType.",
+      type: '{ type: string; id: number | string }',
+    },
+    tx: {
+      description:
+        'Your transaction. The event and its delivery task commit or roll back with your write.',
+      type: 'Transaction',
+    },
+    actorId: {
+      description:
+        'Who caused it. Defaults to the signed-in admin, then the signed-in user. Pass null for a system notification.',
+      type: 'number | null',
+    },
+    allowSelf: {
+      description: 'Deliver to the actor too.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>
+
+Publishing the same type and `idempotencyKey` again returns the first event with `duplicate: true`.
+
+### `remove`
+
+<TypeTable
+  type={{
+    subject: {
+      description: 'Removes items about this subject.',
+      type: '{ type: string; id: number | string }',
+      required: true,
+    },
+    type: {
+      description: 'Only items of this notification type id.',
+      type: 'string',
+    },
+    userIds: {
+      description: "Only items in these members' inboxes.",
+      type: 'number[]',
+    },
+  }}
+/>
+
+Without `type` and `userIds`, `remove()` deletes every item about the subject for everyone.
+
+### `state`
+
+```ts title="plugins/forum/src/api/modules/topics/routes/summary.route.ts"
+const { unread, revision } = await c.get('notifications').state(user.id)
+```
+
+`revision` increases with every change to the member's inbox, so a client can tell a newer count from an older one.
+
+## Errors
+
+`publish()` throws a `NotificationPublishError` before writing anything when:
+
+- the type is not registered, or `type` is a different object than the registered one;
+- `data` fails the schema. The message lists each failing path;
+- `idempotencyKey` is empty or longer than 255 characters after trimming;
+- `subject` has an invalid type or id, or a type other than the type's `subjectType`;
+- there are more than 100,000 recipients.
+
+It also throws when two transactions publish the same key at the same moment and the first has not committed. Retry after the first commits, and the call returns `duplicate: true`.
+
+## Member endpoints
+
+Every route acts on the signed-in member and answers `401` to guests. Paths are relative to `/api/@vitnode/core/notifications`.
+
+| Method | Path            | Behavior                                                                                                               |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/`             | One page of items, newest activity first. Query: `limit` (1 to 50, default 20), `cursor`, `unread`, `category`, `type` |
+| `GET`  | `/state`        | `{ unread, revision }`                                                                                                 |
+| `POST` | `/{id}/read`    | Marks one item read. Optional body `{ throughSeq }`                                                                    |
+| `POST` | `/{id}/unread`  | Marks one item unread again                                                                                            |
+| `POST` | `/{id}/archive` | Hides one item from the inbox. New activity brings it back                                                             |
+| `POST` | `/read-all`     | Marks everything read. Optional body `{ category }`                                                                    |
+| `GET`  | `/preferences`  | Every type the member can see, with their channels                                                                     |
+| `PUT`  | `/preferences`  | Saves `{ types: { [typeId]: { inApp?, push?, email? } } }`. Other types keep their choices                             |
+
+The mark routes return the new `{ unread, revision }`. Another member's item id answers `404`, like a missing one. Call these routes with the [fetcher](/docs/dev/fetcher):
+
+```ts
+const state = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'notifications',
+  path: '/state',
+})
+```
+
+A member's time zone, used for digests, is saved with `PUT /api/@vitnode/core/users/me/time-zone` and the body `{ "timeZone": "Europe/Warsaw" }`, or `null` to follow their language.
+
+## AdminCP endpoints
+
+Paths are relative to `/api/@vitnode/core/admin/notifications` and need an AdminCP session with the listed [staff permission](/docs/dev/working-with-users/staff-permissions) in the `notifications` module.
+
+| Method | Path                         | Permission   | Behavior                                                           |
+| ------ | ---------------------------- | ------------ | ------------------------------------------------------------------ |
+| `GET`  | `/overview`                  | `can_view`   | Registered types, installation settings and delivery health        |
+| `GET`  | `/stats`                     | `can_view`   | Activity numbers. Query: `range` (`24h`, `7d`, `30d`), `timeZone`  |
+| `GET`  | `/deliveries`                | `can_view`   | Email deliveries, newest first. Query: `status`, `limit`, `cursor` |
+| `PUT`  | `/types/{type}`              | `can_edit`   | Merges the body into the type's policy                             |
+| `POST` | `/test-email`                | `can_manage` | Queues a test email to the signed-in administrator only            |
+| `POST` | `/reconcile`                 | `can_manage` | Compares unread counts with the inbox. Body `{ dryRun, userId? }`  |
+| `POST` | `/deliveries/{id}/retry`     | `can_manage` | Retries one failed delivery with the same idempotency key          |
+| `POST` | `/pause`                     | `can_manage` | Pauses delivery and email                                          |
+| `POST` | `/resume`                    | `can_manage` | Resumes and re-queues events that waited                           |
+| `POST` | `/emails/cancel`             | `can_manage` | Skips every email that has not gone out                            |
+| `POST` | `/read-all`                  | `can_manage` | Marks every member's notifications read                            |
+| `POST` | `/delete-all`                | `can_manage` | Deletes every member's notifications                               |
+| `POST` | `/members/reset-preferences` | `can_manage` | Clears every member's own choices                                  |
+
+The body of `PUT /types/{type}` accepts any of these keys:
+
+```json
+{
+  "allowInApp": true,
+  "inApp": false,
+  "allowPush": true,
+  "allowEmail": true,
+  "email": "daily",
+  "memberCanEdit": false
+}
+```
+
+`POST /reconcile` only reports by default: `dryRun` is `true` unless you send `false`. It returns `{ mismatched, corrected }`.
+
+## Realtime channel
+
+Every committed change to a member's inbox sends `notificationsStateChannel` from `@vitnode/core/ws/notifications` to that member's open tabs:
+
+```ts
+interface NotificationStateMessage {
+  unread: number
+  revision: number
+  reason:
+    | 'created'
+    | 'read'
+    | 'unread'
+    | 'read_all'
+    | 'archived'
+    | 'removed'
+    | 'reconciled'
+  notificationId?: number
+}
+```
+
+`unread` is always the absolute count, never a change of one. The toast channel, `notificationsChannel`, lives in the same module. See [WebSocket](/docs/dev/websocket).
+
+AdminCP actions also emit events such as `notifications.paused` and `notifications.type.updated`. See [Built-in events](/docs/dev/events/built-in-events).

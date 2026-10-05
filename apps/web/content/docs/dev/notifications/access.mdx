@@ -1,0 +1,92 @@
+---
+title: Limit who sees a notification
+description: Hide VitNode notifications from members who cannot see the content, with a batched access check on the notification type and remove() when content is deleted.
+icon: ShieldCheck
+---
+
+Add an `access` check to a notification type when the content behind it is private, such as a topic in a members-only forum. Core asks your check who may see the notification before delivering it, before emailing it and every time the inbox loads. A member who loses access stops seeing the item, even after it was delivered.
+
+This guide continues the `forum.topic_reply` type from [Publish notifications](/docs/dev/notifications/publishing).
+
+<Steps>
+
+<Step>
+
+### Add the access check
+
+Add `access` to the type. It receives a batch of candidate user ids and returns the ones that may see the notification:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
+import { and, eq, inArray } from 'drizzle-orm'
+import { z } from 'zod'
+
+import { forum_topic_members } from '@/database/topic-members'
+
+export const topicReplyNotification = buildNotificationType({
+  id: 'forum.topic_reply',
+  // other options unchanged
+  // [!code ++:14]
+  access: async ({ c, data, userIds }) => {
+    const members = await c
+      .get('db')
+      .select({ userId: forum_topic_members.userId })
+      .from(forum_topic_members)
+      .where(
+        and(
+          eq(forum_topic_members.topicId, data.topicId),
+          inArray(forum_topic_members.userId, userIds),
+        ),
+      )
+
+    return members.map((member) => member.userId)
+  },
+})
+```
+
+Answer the whole batch with one query. A batch holds up to 500 ids by default, so a query per user would run 500 times. When every candidate shares one answer, such as "is the topic still public?", check once and return `userIds` or `[]`.
+
+</Step>
+
+<Step>
+
+### Remove notifications when content goes away
+
+When a topic is deleted, take its notifications out of every inbox. Call `remove()` in the route that deletes the topic:
+
+```ts title="plugins/forum/src/api/modules/topics/routes/delete.route.ts"
+await c.get('notifications').remove({
+  subject: { type: 'forum.topic', id: topic.id },
+})
+```
+
+`remove()` matches the `subject` you passed to `publish()`, lowers the unread counts in the same transaction and returns how many items it deleted. To remove only some members, for example after kicking them from a private topic, add `type` and `userIds`:
+
+```ts title="plugins/forum/src/api/modules/topics/routes/kick.route.ts"
+await c.get('notifications').remove({
+  subject: { type: 'forum.topic', id: topic.id },
+  type: 'forum.topic_reply',
+  userIds: removedMemberIds,
+})
+```
+
+`remove()` keeps inboxes tidy, but it is not required for privacy. An item whose `access` check now says no already shows "This notification is no longer available." instead of its text.
+
+</Step>
+
+</Steps>
+
+<Callout type="warn" title="A throwing access check delays delivery">
+  If `access` throws while notifications are delivered, the whole batch fails
+  and the queue retries it later. When the inbox loads, a throw turns that one
+  item into the "no longer available" placeholder. Let real database errors
+  throw, but do not throw for "no access": return fewer ids instead.
+</Callout>
+
+## Check the result
+
+1. Publish a reply in a private topic with two members and one non-member listed in `recipients`. Only the two members get an inbox item.
+2. Remove one member from the topic and reload their notifications. The item shows "This notification is no longer available." and no longer links to the topic.
+3. Delete the topic. The item disappears from the remaining member's inbox, and their unread count drops at the same moment.
+
+For the full `remove()` signature, see the [Notifications API reference](/docs/dev/notifications/reference#remove).

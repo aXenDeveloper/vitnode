@@ -1,151 +1,112 @@
 ---
-title: Localization & Translations
-description: Step-by-step guide to building multi-language content models with localized fields, translation tables, independent workflows, and localized public APIs.
+title: Translate content
+description: Store Content Engine fields in several languages. Mark fields as localized, get a translations table, edit each language in the AdminCP and serve the right language from the public API.
 icon: Languages
 ---
 
-Content Engine supports localized fields, storing translatable text in dedicated per-language tables (`{tableName}_translations`) while keeping shared fields in the main table.
+Localization stores chosen fields once per language, while everything else stays shared. A recipe's title and summary get a Polish version, but its cooking time stays one number. Translated values live in a second table, `{tableName}_translations`, with one row per record and language.
 
-## Prerequisites & Context
+## Before you begin
 
-Multi-language support is configured in your content type definition file:
-
-When `createContentModel` compiles a localized model, it automatically generates a separate secondary database table (`{tableName}_translations`) to hold per-language strings without altering the schema of the main table.
-
----
-
-## Step-by-Step Multi-Language Setup
+List every language in `i18n.locales` of your app's `vitnode.config.ts`, as described in [Internationalization](/docs/dev/i18n). Only those languages can hold translations or be requested from the API.
 
 <Steps>
 
 <Step>
-### Step 1: Mark Localized Fields in Definition
 
-Set `localization` configuration and add `localized: true` to translatable fields in your content definition:
+### Mark the translatable fields
 
-```ts title="plugins/example/src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content"
+Add a `localization` block and set `localized: true` on the fields that change per language:
 
-export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
-  // [!code ++:5]
-  localization: {
+```ts title="plugins/example/src/content/recipe.ts"
+export const recipeContentType = defineContentType({
+  id: "example.recipe",
+  tableName: "example_recipes",
+  localization: { // [!code ++:4]
     enabled: true,
     defaultLocale: "en",
-    fallback: "default", // "default" | "none"
+    fallback: "default",
   },
   fields: {
-    code: field.text({ required: true }), // Shared field on main table
-    // [!code ++:2]
-    title: field.text({ required: true, localized: true }), // Localized
-    content: field.textarea({ localized: true }), // Localized
+    title: field.text({ required: true, maxLength: 120, localized: true }), // [!code highlight]
+    slug: field.slug({ source: "title", localized: true }), // [!code highlight]
+    summary: field.textarea({ maxLength: 300, nullable: true, localized: true }), // [!code highlight]
+    cookingTime: field.number({ integer: true, min: 1, required: true }),
   },
-})
+});
 ```
 
-`localized: true` is supported on `text`, `textarea`, `slug`, and `group` fields. Shared fields (such as `number`, `boolean`, `select`, `relation`, `file`, `user`) always reside on the base table.
+`text`, `textarea`, `slug`, `blocks` and whole `group` fields can be localized. Numbers, booleans, enums, dates, files, users and relations are always shared. A slug and its `source` must both be localized or both shared.
 
 </Step>
 
 <Step>
-### Step 2: Understand the Database Tables
 
-Compiling this model automatically builds two PostgreSQL tables:
+### Export the translations table
 
-1. **Main Table** (`example_articles`): Stores `id`, `code`, system timestamps (`createdAt`, `updatedAt`), and shared non-localized columns.
-2. **Translation Table** (`example_articles_translations`): Stores composite primary key `(itemId, languageId)`, `version`, timestamps, publication columns (if enabled), and all localized field values.
+```ts title="plugins/example/src/database/recipes.ts"
+export const recipeContent = createContentModel(recipeContentType);
 
-```text
-  example_articles                     example_articles_translations
-  ┌─────┬────────┬──────────┐          ┌────────┬────────────┬─────────┬────────┬─────────┐
-  │ id  │  code  │ authorId │ ◄──┐     │ itemId │ languageId │ version │ title  │ content │
-  ├─────┼────────┼──────────┤    │     ├────────┼────────────┼─────────┼────────┼─────────┤
-  │  1  │ ART-01 │    5     │    └─────│   1    │     1      │    1    │ Hello  │ World   │
-  └─────┴────────┴──────────┘   (PK)   │   1    │     2      │    1    │ Bonjour│ Monde   │
-                                       └────────┴────────────┴─────────┴────────┴─────────┘
-                                                ▲
-                                                │ (references core_languages.id)
-```
-
-`languageId` references the system `core_languages.id` table, and `itemId` cascades upon deletion of the parent record.
-
-</Step>
-
-<Step>
-### Step 3: Export the Translation Table for Drizzle Kit
-
-When exporting database tables from your plugin for migrations, export both the base table and `translationTable`:
-
-```ts title="plugins/example/src/database/articles.ts"
-import { createContentModel } from "@vitnode/core/content/server"
-import { articleContentType } from "../content/article"
-
-export const articleContent = createContentModel(articleContentType)
-
-// [!code ++:2]
-export const exampleArticlesTable = articleContent.table
-export const exampleArticlesTranslationsTable = articleContent.translationTable
+export const example_recipes = recipeContent.table;
+export const example_recipes_translations = recipeContent.translationTable; // [!code ++]
 ```
 
 </Step>
 
 <Step>
-### Step 4: Render Localized Content
 
-When querying content via the public API or `resolveContentDelivery`, translatable fields (`title`, `content`) automatically resolve in the requested locale, with fallback to `defaultLocale` when `fallback: "default"` is configured.
+### Build and migrate
 
-For UI labels and chrome text, use `useTranslations` from `use-intl`:
+Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The localized columns move to `example_recipes_translations`, keyed by `(itemId, languageId)`. That table has its own `version`, `createdAt` and `updatedAt`, plus `status` and `publishedAt` when the type has publication.
 
-```tsx title="plugins/example/src/components/article-card.tsx"
-import { useTranslations } from "use-intl"
-
-interface Props {
-  article: {
-    title: string // Resolved to active locale by Content Engine
-    content: string
-  }
-}
-
-export const ArticleCard = ({ article }: Props) => {
-  const t = useTranslations("example")
-
-  return (
-    <div className="card">
-      <span className="badge">{t("content.article.badge_label")}</span>
-      <h3>{article.title}</h3>
-      <p>{article.content}</p>
-    </div>
-  )
-}
-```
+The generated migration does not copy existing values into the translations table. If the table already holds records, review the SQL before you apply it and add a step that copies them.
 
 </Step>
 
 </Steps>
 
----
+## Check the result
 
-## AdminCP Translation Features
+Open a recipe in the AdminCP. Each localized field has its own language selector, so you can translate the title without leaving the form. A value that is empty in your AdminCP language shows the default language instead, then any language that has text.
 
-- **Per-field language select**: Every localized text, textarea and editor field has its own language select, so you can translate one field without leaving the form.
-- **Untranslated? You still see text**: No more wall of "Missing". A localized value in the list, the edit page title and each field is shown in your AdminCP language first. If that's empty, you get the content type's `defaultLocale`, then any language that has something written. A field that's empty in every language opens on your language, ready to type in.
-- **Independent Status**: Each translation language manages its own draft/published lifecycle when publication is enabled.
-- **Independent Revisions**: When editorial is enabled, revision histories and restores operate per locale (`GET /{id}/translations/{locale}/revisions` and `POST /{id}/translations/{locale}/revisions/{revisionId}/restore`).
-- **Composite Key Integrity**: Translations are uniquely identified by `(itemId, languageId)`, guaranteeing exactly one translation per locale per item.
+With publication, every language has its own status. A translation is public only when both the record and that translation are published. With `editorial`, each language also keeps its own revisions.
 
-## Localized URLs
+## Pick the language in the public API
 
-Mark the slug `localized: true` and each translation gets its own slug: `hello-world` in English, `witaj-swiecie` in Polish. That's the part of the URL the content owns. The static segments (`articles` → `artykuly`) belong to the app's `i18n.routePaths`, so with [delivery](/docs/dev/content-engine/content-delivery-and-seo) enabled the Polish record lives at `/pl/artykuly/witaj-swiecie`.
+The public API chooses one language per request:
 
-- Only **published** translations become hreflang alternates and sitemap lines.
-- A fallback response (`fallback: "default"` served English for a Polish request) keeps the English canonical URL.
-- Language prefixes, domains and translated segments all come from one place. [Localized URLs](/docs/dev/i18n/localized-urls) covers the rules.
+1. The `?locale=` query parameter, such as `?locale=pl`. An unknown locale returns `404`.
+2. Otherwise the `Accept-Language` header.
+3. Otherwise `defaultLocale`.
 
-## Configuration Reference
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/recipes/szakszuka-dla-dwojga?locale=pl"
+```
 
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `enabled` | `true` | — | Enables multi-language localization. |
-| `defaultLocale` | `string` | — | Default locale code (e.g. `"en"`). Required when `enabled: true`. |
-| `fallback` | `"default" \| "none"` | `"default"` | Fallback strategy when a translation in the requested locale is missing. |
+The response carries a `Content-Language` header. When a translation is missing, `fallback: "default"` serves the default language instead and `fallback: "none"` (the default) returns `404`.
+
+In a page loader, pass the route's locale through: `args: { params: { slug }, query: { locale: context.locale } }`. Each translation can have its own slug and URL; see [Public URLs and languages](/docs/dev/content-engine/content-delivery-and-seo#public-urls-and-languages).
+
+## Translation routes
+
+`buildContentAdminModule` adds staff routes for each language under the content type's admin path:
+
+| Route                                                   | Does                                         |
+| ------------------------------------------------------- | -------------------------------------------- |
+| `GET /{id}/translations`                                | Lists the record's translations              |
+| `GET`, `POST`, `PUT`, `DELETE /{id}/translations/{locale}` | Reads, creates, updates or deletes one language |
+| `POST /{id}/translations/{locale}/publish` and `/unpublish` | Changes one language's status (with publication) |
+| `GET /{id}/translations/{locale}/revisions`             | One language's history (with editorial)      |
+| `POST /localized`, `PUT /{id}/localized`                | Saves shared fields and every language in one transaction |
+
+They use the same permissions as the record. Changes emit `content.{id}.translation_created`, `translation_updated` and the other [translation events](/docs/dev/content-engine/services-and-api#events).
+
+## Options
+
+| Name            | Type                    | Default  | Description                                                     |
+| --------------- | ----------------------- | -------- | --------------------------------------------------------------- |
+| `enabled`       | `true`                  |          | Required                                                        |
+| `defaultLocale` | `string`                |          | Required. A language code such as `"en"` or `"pt-BR"`           |
+| `fallback`      | `"none"` \| `"default"` | `"none"` | What the public API serves when the requested language is missing |
+
+A localized content type needs at least one localized field, and `localized: true` without a `localization` block throws.

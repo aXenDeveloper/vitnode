@@ -1,184 +1,182 @@
 ---
-title: Content Services & API
-description: Call generated Content Engine services from custom Hono routes, use typed Zod schemas, and listen to content events.
+title: Services, schemas and events
+description: Use a Content Engine content type from your own Hono routes with the typed service, reuse its Zod schemas, and react to content changes with typed events.
 icon: Server
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+The generated routes cover the usual create, read, update and delete. When you need more, such as a "quick dinners" endpoint or a reaction to every published recipe, the model from `createContentModel` gives you typed services, Zod schemas and events.
 
-When you compile a content type with `createContentModel`, it provides a typed service, Zod validation schemas, and database events that can be used directly inside custom Hono endpoints.
+## Read records in a custom route
 
-## Quick start
+`recipeContent.publicService` reads what the public API can read: published records and public fields only. It is typed as optional, because a content type without `publicApi` has none, so check it once.
 
-Access the typed repository in any Hono route via `model.service(c)`:
+```ts title="plugins/example/src/api/modules/recipes/quick.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
 
-```ts title="plugins/blog/src/api/modules/articles/routes/featured.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route"
-import { articleContent } from "@/content/articles"
+import { CONFIG_PLUGIN } from "@/const";
+import { recipeContent } from "@/database/recipes";
 
-export const featuredRoute = buildRoute({
-  pluginId: "blog",
+export const quickRecipesRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
-    path: "/featured",
-    responses: { 200: { description: "Featured articles" } },
+    path: "/quick",
+    description: "Vegetarian recipes, quickest first",
+    responses: { 200: { description: "Quick vegetarian recipes" } },
   },
-  handler: async (c) => {
-    // [!code ++:6]
-    const { edges, pageInfo } = await articleContent.service(c).findMany({
-      filters: { featured: true },
-      orderBy: { column: "createdAt", order: "desc" },
+  handler: async c => {
+    const { publicService } = recipeContent;
+    if (!publicService) throw new Error("Recipes have no public API.");
+
+    const { edges } = await publicService(c).findMany({
+      filters: { vegetarian: true },
+      orderBy: { column: "cookingTime", order: "asc" },
       query: { first: "5" },
-    })
+    });
 
-    return c.json({ edges, pageInfo })
+    return c.json(edges);
   },
-})
+});
 ```
 
-`findMany` returns `{ edges, pageInfo }` formatted for cursor-based pagination. Each edge in `edges` includes the row fields along with resolved `labels` for relations and user references.
+`filters` accepts only `publicApi.filterableFields` and `orderBy.column` only orderable columns. `findBySlug(slug)` and `findById(id)` return one published record or `null`.
 
----
+## Write records
 
-## Service Methods Reference
-
-The service returned by `model.service(c)` is typed to the content type's schema and capabilities:
-
-| Method | Parameters | Returns |
-| :--- | :--- | :--- |
-| `findMany` | `args?: { query?, filters?, orderBy?, where? }` | `Promise<{ edges: ContentListRow<T>[], pageInfo: ContentPageInfo }>` |
-| `findById` | `id: number, options?: ContentServiceOptions` | `Promise<ContentSelect<T> \| null>` |
-| `findRowById` | `id: number, options?: ContentServiceOptions` | `Promise<ContentListRow<T> \| null>` (row with `labels`) |
-| `findDetail` | `id: number, options?: ContentServiceOptions` | `Promise<ContentDetail<T> \| null>` |
-| `create` | `values: ContentCreateInput<T>, options?: ContentServiceOptions` | `Promise<ContentSelect<T>>` |
-| `update` | `id: number, values: ContentUpdateInput<T>, options?: ContentServiceOptions` | `Promise<ContentUpdateResult<T> \| null>` (`{ row, changedFields }`) |
-| `delete` | `id: number, options?: ContentServiceOptions` | `Promise<ContentSelect<T> \| null>` (returns deleted row, or `null`) |
-| `publish` | `id: number, options?: ContentServiceOptions` | `Promise<ContentPublicationResult<T> \| null>` (when `publication` enabled) |
-| `unpublish` | `id: number, options?: ContentServiceOptions` | `Promise<ContentPublicationResult<T> \| null>` (when `publication` enabled) |
-| `advanced` | `id: number, options?: ContentServiceOptions` | `Promise<ContentAdvancedValues<T>>` (all relation and repeatable fields) |
-| `options` | `field, search?, ids?` | `Promise<{ color?: string, label: string, value: number }[]>` |
-| `relations[name]` | — | Collection methods: `add`, `get`, `remove`, `reorder`, `set` |
-| `repeatable[name]` | — | Nested row methods: `create`, `delete`, `list`, `reorder`, `set`, `update` |
-
-### Database Transactions
-
-All service methods accept an optional `options` argument with `tx` to participate in an existing database transaction:
+`recipeContent.service(c)` is the unrestricted service: it sees drafts and every field. Use it in staff routes or background jobs, and check permissions yourself.
 
 ```ts
-await c.var.db.transaction(async (tx) => {
-  const service = articleContent.service(c, { tx })
-  const article = await service.create({ title: "Hello World" })
-  // other transactional operations...
-})
+const service = recipeContent.service(c);
+
+const recipe = await service.create({ title: "Pancakes", cookingTime: 20 });
+await service.update(recipe.id, { vegetarian: true });
+await service.publish(recipe.id);
 ```
 
----
-
-## Generated Zod Schemas
-
-`createContentModel` automatically compiles Zod validation schemas accessible under `model.schemas`:
-
-| Schema | Purpose |
-| :--- | :--- |
-| `schemas.create` | Validates new record input, checking required fields and defaults. |
-| `schemas.update` | Validates record updates with partial fields. |
-| `schemas.select` | Validates and serializes the complete database row. |
-| `schemas.filter` | Validates equality filter parameters for the content type. |
-| `schemas.findManyQuery` | Validates standard cursor pagination parameters (`cursor`, `first`, `last`, `search`). |
-
-Use them in custom routes to validate incoming requests:
+`create` validates its input with the content type's Zod schema and throws a `ZodError` on invalid input. Every method except `findMany` and `options` accepts `{ tx }` as its last argument, so several calls can share a transaction:
 
 ```ts
-import { buildRoute } from "@vitnode/core/api/lib/route"
-import { articleContent } from "@/content/articles"
+await c.get("db").transaction(async tx => {
+  const recipe = await service.create({ title: "Pancakes", cookingTime: 20 }, { tx });
+  await service.publish(recipe.id, { tx });
+});
+```
 
-export const createArticleRoute = buildRoute({
-  pluginId: "blog",
-  route: {
-    method: "post",
-    path: "/",
-    request: {
-      body: {
-        content: {
-          "application/json": {
-            // [!code ++:1]
-            schema: articleContent.schemas.create,
-          },
-        },
-      },
+The plain service does not emit events, store revisions or check versions. The generated routes do all three. When you want the same behaviour from your own code, use the editorial service below or call the generated routes.
+
+| Method                               | Returns                                                                 |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `findMany({ filters, orderBy, query, where })` | `{ edges, pageInfo }`, drafts included                        |
+| `findById(id)`                       | The row, or `null`                                                      |
+| `findRowById(id)`                    | The row with labels for relations and users, or `null`                  |
+| `findDetail(id)`                     | The row with relation, repeatable and file values, or `null`            |
+| `create(values)`                     | The new row                                                             |
+| `update(id, values)`                 | `{ row, changedFields }`, or `null` when the id does not exist          |
+| `delete(id)`                         | The deleted row, or `null`                                              |
+| `publish(id)`, `unpublish(id)`       | `{ changed, publishedAt, row }`, or `null`. Only with `publication`     |
+| `advanced(id)`, `advancedFields(id, fields)` | Values of to-many, repeatable and group fields                  |
+| `options(field, search?, ids?)`      | `{ value, label, color? }[]` for a relation or user picker              |
+| `relations.<field>`                  | `add`, `remove`, `set`, `reorder`, `get` for a to-many field            |
+| `repeatable.<field>`                 | `create`, `update`, `delete`, `reorder`, `set`, `list` for a repeatable |
+
+## Editorial writes
+
+For a content type with [`editorial`](/docs/dev/content-engine/publication-and-editorial), `recipeContent.editorialService` writes the way the AdminCP does: it checks the version, stores a revision and emits events. Like `publicService`, it is optional in the type.
+
+```ts
+import { resolveContentActor } from "@vitnode/core/content/server";
+
+const { editorialService } = recipeContent;
+if (!editorialService) throw new Error("Recipes have no editorial features.");
+
+const editorial = editorialService(c, { pluginId: CONFIG_PLUGIN.pluginId });
+
+await editorial.update(
+  recipeId,
+  { title: "Shakshuka for four" },
+  { actor: resolveContentActor(c), expectedVersion: 3 },
+);
+```
+
+When the record's version is no longer `3`, the call throws `ContentVersionConflict` from `@vitnode/core/content`. It carries `itemId`, `expectedVersion` and `currentVersion`, and the generated routes turn it into a `409` with the code `CONTENT_VERSION_CONFLICT`. Background jobs pass `CONTENT_SYSTEM_ACTOR` instead of a request's actor.
+
+## Reuse the schemas
+
+`recipeContent.schemas` holds the Zod schemas the generated routes use. Reuse them so a custom route validates exactly like the built-in ones:
+
+| Schema                | Validates                                             |
+| --------------------- | ----------------------------------------------------- |
+| `create`              | A create payload, with required fields and defaults   |
+| `update`              | A partial update payload                              |
+| `select`              | A full row                                            |
+| `publicSelect`        | A row as the public API returns it                    |
+| `filters`             | Staff list filters                                    |
+| `publicFilters`       | Public list filters                                   |
+| `form`                | The AdminCP form values                               |
+
+```ts
+request: {
+  body: {
+    content: {
+      "application/json": { schema: recipeContent.schemas.create },
     },
   },
-  handler: async (c) => {
-    const data = c.req.valid("json")
-    const article = await articleContent.service(c).create(data)
-    return c.json(article, 201)
-  },
-})
+},
 ```
 
----
+## Events
 
-## Content Engine Events
+The generated routes emit an event after every change, named `content.{contentTypeId}.{action}`, such as `content.example.recipe.published`. Register the content type's events once so listeners get typed names and payloads:
 
-Content modifications automatically emit typed domain events on the event bus using the pattern `content.${contentTypeId}.${action}`.
+```ts title="plugins/example/src/api/lib/events.ts"
+import type { ContentEventsFor } from "@vitnode/core/content";
 
-Register the content events in your plugin's TypeScript type definitions using module augmentation:
-
-```ts title="plugins/blog/src/events.d.ts"
-import type { ContentEventsFor } from "@vitnode/core/content"
-import type { articleContentType } from "./content/articles"
+import type { recipeContentType } from "@/content/recipe";
 
 declare module "@vitnode/core/api/models/events" {
-  interface VitNodeEvents
-    extends ContentEventsFor<typeof articleContentType> {}
+  interface VitNodeEvents extends ContentEventsFor<typeof recipeContentType> {}
 }
 ```
 
-Now event listeners have fully typed names and payloads:
+Then listen with `buildEventListener`:
 
-```ts title="plugins/blog/src/api/lib/listeners.ts"
-import { buildEventListener } from "@vitnode/core/api/lib/events"
+```ts title="plugins/example/src/api/lib/listeners.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
 
-export const onArticleCreated = buildEventListener({
-  // [!code ++:2]
-  event: "content.blog.article.created",
-  name: "notify-subscribers",
+export const onRecipePublished = buildEventListener({
+  event: "content.example.recipe.published",
+  name: "announce-new-recipe",
+  description: "Logs every newly published recipe",
   handler: async (c, payload) => {
-    // payload is typed: { contentId: number }
-    await c.get("queue").dispatch({
-      name: "broadcast-new-article",
-      payload: { articleId: payload.contentId },
-    })
+    await c
+      .get("log")
+      .debug(`Recipe ${payload.contentId} published at ${payload.publishedAt.toISOString()}`);
   },
-})
+});
 ```
 
-### Event Reference
+Add the listener to the `events` array of a **top-level** module, such as your `admin` module. Listeners on nested modules are not collected.
 
-| Event Name | Payload Shape | Emitted When |
-| :--- | :--- | :--- |
-| `content.${id}.created` | `{ contentId: number }` | A new record is inserted. |
-| `content.${id}.updated` | `{ contentId: number, changedFields: string[] }` | A record is modified. |
-| `content.${id}.deleted` | `{ contentId: number }` | A record is permanently removed. |
-| `content.${id}.published` | `{ contentId: number, publishedAt: Date }` | A record transitions to `published`. |
-| `content.${id}.unpublished` | `{ contentId: number }` | A record transitions to `draft`. |
-| `content.${id}.restored` | `{ contentId: number, revisionId: number, version: number }` | An editorial revision is restored. |
-| `content.${id}.scheduled` | `{ contentId: number, action, scheduledFor, scheduleId }` | Publication is scheduled. |
-| `content.${id}.schedule_cancelled` | `{ contentId: number, action, scheduleId }` | A scheduled job is cancelled. |
+```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
+export const adminModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "admin",
+  routes: [],
+  modules: [buildContentAdminModule({ pluginId: CONFIG_PLUGIN.pluginId, contentTypes: [recipeContent] })],
+  events: [onRecipePublished], // [!code ++]
+});
+```
 
-When `localization` is enabled, corresponding `content.${id}.translation_*` events are also emitted for translation actions.
+| Event                       | Payload                                                       | Available with      |
+| --------------------------- | ------------------------------------------------------------- | ------------------- |
+| `created`, `deleted`        | `{ contentId }`                                               | always              |
+| `updated`                   | `{ contentId, changedFields }`                                | always              |
+| `published`                 | `{ contentId, publishedAt, scheduledBy?, scheduleId? }`       | `publication`       |
+| `unpublished`               | `{ contentId, scheduledBy?, scheduleId? }`                    | `publication`       |
+| `restored`                  | `{ contentId, changedFields, restoredFromRevisionId, revisionId, version }` | `editorial` |
+| `scheduled`                 | `{ contentId, action, actorUserId, scheduledFor, scheduleId }` | `editorial.scheduling` |
+| `schedule_cancelled`        | `{ contentId, action, actorUserId, scheduleId }`              | `editorial.scheduling` |
+| `translation_created`, `translation_updated`, `translation_deleted`, `translation_published`, `translation_unpublished`, `translation_restored` | `{ contentId, languageId, locale, version, … }` | `localization` |
+| `delivery_slug_changed`, `delivery_redirect_created` | `{ contentId, locale, canonicalPath, previousPath, previousSlug, … }` | `delivery` |
 
-## Learn More
-
-<Cards>
-  <Card
-    title="Defining a Content Type"
-    description="Overview of Content Engine declarations"
-    href="/docs/dev/content-engine/defining-a-content-type"
-  />
-  <Card
-    title="Events"
-    description="Emit and subscribe to application domain events"
-    href="/docs/dev/events"
-  />
-</Cards>
+No event fires when a save changes nothing. Every event, including core's, is listed in [Built-in events](/docs/dev/events/built-in-events).

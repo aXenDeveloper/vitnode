@@ -1,0 +1,52 @@
+---
+title: Troubleshooting notifications
+description: Fix common VitNode notification problems. A bell that does not update live, notifications that arrive late or never, missing emails, a wrong unread count and items that are no longer available.
+icon: Wrench
+---
+
+Each section below starts from a symptom and lists the checks in the order that finds the cause fastest.
+
+## The bell does not update live
+
+- **Check the WebSocket.** The browser needs a working `/api/ws` connection. See [WebSocket](/docs/dev/websocket). Without one, the bell still catches up every 60 seconds while the tab is visible.
+- **Running several API instances?** Set `REDIS_URL`. Without Redis, live updates reach only tabs connected to the instance that delivered the notification. Other tabs catch up on reconnect or page load.
+
+## Notifications arrive late or never
+
+A publishing request starts delivery right after its response. Everything else is delivered by the queue worker, which your cron adapter runs every minute.
+
+1. **The cron adapter is not calling the queue worker.** In development there is no `CRON_SECRET`, so queued tasks wait until you run them. See [Cron](/docs/dev/cron).
+2. **Notifications are paused.** The AdminCP notifications screen shows a **Notifications are paused** banner. See [Use the Settings sheet](/docs/dev/notifications/admincp#use-the-settings-sheet).
+3. **The delivery task failed.** **AdminCP → Advanced → Queue** lists failed `notifications-fanout` tasks with the error.
+4. **The member never gets it.** The actor is skipped unless you pass `allowSelf: true`, and members who turned the type off or fail your `access` check get nothing. See [Choose the recipients](/docs/dev/notifications/publishing#choose-the-recipients).
+
+## Emails are not sending
+
+1. **No email adapter.** Run **Send a test email to me** from the AdminCP [Settings sheet](/docs/dev/notifications/admincp#use-the-settings-sheet). If the tool is missing, no [email adapter](/docs/dev/email) is configured.
+2. **Email is disabled for the type.** Check the type's **Email** column in [the AdminCP](/docs/dev/notifications/admincp#set-what-members-get-by-default).
+3. **The member gets no email for the type.** The default may be **Not enabled by default**, or the member chose otherwise.
+4. **The delivery was skipped or failed.** List deliveries with `GET /deliveries` from the [AdminCP endpoints](/docs/dev/notifications/reference#admincp-endpoints). `failed` shows a redacted error. `skipped` shows a reason, such as `empty` when everything was already read.
+
+Digests go out only after their period ends, at 08:00 in the member's time zone, and include only notifications that are still unread.
+
+## The digest came at the wrong time
+
+Digests follow the time zone the member set under **Region** on `/settings`, then the time zone of their language, then UTC. The scheduler runs every 5 minutes, so a digest can arrive up to 5 minutes after 08:00.
+
+## The unread count looks wrong
+
+Every inbox change updates the count in the same transaction, so a wrong count is a bug worth reporting. To check and repair counts, call `POST /reconcile` from the [AdminCP endpoints](/docs/dev/notifications/reference#admincp-endpoints). It only reports mismatches unless you send `{ "dryRun": false }`, which also pushes the corrected badge to open tabs.
+
+## Items say "This notification is no longer available"
+
+The item is a placeholder. The content was deleted, the member lost access, the plugin was uninstalled, or the stored data no longer matches the type's schema and `migrate` could not upgrade it. Members can still read or archive the item. Plugins can tidy these up with [`remove()`](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
+
+## Run the notification integration tests
+
+The notification integration tests need a real PostgreSQL database for row locks and concurrent transactions. They run when `VITNODE_TEST_POSTGRES_URL` is set and are skipped otherwise:
+
+```bash
+VITNODE_TEST_POSTGRES_URL=postgresql://root:root@localhost:5432/postgres pnpm --filter @vitnode/core test
+```
+
+Each test file creates its own temporary database and drops it afterwards.

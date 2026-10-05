@@ -132,13 +132,11 @@ export type { ApiPluginRegistry } from '@vitnode/core/lib/fetcher/registry'
 
 ## Loading data in plugin routes
 
-Plugin routes load data using `definePluginRoute({ load })`. The loader runs during SSR and client navigation, handing typed `loaderData` to the page component:
+Plugin routes load data using `defineRoute({ load })` from `@vitnode/core/tanstack/plugin-routes`. The loader runs during SSR and client navigation, handing typed `loaderData` to the page component. Its context includes `queryClient`; the framework-neutral `definePluginRoute` from `@vitnode/core/routing` only receives `locale`:
 
 ```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from '@vitnode/core/routing'
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
 import { notesQuery } from '../features/notes/notes-query'
 
 interface Note {
@@ -147,7 +145,7 @@ interface Note {
 }
 
 // [!code ++:8]
-export const route = definePluginRoute({
+export const route = defineRoute({
   load: async ({ context }) => {
     return await context.queryClient.query({
       ...notesQuery(),
@@ -174,7 +172,7 @@ const NotesPage = ({ loaderData }: PluginRoutePageProps<Note[]>) => {
 export default NotesPage
 ```
 
-`staleTime: "static"` makes route loaders fast and cheap: a cached entry is returned instantly without redundant network trips on repeat visits, while the component's `useQuery` keeps data fresh in the background.
+`staleTime: "static"` makes the loader reuse an entry that is already cached instead of fetching again on every navigation. The entry refreshes when a mutation invalidates it, as shown below. See [Cache app data](/docs/dev/cache/app) for the full pattern.
 
 ## Mutations & cache invalidation
 
