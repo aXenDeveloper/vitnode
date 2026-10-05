@@ -23,6 +23,7 @@ export interface AdminIntegrations {
     active: boolean;
     jobs: number;
     lastRun: null | string;
+    overdueJobs: number;
     secure: boolean;
     stale: boolean;
   };

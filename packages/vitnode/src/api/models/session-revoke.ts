@@ -116,4 +116,9 @@ export const revokeSessions = async (
   ]);
 
   await deleteSessionCacheKeys(c, { adminSessions, sessions });
+  await c.get("events").emit("user.sessions.revoked", {
+    deviceId: scope.deviceId ?? null,
+    sessions: sessions.length + adminSessions.length,
+    userId: scope.userId,
+  });
 };

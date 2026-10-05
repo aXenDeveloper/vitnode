@@ -107,6 +107,7 @@ The canonical user table contains:
 | `avatarId`      | `integer`      | Uploaded avatar, a `core_files` row (nullable)        |
 | `coverId`       | `integer`      | Uploaded profile cover, a `core_files` row (nullable) |
 | `language`      | `varchar(32)`  | Preferred UI locale (defaults to `en`)                |
+| `timeZone`      | `varchar(64)`  | IANA time zone, set by the user (nullable)            |
 | `emailVerified` | `boolean`      | Verification status                                   |
 
 Every user payload the API hands out - the session, the public profile, the
@@ -139,6 +140,22 @@ cleared. Writing invalidates the user's cached session and emits
 numbers are written with (`+`, spaces, `-`, `(` and `)`), up to 32 characters.
 Anything else is rejected by the form and by the route. It is **not** on the
 public profile payload - only the account's own session carries it.
+
+### Time zone
+
+`timeZone` sits under **Region** on **Settings → Overview**. It takes any IANA
+name, like `Europe/Warsaw`, and **Use this device's time zone** fills it in from
+the browser in one click. `null` means "follow my language", then UTC.
+Notification digests go out in this time zone, and the session carries it, so
+`c.get("user")?.timeZone` is there for anything else that wants local time.
+
+| Method | Path                                    | Who                                  |
+| :----- | :-------------------------------------- | :----------------------------------- |
+| `PUT`  | `/api/@vitnode/core/users/me/time-zone` | The signed-in user, on their own row |
+
+The body is `{ timeZone: string | null }`. An unknown name answers `400`.
+Saving invalidates the cached session and emits
+[`user.updated`](/docs/dev/events/built-in-events).
 
 ### Which name the public sees
 
@@ -222,6 +239,53 @@ edit, so the **Edit** button disappears too.
 {/* Image prompt: VitNode AdminCP User management screen at /admin/core/users. Data table listing registered accounts with columns for Avatar, Name, Email, Primary Role badge, Status, and action dropdowns (Edit, Ban, Delete). Dark theme, 1440x900. */}
 
 Administrators can view, edit, ban, and assign roles to users at **Core → Users** (`/admin/core/users`).
+
+---
+
+### Edit a user
+
+{/* Image prompt: VitNode AdminCP user page at /admin/core/users/1. Left column: profile card with cover, round avatar, name, @handle, Staff and Verified badges, then Personal information, Preferences, Roles, Connected accounts and Devices cards. Right column: segmented tabs Activity, Notifications, Password & passkeys above a vertical activity timeline. Dark theme, 1440x1000. */}
+
+Open a user at `/admin/core/users/[id]`. Everything the member can change in their own `/settings` is editable here too.
+
+| Area                     | What staff can change                                                                                   |
+| :----------------------- | :------------------------------------------------------------------------------------------------------ |
+| Profile card             | Display name, name code, email, avatar, cover, and **Mark email as verified**                           |
+| Personal information     | First name, last name, headline, phone, birthday, **Show real name**                                    |
+| Preferences              | Language, time zone (or automatic), newsletter                                                          |
+| Roles                    | Primary role and secondary roles                                                                        |
+| Connected accounts       | Disconnect an SSO account, choose where the avatar and name come from, turn **Sync on sign-in** on/off |
+| Devices                  | Sign out one device, or every device at once                                                            |
+| **Notifications** tab    | In-app, push and email (with frequency) per notification type                                           |
+| **Password & passkeys** tab | Set a new password, rename or delete passkeys                                                        |
+
+A few rules differ from the member's own settings:
+
+- **Staff can edit locked fields.** The role's **Allow editing personal information** and the install's `users.personalInformation` switches limit members, not staff.
+- **Notification locks still apply.** Mandatory types, and types the notification settings stop members from changing, are read-only here too, because delivery ignores stored choices for them.
+- **The last sign-in method can't be removed.** Disconnecting the only SSO account or deleting the only passkey answers `409`.
+- **Setting a password signs the member out everywhere**, AdminCP sessions included.
+- **Sync now isn't offered.** It needs the member to sign in with the provider themselves.
+
+Every write needs `users:can_edit`, plus `users:can_edit_admin` when the target is staff. Reads need `users:can_view`.
+
+| Method   | Path                                                                | Does                                                 |
+| :------- | :------------------------------------------------------------------ | :--------------------------------------------------- |
+| `PATCH`  | `/api/@vitnode/core/admin/users/{id}`                               | Account, personal information and preferences        |
+| `PUT`    | `/api/@vitnode/core/admin/users/{id}/password`                      | Sets a new password and revokes every session        |
+| `GET`    | `/api/@vitnode/core/admin/users/{id}/devices`                       | Devices with an active session                       |
+| `DELETE` | `/api/@vitnode/core/admin/users/{id}/devices/{publicId}`            | Signs one device out                                 |
+| `DELETE` | `/api/@vitnode/core/admin/users/{id}/devices`                       | Signs every device out                               |
+| `GET`    | `/api/@vitnode/core/admin/users/{id}/passkeys`                      | Passkeys                                             |
+| `PATCH`  | `/api/@vitnode/core/admin/users/{id}/passkeys/{passkeyId}`          | Renames a passkey                                    |
+| `DELETE` | `/api/@vitnode/core/admin/users/{id}/passkeys/{passkeyId}`          | Deletes a passkey                                    |
+| `GET`    | `/api/@vitnode/core/admin/users/{id}/sso`                           | Connected accounts, sign-in summary, profile sources |
+| `DELETE` | `/api/@vitnode/core/admin/users/{id}/sso/{providerId}`              | Disconnects an account                               |
+| `PUT`    | `/api/@vitnode/core/admin/users/{id}/sso/preferences`               | Profile sources and sync on sign-in                  |
+| `GET`    | `/api/@vitnode/core/admin/users/{id}/notification-preferences`      | Notification preferences per type                    |
+| `PUT`    | `/api/@vitnode/core/admin/users/{id}/notification-preferences`      | Changes notification preferences                     |
+
+The `PATCH` body takes any of `email`, `name`, `nameCode`, `roleId`, `secondaryRoleIds`, `firstName`, `lastName`, `headline`, `phone`, `showRealName`, `birthday` (`YYYY-MM-DD` or `null`), `language`, `timeZone` (`null` for automatic) and `newsletter`. At least one field is required.
 
 ---
 

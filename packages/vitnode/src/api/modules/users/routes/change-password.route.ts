@@ -86,6 +86,7 @@ export const changePasswordRoute = buildRoute({
         .delete(core_users_forgot_password)
         .where(eq(core_users_forgot_password.id, user.id)),
     ]);
+    await c.get("events").emit("user.password.updated", { userId });
 
     // After the new password is in place, so a failure above cannot sign
     // somebody out without having changed anything. Whoever reset this password

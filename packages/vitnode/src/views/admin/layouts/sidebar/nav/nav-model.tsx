@@ -177,6 +177,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           href: "/admin/core/system/files",
           permission: core("files"),
         },
+        {
+          title: key("admin.global.nav.system.notifications"),
+          href: "/admin/core/system/notifications",
+          permission: core("notifications"),
+        },
       ],
     },
     {

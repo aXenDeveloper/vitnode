@@ -9,11 +9,20 @@ import {
 } from "@/views/admin/views/core/shared/admin-mutation";
 
 export interface AdminUserUpdateInput {
+  birthday?: null | string;
   email?: string;
+  firstName?: null | string;
+  headline?: null | string;
+  language?: string;
+  lastName?: null | string;
   name?: string;
   nameCode?: string;
+  newsletter?: boolean;
+  phone?: null | string;
   roleId?: number;
   secondaryRoleIds?: number[];
+  showRealName?: boolean;
+  timeZone?: null | string;
 }
 
 export interface AdminUserUpdated {

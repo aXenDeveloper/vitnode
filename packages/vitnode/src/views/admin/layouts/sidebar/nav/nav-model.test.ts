@@ -63,6 +63,7 @@ describe("the core group", () => {
       "/admin/core/system/integrations",
       "/admin/core/system/navigation",
       "/admin/core/system/files",
+      "/admin/core/system/notifications",
       "/admin/core/users",
       "/admin/core/users",
       "/admin/core/users/roles",

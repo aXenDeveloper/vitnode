@@ -1,0 +1,218 @@
+---
+title: Migration and troubleshooting
+description: Upgrade a VitNode plugin from toast-only realtime notifications to the Notifications Center, apply the database migration, and fix a bell that does not update, late notifications, missing emails or wrong counts.
+icon: Wrench
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Before the Notifications Center, a "notification" was a toast pushed over the
+WebSocket. It vanished on reload and never reached anyone offline. Toasts still
+work - persistent notifications now have a proper home.
+
+## Apply the database migration
+
+The Notifications Center adds six tables to core:
+
+| Table                          | Holds                                                |
+| ------------------------------ | ---------------------------------------------------- |
+| `core_notification_events`     | One row per published event, with its fan-out cursor |
+| `core_notifications`           | Inbox items, one per recipient (or per group)        |
+| `core_notification_receipts`   | One row per event and recipient, and its email state |
+| `core_notification_user_state` | Unread count, revision and preferences               |
+| `core_notification_deliveries` | Email sends and their attempts                       |
+| `core_notification_settings`   | Installation settings and per-type policy            |
+
+Build the plugins and migrate:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+## Toasts still work
+
+`sendToUser()` with `notificationsChannel` is unchanged. Use it for transient
+feedback that does not need to be kept, like "Your import started":
+
+```ts
+import { notificationsChannel } from '@vitnode/core/ws/notifications'
+
+c.get('realtime').sendToUser(userId, notificationsChannel, {
+  title: 'Import started',
+  description: "We'll let you know when it's done.",
+  type: 'info',
+})
+```
+
+A toast reaches open tabs only. No inbox item, no unread count, no email, no
+preferences.
+
+### The dashboard widget now keeps a copy
+
+The AdminCP dashboard's **send notification** widget still shows the toast, and
+now also stores the message in the user's inbox as a `core.admin_message`
+notification. A user who was offline or closed the toast still sees it.
+Users can turn these off on `/settings/notifications` like any other type.
+
+## Move a plugin from toasts to `publish()`
+
+<Steps>
+
+<Step>
+
+### Find toasts users should keep
+
+Anything a user would look for later - a reply, a mention, an approval, a
+finished export - belongs in the inbox. Keep toasts for "something is happening
+right now".
+
+</Step>
+
+<Step>
+
+### Declare a type for each
+
+```ts
+export const exportReadyNotification = buildNotificationType({
+  id: 'shop.export_ready',
+  version: 1,
+  schema: z.object({ exportId: z.number() }),
+  category: 'system',
+  label: '@acme/shop.notifications.export_ready.label',
+  defaults: { inApp: true, email: 'none' },
+  present: ({ data, t }) => ({
+    title: t('@acme/shop.notifications.export_ready.title'),
+    target: `/shop/exports/${data.exportId}`,
+  }),
+})
+```
+
+Register it with `notificationTypes` on your API plugin, and put the strings in
+`src/locales/api/en.json`. See
+[Notification types](/docs/dev/notifications/notification-types).
+
+</Step>
+
+<Step>
+
+### Replace the toast with `publish()`
+
+```ts
+// [!code --:4]
+c.get('realtime').sendToUser(user.id, notificationsChannel, {
+  title: 'Your export is ready',
+  type: 'success',
+})
+// [!code ++:7]
+await c.get('notifications').publish({
+  type: exportReadyNotification,
+  recipients: [user.id],
+  allowSelf: true,
+  data: { exportId: job.id },
+  idempotencyKey: `export:${job.id}`,
+})
+```
+
+The bell updates live through the same WebSocket, so users still see it
+immediately. `allowSelf` matters here: the user who started the export is also
+the request's actor.
+
+</Step>
+
+</Steps>
+
+## Troubleshooting
+
+### The bell does not update live
+
+- **Check the WebSocket.** The browser needs a working `/api/ws` connection.
+  See [WebSocket](/docs/dev/websocket).
+- **Several API instances?** Set `REDIS_URL`. Without Redis, realtime only
+  reaches clients on the instance that did the fan-out. Others see the new
+  count on their next reconnect, after 30 seconds in a background tab, or on
+  page load.
+
+### Notifications arrive a minute late
+
+Delivery starts right after the publishing request's response. Anything that
+misses that is delivered by the queue worker, which runs from cron every
+minute. If notifications never arrive, or arrive much later:
+
+- your [cron adapter](/docs/dev/cron) isn't calling the queue worker - in
+  development there is no `CRON_SECRET`, so queued tasks wait until you run
+  them;
+- notifications are [paused](/docs/dev/notifications/admincp#danger-zone) -
+  the AdminCP shows a banner;
+- **AdminCP → Advanced → Queue** shows failed `notifications-fanout` tasks -
+  the error says why.
+
+### Emails are not sending
+
+Check, in this order:
+
+1. An [email adapter](/docs/dev/email) is configured - **Send a test email**
+   in the AdminCP [Settings tools](/docs/dev/notifications/admincp#tools)
+   proves it.
+2. The type's email isn't _Disabled_ in
+   [Notification types](/docs/dev/notifications/admincp#notification-types).
+3. The user picked an email mode for the type - the default may be `none`.
+4. `GET /deliveries` in the [Admin API](/docs/dev/notifications/admincp#admin-api):
+   `failed` shows a sanitized error, and `skipped` shows a reason such as
+   `empty` (everything was already read).
+
+Remember digests only go out after the period ends in the user's time zone, and
+only include notifications that are still unread.
+
+### The unread count looks wrong
+
+`POST /reconcile` in the [Admin API](/docs/dev/notifications/admincp#admin-api)
+recalculates every count from the inbox and pushes the corrected badge. Please
+report how you got there - the count is updated in the same transaction as
+every inbox change, so drift means a bug.
+
+### Items say "This notification is no longer available"
+
+That is a placeholder. The content was deleted, the user lost access, the
+plugin was uninstalled, or its stored data no longer matches the type's schema.
+Users can still read or archive it. Plugins can tidy these up with
+[`remove()`](/docs/dev/notifications/publishing#remove-notifications).
+
+### The digest came at the wrong time
+
+Digests follow the time zone the member set under **Region** on `/settings`.
+Without one, the time zone of their language is used, then UTC. Daily digests
+go out at 08:00 and weekly ones on Monday at 08:00. The scheduler runs every 5
+minutes,
+so a digest can arrive up to 5 minutes after the hour.
+
+## Testing
+
+Integration tests for notifications need real PostgreSQL: row locks,
+`ON CONFLICT` and concurrent transactions. They run when
+`VITNODE_TEST_POSTGRES_URL` is set, and are skipped otherwise:
+
+```bash
+VITNODE_TEST_POSTGRES_URL=postgresql://root:root@localhost:5432/postgres pnpm --filter @vitnode/core test
+```
+
+Each test file creates its own throwaway database and drops it afterwards, so
+files run in parallel without seeing each other's rows.
+
+## Related
+
+<Cards>
+  <Card title="WebSocket" href="/docs/dev/websocket" />
+  <Card title="AdminCP" href="/docs/dev/notifications/admincp" />
+</Cards>

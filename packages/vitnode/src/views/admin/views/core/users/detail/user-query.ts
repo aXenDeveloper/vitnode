@@ -37,16 +37,22 @@ export interface AdminUserDetail {
   createdAt: Date | string;
   email: string;
   emailVerified: boolean;
+  firstName: null | string;
+  headline: null | string;
   id: number;
   imagePolicy: UserImagePolicy;
   isStaff: boolean;
   language: string;
+  lastName: null | string;
   name: string;
   nameCode: string;
   newsletter: boolean;
+  phone: null | string;
   role: AdminUserRole;
   roleId: number;
   secondaryRoles: AdminUserRole[];
+  showRealName: boolean;
+  timeZone: null | string;
 }
 
 export type AdminUserFetcher = (id: string) => Promise<AdminUserDetail>;

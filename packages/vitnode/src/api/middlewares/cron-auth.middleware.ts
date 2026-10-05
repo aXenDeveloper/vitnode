@@ -3,7 +3,7 @@ import type { Context, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { timingSafeEqual } from "node:crypto";
 
-import { CONFIG, INSECURE_CRON_SECRETS } from "@/lib/config";
+import { isCronSecretRejected } from "@/lib/config";
 
 /**
  * Constant-time comparison of two secrets.
@@ -53,10 +53,7 @@ export const cronAuthMiddleware = () => {
     // repository, so anyone could post to this endpoint and run every registered
     // job. The admin panel flags it, but a warning nobody reads is not a control,
     // so production refuses the request outright.
-    if (
-      INSECURE_CRON_SECRETS.includes(cronSecret) &&
-      !CONFIG.node_development
-    ) {
+    if (isCronSecretRejected(cronSecret)) {
       throw new HTTPException(403, {
         message:
           "Cron access is disabled because CRON_SECRET is still the built-in default. Set CRON_SECRET to a random value.",

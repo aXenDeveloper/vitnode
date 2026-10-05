@@ -5,6 +5,8 @@ import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { PageTitle } from "@/components/ui/page-title";
+import { cronHealthQueryOptions } from "@/views/admin/views/core/advanced/cron/cron-query";
+import { CronSchedulerStatus } from "@/views/admin/views/core/advanced/cron/cron-scheduler-status";
 import { CronTableContent } from "@/views/admin/views/core/advanced/cron/cron-table-content";
 
 import type { AdminTableNavigate } from "../table-search";
@@ -29,6 +31,7 @@ export const AdminCronRouteContent = ({
   title,
 }: AdminCronRouteProps) => {
   const { data } = useSuspenseQuery(cronQuery({ params }));
+  const { data: health } = useSuspenseQuery(cronHealthQueryOptions());
   const onRun = useCronRunCallback();
 
   const navigation = React.useMemo<DataTableNavigation>(
@@ -49,9 +52,13 @@ export const AdminCronRouteContent = ({
       <div className="p-6">
         <PageTitle desc={description} h1={title} />
 
-        <DataTableNavigationProvider value={navigation}>
-          <CronTableContent data={data} onRun={onRun} />
-        </DataTableNavigationProvider>
+        <div className="flex flex-col gap-4">
+          <CronSchedulerStatus health={health} />
+
+          <DataTableNavigationProvider value={navigation}>
+            <CronTableContent data={data} onRun={onRun} />
+          </DataTableNavigationProvider>
+        </div>
       </div>
     </RouteMessages>
   );

@@ -50,6 +50,21 @@ response quick even when the mail provider is having a moody afternoon.
   path.
 </Callout>
 
+`deliver()` takes an optional `idempotencyKey` and returns what the provider
+reported, such as its message id:
+
+```ts
+const email = await c.get('email').build(args)
+const { id } = await c.get('email').deliver(email, {
+  idempotencyKey: `order-receipt:${order.id}`, // same key on every retry
+})
+```
+
+Adapters whose provider deduplicates on a key, like Resend, forward it - so a
+retry after an unconfirmed send is not delivered twice. SMTP has no such
+feature and ignores it. [Notification emails](/docs/dev/notifications/email-and-digests)
+use this for every send.
+
 ## Configuring Email Adapters
 
 Configure your delivery transport in `apps/api/src/vitnode.api.config.ts`:
@@ -105,6 +120,11 @@ Verify email configuration in the AdminCP at **System → Integrations** (`/admi
     title="Email Templates"
     description="Build beautiful React Email templates with DefaultTemplateEmail"
     href="/docs/dev/email/templates"
+  />
+  <Card
+    title="Notification Emails"
+    description="Immediate notification email and daily or weekly digests"
+    href="/docs/dev/notifications/email-and-digests"
   />
   <Card
     title="Custom Email Adapter"

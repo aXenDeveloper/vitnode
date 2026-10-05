@@ -1,0 +1,170 @@
+---
+title: Notifications in the AdminCP
+description: Manage VitNode notifications in the AdminCP - activity at a glance, what members get by default per type, installation settings, maintenance tools and a danger zone to pause, cancel, mark read or delete everything.
+icon: LayoutDashboard
+---
+
+Open **AdminCP → System → Notifications** (`/admin/core/system/notifications`)
+to see how notifications are doing, decide what members get by default, and
+tidy up when you need to.
+
+{/* Image prompt: The VitNode AdminCP page at /admin/core/system/notifications, light theme, 1440x900. Title "Notifications" with a "Settings" button top right. An "Activity" row of four stat cards (Emails delivered, Failure rate, Events published, Emails skipped) each with a percentage change and a small sparkline, and 24h / 7d / 30d tabs. Below, "Notification types" grouped by plugin; one row is open, showing a "Member can edit" switch and three columns of radio cards: Notification list, Push, Email. */}
+
+## Permissions
+
+The screen uses the core `notifications` staff permission module:
+
+| Permission                 | Allows                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `notifications.can_view`   | Open the screen and the settings sheet, read-only                                  |
+| `notifications.can_edit`   | Change settings and what each type does by default                                 |
+| `notifications.can_manage` | Tools (test email, cleanup), the danger zone and **Reset all members to defaults** |
+
+Grant them in **Staff → Administrators** (`/admin/core/staff/admins`). See
+[Staff permissions](/docs/dev/working-with-users/staff-permissions).
+
+## Activity
+
+Four numbers for the last 24 hours, 7 days or 30 days, each compared with the
+period before it and drawn as a small trend line:
+
+- **Emails delivered** - notification emails that went out (test emails don't count).
+- **Failure rate** - failed emails out of everything that was attempted.
+- **Events published** - notifications plugins and core published.
+- **Emails skipped** - emails that were due but not sent, for example because the
+  member turned email off or the notification was already read.
+
+Days and hours follow the site's time zone, so "today" means the same thing to
+everyone on the screen.
+
+Hover a trend line - or tap it on a phone - to see one day (or one hour in the
+24 hour view) and its count, like "Sun, Oct 4 · 3 events published". The
+failure rate shows how many emails failed out of how many were tried. With the
+chart focused, the arrow keys step through the same points.
+
+If notifications are [paused](#danger-zone), a banner at the top says so.
+
+## Notification types
+
+Every registered type, grouped by plugin. Each row shows what members get today
+at a glance - notification list, push and email - and opens to change it:
+
+| Choice                | Options                                                             |
+| --------------------- | ------------------------------------------------------------------- |
+| **Member can edit**   | Off locks the type: members still get it, they just can't change it |
+| **Notification list** | Enabled by default · Not enabled by default · Disabled              |
+| **Push**              | Available · Disabled                                                |
+| **Email**             | Enabled by default · Not enabled by default · Disabled              |
+
+- **Enabled by default** - members get it unless they turn it off.
+- **Not enabled by default** - members get it only after turning it on.
+- **Disabled** - nobody gets it on that channel and the option disappears from
+  members' settings.
+
+Changes save as you click and apply to members who never chose for themselves.
+Members' own choices still win, unless the type is locked. See
+[How core decides](/docs/dev/notifications/preferences#how-core-decides).
+
+<Callout title="Push is a placeholder for now">
+  VitNode doesn't deliver push notifications yet. The **Push** choice is saved
+  with the type so it's ready when push lands.
+</Callout>
+
+Mandatory types always show in the notification list and are always locked.
+Switching email back to **Enabled by default** keeps the frequency (immediate,
+daily or weekly) the type had before.
+
+### Reset all members to defaults
+
+The button next to **Notification types** wipes every member's own choices -
+list, push and email choices - so everyone follows
+the defaults on this page again. The confirmation says how many members picked
+their own settings. It can't be undone.
+
+A member's time zone is part of their account, so a reset keeps it.
+
+## Settings
+
+The **Settings** button opens a sheet with tools and the danger zone. Only
+staff with the `can_manage` permission see it.
+
+There is no installation-wide email switch or hourly limit: email is decided
+per type, in [Notification types](#notification-types). Retention and worker
+batch sizes are deployment settings, set in your API config - see
+[Queue and scale → Configuration](/docs/dev/notifications/queue-and-scale#configuration).
+The sheet shows the current retention period at the bottom.
+
+### Tools
+
+- **Send a test email to me** queues a sample notification email to your own
+  address. It can't be sent to anyone else. It only shows when an email
+  adapter is configured.
+
+Old notifications are removed every night at 02:00 by the
+`notifications-cleanup` cron.
+
+### Danger zone
+
+Each action affects every member at once and asks before it runs:
+
+| Action                                   | What happens                                                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Pause all notifications**              | Nothing is fanned out or emailed. New events wait in the queue. **Resume** sends everything that waited  |
+| **Cancel all queued emails**             | Emails that haven't gone out yet, including pending digests, are skipped. Notifications stay in the list |
+| **Mark everything as read for everyone** | Every unread notification becomes read and every badge drops to zero, live                               |
+| **Delete all notifications**             | Empties every member's notification list. You type `delete all notifications` to confirm                 |
+
+Deleting keeps types, preferences, settings and email history. It can't be
+undone.
+
+## Admin API
+
+All routes live under `/api/@vitnode/core/admin/notifications`:
+
+| Method | Path                         | Permission   |
+| ------ | ---------------------------- | ------------ |
+| `GET`  | `/overview`                  | `can_view`   |
+| `GET`  | `/stats`                     | `can_view`   |
+| `GET`  | `/deliveries`                | `can_view`   |
+| `PUT`  | `/types/{type}`              | `can_edit`   |
+| `POST` | `/test-email`                | `can_manage` |
+| `POST` | `/reconcile`                 | `can_manage` |
+| `POST` | `/deliveries/{id}/retry`     | `can_manage` |
+| `POST` | `/pause`                     | `can_manage` |
+| `POST` | `/resume`                    | `can_manage` |
+| `POST` | `/emails/cancel`             | `can_manage` |
+| `POST` | `/read-all`                  | `can_manage` |
+| `POST` | `/delete-all`                | `can_manage` |
+| `POST` | `/members/reset-preferences` | `can_manage` |
+
+`GET /stats` takes `range` (`24h`, `7d` or `30d`) and `timeZone` (an IANA name,
+like `Europe/Warsaw`). `PUT /types/{type}` merges what you send into the stored
+policy:
+
+```json
+{
+  "allowInApp": true,
+  "inApp": false,
+  "allowPush": true,
+  "allowEmail": true,
+  "email": "daily",
+  "memberCanEdit": false
+}
+```
+
+The deliveries list, retry and unread count repair have no buttons on this
+screen any more - the routes stay for scripts and for the debug panel.
+
+## Related
+
+<Cards>
+  <Card title="Preferences" href="/docs/dev/notifications/preferences" />
+  <Card
+    title="Email and digests"
+    href="/docs/dev/notifications/email-and-digests"
+  />
+  <Card
+    title="Troubleshooting"
+    href="/docs/dev/notifications/migration-and-troubleshooting#troubleshooting"
+  />
+</Cards>

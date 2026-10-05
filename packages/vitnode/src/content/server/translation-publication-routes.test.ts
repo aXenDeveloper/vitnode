@@ -27,6 +27,7 @@ const adminUser = {
   headline: null,
   phone: null,
   showRealName: false,
+  timeZone: null,
   firstName: null,
   lastName: null,
   avatarUrl: null,

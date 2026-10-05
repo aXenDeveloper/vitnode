@@ -1,0 +1,195 @@
+---
+title: Notifications
+description: Add persistent notifications to a VitNode plugin - an inbox, a live unread count, push and email choices, daily or weekly digests, all from one publish call.
+icon: Bell
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+The Notifications Center is VitNode's inbox. A plugin publishes an event with
+`c.get("notifications").publish()`, and core stores it, works out who receives
+it, updates every unread count in realtime and sends the emails and digests
+users asked for.
+
+Your plugin decides who **might** care. Core decides who **actually** receives
+what, and delivers it.
+
+{/* Image prompt: The VitNode site header on desktop with the notification bell open as a popover. The bell shows a small "3" badge. The popover lists three notifications with avatars, bold unread titles like "New article: Shipping VitNode 2.0", relative times, a "Mark all as read" button at the top and a "View all" link at the bottom. Clean neutral UI, light theme, 1440x900. */}
+
+## Quick start
+
+<Steps>
+
+<Step>
+
+### Declare a notification type
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
+import { z } from 'zod'
+
+export const topicReplyNotification = buildNotificationType({
+  id: 'forum.topic_reply',
+  version: 1,
+  schema: z.object({ topicId: z.number(), topicTitle: z.string() }),
+  category: 'social',
+  label: '@acme/forum.notifications.topic_reply.label',
+  defaults: { inApp: true, email: 'daily' },
+  email: true,
+  present: ({ data, t }) => ({
+    title: t('@acme/forum.notifications.topic_reply.title', {
+      title: data.topicTitle,
+    }),
+    target: `/forum/topics/${data.topicId}`,
+  }),
+})
+```
+
+Every field is described in [Notification types](/docs/dev/notifications/notification-types).
+
+</Step>
+
+<Step>
+
+### Register it on your API plugin
+
+```ts title="plugins/forum/src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+import { topicReplyNotification } from '@/api/lib/notifications'
+import { CONFIG_PLUGIN } from '@/const'
+import apiMessages from '@/locales/api'
+
+export const forumApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    messages: apiMessages, // [!code ++]
+    notificationTypes: [topicReplyNotification], // [!code ++]
+    modules: [topicsModule],
+  })
+```
+
+The `label` and `title` keys live in the plugin's **API** messages
+(`src/locales/api/en.json`), because the server renders notifications. See
+[Server-side translations](/docs/dev/i18n/server).
+
+</Step>
+
+<Step>
+
+### Publish when something happens
+
+```ts title="plugins/forum/src/api/modules/topics/routes/reply.route.ts"
+await c.get('db').transaction(async (tx) => {
+  const [reply] = await tx.insert(forum_replies).values(values).returning()
+
+  await c.get('notifications').publish({
+    type: topicReplyNotification,
+    tx,
+    recipients: [topic.authorId],
+    subject: { type: 'forum.topic', id: topic.id },
+    data: { topicId: topic.id, topicTitle: topic.title },
+    idempotencyKey: `reply:${reply.id}`,
+  })
+})
+```
+
+The topic author sees it in the bell a moment after the response is sent. See
+[Publish notifications](/docs/dev/notifications/publishing).
+
+</Step>
+
+<Step>
+
+### Apply the database migration
+
+The Notifications Center adds six `core_notification*` tables. Build and
+migrate once after upgrading:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+</Step>
+
+</Steps>
+
+## Who does what
+
+| Your plugin                                                | Core                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------- |
+| Declares notification types                                | Builds the preferences page from them                         |
+| Picks candidates: `recipients`                             | Removes the actor, deleted users and opted-out users          |
+| Answers "who may see this?" in `access`                    | Calls it in batches, again before email, and when listing     |
+| Renders plain text in `present`                            | Strips markup, drops unsafe links, localizes per recipient    |
+| Publishes once per real-world happening (`idempotencyKey`) | Deduplicates, retries and never delivers twice in-app         |
+|                                                            | Unread counts, realtime, grouping, email, digests and cleanup |
+
+## How a notification travels
+
+```text
+publish()                          one row in core_notification_events
+  │                                + a "notifications-fanout" queue task
+  │                                  (same transaction when you pass tx)
+  ▼
+fan-out, in batches of 500         candidates → opted out? access?
+  │
+  ├─► receipt per event and user   the "already delivered" guard
+  ├─► inbox item (or grouped)      core_notifications
+  ├─► unread count + revision      core_notification_user_state
+  │      └─► WebSocket push        notificationsStateChannel
+  └─► email delivery               immediate now, digests on schedule
+         └─► "notifications-email" queue task → your email adapter
+```
+
+1. **Stored once.** An event is one row however many people receive it.
+2. **Durable fan-out.** A queue task delivers it in batches. Each batch commits
+   with its cursor, so a crash resumes where it stopped.
+3. **Per-recipient inbox.** Every recipient gets an inbox item. Types with
+   `grouping` merge related events into one item.
+4. **Counter and realtime.** Each user has one stored unread count with a
+   revision. Every change pushes the new absolute count over the WebSocket.
+5. **Email and digests.** Email runs in its own queue task, so a slow mail
+   provider only delays email - never the inbox.
+
+## Learn more
+
+<Cards>
+  <Card
+    title="Notification types"
+    description="Every field of buildNotificationType"
+    href="/docs/dev/notifications/notification-types"
+  />
+  <Card
+    title="Publish notifications"
+    description="Transactions, idempotency keys, audiences and access checks"
+    href="/docs/dev/notifications/publishing"
+  />
+  <Card
+    title="Inbox and realtime"
+    description="Read state, grouping, the unread count and the WebSocket"
+    href="/docs/dev/notifications/inbox-and-realtime"
+  />
+  <Card
+    title="Preferences"
+    description="How core decides what each user receives"
+    href="/docs/dev/notifications/preferences"
+  />
+  <Card
+    title="Email and digests"
+    description="Immediate email, daily and weekly digests, retries"
+    href="/docs/dev/notifications/email-and-digests"
+  />
+</Cards>

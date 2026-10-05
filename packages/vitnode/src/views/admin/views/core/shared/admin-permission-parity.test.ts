@@ -67,13 +67,25 @@ const key = ({
 }): string => `${module}:${permission}`;
 
 describe("the scan is reading real declarations", () => {
-  it("finds the eight users routes that declare one", () => {
-    expect([...declarationsIn("users").keys()]).toEqual([
+  it("finds the twenty users routes that declare one", () => {
+    expect([...declarationsIn("users").keys()].sort()).toEqual([
       "create.route.ts",
+      "devices.route.ts",
       "image-delete.route.ts",
       "image-upload.route.ts",
       "list.route.ts",
+      "notification-preferences-update.route.ts",
+      "notification-preferences.route.ts",
+      "passkey-delete.route.ts",
+      "passkey-rename.route.ts",
+      "passkeys.route.ts",
+      "password.route.ts",
+      "revoke-device.route.ts",
+      "revoke-devices.route.ts",
       "show.route.ts",
+      "sso-disconnect.route.ts",
+      "sso-preferences.route.ts",
+      "sso.route.ts",
       "timeline.route.ts",
       "update.route.ts",
       "verify-email.route.ts",

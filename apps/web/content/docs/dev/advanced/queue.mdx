@@ -86,10 +86,18 @@ export const riskyTask = buildQueueTask({
 
 | Attempt | Delay Before Next Retry |
 | :--- | :--- |
-| 1st failure | ~1 minute |
-| 2nd failure | ~4 minutes |
-| 3rd failure | ~9 minutes |
+| 1st failure | ~10 seconds |
+| 2nd failure | ~20 seconds |
+| Each next failure | Doubles, capped at 1 hour |
 | Final failure | Marked as `failed` in `core_queue` |
+
+### Stale Tasks Are Reclaimed
+
+A task still `processing` after 15 minutes (`QUEUE_STALE_PROCESSING_MINUTES`) belonged to a worker that died mid-run. The queue worker puts it back to `pending`, or marks it `failed` if it has used every attempt, so a crash never strands a task forever.
+
+<Callout type="warn" title="Keep handlers well under 15 minutes">
+  A handler that runs longer would be reclaimed and run again while it is still going. Long work should save its progress and dispatch a follow-up task instead - the way [notification fan-out](/docs/dev/notifications/queue-and-scale) does.
+</Callout>
 
 ---
 
@@ -128,6 +136,11 @@ Inspect and debug tasks at **Core → Advanced → Queue** (`/admin/core/advance
 ## Learn More
 
 <Cards>
+  <Card
+    title="Notifications Queue"
+    description="How notification fan-out, email and cleanup run on the queue"
+    href="/docs/dev/notifications/queue-and-scale"
+  />
   <Card
     title="Cron Jobs"
     description="Recurring scheduled tasks and maintenance timers"

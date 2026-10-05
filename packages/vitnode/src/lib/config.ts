@@ -40,3 +40,7 @@ export const CONFIG = {
     return new URL(process.env.VITNODE_WEB_URL ?? "http://localhost:3000");
   },
 };
+
+export const isCronSecretRejected = (secret: string | undefined): boolean =>
+  !secret ||
+  (INSECURE_CRON_SECRETS.includes(secret) && !CONFIG.node_development);

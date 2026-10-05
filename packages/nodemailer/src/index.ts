@@ -42,11 +42,13 @@ export const NodemailerEmailAdapter = ({
         },
       );
 
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         to,
         subject,
         html,
       });
+
+      return { id: info.messageId };
     },
   };
 };

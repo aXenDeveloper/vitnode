@@ -1,0 +1,188 @@
+---
+title: Inbox and realtime
+description: How VitNode's notification inbox tracks read state, groups events, keeps the unread count exact and pushes it live over the WebSocket - plus the REST endpoints and frontend components.
+icon: Inbox
+---
+
+Every recipient gets inbox items in `core_notifications` and one stored unread
+count in `core_notification_user_state`. Each change to a user's inbox updates
+that count in the same transaction and pushes the new absolute value to their
+open tabs.
+
+## Read and unread
+
+An item is **unread** when it is not archived and `readSeq < activitySeq`.
+
+- `activitySeq` starts at 1 and goes up each time a grouped event joins the
+  item.
+- `readSeq` records how far the user has read.
+
+Listing the inbox never marks anything read. Opening an item, marking it read,
+or "mark all as read" does.
+
+### The read boundary
+
+The client sends the `activitySeq` it rendered as `throughSeq`:
+
+```http
+POST /api/@vitnode/core/notifications/42/read
+Content-Type: application/json
+
+{ "throughSeq": 3 }
+```
+
+If a fourth reply joined the item after the bell rendered it, `activitySeq` is
+now 4. The item stays unread, because the user has not seen reply four yet.
+Without `throughSeq`, the item is read up to its current activity. Repeating
+the call changes nothing.
+
+### Mark all as read
+
+`POST /read-all` takes the user's state lock and marks every unread item read in
+one statement. A fan-out that committed before the lock is included. One still
+running waits for the lock and then adds its item as unread, so nothing that
+arrives during the click is lost. Pass `{ "category": "social" }` to limit it
+to one category.
+
+## Grouping
+
+Types with [`grouping`](/docs/dev/notifications/notification-types#group-related-events-with-grouping)
+merge events into one item per user, type, group key and time window:
+
+- **Window buckets.** Windows are fixed slots counted in UTC, not sliding.
+  With `windowMinutes: 60`, events between 14:00 and 14:59 UTC share an item,
+  and an event at 15:00 starts a new one.
+- **Reopening.** A new event in a read item makes it unread again.
+- **Archive revival.** A new event in an archived item brings it back to the
+  inbox.
+- **Ordering.** Items sort by last activity, so a grouped item jumps to the top
+  when an event joins it.
+- **The bell counts items, not events.** Ten replies in one grouped item add 1
+  to the unread count, not 10.
+
+## Unavailable items
+
+Before returning a page, core re-checks every item: the type is still
+registered, its stored data still parses, `access` still allows the user and
+`present` still renders. If any check fails, the item comes back as a
+placeholder:
+
+```json
+{
+  "id": 42,
+  "available": false,
+  "title": "This notification is no longer available.",
+  "target": null,
+  "actors": []
+}
+```
+
+The placeholder keeps its read state, so users can still read or archive it and
+the count never includes a ghost they cannot clear. This covers deleted content,
+revoked access and uninstalled plugins.
+
+## The unread count
+
+The count reaches the browser from three sources. Each one carries the same
+pair:
+
+```ts
+interface NotificationState {
+  unread: number // absolute, never a +1 or -1
+  revision: number // goes up with every committed change for this user
+}
+```
+
+1. **Session payload.** `GET /api/@vitnode/core/users/session` includes
+   `user.notifications`. It is read fresh on every request, never cached with
+   the session user.
+2. **WebSocket.** Every committed inbox change sends `notificationsStateChannel`
+   to that user's connections, with a `reason` such as `created`, `read`,
+   `read_all`, `archived`, `removed` or `reconciled`.
+3. **State endpoint.** `GET /api/@vitnode/core/notifications/state` returns the
+   current pair.
+
+The client keeps whichever state has the **highest revision** and ignores
+anything older. A slow session response can never undo a newer realtime update.
+Messages are sent only after commit, so the browser never sees a count that was
+rolled back.
+
+### Reconnects and background tabs
+
+WebSocket messages sent while a tab was offline are not replayed. Instead,
+`NotificationStateSync` re-reads `/state` every time the socket connects, and
+when a tab returns after more than 30 seconds in the background.
+
+No socket at all? That happens when the API is mounted inside the web app on
+the same origin (the default `apps/web` setup opens no WebSocket), or while
+the socket is down. The count is then re-read every 60 seconds while the tab is
+visible - one primary-key read - so the bell is at most a minute behind.
+
+When the count changes, open notification lists refresh once per burst - 1
+second after the last change, and at most 5 seconds after the first - instead of
+once per message.
+
+### Multiple API instances
+
+<Callout type="warn" title="Realtime across instances needs Redis">
+  With `REDIS_URL` set, realtime messages are relayed between API instances over
+  Redis pub/sub, so a fan-out on instance A reaches a tab connected to instance
+  B. Without Redis, realtime only reaches clients connected to the same
+  instance. Other users still catch up from the session payload or the `/state`
+  endpoint on their next reconnect or page load.
+</Callout>
+
+See [Redis](/docs/dev/advanced/redis) and [WebSocket](/docs/dev/websocket).
+
+## REST endpoints
+
+All routes act on the signed-in user and return `401` for guests. Paths are
+relative to `/api/@vitnode/core/notifications`.
+
+| Method | Path            | Does                                                                                           |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------- |
+| `GET`  | `/`             | One page, newest activity first. Query: `limit` (1-50), `cursor`, `unread`, `category`, `type` |
+| `GET`  | `/state`        | `{ unread, revision }`                                                                         |
+| `POST` | `/{id}/read`    | Mark read, optional body `{ throughSeq }`                                                      |
+| `POST` | `/{id}/unread`  | Mark unread again                                                                              |
+| `POST` | `/{id}/archive` | Hide from the inbox                                                                            |
+| `POST` | `/read-all`     | Mark all read, optional body `{ category }`                                                    |
+| `GET`  | `/preferences`  | Types and their channels                                                                       |
+| `PUT`  | `/preferences`  | Save them                                                                                      |
+
+Mark routes return the new `{ unread, revision }`. Another user's item id
+answers `404`, exactly like a missing one.
+
+Call them from a page with the universal fetcher:
+
+```ts
+const response = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'notifications',
+  path: '/state',
+})
+```
+
+## Frontend pieces
+
+Core ships the whole UI. Nothing needs wiring in a default theme.
+
+| Piece                   | Where                                                                   |
+| ----------------------- | ----------------------------------------------------------------------- |
+| Bell with unread badge  | Site header, every screen size. Loads the recent list only when opened. |
+| Notifications Center    | `/notifications` - all or unread, category filter, infinite scroll      |
+| Preferences             | `/settings/notifications` - channels and per type choices               |
+| `NotificationStateSync` | Mounted with the realtime listeners. Keeps the count in step            |
+
+{/* Image prompt: The VitNode Notifications Center page at /notifications on a phone, 390x844, light theme. A heading "Notifications", tabs "All" and "Unread", a category select, and a list of notification rows with avatars, bold unread titles, a muted body line, relative times and a small overflow menu with "Mark as unread" and "Archive". */}
+
+## Related
+
+<Cards>
+  <Card title="Preferences" href="/docs/dev/notifications/preferences" />
+  <Card
+    title="Queue and scale"
+    href="/docs/dev/notifications/queue-and-scale"
+  />
+</Cards>

@@ -786,6 +786,10 @@ export class SsoConnectionModel {
     if (outcome === "not_connected") {
       throw new SsoConnectionError("not_connected", 409);
     }
+
+    await this.c
+      .get("events")
+      .emit("user.sso.preferences_updated", { sources, sync, userId });
   }
 
   private get adapters(): SSOApiPlugin[] {

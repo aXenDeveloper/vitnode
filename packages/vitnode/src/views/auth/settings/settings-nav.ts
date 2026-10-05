@@ -3,7 +3,8 @@ import { normalizeUrl } from "@/lib/utils";
 /** Where the settings screens are rooted, and the overview panel's own URL. */
 export const SETTINGS_ROOT_HREF = "/settings";
 
-export type SettingsNavKey = "devices" | "overview" | "security" | "sso";
+export type SettingsNavKey =
+  "devices" | "notifications" | "overview" | "security" | "sso";
 
 export interface SettingsNavItem {
   href: string;
@@ -13,6 +14,7 @@ export interface SettingsNavItem {
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: SETTINGS_ROOT_HREF, key: "overview" },
+  { href: "/settings/notifications", key: "notifications" },
   { href: "/settings/devices", key: "devices" },
   { href: "/settings/security", key: "security" },
   { href: "/settings/sso", key: "sso" },

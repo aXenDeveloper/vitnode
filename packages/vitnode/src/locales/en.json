@@ -36,6 +36,10 @@
   "@vitnode/core:navigation:can_delete": "Remove main menu items",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
+  "@vitnode/core:notifications": "Notifications",
+  "@vitnode/core:notifications:can_view": "View notification settings and delivery health",
+  "@vitnode/core:notifications:can_edit": "Edit notification settings",
+  "@vitnode/core:notifications:can_manage": "Test emails, cleanup and the danger zone: pause, cancel queued emails, mark everything read, delete all and reset member preferences",
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
@@ -523,6 +527,28 @@
       "showing_range": "Showing {from}–{to} of {total}",
       "rows_per_page": "Rows per page",
       "page_of": "Page {page} of {total}",
+      "notifications": {
+        "title": "Notifications",
+        "bell_label": "Notifications",
+        "bell_label_unread": "Notifications, {count, plural, one {# unread} other {# unread}}",
+        "recent": "Recent notifications",
+        "mark_all_read": "Mark all as read",
+        "all_read": "All caught up",
+        "all_read_desc": "Every notification is marked as read.",
+        "mark_read": "Mark as read",
+        "mark_unread": "Mark as unread",
+        "archive": "Archive",
+        "archived": "Notification archived",
+        "unread": "Unread",
+        "loading": "Loading notifications…",
+        "load_error": "We couldn't load your notifications.",
+        "retry": "Try again",
+        "empty_title": "You're all caught up",
+        "empty_desc": "New activity will show up here.",
+        "view_all": "View all notifications",
+        "settings": "Notification settings",
+        "action_failed": "That didn't work. Your notifications were refreshed."
+      },
       "tab_has_errors": "Has errors"
     },
     "navigation": {
@@ -804,7 +830,8 @@
           "overview": "Overview",
           "devices": "Devices",
           "security": "Security",
-          "sso": "Connected accounts"
+          "sso": "Connected accounts",
+          "notifications": "Notifications"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -827,7 +854,15 @@
           "notSet": "Not set",
           "save": "Save changes",
           "saved": "Personal information updated.",
-          "savedDesc": "Your profile shows the new details right away."
+          "savedDesc": "Your profile shows the new details right away.",
+          "regionTitle": "Region",
+          "regionDesc": "Digest emails and dates follow this time zone.",
+          "timeZone": "Time zone",
+          "timeZoneDesc": "Search by city, like Warsaw or New York.",
+          "timeZoneAuto": "Automatic - from your language",
+          "timeZoneUseDevice": "Use this device's time zone ({timeZone})",
+          "timeZoneSaved": "Time zone saved",
+          "timeZoneSavedDesc": "Digests and dates now follow {timeZone}."
         },
         "devices": {
           "title": "Devices",
@@ -1068,6 +1103,68 @@
             "from": "From {provider}",
             "saved_from": "{field} now follows {provider}",
             "saved_manual": "{field} is now manual"
+          }
+        },
+        "notifications": {
+          "title": "Notifications",
+          "desc": "Choose what reaches you and where - in your notifications, as push, or by email.",
+          "saved": "Saved",
+          "saved_desc": "Your notification settings are up to date.",
+          "locked": "Set by the admin",
+          "channels": {
+            "title": "Where notifications reach you",
+            "push": {
+              "title": "Push",
+              "desc": "Sent to this device even when you're not browsing.",
+              "enable": "Turn on push in this browser",
+              "enabled": "On",
+              "denied": "Blocked by your browser. Allow notifications for this site in its settings to turn push on.",
+              "unsupported": "This browser can't receive push notifications.",
+              "soon": "Push delivery is on its way - the choices below are saved for when it lands.",
+              "enabled_toast": "Push is on",
+              "enabled_toast_desc": "This browser can now get your notifications.",
+              "enable_short": "Turn on"
+            },
+            "email": {
+              "title": "Email",
+              "desc": "Sent to <email></email>.",
+              "stop_title": "Stop all email notifications?",
+              "stop_desc": "You won't get notification emails or digests any more. Security alerts still arrive by email - they keep your account safe. Your notification list isn't affected.",
+              "stop_cancel": "Keep emails",
+              "stop_submit": "Stop all emails",
+              "stopped_toast_desc": "No more notification emails. Security alerts still reach you.",
+              "restored_toast_desc": "Your emails are back the way they were.",
+              "desc_off": "Off - only security alerts go to <email></email>.",
+              "unavailable": "None of your notifications are sent by email right now.",
+              "on_toast_desc": "Notification emails are back on."
+            }
+          },
+          "types": {
+            "title": "What you get notified about",
+            "empty": "There's nothing to set up yet.",
+            "summary": {
+              "list": "Notification list",
+              "push": "Push",
+              "email": "Email",
+              "on": "on",
+              "off": "off",
+              "unavailable": "not available"
+            },
+            "mandatory": "A security alert - it always reaches you.",
+            "locked": "Set by the admin, so it can't be changed here.",
+            "list_desc": "Show it under the bell when you visit.",
+            "push_desc": "Send it to devices where you turned push on.",
+            "email_off": "No emails for this one.",
+            "frequency_label": "How often to email {type}",
+            "email_immediate": "Emailed right away.",
+            "email_daily": "Goes into your daily digest.",
+            "email_weekly": "Goes into your weekly digest."
+          },
+          "email_modes": {
+            "none": "Off",
+            "immediate": "Right away",
+            "daily": "Daily digest",
+            "weekly": "Weekly digest"
           }
         }
       }
@@ -1502,6 +1599,24 @@
         },
         "full": "This area already holds as many widgets as it can."
       }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "desc": "Everything that happened while you were away. Opening this page never marks anything as read.",
+      "list_label": "Notifications",
+      "filter_all": "All",
+      "filter_unread": "Unread",
+      "all_categories": "All categories",
+      "category_label": "Filter by category",
+      "mark_all_read": "Mark all as read",
+      "settings": "Notification settings",
+      "loading": "Loading…",
+      "load_more": "Load more",
+      "load_error": "We couldn't load your notifications. Check your connection and try again.",
+      "retry": "Try again",
+      "empty_title": "Nothing here yet",
+      "empty_unread_title": "No unread notifications",
+      "empty_desc": "When something needs your attention, it lands here."
     }
   },
   "admin": {
@@ -1618,7 +1733,8 @@
           "title": "System",
           "integrations": "Integrations",
           "navigation": "Navigation",
-          "files": "Files"
+          "files": "Files",
+          "notifications": "Notifications"
         },
         "advanced": {
           "title": "Advanced",
@@ -1650,8 +1766,13 @@
         "desc": "Manage and monitor scheduled tasks.",
         "list": {
           "name": "Name",
-          "pluginId": "Plugin ID",
-          "module": "Module",
+          "status": {
+            "title": "Status",
+            "on_schedule": "On schedule",
+            "overdue": "Overdue",
+            "waiting": "Waiting for first run"
+          },
+          "plugin": "Plugin",
           "schedule": "Schedule",
           "lastRun": {
             "title": "Last Run",
@@ -1666,7 +1787,32 @@
               "label": "Run Job Now",
               "success": "Cron job executed successfully."
             }
-          }
+          },
+          "search": "Search jobs…"
+        },
+        "health": {
+          "stale": {
+            "title": "Scheduler stopped",
+            "desc": "Nothing has run since <date></date>. The queue, scheduled notifications and cleanups are on hold until the scheduler is back.",
+            "desc_never": "No job has run yet. The queue, scheduled notifications and cleanups are on hold until the scheduler starts.",
+            "help": "Check your <docs>cron setup</docs> and the server logs."
+          },
+          "overdue": {
+            "title": "{count, plural, one {# cron job is} other {# cron jobs are}} overdue",
+            "desc": "The scheduler is running, but some jobs haven't finished on time. A job that throws keeps its last successful run, so look for its error in the server logs."
+          },
+          "ok": {
+            "title": "All jobs on schedule",
+            "desc": "Every job ran at its last scheduled time."
+          },
+          "no_adapter": "No cron adapter is configured, so jobs only run when an external scheduler calls the cron endpoint.",
+          "facts": {
+            "last_run": "Last run",
+            "next_run": "Next up",
+            "jobs": "Jobs",
+            "never": "Never"
+          },
+          "secret_rejected": "The cron endpoint refuses every run because CRON_SECRET is missing or still a built-in default. Set CRON_SECRET to a random value in your API environment and restart it."
         }
       },
       "queue": {
@@ -1765,6 +1911,156 @@
             "uploaded": "Cover image updated.",
             "removed": "Cover image removed."
           }
+        },
+        "verify": {
+          "action": "Mark email as verified",
+          "success": "Email marked as verified",
+          "successDesc": "{name} can now receive emails from the site."
+        },
+        "badges": {
+          "staff": "Staff",
+          "verified": "Verified",
+          "unverified": "Unverified"
+        },
+        "tabs": {
+          "profileLabel": "Member profile",
+          "detailsLabel": "Member details",
+          "activity": "Activity",
+          "notifications": "Notifications",
+          "security": "Password & passkeys",
+          "securityShort": "Security"
+        },
+        "personal": {
+          "title": "Personal information",
+          "edit": "Edit personal information",
+          "editDesc": "Optional details from the member's profile. Empty fields are cleared.",
+          "save": "Save changes",
+          "saved": "Personal information saved",
+          "savedDesc": "{name}'s profile shows the new details.",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "headline": "Headline",
+          "headlineDesc": "Shown under the name on the profile. Up to {max} characters.",
+          "phone": "Phone",
+          "birthday": "Birthday",
+          "showRealName": "Show real name",
+          "showRealNameDesc": "Shows first and last name next to the display name.",
+          "memberId": "Member ID",
+          "realName": "Real name",
+          "hidden": "hidden",
+          "notSet": "Not set"
+        },
+        "preferences": {
+          "title": "Preferences",
+          "edit": "Edit preferences",
+          "editDesc": "Language, time zone and newsletter for this member.",
+          "save": "Save changes",
+          "saved": "Preferences saved",
+          "savedDesc": "{name} sees the change on their next page load.",
+          "language": "Language",
+          "timeZone": "Time zone",
+          "timeZoneDesc": "Used for digest emails and dates. Automatic follows the language.",
+          "timeZoneAuto": "Automatic",
+          "newsletter": "Newsletter",
+          "newsletterDesc": "Receives newsletter emails sent from the AdminCP.",
+          "subscribed": "Subscribed",
+          "notSubscribed": "Not subscribed"
+        },
+        "sso": {
+          "title": "Connected accounts",
+          "edit": "Edit profile source and sync",
+          "editTitle": "Profile source and sync",
+          "editDesc": "Choose where {name}'s avatar and name come from, and whether they refresh each time they sign in.",
+          "syncTitle": "Sync on sign-in",
+          "syncFooter": "Sync refreshes the fields above from that account each time they sign in with it.",
+          "syncNoFields": "Not a source for any field yet",
+          "syncOn": "{provider} syncs on sign-in",
+          "syncOff": "{provider} sync turned off",
+          "disconnect": "Disconnect {provider}",
+          "disconnectTitle": "Disconnect {provider}?",
+          "disconnectDesc": "{name} will no longer be able to sign in with {provider}. Their password and other connections stay as they are.",
+          "disconnectSubmit": "Disconnect",
+          "disconnected": "{provider} disconnected",
+          "disconnectedDesc": "{name} can't sign in with it any more.",
+          "connected": "Connected",
+          "sourceBadge": "{fields} from here",
+          "syncsBadge": "Syncs on sign-in",
+          "lastMethod": "Can't remove the last way to sign in",
+          "lastMethodDesc": "Set a password or add another sign-in method first.",
+          "loadError": "Connected accounts couldn't be loaded. Refresh to try again.",
+          "empty": "No connected accounts. This member signs in with their password or a passkey."
+        },
+        "devices": {
+          "title": "Devices",
+          "deviceName": "{browser} on {os}",
+          "unknownDevice": "Unknown device",
+          "signOut": "Sign out this device",
+          "signOutLabel": "Sign out {device}",
+          "signOutTitle": "Sign out this device?",
+          "signOutDesc": "{name} is signed out on {device}, including any AdminCP session there.",
+          "signOutSubmit": "Sign out",
+          "signedOut": "Device signed out",
+          "signedOutDesc": "{device} needs to sign in again.",
+          "signOutAll": "Sign out all",
+          "signOutAllTitle": "Sign {name} out everywhere?",
+          "signOutAllDesc": "{count, plural, one {The session on # device ends} other {Every session on all # devices ends}}, including AdminCP sessions. They can sign in again right away.",
+          "signedOutAll": "Signed out everywhere",
+          "signedOutAllDesc": "{name} needs to sign in again on every device.",
+          "admincp": "AdminCP",
+          "showAll": "Show all {count} devices",
+          "showFewer": "Show fewer",
+          "loadError": "Devices couldn't be loaded. Refresh to try again.",
+          "empty": "Not signed in on any device."
+        },
+        "security": {
+          "title": "Password & passkeys",
+          "password": "Password",
+          "passwordSet": "Password set",
+          "passwordNotSet": "No password",
+          "passwordDisabled": "Password sign-in is turned off on this site.",
+          "passwordLoadError": "The password status couldn't be loaded. Refresh to try again.",
+          "passwordChange": "Change",
+          "passwordAdd": "Set password",
+          "passwordTitle": "Set a new password",
+          "passwordDesc": "{name} is signed out of every device and must use the new password next time.",
+          "newPassword": "New password",
+          "confirmPassword": "Confirm password",
+          "passwordMin": "Use at least {min} characters.",
+          "passwordMismatch": "Passwords don't match.",
+          "passwordSubmit": "Set password",
+          "passwordSaved": "Password changed",
+          "passwordSavedDesc": "{name} was signed out everywhere.",
+          "passkeys": "Passkeys",
+          "passkeysEmpty": "No passkeys yet.",
+          "passkeysDisabled": "Passkeys are turned off on this site.",
+          "passkeysLoadError": "Passkeys couldn't be loaded. Refresh to try again.",
+          "passkeySynced": "Synced",
+          "passkeyDeviceOnly": "This device only",
+          "passkeyUsed": "Used",
+          "passkeyNeverUsed": "Never used",
+          "passkeyRename": "Rename passkey",
+          "passkeyRenameLabel": "Rename {name}",
+          "passkeyRenameTitle": "Rename passkey",
+          "passkeyRenameDesc": "Only the label changes; the passkey keeps working.",
+          "passkeyName": "Name",
+          "passkeyRenameSubmit": "Save name",
+          "passkeyRenamed": "Passkey renamed",
+          "passkeyDelete": "Delete passkey",
+          "passkeyDeleteLabel": "Delete {name}",
+          "passkeyDeleteTitle": "Delete this passkey?",
+          "passkeyDeleteDesc": "{name} won't be able to sign in with “{passkey}” any more.",
+          "passkeyDeleteSubmit": "Delete passkey",
+          "passkeyDeleted": "Passkey deleted",
+          "passkeyDeletedDesc": "“{passkey}” no longer signs in to this account.",
+          "lastMethod": "Can't remove the last way to sign in",
+          "lastMethodDesc": "Set a password or connect another sign-in method first."
+        },
+        "notifications": {
+          "desc": "Each type follows the site's notification settings until you change it here. Changes apply to {name} only.",
+          "empty": "No notification types are turned on for this site.",
+          "saved": "Notification preference saved",
+          "savedDesc": "Applies to {name} only.",
+          "loadError": "Notification preferences couldn't be loaded. Refresh to try again."
         }
       },
       "verify_email": {
@@ -1959,6 +2255,201 @@
       }
     },
     "system": {
+      "notifications": {
+        "title": "Notifications",
+        "desc": "See how notifications are doing, decide what members get by default, and tidy up when you need to.",
+        "load_error": {
+          "title": "Couldn't load this part",
+          "desc": "The server didn't answer the way we hoped. Give it another go in a moment."
+        },
+        "paused": {
+          "title": "Notifications are paused",
+          "desc": "Nothing reaches members until you resume them in Settings, under Danger zone."
+        },
+        "activity": {
+          "title": "Activity",
+          "range_label": "Time range",
+          "ranges": {
+            "24h": "Last 24 hours",
+            "7d": "Last 7 days",
+            "30d": "Last 30 days"
+          },
+          "ranges_short": {
+            "24h": "24h",
+            "7d": "7d",
+            "30d": "30d"
+          },
+          "sent": "Emails delivered",
+          "failure_rate": "Failure rate",
+          "events": "Events published",
+          "skipped": "Emails skipped",
+          "vs_previous": "vs previous period",
+          "no_previous": "Nothing to compare yet",
+          "trend": "{label} over the selected range",
+          "tooltip": {
+            "sent": "{count, plural, =0 {No emails delivered} one {# email delivered} other {# emails delivered}}",
+            "events": "{count, plural, =0 {No events published} one {# event published} other {# events published}}",
+            "skipped": "{count, plural, =0 {No emails skipped} one {# email skipped} other {# emails skipped}}",
+            "failure": "{rate} failed - {failed} of {total, plural, one {# email} other {# emails}}",
+            "failure_none": "No emails sent"
+          }
+        },
+        "types": {
+          "title": "Notification types",
+          "desc": "What members get by default, and whether they can change it. Changes save on their own and only apply to members who never touched their own preferences.",
+          "empty": {
+            "title": "No notification types yet",
+            "desc": "Core and plugins register their types here. Nothing has signed up so far."
+          },
+          "read_only": "Changing type policies needs the \"Can edit\" notifications permission.",
+          "badges": {
+            "mandatory": "Always on",
+            "locked": "Locked for members",
+            "nowhere": "Not sent anywhere",
+            "no_template": "No email template",
+            "grouped": "Grouped"
+          },
+          "summary": {
+            "label": "{type} defaults",
+            "list": "Notification list",
+            "push": "Push",
+            "email": "Email",
+            "on": "On",
+            "off": "Off",
+            "available": "Available",
+            "disabled": "Disabled",
+            "unsupported": "Not supported"
+          },
+          "member_can_edit": {
+            "label": "Member can edit",
+            "desc": "Off locks this type to the defaults below. Members still get it, they just can't change it.",
+            "mandatory": "Mandatory types are always on and can't be changed by members."
+          },
+          "list": {
+            "legend": "Notification list",
+            "default_on": {
+              "label": "Enabled by default",
+              "hint": "Members get it unless they turn it off."
+            },
+            "default_off": {
+              "label": "Not enabled by default",
+              "hint": "Members get it only after turning it on."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "hint": "Nobody gets it and the option is hidden."
+            },
+            "mandatory": "Mandatory types always show in the notification list."
+          },
+          "push": {
+            "legend": "Push",
+            "available": {
+              "label": "Available",
+              "hint": "Members who allowed push can get it."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "hint": "Never sent as a push notification."
+            },
+            "note": "Push delivery isn't built yet. This choice is saved for when it is."
+          },
+          "email": {
+            "legend": "Email",
+            "default_on": {
+              "label": "Enabled by default",
+              "hint": "Members get an email unless they turn it off."
+            },
+            "default_off": {
+              "label": "Not enabled by default",
+              "hint": "Members get an email only after turning it on."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "hint": "Never sent by email and the option is hidden."
+            },
+            "unsupported": "This type has no email version, so it can't be emailed."
+          },
+          "success": "Saved",
+          "success_desc": "\"{type}\" uses the new defaults for members who never chose for themselves."
+        },
+        "reset_members": {
+          "button": "Reset all members to defaults",
+          "title": "Reset everyone's notification preferences?",
+          "desc": "{count, plural, =0 {No member has changed their notification preferences yet.} one {# member picked their own notification settings.} other {# members picked their own notification settings.}} Their list, push and email choices are replaced with the defaults on this page.",
+          "warning": "This can't be undone.",
+          "submit": "Reset all members",
+          "success": "Preferences reset",
+          "success_desc": "{count, plural, =0 {Everyone already used the defaults.} one {# member now uses the defaults.} other {# members now use the defaults.}}"
+        },
+        "settings": {
+          "button": "Settings",
+          "title": "Notification settings",
+          "desc": "Tools and actions that reach every member.",
+          "groups": {
+            "tools": "Tools",
+            "danger": "Danger zone"
+          },
+          "config_note": "Notifications are kept for {days, plural, one {# day} other {# days}}. Retention and worker batch sizes are set in the API config (vitnode.api.config.ts), under notifications."
+        },
+        "tools": {
+          "run": "Run",
+          "run_label": "Run: {label}",
+          "test_email": {
+            "label": "Send a test email to me",
+            "desc": "Goes to your own address, and only yours.",
+            "success": "Test email queued",
+            "success_desc": "Delivery #{id} goes to your own address.",
+            "not_configured": "Notification email isn't set up yet, so there's nothing to test."
+          }
+        },
+        "danger": {
+          "intro": "These affect every member at once. Each one asks before it runs.",
+          "paused_badge": "Paused",
+          "pause": {
+            "title": "Pause all notifications",
+            "desc": "Stop sending everything for a while, for example during a migration or a spam wave.",
+            "confirm_desc": "Members get nothing - no notification list, no email - until you resume. New events wait in the queue, nothing is lost.",
+            "submit": "Pause notifications",
+            "success": "Notifications paused",
+            "success_desc": "New events wait in the queue until you resume."
+          },
+          "resume": {
+            "title": "Resume all notifications",
+            "desc": "Notifications are paused. Resume to send everything that waited.",
+            "confirm_desc": "Everything queued while paused goes out over the next few worker runs.",
+            "submit": "Resume notifications",
+            "success": "Notifications resumed",
+            "success_desc": "{count, plural, =0 {Nothing was waiting.} one {# waiting event is on its way.} other {# waiting events are on their way.}}"
+          },
+          "cancel_emails": {
+            "title": "Cancel all queued emails",
+            "desc": "Drop emails that are waiting to be sent, including the next digests.",
+            "confirm_desc": "{count, plural, =0 {No emails are waiting right now.} one {# email that hasn't gone out yet is dropped, along with pending digests.} other {# emails that haven't gone out yet are dropped, along with pending digests.}} In-app notifications stay.",
+            "submit": "Cancel queued emails",
+            "success": "Email queue cleared",
+            "success_desc": "{count, plural, =0 {Nothing was waiting.} one {# queued email was dropped.} other {# queued emails were dropped.}}"
+          },
+          "read_all": {
+            "title": "Mark everything as read for everyone",
+            "desc": "Clear the unread badge for every member at once.",
+            "confirm_desc": "{count, plural, =0 {Nothing is unread right now.} one {# unread notification becomes read} other {# unread notifications become read}} and every unread badge drops to zero.",
+            "submit": "Mark all as read",
+            "success": "Everything marked as read",
+            "success_desc": "{count, plural, =0 {Nothing was unread.} one {# notification is now read.} other {# notifications are now read.}}"
+          },
+          "delete_all": {
+            "title": "Delete all notifications",
+            "desc": "Empty every member's notification list. Types, preferences and settings are kept.",
+            "confirm_desc": "{count, plural, =0 {There are no notifications to delete.} one {# notification is deleted for every member.} other {# notifications are deleted for every member.}} Emails already sent stay in people's inboxes. This can't be undone.",
+            "phrase": "delete all notifications",
+            "phrase_label": "Type <phrase></phrase> to confirm",
+            "phrase_error": "Type the phrase exactly as shown.",
+            "submit": "Delete all notifications",
+            "success": "All notifications deleted",
+            "success_desc": "{count, plural, =0 {There was nothing to delete.} one {# notification was deleted.} other {# notifications were deleted.}}"
+          }
+        }
+      },
       "integrations": {
         "title": "Integrations",
         "desc": "Status of the core services that power this instance.",
@@ -1966,7 +2457,7 @@
         "status": {
           "active": "Active",
           "inactive": "Inactive",
-          "warning": "Unreachable"
+          "warning": "Needs attention"
         },
         "ai": {
           "title": "AI",
@@ -2055,8 +2546,10 @@
           "desc": "Scheduled background tasks such as clearing expired sessions and tokens.",
           "insecure": "Using the default CRON_SECRET - set a secure one in production.",
           "not_configured": "No cron adapter configured - jobs won't run automatically.",
-          "stale": "No job has run in over 6 hours - cron may be misconfigured or stopped. Check your cron setup.",
-          "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
+          "stale": "Stopped - no job has run since <date></date>. Check your cron setup.",
+          "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}",
+          "stale_never": "Stopped - no job has run yet. Check your cron setup.",
+          "overdue": "{count, plural, one {# job is} other {# jobs are}} overdue - check the server logs."
         },
         "content_preview": {
           "title": "Content Preview",

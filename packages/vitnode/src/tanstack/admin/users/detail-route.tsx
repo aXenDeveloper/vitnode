@@ -4,6 +4,10 @@ import type { PluginRouteTranslator } from "@/routing";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
+import {
+  adminUserDevicesQueryOptions,
+  adminUserSsoQueryOptions,
+} from "@/views/admin/views/core/users/detail/user-account-query";
 import { normalizeAdminUserId } from "@/views/admin/views/core/users/detail/user-query";
 
 import type { AdminScreenContext } from "../screen";
@@ -14,6 +18,8 @@ import { adminUserQuery } from "./query";
 
 export const ADMIN_USER_NAMESPACES = [
   "admin.user",
+  "core.auth.settings.notifications",
+  "core.auth.settings.sso",
   "core.global",
   "core.search",
 ] as const;
@@ -48,10 +54,25 @@ export const loadAdminUserRoute = async ({
 
   const adminUserId = adminIdentityOf(adminAccess);
 
-  const user = await queryClient.query({
-    ...adminUserQuery({ adminUserId, id }),
-    staleTime: "static",
-  });
+  const userId = Number(id);
+  const [user] = await Promise.all([
+    queryClient.query({
+      ...adminUserQuery({ adminUserId, id }),
+      staleTime: "static",
+    }),
+    queryClient
+      .query({
+        ...adminUserDevicesQueryOptions({ adminUserId, userId }),
+        staleTime: "static",
+      })
+      .catch(() => null),
+    queryClient
+      .query({
+        ...adminUserSsoQueryOptions({ adminUserId, userId }),
+        staleTime: "static",
+      })
+      .catch(() => null),
+  ]);
 
   return {
     adminUserId,

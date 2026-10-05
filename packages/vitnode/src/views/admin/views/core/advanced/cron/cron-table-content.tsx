@@ -1,12 +1,49 @@
+import { CircleCheckIcon, ClockIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { ContentDataTable } from "@/components/table/content";
+import { Badge } from "@/components/ui/badge";
 
 import type { CronJobRow, CronPage } from "./cron-query";
 import type { RunCron } from "./run-action/run-cron";
 
 import { RunActionCronTable } from "./run-action/run-action";
+
+type CronJobStatus = "on_schedule" | "overdue" | "waiting";
+
+const jobStatus = (row: CronJobRow): CronJobStatus => {
+  if (row.overdue) return "overdue";
+  if (!row.lastRun) return "waiting";
+
+  return "on_schedule";
+};
+
+const CronStatusBadge = ({ status }: { status: CronJobStatus }) => {
+  const t = useTranslations("admin.advanced.cron.list.status");
+
+  if (status === "on_schedule") {
+    return (
+      <Badge className="border-success/50" variant="success">
+        <CircleCheckIcon /> {t(status)}
+      </Badge>
+    );
+  }
+
+  if (status === "overdue") {
+    return (
+      <Badge className="border-warn/50" variant="warning">
+        <TriangleAlertIcon /> {t(status)}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="secondary">
+      <ClockIcon /> {t(status)}
+    </Badge>
+  );
+};
 
 export const CronTableContent = ({
   data,
@@ -35,11 +72,31 @@ export const CronTableContent = ({
             </div>
           ),
         },
-        { accessorKey: "pluginId", header: t("list.pluginId") },
-        { accessorKey: "module", header: t("list.module") },
+        {
+          id: "status",
+          header: t("list.status.title"),
+          cell: ({ row }) => <CronStatusBadge status={jobStatus(row)} />,
+        },
+        {
+          accessorKey: "pluginId",
+          header: t("list.plugin"),
+          cell: ({ row }) => (
+            <div className="flex flex-col">
+              <span>{row.pluginId}</span>
+              <span className="text-muted-foreground text-sm">
+                {row.module}
+              </span>
+            </div>
+          ),
+        },
         {
           accessorKey: "schedule",
           header: t("list.schedule"),
+          cell: ({ row }) => (
+            <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs whitespace-nowrap">
+              {row.schedule}
+            </code>
+          ),
         },
         {
           accessorKey: "lastRun",
@@ -82,6 +139,8 @@ export const CronTableContent = ({
         },
       }}
       pageInfo={data.pageInfo}
+      search
+      searchPlaceholder={t("list.search")}
     />
   );
 };

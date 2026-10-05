@@ -1,0 +1,18 @@
+{
+  "title": "Notifications",
+  "description": "Persistent inbox, unread counts, realtime updates, email and digests for every plugin",
+  "icon": "Bell",
+  "pages": [
+    "index",
+    "notification-types",
+    "publishing",
+    "inbox-and-realtime",
+    "preferences",
+    "email-and-digests",
+    "---Operate---",
+    "queue-and-scale",
+    "admincp",
+    "---Guides---",
+    "migration-and-troubleshooting"
+  ]
+}

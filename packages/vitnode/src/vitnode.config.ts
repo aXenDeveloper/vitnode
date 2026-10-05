@@ -3,6 +3,7 @@ import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
 import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
+import type { NotificationWorkerSettings } from "./api/lib/notifications/preferences";
 import type { PasskeysConfig } from "./api/lib/passkey-config";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { AIConfig } from "./api/models/ai";
@@ -116,6 +117,7 @@ export interface VitNodeApiConfig {
    */
   maxBodySize?: number;
   metadata: VitNodeMetadata;
+  notifications?: Partial<NotificationWorkerSettings>;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
 

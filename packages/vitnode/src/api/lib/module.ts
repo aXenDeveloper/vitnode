@@ -6,6 +6,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import type { SearchIndexer } from "../models/search";
 import type { BuildCronReturn } from "./cron";
 import type { BuildEventListenerReturn } from "./events";
+import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { BuildQueueTaskReturn } from "./queue";
 import type { Route } from "./route";
 import type { BuildWebSocketReturn } from "./websocket";
@@ -28,6 +29,7 @@ export interface BaseBuildModuleReturn<
   hono: OpenAPIHono;
   modules?: BaseBuildModuleReturn<P>[];
   name: M;
+  notificationTypes?: AnyNotificationTypeDefinition[];
   pluginId: P;
   publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks: BuildQueueTaskReturn[];
@@ -57,6 +59,7 @@ export function buildModule<
   modules,
   contentModels,
   contentTypes,
+  notificationTypes,
   publicContentTypes,
   cronJobs = [],
   events = [],
@@ -70,6 +73,7 @@ export function buildModule<
   events?: BuildEventListenerReturn[];
   modules?: Modules;
   name: M;
+  notificationTypes?: AnyNotificationTypeDefinition[];
   pluginId: P;
   publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks?: BuildQueueTaskReturn[];
@@ -101,6 +105,7 @@ export function buildModule<
     contentTypes,
     cronJobs,
     events,
+    notificationTypes,
     publicContentTypes,
     queueTasks,
     searchIndexers,

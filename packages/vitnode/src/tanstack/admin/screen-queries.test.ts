@@ -21,6 +21,7 @@ import {
   adminFilesQueryRoot,
 } from "@/views/admin/views/core/system/files/files-query";
 import { integrationsQueryKey } from "@/views/admin/views/core/system/integrations/integrations-query";
+import { notificationsAdminQueryRoot } from "@/views/admin/views/core/system/notifications/notifications-query";
 
 import { ADMIN_SESSION_QUERY_KEY } from "./state";
 
@@ -39,6 +40,7 @@ const ROOTS = {
   "debug-queue": debugQueueQueryKey,
   files: adminFilesQueryRoot,
   integrations: integrationsQueryKey,
+  notifications: notificationsAdminQueryRoot,
   queue: queueQueryRoot,
   "search-index": searchIndexQueryKey,
 };
