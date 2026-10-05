@@ -2017,6 +2017,8 @@
           "password": "Password",
           "passwordSet": "Password set",
           "passwordNotSet": "No password",
+          "passwordDisabled": "Password sign-in is turned off on this site.",
+          "passwordLoadError": "The password status couldn't be loaded. Refresh to try again.",
           "passwordChange": "Change",
           "passwordAdd": "Set password",
           "passwordTitle": "Set a new password",

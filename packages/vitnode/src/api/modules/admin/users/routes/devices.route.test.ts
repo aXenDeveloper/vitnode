@@ -2,7 +2,7 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
@@ -127,11 +127,13 @@ const harness = async (editor: PermissionsStaffArgs[]) => {
     { cached: true },
   );
 
+  const emit = vi.fn(async () => Promise.resolve(undefined));
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {
     c.set("admin", { user: EDITOR } as unknown as Context["var"]["admin"]);
     c.set("cache", cache);
     c.set("db", memory.db as unknown as Context["var"]["db"]);
+    c.set("events", { emit } as unknown as Context["var"]["events"]);
     await next();
   });
   app.route(
@@ -172,7 +174,7 @@ const harness = async (editor: PermissionsStaffArgs[]) => {
   const request = async (path: string, method = "GET") =>
     await app.request(path, { method });
 
-  return { isCached, request, sessionsOf };
+  return { emit, isCached, request, sessionsOf };
 };
 
 describe("GET /admin/users/{id}/devices", () => {
@@ -228,6 +230,11 @@ describe("DELETE /admin/users/{id}/devices/{publicId}", () => {
     });
     expect(h.sessionsOf(MODERATOR_ID).user).toEqual([PHONE.id]);
     expect((await h.isCached()).user).toBe(false);
+    expect(h.emit).toHaveBeenCalledWith("user.sessions.revoked", {
+      deviceId: PHONE.id,
+      sessions: 2,
+      userId: TARGET_ID,
+    });
   });
 
   it("returns 404 for a device the user has no session on", async () => {
@@ -265,6 +272,7 @@ describe("DELETE /admin/users/{id}/devices/{publicId}", () => {
 
     expect(response.status).toBe(403);
     expect(h.sessionsOf(TARGET_ID).user).toContain(PHONE.id);
+    expect(h.emit).not.toHaveBeenCalled();
   });
 
   it("refuses a staff target without users:can_edit_admin", async () => {
@@ -303,6 +311,11 @@ describe("DELETE /admin/users/{id}/devices", () => {
     expect(h.sessionsOf(TARGET_ID)).toEqual({ admin: [], user: [] });
     expect(h.sessionsOf(OTHER_ID).user).toEqual([TABLET.id]);
     expect(await h.isCached()).toEqual({ admin: false, user: false });
+    expect(h.emit).toHaveBeenCalledWith("user.sessions.revoked", {
+      deviceId: null,
+      sessions: 5,
+      userId: TARGET_ID,
+    });
   });
 
   it("returns 404 for an unknown user", async () => {

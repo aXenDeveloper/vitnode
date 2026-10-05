@@ -983,6 +983,8 @@
           "password": "Hasło",
           "passwordSet": "Hasło ustawione",
           "passwordNotSet": "Brak hasła",
+          "passwordDisabled": "Logowanie hasłem jest wyłączone w tej witrynie.",
+          "passwordLoadError": "Nie udało się wczytać stanu hasła. Odśwież, aby spróbować ponownie.",
           "passwordChange": "Zmień",
           "passwordAdd": "Ustaw hasło",
           "passwordTitle": "Ustaw nowe hasło",

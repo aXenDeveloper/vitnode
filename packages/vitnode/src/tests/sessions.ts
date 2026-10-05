@@ -2,6 +2,7 @@ import type { Table } from "drizzle-orm";
 import type { Context, Next } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { vi } from "vitest";
 
 import type {
   EnvVariablesVitNode,
@@ -175,6 +176,7 @@ export const createSessionWorld = async ({
     };
   };
 
+  const emit = vi.fn(async () => Promise.resolve(undefined));
   const app = new OpenAPIHono<EnvVitNode>();
   app.use("*", async (c: Context<EnvVitNode>, next: Next) => {
     c.set("core", {
@@ -182,6 +184,7 @@ export const createSessionWorld = async ({
     } as unknown as EnvVariablesVitNode["core"]);
     c.set("db", db as unknown as EnvVariablesVitNode["db"]);
     c.set("cache", cache);
+    c.set("events", { emit } as unknown as EnvVariablesVitNode["events"]);
     c.set("ipAddress", "203.0.113.7");
     c.set("user", await new SessionModel(c).getUser());
     await next();
@@ -219,5 +222,5 @@ export const createSessionWorld = async ({
     };
   };
 
-  return { app, cache, isCached, probe, rows, rowsFor };
+  return { app, cache, emit, isCached, probe, rows, rowsFor };
 };

@@ -2,7 +2,7 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import type { NotificationTypePolicy } from "@/api/lib/notifications/preferences";
@@ -147,6 +147,7 @@ const harness = async ({
     ].map(definition => ({ definition, pluginId: "@acme/blog" })),
   );
 
+  const emit = vi.fn(async () => Promise.resolve(undefined));
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {
     c.set("admin", { user: EDITOR } as unknown as Context["var"]["admin"]);
@@ -156,6 +157,7 @@ const harness = async ({
       notifications: registry,
     } as unknown as EnvVariablesVitNode["core"]);
     c.set("db", memory.db as unknown as Context["var"]["db"]);
+    c.set("events", { emit } as unknown as Context["var"]["events"]);
     c.set("i18n", {
       getTranslator: async () => await Promise.resolve(translator),
       resolveSupportedLocale: () => "en",
@@ -180,7 +182,7 @@ const harness = async ({
     memory.rows(core_notification_user_state).find(row => row.userId === userId)
       ?.preferences;
 
-  return { preferencesOf, put, request: app.request.bind(app) };
+  return { emit, preferencesOf, put, request: app.request.bind(app) };
 };
 
 interface PreferencesBody {
@@ -273,6 +275,10 @@ describe("PUT /admin/users/{id}/notification-preferences", () => {
     });
     expect(h.preferencesOf(EDITOR.id)).toEqual({
       [COMMENT]: { email: "none" },
+    });
+    expect(h.emit).toHaveBeenCalledWith("notifications.preferences_updated", {
+      typeIds: [COMMENT],
+      userId: TARGET_ID,
     });
   });
 

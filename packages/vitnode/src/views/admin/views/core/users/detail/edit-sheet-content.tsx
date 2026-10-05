@@ -1,9 +1,12 @@
+import React from "react";
+
 import {
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
 
 export const EditSheetContent = ({
   children,
@@ -20,7 +23,15 @@ export const EditSheetContent = ({
       <SheetDescription className="text-pretty">{description}</SheetDescription>
     </SheetHeader>
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
-      {children}
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center">
+            <Spinner size="xl" />
+          </div>
+        }
+      >
+        {children}
+      </React.Suspense>
     </div>
   </SheetContent>
 );

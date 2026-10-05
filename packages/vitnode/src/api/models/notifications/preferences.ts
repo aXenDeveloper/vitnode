@@ -205,4 +205,9 @@ export const updateNotificationPreferences = async (
       })
       .where(eq(core_notification_user_state.userId, userId));
   });
+
+  await c.get("events").emit("notifications.preferences_updated", {
+    typeIds: Object.keys(patch),
+    userId,
+  });
 };

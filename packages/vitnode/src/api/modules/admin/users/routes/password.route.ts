@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
+import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { buildRoute } from "@/api/lib/route";
 import { PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
@@ -47,7 +48,7 @@ export const setPasswordUserAdminRoute = buildRoute({
         description: "Invalid password",
       },
       403: {
-        description: "Access Denied",
+        description: "Access Denied, or password sign-in is disabled",
       },
       404: {
         content: {
@@ -60,6 +61,7 @@ export const setPasswordUserAdminRoute = buildRoute({
     },
   },
   handler: async c => {
+    assertPasswordSignInEnabled(c);
     const { id } = c.req.valid("param");
     const { password } = c.req.valid("json");
     const userId = Number(id);
@@ -86,6 +88,7 @@ export const setPasswordUserAdminRoute = buildRoute({
       .update(core_users)
       .set({ password: hashedPassword })
       .where(eq(core_users.id, user.id));
+    await c.get("events").emit("user.password.updated", { userId: user.id });
 
     await revokeSessions(c, { userId: user.id });
 

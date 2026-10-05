@@ -18,6 +18,7 @@ import {
 import { UserConnectedAccountsCard } from "./user-connected-accounts";
 import { UserDevicesCard } from "./user-devices";
 import { UserNotificationsPanel } from "./user-notifications";
+import { UserSecurityPanel } from "./user-security";
 
 const ADMIN_ID = 1;
 const USER_ID = 7;
@@ -36,7 +37,10 @@ const device = (publicId: string, browser: string): AdminUserDevice => ({
   sessionKinds: ["user"],
 });
 
-const sso = (hasPassword: boolean): SsoConnectionsApi => ({
+const sso = (
+  hasPassword: boolean,
+  signIn: Partial<SsoConnectionsApi["signIn"]> = {},
+): SsoConnectionsApi => ({
   providers: [
     {
       available: true,
@@ -57,6 +61,7 @@ const sso = (hasPassword: boolean): SsoConnectionsApi => ({
     passkeys: 0,
     passkeysEnabled: true,
     passwordEnabled: true,
+    ...signIn,
   },
   sources: { avatar: null, firstName: null, lastName: null },
 });
@@ -256,6 +261,62 @@ describe("UserConnectedAccountsCard", () => {
     const request = requestOf(0);
     expect(request.method).toBe("DELETE");
     expect(request.url).toContain(`/${USER_ID}/sso/github`);
+  });
+});
+
+describe("UserSecurityPanel", () => {
+  const panel = (
+    <UserSecurityPanel adminUserId={ADMIN_ID} canEdit user={user} />
+  );
+
+  it("reports a failed sign-in lookup instead of loading passkeys forever", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 500 }));
+    mount(panel, () => {});
+
+    expect(
+      await screen.findByText("admin.user.show.security.passkeysLoadError"),
+    ).not.toBeNull();
+    expect(
+      screen.getByText("admin.user.show.security.passwordLoadError"),
+    ).not.toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "admin.user.show.security.passwordAdd",
+      }),
+    ).toBeNull();
+  });
+
+  it("offers no password reset while password sign-in is turned off", async () => {
+    mount(panel, client => {
+      client.setQueryData(
+        adminUserSsoQueryKey(KEY),
+        sso(false, { passkeysEnabled: false, passwordEnabled: false }),
+      );
+    });
+
+    expect(
+      await screen.findByText("admin.user.show.security.passwordDisabled"),
+    ).not.toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "admin.user.show.security.passwordAdd",
+      }),
+    ).toBeNull();
+  });
+
+  it("offers a password reset while password sign-in is on", async () => {
+    mount(panel, client => {
+      client.setQueryData(
+        adminUserSsoQueryKey(KEY),
+        sso(false, { passkeysEnabled: false }),
+      );
+    });
+
+    expect(
+      await screen.findByRole("button", {
+        name: "admin.user.show.security.passwordAdd",
+      }),
+    ).not.toBeNull();
   });
 });
 

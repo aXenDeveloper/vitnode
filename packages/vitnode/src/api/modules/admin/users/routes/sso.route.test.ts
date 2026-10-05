@@ -316,6 +316,11 @@ describe("PUT /admin/users/{id}/sso/preferences", () => {
       { field: "firstName", providerId: "google", userId: TARGET_ID },
     ]);
     expect(h.sso.connections[0]?.syncOnSignIn).toBe(true);
+    expect(h.emit).toHaveBeenCalledWith("user.sso.preferences_updated", {
+      sources: { firstName: "google" },
+      sync: { google: true },
+      userId: TARGET_ID,
+    });
   });
 
   it("rejects a provider the target user is not connected to", async () => {
@@ -329,6 +334,7 @@ describe("PUT /admin/users/{id}/sso/preferences", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "invalid_source" });
+    expect(h.emit).not.toHaveBeenCalled();
   });
 
   it("rejects a field the provider does not supply", async () => {

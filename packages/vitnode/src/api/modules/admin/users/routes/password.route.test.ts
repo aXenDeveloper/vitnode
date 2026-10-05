@@ -2,9 +2,10 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
 import { PasswordModel } from "@/api/models/password";
 import {
@@ -45,9 +46,11 @@ const session = (id: number, userId: number, deviceId: number) => ({
 
 const harness = async ({
   editor,
+  passwordEnabled = true,
   targetIsModerator = false,
 }: {
   editor: PermissionsStaffArgs[];
+  passwordEnabled?: boolean;
   targetIsModerator?: boolean;
 }) => {
   const cache = createTestCache();
@@ -94,11 +97,16 @@ const harness = async ({
     cache.setSystem(adminSessionCacheKey("token-4", 10), { id: TARGET_ID }),
   ]);
 
+  const emit = vi.fn(async () => Promise.resolve(undefined));
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {
     c.set("admin", { user: EDITOR } as unknown as Context["var"]["admin"]);
     c.set("cache", cache);
+    c.set("core", {
+      authorization: { password: { enabled: passwordEnabled } },
+    } as unknown as EnvVariablesVitNode["core"]);
     c.set("db", memory.db as unknown as Context["var"]["db"]);
+    c.set("events", { emit } as unknown as Context["var"]["events"]);
     await next();
   });
   app.openapi(
@@ -122,7 +130,14 @@ const harness = async ({
   const adminSessionUserIds = () =>
     memory.rows(core_admin_sessions).map(row => row.userId);
 
-  return { adminSessionUserIds, cache, put, sessionUserIds, storedHash };
+  return {
+    adminSessionUserIds,
+    cache,
+    emit,
+    put,
+    sessionUserIds,
+    storedHash,
+  };
 };
 
 describe("PUT /admin/users/{id}/password", () => {
@@ -153,6 +168,33 @@ describe("PUT /admin/users/{id}/password", () => {
     expect(
       await h.cache.getSystem(adminSessionCacheKey("token-4", 10)),
     ).toBeNull();
+  });
+
+  it("emits the password change and the sign-out of every device", async () => {
+    const h = await harness({ editor: [CAN_EDIT] });
+
+    await h.put(TARGET_ID, NEW_PASSWORD);
+
+    expect(h.emit).toHaveBeenCalledWith("user.password.updated", {
+      userId: TARGET_ID,
+    });
+    expect(h.emit).toHaveBeenCalledWith("user.sessions.revoked", {
+      deviceId: null,
+      sessions: 3,
+      userId: TARGET_ID,
+    });
+  });
+
+  it("refuses while password sign-in is disabled and changes nothing", async () => {
+    const h = await harness({ editor: [CAN_EDIT], passwordEnabled: false });
+
+    const response = await h.put(TARGET_ID, NEW_PASSWORD);
+
+    expect(response.status).toBe(403);
+    expect(h.storedHash(TARGET_ID)).toBe(OLD_HASH);
+    expect(h.sessionUserIds()).toHaveLength(3);
+    expect(h.adminSessionUserIds()).toEqual([TARGET_ID]);
+    expect(h.emit).not.toHaveBeenCalled();
   });
 
   it("refuses an editor without users:can_edit", async () => {

@@ -9,19 +9,18 @@ import {
   PencilIcon,
   Trash2Icon,
 } from "lucide-react";
+import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-import { z } from "zod";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
+import type { SsoConnectionsApi } from "@/views/auth/settings/sso/sso-connections-query";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
-import { AutoForm } from "@/components/form/auto-form";
-import { AutoFormInput } from "@/components/form/fields/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Dialog, DialogTrigger, useDialog } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -29,18 +28,13 @@ import {
   TooltipTrigger,
   TooltipWithContent,
 } from "@/components/ui/tooltip";
-import { PASSKEY_NAME_MAX_LENGTH } from "@/lib/passkey";
 
 import type { AdminUserPasskey } from "./user-account-query";
 import type { AdminUserDetail } from "./user-query";
 
 import { EditSheetContent } from "./edit-sheet-content";
 import { useFailureToast } from "./use-failure-toast";
-import {
-  deleteAdminUserPasskey,
-  renameAdminUserPasskey,
-  setAdminUserPassword,
-} from "./user-account-mutations";
+import { deleteAdminUserPasskey } from "./user-account-mutations";
 import {
   adminUserPasskeysQueryOptions,
   adminUserSsoQueryOptions,
@@ -49,136 +43,17 @@ import {
 import { DetailCardTitle } from "./user-profile-cards";
 import { adminUserQueryKey } from "./user-query";
 
-const PASSWORD_MIN_LENGTH = 8;
+const PasswordForm = React.lazy(async () =>
+  import("./user-security-forms").then(module => ({
+    default: module.PasswordForm,
+  })),
+);
 
-const PasswordForm = ({
-  onSaved,
-  user,
-}: {
-  onSaved: () => Promise<void>;
-  user: AdminUserDetail;
-}) => {
-  const t = useTranslations("admin.user.show.security");
-  const { setIsDirty, setOpen } = useDialog();
-  const showFailure = useFailureToast();
-  const formSchema = z
-    .object({
-      password: z
-        .string()
-        .min(
-          PASSWORD_MIN_LENGTH,
-          t("passwordMin", { min: PASSWORD_MIN_LENGTH }),
-        )
-        .default(""),
-      confirm: z.string().default(""),
-    })
-    .refine(values => values.password === values.confirm, {
-      message: t("passwordMismatch"),
-      path: ["confirm"],
-    });
-
-  return (
-    <AutoForm
-      fields={[
-        {
-          id: "password",
-          component: props => (
-            <AutoFormInput
-              {...props}
-              autoComplete="new-password"
-              label={t("newPassword")}
-              type="password"
-            />
-          ),
-        },
-        {
-          id: "confirm",
-          component: props => (
-            <AutoFormInput
-              {...props}
-              autoComplete="new-password"
-              label={t("confirmPassword")}
-              type="password"
-            />
-          ),
-        },
-      ]}
-      formSchema={formSchema}
-      onSubmit={async values => {
-        const result = await setAdminUserPassword(user.id, values.password);
-        if ("error" in result) {
-          showFailure();
-
-          return;
-        }
-        await onSaved();
-        setIsDirty?.(false);
-        setOpen?.(false);
-        toast.success(t("passwordSaved"), {
-          description: t("passwordSavedDesc", { name: user.name }),
-        });
-      }}
-      submitButtonProps={{ children: t("passwordSubmit") }}
-    />
-  );
-};
-
-const RenamePasskeyForm = ({
-  onSaved,
-  passkey,
-  user,
-}: {
-  onSaved: () => Promise<void>;
-  passkey: AdminUserPasskey;
-  user: AdminUserDetail;
-}) => {
-  const t = useTranslations("admin.user.show.security");
-  const { setIsDirty, setOpen } = useDialog();
-  const showFailure = useFailureToast();
-  const formSchema = z.object({
-    name: z
-      .string()
-      .trim()
-      .min(1)
-      .max(PASSKEY_NAME_MAX_LENGTH)
-      .default(passkey.name),
-  });
-
-  return (
-    <AutoForm
-      fields={[
-        {
-          id: "name",
-          component: props => (
-            <AutoFormInput
-              {...props}
-              autoComplete="off"
-              label={t("passkeyName")}
-            />
-          ),
-        },
-      ]}
-      formSchema={formSchema}
-      onSubmit={async values => {
-        const result = await renameAdminUserPasskey(
-          user.id,
-          passkey.id,
-          values.name,
-        );
-        if ("error" in result) {
-          showFailure();
-
-          return;
-        }
-        await onSaved();
-        setIsDirty?.(false);
-        setOpen?.(false);
-        toast.success(t("passkeyRenamed"));
-      }}
-      submitButtonProps={{ children: t("passkeyRenameSubmit") }}
-    />
-  );
-};
+const RenamePasskeyForm = React.lazy(async () =>
+  import("./user-security-forms").then(module => ({
+    default: module.RenamePasskeyForm,
+  })),
+);
 
 const SubHeading = ({
   children,
@@ -334,18 +209,17 @@ const PasskeyRow = ({
 
 const PasswordSection = ({
   canEdit,
-  hasPassword,
-  isPending,
   onSaved,
+  sso,
   user,
 }: {
   canEdit: boolean;
-  hasPassword: boolean;
-  isPending: boolean;
   onSaved: () => Promise<void>;
+  sso: UseQueryResult<SsoConnectionsApi>;
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show.security");
+  const hasPassword = sso.data?.signIn.hasPassword === true;
 
   return (
     <section className="flex flex-col gap-2">
@@ -355,15 +229,23 @@ const PasswordSection = ({
           <LockIcon aria-hidden className="size-4" />
         </span>
         <span className="text-foreground flex-1 text-sm">
-          {isPending ? (
+          {sso.isPending ? (
             <Skeleton className="h-4 w-32" />
+          ) : sso.isError ? (
+            <span className="text-muted-foreground">
+              {t("passwordLoadError")}
+            </span>
+          ) : !sso.data.signIn.passwordEnabled ? (
+            <span className="text-muted-foreground">
+              {t("passwordDisabled")}
+            </span>
           ) : hasPassword ? (
             t("passwordSet")
           ) : (
             t("passwordNotSet")
           )}
         </span>
-        {canEdit && (
+        {canEdit && sso.data?.signIn.passwordEnabled === true && (
           <Dialog>
             <DialogTrigger render={<Button size="xs" variant="outline" />}>
               {hasPassword ? t("passwordChange") : t("passwordAdd")}
@@ -384,6 +266,7 @@ const PasswordSection = ({
 const PasskeysSection = ({
   canEdit,
   enabled,
+  isCapabilityError,
   isLastMethod,
   onSaved,
   query,
@@ -391,6 +274,7 @@ const PasskeysSection = ({
 }: {
   canEdit: boolean;
   enabled: boolean;
+  isCapabilityError: boolean;
   isLastMethod: boolean;
   onSaved: () => Promise<void>;
   query: UseQueryResult<AdminUserPasskey[]>;
@@ -405,15 +289,15 @@ const PasskeysSection = ({
         <p className="text-muted-foreground text-sm leading-relaxed">
           {t("passkeysDisabled")}
         </p>
+      ) : isCapabilityError || query.isError ? (
+        <p className="text-muted-foreground text-sm">
+          {t("passkeysLoadError")}
+        </p>
       ) : query.isPending ? (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>
-      ) : query.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {t("passkeysLoadError")}
-        </p>
       ) : query.data.length === 0 ? (
         <p className="text-muted-foreground text-sm leading-relaxed">
           {t("passkeysEmpty")}
@@ -474,14 +358,14 @@ export const UserSecurityPanel = ({
       <CardContent className="flex flex-col gap-6">
         <PasswordSection
           canEdit={canEdit}
-          hasPassword={sso.data?.signIn.hasPassword === true}
-          isPending={sso.isPending}
           onSaved={refresh}
+          sso={sso}
           user={user}
         />
         <PasskeysSection
           canEdit={canEdit}
           enabled={!sso.isSuccess || passkeysEnabled}
+          isCapabilityError={sso.isError}
           isLastMethod={isLastMethod}
           onSaved={refresh}
           query={passkeys}
