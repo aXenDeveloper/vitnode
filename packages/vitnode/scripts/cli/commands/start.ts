@@ -68,10 +68,11 @@ export const runStartCommand = async (
     });
   }
 
+  const command = runtimeExecutable(runtime);
   const group = new ProcessGroup();
   const child = group.spawn({
     args: [entry],
-    command: runtimeExecutable(runtime),
+    command,
     cwd: project.root,
     env: {
       ...env,
@@ -82,8 +83,13 @@ export const runStartCommand = async (
   });
 
   let exitCode: null | number = null;
+  let spawnError = null as Error | null;
   child.once("exit", code => {
     exitCode = code ?? 1;
+  });
+  child.once("error", error => {
+    spawnError = error;
+    exitCode = 1;
   });
 
   const ready = await waitForPort({
@@ -91,6 +97,19 @@ export const runStartCommand = async (
     isAlive: () => exitCode === null,
     port,
   });
+
+  if (spawnError !== null) {
+    await group.stop();
+    throw new RuntimeError(
+      `Could not start the server with ${command}: ${spawnError.message}`,
+      {
+        hint:
+          runtime === "bun"
+            ? "This project runs on Bun - install it on this host, or start the build with Node."
+            : undefined,
+      },
+    );
+  }
 
   if (!ready || exitCode !== null) {
     await group.stop();

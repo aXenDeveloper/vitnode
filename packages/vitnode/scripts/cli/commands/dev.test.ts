@@ -140,7 +140,7 @@ describe("vitnode dev in an API app", () => {
   });
 
   const start = async (
-    options: { port?: string },
+    options: { host?: boolean | string; port?: string },
     env: Record<string, string> = {},
   ) => {
     const group = fakeGroup();
@@ -158,6 +158,20 @@ describe("vitnode dev in an API app", () => {
 
     expect(spawned.env?.PORT).toBe("9000");
     expect(output).toMatch(/API\s+http:\/\/localhost:9000\/api/);
+  });
+
+  it("passes --host to the API as HOST", async () => {
+    const { output, spawned } = await start({ host: "127.0.0.1" });
+
+    expect(spawned.env?.HOST).toBe("127.0.0.1");
+    expect(output).toMatch(/API\s+http:\/\/127\.0\.0\.1:8000\/api/);
+  });
+
+  it("treats a bare --host as every address", async () => {
+    const { output, spawned } = await start({ host: true });
+
+    expect(spawned.env?.HOST).toBe("0.0.0.0");
+    expect(output).toMatch(/API\s+http:\/\/localhost:8000\/api/);
   });
 
   it("runs a Node project through tsx watch", async () => {

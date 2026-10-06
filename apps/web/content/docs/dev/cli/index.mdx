@@ -1,13 +1,12 @@
 ---
 title: VitNode CLI
-description: The vitnode command runs, builds and starts your app, creates and validates plugins, and manages database migrations.
+description: The vitnode command runs, builds and starts VitNode apps, validates plugins, manages database migrations and translations.
 icon: SquareTerminal
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
-import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-`vitnode` is the command you run VitNode with. It ships with `@vitnode/core`, so every VitNode app and plugin already has it.
+`vitnode` is the command-line tool for VitNode projects. It ships with `@vitnode/core`, so every VitNode app and plugin already has it. You do not install anything extra.
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run the VitNode CLI">
 
@@ -25,167 +24,59 @@ npx vitnode dev
 
 </Tabs>
 
-Generated projects call it from their `package.json` scripts, so `pnpm dev`, `pnpm build` and `pnpm start` already go through it.
+Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
 
 ## Commands
 
-| Command                   | What it does                                     |
-| ------------------------- | ------------------------------------------------ |
-| `vitnode dev`             | Start the development environment                |
-| `vitnode build`           | Build for production and report bundle sizes     |
-| `vitnode start`           | Start the production server                      |
-| `vitnode plugin list`     | List the plugins your app uses                   |
-| `vitnode plugin validate` | Check plugins the way your app will load them    |
-| `vitnode db generate`     | Generate a migration from schema changes         |
-| `vitnode db migrate`      | Apply pending migrations                         |
-| `vitnode db push`         | Push the schema directly (development only)      |
-| `vitnode db status`       | Show the connection and migration status         |
-| `vitnode i18n check`      | Find missing, unknown and unloaded translations  |
-| `vitnode i18n create`     | Add a language                                   |
-| `vitnode i18n delete`     | Remove a language                                |
-| `vitnode i18n update`     | Sync translation files with the default language |
-| `vitnode i18n update-ai`  | Translate missing strings with an AI model       |
+| Command                   | What it does                                   | Guide                                   |
+| ------------------------- | ---------------------------------------------- | --------------------------------------- |
+| `vitnode dev`             | Start the development environment              | [Run in development](/docs/dev/cli/dev) |
+| `vitnode build`           | Build for production and report bundle sizes   | [Build and start](/docs/dev/cli/build)  |
+| `vitnode start`           | Start the production server                    | [Build and start](/docs/dev/cli/build)  |
+| `vitnode plugin list`     | List the plugins your app uses                 | [Plugins](/docs/dev/cli/plugins)        |
+| `vitnode plugin validate` | Check plugins the way your app will load them  | [Plugins](/docs/dev/cli/plugins)        |
+| `vitnode db generate`     | Write a migration for schema changes           | [Database](/docs/dev/cli/database)      |
+| `vitnode db migrate`      | Apply pending migrations and seed initial data | [Database](/docs/dev/cli/database)      |
+| `vitnode db status`       | Show the connection and what is pending        | [Database](/docs/dev/cli/database)      |
+| `vitnode db push`         | Sync the schema directly, in development only  | [Database](/docs/dev/cli/database)      |
+| `vitnode i18n <command>`  | Add, check, sync and translate languages       | [Internationalization](/docs/dev/i18n)  |
 
-Create plugins with `create-vitnode-app --plugin` - see [Create a plugin](/docs/dev/plugins/create).
+To create a plugin, use the project generator: `create-vitnode-app --plugin`. See [Create a plugin](/docs/dev/plugins/create).
 
-Run `vitnode` alone for a short overview, or `vitnode <command> --help` for a command's options.
+Run `vitnode` alone (or `vitnode --help`) for a short overview, `vitnode <command> --help` for a command's options, and `vitnode --version` for the installed `@vitnode/core` version.
 
-## What the folder decides
+## How the CLI picks your project
 
-`dev`, `build` and `start` work on the project in the current folder:
+`dev`, `build` and `start` act on the project in the current folder. The CLI walks up to the nearest `package.json` and checks, in this order:
 
-| Folder                                            | `vitnode dev`                        | `vitnode build`                         | `vitnode start`            |
-| ------------------------------------------------- | ------------------------------------ | --------------------------------------- | -------------------------- |
-| App (`vite.config.ts`)                            | Database bootstrap, then Vite        | Vite production build + size report     | `.output/server/index.mjs` |
-| API app on Node (`src/vitnode.api.config.ts`)     | Database bootstrap, then `tsx watch` | `tsc` + `tsc-alias`                     | `dist/index.js`            |
-| API app on Bun                                    | Database bootstrap, then `bun --hot` | Nothing to compile                      | `bun src/index.ts`         |
-| Plugin package (`tsconfig.build.json` + `.swcrc`) | Compilers in watch mode              | Types, JavaScript and aliases to `dist` | -                          |
+| The folder has                         | It is a        |
+| -------------------------------------- | -------------- |
+| `vite.config.ts` (or `.mts`, `.js`...) | App            |
+| `src/vitnode.api.config.ts`            | API app        |
+| `tsconfig.build.json` and `.swcrc`     | Plugin package |
 
-An API app runs on Bun when Bun runs the script (`bun run dev`), or when the project or its workspace uses Bun (`packageManager: "bun@..."` or a `bun.lock`). Otherwise it runs on Node.
+Run it at a monorepo root and the CLI stops with a hint to `cd` into your app, such as `apps/web`, instead of guessing which project you meant.
 
-The database bootstrap runs only in an app that owns the schema - one with a `drizzle.config.ts`. It generates a migration for schema changes, applies pending migrations and seeds initial data, just like `vitnode db:prepare`.
+## Works with your tools, not instead of them
 
-## Start development
+The CLI drives the tools your project already uses: Vite through its JavaScript API, TanStack Start through your `vite.config.ts`, and your project's own `drizzle-kit`. You can still run `vite` or `drizzle-kit` directly. `vitnode` adds the database bootstrap, plugin checks and readable output around them.
 
-```bash
-vitnode dev
-```
-
-```txt
-◆ VitNode
-  Development
-
-  ✓ Loading configuration  31ms
-  ✓ Database connected  up to date
-  ✓ 2 plugins loaded
-  ✓ Starting dev server  2.6s
-
-  Web       http://localhost:3000
-  AdminCP   http://localhost:3000/admin
-  API       http://localhost:3000/api
-────────────────────────────────────────
-GET   /                                   200   180ms
-GET   /api/@vitnode/core/users/session    200     6ms
-HMR   src/routes/_main/index.tsx
-```
-
-The URLs are the ones Vite actually bound. The port is `--port`, then `PORT`, then `server.port` in `vite.config.ts`, then `3000`.
-
-In an interactive terminal, type a shortcut and press <kbd>Enter</kbd>:
-
-| Key | Action        |
-| --- | ------------- |
-| `o` | Open the site |
-| `a` | Open AdminCP  |
-| `r` | Restart       |
-| `c` | Clear         |
-| `q` | Quit          |
-
-<kbd>Ctrl</kbd>+<kbd>C</kbd> closes the server and every watcher it started.
-
-## Start the production server
-
-```bash
-vitnode build
-vitnode start
-```
-
-```txt
-◆ VitNode
-  Production
-
-  ● Running  http://localhost:3000
-```
-
-`vitnode start` runs the server your build produced with Node - it is not a second server. "Running" appears only once the server accepts connections. `--port` and `--host` set `PORT` and `HOST`, the variables the server already reads. A build for a hosting platform (for example the `vercel` Nitro preset) is refused, because that platform runs it.
-
-## Output options
-
-<TypeTable
-  type={{
-    '--plain': {
-      description:
-        'Line-based output without colors, symbols or animation. Lines start with [OK], [WARN] or [ERROR].',
-      type: 'boolean',
-    },
-    '--verbose': {
-      description:
-        'Show the underlying tool output (Vite, drizzle-kit, compilers) and full stack traces.',
-      type: 'boolean',
-    },
-    '--help': {
-      description: 'Show the command and its options.',
-      type: 'boolean',
-    },
-  }}
-/>
-
-Colors follow `NO_COLOR` and `FORCE_COLOR`. In CI, piped output and other non-interactive terminals, the CLI never shows spinners or prompts - see [CI](/docs/dev/cli/ci).
-
-## Exit codes
-
-| Code  | Meaning                                                                 |
-| ----- | ----------------------------------------------------------------------- |
-| `0`   | Success                                                                 |
-| `1`   | The command failed: a build error, invalid plugin, unreachable database |
-| `2`   | The command line is wrong, or a confirmation flag is missing            |
-| `130` | Cancelled with <kbd>Ctrl</kbd>+<kbd>C</kbd> at a prompt                 |
-
-## Vite, Drizzle Kit and TanStack Start
-
-The CLI drives these tools - through Vite's JavaScript API, your project's own `drizzle-kit`, and your `vite.config.ts` - instead of replacing them. You can still run `vite` or `drizzle-kit` directly; `vitnode` adds the database bootstrap, plugin checks and readable output around them.
-
-## Older commands
-
-These still work for existing projects and deployment scripts:
-
-| Command                                           | Same as                                                         |
-| ------------------------------------------------- | --------------------------------------------------------------- |
-| `vitnode db:prepare`                              | Generate, migrate and seed - what `vitnode dev` runs            |
-| `vitnode migrate`                                 | `vitnode db:prepare`; `--generate` only generates               |
-| `vitnode i18n:check` and the other `i18n:*` names | `vitnode i18n check`, `create`, `delete`, `update`, `update-ai` |
-
-## Learn more
+## Next steps
 
 <Cards>
   <Card
-    title="Build"
-    description="Bundle sizes, analysis and comparison"
-    href="/docs/dev/cli/build"
+    title="Run in development"
+    description="Start the dev server for an app, API or plugin"
+    href="/docs/dev/cli/dev"
   />
   <Card
-    title="Plugins"
-    description="List and validate plugins"
-    href="/docs/dev/cli/plugins"
+    title="Output and exit codes"
+    description="Plain logs, verbose output and what each exit code means"
+    href="/docs/dev/cli/output"
   />
   <Card
-    title="Database"
-    description="Generate, migrate, push and status"
-    href="/docs/dev/cli/database"
-  />
-  <Card
-    title="CI"
-    description="Run the CLI in pipelines"
+    title="Use the CLI in CI"
+    description="Validate, build and migrate in a pipeline"
     href="/docs/dev/cli/ci"
   />
 </Cards>

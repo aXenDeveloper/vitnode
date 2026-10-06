@@ -1,0 +1,61 @@
+---
+title: Output and exit codes
+description: Reference for VitNode CLI output options, colors, non-interactive behavior and exit codes.
+icon: ScrollText
+---
+
+Every `vitnode` command accepts the same output options and uses the same exit codes. Use this page to tune the output for logs or debugging, or to react to a failure in a script.
+
+## Output options
+
+| Option          | Effect                                                                                                                                       |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--plain`       | Line-based output without colors, symbols or animation. Status lines start with `[OK]`, `[WARN]`, `[FAIL]`, `[ERROR]`, `[INFO]` or `[SKIP]`. |
+| `--verbose`     | Show the underlying tool output (Vite, compilers), every file and change, and full stack traces                                              |
+| `-h, --help`    | Show the command and its options                                                                                                             |
+| `-v, --version` | Print the installed `@vitnode/core` version                                                                                                  |
+
+Setting `VITNODE_DEBUG=1` turns on `--verbose` for every command.
+
+Without `--verbose`, messages that Vite and its plugins print during a build are held back, so they do not break the progress lines. The CLI tells you how many it hid, and prints the last 60 lines of captured output if the command fails.
+
+## Interactive and non-interactive terminals
+
+The CLI treats a terminal as interactive when stdin and stdout are both terminals, `TERM` is not `dumb`, `--plain` is not set, and no CI variable is set. It checks `CI`, `CONTINUOUS_INTEGRATION`, `BUILD_NUMBER`, `RUN_ID`, `GITHUB_ACTIONS`, `GITLAB_CI`, `BUILDKITE` and `TF_BUILD`. A value of `0` or `false` counts as unset.
+
+In a non-interactive terminal, the CLI never shows spinners or prompts. A command that needs an answer exits with code `2` instead of waiting. For a confirmation, the error names the flag that answers it, such as `--yes`.
+
+## Colors
+
+Colors are on when stdout is a terminal and `TERM` is not `dumb`.
+
+- `NO_COLOR` with any non-empty value turns colors off.
+- `FORCE_COLOR` turns them on even in piped output, unless its value is `0` or `false`.
+- `--plain` turns them off whatever the variables say.
+
+On a Linux console (`TERM=linux`) and older Windows consoles, the CLI uses plain ASCII symbols instead of `✓` and `▲`.
+
+## Exit codes
+
+| Code  | Meaning                                                                                    |
+| ----- | ------------------------------------------------------------------------------------------ |
+| `0`   | Success, including a confirmation you declined                                             |
+| `1`   | The command failed: a build error, invalid plugin, migration error or unreachable database |
+| `2`   | The command needs a change from you: see below                                             |
+| `130` | Cancelled with <kbd>Ctrl</kbd>+<kbd>C</kbd> at a prompt                                    |
+
+Exit code `2` means nothing ran because the input was not usable as given:
+
+- an unknown command or option (the CLI suggests the closest match)
+- an invalid value, such as a port outside 1-65535 or an unknown plugin name
+- a missing `--yes` or `--accept-data-loss` in a non-interactive terminal
+- a drizzle-kit rename question in a non-interactive terminal
+- `vitnode db push` with `NODE_ENV=production` and no `--force`
+
+<kbd>Ctrl</kbd>+<kbd>C</kbd> while `vitnode dev` or `vitnode start` is running
+stops the server cleanly and exits with `0`.
+
+## Related
+
+- [Use the CLI in CI](/docs/dev/cli/ci)
+- [VitNode CLI](/docs/dev/cli)

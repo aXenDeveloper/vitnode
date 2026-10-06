@@ -1,0 +1,119 @@
+---
+title: Run in development
+description: Start a VitNode app, API app or plugin package in development with vitnode dev, including database setup, ports, hosts and keyboard shortcuts.
+icon: Play
+---
+
+`vitnode dev` starts whatever the current folder is: an app gets a Vite dev server, an API app gets a watching Node or Bun process, and a plugin package gets its compilers in watch mode. Run it from the project's folder.
+
+```bash
+vitnode dev
+```
+
+## Start an app
+
+```txt
+◆ VitNode
+  Development
+
+  ✓ Loading configuration  31ms
+  ✓ Checking database schema  1.2s
+  ✓ Database connected  up to date
+  ✓ 2 plugins loaded
+  ✓ Starting dev server  2.6s
+
+  Web       http://localhost:3000
+  AdminCP   http://localhost:3000/admin
+  API       http://localhost:3000/api
+────────────────────────────────────────
+GET   /                                   200   180ms
+GET   /api/@vitnode/core/users/session    200     6ms
+HMR   src/routes/_main/index.tsx
+```
+
+Below the line, the CLI logs page loads, API calls, server functions and every non-GET request, plus each hot update (`HMR`). Requests for scripts, styles and images are left out so the log stays readable.
+
+The URLs are the ones Vite actually bound. The `API` row appears when the app also serves the API.
+
+### Choose the port and host
+
+The port is the first one set of: `--port`, the `PORT` variable, `server.port` in `vite.config.ts`, then `3000`.
+
+```bash
+vitnode dev --port 4000
+vitnode dev --host              # listen on every address
+vitnode dev --host 127.0.0.1    # listen on one address
+```
+
+With `--host`, a `Network` row shows the address other devices on your network can open, which is handy for testing on a phone.
+
+### Keyboard shortcuts
+
+In an interactive terminal, type a key and press <kbd>Enter</kbd>:
+
+| Key | Action        |
+| --- | ------------- |
+| `o` | Open the site |
+| `a` | Open AdminCP  |
+| `r` | Restart       |
+| `q` | Quit          |
+
+<kbd>Ctrl</kbd>+<kbd>C</kbd> closes the dev server and every watcher it started.
+
+## Database setup before the server starts
+
+When the app owns the database (it has both a `drizzle.config.ts` and `src/vitnode.api.config.ts`), `vitnode dev` prepares the database before anything serves a request:
+
+1. It compares your schema with the last migration and generates a migration when they differ.
+2. It applies pending migrations.
+3. It seeds the data every installation needs: languages, roles and permissions.
+
+The server starts only after this finishes, so your first page load never hits a half-built schema. When the terminal is not interactive and drizzle-kit needs to ask whether a column was renamed, the CLI skips generation with a warning. Run `vitnode db generate` yourself to answer it. See [Database commands](/docs/dev/cli/database).
+
+## Start an API app
+
+In a folder with `src/vitnode.api.config.ts` and no Vite config, `vitnode dev` runs your API with a file watcher:
+
+```txt
+  API       http://localhost:8000/api
+  Runtime   Node (tsx watch)
+```
+
+The port is `--port`, then `PORT`, then `8000`. The CLI passes it to your API as `PORT`. `--host` is passed as `HOST`, and a bare `--host` means `0.0.0.0`. Generated API apps read both variables.
+
+The API runs on Bun, with `bun --hot`, when any of these is true:
+
+- you started the script with Bun (`bun run dev`)
+- the nearest `packageManager` field says `bun@...`
+- the nearest lockfile is `bun.lock` or `bun.lockb`
+
+Otherwise it runs on Node with `tsx watch`.
+
+## Develop a plugin package
+
+In a plugin package, `vitnode dev` regenerates the plugin's API registry and runs `tsc`, `swc` and `tsc-alias` in watch mode. Apps that use the plugin import its `dist` folder, so they reload as you save.
+
+```txt
+◆ VitNode
+  Plugin development - @acme/blog
+
+  ✓ API registry generated
+  ● Watching sources - apps using this plugin reload as dist/ changes
+```
+
+If one compiler crashes, the CLI stops the others and exits with code `1`.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Build and start"
+    description="Build for production and run the server"
+    href="/docs/dev/cli/build"
+  />
+  <Card
+    title="Database commands"
+    description="Generate, apply and inspect migrations"
+    href="/docs/dev/cli/database"
+  />
+</Cards>

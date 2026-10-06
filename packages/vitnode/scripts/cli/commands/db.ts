@@ -201,8 +201,17 @@ export const runDbMigrateCommand = async (
       table: config.migrationsTable,
     });
     const { pending } = computeMigrationState(local, journal);
+    const apply = async (label: string) =>
+      ui.runTask(label, async () =>
+        withQuietOutput(ui.verbose, async () =>
+          handle.apply(message => {
+            ui.note(message);
+          }),
+        ),
+      );
 
     if (pending.length === 0) {
+      await apply("Ensuring initial data");
       ui.success("Database is up to date.");
       ui.line();
 
@@ -228,13 +237,7 @@ export const runDbMigrateCommand = async (
       return EXIT_CODE.ok;
     }
 
-    await ui.runTask("Applying migrations", async () =>
-      withQuietOutput(ui.verbose, async () =>
-        handle.apply(message => {
-          ui.note(message);
-        }),
-      ),
-    );
+    await apply("Applying migrations");
     pending.forEach(migration => {
       ui.success(migration.name);
     });

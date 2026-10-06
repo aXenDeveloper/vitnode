@@ -1,16 +1,18 @@
 ---
 title: Use the CLI in CI
-description: Validate plugins, build with readable logs and apply migrations from GitHub Actions, Docker and other CI pipelines with the VitNode CLI.
+description: Validate plugins, build with readable logs and apply migrations with the VitNode CLI in GitHub Actions, Docker and other pipelines.
 icon: Workflow
 ---
 
+The VitNode CLI runs in pipelines without changes: it never waits for input there, and every command exits with a non-zero code when it fails, so a pipeline stops at the first problem.
+
 ```bash
-pnpm vitnode plugin validate
-pnpm vitnode build --plain
-pnpm vitnode db migrate --yes
+vitnode plugin validate
+vitnode build --plain
+vitnode db migrate --yes
 ```
 
-Run them in your app's folder. Every command exits with a non-zero code when it fails, so a pipeline stops at the first problem.
+Run each command in your app's folder, so the CLI finds the app's config.
 
 ## GitHub Actions
 
@@ -35,52 +37,49 @@ jobs:
       - run: pnpm --filter web exec vitnode build --plain
 ```
 
-Run `vitnode` in the app folder (`--filter web` above), so it finds the app's config.
+`--filter web` runs `vitnode` in the `web` app's folder. Plugins are built first, because validation and the app build both read their `dist` output.
+
+To compare bundle sizes between runs, cache `node_modules/.cache/vitnode`. That is where `vitnode build` keeps the previous build's sizes.
 
 ## Migrate during deployment
 
 ```bash
-POSTGRES_URL=postgresql://... pnpm vitnode db migrate --yes
-pnpm vitnode start
+POSTGRES_URL=postgresql://... vitnode db migrate --yes
+vitnode start
 ```
 
-Run migrations once per deployment, before the new version starts. `--yes` is required: without an interactive terminal, the CLI never waits for an answer.
+Run migrations once per deployment, before the new version starts. `--yes` is required, because the CLI never waits for an answer without an interactive terminal. If two instances start at once, the second waits for the first instead of racing it.
 
-## Non-interactive behavior
+## What changes in a pipeline
 
-The CLI detects where it runs. Under CI (`CI`, `GITHUB_ACTIONS` and similar), with piped output, or when stdin is not a terminal:
+Under CI, with piped output, or when stdin is not a terminal, the CLI:
 
-- no spinners, animations or cursor movement
-- no prompts - a command that needs confirmation exits with code `2` and names the flag to pass
-- colors only when `FORCE_COLOR` is set; `NO_COLOR` always turns them off
+- shows no spinners, animations or cursor movement
+- never prompts: a command that needs a confirmation exits with code `2` and names the flag to pass, such as `--yes`
 
-`--plain` goes further and gives stable, prefixed lines for log parsers:
+`--plain` gives stable, prefixed lines that are easy to grep:
 
-```txt
+```txt title="vitnode build --plain (excerpt)"
 VitNode - Production build
+[OK] Configuration loaded, plugin routes generated (1.5s)
 [OK] Building client (21.7s)
 [OK] Building server (12.8s)
 [WARN] admin-D2kL8aQ1.js is larger than the recommended 500.0 kB for a client chunk.
-[OK] Built in 1m 6s
 ```
 
-Bundle size warnings never fail a build. The bundle comparison reads the previous sizes from `node_modules/.cache/vitnode` - cache that folder between runs to compare builds in CI.
+Size warnings never fail a build. [Output and exit codes](/docs/dev/cli/output) lists every exit code and how colors are chosen.
 
-## Exit codes
-
-| Code | Meaning                                                                    |
-| ---- | -------------------------------------------------------------------------- |
-| `0`  | Success                                                                    |
-| `1`  | Failed: build error, invalid plugin, migration error, unreachable database |
-| `2`  | Wrong command line, or a required `--yes` was not passed                   |
-
-## Learn more
+## Next steps
 
 <Cards>
-  <Card title="VitNode CLI" description="All commands" href="/docs/dev/cli" />
+  <Card
+    title="Output and exit codes"
+    description="Plain logs, colors and exit codes"
+    href="/docs/dev/cli/output"
+  />
   <Card
     title="Self-hosted deployment"
-    description="Build, migrate and run on your server"
+    description="Build, migrate and run on your own server"
     href="/docs/dev/deployments/self-hosted"
   />
 </Cards>

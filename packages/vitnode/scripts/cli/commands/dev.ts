@@ -20,7 +20,7 @@ import { loadConfiguredPluginIds } from "../plugins/discover";
 import { detectProject } from "../project/project";
 import { detectRuntime } from "../project/runtime";
 import { plural } from "../ui/format";
-import { parsePort } from "./start";
+import { displayHost, parsePort } from "./start";
 
 export interface DevOptions extends OutputOptions {
   host?: boolean | string;
@@ -34,6 +34,9 @@ export interface DevDeps {
   loadVite?: () => Promise<ViteDevApi>;
   openUrl?: (url: string) => void;
 }
+
+const apiHost = (host: DevOptions["host"]): string | undefined =>
+  host === true ? "0.0.0.0" : host === false ? undefined : host;
 
 /** Whether `vitnode dev` should prepare this project's database first. */
 const ownsDatabase = (project: Project) =>
@@ -91,10 +94,14 @@ export const runDevCommand = async (
   if (project.kind === "api") {
     // The API reads PORT itself, so `--port` reaches it the same way.
     const port = parsePort(options.port ?? env.PORT, 8000);
+    const host = apiHost(options.host) ?? env.HOST;
     const runtime = detectRuntime(project.root, env);
     ui.line();
     ui.keyValue([
-      ["API", ui.colors.command(`http://localhost:${String(port)}/api`)],
+      [
+        "API",
+        ui.colors.command(`http://${displayHost(host)}:${String(port)}/api`),
+      ],
       [
         "Runtime",
         ui.colors.muted(runtime === "bun" ? "Bun (--hot)" : "Node (tsx watch)"),
@@ -106,7 +113,11 @@ export const runDevCommand = async (
       group: deps.group,
       processes: apiWatchers(runtime).map(watcher =>
         toProcess(project, watcher, {
-          env: { ...env, PORT: String(port) },
+          env: {
+            ...env,
+            PORT: String(port),
+            ...(host === undefined ? {} : { HOST: host }),
+          },
           runtime,
         }),
       ),

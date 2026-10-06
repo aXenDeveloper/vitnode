@@ -129,13 +129,6 @@ export const readDrizzleConfig = async (
   return config;
 };
 
-// Reads the migrations output folder from the app's `drizzle.config.ts` (`out`),
-// falling back to `./migrations` so the in-process migrator points at the same
-// files `drizzle-kit generate` writes.
-export const getMigrationsFolder = async (
-  root: string = process.cwd(),
-): Promise<string> => (await readDrizzleConfig(root)).migrationsFolder;
-
 // Every `regconfig` literal referenced by the generated `search_vector` column
 // (see SEARCH_TEXT_CONFIGS) has to exist on the target database before the
 // column is created - Postgres resolves all branches of the `CASE`, even ones no
@@ -229,10 +222,10 @@ export const describePostgresError = (err: unknown): string[] => {
 
 export const runMigrations = async ({
   config: given,
-  migrationsFolder: folder,
+  drizzle,
 }: {
   config?: VitNodeApiConfig;
-  migrationsFolder?: string;
+  drizzle?: DrizzleProjectConfig;
 } = {}) => {
   const config = given ?? (await getConfig({ type: "api.config" }));
 
@@ -240,16 +233,21 @@ export const runMigrations = async ({
   // generated `search_vector` column (0017/0018) can resolve every `regconfig`.
   await ensureSearchTextConfigs(config.dbProvider);
 
-  const migrationsFolder = folder ?? (await getMigrationsFolder());
+  const { migrationsFolder, migrationsSchema, migrationsTable } =
+    drizzle ?? (await readDrizzleConfig());
 
   try {
     // Run migrations in-process instead of shelling out to `drizzle-kit migrate`:
     // that CLI swallows the underlying Postgres error and just exits 1, which
     // makes failures impossible to diagnose. The in-process migrator throws the
-    // real error, which we log in full below. Both use the same
-    // `drizzle.__drizzle_migrations` table, so this resumes exactly where
-    // `drizzle-kit` left off.
-    await migrate(config.dbProvider, { migrationsFolder });
+    // real error, which we log in full below. Both use the journal table
+    // `drizzle.config.ts` names, so this resumes exactly where `drizzle-kit`
+    // left off.
+    await migrate(config.dbProvider, {
+      migrationsFolder,
+      migrationsSchema,
+      migrationsTable,
+    });
   } catch (err) {
     // The in-process migrator throws Postgres' own error, with every field
     // that explains it - kept whole rather than squashed into one line.

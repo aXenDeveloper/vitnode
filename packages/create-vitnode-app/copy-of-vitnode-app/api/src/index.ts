@@ -15,6 +15,7 @@ VitNodeAPI({
 const server = serve(
   {
     fetch: app.fetch,
+    hostname: process.env.HOST,
     port: Number(process.env.PORT ?? 8000),
   },
   info => {

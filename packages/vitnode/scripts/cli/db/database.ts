@@ -127,7 +127,7 @@ export const createDatabaseServices = (root: string): DatabaseServices => ({
           async () => {
             await bootstrap.runMigrations({
               config: apiConfig,
-              migrationsFolder: config.migrationsFolder,
+              drizzle: config,
             });
             await bootstrap.initialDataForDatabase(apiConfig);
           },

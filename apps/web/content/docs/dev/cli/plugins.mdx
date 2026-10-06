@@ -1,21 +1,16 @@
 ---
 title: List and validate plugins
-description: List the plugins a VitNode app uses with vitnode plugin list, and validate them with vitnode plugin validate before a build or in CI.
+description: List the plugins a VitNode app uses with vitnode plugin list, and check them with vitnode plugin validate before a build or in CI.
 icon: Puzzle
 ---
 
-```bash
-vitnode plugin list
-vitnode plugin validate blog
-```
+`vitnode plugin list` shows which plugins your app uses and where they come from. `vitnode plugin validate` loads each plugin the way your app will, so a broken plugin fails here with a clear message instead of halfway through a build.
 
-<Callout type="info" title="Creating a plugin">
-  New plugins come from the generator, which also registers, installs and builds
-  them: `pnpm create vitnode-app@canary --plugin`. See [Create a
-  plugin](/docs/dev/plugins/create).
-</Callout>
+To create a plugin, use the generator, which also registers, installs and builds it. See [Create a plugin](/docs/dev/plugins/create).
 
 ## List plugins
+
+Run it from your app, or from anywhere in its workspace:
 
 ```bash
 vitnode plugin list
@@ -25,32 +20,37 @@ vitnode plugin list
 ◆ VitNode
   Plugins
 
-  Plugin             Version           Source
-  ──────────────────────────────────────────────
-  @vitnode/blog      2.0.0-canary.13   workspace
-  @acme/search       1.1.2             package
-  @acme/forum (not configured)  0.1.0  workspace
+  Plugin                         Version           Source
+  ───────────────────────────────────────────────────────────
+  @vitnode/blog                  2.0.0-canary.13   workspace
+  @acme/search                   1.1.2             package
+  @acme/forum (not configured)   0.1.0             workspace
 
-  2 plugins configured in apps/web
+  2 plugins configured in this app
 ```
 
-The list comes from your app's `vitnode.config.ts`, read by the same loader the app's build uses. Workspace plugins the app does not use yet are listed as `not configured`.
+The list comes from your app's `vitnode.config.ts`, read by the same loader the app's build uses.
 
-| Source      | Meaning                      |
-| ----------- | ---------------------------- |
-| `workspace` | A package in this repository |
-| `package`   | Installed from a registry    |
+| Value              | Meaning                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| `workspace`        | A package in this repository                                  |
+| `package`          | Installed from a registry into `node_modules`                 |
+| `(not configured)` | A workspace plugin your app does not use yet                  |
+| `not installed`    | The app's config names the plugin, but the package is missing |
 
-`--verbose` adds each plugin's path and description. Run the command from an app, or from anywhere in its workspace.
+`--verbose` adds each plugin's path and description.
 
 ## Validate plugins
 
 ```bash
-vitnode plugin validate        # every plugin - or the one you are in
-vitnode plugin validate blog   # by name, package name or folder
+vitnode plugin validate        # every plugin, or the one you are in
+vitnode plugin validate blog   # one plugin, by id, package name or folder
 ```
 
 ```txt
+◆ VitNode
+  Validate plugins
+
   @vitnode/blog  plugins/blog
   ✓ Package  2.0.0-canary.13
   ✓ Plugin definition
@@ -63,18 +63,20 @@ vitnode plugin validate blog   # by name, package name or folder
   ✓ 1 plugin valid
 ```
 
-Validation loads the plugin's build output - the files your app imports - through VitNode's own loaders. A check runs only when the plugin has that part.
+Validation reads the plugin's build output, the `dist` files your app imports, so build the plugin first. Each check runs only when the plugin has that part:
 
-| Check              | Fails when                                                                                                  |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Package            | `name` is not a valid plugin id, `type` is not `module`, or `exports` does not expose `dist`                |
-| Build output       | `dist/src/config.js` is missing - build the plugin first                                                    |
-| Plugin definition  | `config.tsx` exports no `buildPlugin()` factory, or its `pluginId` is not the package name                  |
-| API definition     | `buildApiPlugin()` rejects the configuration, or its `pluginId` does not match                              |
-| Routes             | The route tree does not compile, or a `lazy(() => import(...))` page file is missing                        |
-| Translations       | A locale file is unreadable, lacks the plugin's top-level key, or a route's `messages` namespace is missing |
-| AdminCP navigation | A nav item requires a permission the plugin does not register in `permissionStaff.admin`                    |
-| Database schema    | A schema module fails to load, or two modules declare the same table                                        |
+| Check              | Fails when                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Package            | `package.json` is missing, `name` is not a valid plugin id, `type` is not `module`, or `exports` lacks `./*` or `./config` |
+| Build output       | `dist/src/config.js` is missing: build the plugin first                                                                    |
+| Plugin definition  | `dist/src/config.js` exports no `buildPlugin()` factory, or its `pluginId` is not the package name                         |
+| API definition     | `dist/src/config.api.js` exports no working `buildApiPlugin()` factory, or its `pluginId` does not match                   |
+| Routes             | The route tree does not compile, or a `lazy(() => import(...))` page file is missing                                       |
+| Translations       | A locale file is unreadable, lacks the plugin's top-level key, or a route's `messages` namespace is missing                |
+| AdminCP navigation | A nav item requires a permission the plugin does not register in `permissionStaff.admin`                                   |
+| Database schema    | A schema module fails to load, or two modules declare the same table                                                       |
+
+A translation file that is only missing some keys gets a `!` warning, not a failure, so a half-translated language does not block a release.
 
 A failure says what is wrong and where:
 
@@ -87,18 +89,18 @@ A failure says what is wrong and where:
 ✖ 1 plugin failed validation: @acme/blog
 ```
 
-`vitnode plugin validate` exits with code `1` when any plugin is invalid, so it can gate a CI job.
+`vitnode plugin validate` exits with code `1` when any plugin is invalid, so it can gate a CI job. An unknown plugin name exits with code `2` and lists the plugins it knows.
 
-## Learn more
+## Next steps
 
 <Cards>
   <Card
-    title="Plugins"
-    description="How plugins work"
-    href="/docs/dev/plugins"
+    title="Create a plugin"
+    description="Scaffold, register and build a new plugin"
+    href="/docs/dev/plugins/create"
   />
   <Card
-    title="CI"
+    title="Use the CLI in CI"
     description="Validate plugins in a pipeline"
     href="/docs/dev/cli/ci"
   />

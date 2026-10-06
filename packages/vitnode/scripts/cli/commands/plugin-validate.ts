@@ -88,7 +88,7 @@ export const runPluginValidateCommand = async (
       throw new UserError(`No plugin named "${name}" was found.`, {
         hint:
           plugins.length === 0
-            ? "Create one with vitnode plugin create <name>."
+            ? "Create one with npx create-vitnode-app --plugin <name>."
             : `Known plugins: ${plugins.map(plugin => plugin.id).join(", ")}`,
       });
     }

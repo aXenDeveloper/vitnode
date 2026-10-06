@@ -176,7 +176,7 @@ describe("what decides whether work is pending", () => {
     }
 
     expect(bootstrap).toMatch(
-      /migrate\(config\.dbProvider, \{ migrationsFolder/,
+      /migrate\(config\.dbProvider, \{\s+migrationsFolder,\s+migrationsSchema,\s+migrationsTable,/,
     );
   });
 

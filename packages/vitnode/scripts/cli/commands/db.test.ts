@@ -36,6 +36,7 @@ const migration = (name: string): LocalMigration => ({
 
 interface FakeDatabase {
   applied: string[];
+  applyCalls: number;
   closed: number;
   kitCalls: string[][];
   services: DatabaseServices;
@@ -60,6 +61,7 @@ const fakeDatabase = ({
 } = {}): FakeDatabase => {
   const state: FakeDatabase = {
     applied: [...journal],
+    applyCalls: 0,
     closed: 0,
     kitCalls: [],
     services: undefined as unknown as DatabaseServices,
@@ -69,6 +71,7 @@ const fakeDatabase = ({
   const handle: DatabaseHandle = {
     apply: async () => {
       await Promise.resolve();
+      state.applyCalls += 1;
       if (applyError) throw applyError;
       state.applied = local.map(m => m.name);
     },
@@ -243,6 +246,21 @@ describe("vitnode db migrate", () => {
     ).toBe(0);
     expect(runtime.output()).toContain("✓ Database is up to date.");
     expect(db.closed).toBe(1);
+  });
+
+  it("still ensures initial data when nothing is pending", async () => {
+    const db = fakeDatabase({
+      journal: ["0001_init"],
+      local: [migration("0001_init")],
+    });
+
+    await runDbMigrateCommand(
+      context().context,
+      {},
+      { services: () => db.services },
+    );
+
+    expect(db.applyCalls).toBe(1);
   });
 
   it("lists pending migrations and applies them with --yes", async () => {

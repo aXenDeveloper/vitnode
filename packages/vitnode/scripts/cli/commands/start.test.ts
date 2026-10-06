@@ -182,6 +182,27 @@ describe("vitnode start", () => {
     }
   });
 
+  it("fails at once when the runtime is missing, instead of waiting for the port", async () => {
+    rmSync(join(root, "vite.config.ts"));
+    write("src/vitnode.api.config.ts", "export default {};");
+    write("src/index.ts", "");
+    write("bun.lock", "");
+    const { context, runtime } = createTestContext({
+      cwd: root,
+      env: { PATH: join(root, "empty-bin") },
+    });
+    const startedAt = Date.now();
+
+    const error = (await runStartCommand(context, {
+      port: String(await freePort()),
+    }).catch((thrown: unknown) => thrown)) as RuntimeError;
+
+    expect(error).toBeInstanceOf(RuntimeError);
+    expect(error.message).toContain("Could not start the server with bun");
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
+    expect(runtime.output()).not.toContain("Running");
+  }, 20_000);
+
   it("fails - without claiming it is running - when the server dies during boot", async () => {
     write(".output/server/index.mjs", "process.exit(3);");
     const { context, runtime } = createTestContext({ cwd: root });

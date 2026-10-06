@@ -23,7 +23,7 @@ export const runPluginListCommand = async (
         : "No plugins configured yet.",
     );
     ui.note(
-      `Create one with ${ui.colors.command("vitnode plugin create <name>")}.`,
+      `Create one with ${ui.colors.command("npx create-vitnode-app --plugin <name>")}.`,
     );
     ui.line();
 
