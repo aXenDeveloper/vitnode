@@ -1,255 +1,149 @@
 ---
-title: Field Reference
-description: Complete guide to adding and configuring field types in Content Engine, including Postgres mappings, Zod validation, and AdminCP controls.
+title: Fields
+description: Every field helper of the VitNode Content Engine, with its options, Postgres column, validation and AdminCP form control.
 icon: LayoutGrid
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+A field is one property of a content type, such as a title or a cooking time. Build each one with a helper from `field`, exported by `@vitnode/core/content`. The helper decides the Postgres column, the Zod validation and the control in the AdminCP form.
 
-Content Engine provides field descriptors exported from `@vitnode/core/content` via the `field` helper. Each field generates a typed Drizzle column, Zod validation schemas, and an interactive AdminCP input automatically.
+```ts
+import { defineContentType, field } from "@vitnode/core/content";
 
-## Supported Field Types
-
-| Field Method | Postgres Column | Zod Schema | AdminCP Form Control |
-| :--- | :--- | :--- | :--- |
-| `field.text()` | `varchar(maxLength)` | `z.string()` | Text Input |
-| `field.textarea()` | `text()` | `z.string()` | Textarea |
-| `field.number({ integer: true })` | `integer()` | `z.number().int()` | Integer Input |
-| `field.number({ integer: false })` | `double precision` | `z.number()` | Number Input |
-| `field.boolean()` | `boolean()` | `z.boolean()` | Switch Toggle |
-| `field.enum({ values: [...] })` | `varchar(length)` | `z.enum([...])` | Select Dropdown / Radio |
-| `field.dateTime()` | `timestamp()` | `z.date()` / ISO string | Date / Time Picker |
-| `field.slug()` | `varchar(maxLength)` | `z.string()` | Slug Generator |
-| `field.user()` | `integer()` (FK `core_users`) | `z.number()` | User Combobox |
-| `field.user({ multiple: true })` | Junction table | `z.array(z.number())` | Multi-user Combobox |
-| `field.file()` | `integer()` (FK `core_files`) | `z.number()` | Drag-and-drop File Upload |
-| `field.file({ multiple: true })` | Junction table | `z.array(z.number())` | Multi-file Gallery Uploader |
-| `field.relation()` | `integer()` (FK target table) | `z.number()` | Relation Combobox |
-| `field.relation({ multiple: true })` | Junction table | `z.array(z.number())` | Multi-relation Combobox |
-| `field.group({ fields: ... })` | Prefixed columns | `z.object(...)` | Grouped Card |
-| `field.repeatable({ fields: ... })` | Child table | `z.array(...)` | Repeatable List |
-| `field.blocks()` | `jsonb` | `z.array(...)` | None yet - see [Widgets](/docs/dev/widgets) |
-
----
-
-## Field Configurations
-
-<Steps>
-<Step>
-
-### Text and Strings
-
-Configure string length, required state, and multi-language support:
-
-```ts title="plugins/blog/src/content/post.ts"
-import { defineContentType, field } from "@vitnode/core/content"
-
-export const postContentType = defineContentType({
-  id: "blog.post",
-  tableName: "blog_posts",
-  fields: {
-    // [!code ++:8]
-    title: field.text({
-      required: true,
-      minLength: 3,
-      maxLength: 200,
-      localized: true,
-    }),
-    summary: field.textarea({
-      maxLength: 500,
-      localized: true,
-    }),
-  },
-})
-```
-
-`localized: true` marks a field for multi-language translation. When `localization: { enabled: true }` is enabled on the content type, localized field values are stored in the generated `{tableName}_translations` table rather than on the base table.
-
-</Step>
-<Step>
-
-### Numbers, Booleans, and Enums
-
-Number fields require the `integer` boolean option. When `integer: true`, Content Engine generates an `integer` column in PostgreSQL; when `integer: false`, it generates a `double precision` column for floating-point values.
-
-```ts title="plugins/blog/src/content/post.ts"
 fields: {
-  // [!code ++:16]
-  views: field.number({
-    integer: true,
-    defaultValue: 0,
-    min: 0,
-  }),
-  rating: field.number({
-    integer: false,
-    min: 0,
-    max: 5,
-  }),
-  featured: field.boolean({
-    defaultValue: false,
-  }),
-  status: field.enum({
-    values: ["draft", "published", "archived"] as const,
-    defaultValue: "draft",
-  }),
+  title: field.text({ required: true, maxLength: 120 }),
+  cookingTime: field.number({ integer: true, min: 1, required: true }),
+  vegetarian: field.boolean({ defaultValue: false }),
 }
 ```
 
-</Step>
-<Step>
+## Field helpers
 
-### Slugs, Dates, and User Relations
+| Helper              | Postgres column                          | AdminCP control                   | Can be `localized` |
+| ------------------- | ---------------------------------------- | --------------------------------- | ------------------ |
+| `field.text()`      | `varchar(maxLength)`, 255 by default     | Text input                        | Yes                |
+| `field.textarea()`  | `text`                                   | Textarea                          | Yes                |
+| `field.number()`    | `integer` or `double precision`          | Number input with steppers        | No                 |
+| `field.boolean()`   | `boolean`                                | Switch                            | No                 |
+| `field.enum()`      | `varchar(length)`, 64 by default         | Select, or radio buttons          | No                 |
+| `field.dateTime()`  | `timestamp`                              | Date and time picker              | No                 |
+| `field.slug()`      | `varchar(maxLength)`, 160 by default, unique | Text input                    | Yes                |
+| `field.user()`      | `integer` referencing `core_users.id`    | User picker                       | No                 |
+| `field.file()`      | `integer` referencing `core_files.id`    | File upload                       | No                 |
+| `field.relation()`  | `integer` referencing the target table   | Record picker                     | No                 |
+| `field.group()`     | one column per leaf                      | A card with the leaf fields       | Yes, as a whole    |
+| `field.repeatable()`| a child table                            | A list of rows you can reorder    | No                 |
+| `field.blocks()`    | `jsonb`                                  | None; see [Widgets](/docs/dev/widgets) | Yes           |
 
-Auto-generate slugs from another field, default timestamps to current time, or link users:
+`user`, `file` and `relation` with `multiple: true` use a junction table instead of a column. [Relations and advanced fields](/docs/dev/content-engine/relations-and-advanced-modeling) covers them, together with groups and repeatables.
 
-```ts title="plugins/blog/src/content/post.ts"
-fields: {
-  // [!code ++:13]
-  slug: field.slug({
-    source: "title",
-  }),
-  publishedAt: field.dateTime({
-    defaultNow: true,
-  }),
-  author: field.user({
-    required: true,
-  }),
-  contributors: field.user({
-    multiple: true,
-    ordered: true,
-  }),
-}
+## Required, nullable and default values
+
+Most helpers accept `required`, `nullable` and `description`. These three decide whether a row can be inserted:
+
+| Option           | Effect                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `required: true` | The create request must include the field. An empty string still passes unless you set `minLength` |
+| `nullable: true` | The column accepts `NULL`, and so does validation                                       |
+| `defaultValue`   | Used when a create request leaves the field out. Also becomes the column's `DEFAULT`    |
+
+A field that is neither required nor nullable needs a fallback, otherwise `defineContentType` throws: `Field "x" is neither required nor nullable, so it needs a default value`. A `defaultValue`, `defaultNow` on a date, or `source` on a slug all count. On update, every field is optional.
+
+A single `field.user()` and a single `field.file()` are nullable unless you say otherwise. Every other field starts as `nullable: false`.
+
+`description` is shown under the input in the AdminCP form.
+
+## Text and textarea
+
+| Option         | Type      | Default | Description                                                     |
+| -------------- | --------- | ------- | --------------------------------------------------------------- |
+| `minLength`    | `number`  |         | Shortest accepted value                                         |
+| `maxLength`    | `number`  | 255 for `text` | Longest accepted value; for `text` also the `varchar` length |
+| `defaultValue` | `string`  |         |                                                                 |
+| `unique`       | `boolean` | `false` | `text` only: adds a unique index. Ignored on a localized field  |
+| `localized`    | `boolean` | `false` | Stores the value per language. Needs [`localization`](/docs/dev/content-engine/localization) |
+
+Set `maxLength` on every `text` field. Without it, validation accepts any length and Postgres rejects values over 255 characters with an error.
+
+## Number
+
+| Option         | Type      | Default | Description                                                     |
+| -------------- | --------- | ------- | --------------------------------------------------------------- |
+| `integer`      | `boolean` |         | Required. `true` makes an `integer` column, `false` a `double precision` one |
+| `min`, `max`   | `number`  |         | Accepted range                                                  |
+| `defaultValue` | `number`  |         | Must be inside the range, and whole when `integer: true`        |
+
+## Boolean
+
+`field.boolean({ defaultValue: false })`. The only option besides the shared ones is `defaultValue`.
+
+## Enum
+
+| Option         | Type                     | Default    | Description                                       |
+| -------------- | ------------------------ | ---------- | ------------------------------------------------- |
+| `values`       | `string[]`               |            | Required. Non-empty, without duplicates           |
+| `defaultValue` | one of `values`          |            |                                                   |
+| `display`      | `"select"` \| `"radio"`  | `"select"` | AdminCP control                                   |
+| `length`       | `number`                 | `64`       | `varchar` length; every value must fit            |
+
+The column is a plain `varchar`, not a Postgres enum, so adding a value later needs no type migration. Translate the values at `{pluginId}.content.{entity}.enums.{field}.{value}`.
+
+## Date and time
+
+`field.dateTime({ defaultNow: true })` fills the column with the current time on insert. There is no `defaultValue`. The API accepts ISO 8601 strings and returns dates.
+
+## Slug
+
+| Option      | Type      | Default | Description                                                         |
+| ----------- | --------- | ------- | ------------------------------------------------------------------- |
+| `source`    | text field name | | Fills the slug from that field when a record is created without one |
+| `maxLength` | `number`  | `160`   | `varchar` length and the point where long slugs are cut             |
+| `localized` | `boolean` | `false` | One slug per language                                               |
+
+A slug is never empty and always unique: across the table, or within each language when it is localized. Whatever you send is normalized: `"Shakshuka for Two!"` becomes `shakshuka-for-two`. The slug is filled only on create; renaming the source later keeps the old slug. Without `source`, the slug is required. `source` must point to a `field.text()`, not a textarea.
+
+## User
+
+| Option     | Type                                    | Default         | Description                                         |
+| ---------- | --------------------------------------- | --------------- | --------------------------------------------------- |
+| `multiple` | `boolean`                               | `false`         | Several people, stored in a junction table          |
+| `ordered`  | `boolean`                               | `false`         | Keeps the order editors arrange                     |
+| `min`      | `number`                                |                 | Fewest people, with `multiple` only                 |
+| `onDelete` | `"cascade"` \| `"restrict"` \| `"set null"` | see below   | What happens when the user is deleted               |
+
+`onDelete` defaults to `"set null"` for a nullable single user, `"restrict"` for a required one and `"cascade"` for `multiple`. User fields cannot be part of `publicApi.fields`.
+
+## File
+
+```ts
+coverImage: field.file({
+  maxBytes: 5 * 1024 * 1024,
+  allowedExtensions: [".jpg", ".png", ".webp"],
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+}),
+gallery: field.file({ multiple: true, min: 1, max: 8, maxBytes: 5 * 1024 * 1024 }),
 ```
 
-- `source: "title"` automatically derives the slug from the `title` field upon creation. When `source` is omitted, the slug must be explicitly supplied in the create payload.
-- `defaultNow: true` configures PostgreSQL and Drizzle to automatically default the column value to `now()` upon insertion.
+| Option              | Type       | Default        | Description                                       |
+| ------------------- | ---------- | -------------- | ------------------------------------------------- |
+| `maxBytes`          | `number`   |                | Required. Largest accepted file                   |
+| `allowedExtensions` | `string[]` | any            | Normalized to lowercase with a leading dot        |
+| `allowedMimeTypes`  | `string[]` | any            |                                                   |
+| `multiple`          | `boolean`  | `false`        | Several files in a junction table                 |
+| `min`, `max`        | `number`   | `max`: 20      | With `multiple` only; `max` up to 200             |
+| `ordered`           | `boolean`  | same as `multiple` | Keeps the order editors arrange               |
 
-</Step>
-<Step>
+Files are uploaded through the [storage](/docs/dev/storage) adapter and recorded in `core_files`. The column uses `ON DELETE RESTRICT`, so a file in use cannot be deleted. In the public API a file is returned as `{ id, name, url, mimeType, size, width, height }`, never as a raw id.
 
-### Single and Multi-File Uploads
+## Relation
 
-VitNode connects file fields directly to `core_files` with storage adapters (Local disk, S3, Cloudflare R2):
+`field.relation({ target: () => categoryContentType, required: true })` links to another content type. Set `required` or `nullable`: a single relation without either throws. All options are in [Relations and advanced fields](/docs/dev/content-engine/relations-and-advanced-modeling#relation-options).
 
-```ts title="plugins/blog/src/content/post.ts"
-fields: {
-  // Single cover image (max 5 MB)
-  // [!code ++:6]
-  coverImage: field.file({
-    maxBytes: 5 * 1024 * 1024,
-    allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-  }),
+## Searching and sorting fields
 
-  // Gallery of screenshots
-  // [!code ++:8]
-  gallery: field.file({
-    multiple: true,
-    min: 1,
-    max: 10,
-    maxBytes: 10 * 1024 * 1024,
-    allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-  }),
-}
-```
+Fields have no `searchable` or `sortable` option. Each surface chooses its own:
 
-<Callout type="info" title="Automatic Multipart Upload Pipeline">
-  In the AdminCP, `AutoFormFile` uploads attachments via TanStack Query and standard multipart API routes (`POST /api/.../uploads/{field}`). Uploaded records are stored in `core_files` and assigned by ID.
-</Callout>
+- `admin.list.searchableFields` and `admin.list.orderableFields` for the AdminCP list.
+- `publicApi.searchableFields`, `orderableFields` and `filterableFields` for the public API.
+- `search.contentFields` for the site search index.
 
-</Step>
-</Steps>
-
----
-
-## Common Field Options
-
-Field descriptors accept these standard attributes:
-
-<TypeTable
-  type={{
-    required: {
-      default: "false",
-      description: "Whether the field must be supplied in the create payload.",
-      type: "boolean",
-    },
-    nullable: {
-      default: "false",
-      description: "Whether the database column accepts NULL, allowing null values.",
-      type: "boolean",
-    },
-    defaultValue: {
-      description: "Static fallback value for record creation.",
-      type: "string | number | boolean | undefined",
-    },
-    localized: {
-      default: "false",
-      description: "Store separate values per language in the translation table (valid on slug, text, and textarea).",
-      type: "boolean",
-    },
-    description: {
-      description: "Helper text or translation key rendered below the form input in the AdminCP.",
-      type: "string",
-    },
-  }}
-/>
-
----
-
-## Search, Ordering, and Filter Configuration
-
-`searchable` and `sortable` are not field descriptor options. Searching and ordering are configured at the feature level to separate AdminCP management from public API delivery and global search indexing:
-
-### 1. AdminCP Table (`admin.list`)
-
-Configure how administrators search and sort the AdminCP data table:
-
-- **`admin.list.searchableFields`**: Array of `text`, `textarea`, or `slug` fields searchable via the table search input. A localized field matches its value in any language.
-- **`admin.list.orderableFields`**: Array of shared scalar columns administrators can click to sort. System columns (`id`, `createdAt`, `updatedAt`) and publication columns (`status`, `publishedAt`) are always allowed.
-- **`admin.list.defaultOrderBy`**: The column name string to sort by initially (e.g. `'updatedAt'`).
-- **`admin.list.defaultOrder`**: Sort direction (`'asc' | 'desc'`).
-
-<Callout type="warn" title="Localized Fields Cannot Be SQL-Sorted on the Base Table">
-  Because localized fields live on the secondary `{tableName}_translations` table, they cannot be ordered with SQL `ORDER BY` on base table queries. Therefore, `admin.list.orderableFields` accepts only shared columns. However, localized fields **can** be displayed as cells in `admin.list.columns` and used for `admin.titleField` (resolved in the editor's language).
-</Callout>
-
-### 2. Public API (`publicApi`)
-
-Control which fields public consumers can query, search, and sort:
-
-- **`publicApi.searchableFields`**: Columns scanned by the public `?search=` parameter.
-- **`publicApi.orderableFields`**: Columns accepted by the public `?orderBy=` parameter (in addition to `publishedAt`).
-- **`publicApi.filterableFields`**: Columns accepted as exact equality filters in query parameters (e.g. `?category=1`).
-
-### 3. Global Search Index (`search`)
-
-Synchronize records with the VitNode search and discovery engine:
-
-- **`search.titleField`**: Non-nullable text field used as the search result heading.
-- **`search.descriptionField`**: Optional text or textarea field prepended to the indexed body.
-- **`search.contentFields`**: Array of fields and group/repeatable leaves concatenated into the full-text search document.
-- **`search.authorField`**: Optional top-level `field.user()` whose people are credited in the index. Their published records show up on their [timelines](/docs/dev/search#member-timelines), and their drafts stay visible only to them and to staff. It doesn't have to be in `publicApi.fields`, but turning it on makes authorship public on search results.
-
-Drafts are indexed too, as private documents without a URL. Public search and Discover only ever return published records.
-
-
-## Learn More
-
-<Cards>
-  <Card
-    title="Defining a Content Type"
-    description="Step-by-step tutorial creating tables, schemas, and AdminCP screens"
-    href="/docs/dev/content-engine/defining-a-content-type"
-  />
-  <Card
-    title="AdminCP Integration"
-    description="Customize layouts and form components"
-    href="/docs/dev/content-engine/admincp"
-  />
-  <Card
-    title="Content Delivery & SEO"
-    description="Fetch and render content in TanStack Start routes"
-    href="/docs/dev/content-engine/content-delivery-and-seo"
-  />
-</Cards>
+The [content type reference](/docs/dev/content-engine/reference) lists which field kinds each option accepts.

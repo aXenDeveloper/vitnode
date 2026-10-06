@@ -1,154 +1,94 @@
 ---
 title: Email and digests
-description: How VitNode sends notification email - immediate messages and daily or weekly digests in each user's time zone, with delivery records, retries, idempotency keys and send-time checks.
+description: Send VitNode notifications by email, right away or in a daily or weekly digest in each member's time zone, with checks at send time, delivery records and retries.
 icon: MailCheck
 ---
 
-Notification email reuses your configured [email adapter](/docs/dev/email) and
-the [queue](/docs/dev/advanced/queue). There is nothing to set up beyond
-`email: true` on a type. Each user picks one mode per type: `none`,
-`immediate`, `daily` or `weekly`.
+A notification type can also reach members by email, either right away or bundled into a daily or weekly digest. You turn email on in the type, and each member picks one mode per type: `none`, `immediate`, `daily` or `weekly`. Core plans, sends, retries and records every email through your configured email adapter.
 
-## Immediate email
+## Before you begin
 
-Fan-out creates one delivery per event and user, keyed
-`immediate:{eventId}:{userId}`, and queues the `notifications-email` task. That
-task sends due deliveries in batches, a few at a time, so a slow provider only
-slows email - never the inbox.
+Configure an [email adapter](/docs/dev/email). Without one, no type offers email, and members see no email choice.
 
-Each email is rendered in the user's language with a link to the item and a
-**Manage notification preferences** link to `/settings/notifications`.
+<Steps>
 
-## Daily and weekly digests
+<Step>
 
-Events for digest users wait as pending email receipts. Every 5 minutes the
-`notifications-schedule` cron plans the digests whose period has ended:
+### Turn on email for the type
 
-- **Periods are local.** A daily digest covers one calendar day in the user's
-  time zone and goes out at 08:00. A weekly one covers seven days and goes out
-  on Monday at 08:00. The schedule is the same for everyone - only the time
-  zone is personal.
-- **Time zone fallback.** The time zone the member set on `/settings`, then the
-  time zone of their language, then UTC.
-- **DST-safe.** Periods are contiguous. On the night clocks change, a "day" is
-  23 or 25 hours long - no day is skipped or sent twice.
-- **Claimed once.** A digest's key is the user, mode and local date of its
-  period, such as `daily:42:2026-10-04`. Planning it again finds the key and
-  does nothing.
-- **Never re-included.** Each event joins exactly one digest. An event that
-  arrives after a period ended waits for the next one.
-- **Empty digests are skipped.** No email says "nothing happened".
+Add `email: true` and pick the default mode for members who never change it:
 
-A digest lists up to 25 notifications, newest first, and says how many more
-are waiting.
-
-## What is checked at send time
-
-Nothing is decided from the state at fan-out time. Right before any email or
-digest goes out, core checks each notification again:
-
-- the user's current email mode for the type;
-- the type's installation policy;
-- the type's `access` callback;
-- whether the user already read it.
-
-<Callout type="info" title="Only unread notifications are emailed">
-  Digests and delayed emails include only notifications that are still unread.
-  If the user read or archived an item in the inbox first, it is dropped from
-  the email. A digest left with nothing in it is skipped.
-</Callout>
-
-If the user switched modes since the event arrived, the event is re-planned for
-the new mode, or dropped for `none`. A user who takes a type by email only has
-no inbox item to read, so their email always goes out.
-
-## Delivery records
-
-Every send - immediate, digest or test - is a row in
-`core_notification_deliveries`:
-
-| Status    | Means                                                                                    |
-| --------- | ---------------------------------------------------------------------------------------- |
-| `pending` | Waiting for its `availableAt` time                                                       |
-| `sending` | Claimed by a worker                                                                      |
-| `sent`    | The provider accepted it. `providerMessageId` holds the provider id                      |
-| `failed`  | Every attempt failed. Retry it from the AdminCP                                          |
-| `skipped` | Nothing to send. `skipReason` says why, e.g. `empty`, `email_disabled` or `user_missing` |
-
-### Retries
-
-A failed attempt goes back to `pending` with exponential backoff: 10 seconds,
-then 20, 40 and 80. After the fifth attempt it is `failed`. The stored error is
-sanitized: email addresses, tokens and keys are redacted, and it is cut to 500
-characters.
-
-[Retrying with `POST /deliveries/{id}/retry`](/docs/dev/notifications/admincp#admin-api) reuses
-the same row, the same idempotency key and the same notifications - a retry can
-never turn into a second, different email.
-
-## Idempotency and duplicates
-
-Every send passes a stable key to your adapter as `idempotencyKey`:
-`vitnode-notification-` plus the delivery key. Every attempt of one delivery
-uses the same key.
-
-That matters for one unavoidable gap: the provider accepted the email, then the
-worker crashed before recording it. The delivery is still `sending`, and after
-15 minutes the scheduler puts it back to `pending`.
-
-- **Resend** forwards the key, and drops a second send with the same key for 24
-  hours. No duplicate.
-- **SMTP (Nodemailer)** has no idempotency. The retry can arrive twice.
-
-So notification email is **at least once**. Exactly once is only as good as
-your provider's deduplication.
-
-### Support idempotency in a custom adapter
-
-`sendEmail` receives an optional `idempotencyKey` and may return `{ id }`:
-
-```ts title="apps/api/src/lib/email/acme-mail-adapter.ts"
-import type { EmailApiPlugin } from '@vitnode/core/api/models/email'
-
-export const AcmeMailAdapter = ({
-  apiKey,
-  from,
-}: {
-  apiKey: string
-  from: string
-}): EmailApiPlugin => ({
-  sendEmail: async ({ to, subject, html, text, idempotencyKey }) => {
-    const res = await fetch('https://api.acmemail.example/v1/send', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
-      },
-      body: JSON.stringify({ from, to, subject, html, text }),
-    })
-    if (!res.ok) throw new Error(`Acme Mail error: ${res.status}`)
-
-    const { id } = (await res.json()) as { id: string }
-
-    return { id }
-  },
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+export const topicReplyNotification = buildNotificationType({
+  id: 'forum.topic_reply',
+  // other options unchanged
+  defaults: { inApp: true, email: 'daily' }, // [!code ++]
+  email: true, // [!code ++]
 })
 ```
 
-Forward the key in whatever field your provider documents for deduplication,
-and ignore it if the provider has none. Throw on failure so the delivery is
-retried, and return the provider's message id so it shows in the AdminCP.
-Returning nothing is fine too. See
-[Custom email adapter](/docs/dev/email/custom-adapter).
+`email: true` reuses the `title`, `body` and `target` from `present`. Each email links to the item and to **Manage notification preferences** on `/settings/notifications`. A default other than `'none'` without `email` throws when the module loads.
 
-## Related
+</Step>
 
-<Cards>
-  <Card title="Preferences" href="/docs/dev/notifications/preferences" />
-  <Card
-    title="Queue and scale"
-    href="/docs/dev/notifications/queue-and-scale"
-  />
-  <Card title="Email" href="/docs/dev/email" />
-</Cards>
+<Step>
+
+### Word the email separately (optional)
+
+Pass a function instead of `true` when the email needs its own subject or button label:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+email: ({ data, t }) => ({
+  subject: t('@acme/forum.notifications.topic_reply.email_subject', {
+    title: data.topicTitle,
+  }),
+  title: t('@acme/forum.notifications.topic_reply.title', {
+    title: data.topicTitle,
+  }),
+  actionLabel: t('@acme/forum.notifications.topic_reply.email_action'),
+}),
+```
+
+It receives the same arguments as `present`, in the recipient's language. Add the new keys to `src/locales/api/en.json`.
+
+</Step>
+
+</Steps>
+
+## How digests are scheduled
+
+Daily digests go out at 08:00 and weekly digests on Monday at 08:00, in each member's time zone. The hour and day are the same for everyone, and members cannot change them.
+
+- A daily digest covers the 24 hours before 08:00. A weekly one covers the seven days before Monday 08:00. A notification that arrives after 08:00 waits for the next digest.
+- The time zone comes from the member's **Region** setting on `/settings`, then from their language, then UTC.
+- Periods follow local time, so on the night clocks change a day lasts 23 or 25 hours. No day is skipped or sent twice.
+- Each notification joins exactly one digest, and an empty digest is never sent.
+- A digest lists up to 25 notifications, newest first, and says how many more are waiting.
+
+The `notifications-schedule` cron plans digests every 5 minutes, so a digest can arrive up to 5 minutes after 08:00.
+
+## What is checked at send time
+
+Right before an email or digest goes out, core checks each notification again: the member's current email mode, the type's policy in the AdminCP, the type's `access` check, and whether the member already read it.
+
+Digests and delayed emails include only notifications that are still unread. A member who read or archived an item in the inbox does not get it by email too. A member who switched modes since the notification arrived gets it in the new mode, or not at all for `none`. A member who takes a type by email only has no inbox item to read, so their email always goes out.
+
+## Delivery records and retries
+
+Every send, including test emails, is a row in `core_notification_deliveries`. List them with `GET /deliveries` in the [AdminCP API](/docs/dev/notifications/reference#admincp-endpoints).
+
+| Status    | Meaning                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------- |
+| `pending` | Waiting for its send time                                                                   |
+| `sending` | Claimed by a worker                                                                         |
+| `sent`    | The provider accepted it. `providerMessageId` holds the provider's id                       |
+| `failed`  | All 5 attempts failed. `lastError` holds the error with addresses and tokens redacted       |
+| `skipped` | Nothing to send. `skipReason` says why, such as `empty`, `email_disabled` or `user_missing` |
+
+A failed attempt is retried after 10 seconds, then 20, 40 and 80. Every attempt passes the same `idempotencyKey` to your adapter, so a provider that deduplicates, such as Resend, never delivers a retry twice. SMTP through Nodemailer cannot deduplicate, so a crash between "accepted" and "recorded" can send one email twice. To forward the key from your own adapter, see [Custom email adapter](/docs/dev/email/custom-adapter#idempotency-and-the-return-value).
+
+## Check the result
+
+1. Open **AdminCP → System → Notifications**, select **Settings**, and run **Send a test email to me**. The email arrives at your own address.
+2. Set **Replies to your topics** to **Right away** on `/settings/notifications`, then trigger a reply as another member. The email arrives within about a minute, as long as your [cron adapter](/docs/dev/cron) runs the queue worker.
+3. If it does not, see [Emails are not sending](/docs/dev/notifications/troubleshooting#emails-are-not-sending).

@@ -102,6 +102,85 @@ boringly reliable.
   </Step>
 </Steps>
 
+## Write and translate articles
+
+The article editor keeps the text in the middle and everything readers see
+around it in a **Ready to publish** panel on the right.
+
+{/* Image prompt: VitNode AdminCP blog article editor. Large article title, slug under it, a TipTap editor, and a right panel with a "Ready to publish" checklist, a Google-style search preview and a social card. Header with Translate, a Draft/Published switch and Save changes. Light theme, 1440x900. */}
+
+### Check the article before you publish
+
+The checklist counts what a published article usually needs:
+
+| Check | Passes when |
+| --- | --- |
+| Title fits search results | Every started language has a title of 60 characters or less |
+| Excerpt in every language | Every started language has an excerpt |
+| Cover image | A cover image is set |
+| Cover alt text in every language | Every started language describes the cover |
+| Translations complete | Every language has a title, friendly URL and content |
+| Translations up to date | No translation is older than the default language |
+
+The title, excerpt and alt text fields show a live counter against the
+recommended length: 60, 160 and 125 characters. They are recommendations, not
+limits, so you can still save a longer title.
+
+The search result and social card previews switch between languages. A missing
+field falls back to the default language, the same way the public site does.
+
+### Publish or unpublish
+
+The **Draft / Published** switch sits next to **Save changes**. Switching asks
+for confirmation first, because it changes what readers see immediately.
+
+### Translate side by side
+
+Pick a language from **Translate**. Each translated field then shows the default
+language on the left, read-only, and the language you translate into on the
+right. Your shared fields, such as categories and authors, stay in one place.
+
+A translation is marked **outdated** when the default language was saved after
+it. **Generate from title** builds the friendly URL from the translated title.
+
+### Use AI helpers
+
+With AI configured, the editor adds:
+
+- **Translate** on each field, and **Translate missing fields** for a whole
+  language. Content keeps its HTML structure.
+- **Write with AI** on the excerpt, which writes it from the title and content.
+
+<Callout type="info" title="When the AI buttons appear">
+  The buttons appear only when the API has at least one model in `ai.models`.
+  The routes behind them require the `can_edit` permission on articles. See
+  [AI](/docs/dev/ai) to configure a model.
+</Callout>
+
+AI never saves for you. Read the suggestion, then press **Save changes**.
+
+### Upgrade an existing blog
+
+Articles have a localized **Excerpt** field. Search results use it as the
+description and fall back to the article content when it is empty. Run your
+migrations after you upgrade `@vitnode/blog`:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the blog excerpt">
+
+```bash tab="bun"
+bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
 ## Deliver it from a plugin
 
 Build the public article page in a plugin too, then use the Content Engine

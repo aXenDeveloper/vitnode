@@ -1,0 +1,79 @@
+---
+title: Cache API data
+description: Cache slow database reads in a VitNode Hono route with c.get("cache").remember, and delete the key when the data changes.
+icon: Server
+---
+
+`c.get("cache")` stores values in Redis from inside a Hono route handler. Use it for reads that are slow and give the same answer to many visitors, such as counts over a large table or a computed summary. Without Redis, every call runs your loader directly, so the same code works with and without it.
+
+## Before you begin
+
+Connect Redis in `vitnode.api.config.ts` as described in [Redis](/docs/dev/advanced/redis). You can write the code below without Redis, but nothing is cached until it is connected.
+
+<Steps>
+<Step>
+
+### Wrap the slow read in `remember`
+
+In the route handler, pass `remember` a key, a time to live (TTL) in seconds, and a function that loads the value:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/stats.route.ts"
+handler: async c => {
+  // [!code ++:5]
+  const stats = await c.get('cache').remember(
+    'notes:stats',
+    60 * 5,
+    async () => await countNotesByAuthor(c),
+  )
+
+  return c.json(stats)
+},
+```
+
+`countNotesByAuthor` stands for your existing database query. On a hit, `remember` returns the stored value and skips the query. On a miss, it runs the query, stores the result for five minutes and returns it.
+
+Keys are prefixed with the plugin that owns the route. `notes:stats` is stored as `vitnode:cache:@acme/site-notes:notes:stats`, so it cannot collide with another plugin's key. Values are stored as JSON, so a `Date` comes back as a string.
+
+</Step>
+<Step>
+
+### Delete the key when the data changes
+
+In every route that changes notes, delete the key after the write succeeds:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/create.route.ts"
+handler: async c => {
+  const note = await createNote(c, c.req.valid('json'))
+  await c.get('cache').delete('notes:stats') // [!code ++]
+
+  return c.json(note, 201)
+},
+```
+
+The TTL is a safety net, not the invalidation. Without `delete`, visitors see outdated stats for up to five minutes after every write. `delete` also accepts an array of keys.
+
+</Step>
+</Steps>
+
+<Callout type="warn" title="The API cache is shared by every visitor">
+  A key such as `notes:stats` returns the same value to everyone. For data that
+  depends on who is asking, put the user ID in the key, for example
+  `notes:stats:${userId}`, or do not cache it.
+</Callout>
+
+`remember` treats a stored `null` as a miss, so a loader that returns `null` runs on every call. If an empty answer is expensive to compute, return an object such as `{ stats: null }` instead.
+
+## Check the result
+
+1. Open **AdminCP → System → Integrations** (`/admin/core/system/integrations`). The Redis card shows **Active** when Redis is connected. **Needs attention** means it is configured but unreachable.
+2. Call the stats route, then list your plugin's keys:
+
+   ```bash
+   redis-cli --scan --pattern 'vitnode:cache:@acme/site-notes:*'
+   ```
+
+   The output includes `vitnode:cache:@acme/site-notes:notes:stats`. Calling the route again within five minutes does not run `countNotesByAuthor`.
+
+3. Create a note and run the same command. The key is gone until the next call to the stats route.
+
+For every method, including `get`, `set`, `flush` and locks, see the [Cache reference](/docs/dev/cache/reference).

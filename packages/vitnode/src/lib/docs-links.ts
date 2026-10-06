@@ -1,7 +1,8 @@
 export const DOCS_URLS = {
   ai: "https://vitnode.com/docs/dev/ai",
   captcha: "https://vitnode.com/docs/dev/captcha",
-  contentPreview: "https://vitnode.com/docs/dev/content-engine/preview",
+  contentPreview:
+    "https://vitnode.com/docs/dev/content-engine/publication-and-editorial#preview-links",
   cron: "https://vitnode.com/docs/dev/cron",
   email: "https://vitnode.com/docs/dev/email",
   queue: "https://vitnode.com/docs/dev/advanced/queue",

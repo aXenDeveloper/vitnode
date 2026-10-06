@@ -16,7 +16,13 @@ import {
   ContentFormStatusSkeleton,
 } from "./skeleton";
 
-export const ContentFormSubmit = ({ label }: { label?: React.ReactNode }) => {
+export const ContentFormSubmit = ({
+  label,
+  withPublicationToggle = true,
+}: {
+  label?: React.ReactNode;
+  withPublicationToggle?: boolean;
+}) => {
   const tContent = useTranslations("core.content");
   const { mode, publication, skeleton } = useContentForm();
 
@@ -51,7 +57,9 @@ export const ContentFormSubmit = ({ label }: { label?: React.ReactNode }) => {
 
   return (
     <>
-      {mode === "edit" ? <ContentFormPublicationToggle /> : null}
+      {mode === "edit" && withPublicationToggle ? (
+        <ContentFormPublicationToggle />
+      ) : null}
       <AutoFormSubmitButton>
         <SaveIcon />
         {label ?? tContent(mode === "create" ? "create.submit" : "edit.submit")}
@@ -142,10 +150,12 @@ export const ContentFormActions = ({
   children,
   className,
   submitLabel,
+  withPublicationToggle,
   ...props
 }: React.ComponentProps<"div"> & {
   cancelHref?: string;
   submitLabel?: React.ReactNode;
+  withPublicationToggle?: boolean;
 }) => {
   const t = useTranslations("core.global");
 
@@ -164,7 +174,10 @@ export const ContentFormActions = ({
           {t("cancel")}
         </Button>
       ) : null}
-      <ContentFormSubmit label={submitLabel} />
+      <ContentFormSubmit
+        label={submitLabel}
+        withPublicationToggle={withPublicationToggle}
+      />
     </div>
   );
 };

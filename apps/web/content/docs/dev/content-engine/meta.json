@@ -4,17 +4,22 @@
   "icon": "Boxes",
   "pages": [
     "index",
+    "---Build---",
     "defining-a-content-type",
+    "public-api-and-caching",
+    "content-delivery-and-seo",
+    "---Model your content---",
+    "relations-and-advanced-modeling",
+    "localization",
+    "publication-and-editorial",
+    "---Customize---",
+    "admincp",
+    "services-and-api",
+    "production-and-security",
+    "---Reference---",
+    "reference",
     "fields",
     "database-and-migrations",
-    "services-and-api",
-    "publication-and-editorial",
-    "public-api-and-caching",
-    "localization",
-    "relations-and-advanced-modeling",
-    "content-delivery-and-seo",
-    "plugin-registration",
-    "admincp",
-    "production-and-security"
+    "plugin-registration"
   ]
 }

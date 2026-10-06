@@ -1,0 +1,1 @@
+ALTER TABLE "blog_posts_translations" ADD COLUMN "excerpt" text;

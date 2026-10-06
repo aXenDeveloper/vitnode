@@ -1,0 +1,140 @@
+---
+title: Cache app data
+description: Warm a TanStack Query entry in a VitNode plugin route loader, read it in the page without a second request, and invalidate it after a write.
+icon: AppWindow
+---
+
+The app cache in VitNode is TanStack Query. A plugin route's loader fills a query entry during SSR or navigation, the page reads that same entry without another request, and a write invalidates it so the next read is fresh.
+
+This guide builds a notes list for an `@acme/site-notes` plugin with a `notes` API module. How the API call itself works is covered in [Data fetching](/docs/dev/fetcher).
+
+<Steps>
+<Step>
+
+### Define the query once
+
+Create one `queryOptions` helper for the list. The loader, the page and the mutation all use it, so they always agree on the key.
+
+```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
+import { queryOptions } from '@tanstack/react-query'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+export const notesQueryKey = ['@acme/site-notes', 'notes'] as const
+
+export const notesQuery = () =>
+  queryOptions({
+    queryKey: notesQueryKey,
+    queryFn: async () => {
+      const response = await fetcher({
+        plugin: '@acme/site-notes',
+        method: 'get',
+        module: 'notes',
+        path: '/',
+      })
+
+      if (response.status !== 200) {
+        throw new Error(`Loading notes answered ${response.status}.`)
+      }
+
+      return await response.json()
+    },
+  })
+```
+
+Start every key with your plugin ID. `invalidateQueries` matches keys by prefix, so a generic first segment such as `'notes'` would let one plugin invalidate another plugin's data.
+
+</Step>
+<Step>
+
+### Warm the query in the route loader
+
+Create the page with `defineRoute` from `@vitnode/core/tanstack/plugin-routes`. Its loader context includes `queryClient`. The framework-neutral `definePluginRoute` from `@vitnode/core/routing` only receives `locale`.
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
+
+import { notesQuery } from '../features/notes/notes-query'
+
+export const route = defineRoute({
+  load: async ({ context }) => {
+    await context.queryClient.query({ ...notesQuery(), staleTime: 'static' }) // [!code ++]
+  },
+})
+
+const NotesPage = () => {
+  const { data: notes } = useSuspenseQuery(notesQuery())
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {notes.map((note) => (
+        <li key={note.id}>{note.title}</li>
+      ))}
+    </ul>
+  )
+}
+
+export default NotesPage
+```
+
+`staleTime: 'static'` makes the loader reuse an entry that is already cached instead of fetching again on every navigation. The page reads the entry the loader just filled, so it renders without suspending.
+
+</Step>
+<Step>
+
+### Invalidate the query after a write
+
+VitNode's query client does not refetch when a component mounts or the tab regains focus. A cached list stays as it is until your code invalidates it, so invalidate it in every mutation that changes notes:
+
+```ts title="plugins/site-notes/src/features/notes/use-create-note.ts"
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+import { toast } from 'sonner'
+
+import { notesQueryKey } from './notes-query'
+
+export const useCreateNote = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (title: string) => {
+      const response = await fetcher({
+        plugin: '@acme/site-notes',
+        method: 'post',
+        module: 'notes',
+        path: '/',
+        args: { body: { title } },
+      })
+
+      if (response.status !== 201) {
+        throw new Error(`Creating a note answered ${response.status}.`)
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: notesQueryKey }) // [!code ++]
+      toast.success('Note created', {
+        description: 'It now appears in the notes list.',
+      })
+    },
+  })
+}
+```
+
+Invalidate the narrowest key that covers everything the write could change. For a list with paging or sorting, that is the list's root key: the changed row may have moved to a different page.
+
+</Step>
+</Steps>
+
+<Callout type="warn" title="Put the user ID in per-user keys">
+  For data that belongs to one signed-in user, such as drafts or settings, add
+  the user ID to the query key. Otherwise, signing out and back in as someone
+  else in the same tab can show the previous account's cached data.
+</Callout>
+
+## Check the result
+
+1. Open the notes page with the browser's Network tab open. The list renders without a browser request for notes, because the loader filled the cache during SSR.
+2. Navigate to another page and back with a link. No new request for notes is sent.
+3. Create a note. You see one `POST` request, then one `GET` request that refetches the list, and the new note appears.
+
+To cache the database work behind the `notes` endpoint as well, continue with [Cache API data](/docs/dev/cache/api).

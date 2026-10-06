@@ -1,53 +1,59 @@
 import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
 
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 import {
-  ContentFormActions,
   ContentFormField,
-  ContentFormHeader,
-  ContentFormLayoutGrid,
-  ContentFormMain,
-  ContentFormSection,
-  ContentFormSidebar,
-  ContentFormStatus,
+  useContentForm,
 } from "@vitnode/core/content/admin-form";
-import { useTranslations } from "use-intl";
+import React from "react";
 
-export const BlogArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
-  const t = useTranslations("@vitnode/blog.admin.article.form");
+const ArticleEditor = React.lazy(async () =>
+  import("./editor/article-editor").then(module => ({
+    default: module.ArticleEditor,
+  })),
+);
+
+const ArticleEditorSkeleton = () => {
+  const { markHeaderRendered } = useContentForm();
+
+  markHeaderRendered?.();
 
   return (
-    <>
-      <ContentFormHeader>
-        <ContentFormActions />
-      </ContentFormHeader>
-
-      <ContentFormLayoutGrid>
-        <ContentFormMain>
-          <ContentFormSection>
-            <ContentFormField name="title" />
-            <ContentFormField name="friendlyUrl" />
-            <ContentFormField name="content" />
-          </ContentFormSection>
-        </ContentFormMain>
-
-        <ContentFormSidebar>
-          {mode === "edit" ? (
-            <ContentFormSection title={t("publish")}>
-              <ContentFormStatus />
-            </ContentFormSection>
-          ) : null}
-
-          <ContentFormSection title={t("cover.title")}>
-            <ContentFormField name="coverImage" />
-            <ContentFormField name="coverImageAlt" />
-          </ContentFormSection>
-
-          <ContentFormSection title={t("settings.title")}>
+    <div aria-busy="true" className="-m-6 flex flex-col">
+      <div className="flex h-14 items-center gap-2 border-b px-4 sm:px-6">
+        <Skeleton className="h-8 w-24" />
+        <div className="flex-1" />
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="grid grid-cols-1 items-start gap-8 px-4 py-8 sm:px-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+          <ContentFormField name="title" />
+          <ContentFormField name="friendlyUrl" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ContentFormField name="categoryId" />
             <ContentFormField name="authorId" />
-          </ContentFormSection>
-        </ContentFormSidebar>
-      </ContentFormLayoutGrid>
-    </>
+          </div>
+          <ContentFormField name="content" />
+        </div>
+        <div className="flex flex-col gap-6">
+          <ContentFormField name="excerpt" />
+          <ContentFormField name="coverImage" />
+          <ContentFormField name="coverImageAlt" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const BlogArticleFormLayout = (_props: ContentFormLayoutProps) => {
+  const { skeleton } = useContentForm();
+
+  if (skeleton) return <ArticleEditorSkeleton />;
+
+  return (
+    <React.Suspense fallback={<ArticleEditorSkeleton />}>
+      <ArticleEditor />
+    </React.Suspense>
   );
 };

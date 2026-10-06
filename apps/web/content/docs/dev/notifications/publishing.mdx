@@ -1,28 +1,115 @@
 ---
 title: Publish notifications
-description: Publish a notification from a VitNode plugin with c.get("notifications").publish() - inside your transaction, with an idempotency key, to the users your plugin names.
+description: Send a notification from a VitNode plugin. Declare a type with buildNotificationType, register it, and call c.get("notifications").publish() inside your transaction.
 icon: Send
 ---
 
-import { TypeTable } from 'fumadocs-ui/components/type-table'
+This guide notifies a topic's author when someone replies to their topic. You declare a notification type once, register it on your API plugin, and publish it from the route that saves the reply. The examples use a forum plugin with the id `@acme/forum`.
 
-Call `c.get("notifications").publish()` from a Hono route, event listener or
-queue task. Pass your transaction as `tx`, and the notification commits or
-rolls back with your own write.
+## Before you begin
 
-## Publish inside your transaction
+You need a plugin with an API part (`src/config.api.ts`) and a route that writes to the database. See [Create a plugin](/docs/dev/plugins/create) if you do not have one yet.
+
+<Steps>
+
+<Step>
+
+### Declare the notification type
+
+Create a file for your plugin's notification types:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
+import { z } from 'zod'
+
+export const topicReplyNotification = buildNotificationType({
+  id: 'forum.topic_reply',
+  version: 1,
+  schema: z.object({ topicId: z.number(), topicTitle: z.string() }),
+  category: 'social',
+  label: '@acme/forum.notifications.topic_reply.label',
+  defaults: { inApp: true, email: 'none' },
+  present: ({ data, t }) => ({
+    title: t('@acme/forum.notifications.topic_reply.title', {
+      title: data.topicTitle,
+    }),
+    target: `/forum/topics/${data.topicId}`,
+  }),
+})
+```
+
+`id` is permanent, because stored notifications refer to it. `schema` checks the `data` you publish. `present` turns that data into the inbox text, in the recipient's language, every time the inbox loads. Every option is listed in [Notification types](/docs/dev/notifications/notification-types).
+
+</Step>
+
+<Step>
+
+### Add the messages
+
+The API renders notification text, so the strings belong in your plugin's API messages:
+
+```json title="plugins/forum/src/locales/api/en.json"
+{
+  "@acme/forum": {
+    "notifications": {
+      "topic_reply": {
+        "label": "Replies to your topics",
+        "title": "New reply in {title}"
+      }
+    }
+  }
+}
+```
+
+`label` names the type on the member's preferences page. If your plugin has no `src/locales/api/` folder yet, create it as shown in [Shipping translations with a plugin](/docs/dev/i18n/server#shipping-translations-with-a-plugin).
+
+</Step>
+
+<Step>
+
+### Register the type
+
+Pass the type and the API messages to `buildApiPlugin()`:
+
+```ts title="plugins/forum/src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+import { topicReplyNotification } from '@/api/lib/notifications' // [!code ++]
+import { topicsModule } from '@/api/modules/topics/topics.module'
+import { CONFIG_PLUGIN } from '@/const'
+import messages from '@/locales/api'
+
+export const forumApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    messages,
+    notificationTypes: [topicReplyNotification], // [!code ++]
+    modules: [topicsModule],
+  })
+```
+
+Core collects the types of every installed plugin when the API starts, so restart the API after adding one. Two types with the same `id` stop the API from starting, with an error that names both plugins.
+
+</Step>
+
+<Step>
+
+### Publish in the reply route
+
+In the handler that saves the reply, publish inside the same transaction:
 
 ```ts title="plugins/forum/src/api/modules/topics/routes/reply.route.ts"
 await c.get('db').transaction(async (tx) => {
   const [reply] = await tx
     .insert(forum_replies)
-    .values({ topicId: topic.id, content, authorId: user.id })
+    .values({ topicId: topic.id, authorId: user.id, content })
     .returning()
 
+  // [!code ++:8]
   await c.get('notifications').publish({
     type: topicReplyNotification,
     tx,
-    recipients: [topic.authorId, ...topic.participantIds],
+    recipients: [topic.authorId],
     subject: { type: 'forum.topic', id: topic.id },
     data: { topicId: topic.id, topicTitle: topic.title },
     idempotencyKey: `reply:${reply.id}`,
@@ -30,107 +117,40 @@ await c.get('db').transaction(async (tx) => {
 })
 ```
 
-`publish()` writes one event row and one queue task in `tx`. A rolled-back
-reply notifies nobody. A committed one always notifies, even if the process
-dies right after the commit.
+`topic`, `user` and `content` come from your existing route. Because of `tx`, the notification is saved together with the reply: a rolled-back reply notifies nobody, and a saved reply always notifies, even if the server stops right after the commit. `subject` names what the notification is about. Core uses it to group notifications and to [remove them later](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
 
-`publish()` returns `{ eventId, duplicate }`. It does not wait for delivery.
+</Step>
 
-## Options
+</Steps>
 
-<TypeTable
-  type={{
-    type: {
-      description:
-        'The registered definition, or its id. A different object with the same id is rejected.',
-      type: 'NotificationTypeDefinition<TData> | string',
-      required: true,
-    },
-    data: {
-      description: "Validated against the type's schema.",
-      type: 'TData',
-      required: true,
-    },
-    idempotencyKey: {
-      description:
-        'Stable for one real-world happening, 1-255 characters. Unique per plugin and type.',
-      type: 'string',
-      required: true,
-    },
-    recipients: {
-      description:
-        'Candidate user ids chosen by your business rules. At most 100,000.',
-      type: 'readonly number[]',
-    },
-    subject: {
-      description:
-        "What the notification is about. Drives grouping and remove(). Must match the type's subjectType.",
-      type: '{ type: string; id: number | string }',
-    },
-    tx: {
-      description:
-        'Your transaction. The event and its delivery task commit with your write.',
-      type: 'Transaction',
-    },
-    actorId: {
-      description:
-        'Who caused it. Defaults to the signed-in admin or user of the request. Pass null for system notifications.',
-      type: 'number | null',
-    },
-    allowSelf: {
-      description: 'Deliver to the actor too.',
-      type: 'boolean',
-      default: 'false',
-    },
-  }}
-/>
+`publish()` returns `{ eventId, duplicate }` and does not wait for delivery. Delivery starts after your route sends its response, so a large audience never slows the request down.
+
+<Callout type="warn" title="A rejected publish rolls back your write">
+  `publish()` throws a `NotificationPublishError` when `data` does not match the
+  schema or the type is not registered. Inside a transaction, that error rolls
+  back the reply too. Catch it if the notification is optional for the write.
+  See [Errors](/docs/dev/notifications/reference#errors).
+</Callout>
 
 ## Choose an idempotency key
 
-The key names **the happening**, not the attempt. Publishing the same type and
-key twice is a no-op that returns the first event with `duplicate: true`, so
-retries, double clicks and replayed listeners never notify twice.
+The `idempotencyKey` names the real-world event, not the attempt to publish it. Publishing the same type with the same key again does nothing and returns the first event with `duplicate: true`. Retries, double clicks and replayed event listeners never notify twice.
 
-| Happening                      | Good key                    | Bad key                  |
+| Event                          | Good key                    | Bad key                  |
 | ------------------------------ | --------------------------- | ------------------------ |
 | A reply was posted             | `reply:${reply.id}`         | `reply:${Date.now()}`    |
 | An article was first published | `post-published:${post.id}` | `post-${post.updatedAt}` |
 | An export finished             | `export:${job.id}`          | `crypto.randomUUID()`    |
 
-A random key is only right when every call really is a new message, like an
-administrator sending the same text twice on purpose.
+Use a random key only when every call really is a new message, such as an administrator sending the same announcement twice on purpose.
 
-<Callout type="info" title="Concurrent duplicates">
-  If two transactions publish the same key at the same moment and the first has
-  not committed yet, the second throws a `NotificationPublishError`. Retrying it
-  after the first commits returns `duplicate: true`.
-</Callout>
+## Choose the recipients
 
-## Pick the audience
+`recipients` holds the user ids your plugin picked, up to 100,000 per publish. Core removes duplicates and the actor, which is the signed-in admin or user of the request. When the notification is delivered, core also skips deleted users, members who turned the type off and anyone your type's [`access` check](/docs/dev/notifications/access) rejects.
 
-`recipients` holds the user ids your plugin picked: the topic author, the
-people who replied, the mentioned users, the members of a group. Up to 100,000
-per event - core walks them in batches, so a big list costs your request
-nothing.
+To notify the actor about their own work, set `allowSelf: true`:
 
-A user listed twice gets the notification once. Candidates are only
-candidates. Core still drops:
-
-- the actor, unless `allowSelf: true`;
-- user ids that do not exist;
-- users who switched the type off, or an installation policy that disabled it
-  (see [Preferences](/docs/dev/notifications/preferences));
-- users your type's `access` callback leaves out.
-
-A publish with no `recipients` is stored as completed and delivers nothing.
-
-### Actor and `allowSelf`
-
-`actorId` defaults to the signed-in admin, then the signed-in user. Nobody needs
-to hear about their own reply, so the actor is skipped. Set `allowSelf: true`
-for messages about the actor's own work:
-
-```ts
+```ts title="plugins/forum/src/api/modules/exports/routes/finish.route.ts"
 await c.get('notifications').publish({
   type: exportReadyNotification,
   recipients: [user.id],
@@ -140,105 +160,12 @@ await c.get('notifications').publish({
 })
 ```
 
-In a queue task or a scheduled job there is no signed-in user, so pass the real
-actor or `null` yourself.
+A queue task or cron job has no signed-in user. Pass the real actor as `actorId`, or `actorId: null` for a system notification.
 
-## Validation errors
+## Check the result
 
-`publish()` throws a `NotificationPublishError` before writing anything when:
+1. Sign in as a second user and reply to a topic started by someone else. Replying to your own topic notifies nobody, because the actor is skipped.
+2. Sign in as the topic author. Within a few seconds the bell shows an unread count, and the new item links to `/forum/topics/{id}`.
+3. Open `/settings/notifications`. **Replies to your topics** is listed under **What you get notified about**, in the **Social** group once more than one category exists.
 
-- the type is not registered, or `type` is a different object than the
-  registered one;
-- `data` fails the schema - the message lists each failing path;
-- `idempotencyKey` is empty or longer than 255 characters;
-- `subject` has another type than the type's `subjectType`, or an invalid
-  type or id;
-- there are more than 100,000 `recipients`.
-
-Inside a transaction the error rolls back your write too. Catch it if the
-notification is optional for that write.
-
-## When delivery happens
-
-A request that published starts delivery as soon as its response is sent - it
-never delays the response. Anything not started that way - a task another
-worker already claimed, or a publish outside a request - is picked up by the
-queue worker, which runs every minute. A rolled-back `tx` leaves nothing to
-deliver. See
-[Queue and scale](/docs/dev/notifications/queue-and-scale).
-
-## Check access in batches
-
-`access` receives a bounded batch of candidate ids, never the whole audience.
-Answer for the whole batch with one query:
-
-```ts title="plugins/forum/src/api/lib/notifications.ts"
-import { and, eq, inArray } from "drizzle-orm";
-
-access: async ({ c, data, userIds }) => {
-  const members = await c
-    .get("db")
-    .select({ userId: forum_topic_members.userId })
-    .from(forum_topic_members)
-    .where(
-      and(
-        eq(forum_topic_members.topicId, data.topicId),
-        inArray(forum_topic_members.userId, userIds),
-      ),
-    );
-
-  return members.map(member => member.userId);
-},
-```
-
-When everyone shares one answer - "is the article still published?" - check
-once and return `userIds` or `[]`.
-
-Core calls `access` again before every email and when a user lists their inbox,
-so revoked access hides the item and stops the email even after delivery. A
-throw during fan-out fails that batch, and the queue retries it.
-
-## Remove notifications
-
-When content is deleted or a group of users loses access, take the items out
-of their inboxes. Unread counts update in the same transaction:
-
-```ts
-await c.get('notifications').remove({
-  subject: { type: 'forum.topic', id: topic.id },
-})
-
-await c.get('notifications').remove({
-  subject: { type: 'forum.topic', id: topic.id },
-  type: 'forum.topic_reply',
-  userIds: removedMemberIds,
-})
-```
-
-`remove()` returns how many items it deleted. Without `type` and `userIds`, it
-removes every item about the subject for everyone.
-
-You do not have to call `remove()` for correctness: an item whose `access` now
-says no already renders as a placeholder. Call it to keep inboxes tidy.
-
-## Read a user's unread count
-
-```ts
-const { unread, revision } = await c.get('notifications').state(user.id)
-```
-
-`revision` goes up with every change, so a client can tell a fresh count from
-a stale one.
-
-## Related
-
-<Cards>
-  <Card
-    title="Notification types"
-    href="/docs/dev/notifications/notification-types"
-  />
-  <Card
-    title="Inbox and realtime"
-    href="/docs/dev/notifications/inbox-and-realtime"
-  />
-</Cards>
+If nothing arrives, see [Troubleshooting](/docs/dev/notifications/troubleshooting#notifications-arrive-late-or-never).

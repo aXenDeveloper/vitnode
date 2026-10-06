@@ -61,15 +61,17 @@ services:
 
 ## Using the Cache in API Routes
 
-Use `remember` to cache expensive database lookups:
+Use `remember` with a key, a TTL in seconds, and a loader to cache expensive database lookups:
 
 ```ts
-const posts = await c.get("cache").remember({
-  key: "featured_posts",
-  ttlSeconds: 60, // 1 minute
-  loader: async () => await fetchFeaturedPostsFromDB(),
-})
+const posts = await c.get("cache").remember(
+  "featured_posts",
+  60,
+  async () => await fetchFeaturedPostsFromDB(),
+)
 ```
+
+See [Cache API data](/docs/dev/cache/api) for invalidation and the full method list.
 
 ---
 

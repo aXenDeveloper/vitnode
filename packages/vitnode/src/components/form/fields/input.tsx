@@ -39,8 +39,14 @@ const MultiLangInput = ({
   > & {
     isOptional?: boolean;
   }) => {
-  const { languages, selected, setSelected, currentValue, setValue } =
-    useMultiLangField(field);
+  const {
+    canSelect,
+    languages,
+    selected,
+    setSelected,
+    currentValue,
+    setValue,
+  } = useMultiLangField(field);
   const { maxLength, minLength } = getMultiLangConstraints(itemParams);
 
   return (
@@ -71,7 +77,7 @@ const MultiLangInput = ({
             value={currentValue}
           />
         </FormControl>
-        {languages.length > 1 && (
+        {canSelect && (
           <InputGroupAddon align="inline-end">
             <MultiLangSelect
               languages={languages}

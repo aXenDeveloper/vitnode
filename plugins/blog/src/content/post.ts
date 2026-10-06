@@ -51,6 +51,11 @@ export const blogPostContentType = defineContentType({
       source: "title",
     }),
     content: field.textarea({ localized: true, required: true }),
+    excerpt: field.textarea({
+      localized: true,
+      nullable: true,
+      maxLength: 300,
+    }),
 
     coverImage: field.file({
       maxBytes: 5 * 1024 * 1024,
@@ -76,6 +81,7 @@ export const blogPostContentType = defineContentType({
       "title",
       "friendlyUrl",
       "content",
+      "excerpt",
       "categoryId",
       // A file crosses the public boundary as the normalised descriptor - `{ id,
       // name, url, mimeType, size, width, height }` - and never as the
@@ -106,7 +112,11 @@ export const blogPostContentType = defineContentType({
   delivery: {
     enabled: true,
     redirects: { enabled: true },
-    seo: { titleField: "title", descriptionField: "content" },
+    seo: {
+      titleField: "title",
+      descriptionField: "excerpt",
+      fallbackDescriptionField: "content",
+    },
     sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },
   },

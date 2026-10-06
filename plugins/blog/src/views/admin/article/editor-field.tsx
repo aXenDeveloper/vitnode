@@ -16,7 +16,12 @@ export const BlogArticleEditorField = (props: ItemAutoFormComponentProps) => {
 
   return (
     <React.Suspense fallback={<ContentFormFieldSkeleton control="editor" />}>
-      <AutoFormEditor label={t("content.label")} {...props} />
+      <AutoFormEditor
+        className="[&_.ProseMirror]:min-h-[50dvh] [&_.ProseMirror]:leading-relaxed [&>:first-child]:top-14"
+        disableScroll
+        label={t("content.label")}
+        {...props}
+      />
     </React.Suspense>
   );
 };

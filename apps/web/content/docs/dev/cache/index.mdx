@@ -1,0 +1,25 @@
+---
+title: Cache
+description: Choose where to cache data in VitNode - TanStack Query in the app, or Redis inside your Hono API routes.
+icon: Zap
+---
+
+VitNode caches data in two places. The app keeps API responses in TanStack Query, so a page never asks for something it already has. The API keeps expensive results in Redis through `c.get("cache")`, so a slow query runs once for everyone. Both are opt-in: nothing is cached until your code asks for it.
+
+## Pick a layer
+
+| You want to                                                     | Use                        | Guide                                        |
+| --------------------------------------------------------------- | -------------------------- | -------------------------------------------- |
+| Render SSR data without refetching it, and skip repeat requests | App cache (TanStack Query) | [Cache app data](/docs/dev/cache/app)        |
+| Stop running the same slow database query for every visitor     | API cache (Redis)          | [Cache API data](/docs/dev/cache/api)        |
+| Look up `remember`, `delete`, `flush` and the other methods     | API cache (Redis)          | [Cache reference](/docs/dev/cache/reference) |
+
+Most features use both. The API caches the expensive part once, and each visitor's app keeps its own copy of the response.
+
+<Callout type="info" title="The fetcher never caches">
+  [`fetcher()`](/docs/dev/fetcher) forwards the visitor's cookies, so a stored
+  response could be one visitor's data served to another. That is why caching
+  lives in the two layers above and not in the fetcher.
+</Callout>
+
+Content Engine content types tag and expire their public reads for you. See [Content Engine caching](/docs/dev/content-engine/public-api-and-caching) instead of wiring that up by hand.

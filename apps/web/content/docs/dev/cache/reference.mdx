@@ -1,0 +1,56 @@
+---
+title: Cache reference
+description: Every method on c.get("cache") in VitNode API routes - signatures, return values, TTLs, key prefixes, serialization and behavior without Redis.
+icon: List
+---
+
+`c.get("cache")` is available in every Hono route handler. It stores JSON values in Redis under a per-plugin prefix and does nothing when Redis is not configured. For a step-by-step example, see [Cache API data](/docs/dev/cache/api).
+
+## Methods
+
+| Method                                 | Returns                                                | Behavior                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `get<T>(key)`                          | `Promise<T \| null>`                                   | Reads and parses a value. Returns `null` on a miss, on a Redis error, or without Redis.                                        |
+| `set<T>(key, value, ttlSeconds?)`      | `Promise<void>`                                        | Stores `value` as JSON. Without `ttlSeconds`, or with `0`, the key never expires.                                              |
+| `has(key)`                             | `Promise<boolean>`                                     | Whether the key exists. `false` on a Redis error or without Redis.                                                             |
+| `remember<T>(key, ttlSeconds, loader)` | `Promise<T>`                                           | Returns the cached value when `get` finds one. Otherwise runs `loader`, stores its result with `set` and returns it.           |
+| `delete(key)`                          | `Promise<void>`                                        | Deletes one key, or every key in an array.                                                                                     |
+| `flush()`                              | `Promise<void>`                                        | Deletes every key of the current plugin. Other plugins' keys and unrelated data in the same Redis instance are left untouched. |
+| `acquireLock(key, ttlSeconds)`         | `Promise<boolean>`                                     | Takes a lock that expires after `ttlSeconds`. `true` when this call holds the lock, `false` when another caller does.          |
+| `releaseLock(key)`                     | `Promise<void>`                                        | Releases a lock taken with `acquireLock`.                                                                                      |
+| `status()`                             | `Promise<{ configured: boolean; connected: boolean }>` | Pings Redis. Both fields are `false` without Redis.                                                                            |
+
+`getSystem`, `setSystem` and `deleteSystem` also exist. They write to a namespace shared with VitNode core, so plugins should use the plugin-scoped methods above.
+
+## Keys
+
+| Method                                             | Stored as                             |
+| -------------------------------------------------- | ------------------------------------- |
+| `get`, `set`, `has`, `remember`, `delete`, `flush` | `vitnode:cache:{pluginId}:{key}`      |
+| `acquireLock`, `releaseLock`                       | `vitnode:cache:__system__:lock:{key}` |
+
+The plugin ID comes from the route that handles the request. Lock keys are not prefixed with it, so include your plugin ID in a lock key, for example `@acme/site-notes:rebuild-stats`.
+
+## Serialization
+
+Values go through `JSON.stringify` and `JSON.parse`:
+
+- A `Date` comes back as an ISO string, and a `Map` or `Set` comes back as `{}`.
+- `null` is stored, but `get` returns `null` for it, so `remember` treats it as a miss and runs the loader again.
+- `undefined` is not stored.
+
+## Without Redis and when Redis fails
+
+When the `redis` option in `vitnode.api.config.ts` is not set, every read misses, every write does nothing, and `remember` always runs its loader.
+
+When Redis is configured but fails, the error never reaches your route. A failed read counts as a miss and a failed write is skipped. Commands fail immediately while Redis is unreachable instead of waiting in a queue, so an outage does not stall requests.
+
+Locks behave differently, because a lock exists to stop work from running twice:
+
+| Situation            | `acquireLock` returns |
+| -------------------- | --------------------- |
+| Redis connected      | `true` or `false`     |
+| Redis not configured | `true`                |
+| Redis error          | `false`               |
+
+Without Redis, every caller gets the lock. If two instances must never run the same work at once, guard it in the database as well, for example with `FOR UPDATE SKIP LOCKED`.

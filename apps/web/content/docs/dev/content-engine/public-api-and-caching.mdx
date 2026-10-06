@@ -1,172 +1,247 @@
 ---
-title: Public API and Caching
-description: Expose safe Content Engine fields from a plugin API and configure cache invalidation without framework-specific glue.
+title: Publish content with a public API
+description: Add drafts and publishing to a Content Engine content type, then expose published records through typed, read-only public API routes with search, filters and sorting.
 icon: Globe
 ---
 
-import { NetworkIcon, SearchIcon } from 'lucide-react'
+import { ImgDocs } from '@/components/fumadocs/img'
+import bulkPublish from './recipes-admin-bulk-publish.png'
+import published from './recipes-admin-published.png'
 
-Public content is an API concern owned by the plugin. Start with an explicit
-allowlist; no field is public just because it looked innocent in a database
-column at 2 a.m.
+A content type is private until you opt in. This guide adds a draft and published state to the recipes from [Create your first content type](/docs/dev/content-engine/defining-a-content-type), then exposes the published ones at `/api/@vitnode/example/content/recipes`. Anyone can read that API without signing in, so you list exactly which fields it returns.
 
 <Steps>
-  <Step>
 
-### Define the public response
+<Step>
 
-Public API generation requires `publication: { enabled: true }` and at least one exposed `slug` field in `publicApi.fields` for the detail route:
+### Turn on publication and the public API
 
-```ts title="plugins/blog/src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content"
+Add `publication` and `publicApi` to the definition, and show the new `status` column in the list:
 
-export const articleContentType = defineContentType({
-  id: "blog.article",
-  tableName: "blog_articles",
+```ts title="plugins/example/src/content/recipe.ts"
+export const recipeContentType = defineContentType({
+  id: "example.recipe",
+  tableName: "example_recipes",
   fields: {
-    adminNotes: field.textarea({ nullable: true }),
-    excerpt: field.textarea({ nullable: true }),
-    slug: field.slug({ source: "title" }),
-    title: field.text({ required: true }),
+    // same fields as before
   },
-  // [!code ++:10]
-  publication: { enabled: true },
-  publicApi: {
+  publication: { enabled: true }, // [!code ++]
+  publicApi: { // [!code ++:16]
     enabled: true,
-    path: "articles",
-    fields: ["id", "title", "slug", "excerpt", "publishedAt"],
-    searchableFields: ["title", "excerpt"],
-    orderableFields: ["title"],
-    defaultOrderBy: "publishedAt",
-    defaultOrder: "desc",
+    path: "recipes",
+    fields: [
+      "title",
+      "slug",
+      "summary",
+      "cookingTime",
+      "difficulty",
+      "vegetarian",
+      "publishedAt",
+    ],
+    searchableFields: ["title", "summary"],
+    filterableFields: ["difficulty", "vegetarian"],
+    orderableFields: ["cookingTime"],
   },
-})
+  admin: {
+    path: "example/recipes",
+    titleField: "title",
+    list: {
+      columns: ["status", "title", "difficulty", "cookingTime", "vegetarian", "updatedAt"], // [!code highlight]
+      searchableFields: ["title", "summary"],
+      orderableFields: ["title", "cookingTime"],
+    },
+  },
+});
 ```
 
-`adminNotes` remains private because it is not listed in `fields`.
+- `publication` adds a `status` column (`draft` or `published`) and a `publishedAt` timestamp. New records start as drafts.
+- `publicApi.fields` is an allowlist. A field you leave out, such as an internal note, never leaves the server. It must contain exactly one slug field, because the detail route looks records up by slug. `status` and `field.user()` fields cannot be public.
+- `path` is a single lowercase URL segment. It cannot be `admin`.
 
-  </Step>
-  <Step>
+A public API without `publication` throws, so drafts can never leak by accident.
 
-### Build the public module in the plugin API
+</Step>
 
-Register the content type's public routes using `buildContentPublicModule`:
+<Step>
 
-```ts title="plugins/blog/src/config.api.ts"
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
-import { buildContentPublicModule } from "@vitnode/core/content/server"
+### Register the public module
 
-import { articleContent } from "./content/articles"
+Add `buildContentPublicModule` to your API plugin. A content type without `publicApi` is skipped, so you can pass all of them:
 
-export const blogApiPlugin = () =>
+```ts title="plugins/example/src/config.api.ts"
+import { buildContentPublicModule } from "@vitnode/core/content/server"; // [!code ++]
+
+import { recipeContent } from "@/database/recipes"; // [!code ++]
+
+export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: "@acme/blog",
+    pluginId: CONFIG_PLUGIN.pluginId,
     modules: [
-      // [!code ++:4]
-      buildContentPublicModule({
-        contentTypes: [articleContent],
-        pluginId: "@acme/blog",
+      helloModule,
+      adminModule,
+      buildContentPublicModule({ // [!code ++:4]
+        pluginId: CONFIG_PLUGIN.pluginId,
+        contentTypes: [recipeContent],
       }),
     ],
-  })
+  });
 ```
 
-The module exposes two public endpoints:
-
-- `GET /api/{pluginId}/content/{path}`: Lists published records with cursor pagination, optional `search`, equality `filters`, and `orderBy`.
-- `GET /api/{pluginId}/content/{path}/{slug}`: Retrieves a single published record resolved by its public slug.
-
 </Step>
-  <Step>
 
-### Read it with the fetcher
+<Step>
 
-`buildContentPublicModule` keeps every generated route in its type, so the
-universal fetcher infers them like any hand-written module. The module path is
-`content/` followed by the content type's `publicApi.path`:
+### Label the new permission and columns
 
-```ts title="plugins/blog/src/features/articles/article-query.ts"
-import { fetcher } from "@vitnode/core/tanstack/fetcher"
+Publication adds a `can_publish` permission. Add a label for it and for the two new columns next to your existing keys:
 
-// [!code ++:8]
-export const fetchArticle = async (slug: string) => {
-  const response = await fetcher({
-    plugin: "@acme/blog",
-    args: { params: { slug } },
-    method: "get",
-    module: "content/articles",
-    path: "/{slug}",
-  })
-
-  if (response.status === 404) return null
-
-  return await response.json()
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example": {
+    "content": {
+      "recipe": {
+        "fields": {
+          "status": "Status",
+          "publishedAt": "Published"
+        }
+      }
+    }
+  },
+  "@vitnode/example:recipe:can_publish": "Publish and unpublish recipes"
 }
-
-export const fetchArticles = async (search?: string) =>
-  await fetcher({
-    plugin: "@acme/blog",
-    args: { query: { first: "20", orderBy: "title", search } },
-    method: "get",
-    module: "content/articles",
-    path: "/",
-  })
 ```
 
-A content type without `publicApi` contributes no module, so
-`module: "content/categories"` for a private type is a compile error rather
-than a 404 at runtime.
+</Step>
+
+<Step>
+
+### Build, migrate and restart
+
+Run `pnpm build:plugins && pnpm db:migrate`, then restart `pnpm dev`. The migration adds the two publication columns and an index. Existing rows become drafts:
+
+```sql title="migration.sql (breakpoints removed)"
+ALTER TABLE "example_recipes" ADD COLUMN "publishedAt" timestamp;
+ALTER TABLE "example_recipes" ADD COLUMN "status" varchar(32) DEFAULT 'draft' NOT NULL;
+CREATE INDEX "example_recipes_status_published_at_idx" ON "example_recipes" ("status","publishedAt");
+```
 
 </Step>
-  <Step>
 
-### Only configure revalidation when a front end caches renders
+<Step>
 
-Content mutations already invalidate VitNode's internal content cache tags. If a separate frontend application caches rendered pages, add its origin so the API can notify it through the framework-neutral revalidation endpoint:
+### Publish some recipes
+
+Open **AdminCP → Example → Recipes**. Every recipe now shows a **Draft** badge, and the public API returns an empty list. Tick a few rows and use **Publish** in the bar that slides up:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={bulkPublish}
+  alt="Recipes list with three of four draft rows ticked and a floating bar showing 3 selected, Publish, Unpublish and Delete"
+/>
+
+Confirm with **Yes, publish**. The badges turn into **Published**. You can also publish one record with the paper plane button in its row, or with **Publish** in the create form, which now sits next to **Save as draft**.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={published}
+  alt="Recipes list with three Published recipes and Beef wellington still a Draft"
+/>
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Read the list. Filters are plain query parameters named after the field, and `orderBy` accepts `publishedAt` plus your `orderableFields`:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/recipes?vegetarian=true&orderBy=cookingTime&order=asc&first=2"
+```
+
+```json
+{
+  "edges": [
+    {
+      "title": "Shakshuka for two",
+      "slug": "shakshuka-for-two",
+      "summary": "Eggs poached in a spicy tomato and pepper sauce.",
+      "cookingTime": 30,
+      "difficulty": "easy",
+      "vegetarian": true,
+      "publishedAt": "2026-10-05T19:34:57.870Z"
+    },
+    {
+      "title": "Mushroom risotto",
+      "slug": "mushroom-risotto",
+      "summary": "Slow-stirred rice with porcini and parmesan.",
+      "cookingTime": 45,
+      "difficulty": "medium",
+      "vegetarian": true,
+      "publishedAt": "2026-10-05T19:34:57.886Z"
+    }
+  ],
+  "pageInfo": {
+    "totalCount": 2,
+    "totalPages": 1,
+    "currentPage": null,
+    "pageSize": 2,
+    "count": 2,
+    "hasNextPage": false,
+    "hasPreviousPage": false,
+    "endCursor": "eyJjb2x1bW4iOiJjb29raW5nVGltZSIsImlkIjozLCJ2YWx1ZSI6NDV9",
+    "startCursor": "eyJjb2x1bW4iOiJjb29raW5nVGltZSIsImlkIjoyLCJ2YWx1ZSI6MzB9"
+  }
+}
+```
+
+Read one recipe by its slug at `/api/@vitnode/example/content/recipes/shakshuka-for-two`. The draft `beef-wellington` answers `404` with `Recipe not found.`, exactly like a slug that never existed, so the API never confirms that a draft exists. Sorting by a column you did not allow is a `400`.
+
+## Read the API from your plugin
+
+The generated routes are typed, so the [universal fetcher](/docs/dev/fetcher) infers the arguments and the response. The module is `content/` followed by `publicApi.path`:
+
+```ts title="plugins/example/src/views/recipes/recipe-queries.ts"
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+export const fetchQuickRecipes = async () => {
+  const response = await fetcher({
+    plugin: "@vitnode/example",
+    method: "get",
+    module: "content/recipes",
+    path: "/",
+    args: { query: { orderBy: "cookingTime", order: "asc", first: "5" } },
+  });
+
+  return await response.json();
+};
+```
+
+A content type without `publicApi` adds no module, so `module: "content/categories"` for a private type is a compile error instead of a runtime `404`. To give each recipe its own web page, continue with [Show content on a public page](/docs/dev/content-engine/content-delivery-and-seo).
+
+## Public API routes
+
+| Route                   | Returns                                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `GET /`                 | Published records. Query: `first`, `last`, `cursor`, `page`, `search`, `orderBy`, `order` and one key per filterable field |
+| `GET /{slug}`           | One published record, or `404`                                                                                  |
+| `GET /preview/{token}`  | A signed draft preview, only with [`editorial.preview`](/docs/dev/content-engine/publication-and-editorial)     |
+| `GET /delivery/...`     | URL resolution, metadata and sitemap entries, only with [`delivery`](/docs/dev/content-engine/content-delivery-and-seo) |
+
+A page holds at most 50 records; ask for fewer with `first`. A record is public only when its status is `published` and its `publishedAt` is in the past. Every option of `publicApi` is in the [content type reference](/docs/dev/content-engine/reference#publicapi).
+
+## Caching
+
+Public reads go straight to the database; core does not cache them for you. If a separate front end caches rendered pages, `content.revalidateOrigins` in your API config lists the origins to notify. VitNode currently notifies them only when a [scheduled](/docs/dev/content-engine/publication-and-editorial#schedule-publishing) publish or unpublish runs. It sends a `POST` to `{origin}/api/vitnode/content/revalidate` with `Authorization: Bearer <CRON_SECRET>`, and your front end has to provide that endpoint.
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
   content: {
-    // [!code ++]
-    revalidateOrigins: ["https://www.example.com"],
+    revalidateOrigins: ["https://www.example.com"], // [!code ++]
   },
-})
+});
 ```
 
-Leave this unset when the frontend reads directly from the public content API.
-
-  </Step>
-</Steps>
-
-## Public API Configuration Reference
-
-| Property | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `enabled` | `true` | — | Opts into the generated public API module. |
-| `path` | `string` | — | Single lowercase URL segment (e.g. `"articles"`, never `"admin"`). |
-| `fields` | `string[]` | — | Strict allowlist of exposed fields. Must include the `slug` field. Can include `id` and `publishedAt`. |
-| `searchableFields` | `string[]` | `[]` | Exposed text fields scanned by the `?search=` query parameter. |
-| `orderableFields` | `string[]` | `[]` | Exposed columns accepted by the `?orderBy=` query parameter. |
-| `filterableFields` | `string[]` | `[]` | Exposed columns accepted as equality filters. |
-| `defaultOrderBy` | `string` | `"publishedAt"` | Default column used for ordering public list results. |
-| `defaultOrder` | `"asc" \| "desc"` | `"desc"` | Default sorting direction. |
-
-## Keep the public surface intentional
-
-Use a plugin route for the page that consumes the endpoint, and add search
-indexing only when users need to discover the content outside its own section.
-
-<Cards>
-  <Card
-    icon={<NetworkIcon />}
-    title="Plugin API modules"
-    description="Add typed Hono modules and routes alongside the feature they serve."
-    href="/docs/dev/plugins/api/modules"
-  />
-  <Card
-    icon={<SearchIcon />}
-    title="Search"
-    description="Choose Postgres or Elasticsearch search for plugin-owned records."
-    href="/docs/dev/search"
-  />
-</Cards>
+Leave it unset when your pages read the public API on every request.

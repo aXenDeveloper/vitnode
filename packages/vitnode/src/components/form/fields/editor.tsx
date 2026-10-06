@@ -41,8 +41,14 @@ const MultiLangEditor = ({
   > & {
     isOptional?: boolean;
   }) => {
-  const { languages, selected, setSelected, currentValue, setValue } =
-    useMultiLangField(field, { isFilled: hasHtmlText });
+  const {
+    canSelect,
+    languages,
+    selected,
+    setSelected,
+    currentValue,
+    setValue,
+  } = useMultiLangField(field, { isFilled: hasHtmlText });
   const labelledBy = useEditorLabelledBy(label);
 
   return (
@@ -53,7 +59,7 @@ const MultiLangEditor = ({
             {label}
           </AutoFormLabel>
         )}
-        {languages.length > 1 && (
+        {canSelect && (
           <MultiLangSelect
             languages={languages}
             onSelect={setSelected}

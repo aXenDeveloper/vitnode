@@ -1,148 +1,102 @@
 ---
-title: Database & Migrations
-description: How the Content Engine maps content models to PostgreSQL tables using createContentModel, handles system columns, and executes Drizzle Kit migrations.
+title: Database and migrations
+description: How the VitNode Content Engine maps a content type to Postgres tables, which columns and indexes it adds for you, and how to generate and apply migrations.
 icon: Database
 ---
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+Every content type becomes ordinary Postgres tables managed by Drizzle. `createContentModel` from `@vitnode/core/content/server` builds them from the definition, and the usual migration workflow creates them in your database. Nothing is stored as an untyped JSON document, except `field.blocks()`.
 
-Content Engine content types compile directly into standard PostgreSQL database tables via Drizzle ORM.
+## Generate and apply a migration
 
-## Prerequisites & Context
+After you add or change a content type, run this from the workspace root:
 
-Before setting up database tables, you must have a content type definition (e.g. `articleContentType`) created using `defineContentType` in `src/content/article.ts`:
-
-```ts title="src/content/article.ts"
-import { defineContentType, field } from '@vitnode/core/content'
-
-// 1. Client-safe definition (imported by both API and AdminCP)
-export const articleContentType = defineContentType({
-  id: 'example.article',
-  tableName: 'example_articles',
-  fields: {
-    title: field.text({ required: true }),
-    code: field.text({ required: true }),
-  },
-})
-```
-
-- **`createContentModel(definition, options)`**: A backend utility from `@vitnode/core/content/server` that converts a client-safe content definition into a server-side Drizzle ORM model.
-- **`articleContent`**: The compiled model object containing `.table` (raw Drizzle table), `.service(c)` (CRUD helper), and `.schemas` (Zod schemas).
-
----
-
-## Step-by-Step Database Setup
-
-<Steps>
-
-<Step>
-### Step 1: Create Database Model File and Export Tables
-
-Create your model file under `src/database/articles.ts`. Import `createContentModel` from `@vitnode/core/content/server` and your definition `articleContentType`:
-
-```ts title="src/database/articles.ts"
-import { createContentModel } from '@vitnode/core/content/server'
-import { articleContentType } from '@/content/article'
-import { example_categories } from './categories'
-
-// Compile client definition into a server Drizzle model
-export const articleContent = createContentModel(articleContentType, {
-  references: {
-    category: () => example_categories.id,
-  },
-})
-
-// Export raw Drizzle tables for migration discovery
-export const example_articles = articleContent.table
-
-// When localization is enabled, export the translation table
-export const example_articles_translations = articleContent.translationTable
-
-// When to-many relations or repeatables are used, export junction and child tables
-export const example_articles_categories =
-  articleContent.advancedTables.junctions.categories
-export const example_articles_faq =
-  articleContent.advancedTables.repeatables.faqItems
-```
-
-<Callout type="warn" title="Always Export Generated Tables">
-  Drizzle Kit discovers database tables by scanning the exported members of built files in `dist/src/database/*.js`. Omitting an export for `table`, `translationTable`, or any junction/repeatable table in `advancedTables` means Drizzle Kit will not discover it and will omit it from the generated SQL migration.
-</Callout>
-
-</Step>
-
-<Step>
-### Step 2: Add Database Indexes
-
-Add single or composite indexes inside your content definition file `src/content/article.ts`:
-
-```ts title="src/content/article.ts"
-export const articleContentType = defineContentType({
-  id: 'example.article',
-  tableName: 'example_articles',
-  fields: {
-    title: field.text({ required: true }),
-    code: field.text({ required: true }),
-    status: field.enum({ values: ['draft', 'published'] }),
-  },
-  indexes: [
-    // [!code ++]
-    { on: ['status', 'createdAt'] }, // Composite index // [!code ++]
-    { on: ['code'], unique: true }, // Unique constraint // [!code ++]
-  ], // [!code ++]
-})
-```
-
-</Step>
-
-<Step>
-### Step 3: Run Database Migrations
-
-Compile your plugins and apply schema changes:
-
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
-
-```bash tab="bun"
-bun run build:plugins && bun run db:migrate
-```
-
-```bash tab="pnpm"
+```bash
 pnpm build:plugins && pnpm db:migrate
 ```
 
-```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+1. `build:plugins` compiles your plugin to `dist/`. `db:migrate` does not build, so it would otherwise read the old schema.
+2. `db:migrate` runs `drizzle-kit generate`, which compares the exported tables of every configured plugin with the last snapshot and writes a new folder to `apps/api/migrations/`.
+3. It applies pending migrations and seeds initial data.
+
+Commit the generated migration with the content type. Production never migrates on startup: run `db:migrate` as a deploy step. More about migrations, including `vitnode migrate --generate` for generation only, is in [Database](/docs/dev/database).
+
+## Export every table
+
+Drizzle Kit discovers tables by reading the exports of `dist/src/database/*.js` in each plugin. A table without an export is left out of the migration without any warning:
+
+```ts title="plugins/example/src/database/recipes.ts"
+export const recipeContent = createContentModel(recipeContentType, {
+  references: { category: () => example_categories.id },
+});
+
+export const example_recipes = recipeContent.table;
+export const example_recipes_translations = recipeContent.translationTable;
+export const example_recipes_tags = recipeContent.advancedTables.junctions.tags;
+export const example_recipes_ingredients =
+  recipeContent.advancedTables.repeatables.ingredients;
 ```
 
-</Tabs>
-</Step>
+| Model member                       | Exists when                                         |
+| ---------------------------------- | --------------------------------------------------- |
+| `table`                            | always                                              |
+| `translationTable`                 | `localization` is enabled, otherwise `null`         |
+| `advancedTables.junctions.<field>` | a `user`, `file` or `relation` field has `multiple: true` |
+| `advancedTables.repeatables.<field>` | a `field.repeatable()` exists                     |
 
-</Steps>
+## Generated columns
 
----
+You never declare these; declaring a field with the same name throws.
 
-## Automatic System Columns
+| Column        | Type                                    | Added when                  |
+| ------------- | --------------------------------------- | --------------------------- |
+| `id`          | `serial` primary key                    | always                      |
+| `createdAt`   | `timestamp`, defaults to `now()`        | always                      |
+| `updatedAt`   | `timestamp`, defaults to `now()`, refreshed on every update | always  |
+| `status`      | `varchar(32)`, `draft` or `published`, defaults to `draft` | `publication` |
+| `publishedAt` | `timestamp`, nullable                   | `publication`               |
+| `version`     | `integer`, defaults to `1`              | `editorial`                 |
 
-When `createContentModel` compiles a model, it automatically includes standard system columns on the base table:
+Column names are camelCase in SQL, exactly as in TypeScript. Every generated table has row-level security enabled.
 
-| Column      | Postgres Type        | Description                         |
-| :---------- | :------------------- | :---------------------------------- |
-| `id`        | `serial` / `integer` | Primary key identifier              |
-| `createdAt` | `timestamp`          | Auto-populated creation timestamp   |
-| `updatedAt` | `timestamp`          | Auto-updated modification timestamp |
+### Translations table
 
-If [`publication`](/docs/dev/content-engine/publication-and-editorial) is enabled, `status` (`varchar(32)`) and `publishedAt` (`timestamp`) columns are added.  
-If [`editorial`](/docs/dev/content-engine/publication-and-editorial) is enabled, a `version` (`integer`) column is added for optimistic concurrency control.
+With `localization`, `{tableName}_translations` holds the localized fields:
 
-When [`localization`](/docs/dev/content-engine/localization) is enabled, the secondary translation table (`{tableName}_translations`) carries its own system columns:
+| Column                   | Notes                                                         |
+| ------------------------ | ------------------------------------------------------------- |
+| `itemId`                 | References the main table; deleting the record deletes its translations |
+| `languageId`             | References `core_languages.id`                                |
+| `version`                | Per-language version, always present                          |
+| `createdAt`, `updatedAt` |                                                               |
+| `status`, `publishedAt`  | With `publication`; each language is published on its own     |
 
-| Column        | Postgres Type | Description                                         |
-| :------------ | :------------ | :-------------------------------------------------- |
-| `itemId`      | `integer`     | Foreign key to the base table `id` (composite PK)   |
-| `languageId`  | `integer`     | Foreign key to `core_languages.id` (composite PK)   |
-| `version`     | `integer`     | Per-locale version for concurrency control          |
-| `createdAt`   | `timestamp`   | Creation timestamp of this translation              |
-| `updatedAt`   | `timestamp`   | Modification timestamp of this translation          |
-| `status`      | `varchar(32)` | Translation publication status (with publication)   |
-| `publishedAt` | `timestamp`   | Translation publication timestamp (with publication)|
+The primary key is `(itemId, languageId)`, so a record has at most one translation per language.
 
+### Junction and child tables
+
+- A **to-many field** gets `{tableName}_{field}` with `itemId`, `relatedItemId`, `position` and `createdAt`, keyed by `(itemId, relatedItemId)`.
+- A **repeatable field** gets `{tableName}_{field}` with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per subfield. Deleting the record deletes its rows.
+- A **group** adds one camelCase column per leaf to the main table, such as `nutritionCalories`.
+
+Field names are converted to snake_case in table names, so `relatedArticles` becomes `{tableName}_related_articles`.
+
+## Generated indexes
+
+The engine creates these indexes without being asked:
+
+- A unique index on every slug, and on every `field.text({ unique: true })`.
+- An index on every single `relation`, `user` and `file` column.
+- Indexes on `createdAt` and `updatedAt`.
+- `(status, publishedAt)` with `publication`.
+- On a translations table: `(languageId, status)` or `(languageId)`, plus a unique `(languageId, slug)` for each localized slug.
+
+Add your own with the [`indexes`](/docs/dev/content-engine/reference#indexes) option. An index on the same columns as a generated one replaces it.
+
+## Changing a content type later
+
+Changing a definition is a schema change like any other. Build, migrate and review the generated SQL before you commit it:
+
+- Adding a nullable field, or one with a `defaultValue`, is safe on a table with data.
+- Adding a required field without a default fails on a table that already has rows. Add it as nullable first, fill it, then make it required.
+- Turning on `localization` moves fields to a new table, and the generated SQL does not copy existing values.
+- Never edit or regenerate a migration that has already been applied. Write a new one instead.

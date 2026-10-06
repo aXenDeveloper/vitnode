@@ -4,15 +4,20 @@
   "icon": "Bell",
   "pages": [
     "index",
-    "notification-types",
+    "---Build---",
     "publishing",
+    "access",
+    "email-and-digests",
+    "migration-and-troubleshooting",
+    "---How it works---",
     "inbox-and-realtime",
     "preferences",
-    "email-and-digests",
-    "---Operate---",
     "queue-and-scale",
+    "---Operate---",
     "admincp",
-    "---Guides---",
-    "migration-and-troubleshooting"
+    "troubleshooting",
+    "---Reference---",
+    "notification-types",
+    "reference"
   ]
 }

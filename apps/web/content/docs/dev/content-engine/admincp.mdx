@@ -1,159 +1,86 @@
 ---
-title: AdminCP Integration
-description: Configure zero-code AdminCP management screens, custom form layouts, list columns, and screen overrides.
+title: Customize the AdminCP
+description: Change how a Content Engine content type looks in the VitNode AdminCP. Pick list columns, search and sorting, group form fields into sections, open forms on a page, and replace cells, fields or the whole form layout.
 icon: LayoutDashboard
 ---
 
-import { TypeTable } from 'fumadocs-ui/components/type-table'
+import { ImgDocs } from '@/components/fumadocs/img'
+import bulkPublish from './recipes-admin-bulk-publish.png'
 
-Content Engine automatically builds interactive management screens in the AdminCP without writing hand-rolled pages or form components.
+Every content type registered in `src/admin/content.tsx` gets an AdminCP list and a create and edit form without any UI code. Most changes are options in the definition's `admin` block. For anything the options cannot express, you replace a single cell, a single field or the whole form layout with your own component.
 
-## Quick start
+## Choose list columns, search and sorting
 
-Register your content type in `src/admin/content.tsx` with `contentTypeAdmin`:
-
-```tsx title="plugins/blog/src/admin/content.tsx"
-import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
-import { contentTypeAdmin } from '@vitnode/core/lib/plugin'
-import { FileTextIcon } from 'lucide-react'
-import { postContentType } from '@/content/post'
-
-export const adminContent = {
-  pluginId: 'blog',
-  // [!code ++:6]
-  contentTypes: [
-    contentTypeAdmin({
-      definition: postContentType,
-      icon: <FileTextIcon />,
-    }),
-  ],
-} satisfies ContentFrontendPluginSource
-```
-
-The screen is immediately accessible at `/admin/content/blog/post`. The build
-imports this module for you through the generated content registry; keep it out
-of `config.tsx`, which is bundled with every public page. See
-[Plugin frontend modules](/docs/dev/content-engine/plugin-registration) for the
-matching `admin/nav.tsx` sidebar entry.
-
----
-
-## Customizing the Data Table
-
-Control which columns, search inputs, and sortable headers appear in the AdminCP table:
-
-```ts title="plugins/blog/src/content/post.ts"
-export const postContentType = defineContentType({
-  id: "blog.post",
-  tableName: "blog_posts",
-  fields: {/* ... */},
-  // [!code ++:10]
-  admin: {
-    titleField: "title", // Primary record identifier in dialogs and headings
-    list: {
-      columns: ["title", "status", "author", "createdAt"],
-      searchableFields: ["title"],
-      orderableFields: ["title"],
-      defaultOrderBy: "createdAt",
-      defaultOrder: "desc",
-    },
-  },
-})
-```
-
-System columns (`createdAt`, `updatedAt`, `status`, `publishedAt`) are always orderable and do not need to be listed in `orderableFields`.
-
-### Searching the list
-
-Any `text`, `textarea` or `slug` field in `searchableFields` gets matched by the search box above the table, and that includes localized ones. A localized field matches in **every** language, so searching "kot" finds the article whose Polish title is "Kot w butach", even when you're browsing the list in English.
-
-```ts title="plugins/blog/src/content/post.ts"
+```ts title="plugins/example/src/content/recipe.ts"
 admin: {
+  path: "example/recipes",
+  titleField: "title",
   list: {
-    columns: ["title", "authorId", "status"],
-    searchableFields: ["title"], // [!code ++]
+    columns: ["status", "title", "difficulty", "cookingTime", "updatedAt"],
+    searchableFields: ["title", "summary"],
+    orderableFields: ["title", "cookingTime"],
+    defaultOrderBy: "cookingTime",
+    defaultOrder: "asc",
   },
 },
 ```
 
-Leave `searchableFields` out and the list searches the shared text fields only, or shows no search box when there aren't any.
+- **`columns`** sets the table columns in order. Without it, you get `status` (with publication), every shared column and `updatedAt`.
+- **`searchableFields`** takes text, textarea or slug fields. A localized field matches in any language, so searching "szakszuka" finds a recipe whose Polish title contains it. Without the option, the search box covers shared text and textarea fields, and it disappears when there are none.
+- **`orderableFields`** makes headers sortable. List only fields you declared: `id`, `createdAt`, `updatedAt`, `status`, `publishedAt` and `version` are always sortable, and listing them throws.
+- **`titleField`** names a record in dialogs, toasts and the edit page heading.
 
-### Bulk actions
+To-many `field.user()` and `field.relation()` fields can be columns too. People show with their role color, relations as badges, and both load once per page instead of once per row. Galleries (`field.file({ multiple: true })`) cannot be columns.
 
-Tick a few rows and a bar slides up from the bottom of the screen with **Publish**, **Unpublish** and **Delete**. There's nothing to configure: every content type gets the bar, and each button only shows up when it makes sense.
+### Thumbnails
 
-- Publish and Unpublish need `publication` enabled and the `can_publish` permission.
-- Delete needs the `can_delete` permission.
-- An administrator with neither gets no checkboxes at all.
-
-Every action asks for confirmation first and runs record by record through the same routes as the row buttons. Events, search indexing and revisions behave exactly as if you'd clicked each row yourself. If some records can't be changed (someone edited one after the page loaded, or a category still has articles), the rest go through anyway. A toast tells you how many were skipped, and those rows stay ticked so you can see what's left.
-
-### People and tags as columns
-
-A to-many `field.user()` or `field.relation()` can be a column too. Authors are listed by name with their role's color and prefix, and relations show up as badges. The whole page is resolved in one go rather than once per row, so a list of fifty articles doesn't turn into fifty extra queries.
+Point `list.thumbnailField` at a single `field.file()` to draw its image at the start of the title cell. Records without an image get a placeholder so titles stay aligned. The title field must be one of the `columns`.
 
 ```ts
 list: {
-  columns: ["title", "authorId", "categoryId", "status"], // [!code highlight]
+  columns: ["title", "status"],
+  thumbnailField: "coverImage", // [!code ++]
 },
 ```
 
-File galleries (`field.file({ multiple: true })`) still can't be columns.
+## Bulk actions
 
-### A thumbnail beside the title
+Ticking rows opens a bar with **Publish**, **Unpublish** and **Delete**. There is nothing to configure. Publish and Unpublish appear with `publication` and the `can_publish` permission, Delete with `can_delete`. Without any of them, the table has no checkboxes.
 
-Point `list.thumbnailField` at a single `field.file()` and its image is drawn at the start of the title cell. There's no separate column and no file name. A record without an image gets a neutral placeholder, so the titles stay lined up.
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={bulkPublish}
+  alt="Recipes list with three rows ticked and a floating bar with Publish, Unpublish and Delete"
+/>
 
-```ts
-admin: {
-  titleField: "title",
-  list: {
-    columns: ["title", "authorId", "status"],
-    thumbnailField: "coverImage", // [!code ++]
-  },
-},
-```
+Each action asks for confirmation and then calls the same route as the row buttons, record by record, so events, search indexing and revisions behave as if you clicked each row. When some records cannot be changed, for example because someone edited them meanwhile, the rest still go through. A toast says how many were skipped, and those rows stay ticked.
 
-The title field has to be one of the list's `columns`, because that's where the thumbnail goes.
+## Group form fields into sections
 
----
-
-## Customizing Form Sections
-
-Divide form fields into titled sections:
-
-```ts title="plugins/blog/src/content/post.ts"
+```ts title="plugins/example/src/content/recipe.ts"
 admin: {
   form: {
-    // [!code ++:12]
     sections: [
-      {
-        name: "main",
-        fields: ["title", "slug", "content"],
-      },
-      {
-        name: "meta",
-        fields: ["category", "author"],
-      },
+      { name: "main", fields: ["title", "slug", "summary"] },
+      { name: "details", fields: ["cookingTime", "difficulty", "vegetarian"] },
     ],
   },
-}
+},
 ```
 
-Section headings and descriptions are localized in your plugin's locale JSON at `{pluginId}.content.{entityKey}.form.{sectionName}.title` and `.desc`:
+Only the fields you list appear in the form, and each field may appear in one section. Section names are lowercase snake_case. Without sections, `form.fields` picks the fields; the default is every field except `blocks`. You cannot use both.
 
-```json title="plugins/blog/locales/en.json"
+Section headings come from your plugin's locale file:
+
+```json title="plugins/example/src/locales/en.json"
 {
-  "content": {
-    "post": {
-      "form": {
-        "main": {
-          "title": "Article Content",
-          "desc": "Title, slug, and body text of the article."
-        },
-        "meta": {
-          "title": "Publishing Options",
-          "desc": "Category and author assignments."
+  "@vitnode/example": {
+    "content": {
+      "recipe": {
+        "form": {
+          "main": { "title": "Recipe", "desc": "What people see first." },
+          "details": { "title": "Details" }
         }
       }
     }
@@ -161,14 +88,73 @@ Section headings and descriptions are localized in your plugin's locale JSON at 
 }
 ```
 
----
+## Open forms on their own page
 
-## Custom Form Layouts
+Forms open in a dialog by default. Long forms read better on a page:
 
-For complete control over form presentation (e.g. main content area with a publishing sidebar), supply a custom layout component using `@vitnode/core/content/admin-form` primitives:
+```ts
+admin: {
+  create: { mode: "page" },
+  edit: { mode: "page" },
+},
+```
 
-```tsx title="plugins/blog/src/views/admin/article/form-layout.tsx"
-import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin"
+The create form moves to `/admin/content/example/recipes/create` and the edit form to `/admin/content/example/recipes/{id}/edit`.
+
+## Replace a field or a cell
+
+Wrap a registration in `contentTypeAdmin` to swap the component of one field or one list column. `contentTypeAdmin` only adds types: it checks that the keys are real field names.
+
+```tsx title="plugins/example/src/admin/content.tsx"
+import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
+
+import { contentTypeAdmin } from "@vitnode/core/lib/plugin";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { DifficultyCell } from "@/views/admin/recipes/difficulty-cell";
+import { RecipeSummaryField } from "@/views/admin/recipes/summary-field";
+
+import { recipeNav } from "./nav";
+
+export const adminContent = {
+  pluginId: CONFIG_PLUGIN.pluginId,
+  contentTypes: [
+    contentTypeAdmin({
+      ...recipeNav,
+      fields: {
+        summary: { component: RecipeSummaryField, skeleton: "textarea" },
+      },
+      columns: {
+        difficulty: { cell: DifficultyCell },
+      },
+    }),
+  ],
+} satisfies ContentFrontendPluginSource;
+```
+
+A field component receives `ItemAutoFormComponentProps` from `@vitnode/core/components/form/auto-form` and usually wraps an AutoForm field, such as `AutoFormTextarea` with your own label and description. A cell receives the row, typed by the definition:
+
+```tsx title="plugins/example/src/views/admin/recipes/difficulty-cell.tsx"
+import type { ContentCellProps } from "@vitnode/core/lib/plugin";
+
+import type { recipeContentType } from "@/content/recipe";
+
+export const DifficultyCell = ({
+  row,
+}: ContentCellProps<typeof recipeContentType>) => (
+  <span className="text-muted-foreground text-sm">{row.difficulty}</span>
+);
+```
+
+`skeleton` sets the loading placeholder for a field whose component is bigger than its kind suggests. The blog's `content` field is a `textarea` that renders a rich text editor, so it sets `skeleton: "editor"`. The options are `"editor"`, `"input"`, `"list"`, `"media"`, `"switch"` and `"textarea"`.
+
+## Replace the whole form layout
+
+For a layout the options cannot express, such as a main column with a publishing sidebar, pass `forms.layout`. Custom layouts render only in page mode, so set `create.mode` and `edit.mode` to `"page"` first.
+
+```tsx title="plugins/example/src/views/admin/recipes/form-layout.tsx"
+import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
+
 import {
   ContentFormActions,
   ContentFormField,
@@ -178,126 +164,36 @@ import {
   ContentFormSection,
   ContentFormSidebar,
   ContentFormStatus,
-} from "@vitnode/core/content/admin-form"
+} from "@vitnode/core/content/admin-form";
 
-export const BlogArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
-  return (
-    <>
-      <ContentFormHeader>
-        <ContentFormActions />
-      </ContentFormHeader>
+export const RecipeFormLayout = ({ mode }: ContentFormLayoutProps) => (
+  <>
+    <ContentFormHeader>
+      <ContentFormActions />
+    </ContentFormHeader>
 
-      <ContentFormLayoutGrid>
-        <ContentFormMain>
-          <ContentFormSection>
-            <ContentFormField name="title" />
-            <ContentFormField name="slug" />
-            <ContentFormField name="content" />
-          </ContentFormSection>
-        </ContentFormMain>
+    <ContentFormLayoutGrid>
+      <ContentFormMain>
+        <ContentFormSection>
+          <ContentFormField name="title" />
+          <ContentFormField name="slug" />
+          <ContentFormField name="summary" />
+        </ContentFormSection>
+      </ContentFormMain>
 
-        <ContentFormSidebar>
-          {mode === "edit" ? <ContentFormStatus /> : null}
-          <ContentFormField name="category" />
-          <ContentFormField name="author" />
-        </ContentFormSidebar>
-      </ContentFormLayoutGrid>
-    </>
-  )
-}
+      <ContentFormSidebar>
+        {mode === "edit" ? <ContentFormStatus /> : null}
+        <ContentFormField name="cookingTime" />
+        <ContentFormField name="difficulty" />
+        <ContentFormField name="vegetarian" />
+      </ContentFormSidebar>
+    </ContentFormLayoutGrid>
+  </>
+);
 ```
 
-Register the layout in `src/admin/content.tsx`:
+Register it with `forms: { layout: RecipeFormLayout }` in `contentTypeAdmin`, or use `forms.create.layout` and `forms.edit.layout` for different layouts per action. `ContentFormRemainingFields` renders every field the layout has not placed yet. In development, the console warns about fields a layout forgot.
 
-```tsx title="plugins/blog/src/admin/content.tsx"
-contentTypeAdmin({
-  ...postNav,
-  forms: {
-    layout: BlogArticleFormLayout,
-  },
-})
-```
+## Check the result
 
----
-
-## Custom Table Cells and Field Components
-
-You can also customize individual table columns or form input controls:
-
-```tsx title="plugins/blog/src/admin/content.tsx"
-contentTypeAdmin({
-  ...categoryNav,
-  // Custom cell rendering in the DataTable
-  columns: {
-    color: {
-      cell: ({ row }) => (
-        <span className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
-          {row.color}
-        </span>
-      ),
-    },
-  },
-  // Custom input component in AutoForm
-  fields: {
-    color: { component: CategoryColorFieldPicker },
-  },
-})
-```
-
----
-
-## The Loading Placeholder
-
-The create and edit screens never flash a spinner. While the form's code chunk and the record are still on their way, Content Engine draws a skeleton in the shape of the form you are about to get.
-
-### When an override is a different shape
-
-A field override can render something much bigger than its field kind suggests — the blog's `content` is declared a `textarea` but renders a full rich-text editor. Tell the placeholder what to draw with `skeleton`:
-
-```tsx title="plugins/blog/src/admin/content.tsx"
-contentTypeAdmin({
-  ...postNav,
-  fields: {
-    content: {
-      component: BlogArticleEditorField,
-      skeleton: "editor", // [!code ++]
-    },
-  },
-})
-```
-
-<TypeTable
-  type={{
-    skeleton: {
-      description:
-        "The silhouette this field's placeholder draws. Defaults to the one its field kind implies.",
-      type: '"editor" | "input" | "list" | "media" | "switch" | "textarea"',
-    },
-  }}
-/>
-
-The same block is available on its own, for a field that lazy-loads its control:
-
-```tsx title="plugins/blog/src/views/admin/article/editor-field.tsx"
-import { ContentFormFieldSkeleton } from "@vitnode/core/content/admin-form"
-
-;<React.Suspense fallback={<ContentFormFieldSkeleton control="editor" />}>
-  <AutoFormEditor label={t("content.label")} {...props} />
-</React.Suspense>
-```
-
-## Learn More
-
-<Cards>
-  <Card
-    title="Defining a Content Type"
-    description="Schema and table definitions"
-    href="/docs/dev/content-engine/defining-a-content-type"
-  />
-  <Card
-    title="Field Reference"
-    description="All supported field descriptors and options"
-    href="/docs/dev/content-engine/fields"
-  />
-</Cards>
+Run `pnpm build:plugins`, restart `pnpm dev` and open **AdminCP → Example → Recipes**. The API validates sorting and form input against the definition, so a restart makes sure both sides see the same `admin` options.

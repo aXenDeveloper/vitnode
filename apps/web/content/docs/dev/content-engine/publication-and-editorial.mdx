@@ -1,106 +1,74 @@
 ---
-title: Publication & Editorial
-description: Add draft/published lifecycles, revision histories, signed preview links, and scheduled publishing to content types.
+title: Revisions, previews and scheduling
+description: Add editorial workflows to a Content Engine content type. Keep revision history with restore, protect edits from overwriting each other, share signed draft previews and schedule publishing.
 icon: Clock
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+The `editorial` block adds the tools an editorial team needs on top of [drafts and publishing](/docs/dev/content-engine/public-api-and-caching): a history of every save with one-click restore, protection against two editors overwriting each other, signed links that show a draft to someone without an AdminCP account, and publishing at a chosen time.
 
-Content Engine includes complete editorial workflows: draft and published states, historical revisions with one-click restore, signed reviewer preview URLs, and automated scheduled publishing.
+## Turn on editorial features
 
-## Quick start
-
-Enable publication, public API, and editorial workflows in your content type definition:
-
-```ts title="plugins/blog/src/content/post.ts"
-import { defineContentType, field } from "@vitnode/core/content"
-
-export const blogPostContentType = defineContentType({
-  id: "blog.post",
-  tableName: "blog_posts",
-  // [!code ++:13]
+```ts title="plugins/example/src/content/recipe.ts"
+export const recipeContentType = defineContentType({
+  id: "example.recipe",
+  tableName: "example_recipes",
   publication: { enabled: true },
-  publicApi: {
-    path: "/posts",
-    fields: ["title"],
-  },
-  editorial: {
+  publicApi: { enabled: true, path: "recipes", fields: ["title", "slug"] },
+  editorial: { // [!code ++:6]
     enabled: true,
-    revisions: { retention: 20 }, // Store up to 20 historical versions
+    revisions: { retention: 20 },
     preview: { enabled: true, expiresInMinutes: 60 },
     scheduling: { enabled: true },
   },
   fields: {
-    title: field.text({ required: true }),
+    title: field.text({ required: true, maxLength: 120 }),
+    slug: field.slug({ source: "title" }),
   },
-})
+});
 ```
 
----
+Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The migration adds a `version` column. Revisions and schedules use shared core tables, so nothing else changes in your schema. Editorial also adds a `can_restore` permission; label it at `@vitnode/example:recipe:can_restore`.
 
-## Editorial Features
+## Revisions
 
-### 1. Publication Lifecycle
+Every create, update, publish, unpublish and restore stores a snapshot in `core_content_revisions`. `revisions.retention` keeps the newest 1 to 500 snapshots per record, 50 by default.
 
-When `publication: { enabled: true }` is configured:
-- Records carry a `status` column (`"draft"` or `"published"`) and a `publishedAt` timestamp.
-- Unauthenticated public queries automatically filter out drafts, returning only records where `status = "published"`.
-- Publishing is idempotent: the first publish stamps `publishedAt`, while subsequent edits preserve the original publication date.
-- The service exposes typed `publish(id)` and `unpublish(id)` methods.
+Open a record's history in the AdminCP to compare each revision with the one before it and restore an earlier version. Restoring needs `can_restore`, creates a new revision and emits `content.example.recipe.restored`.
 
----
+## Safe concurrent edits
 
-### 2. Revision History
+Each editorial write raises the record's `version` by one and only succeeds when the version still matches the one the editor loaded. If someone else saved in between, the second save fails with `409` and the code `CONTENT_VERSION_CONFLICT` instead of silently overwriting their work. The AdminCP sends the version for you.
 
-When `editorial: { enabled: true }` is configured:
-- Adds a `version` column to the database table (defaults to 1 and increments on each restore).
-- Each save stores an immutable snapshot in the centralized `core_content_revisions` table.
-- `revisions.retention` sets the maximum number of revisions kept per record (1–500, default: 50).
-- Editors can inspect diffs between any historical snapshot and the current record state.
-- One-click restore reinstates previous content while incrementing the version and emitting a `content.${id}.restored` event.
+Calls to the edit routes must send it too. `PUT /api/@vitnode/example/admin/content/recipe/{id}` takes `{ "expectedVersion": 3, "values": { "title": "…" } }`, and `DELETE` takes `{ "expectedVersion": 3 }`. In your own server code, use `recipeContent.editorialService` to get the same check; see [Services, schemas and events](/docs/dev/content-engine/services-and-api#editorial-writes).
 
----
+## Preview links
 
-### 3. Signed Preview Links
+A preview link lets a reviewer read a draft without signing in. Previews need `publicApi`, because the preview shows the same fields as the public API. Links are HMAC-signed and expire after `expiresInMinutes`, from 1 to 1440 minutes, 15 by default.
 
-Share unpublished drafts with stakeholders who lack AdminCP accounts:
-- **Prerequisite:** `publicApi` must be configured on the content type, because preview projections rely on `publicApi.fields`.
-- Generates HMAC-signed URLs valid for a customizable duration (`expiresInMinutes`: 1–1440, default: 15).
-- Optional `pathTemplate` allows custom preview URL routing (e.g. `"/preview/posts/{id}"`).
-- Public frontend routes verify the preview token and stream the draft.
+The link points to the first match of:
 
----
+1. `preview.pathTemplate`, such as `/preview/recipes/{token}`, which must contain exactly one `{token}`.
+2. The record's page with `?preview=<token>`, when the type has [delivery](/docs/dev/content-engine/content-delivery-and-seo).
+3. The public API route `GET /api/@vitnode/example/content/recipes/preview/{token}`.
 
-### 4. Scheduled Publishing
+Whichever page opens, it has to load the draft from `/preview/{token}`. A page built from [Show content on a public page](/docs/dev/content-engine/content-delivery-and-seo) does not read `?preview=` on its own, so check for it in your loader. The preview route answers `404` for any invalid or expired token and sends `Cache-Control: private, no-store` and `X-Robots-Tag: noindex, nofollow`.
 
-Pick a future release date and time for automatic publishing or unpublishing:
-- **Prerequisite:** `publication: { enabled: true }` must be enabled.
-- The background cron worker checks scheduled items periodically.
-- Transitions records between `draft` and `published` at the specified timestamp and emits `content.${id}.scheduled` or `content.${id}.schedule_cancelled` events.
+Preview links are built from `VITNODE_WEB_URL` and `VITNODE_API_URL`. When either is not a valid URL, the API logs a warning at startup and previews stay disabled.
 
-## Configuration Reference
+## Schedule publishing
 
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `publication.enabled` | `boolean` | `false` | Enables `status` and `publishedAt` lifecycle columns. |
-| `editorial.enabled` | `boolean` | `false` | Enables version tracking and revisions. |
-| `editorial.revisions.retention` | `number` | `50` | Maximum historical revisions preserved per item (1–500). |
-| `editorial.preview.enabled` | `boolean` | `false` | Enables signed preview links. Requires `publicApi`. |
-| `editorial.preview.expiresInMinutes` | `number` | `15` | Expiration time for signed preview links in minutes (1–1440). |
-| `editorial.preview.pathTemplate` | `string` | — | Custom URL template for preview links. |
-| `editorial.scheduling.enabled` | `boolean` | `false` | Enables scheduled publication/unpublication. Requires `publication.enabled: true`. |
+Scheduling lets an editor pick a future time to publish or unpublish a record. It needs `publication`.
 
-## Learn More
+A schedule is a queued task that runs at the chosen time. The queue is drained by the `process-queue` [cron job](/docs/dev/cron) every minute, so scheduled publishing works only when something triggers your cron endpoint, for example the node-cron adapter or your host's scheduler. In production, set `CRON_SECRET` to your own value.
 
-<Cards>
-  <Card
-    title="Defining a Content Type"
-    description="Overview of Content Engine schema configuration"
-    href="/docs/dev/content-engine/defining-a-content-type"
-  />
-  <Card
-    title="Public API & Caching"
-    description="Configuring public API endpoints and caching rules"
-    href="/docs/dev/content-engine/public-api-and-caching"
-  />
-</Cards>
+A time up to two minutes in the past is accepted; anything older is rejected with `CONTENT_SCHEDULE_IN_PAST`. An unpublish cannot be scheduled before a pending publish.
+
+Booking a schedule emits `content.example.recipe.scheduled`, and cancelling it emits `schedule_cancelled`. When the time comes, the record is published or unpublished and the usual `published` or `unpublished` event carries the `scheduleId`. If your front end caches pages, [`content.revalidateOrigins`](/docs/dev/content-engine/public-api-and-caching#caching) tells it about the change.
+
+## How publishing behaves
+
+- New records start as drafts.
+- Publishing sets `publishedAt` once. Unpublishing and publishing again keeps the original date.
+- A record is public only when its status is `published` and its `publishedAt` is not in the future.
+
+Every `editorial` option is in the [content type reference](/docs/dev/content-engine/reference#editorial).

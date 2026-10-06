@@ -1,224 +1,286 @@
 ---
-title: Content Delivery and SEO
-description: Deliver Content Engine records from a plugin with canonical metadata, slug redirects, hreflang, and XML sitemap support.
+title: Show content on a public page
+description: Give every published Content Engine record its own URL. Enable delivery, add a plugin page, and get the title, meta description, canonical link, slug redirects and sitemap entries from one definition.
 icon: Compass
 ---
 
-import { RouteIcon, SearchIcon } from 'lucide-react'
+import { ImgDocs } from '@/components/fumadocs/img'
+import recipePage from './recipe-public-page.png'
 
-Content delivery starts in the plugin that owns the content type. Opt into the
-public API first, then let the same plugin claim the page URL. Search engines
-get a stable story; future you gets fewer scattered files.
+Delivery turns a published record into a web page at a stable URL, such as `/recipes/shakshuka-for-two`. The Content Engine resolves the URL, answers `404` for drafts, and builds the page's SEO metadata from fields you choose. Your plugin owns the page itself, so the content type, its public API and its URL stay together.
+
+## Before you begin
+
+The content type needs [publication and a public API](/docs/dev/content-engine/public-api-and-caching). This guide continues the recipes example.
 
 <Steps>
-  <Step>
 
-### Enable public delivery on the content type
+<Step>
 
-`publicApi` explicitly chooses exposed fields. Delivery then projects only those fields into metadata, slug redirect history, and sitemap entries.
+### Turn on delivery
 
-```ts title="plugins/blog/src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content"
+Add a `delivery` block. Each SEO field must also be listed in `publicApi.fields`, because the page's metadata is public:
 
-export const articleContentType = defineContentType({
-  id: "blog.article",
-  tableName: "blog_articles",
-  publication: { enabled: true },
-  editorial: { enabled: true },
-  fields: {
-    excerpt: field.textarea({ nullable: true }),
-    slug: field.slug({ source: "title" }),
-    title: field.text({ required: true }),
-  },
-  // [!code ++:17]
-  publicApi: {
+```ts title="plugins/example/src/content/recipe.ts"
+export const recipeContentType = defineContentType({
+  // id, tableName, fields, publication, publicApi as before
+  delivery: { // [!code ++:5]
     enabled: true,
-    fields: ["id", "title", "slug", "excerpt", "publishedAt"],
-    path: "articles",
+    seo: { titleField: "title", descriptionField: "summary" },
+    sitemap: { enabled: true, changeFrequency: "weekly" },
   },
-  delivery: {
-    enabled: true,
-    redirects: { enabled: true },
-    seo: {
-      descriptionField: "excerpt",
-      titleField: "title",
-    },
-    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.8 },
-  },
-})
+});
 ```
 
-All fields referenced in `delivery.seo` must exist in `publicApi.fields`.
+The page URL defaults to `/{publicApi.path}/:slug`, so recipes live at `/recipes/:slug`. Set `delivery.path` when the website URL should differ from the API path.
 
-  </Step>
-  <Step>
+</Step>
 
-### Claim the public URL in the plugin
+<Step>
 
-```ts title="plugins/blog/src/routes.ts"
-import { definePluginRoutes, lazy, page } from "@vitnode/core/routing"
+### List the plugin's public content types
 
+Create `src/content.ts` and export every content type that has delivery or search:
+
+```ts title="plugins/example/src/content.ts"
+import { recipeContentType } from "@/content/recipe";
+
+export const contentTypes = [recipeContentType];
+```
+
+The build compares these URLs with your plugin's pages. A content type whose URL no page serves stops `dev` and `build` with `content-url-without-page`, and the API refuses to start when a plugin publishes URLs this module does not declare.
+
+</Step>
+
+<Step>
+
+### Claim the URL
+
+Add a page for the same path in your plugin's routes:
+
+```ts title="plugins/example/src/routes.ts"
 export const routes = definePluginRoutes([
-  // [!code ++:3]
-  page("/articles/:slug", {
-    component: lazy(() => import("./pages/article-page")),
+  page("/recipes/:slug", { // [!code ++:4]
+    component: lazy(() => import("./pages/recipe-page")),
+    messages: ["@vitnode/example.recipes"],
   }),
-])
+]);
 ```
 
-The page's path must match `delivery.path`, which defaults to `/{publicApi.path}/:slug`. The build checks it for you. Export the plugin's content types from a browser-safe `src/content.ts`, and a content type whose URL no page serves stops `dev` and `build` with `content-url-without-page`:
+</Step>
 
-```ts title="plugins/blog/src/content.ts"
-import { articleContentType } from "@/content/article"
+<Step>
 
-export const contentTypes = [articleContentType]
-```
+### Write the page
 
-Expose it as `./content` in the plugin's `package.json` exports. When the API boots, it loads that same module and refuses to start if the plugin publishes a URL the module doesn't declare. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+The loader asks two routes at once: `/delivery/resolve/{slug}` says whether the URL is a record, an old slug to redirect or nothing, and `/{slug}` returns the record's public fields.
 
-  </Step>
-  <Step>
+```tsx title="plugins/example/src/pages/recipe-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
-### Render data and metadata from the plugin route
-
-```tsx title="plugins/blog/src/pages/article-page.tsx"
-import type { PluginRoutePageProps } from "@vitnode/core/routing"
-import { definePluginRoute } from "@vitnode/core/routing"
+import { definePluginRoute } from "@vitnode/core/routing";
 import {
   contentDeliveryPage,
   contentDeliveryPageHead,
-} from "@vitnode/core/tanstack/content"
-import { fetcher } from "@vitnode/core/tanstack/fetcher"
-import { z } from "zod"
+} from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
 
-const zodArticle = z.object({
-  excerpt: z.string().nullable(),
+const zodRecipe = z.object({
+  cookingTime: z.number(),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  summary: z.string().nullable(),
   title: z.string(),
-})
+  vegetarian: z.boolean(),
+});
 
-const loadArticle = async ({
-  locale,
-  slug,
-}: {
-  locale: string
-  slug: string
-}) => {
+const loadRecipe = async (slug: string) => {
   const [resolution, detail] = await Promise.all([
     fetcher({
-      plugin: "@acme/blog",
+      plugin: "@vitnode/example",
       method: "get",
-      module: "content/articles",
+      module: "content/recipes",
       path: "/delivery/resolve/{slug}",
-      args: { params: { slug: encodeURIComponent(slug) }, query: { locale } },
+      args: { params: { slug: encodeURIComponent(slug) } },
     }),
     fetcher({
-      plugin: "@acme/blog",
+      plugin: "@vitnode/example",
       method: "get",
-      module: "content/articles",
+      module: "content/recipes",
       path: "/{slug}",
-      args: { params: { slug: encodeURIComponent(slug) }, query: { locale } },
+      args: { params: { slug: encodeURIComponent(slug) } },
     }),
-  ])
+  ]);
 
   return contentDeliveryPage({
-    item: detail.status === 200 ? zodArticle.parse(await detail.json()) : null,
+    item: detail.status === 200 ? zodRecipe.parse(await detail.json()) : null,
     resolution: await resolution.json(),
-  })
-}
+  });
+};
 
-// [!code ++:9]
 export const route = definePluginRoute({
-  load: async ({ context, params }) =>
-    await loadArticle({ locale: context.locale, slug: params.slug }),
+  load: async ({ params }) => await loadRecipe(params.slug),
   head: ({ loaderData }) =>
     contentDeliveryPageHead(loaderData?.metadata, {
       title: loaderData?.item.title,
     }),
-})
+});
 
-const ArticlePage = ({
+const RecipePage = ({
   loaderData: { item },
-}: PluginRoutePageProps<Awaited<ReturnType<typeof loadArticle>>>) => (
-  <article className="container mx-auto max-w-3xl p-4">
-    <h1 className="text-3xl font-semibold text-balance">{item.title}</h1>
-    <p className="leading-relaxed">{item.excerpt}</p>
-  </article>
-)
+}: PluginRoutePageProps<Awaited<ReturnType<typeof loadRecipe>>>) => {
+  const t = useTranslations("@vitnode/example.recipes");
 
-export default ArticlePage
+  return (
+    <article className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:py-12">
+      <header className="flex flex-col gap-3">
+        <h1 className="text-foreground text-3xl font-semibold text-balance md:text-4xl">
+          {item.title}
+        </h1>
+        {item.summary ? (
+          <p className="text-muted-foreground text-lg leading-relaxed text-pretty">
+            {item.summary}
+          </p>
+        ) : null}
+      </header>
+
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="bg-card flex flex-col gap-1 rounded-lg border p-4">
+          <dt className="text-muted-foreground text-sm">{t("cookingTime")}</dt>
+          <dd className="text-card-foreground font-medium">
+            {t("minutes", { count: item.cookingTime })}
+          </dd>
+        </div>
+        <div className="bg-card flex flex-col gap-1 rounded-lg border p-4">
+          <dt className="text-muted-foreground text-sm">{t("difficulty")}</dt>
+          <dd className="text-card-foreground font-medium">
+            {t(`level.${item.difficulty}`)}
+          </dd>
+        </div>
+        <div className="bg-card flex flex-col gap-1 rounded-lg border p-4">
+          <dt className="text-muted-foreground text-sm">{t("vegetarian")}</dt>
+          <dd className="text-card-foreground font-medium">
+            {item.vegetarian ? t("yes") : t("no")}
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
+};
+
+export default RecipePage;
 ```
 
-`contentDeliveryPage` turns the resolve response into page data: a retired slug throws a 308 to the current URL, and an unknown one is a 404. `contentDeliveryPageHead` fills the title, description, `robots` and the internal alternates of every published translation. Those become the canonical and `hreflang` links, and they are what the language switcher follows. Blog's own `/blog/:slug` page (`plugins/blog/src/pages/post-page.tsx`) is the full version.
+- `contentDeliveryPage` returns `{ item, metadata }`. It throws a `404` for an unknown slug or a draft, and a redirect for a retired slug.
+- `contentDeliveryPageHead` fills the title, meta description, `robots` and the canonical and alternate links.
+- `load` comes before `head` so TypeScript can infer `loaderData`.
 
-  </Step>
+</Step>
+
+<Step>
+
+### Add the page strings
+
+The route loads the `@vitnode/example.recipes` namespace you named in `messages`:
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example": {
+    "recipes": {
+      "cookingTime": "Cooking time",
+      "minutes": "{count, plural, one {# minute} other {# minutes}}",
+      "difficulty": "Difficulty",
+      "level": { "easy": "Easy", "medium": "Medium", "hard": "Hard" },
+      "vegetarian": "Vegetarian",
+      "yes": "Yes",
+      "no": "No"
+    }
+  }
+}
+```
+
+</Step>
+
 </Steps>
 
-<Callout type="success" title="Keep delivery with its plugin">
-  Do not recreate the article page in the host app. The content type, slug
-  rules, public API, and public route evolve together, so they belong together.
-</Callout>
+## Check the result
 
-## Public URLs
+Run `pnpm build:plugins`, restart `pnpm dev` and open `http://localhost:3000/recipes/shakshuka-for-two`. Delivery adds no database columns, so there is nothing to migrate.
 
-`delivery.path` is the **English route** of the record's page, the same pattern the plugin's `page()` declares. It defaults to `/{publicApi.path}/:slug`, so the example above is `/articles/:slug` without writing it. Set it when the website URL and the API path differ:
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={recipePage}
+  alt="Public recipe page titled Shakshuka for two with its summary and three cards: Cooking time 30 minutes, Difficulty Easy, Vegetarian Yes"
+/>
 
-```ts
-publicApi: { enabled: true, path: "articles", fields: ["id", "title", "slug"] },
+View the page source: the `<title>` is `Shakshuka for two - VitNode` and the meta description is the recipe's summary. A draft such as `/recipes/beef-wellington` returns the app's not-found page.
+
+The resolve route shows what the page received:
+
+```bash
+curl http://localhost:3000/api/@vitnode/example/content/recipes/delivery/resolve/shakshuka-for-two
+```
+
+```json
+{
+  "type": "content",
+  "canonicalPath": "/recipes/shakshuka-for-two",
+  "canonicalInternalPath": "/recipes/shakshuka-for-two",
+  "seo": {
+    "title": "Shakshuka for two",
+    "description": "Eggs poached in a spicy tomato and pepper sauce."
+  },
+  "robots": null,
+  "alternates": [],
+  "isFallback": false
+}
+```
+
+The real response has a few more keys (`hreflang`, `openGraph`, `locale` and others) that matter for localized content.
+
+## Keep old URLs working
+
+Renaming a slug breaks links people already shared. Turn on `delivery.redirects` and the old slug answers with a `308` redirect to the new URL:
+
+```ts title="plugins/example/src/content/recipe.ts"
+editorial: { enabled: true }, // [!code ++]
 delivery: {
   enabled: true,
-  path: "/news/:slug", // [!code ++]
+  redirects: { enabled: true }, // [!code ++]
+  seo: { titleField: "title", descriptionField: "summary" },
 },
 ```
 
-The API stays at `/api/{pluginId}/content/articles/...`. Only the page URL changes. `delivery.path` needs exactly one `:slug`, no other parameters or `*`, and can't start with `/admin` or `/api`.
+Redirects need [`editorial`](/docs/dev/content-engine/publication-and-editorial), which adds a `version` column, so run the migration again. Old slugs are stored in `core_content_slug_history`.
 
-Every URL delivery builds goes through the app's [localized URL](/docs/dev/i18n/localized-urls) rules (`localePrefix`, `domains`, `routePaths`), so it matches what the router serves:
+## Sitemap entries
 
-| Record                          | `as-needed`, one domain              | With `domains`                                   |
-| :------------------------------ | :----------------------------------- | :----------------------------------------------- |
-| English, slug `hello-world`     | `/articles/hello-world`              | `https://vitnode.com/articles/hello-world`       |
-| Polish, slug `witaj-swiecie`    | `/pl/artykuly/witaj-swiecie`         | `https://vitnode.pl/artykuly/witaj-swiecie`      |
+With `sitemap.enabled`, the public API lists every published URL at `GET /api/@vitnode/example/content/recipes/delivery/sitemap`:
 
-(`artykuly` assumes the app translated `/articles/:slug` in `routePaths`.)
+```json
+{
+  "entries": [
+    {
+      "itemId": 2,
+      "path": "/recipes/shakshuka-for-two",
+      "lastModified": "2026-10-05T19:34:57.871Z",
+      "changeFrequency": "weekly",
+      "priority": null,
+      "locale": null
+    }
+  ],
+  "nextCursor": null
+}
+```
 
-- **Default locale is unprefixed.** Under `as-needed`, English URLs no longer start with `/en/`.
-- **hreflang, `x-default` and sitemap lines are absolute per domain** once `domains` is configured. Each language gets its own domain's origin.
-- **Every URL comes in two forms.** Each alternate has a public `path` (what visitors see, like `/pl/wpisy/witaj-swiecie`) and an `internalPath` (the English route with that language's slug, like `/blog/witaj-swiecie`). Metadata also has `canonicalInternalPath`. Page heads declare the internal form.
-- **Only published translations are alternates.** A Polish request that falls back to English content reports the English canonical URL (`isFallback: true`), so fallback text is never labelled as Polish.
-- **Slug history redirects are 308s and stay in their language.** An old Polish slug redirects to the current Polish URL, never to English. The `path` stored in `core_content_slug_history` is informational: history is reported with each slug's current URL, so changing `routePaths` or `domains` doesn't strand old slugs.
-- **Preview links** open the record's canonical page with `?preview=`, on its language's domain when there is one, and `VITNODE_WEB_URL` otherwise.
+Pages hold 1,000 entries by default (`?limit=` up to 50,000), and `nextCursor` fetches the next page. Records whose `seo.noIndexField` is `true` are left out. Your app's own `sitemap.xml` does not read this endpoint for you, so add the entries where you build it.
 
-## Delivery Configuration Reference
+## Public URLs and languages
 
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `enabled` | `true` | — | Opts into the delivery layer. Requires `publicApi: { enabled: true }`. |
-| `path` | `string` | `/{publicApi.path}/:slug` | The English route of the record's page, with exactly one `:slug`. Separate from `publicApi.path`, which only names the API. |
-| `redirects.enabled` | `boolean` | `false` | Stores historical public slugs in `core_content_slug_history` and answers old slugs with a 308 redirect. Requires `editorial: { enabled: true }`. |
-| `seo.titleField` | `string` | — | Exposed field name used to populate page titles. |
-| `seo.fallbackTitleField` | `string` | — | Fallback field name if `titleField` is empty. |
-| `seo.descriptionField` | `string` | — | Exposed field name used for page meta description. |
-| `seo.fallbackDescriptionField` | `string` | — | Fallback field name if `descriptionField` is empty. |
-| `seo.noIndexField` | `string` | — | Shared boolean field that excludes record from sitemap and marks `robots: { index: false }`. |
-| `seo.openGraph` | `{ titleField?, descriptionField? }` | — | Optional Open Graph title and description fields. |
-| `sitemap.enabled` | `boolean` | `false` | Includes published records in the XML sitemap. |
-| `sitemap.changeFrequency` | `"always" \| "hourly" \| "daily" \| "weekly" \| "monthly" \| "yearly" \| "never"` | — | Sitemap `<changefreq>` hint. |
-| `sitemap.priority` | `number` | — | Sitemap priority rating from `0.0` to `1.0`. |
-| `hreflang.xDefault` | `"defaultLocale"` | — | Emits an `x-default` alternate pointing at the default locale's URL, when that translation is published. |
+`delivery.path` is the page's English route, with exactly one `:slug`. It cannot start with `/admin` or `/api`. The API path does not change when you set it.
 
-## Learn More
+Every URL delivery builds follows the app's [localized URL rules](/docs/dev/i18n/localized-urls): language prefixes, per-language domains and translated route segments. With [localization](/docs/dev/content-engine/localization) and a localized slug, and an app that translates `/recipes` in its `routePaths`, the Polish recipe can live at `/pl/przepisy/szakszuka-dla-dwojga` while the English one stays at `/recipes/shakshuka-for-two`. Only published translations become alternate links.
 
-<Cards>
-  <Card
-    icon={<RouteIcon />}
-    title="Plugin routing"
-    description="Add a route module with loaders, metadata, and a stable URL contract."
-    href="/docs/dev/routing"
-  />
-  <Card
-    icon={<SearchIcon />}
-    title="Public API and caching"
-    description="Expose deliberate fields and understand cache invalidation."
-    href="/docs/dev/content-engine/public-api-and-caching"
-  />
-</Cards>
+Every `delivery` option, with its default and requirements, is in the [content type reference](/docs/dev/content-engine/reference#delivery).

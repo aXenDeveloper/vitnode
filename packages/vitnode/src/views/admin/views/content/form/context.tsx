@@ -1,6 +1,7 @@
 import React from "react";
 
 import type { PageTitleBack } from "@/components/ui/page-title";
+import type { ContentFileFieldValue } from "@/content/files";
 
 export interface ContentFormHeaderValue {
   back: PageTitleBack;
@@ -8,9 +9,17 @@ export interface ContentFormHeaderValue {
   title: React.ReactNode;
 }
 
+export interface ContentFormTranslationMeta {
+  locale: string;
+  status?: string;
+  updatedAt?: null | string;
+}
+
 export interface ContentFormContextValue {
+  defaultLocale?: null | string;
   fieldNames: string[];
   fields: Record<string, React.ReactNode>;
+  files?: Record<string, ContentFileFieldValue | undefined>;
   header?: ContentFormHeaderValue;
   localizedFieldNames: string[];
   markHeaderRendered?: () => void;
@@ -26,6 +35,7 @@ export interface ContentFormContextValue {
   singular: string;
   skeleton?: boolean;
   title?: string;
+  translations?: readonly ContentFormTranslationMeta[];
 }
 
 const ContentFormContext = React.createContext<ContentFormContextValue | null>(
