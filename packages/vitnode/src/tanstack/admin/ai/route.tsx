@@ -12,7 +12,6 @@ import type { AdminScreenContext } from "../screen";
 import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import {
-  adminAiAccessQuery,
   adminAiActionsQuery,
   adminAiAltStatusQuery,
   adminAiHistoryQuery,
@@ -101,23 +100,6 @@ export const loadAdminAiSettingsRoute = async (
   };
 };
 
-export const loadAdminAiModelsRoute = async (
-  context: AdminAiLoaderContext,
-): Promise<AdminAiRouteData> => {
-  const adminUserId = enter(context);
-
-  await context.queryClient.query({
-    ...adminAiModelsQuery({ adminUserId }),
-    ...STATIC,
-  });
-
-  return {
-    adminUserId,
-    description: context.t("admin.ai.models.desc"),
-    title: context.t("admin.ai.models.title"),
-  };
-};
-
 export const loadAdminAiActionsRoute = async (
   context: AdminAiLoaderContext,
 ): Promise<AdminAiRouteData> => {
@@ -138,29 +120,6 @@ export const loadAdminAiActionsRoute = async (
     adminUserId,
     description: context.t("admin.ai.actions.desc"),
     title: context.t("admin.ai.actions.title"),
-  };
-};
-
-export const loadAdminAiAccessRoute = async (
-  context: AdminAiLoaderContext,
-): Promise<AdminAiRouteData> => {
-  const adminUserId = enter(context);
-
-  await Promise.all([
-    context.queryClient.query({
-      ...adminAiAccessQuery({ adminUserId }),
-      ...STATIC,
-    }),
-    context.queryClient.query({
-      ...adminAiActionsQuery({ adminUserId }),
-      ...STATIC,
-    }),
-  ]);
-
-  return {
-    adminUserId,
-    description: context.t("admin.ai.access.desc"),
-    title: context.t("admin.ai.access.title"),
   };
 };
 

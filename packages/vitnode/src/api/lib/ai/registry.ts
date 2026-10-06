@@ -29,7 +29,9 @@ export interface RegisteredAiAction {
 export interface AiActionPublicMetadata {
   actors: AiActorType[];
   defaults: AiActionDefaults;
-  description: null | string;
+  description: string;
+  /** A Lucide icon name, or `null` for the default AI icon. */
+  icon: null | string;
   key: AiActionKey;
   localId: string;
   output: AiActionOutputMode;
@@ -37,6 +39,7 @@ export interface AiActionPublicMetadata {
   pluginId: string;
   promptVersion: number;
   requiredCapabilities: AiModelCapability[];
+  title: string;
 }
 
 export const aiActionKey = (pluginId: string, localId: string): AiActionKey =>
@@ -114,7 +117,8 @@ export const projectAiAction = ({
 }: RegisteredAiAction): AiActionPublicMetadata => ({
   actors: [...definition.actors],
   defaults: { ...definition.defaults },
-  description: definition.description ?? null,
+  description: definition.description,
+  icon: definition.icon ?? null,
   key,
   localId: definition.id,
   output: definition.output,
@@ -125,6 +129,7 @@ export const projectAiAction = ({
   pluginId,
   promptVersion: definition.promptVersion,
   requiredCapabilities: [...definition.requiredCapabilities],
+  title: definition.title,
 });
 
 /**

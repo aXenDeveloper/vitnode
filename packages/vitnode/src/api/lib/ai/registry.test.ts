@@ -15,7 +15,9 @@ const summarize = (id = "summary.generate") =>
       maxOutputTokens: 100,
       timeoutMs: 10_000,
     },
+    description: "Test action.",
     id,
+    title: "Test action",
     inputSchema: z.object({ text: z.string() }),
     output: "text",
     outputSchema: z.string().min(1),
@@ -65,6 +67,9 @@ describe("defineAiAction", () => {
       },
     ],
     ["a user action without authorize()", { authorize: undefined }],
+    ["a blank title", { title: "  " }],
+    ["a blank description", { description: "" }],
+    ["an icon that isn't a Lucide name", { icon: "Sparkles Icon" }],
   ])("refuses %s", (_label, override) => {
     expect(() =>
       defineAiAction({
@@ -85,7 +90,9 @@ describe("defineAiAction", () => {
           maxOutputTokens: 10,
           timeoutMs: 5_000,
         },
+        description: "Test action.",
         id: "facts.extract",
+        title: "Test action",
         inputSchema: z.object({}),
         output: "object",
         outputSchema: z.object({ facts: z.array(z.string()) }),
@@ -103,7 +110,9 @@ describe("defineAiAction", () => {
         maxOutputTokens: 10,
         timeoutMs: 5_000,
       },
+      description: "Test action.",
       id: "media.describe",
+      title: "Test action",
       inputSchema: z.object({}),
       output: "text",
       outputSchema: z.string(),
@@ -171,8 +180,11 @@ describe("AI action registry", () => {
     expect(metadata).not.toHaveProperty("buildPrompt");
     expect(metadata).not.toHaveProperty("inputSchema");
     expect(metadata).toMatchObject({
+      description: "Test action.",
+      icon: null,
       key: "@acme/blog:summary.generate",
       permission: { key: "@acme/blog:summary" },
+      title: "Test action",
     });
   });
 });

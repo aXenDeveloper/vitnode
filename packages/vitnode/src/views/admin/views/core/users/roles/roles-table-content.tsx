@@ -56,7 +56,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { ADMIN_ROLE_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 
-import type { AdminRoleFormProps } from "./role-form-content";
+import type {
+  AdminRoleAiAccessQuery,
+  AdminRoleFormProps,
+} from "./role-form-content";
 import type {
   AdminRoleOption,
   AdminRoleRow,
@@ -66,13 +69,15 @@ import type {
 
 import { ADMIN_ROLES_DEFAULT_ORDER } from "./roles-query";
 
-const AdminRoleFormContent = React.lazy(async () =>
+const AdminRoleFormDialogContent = React.lazy(async () =>
   import("./role-form-content").then(module => ({
-    default: module.AdminRoleFormContent,
+    default: module.AdminRoleFormDialogContent,
   })),
 );
 
 export interface RolesAdminTableProps {
+  /** Adds the AI tab to the role form; omit when the admin can't manage AI. */
+  aiAccessQuery?: AdminRoleAiAccessQuery;
   data: AdminRolesPage;
   onDelete: (args: {
     id: number;
@@ -291,10 +296,12 @@ const DeleteRoleAction = ({
 };
 
 const EditRoleAction = ({
+  aiAccessQuery,
   onSave,
   onSaved,
   role,
 }: {
+  aiAccessQuery?: AdminRoleAiAccessQuery;
   onSave: RolesAdminTableProps["onSave"];
   onSaved?: () => void;
   role: AdminRoleRow;
@@ -325,7 +332,12 @@ const EditRoleAction = ({
             </div>
           }
         >
-          <AdminRoleFormContent data={role} onSave={onSave} onSaved={onSaved} />
+          <AdminRoleFormDialogContent
+            aiAccessQuery={aiAccessQuery}
+            data={role}
+            onSave={onSave}
+            onSaved={onSaved}
+          />
         </React.Suspense>
       </DialogContent>
     </Dialog>
@@ -333,12 +345,14 @@ const EditRoleAction = ({
 };
 
 const RoleRowActions = ({
+  aiAccessQuery,
   onDelete,
   onSave,
   onSaved,
   role,
   searchRoles,
 }: {
+  aiAccessQuery?: AdminRoleAiAccessQuery;
   onDelete: RolesAdminTableProps["onDelete"];
   onSave: RolesAdminTableProps["onSave"];
   onSaved?: () => void;
@@ -364,7 +378,12 @@ const RoleRowActions = ({
   return (
     <div className="flex items-center justify-end gap-1">
       {showEdit && (
-        <EditRoleAction onSave={onSave} onSaved={onSaved} role={role} />
+        <EditRoleAction
+          aiAccessQuery={aiAccessQuery}
+          onSave={onSave}
+          onSaved={onSaved}
+          role={role}
+        />
       )}
       {showDelete && (
         <DeleteRoleAction
@@ -380,9 +399,11 @@ const RoleRowActions = ({
 
 /** The header's create button, gated on `roles:can_create`. */
 export const CreateRoleAction = ({
+  aiAccessQuery,
   onSave,
   onSaved,
 }: {
+  aiAccessQuery?: AdminRoleAiAccessQuery;
   onSave: RolesAdminTableProps["onSave"];
   onSaved?: () => void;
 }) => {
@@ -408,7 +429,11 @@ export const CreateRoleAction = ({
             </div>
           }
         >
-          <AdminRoleFormContent onSave={onSave} onSaved={onSaved} />
+          <AdminRoleFormDialogContent
+            aiAccessQuery={aiAccessQuery}
+            onSave={onSave}
+            onSaved={onSaved}
+          />
         </React.Suspense>
       </DialogContent>
     </Dialog>
@@ -416,6 +441,7 @@ export const CreateRoleAction = ({
 };
 
 export const RolesAdminTableContent = ({
+  aiAccessQuery,
   data,
   onDelete,
   onSave,
@@ -461,6 +487,7 @@ export const RolesAdminTableContent = ({
           align: "right",
           cell: ({ row }) => (
             <RoleRowActions
+              aiAccessQuery={aiAccessQuery}
               onDelete={onDelete}
               onSave={onSave}
               onSaved={onSaved}

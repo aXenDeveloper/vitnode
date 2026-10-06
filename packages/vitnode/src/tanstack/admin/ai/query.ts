@@ -7,27 +7,24 @@ import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import {
-  deleteAdminAiPricing,
   deleteAdminAiUserOverride,
   sweepAdminAiAlt,
-  syncAdminAiPricing,
-  testAdminAiAction,
   updateAdminAiAction,
-  updateAdminAiPricing,
   updateAdminAiRoleAccess,
   updateAdminAiSettings,
   updateAdminAiUserOverride,
 } from "@/views/admin/views/core/ai/ai-mutations";
 import {
-  adminAiAccessQueryOptions,
   adminAiActionsQueryOptions,
   adminAiAltStatusQueryOptions,
   adminAiHistoryQueryOptions,
   adminAiModelsQueryOptions,
   adminAiOverviewQueryOptions,
   adminAiQueryRoot,
+  adminAiRoleAccessQueryOptions,
   adminAiRunQueryOptions,
   adminAiSettingsQueryOptions,
+  adminAiUserOverrideQueryOptions,
 } from "@/views/admin/views/core/ai/ai-query";
 
 import { useAdminIdentity } from "../identity";
@@ -37,13 +34,14 @@ export const adminAiSettingsQuery = adminAiSettingsQueryOptions;
 export const adminAiAltStatusQuery = adminAiAltStatusQueryOptions;
 export const adminAiModelsQuery = adminAiModelsQueryOptions;
 export const adminAiActionsQuery = adminAiActionsQueryOptions;
-export const adminAiAccessQuery = adminAiAccessQueryOptions;
+export const adminAiRoleAccessQuery = adminAiRoleAccessQueryOptions;
+export const adminAiUserOverrideQuery = adminAiUserOverrideQueryOptions;
 export const adminAiHistoryQuery = adminAiHistoryQueryOptions;
 export const adminAiRunQuery = adminAiRunQueryOptions;
 
 /**
- * Every AI screen reads from the others' data - a price change moves the
- * overview's estimates, a test run lands in history - so one write expires
+ * Every AI screen reads from the others' data - a settings change moves the
+ * overview, an action change moves history filters - so one write expires
  * them all.
  */
 export const invalidateAdminAi = async (
@@ -59,13 +57,9 @@ type Mutation<TArgs extends unknown[], TData> = (
 ) => Promise<AdminMutationResult<TData>>;
 
 export interface AdminAiMutations {
-  deletePricing: typeof deleteAdminAiPricing;
   deleteUserOverride: typeof deleteAdminAiUserOverride;
   sweepAlt: typeof sweepAdminAiAlt;
-  syncPricing: typeof syncAdminAiPricing;
-  testAction: typeof testAdminAiAction;
   updateAction: typeof updateAdminAiAction;
-  updatePricing: typeof updateAdminAiPricing;
   updateRoleAccess: typeof updateAdminAiRoleAccess;
   updateSettings: typeof updateAdminAiSettings;
   updateUserOverride: typeof updateAdminAiUserOverride;
@@ -90,13 +84,9 @@ export const useAdminAiMutations = (): AdminAiMutations => {
       };
 
     return {
-      deletePricing: settled(deleteAdminAiPricing),
       deleteUserOverride: settled(deleteAdminAiUserOverride),
       sweepAlt: settled(sweepAdminAiAlt),
-      syncPricing: settled(syncAdminAiPricing),
-      testAction: settled(testAdminAiAction),
       updateAction: settled(updateAdminAiAction),
-      updatePricing: settled(updateAdminAiPricing),
       updateRoleAccess: settled(updateAdminAiRoleAccess),
       updateSettings: settled(updateAdminAiSettings),
       updateUserOverride: settled(updateAdminAiUserOverride),

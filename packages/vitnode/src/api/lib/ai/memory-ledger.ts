@@ -10,7 +10,6 @@ import type {
   AiSettingsSnapshot,
   AiSettlement,
   AiSettlementResult,
-  AiStoredPricing,
   AiUserPolicy,
 } from "./ledger";
 
@@ -53,17 +52,14 @@ export class MemoryAiLedger implements AiLedger {
   constructor({
     actionSettings = {},
     policy = () => ({ dailyLimit: null, granted: true, monthlyPoints: null }),
-    pricing = {},
     settings = {},
   }: {
     actionSettings?: Record<string, Partial<AiActionSettings>>;
     policy?: (args: { permissionKey: string; userId: number }) => AiUserPolicy;
-    pricing?: Record<string, Partial<AiStoredPricing>>;
     settings?: Partial<AiSettingsSnapshot>;
   } = {}) {
     this.actionSettings = actionSettings;
     this.policy = policy;
-    this.pricing = pricing;
     this.settings = { ...DEFAULT_AI_SETTINGS, timeZone: "UTC", ...settings };
   }
 
@@ -76,7 +72,6 @@ export class MemoryAiLedger implements AiLedger {
     permissionKey: string;
     userId: number;
   }) => AiUserPolicy;
-  private readonly pricing: Record<string, Partial<AiStoredPricing>>;
   readonly budgets = new Map<
     string,
     AiBudgetRowState & { unit: AiBudgetUnit; unknownCount: number }
@@ -117,14 +112,6 @@ export class MemoryAiLedger implements AiLedger {
       modelId: null,
       timeoutMs: null,
       ...partial,
-    });
-  }
-
-  async loadPricing(modelId: string): Promise<AiStoredPricing> {
-    return Promise.resolve({
-      manual: null,
-      sync: null,
-      ...this.pricing[modelId],
     });
   }
 

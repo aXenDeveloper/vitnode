@@ -19,7 +19,7 @@ import {
 import { usdToPoints } from "./ledger";
 import { periodContaining } from "./periods";
 import { resolvePolicy } from "./postgres-ledger";
-import { maxCallCost, priceUsage } from "./pricing";
+import { assertAiModelPricing, maxCallCost, priceUsage } from "./pricing";
 import {
   defaultProviderAdapter,
   gatewayProviderAdapter,
@@ -230,19 +230,6 @@ describe("cost resolution", () => {
       amountUsd: "0.0045",
       pricingVersion: "config:abc",
       source: "pricing",
-    });
-  });
-
-  it("labels an admin override as manual, never as the catalog price", () => {
-    const cost = resolveCost({
-      pricing: { ...pricing, source: "manual", version: "manual:7" },
-      reportedCost: null,
-      usage: usage(),
-    });
-
-    expect(cost).toMatchObject({
-      pricingVersion: "manual:7",
-      source: "manual",
     });
   });
 
@@ -495,5 +482,30 @@ describe("budget planning", () => {
         }),
       ),
     ).toBe("2");
+  });
+});
+
+describe("assertAiModelPricing", () => {
+  it("accepts models with and without a price in the config", () => {
+    expect(() =>
+      assertAiModelPricing([
+        { id: "free" },
+        {
+          id: "priced",
+          pricing: { rates: { inputPerMillion: "3", outputPerMillion: "15" } },
+        },
+      ]),
+    ).not.toThrow();
+  });
+
+  it("stops the boot on a price that isn't a decimal string", () => {
+    expect(() =>
+      assertAiModelPricing([
+        {
+          id: "typo",
+          pricing: { rates: { inputPerMillion: 3, outputPerMillion: "15" } },
+        },
+      ]),
+    ).toThrow(/AI model "typo" has invalid pricing/);
   });
 });

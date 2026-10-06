@@ -5,26 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { formatAiUsd } from "@/lib/ai/format-points";
 import { aiRunStatusVariant, isAiRunStatus } from "@/lib/ai/run-status";
 
-/** An action as people read it: what it does, then its key for the record. */
+/** An action as people read it: its title, then its key for the record. */
 export const AiActionLabel = ({
   actionKey,
   className,
-  description,
+  title,
 }: {
   actionKey: string;
   className?: string;
-  description?: null | string;
+  title?: null | string;
 }) => (
   <div className={cn("flex min-w-0 flex-col gap-0.5", className)}>
-    {description ? (
+    {title ? (
       <span className="text-foreground text-sm font-medium text-pretty">
-        {description}
+        {title}
       </span>
     ) : null}
     <span
       className={cn(
         "truncate font-mono text-xs",
-        description ? "text-muted-foreground" : "text-foreground",
+        title ? "text-muted-foreground" : "text-foreground",
       )}
       title={actionKey}
     >
@@ -62,7 +62,6 @@ export const AiUsd = ({
 };
 
 const COST_SOURCE_KEYS = {
-  manual: "estimated",
   mixed: "mixed",
   pricing: "estimated",
   provider: "provider",

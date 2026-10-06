@@ -1882,9 +1882,7 @@
         "ai": {
           "title": "AI",
           "overview": "Overview",
-          "models": "Models & pricing",
           "actions": "Actions",
-          "access": "Access & limits",
           "history": "History",
           "settings": "Settings"
         }
@@ -2233,6 +2231,40 @@
         },
         "submit": "Create User",
         "success": "User \"{name}\" has been created."
+      },
+      "ai": {
+        "title": "AI access",
+        "desc": "This member's own rule, ahead of their roles.",
+        "follows_roles": "No exception - their roles decide.",
+        "blocked": "Blocked",
+        "unlimited": "Unlimited",
+        "points_month": "{points} points / month",
+        "edit": "Edit AI exception",
+        "form_desc": "This replaces what the member's roles give them until it's removed.",
+        "remove": {
+          "title": "Remove AI exception",
+          "desc": "The member goes back to what their roles allow.",
+          "cancel": "Cancel",
+          "confirm": "Remove",
+          "success": "Exception removed",
+          "success_desc": "The member follows their roles again."
+        },
+        "form": {
+          "blocked": "Block AI features",
+          "blocked_desc": "This member can't use any AI feature, whatever their roles allow.",
+          "unlimited": "Unlimited points",
+          "unlimited_desc": "Never stopped by a monthly allowance. The site budget still applies.",
+          "monthly_points": "Monthly points",
+          "monthly_points_desc": "A personal allowance instead of the one from their roles.",
+          "from_roles": "Use their roles",
+          "points_unit": "points",
+          "or": "or",
+          "submit": "Save exception",
+          "saved": {
+            "title": "Exception saved",
+            "desc": "It applies to the member's next AI operation."
+          }
+        }
       }
     },
     "role": {
@@ -2274,7 +2306,8 @@
       "tabs": {
         "general": "General",
         "content": "Content",
-        "profile": "Profile"
+        "profile": "Profile",
+        "ai": "AI"
       },
       "form": {
         "name": "Name",
@@ -2306,6 +2339,24 @@
             "max_size": "Maximum cover size",
             "max_size_desc": "The largest cover image a member of this role can upload, in kB."
           }
+        },
+        "ai": {
+          "unlimited": "Unlimited points",
+          "unlimited_desc": "Members with this role are never stopped by their monthly allowance. The site budget still applies.",
+          "monthly_points": "Monthly points",
+          "monthly_points_desc": "Points every member with this role gets each month. A member with several roles gets the largest allowance, never the sum.",
+          "site_default": "Use the site default",
+          "points_unit": "points",
+          "or": "or",
+          "grant": {
+            "default_allowed": "Default (allowed)",
+            "default_denied": "Default (not allowed)",
+            "allow": "Allow",
+            "deny": "Deny"
+          },
+          "daily_limit": "Daily limit",
+          "action_default": "Use the action's limit",
+          "per_day": "runs / day"
         }
       }
     },
@@ -3158,89 +3209,13 @@
           }
         }
       },
-      "models": {
-        "title": "Models & pricing",
-        "desc": "The models this site can use, what they can do and what they cost.",
-        "capabilities": "Capabilities",
-        "capability": {
-          "text": "Text",
-          "image-input": "Image input",
-          "structured-output": "Structured output",
-          "streaming": "Streaming"
-        },
-        "source": {
-          "config": "From config",
-          "sync": "From AI Gateway",
-          "manual": "Manual override",
-          "none": "No price"
-        },
-        "per_million_hint": "USD per 1M tokens",
-        "no_price": "Without a price, costs from this model are unknown: they're charged at their reservation and never shown as $0.",
-        "catalog_hint": "A manual price overrides the catalog price. Reset it to use the catalog again.",
-        "updated": "Price updated",
-        "price": {
-          "input": "Input",
-          "output": "Output",
-          "cache_read": "Cache read",
-          "cache_write": "Cache write",
-          "per_request": "Per request",
-          "per_image": "Per image",
-          "tiers": "{count, plural, one {# long-context tier} other {# long-context tiers}} kept as configured"
-        },
-        "pricing_form": {
-          "open": "Edit price",
-          "title": "Price for {name}",
-          "desc": "Earlier operations keep the price they were charged at. This one applies from now on.",
-          "input": "Input",
-          "input_desc": "Prices are per one million tokens, in USD.",
-          "output": "Output",
-          "cache_read": "Cache read",
-          "cache_write": "Cache write",
-          "per_request": "Flat fee per request",
-          "per_image": "Flat fee per image",
-          "per_million": "USD / 1M tokens",
-          "per_request_unit": "USD / request",
-          "per_image_unit": "USD / image",
-          "or": "or",
-          "not_billed": "Not billed",
-          "submit": "Save price",
-          "saved": {
-            "title": "Price saved",
-            "desc": "{name} now uses your price."
-          }
-        },
-        "reset": {
-          "open": "Reset",
-          "title": "Remove the manual price?",
-          "desc": "{name} goes back to its catalog price. Operations already charged keep their price.",
-          "cancel": "Cancel",
-          "confirm": "Remove override",
-          "success": "Manual price removed",
-          "success_desc": "{name} uses its catalog price again."
-        },
-        "sync": {
-          "button": "Sync gateway prices",
-          "success": "Prices synced",
-          "success_desc": "{updated} updated, {unchanged} unchanged, {unpriced} without a published price.",
-          "error": "Prices could not be synced",
-          "error_desc": "The AI Gateway price list could not be read. Try again in a moment."
-        },
-        "empty": {
-          "title": "No AI models configured",
-          "desc": "Add a model to the AI section of your VitNode config to get started."
-        }
-      },
       "actions": {
         "title": "AI actions",
-        "desc": "Every AI feature your plugins register: switch them, pick their model and set their limits.",
+        "desc": "Every AI feature your plugins register: switch them on or off, pick their model and set their limits. Models and prices live in vitnode.api.config.ts.",
         "enabled": "On",
         "disabled": "Off",
-        "model": "Model",
         "model_default": "Site default",
-        "daily_limit": "Daily limit",
         "no_limit": "None",
-        "actors": "Used by",
-        "compatible": "Compatible models",
         "no_compatible": "None - it can't run",
         "empty": {
           "title": "No AI actions yet",
@@ -3248,7 +3223,6 @@
         },
         "form": {
           "open": "Configure",
-          "title": "Configure action",
           "tabs": {
             "general": "General",
             "limits": "Limits"
@@ -3274,130 +3248,18 @@
           "submit": "Save action",
           "saved": {
             "title": "Action saved",
-            "desc": "{key} uses the new settings from its next run."
-          }
+            "desc": "{title} uses the new settings from its next run."
+          },
+          "open_label": "Configure {title}"
         },
-        "test": {
-          "open": "Test",
-          "title": "Test run",
-          "billed": {
-            "title": "This is a real, billed run",
-            "desc": "It goes through the same limits and accounting as any other operation, charges your own points and shows up in history."
-          },
-          "input": "Input (JSON)",
-          "input_desc": "The action's input, exactly as a plugin would send it.",
-          "invalid_json": "This isn't valid JSON.",
-          "submit": "Run test",
-          "result": "Result",
-          "charged": "{points} points charged",
-          "cost_unknown": "Cost unknown",
-          "run_id": "Run #{id} in history.",
-          "failed": "The test run failed",
-          "done": {
-            "title": "Test run finished",
-            "desc": "Saved as run #{id} in the AI history."
-          }
-        }
-      },
-      "access": {
-        "title": "Access & limits",
-        "desc": "Who may use which AI feature and how much of it.",
-        "unlimited": "Unlimited",
-        "site_default": "Site default",
-        "points_month": "{points} points / month",
-        "layers": {
-          "title": "Four separate controls",
-          "permission": {
-            "title": "Permission",
-            "desc": "Whether a role may use a feature at all."
-          },
-          "points": {
-            "title": "Monthly points",
-            "desc": "How much a member may spend each month, across every feature."
-          },
-          "daily": {
-            "title": "Daily count",
-            "desc": "How many times a day one feature may run per member."
-          },
-          "budget": {
-            "title": "Site spending",
-            "desc": "The cap for the whole site, in USD.",
-            "link": "Change it in settings"
-          }
-        },
-        "roles": {
-          "title": "Roles",
-          "desc": "A member gets the most generous allowance and the broadest permissions of all their roles.",
-          "no_features": "No AI feature members can use is registered yet, so there's nothing to grant.",
-          "root": "Root",
-          "features_allowed": "{allowed} of {total} features allowed",
-          "edit": "Edit access",
-          "edit_title": "AI access for {name}",
-          "edit_desc": "Monthly points and which AI features this role may use."
-        },
-        "role_form": {
-          "tabs": {
-            "allowance": "Allowance",
-            "features": "Features"
-          },
-          "unlimited": "Unlimited points",
-          "unlimited_desc": "Members with this role are never stopped by their monthly allowance. The site budget still applies.",
-          "monthly_points": "Monthly points",
-          "monthly_points_desc": "Points every member with this role gets each month.",
-          "site_default": "Use the site default",
-          "points_unit": "points",
-          "or": "or",
-          "grant": {
-            "default_allowed": "Default (allowed)",
-            "default_denied": "Default (not allowed)",
-            "allow": "Allow",
-            "deny": "Deny"
-          },
+        "search": "Search actions...",
+        "columns": {
+          "action": "Action",
+          "plugin": "Plugin",
+          "model": "Model",
           "daily_limit": "Daily limit",
-          "action_default": "Use the action's limit",
-          "per_day": "runs / day",
-          "submit": "Save access",
-          "saved": {
-            "title": "Access saved",
-            "desc": "{name} has its new AI access."
-          }
-        },
-        "users": {
-          "title": "User exceptions",
-          "desc": "One member's own rule, ahead of their roles: block them, lift the cap or set a different allowance.",
-          "add": "Add exception",
-          "add_title": "Add an exception",
-          "edit": "Edit exception",
-          "edit_title": "Exception for {name}",
-          "form_desc": "This replaces what the member's roles give them until it's removed.",
-          "empty": "No exceptions - everyone follows their roles.",
-          "blocked": "Blocked",
-          "remove": {
-            "title": "Remove exception",
-            "desc": "{name} goes back to what their roles allow.",
-            "cancel": "Cancel",
-            "confirm": "Remove",
-            "success": "Exception removed",
-            "success_desc": "{name} follows their roles again."
-          }
-        },
-        "user_form": {
-          "user": "Member",
-          "user_required": "Choose a member.",
-          "blocked": "Block AI features",
-          "blocked_desc": "This member can't use any AI feature, whatever their roles allow.",
-          "unlimited": "Unlimited points",
-          "unlimited_desc": "Never stopped by a monthly allowance. The site budget still applies.",
-          "monthly_points": "Monthly points",
-          "monthly_points_desc": "A personal allowance instead of the one from their roles.",
-          "from_roles": "Use their roles",
-          "points_unit": "points",
-          "or": "or",
-          "submit": "Save exception",
-          "saved": {
-            "title": "Exception saved",
-            "desc": "It applies to the member's next AI operation."
-          }
+          "status": "Status",
+          "manage": "Manage"
         }
       },
       "history": {

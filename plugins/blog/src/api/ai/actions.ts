@@ -54,7 +54,9 @@ export const translateFieldAiAction = defineAiAction({
     timeoutMs: 120_000,
   },
   description: "Translates one field of an article into another language.",
+  icon: "languages",
   id: "field.translate",
+  title: "Translate article field",
   inputSchema: zodTranslateAiSchema,
   measureInput: input => input.text.length,
   output: "text",
@@ -83,7 +85,9 @@ export const excerptAiAction = defineAiAction({
     timeoutMs: 30_000,
   },
   description: "Writes a short excerpt for an article.",
+  icon: "text-quote",
   id: "excerpt.generate",
+  title: "Generate excerpt",
   inputSchema: zodExcerptAiSchema,
   measureInput: input =>
     input.title.length + excerptSource(input.content).length,
@@ -141,7 +145,9 @@ export const articleReviewAiAction = defineAiAction({
   },
   description:
     "Suggests clarity and completeness improvements before publishing.",
+  icon: "clipboard-check",
   id: "article.review",
+  title: "Review article before publishing",
   inputSchema: z.object({
     content: z.string().trim().min(1).max(200_000),
     excerpt: z.string().max(1_000).optional(),

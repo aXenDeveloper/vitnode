@@ -57,6 +57,25 @@ export const zodAiPricing = z.object({
 
 export type AiPricing = z.infer<typeof zodAiPricing>;
 
+/**
+ * Checks every model's `pricing` in `vitnode.api.config.ts` at boot - the
+ * config is the only place prices live, so a typo must stop the server, not
+ * turn into an unknown cost on every run.
+ */
+export const assertAiModelPricing = (
+  models: readonly { id: string; pricing?: unknown }[],
+): void => {
+  for (const model of models) {
+    if (model.pricing === undefined) continue;
+    const parsed = zodAiPricing.safeParse(model.pricing);
+    if (!parsed.success) {
+      throw new Error(
+        `AI model "${model.id}" has invalid pricing: ${z.prettifyError(parsed.error)}`,
+      );
+    }
+  }
+};
+
 export type AiPriceEstimate =
   | { amount: Decimal; status: "complete" }
   | { reason: string; status: "incomplete" };

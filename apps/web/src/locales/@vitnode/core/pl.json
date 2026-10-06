@@ -326,9 +326,7 @@
         "ai": {
           "title": "AI",
           "overview": "Przegląd",
-          "models": "Modele i ceny",
           "actions": "Akcje",
-          "access": "Dostęp i limity",
           "history": "Historia",
           "settings": "Ustawienia"
         }
@@ -515,6 +513,24 @@
           "or": "lub",
           "total_max_storage": "Całkowity maks. rozmiar pamięci",
           "unlimited": "Bez limitu"
+        },
+        "ai": {
+          "unlimited": "Punkty bez limitu",
+          "unlimited_desc": "Użytkowników z tą rolą nie zatrzyma miesięczny limit. Budżet strony nadal obowiązuje.",
+          "monthly_points": "Punkty miesięczne",
+          "monthly_points_desc": "Punkty, które co miesiąc dostaje każdy użytkownik z tą rolą. Przy kilku rolach liczy się największy przydział, nigdy suma.",
+          "site_default": "Domyślne strony",
+          "points_unit": "pkt",
+          "or": "lub",
+          "grant": {
+            "default_allowed": "Domyślnie (dozwolone)",
+            "default_denied": "Domyślnie (niedozwolone)",
+            "allow": "Zezwól",
+            "deny": "Zabroń"
+          },
+          "daily_limit": "Dzienny limit",
+          "action_default": "Limit akcji",
+          "per_day": "użyć / dzień"
         }
       },
       "list": {
@@ -532,7 +548,8 @@
       "tabs": {
         "content": "Treść",
         "general": "Ogólne",
-        "profile": "Profil"
+        "profile": "Profil",
+        "ai": "AI"
       }
     },
     "staff": {
@@ -1086,6 +1103,40 @@
       "verify_email": {
         "label": "Zweryfikuj adres e-mail",
         "success": "Adres e-mail został zweryfikowany."
+      },
+      "ai": {
+        "title": "Dostęp do AI",
+        "desc": "Własna reguła tego użytkownika, ważniejsza niż jego role.",
+        "follows_roles": "Brak wyjątku - decydują role.",
+        "blocked": "Zablokowany",
+        "unlimited": "Bez limitu",
+        "points_month": "{points} pkt / miesiąc",
+        "edit": "Edytuj wyjątek AI",
+        "form_desc": "Zastępuje to, co dają role użytkownika, dopóki nie zostanie usunięty.",
+        "remove": {
+          "title": "Usuń wyjątek AI",
+          "desc": "Użytkownik wróci do tego, na co pozwalają role.",
+          "cancel": "Anuluj",
+          "confirm": "Usuń",
+          "success": "Usunięto wyjątek",
+          "success_desc": "Użytkownik znów korzysta z ustawień ról."
+        },
+        "form": {
+          "blocked": "Zablokuj funkcje AI",
+          "blocked_desc": "Ten użytkownik nie może używać żadnej funkcji AI, niezależnie od ról.",
+          "unlimited": "Punkty bez limitu",
+          "unlimited_desc": "Nie zatrzyma go miesięczny limit. Budżet strony nadal obowiązuje.",
+          "monthly_points": "Punkty miesięczne",
+          "monthly_points_desc": "Osobisty przydział zamiast tego z ról.",
+          "from_roles": "Według ról",
+          "points_unit": "pkt",
+          "or": "lub",
+          "submit": "Zapisz wyjątek",
+          "saved": {
+            "title": "Zapisano wyjątek",
+            "desc": "Obowiązuje od następnej operacji AI użytkownika."
+          }
+        }
       }
     },
     "ai": {
@@ -1258,89 +1309,13 @@
           }
         }
       },
-      "models": {
-        "title": "Modele i ceny",
-        "desc": "Modele dostępne na tej stronie, ich możliwości i koszty.",
-        "capabilities": "Możliwości",
-        "capability": {
-          "text": "Tekst",
-          "image-input": "Obrazy na wejściu",
-          "structured-output": "Wynik strukturalny",
-          "streaming": "Strumieniowanie"
-        },
-        "source": {
-          "config": "Z konfiguracji",
-          "sync": "Z AI Gateway",
-          "manual": "Ręczna cena",
-          "none": "Brak ceny"
-        },
-        "per_million_hint": "USD za 1 mln tokenów",
-        "no_price": "Bez ceny koszty tego modelu są nieznane: rozlicza się je według rezerwacji i nigdy nie pokazuje jako 0 $.",
-        "catalog_hint": "Ręczna cena zastępuje cenę z katalogu. Zresetuj ją, aby wrócić do katalogu.",
-        "updated": "Cena zaktualizowana",
-        "price": {
-          "input": "Wejście",
-          "output": "Wyjście",
-          "cache_read": "Odczyt z cache",
-          "cache_write": "Zapis do cache",
-          "per_request": "Za żądanie",
-          "per_image": "Za obraz",
-          "tiers": "{count, plural, one {# próg długiego kontekstu} few {# progi długiego kontekstu} many {# progów długiego kontekstu} other {# progu długiego kontekstu}} bez zmian"
-        },
-        "pricing_form": {
-          "open": "Edytuj cenę",
-          "title": "Cena dla {name}",
-          "desc": "Wcześniejsze operacje zachowują cenę, po której je rozliczono. Ta obowiązuje od teraz.",
-          "input": "Wejście",
-          "input_desc": "Ceny podawane są w USD za milion tokenów.",
-          "output": "Wyjście",
-          "cache_read": "Odczyt z cache",
-          "cache_write": "Zapis do cache",
-          "per_request": "Stała opłata za żądanie",
-          "per_image": "Stała opłata za obraz",
-          "per_million": "USD / 1 mln tokenów",
-          "per_request_unit": "USD / żądanie",
-          "per_image_unit": "USD / obraz",
-          "or": "lub",
-          "not_billed": "Nie naliczana",
-          "submit": "Zapisz cenę",
-          "saved": {
-            "title": "Zapisano cenę",
-            "desc": "{name} używa teraz Twojej ceny."
-          }
-        },
-        "reset": {
-          "open": "Resetuj",
-          "title": "Usunąć ręczną cenę?",
-          "desc": "{name} wróci do ceny z katalogu. Rozliczone operacje zachowają swoją cenę.",
-          "cancel": "Anuluj",
-          "confirm": "Usuń ręczną cenę",
-          "success": "Usunięto ręczną cenę",
-          "success_desc": "{name} znów używa ceny z katalogu."
-        },
-        "sync": {
-          "button": "Synchronizuj ceny z bramki",
-          "success": "Zsynchronizowano ceny",
-          "success_desc": "Zaktualizowano: {updated}, bez zmian: {unchanged}, bez opublikowanej ceny: {unpriced}.",
-          "error": "Nie udało się zsynchronizować cen",
-          "error_desc": "Nie udało się odczytać cennika AI Gateway. Spróbuj ponownie za chwilę."
-        },
-        "empty": {
-          "title": "Brak skonfigurowanych modeli AI",
-          "desc": "Dodaj model w sekcji AI konfiguracji VitNode, aby zacząć."
-        }
-      },
       "actions": {
         "title": "Akcje AI",
-        "desc": "Każda funkcja AI zarejestrowana przez wtyczki: włączaj je, wybieraj model i ustawiaj limity.",
+        "desc": "Każda funkcja AI zarejestrowana przez wtyczki: włączaj je, wybieraj model i ustawiaj limity. Modele i ceny ustawia się w vitnode.api.config.ts.",
         "enabled": "Wł.",
         "disabled": "Wył.",
-        "model": "Model",
         "model_default": "Domyślny strony",
-        "daily_limit": "Dzienny limit",
         "no_limit": "Brak",
-        "actors": "Używają",
-        "compatible": "Zgodne modele",
         "no_compatible": "Brak - nie może działać",
         "empty": {
           "title": "Brak akcji AI",
@@ -1348,7 +1323,6 @@
         },
         "form": {
           "open": "Konfiguruj",
-          "title": "Konfiguracja akcji",
           "tabs": {
             "general": "Ogólne",
             "limits": "Limity"
@@ -1374,130 +1348,18 @@
           "submit": "Zapisz akcję",
           "saved": {
             "title": "Zapisano akcję",
-            "desc": "{key} użyje nowych ustawień od następnego uruchomienia."
-          }
+            "desc": "{title} używa nowych ustawień od następnego uruchomienia."
+          },
+          "open_label": "Konfiguruj: {title}"
         },
-        "test": {
-          "open": "Testuj",
-          "title": "Uruchomienie testowe",
-          "billed": {
-            "title": "To prawdziwe, płatne uruchomienie",
-            "desc": "Przechodzi przez te same limity i rozliczenia co każda inna operacja, pobiera Twoje punkty i trafia do historii."
-          },
-          "input": "Dane wejściowe (JSON)",
-          "input_desc": "Dane wejściowe akcji, dokładnie takie, jakie wysłałaby wtyczka.",
-          "invalid_json": "To nie jest poprawny JSON.",
-          "submit": "Uruchom test",
-          "result": "Wynik",
-          "charged": "Pobrano {points} pkt",
-          "cost_unknown": "Koszt nieznany",
-          "run_id": "Operacja #{id} w historii.",
-          "failed": "Test się nie powiódł",
-          "done": {
-            "title": "Test zakończony",
-            "desc": "Zapisano jako operację #{id} w historii AI."
-          }
-        }
-      },
-      "access": {
-        "title": "Dostęp i limity",
-        "desc": "Kto może używać których funkcji AI i w jakim zakresie.",
-        "unlimited": "Bez limitu",
-        "site_default": "Domyślne strony",
-        "points_month": "{points} pkt / miesiąc",
-        "layers": {
-          "title": "Cztery niezależne ustawienia",
-          "permission": {
-            "title": "Uprawnienie",
-            "desc": "Czy rola w ogóle może używać danej funkcji."
-          },
-          "points": {
-            "title": "Punkty miesięczne",
-            "desc": "Ile użytkownik może wydać w miesiącu na wszystkie funkcje."
-          },
-          "daily": {
-            "title": "Dzienna liczba",
-            "desc": "Ile razy dziennie jedna funkcja może działać dla użytkownika."
-          },
-          "budget": {
-            "title": "Wydatki strony",
-            "desc": "Limit dla całej strony w USD.",
-            "link": "Zmień go w ustawieniach"
-          }
-        },
-        "roles": {
-          "title": "Role",
-          "desc": "Użytkownik dostaje najhojniejszy limit i najszersze uprawnienia ze wszystkich swoich ról.",
-          "no_features": "Nie zarejestrowano jeszcze funkcji AI dla użytkowników, więc nie ma czego przyznawać.",
-          "root": "Root",
-          "features_allowed": "Dozwolone funkcje: {allowed} z {total}",
-          "edit": "Edytuj dostęp",
-          "edit_title": "Dostęp do AI dla roli {name}",
-          "edit_desc": "Punkty miesięczne i funkcje AI dostępne dla tej roli."
-        },
-        "role_form": {
-          "tabs": {
-            "allowance": "Limit",
-            "features": "Funkcje"
-          },
-          "unlimited": "Punkty bez limitu",
-          "unlimited_desc": "Użytkowników z tą rolą nie zatrzyma miesięczny limit. Budżet strony nadal obowiązuje.",
-          "monthly_points": "Punkty miesięczne",
-          "monthly_points_desc": "Punkty, które co miesiąc dostaje każdy użytkownik z tą rolą.",
-          "site_default": "Domyślne strony",
-          "points_unit": "pkt",
-          "or": "lub",
-          "grant": {
-            "default_allowed": "Domyślnie (dozwolone)",
-            "default_denied": "Domyślnie (niedozwolone)",
-            "allow": "Zezwól",
-            "deny": "Zabroń"
-          },
+        "search": "Szukaj akcji...",
+        "columns": {
+          "action": "Akcja",
+          "plugin": "Wtyczka",
+          "model": "Model",
           "daily_limit": "Dzienny limit",
-          "action_default": "Limit akcji",
-          "per_day": "użyć / dzień",
-          "submit": "Zapisz dostęp",
-          "saved": {
-            "title": "Zapisano dostęp",
-            "desc": "Rola {name} ma nowy dostęp do AI."
-          }
-        },
-        "users": {
-          "title": "Wyjątki użytkowników",
-          "desc": "Własna reguła jednego użytkownika, ważniejsza niż jego role: zablokuj go, znieś limit albo ustaw inny przydział.",
-          "add": "Dodaj wyjątek",
-          "add_title": "Dodaj wyjątek",
-          "edit": "Edytuj wyjątek",
-          "edit_title": "Wyjątek dla {name}",
-          "form_desc": "Zastępuje to, co dają role użytkownika, dopóki nie zostanie usunięty.",
-          "empty": "Brak wyjątków - wszyscy korzystają z ustawień ról.",
-          "blocked": "Zablokowany",
-          "remove": {
-            "title": "Usuń wyjątek",
-            "desc": "{name} wróci do tego, na co pozwalają role.",
-            "cancel": "Anuluj",
-            "confirm": "Usuń",
-            "success": "Usunięto wyjątek",
-            "success_desc": "{name} znów korzysta z ustawień ról."
-          }
-        },
-        "user_form": {
-          "user": "Użytkownik",
-          "user_required": "Wybierz użytkownika.",
-          "blocked": "Zablokuj funkcje AI",
-          "blocked_desc": "Ten użytkownik nie może używać żadnej funkcji AI, niezależnie od ról.",
-          "unlimited": "Punkty bez limitu",
-          "unlimited_desc": "Nie zatrzyma go miesięczny limit. Budżet strony nadal obowiązuje.",
-          "monthly_points": "Punkty miesięczne",
-          "monthly_points_desc": "Osobisty przydział zamiast tego z ról.",
-          "from_roles": "Według ról",
-          "points_unit": "pkt",
-          "or": "lub",
-          "submit": "Zapisz wyjątek",
-          "saved": {
-            "title": "Zapisano wyjątek",
-            "desc": "Obowiązuje od następnej operacji AI użytkownika."
-          }
+          "status": "Status",
+          "manage": "Zarządzaj"
         }
       },
       "history": {

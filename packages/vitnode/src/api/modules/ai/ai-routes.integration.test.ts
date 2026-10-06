@@ -15,7 +15,6 @@ import { parseDecimal } from "@/api/lib/ai/decimal";
 import {
   applyAiCostAdjustment,
   expireAiLeases,
-  syncGatewayPricing,
 } from "@/api/lib/ai/maintenance";
 import { PostgresAiLedger } from "@/api/lib/ai/postgres-ledger";
 import { collectAiActions } from "@/api/lib/ai/registry";
@@ -25,7 +24,6 @@ import * as aiTables from "@/database/ai";
 import {
   core_ai_budget_periods,
   core_ai_calls,
-  core_ai_pricing,
   core_ai_runs,
 } from "@/database/ai";
 import * as filesTables from "@/database/files";
@@ -56,7 +54,9 @@ const summarize = defineAiAction({
     maxOutputTokens: 50,
     timeoutMs: 10_000,
   },
+  description: "Test action.",
   id: "summary.generate",
+  title: "Test action",
   inputSchema: z.object({ text: z.string() }),
   output: "text",
   outputSchema: z.string().min(1),
@@ -377,6 +377,78 @@ describePostgres("AI routes (real PostgreSQL)", () => {
     // 3 known runs at $0.02 each: the unknown one is left out, not averaged as $0.
     expect(overview.averageOperationCostUsd).toBe("0.02");
   });
+
+  it("reads a role's AI access for the role form, with action titles", async () => {
+    const existing = await request("/admin/ai/access/roles?roleId=1", {
+      user: ADMIN_ID,
+    });
+    const creating = await request("/admin/ai/access/roles", {
+      user: ADMIN_ID,
+    });
+    const notStaff = await request("/admin/ai/access/roles?roleId=1", {
+      user: ALICE,
+    });
+
+    expect(existing.status).toBe(200);
+    expect(await existing.json()).toEqual({
+      permissions: [
+        {
+          actions: [
+            {
+              icon: null,
+              key: "@acme/notes:summary.generate",
+              title: "Test action",
+            },
+          ],
+          defaultGranted: true,
+          key: "@acme/notes:summary",
+        },
+      ],
+      role: { grants: [], monthlyPoints: null, root: true, unlimited: false },
+    });
+    expect(await creating.json()).toMatchObject({ role: null });
+    expect(notStaff.status).toBe(403);
+  });
+
+  it("saves a member's AI exception and reads it back for their page", async () => {
+    await grantStaffPermissions(cache, {
+      permissions: [
+        { module: "ai", permission: "can_view", plugin: "@vitnode/core" },
+        { module: "ai", permission: "can_manage", plugin: "@vitnode/core" },
+      ],
+      userId: ADMIN_ID,
+    });
+    const path = `/admin/ai/access/users/${BOB}`;
+    const before = await request(path, { user: ADMIN_ID });
+    const denied = await request("/admin/ai/access/users", {
+      body: {
+        blocked: true,
+        monthlyPoints: null,
+        unlimited: false,
+        userId: BOB,
+      },
+      method: "PUT",
+      user: ALICE,
+    });
+    const saved = await request("/admin/ai/access/users", {
+      body: {
+        blocked: true,
+        monthlyPoints: null,
+        unlimited: false,
+        userId: BOB,
+      },
+      method: "PUT",
+      user: ADMIN_ID,
+    });
+    const after = await request(path, { user: ADMIN_ID });
+
+    expect(await before.json()).toEqual({ override: null });
+    expect(denied.status).toBe(403);
+    expect(saved.status).toBe(200);
+    expect(await after.json()).toEqual({
+      override: { blocked: true, monthlyPoints: null, unlimited: false },
+    });
+  });
 });
 
 describePostgres("AI maintenance (real PostgreSQL)", () => {
@@ -546,45 +618,5 @@ describePostgres("AI maintenance (real PostgreSQL)", () => {
       .from(core_ai_calls)
       .where(eq(core_ai_calls.id, callId));
     expect(call).toEqual({ costSource: "provider", costUsd: "0.012000000000" });
-  });
-
-  it("versions synced gateway prices and leaves direct connections alone", async () => {
-    const catalog = (input: string) => async () =>
-      await Promise.resolve({
-        models: [
-          { id: "anthropic/claude-x", pricing: { input, output: "0.000015" } },
-        ],
-      });
-    const models: AIModelDefinition[] = [
-      { id: "gw", model: "anthropic/claude-x", name: "Gateway" },
-      { id: "direct", model: new MockLanguageModelV4(), name: "Direct" },
-    ];
-
-    const first = await syncGatewayPricing(
-      database.db,
-      models,
-      catalog("0.000003"),
-    );
-    const again = await syncGatewayPricing(
-      database.db,
-      models,
-      catalog("0.000003"),
-    );
-    const changed = await syncGatewayPricing(
-      database.db,
-      models,
-      catalog("0.000004"),
-    );
-
-    expect(first.updated).toEqual(["gw"]);
-    expect(again.unchanged).toEqual(["gw"]);
-    expect(changed.updated).toEqual(["gw"]);
-    const rows = await database.db.select().from(core_ai_pricing);
-    expect(rows.filter(row => row.modelId === "gw")).toHaveLength(2);
-    expect(rows.filter(row => row.active)).toHaveLength(1);
-    expect(rows.find(row => row.active)?.pricing.rates.inputPerMillion).toBe(
-      "4",
-    );
-    expect(rows.some(row => row.modelId === "direct")).toBe(false);
   });
 });

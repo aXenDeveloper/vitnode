@@ -230,18 +230,8 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           permission: core("ai"),
         },
         {
-          title: key("admin.global.nav.ai.models"),
-          href: "/admin/core/ai/models",
-          permission: core("ai"),
-        },
-        {
           title: key("admin.global.nav.ai.actions"),
           href: "/admin/core/ai/actions",
-          permission: core("ai"),
-        },
-        {
-          title: key("admin.global.nav.ai.access"),
-          href: "/admin/core/ai/access",
           permission: core("ai"),
         },
         {

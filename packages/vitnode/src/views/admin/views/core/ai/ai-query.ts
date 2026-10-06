@@ -2,7 +2,6 @@ import type { z } from "zod";
 
 import { queryOptions } from "@tanstack/react-query";
 
-import type { zodAiPricing } from "@/api/lib/ai/pricing";
 import type {
   zodAiAction,
   zodAiModel,
@@ -92,30 +91,36 @@ export interface AdminAiAltStatus {
   languages: string[];
 }
 export type AdminAiModel = z.infer<typeof zodAiModel>;
-export type AdminAiPricing = z.infer<typeof zodAiPricing>;
 export type AdminAiAction = z.infer<typeof zodAiAction>;
 
-export interface AdminAiAccess {
-  overrides: {
-    blocked: boolean;
+/** `GET /admin/ai/access/roles` - what the role form's AI tab edits. */
+export interface AdminAiRoleAccess {
+  permissions: AdminAiRolePermission[];
+  /** `null` when creating a role. */
+  role: null | {
+    grants: {
+      dailyLimit: null | number;
+      granted: boolean;
+      permission: string;
+    }[];
     monthlyPoints: null | string;
+    root: boolean;
     unlimited: boolean;
-    user: { id: number; name: string; nameCode: string };
-  }[];
-  permissions: { actions: string[]; defaultGranted: boolean; key: string }[];
-  roles: AdminAiRoleAccess[];
+  };
 }
 
-export interface AdminAiRoleAccess {
-  grants: { dailyLimit: null | number; granted: boolean; permission: string }[];
-  id: number;
+export interface AdminAiRolePermission {
+  actions: { icon: null | string; key: string; title: string }[];
+  defaultGranted: boolean;
+  key: string;
+}
+
+/** `GET /admin/ai/access/users/{userId}`. */
+export interface AdminAiUserOverride {
+  blocked: boolean;
   monthlyPoints: null | string;
-  name: { languageCode: string; name: string }[];
-  root: boolean;
   unlimited: boolean;
 }
-
-export type AdminAiUserOverride = AdminAiAccess["overrides"][number];
 
 /** One row of the AI history, as JSON delivers it. */
 export interface AdminAiRunRow {
@@ -299,22 +304,55 @@ export const fetchAdminAiActions: AdminAiActionsFetcher = async () => {
   return await response.json();
 };
 
-export type AdminAiAccessFetcher = () => Promise<AdminAiAccess>;
+export type AdminAiRoleAccessFetcher = (
+  roleId: null | number,
+) => Promise<AdminAiRoleAccess>;
 
-export const fetchAdminAiAccess: AdminAiAccessFetcher = async () => {
-  const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
-    method: "get",
-    module: "admin/ai",
-    path: "/access",
-  });
+export const fetchAdminAiRoleAccess: AdminAiRoleAccessFetcher =
+  async roleId => {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { query: roleId === null ? {} : { roleId } },
+      method: "get",
+      module: "admin/ai",
+      path: "/access/roles",
+    });
 
-  if (!response.ok) {
-    throw new AdminRequestError(response.status, "the AI access");
-  }
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the AI access of a role",
+        `roleId=${roleId ?? "new"}`,
+      );
+    }
 
-  return await response.json();
-};
+    return await response.json();
+  };
+
+export type AdminAiUserOverrideFetcher = (
+  userId: number,
+) => Promise<{ override: AdminAiUserOverride | null }>;
+
+export const fetchAdminAiUserOverride: AdminAiUserOverrideFetcher =
+  async userId => {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { params: { userId } },
+      method: "get",
+      module: "admin/ai",
+      path: "/access/users/{userId}",
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the AI exception of a user",
+        `userId=${userId}`,
+      );
+    }
+
+    return await response.json();
+  };
 
 export type AdminAiHistoryFetcher = (
   params: AiHistoryParams,
@@ -431,14 +469,40 @@ export const adminAiActionsQueryOptions = ({
     staleTime: RECORD_STALE_TIME,
   });
 
-export const adminAiAccessQueryOptions = ({
+export const adminAiRoleAccessQueryOptions = ({
   adminUserId,
+  roleId,
 }: {
   adminUserId: AdminIdentity;
+  roleId: null | number;
 }) =>
   queryOptions({
-    queryFn: async () => await fetchAdminAiAccess(),
-    queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "access"),
+    queryFn: async () => await fetchAdminAiRoleAccess(roleId),
+    queryKey: adminScopedQueryKey(
+      ADMIN_AI_SCREEN,
+      adminUserId,
+      "role-access",
+      roleId,
+    ),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiUserOverrideQueryOptions = ({
+  adminUserId,
+  userId,
+}: {
+  adminUserId: AdminIdentity;
+  userId: number;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiUserOverride(userId),
+    queryKey: adminScopedQueryKey(
+      ADMIN_AI_SCREEN,
+      adminUserId,
+      "user-override",
+      userId,
+    ),
     retry: false,
     staleTime: RECORD_STALE_TIME,
   });

@@ -3,11 +3,9 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { UserOption } from "@/components/form/fields/input-users";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
 import { AutoForm } from "@/components/form/auto-form";
-import { AutoFormUser } from "@/components/form/fields/input-users";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { useDialog } from "@/components/ui/dialog";
@@ -19,30 +17,23 @@ import { fromAiDecimal, toAiDecimal } from "../ai-decimal";
 
 export interface AiUserOverrideFormProps {
   /** The exception being edited. Absent when adding one. */
-  data?: AdminAiUserOverride;
+  data: AdminAiUserOverride | null;
   onSave: (
     body: AdminAiUserOverrideInput,
   ) => Promise<AdminMutationResult<true>>;
-  searchUsers: (search: string) => Promise<UserOption[]>;
+  userId: number;
 }
 
-export const AiUserOverrideFormContent = ({
+export const AiUserOverrideForm = ({
   data,
   onSave,
-  searchUsers,
+  userId,
 }: AiUserOverrideFormProps) => {
-  const t = useTranslations("admin.ai.access.user_form");
+  const t = useTranslations("admin.user.ai.form");
   const tError = useTranslations("core.global.errors");
   const { setIsDirty, setOpen } = useDialog();
 
   const formSchema = z.object({
-    userId: z
-      .number({ message: t("user_required") })
-      .int()
-      .positive()
-      .nullable()
-      .default(data?.user.id ?? null)
-      .refine(value => value !== null, { message: t("user_required") }),
     blocked: z.boolean().default(data?.blocked ?? false),
     unlimited: z.boolean().default(data?.unlimited ?? false),
     monthlyPoints: z
@@ -53,8 +44,6 @@ export const AiUserOverrideFormContent = ({
   });
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    if (values.userId === null) return;
-
     const result = await onSave({
       blocked: values.blocked,
       monthlyPoints:
@@ -62,7 +51,7 @@ export const AiUserOverrideFormContent = ({
           ? null
           : toAiDecimal(values.monthlyPoints),
       unlimited: values.unlimited,
-      userId: values.userId,
+      userId,
     });
 
     if ("error" in result) {
@@ -81,18 +70,6 @@ export const AiUserOverrideFormContent = ({
   return (
     <AutoForm
       fields={[
-        {
-          component: props => (
-            <AutoFormUser
-              {...props}
-              disabled={data !== undefined}
-              label={t("user")}
-              search={searchUsers}
-              selected={data?.user ?? null}
-            />
-          ),
-          id: "userId",
-        },
         {
           component: props => (
             <AutoFormSwitch

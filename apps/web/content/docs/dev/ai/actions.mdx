@@ -55,7 +55,9 @@ export const zodSummarizeTopicSchema = z.object({
 
 export const summarizeTopicAiAction = defineAiAction({
   id: 'topic.summarize',
+  title: 'Summarize topic',
   description: 'Writes a two-sentence summary of a forum topic.',
+  icon: 'text-quote',
   promptVersion: 1,
   permission: { key: 'summarize', defaultGranted: true },
   requiredCapabilities: ['text'],
@@ -192,6 +194,16 @@ Two plugins may both have an `excerpt.generate`; their canonical keys differ. Th
 
 `aiActionRef(pluginId, action)` builds the canonical key **and** remembers the action's input and output types. Pass it to `run()` and TypeScript checks `input` and infers `output`. A plain string key also works, but its output is `unknown`.
 
+## Title, description and icon
+
+Every action shows up as a row on **AI → Actions** and as a feature on the role form's **AI** tab, so it needs a human name:
+
+- **`title`** (required) - a short name, e.g. `Summarize topic`.
+- **`description`** (required) - one sentence on what it does.
+- **`icon`** (optional) - a [Lucide](https://lucide.dev/icons) icon name in kebab case, e.g. `languages` or `wand-sparkles`. Without one, the row shows a sparkles icon.
+
+A blank title or description, or an icon that isn't a kebab-case name, throws at boot.
+
 ## Prompt versions and instructions
 
 `promptVersion` is stored with every run. Bump it whenever the prompt changes meaningfully, so the history shows which prompt produced which result.
@@ -210,6 +222,8 @@ An empty answer, a `parseText()` that throws or a schema mismatch fails with `AI
 ```ts title="An object action"
 export const suggestTagsAiAction = defineAiAction({
   id: 'topic.tags',
+  title: 'Suggest tags',
+  description: 'Picks up to five tags for a new topic.',
   promptVersion: 1,
   permission: 'tags',
   actors: ['system'],
@@ -259,7 +273,7 @@ buildPrompt: (input) => ({
 
 ## Permissions and authorize()
 
-Every action names a **permission**. Admins grant it per role in the AdminCP. Several actions may share one key - they then share one switch and one daily counter.
+Every action names a **permission**. Admins grant it per role on the **AI** tab of the role form. Several actions may share one key - they then share one switch and one daily counter.
 
 ```ts
 permission: 'summarize' // same as { key: 'summarize', defaultGranted: false }

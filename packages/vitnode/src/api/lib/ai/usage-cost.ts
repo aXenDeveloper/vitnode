@@ -16,7 +16,7 @@ export interface AiUsage {
   reasoningTokens: null | number;
 }
 
-export type AiCostSource = "manual" | "pricing" | "provider" | "unknown";
+export type AiCostSource = "pricing" | "provider" | "unknown";
 
 /**
  * What one call cost. Discriminated so an unknown cost can never carry an
@@ -31,7 +31,7 @@ export type AiCost =
   | {
       amountUsd: string;
       pricingVersion: string;
-      source: "manual" | "pricing";
+      source: "pricing";
     }
   | {
       amountUsd: string;
@@ -46,7 +46,7 @@ export interface AiUsageCost {
 /** The pricing that applies to one model on its connection, and where it came from. */
 export interface AiEffectivePricing {
   pricing: AiPricing;
-  source: "manual" | "pricing";
+  source: "pricing";
   /** Stored with every call so a later price change never rewrites history. */
   version: string;
 }

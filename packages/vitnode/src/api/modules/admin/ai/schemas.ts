@@ -43,16 +43,7 @@ export const zodAiModel = z.object({
   id: z.string(),
   model: z.string(),
   name: z.string(),
-  pricing: z
-    .object({
-      pricing: zodAiPricing,
-      source: z.enum(["config", "manual", "sync"]),
-      updatedAt: z.string().nullable(),
-      version: z.string(),
-    })
-    .nullable(),
-  /** The catalog price under an admin override, when there is one. */
-  catalogPricing: zodAiPricing.nullable(),
+  pricing: zodAiPricing.nullable(),
   provider: z.string(),
 });
 
@@ -82,7 +73,8 @@ export const zodAiAction = z.object({
     maxSteps: z.number(),
     timeoutMs: z.number(),
   }),
-  description: z.string().nullable(),
+  description: z.string(),
+  icon: z.string().nullable(),
   key: z.string(),
   localId: z.string(),
   output: z.enum(["object", "text"]),
@@ -91,6 +83,7 @@ export const zodAiAction = z.object({
   promptVersion: z.number(),
   requiredCapabilities: z.array(zodAiCapability),
   settings: zodAiActionSettingsInput.omit({ key: true }),
+  title: z.string(),
 });
 
 export const zodAiRunStatus = z.enum(AI_RUN_STATUSES);

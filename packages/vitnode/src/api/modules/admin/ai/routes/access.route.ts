@@ -1,8 +1,7 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { formatDecimal, parseDecimal } from "@/api/lib/ai/decimal";
-import { resolveRoleNames } from "@/api/lib/resolve-role-names";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import {
@@ -11,46 +10,47 @@ import {
   core_ai_user_overrides,
 } from "@/database/ai";
 import { core_roles } from "@/database/roles";
-import { core_users } from "@/database/users";
 
-const zodRoleName = z.array(
-  z.object({ languageCode: z.string(), name: z.string() }),
-);
+const decimalOrNull = (value: null | string | undefined) =>
+  value === null || value === undefined
+    ? null
+    : formatDecimal(parseDecimal(value));
 
-export const getAiAccessAdminRoute = buildRoute({
+/**
+ * The AI permissions users can be granted, and what one role grants. The
+ * role form's AI tab reads it; `roleId` is absent when creating a role.
+ */
+export const getAiRoleAccessAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",
     description:
-      "Who may use which AI feature: role grants, allowances and user exceptions.",
-    path: "/access",
+      "The AI permissions a role can grant and, for an existing role, its allowance and grants.",
+    path: "/access/roles",
+    request: {
+      query: z.object({ roleId: z.coerce.number().int().optional() }),
+    },
     responses: {
       200: {
         content: {
           "application/json": {
             schema: z.object({
-              overrides: z.array(
-                z.object({
-                  blocked: z.boolean(),
-                  monthlyPoints: z.string().nullable(),
-                  unlimited: z.boolean(),
-                  user: z.object({
-                    id: z.number(),
-                    name: z.string(),
-                    nameCode: z.string(),
-                  }),
-                }),
-              ),
               permissions: z.array(
                 z.object({
-                  actions: z.array(z.string()),
+                  actions: z.array(
+                    z.object({
+                      icon: z.string().nullable(),
+                      key: z.string(),
+                      title: z.string(),
+                    }),
+                  ),
                   defaultGranted: z.boolean(),
                   key: z.string(),
                 }),
               ),
-              roles: z.array(
-                z.object({
+              role: z
+                .object({
                   grants: z.array(
                     z.object({
                       dailyLimit: z.number().nullable(),
@@ -58,51 +58,28 @@ export const getAiAccessAdminRoute = buildRoute({
                       permission: z.string(),
                     }),
                   ),
-                  id: z.number(),
                   monthlyPoints: z.string().nullable(),
-                  name: zodRoleName,
                   root: z.boolean(),
                   unlimited: z.boolean(),
-                }),
-              ),
+                })
+                .nullable(),
             }),
           },
         },
-        description: "AI access",
+        description: "AI access of a role",
       },
     },
   },
   handler: async c => {
+    const { roleId } = c.req.valid("query");
     const db = c.get("db");
-    const [roles, policies, grants, overrides] = await Promise.all([
-      db
-        .select({ id: core_roles.id, root: core_roles.root })
-        .from(core_roles)
-        .where(eq(core_roles.guest, false))
-        .orderBy(asc(core_roles.id)),
-      db.select().from(core_ai_role_policies),
-      db.select().from(core_ai_role_permissions),
-      db
-        .select({
-          blocked: core_ai_user_overrides.blocked,
-          id: core_users.id,
-          monthlyPoints: core_ai_user_overrides.monthlyPoints,
-          name: core_users.name,
-          nameCode: core_users.nameCode,
-          unlimited: core_ai_user_overrides.unlimited,
-        })
-        .from(core_ai_user_overrides)
-        .innerJoin(core_users, eq(core_users.id, core_ai_user_overrides.userId))
-        .orderBy(asc(core_users.name)),
-    ]);
-    const names = await resolveRoleNames(
-      c,
-      roles.map(role => role.id),
-    );
 
     const permissions = new Map<
       string,
-      { actions: string[]; defaultGranted: boolean }
+      {
+        actions: { icon: null | string; key: string; title: string }[];
+        defaultGranted: boolean;
+      }
     >();
     for (const action of c.get("ai").actions().all()) {
       if (!action.definition.actors.includes("user")) continue;
@@ -110,47 +87,111 @@ export const getAiAccessAdminRoute = buildRoute({
         actions: [],
         defaultGranted: action.definition.permission.defaultGranted,
       };
-      entry.actions.push(action.key);
+      entry.actions.push({
+        icon: action.definition.icon ?? null,
+        key: action.key,
+        title: action.definition.title,
+      });
       permissions.set(action.permissionKey, entry);
+    }
+
+    let role: null | {
+      grants: {
+        dailyLimit: null | number;
+        granted: boolean;
+        permission: string;
+      }[];
+      monthlyPoints: null | string;
+      root: boolean;
+      unlimited: boolean;
+    } = null;
+    if (roleId !== undefined) {
+      const [[row], [policy], grants] = await Promise.all([
+        db
+          .select({ root: core_roles.root })
+          .from(core_roles)
+          .where(eq(core_roles.id, roleId)),
+        db
+          .select()
+          .from(core_ai_role_policies)
+          .where(eq(core_ai_role_policies.roleId, roleId)),
+        db
+          .select()
+          .from(core_ai_role_permissions)
+          .where(eq(core_ai_role_permissions.roleId, roleId)),
+      ]);
+      if (row) {
+        role = {
+          grants: grants.map(grant => ({
+            dailyLimit: grant.dailyLimit,
+            granted: grant.granted,
+            permission: grant.permission,
+          })),
+          monthlyPoints: decimalOrNull(policy?.monthlyPoints),
+          root: row.root,
+          unlimited: policy?.unlimited ?? false,
+        };
+      }
     }
 
     return c.json(
       {
-        overrides: overrides.map(row => ({
-          blocked: row.blocked,
-          monthlyPoints:
-            row.monthlyPoints === null
-              ? null
-              : formatDecimal(parseDecimal(row.monthlyPoints)),
-          unlimited: row.unlimited,
-          user: { id: row.id, name: row.name, nameCode: row.nameCode },
-        })),
         permissions: [...permissions.entries()].map(([key, value]) => ({
           key,
           ...value,
         })),
-        roles: roles.map(role => {
-          const policy = policies.find(row => row.roleId === role.id);
+        role,
+      },
+      200,
+    );
+  },
+});
 
-          return {
-            grants: grants
-              .filter(row => row.roleId === role.id)
-              .map(row => ({
-                dailyLimit: row.dailyLimit,
-                granted: row.granted,
-                permission: row.permission,
-              })),
-            id: role.id,
-            monthlyPoints:
-              policy?.monthlyPoints === null ||
-              policy?.monthlyPoints === undefined
-                ? null
-                : formatDecimal(parseDecimal(policy.monthlyPoints)),
-            name: names.get(role.id) ?? [],
-            root: role.root,
-            unlimited: policy?.unlimited ?? false,
-          };
-        }),
+/** One user's AI exception, shown on the user's AdminCP page. */
+export const getAiUserOverrideAdminRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "ai", permission: "can_view" },
+  route: {
+    method: "get",
+    description: "One user's AI exception, or null when their roles apply.",
+    path: "/access/users/{userId}",
+    request: { params: z.object({ userId: z.coerce.number().int() }) },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              override: z
+                .object({
+                  blocked: z.boolean(),
+                  monthlyPoints: z.string().nullable(),
+                  unlimited: z.boolean(),
+                })
+                .nullable(),
+            }),
+          },
+        },
+        description: "AI exception of a user",
+      },
+    },
+  },
+  handler: async c => {
+    const { userId } = c.req.valid("param");
+    const [row] = await c
+      .get("db")
+      .select()
+      .from(core_ai_user_overrides)
+      .where(eq(core_ai_user_overrides.userId, userId));
+
+    return c.json(
+      {
+        override: row
+          ? {
+              blocked: row.blocked,
+              monthlyPoints: decimalOrNull(row.monthlyPoints),
+              unlimited: row.unlimited,
+            }
+          : null,
       },
       200,
     );

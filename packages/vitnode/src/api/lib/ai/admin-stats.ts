@@ -188,7 +188,7 @@ export const loadAiOverview = async (
     byModel,
     byOrigin,
     costSources: {
-      estimated: sourceCount(["pricing", "manual", "mixed"]),
+      estimated: sourceCount(["pricing", "mixed"]),
       provider: sourceCount(["provider"]),
       unknown: sourceCount(["unknown"]),
     },

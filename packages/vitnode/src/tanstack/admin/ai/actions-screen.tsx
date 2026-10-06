@@ -24,7 +24,7 @@ export const AdminAiActionsRouteContent = ({
   const { data: modelsData } = useSuspenseQuery(
     adminAiModelsQuery({ adminUserId }),
   );
-  const { testAction, updateAction } = useAdminAiMutations();
+  const { updateAction } = useAdminAiMutations();
   const canManage = useAdminStaffPermission(ADMIN_AI_PERMISSIONS.manage);
 
   return (
@@ -37,7 +37,6 @@ export const AdminAiActionsRouteContent = ({
           canManage={canManage}
           models={modelsData.models}
           onSave={updateAction}
-          onTest={testAction}
         />
       </div>
     </RouteMessages>

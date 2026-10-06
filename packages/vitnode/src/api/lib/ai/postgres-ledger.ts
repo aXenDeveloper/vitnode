@@ -13,7 +13,6 @@ import type {
   AiSettingsSnapshot,
   AiSettlement,
   AiSettlementResult,
-  AiStoredPricing,
   AiUserPolicy,
 } from "./ledger";
 
@@ -21,7 +20,6 @@ import {
   core_ai_action_settings,
   core_ai_budget_periods,
   core_ai_calls,
-  core_ai_pricing,
   core_ai_reservations,
   core_ai_role_permissions,
   core_ai_role_policies,
@@ -303,9 +301,7 @@ export class PostgresAiLedger implements AiLedger {
         outputTokens: call.usage.outputTokens,
         pricingSnapshot: call.pricingSnapshot,
         pricingVersion:
-          call.cost.source === "manual" || call.cost.source === "pricing"
-            ? call.cost.pricingVersion
-            : null,
+          call.cost.source === "pricing" ? call.cost.pricingVersion : null,
         providerModelId: call.providerModelId ?? undefined,
         providerRequestId: call.providerRequestId,
         reasoningTokens: call.usage.reasoningTokens,
@@ -336,25 +332,6 @@ export class PostgresAiLedger implements AiLedger {
       modelId: row.modelId,
       timeoutMs: row.timeoutMs,
     };
-  }
-
-  async loadPricing(modelId: string): Promise<AiStoredPricing> {
-    const rows = await this.db
-      .select()
-      .from(core_ai_pricing)
-      .where(
-        and(
-          eq(core_ai_pricing.modelId, modelId),
-          eq(core_ai_pricing.active, true),
-        ),
-      );
-    const of = (source: "manual" | "sync") => {
-      const row = rows.find(entry => entry.source === source);
-
-      return row ? { id: row.id, pricing: row.pricing } : null;
-    };
-
-    return { manual: of("manual"), sync: of("sync") };
   }
 
   async loadSettings(): Promise<AiSettingsSnapshot> {
@@ -699,7 +676,7 @@ export const summarizeCalls = (calls: CallRow[]) => {
   const costs = calls.map(call => parseDecimalOrNull(call.costUsd));
   const allKnown = calls.length > 0 && costs.every(cost => cost !== null);
   const sources = new Set(calls.map(call => call.costSource));
-  let source: "manual" | "mixed" | "pricing" | "provider" | "unknown";
+  let source: "mixed" | "pricing" | "provider" | "unknown";
   if (!allKnown) source = "unknown";
   else if (sources.size === 1) source = [...sources][0];
   else source = "mixed";

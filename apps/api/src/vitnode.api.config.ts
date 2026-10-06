@@ -32,15 +32,27 @@ export const vitNodeApiConfig = buildApiConfig({
         name: "Claude Sonnet 5",
         model: "anthropic/claude-sonnet-5",
         // Declared, never guessed: image ALT text runs only on models that
-        // say they accept images. Prices come from the AdminCP ("Sync gateway
-        // prices") or a manual override there.
+        // say they accept images.
         capabilities: ["text", "image-input", "structured-output", "streaming"],
+        // USD per 1M tokens, as decimal strings. Example values - copy yours
+        // from the provider's price list. Without a price, costs are unknown.
+        pricing: {
+          rates: {
+            inputPerMillion: "3",
+            outputPerMillion: "15",
+            cacheReadPerMillion: "0.3",
+            cacheWritePerMillion: "3.75",
+          },
+        },
       },
       {
         id: "fast",
         name: "Google Gemini 3.5 Flash Lite",
         model: google("gemini-3.5-flash-lite"),
         capabilities: ["text", "image-input", "structured-output", "streaming"],
+        pricing: {
+          rates: { inputPerMillion: "0.1", outputPerMillion: "0.4" },
+        },
       },
     ],
     embeddingModels: [

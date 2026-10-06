@@ -29,7 +29,7 @@ interface AiUsage {
 
 type AiCost =
   | { source: 'provider'; amountUsd: string }
-  | { source: 'pricing' | 'manual'; amountUsd: string; pricingVersion: string }
+  | { source: 'pricing'; amountUsd: string; pricingVersion: string }
   | { source: 'unknown'; amountUsd: null; reason: string }
 ```
 
@@ -48,17 +48,33 @@ Amounts are decimal strings with 12 decimal places, stored as `numeric(24, 12)` 
 For every call, VitNode takes the first of these that is available:
 
 1. **Provider-reported cost** - what the provider says it billed (AI Gateway, OpenRouter).
-2. **Pricing** - token usage × the model's effective price:
-   1. an admin's manual price from the AdminCP - it **replaces** the catalog price, it is never ignored;
-   2. the synced AI Gateway catalog price (gateway models only);
-   3. the `pricing` from `vitnode.api.config.ts`.
+2. **Pricing** - token usage × the `pricing` of the model in `vitnode.api.config.ts`.
 3. **Unknown** - never zero.
 
-Each estimated call stores the pricing version it used. Changing a price later never rewrites history.
+Each estimated call stores the pricing version it used (`config:<fingerprint>` of the price). Changing a price later never rewrites history.
 
-## Pricing
+## Model pricing
 
-Prices are USD **per one million tokens**, as decimal strings:
+Every model sets its own price in `vitnode.api.config.ts`. It is the only place prices live - there is no price editor in the AdminCP and no automatic sync, so what you deploy is what VitNode charges. A price that isn't a decimal string stops the server at boot instead of quietly turning every cost into `unknown`.
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+ai: {
+  models: [
+    {
+      id: 'default',
+      name: 'Claude Sonnet 5',
+      model: 'anthropic/claude-sonnet-5',
+      capabilities: ['text', 'image-input', 'structured-output', 'streaming'],
+      // [!code ++:3]
+      pricing: {
+        rates: { inputPerMillion: '3', outputPerMillion: '15' },
+      },
+    },
+  ],
+},
+```
+
+Prices are USD **per one million tokens**, as decimal strings. The full shape:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 pricing: {
@@ -131,13 +147,13 @@ A worked example with the pricing above - 10,000 input tokens (2,000 cache reads
 
 `pricing` is the price **on this connection**. The AI Gateway and the direct provider are different connections, and they can bill differently. Set the price you actually pay.
 
-| Connection                                        | Reports its cost?           | What VitNode needs                                      |
-| :------------------------------------------------ | :-------------------------- | :------------------------------------------------------ |
-| AI Gateway id, e.g. `'anthropic/claude-sonnet-5'` | Often, in response metadata | Pricing for reservations - config or the synced catalog |
-| OpenRouter-compatible provider                    | Yes, `usage.cost`           | Pricing for reservations                                |
-| Direct provider, e.g. `openai('gpt-4o-mini')`     | No                          | `pricing` in config, or a manual price in the AdminCP   |
+| Connection                                        | Reports its cost?           | What VitNode needs           |
+| :------------------------------------------------ | :-------------------------- | :--------------------------- |
+| AI Gateway id, e.g. `'anthropic/claude-sonnet-5'` | Often, in response metadata | `pricing` for reservations   |
+| OpenRouter-compatible provider                    | Yes, `usage.cost`           | `pricing` for reservations   |
+| Direct provider, e.g. `openai('gpt-4o-mini')`     | No                          | `pricing` for every estimate |
 
-The gateway catalog sync copies the AI Gateway's published prices onto **gateway models only**. A direct connection is never priced from the gateway catalog. A changed catalog price becomes a new version; the old one stays for history.
+When a provider changes its prices, update `pricing` and deploy. Runs already charged keep the price version they were charged at.
 
 <Callout type="warn" title="Reported cost does not replace pricing under a cap">
   The reservation happens _before_ the call, so it can only use pricing. A
@@ -266,10 +282,10 @@ Runs whose process died stay `running` until their lease expires - `timeoutMs` p
 
 Admins control who may use AI and how much in the AdminCP:
 
-- **AI permissions per role** - grant or deny each action permission, with an optional daily limit.
-- **Monthly point policies per role** - an allowance in points, or unlimited.
-- **Default monthly points** - the site-wide allowance when no role policy gives more.
-- **User overrides** - block a user, make them unlimited, or set their own allowance.
+- **AI permissions per role** - the **AI** tab of the role form: grant or deny each action permission, with an optional daily limit.
+- **Monthly point policies per role** - on the same tab: an allowance in points, or unlimited.
+- **Default monthly points** - the site-wide allowance when no role policy gives more (**AI → Settings**).
+- **User overrides** - the **AI access** card on a member's AdminCP page: block them, make them unlimited, or set their own allowance.
 
 How multiple roles combine:
 
@@ -303,7 +319,7 @@ When a model has no effective pricing, VitNode cannot bound the run:
 - **Daily run counts** need no pricing.
 - **With no cap at all**, the run goes ahead. Its cost is recorded as `unknown` and counted among unknown costs in the AdminCP.
 
-Add `pricing` to the model in `vitnode.api.config.ts`, or a manual price in the AdminCP, to fix it.
+Add `pricing` to the model in `vitnode.api.config.ts` to fix it.
 
 ## History and retention
 

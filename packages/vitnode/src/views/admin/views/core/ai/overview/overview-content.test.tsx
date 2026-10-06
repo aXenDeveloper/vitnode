@@ -57,7 +57,7 @@ const renderOverview = (data: AdminAiOverview) =>
       <AiOverviewContent
         data={data}
         describeAction={key =>
-          key === "@vitnode/blog:excerpt.generate" ? "Write an excerpt" : null
+          key === "@vitnode/blog:excerpt.generate" ? "Generate excerpt" : null
         }
       />
     </IntlProvider>,
@@ -89,10 +89,10 @@ describe("AiOverviewContent", () => {
     ).toBeTruthy();
   });
 
-  it("names an action by its description and keeps its key", () => {
+  it("names an action by its title and keeps its key", () => {
     renderOverview(overview());
 
-    expect(screen.getByText("Write an excerpt")).toBeTruthy();
+    expect(screen.getByText("Generate excerpt")).toBeTruthy();
     expect(screen.getByText("@vitnode/blog:excerpt.generate")).toBeTruthy();
   });
 

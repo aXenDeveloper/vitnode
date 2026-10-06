@@ -1,17 +1,15 @@
-import { FlaskConicalIcon, PencilIcon } from "lucide-react";
+import { PencilIcon, SparklesIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import type { ColumnDef } from "@/components/table/data-table-content";
+import type { DataTableNavigation } from "@/components/table/navigation";
+
+import { ContentDataTable } from "@/components/table/content";
+import { DataTableNavigationProvider } from "@/components/table/navigation";
+import { readTableFilter, readTableSearch } from "@/components/table/url-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,19 +18,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { Spinner } from "@/components/ui/spinner";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
 import type { AiActionFormProps } from "./action-form-content";
-import type { AiActionTestProps } from "./action-test-content";
-
-import { AiActionLabel } from "../ai-labels";
 
 const AiActionFormContent = React.lazy(async () =>
   import("./action-form-content").then(module => ({
@@ -40,25 +31,16 @@ const AiActionFormContent = React.lazy(async () =>
   })),
 );
 
-const AiActionTestContent = React.lazy(async () =>
-  import("./action-test-content").then(module => ({
-    default: module.AiActionTestContent,
-  })),
-);
-
-const DialogFallback = () => (
-  <div className="flex items-center justify-center">
-    <Spinner size="xl" />
-  </div>
-);
+const PLUGIN_FILTER = "plugin";
 
 export interface AiActionsContentProps {
   actions: AdminAiAction[];
   canManage: boolean;
   models: AdminAiModel[];
   onSave: AiActionFormProps["onSave"];
-  onTest: AiActionTestProps["onTest"];
 }
+
+type AiActionRow = AdminAiAction & { id: number };
 
 export const EditAiActionAction = ({
   action,
@@ -71,18 +53,33 @@ export const EditAiActionAction = ({
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>
-        <PencilIcon />
-        {t("open")}
-      </DialogTrigger>
+      <TooltipWithContent text={t("open")}>
+        <DialogTrigger
+          render={
+            <Button
+              aria-label={t("open_label", { title: action.title })}
+              size="icon"
+              variant="ghost"
+            />
+          }
+        >
+          <PencilIcon />
+        </DialogTrigger>
+      </TooltipWithContent>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogTitle>{action.title}</DialogTitle>
           <DialogDescription className="font-mono text-xs">
             {action.key}
           </DialogDescription>
         </DialogHeader>
-        <React.Suspense fallback={<DialogFallback />}>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
           <AiActionFormContent
             action={action}
             models={models}
@@ -94,137 +91,196 @@ export const EditAiActionAction = ({
   );
 };
 
-const TestAiActionAction = ({
-  action,
-  onTest,
-}: Pick<AiActionsContentProps, "onTest"> & { action: AdminAiAction }) => {
-  const t = useTranslations("admin.ai.actions.test");
+const AiActionIcon = ({ icon }: { icon: null | string }) => (
+  <span
+    aria-hidden
+    className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg"
+  >
+    {icon ? (
+      <DynamicIcon
+        className="size-4"
+        fallback={<SparklesIcon className="size-4" />}
+        name={icon}
+      />
+    ) : (
+      <SparklesIcon className="size-4" />
+    )}
+  </span>
+);
 
-  return (
-    <Dialog>
-      <DialogTrigger render={<Button size="sm" variant="ghost" />}>
-        <FlaskConicalIcon />
-        {t("open")}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription className="font-mono text-xs">
-            {action.key}
-          </DialogDescription>
-        </DialogHeader>
-        <React.Suspense fallback={<DialogFallback />}>
-          <AiActionTestContent actionKey={action.key} onTest={onTest} />
-        </React.Suspense>
-      </DialogContent>
-    </Dialog>
+/** Matches the title, the description and the key, ignoring case. */
+const matchesSearch = (action: AdminAiAction, search: string) => {
+  const needle = search.trim().toLowerCase();
+  if (!needle) return true;
+
+  return [action.title, action.description, action.key].some(value =>
+    value.toLowerCase().includes(needle),
   );
 };
 
-const AiActionFact = ({
-  label,
-  value,
-}: {
-  label: React.ReactNode;
-  value: React.ReactNode;
-}) => (
-  <div className="flex flex-col gap-0.5">
-    <dt className="text-muted-foreground text-xs">{label}</dt>
-    <dd className="text-sm">{value}</dd>
-  </div>
-);
-
-const AiActionCard = ({
-  action,
+/**
+ * Every registered action in one table. The list is small and arrives whole,
+ * so search and the plugin filter run in the browser.
+ */
+export const AiActionsContent = ({
+  actions,
   canManage,
   models,
   onSave,
-  onTest,
-}: Omit<AiActionsContentProps, "actions"> & { action: AdminAiAction }) => {
+}: AiActionsContentProps) => {
   const t = useTranslations("admin.ai.actions");
-  const tOrigin = useTranslations("admin.ai.origin");
+  const [searchParams, setSearchParams] = React.useState(
+    () => new URLSearchParams(),
+  );
+  const navigation = React.useMemo<DataTableNavigation>(
+    () => ({
+      navigate: nextSearch => {
+        setSearchParams(new URLSearchParams(nextSearch));
+      },
+      searchParams,
+    }),
+    [searchParams],
+  );
+
+  const plugins = [...new Set(actions.map(action => action.pluginId))].sort(
+    (a, b) => a.localeCompare(b),
+  );
+  const search = readTableSearch(searchParams);
+  const selectedPlugins = readTableFilter(searchParams, PLUGIN_FILTER);
+  const rows: AiActionRow[] = [...actions]
+    .sort(
+      (a, b) =>
+        a.pluginId.localeCompare(b.pluginId) || a.title.localeCompare(b.title),
+    )
+    .map((action, index) => ({ ...action, id: index + 1 }))
+    .filter(
+      action =>
+        matchesSearch(action, search) &&
+        (selectedPlugins.length === 0 ||
+          selectedPlugins.includes(action.pluginId)),
+    );
+
   const modelName = (id: null | string) =>
     id === null
       ? t("model_default")
       : (models.find(model => model.id === id)?.name ?? id);
-  const dailyLimit = action.settings.dailyLimit ?? action.defaults.dailyLimit;
-  const canTest = action.actors.includes("user");
+
+  const columns: ColumnDef<AiActionRow>[] = [
+    {
+      id: "title",
+      header: t("columns.action"),
+      cell: ({ row }) => (
+        <div className="flex min-w-64 items-center gap-3">
+          <AiActionIcon icon={row.icon} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-foreground font-medium text-pretty">
+              {row.title}
+            </span>
+            <span className="text-muted-foreground text-sm leading-relaxed text-pretty">
+              {row.description}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "plugin",
+      header: t("columns.plugin"),
+      cell: ({ row }) => (
+        <Badge className="font-mono" variant="outline">
+          {row.pluginId}
+        </Badge>
+      ),
+    },
+    {
+      id: "model",
+      header: t("columns.model"),
+      cell: ({ row }) =>
+        row.compatibleModelIds.length === 0 ? (
+          <span className="text-destructive">{t("no_compatible")}</span>
+        ) : (
+          modelName(row.settings.modelId)
+        ),
+    },
+    {
+      id: "dailyLimit",
+      header: t("columns.daily_limit"),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {row.settings.dailyLimit ?? row.defaults.dailyLimit ?? t("no_limit")}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: t("columns.status"),
+      cell: ({ row }) => (
+        <Badge variant={row.settings.enabled ? "success" : "outline"}>
+          {row.settings.enabled ? t("enabled") : t("disabled")}
+        </Badge>
+      ),
+    },
+    ...(canManage
+      ? [
+          {
+            id: "actions",
+            header: <span className="sr-only">{t("columns.manage")}</span>,
+            align: "right" as const,
+            cell: ({ row }: { row: AiActionRow }) => (
+              <EditAiActionAction
+                action={row}
+                models={models}
+                onSave={onSave}
+              />
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>
-          <AiActionLabel
-            actionKey={action.key}
-            description={action.description}
-          />
-        </CardTitle>
-        <CardAction>
-          <Badge variant={action.settings.enabled ? "success" : "outline"}>
-            {action.settings.enabled ? t("enabled") : t("disabled")}
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
-          <AiActionFact
-            label={t("model")}
-            value={modelName(action.settings.modelId)}
-          />
-          <AiActionFact
-            label={t("daily_limit")}
-            value={dailyLimit ?? t("no_limit")}
-          />
-          <AiActionFact
-            label={t("actors")}
-            value={action.actors.map(actor => tOrigin(actor)).join(", ")}
-          />
-          <AiActionFact
-            label={t("compatible")}
-            value={
-              action.compatibleModelIds.length === 0 ? (
-                <span className="text-destructive">{t("no_compatible")}</span>
-              ) : (
-                action.compatibleModelIds.length
-              )
-            }
-          />
-        </dl>
-      </CardContent>
-      {canManage ? (
-        <CardFooter className="flex flex-wrap gap-2">
-          <EditAiActionAction action={action} models={models} onSave={onSave} />
-          {canTest ? (
-            <TestAiActionAction action={action} onTest={onTest} />
-          ) : null}
-        </CardFooter>
-      ) : null}
-    </Card>
-  );
-};
-
-export const AiActionsContent = ({
-  actions,
-  ...props
-}: AiActionsContentProps) => {
-  const t = useTranslations("admin.ai.actions");
-
-  if (actions.length === 0) {
-    return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>{t("empty.title")}</EmptyTitle>
-          <EmptyDescription>{t("empty.desc")}</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {actions.map(action => (
-        <AiActionCard action={action} key={action.key} {...props} />
-      ))}
-    </div>
+    <DataTableNavigationProvider value={navigation}>
+      <ContentDataTable
+        columns={columns}
+        customNoResults={
+          actions.length === 0
+            ? {
+                description: t("empty.desc"),
+                title: t("empty.title"),
+              }
+            : undefined
+        }
+        edges={rows}
+        filters={
+          plugins.length > 1
+            ? [
+                {
+                  id: PLUGIN_FILTER,
+                  label: t("columns.plugin"),
+                  options: plugins.map(plugin => ({
+                    label: plugin,
+                    value: plugin,
+                  })),
+                },
+              ]
+            : undefined
+        }
+        id="ai-actions"
+        order={{ defaultOrder: { column: "title", order: "asc" } }}
+        pageInfo={{
+          count: rows.length,
+          currentPage: 1,
+          endCursor: null,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          pageSize: Math.max(rows.length, 1),
+          startCursor: null,
+          totalCount: rows.length,
+          totalPages: 1,
+        }}
+        search
+        searchPlaceholder={t("search")}
+      />
+    </DataTableNavigationProvider>
   );
 };

@@ -3,7 +3,8 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import {
   deleteAiUserOverrideAdminRoute,
-  getAiAccessAdminRoute,
+  getAiRoleAccessAdminRoute,
+  getAiUserOverrideAdminRoute,
   updateAiRoleAccessAdminRoute,
   updateAiUserOverrideAdminRoute,
 } from "./routes/access.route";
@@ -23,17 +24,11 @@ import {
 import { listAiModelsAdminRoute } from "./routes/models.route";
 import { aiOverviewAdminRoute } from "./routes/overview.route";
 import { getAiSettingsAdminRoute } from "./routes/settings.route";
-import { syncAiPricingAdminRoute } from "./routes/sync-pricing.route";
-import { testAiActionAdminRoute } from "./routes/test-action.route";
 import {
   getTranslationSourcesAdminRoute,
   saveTranslationSourcesAdminRoute,
 } from "./routes/translation-sources.route";
 import { updateAiActionAdminRoute } from "./routes/update-action.route";
-import {
-  deleteAiPricingAdminRoute,
-  updateAiPricingAdminRoute,
-} from "./routes/update-pricing.route";
 import { updateAiSettingsAdminRoute } from "./routes/update-settings.route";
 
 export const aiAdminModule = buildModule({
@@ -44,13 +39,10 @@ export const aiAdminModule = buildModule({
     getAiSettingsAdminRoute,
     updateAiSettingsAdminRoute,
     listAiModelsAdminRoute,
-    updateAiPricingAdminRoute,
-    deleteAiPricingAdminRoute,
-    syncAiPricingAdminRoute,
     listAiActionsAdminRoute,
     updateAiActionAdminRoute,
-    testAiActionAdminRoute,
-    getAiAccessAdminRoute,
+    getAiRoleAccessAdminRoute,
+    getAiUserOverrideAdminRoute,
     updateAiRoleAccessAdminRoute,
     updateAiUserOverrideAdminRoute,
     deleteAiUserOverrideAdminRoute,

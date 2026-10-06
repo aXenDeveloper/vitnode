@@ -1,17 +1,16 @@
-export { AdminAiAccessRouteContent } from "./access-screen";
 export { AdminAiActionsRouteContent } from "./actions-screen";
 export { AdminAiHistoryRouteContent } from "./history-screen";
-export { AdminAiModelsRouteContent } from "./models-screen";
 export { AdminAiOverviewRouteContent } from "./overview-screen";
 export {
-  adminAiAccessQuery,
   adminAiActionsQuery,
   adminAiAltStatusQuery,
   adminAiHistoryQuery,
   adminAiModelsQuery,
   adminAiOverviewQuery,
+  adminAiRoleAccessQuery,
   adminAiRunQuery,
   adminAiSettingsQuery,
+  adminAiUserOverrideQuery,
   invalidateAdminAi,
   useAdminAiMutations,
 } from "./query";
@@ -23,10 +22,8 @@ export type {
 } from "./route";
 export {
   ADMIN_AI_NAMESPACES,
-  loadAdminAiAccessRoute,
   loadAdminAiActionsRoute,
   loadAdminAiHistoryRoute,
-  loadAdminAiModelsRoute,
   loadAdminAiOverviewRoute,
   loadAdminAiSettingsRoute,
 } from "./route";
@@ -45,7 +42,6 @@ export {
 export { AdminAiSettingsRouteContent } from "./settings-screen";
 
 export type {
-  AdminAiAccess,
   AdminAiAction,
   AdminAiModel,
   AdminAiOverview,

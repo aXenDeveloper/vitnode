@@ -57,6 +57,7 @@ import type {
 } from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
 
+import { assertAiModelPricing } from "../lib/ai/pricing";
 import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
@@ -386,6 +387,7 @@ export const globalMiddleware = ({
   );
 
   assertContentAiActions(contentTypesMetadata, aiActionsMetadata);
+  assertAiModelPricing(ai?.models ?? []);
 
   const navigationMetadata: NavigationPreset[] =
     collectNavigationPresets(plugins);

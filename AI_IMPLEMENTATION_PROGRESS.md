@@ -6,7 +6,9 @@ automatic-alt, fields-and-editor, usage, future).
 
 ## Current stage
 
-Stages 1–10 implemented. Final integration verification, review and draft PR.
+Stages 1–10 implemented, draft PR #843 open. Follow-up review round done:
+pricing moved to config only, AI access moved into the role form and the
+user page, actions listed in a data table with title/description/icon.
 
 ## Base branch
 
@@ -25,9 +27,12 @@ extended rather than recreated. The draft PR targets `refactor/edit_articles`.
   requires `structured-output`. Nothing is inferred from model names.
 - Money: decimal strings, `bigint` fixed point (12 places),
   `numeric(24,12)`. 1 AI point = 0.001 USD (conversion version 1).
-- Cost order: provider-reported → effective pricing (admin manual override
-  replaces synced/config catalog) → unknown. Unknown is never zero: an unknown
-  cost charges the site budget its full reservation.
+- Cost order: provider-reported → `pricing` of the model in
+  `vitnode.api.config.ts` → unknown. Config is the only price source (no
+  AdminCP editor, no gateway sync; `core_ai_pricing` dropped in
+  `20261006164800_ai_config_pricing`). Malformed pricing stops the boot
+  (`assertAiModelPricing`). Unknown is never zero: an unknown cost charges the
+  site budget its full reservation.
 - Users are charged points only for the call that delivered a valid result.
 - Budgets: `core_ai_budget_periods` rows per scope per period (global USD,
   system USD, user points, user×permission daily count), locked in sorted
@@ -37,7 +42,13 @@ extended rather than recreated. The draft PR targets `refactor/edit_articles`.
 - Persistence via `AiLedger`: `PostgresAiLedger` (production) and
   `MemoryAiLedger` (test seam, same pure rules in `budget.ts`).
 - Role policies: any granting role grants; largest allowance wins (never
-  summed); user override replaces; root roles unlimited.
+  summed); user override replaces; root roles unlimited. Edited on the role
+  form's **AI** tab (admins with `ai:can_manage`; saved right after the role
+  via `PUT /admin/ai/access/roles`), user exceptions on the AdminCP user page
+  (`GET /admin/ai/access/users/{userId}`).
+- Actions carry `title`, `description` (both required) and an optional Lucide
+  `icon`; AdminCP Actions is a data table (icon, title/description, plugin,
+  model, daily limit, status, configure). No test runs.
 - Global defaults: AI on, no site cap, `defaultMonthlyPoints` 0, automatic
   ALT off and refused without a site budget.
 - ALT: per-language `core_files_alt` (human/ai origin, file fingerprint),
@@ -67,6 +78,8 @@ extended rather than recreated. The draft PR targets `refactor/edit_articles`.
 - Stage 9: Quick Ask.
 - Stage 10: translation freshness and optional pre-publication AI review.
 - CI: PostgreSQL service so integration tests run.
+- Review round: config-only pricing, role-form AI tab, user AI card, actions
+  data table with titles/icons, test runs removed.
 
 ## Checks
 
@@ -84,8 +97,7 @@ extended rather than recreated. The draft PR targets `refactor/edit_articles`.
 ## Known limitations
 
 - Streaming does not retry or fall back once a stream has started.
-- Gateway prices sync only when an admin clicks "Sync gateway prices".
-  Synced prices have no long-context tiers; use a manual override for them.
+- Prices change only by editing `vitnode.api.config.ts` and deploying.
 - ALT base descriptions are written in English, then translated.
 - A crash mid-call may pay for one repeated call; exactly-once is not
   promised. Uncertain calls are settled by maintenance at full reservation
@@ -93,8 +105,7 @@ extended rather than recreated. The draft PR targets `refactor/edit_articles`.
 - The AdminCP assist/translation-source routes rely on the action's AI
   permission + `authorize()` / content `can_edit` instead of a separate
   `ai:*` staff permission (documented in code).
-- Long-context price tiers can't be edited in the AdminCP (kept as is).
 
 ## Next task
 
-Final full-suite run, diff review, draft PR against `refactor/edit_articles`.
+Wait for review on draft PR #843.

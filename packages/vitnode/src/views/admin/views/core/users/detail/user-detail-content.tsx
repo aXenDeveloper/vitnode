@@ -25,6 +25,8 @@ import { UserPersonalCard, UserPreferencesCard } from "./user-profile-cards";
 import { UserRolesCardContent } from "./user-roles-content";
 
 export interface UserDetailProps {
+  /** The member's AI exception card, when the admin may see AI access. */
+  aiAccess?: React.ReactNode;
   canEdit: boolean;
   connectedAccounts: React.ReactNode;
   devices: React.ReactNode;
@@ -41,6 +43,7 @@ export interface UserDetailProps {
 }
 
 export const UserDetailContent = ({
+  aiAccess,
   canEdit,
   connectedAccounts,
   devices,
@@ -87,6 +90,7 @@ export const UserDetailContent = ({
         />
         {connectedAccounts}
         {devices}
+        {aiAccess}
       </aside>
 
       <Tabs className="min-w-0 gap-4" defaultValue="activity">

@@ -41,7 +41,9 @@ export const articleExcerptAiAction = defineAiAction({
     timeoutMs: 20_000,
   },
   description: "Suggests a teaser for an example article.",
+  icon: "sparkles",
   id: "article.excerpt",
+  title: "Suggest article teaser",
   inputSchema: z.object({
     code: z.string().max(100),
     locale: z.string().min(2).max(16),

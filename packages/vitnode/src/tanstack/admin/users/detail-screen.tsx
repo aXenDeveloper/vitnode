@@ -1,10 +1,16 @@
 import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
+import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { useAdminStaffPermissions } from "@/components/staff-permission/provider";
+import {
+  useAdminStaffPermission,
+  useAdminStaffPermissions,
+} from "@/components/staff-permission/provider";
+import { AiUserOverrideCardContent } from "@/views/admin/views/core/ai/access/user-override-card-content";
+import { ADMIN_AI_PERMISSIONS } from "@/views/admin/views/core/ai/ai-permissions";
 import { UserConnectedAccountsCard } from "@/views/admin/views/core/users/detail/user-connected-accounts";
 import { UserDetailContent } from "@/views/admin/views/core/users/detail/user-detail-content";
 import { UserDevicesCard } from "@/views/admin/views/core/users/detail/user-devices";
@@ -18,6 +24,7 @@ import { SearchFeedList } from "@/views/search/search-feed-content";
 import type { AdminUserRouteData } from "./detail-route";
 
 import { RouteMessages } from "../../i18n/route-messages";
+import { adminAiUserOverrideQuery, useAdminAiMutations } from "../ai/query";
 import { ADMIN_USER_NAMESPACES } from "./detail-route";
 import { adminUserQuery, useAdminUserMutations } from "./query";
 
@@ -39,6 +46,30 @@ const UserTimeline = ({
   return <SearchFeedList query={query} variant="timeline" />;
 };
 
+const UserAiAccess = ({
+  adminUserId,
+  userId,
+}: {
+  adminUserId: AdminIdentity;
+  userId: number;
+}) => {
+  const { data } = useSuspenseQuery(
+    adminAiUserOverrideQuery({ adminUserId, userId }),
+  );
+  const { deleteUserOverride, updateUserOverride } = useAdminAiMutations();
+  const canManage = useAdminStaffPermission(ADMIN_AI_PERMISSIONS.manage);
+
+  return (
+    <AiUserOverrideCardContent
+      canManage={canManage}
+      onDelete={deleteUserOverride}
+      onSave={updateUserOverride}
+      override={data.override}
+      userId={userId}
+    />
+  );
+};
+
 const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const t = useTranslations("admin.user.show.images");
   const { data: user } = useSuspenseQuery(adminUserQuery({ adminUserId, id }));
@@ -51,10 +82,18 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   } = useAdminUserMutations();
   const permissions = useAdminStaffPermissions();
   const canEdit = canEditAdminUser(permissions, user);
+  const canViewAi = useAdminStaffPermission(ADMIN_AI_PERMISSIONS.view);
 
   return (
     <div className="p-4 md:p-6">
       <UserDetailContent
+        aiAccess={
+          canViewAi ? (
+            <React.Suspense fallback={null}>
+              <UserAiAccess adminUserId={adminUserId} userId={user.id} />
+            </React.Suspense>
+          ) : null
+        }
         canEdit={canEdit}
         connectedAccounts={
           <UserConnectedAccountsCard

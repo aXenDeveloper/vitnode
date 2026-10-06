@@ -64,11 +64,9 @@ export const AdminAiOverviewRouteContent = ({
   const { data: actionsData } = useSuspenseQuery(
     adminAiActionsQuery({ adminUserId }),
   );
-  const descriptions = React.useMemo(
+  const titles = React.useMemo(
     () =>
-      new Map(
-        actionsData.actions.map(action => [action.key, action.description]),
-      ),
+      new Map(actionsData.actions.map(action => [action.key, action.title])),
     [actionsData.actions],
   );
 
@@ -89,7 +87,7 @@ export const AdminAiOverviewRouteContent = ({
 
         <AiOverviewContent
           data={data}
-          describeAction={key => descriptions.get(key) ?? null}
+          describeAction={key => titles.get(key) ?? null}
         />
       </div>
     </RouteMessages>

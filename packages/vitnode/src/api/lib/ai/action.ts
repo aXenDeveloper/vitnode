@@ -81,8 +81,10 @@ interface AiActionDefinitionBase<
       AiActionDefaults,
       "maxInputCharacters" | "maxOutputTokens" | "timeoutMs"
     >;
-  /** One line shown in the AdminCP. */
-  description?: string;
+  /** One sentence on what the action does, shown in the AdminCP. */
+  description: string;
+  /** A Lucide icon name in kebab case, e.g. `languages`. */
+  icon?: string;
   /** Local id, unique within the plugin: `excerpt.generate`. */
   id: Id;
   inputSchema: InputSchema;
@@ -93,6 +95,8 @@ interface AiActionDefinitionBase<
   /** Bump whenever the prompt changes meaningfully; it is stored with every run. */
   promptVersion: number;
   requiredCapabilities: readonly AiModelCapability[];
+  /** Short name shown in the AdminCP: `Generate excerpt`. */
+  title: string;
 }
 
 export interface AiTextActionDefinition<
@@ -168,6 +172,7 @@ export const AI_ACTION_LIMITS = {
 
 const LOCAL_ID_PATTERN = /^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)*$/;
 const PERMISSION_KEY_PATTERN = LOCAL_ID_PATTERN;
+const ICON_NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 const assertInRange = (
   actionId: string,
@@ -209,6 +214,20 @@ export function defineAiAction<
   if (!LOCAL_ID_PATTERN.test(id)) {
     throw new AiActionDefinitionError(
       `AI action id "${id}" is invalid. Use lowercase dot-separated words, e.g. "excerpt.generate".`,
+    );
+  }
+
+  if (!definition.title.trim() || !definition.description.trim()) {
+    throw new AiActionDefinitionError(
+      `AI action "${id}" needs a title and a description for the AdminCP.`,
+    );
+  }
+  if (
+    definition.icon !== undefined &&
+    !ICON_NAME_PATTERN.test(definition.icon)
+  ) {
+    throw new AiActionDefinitionError(
+      `AI action "${id}" has an invalid icon "${definition.icon}". Use a Lucide icon name in kebab case, e.g. "languages".`,
     );
   }
 

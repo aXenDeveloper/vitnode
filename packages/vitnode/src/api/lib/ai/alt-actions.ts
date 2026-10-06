@@ -66,7 +66,9 @@ export const altGenerateAiAction = defineAiAction({
     timeoutMs: 60_000,
   },
   description: "Describes an image in core_files as its base ALT text.",
+  icon: "image",
   id: "media.alt.generate",
+  title: "Generate image ALT text",
   inputSchema: z.object({
     image: z.instanceof(Uint8Array),
     mediaType: z.enum(ALT_IMAGE_MEDIA_TYPES),
@@ -99,7 +101,9 @@ export const altTranslateAiAction = defineAiAction({
     timeoutMs: 30_000,
   },
   description: "Translates an image's base ALT text into a site language.",
+  icon: "languages",
   id: "media.alt.translate",
+  title: "Translate image ALT text",
   inputSchema: z.object({
     text: z.string().min(1).max(1_000),
     to: z.string().min(2).max(32),

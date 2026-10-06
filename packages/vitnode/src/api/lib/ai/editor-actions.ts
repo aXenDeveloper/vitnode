@@ -96,7 +96,9 @@ export const editorRewriteAiAction = defineAiAction({
   },
   description:
     "Rewrites the selected text: shorter, corrected, simpler or in another tone.",
+  icon: "wand-sparkles",
   id: "editor.selection.rewrite",
+  title: "Rewrite selected text",
   inputSchema: z.object({
     after: z.string().max(QUICK_ASK_LIMITS.context),
     before: z.string().max(QUICK_ASK_LIMITS.context),
@@ -145,7 +147,9 @@ export const editorQuickAskAiAction = defineAiAction({
   },
   description:
     "Continues the text or follows a custom request about the selection.",
+  icon: "message-square-text",
   id: "editor.quick-ask",
+  title: "Quick Ask",
   inputSchema: z
     .object({
       after: z.string().max(QUICK_ASK_LIMITS.context),

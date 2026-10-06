@@ -60,12 +60,6 @@ export interface AiActionSettings {
   timeoutMs: null | number;
 }
 
-/** Admin-managed pricing rows that are active for one model. */
-export interface AiStoredPricing {
-  manual: null | { id: number; pricing: AiPricing };
-  sync: null | { id: number; pricing: AiPricing };
-}
-
 export interface AiUserPolicy {
   /** Largest daily limit any granting role gives; `null` is no limit. */
   dailyLimit: null | number;
@@ -158,7 +152,6 @@ export interface AiLedger {
   beginCall: (call: AiCallStart) => Promise<number>;
   finishCall: (callId: number, call: AiCallFinish) => Promise<void>;
   loadActionSettings: (actionKey: string) => Promise<AiActionSettings | null>;
-  loadPricing: (modelId: string) => Promise<AiStoredPricing>;
   loadSettings: () => Promise<AiSettingsSnapshot>;
   markRunning: (runId: number, leaseExpiresAt: Date) => Promise<void>;
   /** Atomically checks and holds every applicable budget and counter. */

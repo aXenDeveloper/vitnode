@@ -270,10 +270,7 @@ const AiBreakdownCard = ({
             <TabsContent value="action">
               <AiBreakdownTable
                 label={key => (
-                  <AiActionLabel
-                    actionKey={key}
-                    description={describeAction(key)}
-                  />
+                  <AiActionLabel actionKey={key} title={describeAction(key)} />
                 )}
                 rows={data.byAction}
               />

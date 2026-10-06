@@ -117,7 +117,7 @@ export const AiActionFormContent = ({
     }
 
     toast.success(t("saved.title"), {
-      description: t("saved.desc", { key: action.key }),
+      description: t("saved.desc", { title: action.title }),
     });
     setIsDirty?.(false);
     setOpen?.(false);

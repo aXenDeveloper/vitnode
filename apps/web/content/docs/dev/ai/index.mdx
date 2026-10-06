@@ -107,7 +107,9 @@ Every [AI action](/docs/dev/ai/actions) declares the capabilities it needs. When
 }
 ```
 
-Without pricing, a call's cost stays **unknown** - never zero. Under a budget cap, a model with no pricing is refused with `AI_PRICING_MISSING`. Tiers, flat fees, gateway vs direct pricing and admin overrides are covered in [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits#pricing).
+This config is the only place prices live - the AdminCP shows no price editor, so a price change is a code change you deploy. A malformed price stops the server at boot.
+
+Without pricing, a call's cost stays **unknown** - never zero. Under a budget cap, a model with no pricing is refused with `AI_PRICING_MISSING`. Tiers, flat fees and gateway vs direct pricing are covered in [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits#model-pricing).
 
 ### Model options
 
@@ -243,7 +245,7 @@ a picker can hide itself rather than offering nothing.
   />
   <Card
     title="AdminCP & Account Usage"
-    description="Budgets, pricing, role access, history and the member's /settings/ai page"
+    description="Budgets, actions, role access, history and the member's /settings/ai page"
     href="/docs/dev/ai/admin"
   />
   <Card

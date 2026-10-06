@@ -46,7 +46,7 @@ These describe what _is_ built, and where it stops:
 - **Reservations are conservative.** A run reserves its worst case up front - every retry, every step and the fallback model. A nearly spent budget can refuse a run whose real cost would have fit.
 - **No exactly-once for background work.** A process that crashes mid-call can cause one repeated provider call for automatic ALT text. See [Automatic Image ALT Text](/docs/dev/ai/automatic-alt#how-it-works).
 - **Automatic ALT text describes images in English first** and translates from there. It does not migrate legacy `metadata.alt` values.
-- **Gateway prices sync on demand.** **Sync gateway prices** runs only when an admin clicks it.
+- **Prices are updated by deploying.** Model prices live only in `vitnode.api.config.ts`; when a provider changes its prices, update the config and deploy.
 - **The cron is required.** Lease recovery, cost reconciliation, history pruning and ALT text all run from VitNode's cron, which the host has to trigger - see [Running the cron](/docs/dev/ai/automatic-alt#running-the-cron).
 
 ## Learn more

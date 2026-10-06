@@ -72,34 +72,6 @@ export const core_ai_action_settings = camelCase.table.withRLS(
   }),
 );
 
-/**
- * Admin-managed pricing, one immutable row per version. Changing a price adds
- * a row and deactivates the old one, so every stored call keeps the price it
- * was charged at.
- */
-export const core_ai_pricing = camelCase.table.withRLS(
-  "core_ai_pricing",
-  t => ({
-    id: t.serial().primaryKey(),
-    modelId: t.varchar({ length: 100 }).notNull(),
-    source: t
-      .varchar({ enum: ["manual", "sync"], length: 20 })
-      .notNull()
-      .default("manual"),
-    pricing: t.jsonb().$type<AiPricing>().notNull(),
-    active: t.boolean().notNull().default(true),
-    createdById: t.integer().references(() => core_users.id, {
-      onDelete: "set null",
-    }),
-    createdAt: t.timestamp().notNull().defaultNow(),
-  }),
-  t => [
-    uniqueIndex("core_ai_pricing_active_unique")
-      .on(t.modelId, t.source)
-      .where(sql`active`),
-  ],
-);
-
 /** A role's individual monthly allowance. Never a shared pool. */
 export const core_ai_role_policies = camelCase.table.withRLS(
   "core_ai_role_policies",
@@ -191,7 +163,7 @@ export const core_ai_runs = camelCase.table.withRLS(
     /** Known cost of every call, or `null` while any call's cost is unknown. */
     costUsd: t.numeric(money),
     costSource: t.varchar({
-      enum: ["manual", "pricing", "provider", "unknown", "mixed"],
+      enum: ["pricing", "provider", "unknown", "mixed"],
       length: 20,
     }),
     /** What the budgets were charged - the known cost, or the reservation when unknown. */
@@ -252,7 +224,7 @@ export const core_ai_calls = camelCase.table.withRLS(
     costUsd: t.numeric(money),
     costSource: t
       .varchar({
-        enum: ["manual", "pricing", "provider", "unknown"],
+        enum: ["pricing", "provider", "unknown"],
         length: 20,
       })
       .notNull(),

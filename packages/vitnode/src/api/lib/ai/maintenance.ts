@@ -10,24 +10,20 @@ import {
   sql,
 } from "drizzle-orm";
 
-import type { AIModelDefinition } from "../../models/ai";
 import type { Decimal } from "./decimal";
 import type { AiDatabase } from "./postgres-ledger";
-import type { AiPricing } from "./pricing";
 import type { AiProviderAdapter } from "./usage-cost";
 
 import {
   core_ai_budget_periods,
   core_ai_calls,
   core_ai_cost_adjustments,
-  core_ai_pricing,
   core_ai_reservations,
   core_ai_runs,
 } from "../../../database/ai";
 import {
   formatDecimal,
   formatDecimalOrNull,
-  multiplyByInteger,
   parseDecimal,
   parseDecimalOrNull,
 } from "./decimal";
@@ -215,7 +211,7 @@ export const reconcileAiCosts = async (
     .from(core_ai_calls)
     .where(
       and(
-        inArray(core_ai_calls.costSource, ["manual", "pricing", "unknown"]),
+        inArray(core_ai_calls.costSource, ["pricing", "unknown"]),
         isNotNull(core_ai_calls.providerRequestId),
         isNull(core_ai_calls.reconciledAt),
         lt(core_ai_calls.startedAt, new Date(now.getTime() - 60_000)),
@@ -276,102 +272,4 @@ export const pruneAiHistory = async (
         eq(core_ai_budget_periods.reservedAmount, "0"),
       ),
     );
-};
-
-/** A gateway catalog entry's per-token prices, as VitNode pricing. */
-export const pricingFromGatewayEntry = (entry: {
-  cacheCreationInputTokens?: string;
-  cachedInputTokens?: string;
-  input: string;
-  output: string;
-}): AiPricing => {
-  const perMillion = (perToken: string) =>
-    formatDecimal(multiplyByInteger(parseDecimal(perToken), 1_000_000));
-
-  return {
-    rates: {
-      inputPerMillion: perMillion(entry.input),
-      outputPerMillion: perMillion(entry.output),
-      ...(entry.cachedInputTokens
-        ? { cacheReadPerMillion: perMillion(entry.cachedInputTokens) }
-        : {}),
-      ...(entry.cacheCreationInputTokens
-        ? { cacheWritePerMillion: perMillion(entry.cacheCreationInputTokens) }
-        : {}),
-    },
-  };
-};
-
-export type GatewayCatalogFetcher = () => Promise<{
-  models: {
-    id: string;
-    pricing?: null | {
-      cacheCreationInputTokens?: string;
-      cachedInputTokens?: string;
-      input: string;
-      output: string;
-    };
-  }[];
-}>;
-
-/**
- * Copies the AI Gateway's published prices onto gateway models only - a
- * direct provider connection is never priced from the gateway catalog. A
- * changed price becomes a new version; the old one stays for history.
- */
-export const syncGatewayPricing = async (
-  db: AiDatabase,
-  models: AIModelDefinition[],
-  fetchCatalog: GatewayCatalogFetcher,
-): Promise<{ unchanged: string[]; unpriced: string[]; updated: string[] }> => {
-  const gatewayModels = models.filter(entry => typeof entry.model === "string");
-  const result = {
-    unchanged: [] as string[],
-    unpriced: [] as string[],
-    updated: [] as string[],
-  };
-  if (gatewayModels.length === 0) return result;
-
-  const catalog = await fetchCatalog();
-  for (const entry of gatewayModels) {
-    const listed = catalog.models.find(model => model.id === entry.model);
-    if (!listed?.pricing) {
-      result.unpriced.push(entry.id);
-      continue;
-    }
-    const pricing = pricingFromGatewayEntry(listed.pricing);
-    const changed = await db.transaction(async tx => {
-      const [current] = await tx
-        .select()
-        .from(core_ai_pricing)
-        .where(
-          and(
-            eq(core_ai_pricing.modelId, entry.id),
-            eq(core_ai_pricing.source, "sync"),
-            eq(core_ai_pricing.active, true),
-          ),
-        )
-        .for("update");
-      if (
-        current &&
-        JSON.stringify(current.pricing) === JSON.stringify(pricing)
-      ) {
-        return false;
-      }
-      if (current) {
-        await tx
-          .update(core_ai_pricing)
-          .set({ active: false })
-          .where(eq(core_ai_pricing.id, current.id));
-      }
-      await tx
-        .insert(core_ai_pricing)
-        .values({ modelId: entry.id, pricing, source: "sync" });
-
-      return true;
-    });
-    (changed ? result.updated : result.unchanged).push(entry.id);
-  }
-
-  return result;
 };

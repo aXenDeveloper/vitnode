@@ -205,25 +205,11 @@ export const routes = defineRoutes([
     search: normalizeAiOverviewSearch,
   }),
 
-  page("/admin/core/ai/models", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/ai/models")),
-    messages: ADMIN_AI_NAMESPACES,
-    pendingComponent: CardsPendingSkeleton,
-  }),
-
   page("/admin/core/ai/actions", {
     area: "admin",
     component: lazy(() => import("./pages/admin/ai/actions")),
     messages: ADMIN_AI_NAMESPACES,
-    pendingComponent: CardsPendingSkeleton,
-  }),
-
-  page("/admin/core/ai/access", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/ai/access")),
-    messages: ADMIN_AI_NAMESPACES,
-    pendingComponent: CardsPendingSkeleton,
+    pendingComponent: TablePendingSkeleton,
   }),
 
   page("/admin/core/ai/history", {

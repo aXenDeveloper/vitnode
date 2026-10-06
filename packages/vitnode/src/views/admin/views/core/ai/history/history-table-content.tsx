@@ -136,7 +136,7 @@ const AiHistoryFiltersContent = ({
         label={t("action")}
         onChange={set("action")}
         options={actions.map(action => ({
-          label: action.description ?? action.key,
+          label: action.title,
           value: action.key,
         }))}
         value={filters.action}
@@ -183,8 +183,8 @@ export const AiHistoryTableContent = ({
   const tOrigin = useTranslations("admin.ai.origin");
   const locale = useLocale();
   const [openRun, setOpenRun] = React.useState<AdminAiRunRow | null>(null);
-  const descriptions = React.useMemo(
-    () => new Map(actions.map(action => [action.key, action.description])),
+  const titles = React.useMemo(
+    () => new Map(actions.map(action => [action.key, action.title])),
     [actions],
   );
   const modelNames = React.useMemo(
@@ -202,7 +202,7 @@ export const AiHistoryTableContent = ({
               <AiActionLabel
                 actionKey={row.actionKey}
                 className="max-w-xs"
-                description={descriptions.get(row.actionKey)}
+                title={titles.get(row.actionKey)}
               />
             ),
             header: t("list.action"),

@@ -606,15 +606,13 @@ export class AiRunner {
     const required: readonly AiModelCapability[] = streaming
       ? [...definition.requiredCapabilities, "streaming"]
       : definition.requiredCapabilities;
-    const primary = await this.resolveModel(
+    const primary = this.resolveModel(
       required,
       actionSettings?.modelId ?? null,
     );
     // An incompatible or removed fallback is skipped, never used blindly.
     const fallback = actionSettings?.fallbackModelId
-      ? await this.resolveModel(required, actionSettings.fallbackModelId).catch(
-          () => null,
-        )
+      ? this.tryResolveModel(required, actionSettings.fallbackModelId)
       : null;
 
     const prompt = definition.buildPrompt(input, {
@@ -736,10 +734,10 @@ export class AiRunner {
     return result.runId;
   }
 
-  private async resolveModel(
+  private resolveModel(
     requiredCapabilities: readonly AiModelCapability[],
     modelId: null | string,
-  ): Promise<ResolvedModel> {
+  ): ResolvedModel {
     const capabilitiesOf = (entry: AIModelDefinition) =>
       entry.capabilities ?? DEFAULT_AI_MODEL_CAPABILITIES;
 
@@ -772,40 +770,21 @@ export class AiRunner {
     return {
       capabilities: capabilitiesOf(entry),
       definition: entry,
-      pricing: await this.resolvePricing(entry),
+      pricing: this.resolvePricing(entry),
       provider: providerIdOf(entry.model),
       providerModelId: providerModelIdOf(entry.model),
     };
   }
 
-  /** Admin override, then synced catalog, then the price in the config. */
-  private async resolvePricing(
-    entry: AIModelDefinition,
-  ): Promise<AiEffectivePricing | null> {
-    const stored = await this.ledger.loadPricing(entry.id);
-    if (stored.manual) {
-      return {
-        pricing: stored.manual.pricing,
-        source: "manual",
-        version: `manual:${stored.manual.id}`,
-      };
-    }
-    if (stored.sync) {
-      return {
-        pricing: stored.sync.pricing,
-        source: "pricing",
-        version: `sync:${stored.sync.id}`,
-      };
-    }
-    if (entry.pricing) {
-      return {
-        pricing: entry.pricing,
-        source: "pricing",
-        version: `config:${pricingFingerprint(entry.pricing)}`,
-      };
-    }
+  /** The price set on the model in `vitnode.api.config.ts`, if any. */
+  private resolvePricing(entry: AIModelDefinition): AiEffectivePricing | null {
+    if (!entry.pricing) return null;
 
-    return null;
+    return {
+      pricing: entry.pricing,
+      source: "pricing",
+      version: `config:${pricingFingerprint(entry.pricing)}`,
+    };
   }
 
   private async settle(
@@ -1002,6 +981,17 @@ export class AiRunner {
     });
 
     return { result, runId, textStream };
+  }
+
+  private tryResolveModel(
+    requiredCapabilities: readonly AiModelCapability[],
+    modelId: string,
+  ): null | ResolvedModel {
+    try {
+      return this.resolveModel(requiredCapabilities, modelId);
+    } catch {
+      return null;
+    }
   }
 
   private validateOutput(
