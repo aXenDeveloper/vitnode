@@ -1,7 +1,6 @@
 import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 
 import { barY, defineChart, group } from '@tanstack/charts'
-import { Chart } from '@tanstack/charts/react/tooltip'
 import { scaleBand } from '@tanstack/charts/scales/band'
 import { scaleLinear } from '@tanstack/charts/scales/linear'
 import { tooltip } from '@tanstack/charts/tooltip'
@@ -14,11 +13,16 @@ import {
   CardTitle,
 } from '@vitnode/core/components/ui/card'
 import {
-  chartColor,
   ChartContainer,
   ChartLegend,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
+import {
+  chartColor,
+  chartTooltipMotion,
+} from '@vitnode/core/components/ui/chart-utils'
+
+import { EntranceChart } from '../entrance-chart'
 
 const chartData = [
   { month: 'January', desktop: 186, mobile: 80 },
@@ -66,8 +70,12 @@ const definition = defineChart({
   },
   color: chartColor(chartConfig),
   focus: 'group-x',
-  tooltip: { use: tooltip, anchor: 'group-center', sort: 'color-domain' },
-  svgAnimation: true,
+  tooltip: {
+    use: tooltip,
+    anchor: 'group-center',
+    sort: 'color-domain',
+    motion: chartTooltipMotion,
+  },
 })
 
 export default function ChartExample() {
@@ -79,7 +87,7 @@ export default function ChartExample() {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <Chart
+          <EntranceChart
             ariaDescription="Desktop and mobile visitors per month, January to June 2026"
             ariaLabel="Visitors"
             definition={definition}

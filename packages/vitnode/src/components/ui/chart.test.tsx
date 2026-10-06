@@ -43,7 +43,7 @@ describe("ChartTooltipContent", () => {
 
     expect(screen.getByText("January")).toBeDefined();
     expect(screen.getByText("Desktop")).toBeDefined();
-    expect(screen.getByText((1860).toLocaleString())).toBeDefined();
+    expect(screen.getByText("1,860")).toBeDefined();
     expect(screen.getByText("Mobile")).toBeDefined();
     expect(screen.getByText("80")).toBeDefined();
   });

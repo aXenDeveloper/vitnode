@@ -45,11 +45,11 @@ import { scaleLinear } from '@tanstack/charts/scales/linear'
 import { tooltip } from '@tanstack/charts/tooltip'
 import { fold } from '@tanstack/charts/transform/fold'
 import {
-  chartColor,
   ChartContainer,
   ChartLegend,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
+import { chartColor } from '@vitnode/core/components/ui/chart-utils'
 
 const chartData = [
   { month: 'January', desktop: 186, mobile: 80 },
@@ -398,6 +398,52 @@ can read it. Put it inside `ChartContainer`, after the chart.
 Charts render on the server at `initialWidth` (640px by default), then measure
 their real width after hydration.
 
+## Animation
+
+Out of the box a chart paints its final state at once. `svgAnimation: true` in
+the definition tweens later data updates, like switching a date range.
+
+Want bars that grow and pies that sweep in? Swap `Chart` for `RendererChart`
+and hand it the `motion()` renderer:
+
+```tsx
+import { motion } from '@tanstack/charts/motion'
+import { RendererChart } from '@tanstack/charts/react/tooltip'
+import { chartTooltipMotion } from '@vitnode/core/components/ui/chart-utils'
+
+const renderer = motion({
+  transition: { type: 'tween', duration: 700, easing: 'ease-out' },
+})
+
+const definition = defineChart({
+  marks,
+  scales,
+  tooltip: { use: tooltip, motion: chartTooltipMotion },
+})
+
+<ChartContainer config={chartConfig}>
+  <RendererChart
+    ariaLabel="Visitors"
+    definition={definition}
+    height={280}
+    renderer={renderer}
+    renderTooltipBody={({ points }) => <ChartTooltipContent points={points} />}
+  />
+</ChartContainer>
+```
+
+- The entrance plays when the chart mounts in the browser. A server-rendered
+  chart skips it, so it never flashes the final bars first. To animate a chart
+  below the fold, mount it when it scrolls into view with
+  `useIntersectionObserver`, like the demos on this page.
+- `chartTooltipMotion` is a quick spring with no bounce. The tooltip fades in,
+  glides from point to point and fades out. Give a `crosshair` the same
+  spring (`motion: { transition: chartTooltipMotion }`) so the guide and the
+  tooltip move together.
+- A plain `Chart` keeps the tooltip instant: tooltip motion needs `motion()`.
+- `motion()` respects `prefers-reduced-motion` and simply paints the final
+  state.
+
 ## Accessibility
 
 - `ariaLabel` is required. Add `ariaDescription` for a sentence about the data.
@@ -405,7 +451,7 @@ their real width after hydration.
   to move between points. The tooltip follows the keyboard.
 - Keep a visible heading next to the chart, like a `CardTitle`. Never rely on
   color alone: tooltip and legend labels tell series apart.
-- Animations (`svgAnimation: true`) respect `prefers-reduced-motion`.
+- Every animation respects `prefers-reduced-motion`.
 
 ## Migrate from Recharts
 

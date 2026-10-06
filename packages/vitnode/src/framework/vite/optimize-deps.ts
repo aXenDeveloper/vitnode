@@ -46,6 +46,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "@tanstack/charts/crosshair",
   "@tanstack/charts/d3/shape",
   "@tanstack/charts/mark/decorative",
+  "@tanstack/charts/motion",
   "@tanstack/charts/react/tooltip",
   "@tanstack/charts/scales/linear",
   "@tanstack/charts/scales/point",

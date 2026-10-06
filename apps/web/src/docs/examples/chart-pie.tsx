@@ -2,7 +2,6 @@ import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 
 import { defineChart } from '@tanstack/charts'
 import { pie, polar, radialArc } from '@tanstack/charts/polar'
-import { Chart } from '@tanstack/charts/react/tooltip'
 import { tooltip } from '@tanstack/charts/tooltip'
 import {
   Card,
@@ -12,11 +11,16 @@ import {
   CardTitle,
 } from '@vitnode/core/components/ui/card'
 import {
-  chartColor,
   ChartContainer,
   ChartLegend,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
+import {
+  chartColor,
+  chartTooltipMotion,
+} from '@vitnode/core/components/ui/chart-utils'
+
+import { EntranceChart } from '../entrance-chart'
 
 const chartData = [
   { category: 'general', threads: 412 },
@@ -50,8 +54,7 @@ const definition = defineChart({
   ],
   scales: { x: null, y: null },
   color: chartColor(chartConfig),
-  tooltip,
-  svgAnimation: true,
+  tooltip: { use: tooltip, motion: chartTooltipMotion },
 })
 
 export default function ChartPieExample() {
@@ -63,7 +66,7 @@ export default function ChartPieExample() {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <Chart
+          <EntranceChart
             ariaDescription="Share of new forum threads per category in the last 30 days"
             ariaLabel="Threads by category"
             definition={definition}

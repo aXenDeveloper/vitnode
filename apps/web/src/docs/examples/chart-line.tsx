@@ -3,7 +3,6 @@ import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 import { defineChart, lineY } from '@tanstack/charts'
 import { crosshair } from '@tanstack/charts/crosshair'
 import { d3Curve } from '@tanstack/charts/d3/shape'
-import { Chart } from '@tanstack/charts/react/tooltip'
 import { scaleLinear } from '@tanstack/charts/scales/linear'
 import { scalePoint } from '@tanstack/charts/scales/point'
 import { tooltip } from '@tanstack/charts/tooltip'
@@ -18,7 +17,10 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
+import { chartTooltipMotion } from '@vitnode/core/components/ui/chart-utils'
 import { curveMonotoneX } from 'd3-shape'
+
+import { EntranceChart } from '../entrance-chart'
 
 const chartData = [
   { day: 'Monday', responseTime: 182 },
@@ -41,7 +43,11 @@ const shortDay = (day: string) => day.slice(0, 3)
 
 const definition = defineChart({
   marks: [
-    crosshair({ x: true, y: false }),
+    crosshair({
+      x: true,
+      y: false,
+      motion: { transition: chartTooltipMotion },
+    }),
     lineY(chartData, {
       x: 'day',
       y: 'responseTime',
@@ -60,8 +66,7 @@ const definition = defineChart({
   },
   focus: 'nearest-x',
   maxFocusDistance: Number.POSITIVE_INFINITY,
-  tooltip,
-  svgAnimation: true,
+  tooltip: { use: tooltip, motion: chartTooltipMotion },
 })
 
 export default function ChartLineExample() {
@@ -73,7 +78,7 @@ export default function ChartLineExample() {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <Chart
+          <EntranceChart
             ariaDescription="Median API response time in milliseconds per day, Monday to Sunday"
             ariaLabel="API response time"
             definition={definition}

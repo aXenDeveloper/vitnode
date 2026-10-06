@@ -1,11 +1,10 @@
-import type {
-  ChartColorOptions,
-  ChartPoint,
-  ChartTooltipBodyContext,
-} from "@tanstack/charts";
+import type { ChartPoint, ChartTooltipBodyContext } from "@tanstack/charts";
 
 import { cn } from "cn";
 import React from "react";
+import { useLocale } from "use-intl";
+
+import { chartColorKeys } from "./chart-utils";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -37,7 +36,6 @@ function useChart() {
   return context;
 }
 
-// TanStack Charts reads these tokens from the closest ancestor.
 const CHART_THEME = {
   "--ts-chart-1": "var(--chart-1)",
   "--ts-chart-2": "var(--chart-2)",
@@ -127,36 +125,20 @@ ${colorConfig
   );
 };
 
-const colorKeys = (config: ChartConfig) =>
-  Object.entries(config)
-    .filter(([, item]) => item.theme ?? item.color)
-    .map(([key]) => key);
-
-/**
- * Maps every colored config key to its `--color-<key>` variable, so a mark's
- * `color` channel paints series with the colors from your config.
- */
-function chartColor(config: ChartConfig): ChartColorOptions {
-  const domain = colorKeys(config);
-
-  return { domain, range: domain.map(key => `var(--color-${key})`) };
-}
-
 const readField = (datum: unknown, key: string): unknown =>
   typeof datum === "object" && datum !== null && key in datum
     ? (datum as Record<string, unknown>)[key]
     : undefined;
 
-// A field that holds a string names a config key, anything else falls back to the key itself.
 const configKey = (datum: unknown, key: string) => {
   const value = readField(datum, key);
 
   return typeof value === "string" ? value : key;
 };
 
-const formatValue = (value: unknown) => {
-  if (typeof value === "number") return value.toLocaleString();
-  if (value instanceof Date) return value.toLocaleDateString();
+const formatValue = (value: unknown, locale: string) => {
+  if (typeof value === "number") return value.toLocaleString(locale);
+  if (value instanceof Date) return value.toLocaleDateString(locale);
 
   return typeof value === "string" ? value : "";
 };
@@ -196,6 +178,7 @@ function ChartTooltipContent({
   valueKey?: string;
 }) {
   const { config } = useChart();
+  const locale = useLocale();
 
   if (!points.length) {
     return null;
@@ -210,7 +193,7 @@ function ChartTooltipContent({
     const raw = labelKey ? readField(point?.datum, labelKey) : point?.xValue;
     const value =
       (typeof raw === "string" ? config[raw]?.label : undefined) ??
-      formatValue(raw);
+      formatValue(raw, locale);
 
     if (labelFormatter) {
       return (
@@ -301,7 +284,7 @@ function ChartTooltipContent({
                     </div>
                     {value != null && (
                       <span className="text-foreground font-medium tabular-nums">
-                        {formatValue(value)}
+                        {formatValue(value, locale)}
                       </span>
                     )}
                   </div>
@@ -325,7 +308,7 @@ function ChartLegend({
   keys?: readonly string[];
 }) {
   const { config } = useChart();
-  const items = keys ?? colorKeys(config);
+  const items = keys ?? chartColorKeys(config);
 
   if (!items.length) {
     return null;
@@ -365,10 +348,4 @@ function ChartLegend({
   );
 }
 
-export {
-  chartColor,
-  ChartContainer,
-  ChartLegend,
-  ChartStyle,
-  ChartTooltipContent,
-};
+export { ChartContainer, ChartLegend, ChartStyle, ChartTooltipContent };

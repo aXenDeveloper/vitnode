@@ -7,11 +7,11 @@ import { scaleLinear } from '@tanstack/charts/scales/linear'
 import { tooltip } from '@tanstack/charts/tooltip'
 import { fold } from '@tanstack/charts/transform/fold'
 import {
-  chartColor,
   ChartContainer,
   ChartLegend,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
+import { chartColor } from '@vitnode/core/components/ui/chart-utils'
 
 const chartData = [
   { day: 'Mon', posts: 42, replies: 64, likes: 30, signups: 18, reports: 4 },

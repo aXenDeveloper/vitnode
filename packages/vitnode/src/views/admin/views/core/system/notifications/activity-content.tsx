@@ -2,7 +2,8 @@ import { areaY, defineChart, lineY } from "@tanstack/charts";
 import { crosshair } from "@tanstack/charts/crosshair";
 import { d3Curve } from "@tanstack/charts/d3/shape";
 import { decorative } from "@tanstack/charts/mark/decorative";
-import { Chart } from "@tanstack/charts/react/tooltip";
+import { motion as chartMotion } from "@tanstack/charts/motion";
+import { RendererChart } from "@tanstack/charts/react/tooltip";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { scalePoint } from "@tanstack/charts/scales/point";
 import { tooltip } from "@tanstack/charts/tooltip";
@@ -13,6 +14,7 @@ import { curveMonotoneX } from "d3-shape";
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 import {
   AnimatePresence,
+  cubicBezier,
   motion,
   type TargetAndTransition,
   type Transition,
@@ -27,6 +29,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
+import { chartTooltipMotion } from "@/components/ui/chart-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -84,6 +87,15 @@ const SWAP_TRANSITION = {
   duration: 0.2,
   ease: SNAPPY_EASE,
 } satisfies Transition;
+
+const sparkRenderer = chartMotion({
+  initial: false,
+  transition: {
+    duration: SWAP_TRANSITION.duration * 1000,
+    easing: cubicBezier(...SNAPPY_EASE),
+    type: "tween",
+  },
+});
 
 const Swap = ({
   children,
@@ -185,13 +197,11 @@ const SparkTooltip = ({
 const sparkCurve = d3Curve(curveMonotoneX);
 
 const Sparkline = ({
-  animate,
   label,
   metric,
   points,
   unit,
 }: {
-  animate: boolean;
   label: string;
   metric: Metric;
   points: AdminNotificationStats["points"];
@@ -208,7 +218,11 @@ const Sparkline = ({
 
     return defineChart({
       marks: [
-        crosshair({ x: { stroke: "var(--border)", strokeWidth: 1 }, y: false }),
+        crosshair({
+          motion: { transition: chartTooltipMotion },
+          x: { stroke: "var(--border)", strokeWidth: 1 },
+          y: false,
+        }),
         decorative(
           areaY(data, {
             curve: sparkCurve,
@@ -254,23 +268,24 @@ const Sparkline = ({
         strokeWidth: 2,
       },
       maxFocusDistance: Number.POSITIVE_INFINITY,
-      svgAnimation: animate ? { duration: 300, easing: "ease-out" } : false,
       tooltip: {
         anchor: { x: "value", y: "plot-top" },
+        motion: chartTooltipMotion,
         offset: 6,
         placement: "top",
         portal,
         use: tooltip,
       },
     });
-  }, [animate, metric, points]);
+  }, [metric, points]);
 
   return (
     <ChartContainer config={config}>
-      <Chart
+      <RendererChart
         ariaLabel={t("trend", { label })}
         definition={definition}
         height={40}
+        renderer={sparkRenderer}
         renderTooltipBody={({ primaryPoint }) =>
           primaryPoint ? (
             <SparkTooltip
@@ -327,13 +342,11 @@ const Delta = ({
 };
 
 const StatTile = ({
-  animate,
   goodWhenUp,
   label,
   metric,
   stats,
 }: {
-  animate: boolean;
   goodWhenUp: boolean;
   label: string;
   metric: Metric;
@@ -365,7 +378,6 @@ const StatTile = ({
           />
         </Swap>
         <Sparkline
-          animate={animate}
           label={label}
           metric={metric}
           points={stats.points}
@@ -390,9 +402,6 @@ export const NotificationsActivity = () => {
   const tError = useTranslations("core.global.errors");
   const timeZone = useTimeZone() ?? "UTC";
   const [range, setRange] = React.useState<NotificationStatsRange>("7d");
-  const [hasSwitched, setHasSwitched] = React.useState(false);
-  const shouldReduceMotion = useReducedMotion();
-  const animate = hasSwitched && !shouldReduceMotion;
   const query = useQuery({
     ...notificationStatsQueryOptions({ range, timeZone }),
     placeholderData: keepPreviousData,
@@ -419,7 +428,6 @@ export const NotificationsActivity = () => {
           onValueChange={value => {
             if (!isRange(value)) return;
             setRange(value);
-            setHasSwitched(true);
           }}
           value={range}
         >
@@ -446,28 +454,24 @@ export const NotificationsActivity = () => {
           )}
         >
           <StatTile
-            animate={animate}
             goodWhenUp
             label={t("sent")}
             metric="sent"
             stats={query.data}
           />
           <StatTile
-            animate={animate}
             goodWhenUp={false}
             label={t("failure_rate")}
             metric="failureRate"
             stats={query.data}
           />
           <StatTile
-            animate={animate}
             goodWhenUp
             label={t("events")}
             metric="events"
             stats={query.data}
           />
           <StatTile
-            animate={animate}
             goodWhenUp={false}
             label={t("skipped")}
             metric="skipped"
