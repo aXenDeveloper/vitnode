@@ -29,6 +29,8 @@
     "@vitnode/blog": "workspace:*",
     "@vitnode/core": "workspace:*",
     "@vitnode/example": "workspace:*",
+    "@vitnode/node-cron": "workspace:*",
+    "@vitnode/stripe": "workspace:*",
     "@vitnode/supabase-storage": "workspace:*",
     "d3-shape": "^3.2.0",
     "dotenv": "^18.0.5",

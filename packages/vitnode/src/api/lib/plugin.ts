@@ -8,6 +8,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
+import type { PaymentOffer } from "@/payments/offer";
 
 import { BlockError } from "@/blocks/errors";
 import { contentPublicUrls } from "@/content/public-urls";
@@ -15,6 +16,7 @@ import {
   validateContentTypes,
   withContentPermissions,
 } from "@/content/registry";
+import { validatePaymentOffers } from "@/payments/offer";
 
 import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
@@ -52,6 +54,7 @@ export interface BuildPluginApiReturn<
   navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
   openApiTags?: string[];
+  paymentOffers?: PaymentOffer[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
   publicContentTypes?: AnyContentTypeDefinition[];
@@ -118,6 +121,7 @@ export function buildApiPlugin<
     ...(notificationTypes ?? []),
   ];
   const openApiTags: string[] = [];
+  const paymentOffers: PaymentOffer[] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
   modules.forEach(handler => {
@@ -132,6 +136,9 @@ export function buildApiPlugin<
     pluginNotificationTypes.push(
       ...collectModuleTree(handler, m => m.notificationTypes),
     );
+    // Recursive on purpose: an offer declared on a nested module is a sale the
+    // plugin makes, and dropping it would surface as a 404 at checkout.
+    paymentOffers.push(...collectModuleTree(handler, m => m.paymentOffers));
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -160,6 +167,8 @@ export function buildApiPlugin<
     pluginNotificationTypes.map(definition => ({ definition, pluginId })),
   );
 
+  validatePaymentOffers(paymentOffers.map(offer => ({ offer, pluginId })));
+
   const publishing = new Map<string, AnyContentTypeDefinition>();
   for (const definition of [
     ...registered.map(entry => entry.definition),
@@ -186,6 +195,7 @@ export function buildApiPlugin<
     events,
     queueTasks,
     notificationTypes: pluginNotificationTypes,
+    paymentOffers,
     searchIndexers: indexers,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete

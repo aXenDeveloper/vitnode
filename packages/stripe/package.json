@@ -1,0 +1,46 @@
+{
+  "name": "@vitnode/stripe",
+  "version": "2.0.0-canary.13",
+  "description": "Stripe payment provider for VitNode Payments: hosted Checkout, subscriptions, Customer Portal and verified webhooks.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/stripe"
+  },
+  "keywords": [
+    "vitnode",
+    "stripe",
+    "payments"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build:plugins": "vitnode build",
+    "dev:plugins": "vitnode dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "stripe": "^23.0.0"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.16.13",
+    "@vitnode/config": "workspace:*",
+    "@vitnode/core": "workspace:*",
+    "eslint": "^10.11.0",
+    "tsc-alias": "^1.9.7",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

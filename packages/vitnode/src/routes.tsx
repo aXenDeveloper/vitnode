@@ -9,6 +9,12 @@ import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-sea
 import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
 import { ADMIN_NAVIGATION_NAMESPACES } from "./tanstack/admin/navigation/route";
 import { ADMIN_NOTIFICATIONS_NAMESPACES } from "./tanstack/admin/notifications/route";
+import { ADMIN_PAYMENTS_NAMESPACES } from "./tanstack/admin/payments/route";
+import {
+  normalizeEventsRouteSearch,
+  normalizePurchasesRouteSearch,
+  normalizeSubscriptionsRouteSearch,
+} from "./tanstack/admin/payments/route-search";
 import { ADMIN_QUEUE_NAMESPACES } from "./tanstack/admin/queue/route";
 import { normalizeQueueRouteSearch } from "./tanstack/admin/queue/route-search";
 import { ADMIN_ROLES_NAMESPACES } from "./tanstack/admin/roles/route";
@@ -39,6 +45,7 @@ import { MY_FILES_NAMESPACES } from "./tanstack/files/route";
 import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
 import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
+import { BILLING_NAMESPACES } from "./tanstack/payments/billing-route";
 import {
   AuthPendingSkeleton,
   CardsPendingSkeleton,
@@ -158,6 +165,12 @@ export const routes = defineRoutes([
         pendingComponent: FormPendingSkeleton,
         search: normalizeSsoSettingsSearch,
       }),
+
+      page("billing", {
+        component: lazy(() => import("./pages/settings/billing")),
+        messages: BILLING_NAMESPACES,
+        pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
     ],
   }),
 
@@ -209,6 +222,37 @@ export const routes = defineRoutes([
     messages: ADMIN_SEARCH_INDEX_NAMESPACES,
     pendingComponent: TablePendingSkeleton,
     search: normalizeSearchIndexRouteSearch,
+  }),
+
+  page("/admin/core/payments", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/payments/index")),
+    messages: ADMIN_PAYMENTS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+    search: normalizePurchasesRouteSearch,
+  }),
+
+  page("/admin/core/payments/subscriptions", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/payments/subscriptions")),
+    messages: ADMIN_PAYMENTS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+    search: normalizeSubscriptionsRouteSearch,
+  }),
+
+  page("/admin/core/payments/events", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/payments/events")),
+    messages: ADMIN_PAYMENTS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+    search: normalizeEventsRouteSearch,
+  }),
+
+  page("/admin/core/payments/purchases/:id", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/payments/purchase")),
+    messages: ADMIN_PAYMENTS_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
   }),
 
   page("/admin/core/debug", {

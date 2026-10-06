@@ -1,0 +1,127 @@
+---
+title: Reliability
+description: How VitNode Payments stays correct when webhooks repeat, arrive out of order or fail - raw-body signatures, the durable inbox, queue processing, idempotency, fulfillment failures and reconciliation.
+icon: ShieldCheck
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import adminPayments from './admin-payments.png'
+
+Payment providers deliver webhooks at least once, sometimes twice, sometimes
+late, sometimes out of order. A browser can close mid-checkout. A plugin's
+handler can throw. Payments is built so none of that loses a payment or grants
+something twice.
+
+## Webhooks: verify, store, queue, then answer
+
+`POST /api/@vitnode/core/payments/webhooks/stripe` needs no login; the Stripe
+signature is its authentication.
+
+1. **Bounded body.** Anything over 512 KB is refused before it is read.
+2. **Raw bytes.** The signature is checked over the exact bytes received -
+   never over re-serialised JSON, which would not match.
+3. **Normalized.** The adapter reduces the event to _which object changed_
+   (`checkout`, `invoice`, `subscription` or `payment`) and drops the rest. The
+   raw payload is never stored or logged.
+4. **One transaction.** The event row goes into `core_payments_webhook_events`
+   and its job into the queue together.
+5. **Then 200.** If storing fails, Stripe gets a 5xx and delivers again.
+
+The event id is unique per provider and test/live scope, so a repeated delivery
+finds its row and queues nothing.
+
+## Processing re-reads the provider
+
+The queue job does not trust the event's snapshot. It fetches the checkout,
+invoice, subscription or payment from Stripe and applies _that_. So:
+
+- Two different events about one payment (`checkout.session.completed` and
+  `checkout.session.async_payment_succeeded`) produce one paid purchase.
+- An older event processed last still sees the current state.
+- Statuses only move forward: nothing moves a paid purchase back, and a
+  renewal's paid period only ever grows.
+- A slow read never overwrites a newer one. An ended subscription stays ended,
+  a refund that succeeded never goes back to pending, and the refunded total
+  only shrinks when the provider says a refund failed.
+- A checkout about to expire is closed at the provider before a new one opens,
+  and a late "expired" event from the old one does not touch the purchase.
+
+## Four kinds of state
+
+| State        | Values                                                                 |
+| ------------ | ---------------------------------------------------------------------- |
+| Checkout     | creating, unknown, open, complete, expired, failed                     |
+| Payment      | awaiting payment, processing, paid, failed, expired, canceled          |
+| Fulfillment  | not started, pending, fulfilled, failed                                |
+| Subscription | incomplete, active, past due, unpaid, paused, canceled, expired unpaid |
+
+Refunds and disputes are tracked beside them. A failed fulfillment never makes
+a paid payment look failed - the purchase is "Paid, delivery delayed".
+
+## Idempotent checkout
+
+- The browser sends an idempotency key; the server scopes it to the buyer and
+  refuses it for a different request.
+- A per-buyer, per-offer database lock plus a unique index allow one unfinished
+  purchase per offer, so duplicate clicks get the same checkout.
+- The purchase and its checkout attempt are stored **before** Stripe is called,
+  and Stripe is called **outside** any transaction with a key stored on the
+  attempt. A timeout leaves the attempt `unknown`; a retry replays the same key
+  and Stripe returns the same checkout instead of a second one.
+- Return URLs are built on the server from the offer's `returnPath` and the
+  configured web origin. Nothing in the request can redirect elsewhere.
+
+## Fulfillment runs once per effect
+
+Each business effect - `grant`, `refund:<id>`, `subscription` - is one row in
+`core_payments_fulfillments`, unique per purchase. The job locks the purchase
+and then the row (every payment writer locks in that order), runs
+your handler with a transaction, and marks it completed in the same
+transaction.
+
+- Handler throws: the transaction rolls back (your writes too), the row is
+  marked failed, the payment stays paid, and the queue retries with backoff.
+- A retry after success finds the row completed and does nothing.
+- Offer missing (plugin disabled, offer removed): marked failed with a clear
+  message. Nothing else is granted in its place.
+
+Core guarantees your handler's database writes happen once. Side effects
+outside the transaction (an email, an external API) can repeat on a retry -
+make them idempotent or move them to a queue job of their own.
+
+## Reconciliation
+
+The `payments-reconcile` cron job runs every five minutes and looks at small,
+indexed batches of work that may have missed a webhook:
+
+- unfinished checkouts after their window closes,
+- payments stuck in processing,
+- subscriptions just after their period ends (renewal due) or while past due,
+- fulfillment and webhook jobs that have not moved for 30 minutes.
+
+Each row schedules its own next check, so the job never walks the whole
+history. Processed webhook rows are deleted after `webhookRetentionDays`
+(30 by default); failed ones stay until fixed.
+
+## Retrying from the AdminCP
+
+**AdminCP → Payments** shows totals per currency, work that needs attention and
+whether the queue worker is running. Staff with `payments: can_retry` can queue
+a failed webhook event or fulfillment again - through the normal queue, and
+without any risk of granting twice.
+
+<ImgDocs
+  src={adminPayments}
+  alt="AdminCP Payments overview with worker status, per-currency totals, attention counters and the purchases table with status, fulfillment, currency, provider and created filters"
+  withoutBackground
+/>
+
+## Related
+
+<Cards>
+  <Card
+    title="Provider reference"
+    href="/docs/dev/payments/provider-reference"
+  />
+  <Card title="Troubleshooting" href="/docs/dev/payments/troubleshooting" />
+</Cards>

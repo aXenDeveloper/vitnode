@@ -99,6 +99,47 @@
     "articles": {
       "published": "Published",
       "faq": "Frequently asked questions"
+    },
+    "payments": {
+      "title": "Payments example",
+      "desc": "Buy a lifetime pass or subscribe to the Pro plan. Each unlocks a members-only certificate that the API only returns after a confirmed payment.",
+      "offers": {
+        "lifetime-pass": {
+          "name": "Example lifetime pass"
+        },
+        "pro-plan": {
+          "name": "Example Pro plan"
+        }
+      },
+      "lifetime": {
+        "title": "Lifetime pass",
+        "desc": "Pay once, keep it. A full refund takes it away again; a partial refund does not."
+      },
+      "plan": {
+        "title": "Pro plan",
+        "desc": "Billed monthly or yearly and renewed automatically. Cancel any time - you keep access until the end of the paid period."
+      },
+      "owned": "Owned",
+      "subscribed": "Subscribed",
+      "locked": "Unlocks after a confirmed payment.",
+      "access_until": "Pro access lasts until {date}.",
+      "open_checkout": "You already started a checkout for this. Continue it, or cancel it to start over.",
+      "canceled": "Checkout canceled. You have not been charged.",
+      "sign_in": "Sign in to buy or subscribe.",
+      "sign_in_link": "Sign in",
+      "test_mode": "In Stripe test mode, pay with card 4242 4242 4242 4242, any future expiry date and any CVC. No real money moves.",
+      "feature": {
+        "title": "Supporter certificate",
+        "holder": "Issued to {name}",
+        "serial": "Serial {serial}",
+        "valid_until": "Valid until {date}",
+        "loading": "Loading your certificate…",
+        "error": "The certificate could not be loaded."
+      },
+      "disabled": {
+        "title": "Payments are not enabled",
+        "desc": "This demo needs a payment provider. Add Stripe test keys to the API's environment and restart - the Payments documentation walks through it in a few minutes."
+      }
     }
   },
   "@vitnode/example:article": "Articles",

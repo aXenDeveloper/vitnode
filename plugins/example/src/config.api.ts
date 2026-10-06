@@ -4,6 +4,7 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { buildContentPublicModule } from "@vitnode/core/content/server";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { paymentsModule } from "@/api/modules/payments/payments.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { settingsPage } from "@/content/settings-page";
 import { advancedArticleContent } from "@/database/advanced-articles";
@@ -28,6 +29,7 @@ export const exampleApiPlugin = () =>
     },
     modules: [
       adminModule,
+      paymentsModule,
       buildContentPublicModule({
         pluginId: CONFIG_PLUGIN.pluginId,
         contentTypes: [

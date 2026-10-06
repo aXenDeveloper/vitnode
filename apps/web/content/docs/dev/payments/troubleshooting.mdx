@@ -1,0 +1,108 @@
+---
+title: Troubleshooting Payments
+description: Fix common VitNode Payments problems - Payments disabled, missing Stripe credentials, webhook signature failures, a queue worker that is not running, paid purchases waiting for fulfillment, unsupported currencies and pending subscription payments.
+icon: LifeBuoy
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import uncertainAttempt from './admin-purchase-uncertain.png'
+
+## "Payments are not enabled"
+
+The API config has no `payments` key - in the example apps, because
+`STRIPE_SECRET_KEY` is empty. Add the keys to the `.env` of the app that runs
+the API and restart. `GET /api/@vitnode/core/payments/settings` should then
+answer `"enabled": true`. See [Configure Payments](/docs/dev/payments/configuration).
+
+## The API stops at startup with `[VitNode Payments]`
+
+The message names the problem:
+
+| Message mentions                 | Fix                                                         |
+| -------------------------------- | ----------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`              | Set a secret key (`sk_test_...`), not a publishable one     |
+| `STRIPE_WEBHOOK_SECRET`          | Set the endpoint's signing secret (`whsec_...`)             |
+| `defaultCurrency ... not one of` | Add the default currency to `currencies`                    |
+| `registered twice`               | Two providers or two offers share an id                     |
+| `cannot charge in`               | Remove the currency from the Stripe provider's `currencies` |
+
+## Webhooks answer 400
+
+The signature did not verify. Usually:
+
+- `STRIPE_WEBHOOK_SECRET` belongs to another endpoint, or to an old
+  `stripe listen` session - each prints its own secret.
+- Something between Stripe and the API rewrites the body (a proxy that
+  re-encodes JSON). The signature covers the exact bytes.
+
+`404` means Payments is off, or the URL's provider id does not match a
+registered provider.
+
+## Payments stay "Confirming…" or "Processing"
+
+The webhook was accepted but nothing processed it. Open **AdminCP → Payments**:
+the worker card says when the queue last ran and how many payment jobs wait.
+
+- `apps/api`: check that `cron: NodeCronAdapter()` is in the config.
+- API in `apps/web`: set `VITNODE_CRON=node`, or call
+  `POST /api/@vitnode/core/cron` with `Authorization: Bearer $CRON_SECRET` every
+  minute from a scheduler.
+
+The buyer's page also asks Stripe directly when they return, so a paid checkout
+can show as paid before the worker runs - but fulfillment always needs the
+worker.
+
+## "Paid, delivery delayed"
+
+The payment is confirmed; the offer's handler failed. Open the purchase in
+**AdminCP → Payments**. The **Fulfillment** card shows the error. Fix the cause,
+then **Retry** - it runs through the queue and never grants twice. If it says
+the offer is not registered, the plugin is disabled or the offer was removed;
+re-enable it first.
+
+## A checkout attempt is "unknown"
+
+The call to create the checkout ended without an answer - a timeout or a network
+error. The buyer saw "Nothing was charged. Try again in a moment.", and trying
+again replays the same idempotency key, so Stripe returns the same checkout
+rather than creating a second one. An attempt that is never retried is closed
+by reconciliation.
+
+<ImgDocs
+  src={uncertainAttempt}
+  alt="AdminCP purchase detail: an Example lifetime pass awaiting payment, with one checkout attempt in the unknown state and the error Stripe could not create the customer"
+  withoutBackground
+/>
+
+This screenshot comes from a sandbox that could not reach Stripe at all - which
+is exactly the case the `unknown` state exists for.
+
+## "A second checkout ... was also paid"
+
+Rare, but possible: the buyer paid an old checkout in one tab and a new one in
+another before the old one closed. The purchase keeps the first payment and
+grants once. Refund the second payment in the Stripe Dashboard - the error on
+the purchase names it.
+
+"A second subscription ... was created" is the same story for a plan: cancel
+and refund the extra subscription in Stripe. VitNode keeps tracking the first.
+
+## "Not available in your currency yet"
+
+The offer has no price in that currency, the currency is not in
+`payments.currencies`, or the provider cannot charge it. Buyers only see the
+intersection of the three. Disabling a currency stops new purchases in it and
+keeps its history.
+
+## A subscription waits for its first payment
+
+Some payment methods settle later. The plan shows **Waiting for the first
+payment** until Stripe confirms the invoice; access starts then. If the payment
+never arrives, Stripe expires the subscription and the purchase becomes failed.
+
+## Renewal needs attention
+
+The last renewal failed or needs the customer to confirm it with their bank.
+Access continues until the already-paid date. **Manage billing** opens the
+Customer Portal, where the customer can update their card; Stripe retries the
+payment on its own schedule.

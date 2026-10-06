@@ -11,6 +11,7 @@ import * as moderators from "./moderators";
 import * as navigation from "./navigation";
 import * as notifications from "./notifications";
 import * as passkeys from "./passkeys";
+import * as payments from "./payments";
 import * as queue from "./queue";
 import * as roles from "./roles";
 import * as search from "./search";
@@ -30,6 +31,7 @@ export const coreSchema = {
   ...navigation,
   ...notifications,
   ...passkeys,
+  ...payments,
   ...queue,
   ...roles,
   ...search,
@@ -171,6 +173,48 @@ export const coreRelations = defineRelations(coreSchema, r => ({
     user: r.one.core_users({
       from: r.core_files.userId,
       to: r.core_users.id,
+    }),
+  },
+
+  core_payments_purchases: {
+    user: r.one.core_users({
+      from: r.core_payments_purchases.userId,
+      to: r.core_users.id,
+    }),
+    checkouts: r.many.core_payments_checkouts(),
+    fulfillments: r.many.core_payments_fulfillments(),
+  },
+
+  core_payments_checkouts: {
+    purchase: r.one.core_payments_purchases({
+      from: r.core_payments_checkouts.purchaseId,
+      to: r.core_payments_purchases.id,
+    }),
+  },
+
+  core_payments_fulfillments: {
+    purchase: r.one.core_payments_purchases({
+      from: r.core_payments_fulfillments.purchaseId,
+      to: r.core_payments_purchases.id,
+    }),
+  },
+
+  core_payments_subscriptions: {
+    user: r.one.core_users({
+      from: r.core_payments_subscriptions.userId,
+      to: r.core_users.id,
+    }),
+    purchase: r.one.core_payments_purchases({
+      from: r.core_payments_subscriptions.purchaseId,
+      to: r.core_payments_purchases.id,
+    }),
+    invoices: r.many.core_payments_invoices(),
+  },
+
+  core_payments_invoices: {
+    subscription: r.one.core_payments_subscriptions({
+      from: r.core_payments_invoices.subscriptionId,
+      to: r.core_payments_subscriptions.id,
     }),
   },
 }));

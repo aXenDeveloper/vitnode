@@ -23,6 +23,7 @@ export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   navigation: [],
   passkeys: false,
   password: true,
+  payments: false,
   bottomBar: [],
   sso: [],
 });

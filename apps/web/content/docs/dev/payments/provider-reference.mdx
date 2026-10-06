@@ -1,0 +1,244 @@
+---
+title: Payments reference
+description: Reference for @vitnode/core/payments - the PaymentProvider contract, capabilities, normalized results and errors, offer definitions and snapshots, and the money helpers.
+icon: BookOpen
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+Everything below is exported from `@vitnode/core/payments`. The module is
+browser-safe: types, validation and formatting only.
+
+## Offers
+
+```ts
+import { definePaymentOffer } from '@vitnode/core/payments'
+```
+
+<TypeTable
+  type={{
+    id: {
+      description:
+        'Stable id, unique within the plugin: 1-63 lowercase letters, digits or dashes.',
+      type: 'string',
+      required: true,
+    },
+    mode: {
+      description: 'What is sold.',
+      type: '"one_time" | "subscription"',
+      required: true,
+    },
+    name: {
+      description:
+        'Snapshot name stored on purchases and shown on the hosted checkout page.',
+      type: 'string',
+      required: true,
+    },
+    nameKey: {
+      description:
+        "Full message key used for the buyer's language when the API has it.",
+      type: 'string',
+    },
+    returnPath: {
+      description:
+        'Path in this app the buyer returns to, e.g. "/example/payments".',
+      type: 'string',
+      required: true,
+    },
+    prices: {
+      description: 'one_time only. Minor units per currency.',
+      type: 'Record<string, number>',
+    },
+    intervals: {
+      description: 'subscription only. Prices per interval.',
+      type: 'Partial<Record<"month" | "year", Record<string, number>>>',
+    },
+    isEligible: {
+      description: 'Server-side gate run inside the checkout lock.',
+      type: '(args: { c, tx, userId, interval }) => { eligible: true } | { eligible: false; reason: string }',
+    },
+    onPaid: {
+      description:
+        'one_time only, required. Grant the purchase. Runs once per paid purchase.',
+      type: '(args: { c, tx, purchase }) => Promise<void>',
+    },
+    onRefunded: {
+      description: 'one_time only. Called once per succeeded refund.',
+      type: '(args: { c, tx, purchase, refund: { id, amount } }) => Promise<void>',
+    },
+    onSubscriptionChanged: {
+      description: 'subscription only, required. Set access from the snapshot.',
+      type: '(args: { c, tx, subscription }) => Promise<void>',
+    },
+  }}
+/>
+
+Register offers with `buildModule({ paymentOffers: [...] })` on any module of
+your plugin's API.
+
+### Snapshots
+
+`PaymentPurchaseSnapshot` - `id` (public UUID), `userId`, `pluginId`,
+`offerId`, `offerName`, `interval`, `amount`, `currency`, `paidAt`,
+`fulfillmentStatus`, `refundedAmount`, `refundStatus` (`none | partial | full`).
+
+`PaymentSubscriptionSnapshot` - `id`, `purchaseId`, `userId`, `pluginId`,
+`offerId`, `interval`, `amount`, `currency`, `status`, `paidThrough`,
+`cancelAtPeriodEnd`, `endedAt`.
+
+## The provider contract
+
+A provider is a plain object. Optional parts are capabilities: a provider
+without `subscriptions` cannot sell plans, and core refuses rather than
+returning partial results.
+
+```ts
+interface PaymentProvider {
+  id: string // "stripe"
+  name: string // "Stripe"
+  scope: string // "test" | "live" - stored next to every provider id
+  currencies: readonly string[]
+  checkAmount?: (money: Money) => string | null
+  customers: {
+    create(input, { idempotencyKey }): Promise<{ customerId: string }>
+  }
+  checkout: {
+    create(
+      input: ProviderCheckoutInput,
+      { idempotencyKey },
+    ): Promise<ProviderCheckout>
+    retrieve(checkoutId: string): Promise<ProviderCheckout>
+    expire(checkoutId: string): Promise<ProviderCheckout>
+  }
+  payments: { retrieve(paymentId: string): Promise<ProviderPayment> }
+  subscriptions?: {
+    retrieve(subscriptionId: string): Promise<ProviderSubscription>
+    retrieveInvoice(invoiceId: string): Promise<ProviderInvoice>
+  }
+  portal?: {
+    createSession(input: {
+      customerId
+      returnUrl
+      locale?
+    }): Promise<{ url: string }>
+  }
+  webhooks: {
+    verify(input: {
+      body: Uint8Array
+      headers: Headers
+    }): Promise<ProviderWebhookEvent>
+  }
+}
+```
+
+`providerCapabilities(provider)` returns `{ oneTimePayments, subscriptions,
+customerPortal, currencies, intervals }` - the shape the public settings expose.
+
+### Normalized results
+
+| Type                   | Key fields                                                                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProviderCheckout`     | `id`, `status` (`open, complete, expired`), `paymentStatus` (`paid, unpaid, failed, no_payment_required`), `reference`, `paymentId`, `subscriptionId`, `amountTotal`, `currency`, `url` |
+| `ProviderSubscription` | `id`, `status`, `providerStatus`, `currentPeriodEnd`, `cancelAtPeriodEnd`, `cancelAt`, `endedAt`, `amount`, `currency`, `interval`, `priceId`, `latestInvoiceId`, `reference`           |
+| `ProviderInvoice`      | `id`, `subscriptionId`, `status` (`open, paid, void, uncollectible`), `amountPaid`, `periodStart`, `periodEnd`, `paidAt`, `paymentId`                                                   |
+| `ProviderPayment`      | `id`, `amount`, `amountRefunded` (succeeded refunds only), `currency`, `refunds[]`, `disputes[]`                                                                                        |
+| `ProviderWebhookEvent` | `id`, `type`, `scope`, `target` - `{ kind, id }` with kind `checkout`, `subscription`, `payment` or `invoice` (plus a `signal`), or `null` to ignore                                    |
+
+All amounts are ISO minor units. A provider that counts a currency differently
+converts inside its adapter.
+
+### Errors
+
+| Error                          | Meaning                                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `PaymentProviderError`         | `kind`: `uncertain` (no answer - may have happened), `unavailable` (retry later), `rejected`, `not_found` |
+| `PaymentWebhookSignatureError` | The request is not provably from the provider - answered with `400`                                       |
+| `PaymentsConfigError`          | Explicit configuration is wrong - thrown at startup                                                       |
+
+`uncertain` and `unavailable` are retried; the others are recorded as permanent
+failures for the AdminCP.
+
+## `@vitnode/stripe`
+
+```ts
+import {
+  StripePaymentProvider,
+  STRIPE_API_VERSION, // "2026-09-30.endive"
+  STRIPE_SUPPORTED_CURRENCIES,
+  STRIPE_WEBHOOK_EVENTS,
+} from '@vitnode/stripe'
+```
+
+<TypeTable
+  type={{
+    secretKey: {
+      description: 'sk_test_/sk_live_ or a restricted rk_ key.',
+      type: 'string | undefined',
+      required: true,
+    },
+    webhookSecret: {
+      description: "This endpoint's signing secret (whsec_...).",
+      type: 'string | undefined',
+      required: true,
+    },
+    id: {
+      description: 'Provider id, for registering two Stripe accounts.',
+      type: 'string',
+      default: '"stripe"',
+    },
+    currencies: {
+      description: 'A subset of STRIPE_SUPPORTED_CURRENCIES.',
+      type: 'readonly string[]',
+    },
+    portalConfigurationId: {
+      description: 'Customer Portal configuration (bpc_...).',
+      type: 'string',
+    },
+    client: {
+      description: 'A pre-built Stripe client - for tests.',
+      type: 'Stripe',
+    },
+  }}
+/>
+
+## Money helpers
+
+```ts
+import {
+  assertMinorUnits,
+  formatMoney,
+  toDecimalString,
+} from '@vitnode/core/payments'
+
+formatMoney(
+  { amount: 1900, currency: 'PLN' },
+  { locale: 'pl-PL', currencyDisplay: 'code' },
+) // "19,00 PLN"
+formatMoney(
+  { amount: 1900, currency: 'USD' },
+  { locale: 'en-US', currencyDisplay: 'symbol' },
+) // "$19.00"
+formatMoney({ amount: 1900, currency: 'JPY' }, { locale: 'en-US' }) // "¥1,900"
+toDecimalString({ amount: 1900, currency: 'PLN' }) // "19.00"
+assertMinorUnits(19.99) // throws - money is never a float
+```
+
+In React, `useMoneyFormatter()` from `@vitnode/core/tanstack/payments` binds
+`formatMoney` to the reader's locale and the install's display settings.
+
+## HTTP API
+
+| Route                                                 | Who       | Purpose                                                              |
+| ----------------------------------------------------- | --------- | -------------------------------------------------------------------- |
+| `GET /payments/settings`                              | anyone    | Public settings projection                                           |
+| `GET /payments/offers?pluginId=`                      | anyone    | A plugin's offers with purchasable prices                            |
+| `POST /payments/checkout`                             | signed in | Start or resume a checkout                                           |
+| `GET /payments/purchases`, `/purchases/{id}?refresh=` | owner     | Billing history, one purchase (optionally re-checked)                |
+| `POST /payments/purchases/{id}/cancel`                | owner     | Cancel an unfinished checkout                                        |
+| `GET /payments/subscriptions`                         | owner     | The user's subscriptions                                             |
+| `POST /payments/portal`                               | signed in | Customer Portal session for the user's own customer                  |
+| `POST /payments/webhooks/{providerId}`                | provider  | Signed webhooks                                                      |
+| `/admin/payments/*`                                   | staff     | Overview, lists, detail, retries (`payments: can_view`, `can_retry`) |
+
+All paths are under `/api/@vitnode/core`. Owner routes answer `404` for
+records that belong to someone else and send `Cache-Control: private, no-store`.

@@ -11,6 +11,7 @@ import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
 import { notificationsModule } from "./modules/notifications/notifications.module";
 import { pagesModule } from "./modules/pages/pages.module";
+import { paymentsModule } from "./modules/payments/payments.module";
 import { queueModule } from "./modules/queue/queue.module";
 import { searchModule } from "./modules/search/search.module";
 import { usersModule } from "./modules/users/users.module";
@@ -31,6 +32,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     contentModule,
     cronModule,
     pagesModule,
+    paymentsModule,
     queueModule,
     searchModule,
   ],
@@ -80,6 +82,10 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],
+      payments: [
+        "can_view",
+        { permission: "can_retry", dependsOn: ["can_view"] },
+      ],
       notifications: [
         "can_view",
         { permission: "can_edit", dependsOn: ["can_view"] },

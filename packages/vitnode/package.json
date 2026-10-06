@@ -132,6 +132,11 @@
       "types": "./dist/src/content/hash.d.ts",
       "default": "./dist/src/content/hash.js"
     },
+    "./payments": {
+      "import": "./dist/src/payments/index.js",
+      "types": "./dist/src/payments/index.d.ts",
+      "default": "./dist/src/payments/index.js"
+    },
     "./editor": {
       "import": "./dist/src/editor/index.js",
       "types": "./dist/src/editor/index.d.ts",

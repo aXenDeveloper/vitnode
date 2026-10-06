@@ -62,6 +62,7 @@ const core = {
     ssoAdapters: [],
   },
   navigation: presets,
+  payments: { config: null, offers: new Map() },
 } as unknown as Context["var"]["core"];
 
 const ai = { models: () => [] } as unknown as Context["var"]["ai"];

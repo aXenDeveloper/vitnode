@@ -1,0 +1,202 @@
+---
+title: Configure Payments
+description: Enable VitNode Payments in vitnode.api.config.ts - currencies, the Stripe provider, environment variables and the queue worker, for a standalone API or an API embedded in the web app.
+icon: Settings
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+Payments is configured in one place: `buildApiConfig` in
+`vitnode.api.config.ts`. Leave the `payments` key out and Payments is off -
+nothing else changes, and the build does not need Stripe.
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { StripePaymentProvider } from '@vitnode/stripe'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  payments: process.env.STRIPE_SECRET_KEY
+    ? {
+        defaultCurrency: 'PLN',
+        currencies: {
+          PLN: { currencyDisplay: 'code' }, // 19,00 PLN
+          USD: { currencyDisplay: 'symbol' }, // $19.00
+          EUR: { currencyDisplay: 'symbol' },
+        },
+        providers: [
+          StripePaymentProvider({
+            secretKey: process.env.STRIPE_SECRET_KEY,
+            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+          }),
+        ],
+      }
+    : undefined,
+})
+```
+
+The ternary keeps the repository runnable without a Stripe account. Once
+`STRIPE_SECRET_KEY` is set, a missing `STRIPE_WEBHOOK_SECRET` stops the API at
+startup with a message that names the variable.
+
+<Callout title="API only">
+  Never import `vitnode.api.config.ts` into browser code. The UI reads a
+  validated public projection from `GET /api/@vitnode/core/payments/settings`:
+  enabled currencies, display preferences and provider capabilities - never a
+  key.
+</Callout>
+
+## Install the Stripe provider
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install @vitnode/stripe'>
+
+```bash tab="bun"
+bun i @vitnode/stripe
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/stripe
+```
+
+```bash tab="npm"
+npm i @vitnode/stripe
+```
+
+</Tabs>
+
+Install it in the app that runs the API: `apps/api` for a standalone API, or
+`apps/web` when the web app serves `/api/*` itself.
+
+## Options
+
+<TypeTable
+  type={{
+    defaultCurrency: {
+      description: 'Preselected in the UI. Must be one of `currencies`.',
+      type: 'string',
+      required: true,
+    },
+    currencies: {
+      description:
+        'Every ISO 4217 code new purchases may use, with how to show it. Removing one blocks new purchases in it and keeps its history.',
+      type: 'Record<string, { currencyDisplay?: "code" | "symbol" | "narrowSymbol" | "name" }>',
+      required: true,
+    },
+    providers: {
+      description: 'Registered providers. Ids must be unique.',
+      type: 'PaymentProvider[]',
+      required: true,
+    },
+    defaultProvider: {
+      description: 'Required when more than one provider is registered.',
+      type: 'string',
+    },
+    checkoutExpiresInMinutes: {
+      description: 'How long a hosted checkout stays payable (45-1440).',
+      type: 'number',
+      default: '60',
+    },
+    webhookRetentionDays: {
+      description:
+        'Days a processed webhook row is kept. Failed ones stay until resolved.',
+      type: 'number',
+      default: '30',
+    },
+  }}
+/>
+
+Startup refuses: a default currency that is not enabled, an unknown currency
+code, two providers with one id, a default provider that is not registered,
+and an offer that is malformed or registered twice.
+
+## Environment variables
+
+```bash title=".env"
+# Test keys from https://dashboard.stripe.com/test/apikeys - never commit them.
+STRIPE_SECRET_KEY=sk_test_...
+# The signing secret of your webhook endpoint (or of `stripe listen`).
+STRIPE_WEBHOOK_SECRET=whsec_...
+# A real secret for the cron endpoint - the queue worker depends on it.
+CRON_SECRET=a-long-random-string
+```
+
+## Currencies and prices
+
+Money is an integer number of minor units plus a currency code: `1900` with
+`PLN` is 19,00 PLN, `1900` with `JPY` is ¥1,900. Offers declare a price per
+currency - there is no exchange-rate conversion. A buyer only sees currencies
+that are enabled here, priced by the offer and supported by the provider.
+
+The UI language and the billing currency are separate. A Polish reader can pay
+in USD; switching language never changes the currency.
+
+## Run the queue worker
+
+Every webhook becomes a queue job. Something has to tick the queue every
+minute, or confirmed payments wait forever.
+
+<Tabs items={['Standalone API (apps/api)', 'API embedded in apps/web']}>
+
+<Tab value="Standalone API (apps/api)">
+
+`apps/api` already registers the in-process scheduler:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { NodeCronAdapter } from '@vitnode/node-cron'
+
+export const vitNodeApiConfig = buildApiConfig({
+  cron: NodeCronAdapter(),
+  // payments: { ... }
+})
+```
+
+Configure Payments in this file. The webhook URL is
+`https://api.example.com/api/@vitnode/core/payments/webhooks/stripe`.
+
+</Tab>
+
+<Tab value="API embedded in apps/web">
+
+`apps/web/src/vitnode.api.config.ts` is the API config here. It enables the
+in-process scheduler only when asked:
+
+```ts title="apps/web/src/vitnode.api.config.ts"
+cron: process.env.VITNODE_CRON === 'node' ? NodeCronAdapter() : undefined,
+```
+
+- **Long-running Node server** (`pnpm dev`, `pnpm start`): set `VITNODE_CRON=node`.
+- **Serverless**: leave it unset and call the cron endpoint from a scheduler
+  every minute:
+
+```bash
+curl -X POST https://example.com/api/@vitnode/core/cron \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+The webhook URL is `https://example.com/api/@vitnode/core/payments/webhooks/stripe`.
+
+</Tab>
+
+</Tabs>
+
+**AdminCP → Payments** shows whether the worker ran recently and how many
+payment jobs are waiting. See [Cron over REST](/docs/dev/cron/rest-api) for
+scheduler options.
+
+## Database
+
+Payments adds `core_payments_*` tables. They arrive with the normal migrations,
+so `pnpm db:prepare` (or the `dev` script) creates them. They exist whether or
+not Payments is configured, and nothing writes to them until it is.
+
+## Next steps
+
+<Cards>
+  <Card title="Set up Stripe" href="/docs/dev/payments/stripe" />
+  <Card
+    title="Sell a one-time purchase"
+    href="/docs/dev/payments/one-time-purchase"
+  />
+</Cards>

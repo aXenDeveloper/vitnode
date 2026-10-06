@@ -49,6 +49,38 @@ export interface VitNodeEvents {
   "notifications.type.updated": {
     typeId: string;
   };
+  "payments.purchase.created": {
+    offerId: string;
+    pluginId: string;
+    purchaseId: string;
+    userId: number;
+  };
+  "payments.purchase.fulfilled": {
+    offerId: string;
+    pluginId: string;
+    purchaseId: string;
+  };
+  "payments.purchase.paid": {
+    amount: number;
+    currency: string;
+    offerId: string;
+    pluginId: string;
+    purchaseId: string;
+    userId: null | number;
+  };
+  "payments.purchase.refunded": {
+    currency: string;
+    purchaseId: string;
+    refundedAmount: number;
+    refundStatus: "full" | "none" | "partial";
+  };
+  "payments.subscription.updated": {
+    offerId: string;
+    paidThrough: null | string;
+    pluginId: string;
+    status: string;
+    subscriptionId: string;
+  };
   "role.created": {
     roleId: number;
   };

@@ -1,0 +1,264 @@
+---
+title: Sell a one-time purchase
+description: Register a one-time payment offer in a VitNode plugin, start a Stripe checkout, grant access in a fulfillment handler, protect the feature on the server and handle refunds.
+icon: ShoppingBag
+---
+
+This guide builds the lifetime pass from `@vitnode/example`: pay once, unlock a
+feature, lose it again on a full refund. The finished code is in
+`plugins/example/src/api/payments/offers.ts` and
+`plugins/example/src/pages/payments/payments-page.tsx`.
+
+<Steps>
+
+<Step>
+
+### Store what the purchase unlocks
+
+Access is your plugin's data, so it lives in your plugin's table. One row per
+user and offer keeps a grant from ever being doubled.
+
+```ts title="plugins/example/src/database/payments.ts"
+import { core_users } from '@vitnode/core/database/users'
+import { camelCase, uniqueIndex } from 'drizzle-orm/pg-core'
+
+export const example_payments_access = camelCase.table.withRLS(
+  'example_payments_access',
+  (t) => ({
+    id: t.serial().primaryKey(),
+    userId: t
+      .integer()
+      .references(() => core_users.id, { onDelete: 'cascade' })
+      .notNull(),
+    offerId: t.varchar({ length: 64 }).notNull(),
+    purchaseId: t.uuid().notNull(),
+    accessUntil: t.timestamp(), // null = forever
+    revokedAt: t.timestamp(),
+  }),
+  (t) => [
+    uniqueIndex('example_payments_access_user_offer_unique').on(
+      t.userId,
+      t.offerId,
+    ),
+  ],
+)
+```
+
+Generate the migration as usual - see [Database](/docs/dev/database#migration-commands).
+
+</Step>
+
+<Step>
+
+### Declare the offer
+
+```ts title="plugins/example/src/api/payments/offers.ts"
+import { definePaymentOffer } from '@vitnode/core/payments'
+import { and, eq, isNull } from 'drizzle-orm'
+
+export const lifetimePassOffer = definePaymentOffer({
+  id: 'lifetime-pass',
+  mode: 'one_time',
+  name: 'Example lifetime pass',
+  nameKey: '@vitnode/example.payments.offers.lifetime-pass.name',
+  returnPath: '/example/payments',
+  prices: { EUR: 1199, PLN: 4900, USD: 1299 }, // minor units
+
+  isEligible: async ({ tx, userId }) => {
+    const [grant] = await tx
+      .select()
+      .from(example_payments_access)
+      .where(
+        and(
+          eq(example_payments_access.userId, userId),
+          eq(example_payments_access.offerId, 'lifetime-pass'),
+        ),
+      )
+
+    return hasActiveAccess(grant)
+      ? { eligible: false, reason: 'You already own the lifetime pass.' }
+      : { eligible: true }
+  },
+
+  onPaid: async ({ purchase, tx }) => {
+    if (purchase.userId === null) return
+
+    await tx
+      .insert(example_payments_access)
+      .values({
+        offerId: purchase.offerId,
+        purchaseId: purchase.id,
+        userId: purchase.userId,
+      })
+      .onConflictDoUpdate({
+        set: { accessUntil: null, purchaseId: purchase.id, revokedAt: null },
+        target: [
+          example_payments_access.userId,
+          example_payments_access.offerId,
+        ],
+      })
+  },
+})
+```
+
+- `id` is stored on every purchase. Never rename it.
+- `prices` are explicit per currency; there is no conversion.
+- `returnPath` is where Stripe sends the buyer back. The browser cannot change it.
+- `isEligible` runs on the server, inside a lock, before every checkout - two
+  tabs cannot both pass it.
+- `onPaid` runs once after the payment is verified, in a transaction together
+  with the "fulfilled" mark. Write through `tx`; throw to roll back and retry.
+
+</Step>
+
+<Step>
+
+### Register it on a module
+
+```ts title="plugins/example/src/api/modules/payments/payments.module.ts"
+export const paymentsModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: 'payments',
+  routes: [accessRoute, featureRoute],
+  paymentOffers: [lifetimePassOffer, proPlanOffer],
+})
+```
+
+Offers are collected from every module depth when the plugin is built, and
+checked again across all plugins at startup.
+
+**Expected:** `GET /api/@vitnode/core/payments/offers?pluginId=@vitnode/example`
+lists `lifetime-pass` with one price per enabled currency.
+
+</Step>
+
+<Step>
+
+### Start the checkout
+
+The page sends only the offer, the currency and (for plans) the interval.
+`useStartCheckout` adds an idempotency key and redirects to Stripe.
+
+```tsx title="plugins/example/src/pages/payments/payments-page.tsx"
+import { useStartCheckout } from '@vitnode/core/tanstack/payments'
+
+const checkout = useStartCheckout({ userId })
+
+checkout.mutate({
+  currency: 'PLN',
+  interval: null,
+  offerId: 'lifetime-pass',
+  pluginId: '@vitnode/example',
+})
+```
+
+The server derives the price, stores the purchase and returns the Stripe URL.
+A second click returns the same checkout. Show prices with the shared
+formatter so `PLN` and `USD` look right in every language:
+
+```tsx
+import { useMoneyFormatter } from '@vitnode/core/tanstack/payments'
+
+const formatMoney = useMoneyFormatter()
+formatMoney({ amount: 4900, currency: 'PLN' }) // "49,00 PLN" for pl-PL
+```
+
+</Step>
+
+<Step>
+
+### Show the result after the redirect
+
+Stripe returns to `returnPath?purchase=<id>`. Follow that purchase until it
+settles:
+
+```tsx
+import { usePurchaseReturn } from '@vitnode/core/tanstack/payments'
+
+const { purchase, settled, slow, check } = usePurchaseReturn({
+  purchaseId: search.purchase,
+  userId,
+})
+```
+
+Each check asks the server, which asks Stripe. Polling backs off (1 s, 2 s, 4 s,
+8 s, then every 15 s), stops when the purchase settles, stops after eight
+checks and stops when the page unmounts. `check()` lets the buyer ask again.
+
+**Expected:** after paying with `4242 4242 4242 4242`, the page shows "Payment
+confirmed. Enjoy!" and **Settings → Billing** lists the purchase as Paid.
+
+</Step>
+
+<Step>
+
+### Protect the feature on the server
+
+Never send protected content and hide it with CSS. Check access in the route
+that returns it, on every request:
+
+```ts title="plugins/example/src/api/modules/payments/payments.module.ts"
+handler: async (c) => {
+  const user = c.get('user')
+  if (!user) throw new HTTPException(401)
+
+  const grant = await readGrant(c, user.id, offerId)
+  if (!grant || !hasActiveAccess(grant)) {
+    throw new HTTPException(403, {
+      message: 'This feature unlocks after a confirmed payment.',
+    })
+  }
+
+  return c.json({ holder: user.name /* ... */ })
+}
+```
+
+</Step>
+
+<Step>
+
+### Decide what a refund means
+
+Refunds issued in the Stripe Dashboard are synced back. Core records them and
+calls `onRefunded` once per refund that succeeded. The plugin decides:
+
+```ts
+onRefunded: async ({ purchase, tx }) => {
+  if (purchase.refundStatus !== 'full') return // partial refunds keep access
+
+  await tx
+    .update(example_payments_access)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(example_payments_access.purchaseId, purchase.id),
+        isNull(example_payments_access.revokedAt),
+      ),
+    )
+},
+```
+
+**Expected:** refund the full amount in the Stripe Dashboard and the
+certificate disappears; the purchase shows "Refunded" with its original amount.
+
+</Step>
+
+</Steps>
+
+## Prices change, history does not
+
+A purchase stores a snapshot - offer name, amount, currency, provider. Changing
+an offer's price affects new checkouts only. Removing an offer or disabling its
+plugin keeps the history readable; any fulfillment still owed shows up as
+failed in the AdminCP instead of granting something else.
+
+## Related
+
+<Cards>
+  <Card title="Sell a subscription" href="/docs/dev/payments/subscriptions" />
+  <Card title="Reliability" href="/docs/dev/payments/reliability" />
+  <Card
+    title="Provider reference"
+    href="/docs/dev/payments/provider-reference"
+  />
+</Cards>

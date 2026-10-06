@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createContentModel } from "@/content/server/model";
 import { buildContentPublicModule } from "@/content/server/public-module";
+import { definePaymentOffer } from "@/payments/offer";
 import {
   testArticleContentType,
   testCategoryContentType,
@@ -254,5 +255,61 @@ describe("buildApiPlugin public content URLs", () => {
       buildApiPlugin({ pluginId: PLUGIN_ID, modules: [adminModule] })
         .publicContentTypes,
     ).toEqual([]);
+  });
+});
+
+describe("buildApiPlugin payment offers", () => {
+  const offer = definePaymentOffer({
+    id: "lifetime",
+    mode: "one_time",
+    name: "Lifetime",
+    onPaid: async () => {},
+    prices: { PLN: 1900 },
+    returnPath: "/example/payments",
+  });
+
+  it("collects offers from every depth of the module tree", () => {
+    const nested = buildModule({
+      pluginId: "@vitnode/example",
+      name: "admin",
+      routes: [],
+      modules: [
+        buildModule({
+          pluginId: "@vitnode/example",
+          name: "payments",
+          routes: [],
+          paymentOffers: [offer],
+        }),
+      ],
+    });
+
+    const plugin = buildApiPlugin({
+      pluginId: "@vitnode/example",
+      modules: [nested],
+    });
+
+    expect(plugin.paymentOffers?.map(item => item.id)).toEqual(["lifetime"]);
+  });
+
+  it("refuses one offer id declared by two modules of a plugin", () => {
+    expect(() =>
+      buildApiPlugin({
+        pluginId: "@vitnode/example",
+        modules: [
+          buildModule({
+            pluginId: "@vitnode/example",
+            name: "a",
+            routes: [],
+            paymentOffers: [offer],
+          }),
+          buildModule({
+            pluginId: "@vitnode/example",
+            name: "b",
+            routes: [],
+            paymentOffers: [offer],
+          }),
+        ],
+      }),
+    ).toThrow(/registered twice/);
   });
 });
