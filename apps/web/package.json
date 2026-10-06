@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter api db:prepare && vite dev --port 3000",
-    "build": "vite build",
+    "dev": "pnpm --filter api db:prepare && vitnode dev --port 3000",
+    "build": "vitnode build",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
-    "start": "node .output/server/index.mjs",
+    "start": "vitnode start",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix"
   },

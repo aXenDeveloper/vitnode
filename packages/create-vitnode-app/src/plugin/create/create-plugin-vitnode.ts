@@ -20,7 +20,10 @@ import {
 import { addPluginToWorkspace } from "./add-plugin-to-workspace.js";
 import { createPluginPackageJSON } from "./create-package-json.js";
 import { devCommandFor, restartDevServers } from "./restart-dev-servers.js";
-import { pluginRouteScaffold } from "./route-templates.js";
+import {
+  pluginReadmeTemplate,
+  pluginRouteScaffold,
+} from "./route-templates.js";
 
 const BUILD_SCRIPT = "build:plugins";
 
@@ -160,6 +163,11 @@ export const createPluginVitNode = async ({
 
   spinner.text = "Writing the plugin's first route and API...";
   await writePluginRouteScaffold({ pluginName, pluginPath });
+  await writeFile(
+    join(pluginPath, "README.md"),
+    pluginReadmeTemplate(pluginName),
+    "utf-8",
+  );
 
   spinner.text = "Creating package.json...";
   await createPluginPackageJSON({

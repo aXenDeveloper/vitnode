@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-import { checkbox, select } from "@inquirer/prompts";
 import { generateText, type LanguageModel, Output } from "ai";
 import { config as loadEnv } from "dotenv";
 import { writeFileSync } from "node:fs";
@@ -7,19 +5,16 @@ import { dirname, join, relative } from "node:path";
 import { z } from "zod";
 
 import type { AIModelDefinition } from "../src/api/models/ai.js";
+import type { I18nContext } from "./i18n-shared.js";
 
+import { EXIT_CODE, RuntimeError, UserError } from "./cli/errors.js";
 import { findConfigFile, getConfig } from "./get-config.js";
 import {
   appScope,
-  cyan,
-  dim,
   effectiveDefaultTree,
-  green,
   listAppLocaleFiles,
-  prefix,
+  noConfigError,
   readJsonTree,
-  red,
-  yellow,
 } from "./i18n-shared.js";
 import { reconcileTree } from "./i18n-update.js";
 import { findRepoRoot } from "./shared/file-utils.js";
@@ -239,19 +234,40 @@ const translateBatch = async ({
   return result;
 };
 
-export const i18nUpdateAi = async () => {
-  const appDir = process.cwd();
+/**
+ * `vitnode i18n update-ai [codes...]` - translates every string a language
+ * file still has in the default language, with an AI model from the API
+ * config. Languages and model come from the command line or, in a terminal,
+ * from a question; a script that names neither gets every language and the
+ * default model only if it named the languages.
+ */
+export const i18nUpdateAi = async ({
+  codes = [],
+  concurrency: requestedConcurrency,
+  context,
+  model: requestedModel,
+}: {
+  codes?: readonly string[];
+  concurrency?: number;
+  context: I18nContext;
+  model?: string;
+}): Promise<number> => {
+  const { cwd, prompter, ui } = context;
+  const { colors } = ui;
+  const green = colors.success;
+  const dim = colors.muted;
+  const cyan = colors.command;
+  const appDir = cwd;
 
   // Both configs describe the app's shape; the AI models come from the API
   // config specifically, since AI is configured there (`ai.models`).
-  const webConfig = await getConfig({ optional: true });
-  const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  const [webConfig, apiConfig] = await Promise.all([
+    getConfig({ baseDir: cwd, optional: true }),
+    getConfig({ baseDir: cwd, optional: true, type: "api.config" }),
+  ]);
   const config = webConfig ?? apiConfig;
 
-  if (!config) {
-    console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
-    process.exit(1);
-  }
+  if (!config) throw noConfigError();
 
   // The AI models live in the API config. In a monorepo the API app is usually
   // a sibling of the app you run this from (e.g. `apps/web` next to `apps/api`),
@@ -290,12 +306,9 @@ export const i18nUpdateAi = async () => {
   }
 
   if (models.length === 0) {
-    console.error(
-      red(
-        "No AI models configured. Add an `ai.models` entry to vitnode.api.config.ts (searched this app and one level up).",
-      ),
-    );
-    process.exit(1);
+    throw new UserError("No AI models configured.", {
+      hint: "Add an `ai.models` entry to vitnode.api.config.ts (searched this app and one level up).",
+    });
   }
 
   const scope = appScope({ api: apiConfig !== null, web: webConfig !== null });
@@ -319,10 +332,12 @@ export const i18nUpdateAi = async () => {
   );
 
   if (appFiles.length === 0) {
-    console.log(
-      `${prefix} No translation files to translate. Run ${cyan("vitnode i18n:create")} first.`,
+    ui.note(
+      `No translation files to translate. Run ${cyan("vitnode i18n create")} first.`,
     );
-    process.exit(0);
+    ui.line();
+
+    return EXIT_CODE.ok;
   }
 
   const byLocale = new Map<string, typeof appFiles>();
@@ -333,114 +348,85 @@ export const i18nUpdateAi = async () => {
   }
   const locales = [...byLocale.keys()].sort((a, b) => a.localeCompare(b));
 
-  // `vitnode i18n:update:ai [code...] [--model <id>]` - anything supplied on the
-  // command line skips its prompt, so the command is scriptable and never blocks
-  // on a non-interactive stdin.
-  const rawArgs = process.argv.slice(3);
-  let argModelId: string | undefined;
-  let argConcurrency: number | undefined;
-  const argLocales: string[] = [];
-  for (let i = 0; i < rawArgs.length; i += 1) {
-    const arg = rawArgs[i];
-    if (arg === "--model") {
-      argModelId = rawArgs[i + 1];
-      i += 1;
-    } else if (arg.startsWith("--model=")) {
-      argModelId = arg.slice("--model=".length);
-    } else if (arg === "--concurrency") {
-      argConcurrency = Number(rawArgs[i + 1]);
-      i += 1;
-    } else if (arg.startsWith("--concurrency=")) {
-      argConcurrency = Number(arg.slice("--concurrency=".length));
-    } else {
-      argLocales.push(...arg.split(/[\s,]+/).filter(Boolean));
+  // Anything given on the command line skips its question, so the command is
+  // scriptable and never waits on a terminal nobody is at.
+  const argLocales = codes.flatMap(code =>
+    code.split(/[\s,]+/).filter(Boolean),
+  );
+
+  if (
+    requestedConcurrency !== undefined &&
+    (!Number.isInteger(requestedConcurrency) || requestedConcurrency < 1)
+  ) {
+    throw new UserError("--concurrency must be a whole number above 0.");
+  }
+  const concurrency = requestedConcurrency ?? DEFAULT_CONCURRENCY;
+
+  // 1. Which languages to translate from English - every one, ticked, so
+  //    Enter takes them all.
+  let selectedLocales: string[];
+  if (argLocales.length > 0) {
+    const unknown = argLocales.filter(code => !byLocale.has(code));
+    if (unknown.length > 0) {
+      throw new UserError(`No translation files for: ${unknown.join(", ")}.`, {
+        hint: `Translation files exist for: ${locales.join(", ")}.`,
+      });
     }
+    selectedLocales = [...new Set(argLocales)];
+  } else if (ui.interactive) {
+    selectedLocales = await prompter.multiSelect(
+      "Which languages should be translated from English?",
+      locales.map(code => ({
+        checked: true,
+        name: `${localeNames.get(code) ?? code} ${dim(`(${code})`)}`,
+        value: code,
+      })),
+    );
+  } else {
+    throw new UserError("Missing languages.", {
+      hint: "Run: vitnode i18n update-ai <code...> [--model <id>]",
+    });
   }
 
-  const concurrency =
-    argConcurrency && Number.isInteger(argConcurrency) && argConcurrency > 0
-      ? argConcurrency
-      : DEFAULT_CONCURRENCY;
-
-  const isInteractive = process.stdin.isTTY ?? false;
-
-  let selectedLocales: string[];
+  // 2. Which model to translate with - the first entry is the default.
   let selectedModel: AIModelDefinition;
-  try {
-    // 1. Which languages to translate from English - a multi-select ticked in
-    //    full, so pressing Enter takes them all.
-    if (argLocales.length > 0) {
-      const unknown = argLocales.filter(code => !byLocale.has(code));
-      if (unknown.length > 0) {
-        console.error(red(`No translation files for: ${unknown.join(", ")}.`));
-        process.exit(1);
-      }
-      selectedLocales = [...new Set(argLocales)];
-    } else if (isInteractive) {
-      selectedLocales = await checkbox({
-        choices: locales.map(code => ({
-          checked: true,
-          name: `${localeNames.get(code) ?? code} ${dim(`(${code})`)}`,
-          value: code,
-        })),
-        message: "Which languages should be translated from English?",
-        required: true,
-      });
-    } else {
-      console.error(
-        red(
-          "Missing languages. Run: vitnode i18n:update:ai <code...> [--model <id>]",
-        ),
+  if (requestedModel !== undefined) {
+    const found = models.find(entry => entry.id === requestedModel);
+    if (!found) {
+      throw new UserError(
+        `AI model "${requestedModel}" is not defined in vitnode.api.config.ts.`,
+        {
+          hint: `Defined models: ${models.map(entry => entry.id).join(", ")}.`,
+        },
       );
-      process.exit(1);
     }
-
-    // 2. Which model to translate with - a single-select defaulting to the
-    //    first entry, the default model.
-    if (argModelId !== undefined) {
-      const found = models.find(entry => entry.id === argModelId);
-      if (!found) {
-        console.error(
-          red(
-            `AI model "${argModelId}" is not defined in vitnode.api.config.ts.`,
-          ),
-        );
-        process.exit(1);
-      }
-      selectedModel = found;
-    } else if (isInteractive) {
-      const modelId = await select({
-        choices: models.map(entry => ({
-          name: `${entry.name} ${dim(toModelId(entry.model))}`,
-          value: entry.id,
-        })),
-        default: models[0].id,
-        message:
-          "Which AI model should translate? (from vitnode.api.config.ts)",
-      });
-      // `select` only ever returns an id we passed in, so this always resolves.
-      selectedModel = models.find(entry => entry.id === modelId) ?? models[0];
-    } else {
-      // Non-interactive with no `--model`: fall back to the default (first).
-      selectedModel = models[0];
-    }
-  } catch (error) {
-    // Ctrl+C / Esc out of a prompt: exit quietly rather than dump a stack trace.
-    if (error instanceof Error && error.name === "ExitPromptError") {
-      console.log(dim("\nCancelled."));
-      process.exit(0);
-    }
-    throw error;
+    selectedModel = found;
+  } else if (ui.interactive) {
+    const modelId = await prompter.select(
+      "Which AI model should translate? (from vitnode.api.config.ts)",
+      models.map(entry => ({
+        name: `${entry.name} ${dim(toModelId(entry.model))}`,
+        value: entry.id,
+      })),
+      { default: models[0].id },
+    );
+    // `select` only ever returns an id we passed in, so this always resolves.
+    selectedModel = models.find(entry => entry.id === modelId) ?? models[0];
+  } else {
+    selectedModel = models[0];
   }
 
   if (selectedLocales.length === 0) {
-    console.log(`${prefix} No languages selected.`);
-    process.exit(0);
+    ui.note("No languages selected.");
+    ui.line();
+
+    return EXIT_CODE.ok;
   }
 
-  console.log(
-    `\n${prefix} Translating with ${green(selectedModel.name)} ${dim(`(${toModelId(selectedModel.model)})`)} into: ${selectedLocales.map(code => cyan(code)).join(", ")}\n`,
+  ui.info(
+    `Translating with ${green(selectedModel.name)} ${dim(`(${toModelId(selectedModel.model)})`)} into: ${selectedLocales.map(code => cyan(code)).join(", ")}`,
   );
+  ui.line();
 
   // The English tree per package is the same for every locale, so cache it.
   const englishCache = new Map<string, Record<string, unknown>>();
@@ -470,7 +456,7 @@ export const i18nUpdateAi = async () => {
       // No source of truth (package ships nothing for this scope, or is not
       // installed). Translating nothing would be misleading, so skip it.
       if (Object.keys(english).length === 0) {
-        console.log(
+        ui.line(
           dim(`  skipped  ${location} - no "${defaultLocale}" source strings`),
         );
         continue;
@@ -503,7 +489,7 @@ export const i18nUpdateAi = async () => {
     for (const batch of chunk(sources, BATCH_SIZE)) {
       tasks.push({ languageName, locale, sources: batch });
     }
-    console.log(
+    ui.line(
       `  ${cyan(locale)}  ${leaves.length} string(s)${leaves.length === sources.length ? "" : dim(` (${sources.length} unique)`)}`,
     );
   }
@@ -517,12 +503,12 @@ export const i18nUpdateAi = async () => {
       (sum, task) => sum + task.sources.length,
       0,
     );
-    console.log(
-      dim(
-        `  ${totalSources} unique string(s) in ${tasks.length} batch(es), up to ${Math.min(concurrency, tasks.length)} in parallel\n`,
-      ),
+    ui.note(
+      `${totalSources} unique string(s) in ${tasks.length} batch(es), up to ${Math.min(concurrency, tasks.length)} in parallel`,
     );
+    ui.line();
 
+    const progress = ui.task(`Translating ${tasks.length} batch(es)`);
     let done = 0;
     const results = await mapPool(tasks, concurrency, async task => {
       let translations = new Map<string, string>();
@@ -540,13 +526,11 @@ export const i18nUpdateAi = async () => {
         error = batchError;
       }
       done += 1;
-      process.stdout.write(
-        `\r  ${dim(`translated ${done}/${tasks.length} batch(es)`)}`,
-      );
 
       return { error, locale: task.locale, translations };
     });
-    process.stdout.write("\n\n");
+    progress.succeed(`Translated ${done}/${tasks.length} batch(es)`);
+    ui.line();
 
     for (const result of results) {
       const map =
@@ -576,44 +560,45 @@ export const i18nUpdateAi = async () => {
       writeFileSync(job.file.path, `${JSON.stringify(updated, null, 2)}\n`);
       filesChanged += 1;
       translatedTotal += entries.length;
-      console.log(
+      ui.line(
         entries.length === 0
           ? `${green(`  synced   ${job.location}`)} ${dim("(structure only)")}`
           : `${green(`  updated  ${job.location}`)} ${dim(`→ ${job.locale}  +${entries.length}`)}`,
       );
     } else {
-      console.log(dim(`  ok       ${job.location}`));
+      ui.line(dim(`  ok       ${job.location}`));
     }
     notTranslated += job.untranslated.length - entries.length;
   }
 
   // 5. Surface any batches that never succeeded - their strings stay in English
   //    for a re-run - rather than failing the whole command.
-  if (failures.length > 0) {
-    const first = failures[0];
-    console.log(
-      `\n${prefix} ${yellow(`${failures.length} batch(es) failed`)} after ${MAX_ATTEMPTS} attempts - ${notTranslated} string(s) left in English.`,
-    );
-    console.log(
-      red(`    ${first instanceof Error ? first.message : String(first)}`),
-    );
-    console.log(
-      dim(
-        "    Check your AI provider credentials (e.g. AI_GATEWAY_API_KEY) or rate limits, then re-run to fill the rest.",
-      ),
-    );
-  }
-
-  if (filesChanged === 0 && failures.length === 0) {
-    console.log(green("\n  Everything is already translated."));
-    process.exit(0);
-  }
+  ui.line();
 
   if (filesChanged > 0) {
-    console.log(
-      `\n${prefix} ${green(`${filesChanged} file(s) updated`)}, ${yellow(String(translatedTotal))} string(s) translated.`,
+    ui.success(
+      `${filesChanged} file(s) updated, ${translatedTotal} string(s) translated.`,
     );
   }
 
-  process.exit(failures.length > 0 ? 1 : 0);
+  // Failed batches leave their strings in English for a re-run - the files
+  // that did translate are already written - but the command still fails, so
+  // a script notices.
+  if (failures.length > 0) {
+    const first = failures[0];
+
+    throw new RuntimeError(
+      `${failures.length} batch(es) failed after ${MAX_ATTEMPTS} attempts - ${notTranslated} string(s) left in English.`,
+      {
+        cause: first,
+        details: [first instanceof Error ? first.message : String(first)],
+        hint: "Check your AI provider credentials (e.g. AI_GATEWAY_API_KEY) or rate limits, then re-run to fill the rest.",
+      },
+    );
+  }
+
+  if (filesChanged === 0) ui.success("Everything is already translated.");
+  ui.line();
+
+  return EXIT_CODE.ok;
 };

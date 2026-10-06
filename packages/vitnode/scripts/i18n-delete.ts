@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {
   existsSync,
   readdirSync,
@@ -9,20 +8,16 @@ import {
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
+import type { I18nContext } from "./i18n-shared.js";
+
+import { EXIT_CODE } from "./cli/errors.js";
+import { requireConfirmation } from "./cli/ui/prompts.js";
 import { getConfig } from "./get-config.js";
 import {
-  askConfirm,
-  createReadline,
-  cyan,
-  dim,
   findI18nSourceFile,
-  green,
   listAppLocaleFiles,
-  prefix,
-  type Readline,
-  red,
+  noConfigError,
   resolveField,
-  yellow,
 } from "./i18n-shared.js";
 
 const escapeRegExp = (value: string) =>
@@ -76,17 +71,30 @@ export const removeMessagesFromConfig = (
   return source.replace(re, "");
 };
 
-export const i18nDelete = async () => {
-  const appDir = process.cwd();
+/**
+ * `vitnode i18n delete [code]` - removes a language: its translation files,
+ * and its entries in the i18n config. Asks before deleting anything; in a
+ * script, `yes` is that answer.
+ */
+export const i18nDelete = async ({
+  code: provided,
+  context,
+  yes = false,
+}: {
+  code?: string;
+  context: I18nContext;
+  yes?: boolean;
+}): Promise<number> => {
+  const { cwd, prompter, ui } = context;
+  const { colors } = ui;
+  const appDir = cwd;
 
-  const webConfig = await getConfig({ optional: true });
+  const webConfig = await getConfig({ baseDir: cwd, optional: true });
   const config =
-    webConfig ?? (await getConfig({ optional: true, type: "api.config" }));
+    webConfig ??
+    (await getConfig({ baseDir: cwd, optional: true, type: "api.config" }));
 
-  if (!config) {
-    console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
-    process.exit(1);
-  }
+  if (!config) throw noConfigError();
 
   const defaultLocale = config.i18n?.defaultLocale ?? "en";
   const existingLocales = (config.i18n?.locales ?? []).map(locale => ({
@@ -113,11 +121,6 @@ export const i18nDelete = async () => {
     return null;
   };
 
-  const argCode = process.argv[3];
-  const isInteractive = process.stdin.isTTY ?? false;
-  // Open readline when interactive - both to prompt for a missing code and to
-  // confirm before deleting.
-  const rl: null | Readline = isInteractive ? createReadline() : null;
   const sourceFile = findI18nSourceFile(appDir);
   const headingFor = (value: string): string => {
     const label = existingLocales.find(locale => locale.code === value)?.name;
@@ -125,38 +128,36 @@ export const i18nDelete = async () => {
     return label ? `${label} (${value})` : value;
   };
 
-  let code = "";
-  let confirmed = true;
-  try {
-    code = await resolveField({
-      missingMessage: "Missing locale code. Run: vitnode i18n:delete <code>",
-      provided: argCode,
-      question: cyan("? Locale code to remove: "),
-      rl,
-      validate: validateCode,
-    });
+  const code = await resolveField({
+    context,
+    missingMessage: "Missing locale code. Run: vitnode i18n delete <code>",
+    provided,
+    question: "Locale code to remove",
+    validate: validateCode,
+  });
 
-    // Confirm before touching anything - deleting is not easily undone.
-    if (rl) {
-      console.log(`\n${prefix} About to remove ${yellow(headingFor(code))}:`);
-      for (const file of appFiles.filter(f => f.locale === code)) {
-        console.log(dim(`  delete  ${relative(appDir, file.path)}`));
-      }
-      if (sourceFile) {
-        console.log(dim(`  update  ${relative(appDir, sourceFile)}`));
-      }
-      confirmed = await askConfirm(rl, cyan("\n? Remove it? [y/N] "));
-    }
-  } finally {
-    rl?.close();
+  // Show exactly what goes before anything does - deleting is not easily
+  // undone.
+  ui.section(`About to remove ${headingFor(code)}`);
+  for (const file of appFiles.filter(f => f.locale === code)) {
+    ui.note(`delete  ${relative(appDir, file.path)}`);
   }
+  if (sourceFile) ui.note(`update  ${relative(appDir, sourceFile)}`);
+  ui.line();
+
+  const confirmed = await requireConfirmation({
+    message: `Remove ${headingFor(code)}?`,
+    prompter,
+    ui,
+    yes,
+  });
 
   if (!confirmed) {
-    console.log(dim("\nAborted, nothing was removed."));
-    process.exit(0);
-  }
+    ui.note("Aborted, nothing was removed.");
+    ui.line();
 
-  console.log();
+    return EXIT_CODE.ok;
+  }
 
   // 1. Delete the override files, then any directory they leave empty.
   const localesRoot = join(appDir, "src", "locales");
@@ -173,7 +174,7 @@ export const i18nDelete = async () => {
   };
   for (const file of appFiles.filter(f => f.locale === code)) {
     unlinkSync(file.path);
-    console.log(green(`  deleted  ${relative(appDir, file.path)}`));
+    ui.line(colors.success(`  deleted  ${relative(appDir, file.path)}`));
     pruneEmptyDirs(dirname(file.path));
   }
 
@@ -186,10 +187,13 @@ export const i18nDelete = async () => {
     );
     if (updated !== original) {
       writeFileSync(sourceFile, updated);
-      console.log(green(`  updated  ${relative(appDir, sourceFile)}`));
+      ui.line(colors.success(`  updated  ${relative(appDir, sourceFile)}`));
     }
   }
 
-  console.log(`\n${prefix} ${green(headingFor(code))} removed.`);
-  process.exit(0);
+  ui.line();
+  ui.success(`${headingFor(code)} removed.`);
+  ui.line();
+
+  return EXIT_CODE.ok;
 };

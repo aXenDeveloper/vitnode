@@ -12,6 +12,7 @@ VitNodeAPI({
 });
 
 export default {
+  hostname: process.env.HOST,
   port: Number(process.env.PORT ?? 8000),
   fetch: app.fetch,
 };

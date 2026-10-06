@@ -1,0 +1,82 @@
+---
+title: VitNode CLI
+description: The vitnode command runs, builds and starts VitNode apps, validates plugins, manages database migrations and translations.
+icon: SquareTerminal
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+`vitnode` is the command-line tool for VitNode projects. It ships with `@vitnode/core`, so every VitNode app and plugin already has it. You do not install anything extra.
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run the VitNode CLI">
+
+```bash tab="bun"
+bun run vitnode dev
+```
+
+```bash tab="pnpm"
+pnpm vitnode dev
+```
+
+```bash tab="npm"
+npx vitnode dev
+```
+
+</Tabs>
+
+Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
+
+## Commands
+
+| Command                   | What it does                                   | Guide                                   |
+| ------------------------- | ---------------------------------------------- | --------------------------------------- |
+| `vitnode dev`             | Start the development environment              | [Run in development](/docs/dev/cli/dev) |
+| `vitnode build`           | Build for production and report bundle sizes   | [Build and start](/docs/dev/cli/build)  |
+| `vitnode start`           | Start the production server                    | [Build and start](/docs/dev/cli/build)  |
+| `vitnode plugin list`     | List the plugins your app uses                 | [Plugins](/docs/dev/cli/plugins)        |
+| `vitnode plugin validate` | Check plugins the way your app will load them  | [Plugins](/docs/dev/cli/plugins)        |
+| `vitnode db generate`     | Write a migration for schema changes           | [Database](/docs/dev/cli/database)      |
+| `vitnode db migrate`      | Apply pending migrations and seed initial data | [Database](/docs/dev/cli/database)      |
+| `vitnode db status`       | Show the connection and what is pending        | [Database](/docs/dev/cli/database)      |
+| `vitnode db push`         | Sync the schema directly, in development only  | [Database](/docs/dev/cli/database)      |
+| `vitnode i18n <command>`  | Add, check, sync and translate languages       | [Internationalization](/docs/dev/i18n)  |
+
+To create a plugin, use the project generator: `create-vitnode-app --plugin`. See [Create a plugin](/docs/dev/plugins/create).
+
+Run `vitnode` alone (or `vitnode --help`) for a short overview, `vitnode <command> --help` for a command's options, and `vitnode --version` for the installed `@vitnode/core` version.
+
+## How the CLI picks your project
+
+`dev`, `build` and `start` act on the project in the current folder. The CLI walks up to the nearest `package.json` and checks, in this order:
+
+| The folder has                         | It is a        |
+| -------------------------------------- | -------------- |
+| `vite.config.ts` (or `.mts`, `.js`...) | App            |
+| `src/vitnode.api.config.ts`            | API app        |
+| `tsconfig.build.json` and `.swcrc`     | Plugin package |
+
+Run it at a monorepo root and the CLI stops with a hint to `cd` into your app, such as `apps/web`, instead of guessing which project you meant.
+
+## Works with your tools, not instead of them
+
+The CLI drives the tools your project already uses: Vite through its JavaScript API, TanStack Start through your `vite.config.ts`, and your project's own `drizzle-kit`. You can still run `vite` or `drizzle-kit` directly. `vitnode` adds the database bootstrap, plugin checks and readable output around them.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Run in development"
+    description="Start the dev server for an app, API or plugin"
+    href="/docs/dev/cli/dev"
+  />
+  <Card
+    title="Output and exit codes"
+    description="Plain logs, verbose output and what each exit code means"
+    href="/docs/dev/cli/output"
+  />
+  <Card
+    title="Use the CLI in CI"
+    description="Validate, build and migrate in a pipeline"
+    href="/docs/dev/cli/ci"
+  />
+</Cards>

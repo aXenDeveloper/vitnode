@@ -421,7 +421,7 @@ export const readOptionalPluginModules = <
  * package specifier - and this skips those rather than guessing. A check that
  * failed a build over a callback it misread would be worse than no check.
  */
-const assertComponentsImportable = (
+export const assertComponentsImportable = (
   compiled: CompiledPluginRoutes,
   routesFiles: ReadonlyMap<string, string>,
 ): void => {

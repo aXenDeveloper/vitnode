@@ -10,6 +10,31 @@ import { isFolderEmpty } from "../helpers/is-folder-empty.js";
 import { isWriteable } from "../helpers/is-writeable.js";
 import { validateNpmName } from "../helpers/validate-pkg.js";
 
+/**
+ * Names a plugin cannot take: its first page is served at `/<name>`, and
+ * these are core's own top-level routes (or route areas). A plugin named
+ * `admin` would fail its first build with a route collision; refusing it here
+ * says so before any file is written.
+ */
+export const RESERVED_PLUGIN_NAMES: ReadonlySet<string> = new Set([
+  "admin",
+  "api",
+  "core",
+  "discover",
+  "files",
+  "login",
+  "notifications",
+  "register",
+  "search",
+  "users",
+  "vitnode",
+]);
+
+export const reservedPluginNameProblem = (name: string): null | string =>
+  RESERVED_PLUGIN_NAMES.has(name)
+    ? `"${name}" is reserved - VitNode core already serves /${name}. Choose another name.`
+    : null;
+
 export const validationProjectForPlugin = async (projectPath: string) => {
   if (!projectPath) {
     console.log(
@@ -95,6 +120,12 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     validation.problems.forEach(p => {
       console.error(`${color.red(color.bold("*"))} ${p}`);
     });
+    process.exit(1);
+  }
+
+  const reserved = reservedPluginNameProblem(projectName);
+  if (reserved !== null) {
+    console.error(`${color.red("Error:")} ${reserved}`);
     process.exit(1);
   }
 

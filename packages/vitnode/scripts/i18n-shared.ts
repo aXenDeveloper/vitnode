@@ -1,10 +1,11 @@
-/* eslint-disable no-console */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { stdin as input, stdout as output } from "node:process";
-import { createInterface } from "node:readline/promises";
+
+import type { Prompter } from "./cli/ui/prompts.js";
+import type { Ui } from "./cli/ui/ui.js";
 
 import { deepMerge } from "../src/lib/i18n/deep-merge.js";
+import { ConfigError, UserError } from "./cli/errors.js";
 import { findPackagePath } from "./shared/file-utils.js";
 
 export const CORE_PLUGIN_ID = "@vitnode/core";
@@ -144,79 +145,52 @@ export const effectiveDefaultTree = (
     appOverrideTree(appDir, pluginId, defaultLocale),
   );
 
-export const dim = (value: string) => `\x1b[90m${value}\x1b[0m`;
-export const red = (value: string) => `\x1b[31m${value}\x1b[0m`;
-export const green = (value: string) => `\x1b[32m${value}\x1b[0m`;
-export const cyan = (value: string) => `\x1b[36m${value}\x1b[0m`;
-export const yellow = (value: string) => `\x1b[33m${value}\x1b[0m`;
-export const prefix = "\x1b[34m[VitNode]\x1b[0m";
+/** What every i18n command runs with: where, how to talk, how to ask. */
+export interface I18nContext {
+  cwd: string;
+  prompter: Prompter;
+  ui: Ui;
+}
 
-// `createInterface` is overloaded, which makes `ReturnType<typeof
-// createInterface>` resolve to `never`; go through a plain factory instead.
-export const createReadline = () => createInterface({ input, output });
-export type Readline = ReturnType<typeof createReadline>;
-
-/** Re-prompts until the answer passes `validate` (which returns an error or null). */
-export const askQuestion = async (
-  rl: Readline,
-  question: string,
-  validate: (value: string) => null | string,
-): Promise<string> => {
-  for (;;) {
-    const value = (await rl.question(question)).trim();
-    const error = validate(value);
-    if (error) {
-      console.log(red(`  ${error}`));
-      continue;
-    }
-
-    return value;
-  }
-};
-
-/** A yes/no prompt that defaults to no. */
-export const askConfirm = async (
-  rl: Readline,
-  question: string,
-): Promise<boolean> => {
-  const answer = (await rl.question(question)).trim().toLowerCase();
-
-  return answer === "y" || answer === "yes";
-};
+/** The error every i18n command gives when there is no VitNode config here. */
+export const noConfigError = () =>
+  new ConfigError("No vitnode.config.ts or vitnode.api.config.ts found.", {
+    hint: "Run i18n commands in a VitNode app.",
+  });
 
 /**
- * Takes a value from the command line when provided, otherwise prompts for it.
- * A value given inline is validated once and hard-fails; a missing value with
- * no interactive prompt (`rl === null`) hard-fails with `missingMessage`.
+ * Takes a value from the command line when provided, otherwise asks for it.
+ *
+ * A value given inline is validated once and refused outright; a missing value
+ * with nobody to ask is refused with `missingMessage` - a script or CI job
+ * never waits on a prompt.
  */
 export const resolveField = async ({
+  context: { prompter, ui },
   missingMessage,
   provided,
   question,
-  rl,
   validate,
 }: {
+  context: I18nContext;
   missingMessage: string;
   provided: string | undefined;
   question: string;
-  rl: null | Readline;
   validate: (value: string) => null | string;
 }): Promise<string> => {
   if (provided !== undefined) {
     const error = validate(provided);
-    if (error) {
-      console.error(red(error));
-      process.exit(1);
-    }
+    if (error) throw new UserError(error);
 
     return provided;
   }
-  if (!rl) {
-    console.error(red(missingMessage));
-    process.exit(1);
-  }
+  if (!ui.interactive) throw new UserError(missingMessage);
 
-  return askQuestion(rl, question, validate);
+  return (
+    await prompter.text(question, {
+      validate: value => validate(value.trim()) ?? true,
+    })
+  ).trim();
 };
 
 /** Finds the source file that declares the app's i18n config, if any. */

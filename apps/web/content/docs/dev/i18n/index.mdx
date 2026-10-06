@@ -18,23 +18,33 @@ Add a new language in two CLI commands:
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Add a language">
 
 ```bash tab="bun"
-bun run vitnode i18n:create de Deutsch
-bun run vitnode i18n:check
+bun run vitnode i18n create de Deutsch
+bun run vitnode i18n check
 ```
 
 ```bash tab="pnpm"
-pnpm vitnode i18n:create de Deutsch
-pnpm vitnode i18n:check
+pnpm vitnode i18n create de Deutsch
+pnpm vitnode i18n check
 ```
 
 ```bash tab="npm"
-npx vitnode i18n:create de Deutsch
-npx vitnode i18n:check
+npx vitnode i18n create de Deutsch
+npx vitnode i18n check
 ```
 
 </Tabs>
 
-`i18n:create` adds the language to `src/vitnode.config.ts`, seeds a translation file per installed package, and registers the loaders in `src/locales/app.ts`. `i18n:check` scans for missing or untranslated keys - including a file nobody imports, which is the usual reason a translation "does not apply".
+`vitnode i18n create` adds the language to `src/vitnode.config.ts`, seeds a translation file per installed package, and registers the loaders in `src/locales/app.ts`. `vitnode i18n check` scans for missing or untranslated keys - including a file nobody imports, which is the usual reason a translation "does not apply".
+
+| Command                  | What it does                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| `vitnode i18n create`    | Add a language: seed its files and wire them into the config                                  |
+| `vitnode i18n check`     | Report missing, unknown and unloaded translations (`--ci` fails on missing keys)              |
+| `vitnode i18n update`    | Sync translation files with the default language's keys                                       |
+| `vitnode i18n update-ai` | Translate strings still in the default language with an AI model (`--model`, `--concurrency`) |
+| `vitnode i18n delete`    | Remove a language (`--yes` to skip the question)                                              |
+
+Arguments skip their questions, so every command works in a script: without a terminal, a missing argument is an error (exit code `2`) rather than a prompt that waits forever. The older `i18n:create`-style names still work.
 
 ---
 
@@ -82,7 +92,7 @@ export const vitNodeServerConfig = buildServerConfig({
 
 <Callout type="warn" title="Not in vitnode.config.ts">
   Putting a loader in the shared config puts every plugin's AdminCP copy in your
-  browser bundle, and makes your Vite build execute it. `vitnode i18n:create`
+  browser bundle, and makes your Vite build execute it. `vitnode i18n create`
   writes to the right file for you.
 </Callout>
 
@@ -182,7 +192,7 @@ export const appMessages: AppMessagesMap = {
 }
 ```
 
-`i18n:check` treats it like a package: your default-locale file is the source of truth, and every other language is checked against it for missing and leftover keys. No default-locale file at all is an error - there would be nothing to translate from.
+`vitnode i18n check` treats it like a package: your default-locale file is the source of truth, and every other language is checked against it for missing and leftover keys. No default-locale file at all is an error - there would be nothing to translate from.
 
 ---
 

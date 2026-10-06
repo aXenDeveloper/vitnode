@@ -50,7 +50,7 @@ Two files, and the line between them is one question: may a browser hold this?
 
 Add a language to `i18n.locales` in the shared config; register the files that
 translate it in `src/locales/packages.ts` (a package's own translations) or
-`src/locales/app.ts` (your rewordings). `pnpm vitnode i18n:create de Deutsch`
+`src/locales/app.ts` (your rewordings). `pnpm vitnode i18n create de Deutsch`
 does all three.
 
 `src/start.ts` is one call to `createVitNodeStart`, which installs CSRF

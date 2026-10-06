@@ -1,0 +1,85 @@
+---
+title: Use the CLI in CI
+description: Validate plugins, build with readable logs and apply migrations with the VitNode CLI in GitHub Actions, Docker and other pipelines.
+icon: Workflow
+---
+
+The VitNode CLI runs in pipelines without changes: it never waits for input there, and every command exits with a non-zero code when it fails, so a pipeline stops at the first problem.
+
+```bash
+vitnode plugin validate
+vitnode build --plain
+vitnode db migrate --yes
+```
+
+Run each command in your app's folder, so the CLI finds the app's config.
+
+## GitHub Actions
+
+```yaml title=".github/workflows/build.yml"
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:plugins
+      - run: pnpm --filter web exec vitnode plugin validate
+      - run: pnpm --filter web exec vitnode build --plain
+```
+
+`--filter web` runs `vitnode` in the `web` app's folder. Plugins are built first, because validation and the app build both read their `dist` output.
+
+To compare bundle sizes between runs, cache `node_modules/.cache/vitnode`. That is where `vitnode build` keeps the previous build's sizes.
+
+## Migrate during deployment
+
+```bash
+POSTGRES_URL=postgresql://... vitnode db migrate --yes
+vitnode start
+```
+
+Run migrations once per deployment, before the new version starts. `--yes` is required, because the CLI never waits for an answer without an interactive terminal. If two instances start at once, the second waits for the first instead of racing it.
+
+## What changes in a pipeline
+
+Under CI, with piped output, or when stdin is not a terminal, the CLI:
+
+- shows no spinners, animations or cursor movement
+- never prompts: a command that needs a confirmation exits with code `2` and names the flag to pass, such as `--yes`
+
+`--plain` gives stable, prefixed lines that are easy to grep:
+
+```txt title="vitnode build --plain (excerpt)"
+VitNode - Production build
+[OK] Configuration loaded, plugin routes generated (1.5s)
+[OK] Building client (21.7s)
+[OK] Building server (12.8s)
+[WARN] admin-D2kL8aQ1.js is larger than the recommended 500.0 kB for a client chunk.
+```
+
+Size warnings never fail a build. [Output and exit codes](/docs/dev/cli/output) lists every exit code and how colors are chosen.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Output and exit codes"
+    description="Plain logs, colors and exit codes"
+    href="/docs/dev/cli/output"
+  />
+  <Card
+    title="Self-hosted deployment"
+    description="Build, migrate and run on your own server"
+    href="/docs/dev/deployments/self-hosted"
+  />
+</Cards>

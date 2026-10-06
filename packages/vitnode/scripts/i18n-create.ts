@@ -1,20 +1,16 @@
-/* eslint-disable no-console */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
+import type { I18nContext } from "./i18n-shared.js";
+
+import { EXIT_CODE } from "./cli/errors.js";
 import { getConfig } from "./get-config.js";
 import {
   appScope,
   CORE_PLUGIN_ID,
-  createReadline,
-  cyan,
-  dim,
   effectiveDefaultTree,
   findI18nSourceFile,
-  green,
-  prefix,
-  type Readline,
-  red,
+  noConfigError,
   resolveField,
 } from "./i18n-shared.js";
 import { findRepoRoot } from "./shared/file-utils.js";
@@ -293,19 +289,38 @@ ${entries}
 `;
 };
 
-export const i18nCreate = async () => {
-  const appDir = process.cwd();
+/**
+ * `vitnode i18n create [code] [name...]` - adds a language: one translation
+ * file per package, seeded with the default language's strings so every key
+ * is there to translate, then wired into the app's config.
+ *
+ * Anything given on the command line skips its question, so the command is
+ * scriptable and never waits on a terminal nobody is at.
+ */
+export const i18nCreate = async ({
+  code: providedCode,
+  context,
+  name: providedName,
+}: {
+  code?: string;
+  context: I18nContext;
+  name?: string;
+}): Promise<number> => {
+  const { cwd, ui } = context;
+  const { colors } = ui;
+  const green = colors.success;
+  const dim = colors.muted;
+  const appDir = cwd;
 
   // Load both configs: their presence tells us the app's shape (frontend, API,
   // or both), which decides how much of each package to seed.
-  const webConfig = await getConfig({ optional: true });
-  const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  const [webConfig, apiConfig] = await Promise.all([
+    getConfig({ baseDir: cwd, optional: true }),
+    getConfig({ baseDir: cwd, optional: true, type: "api.config" }),
+  ]);
   const config = webConfig ?? apiConfig;
 
-  if (!config) {
-    console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
-    process.exit(1);
-  }
+  if (!config) throw noConfigError();
 
   // An API-only app seeds email strings alone; a single app gets both trees.
   const scope = appScope({ api: apiConfig !== null, web: webConfig !== null });
@@ -344,43 +359,21 @@ export const i18nCreate = async () => {
   const validateName = (value: string): null | string =>
     value ? null : "A language name is required.";
 
-  // `vitnode i18n:create [code] [name...]` - anything supplied on the command
-  // line skips its prompt, so the command is scriptable and never blocks on a
-  // non-interactive stdin.
-  const [argCode, ...argNameParts] = process.argv.slice(3);
-  const argName = argNameParts.join(" ").trim() || undefined;
-  const isInteractive = process.stdin.isTTY ?? false;
-  const needsPrompt = argCode === undefined || argName === undefined;
-  const rl: null | Readline =
-    isInteractive && needsPrompt ? createReadline() : null;
-  const missing = 'Run: vitnode i18n:create <code> "<name>"';
-
-  if (rl) {
-    console.log(`${prefix} Add a language. Press Ctrl+C to abort.\n`);
-  }
-
-  let code: string;
-  let name: string;
-  try {
-    code = await resolveField({
-      missingMessage: `Missing locale code. ${missing}`,
-      provided: argCode,
-      question: cyan("? Locale code (e.g. pl, de, pt-BR): "),
-      rl,
-      validate: validateCode,
-    });
-    name = await resolveField({
-      missingMessage: `Missing language name. ${missing}`,
-      provided: argName,
-      question: cyan("? Language name (e.g. Polski, Deutsch): "),
-      rl,
-      validate: validateName,
-    });
-  } finally {
-    rl?.close();
-  }
-
-  console.log();
+  const missing = 'Run: vitnode i18n create <code> "<name>"';
+  const code = await resolveField({
+    context,
+    missingMessage: `Missing locale code. ${missing}`,
+    provided: providedCode,
+    question: "Locale code (e.g. pl, de, pt-BR)",
+    validate: validateCode,
+  });
+  const name = await resolveField({
+    context,
+    missingMessage: `Missing language name. ${missing}`,
+    provided: providedName?.trim() === "" ? undefined : providedName?.trim(),
+    question: "Language name (e.g. Polski, Deutsch)",
+    validate: validateName,
+  });
 
   // 1. Seed one override file per package with that package's default-locale
   //    strings for the trees this app uses, so every key is present to
@@ -431,10 +424,10 @@ export const i18nCreate = async () => {
     wiredPluginIds.push(pluginId);
   }
 
-  for (const file of created) console.log(green(`  created  ${file}`));
-  for (const file of skipped) console.log(dim(`  exists   ${file}`));
+  for (const file of created) ui.line(green(`  created  ${file}`));
+  for (const file of skipped) ui.line(dim(`  exists   ${file}`));
   for (const pluginId of empty) {
-    console.log(dim(`  skipped  ${pluginId} (no strings for this app)`));
+    ui.line(dim(`  skipped  ${pluginId} (no strings for this app)`));
   }
 
   // 2. Wire the loaders into the app's own message map, which is where a
@@ -453,7 +446,7 @@ export const i18nCreate = async () => {
 
     if (wired) {
       writeFileSync(appMessagesPath, wired);
-      console.log(green(`  updated  ${APP_MESSAGES_FILE}`));
+      ui.line(green(`  updated  ${APP_MESSAGES_FILE}`));
       wroteAppMessages = true;
     }
   }
@@ -473,13 +466,12 @@ export const i18nCreate = async () => {
         pluginIds: wiredPluginIds,
       }),
     );
-    console.log(green(`  created  ${relative(appDir, target)}`));
+    ui.line(green(`  created  ${relative(appDir, target)}`));
     const builder = isApiOnly ? "buildApiConfig" : "buildConfig";
-    console.log(
-      `\n${prefix} Import it into your config so the app picks it up:\n` +
-        dim('  import { i18n } from "./i18n";\n') +
-        dim(`  ${builder}({ i18n, /* ... */ });`),
-    );
+    ui.line();
+    ui.info("Import it into your config so the app picks it up:");
+    ui.line(dim('    import { i18n } from "./i18n";'));
+    ui.line(dim(`    ${builder}({ i18n, /* ... */ });`));
   } else {
     const original = readFileSync(sourceFile, "utf-8");
     const withLocale = addLocaleToConfig(original, { code, name });
@@ -493,15 +485,18 @@ export const i18nCreate = async () => {
 
     if (wired) {
       writeFileSync(sourceFile, wired);
-      console.log(green(`  updated  ${relative(appDir, sourceFile)}`));
+      ui.line(green(`  updated  ${relative(appDir, sourceFile)}`));
     } else {
       // The config is shaped in a way we will not edit blindly - show the
       // exact lines to add instead of risking a broken file.
-      console.log(
-        `\n${prefix} Couldn't edit ${relative(appDir, sourceFile)} automatically. Add:\n` +
-          dim(
-            `  locales: [{ code: ${stringLiteral(code)}, name: ${stringLiteral(name)} }, /* ... */]`,
-          ),
+      ui.line();
+      ui.warning(
+        `Couldn't edit ${relative(appDir, sourceFile)} automatically. Add:`,
+      );
+      ui.line(
+        dim(
+          `    locales: [{ code: ${stringLiteral(code)}, name: ${stringLiteral(name)} }, /* ... */]`,
+        ),
       );
     }
 
@@ -509,15 +504,18 @@ export const i18nCreate = async () => {
       const messages = wiredPluginIds
         .map(id => `    "${id}": () => import("./${id}/${code}.json"),`)
         .join("\n");
-      console.log(
-        `\n${prefix} And register the files in ${APP_MESSAGES_FILE}:\n` +
-          dim(`  "${code}": {\n${messages}\n  },`),
-      );
+      ui.line();
+      ui.info(`And register the files in ${APP_MESSAGES_FILE}:`);
+      ui.line(dim(`  "${code}": {\n${messages}\n  },`));
     }
   }
 
-  console.log(
-    `\n${prefix} ${green(name)} (${code}) added. Translate the files above, then run ${cyan("vitnode i18n:check")}.`,
+  ui.line();
+  ui.success(`${name} (${code}) added.`);
+  ui.note(
+    `Translate the files above, then run ${colors.command("vitnode i18n check")}.`,
   );
-  process.exit(0);
+  ui.line();
+
+  return EXIT_CODE.ok;
 };

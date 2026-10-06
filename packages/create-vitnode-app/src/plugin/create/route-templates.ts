@@ -251,6 +251,48 @@ export type VitNodeApiPlugin = ApiPluginContract<
 >;
 `;
 
+/**
+ * `src/api/modules/hello/hello.module.test.ts` - the endpoint, exercised
+ * through its own Hono app, with no server and no database.
+ *
+ * A real test of the one thing the scaffold does, so `pnpm test` means
+ * something from the first commit - and a pattern to copy for the next route.
+ */
+export const pluginApiModuleTestTemplate = (pluginName: string): string =>
+  `import { describe, expect, it } from "vitest";
+
+import { helloModule } from "./hello.module";
+
+describe("hello module", () => {
+  it("answers GET / with a greeting from the plugin", async () => {
+    const response = await helloModule.hono.request("/");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      message: "Hello from ${pluginName}!",
+    });
+  });
+});
+`;
+
+/** `README.md` - what the plugin is and the commands that work on it. */
+export const pluginReadmeTemplate = (pluginName: string): string =>
+  `# ${pluginName}
+
+A VitNode plugin. It adds a page at \`/${routeSlugFor(pluginName)}\`, rendered by \`src/pages/home-page.tsx\`, which loads its text from the plugin's own API module in \`src/api/modules/hello\`.
+
+## Develop
+
+\`\`\`bash
+vitnode dev       # rebuild dist/ on every change
+vitnode build     # one-off build
+vitest            # run the plugin's tests
+vitnode plugin validate ${routeSlugFor(pluginName)}
+\`\`\`
+
+Docs: https://vitnode.com/docs/dev/plugins
+`;
+
 export const pluginGlobalTypesTemplate = (): string =>
   `/// <reference types="use-intl" />
 
@@ -297,6 +339,8 @@ export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
   "global.d.ts": pluginGlobalTypesTemplate(),
+  "src/api/modules/hello/hello.module.test.ts":
+    pluginApiModuleTestTemplate(pluginName),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
   "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),

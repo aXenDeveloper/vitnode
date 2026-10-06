@@ -13,7 +13,8 @@ const writeJson = async (path: string, data: unknown) =>
 export const pluginScripts = (eslint: boolean) => ({
   "build:plugins": "vitnode build",
   dev: "vitnode dev",
-  "dev:email": "email dev --dir src/emails",
+  test: "vitest run",
+  "test:watch": "vitest",
   ...withIf(eslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
@@ -66,6 +67,7 @@ export const createPluginPackageJSON = async ({
       }),
       "tsc-alias": versionsPackageJson.tscAlias,
       typescript: versionsPackageJson.typescript,
+      vitest: versionsPackageJson.vitest,
     },
   };
 

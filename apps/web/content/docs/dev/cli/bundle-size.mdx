@@ -1,0 +1,118 @@
+---
+title: Bundle size report
+description: Read the bundle size report from vitnode build, including size thresholds, warnings, the comparison with your previous build and --analyze.
+icon: Gauge
+---
+
+After an app build, `vitnode build` reports every file it wrote, warns about oversized client bundles and compares the result with your previous build. This page explains each part of that report. To run a build, see [Build and start for production](/docs/dev/cli/build).
+
+The report prints in this order: **Output**, **Bundle changes**, **Bundle analysis** (with `--analyze`) and **Warnings**.
+
+## Output
+
+Files are grouped as client JavaScript, CSS, assets, server files and other files. Each group shows its largest files: 10 for client JavaScript, 5 for the rest. Run with `--verbose` to list every file.
+
+| Column | Meaning                                                                     |
+| ------ | --------------------------------------------------------------------------- |
+| Size   | The file on disk, after minification                                        |
+| gzip   | What a browser downloads with gzip, for client JavaScript and CSS only      |
+| brotli | Brotli at quality 11, with `--analyze`, for the 25 largest JS and CSS files |
+
+Sizes use decimal units (`1 kB` = 1000 bytes), like Vite and browser dev tools. Server files are never compressed, because nobody downloads them.
+
+## Size thresholds
+
+Every file gets a symbol from its type and size. Client JavaScript has the strictest budget, because every visitor downloads, parses and runs it. A server bundle is read once at boot, so its limits are much looser.
+
+| File type     | `✓` good | `✓` normal | `!` warning | `▲` large |
+| ------------- | -------- | ---------- | ----------- | --------- |
+| Client JS     | ≤ 100 kB | ≤ 250 kB   | ≤ 500 kB    | > 500 kB  |
+| CSS           | ≤ 50 kB  | ≤ 100 kB   | ≤ 250 kB    | > 250 kB  |
+| Assets, other | ≤ 100 kB | ≤ 500 kB   | ≤ 1 MB      | > 1 MB    |
+| Server        | ≤ 1 MB   | ≤ 5 MB     | ≤ 20 MB     | > 20 MB   |
+
+The 500 kB line for client JavaScript matches Vite's own chunk size warning.
+
+## Warnings
+
+Client chunks get a warning from 250 kB. CSS and assets get one only when they are large. Server files never do. Each warning says what to try:
+
+```txt
+Warnings
+▲ admin-D2kL8aQ1.js is larger than the recommended 500.0 kB for a client chunk.
+    assets/admin-D2kL8aQ1.js  612.4 kB
+  Consider:
+  • @tiptap/core makes up 41.2% of admin-D2kL8aQ1.js - import it with import() where it is needed
+  • load heavy libraries with dynamic import() where they are used
+  • give pages their own chunk: component: lazy(() => import(...)) in routes.ts
+  • lazy-load heavy UI such as editors and dialogs with React.lazy + Suspense
+```
+
+<Callout type="info" title="Warnings never fail a build">
+  Size warnings are recommendations. A build fails only when the build itself
+  fails.
+</Callout>
+
+## Bundle changes
+
+From the second build on, the report shows how client JavaScript, CSS and assets changed:
+
+```txt
+Bundle changes
+  File                         Size       Change
+  ──────────────────────────────────────────────────────
+  assets/editor-H2kq9ZZ1.js    428.6 kB   +86.1 kB   +25.1%   ▲
+  assets/admin-Dk2L8aQ1.js     612.4 kB   -12.8 kB    -2.0%
+  assets/new-page-Ab12cdEf.js    4.1 kB    +4.1 kB            new
+  Client JS total 18.1 MB (+77.4 kB)
+```
+
+- `▲` marks a file that grew by more than 10% and by more than 10 kB.
+- Files that changed by less than 1 kB are left out. New and removed files are always listed.
+- The 10 biggest changes are shown; `--verbose` shows all of them.
+
+Files are matched by what they contain, not by name, so a new content hash does not break the comparison:
+
+- an entry chunk is matched by the module it is built from, such as `src/pages/editor.tsx`
+- a shared chunk is matched by its name and the module that makes up most of it
+- an asset is matched by its source file
+
+A shared chunk with no entry module can show up as one file removed and one added when a refactor changes which module makes up most of it.
+
+The previous sizes are stored in `node_modules/.cache/vitnode/build-snapshot.json`, never in your repository. A missing or unreadable snapshot only skips the comparison.
+
+## Analyze a bundle
+
+```bash
+vitnode build --analyze
+```
+
+```txt
+Bundle analysis
+
+  assets/custom-emoji-BPTfd_f5.js  820.6 kB
+    @tiptap/extension-emoji     ≈ 422.3 kB    51.5%
+    @tiptap/core                ≈ 120.7 kB    14.7%
+    prosemirror-view            ≈ 117.9 kB    14.4%
+    application code             ≈ 50.8 kB     6.2%
+    other                        ≈ 57.9 kB     7.1%
+```
+
+`--analyze` breaks the five largest client chunks down by package, showing up to six contributors each. It uses the module sizes the bundler records, measured before minification. The percentages are exact, and each size (`≈`) is that share of the file on disk. Workspace packages show by name, and your app's own files show as `application code`.
+
+A package that makes up at least 30% of a chunk is also named in that chunk's warning. The analysis prints in the terminal; nothing opens in a browser.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Performance"
+    description="Make pages load faster"
+    href="/docs/dev/performance"
+  />
+  <Card
+    title="Routing"
+    description="Give pages their own lazy chunk"
+    href="/docs/dev/routing"
+  />
+</Cards>

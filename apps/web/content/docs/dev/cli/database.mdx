@@ -1,0 +1,179 @@
+---
+title: Database commands
+description: Generate and apply database migrations, check migration status and push schema changes in development with vitnode db.
+icon: Database
+---
+
+The `vitnode db` commands manage your database schema through migrations: files that describe each change, which you commit so every database gets the same changes in the same order.
+
+```bash
+vitnode db generate   # write a migration for your schema changes
+vitnode db migrate    # apply pending migrations and seed initial data
+vitnode db status     # check the connection and what is pending
+vitnode db push       # sync the schema directly, development only
+```
+
+Run them in the app that owns the database, the one with `drizzle.config.ts`. They use your app's own Drizzle configuration, connection and migration table.
+
+## Generate, migrate or push?
+
+| Command       | What it changes               | Use it                                   |
+| ------------- | ----------------------------- | ---------------------------------------- |
+| `db generate` | Writes a migration file       | After changing tables, before committing |
+| `db migrate`  | Applies migration files       | Everywhere: development, CI, production  |
+| `db push`     | Changes the database directly | Quick experiments in development         |
+
+## Generate a migration
+
+```bash
+vitnode db generate --name notifications
+```
+
+```txt
+◆ VitNode
+  Database
+
+  ✓ Checking migration history  2.7s
+  ✓ Comparing schema with the last migration  3.1s
+
+Schema changes detected
+  + table notifications
+  + table notification_preferences
+  + column users.notification_count
+
+  ✓ Generating migration  3.1s
+
+  ✓ 20261005233216_notifications
+  Apply it with vitnode db migrate.
+```
+
+The list comes from drizzle-kit's own plan, so it is exactly what the migration contains. With no changes, the command prints `No schema changes - nothing to generate.` and exits with `0`.
+
+When drizzle-kit cannot tell whether a column was renamed or replaced, the command lists those changes and hands the terminal to drizzle-kit so you can answer. Without an interactive terminal it stops with exit code `2` instead of guessing.
+
+<Callout type="info" title="Build plugins first">
+  Migrations are generated from each plugin's build output. After changing a
+  plugin's tables, run `vitnode build` in the plugin, then `vitnode db
+  generate`.
+</Callout>
+
+## Apply migrations
+
+```bash
+vitnode db migrate
+```
+
+```txt
+◆ VitNode
+  Database migration
+
+  ✓ Connecting to the database  26ms
+
+Pending migrations
+  ○ 20261004081732_add_core_notifications
+  ○ 20261004112416_allow_null_notification_digest_schedule
+
+◇ Apply 2 migrations? Yes
+  ✓ Applying migrations  840ms
+  ✓ 20261004081732_add_core_notifications
+  ✓ 20261004112416_allow_null_notification_digest_schedule
+
+  ✓ Database is up to date.
+```
+
+`db migrate` applies all pending migrations in one transaction, so a failed migration leaves nothing half-applied, and the error shows Postgres' own details. It then seeds the data every VitNode installation needs, such as languages, roles and permissions.
+
+The seed also runs when no migration is pending. That way a language you add to your config gets its row without a new migration, and `db migrate` stays safe to run on every deployment.
+
+If another process is already preparing the same database, for example a second container starting at the same time, `db migrate` waits for it to finish instead of racing it.
+
+Without an interactive terminal, confirm with `--yes`:
+
+```bash
+vitnode db migrate --yes
+```
+
+Without `--yes`, a non-interactive run with pending migrations exits with code `2` instead of waiting for an answer.
+
+## Check the status
+
+```bash
+vitnode db status
+```
+
+```txt
+◆ VitNode
+  Database
+
+  Provider   PostgreSQL
+  Database   vitnode @ localhost:5432
+  Status     ● connected
+
+Migrations
+  Applied   64
+  Pending   1
+
+Pending
+  ○ 20261005233216_notifications
+```
+
+`db status` only reads. It always connects, so the status is never guessed from the config alone. It warns about an applied migration whose file changed since it ran, or whose file is missing. When the database does not answer within 10 seconds, it exits with code `1`.
+
+## Push the schema in development
+
+```bash
+vitnode db push
+```
+
+```txt
+◆ VitNode
+  Push database schema
+
+  ! Direct schema synchronization is intended for development.
+
+Changes
+  - table zz_drafts
+  + index notifications.notifications_user_id_idx
+
+Data loss
+  ! table zz_drafts (non empty)
+
+◇ Apply 2 changes, including 1 that deletes data? No
+```
+
+`db push` changes the database without writing a migration. It shows every change first and names each one that deletes data. The data-loss question defaults to No.
+
+From a script, pass `--yes` to apply and `--accept-data-loss` to allow changes that delete data. Without `--accept-data-loss`, a non-interactive run that would delete data exits with code `2`.
+
+<Callout type="warn" title="db push refuses production">
+  When `NODE_ENV` is `production`, `vitnode db push` stops before connecting and
+  exits with code `2`. Use `db generate` and `db migrate` instead. Pass
+  `--force` only if you really mean to push to that database.
+</Callout>
+
+## Options
+
+| Command       | Option               | Effect                                        |
+| ------------- | -------------------- | --------------------------------------------- |
+| `db generate` | `--name <name>`      | Name the migration folder                     |
+| `db migrate`  | `-y, --yes`          | Apply without asking                          |
+| `db push`     | `-y, --yes`          | Apply without asking                          |
+| `db push`     | `--accept-data-loss` | Allow changes that delete data                |
+| `db push`     | `--force`            | Allow pushing when `NODE_ENV` is `production` |
+
+Every command also accepts `--plain` and `--verbose`. With `--verbose`, the change lists are not shortened and a failure shows the complete drizzle-kit output.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Database"
+    description="Tables and queries in plugins"
+    href="/docs/dev/database"
+  />
+  <Card
+    title="Use the CLI in CI"
+    description="Migrate during deployment"
+    href="/docs/dev/cli/ci"
+  />
+</Cards>

@@ -1,0 +1,116 @@
+---
+title: Build and start for production
+description: Build a VitNode app, API app or plugin with vitnode build, then run the production server with vitnode start.
+icon: Package
+---
+
+`vitnode build` runs your project's real production build and reports the size of every file it wrote. `vitnode start` then runs the server that build produced, and tells you once it accepts connections.
+
+```bash
+vitnode build
+vitnode start
+```
+
+## Build an app
+
+```txt title="vitnode build (shortened)"
+◆ VitNode
+  Production build
+
+  ✓ Configuration loaded, plugin routes generated  1.5s
+  ✓ Building client  21.7s
+  ✓ Building server  12.8s
+  ✓ Packaging server (Nitro)  21.9s
+  ✓ Measuring output  1.1s
+
+Output
+
+Client JS  .output/public
+  File                              Size       gzip
+  ─────────────────────────────────────────────────
+  ▲ assets/custom-emoji-BPTfd_f5.js   820.6 kB   163.2 kB
+  ! assets/editor-CUh_DSIT.js         319.4 kB   101.0 kB
+  ✓ assets/search-DxtCMbN7.js         223.9 kB    69.1 kB
+  … 4721 more not shown (--verbose lists all) - 4731 files, 18.1 MB, gzip 4.5 MB
+
+Server  .output/server
+  File          Size
+  ──────────────────
+  ✓ index.mjs   1.2 MB
+
+  ✓ Built in 1m 6s
+  Run vitnode start to serve it.
+```
+
+The steps are the build environments your app really has. For a TanStack Start app with Nitro, that is the client, the server, then Nitro's packaged server. VitNode's Vite plugin generates plugin routes and registries while the configuration loads.
+
+The symbols mark how a file compares with its size budget: `✓` is fine, `!` is worth a look and `▲` is large. From the second build on, you also see what grew or shrank since the last one. [Bundle size report](/docs/dev/cli/bundle-size) explains the thresholds, the comparison and `--analyze`.
+
+## Build an API app or a plugin
+
+The same command builds other project types:
+
+| Project        | What `vitnode build` does                                                   |
+| -------------- | --------------------------------------------------------------------------- |
+| API app (Node) | Compiles with `tsc` and `tsc-alias` into `dist`, then lists the output      |
+| API app (Bun)  | Nothing: Bun runs `src/index.ts` directly                                   |
+| Plugin package | Emits type declarations, compiles with `swc` and rewrites aliases in `dist` |
+
+## When a build fails
+
+```txt
+✖ Build failed
+  Plugin   @vitnode/blog
+  File     plugins/blog/src/pages/post.tsx:42:9
+  Step     vite:oxc
+
+  Missing export: title
+```
+
+`Plugin` appears when the failing file belongs to a VitNode plugin package, and `File` and `Step` when the bundler reported them. Below them you get the bundler's message and a code frame, then the last 60 lines of build output. Run with `--verbose` for the full output and stack trace.
+
+## Start the production server
+
+```bash
+vitnode start
+```
+
+```txt
+◆ VitNode
+  Production
+
+  ● Running  http://localhost:3000
+```
+
+`vitnode start` is not a second server. It runs your build's own entry, exactly as `node <entry>` would, and adds two things: "Running" appears only once the server accepts connections, and <kbd>Ctrl</kbd>+<kbd>C</kbd> gives the server time to close cleanly.
+
+| Project        | Entry it runs                                                     | Default port |
+| -------------- | ----------------------------------------------------------------- | ------------ |
+| App            | Nitro's server entry, usually `.output/server/index.mjs`, on Node | `3000`       |
+| API app (Node) | `dist/index.js` on Node                                           | `8000`       |
+| API app (Bun)  | `src/index.ts` on Bun                                             | `8000`       |
+
+`--port` and `--host` set the `PORT` and `HOST` variables your server already reads. The port falls back to `PORT`, then the default above. `NODE_ENV` is set to `production` unless you set it yourself.
+
+`vitnode start` stops with an error when:
+
+- there is no build yet: run `vitnode build` first
+- the app was built for a hosting platform, such as the `vercel` Nitro preset, because that platform runs it
+- something already listens on the port
+- the runtime is missing, for example Bun on a server that only has Node
+- the server exits before it is ready, or does not listen within 60 seconds
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Bundle size report"
+    description="Thresholds, build comparison and bundle analysis"
+    href="/docs/dev/cli/bundle-size"
+  />
+  <Card
+    title="Self-hosted deployment"
+    description="Build, migrate and run on your own server"
+    href="/docs/dev/deployments/self-hosted"
+  />
+</Cards>

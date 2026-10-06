@@ -1,0 +1,15 @@
+{
+  "title": "CLI",
+  "description": "Run, build and start VitNode apps, validate plugins and manage migrations with the vitnode command.",
+  "icon": "SquareTerminal",
+  "pages": [
+    "index",
+    "dev",
+    "build",
+    "bundle-size",
+    "plugins",
+    "database",
+    "ci",
+    "output"
+  ]
+}

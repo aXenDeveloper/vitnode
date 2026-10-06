@@ -34,8 +34,12 @@ const i18nCommands = [
   "i18n:update",
   "i18n:update:ai",
 ] as const;
+/** `i18n:update:ai` → `vitnode i18n update-ai`: the script keeps its name. */
+export const i18nCliCommand = (script: (typeof i18nCommands)[number]) =>
+  `vitnode i18n ${script.slice("i18n:".length).replace(":", "-")}`;
+
 const i18nScripts = Object.fromEntries(
-  i18nCommands.map(command => [command, `vitnode ${command}`]),
+  i18nCommands.map(command => [command, i18nCliCommand(command)]),
 );
 
 const runScript = (pm: string, script: string) =>
@@ -113,35 +117,29 @@ export const apiScripts = (
   return {
     "db:migrate": "vitnode migrate",
     "db:prepare": "vitnode db:prepare",
-    ...(pm === "bun"
-      ? {
-          dev: "vitnode db:prepare && bun run --hot src/index.ts",
-          start: "NODE_ENV=production bun run src/index.ts",
-        }
-      : {
-          dev: "vitnode db:prepare && tsx watch src/index.ts",
-          build: "tsc && tsc-alias -p tsconfig.json",
-          start: "node dist/index.js",
-        }),
+    // `vitnode` follows the project's runtime: on Bun it runs `bun --hot`
+    // and starts `src/index.ts` directly, so there is nothing to build.
+    dev: "vitnode dev",
+    ...(pm === "bun" ? {} : { build: "vitnode build" }),
+    start: "vitnode start",
     "dev:email": "email dev --dir src/emails",
     ...i18nScripts,
     ...withIf(eslint, eslintScripts),
     ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
-    "drizzle-kit": "drizzle-kit",
   };
 };
 
 /**
  * The single app: a TanStack Start site with the Hono API mounted inside it.
  *
- * `vite` rather than `next`, and `start` runs Nitro's own server output rather
- * than a framework CLI: a Start build emits `.output/server/index.mjs`, which is
- * a plain Node entry point and needs nothing installed to run.
+ * `dev`, `build` and `start` are the VitNode CLI, which drives Vite through its
+ * JavaScript API and starts the plain Node entry a Start build emits
+ * (`.output/server/index.mjs`) - nothing beyond Node is needed to run it.
  *
  * **This shape owns a database.** It ships `drizzle.config.ts`, a `migrations/`
  * directory and `vitnode.api.config.ts`, and it serves `/api/*` from its own
  * process - so it is the schema's owner as much as a standalone API app is, and
- * `dev` waits for the bootstrap before Vite starts.
+ * `vitnode dev` runs the database bootstrap before Vite starts.
  *
  * That line went missing in Stage 17 and it is the regression this file was
  * fixed for. The reasoning at the time was correct about the half it was looking
@@ -164,20 +162,19 @@ export const singleAppScripts = (
 ) => ({
   "db:migrate": "vitnode migrate",
   "db:prepare": "vitnode db:prepare",
-  dev: "vitnode db:prepare && vite dev --port 3000",
+  dev: "vitnode dev",
   "dev:email": "email dev --dir src/emails",
-  build: "vite build",
-  start: "node .output/server/index.mjs",
+  build: "vitnode build",
+  start: "vitnode start",
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
-  "drizzle-kit": "drizzle-kit",
 });
 
 export const webScripts = (eslint: boolean) => ({
-  dev: "vite dev --port 3000",
-  build: "vite build",
-  start: "node .output/server/index.mjs",
+  dev: "vitnode dev",
+  build: "vitnode build",
+  start: "vitnode start",
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
 });

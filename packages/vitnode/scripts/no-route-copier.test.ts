@@ -59,7 +59,12 @@ describe("the plugin route copier", () => {
    * three compilers - and `vitnode init` is where a fresh project ran the copy.
    */
   it("is not started by `vitnode dev` or `vitnode init`", () => {
-    expect(codeOf("scripts/dev.ts")).not.toContain("processPlugin");
+    expect(codeOf("scripts/cli/commands/dev.ts")).not.toContain(
+      "processPlugin",
+    );
+    expect(codeOf("scripts/cli/dev/watchers.ts")).not.toContain(
+      "processPlugin",
+    );
     expect(codeOf("scripts/prepare-database.ts")).not.toContain(
       "preparePluginsFiles",
     );

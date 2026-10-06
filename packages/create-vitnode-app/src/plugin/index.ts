@@ -6,7 +6,10 @@ import { basename, resolve } from "node:path";
 import { validateNpmName } from "../helpers/validate-pkg.js";
 import { createPluginVitNode } from "./create/create-plugin-vitnode.js";
 import { createPluginQuestionsCli } from "./questions.js";
-import { validationProjectForPlugin } from "./validation.js";
+import {
+  reservedPluginNameProblem,
+  validationProjectForPlugin,
+} from "./validation.js";
 
 export const createPlugin = async ({
   program,
@@ -21,10 +24,13 @@ export const createPlugin = async ({
       message: "What is your plugin named?",
       default: "my-vitnode-plugin",
       validate: (name: string) => {
-        const validation = validateNpmName({ name: basename(resolve(name)) });
-        if (validation.valid) return true;
+        const base = basename(resolve(name));
+        const validation = validateNpmName({ name: base });
+        if (!validation.valid) {
+          return `Invalid plugin name: ${validation.problems[0]}`;
+        }
 
-        return `Invalid plugin name: ${validation.problems[0]}`;
+        return reservedPluginNameProblem(base) ?? true;
       },
     });
   }
