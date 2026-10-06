@@ -37,18 +37,18 @@ describe("vitnode", () => {
         dev                Start the development environment
         build              Build for production
         start              Start the production server
-        plugin create      Create a plugin
         plugin list        List plugins
         plugin validate    Validate plugins
         db generate        Generate a migration
         db migrate         Run pending migrations
         db push            Push schema changes (development)
         db status          Show migration status
+        i18n <command>     Manage languages and translations
 
       Examples
         vitnode dev
-        vitnode plugin create blog
         vitnode build --analyze
+        vitnode db migrate --yes
 
       Run vitnode <command> --help for a command's options.
       "

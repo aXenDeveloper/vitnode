@@ -1,7 +1,7 @@
 import type { Ui } from "../ui/ui";
 import type { DatabaseServices } from "./database";
 
-import { errorMessage, RuntimeError } from "../errors";
+import { rootCauseMessage, RuntimeError } from "../errors";
 import { withQuietOutput } from "../ui/capture-output";
 import { plural } from "../ui/format";
 import { explain } from "./database";
@@ -81,7 +81,7 @@ export const prepareDevelopmentDatabase = async (
       task.fail("Database unreachable");
       throw new RuntimeError("Could not connect to the database.", {
         cause: error,
-        details: [errorMessage(error)],
+        details: [rootCauseMessage(error)],
         hint: "Is it running? In development, pnpm docker:dev starts one.",
       });
     }

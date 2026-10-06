@@ -90,6 +90,22 @@ export class RuntimeError extends CliError {
 export const isCliError = (error: unknown): error is CliError =>
   error instanceof CliError;
 
+/**
+ * The message of the innermost `cause` - for errors a library wraps, such as
+ * Drizzle's "Failed query: SELECT 1" around the driver's `ECONNREFUSED`, where
+ * only the inner one says what actually went wrong.
+ */
+export const rootCauseMessage = (error: unknown): string => {
+  let current = error;
+  for (let depth = 0; depth < 10; depth += 1) {
+    const { cause } = (current ?? {}) as { cause?: unknown };
+    if (!(cause instanceof Error) || cause.message === "") break;
+    current = cause;
+  }
+
+  return errorMessage(current);
+};
+
 /** The message of anything thrown, for places that only need one line. */
 export const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);

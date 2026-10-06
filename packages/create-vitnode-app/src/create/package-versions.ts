@@ -49,5 +49,6 @@ export const versionsPackageJson = {
   tslib: "^2.8.1",
   swcCli: "^0.8.1",
   swcCore: "^1.16",
+  vitest: "^5.0",
   shadcn: "^4.21",
 };

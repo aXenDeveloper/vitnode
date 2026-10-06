@@ -2,8 +2,7 @@
 import { count, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createJiti } from "jiti";
-import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import postgres from "postgres";
 
 import { core_admin_permissions } from "@/database/admins.js";
@@ -18,6 +17,7 @@ import type { VitNodeApiConfig } from "../src/vitnode.config.js";
 import { RuntimeError } from "./cli/errors.js";
 import { resolveBin } from "./cli/project/packages.js";
 import { runProcess } from "./cli/project/processes.js";
+import { findDrizzleConfig } from "./cli/project/project.js";
 import { getConfig } from "./get-config.js";
 
 /**
@@ -25,6 +25,24 @@ import { getConfig } from "./get-config.js";
  * script in between - the app needs `drizzle-kit` installed, not a
  * `"drizzle-kit"` entry in its `package.json`.
  */
+/**
+ * Names the project's Drizzle config explicitly - `.mts`, `.js` or `.mjs` as
+ * much as `.ts` - so drizzle-kit and the CLI never read two different files.
+ */
+export const withConfigFlag = (
+  args: readonly string[],
+  root: string,
+): string[] => {
+  const config = findDrizzleConfig(root);
+  if (config === null || args.includes("--config") || args.length === 0) {
+    return [...args];
+  }
+
+  const [command, ...rest] = args;
+
+  return [command, "--config", relative(root, config), ...rest];
+};
+
 export const runDrizzleKit = async (
   args: readonly string[],
   {
@@ -33,7 +51,7 @@ export const runDrizzleKit = async (
   }: { capture?: boolean; root?: string } = {},
 ) =>
   runProcess({
-    args: [resolveBin(root, "drizzle-kit"), ...args],
+    args: [resolveBin(root, "drizzle-kit"), ...withConfigFlag(args, root)],
     capture,
     command: process.execPath,
     cwd: root,
@@ -73,7 +91,7 @@ export interface DrizzleProjectConfig {
 export const readDrizzleConfig = async (
   root: string = process.cwd(),
 ): Promise<DrizzleProjectConfig> => {
-  const configPath = join(root, "drizzle.config.ts");
+  const configPath = findDrizzleConfig(root);
   const config: DrizzleProjectConfig = {
     dialect: null,
     migrationsFolder: join(root, "migrations"),
@@ -81,7 +99,7 @@ export const readDrizzleConfig = async (
     migrationsTable: "__drizzle_migrations",
   };
 
-  if (!existsSync(configPath)) return config;
+  if (configPath === null) return config;
 
   try {
     const jiti = createJiti(import.meta.url, { interopDefault: true });

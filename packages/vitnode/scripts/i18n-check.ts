@@ -1,18 +1,20 @@
-/* eslint-disable no-console */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
+import type { Ui } from "./cli/ui/ui.js";
+
+import { EXIT_CODE, ValidationError } from "./cli/errors.js";
 import { getConfig } from "./get-config.js";
-import { appOwnedIds, appScope, packageLocaleFiles } from "./i18n-shared.js";
+import {
+  appOwnedIds,
+  appScope,
+  noConfigError,
+  packageLocaleFiles,
+} from "./i18n-shared.js";
 import { findRepoRoot } from "./shared/file-utils.js";
 
 const CORE_PLUGIN_ID = "@vitnode/core";
 const MAX_LISTED_KEYS = 8;
-
-const dim = (value: string) => `\x1b[90m${value}\x1b[0m`;
-const red = (value: string) => `\x1b[31m${value}\x1b[0m`;
-const yellow = (value: string) => `\x1b[33m${value}\x1b[0m`;
-const green = (value: string) => `\x1b[32m${value}\x1b[0m`;
 
 /** Flattens a message tree into the dotted leaf paths translators care about. */
 const flattenKeys = (value: unknown, prefix = ""): string[] => {
@@ -25,13 +27,16 @@ const flattenKeys = (value: unknown, prefix = ""): string[] => {
   );
 };
 
-const readKeys = (filePath: string): null | string[] => {
+const readKeys = (
+  filePath: string,
+  onError: (message: string) => void,
+): null | string[] => {
   if (!existsSync(filePath)) return null;
 
   try {
     return flattenKeys(JSON.parse(readFileSync(filePath, "utf-8")));
   } catch (error) {
-    console.error(red(`  Could not parse ${filePath}: ${String(error)}`));
+    onError(`  Could not parse ${filePath}: ${String(error)}`);
 
     return [];
   }
@@ -66,26 +71,51 @@ const readAppLocaleFiles = (appDir: string) => {
   return files;
 };
 
-export const i18nCheck = async (flag?: string) => {
-  const isCi = flag === "--ci";
-  const appDir = process.cwd();
+/**
+ * `vitnode i18n check` - which translations are missing, unknown or never
+ * loaded.
+ *
+ * A missing or unloadable file always fails. Key-level gaps fall back to the
+ * default locale at runtime, so they only fail with `ci` - the switch a
+ * pipeline uses to hold translations to the same bar as the build.
+ */
+export const i18nCheck = async ({
+  ci = false,
+  cwd,
+  ui,
+}: {
+  ci?: boolean;
+  cwd: string;
+  ui: Ui;
+}): Promise<number> => {
+  const { colors } = ui;
+  const red = colors.error;
+  const yellow = colors.warning;
+  const green = colors.success;
+  const dim = colors.muted;
+  const say = (text: string) => {
+    ui.line(text);
+  };
+  const appDir = cwd;
   const repoRoot = findRepoRoot(appDir);
 
-  const webConfig = await getConfig({ optional: true });
-  const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  const webConfig = await getConfig({ baseDir: cwd, optional: true });
+  const apiConfig = await getConfig({
+    baseDir: cwd,
+    optional: true,
+    type: "api.config",
+  });
   // The app's own message loaders live in the server-only config now, because
   // the shared one is browser-safe. Read from both, so an installation still on
   // the old shape - loaders inside `i18n.messages` - is measured correctly.
   const serverConfig = await getConfig({
+    baseDir: cwd,
     optional: true,
     type: "server.config",
   });
   const config = webConfig ?? apiConfig;
 
-  if (!config) {
-    console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
-    process.exit(1);
-  }
+  if (!config) throw noConfigError();
 
   // Check against the trees the app actually uses: an API-only app is measured
   // on email strings alone, a single app on both.
@@ -113,9 +143,10 @@ export const i18nCheck = async (flag?: string) => {
     ...new Set([...declared, ...appFiles.map(file => file.locale)]),
   ].filter(locale => locale !== defaultLocale);
 
-  console.log(
-    `\x1b[34m[VitNode]\x1b[0m Checking ${packageIds.length} package(s) and ${appIds.size} app namespace(s) against ${locales.length || "no"} extra locale(s), default ${dim(defaultLocale)}.`,
+  ui.note(
+    `Checking ${packageIds.length} package(s) and ${appIds.size} app namespace(s) against ${locales.length || "no"} extra locale(s), default ${defaultLocale}.`,
   );
+  ui.line();
 
   let missingTotal = 0;
   let problems = 0;
@@ -133,12 +164,14 @@ export const i18nCheck = async (flag?: string) => {
       repoRoot,
       scope,
     })
-      .map(readKeys)
+      .map(file => readKeys(file, message => say(red(message))))
       .filter((keys): keys is string[] => keys !== null);
     const override = appFiles.find(
       file => file.pluginId === pluginId && file.locale === locale,
     );
-    const fromApp = override ? readKeys(override.path) : null;
+    const fromApp = override
+      ? readKeys(override.path, message => say(red(message)))
+      : null;
 
     if (fromPackage.length === 0 && !fromApp) return null;
 
@@ -151,7 +184,7 @@ export const i18nCheck = async (flag?: string) => {
     if (!baseKeys && appIds.has(pluginId)) {
       errors += 1;
       problems += 1;
-      console.log(
+      say(
         red(
           `  ${pluginId}: no "${defaultLocale}" messages - create src/locales/${pluginId}/${defaultLocale}.json, every other language is checked against it`,
         ),
@@ -169,11 +202,11 @@ export const i18nCheck = async (flag?: string) => {
           .length > 0;
 
       if (installed) {
-        console.log(
+        say(
           dim(`  ${pluginId}: no strings for this app - nothing to translate`),
         );
       } else {
-        console.log(
+        say(
           yellow(
             `  ${pluginId}: no "${defaultLocale}" messages found - is the package installed?`,
           ),
@@ -193,13 +226,13 @@ export const i18nCheck = async (flag?: string) => {
         if (declaredLocales.has(locale)) {
           errors += 1;
           problems += 1;
-          console.log(
+          say(
             red(
               `  ${pluginId} · ${locale}: no locale file - create src/locales/${pluginId}/${locale}.json`,
             ),
           );
         } else {
-          console.log(
+          say(
             dim(
               `  ${pluginId} · ${locale}: not translated, falls back to ${defaultLocale}`,
             ),
@@ -214,42 +247,38 @@ export const i18nCheck = async (flag?: string) => {
       const unknown = localeKeys.filter(key => !known.has(key));
 
       if (missing.length === 0 && unknown.length === 0) {
-        console.log(green(`  ${pluginId} · ${locale}: complete`));
+        say(green(`  ${pluginId} · ${locale}: complete`));
         continue;
       }
 
       if (missing.length > 0) {
         missingTotal += missing.length;
         problems += 1;
-        console.log(
+        say(
           yellow(
             `  ${pluginId} · ${locale}: ${missing.length} key(s) missing, falling back to ${defaultLocale}`,
           ),
         );
         for (const key of missing.slice(0, MAX_LISTED_KEYS)) {
-          console.log(dim(`      ${key}`));
+          say(dim(`      ${key}`));
         }
         if (missing.length > MAX_LISTED_KEYS) {
-          console.log(
-            dim(`      ... and ${missing.length - MAX_LISTED_KEYS} more`),
-          );
+          say(dim(`      ... and ${missing.length - MAX_LISTED_KEYS} more`));
         }
       }
 
       if (unknown.length > 0) {
         problems += 1;
-        console.log(
+        say(
           yellow(
             `  ${pluginId} · ${locale}: ${unknown.length} key(s) unknown to ${defaultLocale} - typo or leftover?`,
           ),
         );
         for (const key of unknown.slice(0, MAX_LISTED_KEYS)) {
-          console.log(dim(`      ${key}`));
+          say(dim(`      ${key}`));
         }
         if (unknown.length > MAX_LISTED_KEYS) {
-          console.log(
-            dim(`      ... and ${unknown.length - MAX_LISTED_KEYS} more`),
-          );
+          say(dim(`      ... and ${unknown.length - MAX_LISTED_KEYS} more`));
         }
       }
     }
@@ -264,7 +293,7 @@ export const i18nCheck = async (flag?: string) => {
     if (!wired) {
       errors += 1;
       problems += 1;
-      console.log(
+      say(
         red(
           `  ${location} is never loaded - add \`"${file.pluginId}": () => import("./${file.pluginId}/${file.locale}.json")\` under \`"${file.locale}"\` in \`src/locales/app.ts\`.`,
         ),
@@ -272,23 +301,33 @@ export const i18nCheck = async (flag?: string) => {
     } else if (declared.length > 0 && !declared.includes(file.locale)) {
       errors += 1;
       problems += 1;
-      console.log(
-        red(`  ${location} uses a locale that is not in \`i18n.locales\`.`),
-      );
+      say(red(`  ${location} uses a locale that is not in \`i18n.locales\`.`));
     }
   }
 
+  ui.line();
+
   if (problems === 0) {
-    console.log(green("  Everything is translated. Nice."));
-    process.exit(0);
+    ui.success("Everything is translated. Nice.");
+    ui.line();
+
+    return EXIT_CODE.ok;
   }
 
-  console.log(
-    `\x1b[34m[VitNode]\x1b[0m ${problems} issue(s)` +
-      (errors > 0 ? red(`, ${errors} error(s)`) : "") +
-      `, ${missingTotal} untranslated key(s).`,
-  );
+  const summary = `${problems} issue(s)${errors > 0 ? `, ${errors} error(s)` : ""}, ${missingTotal} untranslated key(s).`;
 
   // Missing/unloadable files always fail; key-level gaps only fail under --ci.
-  process.exit(errors > 0 || isCi ? 1 : 0);
+  if (errors > 0 || ci) {
+    throw new ValidationError(summary, {
+      hint:
+        errors > 0
+          ? undefined
+          : "--ci fails on missing keys; without it they only warn, and fall back to the default locale.",
+    });
+  }
+
+  ui.warning(summary);
+  ui.line();
+
+  return EXIT_CODE.ok;
 };

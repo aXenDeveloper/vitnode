@@ -3,8 +3,9 @@ import type { CommandContext, OutputOptions } from "../context";
 import { EXIT_CODE, RuntimeError, UserError } from "../errors";
 import { ProcessGroup, waitForShutdownSignal } from "../project/processes";
 import { detectProject } from "../project/project";
+import { detectRuntime, runtimeExecutable } from "../project/runtime";
 import { resolveServerEntry } from "../start/server-entry";
-import { waitForPort } from "../start/wait-for-port";
+import { canConnect, waitForPort } from "../start/wait-for-port";
 
 export interface StartOptions extends OutputOptions {
   host?: string;
@@ -48,17 +49,29 @@ export const runStartCommand = async (
   options: StartOptions,
 ): Promise<number> => {
   const project = detectProject(cwd);
-  const { defaultPort, entry } = resolveServerEntry(project);
+  const { defaultPort, entry, runtime } = resolveServerEntry(
+    project,
+    project.kind === "api" ? detectRuntime(project.root, env) : "node",
+  );
   const port = parsePort(options.port ?? env.PORT, defaultPort);
   const host = options.host ?? env.HOST;
   const shownHost = displayHost(host);
 
   ui.header("Production");
 
+  // Checked before starting anything: something already answering on the port
+  // would otherwise pass the readiness probe below for a server that never
+  // got to listen.
+  if (await canConnect(port, shownHost)) {
+    throw new RuntimeError(`Port ${String(port)} is already in use.`, {
+      hint: "Stop whatever is listening on it, or pick another port with --port.",
+    });
+  }
+
   const group = new ProcessGroup();
   const child = group.spawn({
     args: [entry],
-    command: process.execPath,
+    command: runtimeExecutable(runtime),
     cwd: project.root,
     env: {
       ...env,
@@ -79,7 +92,7 @@ export const runStartCommand = async (
     port,
   });
 
-  if (!ready) {
+  if (!ready || exitCode !== null) {
     await group.stop();
     throw new RuntimeError(
       exitCode === null

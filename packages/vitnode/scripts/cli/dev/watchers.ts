@@ -2,15 +2,18 @@ import { join } from "node:path";
 
 import type { RunProcessOptions, SignalSource } from "../project/processes";
 import type { Project } from "../project/project";
+import type { Runtime } from "../project/runtime";
 import type { Ui } from "../ui/ui";
 
 import { EXIT_CODE, RuntimeError } from "../errors";
 import { resolveBin } from "../project/packages";
 import { ProcessGroup, waitForShutdownSignal } from "../project/processes";
+import { runtimeExecutable } from "../project/runtime";
 
 export interface Watcher {
   args: string[];
-  bin: { name: string; package: string };
+  /** The package executable to run, or `null` to run the runtime itself. */
+  bin: null | { name: string; package: string };
 }
 
 /** The plugin package's three compilers, each in watch mode. */
@@ -37,15 +40,13 @@ export const packageWatchers = (): Watcher[] => [
   },
 ];
 
-/** A standalone API restarted on every change. */
-export const apiWatchers = (runtime: { bun: boolean }): Watcher[] =>
-  runtime.bun
-    ? [
-        {
-          args: ["--hot", join("src", "index.ts")],
-          bin: { name: "bun", package: "" },
-        },
-      ]
+/**
+ * A standalone API, restarted on every change: Bun reloads its TypeScript
+ * entry itself (`bun --hot`), Node goes through `tsx watch`.
+ */
+export const apiWatchers = (runtime: Runtime): Watcher[] =>
+  runtime === "bun"
+    ? [{ args: ["--hot", join("src", "index.ts")], bin: null }]
     : [
         {
           args: ["watch", join("src", "index.ts")],
@@ -56,10 +57,20 @@ export const apiWatchers = (runtime: { bun: boolean }): Watcher[] =>
 export const toProcess = (
   project: Project,
   watcher: Watcher,
+  {
+    env,
+    runtime = "node",
+  }: { env?: NodeJS.ProcessEnv; runtime?: Runtime } = {},
 ): RunProcessOptions =>
-  // Bun runs the entry itself; everything else is a package's bin run by Node.
-  watcher.bin.package === ""
-    ? { args: watcher.args, command: process.execPath, cwd: project.root }
+  // No bin: the runtime runs the entry itself. Otherwise a package's bin, run
+  // by Node.
+  watcher.bin === null
+    ? {
+        args: watcher.args,
+        command: runtimeExecutable(runtime),
+        cwd: project.root,
+        env,
+      }
     : {
         args: [
           resolveBin(project.root, watcher.bin.package, watcher.bin.name),
@@ -67,6 +78,7 @@ export const toProcess = (
         ],
         command: process.execPath,
         cwd: project.root,
+        env,
       };
 
 /**

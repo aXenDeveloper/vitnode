@@ -12,6 +12,7 @@ export interface PackageJson {
   devDependencies?: Record<string, string>;
   exports?: unknown;
   name?: string;
+  packageManager?: string;
   peerDependencies?: Record<string, string>;
   private?: boolean;
   scripts?: Record<string, string>;

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   pluginApiConfigTemplate,
   pluginApiModuleTemplate,
+  pluginApiModuleTestTemplate,
   pluginApiRouteTemplate,
   pluginApiVariableName,
   pluginConfigTemplate,
@@ -12,6 +13,7 @@ import {
   pluginGlobalTypesTemplate,
   pluginMessagesTemplate,
   pluginPackageExports,
+  pluginReadmeTemplate,
   pluginRouteModuleTemplate,
   pluginRouteScaffold,
   pluginRoutesTemplate,
@@ -478,5 +480,35 @@ describe("the scaffold as a whole", () => {
     expect(Object.keys(pluginRouteScaffold("@acme/blog"))).toEqual(
       Object.keys(pluginRouteScaffold("other")),
     );
+  });
+});
+
+describe("the generated endpoint test", () => {
+  it("is part of the scaffold, next to the module it tests", () => {
+    expect(Object.keys(pluginRouteScaffold("@acme/blog"))).toContain(
+      "src/api/modules/hello/hello.module.test.ts",
+    );
+  });
+
+  it("requests the module through Hono and expects the plugin's own greeting", () => {
+    const test = pluginApiModuleTestTemplate("@acme/blog");
+
+    expect(test).toContain('import { helloModule } from "./hello.module";');
+    expect(test).toContain('helloModule.hono.request("/")');
+    expect(test).toContain('message: "Hello from @acme/blog!"');
+    // The same greeting the route answers with.
+    expect(pluginApiRouteTemplate()).toContain(
+      "Hello from ${CONFIG_PLUGIN.pluginId}!",
+    );
+  });
+});
+
+describe("the generated README", () => {
+  it("names the page the plugin serves and the commands that work on it", () => {
+    const readme = pluginReadmeTemplate("@acme/blog");
+
+    expect(readme).toContain("# @acme/blog");
+    expect(readme).toContain("`/blog`");
+    expect(readme).toContain("vitnode plugin validate blog");
   });
 });

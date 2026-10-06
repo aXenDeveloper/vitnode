@@ -10,7 +10,6 @@ import type { Ui } from "../ui/ui";
 
 import { EXIT_CODE, UserError, ValidationError } from "../errors";
 import { discoverPlugins, isPluginPackage } from "../plugins/discover";
-import { shortNameOf } from "../plugins/naming";
 import { validatePlugin } from "../plugins/validate";
 import { findPackageRoot, readPackageJson } from "../project/packages";
 import { plural, toDisplayPath } from "../ui/format";
@@ -18,6 +17,12 @@ import { plural, toDisplayPath } from "../ui/format";
 export interface PluginValidateOptions extends OutputOptions {
   name?: string;
 }
+
+/** `@acme/blog` → `blog`; `blog` → `blog`. */
+const shortNameOf = (packageName: string): string =>
+  packageName.includes("/")
+    ? packageName.slice(packageName.indexOf("/") + 1)
+    : packageName;
 
 /** `blog`, `@vitnode/blog` and `plugins/blog` all name the same plugin. */
 export const matchesPlugin = (plugin: DiscoveredPlugin, query: string) =>

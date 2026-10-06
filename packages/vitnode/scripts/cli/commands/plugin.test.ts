@@ -14,13 +14,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { UserError, ValidationError } from "../errors";
 import { validatePlugin } from "../plugins/validate";
-import { createScriptedPrompter, createTestContext } from "../testing";
-import { runPluginCreateCommand } from "./plugin-create";
+import { createTestContext } from "../testing";
 import { runPluginListCommand } from "./plugin-list";
 import { runPluginValidateCommand } from "./plugin-validate";
 
@@ -76,201 +76,13 @@ afterEach(() => {
   rmSync(root, { force: true, recursive: true });
 });
 
-const create = async (
-  options: Parameters<typeof runPluginCreateCommand>[1],
-  runtime: Parameters<typeof createTestContext>[0] = {},
-) => {
-  const { context, runtime: fake } = createTestContext({
-    cwd: root,
-    ...runtime,
-  });
-
-  return {
-    code: await runPluginCreateCommand(context, options),
-    output: fake.output(),
-  };
-};
-
-describe("vitnode plugin create", () => {
-  it("creates the canonical plugin in the workspace's plugins folder", async () => {
-    workspace(["forum"]);
-
-    const { code, output } = await create({ name: "blog" });
-
-    expect(code).toBe(0);
-    for (const step of [
-      "Package created",
-      "Plugin definition",
-      "Required structure",
-      "Translations",
-      "Tests",
-      "Documentation",
-    ]) {
-      expect(output).toContain(`✓ ${step}`);
-    }
-    expect(output).toContain("plugins/blog");
-
-    const manifest = JSON.parse(
-      readFileSync(join(root, "plugins/blog/package.json"), "utf8"),
-    ) as {
-      description: string;
-      name: string;
-      scripts: Record<string, string>;
-    };
-    // Joins the scope the workspace's plugins already share.
-    expect(manifest.name).toBe("@acme/blog");
-    expect(manifest.description).toBe("A VitNode plugin.");
-    expect(manifest.scripts["build:plugins"]).toBe("vitnode build");
-    expect(
-      readFileSync(join(root, "plugins/blog/src/routes.ts"), "utf8"),
-    ).toContain('page("/blog"');
-    expect(
-      readFileSync(join(root, "plugins/blog/src/config.tsx"), "utf8"),
-    ).toContain("export const blogPlugin");
-    expect(
-      readFileSync(join(root, "plugins/blog/src/config.api.ts"), "utf8"),
-    ).toContain("export const blogApiPlugin");
-  });
-
-  it("generates exactly the canonical structure, with no feature options", async () => {
-    workspace();
-    await create({ name: "blog", packageName: "@acme/blog" });
-
-    const files: string[] = [];
-    const walk = (dir: string) => {
-      for (const entry of readdirSync(dir)) {
-        const path = join(dir, entry);
-        if (statSync(path).isDirectory()) walk(path);
-        else
-          files.push(
-            relative(join(root, "plugins/blog"), path).replaceAll("\\", "/"),
-          );
-      }
-    };
-    walk(join(root, "plugins/blog"));
-
-    expect(files.sort()).toMatchInlineSnapshot(`
-      [
-        ".npmignore",
-        ".swcrc",
-        "README.md",
-        "eslint.config.mjs",
-        "global.d.ts",
-        "package.json",
-        "src/api/modules/hello/hello.module.test.ts",
-        "src/api/modules/hello/hello.module.ts",
-        "src/api/modules/hello/hello.route.ts",
-        "src/config.api.ts",
-        "src/config.tsx",
-        "src/const.ts",
-        "src/locales/en.json",
-        "src/locales/index.ts",
-        "src/pages/home-page.tsx",
-        "src/routes.ts",
-        "tsconfig.build.json",
-        "tsconfig.json",
-        "vitest.config.ts",
-      ]
-    `);
-  });
-
-  it("uses the given package name and description", async () => {
-    workspace();
-    await create({
-      description: "Blogging for VitNode",
-      name: "blog",
-      packageName: "@acme/blog",
-    });
-
-    expect(
-      readFileSync(join(root, "plugins/blog/package.json"), "utf8"),
-    ).toContain('"description": "Blogging for VitNode"');
-    expect(
-      readFileSync(join(root, "plugins/blog/src/const.ts"), "utf8"),
-    ).toContain('pluginId: "@acme/blog"');
-  });
-
-  it("asks for the name - and only metadata it cannot derive - when interactive", async () => {
-    workspace();
-    const prompter = createScriptedPrompter({
-      text: ["blog", "", "Blogging for VitNode"],
-    });
-
-    await create({}, { interactive: true, prompter });
-
-    expect(prompter.asked).toEqual([
-      "Plugin name",
-      "Package name",
-      "Description",
-    ]);
-    expect(
-      readFileSync(join(root, "plugins/blog/package.json"), "utf8"),
-    ).toContain('"name": "vitnode-plugin-blog"');
-  });
-
-  it("requires the name as an argument when nobody can be asked", async () => {
-    workspace();
-
-    await expect(create({})).rejects.toThrow(UserError);
-    expect(existsSync(join(root, "plugins"))).toBe(false);
-  });
-
-  it.each([
-    ["an invalid name", { name: "My Blog" }, "not a valid plugin name"],
-    ["a reserved name", { name: "admin" }, "reserved"],
-    [
-      "an invalid package name",
-      { name: "blog", packageName: "Blog" },
-      "lowercase",
-    ],
-    [
-      "core's package name",
-      { name: "blog", packageName: "@vitnode/core" },
-      "core package",
-    ],
-  ])("refuses %s before writing anything", async (_, options, message) => {
-    workspace();
-
-    await expect(create(options)).rejects.toThrow(message);
-    expect(existsSync(join(root, "plugins", "blog"))).toBe(false);
-  });
-
-  it("never overwrites an existing plugin folder", async () => {
-    workspace();
-    write("plugins/blog/README.md", "mine");
-
-    await expect(create({ name: "blog" })).rejects.toThrow(
-      "already exists and is not empty",
-    );
-    expect(readFileSync(join(root, "plugins/blog/README.md"), "utf8")).toBe(
-      "mine",
-    );
-  });
-
-  it("refuses a package name - and so a plugin id - the workspace already has", async () => {
-    workspace(["forum"]);
-
-    await expect(
-      create({ name: "community", packageName: "@acme/forum" }),
-    ).rejects.toThrow(
-      'A package named "@acme/forum" already exists at plugins/forum',
-    );
-  });
-
-  it("refuses to run outside a workspace", async () => {
-    write("package.json", { name: "solo" });
-
-    await expect(create({ name: "blog" })).rejects.toThrow(
-      "inside a workspace",
-    );
-  });
-});
-
 /**
- * The strongest check there is: generate a plugin, compile it with the
- * `.swcrc` it was generated with - the same compiler step `vitnode build`
- * runs - and hand the output to the same validator `vitnode plugin validate`
- * uses, which loads it through VitNode's real plugin, route and API loaders.
+ * The contract between `create-vitnode-app --plugin` and this CLI, checked
+ * end to end: scaffold a plugin exactly as `create-vitnode-app` writes it,
+ * compile it with the `.swcrc` it ships - the same compiler step
+ * `vitnode build` runs - and hand the output to the validator
+ * `vitnode plugin validate` uses, which loads it through VitNode's real
+ * plugin, route and API loaders.
  */
 describe("a generated plugin", () => {
   let loadRoot: string;
@@ -289,9 +101,30 @@ describe("a generated plugin", () => {
   });
 
   it("compiles and passes validation through the real plugin loaders", async () => {
-    workspace();
-    await create({ name: "blog", packageName: "@acme/blog" });
+    const creator = join(packageRoot, "..", "create-vitnode-app");
+    const { pluginPackageExports, pluginRouteScaffold } = (await import(
+      pathToFileURL(
+        join(creator, "src", "plugin", "create", "route-templates.ts"),
+      ).href
+    )) as {
+      pluginPackageExports: () => Record<string, unknown>;
+      pluginRouteScaffold: (name: string) => Record<string, string>;
+    };
     const source = join(root, "plugins", "blog");
+    cpSync(join(creator, "copy-of-vitnode-plugin", "root"), source, {
+      recursive: true,
+    });
+    for (const [file, content] of Object.entries(
+      pluginRouteScaffold("@acme/blog"),
+    )) {
+      write(join("plugins", "blog", file), content);
+    }
+    write("plugins/blog/package.json", {
+      exports: pluginPackageExports(),
+      name: "@acme/blog",
+      type: "module",
+      version: "0.1.0",
+    });
     const plugin = join(loadRoot, "blog");
     const swcrc = JSON.parse(
       readFileSync(join(source, ".swcrc"), "utf8"),

@@ -29,18 +29,24 @@ Generated projects call it from their `package.json` scripts, so `pnpm dev`, `pn
 
 ## Commands
 
-| Command                   | What it does                                  |
-| ------------------------- | --------------------------------------------- |
-| `vitnode dev`             | Start the development environment             |
-| `vitnode build`           | Build for production and report bundle sizes  |
-| `vitnode start`           | Start the production server                   |
-| `vitnode plugin create`   | Create a plugin from the official template    |
-| `vitnode plugin list`     | List the plugins your app uses                |
-| `vitnode plugin validate` | Check plugins the way your app will load them |
-| `vitnode db generate`     | Generate a migration from schema changes      |
-| `vitnode db migrate`      | Apply pending migrations                      |
-| `vitnode db push`         | Push the schema directly (development only)   |
-| `vitnode db status`       | Show the connection and migration status      |
+| Command                   | What it does                                     |
+| ------------------------- | ------------------------------------------------ |
+| `vitnode dev`             | Start the development environment                |
+| `vitnode build`           | Build for production and report bundle sizes     |
+| `vitnode start`           | Start the production server                      |
+| `vitnode plugin list`     | List the plugins your app uses                   |
+| `vitnode plugin validate` | Check plugins the way your app will load them    |
+| `vitnode db generate`     | Generate a migration from schema changes         |
+| `vitnode db migrate`      | Apply pending migrations                         |
+| `vitnode db push`         | Push the schema directly (development only)      |
+| `vitnode db status`       | Show the connection and migration status         |
+| `vitnode i18n check`      | Find missing, unknown and unloaded translations  |
+| `vitnode i18n create`     | Add a language                                   |
+| `vitnode i18n delete`     | Remove a language                                |
+| `vitnode i18n update`     | Sync translation files with the default language |
+| `vitnode i18n update-ai`  | Translate missing strings with an AI model       |
+
+Create plugins with `create-vitnode-app --plugin` - see [Create a plugin](/docs/dev/plugins/create).
 
 Run `vitnode` alone for a short overview, or `vitnode <command> --help` for a command's options.
 
@@ -51,8 +57,11 @@ Run `vitnode` alone for a short overview, or `vitnode <command> --help` for a co
 | Folder                                            | `vitnode dev`                        | `vitnode build`                         | `vitnode start`            |
 | ------------------------------------------------- | ------------------------------------ | --------------------------------------- | -------------------------- |
 | App (`vite.config.ts`)                            | Database bootstrap, then Vite        | Vite production build + size report     | `.output/server/index.mjs` |
-| API app (`src/vitnode.api.config.ts`)             | Database bootstrap, then `tsx watch` | `tsc` + `tsc-alias`                     | `dist/index.js`            |
+| API app on Node (`src/vitnode.api.config.ts`)     | Database bootstrap, then `tsx watch` | `tsc` + `tsc-alias`                     | `dist/index.js`            |
+| API app on Bun                                    | Database bootstrap, then `bun --hot` | Nothing to compile                      | `bun src/index.ts`         |
 | Plugin package (`tsconfig.build.json` + `.swcrc`) | Compilers in watch mode              | Types, JavaScript and aliases to `dist` | -                          |
+
+An API app runs on Bun when Bun runs the script (`bun run dev`), or when the project or its workspace uses Bun (`packageManager: "bun@..."` or a `bun.lock`). Otherwise it runs on Node.
 
 The database bootstrap runs only in an app that owns the schema - one with a `drizzle.config.ts`. It generates a migration for schema changes, applies pending migrations and seeds initial data, just like `vitnode db:prepare`.
 
@@ -150,11 +159,11 @@ The CLI drives these tools - through Vite's JavaScript API, your project's own `
 
 These still work for existing projects and deployment scripts:
 
-| Command              | Same as                                              |
-| -------------------- | ---------------------------------------------------- |
-| `vitnode db:prepare` | Generate, migrate and seed - what `vitnode dev` runs |
-| `vitnode migrate`    | `vitnode db:prepare`; `--generate` only generates    |
-| `vitnode i18n:*`     | See [Internationalization](/docs/dev/i18n)           |
+| Command                                           | Same as                                                         |
+| ------------------------------------------------- | --------------------------------------------------------------- |
+| `vitnode db:prepare`                              | Generate, migrate and seed - what `vitnode dev` runs            |
+| `vitnode migrate`                                 | `vitnode db:prepare`; `--generate` only generates               |
+| `vitnode i18n:check` and the other `i18n:*` names | `vitnode i18n check`, `create`, `delete`, `update`, `update-ai` |
 
 ## Learn more
 
@@ -166,7 +175,7 @@ These still work for existing projects and deployment scripts:
   />
   <Card
     title="Plugins"
-    description="Create, list and validate plugins"
+    description="List and validate plugins"
     href="/docs/dev/cli/plugins"
   />
   <Card

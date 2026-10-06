@@ -133,6 +133,53 @@ describe("vitnode dev in a plugin package", () => {
   });
 });
 
+describe("vitnode dev in an API app", () => {
+  beforeEach(() => {
+    write("package.json", JSON.stringify({ name: "api" }));
+    write("src/vitnode.api.config.ts", "export const vitNodeApiConfig = {};");
+  });
+
+  const start = async (
+    options: { port?: string },
+    env: Record<string, string> = {},
+  ) => {
+    const group = fakeGroup();
+    const { context, runtime } = createTestContext({ cwd: root, env });
+    const running = runDevCommand(context, options, { group });
+    await until(() => group.spawn.mock.calls.length === 1);
+    runtime.signals.emit("SIGINT");
+    await running;
+
+    return { output: runtime.output(), spawned: group.spawned[0] };
+  };
+
+  it("passes --port to the API as PORT, which it already reads", async () => {
+    const { output, spawned } = await start({ port: "9000" }, { PORT: "8000" });
+
+    expect(spawned.env?.PORT).toBe("9000");
+    expect(output).toMatch(/API\s+http:\/\/localhost:9000\/api/);
+  });
+
+  it("runs a Node project through tsx watch", async () => {
+    const { spawned } = await start({});
+
+    expect(spawned.command).toBe(process.execPath);
+    expect(spawned.args.slice(1)).toEqual(["watch", join("src", "index.ts")]);
+    expect(spawned.env?.PORT).toBe("8000");
+  });
+
+  it("runs a Bun project with bun --hot", async () => {
+    const { output, spawned } = await start(
+      {},
+      { npm_config_user_agent: "bun/1.3.14 npm/? node/v24.3.0" },
+    );
+
+    expect(spawned.command).toBe("bun");
+    expect(spawned.args).toEqual(["--hot", join("src", "index.ts")]);
+    expect(output).toMatch(/Runtime\s+Bun \(--hot\)/);
+  });
+});
+
 describe("vitnode dev in an app", () => {
   beforeEach(() => {
     write("package.json", JSON.stringify({ name: "web" }));

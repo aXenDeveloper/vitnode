@@ -45,6 +45,10 @@ const DRIZZLE_CONFIGS = [
   "drizzle.config.mjs",
 ];
 
+/** The Drizzle config a project uses, whichever extension it chose. */
+export const findDrizzleConfig = (root: string): null | string =>
+  firstExisting(root, DRIZZLE_CONFIGS);
+
 const firstExisting = (root: string, files: readonly string[]) => {
   const found = files.find(file => existsSync(join(root, file)));
 

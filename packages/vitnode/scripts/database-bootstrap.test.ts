@@ -20,6 +20,7 @@ import {
   readDrizzleConfig,
   runMigrations,
   runWithMigrationLock,
+  withConfigFlag,
 } from "./prepare-database.js";
 
 const scriptsRoot = import.meta.dirname;
@@ -177,6 +178,35 @@ describe("what decides whether work is pending", () => {
     expect(bootstrap).toMatch(
       /migrate\(config\.dbProvider, \{ migrationsFolder/,
     );
+  });
+
+  it("reads whichever drizzle.config extension the project uses, and names it to drizzle-kit", async () => {
+    const root = mkdtempSync(join(tmpdir(), "vitnode-drizzle-mts-"));
+
+    try {
+      writeFileSync(
+        join(root, "drizzle.config.mts"),
+        'export default { out: "./db", migrations: { table: "journal" } };\n',
+      );
+
+      expect(await readDrizzleConfig(root)).toMatchObject({
+        migrationsFolder: join(root, "db"),
+        migrationsTable: "journal",
+      });
+      expect(withConfigFlag(["generate", "--explain"], root)).toEqual([
+        "generate",
+        "--config",
+        "drizzle.config.mts",
+        "--explain",
+      ]);
+      expect(withConfigFlag(["push", "--config", "x.ts"], root)).toEqual([
+        "push",
+        "--config",
+        "x.ts",
+      ]);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 
   it("ensures text-search configs before applying migrations", () => {

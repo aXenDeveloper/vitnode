@@ -34,8 +34,12 @@ const i18nCommands = [
   "i18n:update",
   "i18n:update:ai",
 ] as const;
+/** `i18n:update:ai` → `vitnode i18n update-ai`: the script keeps its name. */
+export const i18nCliCommand = (script: (typeof i18nCommands)[number]) =>
+  `vitnode i18n ${script.slice("i18n:".length).replace(":", "-")}`;
+
 const i18nScripts = Object.fromEntries(
-  i18nCommands.map(command => [command, `vitnode ${command}`]),
+  i18nCommands.map(command => [command, i18nCliCommand(command)]),
 );
 
 const runScript = (pm: string, script: string) =>
@@ -113,16 +117,11 @@ export const apiScripts = (
   return {
     "db:migrate": "vitnode migrate",
     "db:prepare": "vitnode db:prepare",
-    ...(pm === "bun"
-      ? {
-          dev: "vitnode db:prepare && bun run --hot src/index.ts",
-          start: "NODE_ENV=production bun run src/index.ts",
-        }
-      : {
-          dev: "vitnode dev",
-          build: "vitnode build",
-          start: "vitnode start",
-        }),
+    // `vitnode` follows the project's runtime: on Bun it runs `bun --hot`
+    // and starts `src/index.ts` directly, so there is nothing to build.
+    dev: "vitnode dev",
+    ...(pm === "bun" ? {} : { build: "vitnode build" }),
+    start: "vitnode start",
     "dev:email": "email dev --dir src/emails",
     ...i18nScripts,
     ...withIf(eslint, eslintScripts),

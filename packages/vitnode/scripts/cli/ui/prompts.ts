@@ -2,11 +2,28 @@ import type { Ui } from "./ui";
 
 import { CliError, EXIT_CODE, UserError } from "../errors";
 
+export interface PromptChoice<T extends string> {
+  checked?: boolean;
+  name: string;
+  value: T;
+}
+
 export interface Prompter {
   confirm: (
     message: string,
     options?: { default?: boolean },
   ) => Promise<boolean>;
+  /** Pick any number; `required` refuses an empty answer. */
+  multiSelect: <T extends string>(
+    message: string,
+    choices: readonly PromptChoice<T>[],
+  ) => Promise<T[]>;
+  /** Pick exactly one. */
+  select: <T extends string>(
+    message: string,
+    choices: readonly PromptChoice<T>[],
+    options?: { default?: T },
+  ) => Promise<T>;
   text: (
     message: string,
     options?: {
@@ -58,6 +75,28 @@ export const createPrompter = (ui: Ui): Prompter => {
         const { confirm } = await import("@inquirer/prompts");
 
         return confirm({ default: options.default, message, theme });
+      }),
+    multiSelect: async (message, choices) =>
+      guard(async () => {
+        const { checkbox } = await import("@inquirer/prompts");
+
+        return checkbox({
+          choices: choices.map(choice => ({ ...choice })),
+          message,
+          required: true,
+          theme,
+        });
+      }),
+    select: async (message, choices, options = {}) =>
+      guard(async () => {
+        const { select } = await import("@inquirer/prompts");
+
+        return select({
+          choices: choices.map(choice => ({ ...choice })),
+          default: options.default,
+          message,
+          theme,
+        });
       }),
     text: async (message, options = {}) =>
       guard(async () => {

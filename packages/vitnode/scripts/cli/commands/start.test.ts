@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Project } from "../project/project";
 
 import { RuntimeError, UserError } from "../errors";
-import { runProcess } from "../project/processes";
+import { ProcessGroup, runProcess } from "../project/processes";
 import { resolveServerEntry } from "../start/server-entry";
 import { createTestContext } from "../testing";
 import { displayHost, parsePort, runStartCommand } from "./start";
@@ -70,6 +70,7 @@ describe("resolveServerEntry", () => {
     expect(resolveServerEntry(project("app"))).toEqual({
       defaultPort: 3000,
       entry: join(root, ".output", "server", "index.mjs"),
+      runtime: "node",
     });
   });
 
@@ -96,6 +97,15 @@ describe("resolveServerEntry", () => {
     expect(resolveServerEntry(project("api")).entry).toBe(
       join(root, "dist", "index.js"),
     );
+  });
+
+  it("runs a Bun API's TypeScript entry directly - there is no build", () => {
+    write("src/index.ts", "");
+
+    expect(resolveServerEntry(project("api"), "bun")).toMatchObject({
+      entry: join(root, "src", "index.ts"),
+      runtime: "bun",
+    });
   });
 });
 
@@ -151,6 +161,27 @@ describe("vitnode start", () => {
     await expect(fetch(`http://localhost:${String(port)}`)).rejects.toThrow();
   }, 20_000);
 
+  it("refuses a port something else already listens on, instead of announcing it", async () => {
+    write(".output/server/index.mjs", serverScript);
+    const blocker = createServer();
+    await new Promise<void>(resolve => {
+      blocker.listen(0, "localhost", resolve);
+    });
+    const address = blocker.address();
+    const port =
+      typeof address === "object" && address !== null ? address.port : 0;
+    const { context, runtime } = createTestContext({ cwd: root });
+
+    try {
+      await expect(
+        runStartCommand(context, { port: String(port) }),
+      ).rejects.toThrow(`Port ${String(port)} is already in use.`);
+      expect(runtime.output()).not.toContain("Running");
+    } finally {
+      blocker.close();
+    }
+  });
+
   it("fails - without claiming it is running - when the server dies during boot", async () => {
     write(".output/server/index.mjs", "process.exit(3);");
     const { context, runtime } = createTestContext({ cwd: root });
@@ -165,6 +196,20 @@ describe("vitnode start", () => {
     );
     expect(runtime.output()).not.toContain("Running");
   }, 20_000);
+});
+
+describe("ProcessGroup", () => {
+  it("reports a child that exited before anyone asked", async () => {
+    const group = new ProcessGroup();
+    const child = group.spawn({
+      args: ["-e", "process.exit(7)"],
+      command: process.execPath,
+      cwd: root,
+    });
+    await new Promise(resolve => child.once("exit", resolve));
+
+    expect(await group.firstExit()).toBe(7);
+  });
 });
 
 describe("runProcess", () => {

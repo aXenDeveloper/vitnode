@@ -79,7 +79,12 @@ const fakeDatabase = ({
     location: "vitnode @ localhost:5432",
     ping: async () => {
       await Promise.resolve();
-      if (!reachable) throw new Error("connect ECONNREFUSED 127.0.0.1:5432");
+      if (!reachable) {
+        // Drizzle wraps the driver's error; the inner one is what matters.
+        throw new Error("Failed query: SELECT 1", {
+          cause: new Error("connect ECONNREFUSED 127.0.0.1:5432"),
+        });
+      }
     },
     query: async query =>
       await Promise.resolve(
@@ -343,7 +348,10 @@ describe("vitnode db status", () => {
 
     await expect(
       runDbStatusCommand(ctx, {}, { services: () => db.services }),
-    ).rejects.toThrow("Could not connect to the database.");
+    ).rejects.toMatchObject({
+      details: ["connect ECONNREFUSED 127.0.0.1:5432"],
+      message: "Could not connect to the database.",
+    });
     expect(runtime.output()).toMatch(/Status\s+○ unreachable/);
   });
 

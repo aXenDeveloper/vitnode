@@ -12,13 +12,13 @@ export const PUBLIC_COMMANDS = [
   { description: "Start the development environment", name: "dev" },
   { description: "Build for production", name: "build" },
   { description: "Start the production server", name: "start" },
-  { description: "Create a plugin", name: "plugin create" },
   { description: "List plugins", name: "plugin list" },
   { description: "Validate plugins", name: "plugin validate" },
   { description: "Generate a migration", name: "db generate" },
   { description: "Run pending migrations", name: "db migrate" },
   { description: "Push schema changes (development)", name: "db push" },
   { description: "Show migration status", name: "db status" },
+  { description: "Manage languages and translations", name: "i18n <command>" },
 ] as const;
 
 export type PublicCommandName = (typeof PUBLIC_COMMANDS)[number]["name"];
@@ -28,8 +28,8 @@ export const describeCommand = (name: PublicCommandName): string =>
 
 const EXAMPLES = [
   "vitnode dev",
-  "vitnode plugin create blog",
   "vitnode build --analyze",
+  "vitnode db migrate --yes",
 ];
 
 /** `vitnode` and `vitnode --help`: short on purpose - the docs hold the rest. */

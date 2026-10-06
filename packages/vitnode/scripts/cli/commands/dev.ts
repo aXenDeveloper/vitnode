@@ -18,6 +18,7 @@ import {
 } from "../dev/watchers";
 import { loadConfiguredPluginIds } from "../plugins/discover";
 import { detectProject } from "../project/project";
+import { detectRuntime } from "../project/runtime";
 import { plural } from "../ui/format";
 import { parsePort } from "./start";
 
@@ -88,17 +89,26 @@ export const runDevCommand = async (
     ui.success(`${plural(plugins.length, "plugin")} loaded`);
 
   if (project.kind === "api") {
-    const port = parsePort(env.PORT, 8000);
+    // The API reads PORT itself, so `--port` reaches it the same way.
+    const port = parsePort(options.port ?? env.PORT, 8000);
+    const runtime = detectRuntime(project.root, env);
     ui.line();
     ui.keyValue([
       ["API", ui.colors.command(`http://localhost:${String(port)}/api`)],
+      [
+        "Runtime",
+        ui.colors.muted(runtime === "bun" ? "Bun (--hot)" : "Node (tsx watch)"),
+      ],
     ]);
     ui.rule();
 
     return runWatchers({
       group: deps.group,
-      processes: apiWatchers({ bun: process.versions.bun !== undefined }).map(
-        watcher => toProcess(project, watcher),
+      processes: apiWatchers(runtime).map(watcher =>
+        toProcess(project, watcher, {
+          env: { ...env, PORT: String(port) },
+          runtime,
+        }),
       ),
       signals,
       ui,

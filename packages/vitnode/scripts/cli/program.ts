@@ -95,20 +95,10 @@ export const createProgram = (hooks: ProgramHooks): Command => {
 
   const plugin = program
     .command("plugin")
-    .description("Create, list and validate plugins");
-
-  outputOptions(plugin.command("create"))
-    .description(describe("plugin create"))
-    .argument("[name]", "plugin name, e.g. blog")
-    .option("--package-name <name>", "npm package name (default: derived)")
-    .option("--description <text>", "one-line description")
-    .option("-y, --yes", "accept the defaults instead of asking")
-    .action(
-      run(
-        async () =>
-          (await import("./commands/plugin-create")).runPluginCreateCommand,
-        ([name]) => ({ name: name as string | undefined }),
-      ),
+    .description("List and validate plugins")
+    .addHelpText(
+      "after",
+      "\nCreate a plugin with: npx create-vitnode-app --plugin <name>",
     );
 
   outputOptions(plugin.command("list"))
@@ -167,6 +157,7 @@ export const createProgram = (hooks: ProgramHooks): Command => {
       run(async () => (await import("./commands/db")).runDbStatusCommand),
     );
 
+  registerI18nCommands(program, run);
   registerLegacyCommands(program, run);
 
   return program;
@@ -179,12 +170,89 @@ export const createProgram = (hooks: ProgramHooks): Command => {
  * deployment guides - but left out of the root help, which lists the commands a
  * developer should reach for today.
  */
-const registerLegacyCommands = (
-  program: Command,
-  run: <O extends OutputOptions>(
-    load: () => Promise<Handler<O>>,
-  ) => (...actionArgs: unknown[]) => Promise<void>,
-) => {
+type Run = <O extends OutputOptions>(
+  load: () => Promise<Handler<O>>,
+  fromArguments?: (values: unknown[]) => Partial<O>,
+) => (...actionArgs: unknown[]) => Promise<void>;
+
+/**
+ * `vitnode i18n <command>`, plus each command under its older `i18n:<command>`
+ * name - hidden, but parsed by the same definition, so the two spellings
+ * cannot accept different flags.
+ */
+const registerI18nCommands = (program: Command, run: Run) => {
+  const handlers = async () => import("./commands/i18n");
+  const i18n = program
+    .command("i18n")
+    .description(describeCommand("i18n <command>"));
+
+  const define = (
+    name: string,
+    legacyName: string,
+    build: (command: Command) => Command,
+  ) => {
+    build(outputOptions(i18n.command(name)));
+    build(outputOptions(program.command(legacyName, { hidden: true })));
+  };
+
+  define("check", "i18n:check", command =>
+    command
+      .description("Find missing, unknown and unloaded translations")
+      .option("--ci", "also fail on missing keys")
+      .action(run(async () => (await handlers()).runI18nCheckCommand)),
+  );
+
+  define("create", "i18n:create", command =>
+    command
+      .description("Add a language")
+      .argument("[code]", "locale code, e.g. pl or pt-BR")
+      .argument("[name...]", "language name, e.g. Polski")
+      .action(
+        run(
+          async () => (await handlers()).runI18nCreateCommand,
+          ([code, name]) => ({
+            code: code as string | undefined,
+            name: name as string[] | undefined,
+          }),
+        ),
+      ),
+  );
+
+  define("delete", "i18n:delete", command =>
+    command
+      .description("Remove a language")
+      .argument("[code]", "locale code to remove")
+      .option("-y, --yes", "remove without asking")
+      .action(
+        run(
+          async () => (await handlers()).runI18nDeleteCommand,
+          ([code]) => ({ code: code as string | undefined }),
+        ),
+      ),
+  );
+
+  define("update", "i18n:update", command =>
+    command
+      .description("Sync translation files with the default language")
+      .action(run(async () => (await handlers()).runI18nUpdateCommand)),
+  );
+
+  define("update-ai", "i18n:update:ai", command =>
+    command
+      .description("Translate missing strings with an AI model")
+      .argument("[codes...]", "locale codes (default: ask, or every language)")
+      .option("--model <id>", "AI model id from vitnode.api.config.ts")
+      .option("--concurrency <n>", "model calls in parallel")
+      .action(
+        run(
+          async () => (await handlers()).runI18nUpdateAiCommand,
+          ([codes]) => ({ codes: codes as string[] | undefined }),
+        ),
+      ),
+  );
+};
+
+const registerLegacyCommands = (program: Command, run: Run) => {
   const legacy = async () => import("./commands/legacy");
 
   outputOptions(program.command("db:prepare", { hidden: true }))
@@ -195,36 +263,4 @@ const registerLegacyCommands = (
     .description("Same as db:prepare; --generate only generates")
     .option("--generate", "only generate migrations")
     .action(run(async () => (await legacy()).runMigrateCommand));
-
-  program
-    .command("i18n:check", { hidden: true })
-    .description("Find missing and unused translation keys")
-    .option("--ci", "exit with an error when keys are missing")
-    .action(run(async () => (await legacy()).runI18nCheckCommand));
-
-  program
-    .command("i18n:create", { hidden: true })
-    .description("Add a language")
-    .argument("[code]")
-    .argument("[name...]")
-    .action(run(async () => (await legacy()).runI18nCreateCommand));
-
-  program
-    .command("i18n:delete", { hidden: true })
-    .description("Remove a language")
-    .argument("[code]")
-    .action(run(async () => (await legacy()).runI18nDeleteCommand));
-
-  program
-    .command("i18n:update", { hidden: true })
-    .description("Sync translation files with the default language")
-    .action(run(async () => (await legacy()).runI18nUpdateCommand));
-
-  program
-    .command("i18n:update:ai", { hidden: true })
-    .description("Translate missing keys with AI")
-    .argument("[codes...]")
-    .option("--model <id>", "model id")
-    .option("--concurrency <n>", "parallel requests")
-    .action(run(async () => (await legacy()).runI18nUpdateAiCommand));
 };

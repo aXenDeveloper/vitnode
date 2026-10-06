@@ -2,12 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Project } from "../project/project";
+import type { Runtime } from "../project/runtime";
 
 import { ConfigError } from "../errors";
 
 export interface ServerEntry {
   defaultPort: number;
   entry: string;
+  /** Which runtime runs `entry`. */
+  runtime: Runtime;
 }
 
 /** Nitro presets whose output is a Node server `vitnode start` can run. */
@@ -19,19 +22,26 @@ const NODE_PRESETS = new Set(["node", "node-cluster", "node-server"]);
  * For an app that is Nitro's `.output/nitro.json`, which names the server
  * entry and the preset it was built for - so a build for Vercel is refused
  * here with a reason, instead of being started as if it were a Node server.
- * For a standalone API it is the `dist/index.js` its own `tsc` build writes.
+ * For a standalone API on Node it is the `dist/index.js` its `tsc` build
+ * writes; on Bun it is `src/index.ts`, which Bun runs as it is.
  */
-export const resolveServerEntry = (project: Project): ServerEntry => {
+export const resolveServerEntry = (
+  project: Project,
+  runtime: Runtime = "node",
+): ServerEntry => {
   const notBuilt = () =>
     new ConfigError("No production build found.", {
       hint: "Run vitnode build first.",
     });
 
   if (project.kind === "api") {
-    const entry = join(project.root, "dist", "index.js");
+    const entry =
+      runtime === "bun"
+        ? join(project.root, "src", "index.ts")
+        : join(project.root, "dist", "index.js");
     if (!existsSync(entry)) throw notBuilt();
 
-    return { defaultPort: 8000, entry };
+    return { defaultPort: 8000, entry, runtime };
   }
 
   if (project.kind === "package") {
@@ -57,11 +67,13 @@ export const resolveServerEntry = (project: Project): ServerEntry => {
     }
 
     const entry = join(output, manifest.serverEntry ?? "server/index.mjs");
-    if (existsSync(entry)) return { defaultPort: 3000, entry };
+    if (existsSync(entry)) return { defaultPort: 3000, entry, runtime: "node" };
   }
 
   const fallback = join(output, "server", "index.mjs");
-  if (existsSync(fallback)) return { defaultPort: 3000, entry: fallback };
+  if (existsSync(fallback)) {
+    return { defaultPort: 3000, entry: fallback, runtime: "node" };
+  }
 
   throw notBuilt();
 };

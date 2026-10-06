@@ -1,106 +1,19 @@
 ---
-title: Create and validate plugins
-description: Create a VitNode plugin with vitnode plugin create, list the plugins an app uses, and validate them before a build or in CI.
+title: List and validate plugins
+description: List the plugins a VitNode app uses with vitnode plugin list, and validate them with vitnode plugin validate before a build or in CI.
 icon: Puzzle
 ---
 
-import { File, Files, Folder } from 'fumadocs-ui/components/files'
-
 ```bash
-vitnode plugin create blog
 vitnode plugin list
 vitnode plugin validate blog
 ```
 
-## Create a plugin
-
-```bash
-vitnode plugin create blog
-```
-
-```txt
-◆ VitNode
-  Create plugin
-
-◇ Package name @acme/blog
-◇ Description Blogging for VitNode
-
-  Creating plugin...
-  ✓ Package created
-  ✓ Plugin definition
-  ✓ Required structure
-  ✓ Translations
-  ✓ Tests
-  ✓ Documentation
-
-Created
-  plugins/blog
-```
-
-Every plugin starts from the same official structure - there are no features to pick. You only answer what cannot be derived:
-
-- **Package name** - the plugin id. It defaults to your workspace's plugin scope (`@acme/blog` when your plugins are `@acme/*`), otherwise `vitnode-plugin-blog`.
-- **Description** - one line for `package.json`.
-
-Run `vitnode plugin create` without a name to be asked for it. To skip every question, pass the values:
-
-```bash
-vitnode plugin create blog --package-name @acme/blog --description "Blogging for VitNode" --yes
-```
-
-### What you get
-
-<Files>
-  <Folder name="plugins" defaultOpen>
-    <Folder name="blog" defaultOpen>
-      <Folder name="src" defaultOpen>
-        <Folder name="api/modules/hello">
-          <File name="hello.module.ts" />
-          <File name="hello.module.test.ts" />
-          <File name="hello.route.ts" />
-        </Folder>
-        <Folder name="locales">
-          <File name="en.json" />
-          <File name="index.ts" />
-        </Folder>
-        <Folder name="pages">
-          <File name="home-page.tsx" />
-        </Folder>
-        <File name="config.api.ts" />
-        <File name="config.tsx" />
-        <File name="const.ts" />
-        <File name="routes.ts" />
-      </Folder>
-      <File name="package.json" />
-      <File name="README.md" />
-      <File name="tsconfig.json" />
-      <File name="tsconfig.build.json" />
-      <File name=".swcrc" />
-      <File name="vitest.config.ts" />
-      <File name="eslint.config.mjs" />
-      <File name="global.d.ts" />
-    </Folder>
-  </Folder>
-</Files>
-
-The plugin is small but complete: a page at `/blog` whose loader calls the plugin's own `hello` API endpoint through the [fetcher](/docs/dev/fetcher), its strings in `en.json`, and a Vitest test for the endpoint.
-
-### Use it in your app
-
-1. Add `"@acme/blog": "workspace:*"` to your app's dependencies and install.
-2. Register `blogPlugin()` from `@acme/blog/config` in `vitnode.config.ts`.
-3. Register `blogApiPlugin()` from `@acme/blog/config.api` in `vitnode.api.config.ts`.
-4. Build it: `cd plugins/blog && vitnode build` (or `vitnode dev` to rebuild on every change).
-
-### Name rules
-
-| Rule                                                                                                                                      | Example          |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| Lowercase letters, digits and single dashes                                                                                               | `event-calendar` |
-| Starts with a letter, under 50 characters                                                                                                 | `forum2`         |
-| Not one of core's routes: `admin`, `api`, `core`, `discover`, `files`, `login`, `notifications`, `register`, `search`, `users`, `vitnode` | -                |
-
-The package name must be a valid npm name and must not be `@vitnode/core`. Creation stops before writing anything if the folder already exists, or a workspace package already has that name - a plugin id must be unique.
+<Callout type="info" title="Creating a plugin">
+  New plugins come from the generator, which also registers, installs and builds
+  them: `pnpm create vitnode-app@canary --plugin`. See [Create a
+  plugin](/docs/dev/plugins/create).
+</Callout>
 
 ## List plugins
 

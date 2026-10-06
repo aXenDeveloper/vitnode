@@ -2,8 +2,10 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { ValidationError } from "./cli/errors";
+import { createTestContext } from "./cli/testing";
 import { i18nCheck } from "./i18n-check";
 
 const writeApp = (
@@ -36,25 +38,23 @@ const writeApp = (
 
 describe("i18nCheck with an app-owned namespace", () => {
   let root: string;
-  let output: string[];
-  let exit: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), "vitnode-i18n-check-"));
-    output = [];
-    vi.spyOn(process, "cwd").mockReturnValue(root);
-    vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
-      output.push(args.join(" "));
-    });
-    exit = vi
-      .spyOn(process, "exit")
-      .mockImplementation((() => undefined) as never);
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
     rmSync(root, { force: true, recursive: true });
   });
+
+  const check = async (ci = false) => {
+    const { context, runtime } = createTestContext({ cwd: root });
+    const result = await i18nCheck({ ci, cwd: root, ui: context.ui }).catch(
+      (error: unknown) => error,
+    );
+
+    return { report: runtime.output(), result };
+  };
 
   it("lists keys the app's Polish file is missing and fails under --ci", async () => {
     writeApp(root, {
@@ -62,12 +62,23 @@ describe("i18nCheck with an app-owned namespace", () => {
       pl: { site: { hero: { title: "Tytuł" } } },
     });
 
-    await i18nCheck("--ci");
+    const { report, result } = await check(true);
 
-    const report = output.join("\n");
     expect(report).toContain("site · pl: 1 key(s) missing");
     expect(report).toContain("site.hero.cta");
-    expect(exit).toHaveBeenCalledWith(1);
+    expect(result).toBeInstanceOf(ValidationError);
+  });
+
+  it("only warns about missing keys without --ci", async () => {
+    writeApp(root, {
+      en: { site: { hero: { title: "Title", cta: "Explore" } } },
+      pl: { site: { hero: { title: "Tytuł" } } },
+    });
+
+    const { report, result } = await check();
+
+    expect(result).toBe(0);
+    expect(report).toContain("! 2 issue(s), 1 untranslated key(s).");
   });
 
   it("reports a complete translation", async () => {
@@ -76,9 +87,9 @@ describe("i18nCheck with an app-owned namespace", () => {
       pl: { site: { hero: { title: "Tytuł" } } },
     });
 
-    await i18nCheck();
+    const { report, result } = await check();
 
-    const report = output.join("\n");
+    expect(result).toBe(0);
     expect(report).toContain("site · pl: complete");
     expect(report).not.toContain("never loaded");
   });
@@ -86,11 +97,11 @@ describe("i18nCheck with an app-owned namespace", () => {
   it("errors when the namespace has no default-locale file", async () => {
     writeApp(root, { pl: { site: { hero: { title: "Tytuł" } } } });
 
-    await i18nCheck();
+    const { report, result } = await check();
 
-    expect(output.join("\n")).toContain(
+    expect(report).toContain(
       'site: no "en" messages - create src/locales/site/en.json',
     );
-    expect(exit).toHaveBeenCalledWith(1);
+    expect(result).toBeInstanceOf(ValidationError);
   });
 });

@@ -1,6 +1,9 @@
 import { connect } from "node:net";
 
-const canConnect = async (port: number, host: string): Promise<boolean> =>
+export const canConnect = async (
+  port: number,
+  host: string,
+): Promise<boolean> =>
   new Promise(resolve => {
     const socket = connect({ host, port });
     const done = (result: boolean) => {

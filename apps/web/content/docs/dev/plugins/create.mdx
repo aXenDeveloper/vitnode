@@ -10,6 +10,7 @@ import {
   LayoutDashboardIcon,
   RouteIcon,
 } from 'lucide-react'
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 A plugin is the starting point for a VitNode feature. It keeps routes, API
@@ -84,6 +85,48 @@ import generatedPageImage from './generated-page-image.png'
 
   </Step>
 </Steps>
+
+## What gets generated
+
+<Files>
+  <Folder name="plugins" defaultOpen>
+    <Folder name="site-notes" defaultOpen>
+      <Folder name="src" defaultOpen>
+        <Folder name="api/modules/hello">
+          <File name="hello.module.ts" />
+          <File name="hello.module.test.ts" />
+          <File name="hello.route.ts" />
+        </Folder>
+        <Folder name="locales">
+          <File name="en.json" />
+          <File name="index.ts" />
+        </Folder>
+        <Folder name="pages">
+          <File name="home-page.tsx" />
+        </Folder>
+        <File name="config.api.ts" />
+        <File name="config.tsx" />
+        <File name="const.ts" />
+        <File name="routes.ts" />
+      </Folder>
+      <File name="package.json" />
+      <File name="README.md" />
+      <File name="vitest.config.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+One page at `/site-notes` whose loader calls the plugin's own `hello` endpoint, its strings, and a Vitest test for the endpoint (`pnpm test` in the plugin). The generator also registers the plugin in your apps' `vitnode.config.ts` and `vitnode.api.config.ts`, installs it and builds it.
+
+The plugin name must be a valid npm name and must not be one of core's routes: `admin`, `api`, `core`, `discover`, `files`, `login`, `notifications`, `register`, `search`, `users` or `vitnode`.
+
+Check the result the way your app will load it:
+
+```bash
+vitnode plugin validate site-notes
+```
+
+See [Plugin CLI](/docs/dev/cli/plugins) for what validation checks.
 
 ## Add the next capability
 

@@ -117,22 +117,32 @@ const KILL_TIMEOUT_MS = 5000;
 export class ProcessGroup {
   private readonly children = new Set<ChildProcess>();
 
+  /**
+   * One promise per child, created the moment it is spawned - so a child that
+   * exits before anyone asks (a server crashing during boot) is still seen.
+   */
+  private readonly exits: Promise<number>[] = [];
+
   /** Resolves with the exit code of whichever child exits first. */
   async firstExit(): Promise<number> {
-    return new Promise(resolve => {
-      for (const child of this.children) {
-        child.once("exit", code => {
-          resolve(code ?? 0);
-        });
-      }
-    });
+    return Promise.race(this.exits);
   }
 
   spawn(options: RunProcessOptions): ChildProcess {
     const child = spawnChild(options, "inherit");
     this.children.add(child);
-    child.once("exit", () => this.children.delete(child));
-    child.once("error", () => this.children.delete(child));
+    this.exits.push(
+      new Promise(resolve => {
+        child.once("exit", code => {
+          this.children.delete(child);
+          resolve(code ?? 1);
+        });
+        child.once("error", () => {
+          this.children.delete(child);
+          resolve(1);
+        });
+      }),
+    );
 
     return child;
   }
@@ -162,9 +172,5 @@ export class ProcessGroup {
       ),
     );
     this.children.clear();
-  }
-
-  get size(): number {
-    return this.children.size;
   }
 }

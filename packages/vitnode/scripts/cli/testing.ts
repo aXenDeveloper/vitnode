@@ -117,6 +117,18 @@ export const createScriptedPrompter = (answers: {
 
       return Promise.resolve(confirms.shift() ?? true);
     },
+    multiSelect: async (message, choices) => {
+      asked.push(message);
+
+      return Promise.resolve(
+        choices.filter(choice => choice.checked === true).map(c => c.value),
+      );
+    },
+    select: async (message, choices, options) => {
+      asked.push(message);
+
+      return Promise.resolve(options?.default ?? choices[0].value);
+    },
     text: async (message, options) => {
       asked.push(message);
       // An empty answer is Enter on the suggested default, as in a terminal.

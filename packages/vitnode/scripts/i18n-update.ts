@@ -1,19 +1,17 @@
-/* eslint-disable no-console */
 import { writeFileSync } from "node:fs";
 import { relative } from "node:path";
 
+import type { Ui } from "./cli/ui/ui.js";
+
+import { EXIT_CODE } from "./cli/errors.js";
 import { getConfig } from "./get-config.js";
 import {
   appScope,
-  dim,
   effectiveDefaultTree,
   flattenKeys,
-  green,
   listAppLocaleFiles,
-  prefix,
+  noConfigError,
   readJsonTree,
-  red,
-  yellow,
 } from "./i18n-shared.js";
 import { findRepoRoot } from "./shared/file-utils.js";
 
@@ -47,17 +45,33 @@ export const reconcileTree = (
   return merge(english, current) as Record<string, unknown>;
 };
 
-export const i18nUpdate = async () => {
-  const appDir = process.cwd();
+/**
+ * `vitnode i18n update` - brings every translation file in line with the
+ * default locale: new keys are seeded in the default language, removed keys
+ * are dropped, existing translations are kept.
+ */
+export const i18nUpdate = async ({
+  cwd,
+  ui,
+}: {
+  cwd: string;
+  ui: Ui;
+}): Promise<number> => {
+  const { colors } = ui;
+  const green = colors.success;
+  const red = colors.error;
+  const dim = colors.muted;
+  const appDir = cwd;
 
-  const webConfig = await getConfig({ optional: true });
-  const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  const webConfig = await getConfig({ baseDir: cwd, optional: true });
+  const apiConfig = await getConfig({
+    baseDir: cwd,
+    optional: true,
+    type: "api.config",
+  });
   const config = webConfig ?? apiConfig;
 
-  if (!config) {
-    console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
-    process.exit(1);
-  }
+  if (!config) throw noConfigError();
 
   const scope = appScope({ api: apiConfig !== null, web: webConfig !== null });
   const defaultLocale = config.i18n?.defaultLocale ?? "en";
@@ -77,8 +91,10 @@ export const i18nUpdate = async () => {
   );
 
   if (appFiles.length === 0) {
-    console.log(`${prefix} No translation files to update.`);
-    process.exit(0);
+    ui.note("No translation files to update.");
+    ui.line();
+
+    return EXIT_CODE.ok;
   }
 
   // The English tree per package is the same for every locale, so cache it.
@@ -98,9 +114,10 @@ export const i18nUpdate = async () => {
     return tree;
   };
 
-  console.log(
-    `${prefix} Syncing ${appFiles.length} translation file(s) against ${dim(defaultLocale)}.`,
+  ui.note(
+    `Syncing ${appFiles.length} translation file(s) against ${defaultLocale}.`,
   );
+  ui.line();
 
   let addedTotal = 0;
   let removedTotal = 0;
@@ -113,7 +130,7 @@ export const i18nUpdate = async () => {
     // No source of truth (package ships nothing for this scope, or is not
     // installed). Reconciling would empty the file, so leave it as it is.
     if (Object.keys(english).length === 0) {
-      console.log(
+      ui.line(
         dim(`  skipped  ${location} - no "${defaultLocale}" source strings`),
       );
       continue;
@@ -126,7 +143,7 @@ export const i18nUpdate = async () => {
     const removed = [...currentKeys].filter(key => !englishKeys.has(key));
 
     if (added.length === 0 && removed.length === 0) {
-      console.log(dim(`  ok       ${location}`));
+      ui.line(dim(`  ok       ${location}`));
       continue;
     }
 
@@ -138,30 +155,39 @@ export const i18nUpdate = async () => {
     addedTotal += added.length;
     removedTotal += removed.length;
 
-    console.log(
+    ui.line(
       `${green(`  updated  ${location}`)}  ${dim(`+${added.length} -${removed.length}`)}`,
     );
     for (const key of added.slice(0, MAX_LISTED_KEYS)) {
-      console.log(green(`      + ${key}`));
+      ui.line(green(`      + ${key}`));
     }
     for (const key of removed.slice(0, MAX_LISTED_KEYS - added.length)) {
-      console.log(red(`      - ${key}`));
+      ui.line(red(`      - ${key}`));
     }
     const shown = Math.min(added.length, MAX_LISTED_KEYS) + removed.length;
     if (added.length + removed.length > shown) {
-      console.log(
+      ui.line(
         dim(`      ... and ${added.length + removed.length - shown} more`),
       );
     }
   }
 
+  ui.line();
+
   if (changed === 0) {
-    console.log(green("  Every translation is already in sync."));
-    process.exit(0);
+    ui.success("Every translation is already in sync.");
+    ui.line();
+
+    return EXIT_CODE.ok;
   }
 
-  console.log(
-    `\n${prefix} ${green(`${changed} file(s) updated`)}: ${yellow(`+${addedTotal}`)} added, ${yellow(`-${removedTotal}`)} removed. Translate the added keys, then run vitnode i18n:check.`,
+  ui.success(
+    `${changed} file(s) updated: +${addedTotal} added, -${removedTotal} removed.`,
   );
-  process.exit(0);
+  ui.note(
+    `Translate the added keys, then run ${colors.command("vitnode i18n check")}.`,
+  );
+  ui.line();
+
+  return EXIT_CODE.ok;
 };

@@ -32,6 +32,7 @@ import { collectWarnings } from "../builder/warnings";
 import { errorMessage, EXIT_CODE } from "../errors";
 import { isPluginPackage } from "../plugins/discover";
 import { detectProject } from "../project/project";
+import { detectRuntime } from "../project/runtime";
 import { formatDuration, plural } from "../ui/format";
 
 export interface BuildOptions extends OutputOptions {
@@ -115,7 +116,7 @@ const reportAppBuild = (
 };
 
 export const runBuildCommand = async (
-  { cwd, ui }: CommandContext,
+  { cwd, env, ui }: CommandContext,
   options: BuildOptions,
   deps: BuildDeps = {},
 ): Promise<number> => {
@@ -133,6 +134,14 @@ export const runBuildCommand = async (
       steps: packageBuildSteps(),
       ui,
     });
+  } else if (
+    project.kind === "api" &&
+    detectRuntime(project.root, env) === "bun"
+  ) {
+    // Bun runs the TypeScript entry as it is: there is no output to produce,
+    // and `vitnode start` runs `src/index.ts` directly.
+    ui.header("Production build");
+    ui.success("Nothing to compile - Bun runs src/index.ts directly");
   } else if (project.kind === "api") {
     ui.header("Production build");
     await runCompilerSteps({

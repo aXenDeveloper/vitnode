@@ -14,7 +14,12 @@ import {
   isDataLossHint,
   summarizeStatement,
 } from "../db/statements";
-import { errorMessage, EXIT_CODE, RuntimeError, UserError } from "../errors";
+import {
+  EXIT_CODE,
+  rootCauseMessage,
+  RuntimeError,
+  UserError,
+} from "../errors";
 import { requireDatabaseProject } from "../project/project";
 import { withQuietOutput } from "../ui/capture-output";
 import { plural } from "../ui/format";
@@ -169,7 +174,7 @@ const connect = async (
       await handle.close().catch(() => undefined);
       throw new RuntimeError("Could not connect to the database.", {
         cause: error,
-        details: [errorMessage(error)],
+        details: [rootCauseMessage(error)],
         hint: "Is it running? In development, pnpm docker:dev starts one.",
       });
     }
@@ -408,7 +413,7 @@ export const runDbStatusCommand = async (
     ]);
     throw new RuntimeError("Could not connect to the database.", {
       cause: error,
-      details: [errorMessage(error)],
+      details: [rootCauseMessage(error)],
       hint: "Is it running? In development, pnpm docker:dev starts one.",
     });
   }

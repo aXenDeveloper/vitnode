@@ -7,19 +7,15 @@
     "moduleResolution": "bundler",
     "rootDir": "./",
     "outDir": "./dist",
+    "incremental": false,
     "jsx": "react-jsx",
     "emitDeclarationOnly": true,
     "declaration": true,
     "declarationMap": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
   "exclude": ["node_modules"],
-  "include": ["src", "global.d.ts", "types"]
+  "include": ["types", "src", "global.d.ts", "vitest.config.ts"]
 }
