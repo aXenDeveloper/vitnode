@@ -77,11 +77,14 @@ npm run build:plugins && npm run db:migrate
 
 ## Migration Commands
 
+Run these with the [VitNode CLI](/docs/dev/cli/database) in the app that owns the database:
+
 | Command | Action |
 | :--- | :--- |
-| `pnpm db:generate` | Inspects schema diffs and writes timestamped SQL migrations |
-| `pnpm db:migrate` | Applies pending migrations against the target database |
-| `pnpm db:studio` | Opens Drizzle Studio to inspect and edit database rows visually |
+| `vitnode db generate` | Shows schema changes and writes a timestamped SQL migration |
+| `vitnode db migrate` | Applies pending migrations against the target database |
+| `vitnode db status` | Checks the connection and lists pending migrations |
+| `vitnode db push` | Syncs the schema directly - development only |
 
 <Callout type="info" title="Content Engine Alternative">
   If your table represents an editorial entity (articles, FAQs, products), consider [Content Engine](/docs/dev/content-engine/defining-a-content-type) to generate your Drizzle table, API routes, and AdminCP screens from one definition.

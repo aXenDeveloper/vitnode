@@ -1,0 +1,86 @@
+---
+title: Use the CLI in CI
+description: Validate plugins, build with readable logs and apply migrations from GitHub Actions, Docker and other CI pipelines with the VitNode CLI.
+icon: Workflow
+---
+
+```bash
+pnpm vitnode plugin validate
+pnpm vitnode build --plain
+pnpm vitnode db migrate --yes
+```
+
+Run them in your app's folder. Every command exits with a non-zero code when it fails, so a pipeline stops at the first problem.
+
+## GitHub Actions
+
+```yaml title=".github/workflows/build.yml"
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:plugins
+      - run: pnpm --filter web exec vitnode plugin validate
+      - run: pnpm --filter web exec vitnode build --plain
+```
+
+Run `vitnode` in the app folder (`--filter web` above), so it finds the app's config.
+
+## Migrate during deployment
+
+```bash
+POSTGRES_URL=postgresql://... pnpm vitnode db migrate --yes
+pnpm vitnode start
+```
+
+Run migrations once per deployment, before the new version starts. `--yes` is required: without an interactive terminal, the CLI never waits for an answer.
+
+## Non-interactive behavior
+
+The CLI detects where it runs. Under CI (`CI`, `GITHUB_ACTIONS` and similar), with piped output, or when stdin is not a terminal:
+
+- no spinners, animations or cursor movement
+- no prompts - a command that needs confirmation exits with code `2` and names the flag to pass
+- colors only when `FORCE_COLOR` is set; `NO_COLOR` always turns them off
+
+`--plain` goes further and gives stable, prefixed lines for log parsers:
+
+```txt
+VitNode - Production build
+[OK] Building client (21.7s)
+[OK] Building server (12.8s)
+[WARN] admin-D2kL8aQ1.js is larger than the recommended 500.0 kB for a client chunk.
+[OK] Built in 1m 6s
+```
+
+Bundle size warnings never fail a build. The bundle comparison reads the previous sizes from `node_modules/.cache/vitnode` - cache that folder between runs to compare builds in CI.
+
+## Exit codes
+
+| Code | Meaning                                                                    |
+| ---- | -------------------------------------------------------------------------- |
+| `0`  | Success                                                                    |
+| `1`  | Failed: build error, invalid plugin, migration error, unreachable database |
+| `2`  | Wrong command line, or a required `--yes` was not passed                   |
+
+## Learn more
+
+<Cards>
+  <Card title="VitNode CLI" description="All commands" href="/docs/dev/cli" />
+  <Card
+    title="Self-hosted deployment"
+    description="Build, migrate and run on your server"
+    href="/docs/dev/deployments/self-hosted"
+  />
+</Cards>

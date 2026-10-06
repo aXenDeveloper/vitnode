@@ -1,0 +1,192 @@
+---
+title: Create and validate plugins
+description: Create a VitNode plugin with vitnode plugin create, list the plugins an app uses, and validate them before a build or in CI.
+icon: Puzzle
+---
+
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+
+```bash
+vitnode plugin create blog
+vitnode plugin list
+vitnode plugin validate blog
+```
+
+## Create a plugin
+
+```bash
+vitnode plugin create blog
+```
+
+```txt
+◆ VitNode
+  Create plugin
+
+◇ Package name @acme/blog
+◇ Description Blogging for VitNode
+
+  Creating plugin...
+  ✓ Package created
+  ✓ Plugin definition
+  ✓ Required structure
+  ✓ Translations
+  ✓ Tests
+  ✓ Documentation
+
+Created
+  plugins/blog
+```
+
+Every plugin starts from the same official structure - there are no features to pick. You only answer what cannot be derived:
+
+- **Package name** - the plugin id. It defaults to your workspace's plugin scope (`@acme/blog` when your plugins are `@acme/*`), otherwise `vitnode-plugin-blog`.
+- **Description** - one line for `package.json`.
+
+Run `vitnode plugin create` without a name to be asked for it. To skip every question, pass the values:
+
+```bash
+vitnode plugin create blog --package-name @acme/blog --description "Blogging for VitNode" --yes
+```
+
+### What you get
+
+<Files>
+  <Folder name="plugins" defaultOpen>
+    <Folder name="blog" defaultOpen>
+      <Folder name="src" defaultOpen>
+        <Folder name="api/modules/hello">
+          <File name="hello.module.ts" />
+          <File name="hello.module.test.ts" />
+          <File name="hello.route.ts" />
+        </Folder>
+        <Folder name="locales">
+          <File name="en.json" />
+          <File name="index.ts" />
+        </Folder>
+        <Folder name="pages">
+          <File name="home-page.tsx" />
+        </Folder>
+        <File name="config.api.ts" />
+        <File name="config.tsx" />
+        <File name="const.ts" />
+        <File name="routes.ts" />
+      </Folder>
+      <File name="package.json" />
+      <File name="README.md" />
+      <File name="tsconfig.json" />
+      <File name="tsconfig.build.json" />
+      <File name=".swcrc" />
+      <File name="vitest.config.ts" />
+      <File name="eslint.config.mjs" />
+      <File name="global.d.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+The plugin is small but complete: a page at `/blog` whose loader calls the plugin's own `hello` API endpoint through the [fetcher](/docs/dev/fetcher), its strings in `en.json`, and a Vitest test for the endpoint.
+
+### Use it in your app
+
+1. Add `"@acme/blog": "workspace:*"` to your app's dependencies and install.
+2. Register `blogPlugin()` from `@acme/blog/config` in `vitnode.config.ts`.
+3. Register `blogApiPlugin()` from `@acme/blog/config.api` in `vitnode.api.config.ts`.
+4. Build it: `cd plugins/blog && vitnode build` (or `vitnode dev` to rebuild on every change).
+
+### Name rules
+
+| Rule                                                                                                                                      | Example          |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Lowercase letters, digits and single dashes                                                                                               | `event-calendar` |
+| Starts with a letter, under 50 characters                                                                                                 | `forum2`         |
+| Not one of core's routes: `admin`, `api`, `core`, `discover`, `files`, `login`, `notifications`, `register`, `search`, `users`, `vitnode` | -                |
+
+The package name must be a valid npm name and must not be `@vitnode/core`. Creation stops before writing anything if the folder already exists, or a workspace package already has that name - a plugin id must be unique.
+
+## List plugins
+
+```bash
+vitnode plugin list
+```
+
+```txt
+◆ VitNode
+  Plugins
+
+  Plugin             Version           Source
+  ──────────────────────────────────────────────
+  @vitnode/blog      2.0.0-canary.13   workspace
+  @acme/search       1.1.2             package
+  @acme/forum (not configured)  0.1.0  workspace
+
+  2 plugins configured in apps/web
+```
+
+The list comes from your app's `vitnode.config.ts`, read by the same loader the app's build uses. Workspace plugins the app does not use yet are listed as `not configured`.
+
+| Source      | Meaning                      |
+| ----------- | ---------------------------- |
+| `workspace` | A package in this repository |
+| `package`   | Installed from a registry    |
+
+`--verbose` adds each plugin's path and description. Run the command from an app, or from anywhere in its workspace.
+
+## Validate plugins
+
+```bash
+vitnode plugin validate        # every plugin - or the one you are in
+vitnode plugin validate blog   # by name, package name or folder
+```
+
+```txt
+  @vitnode/blog  plugins/blog
+  ✓ Package  2.0.0-canary.13
+  ✓ Plugin definition
+  ✓ API definition
+  ✓ Routes  3 routes
+  ✓ Translations  en
+  ✓ AdminCP navigation
+  ✓ Database schema  6 tables
+
+  ✓ 1 plugin valid
+```
+
+Validation loads the plugin's build output - the files your app imports - through VitNode's own loaders. A check runs only when the plugin has that part.
+
+| Check              | Fails when                                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Package            | `name` is not a valid plugin id, `type` is not `module`, or `exports` does not expose `dist`                |
+| Build output       | `dist/src/config.js` is missing - build the plugin first                                                    |
+| Plugin definition  | `config.tsx` exports no `buildPlugin()` factory, or its `pluginId` is not the package name                  |
+| API definition     | `buildApiPlugin()` rejects the configuration, or its `pluginId` does not match                              |
+| Routes             | The route tree does not compile, or a `lazy(() => import(...))` page file is missing                        |
+| Translations       | A locale file is unreadable, lacks the plugin's top-level key, or a route's `messages` namespace is missing |
+| AdminCP navigation | A nav item requires a permission the plugin does not register in `permissionStaff.admin`                    |
+| Database schema    | A schema module fails to load, or two modules declare the same table                                        |
+
+A failure says what is wrong and where:
+
+```txt
+  ✖ AdminCP navigation
+      AdminCP navigation item /admin/blog requires the permission posts.can_manage,
+      but @acme/blog does not register it in buildApiPlugin({ permissionStaff: { admin } }).
+      dist/src/admin/nav.js
+
+✖ 1 plugin failed validation: @acme/blog
+```
+
+`vitnode plugin validate` exits with code `1` when any plugin is invalid, so it can gate a CI job.
+
+## Learn more
+
+<Cards>
+  <Card
+    title="Plugins"
+    description="How plugins work"
+    href="/docs/dev/plugins"
+  />
+  <Card
+    title="CI"
+    description="Validate plugins in a pipeline"
+    href="/docs/dev/cli/ci"
+  />
+</Cards>

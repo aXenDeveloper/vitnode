@@ -3,7 +3,7 @@ import { count, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createJiti } from "jiti";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import postgres from "postgres";
 
 import { core_admin_permissions } from "@/database/admins.js";
@@ -15,40 +15,108 @@ import { SEARCH_TEXT_CONFIGS } from "@/database/search.js";
 import type { VitNodeApiI18nConfig } from "../src/lib/i18n/types.js";
 import type { VitNodeApiConfig } from "../src/vitnode.config.js";
 
+import { RuntimeError } from "./cli/errors.js";
+import { resolveBin } from "./cli/project/packages.js";
+import { runProcess } from "./cli/project/processes.js";
 import { getConfig } from "./get-config.js";
-import { runInteractiveShellCommand } from "./run-interactive-shell-command.js";
 
-export const generateDatabaseMigrations = async () => {
-  try {
-    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "up"]);
-    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "generate"]);
-  } catch (err) {
-    console.error("\x1b[31m%s\x1b[0m", err);
-    process.exit(1);
+/**
+ * Runs the project's own `drizzle-kit` with Node, without a shell or an npm
+ * script in between - the app needs `drizzle-kit` installed, not a
+ * `"drizzle-kit"` entry in its `package.json`.
+ */
+export const runDrizzleKit = async (
+  args: readonly string[],
+  {
+    capture = false,
+    root = process.cwd(),
+  }: { capture?: boolean; root?: string } = {},
+) =>
+  runProcess({
+    args: [resolveBin(root, "drizzle-kit"), ...args],
+    capture,
+    command: process.execPath,
+    cwd: root,
+  });
+
+/**
+ * `drizzle-kit up` then `drizzle-kit generate`, attached to the terminal so
+ * drizzle-kit can ask whether a changed column is a rename.
+ */
+export const generateDatabaseMigrations = async ({
+  root = process.cwd(),
+}: { root?: string } = {}) => {
+  for (const command of ["up", "generate"]) {
+    const { code } = await runDrizzleKit([command], { root });
+
+    if (code !== 0) {
+      throw new RuntimeError(
+        `drizzle-kit ${command} exited with code ${String(code)}.`,
+      );
+    }
   }
+};
+
+export interface DrizzleProjectConfig {
+  dialect: null | string;
+  /** Where `drizzle-kit generate` writes migrations - `out`. */
+  migrationsFolder: string;
+  migrationsSchema: string;
+  migrationsTable: string;
+}
+
+/**
+ * The parts of the app's `drizzle.config.ts` the migrator and status need,
+ * with drizzle's own defaults: `./migrations`, and `drizzle.__drizzle_migrations`
+ * for the journal table.
+ */
+export const readDrizzleConfig = async (
+  root: string = process.cwd(),
+): Promise<DrizzleProjectConfig> => {
+  const configPath = join(root, "drizzle.config.ts");
+  const config: DrizzleProjectConfig = {
+    dialect: null,
+    migrationsFolder: join(root, "migrations"),
+    migrationsSchema: "drizzle",
+    migrationsTable: "__drizzle_migrations",
+  };
+
+  if (!existsSync(configPath)) return config;
+
+  try {
+    const jiti = createJiti(import.meta.url, { interopDefault: true });
+    const loaded = await jiti.import<
+      Record<string, unknown> & { default?: Record<string, unknown> }
+    >(configPath);
+    const declared = loaded.default ?? loaded;
+    const migrations = (declared.migrations ?? {}) as {
+      schema?: unknown;
+      table?: unknown;
+    };
+
+    if (typeof declared.out === "string" && declared.out.length > 0) {
+      config.migrationsFolder = resolve(root, declared.out);
+    }
+    if (typeof declared.dialect === "string") config.dialect = declared.dialect;
+    if (typeof migrations.table === "string") {
+      config.migrationsTable = migrations.table;
+    }
+    if (typeof migrations.schema === "string") {
+      config.migrationsSchema = migrations.schema;
+    }
+  } catch {
+    // Fall back to drizzle's defaults if the config can't be read.
+  }
+
+  return config;
 };
 
 // Reads the migrations output folder from the app's `drizzle.config.ts` (`out`),
 // falling back to `./migrations` so the in-process migrator points at the same
 // files `drizzle-kit generate` writes.
-const getMigrationsFolder = async (): Promise<string> => {
-  const configPath = join(process.cwd(), "drizzle.config.ts");
-  if (existsSync(configPath)) {
-    try {
-      const jiti = createJiti(import.meta.url, { interopDefault: true });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const loaded = (await jiti.import(configPath)) as any;
-      const out: unknown = loaded.default?.out ?? loaded.out;
-      if (typeof out === "string" && out.length > 0) {
-        return out;
-      }
-    } catch {
-      // Fall back to the default below if the config can't be read.
-    }
-  }
-
-  return "./migrations";
-};
+export const getMigrationsFolder = async (
+  root: string = process.cwd(),
+): Promise<string> => (await readDrizzleConfig(root)).migrationsFolder;
 
 // Every `regconfig` literal referenced by the generated `search_vector` column
 // (see SEARCH_TEXT_CONFIGS) has to exist on the target database before the
@@ -116,14 +184,45 @@ const ensureSearchTextConfigs = async (
   }
 };
 
-export const runMigrations = async () => {
-  const config = await getConfig({ type: "api.config" });
+/** Every field Postgres attaches to an error, as lines a person can read. */
+export const describePostgresError = (err: unknown): string[] => {
+  const e = err as {
+    code?: string;
+    detail?: string;
+    hint?: string;
+    message?: string;
+    position?: string;
+    query?: string;
+    severity?: string;
+    where?: string;
+  };
+
+  return [
+    ...(e.severity ? [`Severity:  ${e.severity}`] : []),
+    ...(e.code ? [`SQLSTATE:  ${e.code}`] : []),
+    `Message:   ${e.message ?? String(err)}`,
+    ...(e.detail ? [`Detail:    ${e.detail}`] : []),
+    ...(e.hint ? [`Hint:      ${e.hint}`] : []),
+    ...(e.where ? [`Where:     ${e.where}`] : []),
+    ...(e.position ? [`Position:  ${e.position}`] : []),
+    ...(e.query ? ["Failing SQL:", e.query] : []),
+  ];
+};
+
+export const runMigrations = async ({
+  config: given,
+  migrationsFolder: folder,
+}: {
+  config?: VitNodeApiConfig;
+  migrationsFolder?: string;
+} = {}) => {
+  const config = given ?? (await getConfig({ type: "api.config" }));
 
   // Provision any missing text-search configs before applying migrations, so the
   // generated `search_vector` column (0017/0018) can resolve every `regconfig`.
   await ensureSearchTextConfigs(config.dbProvider);
 
-  const migrationsFolder = await getMigrationsFolder();
+  const migrationsFolder = folder ?? (await getMigrationsFolder());
 
   try {
     // Run migrations in-process instead of shelling out to `drizzle-kit migrate`:
@@ -134,31 +233,12 @@ export const runMigrations = async () => {
     // `drizzle-kit` left off.
     await migrate(config.dbProvider, { migrationsFolder });
   } catch (err) {
-    const e = err as {
-      code?: string;
-      detail?: string;
-      hint?: string;
-      message?: string;
-      position?: string;
-      query?: string;
-      severity?: string;
-      where?: string;
-    };
-
-    console.error("\x1b[31m[VitNode] Database migration failed.\x1b[0m");
-    if (e.severity) console.error(`\x1b[31mSeverity:\x1b[0m  ${e.severity}`);
-    if (e.code) console.error(`\x1b[31mSQLSTATE:\x1b[0m  ${e.code}`);
-    console.error(`\x1b[31mMessage:\x1b[0m   ${e.message ?? String(err)}`);
-    if (e.detail) console.error(`\x1b[31mDetail:\x1b[0m    ${e.detail}`);
-    if (e.hint) console.error(`\x1b[31mHint:\x1b[0m      ${e.hint}`);
-    if (e.where) console.error(`\x1b[31mWhere:\x1b[0m     ${e.where}`);
-    if (e.position) console.error(`\x1b[31mPosition:\x1b[0m  ${e.position}`);
-    if (e.query) console.error(`\x1b[31mFailing SQL:\x1b[0m\n${e.query}`);
-    if (err instanceof Error && err.stack) {
-      console.error(`\n\x1b[90m${err.stack}\x1b[0m`);
-    }
-
-    process.exit(1);
+    // The in-process migrator throws Postgres' own error, with every field
+    // that explains it - kept whole rather than squashed into one line.
+    throw new RuntimeError("Database migration failed.", {
+      cause: err,
+      details: describePostgresError(err),
+    });
   }
 };
 
@@ -244,7 +324,7 @@ const MIGRATION_LOCK_APPLICATION_NAME = "vitnode-migration-lock";
  * than the race it avoids - which, for the single-process case that every
  * non-monorepo app has, does not exist anyway.
  */
-const openMigrationLock = (
+export const openMigrationLock = (
   dbClient: VitNodeApiConfig["dbProvider"],
 ): MigrationLock | null => {
   const options = (
@@ -318,15 +398,20 @@ const openMigrationLock = (
  * nothing - without a Postgres.
  */
 export const runWithMigrationLock = async ({
-  initMessage,
+  initMessage = "[VitNode]",
   lock,
+  log = message => {
+    console.log(`${initMessage} ${message}`);
+  },
   run,
   sleep = async ms => {
     await new Promise(resolve => setTimeout(resolve, ms));
   },
 }: {
-  initMessage: string;
+  initMessage?: string;
   lock: MigrationLock | null;
+  /** Where the one "waiting for another process" notice goes. */
+  log?: (message: string) => void;
   run: () => Promise<void>;
   sleep?: (ms: number) => Promise<void>;
 }): Promise<void> => {
@@ -355,8 +440,8 @@ export const runWithMigrationLock = async ({
       }
 
       if (!announced) {
-        console.log(
-          `${initMessage} Another process is preparing this database - waiting for it to finish...`,
+        log(
+          "Another process is preparing this database - waiting for it to finish...",
         );
         announced = true;
       }
@@ -401,14 +486,16 @@ export const runWithMigrationLock = async ({
  * The lock is held on a connection of its own, so the application pool is left
  * entirely to the work being serialised - see {@link openMigrationLock}.
  */
-const withMigrationLock = async (
+export const withMigrationLock = async (
   dbClient: VitNodeApiConfig["dbProvider"],
   initMessage: string,
   run: () => Promise<void>,
+  log?: (message: string) => void,
 ): Promise<void> => {
   await runWithMigrationLock({
     initMessage,
     lock: openMigrationLock(dbClient),
+    log,
     run,
   });
 };
@@ -505,8 +592,8 @@ export const languagesFromApiConfig = (
   }));
 };
 
-export const initialDataForDatabase = async () => {
-  const config = await getConfig({ type: "api.config" });
+export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
+  const config = given ?? (await getConfig({ type: "api.config" }));
   const dbClient = config.dbProvider;
 
   const [roleCount] = await dbClient
@@ -698,21 +785,29 @@ export const databaseBootstrapSteps = ({
  */
 export const databaseBootstrap = async ({
   generate = true,
-  initMessage,
+  initMessage = "[VitNode]",
+  log = message => {
+    console.log(`${initMessage} ${message}`);
+  },
 }: {
   generate?: boolean;
-  initMessage: string;
+  initMessage?: string;
+  /** Where progress goes - the CLI passes its own UI. */
+  log?: (message: string) => void;
 }): Promise<void> => {
   const config = await getConfig({ type: "api.config" });
   const steps = databaseBootstrapSteps({ generate });
 
-  await withMigrationLock(config.dbProvider, initMessage, async () => {
-    for (const [index, step] of steps.entries()) {
-      console.log(
-        `${initMessage} [${index + 1}/${steps.length}] ${step.label}`,
-      );
+  await withMigrationLock(
+    config.dbProvider,
+    initMessage,
+    async () => {
+      for (const [index, step] of steps.entries()) {
+        log(`[${index + 1}/${steps.length}] ${step.label}`);
 
-      await step.action();
-    }
-  });
+        await step.action();
+      }
+    },
+    log,
+  );
 };

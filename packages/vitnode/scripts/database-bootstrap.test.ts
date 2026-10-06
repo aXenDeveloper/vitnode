@@ -1,13 +1,23 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
+import { runCli } from "./cli/index.js";
+import { createFakeRuntime } from "./cli/testing.js";
 import {
   databaseBootstrapSteps,
   generateDatabaseMigrations,
   initialDataForDatabase,
   languagesFromApiConfig,
+  readDrizzleConfig,
   runMigrations,
   runWithMigrationLock,
 } from "./prepare-database.js";
@@ -20,7 +30,8 @@ const codeOf = (file: string): string =>
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\/\/.*$/gm, "");
 
-const cli = codeOf("scripts.ts");
+const cli = codeOf("cli/commands/legacy.ts");
+const program = codeOf("cli/program.ts");
 const bootstrap = codeOf("prepare-database.ts");
 
 describe("the steps of a database bootstrap", () => {
@@ -73,24 +84,44 @@ describe("the steps of a database bootstrap", () => {
 
 describe("the `db:prepare` command", () => {
   it("exists", () => {
-    expect(cli).toContain('case "db:prepare":');
+    expect(program).toContain('"db:prepare"');
   });
 
-  it("awaits the bootstrap and exits non-zero when it throws", () => {
+  /**
+   * A `dev` script chains on this with `&&`, so a failed bootstrap has to be a
+   * non-zero exit. The command awaits the bootstrap and does not catch: the
+   * CLI's error boundary turns the throw into exit code 1.
+   */
+  it("awaits the bootstrap and lets a failure reach the error boundary", () => {
     const branch = cli.slice(
-      cli.indexOf('case "db:prepare":'),
-      cli.indexOf('case "migrate":'),
+      cli.indexOf("runDbPrepareCommand"),
+      cli.indexOf("runMigrateCommand"),
     );
 
     expect(branch).toMatch(/await databaseBootstrap\(/);
-    expect(branch).toMatch(/try\s*\{/);
-    expect(branch).toMatch(/catch/);
-    expect(branch).toMatch(/process\.exit\(1\)/);
+    expect(branch).not.toMatch(/catch/);
     expect(branch).not.toMatch(/\bvoid\s+databaseBootstrap/);
   });
 
+  it("exits non-zero when the bootstrap cannot run", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "vitnode-db-prepare-"));
+    const runtime = createFakeRuntime({ cwd });
+
+    try {
+      expect(await runCli(["db:prepare"], runtime)).toBe(1);
+      expect(runtime.errors()).toContain(
+        "Config file not found: src/vitnode.api.config.ts",
+      );
+    } finally {
+      rmSync(cwd, { force: true, recursive: true });
+    }
+  });
+
   it("shares one implementation with `migrate`", () => {
-    const branch = cli.slice(cli.indexOf('case "migrate":'));
+    const branch = cli.slice(
+      cli.indexOf("runMigrateCommand"),
+      cli.indexOf("runI18nCheckCommand"),
+    );
 
     expect(branch).toMatch(/await databaseBootstrap\(/);
     // The one thing `migrate --generate` does that the bootstrap does not.
@@ -100,7 +131,7 @@ describe("the `db:prepare` command", () => {
   });
 
   it("no longer offers `init` or a `--web` no-op", () => {
-    expect(cli).not.toContain('case "init"');
+    expect(program).not.toContain('"init"');
     expect(cli).not.toContain("prepareDatabase");
     expect(bootstrap).not.toContain('"--web"');
     expect(bootstrap).not.toContain("prepareDatabase");
@@ -116,11 +147,33 @@ describe("what decides whether work is pending", () => {
     }
   });
 
-  it("reads the migrations folder from drizzle.config.ts", () => {
-    expect(bootstrap).toContain("drizzle.config.ts");
-    expect(bootstrap).toMatch(/loaded\.default\?\.out \?\? loaded\.out/);
-    // The fallback stays a fallback.
-    expect(bootstrap).toContain('return "./migrations"');
+  it("reads the migrations folder - and journal table - from drizzle.config.ts", async () => {
+    const root = mkdtempSync(join(tmpdir(), "vitnode-drizzle-config-"));
+
+    try {
+      // The fallback stays a fallback: drizzle's own defaults.
+      expect(await readDrizzleConfig(root)).toEqual({
+        dialect: null,
+        migrationsFolder: join(root, "migrations"),
+        migrationsSchema: "drizzle",
+        migrationsTable: "__drizzle_migrations",
+      });
+
+      writeFileSync(
+        join(root, "drizzle.config.ts"),
+        'export default { dialect: "postgresql", out: "./db/migrations/", migrations: { schema: "ops", table: "journal" } };\n',
+      );
+
+      expect(await readDrizzleConfig(root)).toEqual({
+        dialect: "postgresql",
+        migrationsFolder: join(root, "db", "migrations"),
+        migrationsSchema: "ops",
+        migrationsTable: "journal",
+      });
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+
     expect(bootstrap).toMatch(
       /migrate\(config\.dbProvider, \{ migrationsFolder/,
     );

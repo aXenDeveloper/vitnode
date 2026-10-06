@@ -1,0 +1,170 @@
+---
+title: Database commands
+description: Generate and apply database migrations, check migration status, and push schema changes in development with the VitNode CLI.
+icon: Database
+---
+
+```bash
+vitnode db generate   # write a migration for your schema changes
+vitnode db migrate    # apply pending migrations
+vitnode db status     # check the connection and what is pending
+vitnode db push       # sync the schema directly - development only
+```
+
+Run them in the app that owns the database - the one with `drizzle.config.ts`. They use your app's own Drizzle configuration and connection.
+
+## Generate, migrate or push?
+
+| Command       | Changes                       | Use it                                   |
+| ------------- | ----------------------------- | ---------------------------------------- |
+| `db generate` | Writes a migration file       | After changing tables, before committing |
+| `db migrate`  | Applies migration files       | Everywhere: development, CI, production  |
+| `db push`     | Changes the database directly | Quick experiments in development         |
+
+Migrations are files you commit, so every database gets the same changes in the same order. `db push` skips the files - useful while you experiment, never for a shared or production database.
+
+## Generate a migration
+
+```bash
+vitnode db generate --name notifications
+```
+
+```txt
+◆ VitNode
+  Database
+
+  ✓ Checking migration history  2.7s
+  ✓ Comparing schema with the last migration  3.1s
+
+Schema changes detected
+  + table notifications
+  + table notification_preferences
+  + column users.notification_count
+
+  ✓ Generating migration  3.1s
+
+  ✓ 20261005233216_notifications
+```
+
+The changes come from drizzle-kit's own plan, so they are exactly what the migration contains. If drizzle-kit has to ask whether a column was renamed, the command hands the terminal over to it. In a non-interactive terminal it stops instead of guessing.
+
+<Callout type="info" title="Build plugins first">
+  Migrations are generated from the plugins' build output. After changing a
+  plugin's tables, run `vitnode build` in the plugin, then `vitnode db
+  generate`.
+</Callout>
+
+## Apply migrations
+
+```bash
+vitnode db migrate
+```
+
+```txt
+◆ VitNode
+  Database migration
+
+  ✓ Connecting to the database  26ms
+
+Pending migrations
+  ○ 20261004081732_add_core_notifications
+  ○ 20261004112416_allow_null_notification_digest_schedule
+
+◇ Apply 2 migrations? Yes
+  ✓ Applying migrations  840ms
+  ✓ 20261004081732_add_core_notifications
+  ✓ 20261004112416_allow_null_notification_digest_schedule
+
+  ✓ Database is up to date.
+```
+
+`db migrate` applies migrations in one transaction, then seeds the data every VitNode installation needs (languages, roles, permissions). A lock makes two processes wait for each other instead of racing. If a migration fails, nothing is applied and the error shows Postgres' own details.
+
+Without an interactive terminal, confirm with `--yes`:
+
+```bash
+vitnode db migrate --yes
+```
+
+Without `--yes`, a non-interactive run exits with code `2` instead of waiting.
+
+## Check the status
+
+```bash
+vitnode db status
+```
+
+```txt
+◆ VitNode
+  Database
+
+  Provider   PostgreSQL
+  Database   vitnode @ localhost:5432
+  Status     ● connected
+
+Migrations
+  Applied   64
+  Pending   1
+
+Pending
+  ○ 20261005233216_notifications
+```
+
+`db status` only reads. It connects with your app's configuration - the status is never guessed from the config alone - and exits with code `1` when the database is unreachable. It also warns about an applied migration whose file changed since it was applied.
+
+## Push the schema (development)
+
+```bash
+vitnode db push
+```
+
+```txt
+◆ VitNode
+  Push database schema
+
+  ! Direct schema synchronization is intended for development.
+
+Changes
+  - table zz_drafts
+  + index notifications.notifications_user_id_idx
+
+Data loss
+  ! table zz_drafts (non empty)
+
+◇ Apply 2 changes, including 1 that deletes data? No
+```
+
+`db push` shows every change before applying it, and names each change that deletes data. Deleting data always needs a separate confirmation - from a script, pass `--accept-data-loss` together with `--yes`.
+
+<Callout type="warn" title="db push refuses production">
+  When `NODE_ENV` is `production`, `vitnode db push` stops before connecting.
+  Use `db generate` and `db migrate` instead. `--force` overrides the check, if
+  you really mean to push to that database.
+</Callout>
+
+## Options
+
+| Command       | Option               | Effect                                          |
+| ------------- | -------------------- | ----------------------------------------------- |
+| `db generate` | `--name <name>`      | Name the migration folder                       |
+| `db migrate`  | `-y, --yes`          | Apply without asking                            |
+| `db push`     | `-y, --yes`          | Apply without asking                            |
+| `db push`     | `--accept-data-loss` | Allow changes that delete data without a prompt |
+| `db push`     | `--force`            | Allow pushing when `NODE_ENV` is `production`   |
+
+All of them also accept `--plain` and `--verbose`.
+
+## Learn more
+
+<Cards>
+  <Card
+    title="Database"
+    description="Tables and queries in plugins"
+    href="/docs/dev/database"
+  />
+  <Card
+    title="CI"
+    description="Migrate during deployment"
+    href="/docs/dev/cli/ci"
+  />
+</Cards>

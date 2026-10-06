@@ -7,6 +7,7 @@
     "---Start here---",
     "index",
     "setup",
+    "cli",
     "deployments",
     "architecture",
     "configuration",

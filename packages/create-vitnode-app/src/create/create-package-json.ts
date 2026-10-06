@@ -119,9 +119,9 @@ export const apiScripts = (
           start: "NODE_ENV=production bun run src/index.ts",
         }
       : {
-          dev: "vitnode db:prepare && tsx watch src/index.ts",
-          build: "tsc && tsc-alias -p tsconfig.json",
-          start: "node dist/index.js",
+          dev: "vitnode dev",
+          build: "vitnode build",
+          start: "vitnode start",
         }),
     "dev:email": "email dev --dir src/emails",
     ...i18nScripts,
@@ -134,14 +134,14 @@ export const apiScripts = (
 /**
  * The single app: a TanStack Start site with the Hono API mounted inside it.
  *
- * `vite` rather than `next`, and `start` runs Nitro's own server output rather
- * than a framework CLI: a Start build emits `.output/server/index.mjs`, which is
- * a plain Node entry point and needs nothing installed to run.
+ * `dev`, `build` and `start` are the VitNode CLI, which drives Vite through its
+ * JavaScript API and starts the plain Node entry a Start build emits
+ * (`.output/server/index.mjs`) - nothing beyond Node is needed to run it.
  *
  * **This shape owns a database.** It ships `drizzle.config.ts`, a `migrations/`
  * directory and `vitnode.api.config.ts`, and it serves `/api/*` from its own
  * process - so it is the schema's owner as much as a standalone API app is, and
- * `dev` waits for the bootstrap before Vite starts.
+ * `vitnode dev` runs the database bootstrap before Vite starts.
  *
  * That line went missing in Stage 17 and it is the regression this file was
  * fixed for. The reasoning at the time was correct about the half it was looking
@@ -164,10 +164,10 @@ export const singleAppScripts = (
 ) => ({
   "db:migrate": "vitnode migrate",
   "db:prepare": "vitnode db:prepare",
-  dev: "vitnode db:prepare && vite dev --port 3000",
+  dev: "vitnode dev",
   "dev:email": "email dev --dir src/emails",
-  build: "vite build",
-  start: "node .output/server/index.mjs",
+  build: "vitnode build",
+  start: "vitnode start",
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
@@ -175,9 +175,9 @@ export const singleAppScripts = (
 });
 
 export const webScripts = (eslint: boolean) => ({
-  dev: "vite dev --port 3000",
-  build: "vite build",
-  start: "node .output/server/index.mjs",
+  dev: "vitnode dev",
+  build: "vitnode build",
+  start: "vitnode start",
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
 });

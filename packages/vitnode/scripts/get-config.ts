@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { createJiti } from "jiti";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,6 +7,8 @@ import type {
   VitNodeConfig,
   VitNodeServerConfig,
 } from "../src/vitnode.config.js";
+
+import { ConfigError } from "./cli/errors.js";
 
 type ConfigName = "api.config" | "config" | "server.config";
 
@@ -101,11 +102,11 @@ export async function getConfig<T extends ConfigName = "config">({
 
   if (!configPath) {
     if (optional) return null;
-    console.error(`Config file not found: ${filename}`);
-    console.error(
-      `Searched recursively in ${cwd} (excluding node_modules, .*, dist, build, out)`,
-    );
-    process.exit(1);
+    throw new ConfigError(`Config file not found: src/${filename}`, {
+      details: [
+        `Searched recursively in ${cwd} (excluding node_modules, .*, dist, build, out).`,
+      ],
+    });
   }
 
   try {
@@ -122,14 +123,18 @@ export async function getConfig<T extends ConfigName = "config">({
 
     if (!config) {
       if (optional) return null;
-      console.error(`Export "${configVarName}" not found in ${configPath}`);
-      process.exit(1);
+      throw new ConfigError(
+        `Export "${configVarName}" not found in ${configPath}`,
+      );
     }
 
     return config as ConfigType<T>;
   } catch (error) {
     if (optional) return null;
-    console.error("Failed to load config:", error);
-    process.exit(1);
+    if (error instanceof ConfigError) throw error;
+    throw new ConfigError(`Failed to load ${configPath}`, {
+      cause: error,
+      details: [error instanceof Error ? error.message : String(error)],
+    });
   }
 }
