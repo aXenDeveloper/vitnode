@@ -202,7 +202,7 @@ export const publishNotification = async <TData>(
       priority: 10,
       tx: db,
     });
-    onQueued(queued.id);
+    if (queued.id !== null) onQueued(queued.id);
   }
 
   return { duplicate: false, eventId: created.id };

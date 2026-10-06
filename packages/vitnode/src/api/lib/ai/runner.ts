@@ -18,11 +18,7 @@ import {
 
 import type { AIModelDefinition } from "../../models/ai";
 import type { VitNodeEvents } from "../../models/events";
-import type {
-  AiActorType,
-  AiPrompt,
-  AiResourceRef,
-} from "./action";
+import type { AiActorType, AiPrompt, AiResourceRef } from "./action";
 import type { AiModelCapability } from "./capabilities";
 import type { Decimal } from "./decimal";
 import type { AiErrorCode } from "./errors";
