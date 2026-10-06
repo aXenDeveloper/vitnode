@@ -314,12 +314,10 @@ export const i18nCreate = async ({
 
   // Load both configs: their presence tells us the app's shape (frontend, API,
   // or both), which decides how much of each package to seed.
-  const webConfig = await getConfig({ baseDir: cwd, optional: true });
-  const apiConfig = await getConfig({
-    baseDir: cwd,
-    optional: true,
-    type: "api.config",
-  });
+  const [webConfig, apiConfig] = await Promise.all([
+    getConfig({ baseDir: cwd, optional: true }),
+    getConfig({ baseDir: cwd, optional: true, type: "api.config" }),
+  ]);
   const config = webConfig ?? apiConfig;
 
   if (!config) throw noConfigError();

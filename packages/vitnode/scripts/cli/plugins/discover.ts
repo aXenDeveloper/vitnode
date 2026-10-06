@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 
 import type { PackageJson } from "../project/packages";
@@ -92,7 +92,7 @@ const sourceOf = (dir: string, workspaceRoot: null | string): PluginSource => {
 
   return workspaceRoot !== null &&
     !inNodeModules &&
-    !relative(workspaceRoot, dir).startsWith("..")
+    !relative(realpathSync(workspaceRoot), realpathSync(dir)).startsWith("..")
     ? "workspace"
     : "package";
 };

@@ -11,7 +11,6 @@
     "dev:email": "email dev --dir src/emails",
     "build": "vitnode build",
     "start": "vitnode start",
-    "drizzle-kit": "drizzle-kit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "i18n:create": "vitnode i18n create",

@@ -63,12 +63,10 @@ export const i18nUpdate = async ({
   const dim = colors.muted;
   const appDir = cwd;
 
-  const webConfig = await getConfig({ baseDir: cwd, optional: true });
-  const apiConfig = await getConfig({
-    baseDir: cwd,
-    optional: true,
-    type: "api.config",
-  });
+  const [webConfig, apiConfig] = await Promise.all([
+    getConfig({ baseDir: cwd, optional: true }),
+    getConfig({ baseDir: cwd, optional: true, type: "api.config" }),
+  ]);
   const config = webConfig ?? apiConfig;
 
   if (!config) throw noConfigError();

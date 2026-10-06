@@ -99,20 +99,14 @@ export const i18nCheck = async ({
   const appDir = cwd;
   const repoRoot = findRepoRoot(appDir);
 
-  const webConfig = await getConfig({ baseDir: cwd, optional: true });
-  const apiConfig = await getConfig({
-    baseDir: cwd,
-    optional: true,
-    type: "api.config",
-  });
   // The app's own message loaders live in the server-only config now, because
   // the shared one is browser-safe. Read from both, so an installation still on
   // the old shape - loaders inside `i18n.messages` - is measured correctly.
-  const serverConfig = await getConfig({
-    baseDir: cwd,
-    optional: true,
-    type: "server.config",
-  });
+  const [webConfig, apiConfig, serverConfig] = await Promise.all([
+    getConfig({ baseDir: cwd, optional: true }),
+    getConfig({ baseDir: cwd, optional: true, type: "api.config" }),
+    getConfig({ baseDir: cwd, optional: true, type: "server.config" }),
+  ]);
   const config = webConfig ?? apiConfig;
 
   if (!config) throw noConfigError();
@@ -298,7 +292,7 @@ export const i18nCheck = async ({
           `  ${location} is never loaded - add \`"${file.pluginId}": () => import("./${file.pluginId}/${file.locale}.json")\` under \`"${file.locale}"\` in \`src/locales/app.ts\`.`,
         ),
       );
-    } else if (declared.length > 0 && !declared.includes(file.locale)) {
+    } else if (declared.length > 0 && !declaredLocales.has(file.locale)) {
       errors += 1;
       problems += 1;
       say(red(`  ${location} uses a locale that is not in \`i18n.locales\`.`));

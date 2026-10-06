@@ -126,7 +126,6 @@ export const apiScripts = (
     ...i18nScripts,
     ...withIf(eslint, eslintScripts),
     ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
-    "drizzle-kit": "drizzle-kit",
   };
 };
 
@@ -170,7 +169,6 @@ export const singleAppScripts = (
   ...i18nScripts,
   ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
-  "drizzle-kit": "drizzle-kit",
 });
 
 export const webScripts = (eslint: boolean) => ({
