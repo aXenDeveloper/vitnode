@@ -1,25 +1,26 @@
+import { areaY, defineChart, lineY } from "@tanstack/charts";
+import { crosshair } from "@tanstack/charts/crosshair";
+import { d3Curve } from "@tanstack/charts/d3/shape";
+import { decorative } from "@tanstack/charts/mark/decorative";
+import { motion as chartMotion } from "@tanstack/charts/motion";
+import { RendererChart } from "@tanstack/charts/react/tooltip";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { scalePoint } from "@tanstack/charts/scales/point";
+import { tooltip } from "@tanstack/charts/tooltip";
+import { portal } from "@tanstack/charts/tooltip/portal";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
+import { curveMonotoneX } from "d3-shape";
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
 import {
   AnimatePresence,
+  cubicBezier,
   motion,
   type TargetAndTransition,
   type Transition,
   useReducedMotion,
 } from "motion/react";
 import React from "react";
-import { createPortal } from "react-dom";
-import {
-  Area,
-  AreaChart,
-  Tooltip,
-  useActiveTooltipCoordinate,
-  useActiveTooltipLabel,
-  useChartWidth,
-  useIsTooltipActive,
-  XAxis,
-} from "recharts";
 import { useFormatter, useTimeZone, useTranslations } from "use-intl";
 
 import type { ChartConfig } from "@/components/ui/chart";
@@ -28,6 +29,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
+import { chartTooltipMotion } from "@/components/ui/chart-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -85,6 +87,15 @@ const SWAP_TRANSITION = {
   duration: 0.2,
   ease: SNAPPY_EASE,
 } satisfies Transition;
+
+const sparkRenderer = chartMotion({
+  initial: false,
+  transition: {
+    duration: SWAP_TRANSITION.duration * 1000,
+    easing: cubicBezier(...SNAPPY_EASE),
+    type: "tween",
+  },
+});
 
 const Swap = ({
   children,
@@ -169,7 +180,7 @@ const SparkTooltip = ({
       : t(metric, { count: point[metric] });
 
   return (
-    <div className="bg-popover text-popover-foreground ring-foreground/10 flex w-max max-w-48 flex-col gap-0.5 rounded-md px-2.5 py-1.5 text-xs leading-snug shadow-md ring-1">
+    <div className="flex w-max max-w-48 flex-col gap-0.5 text-xs leading-snug">
       <span className="text-muted-foreground">{when}</span>
       <span className="flex items-center gap-1.5 font-medium tabular-nums">
         <span
@@ -183,198 +194,109 @@ const SparkTooltip = ({
   );
 };
 
-const SparkTooltipLayer = ({
-  children,
-  glide,
-  open,
-  width,
-  x,
-}: {
-  children: React.ReactNode;
-  glide: boolean;
-  open: boolean;
-  width: number;
-  x: number;
-}) => {
-  const shouldReduceMotion = useReducedMotion();
-  const [size, setSize] = React.useState(0);
-  const observerRef = React.useRef<null | ResizeObserver>(null);
-  const measure = React.useCallback((node: HTMLDivElement | null) => {
-    observerRef.current?.disconnect();
-    if (!node) return;
-    observerRef.current = new ResizeObserver(([entry]) => {
-      setSize(entry?.borderBoxSize[0]?.inlineSize ?? node.offsetWidth);
-    });
-    observerRef.current.observe(node);
-  }, []);
-  const left = Math.min(Math.max(x - size / 2, 0), Math.max(width - size, 0));
-
-  return (
-    <motion.div
-      animate={{
-        opacity: open ? 1 : 0,
-        scale: open ? 1 : 0.97,
-        x: left,
-        y: open ? 0 : 2,
-      }}
-      aria-hidden={!open}
-      className="pointer-events-none absolute bottom-full left-0 z-10 mb-1.5 origin-bottom"
-      initial={
-        shouldReduceMotion ? false : { opacity: 0, scale: 0.97, x: left, y: 2 }
-      }
-      ref={measure}
-      transition={
-        shouldReduceMotion
-          ? { duration: 0 }
-          : {
-              default: open
-                ? { duration: 0.15, ease: SNAPPY_EASE }
-                : { duration: 0.1, ease: "easeIn" },
-              x: glide
-                ? { duration: 0.14, ease: SNAPPY_EASE }
-                : { duration: 0 },
-            }
-      }
-    >
-      {children}
-    </motion.div>
-  );
-};
-
-const SparkTooltipPortal = ({
-  container,
-  glideAllowed,
-  metric,
-  points,
-  unit,
-}: {
-  container: HTMLDivElement | null;
-  glideAllowed: boolean;
-  metric: Metric;
-  points: AdminNotificationStats["points"];
-  unit: Unit;
-}) => {
-  const active = useIsTooltipActive();
-  const label = useActiveTooltipLabel();
-  const x = useActiveTooltipCoordinate()?.x;
-  const width = useChartWidth() ?? 0;
-  const key = typeof label === "string" ? label : undefined;
-  const open = active && key !== undefined;
-  const [shown, setShown] = React.useState({
-    glide: false,
-    key: undefined as string | undefined,
-    open: false,
-    x: 0,
-  });
-
-  if (
-    open !== shown.open ||
-    (key !== undefined && key !== shown.key) ||
-    (x !== undefined && x !== shown.x)
-  ) {
-    setShown({
-      glide: shown.open && open,
-      key: key ?? shown.key,
-      open,
-      x: x ?? shown.x,
-    });
-  }
-
-  const point = points.find(item => item.key === shown.key);
-  if (!container || !point) return null;
-
-  return createPortal(
-    <SparkTooltipLayer
-      glide={shown.glide && glideAllowed}
-      open={shown.open}
-      width={width}
-      x={shown.x}
-    >
-      <SparkTooltip metric={metric} point={point} unit={unit} />
-    </SparkTooltipLayer>,
-    container,
-  );
-};
+const sparkCurve = d3Curve(curveMonotoneX);
 
 const Sparkline = ({
-  animate,
   label,
   metric,
   points,
   unit,
 }: {
-  animate: boolean;
   label: string;
   metric: Metric;
   points: AdminNotificationStats["points"];
   unit: Unit;
 }) => {
   const t = useTranslations("admin.system.notifications.activity");
-  const id = React.useId().replace(/:/g, "");
-  const [input, setInput] = React.useState<"keyboard" | "pointer">("pointer");
-  const [layer, setLayer] = React.useState<HTMLDivElement | null>(null);
-  const color = TONE[metric];
-  const config = { value: { color } } satisfies ChartConfig;
-  const data = points.map(point => ({
-    key: point.key,
-    value: valueOf(point, metric),
-  }));
+  const config = { value: { color: TONE[metric] } } satisfies ChartConfig;
+  const definition = React.useMemo(() => {
+    const data = points.map(point => ({
+      key: point.key,
+      point,
+      value: valueOf(point, metric),
+    }));
+
+    return defineChart({
+      marks: [
+        crosshair({
+          motion: { transition: chartTooltipMotion },
+          x: { stroke: "var(--border)", strokeWidth: 1 },
+          y: false,
+        }),
+        decorative(
+          areaY(data, {
+            curve: sparkCurve,
+            fill: "url(#spark-fill)",
+            fillOpacity: 1,
+            x: "key",
+            y1: 0,
+            y2: "value",
+          }),
+        ),
+        lineY(data, {
+          curve: sparkCurve,
+          stroke: "var(--color-value)",
+          strokeWidth: 1.5,
+          x: "key",
+          y: "value",
+        }),
+      ],
+      scales: {
+        x: { scale: scalePoint },
+        y: { scale: scaleLinear },
+      },
+      guides: false,
+      margin: { bottom: 2, left: 0, right: 0, top: 2 },
+      gradients: [
+        {
+          id: "spark-fill",
+          stops: [
+            { color: "var(--color-value)", offset: 0, opacity: 0.2 },
+            { color: "var(--color-value)", offset: 1, opacity: 0 },
+          ],
+          x1: 0,
+          x2: 0,
+          y1: 0,
+          y2: 1,
+        },
+      ],
+      focus: "nearest-x",
+      focusRing: {
+        fill: "var(--color-value)",
+        radius: 3,
+        stroke: "var(--card)",
+        strokeWidth: 2,
+      },
+      maxFocusDistance: Number.POSITIVE_INFINITY,
+      tooltip: {
+        anchor: { x: "value", y: "plot-top" },
+        motion: chartTooltipMotion,
+        offset: 6,
+        placement: "top",
+        portal,
+        use: tooltip,
+      },
+    });
+  }, [metric, points]);
 
   return (
-    <div className="relative" ref={setLayer}>
-      <ChartContainer
-        className="aspect-auto h-10 w-full"
-        config={config}
-        onKeyDown={() => {
-          setInput("keyboard");
-        }}
-        onPointerMove={() => {
-          setInput("pointer");
-        }}
-      >
-        <AreaChart
-          data={data}
-          margin={{ bottom: 2, left: 0, right: 0, top: 2 }}
-          title={t("trend", { label })}
-        >
-          <defs>
-            <linearGradient id={`spark-${id}`} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.2} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="key" hide />
-          <Tooltip
-            content={() => null}
-            cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
-            isAnimationActive={false}
-          />
-          <SparkTooltipPortal
-            container={layer}
-            glideAllowed={input === "pointer"}
-            metric={metric}
-            points={points}
-            unit={unit}
-          />
-          <Area
-            activeDot={{
-              fill: color,
-              r: 3,
-              stroke: "var(--card)",
-              strokeWidth: 2,
-            }}
-            animationDuration={300}
-            animationEasing="ease-out"
-            dataKey="value"
-            fill={`url(#spark-${id})`}
-            isAnimationActive={animate}
-            stroke={color}
-            strokeWidth={1.5}
-            type="monotone"
-          />
-        </AreaChart>
-      </ChartContainer>
-    </div>
+    <ChartContainer config={config}>
+      <RendererChart
+        ariaLabel={t("trend", { label })}
+        definition={definition}
+        height={40}
+        renderer={sparkRenderer}
+        renderTooltipBody={({ primaryPoint }) =>
+          primaryPoint ? (
+            <SparkTooltip
+              metric={metric}
+              point={primaryPoint.datum.point}
+              unit={unit}
+            />
+          ) : null
+        }
+      />
+    </ChartContainer>
   );
 };
 
@@ -420,13 +342,11 @@ const Delta = ({
 };
 
 const StatTile = ({
-  animate,
   goodWhenUp,
   label,
   metric,
   stats,
 }: {
-  animate: boolean;
   goodWhenUp: boolean;
   label: string;
   metric: Metric;
@@ -458,7 +378,6 @@ const StatTile = ({
           />
         </Swap>
         <Sparkline
-          animate={animate}
           label={label}
           metric={metric}
           points={stats.points}
@@ -483,9 +402,6 @@ export const NotificationsActivity = () => {
   const tError = useTranslations("core.global.errors");
   const timeZone = useTimeZone() ?? "UTC";
   const [range, setRange] = React.useState<NotificationStatsRange>("7d");
-  const [hasSwitched, setHasSwitched] = React.useState(false);
-  const shouldReduceMotion = useReducedMotion();
-  const animate = hasSwitched && !shouldReduceMotion;
   const query = useQuery({
     ...notificationStatsQueryOptions({ range, timeZone }),
     placeholderData: keepPreviousData,
@@ -512,7 +428,6 @@ export const NotificationsActivity = () => {
           onValueChange={value => {
             if (!isRange(value)) return;
             setRange(value);
-            setHasSwitched(true);
           }}
           value={range}
         >
@@ -539,28 +454,24 @@ export const NotificationsActivity = () => {
           )}
         >
           <StatTile
-            animate={animate}
             goodWhenUp
             label={t("sent")}
             metric="sent"
             stats={query.data}
           />
           <StatTile
-            animate={animate}
             goodWhenUp={false}
             label={t("failure_rate")}
             metric="failureRate"
             stats={query.data}
           />
           <StatTile
-            animate={animate}
             goodWhenUp
             label={t("events")}
             metric="events"
             stats={query.data}
           />
           <StatTile
-            animate={animate}
             goodWhenUp={false}
             label={t("skipped")}
             metric="skipped"

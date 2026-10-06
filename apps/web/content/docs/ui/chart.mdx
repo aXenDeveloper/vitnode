@@ -1,6 +1,6 @@
 ---
 title: Chart
-description: Bar, area, line and pie charts built with plain Recharts, plus tooltips, legends and colors that follow your theme.
+description: Bar, area, line and pie charts built with TanStack Charts, plus tooltips, legends and colors that follow your VitNode theme.
 icon: ChartColumn
 ---
 
@@ -8,65 +8,115 @@ icon: ChartColumn
 
 ## Installation
 
-You write plain [Recharts](https://recharts.github.io/) and borrow only the
-container, tooltip and legend from VitNode. New Recharts chart types work the
-day they ship.
+You write plain [TanStack Charts](https://tanstack.com/charts) and borrow the
+container, colors, tooltip and legend from VitNode. Every TanStack mark, scale
+and transform works out of the box.
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install Recharts'>
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install TanStack Charts'>
 
 ```bash tab="bun"
-bun i recharts
+bun i @tanstack/charts
 ```
 
 ```bash tab="pnpm"
-pnpm i recharts
+pnpm i @tanstack/charts
 ```
 
 ```bash tab="npm"
-npm i recharts
+npm i @tanstack/charts
 ```
 
 </Tabs>
 
-## Usage
+## Create a bar chart
 
-```ts
-import type { ChartConfig } from '@vitnode/core/components/ui/chart'
-
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@vitnode/core/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
-```
+A chart is a **definition** (marks, scales, colors) rendered by TanStack's
+`Chart` inside VitNode's `ChartContainer`.
 
 ```tsx
+import type { ChartConfig } from '@vitnode/core/components/ui/chart'
+
+import { barY, defineChart, group } from '@tanstack/charts'
+import { Chart } from '@tanstack/charts/react/tooltip'
+import { scaleBand } from '@tanstack/charts/scales/band'
+import { scaleLinear } from '@tanstack/charts/scales/linear'
+import { tooltip } from '@tanstack/charts/tooltip'
+import { fold } from '@tanstack/charts/transform/fold'
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartTooltipContent,
+} from '@vitnode/core/components/ui/chart'
+import { chartColor } from '@vitnode/core/components/ui/chart-utils'
+
+const chartData = [
+  { month: 'January', desktop: 186, mobile: 80 },
+  { month: 'February', desktop: 305, mobile: 200 },
+]
+
 const chartConfig = {
   desktop: { label: 'Desktop', color: 'var(--chart-1)' },
   mobile: { label: 'Mobile', color: 'var(--chart-2)' },
 } satisfies ChartConfig
 
-<ChartContainer config={chartConfig}>
-  <BarChart accessibilityLayer data={chartData} title="Visitors">
-    <CartesianGrid vertical={false} />
-    <XAxis dataKey="month" tickLine={false} axisLine={false} />
-    <ChartTooltip content={<ChartTooltipContent />} />
-    <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-    <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
-  </BarChart>
-</ChartContainer>
+// One row per bar: { month, device: 'desktop' | 'mobile', visitors }
+const rows = fold(chartData, {
+  fields: ['desktop', 'mobile'] as const,
+  as: { key: 'device', value: 'visitors' },
+})
+
+const definition = defineChart({
+  marks: [
+    barY(rows, {
+      x: 'month',
+      y: 'visitors',
+      color: 'device',
+      layout: group(),
+      radius: 4,
+    }),
+  ],
+  scales: {
+    x: { scale: () => scaleBand().padding(0.2) },
+    y: { scale: scaleLinear, nice: true, grid: true, axis: false },
+  },
+  color: chartColor(chartConfig),
+  focus: 'group-x',
+  tooltip,
+})
+
+export const VisitorsChart = () => (
+  <ChartContainer config={chartConfig}>
+    <Chart
+      ariaLabel="Visitors"
+      definition={definition}
+      height={280}
+      renderTooltipBody={({ points }) => (
+        <ChartTooltipContent points={points} />
+      )}
+    />
+    <ChartLegend />
+  </ChartContainer>
+)
 ```
 
-`ChartContainer` is responsive and defaults to `aspect-video`. Change the box
-with `className`, for example `aspect-square` or `h-64 w-full`.
+- `fold()` turns wide rows into one row per series. TanStack Charts colors and
+  groups marks by a field, so the series name has to live in the data.
+- `color: 'device'` sends each row through `chartColor(chartConfig)`, which
+  paints `desktop` with `--color-desktop`.
+- Import `Chart` from `@tanstack/charts/react/tooltip` whenever you pass
+  `renderTooltipBody`. The plain `@tanstack/charts/react` entry keeps
+  TanStack's built-in tooltip text.
+
+Define charts at module scope. When a definition reads props or state, wrap
+it in `useMemo`. A new definition object tells TanStack Charts to redraw.
 
 ## Chart config
 
-Each config key matches a `dataKey` in your data. The config holds the words
-and colors, so your data stays clean.
+Each config key matches a series value (`desktop`, `mobile`) or a category
+(`general`, `support`). The config holds the words and colors, so your data
+stays clean.
 
 ```tsx
 const chartConfig = {
@@ -86,85 +136,183 @@ const chartConfig = {
 ## Colors
 
 For every config key, `ChartContainer` creates a `--color-<key>` variable
-scoped to that chart. Use it anywhere Recharts takes a color, or in Tailwind as
-`fill-(--color-desktop)`.
+scoped to that chart. There are two ways to use it:
 
 ```tsx
-<Bar dataKey="desktop" fill="var(--color-desktop)" />
+// Map a field to colors - the legend and tooltip swatches follow
+barY(rows, { x: 'month', y: 'visitors', color: 'device' })
+defineChart({ marks, scales, color: chartColor(chartConfig) })
+
+// Or paint one mark directly
+lineY(chartData, {
+  x: 'day',
+  y: 'responseTime',
+  stroke: 'var(--color-responseTime)',
+})
 ```
 
+`ChartContainer` also maps TanStack's default palette to `--chart-1` to
+`--chart-5`, and styles axes, grid lines, focus rings and tooltips with
+VitNode tokens. Charts follow light and dark mode without extra code.
+
 Pick from `--chart-1` to `--chart-5` in order: blue, orange, gray, green, red.
-They have light and dark values, so charts follow the theme. Two or three per
-chart is plenty. See [Colors](/docs/ui/colors#chart-palette).
+Two or three per chart is plenty. See [Colors](/docs/ui/colors#chart-palette).
 
 ## Area chart
 
 <Preview name="chart-area" />
 
-Stack areas with a shared `stackId`. Fade them with a `linearGradient` that
-reads the chart's color variables.
+Stack the rows with `stackRowsY()`, then draw an area and a line from the same
+endpoints. Gradients are chart resources, so they can read the color variables.
 
 ```tsx
-<defs>
-  <linearGradient id="fill-downloads" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stopColor="var(--color-downloads)" stopOpacity={0.8} />
-    <stop offset="95%" stopColor="var(--color-downloads)" stopOpacity={0.1} />
-  </linearGradient>
-</defs>
-<Area
-  dataKey="downloads"
-  type="natural"
-  stackId="installs"
-  fill="url(#fill-downloads)"
-  stroke="var(--color-downloads)"
-/>
+import { areaY, defineChart, lineY } from '@tanstack/charts'
+import { d3Curve } from '@tanstack/charts/d3/shape'
+import { decorative } from '@tanstack/charts/mark/decorative'
+import { stackRowsY } from '@tanstack/charts/transform/stack'
+import { curveMonotoneX } from 'd3-shape'
+
+const curve = d3Curve(curveMonotoneX)
+
+const rows = stackRowsY(
+  fold(chartData, {
+    fields: ['upgrades', 'downloads'] as const,
+    as: { key: 'kind', value: 'installs' },
+  }),
+  { x: 'month', y: 'installs', z: 'kind' },
+)
+
+const definition = defineChart({
+  marks: [
+    decorative(
+      areaY(rows, {
+        x: 'month',
+        y1: 'y1',
+        y2: 'y2',
+        z: 'kind',
+        fill: (row) => `url(#fill-${row.kind})`,
+        fillOpacity: 1,
+        curve,
+      }),
+    ),
+    lineY(rows, { x: 'month', y: 'y2', z: 'kind', curve }),
+  ],
+  scales: {
+    x: { scale: scalePoint },
+    y: { scale: scaleLinear, nice: true, grid: true, axis: false },
+  },
+  color: chartColor(chartConfig),
+  gradients: (['downloads', 'upgrades'] as const).map((kind) => ({
+    id: `fill-${kind}`,
+    y1: 0,
+    y2: 1,
+    stops: [
+      { offset: 0.05, color: `var(--color-${kind})`, opacity: 0.8 },
+      { offset: 0.95, color: `var(--color-${kind})`, opacity: 0.1 },
+    ],
+  })),
+  focus: 'group-x',
+  tooltip,
+})
 ```
+
+- `decorative()` keeps the area visible but out of hover and keyboard focus,
+  so every month shows up in the tooltip once.
+- The line sits on the stacked top (`y2`). Pass `valueKey="installs"` to the
+  tooltip so it shows each series' own value, not the running total.
+- Smooth curves come from `d3-shape`. Install it next to `@tanstack/charts`
+  when you want them. Straight segments need nothing extra.
 
 ## Line chart
 
 <Preview name="chart-line" />
 
 ```tsx
-<Line
-  dataKey="responseTime"
-  type="monotone"
-  stroke="var(--color-responseTime)"
-  strokeWidth={2}
-/>
+import { crosshair } from '@tanstack/charts/crosshair'
+
+const definition = defineChart({
+  marks: [
+    crosshair({ x: true, y: false }),
+    lineY(chartData, {
+      x: 'day',
+      y: 'responseTime',
+      stroke: 'var(--color-responseTime)',
+      points: true,
+    }),
+  ],
+  scales: {
+    x: { scale: () => scalePoint().padding(0.3) },
+    y: { scale: scaleLinear, nice: true, grid: true, axis: false },
+  },
+  focus: 'nearest-x',
+  maxFocusDistance: Number.POSITIVE_INFINITY,
+  tooltip,
+})
 ```
+
+`focus: 'nearest-x'` with an infinite distance snaps to the closest day
+anywhere in the plot, and `crosshair()` draws a guide at that day. A single
+series has no series field, so name it in the tooltip with
+`nameKey="responseTime"`.
 
 ## Pie chart
 
 <Preview name="chart-pie" />
 
-Each slice is a row, not a series. Put the color on the row with `fill`, and
-pass `nameKey` so the tooltip and legend find the right label.
+Each slice is a row, not a series. `pie()` turns totals into angles, and
+`radialArc()` draws them inside `polar()`.
 
 ```tsx
-const chartData = [
-  { category: 'general', threads: 412, fill: 'var(--color-general)' },
-  { category: 'support', threads: 286, fill: 'var(--color-support)' },
-]
+import { pie, polar, radialArc } from '@tanstack/charts/polar'
 
-<ChartTooltip content={<ChartTooltipContent hideLabel nameKey="category" />} />
-<Pie data={chartData} dataKey="threads" nameKey="category" />
-<ChartLegend content={<ChartLegendContent nameKey="category" />} />
+const definition = defineChart({
+  marks: [
+    polar({
+      marks: [
+        radialArc(pie(chartData, { value: 'threads' }), {
+          innerRadius: ({ radius }) => radius * 0.5,
+          color: 'category',
+          key: 'category',
+        }),
+      ],
+      scales: { angle: null, radius: null },
+    }),
+  ],
+  scales: { x: null, y: null },
+  color: chartColor(chartConfig),
+  tooltip,
+})
+
+<ChartTooltipContent hideLabel nameKey="category" points={points} valueKey="threads" />
 ```
+
+Return `0` from `innerRadius` for a full pie instead of a donut.
 
 ## Tooltip
 
-`ChartTooltip` is the Recharts `Tooltip`. `ChartTooltipContent` styles it and
-reads labels, icons and colors from your config. Hover the previews to compare
-`dashed` (bar), `dot` (area) and `line` (line).
+`ChartTooltipContent` renders inside TanStack's tooltip and reads labels, icons
+and colors from your config. Hover the previews to compare `dashed` (bar),
+`dot` (area) and `line` (line).
 
 ```tsx
-<ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+<Chart
+  ariaLabel="Visitors"
+  definition={definition}
+  renderTooltipBody={({ points }) => (
+    <ChartTooltipContent indicator="line" points={points} />
+  )}
+/>
 ```
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
+    points: {
+      description: 'Focused points from renderTooltipBody.',
+      type: 'readonly ChartPoint[]',
+      required: true,
+    },
     indicator: {
       description: 'Shape next to each value.',
       type: "'dot' | 'line' | 'dashed'",
@@ -181,67 +329,151 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       default: 'false',
     },
     labelKey: {
-      description: 'Config or data key for the heading.',
+      description: 'Data field for the heading. Defaults to the x value.',
       type: 'string',
     },
     nameKey: {
-      description: 'Config or data key for each value name.',
+      description:
+        'Data field (or config key) for each value name. Defaults to the series.',
+      type: 'string',
+    },
+    valueKey: {
+      description: 'Data field for each value. Defaults to the y value.',
       type: 'string',
     },
     labelFormatter: {
       description: 'Formats the heading.',
-      type: '(label, payload) => ReactNode',
+      type: '(label, points) => ReactNode',
     },
     formatter: {
       description: 'Renders each row yourself.',
-      type: '(value, name, item, index, payload) => ReactNode',
+      type: '(value, name, point, index) => ReactNode',
     },
   }}
 />
 
+Placement and behavior live in the definition. A few useful options:
+
+- `focus: 'group-x'` shows every series at the hovered category.
+- `tooltip: { use: tooltip, sort: 'color-domain' }` lists rows in config order.
+- `tooltip: { use: tooltip, portal }` (from `@tanstack/charts/tooltip/portal`)
+  lets the tooltip escape a card with `overflow: hidden`.
+
+Click or press <kbd>Enter</kbd> to pin a tooltip, <kbd>Esc</kbd> to unpin it.
+
 ## Legend
 
-`ChartLegend` is the Recharts `Legend`. `ChartLegendContent` renders labels and
-swatches (or icons) from your config.
+`ChartLegend` is a plain HTML list built from your config, so screen readers
+can read it. Put it inside `ChartContainer`, after the chart.
 
 ```tsx
-import {
-  ChartLegend,
-  ChartLegendContent,
-} from '@vitnode/core/components/ui/chart'
-
-;<ChartLegend content={<ChartLegendContent />} />
+<ChartContainer config={chartConfig}>
+  <Chart ariaLabel="Threads by category" definition={definition} />
+  <ChartLegend />
+</ChartContainer>
 ```
 
 <TypeTable
   type={{
-    nameKey: {
-      description: 'Config or data key for each label.',
-      type: 'string',
+    keys: {
+      description:
+        'Config keys to show, in order. Defaults to every key with a color.',
+      type: 'readonly string[]',
     },
     hideIcon: {
       description: 'Shows the color swatch even when the config has an icon.',
       type: 'boolean',
       default: 'false',
     },
-    verticalAlign: {
-      description: 'Puts the padding on the side facing the chart.',
-      type: "'top' | 'middle' | 'bottom'",
-      default: "'bottom'",
-    },
   }}
 />
 
+## Size
+
+`Chart` fills the container's width. Set its height with one of:
+
+- `height={280}` - a fixed height, the safest choice for dashboards.
+- `aspectRatio={16 / 9}` - height follows the width.
+
+Charts render on the server at `initialWidth` (640px by default), then measure
+their real width after hydration.
+
+## Animation
+
+Out of the box a chart paints its final state at once. `svgAnimation: true` in
+the definition tweens later data updates, like switching a date range.
+
+Want bars that grow and pies that sweep in? Swap `Chart` for `RendererChart`
+and hand it the `motion()` renderer:
+
+```tsx
+import { motion } from '@tanstack/charts/motion'
+import { RendererChart } from '@tanstack/charts/react/tooltip'
+import { chartTooltipMotion } from '@vitnode/core/components/ui/chart-utils'
+
+const renderer = motion({
+  transition: { type: 'tween', duration: 700, easing: 'ease-out' },
+})
+
+const definition = defineChart({
+  marks,
+  scales,
+  tooltip: { use: tooltip, motion: chartTooltipMotion },
+})
+
+<ChartContainer config={chartConfig}>
+  <RendererChart
+    ariaLabel="Visitors"
+    definition={definition}
+    height={280}
+    renderer={renderer}
+    renderTooltipBody={({ points }) => <ChartTooltipContent points={points} />}
+  />
+</ChartContainer>
+```
+
+- The entrance plays when the chart mounts in the browser. A server-rendered
+  chart skips it, so it never flashes the final bars first. To animate a chart
+  below the fold, mount it when it scrolls into view with
+  `useIntersectionObserver`, like the demos on this page.
+- `chartTooltipMotion` is a quick spring with no bounce. The tooltip fades in,
+  glides from point to point and fades out. Give a `crosshair` the same
+  spring (`motion: { transition: chartTooltipMotion }`) so the guide and the
+  tooltip move together.
+- A plain `Chart` keeps the tooltip instant: tooltip motion needs `motion()`.
+- `motion()` respects `prefers-reduced-motion` and simply paints the final
+  state.
+
 ## Accessibility
 
-- `accessibilityLayer` adds ARIA attributes and keyboard support: Tab to the
-  chart, then arrow keys move between points. It is on by default in Recharts
-  3, but writing it out shows intent.
-- Give each chart a `title` and a `desc`. Recharts renders them as the SVG's
-  `<title>` and `<desc>`.
+- `ariaLabel` is required. Add `ariaDescription` for a sentence about the data.
+- Tab to the chart, then use the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>
+  to move between points. The tooltip follows the keyboard.
 - Keep a visible heading next to the chart, like a `CardTitle`. Never rely on
   color alone: tooltip and legend labels tell series apart.
+- Every animation respects `prefers-reduced-motion`.
+
+## Migrate from Recharts
+
+VitNode used Recharts before. The ideas map one to one:
+
+| Recharts                                    | TanStack Charts                                        |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `<BarChart>` + `<Bar>` children             | `defineChart({ marks: [barY(...)] })`                  |
+| Wide rows + one `dataKey` per series        | `fold()` into long rows + `color: 'series'`            |
+| `fill="var(--color-desktop)"` on each `Bar` | `color: chartColor(chartConfig)`                       |
+| `stackId`                                   | Repeated x values stack by default, or `stackRowsY()`  |
+| `<XAxis>` / `<CartesianGrid>`               | `scales.x.axis` / `scales.y.grid`                      |
+| `type="monotone"`                           | `curve: d3Curve(curveMonotoneX)`                       |
+| `<ChartTooltip content={...} />`            | `tooltip` in the definition + `renderTooltipBody`      |
+| `<ChartLegend content={...} />`             | `<ChartLegend />`                                      |
+| `accessibilityLayer`, `title`, `desc`       | `ariaLabel`, `ariaDescription` (keyboard is always on) |
+| `ChartContainer className="aspect-video"`   | `<Chart height={280} />` or `aspectRatio={16 / 9}`     |
+
+`ChartTooltip` and `ChartLegendContent` are gone: the tooltip is configured in
+the definition, and `ChartLegend` is now a component you render directly.
 
 ## API Reference
 
-[Recharts - API](https://recharts.github.io/en-US/api/)
+- [TanStack Charts - React adapter](https://tanstack.com/charts/latest/docs/framework/react/adapter)
+- [TanStack Charts - Example gallery](https://tanstack.com/charts/latest/docs/examples/index)

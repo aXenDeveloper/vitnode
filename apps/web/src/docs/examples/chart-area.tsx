@@ -1,5 +1,13 @@
 import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 
+import { areaY, defineChart, lineY } from '@tanstack/charts'
+import { d3Curve } from '@tanstack/charts/d3/shape'
+import { decorative } from '@tanstack/charts/mark/decorative'
+import { scaleLinear } from '@tanstack/charts/scales/linear'
+import { scalePoint } from '@tanstack/charts/scales/point'
+import { tooltip } from '@tanstack/charts/tooltip'
+import { fold } from '@tanstack/charts/transform/fold'
+import { stackRowsY } from '@tanstack/charts/transform/stack'
 import {
   Card,
   CardContent,
@@ -10,11 +18,15 @@ import {
 import {
   ChartContainer,
   ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import {
+  chartColor,
+  chartTooltipMotion,
+} from '@vitnode/core/components/ui/chart-utils'
+import { curveMonotoneX } from 'd3-shape'
+
+import { EntranceChart } from '../entrance-chart'
 
 const chartData = [
   { month: 'January', downloads: 420, upgrades: 120 },
@@ -26,17 +38,66 @@ const chartData = [
 ]
 
 const chartConfig = {
-  downloads: {
-    label: 'Downloads',
-    color: 'var(--chart-1)',
-  },
   upgrades: {
     label: 'Upgrades',
     color: 'var(--chart-4)',
   },
+  downloads: {
+    label: 'Downloads',
+    color: 'var(--chart-1)',
+  },
 } satisfies ChartConfig
 
 const shortMonth = (month: string) => month.slice(0, 3)
+
+const curve = d3Curve(curveMonotoneX)
+
+const rows = stackRowsY(
+  fold(chartData, {
+    fields: ['upgrades', 'downloads'] as const,
+    as: { key: 'kind', value: 'installs' },
+  }),
+  { x: 'month', y: 'installs', z: 'kind' },
+)
+
+const definition = defineChart({
+  marks: [
+    decorative(
+      areaY(rows, {
+        x: 'month',
+        y1: 'y1',
+        y2: 'y2',
+        z: 'kind',
+        fill: (row) => `url(#fill-${row.kind})`,
+        fillOpacity: 1,
+        curve,
+      }),
+    ),
+    lineY(rows, { x: 'month', y: 'y2', z: 'kind', strokeWidth: 2, curve }),
+  ],
+  scales: {
+    x: {
+      scale: () => scalePoint().padding(0.1),
+      axis: { line: false, ticks: { size: 0, format: shortMonth } },
+    },
+    y: { scale: scaleLinear, nice: true, grid: true, axis: false },
+  },
+  color: chartColor(chartConfig),
+  gradients: (['downloads', 'upgrades'] as const).map((kind) => ({
+    id: `fill-${kind}`,
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 1,
+    stops: [
+      { offset: 0.05, color: `var(--color-${kind})`, opacity: 0.8 },
+      { offset: 0.95, color: `var(--color-${kind})`, opacity: 0.1 },
+    ],
+  })),
+  focus: 'group-x',
+  maxFocusDistance: Number.POSITIVE_INFINITY,
+  tooltip: { use: tooltip, motion: chartTooltipMotion },
+})
 
 export default function ChartAreaExample() {
   return (
@@ -46,68 +107,17 @@ export default function ChartAreaExample() {
         <CardDescription>Fresh downloads and upgrades, stacked</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          className="aspect-4/3 sm:aspect-video"
-          config={chartConfig}
-        >
-          <AreaChart
-            accessibilityLayer
-            data={chartData}
-            desc="Plugin downloads and upgrades per month, January to June"
-            margin={{ left: 12, right: 12 }}
-            title="Plugin installs"
-          >
-            <defs>
-              <linearGradient id="fill-downloads" x1="0" x2="0" y1="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-downloads)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-downloads)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-              <linearGradient id="fill-upgrades" x1="0" x2="0" y1="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-upgrades)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-upgrades)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              axisLine={false}
-              dataKey="month"
-              tickFormatter={shortMonth}
-              tickLine={false}
-              tickMargin={8}
-            />
-            <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Area
-              dataKey="upgrades"
-              fill="url(#fill-upgrades)"
-              stackId="installs"
-              stroke="var(--color-upgrades)"
-              type="natural"
-            />
-            <Area
-              dataKey="downloads"
-              fill="url(#fill-downloads)"
-              stackId="installs"
-              stroke="var(--color-downloads)"
-              type="natural"
-            />
-          </AreaChart>
+        <ChartContainer config={chartConfig}>
+          <EntranceChart
+            ariaDescription="Plugin downloads and upgrades per month, January to June"
+            ariaLabel="Plugin installs"
+            definition={definition}
+            height={280}
+            renderTooltipBody={({ points }) => (
+              <ChartTooltipContent points={points} valueKey="installs" />
+            )}
+          />
+          <ChartLegend />
         </ChartContainer>
       </CardContent>
     </Card>

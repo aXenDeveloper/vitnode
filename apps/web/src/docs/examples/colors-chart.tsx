@@ -1,13 +1,17 @@
 import type { ChartConfig } from '@vitnode/core/components/ui/chart'
 
+import { barY, defineChart, group } from '@tanstack/charts'
+import { Chart } from '@tanstack/charts/react/tooltip'
+import { scaleBand } from '@tanstack/charts/scales/band'
+import { scaleLinear } from '@tanstack/charts/scales/linear'
+import { tooltip } from '@tanstack/charts/tooltip'
+import { fold } from '@tanstack/charts/transform/fold'
 import {
   ChartContainer,
   ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
   ChartTooltipContent,
 } from '@vitnode/core/components/ui/chart'
-import { Bar, BarChart, XAxis } from 'recharts'
+import { chartColor } from '@vitnode/core/components/ui/chart-utils'
 
 const chartData = [
   { day: 'Mon', posts: 42, replies: 64, likes: 30, signups: 18, reports: 4 },
@@ -25,32 +29,46 @@ const chartConfig = {
   reports: { label: 'Reports', color: 'var(--chart-5)' },
 } satisfies ChartConfig
 
-const SERIES = Object.keys(chartConfig) as (keyof typeof chartConfig)[]
+const rows = fold(chartData, {
+  fields: ['posts', 'replies', 'likes', 'signups', 'reports'] as const,
+  as: { key: 'series', value: 'count' },
+})
+
+const definition = defineChart({
+  marks: [
+    barY(rows, {
+      x: 'day',
+      y: 'count',
+      color: 'series',
+      layout: group({ padding: 0.1 }),
+      radius: 4,
+    }),
+  ],
+  scales: {
+    x: {
+      scale: () => scaleBand().padding(0.2),
+      axis: { line: false, ticks: { size: 0 } },
+    },
+    y: { scale: scaleLinear, nice: true, axis: false },
+  },
+  color: chartColor(chartConfig),
+  focus: 'group-x',
+  tooltip: { use: tooltip, anchor: 'group-center', sort: 'color-domain' },
+})
 
 export default function ColorsChart() {
   return (
-    <ChartContainer
-      className="not-prose aspect-video w-full"
-      config={chartConfig}
-    >
-      <BarChart
-        accessibilityLayer
-        data={chartData}
-        desc="Community activity per weekday across five series"
-        title="Community activity"
-      >
-        <XAxis axisLine={false} dataKey="day" tickLine={false} />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <ChartLegend content={<ChartLegendContent />} />
-        {SERIES.map((series) => (
-          <Bar
-            dataKey={series}
-            fill={`var(--color-${series})`}
-            key={series}
-            radius={4}
-          />
-        ))}
-      </BarChart>
+    <ChartContainer className="not-prose" config={chartConfig}>
+      <Chart
+        ariaDescription="Community activity per weekday across five series"
+        ariaLabel="Community activity"
+        definition={definition}
+        height={280}
+        renderTooltipBody={({ points }) => (
+          <ChartTooltipContent points={points} />
+        )}
+      />
+      <ChartLegend />
     </ChartContainer>
   )
 }
