@@ -1,3 +1,5 @@
+import { redactSecrets } from "@/api/lib/redact";
+
 const DRIVER_FIELDS = [
   "code",
   "detail",
@@ -11,6 +13,23 @@ const DRIVER_FIELDS = [
 
 const MAX_CAUSE_DEPTH = 5;
 
+// drizzle-orm's `DrizzleQueryError` is `Failed query: <sql>\nparams: <values>`,
+// and the values are whatever was bound - addresses, password hashes, secrets.
+// The SQL keeps its `$1` placeholders, so it stays.
+const QUERY_PARAMS = /^(Failed query: [\s\S]*?)\nparams: [\s\S]*$/;
+// Postgres echoes the offending values in `detail`:
+// `Key (email)=(bob@example.com) already exists.`, `Failing row contains (...)`.
+const DETAIL_FAILING_ROW = /Failing row contains \([\s\S]*\)/;
+const DETAIL_KEY_VALUES = /=\([\s\S]*\)/;
+
+const redactMessage = (message: string): string =>
+  redactSecrets(message.replace(QUERY_PARAMS, "$1\nparams: [redacted]"));
+
+const redactDetail = (detail: string): string =>
+  detail
+    .replace(DETAIL_FAILING_ROW, "Failing row contains ([redacted])")
+    .replace(DETAIL_KEY_VALUES, "=([redacted])");
+
 const readDriverFields = (error: Error): string[] => {
   const fields = error as unknown as Record<string, unknown>;
 
@@ -18,7 +37,9 @@ const readDriverFields = (error: Error): string[] => {
     const value = fields[key];
 
     if (typeof value === "string" && value.length > 0) {
-      return [`${key}: ${value}`];
+      const safe = key === "detail" ? redactDetail(value) : value;
+
+      return [`${key}: ${redactSecrets(safe)}`];
     }
 
     if (typeof value === "number") {
@@ -32,18 +53,24 @@ const readDriverFields = (error: Error): string[] => {
 const describeOne = (error: unknown): string => {
   if (error instanceof Error) {
     const fields = readDriverFields(error);
-    const message = error.message.length > 0 ? error.message : error.name;
+    const message =
+      error.message.length > 0 ? redactMessage(error.message) : error.name;
 
     return fields.length > 0 ? `${message} (${fields.join(", ")})` : message;
   }
 
   if (typeof error === "string") {
-    return error;
+    return redactMessage(error);
   }
 
-  return String(error);
+  return redactMessage(String(error));
 };
 
+/**
+ * One line per error in the `cause` chain, for logs. Bound query parameters,
+ * values Postgres echoes back and credential-looking strings are redacted - the
+ * result ends up in `core_logs` and on the console.
+ */
 export const describeError = (error: unknown): string => {
   const seen = new Set<unknown>();
   const parts: string[] = [];
