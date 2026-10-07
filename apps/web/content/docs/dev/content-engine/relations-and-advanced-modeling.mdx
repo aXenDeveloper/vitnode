@@ -103,6 +103,41 @@ export const example_recipes_ingredients =
 
 Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The generated migration should contain one table per junction and repeatable field. Open the create form: the category has a picker, tags accept several values, the nutrition fields sit in their own card and ingredients can be added, removed and reordered.
 
+## Relations across ID strategies
+
+A relation can point at a content type with a different [`idStrategy`](/docs/dev/content-engine/id-strategy). The foreign key always takes the type of the key it references. The example plugin's `example.event` uses `bigint` and links to `uuid` tags and `serial` categories:
+
+```ts title="plugins/example/src/content/event.ts"
+import type { ContentRelationTarget } from "@vitnode/core/content";
+
+import { categoryContentType } from "./category";
+import { tagContentType } from "./tag";
+
+fields: {
+  primaryTag: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: (): ContentRelationTarget<"uuid"> => tagContentType,
+  }),
+  category: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: () => categoryContentType,
+  }),
+  tags: field.relation({ multiple: true, ordered: true, target: () => tagContentType }),
+  relatedEvents: field.relation({ multiple: true, onDelete: "cascade", self: true }),
+}
+```
+
+| Field           | Column or junction                                      |
+| --------------- | ------------------------------------------------------- |
+| `primaryTag`    | `uuid` column referencing `example_tags.id`             |
+| `category`      | `integer` column referencing `example_categories.id`    |
+| `tags`          | `example_events_tags`: `itemId bigint`, `relatedItemId uuid` |
+| `relatedEvents` | `example_events_related_events`: both columns `bigint`  |
+
+`field.relation()` reads the target's strategy from `target`, so the relation's values are typed as `string` for tags and `number` for categories. When two content type files import each other, TypeScript cannot infer a type through the cycle and falls back to serial. Annotate the thunk with `ContentRelationTarget<"uuid">` or `ContentRelationTarget<"bigint">`, as `primaryTag` does above. At runtime, a `references` entry whose column type disagrees with the target's strategy throws and names the field.
+
 ## Duplicating records with relations
 
 When a content type has [duplication](/docs/dev/content-engine/duplicate-content), the copy links to the same records, users and files as the source, in the same order. Files are shared, not uploaded again. Repeatable rows are copied as new rows with new ids, in the same order, so editing the copy's ingredients never changes the original's.

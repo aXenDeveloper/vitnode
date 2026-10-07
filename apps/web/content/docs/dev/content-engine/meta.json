@@ -23,6 +23,7 @@
     "reference",
     "fields",
     "database-and-migrations",
+    "id-strategy",
     "plugin-registration"
   ]
 }

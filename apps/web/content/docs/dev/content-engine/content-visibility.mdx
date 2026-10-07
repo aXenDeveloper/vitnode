@@ -9,13 +9,13 @@ import hideDialog from './content-hide-dialog.png'
 import hiddenFilter from './content-hidden-filter.png'
 import hiddenEditor from './content-hidden-editor.png'
 
-Hiding takes a record off the public site immediately while it stays published. Use it for moderation, legal holds or a quick fix: the record disappears from the public API, its page, search and the sitemap, and unhiding brings it back with its original URL and publish date.
+Hiding takes a record off the public site immediately while it stays published. Use it for moderation, legal holds or a quick fix: the record disappears from the public API, its page, search and the sitemap, and unhiding brings it back with its original URL and publish date. This guide follows the blog plugin, whose articles can be hidden.
 
-| You want to                                                            | Use                                                          |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Take a record down for now and put it back as it was                   | Hide                                                         |
-| Turn a record back into a draft to rework it before it goes live again | [Unpublish](/docs/dev/content-engine/public-api-and-caching) |
-| Remove it for good                                                     | Delete                                                       |
+| You want to                                                            | Use                                                                                    |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Take a record down for now and put it back as it was                   | Hide                                                                                   |
+| Turn a record back into a draft to rework it before it goes live again | [Unpublish](/docs/dev/content-engine/publication-and-editorial#how-publishing-behaves) |
+| Remove it for good                                                     | Delete                                                                                 |
 
 ## Before you begin
 
@@ -27,16 +27,16 @@ Hiding needs [`publication`](/docs/dev/content-engine/public-api-and-caching), b
 
 ### Turn on visibility
 
-Add `visibility` to the content type:
+The blog's article content type turns it on next to `publication`:
 
-```ts title="plugins/example/src/content/recipe.ts"
-export const recipeContentType = defineContentType({
-  id: 'example.recipe',
-  tableName: 'example_recipes',
+```ts title="plugins/blog/src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  id: "blog.post",
+  tableName: "blog_posts",
   publication: { enabled: true },
   visibility: { enabled: true }, // [!code ++]
   // ...
-})
+});
 ```
 
 `visibility` without `publication` throws when the content type is defined. With `visibility`, `hiddenAt`, `hiddenBy` and `visibility` are reserved and cannot be field names.
@@ -47,13 +47,13 @@ export const recipeContentType = defineContentType({
 
 ### Build and migrate
 
-Run `pnpm build:plugins && pnpm db:migrate`, then restart `pnpm dev`. The migration adds two nullable columns to the main table:
+Run `pnpm build:plugins && pnpm db:migrate`, then restart `pnpm dev`. The migration adds two nullable columns to the main table. For the blog, `apps/api/migrations/20261007084033_content_rich_text_visibility` contains:
 
-```sql title="migration.sql (breakpoints removed)"
-ALTER TABLE "example_recipes" ADD COLUMN "hiddenAt" timestamp;
-ALTER TABLE "example_recipes" ADD COLUMN "hiddenBy" integer;
-CREATE INDEX "example_recipes_hidden_by_idx" ON "example_recipes" ("hiddenBy");
-ALTER TABLE "example_recipes" ADD CONSTRAINT "example_recipes_hiddenBy_core_users_id_fkey" FOREIGN KEY ("hiddenBy") REFERENCES "core_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+```sql title="migration.sql (excerpt, breakpoints removed)"
+ALTER TABLE "blog_posts" ADD COLUMN "hiddenAt" timestamp;
+ALTER TABLE "blog_posts" ADD COLUMN "hiddenBy" integer;
+CREATE INDEX "blog_posts_hidden_by_idx" ON "blog_posts" ("hiddenBy");
+ALTER TABLE "blog_posts" ADD CONSTRAINT "blog_posts_hiddenBy_core_users_id_fkey" FOREIGN KEY ("hiddenBy") REFERENCES "core_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ```
 
 Existing records stay visible. `hiddenAt` is when the record was hidden and `hiddenBy` is the staff member who hid it.
@@ -64,11 +64,11 @@ Existing records stay visible. `hiddenAt` is when the record was hidden and `hid
 
 ### Label the permission
 
-Visibility adds a `can_hide` permission, separate from `can_publish`, so a moderator can take records down without being able to publish. Label it next to your other permissions:
+Visibility adds a `can_hide` permission, separate from `can_publish`, so a moderator can take records down without being able to publish. The blog labels it next to its other article permissions:
 
-```json title="plugins/example/src/locales/en.json"
+```json title="plugins/blog/src/locales/en.json"
 {
-  "@vitnode/example:recipe:can_hide": "Hide and unhide recipes"
+  "@vitnode/blog:posts:can_hide": "Hide and unhide articles"
 }
 ```
 
@@ -78,9 +78,9 @@ Grant it to administrators in **AdminCP → Staff → Administrators**.
 
 <Step>
 
-### Hide a record
+### Hide an article
 
-Open **AdminCP → Example → Recipes**, open the **More actions** menu of a published row and choose **Hide**. Confirm with **Yes, hide it**:
+Open **AdminCP → Blog → Articles**, open the **More actions** menu of a published article and choose **Hide**. Confirm with **Yes, hide it**:
 
 <ImgDocs
   withoutBackground
@@ -89,7 +89,7 @@ Open **AdminCP → Example → Recipes**, open the **More actions** menu of a pu
   alt="Hide Article dialog explaining that Second post disappears from the public site, search and the sitemap right away and is not unpublished, with Cancel and Yes, hide it buttons"
 />
 
-The row keeps its **Published** badge and gets a **Hidden** badge next to it. Its tooltip shows when it was hidden. The **Visibility** filter in the list toolbar shows only hidden or only visible records, and it combines with the **Status** filter:
+The toast says the article is now hidden. The row keeps its **Published** badge and gets a **Hidden** badge next to it. Its tooltip shows when it was hidden. The **Visibility** filter in the list toolbar shows only hidden or only visible records, and it combines with the **Status** filter:
 
 <ImgDocs
   withoutBackground
@@ -107,7 +107,7 @@ The edit page shows the same badge, an **Unhide** button and a note that publish
   alt="Edit page header of a hidden article with Draft and Published toggle, a Hidden badge, an Unhide button and the note Hidden from the public site, search and the sitemap"
 />
 
-Choose **Unhide** in the same menu to bring the record back.
+Choose **Unhide** in the same menu to bring the article back. In the database, hiding sets `blog_posts."hiddenAt"` and `"hiddenBy"`, and unhiding clears both.
 
 </Step>
 
@@ -130,7 +130,7 @@ Hiding is per record. To take one language off the site, unpublish that translat
 
 ## Hide from the API
 
-The admin module has `POST /{id}/hide` and `POST /{id}/unhide`. Both need `can_hide` and accept an optional body:
+The admin module has `POST /{id}/hide` and `POST /{id}/unhide`, such as `POST /api/@vitnode/blog/admin/content/posts/703/hide` for the blog. Both need `can_hide` and accept an optional body:
 
 ```json
 { "expectedVersion": 4 }
@@ -144,16 +144,17 @@ From your own code, the services have `hide(id, options)` and `unhide(id, option
 
 ## Events and caches
 
-A hide emits `content.example.recipe.hidden` with `{ actorUserId, contentId, hiddenAt }`, and an unhide emits `unhidden` with `{ actorUserId, contentId }`. Both update the search index and the delivery data.
+A hide emits `content.blog.post.hidden` with `{ actorUserId, contentId, hiddenAt }`, and an unhide emits `unhidden` with `{ actorUserId, contentId }`. Both update the search index and the delivery data.
 
 Front ends listed in [`content.revalidateOrigins`](/docs/dev/content-engine/public-api-and-caching#caching) are notified immediately when a hide or unhide changes what the public can see. Hiding a draft notifies nobody, because nothing public changed.
 
 ## Check the result
 
-Hide a published recipe, then request it:
+Hide the published "Second post", then request its page and its API entry:
 
 ```bash
-curl -i "http://localhost:3000/api/@vitnode/example/content/recipes/shakshuka-for-two"
+curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/blog/second-post"
+curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/api/@vitnode/blog/content/blog/second-post"
 ```
 
-It answers `404`, like a draft. Unhide it and the same request returns the recipe with its original `publishedAt`.
+Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`.

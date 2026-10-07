@@ -572,6 +572,11 @@ its id: `content.<id>.<action>`. For the example plugin's `example.article`
 that means `content.example.article.created`, and for the blog's `blog.post` it
 means `content.blog.post.created`.
 
+Every payload's `contentId` (and `sourceId` and `duplicatedFromId`) has the
+content type's [id type](/docs/dev/content-engine/id-strategy): a `number` for
+the default `serial` strategy, a `string` for `uuid` and `bigint`. A bigint id
+arrives as its exact decimal string, so never pass it through `Number()`.
+
 Which actions exist depends on what the definition opts into. A content type
 that declares nothing beyond its fields emits three events; one that declares
 everything emits nineteen.
@@ -619,7 +624,7 @@ the map and a listener for it does not compile.
   type={{
     contentId: {
       description: 'Id of the created, updated or deleted row.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     changedFields: {
       description:
@@ -629,7 +634,7 @@ the map and a listener for it does not compile.
     duplicatedFromId: {
       description:
         'Created only, on a content type with `duplication` - the record this one was copied from. Absent for an ordinary create, so a listener can tell copies apart without waiting for `duplicated`.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
   }}
 />
@@ -650,7 +655,7 @@ carries neither.
   type={{
     contentId: {
       description: 'Id of the record whose visibility moved.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     publishedAt: {
       description:
@@ -687,7 +692,7 @@ than a rewrite - which is why a restore emits one event and not both.
   type={{
     contentId: {
       description: 'Id of the restored record.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     changedFields: {
       description:
@@ -726,7 +731,7 @@ with `scheduleId` and `scheduledBy` set.
   type={{
     contentId: {
       description: 'Id of the record the booking is about.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     action: {
       description: 'Which transition was booked, or cancelled.',
@@ -769,7 +774,7 @@ cache work already ran for `created`, so `duplicated` is a notification only.
     },
     contentId: {
       description: 'Id of the new draft.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     contentTypeId: {
       description: 'The content type id, such as `blog.post`.',
@@ -777,7 +782,7 @@ cache work already ran for `created`, so `duplicated` is a notification only.
     },
     sourceId: {
       description: 'Id of the record that was copied. It is only read, never changed.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
   }}
 />
@@ -802,7 +807,7 @@ already hidden emits nothing.
     },
     contentId: {
       description: 'Id of the record.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     hiddenAt: {
       description: 'Hidden only - when the record was hidden.',
@@ -842,7 +847,7 @@ has to go and ask which language moved.
     contentId: {
       description:
         'Id of the record the translation belongs to - the base row, not the translation row.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     locale: {
       description:
@@ -918,7 +923,7 @@ different facts with different audiences.
   type={{
     contentId: {
       description: 'Id of the record whose URL moved.',
-      type: 'number',
+      type: 'ContentIdOf<TDefinition>',
     },
     slug: {
       description: 'Slug changed only - the slug the record answers to now.',

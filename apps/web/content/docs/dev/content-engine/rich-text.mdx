@@ -7,9 +7,9 @@ icon: PenLine
 import { ImgDocs } from '@/components/fumadocs/img'
 import editor from './rich-text-editor.png'
 
-`field.richText()` stores formatted text, such as an article body or recipe instructions, as an HTML string. Editors write it in the AdminCP rich text editor. The API sanitizes the HTML on every write and checks that a required value holds real content, not only an empty `<p></p>`.
+`field.richText()` stores formatted text, such as an article body, as an HTML string. Editors write it in the AdminCP rich text editor. The API sanitizes the HTML on every write and checks that a required value holds real content, not only an empty `<p></p>`.
 
-Use it instead of `field.textarea()` whenever the value contains formatting. A textarea stores whatever string it receives, and the API does not sanitize it.
+Use it instead of `field.textarea()` whenever the value contains formatting. A textarea stores whatever string it receives, and the API does not sanitize it. This guide follows the blog plugin, whose article body moved from a textarea to rich text.
 
 <Steps>
 
@@ -17,12 +17,18 @@ Use it instead of `field.textarea()` whenever the value contains formatting. A t
 
 ### Declare the field
 
-Add a rich text field to the recipe from [Create your first content type](/docs/dev/content-engine/defining-a-content-type):
+The blog's article `content` is a localized, required rich text field:
 
-```ts title="plugins/example/src/content/recipe.ts"
+```ts title="plugins/blog/src/content/post.ts"
 fields: {
-  title: field.text({ required: true, maxLength: 120 }),
-  instructions: field.richText({ required: true, maxLength: 20000 }), // [!code ++]
+  title: field.text({ localized: true, required: true, minLength: 3, maxLength: 255 }),
+  content: field.textarea({ localized: true, required: true }), // [!code --]
+  content: field.richText({ localized: true, required: true }), // [!code ++]
+},
+publicApi: {
+  enabled: true,
+  path: "blog",
+  searchableFields: ["title", "content"],
 },
 ```
 
@@ -34,9 +40,16 @@ The field takes the same options as a textarea: `required`, `nullable`, `default
 
 ### Build and migrate
 
-Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. A rich text field is a Postgres `text` column, the same column a textarea gets. Switching an existing `field.textarea()` to `field.richText()` produces no column change.
+Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. A rich text field is a Postgres `text` column, the same column a textarea gets, so switching the blog's `content` changed no column.
 
-When the field is listed in `admin.list.searchableFields` or `publicApi.searchableFields`, the migration also adds a plain-text twin column. See [Search and SEO](#search-and-seo) below.
+Because `content` is in `publicApi.searchableFields`, the migration adds a plain-text twin column to the table that holds it, here the translations table. See [Search and SEO](#search-and-seo) below. The blog's migration, `apps/api/migrations/20261007084033_content_rich_text_visibility`, adds it and fills it for existing articles:
+
+```sql title="migration.sql (excerpt)"
+ALTER TABLE "blog_posts_translations" ADD COLUMN "contentText" text;
+UPDATE "blog_posts_translations" SET "contentText" = ... WHERE "content" IS NOT NULL AND "contentText" IS NULL;
+```
+
+The `UPDATE` is hand-written: the generated SQL only adds the empty column. The `UPDATE` approximates the extractor in SQL, and the engine writes the exact text the next time each article is saved.
 
 </Step>
 
@@ -44,7 +57,7 @@ When the field is listed in `admin.list.searchableFields` or `publicApi.searchab
 
 ### Write in the AdminCP
 
-Open **AdminCP → Example → Recipes** and create a recipe. The rich text field renders the editor, with headings, lists, links, tables and more:
+Open **AdminCP → Blog → Articles** and edit an article. The **Content** field renders the rich text editor, with headings, lists, links, tables and more:
 
 <ImgDocs
   withoutBackground
@@ -53,7 +66,7 @@ Open **AdminCP → Example → Recipes** and create a recipe. The rich text fiel
   alt="The Content field of a blog article in the AdminCP: a toolbar with paragraph style, bold, italic, text color, lists, link, emoji, table and embed buttons above a paragraph and a bulleted list"
 />
 
-The editor loads lazily, so it does not slow down the rest of the form. A `localized` rich text field gets a language switcher like any other translated field. To use your own component, override the field with `contentTypeAdmin`, as described in [Customize the AdminCP](/docs/dev/content-engine/admincp#replace-a-field-or-a-cell).
+Any `field.richText()` gets this editor without UI code. It loads lazily, so it does not slow down the rest of the form, and a `localized` field gets a language switcher. The blog replaces the default with its own `BlogArticleEditorField` for a taller writing area. Custom components like that are described in [Customize the AdminCP](/docs/dev/content-engine/admincp#replace-a-field-or-a-cell).
 
 </Step>
 
@@ -61,14 +74,14 @@ The editor loads lazily, so it does not slow down the rest of the form. A `local
 
 ### Render it on a page
 
-The public API returns the HTML string. Render it with `EditorContent`, which sanitizes it again before inserting it:
+The public API returns the HTML string. The blog's article page renders it with `EditorContent`, which sanitizes it again before inserting it:
 
-```tsx title="plugins/example/src/pages/recipe-page.tsx"
-import { EditorContent } from '@vitnode/core/components/ui/editor-content'
+```tsx title="plugins/blog/src/pages/post-page.tsx (excerpt)"
+import { EditorContent } from "@vitnode/core/components/ui/editor-content";
 
-export const RecipeInstructions = ({ html }: { html: string }) => (
-  <EditorContent content={html} />
-)
+<div className="text-foreground leading-relaxed text-pretty">
+  <EditorContent content={item.content} />
+</div>
 ```
 
 Never render the value with `dangerouslySetInnerHTML` yourself. `EditorContent` applies the same allowlist the API used on write.
@@ -101,7 +114,7 @@ The browser runs only the cheap checks (required and length). Sanitizing happens
 Search and SEO read plain text extracted from the HTML. Block elements become separate lines, entities such as `&amp;` are decoded once, and scripts and styles are dropped.
 
 - **Site search:** `search.contentFields` and `search.descriptionField` accept rich text fields and index their plain text.
-- **AdminCP and public API search:** a rich text field in `admin.list.searchableFields` or `publicApi.searchableFields` gets a nullable `text` column named after it with a `Text` suffix, such as `instructionsText`, on the same table as the field. Every write keeps it up to date, and `?search=` matches it instead of the raw HTML, so searching for `strong` does not find every bold word. A field name whose twin collides with another column, or is longer than 63 characters, throws when the content type is defined.
+- **AdminCP and public API search:** a rich text field in `admin.list.searchableFields` or `publicApi.searchableFields` gets a nullable `text` column named after it with a `Text` suffix, such as the blog's `blog_posts_translations."contentText"`, on the same table as the field. Every write keeps it up to date, and `?search=` matches it instead of the raw HTML, so searching for `strong` does not find every bold word. A field name whose twin collides with another column, or is longer than 63 characters, throws when the content type is defined.
 - **SEO:** a rich text field can be `delivery.seo.descriptionField` or its fallback. The delivery API returns its plain text, and a value with only an image falls back to the next field.
 
 The same extractor is exported as `htmlToText` and `stripHtml` from `@vitnode/core/lib/strip-html`, if you need plain text in your own code.
@@ -110,10 +123,18 @@ A rich text field cannot be a slug `source`, a `titleField` fallback, a filter, 
 
 ## Check the result
 
-Save a recipe with some bold text and a `<script>` pasted into the HTML, then read it back:
+Read an article back from the blog's public API:
 
 ```bash
-curl "http://localhost:3000/api/@vitnode/example/content/recipes/shakshuka-for-two"
+curl "http://localhost:3000/api/@vitnode/blog/content/blog/hello-world"
 ```
 
-The `instructions` value is HTML with the formatting intact and no script. Saving the recipe with an empty editor answers with a required-field error under **Instructions**.
+```json title="Response (trimmed)"
+{
+  "id": 701,
+  "title": "Hello world",
+  "content": "<p>Hello <strong>world</strong> &amp; friends</p><ul><li>one</li><li>two</li></ul>"
+}
+```
+
+`content` is HTML with the formatting intact. Searching for a word finds the article, while searching for markup does not: `?search=friends` returns it and `?search=strong` returns nothing, because search reads `contentText` ("Hello world & friends one two"). Saving an article with an empty editor, or with only a pasted `<script>`, fails with a required-field error under **Content**.

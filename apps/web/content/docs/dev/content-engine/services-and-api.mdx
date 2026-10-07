@@ -134,6 +134,47 @@ if (outcome) {
 
 `contentVisibilityEffects` emits `hidden` or `unhidden`, updates the search index and the delivery data, and notifies [revalidation origins](/docs/dev/content-engine/public-api-and-caching#caching). It does nothing for an outcome with `changed: false`. For a duplicate, call `contentDuplicateEffects`, shown in [Duplicate content](/docs/dev/content-engine/duplicate-content#duplicate-from-your-own-code).
 
+## Content IDs
+
+Service methods take and return ids typed by the content type's [`idStrategy`](/docs/dev/content-engine/id-strategy): `ContentIdOf<typeof recipeContentType>` is `number` for a serial type and `string` for a uuid or bigint type. Never convert an id with `Number()` in code that may meet a bigint type, because ids above 2^53 lose precision.
+
+A custom route reads an id from a URL as text. Parse it with the content type's strategy before calling the service, so a malformed id answers `400` instead of reaching the database:
+
+```ts title="plugins/example/src/api/modules/events/summary.route.ts"
+import { parseContentIdOf } from "@vitnode/core/content";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { HTTPException } from "hono/http-exception";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { eventContentType } from "@/content/event";
+import { eventContent } from "@/database/events";
+
+export const eventSummaryRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    path: "/{id}/summary",
+    description: "Title and status of one event",
+    responses: { 200: { description: "The event summary" } },
+  },
+  handler: async c => {
+    const id = parseContentIdOf(eventContentType, c.req.param("id"));
+    if (id === null) {
+      throw new HTTPException(400, { message: "Invalid event id." });
+    }
+
+    const event = await eventContent.service(c).findById(id);
+    if (!event) throw new HTTPException(404, { message: "Event not found." });
+
+    return c.json({ id: event.id, status: event.status });
+  },
+});
+```
+
+`id` is a `string` here, because `example.event` uses bigint. With OpenAPI request validation, use `contentIdParamSchema(eventContentType.idStrategy)` for the path parameter instead. It accepts exactly what `parseContentIdOf` accepts and turns a serial id into a number.
+
+Code that handles content types it does not know statically uses `ContentId` (`number | string`) and `contentAnyIdSchema`. To store an id in a text column, a cache key or a log line, use `contentIdKey(id)`; it keeps a serial id's digits unchanged. The generated routes parse their ids with an internal helper that is not exported, so use these helpers in your own code. The full list is in [Record ID strategies](/docs/dev/content-engine/id-strategy#helpers).
+
 ## Reuse the schemas
 
 `recipeContent.schemas` holds the Zod schemas the generated routes use. Reuse them so a custom route validates exactly like the built-in ones:

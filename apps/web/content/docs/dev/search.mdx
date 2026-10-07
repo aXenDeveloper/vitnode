@@ -209,9 +209,10 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
       type: 'string',
     },
     itemId: {
-      description: 'Primary key of the indexed record.',
+      description:
+        'Primary key of the indexed record. A number for serial ids, a string for Content Engine types with a uuid or bigint idStrategy. Stored as text in core_search_index.',
       required: true,
-      type: 'number',
+      type: 'number | string',
     },
     title: {
       description: 'Document title (indexed with highest search relevance).',

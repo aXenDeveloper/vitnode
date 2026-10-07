@@ -275,7 +275,7 @@ With `sitemap.enabled`, the public API lists every published URL at `GET /api/@v
 }
 ```
 
-Pages hold 1,000 entries by default (`?limit=` up to 50,000), and `nextCursor` fetches the next page. Records whose `seo.noIndexField` is `true`, and [hidden](/docs/dev/content-engine/content-visibility) records, are left out. Your app's own `sitemap.xml` does not read this endpoint for you, so add the entries where you build it.
+Pages hold 1,000 entries by default (`?limit=` up to 50,000), and `nextCursor` fetches the next page. Entries come in id order, which for a [uuid](/docs/dev/content-engine/id-strategy) content type is lexical rather than creation order; every record still appears exactly once. Records whose `seo.noIndexField` is `true`, and [hidden](/docs/dev/content-engine/content-visibility) records, are left out. Your app's own `sitemap.xml` does not read this endpoint for you, so add the entries where you build it.
 
 ## Public URLs and languages
 
