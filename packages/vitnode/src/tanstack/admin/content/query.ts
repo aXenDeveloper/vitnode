@@ -4,6 +4,8 @@ import type { ContentPublicationAction } from "@/content/publication";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
 import type {
+  ContentDuplicateInput,
+  ContentDuplicateMutationResult,
   ContentRowMutationArgs,
   ContentRowMutationResult,
 } from "@/views/admin/views/content/table/list-mutations";
@@ -17,6 +19,7 @@ import {
 } from "@/views/admin/views/content/lib/invalidate";
 import {
   deleteContentInBrowser,
+  duplicateContentInBrowser,
   setContentPublicationInBrowser,
 } from "@/views/admin/views/content/table/list-mutations";
 import {
@@ -135,6 +138,25 @@ export const setContentPublication = async (
       contentTypeId,
       itemId: id,
     });
+  }
+
+  return result;
+};
+
+/** Copies a row as a draft, then refreshes the list it will appear in. */
+export const duplicateContentRow = async (
+  queryClient: QueryClient,
+  {
+    contentTypeId,
+    id,
+    input,
+    target,
+  }: ContentRowWriteArgs & { input?: ContentDuplicateInput },
+): Promise<ContentDuplicateMutationResult> => {
+  const result = await duplicateContentInBrowser({ id, input, target });
+
+  if (result.error === undefined) {
+    await invalidateContentAfterWrite(queryClient, { contentTypeId });
   }
 
   return result;

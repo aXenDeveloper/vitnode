@@ -51,6 +51,12 @@ const payloadFor = (
   };
 
   switch (outcome.operation) {
+    case "create":
+      // Absent rather than `undefined` for an ordinary create, so
+      // `"duplicatedFromId" in payload` is how a listener tells a copy apart.
+      return outcome.duplicatedFromId === undefined
+        ? base
+        : { ...base, duplicatedFromId: outcome.duplicatedFromId };
     case "publish": {
       const publishedAt = (outcome.row as { publishedAt?: unknown })
         .publishedAt;

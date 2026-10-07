@@ -3,6 +3,7 @@ import type { z } from "zod";
 import {
   parseContentConflict,
   parseContentDeliveryConflict,
+  parseContentDuplicateRejection,
   parseContentScheduleRejection,
   parseContentTranslationConflict,
   parseContentUnprocessable,
@@ -71,6 +72,7 @@ export const contentFailureResult = (result: {
 }): ContentMutationResult => ({
   conflict: parseContentConflict(result.error) ?? undefined,
   delivery: parseContentDeliveryConflict(result.error) ?? undefined,
+  duplicate: parseContentDuplicateRejection(result.error) ?? undefined,
   error: result.error ?? "",
   rejection: parseContentScheduleRejection(result.error) ?? undefined,
   status: result.status,

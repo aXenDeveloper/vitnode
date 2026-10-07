@@ -60,6 +60,69 @@ export const setContentPublicationInBrowser = async ({
       }),
   );
 
+export interface ContentDuplicateInput {
+  /** Shared values for the copy. A group merges leaf by leaf. */
+  overrides?: Record<string, unknown>;
+  /** Localized values per copied locale, merged the same way. */
+  translations?: Record<string, Record<string, unknown>>;
+}
+
+/** What `POST /{id}/duplicate` answers with on a `201`. */
+export interface ContentDuplicatePayload {
+  id: number;
+  /** The copied translations' locales, default locale first. */
+  locales: string[];
+  row: Record<string, unknown>;
+  /** Source locales switched off in this install, which the copy does not carry. */
+  skippedLocales: string[];
+  sourceId: number;
+}
+
+export type ContentDuplicateMutationResult = ContentRowMutationResult & {
+  /** Present on success: the copy, so the caller can open it. */
+  duplicated?: ContentDuplicatePayload;
+};
+
+/**
+ * Copies one record as a draft. A refusal comes back with `duplicate` set when it
+ * names a field to fix - `CONTENT_DUPLICATE_SLUG_CONFLICT` (409) or
+ * `CONTENT_DUPLICATE_UNIQUE_REQUIRED` (422) - and with `status` either way.
+ */
+export const duplicateContentInBrowser = async ({
+  id,
+  input = {},
+  target,
+}: ContentRowMutationArgs & {
+  input?: ContentDuplicateInput;
+}): Promise<ContentDuplicateMutationResult> => {
+  let response: Response;
+
+  try {
+    response = await contentApiFetch({
+      body: input,
+      method: "post",
+      path: `/${id}/duplicate`,
+      target,
+    });
+  } catch {
+    return UNREACHABLE;
+  }
+
+  if (!response.ok) {
+    return {
+      ...contentFailureResult({
+        error: await response.text(),
+        status: response.status,
+      }),
+      status: response.status,
+    };
+  }
+
+  const duplicated = (await response.json()) as ContentDuplicatePayload;
+
+  return { duplicated, id: duplicated.id, status: response.status };
+};
+
 /**
  * Deletes one record.
  *
