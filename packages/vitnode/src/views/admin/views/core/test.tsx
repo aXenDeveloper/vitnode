@@ -280,9 +280,7 @@ export const TestView = () => {
             },
           ]}
           formSchema={formSchema}
-          onSubmit={async values => {
-            // oxlint-disable-next-line no-console
-            console.log("Form submitted", values);
+          onSubmit={async () => {
             await new Promise(resolve => setTimeout(resolve, 3000));
           }}
         />
