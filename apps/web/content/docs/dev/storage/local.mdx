@@ -73,14 +73,16 @@ derived from your `publicPath` instead of hardcoded in two places.
 
 ```ts tab="Standalone API" title="apps/api/src/index.ts"
 import { serveStatic } from '@hono/node-server/serve-static'
+import { storageStaticHeadersMiddleware } from '@vitnode/core/api/middlewares/storage-static.middleware'
 import { mkdirSync } from 'node:fs'
 
-// [!code ++:14]
+// [!code ++:15]
 const staticStorage = vitNodeApiConfig.storage?.adapter?.static
 if (staticStorage) {
   mkdirSync(staticStorage.root, { recursive: true })
   app.get(
     staticStorage.mountPath,
+    storageStaticHeadersMiddleware(),
     serveStatic({
       root: staticStorage.root,
       rewriteRequestPath: (path) =>
@@ -96,17 +98,19 @@ VitNodeAPI({ app, vitNodeApiConfig })
 
 ```ts tab="TanStack Start app" title="src/server/vitnode-api.server.ts"
 import { serveStatic } from '@hono/node-server/serve-static'
+import { storageStaticHeadersMiddleware } from '@vitnode/core/api/middlewares/storage-static.middleware'
 import { mkdirSync } from 'node:fs'
 
 const createVitNodeApi = () => {
   const app = new OpenAPIHono().basePath('/api')
 
-  // [!code ++:14]
+  // [!code ++:15]
   const staticStorage = vitNodeApiConfig.storage?.adapter?.static
   if (staticStorage) {
     mkdirSync(staticStorage.root, { recursive: true })
     app.get(
       staticStorage.mountPath,
+      storageStaticHeadersMiddleware(),
       serveStatic({
         root: staticStorage.root,
         rewriteRequestPath: (path) =>
@@ -129,6 +133,15 @@ Mount `serveStatic` **before** `VitNodeAPI` on the standalone API: the request
 then skips the CORS, CSRF, rate-limiter and global middleware, which a static
 image has no use for. `mkdirSync` is only there so `serveStatic` does not warn
 about a missing root before the first upload.
+
+<Callout type="warn" title="Keep storageStaticHeadersMiddleware() in front of serveStatic">
+  Local uploads are served from your own origin - the one your session cookie
+  lives on. Without this middleware, an uploaded SVG or HTML file opened
+  directly in the browser runs its script **as your site**, signed in as
+  whoever clicked the link. The middleware adds `Content-Security-Policy:
+  sandbox` and `X-Content-Type-Options: nosniff`, so stored files can still be
+  shown in an `<img>` but never execute. It costs nothing - leave it in.
+</Callout>
 
 The TanStack Start app is the same code in a different file, because `/api/*` on
 that app is one catch-all route handing the request to the very same Hono
