@@ -9,6 +9,7 @@ import type {
   ContentRelationFilter,
 } from "../types";
 
+import { containsLikePattern } from "../../lib/api/like-pattern";
 import {
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_PUBLICATION_STATUSES,
@@ -28,13 +29,6 @@ import {
   splitContentFieldPath,
 } from "../paths";
 
-/**
- * Escapes the `LIKE` wildcards so a search for "100%" matches the literal text
- * rather than every row. Backslash is Postgres' default escape character.
- */
-export const escapeLikePattern = (value: string): string =>
-  value.replace(/[\\%_]/g, match => `\\${match}`);
-
 export const buildSearchCondition = (
   columns: readonly PgColumn[],
   term: string | undefined,
@@ -42,7 +36,7 @@ export const buildSearchCondition = (
   const trimmed = term?.trim();
   if (!columns.length || !trimmed) return undefined;
 
-  const pattern = `%${escapeLikePattern(trimmed)}%`;
+  const pattern = containsLikePattern(trimmed);
 
   return or(...columns.map(column => ilike(column, pattern)));
 };

@@ -13,6 +13,7 @@ import { core_languages_words } from "@/database/languages";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
+import { containsLikePattern } from "@/lib/api/like-pattern";
 
 import { assertCanListRoles } from "../lib/assert-can-list-roles";
 import { withRolesAdminListFields } from "./list-mapping";
@@ -103,7 +104,10 @@ export const listRolesAdminRoute = buildRoute({
                   eq(core_languages_words.tableName, "core_roles"),
                   eq(core_languages_words.variable, "name"),
                   eq(core_languages_words.pluginCode, "core"),
-                  ilike(core_languages_words.value, `%${search}%`),
+                  ilike(
+                    core_languages_words.value,
+                    containsLikePattern(search),
+                  ),
                 ),
               ),
           )

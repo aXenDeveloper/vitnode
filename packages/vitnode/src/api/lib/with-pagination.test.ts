@@ -180,6 +180,29 @@ describe("cursor predicate", () => {
   });
 });
 
+describe("search", () => {
+  it("escapes LIKE wildcards in the term", async () => {
+    const seen = vi.fn<
+      (args: { offset: number; where: SQL | undefined }) => Promise<[]>
+    >(async () => await Promise.resolve([]));
+
+    await withPagination({
+      c: contextWithCount(0),
+      orderBy: { column: rows.id, order: "desc" },
+      params: { query: { first: "10", search: " 100%_off " } },
+      primaryCursor: rows.id,
+      query: seen,
+      search: [rows.name],
+      table: rows,
+    });
+
+    const where = seen.mock.calls[0][0].where;
+    expect(where && dialect.sqlToQuery(where).params).toEqual([
+      "%100\\%\\_off%",
+    ]);
+  });
+});
+
 describe("numbered pages", () => {
   it("skips the pages before the one asked for", async () => {
     expect(

@@ -18,7 +18,6 @@ import {
   buildOrderColumn,
   buildSearchCondition,
   diffChangedFields,
-  escapeLikePattern,
   toColumnValues,
 } from "./query";
 import { contentTableColumns, createContentTable } from "./table";
@@ -90,17 +89,6 @@ const patternsIn = (condition: unknown): string[] => {
 
   return [];
 };
-
-describe("escapeLikePattern", () => {
-  it.each([
-    ["100%", "100\\%"],
-    ["a_b", "a\\_b"],
-    ["back\\slash", "back\\\\slash"],
-    ["plain", "plain"],
-  ])("escapes %s", (input, expected) => {
-    expect(escapeLikePattern(input)).toBe(expected);
-  });
-});
 
 describe("buildSearchCondition", () => {
   it("returns nothing without a term or columns", () => {

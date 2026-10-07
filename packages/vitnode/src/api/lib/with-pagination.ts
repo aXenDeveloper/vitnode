@@ -29,6 +29,8 @@ import {
 } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { containsLikePattern } from "@/lib/api/like-pattern";
+
 import type { PaginationCursor } from "./pagination-cursor";
 
 import {
@@ -185,7 +187,9 @@ function buildSearchWhere(
   const trimmed = term?.trim();
   if (!search?.length || !trimmed) return undefined;
 
-  return or(...search.map(column => ilike(column, `%${trimmed}%`)));
+  const pattern = containsLikePattern(trimmed);
+
+  return or(...search.map(column => ilike(column, pattern)));
 }
 
 async function fetchTotalCount(
