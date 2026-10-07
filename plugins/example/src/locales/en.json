@@ -128,6 +128,9 @@
     "articles": {
       "published": "Published",
       "faq": "Frequently asked questions"
+    },
+    "events": {
+      "sessions": "Sessions"
     }
   },
   "@vitnode/example:article": "Articles",
