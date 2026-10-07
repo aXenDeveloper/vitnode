@@ -60,6 +60,11 @@ export const routes = definePluginRoutes([
     messages: ["@vitnode/example.articles"],
   }),
 
+  page("/events/:slug", {
+    component: lazy(() => import("./pages/event-page")),
+    messages: ["@vitnode/example.articles", "@vitnode/example.events"],
+  }),
+
   page("/localized-articles/:slug", {
     component: lazy(() => import("./pages/localized-article-page")),
     messages: ["@vitnode/example.articles"],
