@@ -24,6 +24,7 @@ import {
 } from "@/tests/staff-permissions";
 
 import { createStaffAdminRoute } from "./create.route";
+import { deleteStaffAdminRoute } from "./delete.route";
 import { updatePermissionsStaffAdminRoute } from "./update-permissions.route";
 
 const CORE = "@vitnode/core";
@@ -37,10 +38,12 @@ const permission = (module: string, name: string): PermissionsStaffArgs => ({
 const VIEW_ADMINS = permission("staff_admins", "can_view");
 const CREATE_ADMINS = permission("staff_admins", "can_create");
 const EDIT_ADMINS = permission("staff_admins", "can_edit");
-const MANAGE_ADMINS = [VIEW_ADMINS, CREATE_ADMINS, EDIT_ADMINS];
+const DELETE_ADMINS = permission("staff_admins", "can_delete");
+const MANAGE_ADMINS = [VIEW_ADMINS, CREATE_ADMINS, EDIT_ADMINS, DELETE_ADMINS];
 const VIEW_USERS = permission("users", "can_view");
 const EDIT_MODERATORS = permission("staff_moderators", "can_edit");
 const CREATE_MODERATORS = permission("staff_moderators", "can_create");
+const DELETE_MODERATORS = permission("staff_moderators", "can_delete");
 const MODERATE_WIDGETS = permission("widgets", "can_edit");
 const MODERATE_USERS = permission("users", "can_edit");
 
@@ -52,11 +55,13 @@ const CATALOG = [
         "can_view",
         { permission: "can_create", dependsOn: ["can_view"] },
         { permission: "can_edit", dependsOn: ["can_view"] },
+        { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       staff_moderators: [
         "can_view",
         { permission: "can_create", dependsOn: ["can_view"] },
         { permission: "can_edit", dependsOn: ["can_view"] },
+        { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       users: ["can_view"],
     }),
@@ -263,18 +268,93 @@ describe("updating a staff entry", () => {
     ]);
   });
 
-  it("keeps a permission the entry already had", async () => {
+  it("keeps a permission the entry already had when the caller holds it", async () => {
     const { app } = await appFor(updatePermissionsStaffAdminRoute, {
-      entry: entryFor({ permissions: [VIEW_USERS] }),
+      entry: entryFor({ permissions: [VIEW_ADMINS] }),
       grants: { admin: MANAGE_ADMINS },
     });
 
     const res = await patch(app, {
-      permissions: [VIEW_USERS, VIEW_ADMINS],
+      permissions: [VIEW_ADMINS, CREATE_ADMINS],
       unrestricted: false,
     });
 
     expect(res.status).toBe(200);
+  });
+
+  it("refuses to demote an unrestricted entry from a non-root administrator", async () => {
+    const target = entryFor({ unrestricted: true });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: target,
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
+
+    const res = await patch(app, { permissions: [], unrestricted: false });
+
+    expect(res.status).toBe(403);
+    expect(storedEntries()).toEqual([target]);
+  });
+
+  it("refuses to edit an entry holding a permission the caller lacks", async () => {
+    const target = entryFor({ permissions: [VIEW_USERS] });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: target,
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
+
+    const res = await patch(app, { permissions: [], unrestricted: false });
+
+    expect(res.status).toBe(403);
+    expect(storedEntries()).toEqual([target]);
+  });
+
+  it("lets a root administrator demote an unrestricted entry", async () => {
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor({ unrestricted: true }),
+        grants: { admin: ROOT_STAFF_PERMISSIONS },
+      },
+    );
+
+    const res = await patch(app, {
+      permissions: [VIEW_ADMINS],
+      unrestricted: false,
+    });
+
+    expect(res.status).toBe(200);
+    expect(storedEntries()).toEqual([
+      expect.objectContaining({
+        permissions: [VIEW_ADMINS],
+        unrestricted: false,
+      }),
+    ]);
+  });
+
+  it("refuses to edit a moderator entry holding a moderator permission the caller lacks", async () => {
+    const target = entryFor({ permissions: [MODERATE_WIDGETS] });
+    const { app, storedEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: target,
+        grants: { admin: [EDIT_MODERATORS], moderator: [MODERATE_USERS] },
+      },
+    );
+
+    const res = await patch(
+      app,
+      { permissions: [], unrestricted: false },
+      "moderator",
+    );
+
+    expect(res.status).toBe(403);
+    expect(storedEntries("moderator")).toEqual([target]);
   });
 
   it("measures a moderator grant against the caller's moderator permissions", async () => {
@@ -321,6 +401,86 @@ describe("updating a staff entry", () => {
       expect(storedEntries()).toEqual([entryFor()]);
     },
   );
+});
+
+const remove = async (app: OpenAPIHono, type: PermissionStaffType = "admin") =>
+  await app.request(`/entry/${type}/5`, { method: "DELETE" });
+
+describe("removing a staff entry", () => {
+  it("removes an entry within the caller's own permissions", async () => {
+    const { app, storedEntries } = await appFor(deleteStaffAdminRoute, {
+      entry: entryFor({ permissions: [VIEW_ADMINS] }),
+      grants: { admin: MANAGE_ADMINS },
+    });
+
+    const res = await remove(app);
+
+    expect(res.status).toBe(200);
+    expect(storedEntries()).toEqual([]);
+  });
+
+  it.each([
+    ["an unrestricted entry", entryFor({ unrestricted: true })],
+    [
+      "an entry holding a permission the caller lacks",
+      entryFor({ permissions: [VIEW_USERS] }),
+    ],
+  ])(
+    "refuses to remove %s from a non-root administrator",
+    async (_label, target) => {
+      const { app, storedEntries } = await appFor(deleteStaffAdminRoute, {
+        entry: target,
+        grants: { admin: MANAGE_ADMINS },
+      });
+
+      const res = await remove(app);
+
+      expect(res.status).toBe(403);
+      expect(storedEntries()).toEqual([target]);
+    },
+  );
+
+  it("lets a root administrator remove an unrestricted entry", async () => {
+    const { app, storedEntries } = await appFor(deleteStaffAdminRoute, {
+      entry: entryFor({ unrestricted: true }),
+      grants: { admin: ROOT_STAFF_PERMISSIONS },
+    });
+
+    const res = await remove(app);
+
+    expect(res.status).toBe(200);
+    expect(storedEntries()).toEqual([]);
+  });
+
+  it("measures a moderator entry against the caller's moderator permissions", async () => {
+    const target = entryFor({ permissions: [MODERATE_WIDGETS] });
+    const without = await appFor(deleteStaffAdminRoute, {
+      entry: target,
+      grants: { admin: [DELETE_MODERATORS], moderator: [MODERATE_USERS] },
+    });
+    const withWidgets = await appFor(deleteStaffAdminRoute, {
+      entry: target,
+      grants: {
+        admin: [DELETE_MODERATORS],
+        moderator: [MODERATE_USERS, MODERATE_WIDGETS],
+      },
+    });
+
+    expect((await remove(without.app, "moderator")).status).toBe(403);
+    expect(without.storedEntries("moderator")).toEqual([target]);
+    expect((await remove(withWidgets.app, "moderator")).status).toBe(200);
+    expect(withWidgets.storedEntries("moderator")).toEqual([]);
+  });
+
+  it("refuses to remove the caller's own role entry", async () => {
+    const { app, storedEntries } = await appFor(deleteStaffAdminRoute, {
+      entry: entryFor({ roleId: CALLER.roleId }),
+      grants: { admin: ROOT_STAFF_PERMISSIONS },
+    });
+
+    expect((await remove(app)).status).toBe(403);
+    expect(storedEntries()).toHaveLength(1);
+  });
 });
 
 describe("creating a staff entry", () => {

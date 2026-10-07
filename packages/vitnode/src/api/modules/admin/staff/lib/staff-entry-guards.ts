@@ -6,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
+  ResolvedStaffPermissionSet,
 } from "@/api/lib/permission-staff";
 
 import {
@@ -68,6 +69,50 @@ export const assertStaffAssignableRole = async (
   }
 };
 
+interface StaffEntryGrant {
+  permissions: PermissionsStaffArgs[];
+  unrestricted: boolean;
+}
+
+const exceedsCeiling = (
+  permissions: PermissionsStaffArgs[],
+  ceiling: PermissionsStaffArgs[],
+): boolean => {
+  const allowed = new Set(ceiling.map(staffPermissionKey));
+
+  return permissions.some(
+    permission => !allowed.has(staffPermissionKey(permission)),
+  );
+};
+
+// A staff entry may only be changed or removed by someone who holds everything
+// it grants - otherwise a limited administrator could demote or delete a more
+// privileged one. Root and unrestricted callers are exempt.
+export const assertCanManageStaffEntry = async (
+  c: Context,
+  { type, entry }: { entry: StaffEntryGrant; type: PermissionStaffType },
+): Promise<ResolvedStaffPermissionSet> => {
+  const ceiling = await resolveStaffPermissions(c, {
+    type,
+    user: currentAdminUser(c),
+  });
+  if (ceiling.root) return ceiling;
+
+  if (entry.unrestricted) {
+    throw new HTTPException(403, {
+      message: "Only a root administrator can manage an unrestricted entry.",
+    });
+  }
+
+  if (exceedsCeiling(entry.permissions, ceiling.permissions)) {
+    throw new HTTPException(403, {
+      message: "You cannot manage an entry that holds a permission you lack.",
+    });
+  }
+
+  return ceiling;
+};
+
 export const assertWithinStaffPrivilegeCeiling = async (
   c: Context,
   {
@@ -75,16 +120,13 @@ export const assertWithinStaffPrivilegeCeiling = async (
     current,
     requested,
   }: {
-    current: { permissions: PermissionsStaffArgs[]; unrestricted: boolean };
-    requested: { permissions: PermissionsStaffArgs[]; unrestricted: boolean };
+    current: StaffEntryGrant;
+    requested: StaffEntryGrant;
     type: PermissionStaffType;
   },
 ): Promise<void> => {
-  const ceiling = await resolveStaffPermissions(c, {
-    type,
-    user: currentAdminUser(c),
-  });
-  if (ceiling.root || current.unrestricted) return;
+  const ceiling = await assertCanManageStaffEntry(c, { type, entry: current });
+  if (ceiling.root) return;
 
   if (requested.unrestricted) {
     throw new HTTPException(403, {
@@ -92,14 +134,7 @@ export const assertWithinStaffPrivilegeCeiling = async (
     });
   }
 
-  const allowed = new Set(
-    [...ceiling.permissions, ...current.permissions].map(staffPermissionKey),
-  );
-  const exceedsCeiling = requested.permissions.some(
-    permission => !allowed.has(staffPermissionKey(permission)),
-  );
-
-  if (exceedsCeiling) {
+  if (exceedsCeiling(requested.permissions, ceiling.permissions)) {
     throw new HTTPException(403, {
       message: "You cannot grant a permission you do not hold.",
     });
