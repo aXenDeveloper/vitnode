@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "use-intl";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFileFieldValue } from "@/content/files";
+import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -42,6 +43,7 @@ import {
   contentSpecSkeletonShape,
 } from "../form/skeleton";
 import { useContentFormTransport } from "../form/transport";
+import { ContentFormHiddenNotice } from "../form/visibility";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
@@ -63,6 +65,8 @@ export interface ContentFormProps {
   spec: ContentFormSpec;
   title?: string;
   translations?: readonly TranslationRow[];
+  /** `definition.visibility.enabled` - the Hidden badge and Hide / Unhide. */
+  visibility?: boolean;
 }
 
 export const ContentForm = ({
@@ -160,6 +164,7 @@ const ContentFormFields = ({
   spec,
   title,
   translations = [],
+  visibility = false,
 }: ContentFormProps) => {
   const t = useTranslations("core.content");
   const tErrors = useTranslations("core.global.errors");
@@ -174,9 +179,26 @@ const ContentFormFields = ({
     permission: CONTENT_PERMISSIONS.publish,
     plugin: spec.pluginId,
   });
+  const canHide = useAdminStaffPermission({
+    module: spec.permissionModule,
+    permission: CONTENT_PERMISSIONS.hide,
+    plugin: spec.pluginId,
+  });
   const [conflict, setConflict] = React.useState<ContentConflictState | null>(
     null,
   );
+
+  // What the server last said, and what this screen knows since: a hide or an
+  // unhide answers before the record is re-read, and a dialog-mode form is
+  // never re-read at all.
+  const serverHiddenAt: unknown = data?.hiddenAt ?? null;
+  const [hidden, setHidden] = React.useState<{
+    server: unknown;
+    value: unknown;
+  }>(() => ({ server: serverHiddenAt, value: serverHiddenAt }));
+  if (hidden.server !== serverHiddenAt) {
+    setHidden({ server: serverHiddenAt, value: serverHiddenAt });
+  }
 
   const files = data?.files as
     Record<string, ContentFileFieldValue> | undefined;
@@ -256,6 +278,51 @@ const ContentFormFields = ({
     }
 
     if (mutation.version !== undefined) setExpectedVersion(mutation.version);
+
+    toast.success(t(`${action}.success`, { name: singular }), {
+      description: title,
+    });
+    refresh();
+
+    return true;
+  };
+
+  const visibilityTransition = async (action: ContentVisibilityAction) => {
+    if (!data || !transport.setHidden) return false;
+
+    const mutation = await transport.setHidden(
+      spec.contentTypeId,
+      data.id,
+      action,
+      expectedVersion,
+    );
+
+    if (mutation.error !== undefined) {
+      // The same banner a save gets: somebody saved first, and the editor
+      // decides with both versions in front of them. The dialog closes, because
+      // the banner is where the next step is.
+      if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
+        setConflict({ currentVersion: mutation.conflict.currentVersion });
+
+        return true;
+      }
+
+      const errorKey = contentErrorKey(mutation.status, mutation);
+
+      toast.error(tErrors("title"), {
+        description: errorKey
+          ? tContentErrors(errorKey)
+          : tErrors("internal_server_error"),
+      });
+
+      return false;
+    }
+
+    if (mutation.version !== undefined) setExpectedVersion(mutation.version);
+    setHidden(current => ({
+      ...current,
+      value: action === "hide" ? new Date().toISOString() : null,
+    }));
 
     toast.success(t(`${action}.success`, { name: singular }), {
       description: title,
@@ -466,6 +533,15 @@ const ContentFormFields = ({
                   status: row.status,
                   updatedAt: row.updatedAt,
                 })),
+                visibility: {
+                  canHide,
+                  enabled: visibility,
+                  hiddenAt: hidden.value,
+                  transition:
+                    data && transport.setHidden
+                      ? visibilityTransition
+                      : undefined,
+                },
               }}
             >
               {Layout ? (
@@ -483,10 +559,14 @@ const ContentFormFields = ({
                   <ContentFormHeader />
 
                   {publication && data ? (
-                    <ContentFormPublication
-                      publishedAt={data.publishedAt}
-                      status={data.status}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <ContentFormPublication
+                        hiddenAt={visibility ? hidden.value : undefined}
+                        publishedAt={data.publishedAt}
+                        status={data.status}
+                      />
+                      <ContentFormHiddenNotice />
+                    </div>
                   ) : null}
 
                   <ContentFormSections sections={sections} />

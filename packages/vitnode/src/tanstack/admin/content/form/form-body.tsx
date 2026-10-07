@@ -28,6 +28,7 @@ export const ContentDialogForm = ({
       singular={singular}
       spec={spec}
       title={title}
+      visibility={entry.definition.visibility.enabled}
     />
   );
 };

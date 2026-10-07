@@ -138,6 +138,7 @@
   "@vitnode/blog:posts:can_delete": "Delete articles",
   "@vitnode/blog:posts:can_publish": "Publish and unpublish articles",
   "@vitnode/blog:posts:can_restore": "Restore an earlier version of an article",
+  "@vitnode/blog:posts:can_hide": "Hide and unhide articles",
   "@vitnode/blog:categories": "Categories",
   "@vitnode/blog:categories:can_view": "View categories list",
   "@vitnode/blog:categories:can_create": "Create categories",

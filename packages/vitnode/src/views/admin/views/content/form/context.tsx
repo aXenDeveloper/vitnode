@@ -2,6 +2,7 @@ import React from "react";
 
 import type { PageTitleBack } from "@/components/ui/page-title";
 import type { ContentFileFieldValue } from "@/content/files";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 export interface ContentFormHeaderValue {
   back: PageTitleBack;
@@ -36,6 +37,19 @@ export interface ContentFormContextValue {
   skeleton?: boolean;
   title?: string;
   translations?: readonly ContentFormTranslationMeta[];
+  /**
+   * Record-level hiding, for a content type with `visibility` enabled. Absent
+   * for every other one - and from a layout rendered by an older host.
+   */
+  visibility?: {
+    /** `can_hide`. */
+    canHide: boolean;
+    enabled: boolean;
+    /** When the record was hidden, or `null` while it is visible. */
+    hiddenAt?: unknown;
+    /** Hides or unhides; `true` when the dialog may close. */
+    transition?: (action: ContentVisibilityAction) => Promise<boolean>;
+  };
 }
 
 const ContentFormContext = React.createContext<ContentFormContextValue | null>(

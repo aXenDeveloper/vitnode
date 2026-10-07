@@ -42,6 +42,17 @@ declare module "@vitnode/core/api/models/events" {
 }
 
 const POST = blogPostContentType.id;
+
+// What is deliberately not bridged:
+// - A duplicate is a create - `content.blog.post.created`, with
+//   `duplicatedFromId` - so it re-emits `blog.post.created` exactly once, as a
+//   new article should. `content.blog.post.duplicated` carries nothing a legacy
+//   listener knows how to use, and re-emitting it would announce the article
+//   twice.
+// - Hiding and unhiding change who can read an article, not the article.
+//   Neither is an update or a delete, and mapping them onto one would have a
+//   legacy indexer drop or re-add a record the engine's own search sync
+//   already handled. Listen to `content.blog.post.hidden` / `.unhidden`.
 const CATEGORY = "blog.category";
 
 const categoryOf = async (
