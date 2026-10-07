@@ -272,6 +272,7 @@ export {
   compareContentIds,
   CONTENT_BIGINT_MAX,
   CONTENT_SERIAL_MAX,
+  contentAnyIdSchema,
   contentIdFromKey,
   contentIdKey,
   contentIdParamSchema,

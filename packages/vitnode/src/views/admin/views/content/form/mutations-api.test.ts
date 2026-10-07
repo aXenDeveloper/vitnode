@@ -322,6 +322,28 @@ describe("picker options", () => {
     ]);
   });
 
+  it("labels the options of a uuid or a bigint target by their keys", async () => {
+    answers(200, {
+      items: [
+        { label: "Launch week", value: "047d2c6c-1d86-47e2-bcd3-2df9f5359541" },
+        { label: "Big launch", value: "9007199254740994" },
+      ],
+    });
+
+    await expect(
+      loadContentOptionsInBrowser(TARGET, "tags", "", [
+        "047d2c6c-1d86-47e2-bcd3-2df9f5359541",
+        "9007199254740994",
+      ]),
+    ).resolves.toEqual([
+      { label: "Launch week", value: "047d2c6c-1d86-47e2-bcd3-2df9f5359541" },
+      { label: "Big launch", value: "9007199254740994" },
+    ]);
+    expect(sent().query).toEqual({
+      ids: "047d2c6c-1d86-47e2-bcd3-2df9f5359541,9007199254740994",
+    });
+  });
+
   it("asks for identifiers instead of a search when given them", async () => {
     answers(200, { items: [] });
 

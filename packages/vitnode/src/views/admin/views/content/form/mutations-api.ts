@@ -5,6 +5,7 @@ import type { ContentPublicationAction } from "@/content/publication";
 import type { ContentVisibilityAction } from "@/content/visibility";
 
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
+import { contentAnyIdSchema } from "@/content/ids";
 
 import type {
   ContentMutationResult,
@@ -23,7 +24,7 @@ import {
 } from "../lib/api-result";
 
 /** Anything the generated routes return: an identifier plus the row's fields. */
-const zodRow = z.object({ id: z.number() }).loose();
+const zodRow = z.object({ id: contentAnyIdSchema }).loose();
 
 const zodPublicationResult = z.object({ changed: z.boolean(), row: zodRow });
 
@@ -38,7 +39,9 @@ const zodOptions = z.object({
       color: z.string().optional(),
       label: z.string(),
       nameCode: z.string().optional(),
-      value: z.number(),
+      // A number for a `serial` target or a person, the canonical key string
+      // for a `uuid` or `bigint` one.
+      value: contentAnyIdSchema,
     }),
   ),
 });

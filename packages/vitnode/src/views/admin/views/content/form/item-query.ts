@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ContentId } from "@/content/ids";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
+import { contentAnyIdSchema } from "@/content/ids";
 import { resolveLangValue } from "@/lib/helpers/multi-lang";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
@@ -18,7 +19,7 @@ import { contentApiFetch, readContentApiJson } from "../content-request";
 
 export const zodContentItem = z
   .object({
-    id: z.number(),
+    id: contentAnyIdSchema,
     labels: z.record(z.string(), z.string().nullable()),
   })
   .loose();
