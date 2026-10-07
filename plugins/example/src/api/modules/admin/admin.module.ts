@@ -5,8 +5,10 @@ import { CONFIG_PLUGIN } from "@/const";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
+import { eventContent } from "@/database/events";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
+import { tagContent } from "@/database/tags";
 
 export const adminModule = buildModule({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -25,8 +27,11 @@ export const adminModule = buildModule({
         advancedArticleContent,
         articleContent,
         categoryContent,
+        // Keyed by `bigint` and `uuid`: their routes take `{id}` as a string.
+        eventContent,
         localizedArticleContent,
         pageContent,
+        tagContent,
       ],
     }),
   ],
