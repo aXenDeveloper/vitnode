@@ -8,7 +8,6 @@ import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope"
 
 import {
   deleteAdminAiUserOverride,
-  sweepAdminAiAlt,
   updateAdminAiAction,
   updateAdminAiRoleAccess,
   updateAdminAiSettings,
@@ -16,7 +15,6 @@ import {
 } from "@/views/admin/views/core/ai/ai-mutations";
 import {
   adminAiActionsQueryOptions,
-  adminAiAltStatusQueryOptions,
   adminAiHistoryQueryOptions,
   adminAiModelsQueryOptions,
   adminAiOverviewQueryOptions,
@@ -31,7 +29,6 @@ import { useAdminIdentity } from "../identity";
 
 export const adminAiOverviewQuery = adminAiOverviewQueryOptions;
 export const adminAiSettingsQuery = adminAiSettingsQueryOptions;
-export const adminAiAltStatusQuery = adminAiAltStatusQueryOptions;
 export const adminAiModelsQuery = adminAiModelsQueryOptions;
 export const adminAiActionsQuery = adminAiActionsQueryOptions;
 export const adminAiRoleAccessQuery = adminAiRoleAccessQueryOptions;
@@ -58,7 +55,6 @@ type Mutation<TArgs extends unknown[], TData> = (
 
 export interface AdminAiMutations {
   deleteUserOverride: typeof deleteAdminAiUserOverride;
-  sweepAlt: typeof sweepAdminAiAlt;
   updateAction: typeof updateAdminAiAction;
   updateRoleAccess: typeof updateAdminAiRoleAccess;
   updateSettings: typeof updateAdminAiSettings;
@@ -85,7 +81,6 @@ export const useAdminAiMutations = (): AdminAiMutations => {
 
     return {
       deleteUserOverride: settled(deleteAdminAiUserOverride),
-      sweepAlt: settled(sweepAdminAiAlt),
       updateAction: settled(updateAdminAiAction),
       updateRoleAccess: settled(updateAdminAiRoleAccess),
       updateSettings: settled(updateAdminAiSettings),

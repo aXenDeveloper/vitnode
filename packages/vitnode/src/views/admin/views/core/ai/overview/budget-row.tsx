@@ -10,6 +10,7 @@ import { aiMonthOf, countAiDays, shiftAiMonth } from "@/lib/ai/overview-range";
 
 import type { AdminAiOverview } from "../ai-query";
 
+import { openAiSettings } from "../settings/open-settings";
 import { useOverviewFormat } from "./overview-format";
 import { usdNumber } from "./overview-metrics";
 
@@ -33,7 +34,9 @@ const BudgetAlert = ({ data }: { data: AdminAiOverview }) => {
   const rate = formatter.usd(usdNumber(budget.dailyRateUsd));
   const month = formatter.month(budget.month);
   const settingsLink = (label: string) => (
-    <Link to="/admin/core/ai/settings">{label}</Link>
+    <Link search={openAiSettings} to="/admin/core/ai">
+      {label}
+    </Link>
   );
 
   if (budget.live) {
@@ -197,7 +200,8 @@ export const AiBudgetRow = ({
             {t("no_limit")}{" "}
             <Link
               className="text-foreground underline underline-offset-3"
-              to="/admin/core/ai/settings"
+              search={openAiSettings}
+              to="/admin/core/ai"
             >
               {t("set_limit")}
             </Link>

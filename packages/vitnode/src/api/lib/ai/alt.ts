@@ -58,23 +58,16 @@ const setAltState = async (
 };
 
 /**
- * The languages ALT is written in: every registered site language, or the
- * subset an admin chose. `core_languages` has no "active" flag - registered
- * is available.
+ * The languages ALT is written in: every registered site language.
+ * `core_languages` has no "active" flag - registered is available.
  */
-export const altLanguages = async (
-  db: Db,
-  settings: Pick<AiSettingsSnapshot, "altLanguages">,
-): Promise<string[]> => {
+export const altLanguages = async (db: Db): Promise<string[]> => {
   const rows = await db
     .select({ code: core_languages.code })
     .from(core_languages)
     .orderBy(asc(core_languages.code));
-  const codes = rows.map(row => row.code);
 
-  return settings.altLanguages
-    ? codes.filter(code => settings.altLanguages?.includes(code))
-    : codes;
+  return rows.map(row => row.code);
 };
 
 /**
@@ -156,7 +149,7 @@ export const detectMissingAlt = async (
     .from(core_ai_settings)
     .where(eq(core_ai_settings.id, 1));
   const cursor = row?.cursor ?? 0;
-  const languages = await altLanguages(db, settings);
+  const languages = await altLanguages(db);
   if (languages.length === 0) return { enqueued: 0, scanned: 0 };
 
   const files = await db
@@ -395,7 +388,7 @@ export const processAltForFile = async (
     return { written: [] };
   }
 
-  const languages = await altLanguages(db, settings);
+  const languages = await altLanguages(db);
   const existing = await db
     .select({
       fileFingerprint: core_files_alt.fileFingerprint,

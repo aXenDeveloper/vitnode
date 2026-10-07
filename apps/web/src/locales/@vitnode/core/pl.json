@@ -327,8 +327,7 @@
           "title": "AI",
           "overview": "Przegląd",
           "actions": "Akcje",
-          "history": "Historia",
-          "settings": "Ustawienia"
+          "history": "Historia"
         }
       },
       "search": {
@@ -1265,8 +1264,9 @@
       "settings": {
         "title": "Ustawienia AI",
         "desc": "Główny przełącznik, budżety i limity, w ramach których działa każda funkcja AI.",
+        "open": "Ustawienia",
         "time_zone": "Miesięczne budżety i limity odnawiają się o północy w strefie {timeZone}.",
-        "tabs": {
+        "sections": {
           "budget": "Budżet",
           "limits": "Limity",
           "alt": "Tekst ALT"
@@ -1313,11 +1313,6 @@
             "desc": "Opisuj przesłane obrazy w tle. Wymaga miesięcznego budżetu strony, więc nigdy nie wyda pieniędzy bez limitu."
           },
           "needs_budget": "Ustaw miesięczny budżet strony, zanim włączysz automatyczny tekst ALT.",
-          "languages": {
-            "label": "Języki",
-            "desc": "Kody języków oddzielone przecinkami. Pozostaw puste, aby tworzyć tekst ALT we wszystkich włączonych językach.",
-            "placeholder": "en, pl"
-          },
           "batch_size": {
             "label": "Obrazów w kolejce na przegląd",
             "desc": "Ile obrazów bez tekstu ALT dodaje do kolejki jeden cogodzinny przegląd. Następnie zadanie opisuje je po dwa, co minutę."
@@ -1328,26 +1323,7 @@
           "title": "Zapisano ustawienia AI",
           "desc": "Nowe limity obowiązują od następnej operacji AI."
         },
-        "alt_status": {
-          "title": "Postęp automatycznego ALT",
-          "on": "Wł.",
-          "off": "Wył.",
-          "desc": "{eligible, plural, one {# obraz ma} few {# obrazy mają} many {# obrazów ma} other {# obrazu ma}} automatyczny tekst ALT.",
-          "counts": {
-            "pending": "Oczekujące",
-            "completed": "Gotowe",
-            "failed": "Błędy",
-            "waitingBudget": "Czeka na budżet",
-            "skipped": "Pominięte"
-          },
-          "languages": "Języki",
-          "no_languages": "Brak języków do opisania.",
-          "sweep": {
-            "button": "Znajdź brakujące ALT teraz",
-            "success": "Sprawdzono brakujące teksty ALT",
-            "success_desc": "{enqueued, plural, =0 {Nic nowego do kolejki} one {# obraz w kolejce} few {# obrazy w kolejce} many {# obrazów w kolejce} other {# obrazu w kolejce}} po sprawdzeniu {scanned, plural, one {# obrazu} other {# obrazów}}."
-          }
-        }
+        "unsaved": "Niezapisane zmiany"
       },
       "actions": {
         "title": "Akcje AI",

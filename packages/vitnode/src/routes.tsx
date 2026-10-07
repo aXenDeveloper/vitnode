@@ -220,13 +220,6 @@ export const routes = defineRoutes([
     search: normalizeAiHistoryRouteSearch,
   }),
 
-  page("/admin/core/ai/settings", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/ai/settings")),
-    messages: ADMIN_AI_NAMESPACES,
-    pendingComponent: FormPendingSkeleton,
-  }),
-
   page("/admin/core/advanced/cron", {
     area: "admin",
     component: lazy(() => import("./pages/admin/advanced/cron")),

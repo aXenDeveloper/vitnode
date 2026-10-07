@@ -1899,8 +1899,7 @@
           "title": "AI",
           "overview": "Overview",
           "actions": "Actions",
-          "history": "History",
-          "settings": "Settings"
+          "history": "History"
         }
       },
       "search": {
@@ -3181,8 +3180,9 @@
       "settings": {
         "title": "AI settings",
         "desc": "The site-wide switch, budgets and limits every AI feature runs under.",
+        "open": "Settings",
         "time_zone": "Monthly budgets and allowances reset at midnight in {timeZone}.",
-        "tabs": {
+        "sections": {
           "budget": "Budget",
           "limits": "Limits",
           "alt": "ALT text"
@@ -3229,11 +3229,6 @@
             "desc": "Describe uploaded images in the background. Needs a monthly site budget, so it can never spend without a cap."
           },
           "needs_budget": "Set a monthly site budget before turning on automatic ALT text.",
-          "languages": {
-            "label": "Languages",
-            "desc": "Comma-separated language codes. Leave empty to write ALT text in every enabled language.",
-            "placeholder": "en, pl"
-          },
           "batch_size": {
             "label": "Images queued per sweep",
             "desc": "How many images missing ALT text one hourly sweep queues. The worker then describes them two at a time, every minute."
@@ -3244,26 +3239,7 @@
           "title": "AI settings saved",
           "desc": "New limits apply to the next AI operation."
         },
-        "alt_status": {
-          "title": "Automatic ALT progress",
-          "on": "On",
-          "off": "Off",
-          "desc": "{eligible, plural, one {# image is} other {# images are}} set to automatic ALT text.",
-          "counts": {
-            "pending": "Pending",
-            "completed": "Completed",
-            "failed": "Failed",
-            "waitingBudget": "Waiting for budget",
-            "skipped": "Skipped"
-          },
-          "languages": "Languages",
-          "no_languages": "No languages to write in.",
-          "sweep": {
-            "button": "Find missing ALT now",
-            "success": "Looked for missing ALT text",
-            "success_desc": "{enqueued, plural, =0 {Nothing new to queue} one {# image queued} other {# images queued}} after checking {scanned, plural, one {# image} other {# images}}."
-          }
-        }
+        "unsaved": "Unsaved changes"
       },
       "actions": {
         "title": "AI actions",

@@ -239,11 +239,6 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           href: "/admin/core/ai/history",
           permission: core("ai"),
         },
-        {
-          title: key("admin.global.nav.ai.settings"),
-          href: "/admin/core/ai/settings",
-          permission: core("ai"),
-        },
       ],
     },
     {

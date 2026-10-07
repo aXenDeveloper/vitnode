@@ -287,7 +287,6 @@ describePostgres("AI routes (real PostgreSQL)", () => {
       body: {
         altBatchSize: 10,
         altEnabled: false,
-        altLanguages: null,
         defaultMonthlyPoints: "0",
         enabled: true,
         historyRetentionDays: 365,
@@ -318,7 +317,6 @@ describePostgres("AI routes (real PostgreSQL)", () => {
     const settings = {
       altBatchSize: 10,
       altEnabled: true,
-      altLanguages: null,
       defaultMonthlyPoints: "0",
       enabled: true,
       historyRetentionDays: 365,

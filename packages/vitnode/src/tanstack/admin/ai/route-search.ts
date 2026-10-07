@@ -28,7 +28,7 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-export type AiOverviewRouteSearch = AiOverviewSearch;
+export type AiOverviewRouteSearch = AiOverviewSearch & { settings?: "open" };
 
 export const normalizeAiOverviewSearch = (
   input: Record<string, unknown>,
@@ -47,6 +47,7 @@ export const normalizeAiOverviewSearch = (
       ? { range }
       : {}),
     ...(isAiMonth(month) ? { month } : {}),
+    ...(input.settings === "open" ? { settings: "open" as const } : {}),
   };
 };
 

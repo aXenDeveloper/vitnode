@@ -20,7 +20,6 @@ const limit = (field: keyof typeof AI_ACTION_LIMITS) =>
 export const zodAiSettings = z.object({
   altBatchSize: z.number().int().min(1).max(100),
   altEnabled: z.boolean(),
-  altLanguages: z.array(z.string().min(2).max(32)).nullable(),
   defaultMonthlyPoints: zodDecimalString,
   enabled: z.boolean(),
   historyRetentionDays: z.number().int().min(7).max(3650),

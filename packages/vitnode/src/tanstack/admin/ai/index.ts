@@ -3,7 +3,6 @@ export { AdminAiHistoryRouteContent } from "./history-screen";
 export { AdminAiOverviewRouteContent } from "./overview-screen";
 export {
   adminAiActionsQuery,
-  adminAiAltStatusQuery,
   adminAiHistoryQuery,
   adminAiModelsQuery,
   adminAiOverviewQuery,
@@ -25,7 +24,6 @@ export {
   loadAdminAiActionsRoute,
   loadAdminAiHistoryRoute,
   loadAdminAiOverviewRoute,
-  loadAdminAiSettingsRoute,
 } from "./route";
 export type {
   AiHistoryRouteSearch,
@@ -39,7 +37,6 @@ export {
   normalizeAiHistoryRouteSearch,
   normalizeAiOverviewSearch,
 } from "./route-search";
-export { AdminAiSettingsRouteContent } from "./settings-screen";
 
 export type {
   AdminAiAction,

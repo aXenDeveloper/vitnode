@@ -74,7 +74,6 @@ describe("the core group", () => {
       "/admin/core/ai",
       "/admin/core/ai/actions",
       "/admin/core/ai/history",
-      "/admin/core/ai/settings",
       "/admin/core/advanced",
       "/admin/core/advanced/search",
       "/admin/core/advanced/cron",

@@ -48,7 +48,7 @@ At least one model must declare `image-input` (the description) and `text` (the 
 
 ### Set a site budget
 
-In **AI → Settings → Budget**, set **Monthly site budget**. Automatic ALT cannot be switched on without one: the API answers `400` and the form shows _"Set a monthly site budget before turning on automatic ALT text."_ Optionally set **Background jobs budget** to cap system work separately - it counts inside the site budget.
+On **AI → Overview**, click **Settings** and, under **Budget**, set **Monthly site budget**. Automatic ALT cannot be switched on without one: the API answers `400` and the form shows _"Set a monthly site budget before turning on automatic ALT text."_ Optionally set **Background jobs budget** to cap system work separately - it counts inside the site budget.
 
 </Step>
 
@@ -56,11 +56,12 @@ In **AI → Settings → Budget**, set **Monthly site budget**. Automatic ALT ca
 
 ### Switch it on
 
-In **AI → Settings → ALT text**:
+In the same **Settings** sheet, under **ALT text**:
 
 - **Write ALT text automatically** - the switch.
-- **Languages** - comma-separated codes, e.g. `en, pl`. Empty means every language in `core_languages`.
-- **Images per batch** - how many images one hourly sweep queues (default `10`, max `100`).
+- **Images queued per sweep** - how many images one hourly sweep queues (default `10`, max `100`).
+
+ALT text is written in every language in `core_languages` - add a language and the next sweep fills it in.
 
 </Step>
 
@@ -110,7 +111,7 @@ The policy is checked again at write time, so a policy changed mid-run still win
 
 ### The sweep
 
-The sweep walks `core_files` in id order from a stored cursor, at most 200 files per run, and queues up to **Images per batch** of them. When it reaches the end, it wraps to the start - so every image is revisited and a new language or a missed upload is always found again.
+The sweep walks `core_files` in id order from a stored cursor, at most 200 files per run, and queues up to **Images queued per sweep** of them. When it reaches the end, it wraps to the start - so every image is revisited and a new language or a missed upload is always found again.
 
 Queuing is deduplicated: a file that is already pending or processing in the queue is not queued twice.
 
@@ -213,8 +214,6 @@ The file ALT routes live in the `admin/files` module and use the `files` staff p
 | `PUT /admin/files/{id}/alt`        | `files:can_edit_alt` | Set one language as a human text (`""` allowed).                       |
 | `DELETE /admin/files/{id}/alt`     | `files:can_edit_alt` | Remove one language (`?languageCode=`), so the job may write it again. |
 | `PUT /admin/files/{id}/alt-policy` | `files:can_edit_alt` | Set `automatic`, `manual` or `disabled`.                               |
-| `GET /admin/ai/alt`                | `ai:can_view`        | Progress: pending, completed, failed, skipped, waiting budget.         |
-| `POST /admin/ai/alt/sweep`         | `ai:can_manage`      | Run the sweep now instead of waiting for the hour.                     |
 
 ```ts
 await fetcher({

@@ -1,0 +1,1 @@
+ALTER TABLE "core_ai_settings" DROP COLUMN "altLanguages";

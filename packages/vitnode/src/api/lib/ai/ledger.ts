@@ -34,7 +34,6 @@ export const pointsToUsd = (
 export interface AiSettingsSnapshot {
   altBatchSize: number;
   altEnabled: boolean;
-  altLanguages: null | string[];
   defaultMonthlyPoints: Decimal;
   enabled: boolean;
   historyRetentionDays: number;

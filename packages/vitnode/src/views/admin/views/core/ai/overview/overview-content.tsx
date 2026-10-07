@@ -26,6 +26,7 @@ import {
 import type { AdminAiOverview, AiOverviewSearch } from "../ai-query";
 import type { AiOverviewMetric } from "./overview-metrics";
 
+import { openAiSettings } from "../settings/open-settings";
 import { AiOverviewBreakdown } from "./breakdown";
 import { AiBudgetChart } from "./budget-chart";
 import { AiBudgetRow } from "./budget-row";
@@ -193,7 +194,9 @@ export const AiOverviewContent = ({
           <AlertTitle>{t("disabled.title")}</AlertTitle>
           <AlertDescription>
             {t("disabled.desc")}{" "}
-            <Link to="/admin/core/ai/settings">{t("disabled.link")}</Link>
+            <Link search={openAiSettings} to="/admin/core/ai">
+              {t("disabled.link")}
+            </Link>
           </AlertDescription>
         </Alert>
       )}

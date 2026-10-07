@@ -10,8 +10,13 @@ import { defineAdminRoute } from "@/tanstack/plugin-routes";
 const AdminAiOverviewPage = ({
   loaderData,
   navigate,
+  search,
 }: PluginRoutePageProps<AdminAiOverviewRouteData, AiOverviewRouteSearch>) => (
-  <AdminAiOverviewRouteContent {...loaderData} navigate={navigate} />
+  <AdminAiOverviewRouteContent
+    {...loaderData}
+    navigate={navigate}
+    settingsOpen={search.settings === "open"}
+  />
 );
 
 export const route = defineAdminRoute<

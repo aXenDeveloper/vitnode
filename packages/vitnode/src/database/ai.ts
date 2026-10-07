@@ -34,8 +34,6 @@ export const core_ai_settings = camelCase.table.withRLS(
     historyRetentionDays: t.integer().notNull().default(365),
     /** Automatic ALT text for images in core_files. Off until an admin turns it on. */
     altEnabled: t.boolean().notNull().default(false),
-    /** Language codes to generate ALT for; `null` means every site language. */
-    altLanguages: t.jsonb().$type<string[]>(),
     /** Images analysed per cron run - bounds the backfill. */
     altBatchSize: t.integer().notNull().default(10),
     /** Keyset cursor of the ALT detection sweep. */

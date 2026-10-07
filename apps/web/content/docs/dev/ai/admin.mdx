@@ -6,15 +6,15 @@ icon: LayoutDashboard
 
 The AdminCP **AI** section (`/admin/core/ai`) is where admins decide how much the site may spend on AI, which models run which features, and who may use them. Members see their own allowance at **Settings → AI usage** (`/settings/ai`).
 
-| Page           | URL                       | What it is for                                               |
-| :------------- | :------------------------ | :----------------------------------------------------------- |
-| Overview       | `/admin/core/ai`          | Spend against the budget, a forecast, trends and breakdowns. |
-| Actions        | `/admin/core/ai/actions`  | Every registered AI feature: switch, model, limits.          |
-| History        | `/admin/core/ai/history`  | Every run: who, which model, tokens and cost.                |
-| Settings       | `/admin/core/ai/settings` | Global switch, budgets, rate limits, retention, ALT text.    |
-| Roles → AI tab | `/admin/core/users/roles` | A role's AI permissions, monthly points and daily limits.    |
-| User → AI card | `/admin/core/users/{id}`  | One member's exception: blocked, unlimited or own points.    |
-| AI usage       | `/settings/ai` (member)   | A member's own points, daily limits and recent operations.   |
+| Page           | URL                            | What it is for                                               |
+| :------------- | :----------------------------- | :----------------------------------------------------------- |
+| Overview       | `/admin/core/ai`               | Spend against the budget, a forecast, trends and breakdowns. |
+| Settings sheet | `/admin/core/ai?settings=open` | Global switch, budgets, rate limits, retention, ALT text.    |
+| Actions        | `/admin/core/ai/actions`       | Every registered AI feature: switch, model, limits.          |
+| History        | `/admin/core/ai/history`       | Every run: who, which model, tokens and cost.                |
+| Roles → AI tab | `/admin/core/users/roles`      | A role's AI permissions, monthly points and daily limits.    |
+| User → AI card | `/admin/core/users/{id}`       | One member's exception: blocked, unlimited or own points.    |
+| AI usage       | `/settings/ai` (member)        | A member's own points, daily limits and recent operations.   |
 
 Models and their prices are not edited in the AdminCP - they live in `vitnode.api.config.ts`, next to the provider keys they need. See [Model pricing](/docs/dev/ai/costs-and-limits#model-pricing).
 
@@ -28,7 +28,7 @@ Models and their prices come from code - see [AI Setup](/docs/dev/ai). Everythin
 
 ### Set a monthly site budget
 
-Open **AI → Settings → Budget** and set **Monthly site budget** in USD. Without it, nothing caps what the whole site spends. Automatic ALT text refuses to turn on until a budget exists.
+Open **AI → Overview**, click **Settings** and, under **Budget**, set **Monthly site budget** in USD. Without it, nothing caps what the whole site spends. Automatic ALT text refuses to turn on until a budget exists.
 
 </Step>
 
@@ -52,7 +52,7 @@ Open **Users → Roles**, edit a role and switch to the **AI** tab. Give the rol
 
 ### Optionally turn on automatic ALT text
 
-Open **AI → Settings → ALT text** and switch on **Write ALT text automatically**. You need a vision model (`image-input`) with pricing and a running cron - see [Automatic Image ALT Text](/docs/dev/ai/automatic-alt).
+In the same **Settings** sheet, under **ALT text**, switch on **Write ALT text automatically**. You need a vision model (`image-input`) with pricing and a running cron - see [Automatic Image ALT Text](/docs/dev/ai/automatic-alt).
 
 </Step>
 
@@ -64,8 +64,8 @@ The AI screens use two staff permissions in the `ai` module of `@vitnode/core`. 
 
 | Permission      | Allows                                                                                                                              |
 | :-------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| `ai:can_view`   | Open every AI page, read overview, actions, history and ALT progress, and see a member's AI exception.                              |
-| `ai:can_manage` | Change settings and action settings, the **AI** tab on roles and a member's exception, and run an ALT sweep. Depends on `can_view`. |
+| `ai:can_view`   | Open every AI page, read overview, actions, history and settings, and see a member's AI exception.                              |
+| `ai:can_manage` | Change settings and action settings, the **AI** tab on roles and a member's exception. Depends on `can_view`. |
 
 Without `can_manage`, the pages are read-only: forms are disabled, write buttons are hidden and the role form has no **AI** tab.
 
@@ -77,7 +77,9 @@ Without `can_manage`, the pages are read-only: forms are disabled, write buttons
 
 ## Settings
 
-**AI → Settings** holds the rules every run follows. Changes apply from the next run.
+The **Settings** button on **AI → Overview** opens a sheet with the rules every run follows. Changes apply from the next run, after you press **Save settings**. The sheet has its own link, `/admin/core/ai?settings=open`, so you can send it to another admin.
+
+Switch **AI features** off and the rest of the sheet hides - with AI off, none of it applies.
 
 | Setting                  | Default    | Meaning                                                                              |
 | :----------------------- | :--------- | :----------------------------------------------------------------------------------- |
@@ -90,7 +92,7 @@ Without `can_manage`, the pages are read-only: forms are disabled, write buttons
 | Parallel background runs | `2`        | System runs in flight across the site.                                               |
 | Keep history for         | `365` days | How long run records are kept (7 – 3,650).                                           |
 
-Budgets and allowances are calendar months in the **site's time zone** (the default language's). The settings page shows which one.
+Budgets and allowances are calendar months in the **site's time zone** (the default language's). The settings sheet shows which one.
 
 Budgets are in **USD**, because that is what providers bill. Members are charged in **AI points**. [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits) explains the conversion and what happens on failure.
 
@@ -161,7 +163,7 @@ Run statuses: `reserved`, `running`, `succeeded`, `failed`, `canceled` and `unce
 - **Chart** - for spend, the month's running total against the budget line, with last month dashed and the forecast to the month's end. For the other numbers, a running total (or a running average for rates) across the range, against the range before it.
 - **Where it goes** - the picked number by action or by model, ranked, with a mark for the range before. A run whose model has no price shows **Unknown**, never `$0`, and the page tells you how many runs that is.
 
-The range and the budget month live in the URL (`?range=7d`, `?from=2026-09-12&to=2026-09-25`, `?month=2026-09`), so a view can be shared with another admin. Days follow the site's time zone from **AI → Settings**.
+The range and the budget month live in the URL (`?range=7d`, `?from=2026-09-12&to=2026-09-25`, `?month=2026-09`), so a view can be shared with another admin. Days follow the site's time zone, shown in the **Settings** sheet.
 
 ## Member page: /settings/ai
 

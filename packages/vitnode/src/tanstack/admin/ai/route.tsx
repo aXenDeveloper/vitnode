@@ -10,12 +10,12 @@ import { ADMIN_AI_SCREEN } from "@/views/admin/views/core/ai/ai-query";
 import { adminScopedQueryKey } from "@/views/admin/views/core/shared/admin-scope";
 
 import type { AdminScreenContext } from "../screen";
+import type { AiOverviewRouteSearch } from "./route-search";
 
 import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import {
   adminAiActionsQuery,
-  adminAiAltStatusQuery,
   adminAiHistoryQuery,
   adminAiModelsQuery,
   adminAiOverviewQuery,
@@ -56,13 +56,20 @@ const enter = ({ adminAccess }: AdminAiLoaderContext): AdminIdentity => {
 };
 
 export const loadAdminAiOverviewRoute = async (
-  context: AdminAiLoaderContext & { search: AiOverviewSearch },
+  context: AdminAiLoaderContext & { search: AiOverviewRouteSearch },
 ): Promise<AdminAiOverviewRouteData> => {
   const adminUserId = enter(context);
+  const { settings, ...search } = context.search;
   const overview = context.queryClient.query({
-    ...adminAiOverviewQuery({ adminUserId, search: context.search }),
+    ...adminAiOverviewQuery({ adminUserId, search }),
     ...STATIC,
   });
+
+  if (settings === "open") {
+    void context.queryClient
+      .query({ ...adminAiSettingsQuery({ adminUserId }), ...STATIC })
+      .catch(() => undefined);
+  }
   const showingOverview = context.queryClient
     .getQueriesData({
       queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "overview"),
@@ -86,31 +93,8 @@ export const loadAdminAiOverviewRoute = async (
   return {
     adminUserId,
     description: context.t("admin.ai.overview.desc"),
-    search: context.search,
+    search,
     title: context.t("admin.ai.overview.title"),
-  };
-};
-
-export const loadAdminAiSettingsRoute = async (
-  context: AdminAiLoaderContext,
-): Promise<AdminAiRouteData> => {
-  const adminUserId = enter(context);
-
-  await Promise.all([
-    context.queryClient.query({
-      ...adminAiSettingsQuery({ adminUserId }),
-      ...STATIC,
-    }),
-    context.queryClient.query({
-      ...adminAiAltStatusQuery({ adminUserId }),
-      ...STATIC,
-    }),
-  ]);
-
-  return {
-    adminUserId,
-    description: context.t("admin.ai.settings.desc"),
-    title: context.t("admin.ai.settings.title"),
   };
 };
 

@@ -29,7 +29,6 @@ export const getAiSettingsAdminRoute = buildRoute({
       {
         altBatchSize: settings.altBatchSize,
         altEnabled: settings.altEnabled,
-        altLanguages: settings.altLanguages,
         defaultMonthlyPoints: formatDecimal(settings.defaultMonthlyPoints),
         enabled: settings.enabled,
         historyRetentionDays: settings.historyRetentionDays,

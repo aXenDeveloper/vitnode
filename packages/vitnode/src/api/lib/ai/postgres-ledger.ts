@@ -58,7 +58,6 @@ const ACTIVE_RUN_STATUSES = ["reserved", "running"] as const;
 export const DEFAULT_AI_SETTINGS: Omit<AiSettingsSnapshot, "timeZone"> = {
   altBatchSize: 10,
   altEnabled: false,
-  altLanguages: null,
   defaultMonthlyPoints: 0n,
   enabled: true,
   historyRetentionDays: 365,
@@ -349,7 +348,6 @@ export class PostgresAiLedger implements AiLedger {
     return {
       altBatchSize: row.altBatchSize,
       altEnabled: row.altEnabled,
-      altLanguages: row.altLanguages ?? null,
       defaultMonthlyPoints: parseDecimal(row.defaultMonthlyPoints),
       enabled: row.enabled,
       historyRetentionDays: row.historyRetentionDays,
