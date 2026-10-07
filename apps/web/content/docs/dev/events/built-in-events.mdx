@@ -47,6 +47,7 @@ the write it describes has committed.
 | `user.created`                 | `{ userId, email, name, emailVerified }`  | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                                                |
 | `user.updated`                 | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile or time zone in **Settings → Overview**             |
 | `user.deleted`                 | `{ userId, email }`                       | Never - the name is declared for plugins, core has no deletion flow                                                      |
+| `user.email.verified`          | `{ userId, email }`                       | An address is [confirmed](/docs/dev/working-with-users/email-verification) - by its link, a completed reset, or by staff  |
 | `user.password.updated`        | `{ userId }`                              | A password is set - by a member completing a reset, or by staff on the AdminCP user page                                 |
 | `user.sessions.revoked`        | `{ userId, deviceId, sessions }`          | A user is signed out remotely - one device or all of them, by the member or by staff, or after a password change         |
 | `user.sso.linked`              | `{ userId, email, providerId }`           | An SSO identity is linked to an existing account - at login with its password, or from **Settings → Connected accounts** |
@@ -269,6 +270,31 @@ avatar that failed to download never counts. A name change also emits
 />
 
 **A listener would** refresh a search index or a cached member card.
+
+</Accordion>
+<Accordion title="user.email.verified">
+
+Emitted once an unconfirmed address becomes confirmed: when a member clicks
+the link from their sign-up email, when they complete a password reset (the
+reset link went to the same mailbox), or when staff press **Verify Email** on
+the AdminCP user page. A reset on an account that was already confirmed emits
+nothing here. See
+[Email Verification](/docs/dev/working-with-users/email-verification).
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the account whose address was confirmed.',
+      type: 'number',
+    },
+    email: {
+      description: 'The confirmed address, in its stored canonical form.',
+      type: 'string',
+    },
+  }}
+/>
+
+**A listener would** send a welcome email or unlock a "verified member" badge.
 
 </Accordion>
 <Accordion title="user.password.updated">

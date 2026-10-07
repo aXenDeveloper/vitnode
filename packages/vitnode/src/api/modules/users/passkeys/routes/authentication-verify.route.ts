@@ -1,9 +1,15 @@
 import { z } from "@hono/zod-openapi";
+import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
-import { PasskeyModel } from "@/api/models/passkey";
+import {
+  EMAIL_NOT_VERIFIED,
+  mustVerifyEmail,
+} from "@/api/models/email-verification";
+import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
 import { SessionModel } from "@/api/models/session";
 import { CONFIG_PLUGIN } from "@/config";
+import { core_users } from "@/database/users";
 
 import { passkeyFailure } from "../failure";
 import {
@@ -50,6 +56,20 @@ export const passkeyAuthenticationVerifyRoute = buildRoute({
         response,
         "authentication",
       );
+      // The same rule as a password sign-in: an install that sends
+      // confirmation emails does not open a session for an address nobody has
+      // confirmed yet. Checked after the passkey verified, so a stranger learns
+      // nothing from it.
+      const [user] = await c
+        .get("db")
+        .select({ emailVerified: core_users.emailVerified })
+        .from(core_users)
+        .where(eq(core_users.id, userId))
+        .limit(1);
+      if (user && mustVerifyEmail(c, user)) {
+        throw new PasskeyError(EMAIL_NOT_VERIFIED, 403);
+      }
+
       await new SessionModel(c).createSessionByUserId(userId);
 
       return c.json({ id: userId }, 201);

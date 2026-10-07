@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 import { createTranslator } from "use-intl";
 import { z } from "zod";
 
@@ -10,6 +11,8 @@ import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 import ResetPasswordEmailTemplate from "@/emails/reset-password";
 import { CONFIG } from "@/lib/config";
+
+import { USER_EMAIL_MAX_LENGTH } from "../credential-limits";
 
 export const resetPasswordRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -24,9 +27,13 @@ export const resetPasswordRoute = buildRoute({
         content: {
           "application/json": {
             schema: z.object({
-              email: z.email().toLowerCase().openapi({
-                example: "test@test.com",
-              }),
+              email: z
+                .email()
+                .max(USER_EMAIL_MAX_LENGTH)
+                .toLowerCase()
+                .openapi({
+                  example: "test@test.com",
+                }),
             }),
           },
         },
@@ -34,12 +41,27 @@ export const resetPasswordRoute = buildRoute({
     },
     responses: {
       201: {
-        description: "Email sent",
+        description: "Email sent, if the address belongs to an account",
+      },
+      404: {
+        description: "This install cannot send email, so it offers no reset",
       },
     },
   },
   handler: async c => {
     assertPasswordSignInEnabled(c);
+
+    // Before the lookup, and the same for every address. It used to be left to
+    // the email model, which only ran for an address that had an account: an
+    // unknown one got the usual 201 and a known one a 500 "Email provider not
+    // found" - so on an install without email the response said outright
+    // whether an address was registered.
+    if (!c.get("core").email?.adapter) {
+      throw new HTTPException(404, {
+        message: "Password reset is not available",
+      });
+    }
+
     const RESPONSE_TEXT = c.text("Email sent", 201);
     const { email } = c.req.valid("json");
     const candidates = await c

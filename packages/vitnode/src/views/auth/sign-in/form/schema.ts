@@ -9,10 +9,12 @@ export interface SignInFormMessages {
 
 export type SignInMutationResult =
   | undefined
-  | { message: "access_denied" | "Internal Server Error" };
+  | {
+      message: "access_denied" | "email_not_verified" | "Internal Server Error";
+    };
 
 /** What the form renders after a failed attempt, or nothing at all. */
-export type SignInFormError = "" | "access_denied";
+export type SignInFormError = "" | "access_denied" | "email_not_verified";
 
 export const createSignInFormSchema = ({
   invalidEmail,

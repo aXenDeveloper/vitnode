@@ -9,6 +9,10 @@ import type { SignUpSubmit } from "@/views/auth/sign-up/form/sign-up-form-conten
 import type { SSOSelectProvider } from "@/views/auth/sso/buttons/sso-buttons-content";
 import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-result";
 import type { SSOLinkSubmit } from "@/views/auth/sso/link/use-sso-link-form";
+import type {
+  ConfirmEmailSubmit,
+  ResendVerificationSubmit,
+} from "@/views/auth/verify-email/schema";
 
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
 
@@ -20,7 +24,9 @@ import { removeUserIdentityQueries } from "./queries";
 import {
   anonymousSession,
   changePasswordFormResult,
+  confirmEmailResult,
   passwordResetFormResult,
+  resendVerificationFormResult,
   signInFormResult,
   signUpFormResult,
   ssoCallbackResult,
@@ -217,4 +223,20 @@ export const changePasswordFromResetAction: ChangePasswordSubmit =
   async values =>
     changePasswordFormResult(
       await authTransport().changePasswordFromReset(values),
+    );
+
+/**
+ * Spends the confirmation link a sign-up emailed. No session comes back - the
+ * member signs in with their own password afterwards - so there is no identity
+ * boundary to cross and nothing cached to drop.
+ */
+export const confirmEmailAction =
+  (token: string): ConfirmEmailSubmit =>
+  async () =>
+    confirmEmailResult(await authTransport().verifyEmail({ token }));
+
+export const resendEmailVerificationAction: ResendVerificationSubmit =
+  async values =>
+    resendVerificationFormResult(
+      await authTransport().resendEmailVerification(values),
     );

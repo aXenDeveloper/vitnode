@@ -9,6 +9,8 @@ import type {
   PasskeySignInStartResult,
   PasswordResetRequestInput,
   PasswordResetRequestResult,
+  ResendEmailVerificationInput,
+  ResendEmailVerificationResult,
   SignInInput,
   SignInResult,
   SignOutInput,
@@ -20,6 +22,8 @@ import type {
   SsoLinkResult,
   SsoStartInput,
   SsoStartResult,
+  VerifyEmailInput,
+  VerifyEmailResult,
 } from "./contract";
 
 import { callUsersApi, readJson, readText } from "./api-helpers";
@@ -31,12 +35,14 @@ import {
   passkeySignInResultFromStatus,
   passkeySignInStartResultFromStatus,
   passwordResetRequestResultFromStatus,
+  resendEmailVerificationResultFromStatus,
   SESSION_UNAVAILABLE,
   signInResultFromStatus,
   signOutResultFromStatus,
   signUpResultFromStatus,
   ssoLinkResultFromStatus,
   ssoStartResultFromStatus,
+  verifyEmailResultFromStatus,
 } from "./contract";
 
 /** The only thing a status-mapped operation reads off its answer. */
@@ -53,7 +59,7 @@ export interface AuthApiJsonOrText<TBody> extends AuthApiJson<TBody> {
 }
 
 /**
- * The thirteen calls an auth transport makes, as requests rather than as results.
+ * The fifteen calls an auth transport makes, as requests rather than as results.
  *
  * A requester says *where* a call goes and *how* it travels - which fetcher,
  * and whether the answer's cookies may be relayed. Everything after the answer
@@ -73,18 +79,24 @@ export interface AuthApiRequester<TSession> {
   finishAdminPasskeySignIn: (
     input: PasskeySignInInput,
   ) => Promise<AuthApiJson<unknown>>;
-  finishPasskeySignIn: (input: PasskeySignInInput) => Promise<AuthApiStatus>;
+  finishPasskeySignIn: (
+    input: PasskeySignInInput,
+  ) => Promise<AuthApiJson<unknown>>;
   linkSso: (input: SsoLinkInput) => Promise<AuthApiStatus>;
   readSession: () => Promise<AuthApiJson<TSession>>;
   requestPasswordReset: (
     input: PasswordResetRequestInput,
   ) => Promise<AuthApiStatus>;
-  signIn: (input: SignInInput) => Promise<AuthApiStatus>;
+  resendEmailVerification: (
+    input: ResendEmailVerificationInput,
+  ) => Promise<AuthApiStatus>;
+  signIn: (input: SignInInput) => Promise<AuthApiJson<unknown>>;
   signOut: (input: SignOutInput) => Promise<AuthApiStatus>;
   signUp: (input: SignUpInput) => Promise<AuthApiJsonOrText<unknown>>;
   startAdminPasskeySignIn: () => Promise<AuthApiJson<PasskeySignInOptionsBody>>;
   startPasskeySignIn: () => Promise<AuthApiJson<PasskeySignInOptionsBody>>;
   startSso: (input: SsoStartInput) => Promise<AuthApiJson<{ url?: unknown }>>;
+  verifyEmail: (input: VerifyEmailInput) => Promise<AuthApiJson<unknown>>;
 }
 
 export interface AuthOperations<TSession> {
@@ -103,12 +115,16 @@ export interface AuthOperations<TSession> {
   requestPasswordReset: (
     input: PasswordResetRequestInput,
   ) => Promise<PasswordResetRequestResult>;
+  resendEmailVerification: (
+    input: ResendEmailVerificationInput,
+  ) => Promise<ResendEmailVerificationResult>;
   signIn: (input: SignInInput) => Promise<SignInResult>;
   signOut: (input: SignOutInput) => Promise<SignOutResult>;
   signUp: (input: SignUpInput) => Promise<SignUpResult>;
   startAdminPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startSso: (input: SsoStartInput) => Promise<SsoStartResult>;
+  verifyEmail: (input: VerifyEmailInput) => Promise<VerifyEmailResult>;
 }
 
 /** The `url` a start answer carries, with no assumption that it carries one. */
@@ -173,6 +189,9 @@ export const createAuthOperations = <TSession>(
     );
 
     if (!response) return { ok: false, reason: "server_error" };
+    if (response.status === 403) {
+      return passkeySignInResultFromStatus(403, await readJson(response));
+    }
 
     return passkeySignInResultFromStatus(response.status);
   },
@@ -211,10 +230,23 @@ export const createAuthOperations = <TSession>(
     return passwordResetRequestResultFromStatus(response.status);
   },
 
+  resendEmailVerification: async data => {
+    const response = await callUsersApi(async () =>
+      request.resendEmailVerification(data),
+    );
+
+    if (!response) return { ok: false, reason: "server_error" };
+
+    return resendEmailVerificationResultFromStatus(response.status);
+  },
+
   signIn: async data => {
     const response = await callUsersApi(async () => request.signIn(data));
 
     if (!response) return { ok: false, reason: "server_error" };
+    if (response.status === 403) {
+      return signInResultFromStatus(403, await readJson(response));
+    }
 
     return signInResultFromStatus(response.status);
   },
@@ -267,5 +299,16 @@ export const createAuthOperations = <TSession>(
       response.status,
       startUrlOf(await response.json()),
     );
+  },
+
+  verifyEmail: async data => {
+    const response = await callUsersApi(async () => request.verifyEmail(data));
+
+    if (!response) return { ok: false, reason: "server_error" };
+    if (response.status === 200) {
+      return verifyEmailResultFromStatus(200, await readJson(response));
+    }
+
+    return verifyEmailResultFromStatus(response.status);
   },
 });

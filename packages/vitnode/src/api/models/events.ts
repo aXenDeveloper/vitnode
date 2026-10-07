@@ -98,6 +98,10 @@ export interface VitNodeEvents {
     email: string;
     userId: number;
   };
+  "user.email.verified": {
+    email: string;
+    userId: number;
+  };
   "user.passkey.created": {
     passkeyId: number;
     userId: number;

@@ -35,12 +35,14 @@ const requester = (
   linkSso: unreachable,
   readSession: unreachable,
   requestPasswordReset: unreachable,
+  resendEmailVerification: unreachable,
   signIn: unreachable,
   signOut: unreachable,
   signUp: unreachable,
   startAdminPasskeySignIn: unreachable,
   startPasskeySignIn: unreachable,
   startSso: unreachable,
+  verifyEmail: unreachable,
   ...overrides,
 });
 

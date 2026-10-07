@@ -1,0 +1,89 @@
+---
+title: Email Verification
+description: How VitNode confirms a new member's email address before they can sign in, and the API routes and events behind it.
+icon: MailCheck
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+When your install has an [email adapter](/docs/dev/email), every new member has to click a confirmation link before they can sign in. Without one, there is nobody to send the link, so accounts are confirmed the moment they are created and nothing changes.
+
+That stops the oldest trick in the book: signing up with somebody else's address and using the account straight away.
+
+## What a member sees
+
+1. They register at `/register`. Instead of being signed in, they get a "Check your email" card.
+2. The email holds a link to `/login/verify-email?token=...`, valid for **24 hours**.
+3. That page asks them to click **Confirm email address**. The page never confirms on load, because mail scanners and link previews open every URL in an email.
+4. Once confirmed, they sign in with their password as usual.
+
+If they try to sign in first, the sign-in form says **Confirm your email first** and offers **Send a new confirmation link**, which opens the resend form with their address already filled in.
+
+<Callout type="info" title="The password comes first">
+  The "not confirmed" message only appears after the password has been checked.
+  A wrong password, an unknown address and an unconfirmed account with a wrong
+  password all get the same `403`, so the sign-in form can't be used to find out
+  which addresses are registered.
+</Callout>
+
+## The rules
+
+- **Password sign-in** answers `403 { "error": "email_not_verified" }` for an unconfirmed account. No session is created.
+- **Passkey sign-in** follows the same rule, with the same error code.
+- **AdminCP sign-in** at `/admin` is not blocked. Only staff get in, and staff are picked by an administrator, so an install that just added an email adapter can't lock its admins out.
+- **SSO** sign-ups are confirmed already, since the provider vouches for the address.
+- **Completing a password reset** also confirms the address - the reset link went to the same mailbox.
+- **Staff** can confirm anyone by hand from the AdminCP user page.
+
+<Callout type="warn" title="Adding an email adapter to an existing install">
+  Members who registered while an adapter was configured but before this feature
+  existed were never sent a link, so they are still unconfirmed. They can use
+  **Send a new confirmation link** on the sign-in form, reset their password, or
+  a staff member can confirm them from the AdminCP.
+</Callout>
+
+## API routes
+
+All routes live under `/api/@vitnode/core/users`.
+
+| Method | Path                   | Body                      | Answers                                                     |
+| :----- | :--------------------- | :------------------------ | :---------------------------------------------------------- |
+| `POST` | `/verify-email`        | `{ token }`               | `200 { email }`, or `400` for a wrong, used or expired link |
+| `POST` | `/verify-email/resend` | `{ email }`, plus captcha | `201` for every address; `404` with no email adapter        |
+
+`/verify-email/resend` answers the same `201` for an unknown address, a confirmed one and one waiting for confirmation, so it can't be used to check who has an account. It only sends when the account still needs confirming, and only once every five minutes. A new link replaces the old one.
+
+Call them through the [fetcher](/docs/dev/fetcher) like any other core route:
+
+```ts title="src/lib/confirm-email.ts"
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const response = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'post',
+  module: 'users',
+  path: '/verify-email',
+  args: { body: { token } },
+})
+```
+
+Confirming a link does not sign anybody in. Whoever clicks it owns the mailbox, but not necessarily the account - if a stranger registered with your address, your click must not drop you into their session.
+
+## How links are stored
+
+Links live in `core_users_confirm_emails`, one row per account:
+
+- The token is 32 random bytes, base64url-encoded. Only its SHA-256 digest is stored, so a leaked database dump can't confirm anything.
+- A link works once. Spending it deletes the row in the same statement that reads it, so two clicks racing each other can't both win.
+- The hourly `clean` [cron job](/docs/dev/cron) deletes expired rows.
+
+## Events
+
+Confirming an address emits `user.email.verified` with `{ userId, email }` - from the link, from a completed password reset, or from staff in the AdminCP. See [built-in events](/docs/dev/events/built-in-events).
+
+<TypeTable
+  type={{
+    userId: { description: 'Id of the confirmed account.', type: 'number' },
+    email: { description: 'The address that was confirmed.', type: 'string' },
+  }}
+/>

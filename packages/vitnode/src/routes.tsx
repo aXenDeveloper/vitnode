@@ -40,6 +40,10 @@ import {
   normalizeSsoCallbackSearch,
 } from "./tanstack/auth/route-search";
 import { SSO_CALLBACK_NAMESPACES } from "./tanstack/auth/sso-route";
+import {
+  normalizeVerifyEmailSearch,
+  VERIFY_EMAIL_NAMESPACES,
+} from "./tanstack/auth/verify-email";
 import { MY_FILES_NAMESPACES } from "./tanstack/files/route";
 import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
@@ -118,6 +122,15 @@ export const routes = defineRoutes([
     messages: PASSWORD_RESET_BASE_NAMESPACES,
     pendingComponent: AuthPendingSkeleton,
     search: normalizePasswordResetSearch,
+  }),
+
+  page("/login/verify-email", {
+    component: lazy(() => import("./pages/login/verify-email")),
+    // Declared rather than loaded inside `load`: the crumb renders one of
+    // these strings, and a breadcrumb is drawn outside the page.
+    messages: VERIFY_EMAIL_NAMESPACES,
+    pendingComponent: AuthPendingSkeleton,
+    search: normalizeVerifyEmailSearch,
   }),
 
   page("/login/sso/:providerId", {

@@ -45,10 +45,13 @@ const ResetPasswordLink = ({ href }: { href: string }) => {
 
 export const SignInFormContent = ({
   onSignIn,
+  resendVerificationHref = AUTH_HREF.verifyEmail,
   resetPasswordHref = AUTH_HREF.resetPassword,
   showResetPassword = false,
 }: {
   onSignIn: SignInSubmit;
+  /** Where "send a new confirmation link" goes for an unconfirmed account. */
+  resendVerificationHref?: string;
   resetPasswordHref?: string;
   /** Whether this deployment has an email adapter that can send a reset link. */
   showResetPassword?: boolean;
@@ -83,10 +86,24 @@ export const SignInFormContent = ({
                   delay: repeat === 0 ? REVEAL_TRANSITION.height.duration : 0,
                 }}
               >
-                <Alert variant="destructive">
+                <Alert
+                  variant={
+                    error === "email_not_verified" ? "default" : "destructive"
+                  }
+                >
                   <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
                   <AlertDescription>
-                    {t(`errors.${error}.desc`)}
+                    <p>{t(`errors.${error}.desc`)}</p>
+                    {error === "email_not_verified" ? (
+                      <p>
+                        <Link
+                          className="font-medium"
+                          to={resendVerificationHref}
+                        >
+                          {t("errors.email_not_verified.resend")}
+                        </Link>
+                      </p>
+                    ) : null}
                   </AlertDescription>
                 </Alert>
               </m.div>

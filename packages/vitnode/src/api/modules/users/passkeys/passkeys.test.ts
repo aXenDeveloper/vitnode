@@ -94,6 +94,7 @@ const harness = ({
 } = {}) => {
   let passkeys = initialPasskeys;
   let password = AUTHORIZATION.password;
+  let sendsEmail = false;
   const memory = createMemoryPasskeyStore(accounts);
   vi.spyOn(PasskeyModel.prototype, "store", "get").mockReturnValue(
     memory.store,
@@ -130,6 +131,7 @@ const harness = ({
   app.use("*", async (c, next) => {
     c.set("core", {
       authorization: { ...AUTHORIZATION, passkeys, password },
+      email: sendsEmail ? { adapter: { sendEmail: vi.fn() } } : undefined,
     } as EnvVariablesVitNode["core"]);
     c.set("user", viewer as unknown as Context["var"]["user"]);
     c.set("db", memoryDb.db as unknown as Context["var"]["db"]);
@@ -173,6 +175,15 @@ const harness = ({
     },
     disablePasswordSignIn: () => {
       password = { enabled: false };
+    },
+    confirmEmail: async (user: Viewer) => {
+      await memoryDb.db
+        .update(core_users)
+        .set({ emailVerified: true })
+        .where(eq(core_users.id, user.id));
+    },
+    sendEmail: () => {
+      sendsEmail = true;
     },
     grantStaff: async (user: Viewer) => {
       await memoryDb.db.insert(core_admin_permissions).values({
@@ -550,6 +561,28 @@ describe("passkey sign-in", () => {
     expect(h.createSession).toHaveBeenCalledWith(ALICE.id);
     expect(h.createAdminSession).not.toHaveBeenCalled();
     expect([...h.passkeys.values()][0]?.lastUsedAt).toBeInstanceOf(Date);
+  });
+
+  it("refuses an unconfirmed email on an install that sends email", async () => {
+    const { authenticator, h } = await registered();
+    h.sendEmail();
+
+    const response = await signIn(h, authenticator);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "email_not_verified" });
+    expect(h.createSession).not.toHaveBeenCalled();
+  });
+
+  it("signs a confirmed account in on an install that sends email", async () => {
+    const { authenticator, h } = await registered();
+    h.sendEmail();
+    await h.confirmEmail(ALICE);
+
+    const response = await signIn(h, authenticator);
+
+    expect(response.status).toBe(201);
+    expect(h.createSession).toHaveBeenCalledWith(ALICE.id);
   });
 
   it("never trusts a user id supplied by the browser", async () => {

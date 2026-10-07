@@ -833,7 +833,8 @@
         "email_confirmation": {
           "title": "Check your email",
           "desc": "We've sent a confirmation link to your email address",
-          "check_spam": "If you don't see the email in your inbox, please check your spam folder."
+          "check_spam": "If you don't see the email in your inbox, please check your spam folder.",
+          "resend": "Didn't get it? <link>Send a new link</link>."
         },
         "unavailable": {
           "title": "Registration is unavailable",
@@ -856,6 +857,11 @@
           "access_denied": {
             "title": "Invalid credentials",
             "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."
+          },
+          "email_not_verified": {
+            "title": "Confirm your email first",
+            "desc": "Your password is right, but this account's email address isn't confirmed yet. Click the link we emailed you, then sign in again.",
+            "resend": "Send a new confirmation link"
           }
         },
         "submit": "Login",
@@ -890,6 +896,10 @@
             "not_staff": {
               "title": "No AdminCP access",
               "desc": "Your passkey checks out, but this account can't open the AdminCP. Ask an administrator if you think that's a mistake."
+            },
+            "email_not_verified": {
+              "title": "Confirm your email first",
+              "desc": "This account's email address isn't confirmed yet. Click the link we emailed you, then try again."
             }
           }
         },
@@ -1325,6 +1335,33 @@
           "overview": {
             "title": "AI points",
             "details": "See your AI features"
+          }
+        }
+      },
+      "verify_email": {
+        "title": "Confirm your email",
+        "confirm": {
+          "desc": "Almost there! Confirm that this is your email address and your account is ready to go.",
+          "submit": "Confirm email address"
+        },
+        "success": {
+          "title": "Email confirmed",
+          "desc": "Thanks! <email></email> is confirmed - you can sign in now.",
+          "sign_in": "Go to sign in"
+        },
+        "invalid": {
+          "title": "This link doesn't work anymore",
+          "desc": "It may have expired or already been used. Ask for a fresh one and we'll send it right over.",
+          "resend": "Send a new link"
+        },
+        "resend": {
+          "title": "Resend confirmation email",
+          "desc": "Enter the email address you signed up with and we'll send you a new confirmation link.",
+          "submit": "Send confirmation link",
+          "confirmation": {
+            "title": "Check your email",
+            "desc": "If this address has an account waiting to be confirmed, a new link is on its way to:",
+            "check_spam": "If you don't see the email in your inbox, please check your spam folder."
           }
         }
       }

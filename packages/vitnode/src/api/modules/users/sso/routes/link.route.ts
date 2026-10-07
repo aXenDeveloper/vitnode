@@ -6,8 +6,14 @@ import { SessionModel } from "@/api/models/session";
 import { SSOModel } from "@/api/models/sso";
 import { CONFIG_PLUGIN } from "@/config";
 
+import { USER_PASSWORD_MAX_LENGTH } from "../../credential-limits";
+
 export const zodSsoLinkSchema = z.object({
-  password: z.string().min(1).max(1024).openapi({ example: "Test123!" }),
+  password: z
+    .string()
+    .min(1)
+    .max(USER_PASSWORD_MAX_LENGTH)
+    .openapi({ example: "Test123!" }),
   token: z.string().min(16).max(2048),
 });
 
@@ -37,7 +43,6 @@ export const linkRoute = buildRoute({
           "application/json": {
             schema: z.object({
               id: z.number(),
-              token: z.string(),
             }),
           },
         },
@@ -63,8 +68,9 @@ export const linkRoute = buildRoute({
       providerId,
       token,
     });
-    const session = await new SessionModel(c).createSessionByUserId(userId);
+    // The session lives in the HttpOnly cookie only - see the sign-in route.
+    await new SessionModel(c).createSessionByUserId(userId);
 
-    return c.json({ id: userId, token: session.token }, 201);
+    return c.json({ id: userId }, 201);
   },
 });

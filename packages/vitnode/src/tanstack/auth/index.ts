@@ -29,6 +29,13 @@ export type { SsoCallbackRouteProps } from "./sso-screen";
 export { SsoCallbackRouteContent } from "./sso-screen";
 export * from "./state";
 export * from "./transport";
+export * from "./verify-email";
+export { loadVerifyEmailRoute } from "./verify-email-route";
+export type { VerifyEmailRouteProps } from "./verify-email-screen";
+export {
+  VerifyEmailBreadcrumb,
+  VerifyEmailRouteContent,
+} from "./verify-email-screen";
 
 export type { SSOIconSource } from "@/views/auth/sso/icon";
 export { ssoIconSource } from "@/views/auth/sso/icon";

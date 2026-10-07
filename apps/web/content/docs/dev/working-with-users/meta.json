@@ -2,5 +2,5 @@
   "title": "Working with Users",
   "description": "The user model, roles, and the staff permission system - how VitNode decides who somebody is and what they are allowed to do.",
   "icon": "Users",
-  "pages": ["users", "roles", "staff-permissions", "..."]
+  "pages": ["users", "email-verification", "roles", "staff-permissions", "..."]
 }

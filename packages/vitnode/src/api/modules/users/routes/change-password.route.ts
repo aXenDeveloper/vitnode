@@ -9,12 +9,14 @@ import { revokeSessions } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 
+import { USER_PASSWORD_MAX_LENGTH } from "../credential-limits";
+
 export const zodChangePasswordSchema = z.object({
-  password: z.string().min(8).openapi({
+  password: z.string().min(8).max(USER_PASSWORD_MAX_LENGTH).openapi({
     example: "Test123!",
   }),
   userId: z.number().openapi({ example: 123456 }),
-  token: z.string().openapi({ example: "abcdefg12345" }),
+  token: z.string().max(512).openapi({ example: "abcdefg12345" }),
 });
 
 export const changePasswordRoute = buildRoute({
@@ -87,6 +89,24 @@ export const changePasswordRoute = buildRoute({
         .where(eq(core_users_forgot_password.id, user.id)),
     ]);
     await c.get("events").emit("user.password.updated", { userId });
+
+    // The reset link went to the account's own address, so following it proves
+    // the mailbox just as a confirmation link would. Someone who registered
+    // before confirmation emails went out - or lost theirs - is not left locked
+    // out after choosing a new password.
+    const [confirmed] = await c
+      .get("db")
+      .update(core_users)
+      .set({ emailVerified: true })
+      .where(
+        and(eq(core_users.id, userId), eq(core_users.emailVerified, false)),
+      )
+      .returning({ email: core_users.email });
+    if (confirmed) {
+      await c
+        .get("events")
+        .emit("user.email.verified", { email: confirmed.email, userId });
+    }
 
     // After the new password is in place, so a failure above cannot sign
     // somebody out without having changed anything. Whoever reset this password

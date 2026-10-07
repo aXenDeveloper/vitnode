@@ -57,9 +57,10 @@ The AdminCP is the keys to the kingdom, so its session is deliberately short-liv
 
 ## Security Guarantees
 
-- **SHA-256 Token Storage**: The raw token is stored only in the user's `HttpOnly` cookie. The database stores only its cryptographic hash.
+- **SHA-256 Token Storage**: The raw token is stored only in the user's `HttpOnly` cookie. The database stores only its cryptographic hash. Sign-in, SSO and passkey answers carry the user id only - page scripts never see the token.
 - **Device Pinning**: Tokens are bound to a verified device ID. Tokens copied to another device without the matching device cookie are rejected.
 - **Fast 60-Second Caching**: Active sessions are cached in Redis for up to 60 seconds, eliminating database query overhead on repeated requests.
+- **Confirmed Email Addresses**: With an email adapter, members confirm their address before their first sign-in. See [Email Verification](/docs/dev/working-with-users/email-verification).
 - **Canonical Email Identity**: Addresses are stored in their canonical form, so Gmail dot, `googlemail.com` and `+tag` variants cannot become a second account. See [One Mailbox, One Account](#one-mailbox-one-account).
 
 ---

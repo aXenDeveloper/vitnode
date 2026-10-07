@@ -1897,6 +1897,11 @@
           "access_denied": {
             "desc": "Adres e-mail lub hasło są nieprawidłowe. Spróbuj ponownie i sprawdź, czy nie masz włączonego Caps Locka.",
             "title": "Nieprawidłowe dane logowania"
+          },
+          "email_not_verified": {
+            "title": "Najpierw potwierdź swój e-mail",
+            "desc": "Hasło jest poprawne, ale adres e-mail tego konta nie został jeszcze potwierdzony. Kliknij link, który wysłaliśmy, i zaloguj się ponownie.",
+            "resend": "Wyślij nowy link potwierdzający"
           }
         },
         "passkey": {
@@ -1929,6 +1934,10 @@
             "not_staff": {
               "title": "Brak dostępu do AdminCP",
               "desc": "Klucz dostępu jest prawidłowy, ale to konto nie może otworzyć AdminCP. Jeśli uważasz, że to pomyłka, skontaktuj się z administratorem."
+            },
+            "email_not_verified": {
+              "title": "Najpierw potwierdź swój e-mail",
+              "desc": "Adres e-mail tego konta nie został jeszcze potwierdzony. Kliknij link, który wysłaliśmy, i spróbuj ponownie."
             }
           },
           "unsupported_hint": "Ta przeglądarka nie obsługuje kluczy dostępu. Zaloguj się adresem e-mail i hasłem."
@@ -1955,7 +1964,8 @@
         "email_confirmation": {
           "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem.",
           "desc": "Wysłaliśmy link potwierdzający na Twój adres e-mail",
-          "title": "Sprawdź swoją skrzynkę"
+          "title": "Sprawdź swoją skrzynkę",
+          "resend": "Nie dotarł? <link>Wyślij nowy link</link>."
         },
         "newsletter": {
           "desc": "Otrzymuj najnowsze informacje i aktualizacje.",
@@ -2027,6 +2037,44 @@
         "or": "Lub kontynuuj przez e-mail",
         "connection": {
           "pending": "Kończymy z {provider}…"
+        }
+      },
+      "verify_email": {
+        "title": "Potwierdź swój e-mail",
+        "confirm": {
+          "desc": "Już prawie! Potwierdź, że to Twój adres e-mail, a Twoje konto będzie gotowe.",
+          "submit": "Potwierdź adres e-mail"
+        },
+        "success": {
+          "title": "E-mail potwierdzony",
+          "desc": "Dzięki! Adres <email></email> jest potwierdzony - możesz się teraz zalogować.",
+          "sign_in": "Przejdź do logowania"
+        },
+        "invalid": {
+          "title": "Ten link już nie działa",
+          "desc": "Mógł wygasnąć lub został już użyty. Poproś o nowy, a od razu go wyślemy.",
+          "resend": "Wyślij nowy link"
+        },
+        "resend": {
+          "title": "Wyślij ponownie e-mail z potwierdzeniem",
+          "desc": "Podaj adres e-mail, którego użyłeś przy rejestracji, a wyślemy Ci nowy link potwierdzający.",
+          "submit": "Wyślij link potwierdzający",
+          "confirmation": {
+            "title": "Sprawdź swoją skrzynkę",
+            "desc": "Jeśli ten adres należy do konta czekającego na potwierdzenie, nowy link jest już w drodze na:",
+            "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem."
+          }
+        },
+        "email": {
+          "subject": "Potwierdź swój adres e-mail",
+          "greeting": "Witaj {name}!",
+          "intro": "Dziękujemy za rejestrację! Potwierdź, że to Twój adres e-mail, aby dokończyć zakładanie konta.",
+          "button": "Potwierdź adres e-mail",
+          "instructions": "Kliknij powyższy przycisk, aby potwierdzić swój adres e-mail. Zalogujesz się, gdy tylko zostanie potwierdzony.",
+          "no_action": "Jeśli nie zakładałeś konta, możesz bezpiecznie zignorować tę wiadomość - nikt nie zaloguje się tym adresem, dopóki nie zostanie potwierdzony.",
+          "security_note": "Ze względów bezpieczeństwa: to żądanie zostało wysłane z adresu IP: {ip}",
+          "help": "Jeśli masz problem z powyższym przyciskiem, skopiuj i wklej poniższy adres URL do przeglądarki:",
+          "expire_time": "Ten link wygaśnie {date}"
         }
       }
     },

@@ -80,6 +80,16 @@ const operations = createAuthOperations({
       path: "/reset-password",
     }),
 
+  resendEmailVerification: async ({ captchaToken, email }) =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      captchaToken,
+      args: { body: { email } },
+      method: "post",
+      module: "users",
+      path: "/verify-email/resend",
+    }),
+
   signIn: async data =>
     await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
@@ -132,6 +142,15 @@ const operations = createAuthOperations({
       module: "users/sso",
       path: "/{providerId}",
     }),
+
+  verifyEmail: async data =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { body: data },
+      method: "post",
+      module: "users",
+      path: "/verify-email",
+    }),
 });
 
 export const readSessionFromApi = operations.readSession;
@@ -144,10 +163,12 @@ export const defaultAuthTransport = {
   linkSso: operations.linkSso,
   readSession: operations.readSession,
   requestPasswordReset: operations.requestPasswordReset,
+  resendEmailVerification: operations.resendEmailVerification,
   signIn: operations.signIn,
   signOut: operations.signOut,
   signUp: operations.signUp,
   startAdminPasskeySignIn: operations.startAdminPasskeySignIn,
   startPasskeySignIn: operations.startPasskeySignIn,
   startSso: operations.startSso,
+  verifyEmail: operations.verifyEmail,
 };

@@ -46,7 +46,10 @@ export const ssoCallbackInputSchema = z.object({
 export type SsoCallbackInput = z.infer<typeof ssoCallbackInputSchema>;
 
 export type SignInResult =
-  | { ok: false; reason: "access_denied" | "server_error" }
+  | {
+      ok: false;
+      reason: "access_denied" | "email_not_verified" | "server_error";
+    }
   | { ok: true };
 
 export type PasskeySignInOptions = z.infer<
@@ -66,7 +69,14 @@ export type PasskeySignInStartResult =
   | { ok: true; options: PasskeySignInOptions };
 
 export type PasskeySignInResult =
-  | { ok: false; reason: "access_denied" | "expired" | "server_error" }
+  | {
+      ok: false;
+      reason:
+        | "access_denied"
+        | "email_not_verified"
+        | "expired"
+        | "server_error";
+    }
   | { ok: true };
 
 export type AdminPasskeySignInResult =
@@ -127,9 +137,24 @@ export const isUsableSessionStatus = (status: number): boolean =>
 
 export const SESSION_UNAVAILABLE = "The session could not be read.";
 
-export const signInResultFromStatus = (status: number): SignInResult => {
+const emailNotVerifiedBodySchema = z.object({
+  error: z.literal("email_not_verified"),
+});
+
+/** Whether a refused sign-in was refused only because the address is unconfirmed. */
+export const isEmailNotVerifiedBody = (body: unknown): boolean =>
+  emailNotVerifiedBodySchema.safeParse(body).success;
+
+export const signInResultFromStatus = (
+  status: number,
+  body?: unknown,
+): SignInResult => {
   if (status === 201) return { ok: true };
-  if (status === 403) return { ok: false, reason: "access_denied" };
+  if (status === 403) {
+    return isEmailNotVerifiedBody(body)
+      ? { ok: false, reason: "email_not_verified" }
+      : { ok: false, reason: "access_denied" };
+  }
 
   return { ok: false, reason: "server_error" };
 };
@@ -146,15 +171,28 @@ export const passkeySignInStartResultFromStatus = (
   return { ok: true, options: body };
 };
 
-export const passkeySignInResultFromStatus = (
+/** What every passkey sign-in, public or AdminCP, can answer. */
+type PasskeyCeremonyResult =
+  | { ok: false; reason: "access_denied" | "expired" | "server_error" }
+  | { ok: true };
+
+const passkeyCeremonyResultFromStatus = (
   status: number,
-): PasskeySignInResult => {
+): PasskeyCeremonyResult => {
   if (status === 201) return { ok: true };
   if (status === 400) return { ok: false, reason: "expired" };
   if (status === 403) return { ok: false, reason: "access_denied" };
 
   return { ok: false, reason: "server_error" };
 };
+
+export const passkeySignInResultFromStatus = (
+  status: number,
+  body?: unknown,
+): PasskeySignInResult =>
+  status === 403 && isEmailNotVerifiedBody(body)
+    ? { ok: false, reason: "email_not_verified" }
+    : passkeyCeremonyResultFromStatus(status);
 
 const notStaffBodySchema = z.object({ error: z.literal("not_staff") });
 
@@ -166,7 +204,7 @@ export const adminPasskeySignInResultFromStatus = (
     return { ok: false, reason: "not_staff" };
   }
 
-  return passkeySignInResultFromStatus(status);
+  return passkeyCeremonyResultFromStatus(status);
 };
 
 export const signOutResultFromStatus = (status: number): SignOutResult =>
@@ -387,5 +425,57 @@ export const changePasswordResultFromStatus = (
 
   return { ok: false, reason: "server_error" };
 };
+
+/** The link a confirmation email carries - the same alphabet a reset token uses. */
+export const verifyEmailInputSchema = z.object({
+  token: z
+    .string()
+    .min(16)
+    .max(512)
+    .regex(/^[A-Za-z0-9_-]+$/),
+});
+
+export type VerifyEmailInput = z.infer<typeof verifyEmailInputSchema>;
+
+export type VerifyEmailResult =
+  | { email: string; ok: true }
+  | { ok: false; reason: "invalid_token" | "rate_limited" | "server_error" };
+
+const verifyEmailSuccessSchema = z.object({ email: z.string() });
+
+export const verifyEmailResultFromStatus = (
+  status: number,
+  body?: unknown,
+): VerifyEmailResult => {
+  if (status === 200) {
+    const parsed = verifyEmailSuccessSchema.safeParse(body);
+
+    return parsed.success
+      ? { email: parsed.data.email, ok: true }
+      : { ok: false, reason: "server_error" };
+  }
+  if (status === 400) return { ok: false, reason: "invalid_token" };
+  if (status === RATE_LIMIT_STATUS)
+    return { ok: false, reason: "rate_limited" };
+
+  return { ok: false, reason: "server_error" };
+};
+
+/** A request for a fresh confirmation link: one address, and the captcha. */
+export const resendEmailVerificationInputSchema =
+  passwordResetRequestInputSchema;
+
+export type ResendEmailVerificationInput = z.infer<
+  typeof resendEmailVerificationInputSchema
+>;
+
+/**
+ * Like a reset request, an accepted resend says nothing about the address - the
+ * API answers the same 201 whether or not there was anything to send.
+ */
+export type ResendEmailVerificationResult = PasswordResetRequestResult;
+
+export const resendEmailVerificationResultFromStatus =
+  passwordResetRequestResultFromStatus;
 
 export { shouldSaveApiCookies } from "@/lib/fetcher/set-cookie";

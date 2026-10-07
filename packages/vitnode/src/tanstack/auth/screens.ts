@@ -5,15 +5,21 @@ import type { SignUpMutationResult } from "@/views/auth/sign-up/form/schema";
 import type { SSOStartResult as SsoButtonFeedback } from "@/views/auth/sso/buttons/sso-buttons-content";
 import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-result";
 import type { SSOLinkMutationResult } from "@/views/auth/sso/link/schema";
+import type {
+  ConfirmEmailMutationResult,
+  ResendVerificationMutationResult,
+} from "@/views/auth/verify-email/schema";
 
 import type {
   ChangePasswordResult,
   CompleteSsoResult,
   PasswordResetRequestResult,
+  ResendEmailVerificationResult,
   SignInResult,
   SignUpResult,
   SsoLinkResult,
   SsoStartResult,
+  VerifyEmailResult,
 } from "./contract";
 import type { SessionApi } from "./session-api";
 
@@ -22,9 +28,9 @@ export const signInFormResult = (
 ): SignInMutationResult => {
   if (result.ok) return undefined;
 
-  return result.reason === "access_denied"
-    ? { message: "access_denied" }
-    : { message: "Internal Server Error" };
+  return result.reason === "server_error"
+    ? { message: "Internal Server Error" }
+    : { message: result.reason };
 };
 
 export const ssoStartFeedback = (result: SsoStartResult): SsoButtonFeedback =>
@@ -92,3 +98,18 @@ export const changePasswordFormResult = (
         : "internal_server_error",
   };
 };
+
+export const confirmEmailResult = (
+  result: VerifyEmailResult,
+): ConfirmEmailMutationResult => {
+  if (result.ok) return { email: result.email, kind: "confirmed" };
+
+  return result.reason === "invalid_token"
+    ? { kind: "invalid_token" }
+    : { kind: "error" };
+};
+
+export const resendVerificationFormResult = (
+  result: ResendEmailVerificationResult,
+): ResendVerificationMutationResult =>
+  result.ok ? undefined : { message: "Internal Server Error" };

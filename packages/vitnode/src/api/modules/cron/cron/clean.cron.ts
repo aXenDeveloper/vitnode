@@ -10,7 +10,10 @@ import {
   core_sessions,
   core_sessions_known_devices,
 } from "@/database/sessions";
-import { core_users_forgot_password } from "@/database/users";
+import {
+  core_users_confirm_emails,
+  core_users_forgot_password,
+} from "@/database/users";
 
 export const isOrphanedDevice = (
   db: Pick<EnvVitNode["Variables"]["db"], "select">,
@@ -53,10 +56,10 @@ export const cleanCron = buildCron({
         .delete(core_users_forgot_password)
         .where(lt(core_users_forgot_password.expiresAt, new Date()));
 
-      // // Delete expired email confirmation tokens
-      // await tx
-      //   .delete(core_users_confirm_emails)
-      //   .where(lt(core_users_confirm_emails.expiresAt, new Date()));
+      // Delete expired email confirmation tokens
+      await tx
+        .delete(core_users_confirm_emails)
+        .where(lt(core_users_confirm_emails.expiresAt, new Date()));
     });
   },
 });

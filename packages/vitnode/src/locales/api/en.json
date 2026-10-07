@@ -13,6 +13,19 @@
           "help": "If you're having trouble with the button above, copy and paste the URL below into your web browser:",
           "expire_time": "This link will expire on {date}"
         }
+      },
+      "verify_email": {
+        "email": {
+          "subject": "Confirm your email address",
+          "greeting": "Hello {name}!",
+          "intro": "Thanks for signing up! Confirm that this is your email address to finish creating your account.",
+          "button": "Confirm email address",
+          "instructions": "Click the button above to confirm your email address. You can sign in as soon as it's confirmed.",
+          "no_action": "If you didn't create an account, you can safely ignore this email - nobody can sign in with this address until it's confirmed.",
+          "security_note": "For your security, this request was made from IP address: {ip}",
+          "help": "If you're having trouble with the button above, copy and paste the URL below into your web browser:",
+          "expire_time": "This link will expire on {date}"
+        }
       }
     },
     "notifications": {
