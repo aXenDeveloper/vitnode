@@ -1322,27 +1322,19 @@
         "saved": {
           "title": "Zapisano ustawienia AI",
           "desc": "Nowe limity obowiązują od następnej operacji AI."
-        },
-        "unsaved": "Niezapisane zmiany"
+        }
       },
       "actions": {
         "title": "Akcje AI",
         "desc": "Każda funkcja AI zarejestrowana przez wtyczki: włączaj je, wybieraj model i ustawiaj limity. Modele i ceny ustawia się w vitnode.api.config.ts.",
-        "enabled": "Wł.",
         "disabled": "Wył.",
-        "model_default": "Domyślny strony",
-        "no_limit": "Brak",
-        "no_compatible": "Brak - nie może działać",
+        "no_compatible": "Brak zgodnego modelu, więc nie może działać",
         "empty": {
           "title": "Brak akcji AI",
           "desc": "Akcje AI rejestrują wtyczki; gdy któraś to zrobi, pojawi się tutaj."
         },
         "form": {
           "open": "Konfiguruj",
-          "tabs": {
-            "general": "Ogólne",
-            "limits": "Limity"
-          },
           "enabled": "Włączona",
           "enabled_desc": "Wyłączona akcja nie zadziała dla nikogo.",
           "model": "Model",
@@ -1366,17 +1358,27 @@
             "title": "Zapisano akcję",
             "desc": "{title} używa nowych ustawień od następnego uruchomienia."
           },
-          "open_label": "Konfiguruj: {title}"
+          "open_label": "Konfiguruj: {title}",
+          "limits": {
+            "title": "Limity",
+            "desc": "Zostaw limit domyślny, aby używać wartości dostarczonej przez wtyczkę."
+          }
         },
         "search": "Szukaj akcji...",
-        "columns": {
-          "action": "Akcja",
-          "plugin": "Wtyczka",
-          "model": "Model",
-          "daily_limit": "Dzienny limit",
-          "status": "Status",
-          "manage": "Zarządzaj"
-        }
+        "daily_limit": "{count, plural, one {# użycie} few {# użycia} many {# użyć} other {# użycia}} na użytkownika dziennie",
+        "toggle_label": "Włącz {title}",
+        "toggled": {
+          "on": "{title} jest włączona",
+          "on_desc": "Użytkownicy mogą jej znowu używać od następnego żądania.",
+          "off": "{title} jest wyłączona",
+          "off_desc": "Nie zadziała dla nikogo, dopóki jej nie włączysz."
+        },
+        "no_results": {
+          "title": "Żadna akcja nie pasuje do wyszukiwania",
+          "desc": "Spróbuj tytułu akcji, słowa z jej opisu albo jej klucza.",
+          "clear": "Wyczyść wyszukiwanie"
+        },
+        "plugin": "Wtyczka"
       },
       "history": {
         "title": "Historia AI",
@@ -2557,7 +2559,8 @@
             "undo": "Cofnij"
           }
         }
-      }
+      },
+      "unsaved_changes": "Niezapisane zmiany"
     },
     "navigation": {
       "discover": {
@@ -2707,8 +2710,53 @@
       "retry": "Spróbuj ponownie",
       "empty_title": "Na razie pusto",
       "empty_unread_title": "Brak nieprzeczytanych powiadomień",
-      "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj."
+      "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj.",
+      "unavailable": "To powiadomienie nie jest już dostępne.",
+      "categories": {
+        "account": "Konto",
+        "content": "Treści",
+        "social": "Społeczność",
+        "system": "System"
+      },
+      "types": {
+        "admin_message": {
+          "label": "Wiadomości od administratorów",
+          "description": "Ogłoszenia, które administrator wysyła bezpośrednio do Ciebie."
+        }
+      },
+      "email": {
+        "action": "Zobacz",
+        "preferences": "Zarządzaj ustawieniami powiadomień",
+        "digest_subject_daily": "Twoje dzienne podsumowanie: {count, plural, one {# powiadomienie} few {# powiadomienia} many {# powiadomień} other {# powiadomienia}}",
+        "digest_subject_weekly": "Twoje tygodniowe podsumowanie: {count, plural, one {# powiadomienie} few {# powiadomienia} many {# powiadomień} other {# powiadomienia}}",
+        "digest_heading_daily": "Oto co wydarzyło się dzisiaj",
+        "digest_heading_weekly": "Oto co wydarzyło się w tym tygodniu",
+        "digest_more": "I {count, plural, one {# kolejne powiadomienie czeka} few {# kolejne powiadomienia czekają} many {# kolejnych powiadomień czeka} other {# kolejnego powiadomienia czeka}} na Ciebie.",
+        "test_subject": "Testowy e-mail z powiadomieniem",
+        "test_title": "E-maile z powiadomieniami działają",
+        "test_body": "Jeśli to czytasz, e-maile z powiadomieniami z tej strony docierają do Twojej skrzynki. Nic nie musisz robić."
+      }
     }
   },
-  "@vitnode/core:files:can_edit_alt": "Edycja tekstu alternatywnego obrazów"
+  "@vitnode/core:files:can_edit_alt": "Edycja tekstu alternatywnego obrazów",
+  "ai_actions": {
+    "@vitnode/core": {
+      "alt_generate": {
+        "title": "Wygeneruj tekst ALT obrazu",
+        "description": "Opisuje obraz z core_files jako jego bazowy tekst ALT."
+      },
+      "alt_translate": {
+        "title": "Przetłumacz tekst ALT obrazu",
+        "description": "Tłumaczy bazowy tekst ALT obrazu na język strony."
+      },
+      "editor_quick_ask": {
+        "title": "Szybkie pytanie",
+        "description": "Kontynuuje tekst albo wykonuje własne polecenie dotyczące zaznaczenia."
+      },
+      "editor_rewrite": {
+        "title": "Przeredaguj zaznaczony tekst",
+        "description": "Przeredagowuje zaznaczony tekst: skraca, poprawia, upraszcza albo zmienia ton."
+      }
+    }
+  }
 }

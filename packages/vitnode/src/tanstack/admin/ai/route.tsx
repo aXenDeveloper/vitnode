@@ -28,7 +28,11 @@ import {
  * `ai:can_manage` in the screens themselves.
  */
 
-export const ADMIN_AI_NAMESPACES = ["admin.ai", "core.global"] as const;
+export const ADMIN_AI_NAMESPACES = [
+  "admin.ai",
+  "ai_actions",
+  "core.global",
+] as const;
 
 export interface AdminAiRouteData {
   adminUserId: AdminIdentity;

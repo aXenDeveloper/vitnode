@@ -18,6 +18,10 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  type AiActionTranslate,
+  withTranslatedAiActionText,
+} from "@/lib/ai/action-text";
 import { formatAiPoints, formatAiUsd } from "@/lib/ai/format-points";
 import { AI_RUN_STATUS_LIST } from "@/lib/ai/run-status";
 
@@ -181,11 +185,14 @@ export const AiHistoryTableContent = ({
 }: AiHistoryTableProps) => {
   const t = useTranslations("admin.ai.history");
   const tOrigin = useTranslations("admin.ai.origin");
+  const tAll = useTranslations() as unknown as AiActionTranslate;
   const locale = useLocale();
   const [openRun, setOpenRun] = React.useState<AdminAiRunRow | null>(null);
-  const titles = React.useMemo(
-    () => new Map(actions.map(action => [action.key, action.title])),
-    [actions],
+  const translatedActions = actions.map(action =>
+    withTranslatedAiActionText(tAll, action),
+  );
+  const titles = new Map(
+    translatedActions.map(action => [action.key, action.title]),
   );
   const modelNames = React.useMemo(
     () => new Map(models.map(model => [model.id, model.name])),
@@ -285,7 +292,7 @@ export const AiHistoryTableContent = ({
         edges={data.edges}
         header={
           <AiHistoryFiltersContent
-            actions={actions}
+            actions={translatedActions}
             filters={filters}
             models={models}
             onFilterChange={onFilterChange}

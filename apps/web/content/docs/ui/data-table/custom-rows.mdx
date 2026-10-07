@@ -1,0 +1,63 @@
+---
+title: Custom Rows
+description: Render each Data Table row as your own layout, like a list of cards, instead of column cells.
+icon: LayoutList
+---
+
+## Preview
+
+<Preview name="data-table-custom-rows" withoutBackground />
+
+## Usage
+
+Columns suit data you compare across rows. When each row is more of a card
+(an icon, a title, a line of description and a switch), pass `renderRow`
+instead of `columns`. The Data Table draws your layout across the full width
+of the row and still handles search, filters, pagination and the empty state.
+
+```tsx
+<ContentDataTable
+  id="plugins-table"
+  // [!code ++:3]
+  renderRow={({ row }) => (
+    <PluginRow plugin={row} />
+  )}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+- **No column headers.** A custom row has no columns to label, so the header
+  band is hidden. It comes back when you turn on `bulkActions`, `expandable` or
+  `reorderable`, because their controls live there.
+- **Row features still work.** The checkbox, the expand chevron and the drag
+  handle sit in front of your layout, and `rowOpens` makes the whole row
+  clickable.
+- **Controls answer for themselves.** A click on a button, link or switch
+  inside your layout does not trigger `rowOpens`.
+- **Your layout owns its spacing.** The cell already has the row's padding, so
+  don't add outer padding of your own.
+
+<Callout type="info" title="Sorting needs a column header">
+  `order.defaultOrder` still sets the starting order, but there are no headers
+  to click. To let people change the order, add a filter or sort the rows
+  yourself.
+</Callout>
+
+## API
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    renderRow: {
+      description:
+        'Renders one row. `allData` holds every row on the current page. Takes over from `columns`.',
+      type: '(data: { row: T; allData: T[] }) => ReactNode',
+    },
+  }}
+/>
+
+Want those rows sorted into categories? Combine `renderRow` with
+[grouped rows](/docs/ui/data-table/grouped-rows).

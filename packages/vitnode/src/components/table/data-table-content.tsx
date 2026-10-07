@@ -3,6 +3,7 @@ import React from "react";
 
 import type { ExpandableDataTable } from "./expansion";
 import type { FilterDataTable } from "./filters";
+import type { GroupByDataTable } from "./group";
 import type { PaginationDataTable } from "./pagination";
 import type { ReorderableDataTable } from "./reorder";
 import type { SearchDataTable } from "./search";
@@ -58,7 +59,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
   React.ComponentProps<typeof PaginationDataTable> &
   React.ComponentProps<typeof SearchDataTable> & {
     bulkActions?: React.ReactNode;
-    columns: ColumnDef<T>[];
+    columns?: ColumnDef<T>[];
     customNoResults?: {
       description?: string;
       footer?: React.ReactNode;
@@ -68,6 +69,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
     edges: T[];
     expandable?: ExpandableDataTable<T>;
     filters?: FilterDataTable[];
+    groupBy?: GroupByDataTable<T>;
     header?: React.ReactNode;
     id: string;
     order: {
@@ -77,6 +79,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
         order: "asc" | "desc";
       };
     };
+    renderRow?: (data: { allData: T[]; row: T }) => React.ReactNode;
     reorderable?: ReorderableDataTable<T>;
     rowOpens?: (row: T) => void;
     search?: boolean;

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { describe, expect, it, vi } from "vitest";
 
@@ -51,14 +57,20 @@ const quickAsk = action({
   title: "Quick Ask",
 });
 
-const renderActions = (actions: AdminAiAction[], { canManage = true } = {}) =>
+const renderActions = (
+  actions: AdminAiAction[],
+  {
+    canManage = true,
+    onSave = vi.fn(async () => Promise.resolve({ data: true as const })),
+  } = {},
+) =>
   render(
     <IntlProvider locale="en" messages={{}} timeZone="UTC">
       <AiActionsContent
         actions={actions}
         canManage={canManage}
         models={[]}
-        onSave={vi.fn(async () => Promise.resolve({ data: true as const }))}
+        onSave={onSave}
       />
     </IntlProvider>,
   );
@@ -112,5 +124,51 @@ describe("AiActionsContent", () => {
       expect(screen.queryByText("Generate excerpt")).toBeNull();
     });
     expect(screen.getByText("Quick Ask")).toBeTruthy();
+  });
+
+  it("groups actions under the plugin that registers them", () => {
+    renderActions([action(), quickAsk]);
+
+    const blog = screen
+      .getAllByRole("rowgroup")
+      .find(group =>
+        within(group).queryByRole("rowheader", { name: /@vitnode\/blog/ }),
+      );
+    if (!blog) throw new Error("No @vitnode/blog group");
+    expect(within(blog).getByText("Generate excerpt")).toBeTruthy();
+    expect(within(blog).queryByText("Quick Ask")).toBeNull();
+  });
+
+  it("switches an action off right from the list", async () => {
+    const onSave = vi.fn(async () => Promise.resolve({ data: true as const }));
+    renderActions([action()], { onSave });
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: "admin.ai.actions.toggle_label" }),
+    );
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enabled: false,
+          key: "@vitnode/blog:excerpt.generate",
+        }),
+      );
+    });
+  });
+
+  it("offers to clear a search that matches nothing", async () => {
+    renderActions([action()]);
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "nothing like this" },
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "admin.ai.actions.no_results.clear",
+      }),
+    );
+
+    expect(screen.getByText("Generate excerpt")).toBeTruthy();
   });
 });

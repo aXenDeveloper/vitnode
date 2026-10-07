@@ -4,6 +4,10 @@ import { useLocale, useTranslations } from "use-intl";
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  type AiActionTranslate,
+  translateAiActionText,
+} from "@/lib/ai/action-text";
 import { formatAiPoints } from "@/lib/ai/format-points";
 import { aiRunStatusVariant, isAiRunStatus } from "@/lib/ai/run-status";
 
@@ -69,8 +73,14 @@ export const AiHistoryContent = ({
   onLoadMore: () => void;
 }) => {
   const t = useTranslations("core.auth.settings.ai.history");
+  const tAll = useTranslations() as unknown as AiActionTranslate;
   const descriptions = new Map(
-    actions.map(action => [action.key, action.description]),
+    actions.map(action => [
+      action.key,
+      action.description
+        ? translateAiActionText(tAll, action.description)
+        : null,
+    ]),
   );
 
   return (

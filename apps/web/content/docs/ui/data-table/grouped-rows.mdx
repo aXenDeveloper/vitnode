@@ -1,0 +1,77 @@
+---
+title: Grouped Rows
+description: Sort Data Table rows into categories, each under its own heading with a row count.
+icon: ListTree
+---
+
+## Preview
+
+<Preview name="data-table-grouped" withoutBackground />
+
+## Usage
+
+When rows belong to a category, like plugins by type or tasks by project, pass
+`groupBy`. Return the category's name from `key`, and the Data Table puts each
+category's rows under a heading that shows its name and how many rows it holds.
+
+```tsx
+<ContentDataTable
+  id="plugins-table"
+  // [!code ++]
+  groupBy={{ key: (plugin) => plugin.category }}
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+`groupBy` works with `columns` and with [custom rows](/docs/ui/data-table/custom-rows).
+The AdminCP's **AI → Actions** page uses both: one card per action, grouped by
+the plugin that registers it.
+
+### Change the heading
+
+The heading shows the `key` by default. Pass `label` to render something
+else, such as a translated name or an icon. The row count stays next to it.
+
+```tsx
+groupBy={{
+  key: (action) => action.pluginId,
+  label: (group) => <span className="font-mono">{group.key}</span>,
+}}
+```
+
+### How the groups are ordered
+
+Groups appear in the order their first row does, and rows keep their order
+within a group. To get groups in a particular order, sort the rows by the
+category first, then by anything else. Ordering by category on the API is
+usually enough.
+
+Grouping happens per page. If a category runs across two pages, its heading
+appears on both, with the count for that page.
+
+<Callout type="warn" title="Not with draggable rows">
+  When `reorderable` is set, the Data Table ignores `groupBy`. Dragging a row
+  across a heading would move it into another category, and only your data can
+  say whether that is allowed.
+</Callout>
+
+## API
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    key: {
+      description: 'Returns the group a row belongs to.',
+      required: true,
+      type: '(row: T) => string',
+    },
+    label: {
+      description: 'Renders the group heading. Defaults to the key.',
+      type: '(group: { key: string; rows: T[] }) => ReactNode',
+    },
+  }}
+/>

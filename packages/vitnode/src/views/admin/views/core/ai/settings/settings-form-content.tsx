@@ -1,4 +1,3 @@
-import { useSelector } from "@tanstack/react-form";
 import React from "react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
@@ -8,12 +7,10 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
 import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormNumber } from "@/components/form/fields/number";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
-import { Button } from "@/components/ui/button";
-import { useFormApi } from "@/components/ui/form";
-import { SheetClose } from "@/components/ui/sheet";
 import { formatAiUsd } from "@/lib/ai/format-points";
 
 import type { AdminAiSettingsInput } from "../ai-mutations";
@@ -54,34 +51,6 @@ export interface AiSettingsFormProps {
   data: AdminAiSettings;
   onSave: (values: AdminAiSettingsInput) => Promise<AdminMutationResult<true>>;
 }
-
-const AiSettingsFormFooter = ({ canManage }: { canManage: boolean }) => {
-  const t = useTranslations("admin.ai.settings");
-  const tGlobal = useTranslations("core.global");
-  const { form } = useFormApi();
-  const isDirty = useSelector(form.store, state => !state.isDefaultValue);
-  const isSubmitting = useSelector(form.store, state => state.isSubmitting);
-
-  return (
-    <div className="bg-popover flex items-center justify-between gap-3 border-t p-4 pb-[max(--spacing(4),env(safe-area-inset-bottom))]">
-      <p aria-live="polite" className="text-muted-foreground text-sm">
-        {isDirty ? t("unsaved") : null}
-      </p>
-      <div className="flex items-center gap-2">
-        <SheetClose
-          render={<Button variant="ghost">{tGlobal("cancel")}</Button>}
-        />
-        <Button
-          disabled={!canManage || !isDirty}
-          isLoading={isSubmitting}
-          type="submit"
-        >
-          {t("submit")}
-        </Button>
-      </div>
-    </div>
-  );
-};
 
 export const AiSettingsFormContent = ({
   canManage,
@@ -370,7 +339,10 @@ export const AiSettingsFormContent = ({
               </section>
             ))}
           </div>
-          <AiSettingsFormFooter canManage={canManage} />
+          <AutoFormSheetFooter
+            disabled={!canManage}
+            submitLabel={t("submit")}
+          />
         </>
       )}
       onSubmit={onSubmit}

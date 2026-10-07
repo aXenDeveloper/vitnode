@@ -167,5 +167,21 @@
   "@vitnode/blog:categories:can_view": "View categories list",
   "@vitnode/blog:categories:can_create": "Create categories",
   "@vitnode/blog:categories:can_edit": "Edit categories",
-  "@vitnode/blog:categories:can_delete": "Delete categories"
+  "@vitnode/blog:categories:can_delete": "Delete categories",
+  "ai_actions": {
+    "@vitnode/blog": {
+      "article_review": {
+        "title": "Review article before publishing",
+        "description": "Suggests clarity and completeness improvements before publishing."
+      },
+      "excerpt_generate": {
+        "title": "Generate excerpt",
+        "description": "Writes a short excerpt for an article."
+      },
+      "field_translate": {
+        "title": "Translate article field",
+        "description": "Translates one field of an article into another language."
+      }
+    }
+  }
 }

@@ -40,10 +40,10 @@ export const articleExcerptAiAction = defineAiAction({
     maxOutputTokens: 120,
     timeoutMs: 20_000,
   },
-  description: "Suggests a teaser for an example article.",
+  description: "ai_actions.@vitnode/example.article_excerpt.description",
   icon: "sparkles",
   id: "article.excerpt",
-  title: "Suggest article teaser",
+  title: "ai_actions.@vitnode/example.article_excerpt.title",
   inputSchema: z.object({
     code: z.string().max(100),
     locale: z.string().min(2).max(16),

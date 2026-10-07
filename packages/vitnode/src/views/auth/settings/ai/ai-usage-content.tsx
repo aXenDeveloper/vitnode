@@ -3,6 +3,10 @@ import { useFormatter, useLocale, useTranslations } from "use-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
+import {
+  type AiActionTranslate,
+  translateAiActionText,
+} from "@/lib/ai/action-text";
 import { formatAiPoints } from "@/lib/ai/format-points";
 
 import type { AiUsage, AiUsageAction } from "./ai-usage-query";
@@ -150,12 +154,15 @@ export const AiPointsContent = ({ usage }: { usage: AiUsage }) => {
 
 const AiDailyLimitRow = ({ action }: { action: AiUsageAction }) => {
   const t = useTranslations("core.auth.settings.ai.daily");
+  const tAll = useTranslations() as unknown as AiActionTranslate;
 
   return (
     <li className={cn(SETTINGS_ROW, "flex-wrap justify-between")}>
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-sm font-medium text-pretty">
-          {action.description ?? action.key}
+          {action.description
+            ? translateAiActionText(tAll, action.description)
+            : action.key}
         </span>
         {action.description ? (
           <span className="text-muted-foreground truncate font-mono text-xs">

@@ -112,5 +112,13 @@
   "@vitnode/example:category:can_view": "View categories",
   "@vitnode/example:category:can_create": "Create categories",
   "@vitnode/example:category:can_edit": "Edit categories",
-  "@vitnode/example:category:can_delete": "Delete categories"
+  "@vitnode/example:category:can_delete": "Delete categories",
+  "ai_actions": {
+    "@vitnode/example": {
+      "article_excerpt": {
+        "title": "Suggest article teaser",
+        "description": "Suggests a teaser for an example article."
+      }
+    }
+  }
 }

@@ -17,6 +17,7 @@ import {
   useRowExpansionDataTable,
 } from "./expansion";
 import { FiltersDataTable } from "./filters";
+import { GroupHeadingRowDataTable, groupRowsDataTable } from "./group";
 import { useDataTableUrl } from "./navigation";
 import { PaginationDataTable } from "./pagination";
 import {
@@ -73,6 +74,15 @@ const expandColumn = <T extends DataTableTMin>({
         onToggle={() => toggle(row.id)}
       />
     ) : null,
+});
+
+const customRowColumn = <T extends DataTableTMin>(
+  renderRow: NonNullable<DataTableProps<T>["renderRow"]>,
+): ColumnDef<T> => ({
+  id: "row",
+  header: null,
+  className: "w-full whitespace-normal",
+  cell: renderRow,
 });
 
 const withControlColumns = <T extends DataTableTMin>({
@@ -167,14 +177,16 @@ const ReorderableBodyDataTable = <T extends DataTableTMin>({
 
 export function ContentDataTable<T extends DataTableTMin>({
   bulkActions,
-  columns,
+  columns = [],
   edges,
   expandable,
+  groupBy,
   pageInfo,
   order,
   reorderable,
   customNoResults,
   header,
+  renderRow: customRow,
   rowOpens,
   search,
   searchPlaceholder,
@@ -196,7 +208,7 @@ export function ContentDataTable<T extends DataTableTMin>({
     expandable !== undefined && (expandable.canExpand?.(row) ?? true);
   const expandedIdOf = (row: T) => `${expandedBaseId}expanded-${row.id}`;
   const allColumns = withControlColumns({
-    columns,
+    columns: customRow ? [customRowColumn(customRow)] : columns,
     expansion: expandable
       ? {
           canExpand,
@@ -208,6 +220,11 @@ export function ContentDataTable<T extends DataTableTMin>({
     reorderable: Boolean(reorderable),
     selectable: Boolean(bulkActions),
   });
+  const hasHead =
+    !customRow ||
+    bulkActions !== undefined ||
+    expandable !== undefined ||
+    reorderable !== undefined;
 
   const renderRow = (row: T) => (
     <RowDataTable
@@ -244,6 +261,21 @@ export function ContentDataTable<T extends DataTableTMin>({
           searchParams={searchParams}
         />
       );
+    }
+
+    if (groupBy) {
+      return groupRowsDataTable(rows, groupBy.key).map(group => (
+        <TableBody key={group.key}>
+          <GroupHeadingRowDataTable
+            colSpan={allColumns.length}
+            group={group}
+            label={groupBy.label}
+          />
+          {group.rows.map(row => (
+            <React.Fragment key={row.id}>{renderRow(row)}</React.Fragment>
+          ))}
+        </TableBody>
+      ));
     }
 
     return (
@@ -298,11 +330,13 @@ export function ContentDataTable<T extends DataTableTMin>({
               props.className,
             )}
           >
-            <HeadRowDataTable
-              columns={allColumns}
-              order={order}
-              searchParams={searchParams}
-            />
+            {hasHead && (
+              <HeadRowDataTable
+                columns={allColumns}
+                order={order}
+                searchParams={searchParams}
+              />
+            )}
 
             {renderBody()}
           </Table>

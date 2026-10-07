@@ -641,7 +641,8 @@
             "undo": "Undo"
           }
         }
-      }
+      },
+      "unsaved_changes": "Unsaved changes"
     },
     "navigation": {
       "discover": {
@@ -3238,27 +3239,19 @@
         "saved": {
           "title": "AI settings saved",
           "desc": "New limits apply to the next AI operation."
-        },
-        "unsaved": "Unsaved changes"
+        }
       },
       "actions": {
         "title": "AI actions",
         "desc": "Every AI feature your plugins register: switch them on or off, pick their model and set their limits. Models and prices live in vitnode.api.config.ts.",
-        "enabled": "On",
         "disabled": "Off",
-        "model_default": "Site default",
-        "no_limit": "None",
-        "no_compatible": "None - it can't run",
+        "no_compatible": "No compatible model, so it can't run",
         "empty": {
           "title": "No AI actions yet",
           "desc": "Plugins register AI actions; once one does, it shows up here."
         },
         "form": {
           "open": "Configure",
-          "tabs": {
-            "general": "General",
-            "limits": "Limits"
-          },
           "enabled": "Enabled",
           "enabled_desc": "A disabled action refuses to run for anyone.",
           "model": "Model",
@@ -3282,17 +3275,27 @@
             "title": "Action saved",
             "desc": "{title} uses the new settings from its next run."
           },
-          "open_label": "Configure {title}"
+          "open_label": "Configure {title}",
+          "limits": {
+            "title": "Limits",
+            "desc": "Leave a limit on its default to follow the value the plugin ships with."
+          }
         },
         "search": "Search actions...",
-        "columns": {
-          "action": "Action",
-          "plugin": "Plugin",
-          "model": "Model",
-          "daily_limit": "Daily limit",
-          "status": "Status",
-          "manage": "Manage"
-        }
+        "daily_limit": "{count, plural, one {# run} other {# runs}} per member a day",
+        "toggle_label": "Enable {title}",
+        "toggled": {
+          "on": "{title} is on",
+          "on_desc": "Members can run it again from their next request.",
+          "off": "{title} is off",
+          "off_desc": "It refuses to run for anyone until you switch it back on."
+        },
+        "no_results": {
+          "title": "No actions match your search",
+          "desc": "Try the action's title, a word from its description or its key.",
+          "clear": "Clear search"
+        },
+        "plugin": "Plugin"
       },
       "history": {
         "title": "AI history",
@@ -3357,5 +3360,25 @@
       }
     }
   },
-  "@vitnode/core:files:can_edit_alt": "Edit image ALT text"
+  "@vitnode/core:files:can_edit_alt": "Edit image ALT text",
+  "ai_actions": {
+    "@vitnode/core": {
+      "alt_generate": {
+        "title": "Generate image ALT text",
+        "description": "Describes an image in core_files as its base ALT text."
+      },
+      "alt_translate": {
+        "title": "Translate image ALT text",
+        "description": "Translates an image's base ALT text into a site language."
+      },
+      "editor_quick_ask": {
+        "title": "Quick Ask",
+        "description": "Continues the text or follows a custom request about the selection."
+      },
+      "editor_rewrite": {
+        "title": "Rewrite selected text",
+        "description": "Rewrites the selected text: shorter, corrected, simpler or in another tone."
+      }
+    }
+  }
 }

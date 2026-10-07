@@ -24,6 +24,10 @@ import { AutoFormNumber } from "@/components/form/fields/number";
 import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { useDialog } from "@/components/ui/dialog";
+import {
+  type AiActionTranslate,
+  translateAiActionText,
+} from "@/lib/ai/action-text";
 import { EMOJI_ICON_MAX_LENGTH } from "@/lib/emoji-icon";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 import {
@@ -162,6 +166,7 @@ const aiValuesOf = (
 const aiFields = (
   ai: AdminAiRoleAccess,
   t: ReturnType<typeof useTranslations<"admin.role">>,
+  tAll: AiActionTranslate,
 ) => [
   {
     component: (props: ItemAutoFormComponentProps) => (
@@ -197,7 +202,9 @@ const aiFields = (
         <AutoFormSelect
           {...props}
           description={permission.key}
-          label={permission.actions.map(action => action.title).join(", ")}
+          label={permission.actions
+            .map(action => translateAiActionText(tAll, action.title))
+            .join(", ")}
           labels={[
             {
               label: permission.defaultGranted
@@ -240,6 +247,7 @@ export const AdminRoleFormContent = ({
   onSaved,
 }: AdminRoleFormProps) => {
   const t = useTranslations("admin.role");
+  const tAll = useTranslations() as unknown as AiActionTranslate;
   const tCore = useTranslations("core.global.errors");
   const { setIsDirty, setOpen } = useDialog();
 
@@ -439,7 +447,7 @@ export const AdminRoleFormContent = ({
           id: "allowUploadCover",
           tab: "profile",
         },
-        ...(ai ? aiFields(ai, t) : []),
+        ...(ai ? aiFields(ai, t, tAll) : []),
       ]}
       formSchema={formSchema}
       onSubmit={onSubmit}

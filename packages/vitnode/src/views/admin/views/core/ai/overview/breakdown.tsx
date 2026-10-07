@@ -19,6 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  type AiActionTranslate,
+  translateAiActionText,
+} from "@/lib/ai/action-text";
 
 import type { AdminAiOverview } from "../ai-query";
 import type { AiOverviewMetric } from "./overview-metrics";
@@ -49,7 +53,7 @@ const clip = (label: string) =>
 export const AiOverviewBreakdown = ({
   compareLabel,
   data,
-  describeAction,
+  describeAction: describeActionKey,
   describeModel,
   entrance,
   metric,
@@ -64,6 +68,15 @@ export const AiOverviewBreakdown = ({
   const t = useTranslations("admin.ai.overview.breakdown");
   const tMeasure = useTranslations("admin.ai.overview.measure");
   const tCost = useTranslations("admin.ai.cost");
+  const tAll = useTranslations() as unknown as AiActionTranslate;
+  const describeAction = React.useCallback(
+    (key: string) => {
+      const title = describeActionKey(key);
+
+      return title ? translateAiActionText(tAll, title) : null;
+    },
+    [describeActionKey, tAll],
+  );
   const formatter = useOverviewFormat();
   const [split, setSplit] = React.useState<Split>("action");
   const [splitChanged, setSplitChanged] = React.useState(false);

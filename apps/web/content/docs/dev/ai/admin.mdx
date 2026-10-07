@@ -98,14 +98,18 @@ Budgets are in **USD**, because that is what providers bill. Members are charged
 
 ## Actions
 
-**AI → Actions** is a table of every [AI action](/docs/dev/ai/actions) installed plugins register: its icon, title and description, the plugin it comes from, its model, its daily limit and whether it is on. Search by title or filter by plugin. The pencil button opens the settings:
+**AI → Actions** lists every [AI action](/docs/dev/ai/actions) installed plugins register, grouped by the plugin it comes from. Each row shows the action's icon, title and description in your language. Badges appear only when something differs from the default: a chosen model, a daily limit, or a warning that no configured model can run the action. Search by title, description or key, or filter by plugin.
 
-- **Enabled** - a disabled action refuses to run for anyone.
+The switch on each row turns the action on or off straight away. A disabled action refuses to run for anyone, and its row fades.
+
+The settings button opens a sheet with the rest:
+
+- **Enabled** - the same switch as on the row.
 - **Model** and **Fallback model** - only models with every capability the action needs are listed. **Site default** is the first compatible model.
 - **Editorial instructions** - up to 2,000 characters appended to the prompt, e.g. house style.
 - **Limits** - runs per member per day, max input characters, max output tokens, retries, steps and timeout. Each one can fall back to the plugin's default.
 
-An action whose model column says _None - it can't run_ needs a model with the right capabilities in `vitnode.api.config.ts` first.
+Press **Save action** to apply the changes from the next run. An action marked _No compatible model, so it can't run_ needs a model with the right capabilities in `vitnode.api.config.ts` first.
 
 ## AI access
 

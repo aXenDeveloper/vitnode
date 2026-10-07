@@ -55,8 +55,8 @@ export const zodSummarizeTopicSchema = z.object({
 
 export const summarizeTopicAiAction = defineAiAction({
   id: 'topic.summarize',
-  title: 'Summarize topic',
-  description: 'Writes a two-sentence summary of a forum topic.',
+  title: 'ai_actions.@vitnode/forum.topic_summarize.title',
+  description: 'ai_actions.@vitnode/forum.topic_summarize.description',
   icon: 'text-quote',
   promptVersion: 1,
   permission: { key: 'summarize', defaultGranted: true },
@@ -94,7 +94,33 @@ export const SUMMARIZE_TOPIC_AI_ACTION = aiActionRef(
 )
 ```
 
+`title` and `description` are message keys. Add their text to the plugin's
+messages in the next step.
+
 `defineAiAction()` validates the definition when the module loads. A bad id, a missing `authorize()` or an out-of-range limit throws an `AiActionDefinitionError` at boot, not in production traffic.
+
+</Step>
+
+<Step>
+
+### Add the title and description
+
+Add the text to the plugin's messages, under the shared `ai_actions` key and
+your plugin id. Every AI page loads `ai_actions` as one namespace, so all
+plugins' action names arrive together.
+
+```json title="plugins/forum/src/locales/en.json"
+{
+  "ai_actions": {
+    "@vitnode/forum": {
+      "topic_summarize": {
+        "title": "Summarize topic",
+        "description": "Writes a two-sentence summary of a forum topic."
+      }
+    }
+  }
+}
+```
 
 </Step>
 
@@ -196,11 +222,18 @@ Two plugins may both have an `excerpt.generate`; their canonical keys differ. Th
 
 ## Title, description and icon
 
-Every action shows up as a row on **AI → Actions** and as a feature on the role form's **AI** tab, so it needs a human name:
+Every action shows up as a row on **AI → Actions**, as a feature on the role form's **AI** tab and in a member's AI usage, so it needs a human name in every language:
 
-- **`title`** (required) - a short name, e.g. `Summarize topic`.
-- **`description`** (required) - one sentence on what it does.
+- **`title`** (required) - the message key of a short name, e.g. `ai_actions.@vitnode/forum.topic_summarize.title` for "Summarize topic".
+- **`description`** (required) - the message key of one sentence on what it does.
 - **`icon`** (optional) - a [Lucide](https://lucide.dev/icons) icon name in kebab case, e.g. `languages` or `wand-sparkles`. Without one, the row shows a sparkles icon.
+
+The API returns both keys as they are, and the AdminCP and the member's settings translate them in the language the page is showing. A language without the key falls back to the default language's text. Keep the keys in your plugin's `src/locales/en.json` under `ai_actions` → your plugin id, and translate them like any other [plugin message](/docs/dev/i18n/messages).
+
+<Callout type="info" title="Plain text still works">
+  A `title` or `description` that is not a message key is shown as written. That
+  is handy while prototyping, but it never gets translated.
+</Callout>
 
 A blank title or description, or an icon that isn't a kebab-case name, throws at boot.
 
@@ -222,8 +255,8 @@ An empty answer, a `parseText()` that throws or a schema mismatch fails with `AI
 ```ts title="An object action"
 export const suggestTagsAiAction = defineAiAction({
   id: 'topic.tags',
-  title: 'Suggest tags',
-  description: 'Picks up to five tags for a new topic.',
+  title: 'ai_actions.@vitnode/forum.topic_tags.title',
+  description: 'ai_actions.@vitnode/forum.topic_tags.description',
   promptVersion: 1,
   permission: 'tags',
   actors: ['system'],

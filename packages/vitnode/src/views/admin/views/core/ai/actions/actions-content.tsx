@@ -1,26 +1,44 @@
-import { PencilIcon, SparklesIcon } from "lucide-react";
+import { cn } from "cn";
+import {
+  CpuIcon,
+  GaugeIcon,
+  SettingsIcon,
+  SparklesIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import React from "react";
+import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { ColumnDef } from "@/components/table/data-table-content";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { readTableFilter, readTableSearch } from "@/components/table/url-state";
+import {
+  readTableFilter,
+  readTablePage,
+  readTablePageSize,
+  readTableSearch,
+  withTableSearch,
+} from "@/components/table/url-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import {
+  type AiActionTranslate,
+  withTranslatedAiActionText,
+} from "@/lib/ai/action-text";
 
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
 import type { AiActionFormProps } from "./action-form-content";
@@ -31,8 +49,6 @@ const AiActionFormContent = React.lazy(async () =>
   })),
 );
 
-const PLUGIN_FILTER = "plugin";
-
 export interface AiActionsContentProps {
   actions: AdminAiAction[];
   canManage: boolean;
@@ -40,21 +56,22 @@ export interface AiActionsContentProps {
   onSave: AiActionFormProps["onSave"];
 }
 
-type AiActionRow = AdminAiAction & { id: number };
+type ManageProps = Pick<AiActionsContentProps, "models" | "onSave">;
 
 export const EditAiActionAction = ({
   action,
   models,
   onSave,
-}: Pick<AiActionsContentProps, "models" | "onSave"> & {
+}: ManageProps & {
   action: AdminAiAction;
 }) => {
   const t = useTranslations("admin.ai.actions.form");
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <Dialog>
+    <Sheet onOpenChange={setOpen} open={open}>
       <TooltipWithContent text={t("open")}>
-        <DialogTrigger
+        <SheetTrigger
           render={
             <Button
               aria-label={t("open_label", { title: action.title })}
@@ -63,19 +80,22 @@ export const EditAiActionAction = ({
             />
           }
         >
-          <PencilIcon />
-        </DialogTrigger>
+          <SettingsIcon />
+        </SheetTrigger>
       </TooltipWithContent>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{action.title}</DialogTitle>
-          <DialogDescription className="font-mono text-xs">
+      <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg">
+        <SheetHeader className="border-b pe-14">
+          <SheetTitle>{action.title}</SheetTitle>
+          <SheetDescription className="leading-relaxed text-pretty">
+            {action.description}
+          </SheetDescription>
+          <p className="text-muted-foreground font-mono text-xs break-all">
             {action.key}
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </SheetHeader>
         <React.Suspense
           fallback={
-            <div className="flex items-center justify-center">
+            <div className="flex flex-1 items-center justify-center">
               <Spinner size="xl" />
             </div>
           }
@@ -84,17 +104,29 @@ export const EditAiActionAction = ({
             action={action}
             models={models}
             onSave={onSave}
+            onSaved={() => {
+              setOpen(false);
+            }}
           />
         </React.Suspense>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
-const AiActionIcon = ({ icon }: { icon: null | string }) => (
+const AiActionIcon = ({
+  enabled,
+  icon,
+}: {
+  enabled: boolean;
+  icon: null | string;
+}) => (
   <span
     aria-hidden
-    className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg"
+    className={cn(
+      "flex size-9 shrink-0 items-center justify-center rounded-md transition-colors",
+      enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+    )}
   >
     {icon ? (
       <DynamicIcon
@@ -108,7 +140,129 @@ const AiActionIcon = ({ icon }: { icon: null | string }) => (
   </span>
 );
 
-/** Matches the title, the description and the key, ignoring case. */
+const AiActionEnabledSwitch = ({
+  action,
+  onSave,
+}: Pick<AiActionsContentProps, "onSave"> & { action: AdminAiAction }) => {
+  const t = useTranslations("admin.ai.actions");
+  const tError = useTranslations("core.global.errors");
+  const [pending, setPending] = React.useState<boolean | null>(null);
+
+  const onCheckedChange = async (enabled: boolean) => {
+    setPending(enabled);
+    const result = await onSave({
+      ...action.settings,
+      enabled,
+      key: action.key,
+    });
+    setPending(null);
+
+    if ("error" in result) {
+      toast.error(tError("title"), {
+        description: tError("internal_server_error"),
+      });
+
+      return;
+    }
+
+    toast.success(
+      t(enabled ? "toggled.on" : "toggled.off", { title: action.title }),
+      {
+        description: t(enabled ? "toggled.on_desc" : "toggled.off_desc"),
+      },
+    );
+  };
+
+  return (
+    <Switch
+      aria-label={t("toggle_label", { title: action.title })}
+      checked={pending ?? action.settings.enabled}
+      disabled={pending !== null}
+      onCheckedChange={onCheckedChange}
+    />
+  );
+};
+
+const AiActionMeta = ({
+  action,
+  models,
+}: Pick<AiActionsContentProps, "models"> & { action: AdminAiAction }) => {
+  const t = useTranslations("admin.ai.actions");
+  const { modelId } = action.settings;
+  const dailyLimit = action.settings.dailyLimit ?? action.defaults.dailyLimit;
+  const canRun = action.compatibleModelIds.length > 0;
+
+  if (canRun && modelId === null && dailyLimit === null) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {canRun ? null : (
+        <Badge variant="destructive">
+          <TriangleAlertIcon aria-hidden />
+          {t("no_compatible")}
+        </Badge>
+      )}
+      {modelId === null ? null : (
+        <Badge variant="secondary">
+          <CpuIcon aria-hidden />
+          {models.find(model => model.id === modelId)?.name ?? modelId}
+        </Badge>
+      )}
+      {dailyLimit === null ? null : (
+        <Badge variant="secondary">
+          <GaugeIcon aria-hidden />
+          {t("daily_limit", { count: dailyLimit })}
+        </Badge>
+      )}
+    </div>
+  );
+};
+
+const AiActionRow = ({
+  action,
+  canManage,
+  models,
+  onSave,
+}: Omit<AiActionsContentProps, "actions"> & { action: AdminAiAction }) => {
+  const t = useTranslations("admin.ai.actions");
+  const { enabled } = action.settings;
+
+  return (
+    <div className="flex items-start gap-3 sm:items-center">
+      <AiActionIcon enabled={enabled} icon={action.icon} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "font-medium text-pretty transition-colors",
+              enabled ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {action.title}
+          </span>
+          {enabled || canManage ? null : (
+            <Badge variant="outline">{t("disabled")}</Badge>
+          )}
+        </div>
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {action.description}
+        </p>
+        <AiActionMeta action={action} models={models} />
+      </div>
+      {canManage ? (
+        <div className="flex shrink-0 items-center gap-2">
+          <AiActionEnabledSwitch action={action} onSave={onSave} />
+          <EditAiActionAction action={action} models={models} onSave={onSave} />
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const PLUGIN_FILTER = "plugin";
+
+type AiActionRowData = AdminAiAction & { id: number };
+
 const matchesSearch = (action: AdminAiAction, search: string) => {
   const needle = search.trim().toLowerCase();
   if (!needle) return true;
@@ -118,10 +272,6 @@ const matchesSearch = (action: AdminAiAction, search: string) => {
   );
 };
 
-/**
- * Every registered action in one table. The list is small and arrives whole,
- * so search and the plugin filter run in the browser.
- */
 export const AiActionsContent = ({
   actions,
   canManage,
@@ -129,6 +279,7 @@ export const AiActionsContent = ({
   onSave,
 }: AiActionsContentProps) => {
   const t = useTranslations("admin.ai.actions");
+  const tAll = useTranslations() as unknown as AiActionTranslate;
   const [searchParams, setSearchParams] = React.useState(
     () => new URLSearchParams(),
   );
@@ -147,8 +298,9 @@ export const AiActionsContent = ({
   );
   const search = readTableSearch(searchParams);
   const selectedPlugins = readTableFilter(searchParams, PLUGIN_FILTER);
-  const rows: AiActionRow[] = [...actions]
-    .sort(
+  const rows: AiActionRowData[] = actions
+    .map(action => withTranslatedAiActionText(tAll, action))
+    .toSorted(
       (a, b) =>
         a.pluginId.localeCompare(b.pluginId) || a.title.localeCompare(b.title),
     )
@@ -159,104 +311,44 @@ export const AiActionsContent = ({
         (selectedPlugins.length === 0 ||
           selectedPlugins.includes(action.pluginId)),
     );
-
-  const modelName = (id: null | string) =>
-    id === null
-      ? t("model_default")
-      : (models.find(model => model.id === id)?.name ?? id);
-
-  const columns: ColumnDef<AiActionRow>[] = [
-    {
-      id: "title",
-      header: t("columns.action"),
-      cell: ({ row }) => (
-        <div className="flex min-w-64 items-center gap-3">
-          <AiActionIcon icon={row.icon} />
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-foreground font-medium text-pretty">
-              {row.title}
-            </span>
-            <span className="text-muted-foreground text-sm leading-relaxed text-pretty">
-              {row.description}
-            </span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      id: "plugin",
-      header: t("columns.plugin"),
-      cell: ({ row }) => (
-        <Badge className="font-mono" variant="outline">
-          {row.pluginId}
-        </Badge>
-      ),
-    },
-    {
-      id: "model",
-      header: t("columns.model"),
-      cell: ({ row }) =>
-        row.compatibleModelIds.length === 0 ? (
-          <span className="text-destructive">{t("no_compatible")}</span>
-        ) : (
-          modelName(row.settings.modelId)
-        ),
-    },
-    {
-      id: "dailyLimit",
-      header: t("columns.daily_limit"),
-      cell: ({ row }) => (
-        <span className="tabular-nums">
-          {row.settings.dailyLimit ?? row.defaults.dailyLimit ?? t("no_limit")}
-        </span>
-      ),
-    },
-    {
-      id: "status",
-      header: t("columns.status"),
-      cell: ({ row }) => (
-        <Badge variant={row.settings.enabled ? "success" : "outline"}>
-          {row.settings.enabled ? t("enabled") : t("disabled")}
-        </Badge>
-      ),
-    },
-    ...(canManage
-      ? [
-          {
-            id: "actions",
-            header: <span className="sr-only">{t("columns.manage")}</span>,
-            align: "right" as const,
-            cell: ({ row }: { row: AiActionRow }) => (
-              <EditAiActionAction
-                action={row}
-                models={models}
-                onSave={onSave}
-              />
-            ),
-          },
-        ]
-      : []),
-  ];
+  const pageSize = readTablePageSize(searchParams);
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(readTablePage(searchParams), totalPages);
+  const pageRows = rows.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   return (
     <DataTableNavigationProvider value={navigation}>
       <ContentDataTable
-        columns={columns}
         customNoResults={
           actions.length === 0
-            ? {
-                description: t("empty.desc"),
-                title: t("empty.title"),
+            ? { description: t("empty.desc"), title: t("empty.title") }
+            : {
+                description: t("no_results.desc"),
+                footer: (
+                  <Button
+                    onClick={() => {
+                      setSearchParams(
+                        new URLSearchParams(withTableSearch(searchParams, "")),
+                      );
+                    }}
+                    variant="outline"
+                  >
+                    {t("no_results.clear")}
+                  </Button>
+                ),
+                title: t("no_results.title"),
               }
-            : undefined
         }
-        edges={rows}
+        edges={pageRows}
         filters={
           plugins.length > 1
             ? [
                 {
                   id: PLUGIN_FILTER,
-                  label: t("columns.plugin"),
+                  label: t("plugin"),
                   options: plugins.map(plugin => ({
                     label: plugin,
                     value: plugin,
@@ -265,19 +357,31 @@ export const AiActionsContent = ({
               ]
             : undefined
         }
+        groupBy={{
+          key: row => row.pluginId,
+          label: group => <span className="font-mono">{group.key}</span>,
+        }}
         id="ai-actions"
         order={{ defaultOrder: { column: "title", order: "asc" } }}
         pageInfo={{
-          count: rows.length,
-          currentPage: 1,
+          count: pageRows.length,
+          currentPage,
           endCursor: null,
-          hasNextPage: false,
-          hasPreviousPage: false,
-          pageSize: Math.max(rows.length, 1),
+          hasNextPage: currentPage < totalPages,
+          hasPreviousPage: currentPage > 1,
+          pageSize,
           startCursor: null,
           totalCount: rows.length,
-          totalPages: 1,
+          totalPages,
         }}
+        renderRow={({ row }) => (
+          <AiActionRow
+            action={row}
+            canManage={canManage}
+            models={models}
+            onSave={onSave}
+          />
+        )}
         search
         searchPlaceholder={t("search")}
       />

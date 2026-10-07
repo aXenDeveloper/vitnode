@@ -1,3 +1,4 @@
+import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -10,11 +11,11 @@ import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-
 
 import { AI_ACTION_LIMITS } from "@/api/lib/ai/action";
 import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
-import { useDialog } from "@/components/ui/dialog";
 
 import type { AdminAiActionInput } from "../ai-mutations";
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
@@ -33,14 +34,24 @@ export interface AiActionFormProps {
   onSave: (body: AdminAiActionInput) => Promise<AdminMutationResult<true>>;
 }
 
+const LIMIT_FIELDS = [
+  "dailyLimit",
+  "maxInputCharacters",
+  "maxOutputTokens",
+  "maxRetries",
+  "maxSteps",
+  "timeoutMs",
+] as const;
+
 export const AiActionFormContent = ({
   action,
   models,
   onSave,
-}: AiActionFormProps) => {
+  onSaved,
+}: AiActionFormProps & { onSaved?: () => void }) => {
   const t = useTranslations("admin.ai.actions.form");
   const tError = useTranslations("core.global.errors");
-  const { setIsDirty, setOpen } = useDialog();
+  const limitsHeadingId = React.useId();
   const { defaults, settings } = action;
 
   const modelIds = [
@@ -119,8 +130,7 @@ export const AiActionFormContent = ({
     toast.success(t("saved.title"), {
       description: t("saved.desc", { title: action.title }),
     });
-    setIsDirty?.(false);
-    setOpen?.(false);
+    onSaved?.();
   };
 
   const limitField =
@@ -143,6 +153,7 @@ export const AiActionFormContent = ({
 
   return (
     <AutoForm
+      className="flex min-h-0 flex-1 flex-col gap-0"
       fields={[
         {
           component: props => (
@@ -153,7 +164,6 @@ export const AiActionFormContent = ({
             />
           ),
           id: "enabled",
-          tab: "general",
         },
         {
           component: props => (
@@ -165,7 +175,6 @@ export const AiActionFormContent = ({
             />
           ),
           id: "modelId",
-          tab: "general",
         },
         {
           component: props => (
@@ -177,7 +186,6 @@ export const AiActionFormContent = ({
             />
           ),
           id: "fallbackModelId",
-          tab: "general",
         },
         {
           component: props => (
@@ -188,12 +196,10 @@ export const AiActionFormContent = ({
             />
           ),
           id: "instructions",
-          tab: "general",
         },
         {
           component: limitField(t("daily_limit"), defaults.dailyLimit),
           id: "dailyLimit",
-          tab: "limits",
         },
         {
           component: limitField(
@@ -201,7 +207,6 @@ export const AiActionFormContent = ({
             defaults.maxInputCharacters,
           ),
           id: "maxInputCharacters",
-          tab: "limits",
         },
         {
           component: limitField(
@@ -209,31 +214,54 @@ export const AiActionFormContent = ({
             defaults.maxOutputTokens,
           ),
           id: "maxOutputTokens",
-          tab: "limits",
         },
         {
           component: limitField(t("max_retries"), defaults.maxRetries),
           id: "maxRetries",
-          tab: "limits",
         },
         {
           component: limitField(t("max_steps"), defaults.maxSteps),
           id: "maxSteps",
-          tab: "limits",
         },
         {
           component: limitField(t("timeout"), defaults.timeoutMs, "ms"),
           id: "timeoutMs",
-          tab: "limits",
         },
       ]}
       formSchema={formSchema}
+      layout={rendered => (
+        <>
+          <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-4 py-5">
+            <div className="flex flex-col gap-5">
+              {rendered.enabled}
+              {rendered.modelId}
+              {rendered.fallbackModelId}
+              {rendered.instructions}
+            </div>
+            <section
+              aria-labelledby={limitsHeadingId}
+              className="flex flex-col gap-5 border-t pt-6"
+            >
+              <div className="flex flex-col gap-1">
+                <h3
+                  className="text-base font-semibold text-balance"
+                  id={limitsHeadingId}
+                >
+                  {t("limits.title")}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+                  {t("limits.desc")}
+                </p>
+              </div>
+              {LIMIT_FIELDS.map(id => (
+                <React.Fragment key={id}>{rendered[id]}</React.Fragment>
+              ))}
+            </section>
+          </div>
+          <AutoFormSheetFooter submitLabel={t("submit")} />
+        </>
+      )}
       onSubmit={onSubmit}
-      submitButtonProps={{ children: t("submit") }}
-      tabs={[
-        { label: t("tabs.general"), value: "general" },
-        { label: t("tabs.limits"), value: "limits" },
-      ]}
     />
   );
 };
