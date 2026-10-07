@@ -19,6 +19,10 @@ export const ADMIN_USER_PERMISSIONS = {
   view: core("users", "can_view"),
 } as const;
 
+export const ADMIN_SEARCH_PERMISSIONS = {
+  manage: core("system", "can_manage_search"),
+} as const;
+
 export const ADMIN_ROLE_PERMISSIONS = {
   create: core("roles", "can_create"),
   delete: core("roles", "can_delete"),

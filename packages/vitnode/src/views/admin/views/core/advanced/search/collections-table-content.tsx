@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 import type { ColumnDef } from "@/components/table/data-table-content";
 
 import { DateFormat } from "@/components/date-format";
+import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { ContentDataTable } from "@/components/table/content";
 import {
   Card,
@@ -13,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ADMIN_SEARCH_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 import { getSearchTypeRenderer } from "@/views/search/registry";
 
 import type { CollectionStatus, SearchCollection } from "./collection-status";
@@ -202,20 +204,23 @@ export const CollectionsTableContent = ({
       id: "actions",
       header: "",
       align: "right",
-      cell: ({ row }) =>
-        row.hasIndexer ? (
-          <ReindexCollectionAction
-            itemType={row.itemType}
-            label={row.label}
-            onRebuild={actions.rebuild}
-          />
-        ) : (
-          <RemoveCollectionDocumentsAction
-            itemType={row.itemType}
-            label={row.label}
-            onClear={actions.clearCollection}
-          />
-        ),
+      cell: ({ row }) => (
+        <AdminStaffPermissionGate {...ADMIN_SEARCH_PERMISSIONS.manage}>
+          {row.hasIndexer ? (
+            <ReindexCollectionAction
+              itemType={row.itemType}
+              label={row.label}
+              onRebuild={actions.rebuild}
+            />
+          ) : (
+            <RemoveCollectionDocumentsAction
+              itemType={row.itemType}
+              label={row.label}
+              onClear={actions.clearCollection}
+            />
+          )}
+        </AdminStaffPermissionGate>
+      ),
     },
   ];
 
