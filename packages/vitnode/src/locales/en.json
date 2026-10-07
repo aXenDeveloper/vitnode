@@ -1399,6 +1399,7 @@
         "can_edit": "Edit",
         "can_delete": "Delete",
         "can_publish": "Publish and unpublish",
+        "can_hide": "Hide and unhide",
         "can_restore": "Restore an earlier version"
       },
       "errors": {

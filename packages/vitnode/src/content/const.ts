@@ -4,6 +4,17 @@ export const CONTENT_PUBLICATION_FIELDS = ["status", "publishedAt"] as const;
 
 export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
+/** The two system columns `visibility: { enabled: true }` adds to the base table. */
+export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
+
+/**
+ * How a content type's primary key is generated. `serial` is the default and the
+ * only strategy a content type had before; see `ids.ts`.
+ */
+export const CONTENT_ID_STRATEGIES = ["serial", "uuid", "bigint"] as const;
+
+export const CONTENT_DEFAULT_ID_STRATEGY = "serial";
+
 export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
   "itemId",
   "languageId",
@@ -367,6 +378,7 @@ export const CONTENT_PERMISSIONS = {
   create: "can_create",
   delete: "can_delete",
   edit: "can_edit",
+  hide: "can_hide",
   publish: "can_publish",
   restore: "can_restore",
   view: "can_view",

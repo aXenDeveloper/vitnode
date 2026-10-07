@@ -18,6 +18,7 @@ import type {
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
 } from "./const";
 import type { ContentFileDescriptor } from "./files";
+import type { ContentIdStrategy } from "./ids";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -918,6 +919,69 @@ type ContentPublicationColumns<TDefinition> = TDefinition extends {
   : Record<never, never>;
 
 // ---------------------------------------------------------------------------
+// Visibility
+// ---------------------------------------------------------------------------
+
+/**
+ * Opts a content type into record-level hiding: an editor can take a record off
+ * the public site without touching its publication status. Needs `publication`.
+ */
+export interface ContentVisibilityConfig {
+  enabled: true;
+}
+
+export interface ResolvedContentVisibilityConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+}
+
+export type ContentVisibilityEnabled<TVisibility> = TVisibility extends {
+  enabled: true;
+}
+  ? true
+  : false;
+
+/**
+ * The two generated columns, present only when visibility is enabled. A record
+ * is hidden exactly when `hiddenAt` is set; there is no separate flag to drift.
+ */
+type ContentVisibilityColumns<TDefinition> = TDefinition extends {
+  visibility: { enabled: true };
+}
+  ? { hiddenAt: Date | null; hiddenBy: null | number }
+  : Record<never, never>;
+
+// ---------------------------------------------------------------------------
+// Duplication
+// ---------------------------------------------------------------------------
+
+/** Opts a content type into "Duplicate": a draft copy of one record. */
+export interface ContentDuplicationConfig {
+  enabled: true;
+  /**
+   * Appends a localized "(Copy)" suffix to the copy's `admin.titleField`, in
+   * every copied language, trimmed to the field's `maxLength`. Defaults to
+   * `true`; it applies only when the title field is a `text` field.
+   */
+  titleSuffix?: boolean;
+}
+
+export interface ResolvedContentDuplicationConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+  /** The `text` field the copy suffix is appended to, or `null` for none. */
+  titleSuffixField: null | string;
+}
+
+export type ContentDuplicationEnabled<TDuplication> = TDuplication extends {
+  enabled: true;
+}
+  ? true
+  : false;
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -1638,6 +1702,17 @@ export type LocalizedContentTypeDefinition = AnyContentTypeDefinition & {
   localization: { enabled: true };
 };
 
+/** A content type whose records can be hidden from the public site. */
+export type HideableContentTypeDefinition = AnyContentTypeDefinition & {
+  publication: { enabled: true };
+  visibility: { enabled: true };
+};
+
+/** A content type whose records can be duplicated as drafts. */
+export type DuplicableContentTypeDefinition = AnyContentTypeDefinition & {
+  duplication: { enabled: true };
+};
+
 export interface ResolvedContentAdvancedConfig {
   /** One generated junction table per to-many relation field. */
   junctions: ContentRelationJunction[];
@@ -1674,12 +1749,17 @@ export interface ContentTypeDefinition<
   TLocalizationEnabled extends boolean = boolean,
   TDeliveryEnabled extends boolean = boolean,
   TPublicPath extends string = string,
+  TVisibilityEnabled extends boolean = boolean,
+  TDuplicationEnabled extends boolean = boolean,
+  TIdStrategy extends ContentIdStrategy = ContentIdStrategy,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;
 
   delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
+  /** Draft copies of a record, or the disabled default when omitted. */
+  duplication: ResolvedContentDuplicationConfig<TDuplicationEnabled>;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
   editorial: ResolvedContentEditorialConfig<
     TEditorialEnabled,
@@ -1688,6 +1768,8 @@ export interface ContentTypeDefinition<
   >;
   fields: TFields;
   id: TId;
+  /** How the primary key is generated. `serial` unless the definition says otherwise. */
+  idStrategy: TIdStrategy;
   /** Declared indexes plus the automatic ones, deduplicated and named. */
   indexes: ResolvedContentIndex[];
   /**
@@ -1716,12 +1798,18 @@ export interface ContentTypeDefinition<
       TPreviewEnabled,
       TSchedulingEnabled,
       TLocalizationEnabled,
-      TDeliveryEnabled
+      TDeliveryEnabled,
+      TPublicPath,
+      TVisibilityEnabled,
+      TDuplicationEnabled,
+      TIdStrategy
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
   search: ResolvedContentSearchConfig<TSearchEnabled>;
   tableName: string;
+  /** Record-level hiding, or the disabled default when `visibility` is omitted. */
+  visibility: ResolvedContentVisibilityConfig<TVisibilityEnabled>;
 }
 
 /** Use in constraints where the concrete field map does not matter. */
@@ -1735,7 +1823,8 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
 
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
-    ContentPublicationColumns<TDefinition> & {
+    ContentPublicationColumns<TDefinition> &
+    ContentVisibilityColumns<TDefinition> & {
       [K in ColumnFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldValue<
         ContentFieldsOf<TDefinition>[K]
       >;

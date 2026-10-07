@@ -4,6 +4,7 @@ import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
 } from "./const";
 import { ContentEngineError } from "./errors";
 import { splitContentFieldPath } from "./paths";
@@ -21,6 +22,7 @@ export const EXPLICIT_SEARCHABLE_KINDS = new Set<
 export const systemFields: readonly string[] = CONTENT_SYSTEM_FIELDS;
 export const publicationFields: readonly string[] = CONTENT_PUBLICATION_FIELDS;
 export const editorialFields: readonly string[] = CONTENT_EDITORIAL_FIELDS;
+export const visibilityFields: readonly string[] = CONTENT_VISIBILITY_FIELDS;
 
 export const assertKnownColumns = (
   id: string,

@@ -1,3 +1,4 @@
+import type { ContentIdOf } from "./ids";
 import type { ContentFieldName, ContentLocalizedFieldName } from "./types";
 
 export type ContentEventAction =
@@ -5,6 +6,8 @@ export type ContentEventAction =
   | "deleted"
   | "delivery_redirect_created"
   | "delivery_slug_changed"
+  | "duplicated"
+  | "hidden"
   | "published"
   | "restored"
   | "schedule_cancelled"
@@ -15,11 +18,52 @@ export type ContentEventAction =
   | "translation_restored"
   | "translation_unpublished"
   | "translation_updated"
+  | "unhidden"
   | "unpublished"
   | "updated";
 
 export interface ContentCreatedPayload {
   contentId: number;
+}
+
+/**
+ * `created` on a content type with `duplication` enabled. `duplicatedFromId` is
+ * set when the record was created by `duplicate()`: a listener that only cares
+ * about new records ignores it, one that wants to tell copies apart reads it
+ * here instead of correlating with the `duplicated` event.
+ */
+export interface ContentDuplicableCreatedPayload<TId = number> {
+  contentId: TId;
+  duplicatedFromId?: TId;
+}
+
+/**
+ * Emitted once per successful `duplicate()`, after the copy's ordinary
+ * `created` event (and its `translation_created` events). It is a notification
+ * only: indexing and cache work already ran for `created`, so a listener must not
+ * repeat it here.
+ */
+export interface ContentDuplicatedPayload<TId = number> {
+  /** The staff member who asked for the copy; `null` for the system or an API key. */
+  actorUserId: null | number;
+  /** The new record. */
+  contentId: TId;
+  contentTypeId: string;
+  /** The record that was copied. */
+  sourceId: TId;
+}
+
+/** Emitted when a visible record is hidden. Never for a no-op. */
+export interface ContentHiddenPayload<TId = number> {
+  actorUserId: null | number;
+  contentId: TId;
+  hiddenAt: Date;
+}
+
+/** Emitted when a hidden record is made visible again. Never for a no-op. */
+export interface ContentUnhiddenPayload<TId = number> {
+  actorUserId: null | number;
+  contentId: TId;
 }
 
 export interface ContentDeletedPayload {
@@ -296,6 +340,28 @@ type ContentDeliveryEventsFor<TDefinition extends { id: string }> =
         >
     : Record<never, never>;
 
+/** `duplicated`, only for a content type with `duplication` enabled. */
+type ContentDuplicationEventsFor<TDefinition extends { id: string }> =
+  TDefinition extends { duplication: { enabled: true } }
+    ? Record<
+        `content.${TDefinition["id"]}.duplicated`,
+        ContentDuplicatedPayload<ContentIdOf<TDefinition>>
+      >
+    : Record<never, never>;
+
+/** `hidden` and `unhidden`, only for a content type with `visibility` enabled. */
+type ContentVisibilityEventsFor<TDefinition extends { id: string }> =
+  TDefinition extends { visibility: { enabled: true } }
+    ? Record<
+        `content.${TDefinition["id"]}.hidden`,
+        ContentHiddenPayload<ContentIdOf<TDefinition>>
+      > &
+        Record<
+          `content.${TDefinition["id"]}.unhidden`,
+          ContentUnhiddenPayload<ContentIdOf<TDefinition>>
+        >
+    : Record<never, never>;
+
 /**
  * The events a content type emits, as a literal-keyed map.
  *
@@ -316,10 +382,17 @@ type ContentDeliveryEventsFor<TDefinition extends { id: string }> =
  */
 export type ContentEventsFor<TDefinition extends { id: string }> =
   ContentDeliveryEventsFor<TDefinition> &
+    ContentDuplicationEventsFor<TDefinition> &
     ContentEditorialEventsFor<TDefinition> &
     ContentLocalizationEventsFor<TDefinition> &
     ContentPublicationEventsFor<TDefinition> &
-    Record<`content.${TDefinition["id"]}.created`, ContentCreatedPayload> &
+    ContentVisibilityEventsFor<TDefinition> &
+    Record<
+      `content.${TDefinition["id"]}.created`,
+      TDefinition extends { duplication: { enabled: true } }
+        ? ContentDuplicableCreatedPayload<ContentIdOf<TDefinition>>
+        : ContentCreatedPayload
+    > &
     Record<`content.${TDefinition["id"]}.deleted`, ContentDeletedPayload> &
     Record<
       `content.${TDefinition["id"]}.updated`,

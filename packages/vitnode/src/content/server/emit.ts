@@ -8,7 +8,10 @@ import type {
 import type {
   ContentCreatedPayload,
   ContentDeletedPayload,
+  ContentDuplicableCreatedPayload,
+  ContentDuplicatedPayload,
   ContentEventAction,
+  ContentHiddenPayload,
   ContentPublishedPayload,
   ContentTranslationCreatedPayload,
   ContentTranslationDeletedPayload,
@@ -16,9 +19,11 @@ import type {
   ContentTranslationRestoredPayload,
   ContentTranslationUnpublishedPayload,
   ContentTranslationUpdatedPayload,
+  ContentUnhiddenPayload,
   ContentUnpublishedPayload,
   ContentUpdatedPayload,
 } from "../events";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { contentEventName } from "../events";
@@ -26,6 +31,9 @@ import { contentEventName } from "../events";
 type ContentPayload =
   | ContentCreatedPayload
   | ContentDeletedPayload
+  | ContentDuplicableCreatedPayload<ContentId>
+  | ContentDuplicatedPayload<ContentId>
+  | ContentHiddenPayload<ContentId>
   | ContentPublishedPayload
   | ContentTranslationCreatedPayload
   | ContentTranslationDeletedPayload
@@ -33,6 +41,7 @@ type ContentPayload =
   | ContentTranslationRestoredPayload<AnyContentTypeDefinition>
   | ContentTranslationUnpublishedPayload
   | ContentTranslationUpdatedPayload<AnyContentTypeDefinition>
+  | ContentUnhiddenPayload<ContentId>
   | ContentUnpublishedPayload
   | ContentUpdatedPayload<AnyContentTypeDefinition>;
 
