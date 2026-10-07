@@ -397,6 +397,16 @@ export const contentPermissionEntries = (
         },
       ]
     : []),
+  // Hiding takes a record off the public site without unpublishing it, so it
+  // is gated like publishing: on its own, and for both directions.
+  ...(definition?.visibility.enabled
+    ? [
+        {
+          dependsOn: [CONTENT_PERMISSIONS.view],
+          permission: CONTENT_PERMISSIONS.hide,
+        },
+      ]
+    : []),
   // Restoring is the one generated operation that rewrites many fields at once
   // from a source the editor did not type, so it gets its own gate. It depends
   // on `can_edit` rather than `can_view`: somebody who may not edit must not
