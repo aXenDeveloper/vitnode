@@ -49,7 +49,10 @@ import {
   buildContentRepeatableOperations,
   contentCollectionKinds,
 } from "./collection-api";
-import { assertContentFileReferences } from "./files";
+import {
+  assertContentFileReferences,
+  contentFileCollectionFields,
+} from "./files";
 import { findContentLanguage } from "./language-resolver";
 import {
   buildFilterCondition,
@@ -418,6 +421,10 @@ export const createContentService = <
 
   const toRow = (row: Record<string, unknown>): ContentSelect<TDefinition> =>
     projectRow(row) as ContentSelect<TDefinition>;
+
+  const galleryFieldNames = Object.keys(
+    contentFileCollectionFields(definition),
+  );
 
   const splitLabels = (
     row: Record<string, unknown>,
@@ -1012,7 +1019,12 @@ export const createContentService = <
         };
       }
 
-      await assertContentFileReferences(c, definition, patch, tx);
+      await assertContentFileReferences(c, definition, patch, tx, {
+        existing: async () => ({
+          ...projectRow(current),
+          ...(await store?.load(id, tx, galleryFieldNames)),
+        }),
+      });
 
       if (changedCollections.length > 0) await store?.write(tx, id, patch);
 

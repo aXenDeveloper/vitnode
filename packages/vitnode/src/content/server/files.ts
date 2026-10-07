@@ -18,6 +18,7 @@ import { CONTENT_FILE_CODES } from "../const";
 import { ContentInputError } from "../errors";
 import { contentFileConstraints, validateContentFile } from "../files";
 import { partitionContentFields } from "../localization";
+import { resolveContentActor } from "./actor";
 
 export const contentFileFields = (
   definition: AnyContentTypeDefinition,
@@ -71,6 +72,10 @@ interface ContentFileRow {
   size: number;
 }
 
+interface ContentFileOriginRow extends ContentFileRow {
+  userId?: null | number;
+}
+
 const toDescriptor = (
   row: ContentFileRow,
   url: (key: string) => string,
@@ -92,27 +97,37 @@ const toDescriptor = (
   };
 };
 
-export const resolveContentFileDescriptors = async (
+const readContentFileRows = async (
   c: Context,
   ids: readonly number[],
   tx?: ContentDatabase,
-): Promise<Map<number, ContentFileDescriptor>> => {
+): Promise<ContentFileOriginRow[]> => {
   const unique = [...new Set(ids.filter(id => Number.isInteger(id) && id > 0))];
-  if (unique.length === 0) return new Map();
+  if (unique.length === 0) return [];
 
-  const rows = await (tx ?? c.get("db"))
-    .select(fileSelection)
+  return await (tx ?? c.get("db"))
+    .select({ ...fileSelection, userId: core_files.userId })
     .from(core_files)
     .where(inArray(core_files.id, unique));
+};
 
+const descriptorsByIdOf = (
+  c: Context,
+  rows: readonly ContentFileRow[],
+): Map<number, ContentFileDescriptor> => {
   const hasAdapter = !!c.get("core").storage?.adapter;
   const storage = c.get("storage");
   const url = (key: string): string => (hasAdapter ? storage.getUrl(key) : "");
 
-  return new Map(
-    (rows as ContentFileRow[]).map(row => [row.id, toDescriptor(row, url)]),
-  );
+  return new Map(rows.map(row => [row.id, toDescriptor(row, url)]));
 };
+
+export const resolveContentFileDescriptors = async (
+  c: Context,
+  ids: readonly number[],
+  tx?: ContentDatabase,
+): Promise<Map<number, ContentFileDescriptor>> =>
+  descriptorsByIdOf(c, await readContentFileRows(c, ids, tx));
 
 /** One positive integer, or `null` - the only thing a file reference can be. */
 const asFileId = (value: unknown): null | number =>
@@ -218,11 +233,40 @@ export const resolveContentPublicRowFiles = async (
   }));
 };
 
+export interface ContentFileReferenceOptions {
+  /**
+   * The values the record already holds - or, for a restore, held. A file id
+   * found in them is accepted whatever its origin, so a record keeps saving with
+   * the files it has. Only read when some id fails the origin check.
+   */
+  existing?: () => Promise<Record<string, unknown>>;
+}
+
+/**
+ * Whether a caller may point a field at a file it did not just keep.
+ *
+ * Only a file uploaded through this content type's own upload route, or one the
+ * calling user uploaded themselves - never somebody else's avatar or another
+ * plugin's attachment found by counting ids. Server code running without a
+ * user (a job, a seed) picks its own ids and is trusted.
+ */
+const isContentFileOriginAllowed = (
+  row: ContentFileOriginRow,
+  {
+    callerId,
+    contentTypeId,
+  }: { callerId: null | number; contentTypeId: string },
+): boolean =>
+  callerId === null ||
+  row.metadata?.contentTypeId === contentTypeId ||
+  row.userId === callerId;
+
 export const assertContentFileReferences = async (
   c: Context,
   definition: AnyContentTypeDefinition,
   values: Record<string, unknown>,
   tx?: ContentDatabase,
+  { existing }: ContentFileReferenceOptions = {},
 ): Promise<void> => {
   const files = contentFileFields(definition);
   // One entry per (field, id) pair, in payload order, so a gallery contributes
@@ -238,15 +282,35 @@ export const assertContentFileReferences = async (
   );
   if (named.length === 0) return;
 
-  const byId = await resolveContentFileDescriptors(
+  const rows = await readContentFileRows(
     c,
     named.map(entry => entry.id),
     tx,
+  );
+  const origin = {
+    callerId: resolveContentActor(c).userId,
+    contentTypeId: definition.id,
+  };
+  const foreign = new Set(
+    rows
+      .filter(row => !isContentFileOriginAllowed(row, origin))
+      .map(row => row.id),
+  );
+  if (foreign.size > 0 && existing) {
+    const held = fileIdsOf(Object.keys(files), await existing());
+    for (const id of held) foreign.delete(id);
+  }
+
+  const byId = descriptorsByIdOf(
+    c,
+    rows.filter(row => !foreign.has(row.id)),
   );
 
   for (const { id, name } of named) {
     const descriptor = byId.get(id);
 
+    // A file the caller may not use answers exactly like one that does not
+    // exist, so the error is not a way to learn which ids are taken.
     if (!descriptor) {
       throw new ContentFileReferenceError({
         code: CONTENT_FILE_CODES.missing,

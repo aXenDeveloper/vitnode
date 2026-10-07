@@ -134,6 +134,8 @@ gallery: field.file({ multiple: true, min: 1, max: 8, maxBytes: 5 * 1024 * 1024 
 
 Files are uploaded through the [storage](/docs/dev/storage) adapter and recorded in `core_files`. The column uses `ON DELETE RESTRICT`, so a file in use cannot be deleted. In the public API a file is returned as `{ id, name, url, mimeType, size, width, height }`, never as a raw id.
 
+A write can only point a file field at a file it is allowed to use: one uploaded through this content type's own upload route, one the signed-in user uploaded themselves, or one the record already holds. Anything else - say, someone else's avatar found by guessing ids - is refused with `CONTENT_FILE_NOT_FOUND`, the same answer as an id that does not exist. Server code running without a user (a job, a seed) is trusted to pick its own ids.
+
 ## Relation
 
 `field.relation({ target: () => categoryContentType, required: true })` links to another content type. Set `required` or `nullable`: a single relation without either throws. All options are in [Relations and advanced fields](/docs/dev/content-engine/relations-and-advanced-modeling#relation-options).

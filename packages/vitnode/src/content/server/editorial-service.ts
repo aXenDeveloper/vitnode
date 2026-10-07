@@ -53,6 +53,7 @@ import {
 } from "./delivery-writes";
 import {
   assertContentFileReferences,
+  contentFileCollectionFields,
   ContentFileReferenceError,
   contentSnapshotFileIds,
 } from "./files";
@@ -393,6 +394,10 @@ export const createContentEditorialService = <
 
   const toRow = (row: Record<string, unknown>): ContentSelect<TDefinition> =>
     projectRow(row) as ContentSelect<TDefinition>;
+
+  const galleryFieldNames = Object.keys(
+    contentFileCollectionFields(definition),
+  );
 
   const versionOf = (row: Record<string, unknown>): number =>
     typeof row.version === "number" ? row.version : 1;
@@ -994,7 +999,11 @@ export const createContentEditorialService = <
         // satisfies a `maxBytes` somebody has since lowered is a different
         // question, and the answer is the same 422 a dropped column gets.
         try {
-          await assertContentFileReferences(c, definition, patch, tx);
+          // Every file id here comes from this record's own history, so its
+          // origin was settled when the revision was written.
+          await assertContentFileReferences(c, definition, patch, tx, {
+            existing: async () => Promise.resolve(patch),
+          });
         } catch (error) {
           if (!(error instanceof ContentFileReferenceError)) throw error;
 
@@ -1134,7 +1143,12 @@ export const createContentEditorialService = <
           };
         }
 
-        await assertContentFileReferences(c, definition, patch, tx);
+        await assertContentFileReferences(c, definition, patch, tx, {
+          existing: async () => ({
+            ...projectRow(current),
+            ...(await store?.load(id, tx, galleryFieldNames)),
+          }),
+        });
 
         // The version guard runs **first**, before a single junction or child
         // row is touched. That ordering is the whole concurrency story: a writer
