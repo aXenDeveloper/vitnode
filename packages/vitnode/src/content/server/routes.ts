@@ -10,6 +10,10 @@ import type {
   ContentOrderableFieldName,
   ContentReferenceFieldName,
 } from "../types";
+import type {
+  ContentDuplicationMethods,
+  ContentEditorialDuplicationMethods,
+} from "./duplicate";
 import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPreviewTarget } from "./preview-target";
 
@@ -24,6 +28,7 @@ import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
   zodContentDeliveryConflict,
+  zodContentDuplicateRejection,
   zodContentScheduleRejection,
   zodContentUnprocessable,
 } from "../conflicts";
@@ -45,9 +50,12 @@ import {
   zodContentFileFieldValue,
   zodContentFileReferenceRejection,
 } from "../files";
+import { contentIdSchema } from "../ids";
 import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
 import { resolveContentActor } from "./actor";
+import { duplicationMethods } from "./duplicate";
+import { contentDuplicateEffects } from "./duplicate-effects";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import {
@@ -874,6 +882,166 @@ export const buildContentRoutes = <
       });
 
       return c.json(row, 201);
+    },
+  });
+
+  /**
+   * The patch shape of `schemas.update` without its "at least one field" rule, so
+   * an empty `overrides` means "copy as is" rather than a 400. Read off the
+   * object Zod keeps behind the refinement; never a default, so an omitted field
+   * keeps the source's value instead of the field's default.
+   */
+  const patchObject = (schema: z.ZodType): z.ZodObject =>
+    z.strictObject((schema as unknown as z.ZodObject).shape);
+
+  const translationSchemas = model.translationSchemas;
+  const duplicateBody = z.strictObject({
+    /** Shared values for the copy. A group merges leaf by leaf. */
+    overrides: patchObject(schemas.update).optional(),
+    ...(translationSchemas
+      ? {
+          /** Localized values per copied locale, merged the same way. */
+          translations: z
+            .record(
+              z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
+              patchObject(translationSchemas.update),
+            )
+            .optional(),
+        }
+      : {}),
+  });
+
+  const duplicateResponse = z.object({
+    /** The copy's identifier - where the AdminCP navigates next. */
+    id: contentIdSchema(definition.idStrategy),
+    /** The copied translations' locales, default locale first. */
+    locales: z.array(z.string()),
+    row: schemas.selectObject,
+    /** Source locales switched off in this install, which the copy does not carry. */
+    skippedLocales: z.array(z.string()),
+    sourceId: contentIdSchema(definition.idStrategy),
+  });
+
+  /**
+   * `POST /{id}/duplicate` - a draft copy of one record, its collections and every
+   * translation, in one transaction. Creating is what it does, so `can_create`
+   * gates it; reading the source is what it needs, so `can_view` is checked too.
+   * Mounted only for a content type with `duplication: { enabled: true }`.
+   */
+  const duplicate = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
+    route: {
+      method: "post",
+      path: "/{id}/duplicate",
+      description: `Duplicate a ${name} as a draft`,
+      request: { params: schemas.params, body: jsonBody(duplicateBody) },
+      responses: {
+        201: jsonResponse(duplicateResponse, `${name} duplicated as a draft`),
+        400: writeRejection("Invalid identifier or overrides"),
+        403: { description: "Missing can_create or can_view" },
+        404: { description: `${name} not found` },
+        409: jsonResponse(
+          z.union([
+            zodContentConflict,
+            zodContentDeliveryConflict,
+            zodContentDuplicateRejection,
+          ]),
+          "No free slug for the copy, or an override collides with another record",
+        ),
+        422: jsonResponse(
+          zodContentDuplicateRejection,
+          "A unique field needs an override",
+        ),
+      },
+    },
+    handler: async c => {
+      const canView = await checkStaffPermission(c, {
+        module,
+        permission: CONTENT_PERMISSIONS.view,
+        plugin: pluginId,
+        type: "admin",
+      });
+      if (!canView) {
+        throw new HTTPException(403, {
+          message: `You do not have permission to view this ${name}.`,
+        });
+      }
+
+      const id = identifier(c);
+      const body = c.req.header("content-type")?.includes("json")
+        ? await readJson(c, duplicateBody)
+        : {};
+      const overrides = body.overrides;
+      const translations = (body as { translations?: Record<string, object> })
+        .translations;
+      const actor = resolveContentActor(c);
+
+      if (editorial) {
+        const outcome = await withHttpErrors(
+          "create",
+          async () =>
+            await duplicationMethods<
+              ContentEditorialDuplicationMethods<TDefinition>
+            >(definition, editorialService(c)).duplicate(id as never, {
+              actor,
+              overrides: overrides as never,
+              translations: translations as never,
+            }),
+          { contentTypeId: definition.id, itemId: id, structured: true },
+        );
+        if (!outcome) throw notFound(definition);
+
+        await contentDuplicateEffects(
+          c,
+          model,
+          { kind: "editorial", outcome: outcome },
+          { actorUserId: actor.userId, pluginId },
+        );
+
+        return c.json(
+          {
+            id: (outcome.row as { id: number }).id,
+            locales: outcome.translations.map(entry => entry.locale),
+            row: outcome.row,
+            skippedLocales: outcome.skippedLocales,
+            sourceId: id,
+          },
+          201,
+        );
+      }
+
+      const result = await withHttpErrors(
+        "create",
+        async () =>
+          await duplicationMethods<ContentDuplicationMethods<TDefinition>>(
+            definition,
+            model.service(c),
+          ).duplicate(id as never, {
+            overrides: overrides as never,
+            translations: translations as never,
+          }),
+        { contentTypeId: definition.id, itemId: id, structured: true },
+      );
+      if (!result) throw notFound(definition);
+
+      await contentDuplicateEffects(
+        c,
+        model,
+        { kind: "plain", result: result },
+        { actorUserId: actor.userId, pluginId },
+      );
+
+      return c.json(
+        {
+          id: (result.row as { id: number }).id,
+          locales: result.translations.map(entry => entry.locale),
+          row: result.row,
+          skippedLocales: result.skippedLocales,
+          sourceId: id,
+        },
+        201,
+      );
     },
   });
 
@@ -1742,6 +1910,9 @@ export const buildContentRoutes = <
     ...(definition.publication.enabled
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
       : []),
+    // Mounted only when the content type opts in, so no other content type gains
+    // an endpoint - or a permission row in the matrix - it does not use.
+    ...(definition.duplication.enabled ? [duplicate] : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
     // Mounted only for a content type that declares a file field, so nothing
     // else gains a binary endpoint it has no use for.

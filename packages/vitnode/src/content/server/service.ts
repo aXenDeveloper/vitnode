@@ -19,6 +19,7 @@ import type {
   ContentDetail,
   ContentFilterInput,
   ContentInnerFieldsOf,
+  ContentLocalizedValues,
   ContentOrderableFieldName,
   ContentReferenceFieldName,
   ContentRelationCollectionName,
@@ -30,7 +31,9 @@ import type {
   ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
+import type { ContentDuplicationMethods } from "./duplicate";
 import type { ContentPickerTarget } from "./references";
+import type { ContentTranslationModel } from "./translation-model";
 
 import { withPagination } from "../../api/lib/with-pagination";
 import {
@@ -54,6 +57,7 @@ import {
   buildContentRepeatableOperations,
   contentCollectionKinds,
 } from "./collection-api";
+import { runContentDuplicate } from "./duplicate";
 import { assertContentFileReferences } from "./files";
 import { findContentLanguage } from "./language-resolver";
 import {
@@ -225,6 +229,9 @@ export interface ContentPublicationMethods<TDefinition> {
 }
 
 export type ContentService<TDefinition> = ContentServiceBase<TDefinition> &
+  (TDefinition extends { duplication: { enabled: true } }
+    ? ContentDuplicationMethods<TDefinition>
+    : Partial<Record<keyof ContentDuplicationMethods<TDefinition>, never>>) &
   (TDefinition extends { publication: { enabled: true } }
     ? ContentPublicationMethods<TDefinition>
     : Partial<Record<keyof ContentPublicationMethods<TDefinition>, never>>);
@@ -316,6 +323,8 @@ export const createContentService = <
   table: PgTableWithColumns<TableConfig>;
   translation?: {
     columns: Record<string, PgColumn>;
+    /** The translation model, which `duplicate` copies every language through. */
+    model?: () => ContentTranslationModel<TDefinition>;
     table: PgTable;
   };
 }): ContentService<TDefinition> => {
@@ -1156,6 +1165,64 @@ export const createContentService = <
     }) as ContentRepeatableMethods<TDefinition, never>;
   }
 
+  // One transaction, through `service.create` and the translation model's own
+  // `create` - the same pipeline every other write takes.
+  const duplicationMethods: ContentDuplicationMethods<TDefinition> = {
+    duplicate: async (sourceId, options = {}) => {
+      const translationModel = translation?.model;
+      const result = await runContentDuplicate(
+        {
+          advanced: store,
+          c,
+          columns,
+          definition,
+          table,
+          translation:
+            translation && translationModel
+              ? {
+                  columns: translation.columns,
+                  model: translationModel,
+                  table: translation.table,
+                }
+              : undefined,
+        },
+        sourceId,
+        options,
+        {
+          base: async (values, tx) =>
+            await service.create(values as ContentCreateInput<TDefinition>, {
+              tx,
+            }),
+          idOf: row => (row as { id: number }).id,
+          translation: async (itemId, locale, values, tx) => {
+            if (!translationModel) {
+              throw new ContentEngineError(
+                "Duplicating a translation needs the translation model.",
+                { contentTypeId },
+              );
+            }
+
+            return await translationModel().create(
+              itemId,
+              locale,
+              values as ContentLocalizedValues<TDefinition>,
+              { tx },
+            );
+          },
+        },
+      );
+
+      return result
+        ? {
+            row: result.base,
+            skippedLocales: result.skippedLocales,
+            sourceId,
+            translations: result.translations,
+          }
+        : null;
+    },
+  };
+
   // `ContentService` resolves its publication half from
   // `TDefinition["publication"]["enabled"]`, which is still a type parameter
   // here - so TypeScript cannot check the object against a branch it has not
@@ -1165,5 +1232,6 @@ export const createContentService = <
   return {
     ...service,
     ...(publication ? publicationMethods : {}),
+    ...(definition.duplication.enabled ? duplicationMethods : {}),
   } as ContentService<TDefinition>;
 };

@@ -374,3 +374,64 @@ export class ContentScheduleError extends ContentEngineError {
 
   readonly code: ContentScheduleCode;
 }
+
+/**
+ * A duplicate could not find a free slug: every candidate is taken, or
+ * concurrent copies kept taking the one it picked.
+ *
+ * Per-request and structured, so the AdminCP can point at the slug field and
+ * ask for an override rather than show a bare 409.
+ */
+export class ContentDuplicateSlugConflict extends ContentEngineError {
+  constructor({
+    contentTypeId,
+    field,
+    locale,
+    slug,
+  }: {
+    contentTypeId: string;
+    field: string;
+    locale: null | string;
+    slug: string;
+  }) {
+    super(
+      locale === null
+        ? `Could not find a free "${field}" for the copy (last tried "${slug}"). Send "${field}" explicitly.`
+        : `Could not find a free "${field}" in "${locale}" for the copy (last tried "${slug}"). Send "${field}" explicitly.`,
+      { contentTypeId },
+    );
+
+    this.name = "ContentDuplicateSlugConflict";
+    this.field = field;
+    this.locale = locale;
+    this.slug = slug;
+  }
+
+  readonly field: string;
+  readonly locale: null | string;
+  readonly slug: string;
+}
+
+/**
+ * A duplicate would copy a unique value onto a second record. Thrown before
+ * anything is written; `fields` are canonical paths (`code`, `seo.handle`).
+ */
+export class ContentDuplicateUniqueRequired extends ContentEngineError {
+  constructor({
+    contentTypeId,
+    fields,
+  }: {
+    contentTypeId: string;
+    fields: string[];
+  }) {
+    super(
+      `A copy needs a new value for ${fields.map(name => `"${name}"`).join(", ")}: ${fields.length === 1 ? "it is" : "they are"} unique, and the source already holds the current one.`,
+      { contentTypeId },
+    );
+
+    this.name = "ContentDuplicateUniqueRequired";
+    this.fields = fields;
+  }
+
+  readonly fields: string[];
+}

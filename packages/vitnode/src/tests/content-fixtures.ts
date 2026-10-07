@@ -641,3 +641,89 @@ export const testFileGalleryContentType = defineContentType({
     list: { columns: ["cover", "title", "status", "updatedAt"] },
   },
 });
+
+/**
+ * Duplication on the widest shape it has to copy: editorial, localized, a
+ * delivery address with redirects, every collection kind and a nullable unique
+ * field. The short `maxLength` on the title is what the suffix trimming is
+ * measured against.
+ */
+export const testDuplicableArticleContentType = defineContentType({
+  id: "test.duplicable-article",
+  tableName: "test_duplicable_articles",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  editorial: { enabled: true },
+  duplication: { enabled: true },
+  fields: {
+    title: field.text({
+      localized: true,
+      required: true,
+      minLength: 1,
+      maxLength: 20,
+    }),
+    slug: field.slug({ localized: true, source: "title" }),
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        description: field.textarea({ nullable: true, maxLength: 200 }),
+      },
+    }),
+    code: field.text({ unique: true, nullable: true, maxLength: 40 }),
+    featured: field.boolean({ defaultValue: false }),
+    startsAt: field.dateTime({ nullable: true }),
+    author: field.user(),
+    reviewers: field.user({ multiple: true, ordered: true }),
+    categories: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => testCategoryContentType,
+    }),
+    cover: field.file({ maxBytes: 5 * 1024 * 1024 }),
+    gallery: field.file({ multiple: true, maxBytes: 5 * 1024 * 1024 }),
+    faq: field.repeatable({
+      fields: {
+        question: field.text({ required: true, maxLength: 200 }),
+        answer: field.textarea({ required: true }),
+      },
+    }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "duplicable-articles",
+    fields: ["id", "title", "slug", "faq.question", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["title", "faq.question"],
+    pathTemplate: "/{locale}/duplicable-articles/{slug}",
+  },
+  delivery: { enabled: true, redirects: { enabled: true } },
+  admin: {
+    titleField: "title",
+    list: { columns: ["status", "updatedAt"] },
+  },
+});
+
+/**
+ * Duplication without editorial or localization: the plain service path, with a
+ * required unique field every copy has to be given a new value for.
+ */
+export const testDuplicableNoteContentType = defineContentType({
+  id: "test.duplicable-note",
+  tableName: "test_duplicable_notes",
+  publication: { enabled: true },
+  duplication: { enabled: true },
+  fields: {
+    title: field.text({ required: true, minLength: 1, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    code: field.text({ required: true, unique: true, maxLength: 40 }),
+  },
+  admin: {
+    titleField: "title",
+    list: { columns: ["title", "status", "updatedAt"] },
+  },
+});

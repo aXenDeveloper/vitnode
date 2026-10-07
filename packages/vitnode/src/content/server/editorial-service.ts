@@ -1,6 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
+  PgTable,
   PgTableWithColumns,
   TableConfig,
 } from "drizzle-orm/pg-core";
@@ -8,6 +9,7 @@ import type { Context } from "hono";
 
 import { and, eq, ne, sql } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type { ContentActor, ContentRevisionOperation } from "../revisions";
 import type { ContentSchemas } from "../schemas";
 import type {
@@ -15,6 +17,7 @@ import type {
   ContentChangedPath,
   ContentCreateInput,
   ContentInnerFieldsOf,
+  ContentLocalizedValues,
   ContentRelationCollectionName,
   ContentRepeatableFieldName,
   ContentRepeatableInputRow,
@@ -25,9 +28,12 @@ import type {
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentDeliveryOutcome } from "./delivery-writes";
+import type { ContentEditorialDuplicationMethods } from "./duplicate";
 import type { ContentRevisionsModel } from "./revisions-model";
 import type { ContentSchedulesModel } from "./schedules-model";
 import type { ContentDatabase } from "./service";
+import type { ContentTranslationEditorialService } from "./translation-editorial-service";
+import type { ContentTranslationModel } from "./translation-model";
 
 import { isContentPubliclyVisible } from "../cache";
 import {
@@ -55,6 +61,7 @@ import {
   applyContentDeliveryWrite,
   contentSlugHistoryFor,
 } from "./delivery-writes";
+import { runContentDuplicate } from "./duplicate";
 import {
   assertContentFileReferences,
   ContentFileReferenceError,
@@ -82,6 +89,8 @@ export interface ContentEditorialOutcome<TDefinition> {
   changedFields: ContentChangedPath<TDefinition>[];
 
   delivery?: ContentDeliveryOutcome;
+  /** Set by `duplicate` on the copy's `create`: the record it was copied from. */
+  duplicatedFromId?: ContentId;
 
   movedTranslations?: number;
   operation: ContentRevisionOperation;
@@ -112,7 +121,15 @@ export interface ContentEditorialPublicationOptions extends ContentEditorialOpti
   expectedVersion?: number;
 }
 
-export interface ContentEditorialService<TDefinition> {
+export type ContentEditorialService<TDefinition> =
+  ContentEditorialServiceBase<TDefinition> &
+    (TDefinition extends { duplication: { enabled: true } }
+      ? ContentEditorialDuplicationMethods<TDefinition>
+      : Partial<
+          Record<keyof ContentEditorialDuplicationMethods<TDefinition>, never>
+        >);
+
+export interface ContentEditorialServiceBase<TDefinition> {
   create: (
     values: ContentCreateInput<TDefinition>,
     options: ContentEditorialOptions,
@@ -231,6 +248,7 @@ export const createContentEditorialService = <
   pluginId,
   schemas: definitionSchemas,
   table,
+  translations,
 }: {
   /** The collection store, or nothing for a content type that declares none. */
   advanced?: ContentAdvancedStore;
@@ -249,6 +267,16 @@ export const createContentEditorialService = <
   pluginId: string;
   schemas: ContentSchemas<TDefinition>;
   table: PgTableWithColumns<TableConfig>;
+  /**
+   * The translation half, for a localized content type: `duplicate` copies every
+   * language through its editorial create, in the copy's transaction.
+   */
+  translations?: {
+    columns: Record<string, PgColumn>;
+    editorial: () => ContentTranslationEditorialService<TDefinition>;
+    model: () => ContentTranslationModel<TDefinition>;
+    table: PgTable;
+  };
 }): ContentEditorialService<TDefinition> => {
   if (!definition.editorial.enabled) {
     throw new ContentEngineError(
@@ -804,7 +832,7 @@ export const createContentEditorialService = <
     }) as ContentEditorialRepeatableMethods<TDefinition, never>;
   }
 
-  const editorial: ContentEditorialService<TDefinition> = {
+  const editorial: ContentEditorialServiceBase<TDefinition> = {
     create: async (values, options) =>
       await transact(options, async tx => {
         const parsed = schemas.create.parse(values) as Record<string, unknown>;
@@ -1096,7 +1124,7 @@ export const createContentEditorialService = <
     relations: mutableRelations,
 
     repeatable:
-      mutableRepeatables as ContentEditorialService<TDefinition>["repeatable"],
+      mutableRepeatables as ContentEditorialServiceBase<TDefinition>["repeatable"],
 
     revisions,
 
@@ -1211,5 +1239,65 @@ export const createContentEditorialService = <
       }),
   };
 
-  return editorial;
+  // The copy goes through `editorial.create` and each language through its own
+  // editorial create, so every one of them starts with its `create` revision.
+  const duplication: ContentEditorialDuplicationMethods<TDefinition> = {
+    duplicate: async (sourceId, options) => {
+      const result = await runContentDuplicate(
+        {
+          advanced: store,
+          c,
+          columns,
+          definition,
+          pluginId,
+          table,
+          translation: translations,
+        },
+        sourceId,
+        options,
+        {
+          base: async (values, tx) =>
+            await editorial.create(values as ContentCreateInput<TDefinition>, {
+              actor: options.actor,
+              tx,
+            }),
+          idOf: outcome => (outcome.row as { id: number }).id,
+          translation: async (itemId, locale, values, tx) => {
+            if (!translations) {
+              throw new ContentEngineError(
+                "Duplicating a translation needs the translation editorial service.",
+                { contentTypeId },
+              );
+            }
+
+            return await translations
+              .editorial()
+              .create(
+                itemId,
+                locale,
+                values as ContentLocalizedValues<TDefinition>,
+                { actor: options.actor, tx },
+              );
+          },
+        },
+      );
+
+      return result
+        ? {
+            ...result.base,
+            duplicatedFromId: sourceId,
+            skippedLocales: result.skippedLocales,
+            sourceId,
+            translations: result.translations,
+          }
+        : null;
+    },
+  };
+
+  // The duplication half is resolved from `TDefinition["duplication"]`, still a
+  // type parameter here; the runtime flag reads the same field.
+  return {
+    ...editorial,
+    ...(definition.duplication.enabled ? duplication : {}),
+  } as ContentEditorialService<TDefinition>;
 };

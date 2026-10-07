@@ -427,3 +427,27 @@ export const CONTENT_TRANSLATION_CONFLICT_CODES = {
 export const CONTENT_UNPROCESSABLE_CODES = {
   notRestorable: "CONTENT_REVISION_NOT_RESTORABLE",
 } as const;
+
+/** Machine-readable reasons a duplicate was refused. */
+export const CONTENT_DUPLICATE_CODES = {
+  /** Every slug candidate was taken, or kept being taken by concurrent writers. 409. */
+  slugConflict: "CONTENT_DUPLICATE_SLUG_CONFLICT",
+  /** A unique field would collide with the source and no override was given. 422. */
+  uniqueRequired: "CONTENT_DUPLICATE_UNIQUE_REQUIRED",
+} as const;
+
+/** How many slug candidates a duplicate considers: `hello-copy`, `hello-copy-2`, ... */
+export const CONTENT_DUPLICATE_SLUG_CANDIDATES = 20;
+
+/** How many writes a duplicate attempts when concurrent writers keep taking its slug. */
+export const CONTENT_DUPLICATE_SLUG_ATTEMPTS = 3;
+
+/** Appended to a copied slug that has no source field to derive a fresh one from. */
+export const CONTENT_DUPLICATE_SLUG_SUFFIX = "copy";
+
+/** The title suffix when no translated message is available. */
+export const CONTENT_DUPLICATE_TITLE_SUFFIX = "(Copy)";
+
+/** The server message holding the localized title suffix. */
+export const CONTENT_DUPLICATE_TITLE_SUFFIX_KEY =
+  "core.content.duplicate.title_suffix";

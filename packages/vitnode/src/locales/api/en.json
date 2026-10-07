@@ -41,6 +41,11 @@
         "test_title": "Notification emails work",
         "test_body": "If you can read this, notification emails from this site reach your inbox. No action needed."
       }
+    },
+    "content": {
+      "duplicate": {
+        "title_suffix": "(Copy)"
+      }
     }
   }
 }
