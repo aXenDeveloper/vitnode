@@ -25,6 +25,7 @@ import type {
   ContentSharedFieldName,
   ContentSystemField,
   ContentTranslationSystemField,
+  ContentVisibilityField,
   HasColumnDefault,
 } from "../types";
 
@@ -98,13 +99,26 @@ type EditorialColumnBuilders<TEditorial extends boolean> =
     ? ContentEditorialColumnBuilders
     : Record<never, never>;
 
+/** `hiddenAt` and `hiddenBy` - added only when visibility is enabled. */
+export interface ContentVisibilityColumnBuilders {
+  hiddenAt: PgTimestampBuilder;
+  hiddenBy: PgIntegerBuilder;
+}
+
+type VisibilityColumnBuilders<TVisibility extends boolean> =
+  TVisibility extends true
+    ? ContentVisibilityColumnBuilders
+    : Record<never, never>;
+
 export type ContentColumnBuilders<
   TFields,
   TPublication extends boolean = false,
   TEditorial extends boolean = false,
+  TVisibility extends boolean = false,
 > = ContentSystemColumnBuilders &
   EditorialColumnBuilders<TEditorial> &
-  PublicationColumnBuilders<TPublication> & {
+  PublicationColumnBuilders<TPublication> &
+  VisibilityColumnBuilders<TVisibility> & {
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
 
@@ -168,10 +182,11 @@ export type ContentTable<
   TFields,
   TPublication extends boolean = false,
   TEditorial extends boolean = false,
+  TVisibility extends boolean = false,
 > = PgTableWithColumns<{
   columns: PgBuildColumns<
     TName,
-    ContentColumnBuilders<TFields, TPublication, TEditorial>
+    ContentColumnBuilders<TFields, TPublication, TEditorial, TVisibility>
   >;
   dialect: "pg";
   name: TName;
@@ -249,7 +264,11 @@ export type ContentTableFor<TDefinition> = TDefinition extends {
       TName,
       ContentStorageFields<SharedFieldsOf<TDefinition>>,
       TPublication,
-      TEditorial
+      TEditorial,
+      // Read on its own rather than inferred beside the other two: a definition
+      // written before `visibility` existed has no such key, and it must keep
+      // resolving to the table it always had.
+      TDefinition extends { visibility: { enabled: true } } ? true : false
     >
   : never;
 
@@ -273,6 +292,9 @@ export type ContentColumnName<TDefinition> =
       : never)
   | (TDefinition extends { publication: { enabled: true } }
       ? ContentPublicationField
+      : never)
+  | (TDefinition extends { visibility: { enabled: true } }
+      ? ContentVisibilityField
       : never);
 
 /**

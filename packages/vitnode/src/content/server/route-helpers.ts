@@ -31,6 +31,23 @@ export const readJson = async <TValue>(
   schema: z.ZodType<TValue>,
 ): Promise<TValue> => schema.parse(await c.req.json());
 
+/**
+ * {@link readJson} for a body the client may leave out entirely - `POST
+ * /{id}/hide` with nothing to say is the same as `{}`. A body that *is* sent is
+ * validated exactly as strictly as any other.
+ */
+export const readOptionalJson = async <TValue>(
+  c: Context,
+  schema: z.ZodType<TValue>,
+): Promise<TValue> => {
+  const contentType = c.req.header("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("json")) return schema.parse({});
+
+  const text = await c.req.text();
+
+  return schema.parse(text.trim() === "" ? {} : JSON.parse(text));
+};
+
 export const jsonBody = (schema: z.ZodType) => ({
   content: { "application/json": { schema } },
 });

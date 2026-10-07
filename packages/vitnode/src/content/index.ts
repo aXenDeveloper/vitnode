@@ -167,6 +167,9 @@ export {
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
   CONTENT_TRANSLATION_TABLE_SUFFIX,
   CONTENT_UNPROCESSABLE_CODES,
+  CONTENT_VISIBILITY_ACTIONS,
+  CONTENT_VISIBILITY_FIELDS,
+  CONTENT_VISIBILITY_FILTERS,
   isContentPublicationStatus,
   isContentSitemapChangeFrequency,
   isFilterableFieldKind,
@@ -483,6 +486,8 @@ export type {
   ContentUpdateInput,
   ContentUserField,
   ContentValuesOf,
+  ContentVisibilityField,
+  ContentVisibilityFilter,
   DeliverableContentTypeDefinition,
   DuplicableContentTypeDefinition,
   EditorialContentTypeDefinition,
@@ -507,3 +512,12 @@ export type {
   SchedulableContentTypeDefinition,
   SearchableContentTypeDefinition,
 } from "./types";
+export {
+  contentVisibilityTransition,
+  hasContentVisibility,
+  isContentHidden,
+} from "./visibility";
+export type {
+  ContentVisibilityAction,
+  ContentVisibilityTransition,
+} from "./visibility";

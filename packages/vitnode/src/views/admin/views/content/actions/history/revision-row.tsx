@@ -37,6 +37,10 @@ const OPERATION_TONES: Record<
     badge: "border-destructive/40 bg-destructive/10 text-destructive",
     dot: "bg-destructive",
   },
+  hide: {
+    badge: "bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground/40",
+  },
   publish: {
     badge: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
     dot: "bg-blue-500",
@@ -45,6 +49,10 @@ const OPERATION_TONES: Record<
     badge:
       "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-400",
     dot: "bg-violet-500",
+  },
+  unhide: {
+    badge: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    dot: "bg-blue-500",
   },
   unpublish: {
     badge: "bg-muted text-muted-foreground",

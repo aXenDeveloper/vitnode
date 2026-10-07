@@ -174,7 +174,9 @@ const named = (
  * 3. every foreign key (`relation`, `user` and `file` fields),
  * 4. `createdAt` and `updatedAt`, which back the default ordering,
  * 5. `(status, publishedAt)` when publication is enabled - one composite index
- *    serving both the published predicate and the default public ordering.
+ *    serving both the published predicate and the default public ordering,
+ * 6. `hiddenBy` when visibility is enabled - the foreign key `ON DELETE SET NULL`
+ *    scans when a user account is deleted.
  *
  * Two entries covering the same columns collapse into one: the first name wins,
  * and the index is unique if *any* of them asked for uniqueness. So declaring
@@ -192,12 +194,14 @@ export const resolveContentIndexes = ({
   fields,
   publication = false,
   tableName,
+  visibility = false,
 }: {
   contentTypeId: string;
   declared: readonly ContentIndexConfig[];
   fields: ContentFieldMap;
   publication?: boolean;
   tableName: string;
+  visibility?: boolean;
 }): ResolvedContentIndex[] => {
   const seenNames = new Map<string, string[]>();
   const seenSignatures = new Set<string>();
@@ -252,6 +256,7 @@ export const resolveContentIndexes = ({
     ...(publication
       ? [named(tableName, { on: ["status", "publishedAt"] })]
       : []),
+    ...(visibility ? [named(tableName, { on: ["hiddenBy"] })] : []),
   ];
 
   const bySignature = new Map<string, ResolvedContentIndex>();

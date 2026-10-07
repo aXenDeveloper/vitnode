@@ -58,6 +58,7 @@ export const isContentRowPublic = (row: object): boolean => {
   const values = row as Record<string, unknown>;
 
   return isContentPubliclyVisible({
+    hiddenAt: toTimestamp(values.hiddenAt),
     publishedAt: toTimestamp(values.publishedAt),
     status: normalize(values.status) || undefined,
   });
@@ -175,6 +176,7 @@ export const contentTranslationSearchDocument = (
 
   const isPublic = isContentTranslationPubliclyVisible({
     base: {
+      hiddenAt: toTimestamp(baseValues.hiddenAt),
       publishedAt: toTimestamp(baseValues.publishedAt),
       status: normalize(baseValues.status) || undefined,
     },

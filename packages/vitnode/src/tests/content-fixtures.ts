@@ -702,3 +702,91 @@ export const testDuplicableNoteContentType = defineContentType({
     list: { columns: ["title", "status", "updatedAt"] },
   },
 });
+
+/**
+ * Record-level hiding on the fullest non-localized shape: editorial history,
+ * previews, scheduling, search and delivery with redirects, so every effect a
+ * hide or an unhide has is exercised by one content type.
+ */
+export const testHideablePostContentType = defineContentType({
+  id: "test.hideable-post",
+  tableName: "test_hideable_posts",
+  publication: true,
+  visibility: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
+  },
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  publicApi: {
+    path: "hideable-posts",
+    fields: ["id", "title", "slug", "excerpt", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["excerpt"],
+    pathTemplate: "/hideable-posts/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+  admin: { titleField: "title" },
+});
+
+/** Hiding on a localized content type: one switch takes every language down. */
+export const testHideableLocalizedContentType = defineContentType({
+  id: "test.hideable-localized",
+  tableName: "test_hideable_localized",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  visibility: true,
+  editorial: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    path: "hideable-localized",
+    fields: ["id", "title", "slug", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/{locale}/hideable/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    hreflang: { xDefault: "defaultLocale" },
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+});
+
+/** Hiding without `editorial`: the plain repository's `hide` and `unhide`. */
+export const testHideableNoteContentType = defineContentType({
+  id: "test.hideable-note",
+  tableName: "test_hideable_notes",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+  },
+  publicApi: {
+    path: "hideable-notes",
+    fields: ["id", "title", "slug", "publishedAt"],
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/hideable-notes/{slug}",
+  },
+});

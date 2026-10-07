@@ -32,6 +32,7 @@ import {
   CONTENT_RELATION_COLLECTION_MAX,
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FILTERS,
   isFilterableFieldKind,
 } from "./const";
 import { zodContentFileDescriptor } from "./files";
@@ -695,6 +696,7 @@ export const buildContentSchemas = <TDefinition>({
   localization = contentLocalizationDisabled(),
   publicApi = DISABLED_PUBLIC_API,
   publication = false,
+  visibility = false,
 }: {
   admin: ResolvedContentAdminConfig;
   advanced?: ResolvedContentAdvancedConfig;
@@ -704,6 +706,8 @@ export const buildContentSchemas = <TDefinition>({
   localization?: ResolvedContentLocalizationConfig;
   publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
+  /** Whether `hiddenAt` / `hiddenBy` exist on the base row. */
+  visibility?: boolean;
 }): ContentSchemas<TDefinition> => {
   // Everything below this line is about the base table, so it reads the shared
   // half only. The localized half gets its own schemas at the bottom.
@@ -734,6 +738,15 @@ export const buildContentSchemas = <TDefinition>({
     ? { version: z.number().int().positive() }
     : {};
 
+  // Read-only as well: `hide` and `unhide` are the only writers. Returned so the
+  // AdminCP can badge a hidden row and say who hid it.
+  const visibilitySelectShape: z.ZodRawShape = visibility
+    ? {
+        hiddenAt: z.date().nullable(),
+        hiddenBy: z.number().int().nullable(),
+      }
+    : {};
+
   const selectShape: z.ZodRawShape = {
     id: z.number(),
     ...Object.fromEntries(
@@ -744,6 +757,7 @@ export const buildContentSchemas = <TDefinition>({
     ),
     ...publicationSelectShape,
     ...editorialSelectShape,
+    ...visibilitySelectShape,
     createdAt: z.date(),
     updatedAt: z.date(),
   };
@@ -808,6 +822,9 @@ export const buildContentSchemas = <TDefinition>({
       ...filterShape(writableFields),
       ...(publication
         ? { status: z.enum(CONTENT_PUBLICATION_STATUSES).optional() }
+        : {}),
+      ...(visibility
+        ? { visibility: z.enum(CONTENT_VISIBILITY_FILTERS).optional() }
         : {}),
     }),
     // The declared form fields, narrowed to the ones this schema describes. A

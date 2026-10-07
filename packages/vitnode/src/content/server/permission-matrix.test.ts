@@ -27,6 +27,8 @@ const kitchenSink = defineContentType({
   tableName: "test_everything",
   localization: { defaultLocale: "en", fallback: "default" },
   publication: true,
+  // So `hide` and `unhide` are audited with everything else.
+  visibility: true,
   editorial: {
     revisions: { retention: 10 },
     preview: { expiresInMinutes: 30 },
@@ -230,6 +232,9 @@ describe("the generated permission matrix", () => {
     // like the plain one - it writes the same base row, plus the default
     // translation the engine has always required alongside it.
     "POST /localized": "can_create",
+    // Its own permission rather than `can_publish`: taking a record off the
+    // site is a moderation decision a site may grant on its own.
+    "POST /{id}/hide": "can_hide",
     "POST /{id}/preview": "can_view",
     "POST /{id}/publish": "can_publish",
     "POST /{id}/revisions/{revisionId}/restore": "can_restore",
@@ -243,6 +248,7 @@ describe("the generated permission matrix", () => {
     "POST /{id}/translations/{locale}/revisions/{revisionId}/restore":
       "can_restore",
     "POST /{id}/translations/{locale}/unpublish": "can_publish",
+    "POST /{id}/unhide": "can_hide",
     "POST /{id}/unpublish": "can_publish",
     "PUT /{id}": "can_edit",
     // The composite save. One check for the shared half and every language,

@@ -11,6 +11,7 @@ import {
   claimContentSchedule,
   settleContentSchedule,
 } from "@/content/server/schedules-model";
+import { isContentBaseRowPublic } from "@/content/server/visibility";
 
 /** What the run decided, so the task logs something worth reading. */
 export interface ContentScheduleOutcome {
@@ -50,10 +51,13 @@ const slugOf = (
  *
  * `wasPublic` is derived rather than read back: the transition guards on the
  * state it is leaving (`status <> 'published'` to publish, `= 'published'` to
- * unpublish), so a *changed* publish came from a non-public row and a changed
- * unpublish from a public one. That removes the extra `SELECT` the old code did
- * outside the lock, and removes with it the window where the answer could have
- * been someone else's write.
+ * unpublish), so a *changed* publish came from a draft and a changed unpublish
+ * from a published row - and everything else on the row, `hiddenAt` included, is
+ * exactly what it was, because a transition writes nothing but `status`. So the
+ * before-state is the returned row with its status flipped back, and a hidden
+ * record reports "not public" on both sides. That removes the extra `SELECT` the
+ * old code did outside the lock, and removes with it the window where the answer
+ * could have been someone else's write.
  */
 const effectsPayload = ({
   claimed,
@@ -89,7 +93,10 @@ const effectsPayload = ({
     scheduleId: claimed.id,
     scheduledBy: claimed.createdBy,
     version: outcome.version,
-    wasPublic: claimed.action === "unpublish",
+    wasPublic: isContentBaseRowPublic({
+      ...row,
+      status: claimed.action === "unpublish" ? "published" : "draft",
+    }),
   };
 };
 

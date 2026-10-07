@@ -1,4 +1,5 @@
 import type { ContentPublicationAction } from "@/content/publication";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
@@ -122,6 +123,35 @@ export const duplicateContentInBrowser = async ({
 
   return { duplicated, id: duplicated.id, status: response.status };
 };
+
+/**
+ * Hides or unhides one record from the table.
+ *
+ * Idempotent on the server, like publishing: hiding a record that is already
+ * hidden is a `200` that changed nothing, so a stale row resolves itself.
+ * `expectedVersion` is optional and only checked by an editorial content type -
+ * send the version the row was rendered with when a `409` should stop the click
+ * on a record somebody else just changed. Gated by `can_hide`.
+ */
+export const setContentVisibilityInBrowser = async ({
+  action,
+  expectedVersion,
+  id,
+  target,
+}: ContentRowMutationArgs & {
+  /** The transition to perform, from `contentVisibilityTransition`. */
+  action: ContentVisibilityAction;
+  expectedVersion?: number;
+}): Promise<ContentRowMutationResult> =>
+  await readResult(
+    async () =>
+      await contentApiFetch({
+        ...(expectedVersion === undefined ? {} : { body: { expectedVersion } }),
+        method: "post",
+        path: `/${id}/${action}`,
+        target,
+      }),
+  );
 
 /**
  * Deletes one record.
