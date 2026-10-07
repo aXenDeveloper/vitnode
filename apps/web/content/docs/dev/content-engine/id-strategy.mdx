@@ -39,7 +39,7 @@ Choose by what the ids are for:
 
 A JavaScript number holds integers exactly only up to 2^53 − 1 (`9007199254740991`). A bigint key can be much larger, and a larger id read as a number is silently rounded to a different record. VitNode never converts a bigint id through `Number`: Drizzle reads the column in `string` mode, and every API, event, cursor and AdminCP URL carries the exact decimal string.
 
-The example plugin's `example.event` uses bigint. Its demo record has an id above 2^53, and the public API returns it intact:
+The example plugin's `example.event` uses bigint. Once its id sequence is past 2^53 (in this example it was moved there with `SELECT setval(pg_get_serial_sequence('example_events', 'id'), 9007199254740993)`), the public API still returns every id intact:
 
 ```bash
 curl "http://localhost:3000/api/@vitnode/example/content/events/big-launch"
@@ -55,7 +55,7 @@ curl "http://localhost:3000/api/@vitnode/example/content/events/big-launch"
 }
 ```
 
-`primaryTag` and `tags` point at `example.tag` records, so they carry UUIDs. Keep bigint ids as strings in your own code too. `Number("9007199254740994")` already gives the wrong record.
+`primaryTag` and `tags` point at `example.tag` records, so they carry UUIDs. Keep bigint ids as strings in your own code too: `Number("9007199254740993")` is `9007199254740992`, a different record.
 
 ## Valid ids
 
@@ -71,7 +71,7 @@ Each record has exactly one spelling, so one record is never cached or indexed u
 
 ## Where ids appear
 
-Every Content Engine feature works with all three strategies: the public API, the AdminCP (`/admin/content/example/event/9007199254740994/edit`), delivery and sitemaps, previews, schedules, revisions, events, search, pagination cursors, pickers, [duplicate](/docs/dev/content-engine/duplicate-content) and [hide](/docs/dev/content-engine/content-visibility).
+Every Content Engine feature works with all three strategies: the public API, the AdminCP (lists, editors, pickers and edit links carry the uuid or the decimal string), delivery and sitemaps, previews, schedules, revisions, events, search, pagination cursors, pickers, [duplicate](/docs/dev/content-engine/duplicate-content) and [hide](/docs/dev/content-engine/content-visibility).
 
 - **Relations** use the key type of the record they point at. A bigint event that links to uuid tags gets a `uuid` foreign key and a `bigint`-to-`uuid` junction table. See [relations across strategies](/docs/dev/content-engine/relations-and-advanced-modeling#relations-across-id-strategies).
 - **Shared tables** that reference records of any content type (revisions, schedules, slug history and the search index) store the id as text in a `varchar(64)` `itemId` column. See [Database and migrations](/docs/dev/content-engine/database-and-migrations#ids-and-shared-tables).
