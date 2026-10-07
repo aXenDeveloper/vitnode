@@ -2,12 +2,12 @@ import type { Context } from "hono";
 
 import { isIP } from "node:net";
 
+import { CONFIG } from "@/lib/config";
 import {
   FORWARDED_SIGNATURE_HEADER,
   resolveForwardedIpSecret,
   verifyForwardedFor,
 } from "@/lib/fetcher/forwarded-signature.server";
-import { CONFIG } from "@/lib/config";
 import {
   FORWARDED_IP_FALLBACK,
   resolveVisitorIp,

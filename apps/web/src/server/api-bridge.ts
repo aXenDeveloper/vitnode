@@ -9,10 +9,7 @@ export type ApiBridge = (
 ) => Promise<Response> | Response
 
 interface FetchableApp {
-  fetch: (
-    request: Request,
-    env?: ApiBridgeEnv,
-  ) => Promise<Response> | Response
+  fetch: (request: Request, env?: ApiBridgeEnv) => Promise<Response> | Response
 }
 
 export const createApiBridge =

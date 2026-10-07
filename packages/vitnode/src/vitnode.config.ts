@@ -119,7 +119,13 @@ export interface VitNodeApiConfig {
   metadata: VitNodeMetadata;
   notifications?: Partial<NotificationWorkerSettings>;
   plugins: BuildPluginApiReturn[];
-  rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
+  rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix"> & {
+    /**
+     * Separate, smaller budget for sign-in, sign-up, password reset and passkey
+     * sign-in. Defaults to 10 requests per 60 seconds per address.
+     */
+    auth?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
+  };
 
   redis?: CacheConfig;
 
