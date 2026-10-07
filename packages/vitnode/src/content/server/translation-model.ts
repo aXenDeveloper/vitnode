@@ -4,6 +4,7 @@ import type { Context } from "hono";
 
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 
+import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentTranslationSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
@@ -86,19 +87,19 @@ export interface ContentTranslationTransitionResult<TDefinition> {
 
 export interface ContentTranslationModel<TDefinition> {
   create: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     values: ContentLocalizedValues<TDefinition>,
     options?: ContentTranslationCreateOptions,
   ) => Promise<ContentTranslationRow<TDefinition>>;
 
   delete: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options: ContentTranslationWriteOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
   exists: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<boolean>;
@@ -108,7 +109,7 @@ export interface ContentTranslationModel<TDefinition> {
    * has `visibility`, because a hidden record is public in no language.
    */
   findBasePublication: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,
   ) => Promise<null | {
     hiddenAt?: Date | null;
@@ -116,39 +117,39 @@ export interface ContentTranslationModel<TDefinition> {
     status: string | undefined;
   }>;
   findByLanguageId: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     languageId: number,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
   findByLocale: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
 
   findManyByLanguageId: (
-    itemIds: readonly number[],
+    itemIds: readonly ContentIdOf<TDefinition>[],
     languageId: number,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
   /** Metadata for every translation of one record, without the values. */
   findManyForItem: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationMeta<TDefinition>[]>;
 
   findManyRowsForItem: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
 
   findManyRowsForItems: (
-    itemIds: readonly number[],
+    itemIds: readonly ContentIdOf<TDefinition>[],
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
 
   publish: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationTransitionOptions,
   ) => Promise<ContentTranslationTransitionResult<TDefinition> | null>;
@@ -163,13 +164,13 @@ export interface ContentTranslationModel<TDefinition> {
   ) => Promise<ContentLanguage>;
 
   unpublish: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationTransitionOptions,
   ) => Promise<ContentTranslationTransitionResult<TDefinition> | null>;
   /** Conditional `UPDATE` guarded by `expectedVersion`. A no-op writes nothing. */
   update: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     values: ContentLocalizedUpdateValues<TDefinition>,
     options: ContentTranslationWriteOptions,
@@ -299,7 +300,7 @@ export const createContentTranslationModel = <
     ({
       ...publicationOf(row),
       createdAt: row.createdAt as Date,
-      itemId: row.itemId as number,
+      itemId: row.itemId as ContentId,
       languageId: row.languageId as number,
       locale,
       updatedAt: row.updatedAt as Date,
@@ -325,7 +326,7 @@ export const createContentTranslationModel = <
     typeof row.version === "number" ? row.version : 1;
 
   const readOne = async (
-    itemId: number,
+    itemId: ContentId,
     languageId: number,
     database: ContentDatabase,
   ): Promise<null | Record<string, unknown>> => {
@@ -350,7 +351,7 @@ export const createContentTranslationModel = <
   };
 
   const transition = async (
-    itemId: number,
+    itemId: ContentId,
     locale: string,
     options: ContentTranslationTransitionOptions,
     {
@@ -418,7 +419,7 @@ export const createContentTranslationModel = <
   };
 
   const assertItemExists = async (
-    itemId: number,
+    itemId: ContentId,
     database: ContentDatabase,
   ): Promise<void> => {
     const [row] = await database

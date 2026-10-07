@@ -189,7 +189,12 @@ export const buildFilterCondition = ({
     // table rather than an equality against something that does not exist.
     if (fieldValue && isContentReferenceCollection(fieldValue)) {
       const filter = raw as ContentRelationFilter;
-      if (typeof filter?.contains !== "number") {
+      // A number or a string: which one is right is the target's strategy, and
+      // the membership condition checks it against that.
+      if (
+        typeof filter?.contains !== "number" &&
+        typeof filter?.contains !== "string"
+      ) {
         throw new ContentEngineError(
           `Filter "${name}" is a to-many relation, which takes \`{ contains: <id> }\` rather than a value.`,
           { contentTypeId },

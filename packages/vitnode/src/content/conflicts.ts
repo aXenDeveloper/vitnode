@@ -21,18 +21,27 @@ export type ContentTranslationConflictCode =
 export type ContentUnprocessableCode =
   (typeof CONTENT_UNPROCESSABLE_CODES)[keyof typeof CONTENT_UNPROCESSABLE_CODES];
 
+/**
+ * A record identifier in an error body: a number for a `serial` record, the
+ * canonical string for a `uuid` or `bigint` one.
+ */
+export const zodContentItemId = z.union([
+  z.number().int(),
+  z.string().min(1).max(64),
+]);
+
 export const zodContentConflict = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_CONFLICT_CODES.version),
     contentTypeId: z.string(),
     currentVersion: z.number().int(),
     expectedVersion: z.number().int(),
-    itemId: z.number().int(),
+    itemId: zodContentItemId,
   }),
   z.object({
     code: z.literal(CONTENT_CONFLICT_CODES.unique),
     contentTypeId: z.string(),
-    itemId: z.number().int().nullable(),
+    itemId: zodContentItemId.nullable(),
   }),
 ]);
 
@@ -44,19 +53,19 @@ export const zodContentTranslationConflict = z.discriminatedUnion("code", [
     contentTypeId: z.string(),
     currentVersion: z.number().int(),
     expectedVersion: z.number().int(),
-    itemId: z.number().int(),
+    itemId: zodContentItemId,
     locale: z.string(),
   }),
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.defaultRequired),
     contentTypeId: z.string(),
-    itemId: z.number().int(),
+    itemId: zodContentItemId,
     locale: z.string(),
   }),
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.exists),
     contentTypeId: z.string(),
-    itemId: z.number().int(),
+    itemId: zodContentItemId,
     locale: z.string(),
   }),
   z.object({
@@ -67,7 +76,7 @@ export const zodContentTranslationConflict = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.unique),
     contentTypeId: z.string(),
-    itemId: z.number().int().nullable(),
+    itemId: zodContentItemId.nullable(),
     locale: z.string(),
   }),
 ]);

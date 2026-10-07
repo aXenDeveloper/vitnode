@@ -134,8 +134,7 @@ const ContentListTable = ({
     (copy: ContentDuplicatedRecord) => {
       if (definition.admin.edit.mode === "page") {
         void routerNavigate({
-          // The AdminCP's hrefs are still number-typed; a serial id is one.
-          to: contentEditHref(definition, copy.id as number),
+          to: contentEditHref(definition, copy.id),
         });
 
         return;

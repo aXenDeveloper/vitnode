@@ -3,6 +3,8 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
+import type { ContentId } from "@/content/ids";
+
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -19,7 +21,7 @@ const PreviewLink = ({
   id,
 }: {
   contentTypeId: string;
-  id: number;
+  id: ContentId;
 }) => {
   const t = useTranslations("core.content.preview");
   const tErrors = useTranslations("core.global.errors");
@@ -114,7 +116,7 @@ export const PreviewContentPanel = ({
   ...panel
 }: ContentPanelProps & {
   contentTypeId: string;
-  id: number;
+  id: ContentId;
   title: string;
 }) => {
   const t = useTranslations("core.content.preview");

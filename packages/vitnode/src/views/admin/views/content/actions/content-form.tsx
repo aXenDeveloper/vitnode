@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "use-intl";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFileFieldValue } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentFormLayout } from "@/lib/plugin";
 
@@ -50,7 +51,7 @@ import { useInvalidateContentOptions } from "../lib/options-query";
 import { ConflictNotice } from "./conflict-notice";
 
 export interface ContentFormProps {
-  data?: Record<string, unknown> & { id: number };
+  data?: Record<string, unknown> & { id: ContentId };
   fieldOverrides?: Record<
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
@@ -58,7 +59,7 @@ export interface ContentFormProps {
   fieldSkeletons?: ContentFormSkeletonOverrides;
   header?: ContentFormHeaderValue;
   layout?: ContentFormLayout;
-  onCreated?: (id: number) => void;
+  onCreated?: (id: ContentId) => void;
   presentation?: "dialog" | "page";
   publication?: boolean;
   singular: string;

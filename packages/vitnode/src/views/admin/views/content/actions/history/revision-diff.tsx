@@ -67,10 +67,13 @@ const Value = ({
   }
 
   if (Array.isArray(value)) {
-    if (typeof value[0] === "number") {
+    // A list of identifiers: numbers for users, files and serial targets,
+    // canonical strings for `uuid` and `bigint` targets. Anything else in an
+    // array is a repeatable's rows.
+    if (typeof value[0] === "number" || typeof value[0] === "string") {
       return (
         <span>
-          {(value as number[])
+          {(value as (number | string)[])
             .map(id => labels[String(id)] ?? `#${id}`)
             .join(", ")}
         </span>

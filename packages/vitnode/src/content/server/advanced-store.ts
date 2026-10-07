@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
+import type { ContentId, ContentIdStrategy } from "../ids";
 import type { AnyContentTypeDefinition, ContentRelationFilter } from "../types";
 import type { ContentDatabase } from "./service";
 import type { ContentAdvancedTables } from "./types";
@@ -22,6 +23,13 @@ import {
 } from "../const";
 import { ContentAdvancedInputError, ContentEngineError } from "../errors";
 import {
+  compareContentIds,
+  contentIdKey,
+  contentRelationStrategy,
+  parseContentId,
+  requireContentId,
+} from "../ids";
+import {
   asContentReferenceCollection,
   contentInnerFields,
   isContentCollectionField,
@@ -31,10 +39,20 @@ import { toColumnValues } from "./query";
 /** One repeatable child, as it is written back. */
 type ChildValues = Record<string, unknown>;
 
+/**
+ * The collection half of every content record: junction rows and repeatable
+ * children.
+ *
+ * Owner ids are the content type's own (`ContentId` in its canonical form - a
+ * number for `serial`, a string for `uuid` and `bigint`); a relation's target
+ * ids follow the *target's* strategy; a user or file id is a number; and a
+ * repeatable child's own id is always a `serial` number. `loadMany` keys its
+ * map by the canonical owner id, exactly as the base row's `id` reads.
+ */
 export interface ContentAdvancedStore {
   diff: (
     tx: ContentDatabase,
-    itemId: number,
+    itemId: ContentId,
     patch: Record<string, unknown>,
   ) => Promise<string[]>;
   /** Whether the content type declares any advanced collection at all. */
@@ -43,16 +61,16 @@ export interface ContentAdvancedStore {
   readonly fields: string[];
 
   load: (
-    itemId: number,
+    itemId: ContentId,
     database: ContentDatabase,
     only?: readonly string[],
   ) => Promise<Record<string, unknown>>;
 
   loadMany: (
-    itemIds: readonly number[],
+    itemIds: readonly ContentId[],
     database: ContentDatabase,
     only?: readonly string[],
-  ) => Promise<Map<number, Record<string, unknown>>>;
+  ) => Promise<Map<ContentId, Record<string, unknown>>>;
 
   membershipCondition: (
     field: string,
@@ -61,10 +79,10 @@ export interface ContentAdvancedStore {
 
   prepareRestore: (
     tx: ContentDatabase,
-    itemId: number,
+    itemId: ContentId,
     patch: Record<string, unknown>,
   ) => Promise<{
-    missingRelations: { field: string; ids: number[] }[];
+    missingRelations: { field: string; ids: ContentId[] }[];
     patch: Record<string, unknown>;
   }>;
 
@@ -72,7 +90,7 @@ export interface ContentAdvancedStore {
   /** Applies a patch's collection half. Returns the fields that moved. */
   write: (
     tx: ContentDatabase,
-    itemId: number,
+    itemId: ContentId,
     patch: Record<string, unknown>,
   ) => Promise<string[]>;
 }
@@ -80,20 +98,31 @@ export interface ContentAdvancedStore {
 /** The row shape a relation's junction table holds, in write order. */
 interface JunctionRow {
   createdAt?: Date;
-  relatedItemId: number;
+  relatedItemId: ContentId;
 }
 
 const sameJunction = (
   current: readonly JunctionRow[],
-  desired: readonly number[],
+  desired: readonly ContentId[],
 ): boolean =>
   current.length === desired.length &&
-  current.every((row, index) => row.relatedItemId === desired[index]);
+  current.every(
+    (row, index) =>
+      contentIdKey(row.relatedItemId) === contentIdKey(desired[index]),
+  );
 
+/**
+ * An unordered collection is stored in the order Postgres sorts its key in:
+ * numerically for `serial` and `bigint`, lexically for `uuid`.
+ */
 const normalizeTargets = (
-  ids: readonly number[],
+  ids: readonly ContentId[],
   ordered: boolean,
-): number[] => (ordered ? [...ids] : [...ids].sort((a, b) => a - b));
+  strategy: ContentIdStrategy,
+): ContentId[] =>
+  ordered
+    ? [...ids]
+    : [...ids].sort((a, b) => compareContentIds(strategy, a, b));
 
 const sameChildValues = (
   leaves: readonly string[],
@@ -132,6 +161,44 @@ export const createContentAdvancedStore = <
     isContentCollectionField(fields[name]),
   );
   const baseColumns = table as unknown as Record<string, PgColumn>;
+
+  /** An owner id in its canonical form - what the base row's `id` reads as. */
+  const ownerId = (value: unknown): ContentId =>
+    requireContentId(definition.idStrategy, value, contentTypeId);
+
+  /** The id strategy a collection's targets follow. Users and files are serial. */
+  const targetStrategies = new Map<string, ContentIdStrategy>();
+  const targetStrategy = (field: string): ContentIdStrategy => {
+    const cached = targetStrategies.get(field);
+    if (cached) return cached;
+
+    const fieldValue = fields[field];
+    const strategy =
+      fieldValue.kind === "relation"
+        ? contentRelationStrategy(definition, fieldValue)
+        : "serial";
+    targetStrategies.set(field, strategy);
+
+    return strategy;
+  };
+
+  /** A target id read back from a junction, in the target's canonical form. */
+  const targetId = (field: string, value: unknown): ContentId =>
+    requireContentId(targetStrategy(field), value, contentTypeId);
+
+  /** The canonical ids of a caller's list; anything unparseable is dropped. */
+  const targetIds = (
+    field: string,
+    values: readonly unknown[],
+  ): ContentId[] => {
+    const ids: ContentId[] = [];
+    for (const value of values) {
+      const parsed = parseContentId(targetStrategy(field), value);
+      if (parsed !== null) ids.push(parsed);
+    }
+
+    return ids;
+  };
 
   const junctionOf = (
     field: string,
@@ -185,7 +252,7 @@ export const createContentAdvancedStore = <
   const assertTargetsExist = async (
     tx: ContentDatabase,
     field: string,
-    ids: readonly number[],
+    ids: readonly ContentId[],
   ): Promise<void> => {
     if (ids.length === 0) return;
 
@@ -197,8 +264,10 @@ export const createContentAdvancedStore = <
       .from(getColumnTable(target))
       .where(inArray(target, [...ids]));
 
-    const found = new Set(rows.map(row => Number(row.id)));
-    const missing = ids.filter(id => !found.has(id));
+    const found = new Set(
+      rows.map(row => contentIdKey(targetId(field, row.id))),
+    );
+    const missing = ids.filter(id => !found.has(contentIdKey(id)));
     if (missing.length === 0) return;
 
     // The noun follows the kind, because the two mean different things to
@@ -224,13 +293,17 @@ export const createContentAdvancedStore = <
     });
   };
 
+  /**
+   * Junction rows per owner, keyed by storage key so a caller's `7` and the
+   * driver's `7` - or a bigint and its digits - always meet.
+   */
   const readJunction = async (
     field: string,
-    itemIds: readonly number[],
+    itemIds: readonly ContentId[],
     database: ContentDatabase,
-  ): Promise<Map<number, JunctionRow[]>> => {
+  ): Promise<Map<string, JunctionRow[]>> => {
     const junction = junctionOf(field);
-    const result = new Map<number, JunctionRow[]>();
+    const result = new Map<string, JunctionRow[]>();
     if (!junction || itemIds.length === 0) return result;
 
     const rows = await database
@@ -244,13 +317,13 @@ export const createContentAdvancedStore = <
       .orderBy(asc(junction.columns.itemId), asc(junction.columns.position));
 
     for (const row of rows) {
-      const itemId = Number(row.itemId);
-      const list = result.get(itemId) ?? [];
+      const itemKey = contentIdKey(ownerId(row.itemId));
+      const list = result.get(itemKey) ?? [];
       list.push({
         createdAt: row.createdAt instanceof Date ? row.createdAt : undefined,
-        relatedItemId: Number(row.relatedItemId),
+        relatedItemId: targetId(field, row.relatedItemId),
       });
-      result.set(itemId, list);
+      result.set(itemKey, list);
     }
 
     return result;
@@ -258,11 +331,11 @@ export const createContentAdvancedStore = <
 
   const readChildren = async (
     field: string,
-    itemIds: readonly number[],
+    itemIds: readonly ContentId[],
     database: ContentDatabase,
-  ): Promise<Map<number, ChildValues[]>> => {
+  ): Promise<Map<string, ChildValues[]>> => {
     const child = childOf(field);
-    const result = new Map<number, ChildValues[]>();
+    const result = new Map<string, ChildValues[]>();
     if (!child || itemIds.length === 0) return result;
 
     const leaves = leafNamesOf(field);
@@ -278,13 +351,14 @@ export const createContentAdvancedStore = <
 
     for (const row of rows) {
       const values = row as ChildValues;
-      const itemId = Number(values.itemId);
-      const list = result.get(itemId) ?? [];
+      const itemKey = contentIdKey(ownerId(values.itemId));
+      const list = result.get(itemKey) ?? [];
       list.push({
+        // A child's own id is serial whatever the owner's strategy.
         id: Number(values.id),
         ...Object.fromEntries(leaves.map(leaf => [leaf, values[leaf]])),
       });
-      result.set(itemId, list);
+      result.set(itemKey, list);
     }
 
     return result;
@@ -303,7 +377,7 @@ export const createContentAdvancedStore = <
   const settlePositions = async (
     tx: ContentDatabase,
     target: { columns: Record<string, PgColumn>; table: PgTable },
-    itemId: number,
+    itemId: ContentId,
   ): Promise<void> => {
     await tx
       .update(target.table)
@@ -317,16 +391,17 @@ export const createContentAdvancedStore = <
   const writeRelation = async (
     tx: ContentDatabase,
     field: string,
-    itemId: number,
-    desired: readonly number[],
+    itemId: ContentId,
+    desired: readonly ContentId[],
   ): Promise<void> => {
     const junction = junctionOf(field);
     if (!junction) return;
 
-    const current = (await readJunction(field, [itemId], tx)).get(itemId) ?? [];
-    const keep = new Set(desired);
+    const current =
+      (await readJunction(field, [itemId], tx)).get(contentIdKey(itemId)) ?? [];
+    const keep = new Set(desired.map(contentIdKey));
     const removed = current
-      .filter(row => !keep.has(row.relatedItemId))
+      .filter(row => !keep.has(contentIdKey(row.relatedItemId)))
       .map(row => row.relatedItemId);
 
     if (removed.length > 0) {
@@ -342,12 +417,12 @@ export const createContentAdvancedStore = <
 
     const existing = new Set(
       current
-        .filter(row => keep.has(row.relatedItemId))
-        .map(row => row.relatedItemId),
+        .filter(row => keep.has(contentIdKey(row.relatedItemId)))
+        .map(row => contentIdKey(row.relatedItemId)),
     );
 
     for (const [index, relatedItemId] of desired.entries()) {
-      if (!existing.has(relatedItemId)) continue;
+      if (!existing.has(contentIdKey(relatedItemId))) continue;
 
       await tx
         .update(junction.table)
@@ -362,7 +437,7 @@ export const createContentAdvancedStore = <
 
     const inserted = desired
       .map((relatedItemId, index) => ({ index, relatedItemId }))
-      .filter(entry => !existing.has(entry.relatedItemId));
+      .filter(entry => !existing.has(contentIdKey(entry.relatedItemId)));
 
     if (inserted.length > 0) {
       await tx.insert(junction.table).values(
@@ -380,7 +455,7 @@ export const createContentAdvancedStore = <
   const writeRepeatable = async (
     tx: ContentDatabase,
     field: string,
-    itemId: number,
+    itemId: ContentId,
     desired: readonly ChildValues[],
   ): Promise<void> => {
     const child = childOf(field);
@@ -388,7 +463,8 @@ export const createContentAdvancedStore = <
 
     const leaves = leafNamesOf(field);
     const inner = contentInnerFields(fields[field]);
-    const current = (await readChildren(field, [itemId], tx)).get(itemId) ?? [];
+    const current =
+      (await readChildren(field, [itemId], tx)).get(contentIdKey(itemId)) ?? [];
     const currentIds = new Set(current.map(row => Number(row.id)));
 
     // A child id the caller sent that does not belong to this record is a
@@ -447,7 +523,7 @@ export const createContentAdvancedStore = <
 
   const plan = async (
     tx: ContentDatabase,
-    itemId: number,
+    itemId: ContentId,
     patch: Record<string, unknown>,
   ): Promise<
     { desired: unknown; field: string; kind: "relation" | "repeatable" }[]
@@ -466,9 +542,14 @@ export const createContentAdvancedStore = <
       if (relation) {
         if (!Array.isArray(value)) continue;
 
-        const desired = normalizeTargets(value as number[], relation.ordered);
+        const desired = normalizeTargets(
+          targetIds(field, value),
+          relation.ordered,
+          targetStrategy(field),
+        );
         const current =
-          (await readJunction(field, [itemId], tx)).get(itemId) ?? [];
+          (await readJunction(field, [itemId], tx)).get(contentIdKey(itemId)) ??
+          [];
 
         if (sameJunction(current, desired)) continue;
 
@@ -481,7 +562,8 @@ export const createContentAdvancedStore = <
 
       const desired = value as ChildValues[];
       const current =
-        (await readChildren(field, [itemId], tx)).get(itemId) ?? [];
+        (await readChildren(field, [itemId], tx)).get(contentIdKey(itemId)) ??
+        [];
       const leaves = leafNamesOf(field);
 
       const unchanged =
@@ -537,17 +619,19 @@ export const createContentAdvancedStore = <
     fields: collectionNames,
 
     load: async (itemId, database, only) => {
+      const itemKey = contentIdKey(itemId);
       const loaded = await Promise.all(
         selected(only).map(async field => {
           if (tables.junctions[field]) {
             const rows =
-              (await readJunction(field, [itemId], database)).get(itemId) ?? [];
+              (await readJunction(field, [itemId], database)).get(itemKey) ??
+              [];
 
             return [field, rows.map(row => row.relatedItemId)] as const;
           }
 
           const rows =
-            (await readChildren(field, [itemId], database)).get(itemId) ?? [];
+            (await readChildren(field, [itemId], database)).get(itemKey) ?? [];
 
           return [field, rows] as const;
         }),
@@ -558,20 +642,21 @@ export const createContentAdvancedStore = <
 
     loadMany: async (itemIds, database, only) => {
       const wanted = selected(only);
-      const result = new Map<number, Record<string, unknown>>();
+      // Keyed by the caller's own (canonical) ids, read through storage keys.
+      const result = new Map<ContentId, Record<string, unknown>>();
+      const byKey = new Map<string, Record<string, unknown>>();
       for (const itemId of itemIds) {
-        result.set(
-          itemId,
-          Object.fromEntries(wanted.map(field => [field, []])),
-        );
+        const entry = Object.fromEntries(wanted.map(field => [field, []]));
+        result.set(itemId, entry);
+        byKey.set(contentIdKey(itemId), entry);
       }
       if (itemIds.length === 0) return result;
 
       for (const field of wanted) {
         if (tables.junctions[field]) {
           const rows = await readJunction(field, itemIds, database);
-          for (const [itemId, list] of rows) {
-            const entry = result.get(itemId);
+          for (const [itemKey, list] of rows) {
+            const entry = byKey.get(itemKey);
             if (!entry) continue;
             entry[field] = list.map(row => row.relatedItemId);
           }
@@ -579,8 +664,8 @@ export const createContentAdvancedStore = <
         }
 
         const rows = await readChildren(field, itemIds, database);
-        for (const [itemId, list] of rows) {
-          const entry = result.get(itemId);
+        for (const [itemKey, list] of rows) {
+          const entry = byKey.get(itemKey);
           if (!entry) continue;
           entry[field] = list;
         }
@@ -591,14 +676,14 @@ export const createContentAdvancedStore = <
 
     prepareRestore: async (tx, itemId, patch) => {
       const prepared: Record<string, unknown> = { ...patch };
-      const missingRelations: { field: string; ids: number[] }[] = [];
+      const missingRelations: { field: string; ids: ContentId[] }[] = [];
 
       for (const field of collectionNames) {
         const value = prepared[field];
         if (!Array.isArray(value)) continue;
 
         if (tables.junctions[field]) {
-          const ids = (value as number[]).filter(id => Number.isInteger(id));
+          const ids = targetIds(field, value);
           const target = relationTargetColumn(field);
           if (!target || ids.length === 0) continue;
 
@@ -606,8 +691,10 @@ export const createContentAdvancedStore = <
             .select({ id: target })
             .from(getColumnTable(target))
             .where(inArray(target, ids));
-          const found = new Set(rows.map(row => Number(row.id)));
-          const missing = ids.filter(id => !found.has(id));
+          const found = new Set(
+            rows.map(row => contentIdKey(targetId(field, row.id))),
+          );
+          const missing = ids.filter(id => !found.has(contentIdKey(id)));
 
           if (missing.length > 0)
             missingRelations.push({ field, ids: missing });
@@ -618,7 +705,8 @@ export const createContentAdvancedStore = <
         // dropping `id` is exactly the "create a new one" branch of the write
         // protocol, so the entry comes back with its values and a fresh id.
         const current =
-          (await readChildren(field, [itemId], tx)).get(itemId) ?? [];
+          (await readChildren(field, [itemId], tx)).get(contentIdKey(itemId)) ??
+          [];
         const known = new Set(current.map(row => Number(row.id)));
 
         prepared[field] = (value as ChildValues[]).map(row => {
@@ -644,12 +732,15 @@ export const createContentAdvancedStore = <
         );
       }
 
-      if (!Number.isInteger(filter.contains)) return undefined;
+      // A value that cannot name a target matches nothing - and never reaches
+      // Postgres as a cast error.
+      const contains = parseContentId(targetStrategy(field), filter.contains);
+      if (contains === null) return sql`false`;
 
       // Correlated, so the planner uses the junction's primary key and stops at
       // the first matching row - and the outer query needs no `DISTINCT` to keep
       // one record from appearing once per matching target.
-      return sql`exists (select 1 from ${junction.table} where ${junction.columns.itemId} = ${baseColumns.id} and ${junction.columns.relatedItemId} = ${filter.contains})`;
+      return sql`exists (select 1 from ${junction.table} where ${junction.columns.itemId} = ${baseColumns.id} and ${junction.columns.relatedItemId} = ${contains})`;
     },
 
     targetTable: field => {
@@ -663,7 +754,7 @@ export const createContentAdvancedStore = <
 
       for (const change of changes) {
         if (change.kind === "relation") {
-          const desired = change.desired as number[];
+          const desired = change.desired as ContentId[];
           await assertTargetsExist(tx, change.field, desired);
           await writeRelation(tx, change.field, itemId, desired);
           continue;

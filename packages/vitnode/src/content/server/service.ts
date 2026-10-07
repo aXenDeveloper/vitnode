@@ -10,6 +10,7 @@ import type { Context } from "hono";
 import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
+import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
@@ -17,11 +18,13 @@ import type {
   ContentChangedPath,
   ContentCreateInput,
   ContentDetail,
+  ContentFieldsOf,
   ContentFilterInput,
   ContentInnerFieldsOf,
   ContentLocalizedValues,
   ContentOrderableFieldName,
   ContentReferenceFieldName,
+  ContentReferenceIdOf,
   ContentRelationCollectionName,
   ContentRepeatableFieldName,
   ContentRepeatableInputRow,
@@ -31,7 +34,10 @@ import type {
   ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
-import type { ContentDuplicationMethods } from "./duplicate";
+import type {
+  ContentDuplicateTranslationSource,
+  ContentDuplicationMethods,
+} from "./duplicate";
 import type { ContentPickerTarget } from "./references";
 import type { ContentTranslationModel } from "./translation-model";
 import type {
@@ -52,6 +58,7 @@ import {
   CONTENT_VISIBILITY_FIELDS,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import { contentRelationStrategy, requireContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import { orderableColumns } from "../registry";
@@ -142,63 +149,71 @@ export interface ContentUpdateResult<TDefinition> {
   row: ContentSelect<TDefinition>;
 }
 
-export interface ContentRelationMethods<TDefinition> {
+/**
+ * The collection API of one to-many reference. `itemId` is the owner's id;
+ * `TRelatedId` is the target's - a relation target's own strategy, or a number
+ * for users and files.
+ */
+export interface ContentRelationMethods<TDefinition, TRelatedId = ContentId> {
   /** Adds one target. A target already present is a no-op. */
   add: (
-    itemId: number,
-    relatedItemId: number,
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemId: TRelatedId,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
   /** The current targets, in stored order. */
-  get: (itemId: number, options?: ContentServiceOptions) => Promise<number[]>;
+  get: (
+    itemId: ContentIdOf<TDefinition>,
+    options?: ContentServiceOptions,
+  ) => Promise<TRelatedId[]>;
   /** Removes one target. A target that is not there is a no-op. */
   remove: (
-    itemId: number,
-    relatedItemId: number,
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemId: TRelatedId,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 
   reorder: (
-    itemId: number,
-    relatedItemIds: readonly number[],
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemIds: readonly TRelatedId[],
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
   /** Replaces the whole set. */
   set: (
-    itemId: number,
-    relatedItemIds: readonly number[],
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemIds: readonly TRelatedId[],
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
 
 export interface ContentRepeatableMethods<TDefinition, TName> {
   create: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     values: ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
   /** Removes one child by its stable identifier. */
   delete: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     childId: number,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
   /** The current children, in position order, each with its identifier. */
   list: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<
     ContentRepeatableRow<ContentInnerFieldsOf<TDefinition, TName>>[]
   >;
   /** Rearranges the existing children. Refuses a non-permutation. */
   reorder: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     childIds: readonly number[],
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 
   set: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     rows: readonly ContentRepeatableInputRow<
       ContentInnerFieldsOf<TDefinition, TName>
     >[],
@@ -206,7 +221,7 @@ export interface ContentRepeatableMethods<TDefinition, TName> {
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 
   update: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     childId: number,
     values: Partial<ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>>,
     options?: ContentWriteOptions,
@@ -232,12 +247,12 @@ export interface ContentPublicationMethods<TDefinition> {
    * transition and never rewrites it. `null` when the row does not exist.
    */
   publish: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentPublicationResult<TDefinition> | null>;
   /** Idempotent. Flips `status` only - `publishedAt` is left alone. */
   unpublish: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentPublicationResult<TDefinition> | null>;
 }
@@ -254,12 +269,12 @@ export type ContentService<TDefinition> = ContentServiceBase<TDefinition> &
 export interface ContentServiceBase<TDefinition> {
   /** The advanced collections of one record. Two queries per collection field. */
   advanced: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentAdvancedValues<TDefinition>>;
 
   advancedFields: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     fields: readonly string[],
     options?: ContentServiceOptions,
   ) => Promise<Record<string, unknown>>;
@@ -269,16 +284,16 @@ export interface ContentServiceBase<TDefinition> {
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition>>;
   delete: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
   findById: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
 
   findDetail: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentDetail<TDefinition> | null>;
   findMany: (args?: ContentFindManyArgs<TDefinition>) => Promise<{
@@ -287,20 +302,27 @@ export interface ContentServiceBase<TDefinition> {
   }>;
 
   findRowById: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentListRow<TDefinition> | null>;
 
+  /**
+   * Picker options for one reference field. `value` is the target's identifier:
+   * a number for a user or a serial target, a string for a `uuid` or `bigint`
+   * one.
+   */
   options: (
     field: ContentReferenceFieldName<TDefinition>,
     search?: string,
-    ids?: readonly number[],
-  ) => Promise<{ color?: string; label: string; value: number }[]>;
+    ids?: readonly ContentId[],
+  ) => Promise<{ color?: string; label: string; value: ContentId }[]>;
 
-  relations: Record<
-    ContentRelationCollectionName<TDefinition>,
-    ContentRelationMethods<TDefinition>
-  >;
+  relations: {
+    [K in ContentRelationCollectionName<TDefinition>]: ContentRelationMethods<
+      TDefinition,
+      ContentReferenceIdOf<ContentFieldsOf<TDefinition>[K]>
+    >;
+  };
   /**
    * Typed repeatable operations, keyed by the content type's actual repeatable
    * field names - each one carrying its own child shape.
@@ -313,7 +335,7 @@ export interface ContentServiceBase<TDefinition> {
   };
   /** Throws a `ZodError` if `values` does not satisfy `schemas.update`. */
   update: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     values: ContentUpdateInput<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
@@ -366,8 +388,8 @@ export const createContentService = <
   const richTextSearch = contentRichTextSearchColumns(definition).filter(
     entry => !entry.localized,
   );
-  // `buildSystemColumns` always makes `id` a `serial`, which is what
-  // `withPagination` needs to type its cursor.
+  // `serial`, `uuid` or a string-mode `bigint` - all three are cursor kinds
+  // `withPagination` understands.
   const primaryCursor = columns.id as PaginationCursorColumn;
   const orderable = orderableColumns(definition);
   const publication = definition.publication.enabled;
@@ -598,7 +620,7 @@ export const createContentService = <
   };
 
   const readOne = async (
-    id: number,
+    id: ContentId,
     database: ContentDatabase,
   ): Promise<null | Record<string, unknown>> => {
     const [row] = await database
@@ -625,7 +647,7 @@ export const createContentService = <
    * row" - a distinction the route turns into 200 vs 404.
    */
   const transition = async (
-    id: number,
+    id: ContentId,
     options: ContentServiceOptions | undefined,
     values: Record<string, unknown>,
     guard: SQL,
@@ -688,7 +710,7 @@ export const createContentService = <
    * are never in the `SET`: hiding is a separate axis from publication.
    */
   const visibilityTransition = async (
-    id: number,
+    id: ContentId,
     action: ContentVisibilityAction,
     options: ContentVisibilityOptions | undefined,
   ): Promise<ContentVisibilityResult<TDefinition> | null> =>
@@ -735,13 +757,11 @@ export const createContentService = <
       };
     });
 
-  // Serial today, so the identifier is a number at runtime; `ContentIdOf` keeps
-  // the signature honest for the strategies that are not.
   const hideableMethods: ContentVisibilityMethods<TDefinition> = {
     hide: async (id, options) =>
-      await visibilityTransition(id as number, "hide", options),
+      await visibilityTransition(id, "hide", options),
     unhide: async (id, options) =>
-      await visibilityTransition(id as number, "unhide", options),
+      await visibilityTransition(id, "unhide", options),
   };
 
   /**
@@ -789,7 +809,7 @@ export const createContentService = <
    */
   const lockRow = async (
     tx: ContentDatabase,
-    id: number,
+    id: ContentId,
     { force = false }: { force?: boolean } = {},
   ): Promise<boolean> => {
     // A content type with no collections has no read-modify-write to protect, so
@@ -841,8 +861,12 @@ export const createContentService = <
         // In the same transaction as the row it belongs to: a create that
         // committed its categories and rolled back its article would leave
         // junction rows pointing at nothing.
-        if (store?.enabled && typeof row.id === "number") {
-          await store.write(tx, row.id, parsed);
+        if (store?.enabled) {
+          await store.write(
+            tx,
+            requireContentId(definition.idStrategy, row.id, contentTypeId),
+            parsed,
+          );
         }
 
         return toRow(row);
@@ -1066,7 +1090,10 @@ export const createContentService = <
         .limit(ids ? ids.length : CONTENT_OPTIONS_LIMIT);
 
       return rows.map(row => {
-        const value = Number(row.value);
+        // A user and a serial target read back as numbers; a `uuid` and a
+        // string-mode `bigint` as strings - which is what they stay.
+        const value: ContentId =
+          typeof row.value === "number" ? row.value : String(row.value);
         const entry = row as Record<string, unknown>;
 
         const color = target.colorColumn ? toLabel(entry.color) : null;
@@ -1088,7 +1115,10 @@ export const createContentService = <
       });
     },
 
-    relations: mutableRelations,
+    // Keyed by the same runtime field list the conditional type is computed
+    // from; each entry's target ids follow that field's own strategy.
+    relations:
+      mutableRelations as unknown as ContentServiceBase<TDefinition>["relations"],
 
     repeatable: mutableRepeatables as ContentService<TDefinition>["repeatable"],
 
@@ -1116,7 +1146,7 @@ export const createContentService = <
    */
   const applyPatch = async (
     tx: ContentDatabase,
-    id: number,
+    id: ContentId,
     patch: Record<string, unknown>,
   ): Promise<ContentUpdateResult<TDefinition> | null> => {
     {
@@ -1178,7 +1208,7 @@ export const createContentService = <
    * serialised by exactly the same primitive.
    */
   const runCollection = async (
-    itemId: number,
+    itemId: ContentId,
     field: string,
     compute: (current: unknown[]) => unknown[],
     options: ContentServiceOptions | undefined,
@@ -1198,7 +1228,7 @@ export const createContentService = <
     });
 
   const collectionApi = {
-    read: async (itemId: number, field: string, options: unknown) => {
+    read: async (itemId: ContentId, field: string, options: unknown) => {
       const loaded = await store?.load(
         itemId,
         db(options as ContentServiceOptions | undefined),
@@ -1210,7 +1240,7 @@ export const createContentService = <
     },
     run: runCollection,
     write: async (
-      itemId: number,
+      itemId: ContentId,
       field: string,
       next: readonly unknown[],
       options: ContentServiceOptions | undefined,
@@ -1218,7 +1248,7 @@ export const createContentService = <
       // `set` replaces the whole collection, so it never reads and cannot lose a
       // concurrent write. It still goes through `update`, which locks.
       await service.update(
-        itemId,
+        itemId as ContentIdOf<TDefinition>,
         { [field]: [...next] } as ContentUpdateInput<TDefinition>,
         options,
       ),
@@ -1233,10 +1263,15 @@ export const createContentService = <
   );
 
   for (const field of relations) {
+    const fieldValue = definition.fields[field];
     mutableRelations[field] = buildContentRelationOperations({
       api: collectionApi,
       contentTypeId,
       field,
+      strategy:
+        fieldValue.kind === "relation"
+          ? contentRelationStrategy(definition, fieldValue)
+          : "serial",
     });
   }
   for (const field of repeatables) {
@@ -1244,7 +1279,7 @@ export const createContentService = <
       api: collectionApi,
       contentTypeId,
       field,
-    }) as ContentRepeatableMethods<TDefinition, never>;
+    }) as unknown as ContentRepeatableMethods<TDefinition, never>;
   }
 
   // One transaction, through `service.create` and the translation model's own
@@ -1263,7 +1298,10 @@ export const createContentService = <
             translation && translationModel
               ? {
                   columns: translation.columns,
-                  model: translationModel,
+                  // Erased to `ContentId`: the duplicate only ever hands
+                  // back the canonical id it read off this content type's row.
+                  model:
+                    translationModel as unknown as () => ContentDuplicateTranslationSource,
                   table: translation.table,
                 }
               : undefined,
@@ -1275,7 +1313,12 @@ export const createContentService = <
             await service.create(values as ContentCreateInput<TDefinition>, {
               tx,
             }),
-          idOf: row => (row as { id: number }).id,
+          idOf: row =>
+            requireContentId(
+              definition.idStrategy,
+              (row as { id: unknown }).id,
+              contentTypeId,
+            ),
           translation: async (itemId, locale, values, tx) => {
             if (!translationModel) {
               throw new ContentEngineError(
@@ -1285,7 +1328,7 @@ export const createContentService = <
             }
 
             return await translationModel().create(
-              itemId,
+              itemId as ContentIdOf<TDefinition>,
               locale,
               values as ContentLocalizedValues<TDefinition>,
               { tx },

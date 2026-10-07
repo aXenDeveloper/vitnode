@@ -22,8 +22,8 @@ export type ContentEventAction =
   | "unpublished"
   | "updated";
 
-export interface ContentCreatedPayload {
-  contentId: number;
+export interface ContentCreatedPayload<TId = number> {
+  contentId: TId;
 }
 
 /**
@@ -66,17 +66,17 @@ export interface ContentUnhiddenPayload<TId = number> {
   contentId: TId;
 }
 
-export interface ContentDeletedPayload {
-  contentId: number;
+export interface ContentDeletedPayload<TId = number> {
+  contentId: TId;
 }
 
 export interface ContentUpdatedPayload<TDefinition> {
   changedFields: ContentFieldName<TDefinition>[];
-  contentId: number;
+  contentId: ContentIdOf<TDefinition>;
 }
 
-export interface ContentPublishedPayload {
-  contentId: number;
+export interface ContentPublishedPayload<TId = number> {
+  contentId: TId;
   /** When the row was published for the *first* time; never rewritten. */
   publishedAt: Date;
 
@@ -85,8 +85,8 @@ export interface ContentPublishedPayload {
   scheduleId?: number;
 }
 
-export interface ContentUnpublishedPayload {
-  contentId: number;
+export interface ContentUnpublishedPayload<TId = number> {
+  contentId: TId;
   /** As on `published`: who scheduled it, when a schedule fired it. */
   scheduledBy?: null | number;
   /** As on `published`: the booking, and the idempotency key for retries. */
@@ -95,7 +95,7 @@ export interface ContentUnpublishedPayload {
 
 export interface ContentRestoredPayload<TDefinition> {
   changedFields: ContentFieldName<TDefinition>[];
-  contentId: number;
+  contentId: ContentIdOf<TDefinition>;
   /** The revision the values came from. */
   restoredFromRevisionId: number;
   /** The revision this restore itself created. */
@@ -103,19 +103,19 @@ export interface ContentRestoredPayload<TDefinition> {
   version: number;
 }
 
-export interface ContentScheduledPayload {
+export interface ContentScheduledPayload<TId = number> {
   action: "publish" | "unpublish";
   /** The staff member who booked it. */
   actorUserId: null | number;
-  contentId: number;
+  contentId: TId;
   scheduledFor: Date;
   scheduleId: number;
 }
 
-export interface ContentScheduleCancelledPayload {
+export interface ContentScheduleCancelledPayload<TId = number> {
   action: "publish" | "unpublish";
   actorUserId: null | number;
-  contentId: number;
+  contentId: TId;
   scheduleId: number;
 }
 
@@ -123,11 +123,11 @@ type ContentPublicationEventsFor<TDefinition extends { id: string }> =
   TDefinition extends { publication: { enabled: true } }
     ? Record<
         `content.${TDefinition["id"]}.published`,
-        ContentPublishedPayload
+        ContentPublishedPayload<ContentIdOf<TDefinition>>
       > &
         Record<
           `content.${TDefinition["id"]}.unpublished`,
-          ContentUnpublishedPayload
+          ContentUnpublishedPayload<ContentIdOf<TDefinition>>
         >
     : Record<never, never>;
 
@@ -147,11 +147,11 @@ type ContentEditorialEventsFor<TDefinition extends { id: string }> =
     (TDefinition extends { editorial: { scheduling: { enabled: true } } }
       ? Record<
           `content.${TDefinition["id"]}.schedule_cancelled`,
-          ContentScheduleCancelledPayload
+          ContentScheduleCancelledPayload<ContentIdOf<TDefinition>>
         > &
           Record<
             `content.${TDefinition["id"]}.scheduled`,
-            ContentScheduledPayload
+            ContentScheduledPayload<ContentIdOf<TDefinition>>
           >
       : Record<never, never>);
 
@@ -169,8 +169,8 @@ type ContentEditorialEventsFor<TDefinition extends { id: string }> =
  * inspect `changedFields` to tell them apart would get it wrong the first time a
  * field was renamed.
  */
-export interface ContentTranslationEventPayload {
-  contentId: number;
+export interface ContentTranslationEventPayload<TId = number> {
+  contentId: TId;
   languageId: number;
   /** The canonical `core_languages.code`. */
   locale: string;
@@ -178,7 +178,9 @@ export interface ContentTranslationEventPayload {
   version: number;
 }
 
-export interface ContentTranslationCreatedPayload extends ContentTranslationEventPayload {
+export interface ContentTranslationCreatedPayload<
+  TId = number,
+> extends ContentTranslationEventPayload<TId> {
   /**
    * The revision this mutation wrote.
    *
@@ -191,29 +193,35 @@ export interface ContentTranslationCreatedPayload extends ContentTranslationEven
 
 export interface ContentTranslationUpdatedPayload<
   TDefinition,
-> extends ContentTranslationEventPayload {
+> extends ContentTranslationEventPayload<ContentIdOf<TDefinition>> {
   /** Localized field names this write moved. Never a shared field. */
   changedFields: ContentLocalizedFieldName<TDefinition>[];
   revisionId?: number;
 }
 
-export interface ContentTranslationDeletedPayload extends ContentTranslationEventPayload {
+export interface ContentTranslationDeletedPayload<
+  TId = number,
+> extends ContentTranslationEventPayload<TId> {
   revisionId?: number;
 }
 
-export interface ContentTranslationPublishedPayload extends ContentTranslationEventPayload {
+export interface ContentTranslationPublishedPayload<
+  TId = number,
+> extends ContentTranslationEventPayload<TId> {
   /** When this language was first published; never rewritten. */
   publishedAt: Date | null;
   revisionId?: number;
 }
 
-export interface ContentTranslationUnpublishedPayload extends ContentTranslationEventPayload {
+export interface ContentTranslationUnpublishedPayload<
+  TId = number,
+> extends ContentTranslationEventPayload<TId> {
   revisionId?: number;
 }
 
 export interface ContentTranslationRestoredPayload<
   TDefinition,
-> extends ContentTranslationEventPayload {
+> extends ContentTranslationEventPayload<ContentIdOf<TDefinition>> {
   changedFields: ContentLocalizedFieldName<TDefinition>[];
   /** The revision the values came from - always one of this locale's own. */
   restoredFromRevisionId: number;
@@ -248,21 +256,21 @@ type ContentLocalizationEventsFor<TDefinition extends { id: string }> =
     }
       ? Record<
           `content.${TDefinition["id"]}.translation_published`,
-          ContentTranslationPublishedPayload
+          ContentTranslationPublishedPayload<ContentIdOf<TDefinition>>
         > &
           Record<
             `content.${TDefinition["id"]}.translation_unpublished`,
-            ContentTranslationUnpublishedPayload
+            ContentTranslationUnpublishedPayload<ContentIdOf<TDefinition>>
           >
       : Record<never, never>) &
     (TDefinition extends { localization: { enabled: true } }
       ? Record<
           `content.${TDefinition["id"]}.translation_created`,
-          ContentTranslationCreatedPayload
+          ContentTranslationCreatedPayload<ContentIdOf<TDefinition>>
         > &
           Record<
             `content.${TDefinition["id"]}.translation_deleted`,
-            ContentTranslationDeletedPayload
+            ContentTranslationDeletedPayload<ContentIdOf<TDefinition>>
           > &
           Record<
             `content.${TDefinition["id"]}.translation_updated`,
@@ -283,10 +291,10 @@ type ContentLocalizationEventsFor<TDefinition extends { id: string }> =
  * `locale` is `null` when the slug is shared - a content type that is not
  * localized, or a localized one whose slug lives on the base row.
  */
-export interface ContentDeliverySlugChangedPayload {
+export interface ContentDeliverySlugChangedPayload<TId = number> {
   /** The path the record answers to now. */
   canonicalPath: string;
-  contentId: number;
+  contentId: TId;
   locale: null | string;
   /** The path it answered to before, or `null` when it had no public URL yet. */
   previousPath: null | string;
@@ -304,10 +312,10 @@ export interface ContentDeliverySlugChangedPayload {
  * field", and it is why this is a separate event from the one above rather than a
  * boolean on it.
  */
-export interface ContentDeliveryRedirectCreatedPayload {
+export interface ContentDeliveryRedirectCreatedPayload<TId = number> {
   /** Where the historical path now redirects to. */
   canonicalPath: string;
-  contentId: number;
+  contentId: TId;
   locale: null | string;
   /** The retired path, which now answers with a permanent redirect. */
   previousPath: string;
@@ -332,11 +340,11 @@ type ContentDeliveryEventsFor<TDefinition extends { id: string }> =
   TDefinition extends { delivery: { enabled: true } }
     ? Record<
         `content.${TDefinition["id"]}.delivery_redirect_created`,
-        ContentDeliveryRedirectCreatedPayload
+        ContentDeliveryRedirectCreatedPayload<ContentIdOf<TDefinition>>
       > &
         Record<
           `content.${TDefinition["id"]}.delivery_slug_changed`,
-          ContentDeliverySlugChangedPayload
+          ContentDeliverySlugChangedPayload<ContentIdOf<TDefinition>>
         >
     : Record<never, never>;
 
@@ -391,9 +399,12 @@ export type ContentEventsFor<TDefinition extends { id: string }> =
       `content.${TDefinition["id"]}.created`,
       TDefinition extends { duplication: { enabled: true } }
         ? ContentDuplicableCreatedPayload<ContentIdOf<TDefinition>>
-        : ContentCreatedPayload
+        : ContentCreatedPayload<ContentIdOf<TDefinition>>
     > &
-    Record<`content.${TDefinition["id"]}.deleted`, ContentDeletedPayload> &
+    Record<
+      `content.${TDefinition["id"]}.deleted`,
+      ContentDeletedPayload<ContentIdOf<TDefinition>>
+    > &
     Record<
       `content.${TDefinition["id"]}.updated`,
       ContentUpdatedPayload<TDefinition>

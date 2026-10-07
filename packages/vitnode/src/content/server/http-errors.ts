@@ -7,6 +7,7 @@ import type {
   ContentDuplicateRejection,
   ContentUnprocessable,
 } from "../conflicts";
+import type { ContentId } from "../ids";
 import type { ContentScheduleCode } from "../schedules";
 
 import { PG_ERROR_CODES, pgErrorCode } from "../../lib/api/pg-error";
@@ -82,7 +83,7 @@ export const rethrowAsHttpError = (
   }: {
     action: "create" | "delete" | "update";
     contentTypeId?: string;
-    itemId?: number;
+    itemId?: ContentId;
     structured?: boolean;
   },
 ): never => {
@@ -202,7 +203,7 @@ export const rethrowAsHttpError = (
 
 export interface ContentHttpErrorOptions {
   contentTypeId?: string;
-  itemId?: number;
+  itemId?: ContentId;
   /** Answer 409 and 422 with a JSON body. Editorial content types only. */
   structured?: boolean;
 }

@@ -7,10 +7,12 @@ import type { RegisteredContentType } from "@/content/registry";
 
 import { core_search_index } from "@/database/search";
 import {
+  testBigintEventContentType,
   testLocalizedPageContentType,
   testLocalizedSearchPageContentType,
   testSearchablePostContentType,
   testStrictLocalizedSearchPageContentType,
+  testUuidTagContentType,
 } from "@/tests/content-fixtures";
 
 import type { SearchDocument, SearchProviderApiPlugin } from "./search";
@@ -19,6 +21,7 @@ import { PostgresSearchAdapter } from "../adapters/search/postgres";
 import {
   assertSearchProviderCapabilities,
   normalizeSearchIndexerPage,
+  searchItemIdFromKey,
   searchLanguageFallbacks,
   SearchModel,
 } from "./search";
@@ -481,5 +484,62 @@ describe("SearchModel language fallback", () => {
     await new SearchModel(c).search({ authorId: 1 });
 
     expect(provider.search).toHaveBeenCalledWith(c, { authorId: 1 });
+  });
+});
+
+describe("item ids under every strategy", () => {
+  const BEYOND_SAFE = "9007199254740993";
+  const UUID = "0198f6f7-d4a2-7ce1-a2ee-4f5f1f2f3a4b";
+  const types = [
+    registered(testSearchablePostContentType),
+    registered(testBigintEventContentType),
+    registered(testUuidTagContentType),
+  ];
+
+  it("stores every id as its key, and hands the provider the id itself", async () => {
+    const provider = createProvider();
+    const { c, values } = createContext(provider);
+
+    await new SearchModel(c).index({
+      content: "Body",
+      createdAt: new Date("2026-01-01"),
+      itemId: BEYOND_SAFE,
+      itemType: "test.bigint-event",
+      title: "Event",
+    });
+
+    expect(values.mock.calls[0][0]).toMatchObject({ itemId: BEYOND_SAFE });
+    expect(provider.index).toHaveBeenCalledWith(
+      c,
+      expect.objectContaining({ itemId: BEYOND_SAFE }),
+    );
+  });
+
+  it("deletes a uuid record by its key", async () => {
+    const provider = createProvider();
+    const { c } = createContext(provider);
+
+    await new SearchModel(c).delete("test.uuid-tag", UUID, "en");
+
+    expect(provider.delete).toHaveBeenCalledWith(
+      c,
+      "test.uuid-tag",
+      UUID,
+      "en",
+    );
+  });
+
+  it("reads a key back as the id its content type uses", () => {
+    expect(searchItemIdFromKey(types, "test.searchable", "42")).toBe(42);
+    expect(searchItemIdFromKey(types, "test.bigint-event", BEYOND_SAFE)).toBe(
+      BEYOND_SAFE,
+    );
+    expect(searchItemIdFromKey(types, "test.uuid-tag", UUID)).toBe(UUID);
+  });
+
+  it("keeps a numeric key a number for an item type that is not a content type", () => {
+    expect(searchItemIdFromKey(types, "forum.topic", "7")).toBe(7);
+    expect(searchItemIdFromKey(undefined, "forum.topic", "7")).toBe(7);
+    expect(searchItemIdFromKey(types, "forum.topic", "abc")).toBe("abc");
   });
 });

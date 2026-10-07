@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import type { ContentIdOf } from "../ids";
 import type {
   ContentActor,
   ContentRevisionMeta,
@@ -90,48 +91,48 @@ export interface ContentTranslationEditorialTransitionOptions extends ContentTra
 export interface ContentTranslationEditorialService<TDefinition> {
   /** Adds a translation and records its `create` revision. Starts as a draft. */
   create: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     values: ContentLocalizedValues<TDefinition>,
     options: ContentTranslationEditorialOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition>>;
 
   delete: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options: ContentTranslationEditorialWriteOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition> | null>;
   /** One revision of one locale, with its snapshot. Scoped by both. */
   findRevision: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     revisionId: number,
   ) => Promise<ContentRevisionDetailForLocale | null>;
   /** One locale's history, newest first. Metadata only. */
   listRevisions: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     args?: { cursor?: number; limit?: number },
   ) => Promise<ContentRevisionPage>;
   publish: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options: ContentTranslationEditorialTransitionOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition> | null>;
 
   restore: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     revisionId: number,
     options: ContentTranslationEditorialWriteOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition> | null>;
   unpublish: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options: ContentTranslationEditorialTransitionOptions,
   ) => Promise<ContentTranslationEditorialOutcome<TDefinition> | null>;
   update: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     values: ContentLocalizedUpdateValues<TDefinition>,
     options: ContentTranslationEditorialWriteOptions,
@@ -225,7 +226,7 @@ export const createContentTranslationEditorialService = <
     }: {
       after: ContentTranslationRow<TDefinition> | null;
       before: ContentTranslationRow<TDefinition> | null;
-      itemId: number;
+      itemId: ContentIdOf<TDefinition>;
       languageId: number;
       locale: string;
     },
@@ -377,7 +378,7 @@ export const createContentTranslationEditorialService = <
 
   /** Publish and unpublish, which differ only in which model method they call. */
   const transition = async (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options: ContentTranslationEditorialTransitionOptions,
     operation: "publish" | "unpublish",

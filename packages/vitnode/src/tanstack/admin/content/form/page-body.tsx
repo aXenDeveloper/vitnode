@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTranslations } from "use-intl";
 
+import type { ContentId } from "@/content/ids";
 import type {
   ContentAdminAction,
   RegisteredFrontendContentType,
@@ -78,7 +79,7 @@ const ContentEditScreen = ({
   title,
 }: {
   entry: RegisteredFrontendContentType;
-  itemId: number;
+  itemId: ContentId;
   title: string;
 }) => {
   const t = useTranslations("core.content.edit");
@@ -132,11 +133,12 @@ export const ContentFormPageBody = ({
 }: {
   action: Exclude<ContentAdminAction, "list">;
   entry: RegisteredFrontendContentType;
-  itemId: number;
+  /** Present exactly when `action` is `edit` - the route resolver guarantees it. */
+  itemId?: ContentId;
   title: string;
 }) =>
   action === "create" ? (
     <ContentCreateScreen entry={entry} />
-  ) : (
+  ) : itemId === undefined ? null : (
     <ContentEditScreen entry={entry} itemId={itemId} title={title} />
   );

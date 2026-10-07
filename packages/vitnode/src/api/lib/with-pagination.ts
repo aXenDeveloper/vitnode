@@ -206,13 +206,16 @@ async function fetchTotalCount(
  * A stable row identifier: an integer, bigint or UUID column.
  *
  * Drizzle refines these types (`serial` is `number int32`, bigint is
- * `bigint int64`, UUID is `string uuid`), so the bound includes their refined
+ * `bigint int64` - or `string int64` in string mode, which is how a content
+ * type with `idStrategy: "bigint"` keys its rows - UUID is `string uuid`), so
+ * the bound includes their refined
  * forms. The first generic stays broad because built `PgColumn`s expose it that
  * way, as Drizzle's own `AnyPgColumn` does.
  */
 type PaginationIdentifierDataType =
   | "bigint"
   | "number"
+  | "string int64"
   | "string uuid"
   | `bigint ${ColumnDataBigIntConstraint}`
   | `number ${ColumnDataNumberConstraint}`;

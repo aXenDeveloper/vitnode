@@ -1,3 +1,4 @@
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
 import type { ContentVisibilityAction } from "@/content/visibility";
 
@@ -40,7 +41,7 @@ const readResult = async (
 };
 
 export interface ContentRowMutationArgs {
-  id: number;
+  id: ContentId;
   target: ContentApiTarget;
 }
 
@@ -70,13 +71,14 @@ export interface ContentDuplicateInput {
 
 /** What `POST /{id}/duplicate` answers with on a `201`. */
 export interface ContentDuplicatePayload {
-  id: number;
+  /** A number for a `serial` content type, the canonical string otherwise. */
+  id: ContentId;
   /** The copied translations' locales, default locale first. */
   locales: string[];
   row: Record<string, unknown>;
   /** Source locales switched off in this install, which the copy does not carry. */
   skippedLocales: string[];
-  sourceId: number;
+  sourceId: ContentId;
 }
 
 export type ContentDuplicateMutationResult = ContentRowMutationResult & {

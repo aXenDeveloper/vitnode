@@ -311,7 +311,7 @@ describePostgres("rich text writes", () => {
     const [revision] = await database.db
       .select({ id: core_content_revisions.id })
       .from(core_content_revisions)
-      .where(eq(core_content_revisions.itemId, row.id))
+      .where(eq(core_content_revisions.itemId, String(row.id)))
       .orderBy(core_content_revisions.id)
       .limit(1);
     await database.db.execute(

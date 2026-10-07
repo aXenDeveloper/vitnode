@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import type { EventEmitResult } from "../../api/models/events";
 import type { ContentDeliveryInvalidation } from "../cache";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliveryOutcome } from "./delivery-writes";
 
@@ -23,7 +24,7 @@ export const contentDeliveryEffects = async (
   const announce = async (
     action: "delivery_redirect_created" | "delivery_slug_changed",
     payload: Record<string, unknown>,
-    { itemId, locale }: { itemId: number; locale: null | string },
+    { itemId, locale }: { itemId: ContentId; locale: null | string },
   ): Promise<void> => {
     const event = await emitContentEvent(
       c,

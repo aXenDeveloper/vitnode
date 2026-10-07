@@ -1,4 +1,5 @@
 import type { CONTENT_ADVANCED_CODES } from "./const";
+import type { ContentId } from "./ids";
 import type { ContentScheduleCode } from "./schedules";
 
 export type ContentAdvancedCode =
@@ -62,7 +63,7 @@ export class ContentVersionConflict extends ContentEngineError {
     contentTypeId: string;
     currentVersion: number;
     expectedVersion: number;
-    itemId: number;
+    itemId: ContentId;
   }) {
     super(
       `This record is at version ${currentVersion}, not ${expectedVersion}. Someone else saved it first.`,
@@ -77,7 +78,7 @@ export class ContentVersionConflict extends ContentEngineError {
 
   readonly currentVersion: number;
   readonly expectedVersion: number;
-  readonly itemId: number;
+  readonly itemId: ContentId;
 }
 
 /**
@@ -130,7 +131,7 @@ export class ContentTranslationVersionConflict extends ContentEngineError {
     contentTypeId: string;
     currentVersion: number;
     expectedVersion: number;
-    itemId: number;
+    itemId: ContentId;
     locale: string;
   }) {
     super(
@@ -147,7 +148,7 @@ export class ContentTranslationVersionConflict extends ContentEngineError {
 
   readonly currentVersion: number;
   readonly expectedVersion: number;
-  readonly itemId: number;
+  readonly itemId: ContentId;
   readonly locale: string;
 }
 
@@ -166,7 +167,7 @@ export class ContentDefaultTranslationRequired extends ContentEngineError {
     locale,
   }: {
     contentTypeId: string;
-    itemId: number;
+    itemId: ContentId;
     locale: string;
   }) {
     super(
@@ -179,7 +180,7 @@ export class ContentDefaultTranslationRequired extends ContentEngineError {
     this.locale = locale;
   }
 
-  readonly itemId: number;
+  readonly itemId: ContentId;
   readonly locale: string;
 }
 
@@ -190,7 +191,7 @@ export class ContentTranslationExists extends ContentEngineError {
     locale,
   }: {
     contentTypeId: string;
-    itemId: number;
+    itemId: ContentId;
     locale: string;
   }) {
     super(
@@ -203,7 +204,7 @@ export class ContentTranslationExists extends ContentEngineError {
     this.locale = locale;
   }
 
-  readonly itemId: number;
+  readonly itemId: ContentId;
   readonly locale: string;
 }
 
@@ -239,7 +240,7 @@ export class ContentTranslationItemMissing extends ContentEngineError {
     itemId,
   }: {
     contentTypeId: string;
-    itemId: number;
+    itemId: ContentId;
   }) {
     super(`No record with id ${itemId} to translate.`, { contentTypeId });
 
@@ -247,7 +248,7 @@ export class ContentTranslationItemMissing extends ContentEngineError {
     this.itemId = itemId;
   }
 
-  readonly itemId: number;
+  readonly itemId: ContentId;
 }
 
 /**
@@ -274,7 +275,7 @@ export class ContentAdvancedInputError extends ContentInputError {
     code: ContentAdvancedCode;
     contentTypeId: string;
     field: string;
-    ids: number[];
+    ids: ContentId[];
     message: string;
   }) {
     super(message, { contentTypeId });
@@ -287,7 +288,7 @@ export class ContentAdvancedInputError extends ContentInputError {
 
   readonly code: ContentAdvancedCode;
   readonly field: string;
-  readonly ids: number[];
+  readonly ids: ContentId[];
 }
 
 /**

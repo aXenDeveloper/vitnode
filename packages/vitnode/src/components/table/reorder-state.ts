@@ -1,22 +1,24 @@
 import { arrayMove } from "@dnd-kit/sortable";
 
+import type { DataTableRowId } from "./data-table-content";
+
 import { readTableOrder, readTableSearch, type TableOrder } from "./url-state";
 
 export interface ReorderDetailsDataTable {
-  activeId: number;
+  activeId: DataTableRowId;
   from: number;
-  overId: number;
+  overId: DataTableRowId;
   to: number;
 }
 
 export interface RowMoveDataTable extends ReorderDetailsDataTable {
-  ids: number[];
+  ids: DataTableRowId[];
 }
 
 export const moveRowId = (
-  ids: readonly number[],
-  activeId: number,
-  overId: number,
+  ids: readonly DataTableRowId[],
+  activeId: DataTableRowId,
+  overId: DataTableRowId,
 ): null | RowMoveDataTable => {
   const from = ids.indexOf(activeId);
   const to = ids.indexOf(overId);

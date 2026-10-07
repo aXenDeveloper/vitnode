@@ -425,7 +425,7 @@ describePostgres("duplicate (Postgres)", () => {
             core_content_revisions.contentTypeId,
             testDuplicableArticleContentType.id,
           ),
-          eq(core_content_revisions.itemId, itemId),
+          eq(core_content_revisions.itemId, String(itemId)),
         ),
       )
       .orderBy(asc(core_content_revisions.id));
@@ -609,7 +609,7 @@ describePostgres("duplicate (Postgres)", () => {
     const { id: sourceId } = await seedArticle({ title: "Moved" });
     await database.db.insert(core_content_slug_history).values({
       contentTypeId: testDuplicableArticleContentType.id,
-      itemId: 999_999,
+      itemId: "999999",
       languageId: languageIds.en,
       path: "/duplicable-articles/moved-copy",
       pluginId: PLUGIN_ID,
