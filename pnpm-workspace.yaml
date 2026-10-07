@@ -11,3 +11,19 @@ packageExtensions:
   '@tiptap/y-tiptap':
     dependencies:
       prosemirror-transform: 1.12.1
+# Security patches for transitive dependencies. Each selector only matches the
+# vulnerable range, so an entry stops applying once its dependents move on and
+# can then be deleted.
+overrides:
+  # GHSA-vcvr-r3jv-pc5j. `@react-email/ui` pins `next@16.3.3`; fumadocs peers on it.
+  'next@>=16.2.0 <16.3.6': ~16.3.8
+  # GHSA-p6vx-979v-rg4c, GHSA-jp82-f5mq-hwhp. solid-js 1.9.15 asks for
+  # `seroval@~1.5.4`. 1.9.16 moves to `~1.6.8` with no change to how it calls
+  # seroval, but it is still inside `minimumReleaseAge`; drop these two entries
+  # once solid-js 1.9.16 resolves on its own.
+  'seroval@<1.6.3': ~1.6.8
+  'seroval-plugins@<1.6.3': ~1.6.8
+  # GHSA-g7r4-m6w7-qqqr (Windows dev server). tsup still asks for `^0.27.0`.
+  'esbuild@>=0.27.3 <0.28.1': ^0.28.2
+  # GHSA-ch52-4w7c-c8xp. Dev only: @swc/cli > got > cacheable-request (`^4.2.0`).
+  'http-cache-semantics@<4.2.1': ^4.3.0
