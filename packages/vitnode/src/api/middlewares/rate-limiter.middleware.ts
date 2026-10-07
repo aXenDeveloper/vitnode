@@ -129,6 +129,8 @@ export const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/sign_in",
   "/@vitnode/core/users/sign_up",
   "/@vitnode/core/users/reset-password",
+  "/@vitnode/core/users/verify-email",
+  "/@vitnode/core/users/verify-email/resend",
   "/@vitnode/core/users/change-password",
   "/@vitnode/core/users/passkeys/sign-in",
   "/@vitnode/core/users/passkeys/admin-sign-in",

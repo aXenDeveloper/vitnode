@@ -34,6 +34,7 @@ Routes that check a password or send an email to whoever is named in the request
 
 - `POST /users/sign_in` and `POST /users/sign_up`
 - `POST /users/reset-password` and `POST /users/change-password`
+- `POST /users/verify-email` and `POST /users/verify-email/resend`
 - `POST /users/passkeys/sign-in` and `POST /users/passkeys/admin-sign-in`
 
 Tune it with `rateLimiter.auth`:
