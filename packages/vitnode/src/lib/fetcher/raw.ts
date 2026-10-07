@@ -110,6 +110,12 @@ export const rawApiFetch = async ({
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
   });
 
+  // Only the path. The origin is the internal `VITNODE_API_URL`, and the query
+  // can carry credentials - the SSO callback forwards the OAuth `code` and
+  // `state` - while this message reaches logs and, from a loader, the error
+  // payload serialised into the SSR HTML.
+  const loggedPath = url.pathname;
+
   if (response.status === 500) {
     const errorText = await response.text();
     throw new Error(
@@ -117,7 +123,7 @@ export const rawApiFetch = async ({
       // `statusText ?? errorText`, which never fell through - `statusText` is
       // essentially always a non-empty string - so the one part that says *what*
       // went wrong was discarded on every 500.
-      `${response.status} - ${url.toString()}\n${errorText.trim() === "" ? response.statusText : errorText}`,
+      `${response.status} - ${loggedPath}\n${errorText.trim() === "" ? response.statusText : errorText}`,
     );
   }
 
@@ -126,7 +132,7 @@ export const rawApiFetch = async ({
     const errorText = await response.clone().text();
     // oxlint-disable-next-line no-console
     console.error(
-      `\x1b[34m[VitNode - API]\x1b[0m \x1b[31m${response.status}\x1b[0m - \x1b[33m${url.toString()}\x1b[0m\n\x1b[36mError: ${errorText}\x1b[0m`,
+      `\x1b[34m[VitNode - API]\x1b[0m \x1b[31m${response.status}\x1b[0m - \x1b[33m${loggedPath}\x1b[0m\n\x1b[36mError: ${errorText}\x1b[0m`,
     );
   }
 

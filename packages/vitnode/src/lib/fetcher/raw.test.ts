@@ -24,6 +24,7 @@ const mountedApi = () => {
   plugin.get("/broken", () => {
     throw new Error("boom");
   });
+  plugin.get("/broken-quietly", c => c.text("Internal Server Error", 500));
 
   const app = new Hono().basePath("/api");
   app.route(`/${PLUGIN_ID}`, plugin);
@@ -209,14 +210,52 @@ describe("rawApiFetch against the mounted API", () => {
     expect(response.status).toBe(404);
   });
 
-  it("throws on a 500 with the URL and the body", async () => {
+  it("throws on a 500 with the path and the body", async () => {
     await expect(
       rawApiFetch({
         method: "get",
-        module: "broken",
+        module: "broken-quietly",
         path: "/",
         pluginId: PLUGIN_ID,
       }),
-    ).rejects.toThrow(`/api/${PLUGIN_ID}/broken`);
+    ).rejects.toThrow(
+      `500 - /api/${PLUGIN_ID}/broken-quietly\nInternal Server Error`,
+    );
+  });
+
+  it("keeps the origin and the query out of a thrown 500", async () => {
+    const error: unknown = await rawApiFetch({
+      method: "get",
+      module: "broken",
+      path: "/",
+      pluginId: PLUGIN_ID,
+      query: { code: "oauth-code", state: "oauth-state" },
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(Error);
+    const { message } = error as Error;
+    expect(message).toContain(`/api/${PLUGIN_ID}/broken`);
+    expect(message).not.toContain(ORIGIN);
+    expect(message).not.toContain("oauth-code");
+    expect(message).not.toContain("oauth-state");
+  });
+
+  it("logs a 4xx with the path only", async () => {
+    const logError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    await rawApiFetch({
+      method: "get",
+      module: "guarded",
+      path: "/",
+      pluginId: PLUGIN_ID,
+      query: { code: "oauth-code" },
+    });
+
+    const logged = logError.mock.calls.flat().join(" ");
+    expect(logged).toContain(`/api/${PLUGIN_ID}/guarded`);
+    expect(logged).not.toContain(ORIGIN);
+    expect(logged).not.toContain("oauth-code");
   });
 });
