@@ -27,6 +27,7 @@ import {
 import { ContentEngineError } from "../errors";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
+import { contentRichTextSearchColumnOf } from "../rich-text";
 import { groupPublicLeafPaths } from "../schemas";
 import { createContentPublicRowHydrator } from "./public-row-hydration";
 import { publicationColumns, publishedCondition } from "./publication";
@@ -34,6 +35,7 @@ import {
   buildFilterCondition,
   buildOrderColumn,
   buildSearchCondition,
+  contentSearchColumn,
 } from "./query";
 
 /** Where the row nesting lives now. Re-exported so its path is unchanged. */
@@ -266,7 +268,13 @@ export const createContentPublicService = <
   // predicate needs.
   const published = publicationColumns(definition, columns);
   const primaryCursor = columns.id as PaginationCursorColumn;
-  const searchColumns = publicApi.searchableFields.map(name => columns[name]);
+  const searchColumns = publicApi.searchableFields.map(name =>
+    contentSearchColumn(
+      columns,
+      name,
+      contentRichTextSearchColumnOf(definition, name),
+    ),
+  );
   const orderable = publicOrderableColumns(definition);
 
   const selection = (): Record<string, PgColumn> =>

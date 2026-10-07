@@ -30,6 +30,7 @@ import {
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_RELATION_COLLECTION_MAX,
+  CONTENT_RICH_TEXT_MAX_HTML_LENGTH,
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   isFilterableFieldKind,
@@ -44,6 +45,7 @@ import {
   isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
+import { contentRichTextIssue } from "./rich-text";
 
 /** What a content type without `publicApi` carries: nothing exposed at all. */
 const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
@@ -150,6 +152,28 @@ const textSchema = (fieldValue: {
   return schema;
 };
 
+/**
+ * A rich text value on the way in: HTML, bounded, and checked against the
+ * field's rules on its *plain text*. Cheap and isomorphic - the same schema
+ * validates an AdminCP form in the browser. Sanitising is the server's job
+ * (`content/server/rich-text.ts`), which re-checks the sanitised result.
+ */
+const richTextInputSchema = (fieldValue: {
+  maxLength?: number;
+  minLength?: number;
+  required: boolean;
+}): z.ZodType<string> =>
+  z
+    .string()
+    .max(CONTENT_RICH_TEXT_MAX_HTML_LENGTH)
+    .superRefine((value, ctx) => {
+      // Already reported by `max`, and not worth extracting text from.
+      if (value.length > CONTENT_RICH_TEXT_MAX_HTML_LENGTH) return;
+
+      const issue = contentRichTextIssue(fieldValue, value);
+      if (issue !== null) ctx.addIssue({ code: "custom", message: issue });
+    });
+
 const numberSchema = (fieldValue: {
   integer: boolean;
   max?: number;
@@ -230,6 +254,11 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
         }),
       );
     }
+    // What is stored is whatever the server sanitised, so a stored value is
+    // never held to the input rules again on the way out - a field whose
+    // `maxLength` was lowered must still be readable.
+    case "richText":
+      return z.string();
     case "slug":
       // Never empty: the service normalises before writing, and a value that
       // folds to nothing is rejected rather than stored.
@@ -250,6 +279,7 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
 /** The value as it arrives from a client. `dateTime` is an ISO 8601 string. */
 const baseInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   if (fieldValue.kind === "dateTime") return z.iso.datetime();
+  if (fieldValue.kind === "richText") return richTextInputSchema(fieldValue);
 
   return baseSelectSchema(fieldValue);
 };

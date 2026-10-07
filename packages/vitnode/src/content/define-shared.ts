@@ -15,9 +15,14 @@ export const SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
   "textarea",
 ]);
 
+/**
+ * Kinds a list search may name explicitly. `richText` is here but not in
+ * {@link SEARCHABLE_KINDS}: an article body is a poor default search target and
+ * a worse title, and naming it gives the field a plain-text search column.
+ */
 export const EXPLICIT_SEARCHABLE_KINDS = new Set<
   ContentFieldDescriptor["kind"]
->([...SEARCHABLE_KINDS, "slug"]);
+>([...SEARCHABLE_KINDS, "richText", "slug"]);
 
 export const systemFields: readonly string[] = CONTENT_SYSTEM_FIELDS;
 export const publicationFields: readonly string[] = CONTENT_PUBLICATION_FIELDS;

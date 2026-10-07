@@ -2,7 +2,7 @@ import type React from "react";
 
 import { Editor } from "@/components/ui/editor";
 import { FormControl, FormMessage, useFormField } from "@/components/ui/form";
-import { stripHtml } from "@/lib/strip-html";
+import { isHtmlEmpty } from "@/lib/strip-html";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
@@ -14,7 +14,8 @@ import {
   useMultiLangField,
 } from "./multi-lang";
 
-const hasHtmlText = (html: string): boolean => stripHtml(html) !== "";
+// A language holding only an image is filled; one holding `<p></p>` is not.
+const hasHtmlText = (html: string): boolean => !isHtmlEmpty(html);
 
 const useEditorLabelledBy = (label: React.ReactNode): string | undefined => {
   const { formItemId } = useFormField();

@@ -44,7 +44,7 @@ type BaseBuilderFor<TField> = TField extends { kind: "boolean" }
         ? PgDoublePrecisionBuilder
         : TField extends { kind: "number" | "relation" | "user" }
           ? PgIntegerBuilder
-          : TField extends { kind: "textarea" }
+          : TField extends { kind: "richText" | "textarea" }
             ? PgTextBuilder
             : PgVarcharBuilder;
 

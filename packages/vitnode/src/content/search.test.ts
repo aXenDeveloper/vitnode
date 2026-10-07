@@ -172,7 +172,7 @@ describe("search configuration", () => {
       expect(() =>
         define({ search: { ...validSearch, contentFields: ["featured"] } }),
       ).toThrow(
-        /search.contentFields names "featured" of kind "boolean"\. Expected one of: slug, text, textarea\./,
+        /search.contentFields names "featured" of kind "boolean"\. Expected one of: richText, slug, text, textarea\./,
       );
     });
 

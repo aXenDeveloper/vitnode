@@ -43,6 +43,10 @@ import {
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import {
+  contentRichTextSearchColumns,
+  withContentRichTextSearchText,
+} from "../rich-text";
+import {
   buildContentRelationOperations,
   buildContentRepeatableOperations,
   contentCollectionKinds,
@@ -67,6 +71,7 @@ import {
   projectRevisionSnapshot,
 } from "./revision-snapshot";
 import { createContentRevisionsModel } from "./revisions-model";
+import { withContentRichTextWrites } from "./rich-text";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
 
@@ -224,7 +229,7 @@ export const createContentEditorialService = <
   columns,
   definition,
   pluginId,
-  schemas,
+  schemas: definitionSchemas,
   table,
 }: {
   /** The collection store, or nothing for a content type that declares none. */
@@ -253,6 +258,15 @@ export const createContentEditorialService = <
   }
 
   const contentTypeId = definition.id;
+  // Rich text is sanitised and validated as part of the parse, so every write
+  // below - and anything built on this service - stores sanitised HTML.
+  const schemas = withContentRichTextWrites(
+    definitionSchemas,
+    definition.fields,
+  );
+  const richTextSearch = contentRichTextSearchColumns(definition).filter(
+    entry => !entry.localized,
+  );
   const store = advanced;
   // Shared fields only, everywhere below. A localized field is a column on the
   // translation table, so selecting it here would address something that does not
@@ -802,7 +816,12 @@ export const createContentEditorialService = <
 
         const [row] = await tx
           .insert(table)
-          .values(toInsertColumns(fields, withCreateSlugs(parsed)))
+          .values(
+            withContentRichTextSearchText(
+              richTextSearch,
+              toInsertColumns(fields, withCreateSlugs(parsed)),
+            ),
+          )
           .returning(ownSelection());
 
         // In the same transaction as the row: a create that committed its
@@ -1031,7 +1050,10 @@ export const createContentEditorialService = <
           id,
           options.expectedVersion,
           changedPaths.length > 0
-            ? changedPathsToColumns(fields, patch, changedPaths)
+            ? withContentRichTextSearchText(
+                richTextSearch,
+                changedPathsToColumns(fields, patch, changedPaths),
+              )
             : {},
         );
         if (!row) return null;
@@ -1147,7 +1169,10 @@ export const createContentEditorialService = <
           id,
           options.expectedVersion,
           changedPaths.length > 0
-            ? changedPathsToColumns(fields, patch, changedPaths)
+            ? withContentRichTextSearchText(
+                richTextSearch,
+                changedPathsToColumns(fields, patch, changedPaths),
+              )
             : {},
         );
         if (!row) return null;

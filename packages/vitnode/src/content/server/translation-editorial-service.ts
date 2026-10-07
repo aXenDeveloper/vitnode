@@ -46,6 +46,7 @@ import {
   projectTranslationRevisionSnapshot,
 } from "./revision-snapshot";
 import { createContentRevisionsModel } from "./revisions-model";
+import { withContentRichTextWrites } from "./rich-text";
 import { createSlugNormalizer } from "./slugs";
 import { CONTENT_TRANSLATION_INITIAL_VERSION } from "./translation-model";
 
@@ -149,7 +150,7 @@ export const createContentTranslationEditorialService = <
   c,
   definition,
   pluginId,
-  schemas,
+  schemas: definitionSchemas,
   translations,
 }: {
   c: Context;
@@ -160,6 +161,12 @@ export const createContentTranslationEditorialService = <
   translations: ContentTranslationModel<TDefinition>;
 }): ContentTranslationEditorialService<TDefinition> => {
   const contentTypeId = definition.id;
+  // Rich text is sanitised and validated as part of the parse, so every write
+  // below - and anything built on this service - stores sanitised HTML.
+  const schemas = withContentRichTextWrites(
+    definitionSchemas,
+    definition.fields,
+  );
 
   if (!definition.localization.enabled) {
     throw new ContentEngineError(

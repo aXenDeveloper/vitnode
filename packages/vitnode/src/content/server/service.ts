@@ -45,6 +45,11 @@ import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import { orderableColumns } from "../registry";
 import {
+  contentRichTextSearchColumnOf,
+  contentRichTextSearchColumns,
+  withContentRichTextSearchText,
+} from "../rich-text";
+import {
   buildContentRelationOperations,
   buildContentRepeatableOperations,
   contentCollectionKinds,
@@ -56,6 +61,7 @@ import {
   buildOrderColumn,
   buildSearchCondition,
   changedPathsToColumns,
+  contentSearchColumn,
   diffChangedPaths,
   toInsertColumns,
 } from "./query";
@@ -65,6 +71,7 @@ import {
   resolveReferenceTargets,
   toLabel,
 } from "./references";
+import { withContentRichTextWrites } from "./rich-text";
 import { createSlugNormalizer } from "./slugs";
 
 /** Display labels for `user` and `relation` values, keyed by field name. */
@@ -297,7 +304,7 @@ export const createContentService = <
   c,
   columns,
   definition,
-  schemas,
+  schemas: definitionSchemas,
   table,
   translation,
 }: {
@@ -325,6 +332,16 @@ export const createContentService = <
   const filterableFields = { ...fields, ...collectionFields };
   const store = advanced;
   const contentTypeId = definition.id;
+  // Rich text is sanitised and validated as part of the parse, so every write
+  // below - and anything built on this service - stores sanitised HTML.
+  const schemas = withContentRichTextWrites(
+    definitionSchemas,
+    definition.fields,
+  );
+  // The plain-text twins of searchable rich text columns on the base table.
+  const richTextSearch = contentRichTextSearchColumns(definition).filter(
+    entry => !entry.localized,
+  );
   // `buildSystemColumns` always makes `id` a `serial`, which is what
   // `withPagination` needs to type its cursor.
   const primaryCursor = columns.id as PaginationCursorColumn;
@@ -361,13 +378,27 @@ export const createContentService = <
   ].filter(([, target]) => target.localizedLabel !== undefined);
   const isSharedField = (name: string): boolean =>
     sharedFields[name] !== undefined;
+  // A searchable rich text field is matched on its plain-text twin, never on
+  // the markup. See `contentSearchColumn`.
   const searchColumns = definition.admin.list.searchableFields
     .filter(isSharedField)
-    .map(name => columns[name]);
+    .map(name =>
+      contentSearchColumn(
+        columns,
+        name,
+        contentRichTextSearchColumnOf(definition, name),
+      ),
+    );
   const translationSearchColumns = translation
     ? definition.admin.list.searchableFields
         .filter(name => !isSharedField(name))
-        .map(name => translation.columns[name])
+        .map(name =>
+          contentSearchColumn(
+            translation.columns,
+            name,
+            contentRichTextSearchColumnOf(definition, name),
+          ),
+        )
     : [];
 
   const searchCondition = (term: string | undefined): SQL | undefined => {
@@ -709,7 +740,12 @@ export const createContentService = <
 
         const [row] = await tx
           .insert(table)
-          .values(toInsertColumns(fields, withCreateSlugs(parsed)))
+          .values(
+            withContentRichTextSearchText(
+              richTextSearch,
+              toInsertColumns(fields, withCreateSlugs(parsed)),
+            ),
+          )
           .returning(ownSelection());
 
         // In the same transaction as the row it belongs to: a create that
@@ -1022,7 +1058,10 @@ export const createContentService = <
         .update(table)
         .set(
           changedPaths.length > 0
-            ? changedPathsToColumns(fields, patch, changedPaths)
+            ? withContentRichTextSearchText(
+                richTextSearch,
+                changedPathsToColumns(fields, patch, changedPaths),
+              )
             : { updatedAt: new Date() },
         )
         .where(eq(primaryCursor, id))

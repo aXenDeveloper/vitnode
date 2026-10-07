@@ -666,3 +666,64 @@ describe("the localized form schema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("rich text in the form", () => {
+  const story = defineContentType({
+    id: "test.story",
+    tableName: "test_stories",
+    localization: { enabled: true, defaultLocale: "en" },
+    fields: {
+      title: field.text({ required: true }),
+      body: field.richText({ localized: true, required: true, maxLength: 5 }),
+      note: field.richText({ nullable: true }),
+    },
+  });
+  const spec = buildContentFormSpec({
+    definition: story,
+    labelEnum,
+    labelField,
+    pluginId: "@vitnode/example",
+  });
+  const schema = buildFormSchemaFromSpec(spec);
+  const body = (en: string, pl = "") => [
+    { languageCode: "en", value: en },
+    { languageCode: "pl", value: pl },
+  ];
+
+  it("treats an editor holding only empty markup as an unwritten language", () => {
+    expect(
+      contentFormValuesToTranslations(spec, {
+        body: body("<p>Hello</p>", "<p><br></p>"),
+      }),
+    ).toEqual({ en: { body: "<p>Hello</p>" } });
+  });
+
+  it("requires text or media in the default language, not markup", () => {
+    expect(
+      schema.safeParse({ body: body("<p></p>"), title: "x" }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({ body: body('<p><img src="/a.png"></p>'), title: "x" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("holds each language's plain text, not its markup, to maxLength", () => {
+    const styled = '<p><span style="color: red">Hello</span></p>';
+
+    expect(schema.safeParse({ body: body(styled), title: "x" }).success).toBe(
+      true,
+    );
+    expect(
+      schema.safeParse({ body: body(styled, "<p>Witajcie</p>"), title: "x" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("lets a shared optional body stay empty", () => {
+    expect(
+      schema.safeParse({ body: body("<p>Hi</p>"), note: "<p></p>", title: "x" })
+        .success,
+    ).toBe(true);
+  });
+});

@@ -10,6 +10,7 @@ import type {
   ResolvedContentPublicApiConfig,
 } from "./types";
 
+import { stripHtml } from "../lib/strip-html";
 import { parseRoutePath } from "../routing/path";
 import {
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
@@ -18,6 +19,7 @@ import {
   CONTENT_DELIVERY_TITLE_KINDS,
   isContentSitemapChangeFrequency,
 } from "./const";
+import { resolveFieldTarget } from "./define-shared";
 import { ContentEngineError } from "./errors";
 import { normalizeContentLocale } from "./locale";
 import { readContentPath, splitContentFieldPath } from "./paths";
@@ -605,6 +607,7 @@ export interface ContentDeliveryRobots {
 }
 
 const readSeoText = (
+  fields: ContentFieldMap,
   row: Record<string, unknown>,
   primary: null | string,
   fallback: null | string,
@@ -615,7 +618,13 @@ const readSeoText = (
     const value = readContentPath(row, name);
     if (typeof value !== "string") continue;
 
-    const trimmed = value.trim();
+    // A rich text body is HTML, and a meta description is text: the same
+    // extractor search uses, so `&amp;` reads `&` and markup never leaks into a
+    // snippet. A body that is only an image has no description to give.
+    const trimmed =
+      resolveFieldTarget(fields, name)?.descriptor.kind === "richText"
+        ? stripHtml(value)
+        : value.trim();
     if (trimmed !== "") return trimmed;
   }
 
@@ -630,11 +639,17 @@ export const contentDeliverySeo = (
 
   return {
     description: readSeoText(
+      definition.fields,
       row,
       seo.descriptionField,
       seo.fallbackDescriptionField,
     ),
-    title: readSeoText(row, seo.titleField, seo.fallbackTitleField),
+    title: readSeoText(
+      definition.fields,
+      row,
+      seo.titleField,
+      seo.fallbackTitleField,
+    ),
   };
 };
 
@@ -649,9 +664,15 @@ export const contentDeliveryOpenGraph = (
 
   return {
     description:
-      readSeoText(row, seo.openGraph.descriptionField, null) ??
-      base.description,
-    title: readSeoText(row, seo.openGraph.titleField, null) ?? base.title,
+      readSeoText(
+        definition.fields,
+        row,
+        seo.openGraph.descriptionField,
+        null,
+      ) ?? base.description,
+    title:
+      readSeoText(definition.fields, row, seo.openGraph.titleField, null) ??
+      base.title,
   };
 };
 

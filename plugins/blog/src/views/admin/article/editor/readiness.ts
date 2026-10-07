@@ -2,7 +2,7 @@ import type { ContentFormTranslationMeta } from "@vitnode/core/content/admin-for
 import type { MultiLangValue } from "@vitnode/core/lib/helpers/multi-lang";
 
 import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
-import { stripHtml } from "@vitnode/core/lib/strip-html";
+import { isHtmlEmpty, stripHtml } from "@vitnode/core/lib/strip-html";
 
 export const TRANSLATED_FIELDS = [
   "title",
@@ -40,11 +40,18 @@ export const fieldText = (
   return field === "content" ? stripHtml(value).trim() : value.trim();
 };
 
+/**
+ * Whether a language has written this field. The body counts an image or an
+ * audio clip as content, exactly as the server's `required` check does.
+ */
 export const hasFieldText = (
   values: ArticleValues,
   field: TranslatedField,
   locale: string,
-): boolean => fieldText(values, field, locale) !== "";
+): boolean =>
+  field === "content"
+    ? !isHtmlEmpty(getLangValue(values.content, locale))
+    : fieldText(values, field, locale) !== "";
 
 export type FieldStatus = "done" | "missing" | "unavailable";
 
