@@ -13,6 +13,7 @@ import type {
   PgUUIDBuilder,
   PgVarcharBuilder,
   SetHasDefault,
+  SetIsPrimaryKey,
   SetNotNull,
 } from "drizzle-orm/pg-core";
 
@@ -42,9 +43,9 @@ type EnumValuesOf<TField> = TField extends {
 /** The primary key column of a content table, per id strategy. */
 export type ContentIdPkBuilder<TStrategy extends ContentIdStrategy> =
   TStrategy extends "uuid"
-    ? SetHasDefault<PgUUIDBuilder>
+    ? SetIsPrimaryKey<SetHasDefault<PgUUIDBuilder>>
     : TStrategy extends "bigint"
-      ? HasIdentity<PgBigIntStringBuilder, "byDefault">
+      ? HasIdentity<SetIsPrimaryKey<PgBigIntStringBuilder>, "byDefault">
       : PgSerialBuilder;
 
 /** A foreign key column pointing at a content table with `TStrategy` ids. */

@@ -1,6 +1,7 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
 import { categoryContentType } from "./category";
+import { tagContentType } from "./tag";
 
 export const advancedArticleContentType = defineContentType({
   id: "example.advanced-article",
@@ -36,6 +37,14 @@ export const advancedArticleContentType = defineContentType({
       multiple: true,
       onDelete: "restrict",
       target: () => categoryContentType,
+    }),
+
+    // A serial record pointing at `uuid` ones: the junction's `relatedItemId`
+    // is a `uuid` column, and the values are uuid strings in every API.
+    tags: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => tagContentType,
     }),
 
     // A self-relation, and an ordered one: "read next" is a sequence somebody
@@ -156,7 +165,7 @@ export const advancedArticleContentType = defineContentType({
     form: {
       // The form *does* carry them: this is the surface where a group renders as
       // a section and a collection as an editor.
-      fields: ["categories", "relatedArticles", "syndication", "faq"],
+      fields: ["categories", "tags", "relatedArticles", "syndication", "faq"],
     },
   },
 });

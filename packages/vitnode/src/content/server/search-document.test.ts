@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  testBigintEventContentType,
   testContentLocaleRouting,
   testPostContentType,
   testSearchablePostContentType,
@@ -214,5 +215,36 @@ describe("content search document", () => {
     it("percent-encodes an unusual slug", () => {
       expect(document({ slug: "a b" })?.url).toBe("/searchable/a%20b");
     });
+  });
+});
+
+describe("a content type keyed by another id strategy", () => {
+  const event = (id: unknown) =>
+    contentSearchDocument(
+      testBigintEventContentType,
+      {
+        createdAt: CREATED_AT,
+        id,
+        publishedAt: PUBLISHED_AT,
+        sessions: [],
+        slug: "launch",
+        status: "published",
+        title: "Launch",
+        updatedAt: UPDATED_AT,
+      },
+      { routing },
+    );
+
+  it("indexes a bigint record under its exact string id, never skipping it", () => {
+    expect(event("9007199254740993")).toMatchObject({
+      itemId: "9007199254740993",
+      itemType: "test.bigint-event",
+      url: "/bigint-events/launch",
+    });
+  });
+
+  it("builds nothing for an id the strategy cannot read", () => {
+    expect(event(7)).toBeNull();
+    expect(event("not-an-id")).toBeNull();
   });
 });

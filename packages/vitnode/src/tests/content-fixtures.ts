@@ -824,3 +824,150 @@ export const testHideableNoteContentType = defineContentType({
     pathTemplate: "/hideable-notes/{slug}",
   },
 });
+
+/**
+ * `idStrategy: "uuid"`, localized: the translation table's `itemId` is a `uuid`,
+ * a to-one relation points at a *serial* content type and a self-relation
+ * follows the owner's own strategy.
+ */
+export const testUuidTagContentType = defineContentType({
+  id: "test.uuid-tag",
+  tableName: "test_uuid_tags",
+  idStrategy: "uuid",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  visibility: { enabled: true },
+  duplication: { enabled: true },
+  editorial: {
+    enabled: true,
+    preview: { enabled: true, expiresInMinutes: 30 },
+  },
+  fields: {
+    name: field.text({ localized: true, required: true, maxLength: 100 }),
+    slug: field.slug({ localized: true, source: "name" }),
+    category: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testCategoryContentType,
+    }),
+    relatedTags: field.relation({ multiple: true, ordered: true, self: true }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "uuid-tags",
+    fields: ["id", "name", "slug", "category", "relatedTags", "publishedAt"],
+    filterableFields: ["relatedTags"],
+    defaultOrderBy: "publishedAt",
+  },
+  admin: { titleField: "name" },
+});
+
+/**
+ * `idStrategy: "bigint"`, the fullest non-localized shape: every relation kind
+ * across strategies (a `uuid` target, a `serial` one, a bigint self-relation),
+ * a repeatable whose children stay `serial`, editorial history with previews and
+ * scheduling, search and delivery with redirects.
+ */
+export const testBigintEventContentType = defineContentType({
+  id: "test.bigint-event",
+  tableName: "test_bigint_events",
+  idStrategy: "bigint",
+  publication: { enabled: true },
+  visibility: { enabled: true },
+  duplication: { enabled: true },
+  editorial: {
+    enabled: true,
+    preview: { enabled: true, expiresInMinutes: 30 },
+    scheduling: { enabled: true },
+  },
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ nullable: true }),
+    primaryTag: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testUuidTagContentType,
+    }),
+    category: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testCategoryContentType,
+    }),
+    tags: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => testUuidTagContentType,
+    }),
+    relatedEvents: field.relation({ multiple: true, self: true }),
+    sessions: field.repeatable({
+      fields: {
+        title: field.text({ required: true, maxLength: 100 }),
+        startsAt: field.dateTime({ nullable: true }),
+      },
+    }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "bigint-events",
+    fields: [
+      "id",
+      "title",
+      "slug",
+      "primaryTag",
+      "category",
+      "tags",
+      "relatedEvents",
+      "sessions.title",
+      "publishedAt",
+    ],
+    filterableFields: ["tags"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["title", "sessions.title"],
+    pathTemplate: "/bigint-events/{slug}",
+  },
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    seo: { titleField: "title" },
+    sitemap: { enabled: true },
+  },
+  admin: { titleField: "title", list: { columns: ["title", "tags"] } },
+});
+
+/** `idStrategy: "bigint"` with translations: a `bigint` translation `itemId`. */
+export const testBigintPageContentType = defineContentType({
+  id: "test.bigint-page",
+  tableName: "test_bigint_pages",
+  idStrategy: "bigint",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  editorial: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "bigint-pages",
+    fields: ["id", "title", "slug", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/{locale}/bigint-pages/{slug}",
+  },
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    hreflang: { xDefault: "defaultLocale" },
+    seo: { titleField: "title" },
+    sitemap: { enabled: true },
+  },
+});

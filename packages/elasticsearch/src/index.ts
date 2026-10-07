@@ -6,6 +6,7 @@ import type {
   SearchQueryParams,
   SearchResult,
 } from "@vitnode/core/api/models/search";
+import type { ContentId } from "@vitnode/core/content";
 
 import { Client, errors } from "@elastic/elasticsearch";
 
@@ -35,7 +36,13 @@ interface EsSource {
   content: string;
   createdAt: string;
   isPublic: boolean;
-  itemId: number;
+  /**
+   * The numeric id, only for a numeric item - the original `integer` mapping
+   * cannot hold a `uuid` or a `bigint` key, so those carry `itemKey` alone.
+   */
+  itemId?: number;
+  /** `contentIdKey(itemId)` - every item has one, whatever its id strategy. */
+  itemKey?: string;
   itemType: string;
   languageCode: string;
   metadata: Record<string, unknown>;
@@ -44,11 +51,18 @@ interface EsSource {
   url: null | string;
 }
 
+/** The storage key of any item id - exactly what `core_search_index` holds. */
+const itemKeyOf = (itemId: ContentId): string => String(itemId);
+
+/**
+ * The document id. A serial item's is exactly what it always was
+ * (`blog.post:42:en`), so an existing index keeps its documents.
+ */
 const docId = (
   itemType: string,
-  itemId: number,
+  itemId: ContentId,
   languageCode: string,
-): string => `${itemType}:${itemId}:${languageCode}`;
+): string => `${itemType}:${itemKeyOf(itemId)}:${languageCode}`;
 
 interface EsErrorBody {
   error?: { type?: string };
@@ -65,7 +79,8 @@ const toSource = (doc: SearchDocument): EsSource => ({
   // reason a mirrored document disagrees with the canonical row.
   pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
-  itemId: doc.itemId,
+  ...(typeof doc.itemId === "number" ? { itemId: doc.itemId } : {}),
+  itemKey: itemKeyOf(doc.itemId),
   languageCode: doc.languageCode ?? "",
   authorIds: [...new Set(doc.authorIds ?? [])],
   title: doc.title,
@@ -192,11 +207,16 @@ const mapHit = (hit: estypes.SearchHit<EsSource>): null | SearchHit => {
   const source = hit._source;
   if (!source) return null;
 
+  // A document indexed before `itemKey` existed has only the number; a `uuid`
+  // or `bigint` one has only the key. Numeric ids stay numbers either way.
+  const itemId: ContentId | undefined = source.itemId ?? source.itemKey;
+  if (itemId === undefined) return null;
+
   return {
-    id: source.itemId,
+    id: typeof itemId === "number" ? itemId : 0,
     pluginId: source.pluginId,
     itemType: source.itemType,
-    itemId: source.itemId,
+    itemId,
     languageCode: source.languageCode,
     authorId: source.authorIds?.[0] ?? null,
     title: source.title,
@@ -242,7 +262,18 @@ export const ElasticsearchSearchAdapter = (
 
   const createIndexIfMissing = async (): Promise<void> => {
     const es = getClient();
-    if (await es.indices.exists({ index })) return;
+    if (await es.indices.exists({ index })) {
+      // An index created before `itemKey` existed gains the field. Adding a
+      // keyword property is a compatible mapping change, so this is safe to
+      // repeat; documents written before it carry only `itemId`, which every
+      // read and delete below still honours. Rebuild the index to backfill.
+      await es.indices.putMapping({
+        index,
+        properties: { itemKey: { type: "keyword" } },
+      });
+
+      return;
+    }
 
     try {
       await es.indices.create({
@@ -252,6 +283,7 @@ export const ElasticsearchSearchAdapter = (
             pluginId: { type: "keyword" },
             itemType: { type: "keyword" },
             itemId: { type: "integer" },
+            itemKey: { type: "keyword" },
             languageCode: { type: "keyword" },
             authorIds: { type: "integer" },
             title: { type: "text" },
@@ -359,6 +391,7 @@ export const ElasticsearchSearchAdapter = (
     // named one, which is how a single translation is taken down without
     // touching the others.
     delete: async (_c, itemType, itemId, languageCode) => {
+      await ensureIndex();
       await getClient().deleteByQuery(
         {
           index,
@@ -366,10 +399,16 @@ export const ElasticsearchSearchAdapter = (
             bool: {
               filter: [
                 { term: { itemType } },
-                { term: { itemId } },
                 ...(languageCode === undefined
                   ? []
                   : [{ term: { languageCode } }]),
+              ],
+              // By key, which every document written since carries - or by the
+              // number, which is all a document indexed before it has.
+              minimum_should_match: 1,
+              should: [
+                { term: { itemKey: itemKeyOf(itemId) } },
+                ...(typeof itemId === "number" ? [{ term: { itemId } }] : []),
               ],
             },
           },
