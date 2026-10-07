@@ -5,6 +5,8 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "use-intl";
 
+import type { DataTableRowId } from "./data-table-content";
+
 import { MotionFeatures } from "../motion-features";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -16,10 +18,10 @@ import { TooltipWithContent } from "../ui/tooltip";
 export interface SelectionDataTable {
   allSelected: boolean;
   clear: () => void;
-  isSelected: (id: number) => boolean;
-  selected: number[];
+  isSelected: (id: DataTableRowId) => boolean;
+  selected: DataTableRowId[];
   someSelected: boolean;
-  toggle: (id: number) => void;
+  toggle: (id: DataTableRowId) => void;
   toggleAll: (next: boolean) => void;
 }
 
@@ -48,9 +50,9 @@ export function SelectionProviderDataTable({
   rowIds,
 }: {
   children: React.ReactNode;
-  rowIds: number[];
+  rowIds: DataTableRowId[];
 }) {
-  const [selected, setSelected] = React.useState<number[]>([]);
+  const [selected, setSelected] = React.useState<DataTableRowId[]>([]);
   const pageKey = rowIds.join(",");
   const [prevPageKey, setPrevPageKey] = React.useState(pageKey);
 
@@ -104,7 +106,7 @@ export function SelectAllDataTable() {
   );
 }
 
-export function SelectRowDataTable({ id }: { id: number }) {
+export function SelectRowDataTable({ id }: { id: DataTableRowId }) {
   const t = useTranslations("core.global.data_table");
   const { isSelected, toggle } = useDataTableSelection();
 
@@ -122,7 +124,7 @@ export function RowSelectableDataTable({
   id,
 }: {
   children: React.ReactNode;
-  id: number;
+  id: DataTableRowId;
 }) {
   const { isSelected } = useDataTableSelection();
 

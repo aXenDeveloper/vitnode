@@ -85,7 +85,7 @@ export const invalidateContentAfterWrite = async (
     contentTypeId,
     itemId,
     removed = false,
-  }: { contentTypeId: string; itemId?: number; removed?: boolean },
+  }: { contentTypeId: string; itemId?: ContentId; removed?: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 
@@ -106,7 +106,7 @@ export const invalidateContentAfterBulkWrite = async (
     contentTypeId,
     itemIds,
     removed,
-  }: { contentTypeId: string; itemIds: readonly number[]; removed: boolean },
+  }: { contentTypeId: string; itemIds: readonly ContentId[]; removed: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 

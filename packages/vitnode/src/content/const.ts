@@ -24,6 +24,14 @@ export const CONTENT_ID_STRATEGIES = ["serial", "uuid", "bigint"] as const;
 
 export const CONTENT_DEFAULT_ID_STRATEGY = "serial";
 
+/**
+ * `varchar` length of an `itemId` in the tables shared by every content type -
+ * revisions, schedules, slug history and the search index. They hold
+ * `contentIdKey(id)`: the digits of a `serial` or `bigint` (at most 19) or a
+ * canonical UUID (36), with room to spare.
+ */
+export const CONTENT_ID_KEY_LENGTH = 64;
+
 export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
   "itemId",
   "languageId",

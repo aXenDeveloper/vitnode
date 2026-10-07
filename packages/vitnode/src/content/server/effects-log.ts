@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import type { EventEmitResult } from "../../api/models/events";
+import type { ContentId } from "../ids";
 
 export const CONTENT_EFFECTS_LOG_PREFIX = "[content-effects]";
 
@@ -16,7 +17,7 @@ export const reportContentEventFailures = async (
     action: string;
     contentTypeId: string;
     event: EventEmitResult | null;
-    itemId: number;
+    itemId: ContentId;
     /** Present only for a translation mutation. */
     locale?: string;
   },

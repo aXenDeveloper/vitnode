@@ -13,7 +13,7 @@ export interface SearchResultItem {
   createdAt: Date | string;
   id: number;
   isPublic: boolean;
-  itemId: number;
+  itemId: number | string;
   itemType: string;
   languageCode: string;
   metadata: Record<string, unknown>;

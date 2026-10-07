@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { and, desc, eq, isNull, lt, lte, notInArray, sql } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type {
   ContentActor,
   ContentAnyRevisionSnapshot,
@@ -19,6 +20,7 @@ import {
 } from "../../database/content";
 import { core_roles } from "../../database/roles";
 import { core_users } from "../../database/users";
+import { contentIdKey } from "../ids";
 
 export interface ContentRevisionCaptureInput<
   TSnapshot = ContentRevisionSnapshot,
@@ -27,7 +29,7 @@ export interface ContentRevisionCaptureInput<
   changedFields: readonly string[];
 
   fileIds?: readonly number[];
-  itemId: number;
+  itemId: ContentId;
   operation: ContentRevisionOperation;
   restoredFromRevisionId?: number;
   snapshot: TSnapshot;
@@ -41,18 +43,18 @@ export interface ContentRevisionsModel<TSnapshot = ContentRevisionSnapshot> {
     input: ContentRevisionCaptureInput<TSnapshot>,
   ) => Promise<number>;
   findById: (
-    itemId: number,
+    itemId: ContentId,
     revisionId: number,
     tx?: ContentDatabase,
   ) => Promise<ContentRevisionDetail<TSnapshot> | null>;
 
   latest: (
-    itemId: number,
+    itemId: ContentId,
     tx?: ContentDatabase,
   ) => Promise<ContentRevisionMeta | null>;
   /** Newest first. Metadata only - a snapshot is loaded on demand. */
   list: (
-    itemId: number,
+    itemId: ContentId,
     args?: { cursor?: number; limit?: number },
   ) => Promise<ContentRevisionPage>;
 }
@@ -86,11 +88,11 @@ export const createContentRevisionsModel = <
   const retention = definition.editorial.revisions.retention;
 
   /** The scope predicate. Not optional anywhere, which is the point. */
-  const scope = (itemId: number) =>
+  const scope = (itemId: ContentId) =>
     and(
       eq(core_content_revisions.pluginId, pluginId),
       eq(core_content_revisions.contentTypeId, contentTypeId),
-      eq(core_content_revisions.itemId, itemId),
+      eq(core_content_revisions.itemId, contentIdKey(itemId)),
       // `IS NULL` rather than `= NULL`: the shared scope is the absence of a
       // language, and an equality against `null` matches nothing in SQL.
       languageId === null
@@ -121,7 +123,7 @@ export const createContentRevisionsModel = <
           actorUserId: input.actor.userId,
           changedFields: [...input.changedFields],
           contentTypeId,
-          itemId: input.itemId,
+          itemId: contentIdKey(input.itemId),
           languageId,
           operation: input.operation,
           pluginId,

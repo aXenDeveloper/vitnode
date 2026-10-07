@@ -1,6 +1,8 @@
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import type { ContentId } from "@/content/ids";
+
 import type { ContentPanelProps } from "./content-panel";
 
 import { ContentPanel } from "./content-panel";
@@ -22,7 +24,7 @@ export const ScheduleContentPanel = ({
   ...panel
 }: ContentPanelProps & {
   contentTypeId: string;
-  id: number;
+  id: ContentId;
   singular: string;
   title: string;
 }) => {

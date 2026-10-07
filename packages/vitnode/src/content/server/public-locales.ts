@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { eq } from "drizzle-orm";
 
 import type { ContentPublicLocaleState } from "../cache";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
@@ -36,7 +37,7 @@ export const contentPublicLocaleStates = async <
 >(
   c: Context,
   model: ContentModel<TDefinition>,
-  itemId: number,
+  itemId: ContentId,
   { row }: { row?: Record<string, unknown> } = {},
 ): Promise<ContentPublicLocaleState[]> => {
   const { definition } = model;

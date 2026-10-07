@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentLocalizedUpdateValues,
@@ -24,6 +25,7 @@ import {
 } from "../conflicts";
 import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_PERMISSIONS } from "../const";
 import { zodContentFileReferenceRejection } from "../files";
+import { requireContentId } from "../ids";
 import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
@@ -31,7 +33,7 @@ import { contentFileFields } from "./files";
 import { withHttpErrors } from "./http-errors";
 import { commitContentDrafts } from "./live-store";
 import {
-  identifier,
+  contentIdentifier,
   jsonBody,
   jsonResponse,
   plainOutcome,
@@ -155,7 +157,7 @@ export const buildContentLocalizedAdminRoutes = <
    */
   const writeTranslation = async (
     c: Context,
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     entry: TranslationEntry,
     tx: ContentDatabase,
   ): Promise<ContentTranslationEditorialOutcome<TDefinition> | null> => {
@@ -258,7 +260,11 @@ export const buildContentLocalizedAdminRoutes = <
       return;
     }
 
-    const id = (row as { id: number }).id;
+    const id = requireContentId(
+      definition.idStrategy,
+      (row as { id: unknown }).id,
+      definition.id,
+    );
 
     await emitContentEvent(
       c,
@@ -336,7 +342,11 @@ export const buildContentLocalizedAdminRoutes = <
             for (const entry of ordered) {
               const translated = await writeTranslation(
                 c,
-                (row as { id: number }).id,
+                requireContentId(
+                  definition.idStrategy,
+                  (row as { id: unknown }).id,
+                  definition.id,
+                ) as ContentIdOf<TDefinition>,
                 entry,
                 tx,
               );
@@ -383,7 +393,7 @@ export const buildContentLocalizedAdminRoutes = <
     },
     handler: async c => {
       const savedFrom = new Date();
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const body = await readJson(c, updateBody);
       const entries = body.translations as TranslationEntry[];
       const shared = body.values;

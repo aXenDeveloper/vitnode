@@ -3,6 +3,7 @@ import type { Context } from "hono";
 
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
+import type { ContentId, ContentIdStrategy } from "../ids";
 import type { ContentLocaleRouting } from "../public-url";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
@@ -10,10 +11,15 @@ import type { ContentDatabase } from "./service";
 import { core_content_slug_history } from "../../database/content";
 import { contentDeliveryPath } from "../delivery";
 import { ContentDeliverySlugReserved } from "../errors";
+import { contentIdFromKey, contentIdKey } from "../ids";
 
 export interface ContentSlugHistoryEntry {
   createdAt: Date;
-  itemId: number;
+  /**
+   * The owning record, read back under the content type's strategy. The table
+   * stores `contentIdKey(id)`.
+   */
+  itemId: ContentId;
   /** `null` for a shared slug - see `core_content_slug_history`. */
   languageId: null | number;
   path: string;
@@ -22,7 +28,7 @@ export interface ContentSlugHistoryEntry {
 }
 
 export interface ContentSlugHistoryTarget {
-  itemId: number;
+  itemId: ContentId;
   /** `null` for a shared slug - see `core_content_slug_history`. */
   languageId: null | number;
   /** The canonical `core_languages.code`, or `null` when the slug is shared. */
@@ -45,7 +51,7 @@ export interface ContentSlugHistoryModel {
   ) => Promise<{ created: boolean }>;
 
   list: (
-    args: { itemId: number; languageId?: null | number; limit?: number },
+    args: { itemId: ContentId; languageId?: null | number; limit?: number },
     database?: ContentDatabase,
   ) => Promise<ContentSlugHistoryEntry[]>;
 
@@ -75,16 +81,21 @@ const languageCondition = (
   column: typeof core_content_slug_history.languageId,
 ): SQL => (languageId === null ? isNull(column) : eq(column, languageId));
 
-const toEntry = (row: {
-  createdAt: Date;
-  itemId: number;
-  languageId: null | number;
-  path: string;
-  retiredAt: Date | null;
-  slug: string;
-}): ContentSlugHistoryEntry => ({
+const toEntry = (
+  strategy: ContentIdStrategy,
+  row: {
+    createdAt: Date;
+    itemId: string;
+    languageId: null | number;
+    path: string;
+    retiredAt: Date | null;
+    slug: string;
+  },
+): ContentSlugHistoryEntry => ({
   createdAt: row.createdAt,
-  itemId: row.itemId,
+  // A key the strategy cannot read stays the key: an owner that no live record
+  // can match, which is what a reservation by a vanished id should be.
+  itemId: contentIdFromKey(strategy, row.itemId) ?? row.itemId,
   languageId: row.languageId,
   path: row.path,
   retiredAt: row.retiredAt,
@@ -131,7 +142,7 @@ export const createContentSlugHistoryModel = ({
 
     const [row] = lock ? await query.for("update") : await query;
 
-    return row ? toEntry(row) : null;
+    return row ? toEntry(definition.idStrategy, row) : null;
   };
 
   const claim = async (
@@ -146,7 +157,14 @@ export const createContentSlugHistoryModel = ({
   ): Promise<{ created: boolean }> => {
     const [inserted] = await tx
       .insert(core_content_slug_history)
-      .values({ contentTypeId, itemId, languageId, path, pluginId, slug })
+      .values({
+        contentTypeId,
+        itemId: contentIdKey(itemId),
+        languageId,
+        path,
+        pluginId,
+        slug,
+      })
       .onConflictDoNothing()
       .returning({ id: core_content_slug_history.id });
 
@@ -160,7 +178,7 @@ export const createContentSlugHistoryModel = ({
     // commit - and under a stricter isolation level it means somebody else has the
     // address and we simply cannot see them yet. Either way this transaction did
     // not get it, and refusing is the only answer that is never wrong.
-    if (owner?.itemId !== itemId) {
+    if (owner === null || contentIdKey(owner.itemId) !== contentIdKey(itemId)) {
       throw new ContentDeliverySlugReserved({ contentTypeId, locale, slug });
     }
 
@@ -170,7 +188,12 @@ export const createContentSlugHistoryModel = ({
   return {
     assertAvailable: async (tx, { itemId, languageId, locale, slug }) => {
       const owner = await findOwner(tx, { languageId, slug });
-      if (owner === null || owner.itemId === itemId) return;
+      if (
+        owner === null ||
+        contentIdKey(owner.itemId) === contentIdKey(itemId)
+      ) {
+        return;
+      }
 
       throw new ContentDeliverySlugReserved({ contentTypeId, locale, slug });
     },
@@ -181,7 +204,10 @@ export const createContentSlugHistoryModel = ({
     ensureCurrent: async (tx, args) => await claim(tx, args),
 
     list: async ({ itemId, languageId, limit }, database) => {
-      const conditions = [scope, eq(core_content_slug_history.itemId, itemId)];
+      const conditions = [
+        scope,
+        eq(core_content_slug_history.itemId, contentIdKey(itemId)),
+      ];
       if (languageId !== undefined) {
         conditions.push(
           languageCondition(languageId, core_content_slug_history.languageId),
@@ -202,7 +228,7 @@ export const createContentSlugHistoryModel = ({
         )
         .limit(Math.min(limit ?? HISTORY_LIST_LIMIT, HISTORY_LIST_LIMIT));
 
-      return rows.map(toEntry);
+      return rows.map(row => toEntry(definition.idStrategy, row));
     },
 
     owner: async (args, database) =>
@@ -224,7 +250,7 @@ export const createContentSlugHistoryModel = ({
         .where(
           and(
             scope,
-            eq(core_content_slug_history.itemId, itemId),
+            eq(core_content_slug_history.itemId, contentIdKey(itemId)),
             eq(core_content_slug_history.slug, slug),
             languageCondition(languageId, core_content_slug_history.languageId),
           ),
@@ -240,7 +266,7 @@ export const createContentSlugHistoryModel = ({
         .where(
           and(
             scope,
-            eq(core_content_slug_history.itemId, itemId),
+            eq(core_content_slug_history.itemId, contentIdKey(itemId)),
             eq(core_content_slug_history.slug, slug),
             languageCondition(languageId, core_content_slug_history.languageId),
             // Only an *active* row is retired. A slug already marked historical
@@ -256,6 +282,7 @@ export const createContentSlugHistoryModel = ({
   };
 };
 
+/** The live historical path per record, keyed by `contentIdKey(itemId)`. */
 export const contentSlugHistoryCurrentPaths = async (
   database: ContentDatabase,
   {
@@ -264,10 +291,10 @@ export const contentSlugHistoryCurrentPaths = async (
     languageId,
   }: {
     contentTypeId: string;
-    itemIds: readonly number[];
+    itemIds: readonly ContentId[];
     languageId: null | number;
   },
-): Promise<Map<number, string>> => {
+): Promise<Map<string, string>> => {
   if (itemIds.length === 0) return new Map();
 
   const rows = await database
@@ -279,7 +306,7 @@ export const contentSlugHistoryCurrentPaths = async (
     .where(
       and(
         eq(core_content_slug_history.contentTypeId, contentTypeId),
-        inArray(core_content_slug_history.itemId, [...itemIds]),
+        inArray(core_content_slug_history.itemId, itemIds.map(contentIdKey)),
         languageCondition(languageId, core_content_slug_history.languageId),
         isNull(core_content_slug_history.retiredAt),
       ),

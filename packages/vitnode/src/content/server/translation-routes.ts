@@ -38,7 +38,7 @@ import { createContentPreviewToken } from "./preview-token";
 import { contentPublicLocaleStates } from "./public-locales";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
 import {
-  identifier,
+  contentIdentifier,
   jsonBody,
   jsonResponse,
   plainOutcome,
@@ -166,7 +166,9 @@ export const buildContentTranslationRoutes = <
       // per language to open one record. Additive to the metadata this route has
       // always returned, so a client that only reads `version` and `status` is
       // unaffected.
-      const edges = await translations(c).findManyRowsForItem(identifier(c));
+      const edges = await translations(c).findManyRowsForItem(
+        contentIdentifier(c, definition),
+      );
 
       return c.json({ edges }, 200);
     },
@@ -187,7 +189,10 @@ export const buildContentTranslationRoutes = <
       },
     },
     handler: async c => {
-      const row = await translations(c).findByLocale(identifier(c), locale(c));
+      const row = await translations(c).findByLocale(
+        contentIdentifier(c, definition),
+        locale(c),
+      );
       if (!row) {
         throw new HTTPException(404, { message: "Translation not found." });
       }
@@ -215,7 +220,7 @@ export const buildContentTranslationRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const target = locale(c);
       const { values } = await readJson(c, translationSchemas.createEnvelope);
 
@@ -270,7 +275,7 @@ export const buildContentTranslationRoutes = <
     },
     handler: async c => {
       const savedFrom = new Date();
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const target = locale(c);
       const { expectedVersion, values } = await readJson(
         c,
@@ -349,7 +354,7 @@ export const buildContentTranslationRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const target = locale(c);
       const { expectedVersion } = await readJson(
         c,
@@ -425,7 +430,7 @@ export const buildContentTranslationRoutes = <
         },
       },
       handler: async c => {
-        const id = identifier(c);
+        const id = contentIdentifier(c, definition);
         const target = locale(c);
         const { expectedVersion } = await readJson(
           c,
@@ -489,7 +494,7 @@ export const buildContentTranslationRoutes = <
   });
 
   const revisionParams = z.object({
-    id: z.coerce.number(),
+    id: model.schemas.params.shape.id,
     locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
     revisionId: z.coerce.number(),
   });
@@ -545,10 +550,14 @@ export const buildContentTranslationRoutes = <
       const page = await withTranslationHttpErrors(
         "read",
         async () =>
-          await editorial(c).listRevisions(identifier(c), locale(c), {
-            cursor,
-            limit: first,
-          }),
+          await editorial(c).listRevisions(
+            contentIdentifier(c, definition),
+            locale(c),
+            {
+              cursor,
+              limit: first,
+            },
+          ),
         { contentTypeId: definition.id },
       );
 
@@ -575,7 +584,7 @@ export const buildContentTranslationRoutes = <
         "read",
         async () =>
           await editorial(c).findRevision(
-            identifier(c),
+            contentIdentifier(c, definition),
             locale(c),
             revisionIdentifier(c),
           ),
@@ -618,7 +627,7 @@ export const buildContentTranslationRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const target = locale(c);
       const revisionId = revisionIdentifier(c);
       const { expectedVersion } = await readJson(
@@ -705,7 +714,7 @@ export const buildContentTranslationRoutes = <
       // record that exists and one that does not.
       assertContentPreviewIsServable();
 
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const target = locale(c);
 
       const translation = await withTranslationHttpErrors(
@@ -806,7 +815,13 @@ export const buildContentTranslationRoutes = <
     },
     handler: async c =>
       c.json(
-        { edges: await contentPublicLocaleStates(c, model, identifier(c)) },
+        {
+          edges: await contentPublicLocaleStates(
+            c,
+            model,
+            contentIdentifier(c, definition),
+          ),
+        },
         200,
       ),
   });

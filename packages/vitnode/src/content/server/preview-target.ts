@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import type { ContentIdOf } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
@@ -30,7 +31,7 @@ export const resolveContentPreviewTarget = async <
 >(
   c: Context,
   model: ContentModel<TDefinition>,
-  { id, row }: { id: number; row: unknown },
+  { id, row }: { id: ContentIdOf<TDefinition>; row: unknown },
 ): Promise<ContentPreviewTarget> => {
   const { definition } = model;
   const slugField = previewSlugField(definition);
@@ -69,7 +70,7 @@ export const resolveContentTranslationPreviewSlug = async <
 >(
   c: Context,
   model: ContentModel<TDefinition>,
-  { id, values }: { id: number; values: unknown },
+  { id, values }: { id: ContentIdOf<TDefinition>; values: unknown },
 ): Promise<string | undefined> => {
   const { definition } = model;
   const slugField = previewSlugField(definition);

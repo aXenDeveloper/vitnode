@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 
+import type { ContentId } from "@/content/ids";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import { resolveLangValue } from "@/lib/helpers/multi-lang";
@@ -22,7 +23,7 @@ export const zodContentItem = z
   })
   .loose();
 
-export type ContentItem = Record<string, unknown> & { id: number };
+export type ContentItem = Record<string, unknown> & { id: ContentId };
 
 export const zodContentTranslationList = z.object({
   edges: z.array(z.object({ locale: z.string() }).loose()),
@@ -31,7 +32,7 @@ export const zodContentTranslationList = z.object({
 /** Which record is being read, and from which generated module. */
 export interface ContentItemRequest {
   contentTypeId: string;
-  itemId: number;
+  itemId: ContentId;
   target: ContentApiTarget;
 }
 

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import type { CONTENT_ID_STRATEGIES } from "./const";
 
+import { ContentEngineError } from "./errors";
+
 /** How a content type's primary key is generated. Defaults to `serial`. */
 export type ContentIdStrategy = (typeof CONTENT_ID_STRATEGIES)[number];
 
@@ -193,4 +195,76 @@ export const compareContentIds = (
   }
 
   return left < right ? -1 : left > right ? 1 : 0;
+};
+
+/**
+ * {@link parseContentId} for a value the engine itself produced - a row it just
+ * read, a key it wrote - where a miss is a bug rather than bad input. Throws
+ * instead of returning a sentinel, so a uuid or bigint record is never skipped
+ * because somebody once assumed every id was a number.
+ */
+export const requireContentId = (
+  strategy: ContentIdStrategy,
+  value: unknown,
+  contentTypeId?: string,
+): ContentId => {
+  const parsed = parseContentId(strategy, value);
+  if (parsed === null) {
+    throw new ContentEngineError(
+      `Expected a ${strategy} record identifier, got ${JSON.stringify(typeof value === "bigint" ? value.toString() : value)}.`,
+      { contentTypeId },
+    );
+  }
+
+  return parsed;
+};
+
+/**
+ * Every value of a list that is a valid identifier under `strategy`, in its
+ * canonical representation. Anything else is dropped - for lists read back from
+ * the engine's own storage, where an unparseable entry cannot name a record.
+ */
+export const contentIdsOf = (
+  strategy: ContentIdStrategy,
+  values: readonly unknown[],
+): ContentId[] => {
+  const ids: ContentId[] = [];
+  for (const value of values) {
+    const parsed = parseContentId(strategy, value);
+    if (parsed !== null) ids.push(parsed);
+  }
+
+  return ids;
+};
+
+/** The Postgres type of a primary key, and of every foreign key that points at one. */
+export const contentIdSqlType = (
+  strategy: ContentIdStrategy,
+): "bigint" | "integer" | "uuid" =>
+  strategy === "serial" ? "integer" : strategy;
+
+/**
+ * The id strategy a relation field's values follow: the owner's for a
+ * self-relation, the target's otherwise. Reads the target thunk, so call it at
+ * request time, once every content type module has loaded - never while a
+ * table is being built (see `contentRelationBuildStrategy`).
+ */
+export const contentRelationStrategy = (
+  owner: { id: string; idStrategy: ContentIdStrategy },
+  fieldValue: {
+    self: boolean;
+    target: () => undefined | { idStrategy: ContentIdStrategy };
+  },
+): ContentIdStrategy => {
+  if (fieldValue.self) return owner.idStrategy;
+
+  const target = fieldValue.target();
+  if (!target) {
+    throw new ContentEngineError(
+      "A relation's target resolved to nothing. Usually a circular import between content type modules that read a target while it was still loading.",
+      { contentTypeId: owner.id },
+    );
+  }
+
+  return target.idStrategy;
 };

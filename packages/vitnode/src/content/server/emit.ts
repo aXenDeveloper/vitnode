@@ -29,20 +29,20 @@ import type { AnyContentTypeDefinition } from "../types";
 import { contentEventName } from "../events";
 
 type ContentPayload =
-  | ContentCreatedPayload
-  | ContentDeletedPayload
+  | ContentCreatedPayload<ContentId>
+  | ContentDeletedPayload<ContentId>
   | ContentDuplicableCreatedPayload<ContentId>
   | ContentDuplicatedPayload<ContentId>
   | ContentHiddenPayload<ContentId>
-  | ContentPublishedPayload
-  | ContentTranslationCreatedPayload
-  | ContentTranslationDeletedPayload
-  | ContentTranslationPublishedPayload
+  | ContentPublishedPayload<ContentId>
+  | ContentTranslationCreatedPayload<ContentId>
+  | ContentTranslationDeletedPayload<ContentId>
+  | ContentTranslationPublishedPayload<ContentId>
   | ContentTranslationRestoredPayload<AnyContentTypeDefinition>
-  | ContentTranslationUnpublishedPayload
+  | ContentTranslationUnpublishedPayload<ContentId>
   | ContentTranslationUpdatedPayload<AnyContentTypeDefinition>
   | ContentUnhiddenPayload<ContentId>
-  | ContentUnpublishedPayload
+  | ContentUnpublishedPayload<ContentId>
   | ContentUpdatedPayload<AnyContentTypeDefinition>;
 
 interface ContentEventEmitter {

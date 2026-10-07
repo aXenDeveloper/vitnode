@@ -1,6 +1,7 @@
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
+import type { ContentIdOf } from "../ids";
 import type { ContentSchemas, ContentTranslationSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
@@ -252,7 +253,10 @@ export const createContentModel = <
 
                     // Read in the caller's transaction, so a language created a
                     // moment ago in the same transaction is moved too.
-                    const rows = await translations.findManyForItem(itemId, {
+                    // Handed over as the content type's own id by the
+                    // editorial service, which read it off the base row.
+                    const recordId = itemId as ContentIdOf<TDefinition>;
+                    const rows = await translations.findManyForItem(recordId, {
                       tx,
                     });
 
@@ -275,7 +279,7 @@ export const createContentModel = <
                       }
 
                       const outcome = await editorial[operation](
-                        itemId,
+                        recordId,
                         row.locale,
                         { actor, tx },
                       );

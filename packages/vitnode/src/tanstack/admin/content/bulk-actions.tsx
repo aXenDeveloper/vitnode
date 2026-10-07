@@ -4,6 +4,7 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
+import type { ContentId } from "@/content/ids";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentLabels } from "@/views/admin/views/content/content-labels";
 import type {
@@ -53,14 +54,14 @@ const ContentBulkActionButton = ({
   const tErrors = useTranslations("core.global.errors");
   const queryClient = useQueryClient();
   const { clear, selected, toggle } = useDataTableSelection();
-  const settledRef = React.useRef<null | number[]>(null);
+  const settledRef = React.useRef<ContentId[] | null>(null);
 
   const rowsById = new Map(rows.map(row => [row.id, row]));
   const nameFor = (count: number) =>
     count === 1 ? labels.singular : labels.plural;
   const target = contentApiTarget(definition, pluginId);
 
-  const runOne = async (id: number) => {
+  const runOne = async (id: ContentId) => {
     if (action !== "delete") {
       return await setContentPublicationInBrowser({ action, id, target });
     }
@@ -75,7 +76,7 @@ const ContentBulkActionButton = ({
     });
   };
 
-  const titlesOf = (ids: readonly number[]): string => {
+  const titlesOf = (ids: readonly ContentId[]): string => {
     const titles = ids
       .slice(0, TITLES_IN_TOAST)
       .map(id => rowsById.get(id))

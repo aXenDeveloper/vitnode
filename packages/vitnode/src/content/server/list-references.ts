@@ -3,28 +3,39 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { eq, inArray } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
 import { core_roles } from "../../database/roles";
 import { core_users } from "../../database/users";
+import { contentIdKey, contentRelationStrategy } from "../ids";
 import { isContentReferenceCollection } from "../paths";
 import { contentDefinitionOf } from "./model";
 
-export const zodContentReferenceListItem = z.object({
-  color: z.string().optional(),
-  label: z.string(),
-  role: z
-    .object({
-      color: z.string().nullable(),
-      prefix: z.string().nullable(),
-    })
-    .optional(),
-  value: z.number(),
-});
+const zodReferenceListItemOf = <TValue extends z.ZodType>(value: TValue) =>
+  z.object({
+    color: z.string().optional(),
+    label: z.string(),
+    role: z
+      .object({
+        color: z.string().nullable(),
+        prefix: z.string().nullable(),
+      })
+      .optional(),
+    value,
+  });
+
+/** One label in a list cell. `value` is the target's id - a number for a user or a serial target. */
+export const zodContentReferenceListItem = zodReferenceListItemOf(z.number());
+
+/** {@link zodContentReferenceListItem} for a list whose targets include a `uuid` or `bigint` content type. */
+export const zodContentReferenceListItemAnyId = zodReferenceListItemOf(
+  z.union([z.number(), z.string()]),
+);
 
 export type ContentReferenceListItem = z.infer<
-  typeof zodContentReferenceListItem
+  typeof zodContentReferenceListItemAnyId
 >;
 
 export const contentReferenceListColumns = (
@@ -40,14 +51,34 @@ export const contentReferenceListColumns = (
     );
   });
 
-const idsOf = (value: unknown): number[] =>
+/**
+ * Whether every column `contentReferenceListColumns` names points at numeric
+ * ids - users and serial targets - so the list response keeps its old schema.
+ */
+export const contentReferenceListIdsAreNumeric = (
+  definition: AnyContentTypeDefinition,
+): boolean =>
+  contentReferenceListColumns(definition).every(name => {
+    const fieldValue = definition.fields[name];
+
+    return (
+      fieldValue.kind !== "relation" ||
+      contentRelationStrategy(definition, fieldValue) === "serial"
+    );
+  });
+
+/** The loaded ids of one collection, as the store returned them. */
+const idsOf = (value: unknown): ContentId[] =>
   Array.isArray(value)
-    ? value.filter((id): id is number => typeof id === "number")
+    ? value.filter(
+        (id): id is ContentId =>
+          typeof id === "number" || typeof id === "string",
+      )
     : [];
 
 const userItems = async (
   c: Context,
-  ids: readonly number[],
+  ids: readonly ContentId[],
 ): Promise<ContentReferenceListItem[]> => {
   if (ids.length === 0) return [];
 
@@ -61,7 +92,12 @@ const userItems = async (
     })
     .from(core_users)
     .leftJoin(core_roles, eq(core_roles.id, core_users.roleId))
-    .where(inArray(core_users.id, [...ids]));
+    .where(
+      inArray(
+        core_users.id,
+        ids.filter((id): id is number => typeof id === "number"),
+      ),
+    );
 
   return rows.map(({ color, label, prefix, value }) => ({
     label,
@@ -74,7 +110,7 @@ const relationItems = async (
   c: Context,
   model: AnyContentModel,
   field: string,
-  ids: readonly number[],
+  ids: readonly ContentId[],
 ): Promise<ContentReferenceListItem[]> => {
   const options = await model
     .service(c)
@@ -87,7 +123,7 @@ const relationItems = async (
   }));
 };
 
-export const withContentReferenceLists = async <TRow extends { id: number }>(
+export const withContentReferenceLists = async <TRow extends { id: ContentId }>(
   c: Context,
   model: AnyContentModel,
   rows: readonly TRow[],
@@ -114,7 +150,10 @@ export const withContentReferenceLists = async <TRow extends { id: number }>(
           ? await userItems(c, ids)
           : await relationItems(c, model, field, ids);
 
-      return [field, new Map(items.map(item => [item.value, item]))] as const;
+      return [
+        field,
+        new Map(items.map(item => [contentIdKey(item.value), item])),
+      ] as const;
     }),
   );
 
@@ -124,7 +163,7 @@ export const withContentReferenceLists = async <TRow extends { id: number }>(
       itemsByField.map(([field, items]) => [
         field,
         idsOf(values.get(row.id)?.[field]).flatMap(id => {
-          const item = items.get(id);
+          const item = items.get(contentIdKey(id));
 
           return item ? [item] : [];
         }),

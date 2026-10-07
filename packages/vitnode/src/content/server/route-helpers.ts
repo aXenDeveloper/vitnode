@@ -3,20 +3,53 @@ import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentIdOf, ContentIdStrategy } from "../ids";
 import type {
   ContentLocalizedFieldName,
   ContentTranslationRow,
 } from "../types";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
-/** The positive `{id}` in the path, or a 400 before any handler runs. */
-export const identifier = (c: Context): number => {
-  const value = Number(c.req.param("id"));
-  if (!Number.isInteger(value) || value <= 0) {
+import { CONTENT_SERIAL_MAX, parseContentId } from "../ids";
+
+/**
+ * The positive `{id}` in the path, or a 400 before any handler runs. Read the
+ * way `Number` reads it, as a `serial` route always has - and capped at the
+ * largest `integer`, so an id Postgres could never hold is a 400 rather than an
+ * out-of-range error from the driver.
+ */
+export const identifier = (c: Context, param = "id"): number => {
+  const value = Number(c.req.param(param));
+  if (!Number.isInteger(value) || value <= 0 || value > CONTENT_SERIAL_MAX) {
     throw new HTTPException(400, { message: "Invalid identifier." });
   }
 
   return value;
+};
+
+/**
+ * {@link identifier} for one content type, under its id strategy. A `serial`
+ * content type reads exactly as before; a `uuid` or `bigint` one accepts only
+ * the canonical spelling - lowercase hyphenated hex, or decimal digits within
+ * range - so a malformed id is a 400 here and never a Postgres cast error.
+ */
+export const contentIdentifier = <
+  TDefinition extends { idStrategy: ContentIdStrategy },
+>(
+  c: Context,
+  definition: TDefinition,
+  param = "id",
+): ContentIdOf<TDefinition> => {
+  if (definition.idStrategy === "serial") {
+    return identifier(c, param) as ContentIdOf<TDefinition>;
+  }
+
+  const value = parseContentId(definition.idStrategy, c.req.param(param));
+  if (value === null) {
+    throw new HTTPException(400, { message: "Invalid identifier." });
+  }
+
+  return value as ContentIdOf<TDefinition>;
 };
 
 /**

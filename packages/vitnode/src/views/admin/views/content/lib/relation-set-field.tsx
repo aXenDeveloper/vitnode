@@ -2,8 +2,11 @@ import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
+import type { ContentId } from "@/content/ids";
 
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
+import { contentOptionValueToId } from "@/content/admin/spec";
+import { contentIdKey } from "@/content/ids";
 
 import type { ContentOption, ContentOptionsLoader } from "./field-component";
 
@@ -13,7 +16,8 @@ import { ContentReferenceChipSkeleton } from "./reference-chip-skeleton";
 import { useReferenceOptions } from "./reference-options";
 
 export interface ContentRelationSetFieldProps extends ItemAutoFormComponentProps {
-  labels?: Record<number, string>;
+  /** Labels the row already resolved, keyed by `contentIdKey(id)`. */
+  labels?: Record<string, string>;
   loadOptions: ContentOptionsLoader;
   spec: ContentFormFieldSpec;
 }
@@ -27,17 +31,26 @@ export const ContentRelationSetField = ({
 }: ContentRelationSetFieldProps) => {
   const t = useTranslations("core.content.form");
   const locale = useLocale();
-  const selected = Array.isArray(field.value) ? (field.value as number[]) : [];
+  // A number per serial target, a canonical string per `uuid` or `bigint` one.
+  const selected = Array.isArray(field.value)
+    ? (field.value as ContentId[])
+    : [];
   const { known, pending, remember } = useReferenceOptions({
     field: spec.name,
     ids: selected,
     load: loadOptions,
   });
 
-  const optionFor = (id: number): ContentOption =>
-    known[id] ?? { label: labels[id] ?? String(id), value: String(id) };
-  const isPending = (id: number): boolean =>
-    labels[id] === undefined && pending(id);
+  const optionFor = (id: ContentId): ContentOption => {
+    const key = contentIdKey(id);
+
+    return known[key] ?? { label: labels[key] ?? key, value: key };
+  };
+  const isPending = (value: string): boolean => {
+    const id = contentOptionValueToId(spec, value);
+
+    return id !== null && labels[value] === undefined && pending(id);
+  };
 
   return (
     <AutoFormCombobox
@@ -51,7 +64,11 @@ export const ContentRelationSetField = ({
           const items = (value ?? []) as ContentOption[];
           remember(items);
 
-          field.onChange(items.map(item => Number(item.value)));
+          field.onChange(
+            items
+              .map(item => contentOptionValueToId(spec, item.value))
+              .filter((id): id is ContentId => id !== null),
+          );
         },
         value: selected.map(optionFor),
       }}
@@ -61,7 +78,7 @@ export const ContentRelationSetField = ({
       placeholder={t("relation.placeholder")}
       queryKey={contentOptionsQueryKey(spec, locale)}
       renderChip={item =>
-        isPending(Number(item.value)) ? (
+        isPending(item.value) ? (
           <ContentReferenceChipSkeleton />
         ) : (
           <ContentOptionSwatch option={item} />

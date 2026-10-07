@@ -3,6 +3,7 @@ import React from "react";
 import type { ContentDrafts } from "@/content/live/http";
 import type { ContentFieldLock } from "@/content/live/protocol";
 import type { ContentVisibilityAction } from "@/content/visibility";
+import type { ContentId } from "@/content/ids";
 
 import type {
   ContentMutationResult,
@@ -37,14 +38,14 @@ export interface ContentFormTransport {
 
   edit: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown>,
     expectedVersion?: number,
   ) => Promise<ContentMutationResult>;
 
   editLocalized: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown> | undefined,
     translations: ContentTranslationInput[],
     expectedVersion?: number,
@@ -57,14 +58,14 @@ export interface ContentFormTransport {
 
   listTranslations: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ edges: TranslationRow[]; error?: string }>;
 
   loadOptions: (
     contentTypeId: string,
     field: string,
     search: string,
-    ids?: number[],
+    ids?: ContentId[],
   ) => Promise<ContentOption[]>;
   lock: (
     contentTypeId: string,
@@ -79,7 +80,7 @@ export interface ContentFormTransport {
   /** Moves a record to `published`. Idempotent: a no-op is a success. */
   publish: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentMutationResult>;
 
   readDraft: (
@@ -89,7 +90,7 @@ export interface ContentFormTransport {
 
   reloadRow: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentRowResult>;
 
   saveDraft: (
@@ -112,7 +113,7 @@ export interface ContentFormTransport {
   /** Moves a record back to `draft`. Idempotent, like {@link publish}. */
   unpublish: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentMutationResult>;
 }
 

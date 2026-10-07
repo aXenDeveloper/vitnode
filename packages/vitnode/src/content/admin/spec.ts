@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ContentId, ContentIdStrategy } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentFieldAiAssist,
@@ -20,6 +21,7 @@ import {
   contentRepeatableMax,
   contentRepeatableMin,
 } from "../advanced";
+import { contentIdFromKey, contentIdKey, contentIdSchema } from "../ids";
 import {
   contentFieldPath,
   contentInnerFields,
@@ -71,6 +73,12 @@ export interface ContentFormFieldSpec {
   required: boolean;
 
   targetContentTypeId?: string;
+  /**
+   * A relation target's id strategy, so the form keeps a `uuid` or `bigint`
+   * target's ids as strings and a `serial` one's as numbers. Absent for a
+   * `user` field, whose ids are always numbers.
+   */
+  targetIdStrategy?: ContentIdStrategy;
 }
 
 export interface ContentFormSectionSpec {
@@ -234,8 +242,13 @@ export const projectFormField = (
         // client component, and a function cannot. Calling it is what
         // `resolveReferenceTargets` already does per request, so a circular
         // reference is as safe here as it is there.
+        // A self-relation's thunk is bound to its own definition, so the same
+        // call answers both.
         ...(fieldValue.kind === "relation"
-          ? { targetContentTypeId: fieldValue.target().id }
+          ? {
+              targetContentTypeId: fieldValue.target().id,
+              targetIdStrategy: fieldValue.target().idStrategy,
+            }
           : {}),
       };
     case "slug":
@@ -424,12 +437,34 @@ const richTextFormSchema = (spec: ContentFormFieldSpec): z.ZodType => {
       )
     : doc;
 };
+/** Whether a reference field's ids are strings: a `uuid` or `bigint` target. */
+const hasStringIds = (spec: ContentFormFieldSpec): boolean =>
+  spec.kind === "relation" &&
+  spec.targetIdStrategy !== undefined &&
+  spec.targetIdStrategy !== "serial";
 
 const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
-  const schema = z.array(z.number());
+  const schema = z.array(
+    hasStringIds(spec) && spec.targetIdStrategy !== undefined
+      ? contentIdSchema(spec.targetIdStrategy)
+      : z.number(),
+  );
 
   return spec.minItems === undefined ? schema : schema.min(spec.minItems);
 };
+
+/**
+ * A picker option's `value` - always a string, because a combobox keys by
+ * one - back to the identifier the API takes, under the target's strategy.
+ * `null` for a value that strategy cannot read.
+ */
+export const contentOptionValueToId = (
+  spec: ContentFormFieldSpec,
+  value: string,
+): ContentId | null =>
+  hasStringIds(spec) && spec.targetIdStrategy !== undefined
+    ? contentIdFromKey(spec.targetIdStrategy, value)
+    : Number(value);
 
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   switch (spec.kind) {
@@ -532,7 +567,10 @@ const toInitialValue = (
   if (fieldSpec.multiple === true) return current;
   if (current === null || current === undefined) return undefined;
 
-  const id = typeof current === "number" ? current.toString() : "";
+  const id =
+    typeof current === "number" || typeof current === "string"
+      ? contentIdKey(current)
+      : "";
 
   return { label: labels[fieldSpec.name] ?? id, value: id };
 };
@@ -579,7 +617,7 @@ export const contentFormValuesToPayload = (
         const option = value as ContentReferenceOption | null | undefined;
         if (!option?.value) return [name, null];
 
-        return [name, Number(option.value)];
+        return [name, contentOptionValueToId(fieldSpec, option.value)];
       }),
   );
 

@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type { ContentDeliveryAlternate } from "../delivery";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 import type { ContentDatabase } from "./service";
@@ -17,6 +18,7 @@ import {
   contentDeliveryInternalPath,
   contentDeliveryPublicUrl,
 } from "../delivery";
+import { contentIdKey, parseContentId } from "../ids";
 import { listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
 import {
@@ -33,7 +35,7 @@ export const readDeliveryAlternates = async <
   model,
 }: {
   c: Context;
-  itemId: number;
+  itemId: ContentId;
   model: ContentModel<TDefinition>;
 }): Promise<ContentDeliveryAlternate[]> => {
   const batched = await readDeliveryAlternatesMany({
@@ -42,7 +44,7 @@ export const readDeliveryAlternates = async <
     model,
   });
 
-  return batched.get(itemId) ?? [];
+  return batched.get(contentIdKey(itemId)) ?? [];
 };
 
 export const readDeliveryAlternatesMany = async <
@@ -55,11 +57,13 @@ export const readDeliveryAlternatesMany = async <
 }: {
   c: Context;
   database?: ContentDatabase;
-  itemIds: readonly number[];
+  itemIds: readonly ContentId[];
   model: ContentModel<TDefinition>;
-}): Promise<Map<number, ContentDeliveryAlternate[]>> => {
+}): Promise<Map<string, ContentDeliveryAlternate[]>> => {
   const { columns, definition, translationColumns, translationTable } = model;
-  const grouped = new Map<number, ContentDeliveryAlternate[]>();
+  // Keyed by `contentIdKey`, so a caller's id and the driver's meet whatever the
+  // strategy - and a bigint is never rounded on the way.
+  const grouped = new Map<string, ContentDeliveryAlternate[]>();
 
   if (
     itemIds.length === 0 ||
@@ -122,7 +126,7 @@ export const readDeliveryAlternatesMany = async <
     // The selected keys come back as `unknown` through the generic column map, so
     // each one is narrowed here rather than asserted - the same treatment the
     // sitemap query gives its own projection.
-    const itemId = typeof row.itemId === "number" ? row.itemId : null;
+    const itemId = parseContentId(definition.idStrategy, row.itemId);
     const languageId =
       typeof row.languageId === "number" ? row.languageId : null;
     if (itemId === null || languageId === null) continue;
@@ -140,14 +144,15 @@ export const readDeliveryAlternatesMany = async <
     });
     if (url === null || internalPath === null) continue;
 
-    const entries = grouped.get(itemId) ?? [];
+    const itemKey = contentIdKey(itemId);
+    const entries = grouped.get(itemKey) ?? [];
     entries.push({
       internalPath,
       locale: language.locale,
       ...(url.origin === undefined ? {} : { origin: url.origin }),
       path: url.pathname,
     });
-    grouped.set(itemId, entries);
+    grouped.set(itemKey, entries);
   }
 
   for (const entries of grouped.values()) {

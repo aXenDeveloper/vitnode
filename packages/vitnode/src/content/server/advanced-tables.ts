@@ -14,6 +14,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { ContentIdStrategy } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentFieldMap,
@@ -35,29 +36,39 @@ import {
   contentInnerFields,
   contentStorageColumns,
 } from "../paths";
-import { buildContentColumn } from "./column-builders";
+import { buildContentColumn, buildIdForeignKey } from "./column-builders";
+import {
+  assertContentReferenceType,
+  contentRelationBuildStrategy,
+} from "./table";
 
 export const createContentJunctionTable = ({
   contentTypeId,
   field,
   itemReference,
+  itemStrategy = "serial",
   onDelete,
   positionIndexName,
   primaryKeyName,
   relatedIndexName,
   relatedReference,
+  relatedStrategy = "serial",
   tableName,
 }: {
   contentTypeId: string;
   field: string;
   itemReference: ColumnReferenceThunk;
+  /** The owner's id strategy, which `itemId` follows. */
+  itemStrategy?: ContentIdStrategy;
   onDelete: ContentOnDelete;
   positionIndexName: string;
   primaryKeyName: string;
   relatedIndexName: string;
   relatedReference: ColumnReferenceThunk;
+  /** The target's id strategy, which `relatedItemId` follows. Users and files are `serial`. */
+  relatedStrategy?: ContentIdStrategy;
   tableName: string;
-}): ContentJunctionTable => {
+}): ContentJunctionTable<ContentIdStrategy, ContentIdStrategy> => {
   if (onDelete === "set null") {
     throw new ContentEngineError(
       `Relation field "${field}" cannot be \`onDelete: "set null"\`: a junction row has no nullable column to set.`,
@@ -66,10 +77,10 @@ export const createContentJunctionTable = ({
   }
 
   const columns: Record<string, AnyPgColumnBuilder> = {
-    itemId: integer()
+    itemId: buildIdForeignKey(itemStrategy)
       .notNull()
       .references(itemReference, { onDelete: "cascade", onUpdate: "cascade" }),
-    relatedItemId: integer()
+    relatedItemId: buildIdForeignKey(relatedStrategy)
       .notNull()
       .references(relatedReference, { onDelete, onUpdate: "cascade" }),
     position: integer().notNull(),
@@ -96,25 +107,28 @@ export const createContentJunctionTable = ({
         index(relatedIndexName).on(columnMap.relatedItemId),
       ];
     },
-  ) as unknown as ContentJunctionTable;
+  ) as unknown as ContentJunctionTable<ContentIdStrategy, ContentIdStrategy>;
 };
 
 export const createContentRepeatableTable = ({
   contentTypeId,
   fields,
   itemReference,
+  itemStrategy = "serial",
   positionIndexName,
   tableName,
 }: {
   contentTypeId: string;
   fields: ContentFieldMap;
   itemReference: ColumnReferenceThunk;
+  /** The owner's id strategy, which `itemId` follows. The child's own `id` stays serial. */
+  itemStrategy?: ContentIdStrategy;
   positionIndexName: string;
   tableName: string;
-}): ContentRepeatableChildTable<unknown> => {
+}): ContentRepeatableChildTable<unknown, ContentIdStrategy> => {
   const columns: Record<string, AnyPgColumnBuilder> = {
     id: serial().primaryKey(),
-    itemId: integer()
+    itemId: buildIdForeignKey(itemStrategy)
       .notNull()
       .references(itemReference, { onDelete: "cascade", onUpdate: "cascade" }),
     position: integer().notNull(),
@@ -139,7 +153,7 @@ export const createContentRepeatableTable = ({
         uniqueIndex(positionIndexName).on(columnMap.itemId, columnMap.position),
       ];
     },
-  ) as unknown as ContentRepeatableChildTable<unknown>;
+  ) as unknown as ContentRepeatableChildTable<unknown, ContentIdStrategy>;
 };
 
 export const createContentAdvancedTables = <
@@ -159,7 +173,7 @@ export const createContentAdvancedTables = <
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
   const itemReference: ColumnReferenceThunk = () => baseColumns.id;
 
-  const junctions: Record<string, ContentJunctionTable> = {};
+  const junctions: ContentAdvancedTables["junctions"] = {};
   for (const entry of advanced.junctions) {
     const fieldValue = asContentReferenceCollection(fields[entry.field]);
     if (!fieldValue) continue;
@@ -188,10 +202,30 @@ export const createContentAdvancedTables = <
       );
     }
 
+    const relatedStrategy =
+      fieldValue.kind === "relation"
+        ? contentRelationBuildStrategy(definition, fieldValue)
+        : "serial";
+    const checkedRelatedReference: ColumnReferenceThunk =
+      fieldValue.kind === "relation" && !fieldValue.self
+        ? () => {
+            const column = relatedReference();
+            assertContentReferenceType({
+              column,
+              contentTypeId,
+              name: entry.field,
+              strategy: relatedStrategy,
+            });
+
+            return column;
+          }
+        : relatedReference;
+
     junctions[entry.field] = createContentJunctionTable({
       contentTypeId,
       field: entry.field,
       itemReference,
+      itemStrategy: definition.idStrategy,
       // A gallery entry is `restrict`, always, and not a per-field choice - the
       // same rule the single-file column follows. `cascade` would delete the
       // junction row because somebody tidied up the Files screen, silently
@@ -203,12 +237,13 @@ export const createContentAdvancedTables = <
       positionIndexName: entry.positionIndexName,
       primaryKeyName: entry.primaryKeyName,
       relatedIndexName: entry.relatedIndexName,
-      relatedReference,
+      relatedReference: checkedRelatedReference,
+      relatedStrategy,
       tableName: entry.tableName,
     });
   }
 
-  const repeatables: Record<string, ContentRepeatableChildTable<unknown>> = {};
+  const repeatables: ContentAdvancedTables["repeatables"] = {};
   for (const entry of advanced.repeatables) {
     repeatables[entry.field] = createContentRepeatableTable({
       contentTypeId,
@@ -218,6 +253,7 @@ export const createContentAdvancedTables = <
       // a column that silently never appears.
       fields: contentStorageColumns(contentInnerFields(fields[entry.field])),
       itemReference,
+      itemStrategy: definition.idStrategy,
       positionIndexName: entry.positionIndexName,
       tableName: entry.tableName,
     });
@@ -228,5 +264,7 @@ export const createContentAdvancedTables = <
 
 /** Column name -> Drizzle column on one generated collection table. */
 export const contentCollectionTableColumns = (
-  table: ContentJunctionTable | ContentRepeatableChildTable<unknown>,
+  table:
+    | ContentJunctionTable<ContentIdStrategy, ContentIdStrategy>
+    | ContentRepeatableChildTable<unknown, ContentIdStrategy>,
 ): Record<string, PgColumn> => table as unknown as Record<string, PgColumn>;

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ContentIdOf, ContentIdStrategy } from "./ids";
 import type {
   AnyContentTypeDefinition,
   ContentCreateInput,
@@ -36,6 +37,7 @@ import {
   isFilterableFieldKind,
 } from "./const";
 import { zodContentFileDescriptor } from "./files";
+import { contentIdSchema, parseContentId } from "./ids";
 import {
   contentLocalizationDisabled,
   partitionContentFields,
@@ -63,6 +65,17 @@ const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
   slugField: "",
 };
 
+/**
+ * The `{id}` path parameter's schema. A `serial` content type keeps exactly the
+ * coerced number it always had, so its OpenAPI document does not move; a
+ * `uuid` or `bigint` one validates the canonical string.
+ */
+export type ContentIdParamSchemaOf<TDefinition> = [
+  ContentIdOf<TDefinition>,
+] extends [number]
+  ? z.ZodCoercedNumber
+  : z.ZodType<ContentIdOf<TDefinition>>;
+
 export interface ContentTranslationSchemas<
   TDefinition = AnyContentTypeDefinition,
 > {
@@ -78,7 +91,10 @@ export interface ContentTranslationSchemas<
    */
   form: z.ZodObject<z.ZodRawShape>;
   /** Path parameters for a translation route: the item, then the locale. */
-  params: z.ZodObject<{ id: z.ZodCoercedNumber; locale: z.ZodString }>;
+  params: z.ZodObject<{
+    id: ContentIdParamSchemaOf<TDefinition>;
+    locale: z.ZodString;
+  }>;
   /** One translation as it comes back: metadata plus `values`. */
   select: z.ZodObject<z.ZodRawShape>;
   /** One translation without its values - what the list route returns. */
@@ -108,7 +124,7 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   /** `orderBy` allowlist plus direction. */
   order: z.ZodObject<z.ZodRawShape>;
   /** Path parameters for the detail/update/delete routes. */
-  params: z.ZodObject<{ id: z.ZodCoercedNumber }>;
+  params: z.ZodObject<{ id: ContentIdParamSchemaOf<TDefinition> }>;
   /**
    * Equality filters the public list route accepts, one per
    * `publicApi.filterableFields`. Empty when public exposure is off.
@@ -167,8 +183,64 @@ const numberSchema = (fieldValue: {
   return schema;
 };
 
-/** Row identifiers are always positive integers, whatever the field kind. */
+/**
+ * A `core_users.id`, a `core_files.id`, a repeatable child's own id, or a serial
+ * content record's id: a positive integer.
+ */
 const referenceSchema = (): z.ZodNumber => z.number().int().positive();
+
+/** One record identifier under `strategy`, as it crosses JSON. */
+const recordIdSchema = (strategy: ContentIdStrategy): z.ZodType =>
+  // `serial` keeps the exact schema it always had, so a serial content type's
+  // generated forms and OpenAPI document are unchanged.
+  strategy === "serial" ? referenceSchema() : contentIdSchema(strategy);
+
+/** One record identifier under `strategy`, as a response carries it. */
+const recordIdOutputSchema = (strategy: ContentIdStrategy): z.ZodType =>
+  strategy === "serial" ? z.number() : z.string();
+
+/**
+ * The id strategy a relation's values follow, if it can be known while the
+ * schemas are being built: the owner's for a self-relation, the target's when
+ * the target module has already loaded. `null` means "not yet" - a target in a
+ * module that imports this one - and the caller defers the decision to the
+ * first parse with `z.lazy`.
+ */
+const relationStrategyNow = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy,
+): ContentIdStrategy | null => {
+  if (fieldValue.kind !== "relation") return "serial";
+  if (fieldValue.self) return owner;
+
+  try {
+    return (
+      (fieldValue.target() as undefined | { idStrategy?: ContentIdStrategy })
+        ?.idStrategy ?? null
+    );
+  } catch {
+    // A target still in its temporal dead zone - a circular import.
+    return null;
+  }
+};
+
+const relationStrategyLater = (
+  fieldValue: ContentFieldDescriptor,
+): ContentIdStrategy =>
+  fieldValue.kind === "relation" ? fieldValue.target().idStrategy : "serial";
+
+/** {@link recordIdSchema} for a relation's target, resolved now or on first use. */
+const relationIdSchema = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy,
+  build: (strategy: ContentIdStrategy) => z.ZodType = recordIdSchema,
+): z.ZodType => {
+  const strategy = relationStrategyNow(fieldValue, owner);
+
+  return strategy === null
+    ? z.lazy(() => build(relationStrategyLater(fieldValue)))
+    : build(strategy);
+};
 
 const blocksSelectSchema = (): z.ZodType => z.array(zodContentNode);
 
@@ -184,7 +256,10 @@ const blocksInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType =>
   );
 
 /** The value as it leaves the API. */
-const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
+const baseSelectSchema = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy = "serial",
+): z.ZodType => {
   switch (fieldValue.kind) {
     case "blocks":
       return blocksSelectSchema();
@@ -218,8 +293,8 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
       return numberSchema(fieldValue);
     case "relation":
       return fieldValue.multiple
-        ? z.array(referenceSchema())
-        : referenceSchema();
+        ? z.array(relationIdSchema(fieldValue, owner))
+        : relationIdSchema(fieldValue, owner);
     case "repeatable": {
       const inner = contentInnerFields(fieldValue);
 
@@ -257,7 +332,10 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
 };
 
 /** The value as it arrives from a client. `dateTime` is an ISO 8601 string. */
-const baseInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
+const baseInputSchema = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy = "serial",
+): z.ZodType => {
   if (fieldValue.kind === "dateTime") return z.iso.datetime();
   if (fieldValue.kind === "richText") {
     return createRichTextDocumentSchema({
@@ -266,7 +344,7 @@ const baseInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
     });
   }
 
-  return baseSelectSchema(fieldValue);
+  return baseSelectSchema(fieldValue, owner);
 };
 
 const applyNullable = (
@@ -300,7 +378,10 @@ const applyPresence = (
   return schema.optional();
 };
 
-const relationSetSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
+const relationSetSchema = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy = "serial",
+): z.ZodType => {
   const min = (fieldValue as { min?: number }).min;
   // A file collection carries its own ceiling and defaults to a much lower one:
   // every entry is a stored object the record pins against deletion, where a
@@ -309,7 +390,13 @@ const relationSetSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
     fieldValue.kind === "file"
       ? contentFileCollectionMax(fieldValue)
       : CONTENT_RELATION_COLLECTION_MAX;
-  let schema = z.array(referenceSchema()).max(max);
+  let schema = z
+    .array(
+      fieldValue.kind === "relation"
+        ? relationIdSchema(fieldValue, owner)
+        : referenceSchema(),
+    )
+    .max(max);
   if (min !== undefined) schema = schema.min(min);
 
   return schema.refine(value => new Set(value).size === value.length, {
@@ -384,6 +471,7 @@ const groupPatchSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
 const inputShape = (
   fields: ContentFieldMap,
   names: readonly string[],
+  owner: ContentIdStrategy = "serial",
 ): z.ZodRawShape =>
   Object.fromEntries(
     names.map(name => {
@@ -401,13 +489,13 @@ const inputShape = (
         return [name, repeatableSchema(fieldValue).default([])];
       }
       if (isContentReferenceCollection(fieldValue)) {
-        return [name, relationSetSchema(fieldValue).default([])];
+        return [name, relationSetSchema(fieldValue, owner).default([])];
       }
 
       return [
         name,
         applyPresence(
-          applyNullable(baseInputSchema(fieldValue), fieldValue),
+          applyNullable(baseInputSchema(fieldValue, owner), fieldValue),
           fieldValue,
         ),
       ];
@@ -422,6 +510,7 @@ export const contentFieldValuesObject = (
 const updateShape = (
   fields: ContentFieldMap,
   names: readonly string[],
+  owner: ContentIdStrategy = "serial",
 ): z.ZodRawShape =>
   Object.fromEntries(
     names.map(name => {
@@ -437,12 +526,15 @@ const updateShape = (
         return [name, repeatableSchema(fieldValue).optional()];
       }
       if (isContentReferenceCollection(fieldValue)) {
-        return [name, relationSetSchema(fieldValue).optional()];
+        return [name, relationSetSchema(fieldValue, owner).optional()];
       }
 
       return [
         name,
-        applyNullable(baseInputSchema(fieldValue), fieldValue).optional(),
+        applyNullable(
+          baseInputSchema(fieldValue, owner),
+          fieldValue,
+        ).optional(),
       ];
     }),
   );
@@ -455,7 +547,37 @@ export const contentFieldUpdateSchema = (
     ? undefined
     : (updateShape(fields, [name])[name] as z.ZodType);
 
-const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
+/**
+ * A relation filter's identifier, read from a query string. A serial target
+ * keeps the coerced number it always had; the others parse the canonical
+ * string, and a target not loaded yet is parsed on first use.
+ */
+const relationFilterIdSchema = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy,
+): z.ZodType => {
+  const strategy = relationStrategyNow(fieldValue, owner);
+  if (strategy === "serial") return z.coerce.number();
+
+  return z.string().transform((value, ctx) => {
+    const parsed = parseContentId(
+      strategy ?? relationStrategyLater(fieldValue),
+      value,
+    );
+    if (parsed === null) {
+      ctx.addIssue({ code: "custom", message: "Invalid identifier." });
+
+      return z.NEVER;
+    }
+
+    return parsed;
+  });
+};
+
+const filterShape = (
+  fields: ContentFieldMap,
+  owner: ContentIdStrategy = "serial",
+): z.ZodRawShape =>
   Object.fromEntries(
     Object.entries(fields)
       .filter(([, fieldValue]) => isFilterableFieldKind(fieldValue.kind))
@@ -468,7 +590,12 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
           case "number":
             return [name, z.coerce.number().optional()];
           case "relation":
-          case "user":
+          case "user": {
+            const id =
+              fieldValue.kind === "relation"
+                ? relationFilterIdSchema(fieldValue, owner)
+                : z.coerce.number();
+
             // A to-many reference filters by membership, and it arrives from a
             // query string as one identifier: `?categories=7`. The transform is
             // what turns it into the `{ contains }` object the query builder
@@ -478,22 +605,25 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
             return fieldValue.multiple
               ? [
                   name,
-                  z.coerce
-                    .number()
+                  id
                     .optional()
                     .transform(value =>
                       value === undefined ? undefined : { contains: value },
                     ),
                 ]
-              : [name, z.coerce.number().optional()];
+              : [name, id.optional()];
+          }
           default:
             return [name, z.string().optional()];
         }
       }),
   );
 
-const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
-  z.object({ id: z.number() });
+const publicRelationSchema = (
+  fieldValue: ContentFieldDescriptor,
+  owner: ContentIdStrategy,
+): z.ZodObject<z.ZodRawShape> =>
+  z.object({ id: relationIdSchema(fieldValue, owner, recordIdOutputSchema) });
 
 export const groupPublicLeafPaths = (
   names: readonly string[],
@@ -539,6 +669,7 @@ const publicSelectShape = (
   fields: ContentFieldMap,
   publicApi: ResolvedContentPublicApiConfig,
   localization: ResolvedContentLocalizationConfig,
+  owner: ContentIdStrategy = "serial",
 ): z.ZodRawShape => ({
   // The language actually served, which with a fallback is not always the one
   // that was asked for. `defineContentType` reserves the name on a localized
@@ -548,7 +679,7 @@ const publicSelectShape = (
     publicApi.fields
       .filter(name => splitContentFieldPath(name) === null)
       .map(name => {
-        if (name === "id") return [name, z.number()];
+        if (name === "id") return [name, recordIdOutputSchema(owner)];
         if (name === "createdAt" || name === "updatedAt") {
           return [name, z.date()];
         }
@@ -578,14 +709,24 @@ const publicSelectShape = (
           // `{ id }` objects: the single-relation wrapper exists so a `null`
           // relation is distinguishable from a missing key, and an empty array
           // already says that on its own.
-          if (fieldValue.multiple) return [name, z.array(z.number())];
+          if (fieldValue.multiple) {
+            return [
+              name,
+              z.array(
+                relationIdSchema(fieldValue, owner, recordIdOutputSchema),
+              ),
+            ];
+          }
 
-          const relation = publicRelationSchema();
+          const relation = publicRelationSchema(fieldValue, owner);
 
           return [name, fieldValue.nullable ? relation.nullable() : relation];
         }
 
-        return [name, applyNullable(baseSelectSchema(fieldValue), fieldValue)];
+        return [
+          name,
+          applyNullable(baseSelectSchema(fieldValue, owner), fieldValue),
+        ];
       }),
   ),
   ...Object.fromEntries(
@@ -596,13 +737,19 @@ const publicSelectShape = (
   ),
 });
 
+/** The `{id}` path parameter of `strategy`. See {@link ContentIdParamSchemaOf}. */
+const idParamSchema = (strategy: ContentIdStrategy): z.ZodType =>
+  strategy === "serial" ? z.coerce.number() : contentIdSchema(strategy);
+
 const buildTranslationSchemas = <TDefinition>({
   admin,
+  idStrategy,
   localizedFields,
   localization,
   publication,
 }: {
   admin: ResolvedContentAdminConfig;
+  idStrategy: ContentIdStrategy;
   localization: ResolvedContentLocalizationConfig;
   localizedFields: ContentFieldMap;
   publication: boolean;
@@ -611,9 +758,9 @@ const buildTranslationSchemas = <TDefinition>({
 
   const names = Object.keys(localizedFields);
 
-  const create = z.strictObject(inputShape(localizedFields, names));
+  const create = z.strictObject(inputShape(localizedFields, names, idStrategy));
   const update = z
-    .strictObject(updateShape(localizedFields, names))
+    .strictObject(updateShape(localizedFields, names, idStrategy))
     .refine(value => Object.keys(value).length > 0, {
       message: "Provide at least one localized field to update.",
     });
@@ -624,7 +771,10 @@ const buildTranslationSchemas = <TDefinition>({
   // `publish` / `unpublish`.
   const selectMeta = z.object({
     createdAt: z.date(),
-    itemId: z.number().int().positive(),
+    itemId:
+      idStrategy === "serial"
+        ? z.number().int().positive()
+        : recordIdOutputSchema(idStrategy),
     languageId: z.number().int().positive(),
     locale: z.string(),
     ...(publication
@@ -642,7 +792,7 @@ const buildTranslationSchemas = <TDefinition>({
       names.map(name => [
         name,
         applyNullable(
-          baseSelectSchema(localizedFields[name]),
+          baseSelectSchema(localizedFields[name], idStrategy),
           localizedFields[name],
         ),
       ]),
@@ -661,15 +811,16 @@ const buildTranslationSchemas = <TDefinition>({
       inputShape(
         localizedFields,
         admin.form.fields.filter(name => localizedFields[name] !== undefined),
+        idStrategy,
       ),
     ),
     params: z.object({
-      id: z.coerce.number(),
+      id: idParamSchema(idStrategy),
       // Loose on purpose, like `publicParams.slug`: an unknown locale and a
       // malformed one are both answered the same way, and the value is a bound
       // parameter rather than an identifier.
       locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
-    }),
+    }) as unknown as ContentTranslationSchemas<TDefinition>["params"],
     select: selectMeta.extend({ values }),
     selectMeta,
     update: update as unknown as z.ZodType<
@@ -693,6 +844,7 @@ export const buildContentSchemas = <TDefinition>({
   advanced = contentAdvancedDisabled(),
   editorial = false,
   fields,
+  idStrategy = "serial",
   localization = contentLocalizationDisabled(),
   publicApi = DISABLED_PUBLIC_API,
   publication = false,
@@ -703,6 +855,8 @@ export const buildContentSchemas = <TDefinition>({
   editorial?: boolean;
   /** Every declared field. Partitioned here, so no caller has to. */
   fields: ContentFieldMap;
+  /** The content type's own id strategy: `id`, `{id}` and self-relations follow it. */
+  idStrategy?: ContentIdStrategy;
   localization?: ResolvedContentLocalizationConfig;
   publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
@@ -748,11 +902,14 @@ export const buildContentSchemas = <TDefinition>({
     : {};
 
   const selectShape: z.ZodRawShape = {
-    id: z.number(),
+    id: recordIdOutputSchema(idStrategy),
     ...Object.fromEntries(
       fieldNames.map(name => [
         name,
-        applyNullable(baseSelectSchema(sharedFields[name]), sharedFields[name]),
+        applyNullable(
+          baseSelectSchema(sharedFields[name], idStrategy),
+          sharedFields[name],
+        ),
       ]),
     ),
     ...publicationSelectShape,
@@ -765,9 +922,11 @@ export const buildContentSchemas = <TDefinition>({
   // `strictObject` blocks mass assignment: an unknown key is an error, not
   // something quietly stripped. System columns are absent from the shape, so
   // they can never be set from a request.
-  const create = z.strictObject(inputShape(writableFields, writableNames));
+  const create = z.strictObject(
+    inputShape(writableFields, writableNames, idStrategy),
+  );
   const update = z
-    .strictObject(updateShape(writableFields, writableNames))
+    .strictObject(updateShape(writableFields, writableNames, idStrategy))
     .refine(value => Object.keys(value).length > 0, {
       message: "Provide at least one field to update.",
     });
@@ -781,7 +940,7 @@ export const buildContentSchemas = <TDefinition>({
   const selectObject = z.object(selectShape);
 
   const publicSelectObject = z.object(
-    publicSelectShape(fields, publicApi, localization),
+    publicSelectShape(fields, publicApi, localization, idStrategy),
   );
   const publicFilterable = new Set(publicApi.filterableFields);
   // Derived from the same `filterShape`, then narrowed to the configured
@@ -795,7 +954,7 @@ export const buildContentSchemas = <TDefinition>({
   // over the base table.
   const publicFilters = z.object(
     Object.fromEntries(
-      Object.entries(filterShape(fields)).filter(([name]) =>
+      Object.entries(filterShape(fields, idStrategy)).filter(([name]) =>
         publicFilterable.has(name),
       ),
     ),
@@ -810,7 +969,10 @@ export const buildContentSchemas = <TDefinition>({
         [
           ...advanced.junctions.map(entry => entry.field),
           ...advanced.repeatables.map(entry => entry.field),
-        ].map(name => [name, baseSelectSchema(collectionFields[name])]),
+        ].map(name => [
+          name,
+          baseSelectSchema(collectionFields[name], idStrategy),
+        ]),
       ),
     ),
     // The shapes are assembled in a loop, so their Zod types are erased.
@@ -819,7 +981,7 @@ export const buildContentSchemas = <TDefinition>({
     // casts. `buildContentSchemas` is covered by `schemas.test-d.ts`.
     create: create as unknown as z.ZodType<ContentCreateInput<TDefinition>>,
     filters: z.object({
-      ...filterShape(writableFields),
+      ...filterShape(writableFields, idStrategy),
       ...(publication
         ? { status: z.enum(CONTENT_PUBLICATION_STATUSES).optional() }
         : {}),
@@ -835,13 +997,16 @@ export const buildContentSchemas = <TDefinition>({
       inputShape(
         writableFields,
         admin.form.fields.filter(name => writableFields[name] !== undefined),
+        idStrategy,
       ),
     ),
     order: z.object({
       order: z.enum(["asc", "desc"]).optional(),
       orderBy: z.enum(orderable as [string, ...string[]]).optional(),
     }),
-    params: z.object({ id: z.coerce.number() }),
+    params: z.object({
+      id: idParamSchema(idStrategy),
+    }) as unknown as ContentSchemas<TDefinition>["params"],
     publicFilters,
     publicOrder: z.object({
       order: z.enum(["asc", "desc"]).optional(),
@@ -865,6 +1030,7 @@ export const buildContentSchemas = <TDefinition>({
     selectObject,
     translation: buildTranslationSchemas<TDefinition>({
       admin,
+      idStrategy,
       localization,
       localizedFields,
       publication,

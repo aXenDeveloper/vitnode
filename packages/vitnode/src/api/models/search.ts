@@ -3,9 +3,11 @@ import type { Context } from "hono";
 import { and, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import type { ContentId } from "@/content/ids";
 import type { RegisteredContentType } from "@/content/registry";
 
 import { storageUrlOf } from "@/api/lib/storage-url";
+import { contentIdFromKey, contentIdKey } from "@/content/ids";
 import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
 import { core_search_index } from "@/database/search";
@@ -21,7 +23,12 @@ export interface SearchDocument {
   content: string;
   createdAt: Date;
   isPublic?: boolean;
-  itemId: number;
+  /**
+   * The item's own id: a number for every non-content indexer and every
+   * `serial` content type, the canonical string for a `uuid` or `bigint` one.
+   * Stored as its `contentIdKey`.
+   */
+  itemId: ContentId;
   itemType: string;
   // Locale of this projection. Multi-language content emits one document per
   // language; single-language content may leave it empty.
@@ -72,6 +79,33 @@ export const searchLanguageFallbacks = (
       : [],
   );
 
+/** The shape of a key that reads back as the number it was written from. */
+const NUMERIC_KEY = /^[1-9][0-9]{0,14}$/;
+
+/**
+ * Turns a stored `itemId` key back into the id its item type uses.
+ *
+ * A registered content type reads it under its own id strategy, so a `bigint`
+ * stays a string however large and a `serial` is a number again. Any other item
+ * type - an indexer that predates content strategies - gets back the number it
+ * wrote when the key is plainly one, and the key itself otherwise.
+ */
+export const searchItemIdFromKey = (
+  /** The installation's content types; absent where none are registered. */
+  contentTypes: readonly RegisteredContentType[] | undefined,
+  itemType: string,
+  key: string,
+): ContentId => {
+  const contentType = contentTypes?.find(
+    entry => entry.definition.id === itemType,
+  );
+  if (contentType) {
+    return contentIdFromKey(contentType.definition.idStrategy, key) ?? key;
+  }
+
+  return NUMERIC_KEY.test(key) ? Number(key) : key;
+};
+
 export interface SearchHitAuthor {
   avatarColor: string;
   avatarUrl: null | string;
@@ -89,7 +123,8 @@ export interface SearchHit {
   createdAt: Date;
   id: number;
   isPublic: boolean;
-  itemId: number;
+  /** As on {@link SearchDocument}: read back with {@link searchItemIdFromKey}. */
+  itemId: ContentId;
   itemType: string;
   languageCode: string;
   metadata: Record<string, unknown>;
@@ -257,12 +292,15 @@ export interface SearchProviderApiPlugin {
    * that does not with a localized searchable content type refuses to boot. See
    * {@link assertSearchProviderCapabilities}.
    */
-  delete: (
+  // Method syntax on purpose: parameters stay bivariant, so a provider written
+  // when every id was a number still satisfies the interface.
+  // eslint-disable-next-line @typescript-eslint/method-signature-style
+  delete(
     c: Context,
     itemType: string,
-    itemId: number,
+    itemId: ContentId,
     languageCode?: string,
-  ) => Promise<void>;
+  ): Promise<void>;
   index: (c: Context, doc: SearchDocument) => Promise<void>;
   name: string;
   ping?: (c: Context) => Promise<boolean>;
@@ -272,7 +310,7 @@ export interface SearchProviderApiPlugin {
 const toRow = (doc: SearchDocument) => ({
   pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
-  itemId: doc.itemId,
+  itemId: contentIdKey(doc.itemId),
   languageCode: doc.languageCode ?? "",
   authorIds: [...new Set(doc.authorIds ?? [])],
   title: doc.title,
@@ -435,7 +473,7 @@ export class SearchModel {
    */
   async delete(
     itemType: string,
-    itemId: number,
+    itemId: ContentId,
     languageCode?: string,
   ): Promise<void> {
     await this.c
@@ -444,7 +482,7 @@ export class SearchModel {
       .where(
         and(
           eq(core_search_index.itemType, itemType),
-          eq(core_search_index.itemId, itemId),
+          eq(core_search_index.itemId, contentIdKey(itemId)),
           languageCode === undefined
             ? undefined
             : eq(core_search_index.languageCode, languageCode),

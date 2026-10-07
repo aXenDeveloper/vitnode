@@ -598,6 +598,7 @@ export const defineContentType = <
       advanced: resolvedAdvanced,
       editorial: editorialEnabled,
       fields: fieldMap,
+      idStrategy: resolvedIdStrategy,
       localization: resolvedLocalization,
       publicApi: resolvedPublicApi,
       publication: publicationEnabled,

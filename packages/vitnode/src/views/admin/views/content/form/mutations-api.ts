@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
 import type { ContentVisibilityAction } from "@/content/visibility";
 
@@ -44,7 +45,7 @@ const zodOptions = z.object({
 
 const readTranslations = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<TranslationRow[]> => {
   const result = await send(
     { method: "get", path: `/${id}/translations`, target },
@@ -76,7 +77,7 @@ export const editContentInBrowser = async (
     /** Whether this content type's `PUT` takes a precondition at all. */
     editorial: boolean;
     expectedVersion?: number;
-    id: number;
+    id: ContentId;
     values: Record<string, unknown>;
   },
 ): Promise<ContentMutationResult> => {
@@ -146,7 +147,7 @@ export const editLocalizedContentInBrowser = async (
     values,
   }: {
     expectedVersion?: number;
-    id: number;
+    id: ContentId;
     translations: ContentTranslationInput[];
     values: Record<string, unknown> | undefined;
   },
@@ -189,7 +190,7 @@ export const editLocalizedContentInBrowser = async (
  */
 export const setContentPublishedInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   action: ContentPublicationAction,
 ): Promise<ContentMutationResult> => {
   const result = await send(
@@ -214,7 +215,7 @@ export const setContentPublishedInBrowser = async (
  */
 export const setContentHiddenInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   action: ContentVisibilityAction,
   expectedVersion?: number,
 ): Promise<ContentMutationResult> => {
@@ -236,7 +237,7 @@ export const setContentHiddenInBrowser = async (
 /** Re-reads one record - for the conflict banner and for missing collections. */
 export const readContentRowInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<ContentRowResult> => {
   const result = await send({ method: "get", path: `/${id}`, target }, zodRow);
 
@@ -248,7 +249,7 @@ export const readContentRowInBrowser = async (
 /** Every language one record exists in, values included, in one request. */
 export const listContentTranslationsInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<{ edges: TranslationRow[]; error?: string }> => {
   const result = await send(
     { method: "get", path: `/${id}/translations`, target },
@@ -274,7 +275,7 @@ export const loadContentOptionsInBrowser = async (
   target: ContentApiTarget,
   field: string,
   search: string,
-  ids?: number[],
+  ids?: ContentId[],
 ): Promise<ContentOption[]> => {
   const result = await send(
     {

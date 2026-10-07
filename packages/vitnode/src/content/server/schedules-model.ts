@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { and, desc, eq, inArray, lt, notInArray, sql } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type {
   ContentSchedule,
   ContentScheduleAction,
@@ -14,6 +15,7 @@ import { core_content_schedules } from "../../database/content";
 import { core_users } from "../../database/users";
 import { CONTENT_QUEUE_TASK_SCHEDULE, CONTENT_SCHEDULE_CODES } from "../const";
 import { ContentScheduleError } from "../errors";
+import { contentIdKey } from "../ids";
 import { contentScheduleTimingError } from "../schedules";
 
 /** A schedule row claimed for execution, with everything the handler needs. */
@@ -22,7 +24,12 @@ export interface ClaimedContentSchedule {
   contentTypeId: string;
   createdBy: null | number;
   id: number;
-  itemId: number;
+  /**
+   * The record's storage key (`contentIdKey`), exactly as the shared table holds
+   * it. Decode it with `contentIdFromKey(definition.idStrategy, itemId)` once the
+   * content type is known.
+   */
+  itemId: string;
   pluginId: string;
 }
 
@@ -113,14 +120,14 @@ export const recordContentScheduleEffectsError = async (
 
 export interface ContentSchedulesModel {
   cancel: (
-    itemId: number,
+    itemId: ContentId,
     scheduleId: number,
   ) => Promise<null | { action: ContentScheduleAction }>;
   /** Pending and recent schedules for one record, newest first. */
-  listForItem: (itemId: number) => Promise<ContentSchedule[]>;
+  listForItem: (itemId: ContentId) => Promise<ContentSchedule[]>;
   /** Pending rows only, for the ordering rule. */
   pendingForItem: (
-    itemId: number,
+    itemId: ContentId,
     tx?: ContentDatabase,
   ) => Promise<{ action: ContentScheduleAction; scheduledFor: Date }[]>;
   recordError: (scheduleId: number, message: string) => Promise<void>;
@@ -131,7 +138,7 @@ export interface ContentSchedulesModel {
   schedule: (input: {
     action: ContentScheduleAction;
     actorUserId: null | number;
-    itemId: number;
+    itemId: ContentId;
     now?: Date;
     scheduledFor: Date;
   }) => Promise<{ generation: number; id: number; scheduledFor: Date }>;
@@ -151,14 +158,14 @@ export const createContentSchedulesModel = ({
 }): ContentSchedulesModel => {
   const contentTypeId = definition.id;
 
-  const scope = (itemId: number) =>
+  const scope = (itemId: ContentId) =>
     and(
       eq(core_content_schedules.pluginId, pluginId),
       eq(core_content_schedules.contentTypeId, contentTypeId),
-      eq(core_content_schedules.itemId, itemId),
+      eq(core_content_schedules.itemId, contentIdKey(itemId)),
     );
 
-  const pendingForItem = async (itemId: number, tx?: ContentDatabase) =>
+  const pendingForItem = async (itemId: ContentId, tx?: ContentDatabase) =>
     await (tx ?? c.get("db"))
       .select({
         action: core_content_schedules.action,
@@ -280,7 +287,7 @@ export const createContentSchedulesModel = ({
             contentTypeId,
             createdBy: actorUserId,
             generation,
-            itemId,
+            itemId: contentIdKey(itemId),
             pluginId,
             scheduledFor,
           })
