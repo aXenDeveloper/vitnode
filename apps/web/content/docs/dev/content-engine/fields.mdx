@@ -22,6 +22,7 @@ fields: {
 | ------------------- | ---------------------------------------- | --------------------------------- | ------------------ |
 | `field.text()`      | `varchar(maxLength)`, 255 by default     | Text input                        | Yes                |
 | `field.textarea()`  | `text`                                   | Textarea                          | Yes                |
+| `field.richText()`  | `text`, holding sanitized HTML           | Rich text editor                  | Yes                |
 | `field.number()`    | `integer` or `double precision`          | Number input with steppers        | No                 |
 | `field.boolean()`   | `boolean`                                | Switch                            | No                 |
 | `field.enum()`      | `varchar(length)`, 64 by default         | Select, or radio buttons          | No                 |
@@ -42,7 +43,7 @@ Most helpers accept `required`, `nullable` and `description`. These three decide
 
 | Option           | Effect                                                                                  |
 | ---------------- | --------------------------------------------------------------------------------------- |
-| `required: true` | The create request must include the field. An empty string still passes unless you set `minLength` |
+| `required: true` | The create request must include the field. An empty string still passes unless you set `minLength`. A rich text field must also hold text or media |
 | `nullable: true` | The column accepts `NULL`, and so does validation                                       |
 | `defaultValue`   | Used when a create request leaves the field out. Also becomes the column's `DEFAULT`    |
 
@@ -63,6 +64,21 @@ A single `field.user()` and a single `field.file()` are nullable unless you say 
 | `localized`    | `boolean` | `false` | Stores the value per language. Needs [`localization`](/docs/dev/content-engine/localization) |
 
 Set `maxLength` on every `text` field. Without it, validation accepts any length and Postgres rejects values over 255 characters with an error.
+
+## Rich text
+
+`field.richText()` stores formatted text as an HTML string, edited with the rich text editor. The API sanitizes the HTML on every write. [Rich text fields](/docs/dev/content-engine/rich-text) covers the editor, sanitizing, search and rendering.
+
+| Option         | Type      | Default | Description                                                                  |
+| -------------- | --------- | ------- | ---------------------------------------------------------------------------- |
+| `minLength`    | `number`  |         | Shortest accepted value, counted in plain-text characters, not markup        |
+| `maxLength`    | `number`  |         | Longest accepted value, counted the same way                                 |
+| `defaultValue` | `string`  |         | Checked against the rules below when the content type is defined             |
+| `localized`    | `boolean` | `false` | Stores the value per language                                                |
+
+Whatever the options, a value can hold at most 500,000 characters of HTML (`CONTENT_RICH_TEXT_MAX_HTML_LENGTH`). `required: true` rejects values with no text and no image or audio, such as `<p></p>`. An empty optional value is stored as `null` when the field is `nullable`, otherwise as `""`.
+
+Switching a `field.textarea()` to `field.richText()` keeps the same `text` column, so the migration is empty. The new rules apply from the next save of each record.
 
 ## Number
 
@@ -146,4 +162,4 @@ Fields have no `searchable` or `sortable` option. Each surface chooses its own:
 - `publicApi.searchableFields`, `orderableFields` and `filterableFields` for the public API.
 - `search.contentFields` for the site search index.
 
-The [content type reference](/docs/dev/content-engine/reference) lists which field kinds each option accepts.
+A rich text field is never searched by default. Name it in `admin.list.searchableFields` or `publicApi.searchableFields` to search its plain text, as explained in [Rich text fields](/docs/dev/content-engine/rich-text#search-and-seo). The [content type reference](/docs/dev/content-engine/reference) lists which field kinds each option accepts.

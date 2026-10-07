@@ -75,7 +75,7 @@ nutrition: field.group({
 }),
 ```
 
-A group adds one column per leaf to the main table, named in camelCase: `nutritionCalories`, `nutritionProtein`, `nutritionNotes`. The API reads and writes it as `{ nutrition: { calories, protein, notes } }`. Leaves can be text, textarea, number, boolean, enum or dateTime fields. A group that is not required needs leaves that are nullable or have a default. Refer to a leaf elsewhere with a path such as `"nutrition.calories"`.
+A group adds one column per leaf to the main table, named in camelCase: `nutritionCalories`, `nutritionProtein`, `nutritionNotes`. The API reads and writes it as `{ nutrition: { calories, protein, notes } }`. Leaves can be text, textarea, rich text, number, boolean, enum or dateTime fields. A group that is not required needs leaves that are nullable or have a default. Refer to a leaf elsewhere with a path such as `"nutrition.calories"`.
 
 ## Repeatable rows
 
@@ -92,7 +92,7 @@ ingredients: field.repeatable({
 }),
 ```
 
-The child table `example_recipes_ingredients` has `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per field. Deleting a recipe deletes its rows. `max` defaults to 100. Export the table as well:
+The child table `example_recipes_ingredients` has `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per field. Deleting a recipe deletes its rows. `max` defaults to 100. Subfields can be the same kinds as group leaves, rich text included. Export the table as well:
 
 ```ts title="plugins/example/src/database/recipes.ts"
 export const example_recipes_ingredients =
@@ -102,6 +102,10 @@ export const example_recipes_ingredients =
 ## Check the result
 
 Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The generated migration should contain one table per junction and repeatable field. Open the create form: the category has a picker, tags accept several values, the nutrition fields sit in their own card and ingredients can be added, removed and reordered.
+
+## Duplicating records with relations
+
+When a content type has [duplication](/docs/dev/content-engine/duplicate-content), the copy links to the same records, users and files as the source, in the same order. Files are shared, not uploaded again. Repeatable rows are copied as new rows with new ids, in the same order, so editing the copy's ingredients never changes the original's.
 
 ## Relation options
 

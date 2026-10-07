@@ -22,4 +22,4 @@ Most features use both. The API caches the expensive part once, and each visitor
   lives in the two layers above and not in the fetcher.
 </Callout>
 
-Content Engine content types tag and expire their public reads for you. See [Content Engine caching](/docs/dev/content-engine/public-api-and-caching) instead of wiring that up by hand.
+The Content Engine does not cache its public reads either: every request reads the database. If a separate front end caches rendered pages, the engine can tell it when a record goes on or off the site. See [Content Engine caching](/docs/dev/content-engine/public-api-and-caching#caching).

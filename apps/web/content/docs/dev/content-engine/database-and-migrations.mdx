@@ -55,8 +55,13 @@ You never declare these; declaring a field with the same name throws.
 | `status`      | `varchar(32)`, `draft` or `published`, defaults to `draft` | `publication` |
 | `publishedAt` | `timestamp`, nullable                   | `publication`               |
 | `version`     | `integer`, defaults to `1`              | `editorial`                 |
+| `hiddenAt`    | `timestamp`, nullable                   | `visibility`                |
+| `hiddenBy`    | `integer`, nullable, references `core_users.id` with `ON DELETE SET NULL` | `visibility` |
+| `{field}Text` | `text`, nullable                        | a `field.richText()` listed in `admin.list.searchableFields` or `publicApi.searchableFields` |
 
 Column names are camelCase in SQL, exactly as in TypeScript. Every generated table has row-level security enabled.
+
+The `{field}Text` column holds the plain text of a searchable rich text field, so search matches words instead of HTML tags. It lives on the same table as the field: the main table, the translations table or a repeatable's child table. The engine writes it on every save; you never set it yourself. See [Rich text fields](/docs/dev/content-engine/rich-text#search-and-seo).
 
 ### Translations table
 
@@ -85,7 +90,7 @@ Field names are converted to snake_case in table names, so `relatedArticles` bec
 The engine creates these indexes without being asked:
 
 - A unique index on every slug, and on every `field.text({ unique: true })`.
-- An index on every single `relation`, `user` and `file` column.
+- An index on every single `relation`, `user` and `file` column, and on `hiddenBy` with `visibility`.
 - Indexes on `createdAt` and `updatedAt`.
 - `(status, publishedAt)` with `publication`.
 - On a translations table: `(languageId, status)` or `(languageId)`, plus a unique `(languageId, slug)` for each localized slug.
@@ -99,4 +104,7 @@ Changing a definition is a schema change like any other. Build, migrate and revi
 - Adding a nullable field, or one with a `defaultValue`, is safe on a table with data.
 - Adding a required field without a default fails on a table that already has rows. Add it as nullable first, fill it, then make it required.
 - Turning on `localization` moves fields to a new table, and the generated SQL does not copy existing values.
+- Switching a `field.textarea()` to `field.richText()` changes no column. Existing values are sanitized the next time each record is saved.
+- Making a rich text field searchable adds an empty `{field}Text` column. Until a record is saved again, search falls back to its HTML. To search existing rows by plain text right away, generate the migration with `vitnode migrate --generate` and add an `UPDATE` that fills the column before you apply it. The blog's `20261007084033_content_rich_text_visibility` migration in `apps/api/migrations/` is an example.
+- Turning on `visibility` adds two nullable columns, so existing records stay visible.
 - Never edit or regenerate a migration that has already been applied. Write a new one instead.

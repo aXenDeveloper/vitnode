@@ -29,7 +29,7 @@ publicApi: {
 
 ## Grant the right permissions
 
-Generated routes check `can_view`, `can_create`, `can_edit` and `can_delete`, plus `can_publish` with publication and `can_restore` with editorial. Give moderators only what they need in **AdminCP → Staff**. Any custom admin route you add next to the generated ones must check staff permissions too, because the generated checks do not cover it.
+Generated routes check `can_view`, `can_create`, `can_edit` and `can_delete`, plus `can_publish` with publication, `can_restore` with editorial and `can_hide` with [visibility](/docs/dev/content-engine/content-visibility). Give moderators only what they need in **AdminCP → Staff**. Any custom admin route you add next to the generated ones must check staff permissions too, because the generated checks do not cover it.
 
 ## Ship the migration
 

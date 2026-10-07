@@ -230,11 +230,13 @@ A content type without `publicApi` adds no module, so `module: "content/categori
 | `GET /preview/{token}`  | A signed draft preview, only with [`editorial.preview`](/docs/dev/content-engine/publication-and-editorial)     |
 | `GET /delivery/...`     | URL resolution, metadata and sitemap entries, only with [`delivery`](/docs/dev/content-engine/content-delivery-and-seo) |
 
-A page holds at most 50 records; ask for fewer with `first`. A record is public only when its status is `published` and its `publishedAt` is in the past. Every option of `publicApi` is in the [content type reference](/docs/dev/content-engine/reference#publicapi).
+A page holds at most 50 records; ask for fewer with `first`. A record is public only when its status is `published`, its `publishedAt` is in the past and it is not [hidden](/docs/dev/content-engine/content-visibility). Every option of `publicApi` is in the [content type reference](/docs/dev/content-engine/reference#publicapi).
 
 ## Caching
 
-Public reads go straight to the database; core does not cache them for you. If a separate front end caches rendered pages, `content.revalidateOrigins` in your API config lists the origins to notify. VitNode currently notifies them only when a [scheduled](/docs/dev/content-engine/publication-and-editorial#schedule-publishing) publish or unpublish runs. It sends a `POST` to `{origin}/api/vitnode/content/revalidate` with `Authorization: Bearer <CRON_SECRET>`, and your front end has to provide that endpoint.
+Public reads go straight to the database. Core does not cache them, so a change shows up on the next request.
+
+If a separate front end caches rendered pages, list its origins in `content.revalidateOrigins` and the API tells it when a record goes on or off the public site:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
@@ -245,3 +247,57 @@ export const vitNodeApiConfig = buildApiConfig({
 ```
 
 Leave it unset when your pages read the public API on every request.
+
+### When origins are notified
+
+| Change                                                     | Notifies origins |
+| ---------------------------------------------------------- | ---------------- |
+| A [scheduled](/docs/dev/content-engine/publication-and-editorial#schedule-publishing) publish or unpublish runs | Yes |
+| A record is [hidden or unhidden](/docs/dev/content-engine/content-visibility) | Yes, when that changes what the public can see |
+| A publish, unpublish, edit or delete from the AdminCP or the API | No              |
+
+A change that never touches a public record, such as hiding a draft, notifies nobody. For the changes that do not notify, expire your front end's cache yourself, for example from a listener for the [content events](/docs/dev/content-engine/services-and-api#events).
+
+### Receive the notification
+
+The API sends `POST {origin}/api/vitnode/content/revalidate` to each origin, with these headers:
+
+| Header                | Value                                                   |
+| --------------------- | ------------------------------------------------------- |
+| `Authorization`       | `Bearer <CRON_SECRET>`, the API's cron secret            |
+| `x-vitnode-timestamp` | When the request was sent, in milliseconds since epoch  |
+| `Content-Type`        | `application/json`                                      |
+
+The body describes the change: `contentTypeId`, `id`, `wasPublic` and `isPublic`, the `slugs` the record answered to, per-language `locales` for a localized type, `delivery` for a type with delivery, and `mode` (`"immediate"` or `"stale-while-revalidate"`). Pass it to `contentInvalidationTags` from `@vitnode/core/content` to get the cache tags to expire:
+
+```ts title="src/server/content-revalidate.ts"
+import type { ContentInvalidationInput } from "@vitnode/core/content";
+
+import { contentInvalidationTags } from "@vitnode/core/content";
+
+const MAX_SKEW_MS = 5 * 60 * 1000;
+
+export const handleContentRevalidate = async (
+  request: Request,
+  expireTags: (tags: string[]) => Promise<void>,
+): Promise<Response> => {
+  const auth = request.headers.get("authorization");
+  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response(null, { status: 403 });
+  }
+
+  const sentAt = Number(request.headers.get("x-vitnode-timestamp"));
+  if (!Number.isFinite(sentAt) || Math.abs(Date.now() - sentAt) > MAX_SKEW_MS) {
+    return new Response(null, { status: 400 });
+  }
+
+  const change = (await request.json()) as ContentInvalidationInput;
+  await expireTags(contentInvalidationTags(change));
+
+  return new Response(null, { status: 204 });
+};
+```
+
+`expireTags` is your cache's own purge function. Mount the handler at `/api/vitnode/content/revalidate`. The tags are plain strings such as `content:example.recipe:list`, built by `contentPublicListTag` and the other helpers in `@vitnode/core/content`, so tag your cached pages with the same helpers.
+
+The API tries each origin twice, 250 ms apart, and one failing origin does not stop the others. A `403` is not retried, because a wrong secret will not fix itself; check that `CRON_SECRET` matches on both sides. Failures are written to the API log.
