@@ -105,7 +105,8 @@ Turn on `storage.image` and VitNode re-encodes JPEG, PNG, AVIF, TIFF and WebP up
 export const vitNodeApiConfig = buildApiConfig({
   storage: {
     adapter: LocalStorageAdapter(),
-    image: { // [!code ++:5]
+    // [!code ++:5]
+    image: {
       quality: 85, // 1-100, defaults to 85
       webp: true, // set to false to keep the original format
       maxPixels: 40_000_000, // width x height, defaults to 40 million
@@ -118,7 +119,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ### What gets checked on every upload
 
-Whether or not `storage.image` is set, an upload declared as JPEG, PNG, WebP, GIF, AVIF or TIFF must actually *be* that format. The type a client sends is just a claim (a browser guesses it from the file name), so VitNode reads the file's first bytes and refuses a mismatch - say, an HTML page named `cat.gif` - with a `400`. SVG and non-image files have no fixed signature and are not affected; limit them with `allowedMimeTypes`.
+Whether or not `storage.image` is set, an upload declared as JPEG, PNG, WebP, GIF, AVIF or TIFF must actually _be_ that format. The type a client sends is just a claim (a browser guesses it from the file name), so VitNode reads the file's first bytes and refuses a mismatch - say, an HTML page named `cat.gif` - with a `400`. SVG and non-image files have no fixed signature and are not affected; limit them with `allowedMimeTypes`.
 
 ---
 
