@@ -15,13 +15,21 @@ import {
   ContentFormButtonSkeleton,
   ContentFormStatusSkeleton,
 } from "./skeleton";
+import {
+  ContentFormHiddenNotice,
+  ContentFormVisibilityToggle,
+  useContentFormHidden,
+} from "./visibility";
 
 export const ContentFormSubmit = ({
   label,
   withPublicationToggle = true,
+  withVisibilityToggle = true,
 }: {
   label?: React.ReactNode;
   withPublicationToggle?: boolean;
+  /** The Hide / Unhide button, for a content type with visibility enabled. */
+  withVisibilityToggle?: boolean;
 }) => {
   const tContent = useTranslations("core.content");
   const { mode, publication, skeleton } = useContentForm();
@@ -57,6 +65,9 @@ export const ContentFormSubmit = ({
 
   return (
     <>
+      {mode === "edit" && withVisibilityToggle ? (
+        <ContentFormVisibilityToggle />
+      ) : null}
       {mode === "edit" && withPublicationToggle ? (
         <ContentFormPublicationToggle />
       ) : null}
@@ -71,6 +82,7 @@ export const ContentFormSubmit = ({
 const ContentFormPublicationToggle = () => {
   const tContent = useTranslations("core.content");
   const { publication, singular, title } = useContentForm();
+  const hidden = useContentFormHidden();
   const { canPublish, enabled, status, transition } = publication;
 
   if (!enabled || !canPublish || !transition) return null;
@@ -78,14 +90,23 @@ const ContentFormPublicationToggle = () => {
   const { action, destructive: published } =
     contentPublicationTransition(status);
   const Icon = published ? EyeOffIcon : SendIcon;
+  const description = tContent.rich(`${action}.desc`, {
+    title: () => (
+      <span className="text-foreground font-bold">{title ?? singular}</span>
+    ),
+  });
 
   return (
     <ConfirmActionAlertDialog
-      description={tContent.rich(`${action}.desc`, {
-        title: () => (
-          <span className="text-foreground font-bold">{title ?? singular}</span>
-        ),
-      })}
+      description={
+        hidden && action === "publish" ? (
+          <>
+            {description} {tContent("visibility.publish_note")}
+          </>
+        ) : (
+          description
+        )
+      }
       icon={<Icon />}
       onSubmit={async ({ onClose }) => {
         if (await transition(action)) onClose();
@@ -131,17 +152,21 @@ export const ContentFormRemainingFields = ({
 };
 
 export const ContentFormStatus = () => {
-  const { mode, publication, skeleton } = useContentForm();
+  const { mode, publication, skeleton, visibility } = useContentForm();
 
   if (!publication.enabled || mode === "create") return null;
 
   if (skeleton) return <ContentFormStatusSkeleton />;
 
   return (
-    <ContentFormPublication
-      publishedAt={publication.publishedAt}
-      status={publication.status}
-    />
+    <div className="flex flex-col gap-2">
+      <ContentFormPublication
+        hiddenAt={visibility?.enabled ? visibility.hiddenAt : undefined}
+        publishedAt={publication.publishedAt}
+        status={publication.status}
+      />
+      <ContentFormHiddenNotice />
+    </div>
   );
 };
 
@@ -151,11 +176,13 @@ export const ContentFormActions = ({
   className,
   submitLabel,
   withPublicationToggle,
+  withVisibilityToggle,
   ...props
 }: React.ComponentProps<"div"> & {
   cancelHref?: string;
   submitLabel?: React.ReactNode;
   withPublicationToggle?: boolean;
+  withVisibilityToggle?: boolean;
 }) => {
   const t = useTranslations("core.global");
 
@@ -177,6 +204,7 @@ export const ContentFormActions = ({
       <ContentFormSubmit
         label={submitLabel}
         withPublicationToggle={withPublicationToggle}
+        withVisibilityToggle={withVisibilityToggle}
       />
     </div>
   );

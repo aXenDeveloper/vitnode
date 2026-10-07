@@ -16,6 +16,7 @@ import {
   listContentTranslationsInBrowser,
   loadContentOptionsInBrowser,
   readContentRowInBrowser,
+  setContentHiddenInBrowser,
   setContentPublishedInBrowser,
 } from "@/views/admin/views/content/form/mutations-api";
 import {
@@ -155,6 +156,18 @@ export const contentFormTransport = (
 
     saveDraft: async (contentTypeId, itemId, draft) =>
       await saveContentDraftInBrowser(targetFor(contentTypeId), itemId, draft),
+    setHidden: async (contentTypeId, itemId, action, expectedVersion) => {
+      const result = await setContentHiddenInBrowser(
+        targetFor(contentTypeId),
+        itemId,
+        action,
+        expectedVersion,
+      );
+
+      if (result.error === undefined) await settled(contentTypeId, itemId);
+
+      return result;
+    },
 
     unpublish: async (contentTypeId, itemId) => {
       const result = await setContentPublishedInBrowser(

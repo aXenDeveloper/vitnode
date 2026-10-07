@@ -18,8 +18,11 @@ export {
   contentListPageQuery,
   contentListRequestFor,
   deleteContentRow,
+  duplicateContentRow,
   invalidateContentAfterWrite,
+  readDuplicatedContent,
   setContentPublication,
+  setContentVisibility,
 } from "./query";
 export type { ContentAdminRouteData, ContentAdminScreen } from "./route";
 export {
@@ -45,7 +48,10 @@ export {
   contentTableContract,
   normalizeContentListSearch,
 } from "./route-search";
-export type { ContentRowActionsProps } from "./row-actions";
+export type {
+  ContentDuplicatedRecord,
+  ContentRowActionsProps,
+} from "./row-actions";
 export { ContentRowActions } from "./row-actions";
 export type { ContentAdminScreenProps } from "./screen";
 export { ContentAdminScreenContent } from "./screen";
@@ -89,10 +95,12 @@ export {
 
 export type {
   ContentEditorialActionId,
+  ContentListActionId,
   ContentRowActionId,
 } from "@/views/admin/views/content/actions/row-actions-model";
 export {
   CONTENT_EDITORIAL_ACTION_IDS,
+  CONTENT_LIST_ACTION_IDS,
   CONTENT_ROW_ACTION_IDS,
   CONTENT_ROW_INLINE_ACTION_LIMIT,
   contentRowActionIds,

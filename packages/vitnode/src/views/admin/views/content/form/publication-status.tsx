@@ -5,14 +5,20 @@ import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { isContentPublished } from "@/content/publication";
 
+import { ContentHiddenBadge } from "../lib/hidden-badge";
+
 export const ContentFormPublication = ({
+  hiddenAt,
   publishedAt,
   status,
 }: {
+  /** The record's `hiddenAt`, for a content type with visibility enabled. */
+  hiddenAt?: unknown;
   publishedAt: unknown;
   status: unknown;
 }) => {
   const t = useTranslations("core.content.status");
+  const tVisibility = useTranslations("core.content.visibility");
   const published = isContentPublished(status);
   const date = typeof publishedAt === "string" ? new Date(publishedAt) : null;
 
@@ -27,6 +33,7 @@ export const ContentFormPublication = ({
         )}
         {published ? t("published") : t("draft")}
       </Badge>
+      <ContentHiddenBadge label={tVisibility("hidden")} row={{ hiddenAt }} />
       <span className="text-muted-foreground">
         {date ? <DateFormat date={date} /> : t("never_published")}
       </span>

@@ -46,3 +46,9 @@ export {
 export { ContentFormStatusSwitch } from "./status-switch";
 export { useTranslationFreshness } from "./translation-freshness";
 export { useContentFormValues, useSetContentFormValue } from "./values";
+export {
+  ContentFormHiddenBadge,
+  ContentFormHiddenNotice,
+  ContentFormVisibilityToggle,
+  useContentFormHidden,
+} from "./visibility";

@@ -2,6 +2,7 @@ import React from "react";
 
 import type { ContentDrafts } from "@/content/live/http";
 import type { ContentFieldLock } from "@/content/live/protocol";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import type {
   ContentMutationResult,
@@ -96,6 +97,18 @@ export interface ContentFormTransport {
     itemId: number,
     draft: { locale: null | string; values: Record<string, unknown> },
   ) => Promise<ContentDraftSaveResult>;
+  /**
+   * Hides or unhides a record, for a content type with visibility enabled.
+   * `expectedVersion` is the form's own precondition, so a record somebody
+   * saved meanwhile answers `409` rather than changing under the editor.
+   * Optional: a transport without it renders no Hide / Unhide control.
+   */
+  setHidden?: (
+    contentTypeId: string,
+    itemId: number,
+    action: ContentVisibilityAction,
+    expectedVersion?: number,
+  ) => Promise<ContentMutationResult>;
   /** Moves a record back to `draft`. Idempotent, like {@link publish}. */
   unpublish: (
     contentTypeId: string,

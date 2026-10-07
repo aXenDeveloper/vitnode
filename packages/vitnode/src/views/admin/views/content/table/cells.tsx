@@ -22,6 +22,8 @@ import { isContentPublished } from "@/content/publication";
 import { isRichTextDocument } from "@/content/rich-text/document";
 import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
+import { ContentHiddenBadge } from "../lib/hidden-badge";
+
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
   id: number;
@@ -149,11 +151,19 @@ const ContentReferenceList = ({
   );
 };
 
+/** The publication badge's words, and the visibility badge's beside it. */
+export interface ContentStatusLabels {
+  draft: string;
+  /** `core.content.visibility.hidden`. Absent, a hidden row shows no badge. */
+  hidden?: string;
+  published: string;
+}
+
 interface ContentCellProps {
   emptyLabel: string;
   row: ContentRowData;
   spec: ContentColumnSpec;
-  statusLabels: { draft: string; published: string };
+  statusLabels: ContentStatusLabels;
 }
 
 const ContentCellValue = ({
@@ -225,8 +235,7 @@ const ContentCellValue = ({
 
     case "publication": {
       const published = isContentPublished(value);
-
-      return (
+      const badge = (
         <Badge variant={published ? "default" : "secondary"}>
           {published ? (
             <CircleCheckIcon aria-hidden />
@@ -235,6 +244,19 @@ const ContentCellValue = ({
           )}
           {published ? statusLabels.published : statusLabels.draft}
         </Badge>
+      );
+
+      // "Published" alone would be a lie for a hidden record: readers get a 404.
+      return statusLabels.hidden === undefined ? (
+        badge
+      ) : (
+        <span className="flex flex-wrap items-center gap-1">
+          {badge}
+          <ContentHiddenBadge
+            label={statusLabels.hidden}
+            row={{ hiddenAt: row.hiddenAt }}
+          />
+        </span>
       );
     }
 

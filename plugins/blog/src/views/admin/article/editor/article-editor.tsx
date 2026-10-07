@@ -18,6 +18,7 @@ import {
 import {
   ContentFormActions,
   ContentFormField,
+  ContentFormHiddenNotice,
   ContentFormStatusSwitch,
   ContentLivePresence,
   ContentLiveStatus,
@@ -476,6 +477,7 @@ export const ArticleEditor = ({
               !target && "max-w-3xl",
             )}
           >
+            <ContentFormHiddenNotice />
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <AutoFormFileDisplayContext value="cover">

@@ -6,6 +6,7 @@ import type {
 
 import { CONTENT_DEFAULT_PAGE_SIZE } from "@/content/const";
 import { contentFilterableFields, orderableColumns } from "@/content/registry";
+import { contentListSystemFilterValue } from "@/views/admin/views/content/table/list-filters";
 
 import type {
   AdminTableRouteSearch,
@@ -59,7 +60,16 @@ export const contentListFilters = (
 
   return Object.fromEntries(
     contentFilterableFields(definition)
-      .map(name => [name, readParam(source[name])?.trim() ?? ""] as const)
+      .map(
+        name =>
+          [
+            name,
+            contentListSystemFilterValue(
+              name,
+              readParam(source[name])?.trim() ?? "",
+            ) ?? "",
+          ] as const,
+      )
       .filter(([, value]) => value !== "")
       .sort(([a], [b]) => a.localeCompare(b)),
   );
