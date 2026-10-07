@@ -4,7 +4,10 @@ import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 
 import { runLocaleRequest } from "./locale-request";
 
-export const createLocaleRequestMiddleware = (localeRouting: LocaleRouting) =>
+export const createLocaleRequestMiddleware = (
+  localeRouting: LocaleRouting,
+  securityHeaders?: Record<string, string>,
+) =>
   createMiddleware().server(
-    async ctx => await runLocaleRequest(ctx, localeRouting),
+    async ctx => await runLocaleRequest(ctx, localeRouting, securityHeaders),
   );
