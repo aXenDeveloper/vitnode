@@ -10,6 +10,8 @@ import type {
   ContentScheduleAction,
 } from "@/content/schedules";
 
+import { contentAnyIdSchema } from "@/content/ids";
+
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
 
@@ -30,7 +32,7 @@ const zodRevisionList = z.object({
 
 const zodRevision = z.object({ id: z.number() }).loose();
 
-const zodRow = z.object({ id: z.number() }).loose();
+const zodRow = z.object({ id: contentAnyIdSchema }).loose();
 
 const zodRestoreResult = z.object({ changed: z.boolean(), row: zodRow });
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { CONTENT_ID_STRATEGIES } from "./const";
 
+import { CONTENT_ID_KEY_LENGTH } from "./const";
 import { ContentEngineError } from "./errors";
 
 /** How a content type's primary key is generated. Defaults to `serial`. */
@@ -151,6 +152,17 @@ export const contentIdSchema = (
           .regex(BIGINT_PATTERN, "Expected a positive decimal bigint.")
           .refine(withinBigint, "Out of range for a bigint identifier.")
       : z.string().regex(UUID_PATTERN, "Expected a lowercase UUID.");
+
+/**
+ * One record identifier under any strategy, for code that reads rows of content
+ * types it does not know statically - the generic AdminCP. A positive integer
+ * (`serial`) or a canonical key string (`uuid`, `bigint`); never a number for a
+ * string strategy, so a bigint above 2^53 is never rounded on the way in.
+ */
+export const contentAnyIdSchema: z.ZodType<ContentId> = z.union([
+  z.number().int().positive().max(CONTENT_SERIAL_MAX),
+  z.string().min(1).max(CONTENT_ID_KEY_LENGTH),
+]);
 
 /**
  * The Zod schema of one identifier read from a path segment or a query string,
