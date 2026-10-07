@@ -34,12 +34,19 @@ import type { ContentSchedulesModel } from "./schedules-model";
 import type { ContentDatabase } from "./service";
 import type { ContentTranslationEditorialService } from "./translation-editorial-service";
 import type { ContentTranslationModel } from "./translation-model";
+import type {
+  ContentEditorialVisibilityMethods,
+  ContentEditorialVisibilityOptions,
+  ContentVisibilityAction,
+  ContentVisibilityChange,
+  ContentVisibilityMembers,
+} from "./visibility";
 
-import { isContentPubliclyVisible } from "../cache";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
 } from "../const";
 import {
   ContentEngineError,
@@ -81,6 +88,12 @@ import { createContentRevisionsModel } from "./revisions-model";
 import { withContentRichTextWrites } from "./rich-text";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
+import {
+  isContentBaseRowPublic,
+  isInVisibilityState,
+  visibilityChange,
+  visibilityValues,
+} from "./visibility";
 
 export interface ContentEditorialOutcome<TDefinition> {
   /** `false` when nothing moved: no write, no revision, no event, no tags. */
@@ -102,6 +115,11 @@ export interface ContentEditorialOutcome<TDefinition> {
   revisionId: null | number;
   row: ContentSelect<TDefinition>;
   version: number;
+  /**
+   * Set only by `hide` and `unhide`: who asked, the visibility columns before
+   * the write, and the public reachability on both sides of it.
+   */
+  visibility?: ContentVisibilityChange;
 }
 
 export interface ContentEditorialOptions {
@@ -123,6 +141,10 @@ export interface ContentEditorialPublicationOptions extends ContentEditorialOpti
 
 export type ContentEditorialService<TDefinition> =
   ContentEditorialServiceBase<TDefinition> &
+    ContentVisibilityMembers<
+      TDefinition,
+      ContentEditorialVisibilityMethods<TDefinition>
+    > &
     (TDefinition extends { duplication: { enabled: true } }
       ? ContentEditorialDuplicationMethods<TDefinition>
       : Partial<
@@ -329,6 +351,10 @@ export const createContentEditorialService = <
     ...CONTENT_SYSTEM_FIELDS,
     ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
     ...CONTENT_EDITORIAL_FIELDS,
+    // Selected on every read and returned by every write, so each "was it
+    // public?" this service asks - delivery, the transition's before-state -
+    // sees `hiddenAt` without a second query.
+    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
   ];
   const ownColumnNames = [
     ...generatedColumnNames,
@@ -363,28 +389,34 @@ export const createContentEditorialService = <
     definition.delivery.enabled && definition.delivery.slugScope === "shared";
   const slugHistory = contentSlugHistoryFor({ c, definition, pluginId });
 
-  /** Whether a base row is publicly reachable right now. `false` without publication. */
+  /**
+   * Whether a base row is publicly reachable right now - published, live and not
+   * hidden. `false` without publication.
+   */
   const publiclyVisible = (row: null | Record<string, unknown>): boolean => {
     if (row === null || !publication) return false;
 
-    return isContentPubliclyVisible({
-      publishedAt: row.publishedAt as Date | null | undefined,
-      status: typeof row.status === "string" ? row.status : undefined,
-    });
+    return isContentBaseRowPublic(row);
   };
 
   /**
-   * The publication state a row held *before* a transition.
+   * The row as it stood *before* a publish or an unpublish.
    *
    * Reconstructed rather than re-read, and it is not a guess: a transition is
    * guarded on the state it changes, so a `publish` that returned a row can only
    * have found it unpublished, and an `unpublish` can only have found it published.
    * A second `SELECT` would race with the writer that just won.
+   *
+   * Everything else is the returned row, unchanged - `hiddenAt` above all. A
+   * transition never writes it, so a hidden record was hidden before its publish
+   * and is hidden after it, and both sides report "not public": publishing a
+   * hidden record reserves no address and adds no sitemap line.
    */
   const invert = (
     operation: "publish" | "unpublish",
     row: Record<string, unknown>,
   ): Record<string, unknown> => ({
+    ...row,
     publishedAt: row.publishedAt,
     status: operation === "publish" ? "draft" : "published",
   });
@@ -707,7 +739,7 @@ export const createContentEditorialService = <
       // coming back and its old URLs should redirect again when it does.
       const delivery = await applyDelivery(tx, {
         after: row,
-        before: { ...row, ...invert(operation, row) },
+        before: invert(operation, row),
         itemId: id,
       });
 
@@ -724,6 +756,110 @@ export const createContentEditorialService = <
         version,
       };
     });
+
+  /**
+   * Hide and unhide: a version bump, a revision and - for a shared slug - the
+   * same delivery bookkeeping an unpublish and a publish do, all in one
+   * transaction.
+   *
+   * The row is locked and read first, so the before-state is the real one: the
+   * effects need to know whether the record was public a moment ago, and a hidden
+   * draft never was. The publication columns are not in the `SET` and never will
+   * be, so hiding cannot publish and unhiding cannot unpublish.
+   *
+   * Like a transition, it is guarded on the state it changes - which is what makes
+   * a repeat a harmless no-op - with `expectedVersion` checked on top when given.
+   */
+  const visibilityTransition = async (
+    id: number,
+    options: ContentEditorialVisibilityOptions,
+    action: ContentVisibilityAction,
+  ): Promise<ContentEditorialOutcome<TDefinition> | null> =>
+    await transact(options, async tx => {
+      const [current] = await tx
+        .select(ownSelection())
+        .from(table)
+        .where(eq(primaryCursor, id))
+        .limit(1)
+        .for("update");
+      if (!current) return null;
+
+      if (
+        options.expectedVersion !== undefined &&
+        versionOf(current) !== options.expectedVersion
+      ) {
+        throw new ContentVersionConflict({
+          contentTypeId,
+          currentVersion: versionOf(current),
+          expectedVersion: options.expectedVersion,
+          itemId: id,
+        });
+      }
+
+      if (isInVisibilityState(action, current)) {
+        return {
+          changed: false,
+          changedFields: [],
+          operation: action,
+          previousSlug: slugOf(current),
+          restoredFromRevisionId: null,
+          revisionId: null,
+          row: toRow(current),
+          version: versionOf(current),
+        };
+      }
+
+      const row = await guardedWrite(
+        tx,
+        id,
+        versionOf(current),
+        visibilityValues(action, options.actor.userId),
+      );
+      if (!row) return null;
+
+      const version = versionOf(row);
+      const revisionId = await capture(tx, {
+        actor: options.actor,
+        changedFields: [],
+        operation: action,
+        row,
+        version,
+      });
+
+      // A hide is an unpublish as far as the address is concerned - the history
+      // keeps the slug, so unhiding brings its redirects back - and an unhide is a
+      // publish: the slug is reserved again, and refused if another record took it
+      // in the meantime.
+      const delivery = await applyDelivery(tx, {
+        after: row,
+        before: current,
+        itemId: id,
+      });
+
+      return {
+        changed: true,
+        changedFields: [],
+        ...(delivery === undefined ? {} : { delivery }),
+        operation: action,
+        previousSlug: slugOf(current),
+        restoredFromRevisionId: null,
+        revisionId,
+        row: toRow(row),
+        version,
+        visibility: visibilityChange({
+          actorUserId: options.actor.userId,
+          after: row,
+          before: current,
+        }),
+      };
+    });
+
+  const hideableMethods: ContentEditorialVisibilityMethods<TDefinition> = {
+    hide: async (id, options) =>
+      await visibilityTransition(id as number, options, "hide"),
+    unhide: async (id, options) =>
+      await visibilityTransition(id as number, options, "unhide"),
+  };
 
   /**
    * Every editorial collection mutation needs an actor and an expected version.
@@ -990,7 +1126,10 @@ export const createContentEditorialService = <
 
         // Currently declared fields only. A field the content type has since
         // dropped is ignored; one added since is absent, so the record keeps
-        // what it has.
+        // what it has. The snapshot's `publication` and `visibility` blocks are
+        // never read here: restoring version 3 of a record that is hidden today
+        // brings back version 3's words and leaves it hidden, and the same for
+        // its publication status.
         const projected = projectRevisionSnapshot(
           definition,
           revision.snapshot,
@@ -1299,5 +1438,6 @@ export const createContentEditorialService = <
   return {
     ...editorial,
     ...(definition.duplication.enabled ? duplication : {}),
+    ...(definition.visibility.enabled ? hideableMethods : {}),
   } as ContentEditorialService<TDefinition>;
 };

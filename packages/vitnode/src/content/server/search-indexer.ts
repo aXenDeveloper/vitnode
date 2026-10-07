@@ -41,6 +41,16 @@ const REQUIRED_COLUMNS = [
   "publishedAt",
 ] as const;
 
+/**
+ * {@link REQUIRED_COLUMNS}, plus `hiddenAt` for a content type with `visibility`:
+ * a rebuild has to index a hidden record as private, exactly as the live hide
+ * did, or every rebuild would put it back into public results.
+ */
+const requiredColumns = (definition: AnyContentTypeDefinition): string[] => [
+  ...REQUIRED_COLUMNS,
+  ...(definition.visibility.enabled ? ["hiddenAt"] : []),
+];
+
 interface ContentSearchSources {
   /** Collection fields to batch-load for the page's parent ids. */
   collections: string[];
@@ -165,10 +175,9 @@ export const createContentSearchIndexer = <
   const sources = resolveSearchSources(definition);
   const advanced = model.advanced;
   const selection: Record<string, PgColumn> = Object.fromEntries(
-    [...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns])].map(name => [
-      name,
-      columns[name],
-    ]),
+    [
+      ...new Set([...requiredColumns(definition), ...sources.sharedColumns]),
+    ].map(name => [name, columns[name]]),
   );
 
   const cursors = new WeakMap<Context, number>();
@@ -259,7 +268,7 @@ export const createContentLocalizedSearchIndexer = <
   const sources = resolveSearchSources(definition);
   const advanced = model.advanced;
   const sharedSelection = [
-    ...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns]),
+    ...new Set([...requiredColumns(definition), ...sources.sharedColumns]),
   ];
   const localizedSelection = [...new Set(sources.localizedColumns)];
 

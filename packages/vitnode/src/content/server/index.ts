@@ -6,6 +6,7 @@ export {
   buildSystemColumns,
   buildTranslationPublicationColumns,
   buildTranslationSystemColumns,
+  buildVisibilityColumns,
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
 export {
@@ -331,4 +332,24 @@ export type {
   ContentTranslationSystemColumnBuilders,
   ContentTranslationTable,
   ContentTranslationTableFor,
+  ContentVisibilityColumnBuilders,
 } from "./types";
+export {
+  editorialVisibilityMethods,
+  isContentBaseRowPublic,
+  visibilityMethods,
+} from "./visibility";
+export type {
+  ContentEditorialVisibilityMethods,
+  ContentEditorialVisibilityOptions,
+  ContentVisibilityChange,
+  ContentVisibilityMethods,
+  ContentVisibilityOptions,
+  ContentVisibilityResult,
+  ContentVisibilityState,
+} from "./visibility";
+export {
+  contentVisibilityEffects,
+  contentVisibilityRevalidation,
+} from "./visibility-effects";
+export type { ContentVisibilityEffectsResult } from "./visibility-effects";

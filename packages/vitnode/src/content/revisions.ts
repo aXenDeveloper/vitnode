@@ -36,6 +36,13 @@ export interface ContentRevisionSnapshot {
   schemaVersion: number;
   updatedAt: string;
   version: number;
+  /**
+   * Present only for a content type with `visibility`. A record of what the
+   * visibility was at this version - never something a restore puts back:
+   * restoring an old version brings back its *field values*, and a record hidden
+   * today stays hidden.
+   */
+  visibility?: { hiddenAt: null | string; hiddenBy: null | number };
 }
 
 export interface ContentTranslationRevisionSnapshot {

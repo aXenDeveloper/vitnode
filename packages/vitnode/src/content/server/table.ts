@@ -26,7 +26,11 @@ import type {
 
 import { core_files } from "../../database/files";
 import { core_users } from "../../database/users";
-import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
+import {
+  CONTENT_EDITORIAL_FIELDS,
+  CONTENT_PUBLICATION_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
+} from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
 import { contentStorageColumns } from "../paths";
@@ -37,6 +41,7 @@ import {
   buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
+  buildVisibilityColumns,
 } from "./column-builders";
 
 const checkedReference = (
@@ -150,6 +155,9 @@ export const createContentTable = <
     ...buildSystemColumns(),
     ...(definition.publication.enabled ? buildPublicationColumns() : {}),
     ...(definition.editorial.enabled ? buildEditorialColumns() : {}),
+    ...(definition.visibility.enabled
+      ? buildVisibilityColumns(() => core_users.id)
+      : {}),
   };
 
   for (const name of Object.keys(fields)) {
@@ -224,6 +232,7 @@ export const contentTableColumns = <
     "updatedAt",
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
+    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
     ...Object.keys(contentStorageColumns(sharedFields)),
     // Registered under their own names, never under the field's: selecting
     // `columns.body` must keep returning the HTML.

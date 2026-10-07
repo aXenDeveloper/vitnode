@@ -16,6 +16,8 @@ import type {
   CONTENT_SITEMAP_CHANGE_FREQUENCIES,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
+  CONTENT_VISIBILITY_FILTERS,
 } from "./const";
 import type { ContentFileDescriptor } from "./files";
 import type { ContentIdStrategy } from "./ids";
@@ -27,6 +29,12 @@ export type ContentPublicationField =
   (typeof CONTENT_PUBLICATION_FIELDS)[number];
 
 export type ContentEditorialField = (typeof CONTENT_EDITORIAL_FIELDS)[number];
+
+export type ContentVisibilityField = (typeof CONTENT_VISIBILITY_FIELDS)[number];
+
+/** The admin list's `visibility` filter value. */
+export type ContentVisibilityFilter =
+  (typeof CONTENT_VISIBILITY_FILTERS)[number];
 
 export type ContentTranslationSystemField =
   (typeof CONTENT_TRANSLATION_SYSTEM_FIELDS)[number];
@@ -1919,6 +1927,9 @@ export type ContentFilterInput<TDefinition> = Partial<
   Record<ContentRelationCollectionName<TDefinition>, ContentRelationFilter> &
     (TDefinition extends { publication: { enabled: true } }
       ? { status: ContentPublicationStatus }
+      : Record<never, never>) &
+    (TDefinition extends { visibility: { enabled: true } }
+      ? { visibility: ContentVisibilityFilter }
       : Record<never, never>) & {
       [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
         ContentFieldsOf<TDefinition>[K]

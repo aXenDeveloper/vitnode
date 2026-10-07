@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import type { ContentRichTextSearchColumn } from "../rich-text";
 import type {
@@ -13,6 +13,7 @@ import type {
 import {
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_VISIBILITY_FILTERS,
   isContentPublicationStatus,
   isFilterableFieldKind,
 } from "../const";
@@ -100,6 +101,7 @@ export const buildFilterCondition = ({
   filters,
   membership,
   publication = false,
+  visibility = false,
 }: {
   /**
    * Narrows the filterable set further, for a caller with its own allowlist -
@@ -125,6 +127,12 @@ export const buildFilterCondition = ({
   ) => SQL | undefined;
   /** Whether `status` is a generated column and therefore filterable. */
   publication?: boolean;
+  /**
+   * Whether `visibility` is a filter: `hidden` or `visible`, against the
+   * generated `hiddenAt`. Never passed by the public services - a public reader
+   * cannot ask for hidden records, and their allowlist refuses the key anyway.
+   */
+  visibility?: boolean;
 }): SQL | undefined => {
   const conditions: SQL[] = [];
 
@@ -152,6 +160,25 @@ export const buildFilterCondition = ({
       }
 
       conditions.push(eq(columns.status, raw));
+      continue;
+    }
+
+    // Composes with `status` like any other equality: "published but hidden" is
+    // `status=published&visibility=hidden`, and is exactly the set of records a
+    // reader cannot reach although the AdminCP calls them published.
+    if (visibility && name === "visibility" && columns.hiddenAt) {
+      if (raw !== "hidden" && raw !== "visible") {
+        throw new ContentEngineError(
+          `Invalid visibility filter ${JSON.stringify(raw)}. Allowed values: ${CONTENT_VISIBILITY_FILTERS.join(", ")}.`,
+          { contentTypeId },
+        );
+      }
+
+      conditions.push(
+        raw === "hidden"
+          ? isNotNull(columns.hiddenAt)
+          : isNull(columns.hiddenAt),
+      );
       continue;
     }
 

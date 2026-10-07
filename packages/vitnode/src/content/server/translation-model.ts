@@ -103,10 +103,18 @@ export interface ContentTranslationModel<TDefinition> {
     options?: ContentTranslationOptions,
   ) => Promise<boolean>;
 
+  /**
+   * The base row's publication state - and its `hiddenAt` when the content type
+   * has `visibility`, because a hidden record is public in no language.
+   */
   findBasePublication: (
     itemId: number,
     options?: ContentTranslationOptions,
-  ) => Promise<null | { publishedAt: Date | null; status: string | undefined }>;
+  ) => Promise<null | {
+    hiddenAt?: Date | null;
+    publishedAt: Date | null;
+    status: string | undefined;
+  }>;
   findByLanguageId: (
     itemId: number,
     languageId: number,
@@ -544,10 +552,12 @@ export const createContentTranslationModel = <
 
     findBasePublication: async (itemId, options) => {
       const baseColumns = table as unknown as Record<string, PgColumn>;
+      const hideable = definition.visibility.enabled;
       const [row] = await db(options)
         .select(
           publication
             ? {
+                ...(hideable ? { hiddenAt: baseColumns.hiddenAt } : {}),
                 publishedAt: baseColumns.publishedAt,
                 status: baseColumns.status,
               }
@@ -561,6 +571,13 @@ export const createContentTranslationModel = <
       if (!publication) return { publishedAt: null, status: undefined };
 
       return {
+        ...(hideable
+          ? {
+              hiddenAt: toNullableDate(
+                (row as Record<string, unknown>).hiddenAt,
+              ),
+            }
+          : {}),
         publishedAt: toNullableDate(row.publishedAt),
         status: typeof row.status === "string" ? row.status : undefined,
       };

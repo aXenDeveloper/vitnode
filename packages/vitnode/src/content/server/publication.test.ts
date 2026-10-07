@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   testCategoryContentType,
+  testHideableNoteContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
@@ -21,6 +22,8 @@ const categories = createContentModel(testCategoryContentType);
 const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
+
+const notes = createContentModel(testHideableNoteContentType);
 
 const dialect = new PgDialect();
 
@@ -42,6 +45,24 @@ describe("publishedCondition", () => {
       '(("test_posts"."status" = $1) and (("test_posts"."publishedAt" is not null)) and ("test_posts"."publishedAt" <= now()))',
     );
     expect(params).toEqual(["published"]);
+  });
+
+  it("adds `hiddenAt IS NULL` for a content type with visibility", () => {
+    const { sql } = compile(
+      publishedCondition(
+        publicationColumns(testHideableNoteContentType, notes.columns),
+      ),
+    );
+
+    expect(sql).toContain('("test_hideable_notes"."hiddenAt" is null)');
+  });
+
+  it("refuses a visibility column map that lost `hiddenAt`", () => {
+    const { hiddenAt: _dropped, ...rest } = notes.columns;
+
+    expect(() => publicationColumns(testHideableNoteContentType, rest)).toThrow(
+      ContentEngineError,
+    );
   });
 
   it("binds the status rather than inlining it", () => {

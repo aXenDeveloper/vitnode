@@ -47,6 +47,23 @@ export const buildPublicationColumns = (): Record<
     .default("draft"),
 });
 
+/**
+ * `hiddenAt` and `hiddenBy` - added only when visibility is enabled.
+ *
+ * `hiddenAt` is the whole state: a record is hidden exactly when it is set, so
+ * there is no second flag that could disagree with it. `hiddenBy` is who did it,
+ * and goes back to `NULL` with the account rather than blocking its deletion.
+ */
+export const buildVisibilityColumns = (
+  userReference: ColumnReferenceThunk,
+): Record<string, AnyPgColumnBuilder> => ({
+  hiddenAt: timestamp(),
+  hiddenBy: integer().references(userReference, {
+    onDelete: "set null",
+    onUpdate: "cascade",
+  }),
+});
+
 export const buildEditorialColumns = (): Record<
   string,
   AnyPgColumnBuilder
