@@ -77,6 +77,10 @@ interface WidgetComponentProps<TData> {
 
 `data` has already been through the widget's schema when the component runs, so a component never checks for missing fields. `variant` is the look this instance picked, and is `undefined` for a widget that offers none.
 
+<Callout type="warn" title="A text field is not a safe link">
+  The schema checks that a `field.text()` is a string, not that it is a URL you want people clicking. If your widget turns one into an `href`, check it with `isValidNavigationHref` from `@vitnode/core/lib/navigation` first - it allows a site path (`/discover`) or an `https://` URL and refuses `javascript:` and friends. Core's Hero and Call to action widgets simply leave the link out when it fails.
+</Callout>
+
 ## Two looks, one widget
 
 A widget that should render the same content in more than one shape declares its shapes instead of growing a `style` field:
