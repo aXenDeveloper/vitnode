@@ -1,3 +1,4 @@
+import type { ContentId } from "@/content/ids";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentEditorialActionId } from "@/views/admin/views/content/actions/row-actions-model";
 import type { ContentRowData } from "@/views/admin/views/content/table/cells";
@@ -24,7 +25,7 @@ export interface ContentRowPanelProps {
   currentVersion: number;
   entry: RegisteredFrontendContentType;
   finalFocus: React.RefObject<HTMLElement | null>;
-  itemId: number;
+  itemId: ContentId;
   /** The language the list is being read in, for a localized content type. */
   locale?: string;
   onOpenChange: (open: boolean) => void;

@@ -7,6 +7,11 @@ import type {
 import type { AnyContentTypeDefinition, ContentFieldMap } from "../types";
 
 import { CONTENT_REVISION_SNAPSHOT_VERSION } from "../const";
+import {
+  contentIdsOf,
+  contentRelationStrategy,
+  requireContentId,
+} from "../ids";
 import { partitionContentFields } from "../localization";
 import {
   contentInnerFields,
@@ -40,6 +45,7 @@ const toSnapshotValue = (value: unknown): ContentSnapshotScalar => {
 };
 
 const toFieldSnapshot = (
+  definition: AnyContentTypeDefinition,
   name: string,
   fieldValue: ContentFieldMap[string],
   values: Record<string, unknown>,
@@ -66,8 +72,15 @@ const toFieldSnapshot = (
   if (isContentReferenceCollection(fieldValue)) {
     const value = values[name];
 
+    // Under the target's strategy: a `uuid` or `bigint` target's ids are
+    // strings, and dropping them would make a restore empty the collection.
     return Array.isArray(value)
-      ? value.map(id => Number(id)).filter(id => Number.isInteger(id))
+      ? contentIdsOf(
+          fieldValue.kind === "relation"
+            ? contentRelationStrategy(definition, fieldValue)
+            : "serial",
+          value,
+        )
       : [];
   }
 
@@ -106,14 +119,14 @@ export const contentRevisionSnapshot = (
     ...collectionFields,
   };
   for (const [name, fieldValue] of Object.entries(snapshotFields)) {
-    fields[name] = toFieldSnapshot(name, fieldValue, values);
+    fields[name] = toFieldSnapshot(definition, name, fieldValue, values);
   }
 
   const snapshot: ContentRevisionSnapshot = {
     contentTypeId: definition.id,
     createdAt: toIso(values.createdAt),
     fields,
-    id: typeof values.id === "number" ? values.id : 0,
+    id: requireContentId(definition.idStrategy, values.id, definition.id),
     schemaVersion: CONTENT_REVISION_SNAPSHOT_VERSION,
     updatedAt: toIso(values.updatedAt),
     version: typeof values.version === "number" ? values.version : 1,
@@ -225,14 +238,18 @@ export const contentTranslationRevisionSnapshot = (
   // coercion - which returns `null` for an object, and would silently record
   // every localized group as absent.
   for (const [name, fieldValue] of Object.entries(localizedFields)) {
-    fields[name] = toFieldSnapshot(name, fieldValue, values);
+    fields[name] = toFieldSnapshot(definition, name, fieldValue, values);
   }
 
   const snapshot: ContentTranslationRevisionSnapshot = {
     contentTypeId: definition.id,
     createdAt: toIso(values.createdAt),
     fields,
-    itemId: typeof values.itemId === "number" ? values.itemId : 0,
+    itemId: requireContentId(
+      definition.idStrategy,
+      values.itemId,
+      definition.id,
+    ),
     languageId,
     locale,
     schemaVersion: CONTENT_REVISION_SNAPSHOT_VERSION,

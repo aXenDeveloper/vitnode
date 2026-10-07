@@ -35,7 +35,7 @@ describe("a plugin's form layout", () => {
     // engine decides what happens when the form is submitted.
     expectTypeOf<Parameters<ContentFormLayout>[0]>().toEqualTypeOf<{
       contentTypeId: string;
-      itemId?: number;
+      itemId?: number | string;
       mode: "create" | "edit";
       pluginId: string;
       publication: boolean;

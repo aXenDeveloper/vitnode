@@ -1,8 +1,10 @@
 import type { Context } from "hono";
 
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 
+import { isContentId } from "../ids";
 import { splitContentFieldPath } from "../paths";
 import { resolveContentPublicRowFiles } from "./files";
 
@@ -72,9 +74,12 @@ export const createContentPublicRowHydrator =
     const nested = rows.map(nestContentPublicRow);
     if (nested.length === 0) return nested;
 
+    // Read under the content type's own strategy: a `uuid` or `bigint` row's
+    // id is a string, and skipping it would serve the record without its
+    // collections.
     const ids = nested
       .map(row => row.id)
-      .filter((id): id is number => typeof id === "number");
+      .filter((id): id is ContentId => isContentId(definition.idStrategy, id));
     const loaded =
       publicCollections.length === 0
         ? undefined
@@ -85,7 +90,9 @@ export const createContentPublicRowHydrator =
         ? nested
         : nested.map(row => ({
             ...row,
-            ...(typeof row.id === "number" ? loaded.get(row.id) : undefined),
+            ...(isContentId(definition.idStrategy, row.id)
+              ? loaded.get(row.id)
+              : undefined),
           }));
 
     // The identifier is replaced by the descriptor here rather than in the

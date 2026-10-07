@@ -7,6 +7,7 @@ import type {
   ContentFileDescriptor,
   ContentFileFieldValue,
 } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
@@ -48,7 +49,8 @@ export interface ContentOption {
 
 export type ContentOptionsLoader = (args: {
   field: string;
-  ids?: number[];
+  /** The target's ids: numbers for users and serial targets, strings otherwise. */
+  ids?: ContentId[];
   search: string;
 }) => Promise<ContentOption[]>;
 

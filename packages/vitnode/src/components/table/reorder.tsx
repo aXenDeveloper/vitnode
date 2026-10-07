@@ -28,7 +28,7 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { DataTableTMin } from "./data-table-content";
+import type { DataTableRowId, DataTableTMin } from "./data-table-content";
 
 import { Button } from "../ui/button";
 import { moveRowId, type ReorderDetailsDataTable } from "./reorder-state";
@@ -37,13 +37,13 @@ export interface ReorderableDataTable<T> {
   disabled?: boolean;
   getRowLabel?: (row: T) => string;
   onReorder: (
-    ids: number[],
+    ids: DataTableRowId[],
     details: ReorderDetailsDataTable,
   ) => Promise<void> | void;
 }
 
 interface RowOrderOverride {
-  ids: number[];
+  ids: DataTableRowId[];
   key: string;
 }
 
@@ -67,7 +67,7 @@ export const useRowOrderDataTable = <T extends DataTableTMin>({
     return row ? [row] : [];
   });
 
-  const reorder = (activeId: number, overId: number) => {
+  const reorder = (activeId: DataTableRowId, overId: DataTableRowId) => {
     const move = moveRowId(ids, activeId, overId);
     if (!move || !onReorder) return;
 
@@ -123,9 +123,9 @@ export function ReorderProviderDataTable({
   onMove,
 }: {
   children: React.ReactNode;
-  ids: number[];
-  labelOf: (id: number) => string | undefined;
-  onMove: (activeId: number, overId: number) => void;
+  ids: DataTableRowId[];
+  labelOf: (id: DataTableRowId) => string | undefined;
+  onMove: (activeId: DataTableRowId, overId: DataTableRowId) => void;
 }) {
   const t = useTranslations("core.global.data_table");
   const contextId = React.useId();
@@ -144,7 +144,7 @@ export function ReorderProviderDataTable({
     }),
   );
 
-  const spoken = (activeId: number, overId: number) => ({
+  const spoken = (activeId: DataTableRowId, overId: DataTableRowId) => ({
     name:
       labelOf(activeId) ??
       t("row_fallback", { position: ids.indexOf(activeId) + 1 }),
@@ -154,17 +154,13 @@ export function ReorderProviderDataTable({
 
   const announcements: Announcements = {
     onDragCancel: ({ active }) =>
-      t("reorder_cancelled", spoken(Number(active.id), Number(active.id))),
+      t("reorder_cancelled", spoken(active.id, active.id)),
     onDragEnd: ({ active, over }) =>
-      over
-        ? t("reorder_ended", spoken(Number(active.id), Number(over.id)))
-        : undefined,
+      over ? t("reorder_ended", spoken(active.id, over.id)) : undefined,
     onDragOver: ({ active, over }) =>
-      over
-        ? t("reorder_over", spoken(Number(active.id), Number(over.id)))
-        : undefined,
+      over ? t("reorder_over", spoken(active.id, over.id)) : undefined,
     onDragStart: ({ active }) =>
-      t("reorder_started", spoken(Number(active.id), Number(active.id))),
+      t("reorder_started", spoken(active.id, active.id)),
   };
 
   return (
@@ -178,7 +174,8 @@ export function ReorderProviderDataTable({
       id={contextId}
       modifiers={[restrictToVerticalAxis, restrictToParentElement]}
       onDragEnd={({ active, over }) => {
-        if (over) onMove(Number(active.id), Number(over.id));
+        // dnd-kit hands back the very ids `SortableContext` was given.
+        if (over) onMove(active.id, over.id);
       }}
       sensors={sensors}
     >
@@ -198,7 +195,7 @@ export function SortableRowGroupDataTable({
 }: {
   children: React.ReactNode;
   disabled: boolean;
-  id: number;
+  id: DataTableRowId;
   label?: string;
   position: number;
 }) {

@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
 import type { ContentFormTransport } from "@/views/admin/views/content/form/transport";
 
@@ -40,7 +41,7 @@ export const contentFormTransport = (
   queryClient: QueryClient,
 ): ContentFormTransport => {
   /** What a successful write to one record owes the rest of the AdminCP. */
-  const settled = async (contentTypeId: string, itemId?: number) => {
+  const settled = async (contentTypeId: string, itemId?: ContentId) => {
     await invalidateContentAfterWrite(queryClient, {
       contentTypeId,
       ...(itemId === undefined ? {} : { itemId }),

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ContentId } from "@/content/ids";
 import type {
   ContentRevisionDetail,
   ContentRevisionMeta,
@@ -97,7 +98,7 @@ const EMPTY_PAGE_INFO = { endCursor: null, hasNextPage: false } as const;
 
 export const listContentRevisionsInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   cursor?: number,
 ): Promise<ContentRevisionPageResult> => {
   const result = await sendContentApiRequest(
@@ -122,7 +123,7 @@ export const listContentRevisionsInBrowser = async (
 
 export const getContentRevisionInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   revisionId: number,
 ): Promise<{ error?: string; revision?: ContentRevisionDetail }> => {
   const result = await sendContentApiRequest(
@@ -146,7 +147,7 @@ export const getContentRevisionInBrowser = async (
  */
 export const restoreContentRevisionInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   revisionId: number,
   expectedVersion: number,
 ): Promise<ContentMutationResult> => {
@@ -180,7 +181,7 @@ export const restoreContentRevisionInBrowser = async (
  */
 export const createContentPreviewInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<ContentPreviewResult> => {
   const result = await sendContentApiRequest(
     { method: "post", path: `/${id}/preview`, target },
@@ -200,7 +201,7 @@ export const createContentPreviewInBrowser = async (
 
 export const listContentSchedulesInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<ContentScheduleListResult> => {
   const result = await sendContentApiRequest(
     { method: "get", path: `/${id}/schedules`, target },
@@ -230,7 +231,7 @@ export const listContentSchedulesInBrowser = async (
  */
 export const scheduleContentInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   action: ContentScheduleAction,
   scheduledFor: string,
 ): Promise<ContentMutationResult> => {
@@ -251,7 +252,7 @@ export const scheduleContentInBrowser = async (
 
 export const cancelContentScheduleInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   scheduleId: number,
 ): Promise<ContentMutationResult> => {
   const result = await sendContentApiRequest(
@@ -281,7 +282,7 @@ export const cancelContentScheduleInBrowser = async (
  */
 export const readContentDeliveryInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   locale?: string,
 ): Promise<ContentDeliveryPanelResult> => {
   const result = await sendContentApiRequest(

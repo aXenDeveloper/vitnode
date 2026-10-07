@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
@@ -74,7 +75,7 @@ export const invalidateContentAfterWrite = async (
     contentTypeId,
     itemId,
     removed = false,
-  }: { contentTypeId: string; itemId?: number; removed?: boolean },
+  }: { contentTypeId: string; itemId?: ContentId; removed?: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 
@@ -95,7 +96,7 @@ export const invalidateContentAfterBulkWrite = async (
     contentTypeId,
     itemIds,
     removed,
-  }: { contentTypeId: string; itemIds: readonly number[]; removed: boolean },
+  }: { contentTypeId: string; itemIds: readonly ContentId[]; removed: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 

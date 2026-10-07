@@ -4,6 +4,7 @@ import type { Context } from "hono";
 
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type { ContentLocaleRouting } from "../public-url";
 import type { ContentSitemapEntry } from "../sitemap";
 import type { AnyContentTypeDefinition } from "../types";
@@ -16,6 +17,7 @@ import {
 } from "../const";
 import { contentDeliveryPublicUrl } from "../delivery";
 import { ContentDeliveryNotEnabled } from "../errors";
+import { parseContentId } from "../ids";
 import { splitContentFieldPath } from "../paths";
 import { findContentLanguage } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
@@ -27,8 +29,13 @@ import {
 
 export interface ContentDeliverySitemapPage {
   entries: ContentSitemapEntry[];
-  /** Pass back as `cursor`. `null` when this was the last page. */
-  nextCursor: null | number;
+  /**
+   * Pass back as `cursor`. `null` when this was the last page. The last listed
+   * record's id: pages are keyed on the primary key, which orders numerically for
+   * `serial` and `bigint` and lexically for `uuid` - a uuid sitemap is complete
+   * and stable, just not in creation order.
+   */
+  nextCursor: ContentId | null;
 }
 
 const noIndexColumn = (
@@ -72,6 +79,10 @@ export const readContentDeliverySitemapPage = async <
   // a caller error.
   if (!sitemap.enabled) return { entries: [], nextCursor: null };
 
+  const cursor =
+    args.cursor === undefined
+      ? null
+      : parseContentId(definition.idStrategy, args.cursor);
   const limit = Math.max(
     1,
     Math.min(
@@ -90,7 +101,10 @@ export const readContentDeliverySitemapPage = async <
 
   const conditions: (SQL | undefined)[] = [
     publishedCondition(base),
-    args.cursor === undefined ? undefined : gt(columns.id, args.cursor),
+    // Re-read under the strategy rather than trusted: a cursor the strategy
+    // cannot hold is treated as "from the start" by the route's schema already,
+    // and never reaches Postgres as a cast error.
+    cursor === null ? undefined : gt(columns.id, cursor),
     // `IS DISTINCT FROM TRUE`, which is the only spelling that agrees with the
     // metadata. `contentDeliveryRobots` reads `value !== true`, so a `noIndex` of
     // `null` means `index: true` - and the sitemap has to list exactly what claims
@@ -127,7 +141,7 @@ export const readContentDeliverySitemapPage = async <
       locale: null,
       routing: contentLocaleRouting(c),
       rows: rows.map(row => ({
-        itemId: row.itemId as number,
+        itemId: row.itemId as ContentId,
         lastModified: row.lastModified as Date,
         slug: row.slug,
       })),
@@ -200,7 +214,7 @@ export const readContentDeliverySitemapPage = async <
     locale: language.locale,
     routing: contentLocaleRouting(c),
     rows: rows.map(row => ({
-      itemId: row.itemId as number,
+      itemId: row.itemId as ContentId,
       // `greatest()` comes back as a string on some drivers, so it is normalized
       // here rather than trusted - a sitemap `lastmod` of "Invalid Date" is a
       // document a crawler rejects.
@@ -230,7 +244,7 @@ const page = ({
   limit: number;
   locale: null | string;
   routing: ContentLocaleRouting;
-  rows: readonly { itemId: number; lastModified: Date; slug: unknown }[];
+  rows: readonly { itemId: ContentId; lastModified: Date; slug: unknown }[];
 }): ContentDeliverySitemapPage => {
   const visible = rows.slice(0, limit);
   const { sitemap } = definition.delivery;

@@ -2,7 +2,10 @@ import React from "react";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentId } from "@/content/ids";
 import type { ContentFormLayout } from "@/lib/plugin";
+
+import { contentIdKey } from "@/content/ids";
 
 import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
@@ -14,7 +17,7 @@ import { useContentFormNavigation } from "../form/navigation";
 export interface ContentFormPageProps {
   backHref: string;
   createdHrefTemplate?: string;
-  data?: Record<string, unknown> & { id: number };
+  data?: Record<string, unknown> & { id: ContentId };
   fieldOverrides?: Record<
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
@@ -37,10 +40,10 @@ export const ContentFormPage = ({
 }: ContentFormPageProps) => {
   const { navigate } = useContentFormNavigation();
 
-  const onCreated = (id: number) => {
+  const onCreated = (id: ContentId) => {
     navigate(
       createdHrefTemplate
-        ? createdHrefTemplate.replace("{id}", String(id))
+        ? createdHrefTemplate.replace("{id}", contentIdKey(id))
         : backHref,
     );
   };

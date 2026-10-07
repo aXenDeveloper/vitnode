@@ -8,6 +8,7 @@ import type {
 } from "./duplicate";
 import type { AnyContentModel } from "./model";
 
+import { requireContentId } from "../ids";
 import { contentEditorialEffects } from "./editorial-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
@@ -55,7 +56,11 @@ export const contentDuplicateEffects = async (
   const row = input.kind === "editorial" ? input.outcome.row : input.result.row;
   const sourceId =
     input.kind === "editorial" ? input.outcome.sourceId : input.result.sourceId;
-  const contentId = (row as { id: number }).id;
+  const contentId = requireContentId(
+    definition.idStrategy,
+    (row as { id: unknown }).id,
+    definition.id,
+  );
 
   if (input.kind === "editorial") {
     await contentEditorialEffects(c, definition, input.outcome, {

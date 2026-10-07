@@ -279,7 +279,7 @@ describePostgres("record visibility against Postgres", () => {
   const sitemapIds = async (
     model: typeof pages | typeof posts,
     locale?: string,
-  ): Promise<number[]> =>
+  ): Promise<(number | string)[]> =>
     (
       await readContentDeliverySitemapPage({
         args: locale === undefined ? {} : { locale },
@@ -702,7 +702,7 @@ describePostgres("record visibility against Postgres", () => {
           .where(
             and(
               eq(core_content_slug_history.contentTypeId, posts.definition.id),
-              eq(core_content_slug_history.itemId, id),
+              eq(core_content_slug_history.itemId, String(id)),
             ),
           ),
       ).toEqual([]);
@@ -724,7 +724,7 @@ describePostgres("record visibility against Postgres", () => {
         .values({
           action,
           contentTypeId: posts.definition.id,
-          itemId: id,
+          itemId: String(id),
           pluginId: PLUGIN_ID,
           scheduledFor: new Date(Date.now() - 60_000),
         })

@@ -20,7 +20,12 @@ import type {
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
 import type { ContentFileDescriptor } from "./files";
-import type { ContentIdStrategy } from "./ids";
+import type {
+  ContentId,
+  ContentIdOf,
+  ContentIdOfStrategy,
+  ContentIdStrategy,
+} from "./ids";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -234,12 +239,24 @@ interface ContentReferenceCollection {
   multiple: true;
 }
 
+/**
+ * What a relation thunk resolves to: any content type, narrowed to the id
+ * strategy its records are keyed by. The strategy is the only thing about the
+ * target a relation's *value* depends on - it decides whether the foreign key is
+ * an `integer`, a `uuid` or a `bigint`, and whether the API carries a number or
+ * a string.
+ */
+export type ContentRelationTarget<
+  TStrategy extends ContentIdStrategy = ContentIdStrategy,
+> = AnyContentTypeDefinition & { idStrategy: TStrategy };
+
 export interface ContentRelationField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
   TMultiple extends boolean = boolean,
   TOrdered extends boolean = boolean,
   TSelf extends boolean = boolean,
+  TTargetStrategy extends ContentIdStrategy = ContentIdStrategy,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "relation";
 
@@ -251,8 +268,11 @@ export interface ContentRelationField<
   ordered: TOrdered;
 
   self: TSelf;
-  /** Thunk so two content types can refer to each other. */
-  target: () => AnyContentTypeDefinition;
+  /**
+   * Thunk so two content types can refer to each other. Its return type carries
+   * the target's id strategy, which is what the relation's values are typed by.
+   */
+  target: () => ContentRelationTarget<TTargetStrategy>;
 }
 
 export interface ContentGroupField<
@@ -344,6 +364,25 @@ type ApplyNullable<TValue, TField> = TField extends { nullable: true }
   ? null | TValue
   : TValue;
 
+/**
+ * The identifier type a relation field holds: its target's, read off the
+ * target thunk. A field whose target is erased holds either, which is what
+ * generic engine code handles.
+ */
+export type ContentRelationIdOf<TField> = TField extends {
+  target: () => { idStrategy: infer TStrategy };
+}
+  ? ContentIdOfStrategy<TStrategy>
+  : number;
+
+/**
+ * The identifier one reference field holds: a relation's target id, or the
+ * `core_users.id` / `core_files.id` a user or file field holds.
+ */
+export type ContentReferenceIdOf<TField> = TField extends { kind: "relation" }
+  ? ContentRelationIdOf<TField>
+  : number;
+
 /** The scalar half of {@link ContentFieldValue}, before nullability. */
 type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
   ? boolean
@@ -351,9 +390,11 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
     ? Date
     : TField extends { values: readonly (infer TValue)[] }
       ? TValue
-      : TField extends { kind: "file" | "number" | "relation" | "user" }
-        ? number
-        : string;
+      : TField extends { kind: "relation" }
+        ? ContentRelationIdOf<TField>
+        : TField extends { kind: "file" | "number" | "user" }
+          ? number
+          : string;
 
 /** The scalar half of {@link ContentFieldInput}. `dateTime` crosses as ISO. */
 type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
@@ -362,9 +403,11 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
     ? string
     : TField extends { values: readonly (infer TValue)[] }
       ? TValue
-      : TField extends { kind: "file" | "number" | "relation" | "user" }
-        ? number
-        : string;
+      : TField extends { kind: "relation" }
+        ? ContentRelationIdOf<TField>
+        : TField extends { kind: "file" | "number" | "user" }
+          ? number
+          : string;
 
 /** Every leaf of a group, as it comes back. Nested, never flattened. */
 type ContentGroupValue<TFields> = Prettify<{
@@ -402,7 +445,7 @@ export type ContentFieldValue<TField> = TField extends { kind: "blocks" }
     : TField extends { fields: infer TInner; kind: "repeatable" }
       ? ContentRepeatableRow<TInner>[]
       : TField extends ContentReferenceCollection
-        ? number[]
+        ? ContentReferenceIdOf<TField>[]
         : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
 export type ContentFieldInput<TField> = TField extends { kind: "blocks" }
@@ -415,7 +458,7 @@ export type ContentFieldInput<TField> = TField extends { kind: "blocks" }
     : TField extends { fields: infer TInner; kind: "repeatable" }
       ? ContentRepeatableInputRow<TInner>[]
       : TField extends ContentReferenceCollection
-        ? number[]
+        ? ContentReferenceIdOf<TField>[]
         : ApplyNullable<ScalarFieldInput<TField>, TField>;
 
 export type ContentFieldPatch<TField> = TField extends {
@@ -1677,7 +1720,7 @@ export type ContentTranslationPublicationColumns<TDefinition> =
 export type ContentTranslationRow<TDefinition> = Prettify<
   ContentTranslationPublicationColumns<TDefinition> & {
     createdAt: Date;
-    itemId: number;
+    itemId: ContentIdOf<TDefinition>;
     languageId: number;
     /** The canonical `core_languages.code`, never the caller's casing. */
     locale: string;
@@ -1691,7 +1734,7 @@ export type ContentTranslationMeta<TDefinition = AnyContentTypeDefinition> =
   Prettify<
     ContentTranslationPublicationColumns<TDefinition> & {
       createdAt: Date;
-      itemId: number;
+      itemId: ContentIdOf<TDefinition>;
       languageId: number;
       locale: string;
       updatedAt: Date;
@@ -1848,11 +1891,50 @@ export interface ContentTypeDefinition<
 /** Use in constraints where the concrete field map does not matter. */
 export type AnyContentTypeDefinition = ContentTypeDefinition;
 
+/**
+ * A definition's field map, with every `self: true` relation re-pointed at the
+ * definition's own id strategy. `field.relation({ self: true })` is written
+ * before the content type exists, so its descriptor cannot know which strategy
+ * it will be keyed by; this is the one place that fills it in. A `serial`
+ * content type - every content type written before strategies existed - and an
+ * erased field map are returned untouched.
+ */
 export type ContentFieldsOf<TDefinition> = TDefinition extends {
   fields: infer TFields;
 }
-  ? TFields
+  ? TDefinition extends { idStrategy: infer TStrategy }
+    ? [TStrategy] extends ["serial"]
+      ? TFields
+      : string extends keyof TFields
+        ? TFields
+        : TStrategy extends ContentIdStrategy
+          ? ContentBindSelfRelations<TFields, TStrategy>
+          : TFields
+    : TFields
   : never;
+
+/** {@link ContentFieldsOf}'s rebinding of self relations, for one field map. */
+export type ContentBindSelfRelations<
+  TFields,
+  TStrategy extends ContentIdStrategy,
+> = {
+  [K in keyof TFields]: TFields[K] extends ContentRelationField<
+    infer TRequired,
+    infer TNullable,
+    infer TMultiple,
+    infer TOrdered,
+    true
+  >
+    ? ContentRelationField<
+        TRequired,
+        TNullable,
+        TMultiple,
+        TOrdered,
+        true,
+        TStrategy
+      >
+    : TFields[K];
+};
 
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
@@ -1861,7 +1943,7 @@ export type ContentSelect<TDefinition> = Prettify<
       [K in ColumnFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldValue<
         ContentFieldsOf<TDefinition>[K]
       >;
-    } & { createdAt: Date; id: number; updatedAt: Date }
+    } & { createdAt: Date; id: ContentIdOf<TDefinition>; updatedAt: Date }
 >;
 
 export type ContentDetail<TDefinition> = Prettify<
@@ -1919,12 +2001,23 @@ export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
   FilterableContentFieldKind
 >;
 
-export interface ContentRelationFilter {
-  contains: number;
+/** A to-many filter by membership: rows whose collection holds `contains`. */
+export interface ContentRelationFilter<TId = ContentId> {
+  contains: TId;
 }
 
+/** One {@link ContentRelationFilter} per to-many reference, typed by its target. */
+type ContentCollectionFilters<TDefinition, TName extends PropertyKey> = {
+  [K in keyof ContentFieldsOf<TDefinition> & TName]: ContentRelationFilter<
+    ContentReferenceIdOf<ContentFieldsOf<TDefinition>[K]>
+  >;
+};
+
 export type ContentFilterInput<TDefinition> = Partial<
-  Record<ContentRelationCollectionName<TDefinition>, ContentRelationFilter> &
+  ContentCollectionFilters<
+    TDefinition,
+    ContentRelationCollectionName<TDefinition>
+  > &
     (TDefinition extends { publication: { enabled: true } }
       ? { status: ContentPublicationStatus }
       : Record<never, never>) &
@@ -1957,8 +2050,9 @@ export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
 // Public projection
 // ---------------------------------------------------------------------------
 
-export interface ContentPublicRelation {
-  id: number;
+/** A to-one relation as the public API returns it. */
+export interface ContentPublicRelation<TId = number> {
+  id: TId;
 }
 
 /** The exposed field names of one content type, read off its resolved config. */
@@ -1968,8 +2062,8 @@ export type ContentPublicFieldName<TDefinition> = TDefinition extends {
   ? TField
   : never;
 
-type ContentPublicValue<TFields, TName extends string> = TName extends "id"
-  ? number
+type ContentPublicValue<TFields, TName extends string, TId> = TName extends "id"
+  ? TId
   : TName extends "createdAt" | "updatedAt"
     ? Date
     : TName extends "publishedAt"
@@ -1988,11 +2082,13 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
               ? ContentFileDescriptor | null
               : ContentFileDescriptor
             : TFields[TName] extends { kind: "relation"; multiple: true }
-              ? number[]
+              ? ContentRelationIdOf<TFields[TName]>[]
               : TFields[TName] extends { kind: "relation" }
                 ? TFields[TName] extends { nullable: true }
-                  ? ContentPublicRelation | null
-                  : ContentPublicRelation
+                  ? ContentPublicRelation<
+                      ContentRelationIdOf<TFields[TName]>
+                    > | null
+                  : ContentPublicRelation<ContentRelationIdOf<TFields[TName]>>
                 : ContentFieldValue<TFields[TName]>
         : never;
 
@@ -2058,7 +2154,11 @@ export type ContentPublicSelect<TDefinition> = Prettify<
     > & {
       [
         K in PublicFlatName<ContentPublicFieldName<TDefinition>>
-      ]: ContentPublicValue<ContentFieldsOf<TDefinition>, K>;
+      ]: ContentPublicValue<
+        ContentFieldsOf<TDefinition>,
+        K,
+        ContentIdOf<TDefinition>
+      >;
     }
 >;
 
@@ -2100,10 +2200,10 @@ export type ContentPublicListRow<TDefinition> =
  * narrower check is the runtime allowlist.
  */
 export type ContentPublicFilterInput<TDefinition> = Partial<
-  Record<
+  ContentCollectionFilters<
+    TDefinition,
     ContentPublicFieldName<TDefinition> &
-      ContentRelationCollectionName<TDefinition>,
-    ContentRelationFilter
+      ContentRelationCollectionName<TDefinition>
   > & {
     [
       K in ContentPublicFieldName<TDefinition> &

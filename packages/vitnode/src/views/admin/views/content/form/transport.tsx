@@ -1,5 +1,7 @@
 import React from "react";
 
+import type { ContentId } from "@/content/ids";
+
 import type {
   ContentMutationResult,
   ContentRowResult,
@@ -23,14 +25,14 @@ export interface ContentFormTransport {
 
   edit: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown>,
     expectedVersion?: number,
   ) => Promise<ContentMutationResult>;
 
   editLocalized: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown> | undefined,
     translations: ContentTranslationInput[],
     expectedVersion?: number,
@@ -38,29 +40,29 @@ export interface ContentFormTransport {
 
   listTranslations: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ edges: TranslationRow[]; error?: string }>;
 
   loadOptions: (
     contentTypeId: string,
     field: string,
     search: string,
-    ids?: number[],
+    ids?: ContentId[],
   ) => Promise<ContentOption[]>;
   /** Moves a record to `published`. Idempotent: a no-op is a success. */
   publish: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentMutationResult>;
 
   reloadRow: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentRowResult>;
   /** Moves a record back to `draft`. Idempotent, like {@link publish}. */
   unpublish: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentMutationResult>;
 }
 

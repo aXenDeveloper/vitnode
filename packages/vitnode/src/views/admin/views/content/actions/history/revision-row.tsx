@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentId } from "@/content/ids";
 import type {
   ContentRevisionMeta,
   ContentRevisionOperation,
@@ -87,7 +88,7 @@ const useRevisionSnapshot = ({
 }: {
   contentTypeId: string;
   enabled: boolean;
-  itemId: number;
+  itemId: ContentId;
   revisionId: null | number;
 }) => {
   const transport = useContentEditorialTransport();
@@ -116,7 +117,7 @@ const RevisionRestoreAction = ({
 }: {
   contentTypeId: string;
   currentVersion: number;
-  id: number;
+  id: ContentId;
   onRestored: () => void;
   revision: ContentRevisionMeta;
   singular: string;
@@ -255,7 +256,7 @@ export const RevisionRow = ({
   canRestore: boolean;
   contentTypeId: string;
   currentVersion: number;
-  id: number;
+  id: ContentId;
   isCurrent: boolean;
   onRestored: () => void;
   previousId: null | number;

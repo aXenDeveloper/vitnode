@@ -6,6 +6,7 @@ import {
   isContentPubliclyVisible,
   isContentTranslationPubliclyVisible,
 } from "../cache";
+import { isContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { readContentPath, splitContentFieldPath } from "../paths";
 import { contentSearchUrl } from "../search";
@@ -87,8 +88,10 @@ export const contentSearchDocument = (
 
   const values = row as Record<string, unknown>;
 
+  // Exactly the representation the content type's strategy reads back: a
+  // `uuid` or `bigint` id is a string, a `serial` one a number.
   const itemId = values.id;
-  if (typeof itemId !== "number") return null;
+  if (!isContentId(definition.idStrategy, itemId)) return null;
 
   const title = normalize(readSearchValue(values, search.titleField));
   if (title === "") return null;

@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
+import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFilterInput,
@@ -25,6 +26,7 @@ import {
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import { contentRelationStrategy, parseContentId } from "../ids";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { contentRichTextSearchColumnOf } from "../rich-text";
@@ -71,7 +73,7 @@ export interface ContentPublicFindManyArgs<
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
   findById: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options?: ContentPublicReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
 
@@ -117,6 +119,20 @@ export const createContentPublicProjector = <
         isContentReferenceCollection(definition.fields[name]),
     ),
   );
+  // The strategy each to-one target is keyed by, so a `uuid` or `bigint`
+  // reference projects as `{ id }` rather than vanishing as a non-number.
+  const toOneStrategies = new Map(
+    [...exposedToOne].map(name => {
+      const fieldValue = definition.fields[name];
+
+      return [
+        name,
+        fieldValue.kind === "relation"
+          ? contentRelationStrategy(definition, fieldValue)
+          : "serial",
+      ] as const;
+    }),
+  );
   // Leaf-level privacy, resolved once: `seo` carries only the leaves the
   // allowlist named, whatever else the group declares.
   const containers = [...groupPublicLeafPaths(exposed)].map(
@@ -142,8 +158,11 @@ export const createContentPublicProjector = <
         continue;
       }
 
-      const id = row[name];
-      projected[name] = typeof id === "number" ? { id } : null;
+      const id = parseContentId(
+        toOneStrategies.get(name) ?? "serial",
+        row[name],
+      );
+      projected[name] = id === null ? null : { id };
     }
 
     for (const { leaves, owner, repeatable } of containers) {

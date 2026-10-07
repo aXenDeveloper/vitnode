@@ -12,6 +12,7 @@ import type {
   ContentFileDescriptor,
   ContentFileFieldValue,
 } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 import type { ContentReferenceListItem } from "@/content/server/list-references";
 import type { ContentLabels } from "@/content/server/service";
 
@@ -23,7 +24,7 @@ import { stripHtml } from "@/lib/strip-html";
 
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
-  id: number;
+  id: ContentId;
   labels: ContentLabels;
   localizedValues?: Record<string, unknown>;
   references?: Record<string, ContentReferenceListItem[]>;

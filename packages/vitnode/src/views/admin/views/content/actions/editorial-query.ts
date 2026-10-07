@@ -1,5 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
 import type {
   ContentRevisionDetail,
   ContentRevisionMeta,
@@ -21,18 +22,18 @@ import {
 /** The one entry the whole revision timeline pages into. */
 export const contentHistoryListQueryKey = (
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ) => contentHistoryQueryKey(contentTypeId, itemId, { kind: "list" });
 
 export const contentRevisionQueryKey = (
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
   revisionId: number,
 ) => contentHistoryQueryKey(contentTypeId, itemId, { revision: revisionId });
 
 export const contentDeliveryLocaleQueryKey = (
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
   locale: string | undefined,
 ) => [...contentDeliveryQueryKey(contentTypeId, itemId), locale ?? ""] as const;
 
@@ -46,7 +47,7 @@ export const contentSchedulesQueryOptions = ({
   listSchedules,
 }: {
   contentTypeId: string;
-  itemId: number;
+  itemId: ContentId;
   listSchedules: ContentEditorialTransport["listSchedules"];
 }) =>
   queryOptions<ContentScheduleListResult>({
@@ -61,7 +62,7 @@ export const contentRevisionHistoryQueryOptions = ({
   listRevisions,
 }: {
   contentTypeId: string;
-  itemId: number;
+  itemId: ContentId;
   listRevisions: ContentEditorialTransport["listRevisions"];
 }) =>
   infiniteQueryOptions<
@@ -87,7 +88,7 @@ export const contentRevisionQueryOptions = ({
 }: {
   contentTypeId: string;
   getRevision: ContentEditorialTransport["getRevision"];
-  itemId: number;
+  itemId: ContentId;
   revisionId: number;
 }) =>
   queryOptions<{ error?: string; revision?: ContentRevisionDetail }>({
@@ -104,7 +105,7 @@ export const contentDeliveryQueryOptions = ({
   readDelivery,
 }: {
   contentTypeId: string;
-  itemId: number;
+  itemId: ContentId;
   locale?: string;
   readDelivery: ContentEditorialTransport["readDelivery"];
 }) =>

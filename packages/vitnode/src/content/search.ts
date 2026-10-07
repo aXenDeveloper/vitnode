@@ -1,7 +1,9 @@
+import type { ContentId } from "./ids";
 import type { ContentLocaleRouting } from "./public-url";
 import type { AnyContentTypeDefinition } from "./types";
 
 import { CONTENT_SEARCH_SLUG_PLACEHOLDER } from "./const";
+import { contentIdKey } from "./ids";
 import { isContentReferenceCollection, splitContentFieldPath } from "./paths";
 import { contentPublicHref, contentPublicUrl } from "./public-url";
 
@@ -40,12 +42,12 @@ export const contentSearchUrl = ({
 
 export const contentSearchDocumentId = (
   definition: AnyContentTypeDefinition,
-  id: number,
+  id: ContentId,
   locale?: string,
 ): string =>
   locale === undefined || locale === ""
-    ? `${definition.id}:${id}`
-    : `${definition.id}:${id}:${locale}`;
+    ? `${definition.id}:${contentIdKey(id)}`
+    : `${definition.id}:${contentIdKey(id)}:${locale}`;
 
 /**
  * Every field whose value the search document is built from, including the slug

@@ -1,5 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
+
 import {
   contentDeliveryQueryKey,
   contentHistoryQueryRoot,
@@ -23,7 +25,7 @@ export const invalidateContentList = async (
 export const invalidateContentItem = async (
   queryClient: QueryClient,
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentItemQueryRoot(contentTypeId, itemId),
@@ -33,7 +35,7 @@ export const invalidateContentItem = async (
 export const removeContentItem = (
   queryClient: QueryClient,
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ): void => {
   queryClient.removeQueries({
     queryKey: contentItemQueryRoot(contentTypeId, itemId),
@@ -43,7 +45,7 @@ export const removeContentItem = (
 export const invalidateContentHistory = async (
   queryClient: QueryClient,
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentHistoryQueryRoot(contentTypeId, itemId),
@@ -54,7 +56,7 @@ export const invalidateContentHistory = async (
 export const invalidateContentTranslations = async (
   queryClient: QueryClient,
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentTranslationsQueryKey(contentTypeId, itemId),
@@ -65,7 +67,7 @@ export const invalidateContentTranslations = async (
 export const invalidateContentSchedules = async (
   queryClient: QueryClient,
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentSchedulesQueryKey(contentTypeId, itemId),
@@ -76,7 +78,7 @@ export const invalidateContentSchedules = async (
 export const invalidateContentDelivery = async (
   queryClient: QueryClient,
   contentTypeId: string,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentDeliveryQueryKey(contentTypeId, itemId),

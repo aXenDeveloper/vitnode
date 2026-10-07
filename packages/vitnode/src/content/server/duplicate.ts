@@ -39,6 +39,7 @@ import {
   ContentEngineError,
   ContentInputError,
 } from "../errors";
+import { parseContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import {
   contentColumnsToValues,
@@ -66,6 +67,12 @@ export interface ContentDuplicateOptions<TDefinition> {
   /** Join an existing transaction instead of opening one. */
   tx?: ContentDatabase;
 }
+
+/** The two halves of a duplicate request body: shared and per-locale overrides. */
+export type ContentDuplicateOverrides<TDefinition> = Pick<
+  ContentDuplicateOptions<TDefinition>,
+  "overrides" | "translations"
+>;
 
 export interface ContentEditorialDuplicateOptions<
   TDefinition,
@@ -115,9 +122,13 @@ export interface ContentEditorialDuplicationMethods<TDefinition> {
 }
 
 /** The part of the translation model a duplicate reads through. */
+/**
+ * The part of the translation model a duplicate reads through, erased over the
+ * id strategy: the duplicate hands it back the source's own canonical id.
+ */
 export interface ContentDuplicateTranslationSource {
   findManyRowsForItem: (
-    itemId: number,
+    itemId: ContentId,
     options?: { tx?: ContentDatabase },
   ) => Promise<{ languageId: number; locale: string; values: object }[]>;
   resolveLanguage: (
@@ -150,9 +161,9 @@ export interface ContentDuplicateWriter<TBase, TTranslation> {
     values: Record<string, unknown>,
     tx: ContentDatabase,
   ) => Promise<TBase>;
-  idOf: (base: TBase) => number;
+  idOf: (base: TBase) => ContentId;
   translation: (
-    itemId: number,
+    itemId: ContentId,
     locale: string,
     values: Record<string, unknown>,
     tx: ContentDatabase,
@@ -355,9 +366,10 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     );
   }
 
-  // Serial is the only strategy with tables today; `parseContentId` is the
-  // boundary that will widen this.
-  const id = Number(sourceId);
+  // Canonicalised once, so `"7"` and `7` - or a bigint and its own digits - read
+  // the same row. Unparseable cannot name a record, which is a miss, not a 500.
+  const id = parseContentId(definition.idStrategy, sourceId);
+  if (id === null) return null;
   const { localizedFields, sharedFields, collectionFields } =
     partitionContentFields(definition.fields);
   const writableFields: ContentFieldMap = {

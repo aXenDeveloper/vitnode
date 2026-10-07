@@ -14,6 +14,7 @@ import {
   contentLocaleInvalidations,
   diffContentPublicLocaleStates,
 } from "../cache";
+import { requireContentId } from "../ids";
 import { contentEditorialEffects } from "./editorial-effects";
 import { contentDefinitionOf } from "./model";
 import { contentPublicLocaleStates } from "./public-locales";
@@ -50,7 +51,7 @@ export const contentVisibilityRevalidation = async (
 ): Promise<ContentRevalidationRequest> => {
   const definition: AnyContentTypeDefinition = contentDefinitionOf(model);
   const { isPublic, wasPublic } = visibility;
-  const id = typeof row.id === "number" ? row.id : 0;
+  const id = requireContentId(definition.idStrategy, row.id, definition.id);
   const slug = definition.publicApi.enabled
     ? row[definition.publicApi.slugField]
     : undefined;

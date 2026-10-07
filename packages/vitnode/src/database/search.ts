@@ -3,6 +3,8 @@ import type { SQL } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { camelCase, customType, index, unique } from "drizzle-orm/pg-core";
 
+import { CONTENT_ID_KEY_LENGTH } from "../content/const";
+
 // Drizzle ships no native `tsvector` type, so we declare it once and reuse it
 // for the generated full-text-search column below. The column and its GIN index
 // live in the schema (not a hand-written migration) so `drizzle-kit generate`
@@ -68,7 +70,7 @@ export const core_search_index = camelCase.table.withRLS(
     id: t.serial().primaryKey(),
     pluginId: t.varchar({ length: 255 }).notNull(),
     itemType: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     languageCode: t.varchar({ length: 32 }).notNull().default(""),
     authorIds: t
       .integer()

@@ -10,6 +10,7 @@ import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFilterInput,
@@ -239,8 +240,10 @@ export const buildContentPublicRoutes = <
       const build = model.translationEditorialService;
       if (!build) return null;
 
+      // Canonical under this content type's strategy: the token was verified
+      // against it before this ran.
       const revision = await build(c, { pluginId }).findRevision(
-        payload.i,
+        payload.i as ContentIdOf<TDefinition>,
         language.locale,
         payload.tr,
       );
