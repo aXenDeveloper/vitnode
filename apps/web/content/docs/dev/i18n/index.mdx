@@ -4,7 +4,6 @@ description: How VitNode merges translations from installed packages, and how to
 icon: Globe
 ---
 
-import { Callout } from 'fumadocs-ui/components/callout'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 VitNode provides full internationalization out of the box. Every package (`@vitnode/core` and plugins) maintains its own locale files, which VitNode merges per request: core strings first, plugin strings second, and your host app overrides last.

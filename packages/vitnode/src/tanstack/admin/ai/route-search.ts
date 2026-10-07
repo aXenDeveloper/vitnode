@@ -2,9 +2,15 @@ import type {
   AiHistoryFilters,
   AiHistoryOrderBy,
   AiHistoryParams,
-  AiOverviewPeriod,
+  AiOverviewSearch,
 } from "@/views/admin/views/core/ai/ai-query";
 
+import {
+  AI_OVERVIEW_DEFAULT_PRESET,
+  isAiDay,
+  isAiMonth,
+  isAiOverviewPreset,
+} from "@/lib/ai/overview-range";
 import { isAiRunStatus } from "@/lib/ai/run-status";
 import { asSearchValue } from "@/lib/table-params";
 import {
@@ -22,19 +28,27 @@ import {
   normalizeAdminTableSearch,
 } from "../table-search";
 
-/** `/admin/core/ai`: the current month is the URL saying nothing. */
-export interface AiOverviewRouteSearch {
-  period?: Exclude<AiOverviewPeriod, "current">;
-}
+export type AiOverviewRouteSearch = AiOverviewSearch;
 
 export const normalizeAiOverviewSearch = (
   input: Record<string, unknown>,
-): AiOverviewRouteSearch =>
-  asSearchValue(input.period) === "previous" ? { period: "previous" } : {};
+): AiOverviewRouteSearch => {
+  const from = asSearchValue(input.from);
+  const to = asSearchValue(input.to);
+  const range = asSearchValue(input.range);
+  const month = asSearchValue(input.month);
+  const custom = isAiDay(from) && isAiDay(to);
 
-export const aiOverviewPeriodOf = (
-  search: AiOverviewRouteSearch,
-): AiOverviewPeriod => search.period ?? "current";
+  return {
+    ...(custom ? { from, to } : {}),
+    ...(!custom &&
+    isAiOverviewPreset(range) &&
+    range !== AI_OVERVIEW_DEFAULT_PRESET
+      ? { range }
+      : {}),
+    ...(isAiMonth(month) ? { month } : {}),
+  };
+};
 
 export type AiHistoryRouteSearch = AiHistoryFilters &
   Omit<

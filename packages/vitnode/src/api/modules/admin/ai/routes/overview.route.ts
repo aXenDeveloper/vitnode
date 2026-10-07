@@ -1,73 +1,88 @@
 import { z } from "zod";
 
 import { loadAiOverview } from "@/api/lib/ai/admin-stats";
-import {
-  divideByInteger,
-  formatDecimal,
-  parseDecimal,
-} from "@/api/lib/ai/decimal";
-import { periodContaining } from "@/api/lib/ai/periods";
+import { localDayOf } from "@/api/lib/ai/periods";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
+import {
+  AI_OVERVIEW_PRESETS,
+  aiMonthOf,
+  compareAiRange,
+  isAiMonth,
+  resolveAiOverviewRange,
+} from "@/lib/ai/overview-range";
 
-const zodBreakdown = z.array(
-  z.object({
-    failures: z.number(),
-    key: z.string(),
-    knownCostUsd: z.string(),
-    knownOperations: z.number(),
-    operations: z.number(),
-  }),
-);
-
-export const zodAiOverview = z.object({
-  alt: z.object({
-    imagesDescribed: z.number(),
-    knownCostUsd: z.string(),
-    perImageUsd: z.string().nullable(),
-    perTranslationUsd: z.string().nullable(),
-    translations: z.number(),
-  }),
-  averageDailyCostUsd: z.string(),
-  averageOperationCostUsd: z.string().nullable(),
-  budget: z.object({
-    limitUsd: z.string().nullable(),
-    remainingUsd: z.string().nullable(),
-    reservedUsd: z.string(),
-    spentUsd: z.string(),
-    systemLimitUsd: z.string().nullable(),
-    systemSpentUsd: z.string(),
-  }),
-  byAction: zodBreakdown,
-  byModel: zodBreakdown,
-  byOrigin: zodBreakdown,
-  costSources: z.object({
-    estimated: z.number(),
-    provider: z.number(),
-    unknown: z.number(),
-  }),
-  enabled: z.boolean(),
-  failureRate: z.number(),
+const zodUsageTotals = z.object({
+  chargedUsd: z.string(),
+  failures: z.number(),
+  inputTokens: z.number(),
   knownCostUsd: z.string(),
+  knownOperations: z.number(),
   operations: z.number(),
-  period: z.object({ end: z.string(), start: z.string() }),
-  pricingCoverage: z.number(),
-  tokens: z.object({ input: z.number(), output: z.number() }),
+  outputTokens: z.number(),
 });
 
-export const ALT_GENERATE_ACTION = "@vitnode/core:media.alt.generate";
-export const ALT_TRANSLATE_ACTION = "@vitnode/core:media.alt.translate";
+const zodUsageDay = zodUsageTotals.extend({ day: z.string() });
+
+const zodUsageEntity = z.object({
+  current: zodUsageTotals,
+  key: z.string(),
+  previous: zodUsageTotals,
+});
+
+const zodBudgetDay = z.object({ costUsd: z.string(), day: z.string() });
+
+export const zodAiOverview = z.object({
+  budget: z.object({
+    dailyRateUsd: z.string(),
+    days: z.array(zodBudgetDay),
+    end: z.string(),
+    forecastUsd: z.string().nullable(),
+    limitUsd: z.string().nullable(),
+    live: z.boolean(),
+    month: z.string(),
+    monthlyAtRateUsd: z.string(),
+    previousDays: z.array(zodBudgetDay),
+    reservedUsd: z.string(),
+    spentUsd: z.string(),
+    start: z.string(),
+  }),
+  byAction: z.array(zodUsageEntity),
+  byModel: z.array(zodUsageEntity),
+  compare: z.object({
+    days: z.array(zodUsageDay),
+    end: z.string(),
+    kind: z.enum(["month-to-date", "preceding", "previous-month"]),
+    start: z.string(),
+    totals: zodUsageTotals,
+  }),
+  enabled: z.boolean(),
+  firstDay: z.string().nullable(),
+  range: z.object({
+    days: z.array(zodUsageDay),
+    end: z.string(),
+    preset: z.enum(AI_OVERVIEW_PRESETS).nullable(),
+    start: z.string(),
+    totals: zodUsageTotals,
+  }),
+  timeZone: z.string(),
+  today: z.string(),
+});
 
 export const aiOverviewAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",
-    description: "AI spending and usage for the current or previous month.",
+    description:
+      "AI usage and spend for a date range, compared with the range before it, plus one month's budget with a forecast at the range's pace.",
     path: "/overview",
     request: {
       query: z.object({
-        period: z.enum(["current", "previous"]).optional(),
+        from: z.string().optional(),
+        month: z.string().optional(),
+        range: z.enum(AI_OVERVIEW_PRESETS).optional(),
+        to: z.string().optional(),
       }),
     },
     responses: {
@@ -78,59 +93,32 @@ export const aiOverviewAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { period = "current" } = c.req.valid("query");
+    const query = c.req.valid("query");
     const settings = await c.get("ai").ledger().loadSettings();
     const now = new Date();
-    const current = periodContaining(now, "month", settings.timeZone);
-    const range =
-      period === "current"
-        ? current
-        : periodContaining(
-            new Date(current.start.getTime() - 1),
-            "month",
-            settings.timeZone,
-          );
+    const today = localDayOf(now, settings.timeZone);
+    const { preset, range } = resolveAiOverviewRange({
+      from: query.from,
+      preset: query.range,
+      to: query.to,
+      today,
+    });
+    const month =
+      isAiMonth(query.month) && query.month <= aiMonthOf(today)
+        ? query.month
+        : aiMonthOf(range.end);
 
     const overview = await loadAiOverview(c.get("db"), {
-      globalLimitUsd: settings.monthlyBudgetUsd,
+      compare: compareAiRange(range, today),
+      limitUsd: settings.monthlyBudgetUsd,
+      month,
       now,
-      period: range,
-      systemLimitUsd: settings.systemMonthlyBudgetUsd,
+      preset,
+      range,
+      timeZone: settings.timeZone,
+      today,
     });
-    const altGenerate = overview.byAction.find(
-      row => row.key === ALT_GENERATE_ACTION,
-    );
-    const altTranslate = overview.byAction.find(
-      row => row.key === ALT_TRANSLATE_ACTION,
-    );
-    const generateCost = parseDecimal(altGenerate?.knownCostUsd ?? "0");
-    const translateCost = parseDecimal(altTranslate?.knownCostUsd ?? "0");
-    const images = altGenerate?.knownOperations ?? 0;
-    const translations = altTranslate?.knownOperations ?? 0;
 
-    return c.json(
-      {
-        ...overview,
-        alt: {
-          imagesDescribed: altGenerate?.operations ?? 0,
-          knownCostUsd: formatDecimal(generateCost + translateCost),
-          // Averages of known costs - shown, never charged. One image's cost
-          // includes its share of every language it was translated into.
-          perImageUsd:
-            images > 0
-              ? formatDecimal(
-                  divideByInteger(generateCost + translateCost, images),
-                )
-              : null,
-          perTranslationUsd:
-            translations > 0
-              ? formatDecimal(divideByInteger(translateCost, translations))
-              : null,
-          translations: altTranslate?.operations ?? 0,
-        },
-        enabled: settings.enabled,
-      },
-      200,
-    );
+    return c.json({ ...overview, enabled: settings.enabled }, 200);
   },
 });

@@ -10,199 +10,262 @@ import {
   sum,
 } from "drizzle-orm";
 
+import type {
+  AiCompareKind,
+  AiDayRange,
+  AiOverviewPreset,
+} from "@/lib/ai/overview-range";
+
+import {
+  addAiDays,
+  aiMonthOf,
+  aiMonthRange,
+  countAiDays,
+  shiftAiMonth,
+} from "@/lib/ai/overview-range";
+
+import type { AiUsageDay, AiUsageTotals } from "./overview-math";
 import type { AiDatabase } from "./postgres-ledger";
 
 import { core_ai_budget_periods, core_ai_runs } from "../../../database/ai";
-import { GLOBAL_SCOPE, SYSTEM_SCOPE } from "./budget";
+import { GLOBAL_SCOPE } from "./budget";
 import {
-  divideByInteger,
   formatDecimal,
   formatDecimalOrNull,
+  multiplyByInteger,
   parseDecimal,
 } from "./decimal";
+import {
+  dailyAiRate,
+  EMPTY_AI_USAGE,
+  fillAiUsageDays,
+  forecastAiSpend,
+  sumAiUsage,
+  toAiUsageTotals,
+} from "./overview-math";
+import { localDayStart } from "./periods";
 
 const FAILED_STATUSES = ["failed", "uncertain", "canceled"] as const;
+const DAY_MS = 86_400_000;
 
-export interface AiBreakdownRow {
-  failures: number;
+export interface AiUsageEntity {
+  current: AiUsageTotals;
   key: string;
-  knownCostUsd: string;
-  knownOperations: number;
-  operations: number;
+  previous: AiUsageTotals;
+}
+
+export interface AiBudgetDay {
+  costUsd: string;
+  day: string;
 }
 
 export interface AiOverview {
-  averageDailyCostUsd: string;
-  /** Average of operations whose cost is known - unknown never counts as zero. */
-  averageOperationCostUsd: null | string;
   budget: {
+    dailyRateUsd: string;
+    days: AiBudgetDay[];
+    end: string;
+    forecastUsd: null | string;
     limitUsd: null | string;
-    remainingUsd: null | string;
+    live: boolean;
+    month: string;
+    monthlyAtRateUsd: string;
+    previousDays: AiBudgetDay[];
     reservedUsd: string;
     spentUsd: string;
-    systemLimitUsd: null | string;
-    systemSpentUsd: string;
+    start: string;
   };
-  byAction: AiBreakdownRow[];
-  byModel: AiBreakdownRow[];
-  byOrigin: AiBreakdownRow[];
-  costSources: { estimated: number; provider: number; unknown: number };
-  failureRate: number;
-  knownCostUsd: string;
-  operations: number;
-  period: { end: string; start: string };
-  /** Share of operations with a known cost, 0..1. */
-  pricingCoverage: number;
-  tokens: { input: number; output: number };
+  byAction: AiUsageEntity[];
+  byModel: AiUsageEntity[];
+  compare: AiDayRange & {
+    days: AiUsageDay[];
+    kind: AiCompareKind;
+    totals: AiUsageTotals;
+  };
+  firstDay: null | string;
+  range: AiDayRange & {
+    days: AiUsageDay[];
+    preset: AiOverviewPreset | null;
+    totals: AiUsageTotals;
+  };
+  timeZone: string;
+  today: string;
 }
 
-const toNumber = (value: null | number | string | undefined): number =>
-  value === null || value === undefined ? 0 : Number(value);
-
-const breakdown = async (
-  db: AiDatabase,
-  column:
-    | typeof core_ai_runs.actionKey
-    | typeof core_ai_runs.actorType
-    | typeof core_ai_runs.modelId,
-  where: ReturnType<typeof and>,
-): Promise<AiBreakdownRow[]> => {
-  const rows = await db
-    .select({
-      failures: sql<number>`count(*) filter (where ${inArray(core_ai_runs.status, [...FAILED_STATUSES])})`,
-      key: column,
-      knownCostUsd: sum(core_ai_runs.costUsd),
-      knownOperations: count(core_ai_runs.costUsd),
-      operations: count(),
-    })
-    .from(core_ai_runs)
-    .where(where)
-    .groupBy(column)
-    .orderBy(sql`count(*) desc`);
-
-  return rows.map(row => ({
-    failures: toNumber(row.failures),
-    key: row.key ?? "unknown",
-    knownCostUsd: formatDecimal(parseDecimal(row.knownCostUsd ?? "0")),
-    knownOperations: toNumber(row.knownOperations),
-    operations: toNumber(row.operations),
-  }));
+const aggregates = {
+  chargedUsd: sum(core_ai_runs.chargedUsd),
+  failures: sql<number>`count(*) filter (where ${inArray(core_ai_runs.status, [...FAILED_STATUSES])})`,
+  inputTokens: sum(core_ai_runs.inputTokens),
+  knownCostUsd: sum(core_ai_runs.costUsd),
+  knownOperations: count(core_ai_runs.costUsd),
+  operations: count(),
+  outputTokens: sum(core_ai_runs.outputTokens),
 };
+
+const toBudgetDays = (days: AiUsageDay[]): AiBudgetDay[] =>
+  days.map(day => ({ costUsd: day.chargedUsd, day: day.day }));
 
 export const loadAiOverview = async (
   db: AiDatabase,
   {
-    globalLimitUsd,
+    compare,
+    limitUsd,
+    month,
     now = new Date(),
-    period,
-    systemLimitUsd,
+    preset,
+    range,
+    timeZone,
+    today,
   }: {
-    globalLimitUsd: bigint | null;
+    compare: { kind: AiCompareKind; range: AiDayRange };
+    limitUsd: bigint | null;
+    month: string;
     now?: Date;
-    period: { end: Date; start: Date };
-    systemLimitUsd: bigint | null;
+    preset: AiOverviewPreset | null;
+    range: AiDayRange;
+    timeZone: string;
+    today: string;
   },
 ): Promise<AiOverview> => {
-  const where = and(
-    gte(core_ai_runs.createdAt, period.start),
-    lt(core_ai_runs.createdAt, period.end),
-    eq(core_ai_runs.settlement, "settled"),
-  );
-
-  const [[totals], sources, byAction, byModel, byOrigin, budgets] =
-    await Promise.all([
-      db
-        .select({
-          failures: sql<number>`count(*) filter (where ${inArray(core_ai_runs.status, [...FAILED_STATUSES])})`,
-          inputTokens: sum(core_ai_runs.inputTokens),
-          knownCostUsd: sum(core_ai_runs.costUsd),
-          knownOperations: count(core_ai_runs.costUsd),
-          operations: count(),
-          outputTokens: sum(core_ai_runs.outputTokens),
-        })
-        .from(core_ai_runs)
-        .where(where),
-      db
-        .select({ source: core_ai_runs.costSource, total: count() })
-        .from(core_ai_runs)
-        .where(where)
-        .groupBy(core_ai_runs.costSource),
-      breakdown(db, core_ai_runs.actionKey, where),
-      breakdown(
-        db,
-        core_ai_runs.modelId,
-        and(where, isNotNull(core_ai_runs.modelId)),
+  const within = (window: AiDayRange) =>
+    and(
+      gte(core_ai_runs.createdAt, localDayStart(window.start, timeZone)),
+      lt(
+        core_ai_runs.createdAt,
+        localDayStart(addAiDays(window.end, 1), timeZone),
       ),
-      breakdown(db, core_ai_runs.actorType, where),
-      db
-        .select()
-        .from(core_ai_budget_periods)
-        .where(
-          and(
-            inArray(core_ai_budget_periods.scopeKey, [
-              GLOBAL_SCOPE,
-              SYSTEM_SCOPE,
-            ]),
-            eq(core_ai_budget_periods.periodStart, period.start),
+      eq(core_ai_runs.settlement, "settled"),
+    );
+
+  const localDay = sql<string>`to_char((${core_ai_runs.createdAt} at time zone 'UTC') at time zone ${timeZone}, 'YYYY-MM-DD')`;
+
+  const daily = async (window: AiDayRange) =>
+    fillAiUsageDays(
+      window,
+      today,
+      await db
+        .select({ day: localDay, ...aggregates })
+        .from(core_ai_runs)
+        .where(within(window))
+        .groupBy(sql`1`),
+    );
+
+  const entities = async (
+    column: typeof core_ai_runs.actionKey | typeof core_ai_runs.modelId,
+  ): Promise<AiUsageEntity[]> => {
+    const read = async (window: AiDayRange) =>
+      await db
+        .select({ key: column, ...aggregates })
+        .from(core_ai_runs)
+        .where(and(within(window), isNotNull(column)))
+        .groupBy(column);
+    const [current, previous] = await Promise.all([
+      read(range),
+      read(compare.range),
+    ]);
+    const before = new Map(previous.map(row => [row.key, row]));
+    const seen = new Set(current.map(row => row.key));
+
+    return [
+      ...current.map(row => ({
+        current: toAiUsageTotals(row),
+        key: row.key ?? "unknown",
+        previous: toAiUsageTotals(before.get(row.key)),
+      })),
+      ...previous
+        .filter(row => !seen.has(row.key))
+        .map(row => ({
+          current: EMPTY_AI_USAGE,
+          key: row.key ?? "unknown",
+          previous: toAiUsageTotals(row),
+        })),
+    ];
+  };
+
+  const monthRange = aiMonthRange(month);
+  const previousMonthRange = aiMonthRange(shiftAiMonth(month, -1));
+
+  const [
+    rangeDays,
+    compareDays,
+    monthDays,
+    previousMonthDays,
+    byAction,
+    byModel,
+    [budgetRow],
+    [first],
+  ] = await Promise.all([
+    daily(range),
+    daily(compare.range),
+    daily(monthRange),
+    daily(previousMonthRange),
+    entities(core_ai_runs.actionKey),
+    entities(core_ai_runs.modelId),
+    db
+      .select()
+      .from(core_ai_budget_periods)
+      .where(
+        and(
+          eq(core_ai_budget_periods.scopeKey, GLOBAL_SCOPE),
+          eq(
+            core_ai_budget_periods.periodStart,
+            localDayStart(monthRange.start, timeZone),
           ),
         ),
-    ]);
+      ),
+    db
+      .select({ first: sql<null | string>`min(${localDay})` })
+      .from(core_ai_runs)
+      .where(eq(core_ai_runs.settlement, "settled")),
+  ]);
 
-  const global = budgets.find(row => row.scopeKey === GLOBAL_SCOPE);
-  const system = budgets.find(row => row.scopeKey === SYSTEM_SCOPE);
-  const spent = parseDecimal(global?.spentAmount ?? "0");
-  const reserved = parseDecimal(global?.reservedAmount ?? "0");
-  const knownCost = parseDecimal(totals.knownCostUsd ?? "0");
-  const operations = toNumber(totals.operations);
-  const knownOperations = toNumber(totals.knownOperations);
-  const elapsedMs =
-    Math.min(now.getTime(), period.end.getTime()) - period.start.getTime();
-  const elapsedDays = Math.max(1, Math.ceil(elapsedMs / 86_400_000));
-  const sourceCount = (names: string[]) =>
-    sources
-      .filter(row => row.source !== null && names.includes(row.source))
-      .reduce((total, row) => total + toNumber(row.total), 0);
+  const live = month === aiMonthOf(today);
+  const spent = parseDecimal(budgetRow?.spentAmount ?? "0");
+  const rate = dailyAiRate(rangeDays, today);
+  const monthEnd = localDayStart(addAiDays(monthRange.end, 1), timeZone);
 
   return {
-    averageDailyCostUsd: formatDecimal(divideByInteger(spent, elapsedDays)),
-    averageOperationCostUsd:
-      knownOperations === 0
-        ? null
-        : formatDecimal(divideByInteger(knownCost, knownOperations)),
     budget: {
-      limitUsd: formatDecimalOrNull(globalLimitUsd),
-      remainingUsd:
-        globalLimitUsd === null
-          ? null
-          : formatDecimal(
-              globalLimitUsd - spent - reserved > 0n
-                ? globalLimitUsd - spent - reserved
-                : 0n,
-            ),
-      reservedUsd: formatDecimal(reserved),
+      dailyRateUsd: formatDecimal(rate),
+      days: toBudgetDays(monthDays),
+      end: monthRange.end,
+      forecastUsd: live
+        ? formatDecimal(
+            forecastAiSpend({
+              rate,
+              remainingDays: (monthEnd.getTime() - now.getTime()) / DAY_MS,
+              spent,
+            }),
+          )
+        : null,
+      limitUsd: formatDecimalOrNull(limitUsd),
+      live,
+      month,
+      monthlyAtRateUsd: formatDecimal(
+        multiplyByInteger(rate, countAiDays(monthRange)),
+      ),
+      previousDays: toBudgetDays(previousMonthDays),
+      reservedUsd: formatDecimal(
+        parseDecimal(budgetRow?.reservedAmount ?? "0"),
+      ),
       spentUsd: formatDecimal(spent),
-      systemLimitUsd: formatDecimalOrNull(systemLimitUsd),
-      systemSpentUsd: formatDecimal(parseDecimal(system?.spentAmount ?? "0")),
+      start: monthRange.start,
     },
     byAction,
     byModel,
-    byOrigin,
-    costSources: {
-      estimated: sourceCount(["pricing", "mixed"]),
-      provider: sourceCount(["provider"]),
-      unknown: sourceCount(["unknown"]),
+    compare: {
+      ...compare.range,
+      days: compareDays,
+      kind: compare.kind,
+      totals: sumAiUsage(compareDays),
     },
-    failureRate: operations === 0 ? 0 : toNumber(totals.failures) / operations,
-    knownCostUsd: formatDecimal(knownCost),
-    operations,
-    period: {
-      end: period.end.toISOString(),
-      start: period.start.toISOString(),
+    firstDay: first?.first ?? null,
+    range: {
+      ...range,
+      days: rangeDays,
+      preset,
+      totals: sumAiUsage(rangeDays),
     },
-    pricingCoverage: operations === 0 ? 1 : knownOperations / operations,
-    tokens: {
-      input: toNumber(totals.inputTokens),
-      output: toNumber(totals.outputTokens),
-    },
+    timeZone,
+    today,
   };
 };

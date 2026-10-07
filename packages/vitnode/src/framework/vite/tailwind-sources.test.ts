@@ -1,5 +1,14 @@
 import type { Plugin } from "vite";
 
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { vitNodeTailwindSources } from "./tailwind-sources";
@@ -144,6 +153,36 @@ describe("the Tailwind sources a VitNode app scans", () => {
     expect(
       sourcesIn(transform(APP_CSS, "/app/src/styles.css")?.code ?? ""),
     ).toEqual(["/app/node_modules/@vitnode/core/dist/src/**/*.js"]);
+  });
+
+  it("scans a linked package at its real path so Vite sees its rebuilds", async () => {
+    const workspace = realpathSync(mkdtempSync(join(tmpdir(), "vitnode-")));
+    const appRoot = join(workspace, "apps", "web");
+    const packageRoot = join(workspace, "packages", "vitnode");
+
+    mkdirSync(join(packageRoot, "dist", "src"), { recursive: true });
+    mkdirSync(join(appRoot, "node_modules", "@vitnode"), { recursive: true });
+    symlinkSync(packageRoot, join(appRoot, "node_modules", "@vitnode", "core"));
+
+    try {
+      const plugin = vitNodeTailwindSources({
+        appRoot,
+        readPluginIds: async () => Promise.resolve([]),
+      });
+
+      await (plugin.configResolved as () => Promise<void>)();
+
+      expect(
+        sourcesIn(
+          (plugin.transform as TransformHook)(
+            APP_CSS,
+            join(appRoot, "src", "styles.css"),
+          )?.code ?? "",
+        ),
+      ).toEqual([`${packageRoot}/dist/src/**/*.js`]);
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
   });
 
   it("writes POSIX separators for a Windows install path", async () => {

@@ -1,0 +1,238 @@
+---
+title: Date Picker
+description: A button that opens a calendar in a popover, for picking a single date in forms and filters.
+icon: CalendarCheck
+---
+
+The Date Picker is a [Calendar](/docs/ui/calendar) tucked inside a popover. It takes little space until someone needs it, then closes as soon as they pick a day.
+
+## Preview
+
+<Preview name="date-picker-auto-form" />
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+
+```ts
+import { z } from 'zod'
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormDatePicker } from '@vitnode/core/components/form/fields/date-picker'
+```
+
+```tsx
+const formSchema = z.object({
+  birthday: z.iso.date('Pick your birthday'),
+  anniversary: z.iso.date().optional(),
+})
+
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'birthday',
+      component: props => (
+        <AutoFormDatePicker {...props} label="Birthday" />
+      ),
+    },
+    {
+      id: 'anniversary',
+      component: props => (
+        <AutoFormDatePicker {...props} label="Community anniversary" />
+      ),
+    },
+  ]}
+/>
+```
+
+The value is a `YYYY-MM-DD` string, so use `z.iso.date()` in the schema. It is the user's local day, with no time zone surprises on the way to your API. Optional fields get a **Clear** button.
+
+  </Tab>
+
+  <Tab value="Manual">
+
+<Preview name="date-picker" />
+
+```ts
+import { DatePicker } from '@vitnode/core/components/ui/date-picker'
+```
+
+```tsx
+const [date, setDate] = React.useState<Date>()
+
+<Label htmlFor="event-date">Event date</Label>
+<DatePicker allowClear id="event-date" onChange={setDate} value={date} />
+```
+
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+  `z.date()` does not work in AutoForm: the schema is turned into JSON Schema,
+  which has no date type. Use `z.iso.date()` and convert on the server if you
+  need a `Date`.
+</Callout>
+
+## Calendar options
+
+`calendarProps` passes any [Calendar](/docs/ui/calendar) prop through, except the selection ones. A birthday field with year dropdowns and no future dates:
+
+```tsx
+<AutoFormDatePicker
+  {...props}
+  calendarProps={{
+    captionLayout: 'dropdown',
+    disabled: { after: new Date() },
+    endMonth: new Date(),
+    startMonth: new Date(1926, 0),
+  }}
+  label="Birthday"
+/>
+```
+
+## Date format
+
+The button shows the date in the active VitNode language, `October 7, 2026` in English. Pass `Intl.DateTimeFormat` options to change it.
+
+```tsx
+<DatePicker
+  dateFormat={{ dateStyle: 'short' }}
+  onChange={setDate}
+  value={date}
+/>
+```
+
+## Date range
+
+<Preview name="date-picker-range" className="*:max-w-none" />
+
+`DateRangePicker` picks a start and an end day. Quick ranges on the left apply in one click; a range picked on the calendar waits for **Apply range**, so a half-finished pick never fires a request. The button shows the preset's name, or the dates like `Oct 7 – 12, 2026`.
+
+```ts
+import { DateRangePicker } from '@vitnode/core/components/ui/date-range-picker'
+```
+
+```tsx
+const [range, setRange] = React.useState({ from: weekAgo, to: today })
+const [preset, setPreset] = React.useState<'7d' | '30d' | null>('7d')
+
+<DateRangePicker
+  activePreset={preset}
+  disabledDays={{ after: today }}
+  endMonth={today}
+  onChange={next => {
+    setPreset(null)
+    setRange(next)
+  }}
+  onPresetSelect={next => {
+    setPreset(next)
+    setRange(resolve(next))
+  }}
+  presets={[
+    { key: '7d', label: 'Last 7 days' },
+    { key: '30d', label: 'Last 30 days' },
+  ]}
+  value={range}
+/>
+```
+
+You own the presets: `onPresetSelect` hands you the key and you work out the dates, so "Last 7 days" can mean the site's time zone instead of the browser's. The calendar shows two months on wide screens and one on phones.
+
+## Accessibility
+
+- `AutoFormDatePicker` wires the label, description and error to the button.
+- With `DatePicker` alone, give it an `id` and a `<Label htmlFor>`.
+- Opening the popover moves focus into the calendar. Escape closes it and focus returns to the button.
+- A validation message waits until focus leaves the field, not when the popover opens.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### DatePicker
+
+`DatePicker` also takes every `<button>` prop.
+
+<TypeTable
+  type={{
+    value: { description: 'The selected date.', type: 'Date' },
+    onChange: {
+      description: 'Called with the picked date, or `undefined` when cleared.',
+      type: '(date: Date | undefined) => void',
+    },
+    placeholder: {
+      description: 'Text shown before a date is picked.',
+      type: 'string',
+      default: "'Pick a date'",
+    },
+    allowClear: {
+      description: 'Show a Clear button in the popover.',
+      type: 'boolean',
+      default: 'false (AutoForm: true for optional fields)',
+    },
+    dateFormat: {
+      description: 'How the button formats the date.',
+      type: 'Intl.DateTimeFormatOptions',
+      default: "{ dateStyle: 'long' }",
+    },
+    calendarProps: {
+      description: 'Props for the inner Calendar, minus the selection ones.',
+      type: 'CalendarProps',
+    },
+  }}
+/>
+
+`AutoFormDatePicker` takes the same props, except its `onChange` receives the `YYYY-MM-DD` string.
+
+### DateRangePicker
+
+`DateRangePicker` also takes every `<button>` prop.
+
+<TypeTable
+  type={{
+    value: {
+      description: 'The selected range.',
+      type: '{ from: Date; to: Date }',
+    },
+    onChange: {
+      description:
+        'Called with a range picked on the calendar, after Apply range.',
+      type: '(range: { from: Date; to: Date }) => void',
+    },
+    presets: {
+      description: 'Quick ranges listed beside the calendar.',
+      type: '{ key: string; label: string }[]',
+      default: '[]',
+    },
+    activePreset: {
+      description:
+        'The preset the current range came from. The button shows its label.',
+      type: 'string | null',
+    },
+    onPresetSelect: {
+      description:
+        'Called with the key of a clicked preset. The popover closes.',
+      type: '(key: string) => void',
+    },
+    disabledDays: {
+      description: 'Days that cannot be picked, as Calendar matchers.',
+      type: 'Matcher | Matcher[]',
+    },
+    startMonth: {
+      description: 'The first month the calendar can show.',
+      type: 'Date',
+    },
+    endMonth: {
+      description: 'The last month the calendar can show.',
+      type: 'Date',
+    },
+    align: {
+      description: 'Where the popover lines up with the button.',
+      type: "'start' | 'center' | 'end'",
+      default: "'end'",
+    },
+  }}
+/>

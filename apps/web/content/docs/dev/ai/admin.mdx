@@ -6,15 +6,15 @@ icon: LayoutDashboard
 
 The AdminCP **AI** section (`/admin/core/ai`) is where admins decide how much the site may spend on AI, which models run which features, and who may use them. Members see their own allowance at **Settings → AI usage** (`/settings/ai`).
 
-| Page           | URL                       | What it is for                                             |
-| :------------- | :------------------------ | :--------------------------------------------------------- |
-| Overview       | `/admin/core/ai`          | This month's spend, budget, cost coverage and breakdowns.  |
-| Actions        | `/admin/core/ai/actions`  | Every registered AI feature: switch, model, limits.        |
-| History        | `/admin/core/ai/history`  | Every run: who, which model, tokens and cost.              |
-| Settings       | `/admin/core/ai/settings` | Global switch, budgets, rate limits, retention, ALT text.  |
-| Roles → AI tab | `/admin/core/users/roles` | A role's AI permissions, monthly points and daily limits.  |
-| User → AI card | `/admin/core/users/{id}`  | One member's exception: blocked, unlimited or own points.  |
-| AI usage       | `/settings/ai` (member)   | A member's own points, daily limits and recent operations. |
+| Page           | URL                       | What it is for                                               |
+| :------------- | :------------------------ | :----------------------------------------------------------- |
+| Overview       | `/admin/core/ai`          | Spend against the budget, a forecast, trends and breakdowns. |
+| Actions        | `/admin/core/ai/actions`  | Every registered AI feature: switch, model, limits.          |
+| History        | `/admin/core/ai/history`  | Every run: who, which model, tokens and cost.                |
+| Settings       | `/admin/core/ai/settings` | Global switch, budgets, rate limits, retention, ALT text.    |
+| Roles → AI tab | `/admin/core/users/roles` | A role's AI permissions, monthly points and daily limits.    |
+| User → AI card | `/admin/core/users/{id}`  | One member's exception: blocked, unlimited or own points.    |
+| AI usage       | `/settings/ai` (member)   | A member's own points, daily limits and recent operations.   |
 
 Models and their prices are not edited in the AdminCP - they live in `vitnode.api.config.ts`, next to the provider keys they need. See [Model pricing](/docs/dev/ai/costs-and-limits#model-pricing).
 
@@ -151,13 +151,17 @@ Run statuses: `reserved`, `running`, `succeeded`, `failed`, `canceled` and `unce
 
 ## Overview
 
-**AI → Overview** shows this month or last month:
+**AI → Overview** answers two questions: _will we stay inside the budget?_ and _where does the money go?_
 
-- **Charged to the budget** - spent of the limit, what is left, and what is reserved for runs in progress.
-- **Operations**, failure rate, average cost per operation and tokens.
-- **How sure are these numbers?** - the share of runs whose cost was provider-reported, estimated or unknown. Unknown costs are charged at their reservation and left out of averages.
-- **Automatic ALT text** - images described, translations, and the known cost per image and per translation.
-- **Where it goes** - spend by action, by model and by origin.
+- **Date range** (top right) - This month (the default), Last month, the last 7, 30 or 90 days, or any range picked on the calendar. Every number below follows it, and each is compared with the range before it: this month so far with the same days of last month, a whole month with the month before, anything else with the same number of days just before it.
+- **Budget** - what the month has charged to the budget, with a mark where an even pace would be today. The arrows next to the month's name step through earlier months.
+  - For this month you get a forecast: what is already charged, plus the selected range's daily average for every day left. Pick **Last 7 days** to forecast from recent days, or **Last 90 days** for a steadier average. Going over turns the note amber.
+  - For an earlier month you get how it closed, and what a month would cost at the selected range's pace.
+- **Six numbers** - spend, cost per run, runs, failure rate, tokens and the share of runs with a known cost, each with its change. Click one to chart it.
+- **Chart** - for spend, the month's running total against the budget line, with last month dashed and the forecast to the month's end. For the other numbers, a running total (or a running average for rates) across the range, against the range before it.
+- **Where it goes** - the picked number by action or by model, ranked, with a mark for the range before. A run whose model has no price shows **Unknown**, never `$0`, and the page tells you how many runs that is.
+
+The range and the budget month live in the URL (`?range=7d`, `?from=2026-09-12&to=2026-09-25`, `?month=2026-09`), so a view can be shared with another admin. Days follow the site's time zone from **AI → Settings**.
 
 ## Member page: /settings/ai
 
@@ -180,19 +184,19 @@ A notice at the top explains why AI may not be working, checked in this order:
 
 Every screen is backed by an API route under `@vitnode/core`. Use them with [`fetcher`](/docs/dev/fetcher), e.g. `fetcher({ plugin: '@vitnode/core', method: 'get', module: 'admin/ai', path: '/overview' })`.
 
-| Route                                         | Staff permission | Purpose                                |
-| :-------------------------------------------- | :--------------- | :------------------------------------- |
-| `GET /admin/ai/overview`                      | `ai:can_view`    | Overview numbers                       |
-| `GET /admin/ai/settings`, `PUT …/settings`    | view / manage    | Site-wide settings                     |
-| `GET /admin/ai/models`                        | `ai:can_view`    | Configured models (read only)          |
-| `GET /admin/ai/actions`, `PUT …/actions`      | view / manage    | Action list and per-action settings    |
-| `GET /admin/ai/access/roles?roleId=`          | `ai:can_view`    | AI permissions and one role's access   |
-| `PUT /admin/ai/access/roles`                  | `ai:can_manage`  | A role's allowance and permissions     |
-| `GET /admin/ai/access/users/{userId}`         | `ai:can_view`    | One member's exception                 |
-| `PUT`, `DELETE /admin/ai/access/users`        | `ai:can_manage`  | A user exception                       |
-| `GET /admin/ai/history`, `GET …/history/{id}` | `ai:can_view`    | Runs and one run's details             |
-| `GET /ai/usage`                               | signed in        | The member's own allowance and notices |
-| `GET /ai/history`                             | signed in        | The member's own recent runs           |
+| Route                                         | Staff permission | Purpose                                             |
+| :-------------------------------------------- | :--------------- | :-------------------------------------------------- |
+| `GET /admin/ai/overview`                      | `ai:can_view`    | Overview for `range` or `from`/`to`, budget `month` |
+| `GET /admin/ai/settings`, `PUT …/settings`    | view / manage    | Site-wide settings                                  |
+| `GET /admin/ai/models`                        | `ai:can_view`    | Configured models (read only)                       |
+| `GET /admin/ai/actions`, `PUT …/actions`      | view / manage    | Action list and per-action settings                 |
+| `GET /admin/ai/access/roles?roleId=`          | `ai:can_view`    | AI permissions and one role's access                |
+| `PUT /admin/ai/access/roles`                  | `ai:can_manage`  | A role's allowance and permissions                  |
+| `GET /admin/ai/access/users/{userId}`         | `ai:can_view`    | One member's exception                              |
+| `PUT`, `DELETE /admin/ai/access/users`        | `ai:can_manage`  | A user exception                                    |
+| `GET /admin/ai/history`, `GET …/history/{id}` | `ai:can_view`    | Runs and one run's details                          |
+| `GET /ai/usage`                               | signed in        | The member's own allowance and notices              |
+| `GET /ai/history`                             | signed in        | The member's own recent runs                        |
 
 ## Learn more
 

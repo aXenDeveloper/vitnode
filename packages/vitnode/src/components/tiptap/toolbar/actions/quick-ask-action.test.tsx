@@ -38,8 +38,8 @@ describe("QuickAskPanel", () => {
   it("offers the rewrite operations and runs the one clicked", () => {
     const { onRun } = renderPanel();
 
-    fireEvent.click(button("core.ai_assist.quick_ask.operation.shorten"));
-    fireEvent.click(button("core.ai_assist.quick_ask.tones.formal"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.operation.shorten"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.tones.formal"));
 
     expect(onRun).toHaveBeenNthCalledWith(1, {
       kind: "rewrite",
@@ -55,13 +55,13 @@ describe("QuickAskPanel", () => {
   it("shows the bound before anything runs", () => {
     renderPanel({ estimate: "12.5" });
 
-    expect(screen.getByText("core.ai_assist.quick_ask.estimate")).toBeTruthy();
+    expect(screen.getByText("core.global.ai_assist.quick_ask.estimate")).toBeTruthy();
   });
 
   it("sends a custom request only with an instruction", () => {
     const { onRun } = renderPanel({ instruction: "Make a list" });
 
-    fireEvent.click(button("core.ai_assist.quick_ask.ask"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.ask"));
 
     expect(onRun).toHaveBeenCalledWith({
       instruction: "Make a list",
@@ -75,7 +75,7 @@ describe("QuickAskPanel", () => {
     });
 
     expect(screen.getByText("Partial")).toBeTruthy();
-    fireEvent.click(button("core.ai_assist.quick_ask.stop"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.stop"));
     expect(onStop).toHaveBeenCalledOnce();
   });
 
@@ -84,9 +84,9 @@ describe("QuickAskPanel", () => {
       phase: { kind: "result", runId: 1, text: "Shorter." },
     });
 
-    fireEvent.click(button("core.ai_assist.quick_ask.replace"));
-    fireEvent.click(button("core.ai_assist.quick_ask.insert_below"));
-    fireEvent.click(button("core.ai_assist.quick_ask.discard"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.replace"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.insert_below"));
+    fireEvent.click(button("core.global.ai_assist.quick_ask.discard"));
 
     expect(onApply.mock.calls).toEqual([["replace"], ["below"]]);
     expect(onDiscard).toHaveBeenCalledOnce();
@@ -98,10 +98,10 @@ describe("QuickAskPanel", () => {
       stale: true,
     });
 
-    expect(screen.getByText("core.ai_assist.quick_ask.stale")).toBeTruthy();
+    expect(screen.getByText("core.global.ai_assist.quick_ask.stale")).toBeTruthy();
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: "core.ai_assist.quick_ask.replace",
+        name: "core.global.ai_assist.quick_ask.replace",
       }).disabled,
     ).toBe(true);
   });

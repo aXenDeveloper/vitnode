@@ -2,11 +2,13 @@ import type { z } from "zod";
 
 import { queryOptions } from "@tanstack/react-query";
 
+import type { zodAiOverview } from "@/api/modules/admin/ai/routes/overview.route";
 import type {
   zodAiAction,
   zodAiModel,
   zodAiSettingsResponse,
 } from "@/api/modules/admin/ai/schemas";
+import type { AiOverviewPreset } from "@/lib/ai/overview-range";
 import type { AiRunStatusValue } from "@/lib/ai/run-status";
 import type {
   AdminTableContract,
@@ -32,48 +34,20 @@ import {
 
 export const ADMIN_AI_SCREEN = "ai";
 
-export const AI_OVERVIEW_PERIODS = ["current", "previous"] as const;
-export type AiOverviewPeriod = (typeof AI_OVERVIEW_PERIODS)[number];
-
-export interface AiBreakdownRow {
-  failures: number;
-  key: string;
-  knownCostUsd: string;
-  knownOperations: number;
-  operations: number;
+export interface AiOverviewSearch {
+  from?: string;
+  month?: string;
+  range?: AiOverviewPreset;
+  to?: string;
 }
 
-/** `GET /admin/ai/overview`. */
-export interface AdminAiOverview {
-  alt: {
-    imagesDescribed: number;
-    knownCostUsd: string;
-    perImageUsd: null | string;
-    perTranslationUsd: null | string;
-    translations: number;
-  };
-  averageDailyCostUsd: string;
-  averageOperationCostUsd: null | string;
-  budget: {
-    limitUsd: null | string;
-    remainingUsd: null | string;
-    reservedUsd: string;
-    spentUsd: string;
-    systemLimitUsd: null | string;
-    systemSpentUsd: string;
-  };
-  byAction: AiBreakdownRow[];
-  byModel: AiBreakdownRow[];
-  byOrigin: AiBreakdownRow[];
-  costSources: { estimated: number; provider: number; unknown: number };
-  enabled: boolean;
-  failureRate: number;
-  knownCostUsd: string;
-  operations: number;
-  period: { end: string; start: string };
-  pricingCoverage: number;
-  tokens: { input: number; output: number };
-}
+export type AdminAiOverview = z.infer<typeof zodAiOverview>;
+
+export type AiUsageTotals = AdminAiOverview["range"]["totals"];
+
+export type AiUsageDay = AdminAiOverview["range"]["days"][number];
+
+export type AiUsageEntity = AdminAiOverview["byAction"][number];
 
 export type AdminAiSettings = z.infer<typeof zodAiSettingsResponse>;
 
@@ -215,20 +189,24 @@ export type AiHistoryParams = AiHistoryFilters &
 export type AdminAiHistoryPage = AdminTablePage<AdminAiRunRow>;
 
 export type AdminAiOverviewFetcher = (
-  period: AiOverviewPeriod,
+  search: AiOverviewSearch,
 ) => Promise<AdminAiOverview>;
 
-export const fetchAdminAiOverview: AdminAiOverviewFetcher = async period => {
+export const fetchAdminAiOverview: AdminAiOverviewFetcher = async search => {
   const response = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
-    args: { query: { period } },
+    args: { query: search },
     method: "get",
     module: "admin/ai",
     path: "/overview",
   });
 
   if (!response.ok) {
-    throw new AdminRequestError(response.status, "the AI overview", period);
+    throw new AdminRequestError(
+      response.status,
+      "the AI overview",
+      describeAdminParams(search),
+    );
   }
 
   return await response.json();
@@ -402,18 +380,21 @@ export const adminAiQueryRoot = (adminUserId: AdminIdentity) =>
 
 export const adminAiOverviewQueryOptions = ({
   adminUserId,
-  period,
+  search,
 }: {
   adminUserId: AdminIdentity;
-  period: AiOverviewPeriod;
+  search: AiOverviewSearch;
 }) =>
   queryOptions({
-    queryFn: async () => await fetchAdminAiOverview(period),
+    queryFn: async () => await fetchAdminAiOverview(search),
     queryKey: adminScopedQueryKey(
       ADMIN_AI_SCREEN,
       adminUserId,
       "overview",
-      period,
+      search.range ?? null,
+      search.from ?? null,
+      search.to ?? null,
+      search.month ?? null,
     ),
     retry: false,
     /** {@link OPERATIONAL_STALE_TIME} - Spending moves with every run. */

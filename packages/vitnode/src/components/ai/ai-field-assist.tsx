@@ -51,7 +51,7 @@ export const AiFieldAssist = ({
   fieldName: string;
   multiLang: boolean;
 }) => {
-  const t = useTranslations("core.ai_assist");
+  const t = useTranslations("core.global.ai_assist");
   const locale = useLocale();
   const selected = useMultiLangSelected();
   const language = selected ?? locale;
@@ -208,7 +208,7 @@ export const AiSuggestionBody = ({
   suggestion: null | string;
   targetEdited: boolean;
 }) => {
-  const t = useTranslations("core.ai_assist");
+  const t = useTranslations("core.global.ai_assist");
 
   return (
     <>

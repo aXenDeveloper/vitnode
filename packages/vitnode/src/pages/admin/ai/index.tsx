@@ -4,7 +4,6 @@ import type { AiOverviewRouteSearch } from "@/tanstack/admin/ai/route-search";
 
 import { AdminAiOverviewRouteContent } from "@/tanstack/admin/ai/overview-screen";
 import { loadAdminAiOverviewRoute } from "@/tanstack/admin/ai/route";
-import { aiOverviewPeriodOf } from "@/tanstack/admin/ai/route-search";
 import { adminBreadcrumb } from "@/tanstack/admin/breadcrumb";
 import { defineAdminRoute } from "@/tanstack/plugin-routes";
 
@@ -23,7 +22,7 @@ export const route = defineAdminRoute<
   load: async ({ context, search, t }) =>
     await loadAdminAiOverviewRoute({
       ...context,
-      period: aiOverviewPeriodOf(search),
+      search,
       t,
     }),
   head: ({ loaderData }) => ({ ...loaderData }),

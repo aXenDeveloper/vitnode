@@ -126,3 +126,19 @@ export const periodContaining = (
     end: zonedMidnight(nextYear, nextMonth, 1, zone),
   };
 };
+
+const pad = (value: number, length = 2) => String(value).padStart(length, "0");
+
+export const localDayOf = (date: Date, timeZone = "UTC"): string => {
+  const zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
+  const { day, month, year } = localParts(date, zone);
+
+  return `${pad(year, 4)}-${pad(month)}-${pad(day)}`;
+};
+
+export const localDayStart = (day: string, timeZone = "UTC"): Date => {
+  const zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
+  const [year = 1970, month = 1, date = 1] = day.split("-").map(Number);
+
+  return zonedMidnight(year, month, date, zone);
+};

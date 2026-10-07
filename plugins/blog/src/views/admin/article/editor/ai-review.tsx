@@ -82,7 +82,7 @@ export const ArticleAiReview = ({
   title: string;
 }) => {
   const t = useTranslations("@vitnode/blog.admin.article.editor.review");
-  const tError = useTranslations("core.ai_assist.error");
+  const tError = useTranslations("core.global.ai_assist.error");
   const { data: available = [] } = useAvailableAiActions("admin");
   const [pending, setPending] = React.useState(false);
   const [review, setReview] = React.useState<ArticleReview | null>(null);

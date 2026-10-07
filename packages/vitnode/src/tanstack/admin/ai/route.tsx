@@ -1,11 +1,13 @@
 import type { PluginRouteTranslator } from "@/routing";
 import type {
   AiHistoryParams,
-  AiOverviewPeriod,
+  AiOverviewSearch,
 } from "@/views/admin/views/core/ai/ai-query";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { ADMIN_AI_PERMISSIONS } from "@/views/admin/views/core/ai/ai-permissions";
+import { ADMIN_AI_SCREEN } from "@/views/admin/views/core/ai/ai-query";
+import { adminScopedQueryKey } from "@/views/admin/views/core/shared/admin-scope";
 
 import type { AdminScreenContext } from "../screen";
 
@@ -35,7 +37,7 @@ export interface AdminAiRouteData {
 }
 
 export interface AdminAiOverviewRouteData extends AdminAiRouteData {
-  period: AiOverviewPeriod;
+  search: AiOverviewSearch;
 }
 
 export interface AdminAiHistoryRouteData extends AdminAiRouteData {
@@ -54,17 +56,29 @@ const enter = ({ adminAccess }: AdminAiLoaderContext): AdminIdentity => {
 };
 
 export const loadAdminAiOverviewRoute = async (
-  context: AdminAiLoaderContext & { period: AiOverviewPeriod },
+  context: AdminAiLoaderContext & { search: AiOverviewSearch },
 ): Promise<AdminAiOverviewRouteData> => {
   const adminUserId = enter(context);
+  const overview = context.queryClient.query({
+    ...adminAiOverviewQuery({ adminUserId, search: context.search }),
+    ...STATIC,
+  });
+  const showingOverview = context.queryClient
+    .getQueriesData({
+      queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "overview"),
+    })
+    .some(([, data]) => data !== undefined);
+
+  if (showingOverview) void overview.catch(() => undefined);
 
   await Promise.all([
+    showingOverview ? undefined : overview,
     context.queryClient.query({
-      ...adminAiOverviewQuery({ adminUserId, period: context.period }),
+      ...adminAiActionsQuery({ adminUserId }),
       ...STATIC,
     }),
     context.queryClient.query({
-      ...adminAiActionsQuery({ adminUserId }),
+      ...adminAiModelsQuery({ adminUserId }),
       ...STATIC,
     }),
   ]);
@@ -72,7 +86,7 @@ export const loadAdminAiOverviewRoute = async (
   return {
     adminUserId,
     description: context.t("admin.ai.overview.desc"),
-    period: context.period,
+    search: context.search,
     title: context.t("admin.ai.overview.title"),
   };
 };

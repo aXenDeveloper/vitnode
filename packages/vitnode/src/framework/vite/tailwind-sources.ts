@@ -1,6 +1,6 @@
 import type { Plugin } from "vite";
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { configuredPluginIds } from "./plugin-routes";
@@ -34,7 +34,7 @@ const buildOutputOf = (appRoot: string, packageName: string): null | string => {
       ...BUILD_OUTPUT,
     );
 
-    if (existsSync(candidate)) return candidate;
+    if (existsSync(candidate)) return realpathSync(candidate);
     if (dirname(directory) === directory) return null;
   }
 };

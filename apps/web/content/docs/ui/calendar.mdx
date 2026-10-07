@@ -1,0 +1,212 @@
+---
+title: Calendar
+description: A month grid for picking a day, several days or a date range, localized to the visitor's language out of the box.
+icon: CalendarDays
+---
+
+The Calendar shows a month and lets people pick dates from it. Use it inline for booking or reporting screens. For a form field that opens on click, reach for the [Date Picker](/docs/ui/date-picker) instead.
+
+## Preview
+
+<Preview name="calendar" />
+
+## Usage
+
+```ts
+import { Calendar } from '@vitnode/core/components/ui/calendar'
+```
+
+```tsx
+const [date, setDate] = React.useState<Date>()
+
+<Calendar mode="single" onSelect={setDate} selected={date} />
+```
+
+`Calendar` is built on [React DayPicker](https://daypicker.dev), so every DayPicker prop works.
+
+## Date range
+
+<Preview name="calendar-range" className="*:max-w-none" />
+
+Set `mode="range"` and keep a `DateRange` in state. `numberOfMonths` shows months side by side on wider screens and stacks them on phones.
+
+```ts
+import { Calendar, type DateRange } from '@vitnode/core/components/ui/calendar'
+```
+
+```tsx
+const [range, setRange] = React.useState<DateRange>()
+
+<Calendar mode="range" numberOfMonths={2} onSelect={setRange} selected={range} />
+```
+
+## Multiple days
+
+<Preview name="calendar-multiple" />
+
+`mode="multiple"` collects an array of dates. `max` caps how many can be picked.
+
+```tsx
+<Calendar max={3} mode="multiple" onSelect={setDates} selected={dates} />
+```
+
+## Disabled days
+
+<Preview name="calendar-disabled" />
+
+`disabled` takes a date, an array of dates or a matcher. Here: no past days and no weekends.
+
+```tsx
+<Calendar
+  disabled={[{ before: new Date() }, { dayOfWeek: [0, 6] }]}
+  mode="single"
+/>
+```
+
+## Month and year dropdowns
+
+<Preview name="calendar-dropdown" />
+
+Typing a birthday by clicking "previous month" 300 times is nobody's idea of fun. `captionLayout="dropdown"` adds month and year selects. Set `startMonth` and `endMonth` to bound the years.
+
+```tsx
+<Calendar
+  captionLayout="dropdown"
+  endMonth={new Date()}
+  mode="single"
+  startMonth={new Date(1926, 0)}
+/>
+```
+
+Use `dropdown-months` or `dropdown-years` for only one of them.
+
+## Week numbers
+
+<Preview name="calendar-week-numbers" />
+
+```tsx
+<Calendar mode="single" showWeekNumber />
+```
+
+## Today button
+
+<Preview name="calendar-today" />
+
+Control the visible month with `month` and `onMonthChange`, then jump back from a footer button.
+
+```tsx
+const [month, setMonth] = React.useState(new Date())
+
+<Calendar month={month} onMonthChange={setMonth} mode="single" />
+<Button onClick={() => setMonth(new Date())}>Today</Button>
+```
+
+## Presets
+
+<Preview name="calendar-presets" className="*:max-w-none" />
+
+Presets are plain buttons that set the range and move the month to it. Handy for analytics filters.
+
+```tsx
+<Button
+  onClick={() => {
+    setRange({ from: addDays(today, -6), to: today })
+    setMonth(today)
+  }}
+>
+  Last 7 days
+</Button>
+```
+
+## Custom day content
+
+<Preview name="calendar-pricing" />
+
+Swap the day button through `components.DayButton` and render `CalendarDayButton` with extra children. A `<span>` inside it gets small, muted text automatically. A larger `--cell-size` makes room for it.
+
+```tsx
+import {
+  Calendar,
+  CalendarDayButton,
+} from '@vitnode/core/components/ui/calendar'
+
+const PricedDayButton = ({
+  children,
+  ...props
+}: React.ComponentProps<typeof CalendarDayButton>) => (
+  <CalendarDayButton {...props}>
+    {children}
+    <span>${priceFor(props.day.date)}</span>
+  </CalendarDayButton>
+)
+
+<Calendar
+  className="[--cell-size:--spacing(11)]"
+  components={{ DayButton: PricedDayButton }}
+  mode="single"
+/>
+```
+
+Define the day button outside your component, so React does not remount every day on each render.
+
+## Appointment picker
+
+<Preview name="calendar-appointment" className="*:max-w-none" />
+
+Pair the Calendar with a list of time slots. Reset the slot when the day changes.
+
+## Localization
+
+The Calendar follows the active VitNode language with no setup. Month names, weekday names, the first day of the week and screen reader labels all come from the browser's `Intl` API, so no extra locale files land in your bundle. In Polish the week starts on Monday, in the US on Sunday.
+
+Need a date-fns locale for something `Intl` can't do? Add `react-day-picker` to your app, then pass the locale as `locale` and the Calendar uses it instead.
+
+```tsx
+import { pl } from 'react-day-picker/locale'
+
+<Calendar locale={pl} mode="single" />
+```
+
+Force a different first day with `weekStartsOn={1}`.
+
+## Accessibility
+
+- The grid is a real ARIA grid. Arrow keys move by day and week, Page Up and Page Down by month, Home and End to the edges of a week.
+- Each day reads as its full date, plus "Today" and "selected" when they apply.
+- Navigation and dropdown labels are translated through `core.global.calendar`.
+- Arrows flip in right-to-left languages.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+`Calendar` accepts every [DayPicker prop](https://daypicker.dev/api/type-aliases/DayPickerProps), plus:
+
+<TypeTable
+  type={{
+    buttonVariant: {
+      description: 'Button variant for the previous and next month buttons.',
+      type: "'ghost' | 'outline' | 'secondary' | …",
+      default: "'ghost'",
+    },
+    captionLayout: {
+      description: 'Plain caption or month/year dropdowns.',
+      type: "'label' | 'dropdown' | 'dropdown-months' | 'dropdown-years'",
+      default: "'label'",
+    },
+    showOutsideDays: {
+      description: 'Show days from the previous and next months.',
+      type: 'boolean',
+      default: 'true',
+    },
+    locale: {
+      description:
+        'A date-fns locale. Leave empty to follow the active VitNode language.',
+      type: 'Locale',
+    },
+  }}
+/>
+
+## API Reference
+
+[React DayPicker](https://daypicker.dev)

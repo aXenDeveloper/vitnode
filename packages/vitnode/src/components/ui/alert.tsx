@@ -10,39 +10,40 @@ import React from "react";
 const ALERT_VARIANTS: Record<
   "default" | "destructive" | "info" | "success" | "warning",
   {
-    bar: string;
     Icon: null | React.ComponentType;
     icon: string;
     role: "alert" | "status";
+    surface: string;
   }
 > = {
   default: {
-    bar: "bg-muted-foreground/50",
-    icon: "[&_svg]:fill-muted-foreground",
+    surface: "border-border bg-card",
+    icon: "text-muted-foreground",
     Icon: null,
     role: "status",
   },
   info: {
-    bar: "bg-primary/50",
-    icon: "[&_svg]:fill-primary",
+    surface: "border-primary/30 bg-primary/5 dark:border-primary/40",
+    icon: "text-primary",
     Icon: InfoIcon,
     role: "status",
   },
   success: {
-    bar: "bg-success/50",
-    icon: "[&_svg]:fill-success",
+    surface: "border-success/30 bg-success/5 dark:border-success/40",
+    icon: "text-success",
     Icon: CircleCheckIcon,
     role: "status",
   },
   warning: {
-    bar: "bg-warn/50",
-    icon: "[&_svg]:fill-warn",
+    surface: "border-warn/30 bg-warn/5 dark:border-warn/40",
+    icon: "text-warn",
     Icon: TriangleAlertIcon,
     role: "alert",
   },
   destructive: {
-    bar: "bg-destructive/50",
-    icon: "[&_svg]:fill-destructive",
+    surface:
+      "border-destructive/30 bg-destructive/5 dark:border-destructive/40",
+    icon: "text-destructive",
     Icon: CircleXIcon,
     role: "alert",
   },
@@ -60,13 +61,14 @@ function Alert({
   icon?: React.ReactNode;
   variant?: AlertVariant;
 }) {
-  const { bar, icon: iconClassName, Icon, role } = ALERT_VARIANTS[variant];
+  const { surface, icon: iconClassName, Icon, role } = ALERT_VARIANTS[variant];
   const resolvedIcon = icon === undefined ? Icon && <Icon /> : icon;
 
   return (
     <div
       className={cn(
-        "group/alert bg-card text-card-foreground relative flex w-full gap-2 rounded-xl border p-3 ps-1 text-start text-sm shadow-xs has-data-[slot=alert-action]:pe-12",
+        "group/alert text-foreground relative flex w-full gap-2.5 rounded-xl border px-4 py-3 text-start text-sm shadow-xs has-data-[slot=alert-action]:pe-12",
+        surface,
         className,
       )}
       data-slot="alert"
@@ -74,16 +76,11 @@ function Alert({
       role={role}
       {...props}
     >
-      <div
-        className={cn("w-0.5 shrink-0 rounded-sm", bar)}
-        data-slot="alert-bar"
-        role="none"
-      />
       {resolvedIcon !== null && (
         <span
           aria-hidden="true"
           className={cn(
-            "text-card -me-0.5 flex shrink-0 [&_svg]:size-5",
+            "flex h-5 shrink-0 items-center [&_svg]:size-4",
             iconClassName,
           )}
           data-slot="alert-icon"
@@ -92,7 +89,7 @@ function Alert({
         </span>
       )}
       <div
-        className="flex min-w-0 flex-1 flex-col gap-2"
+        className="flex min-w-0 flex-1 flex-col gap-1"
         data-slot="alert-content"
       >
         {children}

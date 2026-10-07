@@ -63,8 +63,8 @@ const TONES = ["friendly", "formal", "confident", "neutral"] as const;
  * Applying is one editor transaction, so Undo restores the text.
  */
 export const QuickAskAction = () => {
-  const t = useTranslations("core.ai_assist.quick_ask");
-  const tError = useTranslations("core.ai_assist.error");
+  const t = useTranslations("core.global.ai_assist.quick_ask");
+  const tError = useTranslations("core.global.ai_assist.error");
   // The language of the text being edited - a multi-language field's tab -
   // and only then the interface language.
   const lockedLanguage = useMultiLangLanguage();
@@ -269,7 +269,7 @@ export const QuickAskPanel = ({
   phase: Phase;
   stale: boolean;
 }) => {
-  const t = useTranslations("core.ai_assist.quick_ask");
+  const t = useTranslations("core.global.ai_assist.quick_ask");
   const instructionId = React.useId();
 
   if (phase.kind === "streaming") {

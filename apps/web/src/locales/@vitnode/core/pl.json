@@ -1163,63 +1163,103 @@
       },
       "overview": {
         "title": "Przegląd AI",
-        "desc": "Ile kosztuje AI w tym miesiącu, na co idą pieniądze i na ile pewne są te liczby.",
-        "period": {
-          "label": "Okres",
-          "current": "Ten miesiąc",
-          "previous": "Poprzedni miesiąc"
-        },
-        "period_range": "{start} – {end}",
-        "stats_label": "Najważniejsze liczby",
+        "desc": "Ile kosztuje AI, na co idą pieniądze i na ile pewne są te liczby.",
         "disabled": {
           "title": "AI jest wyłączone na całej stronie",
           "desc": "Żadna funkcja AI nie zadziała, dopóki nie zostanie włączona ponownie.",
           "link": "Otwórz ustawienia AI"
         },
+        "range": {
+          "label": "Zakres dat",
+          "this-month": "Ten miesiąc",
+          "last-month": "Poprzedni miesiąc",
+          "7d": "Ostatnie 7 dni",
+          "30d": "Ostatnie 30 dni",
+          "90d": "Ostatnie 90 dni"
+        },
+        "compare": {
+          "month": "vs {month}",
+          "previous_days": "vs {count, plural, one {poprzedni dzień} few {poprzednie # dni} many {poprzednich # dni} other {poprzednich # dni}}",
+          "range": "vs {range}"
+        },
+        "basis": {
+          "this-month": "tego miesiąca",
+          "last-month": "poprzedniego miesiąca",
+          "7d": "ostatnich 7 dni",
+          "30d": "ostatnich 30 dni",
+          "90d": "ostatnich 90 dni",
+          "custom": "okresu {range}"
+        },
         "budget": {
-          "spent": "Pobrano z budżetu",
+          "title": "Budżet: {month}",
+          "show_month": "Pokaż budżet za {month}",
+          "of_limit": "z {limit}",
+          "day_of": "dzień {day} z {days}",
+          "month_closed": "zamknięty",
           "no_limit": "Nie ustawiono miesięcznego budżetu.",
           "set_limit": "Ustaw go",
-          "of_limit": "{spent} z {limit}",
-          "remaining": "Zostało {remaining}",
-          "reserved": "{reserved} zarezerwowano na trwające operacje"
+          "meter": "Wykorzystano {spent} z {limit}",
+          "forecast_over": "W tym tempie {forecast} do {end}, {over} ponad budżet",
+          "forecast_inside": "W tym tempie {forecast} do {end}, w ramach budżetu",
+          "forecast_no_limit": "W tym tempie {forecast} do {end}",
+          "basis": "Na podstawie {basis}: {rate} dziennie.",
+          "change_limit": "Zmień budżet",
+          "closed": "{month} zamknięty na {spent}, {share} budżetu",
+          "closed_no_limit": "{month} zamknięty na {spent}",
+          "pace_over": "W tempie {basis} ({rate} dziennie) miesiąc kosztuje {monthly}, {over} ponad budżet.",
+          "pace_inside": "W tempie {basis} ({rate} dziennie) miesiąc kosztuje {monthly}, w ramach budżetu.",
+          "pace_no_limit": "W tempie {basis} ({rate} dziennie) miesiąc kosztuje {monthly}."
         },
-        "operations": "Operacje",
-        "failure_rate": "{share} nieudanych",
-        "average_operation": "Średni koszt operacji",
-        "average_daily": "Około {amount} dziennie",
-        "tokens": "Tokeny",
-        "tokens_split": "{input} wej. · {output} wyj.",
-        "system_budget": "Zadania w tle wykorzystały {spent} z {limit}.",
-        "system_no_limit": "brak osobnego limitu",
-        "coverage": {
-          "title": "Na ile pewne są te liczby?",
-          "summary": "Koszt znany dla {share} operacji.",
-          "provider": "Od dostawcy",
-          "estimated": "Szacunkowy",
-          "unknown": "Nieznany",
-          "unknown_hint": "Operacje o nieznanym koszcie są rozliczane według rezerwacji i pomijane w średnich - nigdy nie liczą się jako 0 $. Dodaj cenę modelu, aby to naprawić.",
-          "all_known_hint": "Każda operacja ma koszt: podany przez dostawcę albo oszacowany z ceny modelu."
+        "metrics": {
+          "hint": "Zmiana {compare}",
+          "spend": "Wydatki",
+          "per_run": "Koszt uruchomienia",
+          "runs": "Uruchomienia",
+          "failure_rate": "Odsetek błędów",
+          "tokens": "Tokeny",
+          "known": "Znany koszt"
         },
-        "alt": {
-          "title": "Automatyczny tekst ALT",
-          "desc": "Opisy obrazów tworzone w tle wraz z tłumaczeniami. Średnie uwzględniają tylko znane koszty.",
-          "images": "Opisane obrazy",
-          "translations": "Tłumaczenia",
-          "per_image": "Na obraz",
-          "per_translation": "Na tłumaczenie"
+        "delta": {
+          "no_previous": "Brak wcześniejszych danych",
+          "no_change": "Bez zmian",
+          "up": "Wzrost",
+          "down": "Spadek"
+        },
+        "chart": {
+          "limit": "Budżet {limit}",
+          "budget_title": "Wydatki w miesiącu {month} na tle budżetu",
+          "budget_description": "Narastające wydatki w miesiącu {month} na tle miesięcznego budżetu, z miesiącem {previous} jako linią przerywaną i prognozą do końca miesiąca.",
+          "forecast": "Prognoza",
+          "forecast_to": "Prognoza do {end}",
+          "spent_so_far": "Wydano do tej pory",
+          "running_total": "{metric}, suma narastająco",
+          "running_average": "{metric}, średnia do tej pory",
+          "running_description": "{title} za {range}. Linia przerywana to porównanie ({compare}).",
+          "so_far": "Do tej pory",
+          "budget": "Budżet"
         },
         "breakdown": {
-          "title": "Na co idą koszty",
-          "by_action": "Wg akcji",
-          "by_model": "Wg modelu",
-          "by_origin": "Wg źródła",
-          "name": "Nazwa",
-          "operations": "Operacje",
+          "title": "Na co idą pieniądze",
+          "split": "Podział według",
+          "by_action": "Według akcji",
+          "by_model": "Według modelu",
+          "action": "Akcja",
+          "model": "Model",
+          "other": "Inne ({count})",
+          "empty": "W tym zakresie nic jeszcze nie działało.",
+          "chart_label": "{measure} – ranking",
+          "chart_description": "{measure} według akcji lub modelu, w kolejności, z porównaniem ({compare}) jako znacznikiem na każdym pasku. Tabela poniżej zawiera te same liczby.",
+          "now": "Ten zakres",
+          "tick": "Znacznik: poprzedni zakres",
+          "unpriced": "{count, plural, one {# uruchomienie nie ma ceny i nie jest liczone} few {# uruchomienia nie mają ceny i nie są liczone} many {# uruchomień nie ma ceny i nie jest liczonych} other {# uruchomienia nie mają ceny i nie są liczone}} w kosztach.",
+          "add_price": "Dodaj cenę",
+          "change": "Zmiana {compare}"
+        },
+        "measure": {
+          "cost": "Koszt",
+          "ops": "Uruchomienia",
           "failures": "Błędy",
-          "known_cost": "Znany koszt",
-          "coverage": "Znany koszt dla",
-          "empty": "W tym okresie nic jeszcze nie działało."
+          "tokens": "Tokeny"
         }
       },
       "settings": {
@@ -2452,7 +2492,96 @@
         "settings": "Ustawienia powiadomień",
         "action_failed": "Nie udało się. Powiadomienia zostały odświeżone."
       },
-      "tab_has_errors": "Zawiera błędy"
+      "tab_has_errors": "Zawiera błędy",
+      "calendar": {
+        "previous_month": "Przejdź do poprzedniego miesiąca",
+        "next_month": "Przejdź do następnego miesiąca",
+        "month": "Wybierz miesiąc",
+        "year": "Wybierz rok",
+        "navigation": "Nawigacja kalendarza",
+        "week_number": "Tydzień {week}",
+        "week_number_header": "Numer tygodnia",
+        "today": "Dzisiaj",
+        "selected": "wybrano",
+        "pick_date": "Wybierz datę",
+        "presets": "Szybkie zakresy",
+        "pick_range": "Wybierz datę początkową i końcową",
+        "range_days": "{count, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}}",
+        "apply_range": "Zastosuj zakres"
+      },
+      "ai_assist": {
+        "button": "AI",
+        "open": "Sugestia AI dla pola {field}",
+        "title": "Sugestia AI",
+        "desc": "Napisana na podstawie innych pól w języku {language}. Sprawdź ją przed użyciem.",
+        "missing_sources": "Najpierw uzupełnij: {fields}.",
+        "generating": "Piszę sugestię…",
+        "generate": "Wygeneruj",
+        "regenerate": "Spróbuj ponownie",
+        "discard": "Odrzuć",
+        "accept": "Użyj sugestii",
+        "replace_anyway": "Zastąp mój nowszy tekst",
+        "stale_source": "Tekst źródłowy zmienił się od tego czasu. Wygeneruj ponownie, aby mieć aktualną sugestię.",
+        "target_edited": "Pole zostało zmienione po wysłaniu prośby. Użycie sugestii zastąpi nowszy tekst.",
+        "accepted": {
+          "title": "Dodano sugestię",
+          "desc": "Zapisz formularz, aby ją zachować."
+        },
+        "error": {
+          "title": "Brak sugestii AI",
+          "AI_ACTION_DISABLED": "Administrator wyłączył tę funkcję AI.",
+          "AI_BUDGET_EXHAUSTED": "Budżet AI strony został chwilowo wyczerpany. To nie jest Twój limit.",
+          "AI_CANCELED": "Żądanie zostało anulowane.",
+          "AI_CONCURRENCY_LIMITED": "Inne Twoje żądanie AI jeszcze trwa. Spróbuj za chwilę.",
+          "AI_DAILY_LIMIT_REACHED": "Osiągnięto dzisiejszy limit tej funkcji AI.",
+          "AI_DISABLED": "Funkcje AI są wyłączone na tej stronie.",
+          "AI_INPUT_TOO_LARGE": "Tekst jest za długi dla tej funkcji AI.",
+          "AI_INVALID_INPUT": "Brakuje części tekstu źródłowego lub jest niepoprawna.",
+          "AI_INVALID_OUTPUT": "Odpowiedź AI nie nadawała się do użycia. Nic nie zostało pobrane.",
+          "AI_MODEL_INCOMPATIBLE": "Żaden skonfigurowany model AI jeszcze tego nie potrafi.",
+          "AI_NOT_CONFIGURED": "Nie skonfigurowano modelu AI.",
+          "AI_PRICING_MISSING": "Model AI nie ma cennika, więc nie można ograniczyć kosztu.",
+          "AI_PROVIDER_FAILED": "Dostawca AI zawiódł. Nic nie zostało pobrane.",
+          "AI_RATE_LIMITED": "Zbyt wiele żądań AI. Spróbuj za minutę.",
+          "AI_TIMEOUT": "Dostawca AI odpowiadał zbyt długo. Nic nie zostało pobrane.",
+          "AI_UNAUTHORIZED": "Nie masz dostępu do tej funkcji AI lub tej treści.",
+          "AI_USER_LIMIT_REACHED": "Wykorzystano wszystkie punkty AI w tym miesiącu.",
+          "unknown": "Coś poszło nie tak. Spróbuj ponownie.",
+          "AI_DUPLICATE_REQUEST": "To żądanie zostało już wysłane. Spróbuj ponownie, aby wysłać nowe."
+        },
+        "quick_ask": {
+          "label": "Szybkie pytanie (AI)",
+          "writing": "Piszę…",
+          "stop": "Zatrzymaj",
+          "discard": "Odrzuć",
+          "insert_below": "Wstaw poniżej",
+          "replace": "Zastąp zaznaczenie",
+          "stale": "Zaznaczony tekst zmienił się w trakcie pisania odpowiedzi. Wstaw ją poniżej albo zamknij i spróbuj ponownie.",
+          "tone": "Zmień ton",
+          "select_text": "Zaznacz tekst, aby go przepisać.",
+          "operation": {
+            "shorten": "Skróć",
+            "correct": "Popraw pisownię",
+            "simplify": "Uprość",
+            "continue": "Pisz dalej"
+          },
+          "tones": {
+            "friendly": "Przyjazny",
+            "formal": "Formalny",
+            "confident": "Pewny siebie",
+            "neutral": "Neutralny"
+          },
+          "custom_label": "Albo zapytaj o cokolwiek w sprawie zaznaczenia",
+          "custom_placeholder": "np. Zamień to w listę punktów",
+          "ask": "Zapytaj",
+          "estimate": "Jedno żądanie kosztuje najwyżej {points} punktów AI – zwykle znacznie mniej.",
+          "applied": {
+            "title": "Dodano tekst AI",
+            "desc": "Nic nie jest zapisane, dopóki nie zapiszesz formularza.",
+            "undo": "Cofnij"
+          }
+        }
+      }
     },
     "navigation": {
       "discover": {
@@ -2603,79 +2732,6 @@
       "empty_title": "Na razie pusto",
       "empty_unread_title": "Brak nieprzeczytanych powiadomień",
       "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj."
-    },
-    "ai_assist": {
-      "button": "AI",
-      "open": "Sugestia AI dla pola {field}",
-      "title": "Sugestia AI",
-      "desc": "Napisana na podstawie innych pól w języku {language}. Sprawdź ją przed użyciem.",
-      "missing_sources": "Najpierw uzupełnij: {fields}.",
-      "generating": "Piszę sugestię…",
-      "generate": "Wygeneruj",
-      "regenerate": "Spróbuj ponownie",
-      "discard": "Odrzuć",
-      "accept": "Użyj sugestii",
-      "replace_anyway": "Zastąp mój nowszy tekst",
-      "stale_source": "Tekst źródłowy zmienił się od tego czasu. Wygeneruj ponownie, aby mieć aktualną sugestię.",
-      "target_edited": "Pole zostało zmienione po wysłaniu prośby. Użycie sugestii zastąpi nowszy tekst.",
-      "accepted": {
-        "title": "Dodano sugestię",
-        "desc": "Zapisz formularz, aby ją zachować."
-      },
-      "error": {
-        "title": "Brak sugestii AI",
-        "AI_ACTION_DISABLED": "Administrator wyłączył tę funkcję AI.",
-        "AI_BUDGET_EXHAUSTED": "Budżet AI strony został chwilowo wyczerpany. To nie jest Twój limit.",
-        "AI_CANCELED": "Żądanie zostało anulowane.",
-        "AI_CONCURRENCY_LIMITED": "Inne Twoje żądanie AI jeszcze trwa. Spróbuj za chwilę.",
-        "AI_DAILY_LIMIT_REACHED": "Osiągnięto dzisiejszy limit tej funkcji AI.",
-        "AI_DISABLED": "Funkcje AI są wyłączone na tej stronie.",
-        "AI_INPUT_TOO_LARGE": "Tekst jest za długi dla tej funkcji AI.",
-        "AI_INVALID_INPUT": "Brakuje części tekstu źródłowego lub jest niepoprawna.",
-        "AI_INVALID_OUTPUT": "Odpowiedź AI nie nadawała się do użycia. Nic nie zostało pobrane.",
-        "AI_MODEL_INCOMPATIBLE": "Żaden skonfigurowany model AI jeszcze tego nie potrafi.",
-        "AI_NOT_CONFIGURED": "Nie skonfigurowano modelu AI.",
-        "AI_PRICING_MISSING": "Model AI nie ma cennika, więc nie można ograniczyć kosztu.",
-        "AI_PROVIDER_FAILED": "Dostawca AI zawiódł. Nic nie zostało pobrane.",
-        "AI_RATE_LIMITED": "Zbyt wiele żądań AI. Spróbuj za minutę.",
-        "AI_TIMEOUT": "Dostawca AI odpowiadał zbyt długo. Nic nie zostało pobrane.",
-        "AI_UNAUTHORIZED": "Nie masz dostępu do tej funkcji AI lub tej treści.",
-        "AI_USER_LIMIT_REACHED": "Wykorzystano wszystkie punkty AI w tym miesiącu.",
-        "unknown": "Coś poszło nie tak. Spróbuj ponownie.",
-        "AI_DUPLICATE_REQUEST": "To żądanie zostało już wysłane. Spróbuj ponownie, aby wysłać nowe."
-      },
-      "quick_ask": {
-        "label": "Szybkie pytanie (AI)",
-        "writing": "Piszę…",
-        "stop": "Zatrzymaj",
-        "discard": "Odrzuć",
-        "insert_below": "Wstaw poniżej",
-        "replace": "Zastąp zaznaczenie",
-        "stale": "Zaznaczony tekst zmienił się w trakcie pisania odpowiedzi. Wstaw ją poniżej albo zamknij i spróbuj ponownie.",
-        "tone": "Zmień ton",
-        "select_text": "Zaznacz tekst, aby go przepisać.",
-        "operation": {
-          "shorten": "Skróć",
-          "correct": "Popraw pisownię",
-          "simplify": "Uprość",
-          "continue": "Pisz dalej"
-        },
-        "tones": {
-          "friendly": "Przyjazny",
-          "formal": "Formalny",
-          "confident": "Pewny siebie",
-          "neutral": "Neutralny"
-        },
-        "custom_label": "Albo zapytaj o cokolwiek w sprawie zaznaczenia",
-        "custom_placeholder": "np. Zamień to w listę punktów",
-        "ask": "Zapytaj",
-        "estimate": "Jedno żądanie kosztuje najwyżej {points} punktów AI – zwykle znacznie mniej.",
-        "applied": {
-          "title": "Dodano tekst AI",
-          "desc": "Nic nie jest zapisane, dopóki nie zapiszesz formularza.",
-          "undo": "Cofnij"
-        }
-      }
     }
   },
   "@vitnode/core:files:can_edit_alt": "Edycja tekstu alternatywnego obrazów"

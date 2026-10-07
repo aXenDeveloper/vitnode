@@ -1,19 +1,27 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { cn } from "cn";
 import React from "react";
-import { useTranslations } from "use-intl";
 
-import type { AiOverviewPeriod } from "@/views/admin/views/core/ai/ai-query";
-
-import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/page-title";
-import { AI_OVERVIEW_PERIODS } from "@/views/admin/views/core/ai/ai-query";
-import { AiOverviewContent } from "@/views/admin/views/core/ai/overview/overview-content";
+import { CardsPendingSkeleton } from "@/tanstack/pending";
+import {
+  AiOverviewContent,
+  AiOverviewRangePicker,
+} from "@/views/admin/views/core/ai/overview/overview-content";
 
 import type { AdminAiOverviewRouteData } from "./route";
 import type { AiOverviewRouteSearch } from "./route-search";
 
 import { RouteMessages } from "../../i18n/route-messages";
-import { adminAiActionsQuery, adminAiOverviewQuery } from "./query";
+import {
+  adminAiActionsQuery,
+  adminAiModelsQuery,
+  adminAiOverviewQuery,
+} from "./query";
 import { ADMIN_AI_NAMESPACES } from "./route";
 
 export interface AdminAiOverviewRouteProps extends AdminAiOverviewRouteData {
@@ -23,46 +31,26 @@ export interface AdminAiOverviewRouteProps extends AdminAiOverviewRouteData {
   }) => Promise<void>;
 }
 
-const PeriodSwitch = ({
-  onChange,
-  period,
-}: {
-  onChange: (period: AiOverviewPeriod) => void;
-  period: AiOverviewPeriod;
-}) => {
-  const t = useTranslations("admin.ai.overview.period");
-
-  return (
-    <div aria-label={t("label")} className="flex gap-2" role="group">
-      {AI_OVERVIEW_PERIODS.map(value => (
-        <Button
-          aria-pressed={value === period}
-          key={value}
-          onClick={() => {
-            onChange(value);
-          }}
-          size="sm"
-          variant={value === period ? "secondary" : "ghost"}
-        >
-          {t(value)}
-        </Button>
-      ))}
-    </div>
-  );
-};
-
 export const AdminAiOverviewRouteContent = ({
   adminUserId,
   description,
   navigate,
-  period,
+  search,
   title,
 }: AdminAiOverviewRouteProps) => {
-  const { data } = useSuspenseQuery(
-    adminAiOverviewQuery({ adminUserId, period }),
-  );
+  const overview = useQuery({
+    ...adminAiOverviewQuery({ adminUserId, search }),
+    placeholderData: keepPreviousData,
+  });
   const { data: actionsData } = useSuspenseQuery(
     adminAiActionsQuery({ adminUserId }),
+  );
+  const { data: modelsData } = useSuspenseQuery(
+    adminAiModelsQuery({ adminUserId }),
+  );
+  const modelNames = React.useMemo(
+    () => new Map(modelsData.models.map(model => [model.id, model.name])),
+    [modelsData.models],
   );
   const titles = React.useMemo(
     () =>
@@ -70,25 +58,41 @@ export const AdminAiOverviewRouteContent = ({
     [actionsData.actions],
   );
 
+  const { data } = overview;
+
+  if (!data) return <CardsPendingSkeleton />;
+
   return (
     <RouteMessages namespaces={ADMIN_AI_NAMESPACES}>
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <PageTitle className="mb-0" desc={description} h1={title}>
-          <PeriodSwitch
+          <AiOverviewRangePicker
+            data={data}
             onChange={next => {
-              void navigate({
-                resetScroll: false,
-                search: next === "previous" ? { period: "previous" } : {},
-              });
+              void navigate({ resetScroll: false, search: next });
             }}
-            period={period}
           />
         </PageTitle>
 
-        <AiOverviewContent
-          data={data}
-          describeAction={key => titles.get(key) ?? null}
-        />
+        <div
+          aria-busy={overview.isPlaceholderData}
+          className={cn(
+            "transition-opacity duration-150 ease-out motion-reduce:transition-none",
+            overview.isPlaceholderData && "opacity-60",
+          )}
+        >
+          <AiOverviewContent
+            data={data}
+            describeAction={key => titles.get(key) ?? null}
+            describeModel={id => modelNames.get(id) ?? null}
+            onMonthChange={month => {
+              void navigate({
+                resetScroll: false,
+                search: { ...search, month },
+              });
+            }}
+          />
+        </div>
       </div>
     </RouteMessages>
   );

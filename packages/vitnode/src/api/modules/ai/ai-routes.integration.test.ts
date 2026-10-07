@@ -362,20 +362,88 @@ describePostgres("AI routes (real PostgreSQL)", () => {
       .where(eq(aiTables.core_ai_role_policies.roleId, 2));
     await runFor(ALICE);
 
-    const overview = (await (
-      await request("/admin/ai/overview", { user: ADMIN_ID })
-    ).json()) as {
-      averageOperationCostUsd: string;
-      costSources: { unknown: number };
-      operations: number;
-      pricingCoverage: number;
+    const response = await request("/admin/ai/overview", { user: ADMIN_ID });
+    const overview = (await response.json()) as {
+      budget: {
+        days: { costUsd: string; day: string }[];
+        forecastUsd: null | string;
+        live: boolean;
+        month: string;
+      };
+      byAction: {
+        current: { knownOperations: number; operations: number };
+        key: string;
+      }[];
+      compare: { kind: string };
+      range: {
+        days: { day: string; operations: number }[];
+        end: string;
+        preset: null | string;
+        start: string;
+        totals: {
+          knownCostUsd: string;
+          knownOperations: number;
+          operations: number;
+        };
+      };
+      today: string;
     };
 
-    expect(overview.operations).toBe(4);
-    expect(overview.costSources.unknown).toBe(1);
-    expect(overview.pricingCoverage).toBe(0.75);
-    // 3 known runs at $0.02 each: the unknown one is left out, not averaged as $0.
-    expect(overview.averageOperationCostUsd).toBe("0.02");
+    expect(response.status).toBe(200);
+    expect(overview.range.preset).toBe("this-month");
+    expect(overview.range.end).toBe(overview.today);
+    expect(overview.range.start).toBe(`${overview.today.slice(0, 7)}-01`);
+    expect(overview.compare.kind).toBe("month-to-date");
+    expect(overview.range.totals.operations).toBe(4);
+    // 3 known runs at $0.02 each: the unknown one adds no cost, never $0 of it.
+    expect(overview.range.totals.knownOperations).toBe(3);
+    expect(overview.range.totals.knownCostUsd).toBe("0.06");
+    expect(
+      overview.range.days.reduce((total, day) => total + day.operations, 0),
+    ).toBe(4);
+    expect(overview.byAction).toEqual([
+      expect.objectContaining({
+        current: expect.objectContaining({
+          knownOperations: 3,
+          operations: 4,
+        }),
+        key: "@acme/notes:summary.generate",
+      }),
+    ]);
+    expect(overview.budget.live).toBe(true);
+    expect(overview.budget.month).toBe(overview.today.slice(0, 7));
+    expect(overview.budget.forecastUsd).not.toBeNull();
+  });
+
+  it("reads a custom range and a past budget month, and refuses non-staff", async () => {
+    const custom = await request(
+      "/admin/ai/overview?from=2020-01-31&to=2020-01-01&month=2020-01",
+      { user: ADMIN_ID },
+    );
+    const notStaff = await request("/admin/ai/overview", { user: ALICE });
+    const body = (await custom.json()) as {
+      budget: { forecastUsd: null | string; live: boolean; month: string };
+      compare: { end: string; kind: string; start: string };
+      range: { end: string; preset: null | string; start: string };
+    };
+
+    expect(custom.status).toBe(200);
+    expect(body.range).toMatchObject({
+      end: "2020-01-31",
+      preset: null,
+      start: "2020-01-01",
+    });
+    expect(body.compare).toMatchObject({
+      end: "2019-12-31",
+      kind: "previous-month",
+      start: "2019-12-01",
+    });
+    expect(body.budget).toMatchObject({
+      forecastUsd: null,
+      live: false,
+      month: "2020-01",
+    });
+    expect(notStaff.status).toBe(403);
   });
 
   it("reads a role's AI access for the role form, with action titles", async () => {

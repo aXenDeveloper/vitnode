@@ -552,7 +552,96 @@
         "settings": "Notification settings",
         "action_failed": "That didn't work. Your notifications were refreshed."
       },
-      "tab_has_errors": "Has errors"
+      "tab_has_errors": "Has errors",
+      "calendar": {
+        "previous_month": "Go to the previous month",
+        "next_month": "Go to the next month",
+        "month": "Choose the month",
+        "year": "Choose the year",
+        "navigation": "Calendar navigation",
+        "week_number": "Week {week}",
+        "week_number_header": "Week number",
+        "today": "Today",
+        "selected": "selected",
+        "pick_date": "Pick a date",
+        "presets": "Quick ranges",
+        "pick_range": "Pick a start and an end date",
+        "range_days": "{count, plural, one {# day} other {# days}}",
+        "apply_range": "Apply range"
+      },
+      "ai_assist": {
+        "button": "AI",
+        "open": "AI suggestion for {field}",
+        "title": "AI suggestion",
+        "desc": "Written from the other fields in {language}. Review it before you use it.",
+        "missing_sources": "Fill in {fields} first.",
+        "generating": "Writing a suggestion…",
+        "generate": "Generate",
+        "regenerate": "Try again",
+        "discard": "Discard",
+        "accept": "Use suggestion",
+        "replace_anyway": "Replace my newer text",
+        "stale_source": "The text it was written from changed since. Try again for an up-to-date suggestion.",
+        "target_edited": "You edited this field after asking. Using the suggestion replaces your newer text.",
+        "accepted": {
+          "title": "Suggestion added",
+          "desc": "Save the form to keep it. You can undo by editing the field."
+        },
+        "error": {
+          "title": "No AI suggestion",
+          "AI_ACTION_DISABLED": "An administrator switched this AI feature off.",
+          "AI_BUDGET_EXHAUSTED": "The site's AI budget is used up for now. It is not your limit.",
+          "AI_CANCELED": "The request was canceled.",
+          "AI_CONCURRENCY_LIMITED": "Another AI request of yours is still running. Try again in a moment.",
+          "AI_DAILY_LIMIT_REACHED": "You reached today's limit for this AI feature.",
+          "AI_DISABLED": "AI features are switched off on this site.",
+          "AI_INPUT_TOO_LARGE": "The text is too long for this AI feature.",
+          "AI_INVALID_INPUT": "Some of the source text is missing or invalid.",
+          "AI_INVALID_OUTPUT": "The AI answer was not usable. Nothing was charged to you.",
+          "AI_MODEL_INCOMPATIBLE": "No configured AI model can do this yet.",
+          "AI_NOT_CONFIGURED": "No AI model is configured.",
+          "AI_PRICING_MISSING": "The AI model has no pricing, so its cost cannot be limited.",
+          "AI_PROVIDER_FAILED": "The AI provider failed. Nothing was charged to you.",
+          "AI_RATE_LIMITED": "Too many AI requests. Try again in a minute.",
+          "AI_TIMEOUT": "The AI provider took too long. Nothing was charged to you.",
+          "AI_UNAUTHORIZED": "You do not have access to this AI feature or this content.",
+          "AI_USER_LIMIT_REACHED": "You used all your AI points for this month.",
+          "unknown": "Something went wrong. Try again.",
+          "AI_DUPLICATE_REQUEST": "This request was already sent. Try again for a new one."
+        },
+        "quick_ask": {
+          "label": "Quick Ask (AI)",
+          "writing": "Writing…",
+          "stop": "Stop",
+          "discard": "Discard",
+          "insert_below": "Insert below",
+          "replace": "Replace selection",
+          "stale": "The selected text changed while the answer was written. Insert it below, or close and try again.",
+          "tone": "Change the tone",
+          "select_text": "Select some text to rewrite it.",
+          "operation": {
+            "shorten": "Shorten",
+            "correct": "Correct writing",
+            "simplify": "Simplify",
+            "continue": "Continue writing"
+          },
+          "tones": {
+            "friendly": "Friendly",
+            "formal": "Formal",
+            "confident": "Confident",
+            "neutral": "Neutral"
+          },
+          "custom_label": "Or ask anything about the selection",
+          "custom_placeholder": "e.g. Turn this into a bulleted summary",
+          "ask": "Ask",
+          "estimate": "One request costs at most {points} AI points - usually much less.",
+          "applied": {
+            "title": "AI text added",
+            "desc": "Nothing is saved until you save the form.",
+            "undo": "Undo"
+          }
+        }
+      }
     },
     "navigation": {
       "discover": {
@@ -1681,79 +1770,6 @@
       "empty_title": "Nothing here yet",
       "empty_unread_title": "No unread notifications",
       "empty_desc": "When something needs your attention, it lands here."
-    },
-    "ai_assist": {
-      "button": "AI",
-      "open": "AI suggestion for {field}",
-      "title": "AI suggestion",
-      "desc": "Written from the other fields in {language}. Review it before you use it.",
-      "missing_sources": "Fill in {fields} first.",
-      "generating": "Writing a suggestion…",
-      "generate": "Generate",
-      "regenerate": "Try again",
-      "discard": "Discard",
-      "accept": "Use suggestion",
-      "replace_anyway": "Replace my newer text",
-      "stale_source": "The text it was written from changed since. Try again for an up-to-date suggestion.",
-      "target_edited": "You edited this field after asking. Using the suggestion replaces your newer text.",
-      "accepted": {
-        "title": "Suggestion added",
-        "desc": "Save the form to keep it. You can undo by editing the field."
-      },
-      "error": {
-        "title": "No AI suggestion",
-        "AI_ACTION_DISABLED": "An administrator switched this AI feature off.",
-        "AI_BUDGET_EXHAUSTED": "The site's AI budget is used up for now. It is not your limit.",
-        "AI_CANCELED": "The request was canceled.",
-        "AI_CONCURRENCY_LIMITED": "Another AI request of yours is still running. Try again in a moment.",
-        "AI_DAILY_LIMIT_REACHED": "You reached today's limit for this AI feature.",
-        "AI_DISABLED": "AI features are switched off on this site.",
-        "AI_INPUT_TOO_LARGE": "The text is too long for this AI feature.",
-        "AI_INVALID_INPUT": "Some of the source text is missing or invalid.",
-        "AI_INVALID_OUTPUT": "The AI answer was not usable. Nothing was charged to you.",
-        "AI_MODEL_INCOMPATIBLE": "No configured AI model can do this yet.",
-        "AI_NOT_CONFIGURED": "No AI model is configured.",
-        "AI_PRICING_MISSING": "The AI model has no pricing, so its cost cannot be limited.",
-        "AI_PROVIDER_FAILED": "The AI provider failed. Nothing was charged to you.",
-        "AI_RATE_LIMITED": "Too many AI requests. Try again in a minute.",
-        "AI_TIMEOUT": "The AI provider took too long. Nothing was charged to you.",
-        "AI_UNAUTHORIZED": "You do not have access to this AI feature or this content.",
-        "AI_USER_LIMIT_REACHED": "You used all your AI points for this month.",
-        "unknown": "Something went wrong. Try again.",
-        "AI_DUPLICATE_REQUEST": "This request was already sent. Try again for a new one."
-      },
-      "quick_ask": {
-        "label": "Quick Ask (AI)",
-        "writing": "Writing…",
-        "stop": "Stop",
-        "discard": "Discard",
-        "insert_below": "Insert below",
-        "replace": "Replace selection",
-        "stale": "The selected text changed while the answer was written. Insert it below, or close and try again.",
-        "tone": "Change the tone",
-        "select_text": "Select some text to rewrite it.",
-        "operation": {
-          "shorten": "Shorten",
-          "correct": "Correct writing",
-          "simplify": "Simplify",
-          "continue": "Continue writing"
-        },
-        "tones": {
-          "friendly": "Friendly",
-          "formal": "Formal",
-          "confident": "Confident",
-          "neutral": "Neutral"
-        },
-        "custom_label": "Or ask anything about the selection",
-        "custom_placeholder": "e.g. Turn this into a bulleted summary",
-        "ask": "Ask",
-        "estimate": "One request costs at most {points} AI points - usually much less.",
-        "applied": {
-          "title": "AI text added",
-          "desc": "Nothing is saved until you save the form.",
-          "undo": "Undo"
-        }
-      }
     }
   },
   "admin": {
@@ -3063,63 +3079,103 @@
       },
       "overview": {
         "title": "AI overview",
-        "desc": "What AI costs this month, where it goes and how sure we are about the numbers.",
-        "period": {
-          "label": "Period",
-          "current": "This month",
-          "previous": "Last month"
-        },
-        "period_range": "{start} – {end}",
-        "stats_label": "Key numbers",
+        "desc": "What AI costs, where it goes and how sure we are about the numbers.",
         "disabled": {
           "title": "AI is switched off site-wide",
           "desc": "No AI feature runs for anyone until it's switched back on.",
           "link": "Open AI settings"
         },
+        "range": {
+          "label": "Date range",
+          "this-month": "This month",
+          "last-month": "Last month",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days",
+          "90d": "Last 90 days"
+        },
+        "compare": {
+          "month": "vs {month}",
+          "previous_days": "vs previous {count, plural, one {day} other {# days}}",
+          "range": "vs {range}"
+        },
+        "basis": {
+          "this-month": "this month so far",
+          "last-month": "last month",
+          "7d": "the last 7 days",
+          "30d": "the last 30 days",
+          "90d": "the last 90 days",
+          "custom": "{range}"
+        },
         "budget": {
-          "spent": "Charged to the budget",
+          "title": "{month} budget",
+          "show_month": "Show the budget for {month}",
+          "of_limit": "of {limit}",
+          "day_of": "day {day} of {days}",
+          "month_closed": "closed",
           "no_limit": "No monthly budget is set.",
           "set_limit": "Set one",
-          "of_limit": "{spent} of {limit}",
-          "remaining": "{remaining} left",
-          "reserved": "{reserved} reserved for operations in progress"
+          "meter": "{spent} of {limit} used",
+          "forecast_over": "On pace for {forecast} by {end}, {over} over the budget",
+          "forecast_inside": "On pace for {forecast} by {end}, inside the budget",
+          "forecast_no_limit": "On pace for {forecast} by {end}",
+          "basis": "Based on {basis}: {rate} a day.",
+          "change_limit": "Change the budget",
+          "closed": "{month} closed at {spent}, {share} of the budget",
+          "closed_no_limit": "{month} closed at {spent}",
+          "pace_over": "At the pace of {basis} ({rate} a day), a month costs {monthly}, {over} over the budget.",
+          "pace_inside": "At the pace of {basis} ({rate} a day), a month costs {monthly}, inside the budget.",
+          "pace_no_limit": "At the pace of {basis} ({rate} a day), a month costs {monthly}."
         },
-        "operations": "Operations",
-        "failure_rate": "{share} failed",
-        "average_operation": "Average cost per operation",
-        "average_daily": "About {amount} a day",
-        "tokens": "Tokens",
-        "tokens_split": "{input} in · {output} out",
-        "system_budget": "Background jobs used {spent} of {limit}.",
-        "system_no_limit": "no separate limit",
-        "coverage": {
-          "title": "How sure are these numbers?",
-          "summary": "Cost known for {share} of operations.",
-          "provider": "Provider-reported",
-          "estimated": "Estimated",
-          "unknown": "Unknown",
-          "unknown_hint": "Operations with an unknown cost are charged at their reservation and left out of averages - never counted as $0. Add a price for the model to fix it.",
-          "all_known_hint": "Every operation has a cost: either reported by the provider or estimated from the model's price."
+        "metrics": {
+          "hint": "Change {compare}",
+          "spend": "Spend",
+          "per_run": "Cost per run",
+          "runs": "Runs",
+          "failure_rate": "Failure rate",
+          "tokens": "Tokens",
+          "known": "Cost known"
         },
-        "alt": {
-          "title": "Automatic ALT text",
-          "desc": "Image descriptions written in the background, with their translations. Averages use known costs only.",
-          "images": "Images described",
-          "translations": "Translations",
-          "per_image": "Per image",
-          "per_translation": "Per translation"
+        "delta": {
+          "no_previous": "No earlier data",
+          "no_change": "No change",
+          "up": "Up",
+          "down": "Down"
+        },
+        "chart": {
+          "limit": "Budget {limit}",
+          "budget_title": "{month} spend against the budget",
+          "budget_description": "Running total of {month} spend against the monthly budget, with {previous} as a dashed line and a forecast to the end of the month.",
+          "forecast": "Forecast",
+          "forecast_to": "Forecast to {end}",
+          "spent_so_far": "Spent so far",
+          "running_total": "{metric}, running total",
+          "running_average": "{metric}, average to date",
+          "running_description": "{title} for {range}. The dashed line is the comparison ({compare}).",
+          "so_far": "So far",
+          "budget": "Budget"
         },
         "breakdown": {
           "title": "Where it goes",
+          "split": "Split by",
           "by_action": "By action",
           "by_model": "By model",
-          "by_origin": "By origin",
-          "name": "Name",
-          "operations": "Operations",
+          "action": "Action",
+          "model": "Model",
+          "other": "Other ({count})",
+          "empty": "Nothing ran in this range yet.",
+          "chart_label": "{measure} ranked",
+          "chart_description": "{measure} by action or model, ranked, with the comparison ({compare}) as a mark on each bar. The table below has the same numbers.",
+          "now": "This range",
+          "tick": "Mark: the range before",
+          "unpriced": "{count, plural, one {# run has} other {# runs have}} no price and {count, plural, one {isn't} other {aren't}} counted in cost.",
+          "add_price": "Add a price",
+          "change": "Change {compare}"
+        },
+        "measure": {
+          "cost": "Cost",
+          "ops": "Runs",
           "failures": "Failures",
-          "known_cost": "Known cost",
-          "coverage": "Cost known",
-          "empty": "Nothing ran in this period yet."
+          "tokens": "Tokens"
         }
       },
       "settings": {
