@@ -8,6 +8,10 @@ import type {
 } from "@vitnode/core/api/models/search";
 
 import { Client, errors } from "@elastic/elasticsearch";
+import {
+  MAX_SEARCH_OFFSET,
+  parseSearchOffset,
+} from "@vitnode/core/api/lib/search-offset";
 
 const DEFAULT_INDEX = "vitnode";
 const DEFAULT_SIZE = 20;
@@ -400,7 +404,10 @@ export const ElasticsearchSearchAdapter = (
       await ensureIndex();
 
       const size = Math.min(params.first ?? DEFAULT_SIZE, MAX_SIZE);
-      const from = params.cursor ? Number(params.cursor) : 0;
+      // `from + size` past `max_result_window` (10,000 by default) is a 500 from
+      // Elasticsearch, and so is `from: NaN`.
+      const from =
+        parseSearchOffset(params.cursor, MAX_SEARCH_OFFSET - size) ?? 0;
 
       const res = await getClient().search<EsSource>({
         index,
