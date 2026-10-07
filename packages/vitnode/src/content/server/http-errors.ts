@@ -4,18 +4,23 @@ import { ZodError } from "zod";
 import type {
   ContentConflict,
   ContentDeliveryConflict,
+  ContentDuplicateRejection,
   ContentUnprocessable,
 } from "../conflicts";
+import type { ContentId } from "../ids";
 import type { ContentScheduleCode } from "../schedules";
 
 import { PG_ERROR_CODES, pgErrorCode } from "../../lib/api/pg-error";
 import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
+  CONTENT_DUPLICATE_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "../const";
 import {
   ContentDeliverySlugReserved,
+  ContentDuplicateSlugConflict,
+  ContentDuplicateUniqueRequired,
   ContentInputError,
   ContentRevisionNotRestorable,
   ContentScheduleError,
@@ -48,6 +53,15 @@ export const contentUnprocessable = (
   body: ContentUnprocessable,
 ): HTTPException => jsonError(422, body);
 
+/** A duplicate refused for a reason a form can act on: 409 slug, 422 unique. */
+export const contentDuplicateRejected = (
+  body: ContentDuplicateRejection,
+): HTTPException =>
+  jsonError(
+    body.code === CONTENT_DUPLICATE_CODES.slugConflict ? 409 : 422,
+    body,
+  );
+
 export const contentFileRejected = (body: {
   code: string;
   field: string;
@@ -69,7 +83,7 @@ export const rethrowAsHttpError = (
   }: {
     action: "create" | "delete" | "update";
     contentTypeId?: string;
-    itemId?: number;
+    itemId?: ContentId;
     structured?: boolean;
   },
 ): never => {
@@ -93,6 +107,24 @@ export const rethrowAsHttpError = (
       contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
       locale: error.locale,
       slug: error.slug,
+    });
+  }
+
+  if (error instanceof ContentDuplicateSlugConflict) {
+    throw contentDuplicateRejected({
+      code: CONTENT_DUPLICATE_CODES.slugConflict,
+      contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
+      field: error.field,
+      locale: error.locale,
+      slug: error.slug,
+    });
+  }
+
+  if (error instanceof ContentDuplicateUniqueRequired) {
+    throw contentDuplicateRejected({
+      code: CONTENT_DUPLICATE_CODES.uniqueRequired,
+      contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
+      fields: error.fields,
     });
   }
 
@@ -171,7 +203,7 @@ export const rethrowAsHttpError = (
 
 export interface ContentHttpErrorOptions {
   contentTypeId?: string;
-  itemId?: number;
+  itemId?: ContentId;
   /** Answer 409 and 422 with a JSON body. Editorial content types only. */
   structured?: boolean;
 }

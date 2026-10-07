@@ -29,6 +29,7 @@ import {
 
 const probes = camelCase.table("cursor_probes", {
   big: bigint({ mode: "bigint" }),
+  bigString: bigint({ mode: "string" }),
   clock: time(),
   clockTz: time({ withTimezone: true }),
   day: date(),
@@ -556,5 +557,55 @@ describe("minting keeps the database's own representation", () => {
     expect(cursorValueOf(probes.big, 9007199254740993n)).toBe(
       "9007199254740993",
     );
+  });
+});
+
+describe('a string-mode bigint, which `idStrategy: "bigint"` keys by', () => {
+  const BEYOND_SAFE = "9007199254740993";
+
+  it("is an identifier column that keeps its decimal string exact", () => {
+    expect(isPaginationIdentifierColumn(probes.bigString)).toBe(true);
+    expect(cursorIdentifierOf(probes.bigString, BEYOND_SAFE)).toBe(BEYOND_SAFE);
+    expect(cursorIdentifierForColumn(probes.bigString, BEYOND_SAFE)).toBe(
+      BEYOND_SAFE,
+    );
+  });
+
+  it("orders as a bigint, binding the canonical string rather than a number", () => {
+    expect(cursorValueOf(probes.bigString, BEYOND_SAFE)).toBe(BEYOND_SAFE);
+    expect(cursorValueForColumn(probes.bigString, BEYOND_SAFE)).toBe(
+      BEYOND_SAFE,
+    );
+  });
+
+  it("refuses what the column could never hold with a 400", () => {
+    for (const value of ["1.5", "abc", "9223372036854775808", "-1"]) {
+      let status = 0;
+      try {
+        cursorIdentifierForColumn(probes.bigString, value);
+      } catch (error) {
+        status = statusOf(error);
+      }
+
+      expect([value, status]).toEqual([value, 400]);
+    }
+    expect(() => cursorValueForColumn(probes.bigString, "1.5")).toThrow(
+      HTTPException,
+    );
+  });
+
+  it("round-trips a cursor without a Number in between", () => {
+    const cursor = {
+      column: "bigString",
+      id: BEYOND_SAFE,
+      value: BEYOND_SAFE,
+    };
+
+    expect(
+      decodePaginationCursor(encodePaginationCursor(cursor), {
+        column: "bigString",
+        primary: probes.bigString,
+      }),
+    ).toEqual(cursor);
   });
 });

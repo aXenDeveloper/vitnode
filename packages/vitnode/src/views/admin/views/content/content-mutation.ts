@@ -1,14 +1,16 @@
 import type {
   ContentConflict,
   ContentDeliveryConflict,
+  ContentDuplicateRejection,
   ContentScheduleRejection,
   ContentTranslationConflict,
   ContentUnprocessable,
 } from "@/content/conflicts";
+import type { ContentId } from "@/content/ids";
 
 /** One language's row, as the tab strip, the panel and the form read it. */
 export interface TranslationRow {
-  itemId: number;
+  itemId: ContentId;
   languageId: number;
   locale: string;
   publishedAt?: null | string;
@@ -25,7 +27,7 @@ export interface ContentTranslationInput {
 }
 
 /** Anything the generated routes return: an identifier plus the row's fields. */
-export type ContentRow = Record<string, unknown> & { id: number };
+export type ContentRow = Record<string, unknown> & { id: ContentId };
 
 /** A re-read of one record, for the conflict banner. */
 export interface ContentRowResult {
@@ -37,9 +39,11 @@ export interface ContentMutationResult {
   conflict?: ContentConflict;
 
   delivery?: ContentDeliveryConflict;
+  /** Why a duplicate was refused: no free slug (409) or a unique field (422). */
+  duplicate?: ContentDuplicateRejection;
   error?: string;
 
-  id?: number;
+  id?: ContentId;
   /** Why a schedule was refused, when the API said. */
   rejection?: ContentScheduleRejection;
   /** Lets the UI tell a restricted delete (409) from a generic failure. */

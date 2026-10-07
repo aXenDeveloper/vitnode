@@ -75,7 +75,7 @@ nutrition: field.group({
 }),
 ```
 
-A group adds one column per leaf to the main table, named in camelCase: `nutritionCalories`, `nutritionProtein`, `nutritionNotes`. The API reads and writes it as `{ nutrition: { calories, protein, notes } }`. Leaves can be text, textarea, number, boolean, enum or dateTime fields. A group that is not required needs leaves that are nullable or have a default. Refer to a leaf elsewhere with a path such as `"nutrition.calories"`.
+A group adds one column per leaf to the main table, named in camelCase: `nutritionCalories`, `nutritionProtein`, `nutritionNotes`. The API reads and writes it as `{ nutrition: { calories, protein, notes } }`. Leaves can be text, textarea, rich text, number, boolean, enum or dateTime fields. A group that is not required needs leaves that are nullable or have a default. Refer to a leaf elsewhere with a path such as `"nutrition.calories"`.
 
 ## Repeatable rows
 
@@ -92,7 +92,7 @@ ingredients: field.repeatable({
 }),
 ```
 
-The child table `example_recipes_ingredients` has `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per field. Deleting a recipe deletes its rows. `max` defaults to 100. Export the table as well:
+The child table `example_recipes_ingredients` has `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per field. Deleting a recipe deletes its rows. `max` defaults to 100. Subfields can be the same kinds as group leaves, rich text included. Export the table as well:
 
 ```ts title="plugins/example/src/database/recipes.ts"
 export const example_recipes_ingredients =
@@ -102,6 +102,45 @@ export const example_recipes_ingredients =
 ## Check the result
 
 Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The generated migration should contain one table per junction and repeatable field. Open the create form: the category has a picker, tags accept several values, the nutrition fields sit in their own card and ingredients can be added, removed and reordered.
+
+## Relations across ID strategies
+
+A relation can point at a content type with a different [`idStrategy`](/docs/dev/content-engine/id-strategy). The foreign key always takes the type of the key it references. The example plugin's `example.event` uses `bigint` and links to `uuid` tags and `serial` categories:
+
+```ts title="plugins/example/src/content/event.ts"
+import type { ContentRelationTarget } from "@vitnode/core/content";
+
+import { categoryContentType } from "./category";
+import { tagContentType } from "./tag";
+
+fields: {
+  primaryTag: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: (): ContentRelationTarget<"uuid"> => tagContentType,
+  }),
+  category: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: () => categoryContentType,
+  }),
+  tags: field.relation({ multiple: true, ordered: true, target: () => tagContentType }),
+  relatedEvents: field.relation({ multiple: true, onDelete: "cascade", self: true }),
+}
+```
+
+| Field           | Column or junction                                      |
+| --------------- | ------------------------------------------------------- |
+| `primaryTag`    | `uuid` column referencing `example_tags.id`             |
+| `category`      | `integer` column referencing `example_categories.id`    |
+| `tags`          | `example_events_tags`: `itemId bigint`, `relatedItemId uuid` |
+| `relatedEvents` | `example_events_related_events`: both columns `bigint`  |
+
+`field.relation()` reads the target's strategy from `target`, so the relation's values are typed as `string` for tags and `number` for categories. When two content type files import each other, TypeScript cannot infer a type through the cycle and falls back to serial. Annotate the thunk with `ContentRelationTarget<"uuid">` or `ContentRelationTarget<"bigint">`, as `primaryTag` does above. At runtime, a `references` entry whose column type disagrees with the target's strategy throws and names the field.
+
+## Duplicating records with relations
+
+When a content type has [duplication](/docs/dev/content-engine/duplicate-content), the copy links to the same records, users and files as the source, in the same order. Files are shared, not uploaded again. Repeatable rows are copied as new rows with new ids, in the same order, so editing the copy's ingredients never changes the original's.
 
 ## Relation options
 

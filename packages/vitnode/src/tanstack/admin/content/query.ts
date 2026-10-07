@@ -1,14 +1,26 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
 import type { AnyContentTypeDefinition } from "@/content/types";
+import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
+import type { ContentItem } from "@/views/admin/views/content/form/item-query";
 import type {
+  ContentDuplicateInput,
+  ContentDuplicateMutationResult,
   ContentRowMutationArgs,
   ContentRowMutationResult,
 } from "@/views/admin/views/content/table/list-mutations";
 import type { ContentListRequest } from "@/views/admin/views/content/table/list-query";
 
+import {
+  contentItemQueryOptions,
+  contentItemTitle,
+  contentTranslationsQueryOptions,
+  fetchContentItem,
+  fetchContentTranslations,
+} from "@/views/admin/views/content/form/item-query";
 import {
   invalidateContentItem,
   invalidateContentList,
@@ -17,7 +29,9 @@ import {
 } from "@/views/admin/views/content/lib/invalidate";
 import {
   deleteContentInBrowser,
+  duplicateContentInBrowser,
   setContentPublicationInBrowser,
+  setContentVisibilityInBrowser,
 } from "@/views/admin/views/content/table/list-mutations";
 import {
   contentListQueryOptions,
@@ -71,7 +85,7 @@ export const invalidateContentAfterWrite = async (
     contentTypeId,
     itemId,
     removed = false,
-  }: { contentTypeId: string; itemId?: number; removed?: boolean },
+  }: { contentTypeId: string; itemId?: ContentId; removed?: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 
@@ -92,7 +106,7 @@ export const invalidateContentAfterBulkWrite = async (
     contentTypeId,
     itemIds,
     removed,
-  }: { contentTypeId: string; itemIds: readonly number[]; removed: boolean },
+  }: { contentTypeId: string; itemIds: readonly ContentId[]; removed: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 
@@ -138,6 +152,131 @@ export const setContentPublication = async (
   }
 
   return result;
+};
+
+/** Copies a row as a draft, then refreshes the list it will appear in. */
+export const duplicateContentRow = async (
+  queryClient: QueryClient,
+  {
+    contentTypeId,
+    id,
+    input,
+    target,
+  }: ContentRowWriteArgs & { input?: ContentDuplicateInput },
+): Promise<ContentDuplicateMutationResult> => {
+  const result = await duplicateContentInBrowser({ id, input, target });
+
+  if (result.error === undefined) {
+    await invalidateContentAfterWrite(queryClient, { contentTypeId });
+  }
+
+  return result;
+};
+
+/**
+ * Hides or unhides a row, then refreshes everything that showed it.
+ *
+ * `expectedVersion` is the version the row was rendered at; an editorial
+ * content type answers a stale one with a `409` instead of acting on a record
+ * somebody else just changed.
+ */
+export const setContentVisibility = async (
+  queryClient: QueryClient,
+  {
+    action,
+    contentTypeId,
+    expectedVersion,
+    id,
+    target,
+  }: ContentRowWriteArgs & {
+    /** The transition to perform, from `contentVisibilityTransition`. */
+    action: ContentVisibilityAction;
+    expectedVersion?: number;
+  },
+): Promise<ContentRowMutationResult> => {
+  const result = await setContentVisibilityInBrowser({
+    action,
+    expectedVersion,
+    id,
+    target,
+  });
+
+  if (result.error === undefined) {
+    await invalidateContentAfterWrite(queryClient, {
+      contentTypeId,
+      itemId: id,
+    });
+  }
+
+  return result;
+};
+
+/**
+ * The copy a duplicate just made, read the way its edit screen reads it.
+ *
+ * Through the same query definitions the edit page's loader uses, so the
+ * navigation that follows paints from the cache - and so a localized title,
+ * which is not on the duplicate's base row, comes from the copy's own
+ * translation rather than from a guess about the suffix the server added.
+ * Falls back to the duplicate's own row when the read fails: the copy exists
+ * either way, and the toast and the hand-off must not depend on a second
+ * request.
+ */
+export const readDuplicatedContent = async (
+  queryClient: QueryClient,
+  {
+    definition,
+    fallback,
+    id,
+    locale,
+    pluginId,
+  }: {
+    definition: AnyContentTypeDefinition;
+    /** The `row` the duplicate answered with. */
+    fallback: Record<string, unknown>;
+    id: ContentId;
+    /** The language the administrator reads the AdminCP in. */
+    locale: string;
+    pluginId: string;
+  },
+): Promise<{ row: ContentItem; title: string }> => {
+  const request = {
+    contentTypeId: definition.id,
+    itemId: id,
+    target: contentApiTarget(definition, pluginId),
+  };
+  const base: ContentItem = { ...fallback, id: request.itemId };
+
+  try {
+    const [row, translations] = await Promise.all([
+      queryClient.query({
+        ...contentItemQueryOptions({ fetchItem: fetchContentItem, request }),
+      }),
+      definition.localization.enabled
+        ? queryClient.query({
+            ...contentTranslationsQueryOptions({
+              fetchTranslations: fetchContentTranslations,
+              request,
+            }),
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      row,
+      title: contentItemTitle({ definition, locale, row, translations }),
+    };
+  } catch {
+    return {
+      row: base,
+      title: contentItemTitle({
+        definition,
+        locale,
+        row: base,
+        translations: [],
+      }),
+    };
+  }
 };
 
 /** Deletes a row, then drops everything that was about it. */

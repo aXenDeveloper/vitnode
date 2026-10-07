@@ -10,7 +10,9 @@ import type {
   ContentNumberField,
   ContentOnDelete,
   ContentRelationField,
+  ContentRelationTarget,
   ContentRepeatableField,
+  ContentRichTextField,
   ContentSlugField,
   ContentSlugRequired,
   ContentTextareaField,
@@ -87,6 +89,36 @@ const textarea = <
   ...shared(args),
   defaultValue: args.defaultValue as TDefault,
   kind: "textarea",
+  localized: localizedOf(args),
+});
+
+/**
+ * Formatted text edited with the AdminCP's rich text editor and stored as HTML.
+ *
+ * Same column as `textarea`, so switching a field between the two changes no
+ * schema. What changes is the contract: the server sanitises every write,
+ * `required` refuses an editor that holds nothing but empty markup, and
+ * `minLength` / `maxLength` count the plain text a reader sees.
+ */
+const richText = <
+  TRequired extends boolean = false,
+  TNullable extends boolean = false,
+  TDefault extends string | undefined = undefined,
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & {
+      defaultValue?: TDefault;
+      /** Most characters of plain text, markup excluded. */
+      maxLength?: number;
+      /** Fewest characters of plain text, markup excluded. */
+      minLength?: number;
+    } = {},
+): ContentRichTextField<TRequired, TNullable, TDefault, TLocalized> => ({
+  ...args,
+  ...shared(args),
+  defaultValue: args.defaultValue as TDefault,
+  kind: "richText",
   localized: localizedOf(args),
 });
 
@@ -273,6 +305,11 @@ const relation = <
   TMultiple extends boolean = false,
   TOrdered extends boolean = false,
   TSelf extends boolean = false,
+  // Inferred from the thunk, so a relation's values are typed by its target's id
+  // strategy. Defaults to `serial` - what every target written before
+  // strategies existed is - and a `self` relation keeps that placeholder until
+  // `ContentFieldsOf` rebinds it to the owner's strategy.
+  TTarget extends ContentRelationTarget = ContentRelationTarget<"serial">,
 >(
   args: SharedArgs<TRequired, TNullable> & {
     min?: number;
@@ -281,9 +318,16 @@ const relation = <
     ordered?: TOrdered;
     /** The target is this content type. Mutually exclusive with `target`. */
     self?: TSelf;
-    target?: () => AnyContentTypeDefinition;
+    target?: () => TTarget;
   },
-): ContentRelationField<TRequired, TNullable, TMultiple, TOrdered, TSelf> => ({
+): ContentRelationField<
+  TRequired,
+  TNullable,
+  TMultiple,
+  TOrdered,
+  TSelf,
+  TSelf extends true ? "serial" : TTarget["idStrategy"]
+> => ({
   ...args,
   ...shared(args),
   kind: "relation",
@@ -294,7 +338,11 @@ const relation = <
   onDelete: args.onDelete ?? "restrict",
   ordered: (args.ordered ?? false) as TOrdered,
   self: (args.self ?? false) as TSelf,
-  target: args.target ?? unboundSelfTarget,
+  // The descriptor's own strategy is the type-level contract; at runtime the
+  // thunk returns whichever definition it names.
+  target: (args.target ?? unboundSelfTarget) as () => ContentRelationTarget<
+    TSelf extends true ? "serial" : TTarget["idStrategy"]
+  >,
 });
 
 const group = <
@@ -357,6 +405,7 @@ export const field = {
   number,
   relation,
   repeatable,
+  richText,
   slug,
   text,
   textarea,

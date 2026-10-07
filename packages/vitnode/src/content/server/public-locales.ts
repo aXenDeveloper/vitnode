@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { eq } from "drizzle-orm";
 
 import type { ContentPublicLocaleState } from "../cache";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
@@ -16,9 +17,13 @@ export type { ContentPublicLocaleState };
 
 type PublicationRow = Record<string, unknown> | undefined;
 
+// `hiddenAt` is read off whichever row it is handed: the base row carries it when
+// the content type has `visibility`, and a translation row never does - hiding is
+// record-level, so a hidden base row takes every language down with it.
 const isVisible = (row: PublicationRow): boolean =>
   row !== undefined &&
   isContentPubliclyVisible({
+    hiddenAt: row.hiddenAt as Date | null | string | undefined,
     publishedAt: row.publishedAt as Date | null | string | undefined,
     status: typeof row.status === "string" ? row.status : undefined,
   });
@@ -32,7 +37,7 @@ export const contentPublicLocaleStates = async <
 >(
   c: Context,
   model: ContentModel<TDefinition>,
-  itemId: number,
+  itemId: ContentId,
   { row }: { row?: Record<string, unknown> } = {},
 ): Promise<ContentPublicLocaleState[]> => {
   const { definition } = model;
@@ -59,6 +64,9 @@ export const contentPublicLocaleStates = async <
       await c
         .get("db")
         .select({
+          ...(definition.visibility.enabled
+            ? { hiddenAt: columns.hiddenAt }
+            : {}),
           publishedAt: columns.publishedAt,
           status: columns.status,
           ...(slugIsLocalized ? {} : { [slugField]: columns[slugField] }),

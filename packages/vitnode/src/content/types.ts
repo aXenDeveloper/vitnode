@@ -16,8 +16,16 @@ import type {
   CONTENT_SITEMAP_CHANGE_FREQUENCIES,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
+  CONTENT_VISIBILITY_FILTERS,
 } from "./const";
 import type { ContentFileDescriptor } from "./files";
+import type {
+  ContentId,
+  ContentIdOf,
+  ContentIdOfStrategy,
+  ContentIdStrategy,
+} from "./ids";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -26,6 +34,12 @@ export type ContentPublicationField =
   (typeof CONTENT_PUBLICATION_FIELDS)[number];
 
 export type ContentEditorialField = (typeof CONTENT_EDITORIAL_FIELDS)[number];
+
+export type ContentVisibilityField = (typeof CONTENT_VISIBILITY_FIELDS)[number];
+
+/** The admin list's `visibility` filter value. */
+export type ContentVisibilityFilter =
+  (typeof CONTENT_VISIBILITY_FILTERS)[number];
 
 export type ContentTranslationSystemField =
   (typeof CONTENT_TRANSLATION_SYSTEM_FIELDS)[number];
@@ -108,6 +122,28 @@ export interface ContentTextareaField<
   kind: "textarea";
   localized: TLocalized;
   maxLength?: number;
+  minLength?: number;
+}
+
+/**
+ * Formatted text from the AdminCP editor, stored as an HTML string in a `text`
+ * column - the same column a `textarea` generates.
+ *
+ * Every write is sanitised on the server, `required` means "has text or media",
+ * and `minLength` / `maxLength` count the *plain text*, never the markup.
+ */
+export interface ContentRichTextField<
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+  TDefault extends string | undefined = string | undefined,
+  TLocalized extends boolean = boolean,
+> extends ContentFieldShared<TRequired, TNullable> {
+  defaultValue: TDefault;
+  kind: "richText";
+  localized: TLocalized;
+  /** Most characters of plain text, markup excluded. */
+  maxLength?: number;
+  /** Fewest characters of plain text, markup excluded. */
   minLength?: number;
 }
 
@@ -203,12 +239,24 @@ interface ContentReferenceCollection {
   multiple: true;
 }
 
+/**
+ * What a relation thunk resolves to: any content type, narrowed to the id
+ * strategy its records are keyed by. The strategy is the only thing about the
+ * target a relation's *value* depends on - it decides whether the foreign key is
+ * an `integer`, a `uuid` or a `bigint`, and whether the API carries a number or
+ * a string.
+ */
+export type ContentRelationTarget<
+  TStrategy extends ContentIdStrategy = ContentIdStrategy,
+> = AnyContentTypeDefinition & { idStrategy: TStrategy };
+
 export interface ContentRelationField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
   TMultiple extends boolean = boolean,
   TOrdered extends boolean = boolean,
   TSelf extends boolean = boolean,
+  TTargetStrategy extends ContentIdStrategy = ContentIdStrategy,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "relation";
 
@@ -220,8 +268,11 @@ export interface ContentRelationField<
   ordered: TOrdered;
 
   self: TSelf;
-  /** Thunk so two content types can refer to each other. */
-  target: () => AnyContentTypeDefinition;
+  /**
+   * Thunk so two content types can refer to each other. Its return type carries
+   * the target's id strategy, which is what the relation's values are typed by.
+   */
+  target: () => ContentRelationTarget<TTargetStrategy>;
 }
 
 export interface ContentGroupField<
@@ -268,6 +319,7 @@ export type ContentFieldDescriptor =
   | ContentNumberField
   | ContentRelationField
   | ContentRepeatableField
+  | ContentRichTextField
   | ContentSlugField
   | ContentTextareaField
   | ContentTextField
@@ -280,6 +332,7 @@ export type ContentLeafFieldDescriptor =
   | ContentDateTimeField
   | ContentEnumField
   | ContentNumberField
+  | ContentRichTextField
   | ContentTextareaField
   | ContentTextField;
 
@@ -311,6 +364,25 @@ type ApplyNullable<TValue, TField> = TField extends { nullable: true }
   ? null | TValue
   : TValue;
 
+/**
+ * The identifier type a relation field holds: its target's, read off the
+ * target thunk. A field whose target is erased holds either, which is what
+ * generic engine code handles.
+ */
+export type ContentRelationIdOf<TField> = TField extends {
+  target: () => { idStrategy: infer TStrategy };
+}
+  ? ContentIdOfStrategy<TStrategy>
+  : number;
+
+/**
+ * The identifier one reference field holds: a relation's target id, or the
+ * `core_users.id` / `core_files.id` a user or file field holds.
+ */
+export type ContentReferenceIdOf<TField> = TField extends { kind: "relation" }
+  ? ContentRelationIdOf<TField>
+  : number;
+
 /** The scalar half of {@link ContentFieldValue}, before nullability. */
 type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
   ? boolean
@@ -318,9 +390,11 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
     ? Date
     : TField extends { values: readonly (infer TValue)[] }
       ? TValue
-      : TField extends { kind: "file" | "number" | "relation" | "user" }
-        ? number
-        : string;
+      : TField extends { kind: "relation" }
+        ? ContentRelationIdOf<TField>
+        : TField extends { kind: "file" | "number" | "user" }
+          ? number
+          : string;
 
 /** The scalar half of {@link ContentFieldInput}. `dateTime` crosses as ISO. */
 type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
@@ -329,9 +403,11 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
     ? string
     : TField extends { values: readonly (infer TValue)[] }
       ? TValue
-      : TField extends { kind: "file" | "number" | "relation" | "user" }
-        ? number
-        : string;
+      : TField extends { kind: "relation" }
+        ? ContentRelationIdOf<TField>
+        : TField extends { kind: "file" | "number" | "user" }
+          ? number
+          : string;
 
 /** Every leaf of a group, as it comes back. Nested, never flattened. */
 type ContentGroupValue<TFields> = Prettify<{
@@ -369,7 +445,7 @@ export type ContentFieldValue<TField> = TField extends { kind: "blocks" }
     : TField extends { fields: infer TInner; kind: "repeatable" }
       ? ContentRepeatableRow<TInner>[]
       : TField extends ContentReferenceCollection
-        ? number[]
+        ? ContentReferenceIdOf<TField>[]
         : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
 export type ContentFieldInput<TField> = TField extends { kind: "blocks" }
@@ -382,7 +458,7 @@ export type ContentFieldInput<TField> = TField extends { kind: "blocks" }
     : TField extends { fields: infer TInner; kind: "repeatable" }
       ? ContentRepeatableInputRow<TInner>[]
       : TField extends ContentReferenceCollection
-        ? number[]
+        ? ContentReferenceIdOf<TField>[]
         : ApplyNullable<ScalarFieldInput<TField>, TField>;
 
 export type ContentFieldPatch<TField> = TField extends {
@@ -648,8 +724,9 @@ export interface ContentAdminListConfig<
    */
   orderableFields?: ScalarColumnFieldKeys<TFields>[];
   /**
-   * `text`, `textarea` and `slug` fields the list's search box matches. A
-   * localized field matches its value in any language.
+   * `text`, `textarea`, `richText` and `slug` fields the list's search box
+   * matches. A localized field matches its value in any language. A `richText`
+   * field is matched on its plain text, never on its markup.
    */
   searchableFields?: ScalarDisplayFieldKeys<TFields>[];
   thumbnailField?: ContentSingleFileFieldKeys<TFields>;
@@ -916,6 +993,69 @@ type ContentPublicationColumns<TDefinition> = TDefinition extends {
 }
   ? { publishedAt: Date | null; status: ContentPublicationStatus }
   : Record<never, never>;
+
+// ---------------------------------------------------------------------------
+// Visibility
+// ---------------------------------------------------------------------------
+
+/**
+ * Opts a content type into record-level hiding: an editor can take a record off
+ * the public site without touching its publication status. Needs `publication`.
+ */
+export interface ContentVisibilityConfig {
+  enabled: true;
+}
+
+export interface ResolvedContentVisibilityConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+}
+
+export type ContentVisibilityEnabled<TVisibility> = TVisibility extends {
+  enabled: true;
+}
+  ? true
+  : false;
+
+/**
+ * The two generated columns, present only when visibility is enabled. A record
+ * is hidden exactly when `hiddenAt` is set; there is no separate flag to drift.
+ */
+type ContentVisibilityColumns<TDefinition> = TDefinition extends {
+  visibility: { enabled: true };
+}
+  ? { hiddenAt: Date | null; hiddenBy: null | number }
+  : Record<never, never>;
+
+// ---------------------------------------------------------------------------
+// Duplication
+// ---------------------------------------------------------------------------
+
+/** Opts a content type into "Duplicate": a draft copy of one record. */
+export interface ContentDuplicationConfig {
+  enabled: true;
+  /**
+   * Appends a localized "(Copy)" suffix to the copy's `admin.titleField`, in
+   * every copied language, trimmed to the field's `maxLength`. Defaults to
+   * `true`; it applies only when the title field is a `text` field.
+   */
+  titleSuffix?: boolean;
+}
+
+export interface ResolvedContentDuplicationConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+  /** The `text` field the copy suffix is appended to, or `null` for none. */
+  titleSuffixField: null | string;
+}
+
+export type ContentDuplicationEnabled<TDuplication> = TDuplication extends {
+  enabled: true;
+}
+  ? true
+  : false;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -1580,7 +1720,7 @@ export type ContentTranslationPublicationColumns<TDefinition> =
 export type ContentTranslationRow<TDefinition> = Prettify<
   ContentTranslationPublicationColumns<TDefinition> & {
     createdAt: Date;
-    itemId: number;
+    itemId: ContentIdOf<TDefinition>;
     languageId: number;
     /** The canonical `core_languages.code`, never the caller's casing. */
     locale: string;
@@ -1594,7 +1734,7 @@ export type ContentTranslationMeta<TDefinition = AnyContentTypeDefinition> =
   Prettify<
     ContentTranslationPublicationColumns<TDefinition> & {
       createdAt: Date;
-      itemId: number;
+      itemId: ContentIdOf<TDefinition>;
       languageId: number;
       locale: string;
       updatedAt: Date;
@@ -1638,6 +1778,17 @@ export type LocalizedContentTypeDefinition = AnyContentTypeDefinition & {
   localization: { enabled: true };
 };
 
+/** A content type whose records can be hidden from the public site. */
+export type HideableContentTypeDefinition = AnyContentTypeDefinition & {
+  publication: { enabled: true };
+  visibility: { enabled: true };
+};
+
+/** A content type whose records can be duplicated as drafts. */
+export type DuplicableContentTypeDefinition = AnyContentTypeDefinition & {
+  duplication: { enabled: true };
+};
+
 export interface ResolvedContentAdvancedConfig {
   /** One generated junction table per to-many relation field. */
   junctions: ContentRelationJunction[];
@@ -1674,12 +1825,17 @@ export interface ContentTypeDefinition<
   TLocalizationEnabled extends boolean = boolean,
   TDeliveryEnabled extends boolean = boolean,
   TPublicPath extends string = string,
+  TVisibilityEnabled extends boolean = boolean,
+  TDuplicationEnabled extends boolean = boolean,
+  TIdStrategy extends ContentIdStrategy = ContentIdStrategy,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;
 
   delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
+  /** Draft copies of a record, or the disabled default when omitted. */
+  duplication: ResolvedContentDuplicationConfig<TDuplicationEnabled>;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
   editorial: ResolvedContentEditorialConfig<
     TEditorialEnabled,
@@ -1688,6 +1844,8 @@ export interface ContentTypeDefinition<
   >;
   fields: TFields;
   id: TId;
+  /** How the primary key is generated. `serial` unless the definition says otherwise. */
+  idStrategy: TIdStrategy;
   /** Declared indexes plus the automatic ones, deduplicated and named. */
   indexes: ResolvedContentIndex[];
   /**
@@ -1716,30 +1874,76 @@ export interface ContentTypeDefinition<
       TPreviewEnabled,
       TSchedulingEnabled,
       TLocalizationEnabled,
-      TDeliveryEnabled
+      TDeliveryEnabled,
+      TPublicPath,
+      TVisibilityEnabled,
+      TDuplicationEnabled,
+      TIdStrategy
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
   search: ResolvedContentSearchConfig<TSearchEnabled>;
   tableName: string;
+  /** Record-level hiding, or the disabled default when `visibility` is omitted. */
+  visibility: ResolvedContentVisibilityConfig<TVisibilityEnabled>;
 }
 
 /** Use in constraints where the concrete field map does not matter. */
 export type AnyContentTypeDefinition = ContentTypeDefinition;
 
+/**
+ * A definition's field map, with every `self: true` relation re-pointed at the
+ * definition's own id strategy. `field.relation({ self: true })` is written
+ * before the content type exists, so its descriptor cannot know which strategy
+ * it will be keyed by; this is the one place that fills it in. A `serial`
+ * content type - every content type written before strategies existed - and an
+ * erased field map are returned untouched.
+ */
 export type ContentFieldsOf<TDefinition> = TDefinition extends {
   fields: infer TFields;
 }
-  ? TFields
+  ? TDefinition extends { idStrategy: infer TStrategy }
+    ? [TStrategy] extends ["serial"]
+      ? TFields
+      : string extends keyof TFields
+        ? TFields
+        : TStrategy extends ContentIdStrategy
+          ? ContentBindSelfRelations<TFields, TStrategy>
+          : TFields
+    : TFields
   : never;
+
+/** {@link ContentFieldsOf}'s rebinding of self relations, for one field map. */
+export type ContentBindSelfRelations<
+  TFields,
+  TStrategy extends ContentIdStrategy,
+> = {
+  [K in keyof TFields]: TFields[K] extends ContentRelationField<
+    infer TRequired,
+    infer TNullable,
+    infer TMultiple,
+    infer TOrdered,
+    true
+  >
+    ? ContentRelationField<
+        TRequired,
+        TNullable,
+        TMultiple,
+        TOrdered,
+        true,
+        TStrategy
+      >
+    : TFields[K];
+};
 
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
-    ContentPublicationColumns<TDefinition> & {
+    ContentPublicationColumns<TDefinition> &
+    ContentVisibilityColumns<TDefinition> & {
       [K in ColumnFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldValue<
         ContentFieldsOf<TDefinition>[K]
       >;
-    } & { createdAt: Date; id: number; updatedAt: Date }
+    } & { createdAt: Date; id: ContentIdOf<TDefinition>; updatedAt: Date }
 >;
 
 export type ContentDetail<TDefinition> = Prettify<
@@ -1797,14 +2001,28 @@ export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
   FilterableContentFieldKind
 >;
 
-export interface ContentRelationFilter {
-  contains: number;
+/** A to-many filter by membership: rows whose collection holds `contains`. */
+export interface ContentRelationFilter<TId = ContentId> {
+  contains: TId;
 }
 
+/** One {@link ContentRelationFilter} per to-many reference, typed by its target. */
+type ContentCollectionFilters<TDefinition, TName extends PropertyKey> = {
+  [K in keyof ContentFieldsOf<TDefinition> & TName]: ContentRelationFilter<
+    ContentReferenceIdOf<ContentFieldsOf<TDefinition>[K]>
+  >;
+};
+
 export type ContentFilterInput<TDefinition> = Partial<
-  Record<ContentRelationCollectionName<TDefinition>, ContentRelationFilter> &
+  ContentCollectionFilters<
+    TDefinition,
+    ContentRelationCollectionName<TDefinition>
+  > &
     (TDefinition extends { publication: { enabled: true } }
       ? { status: ContentPublicationStatus }
+      : Record<never, never>) &
+    (TDefinition extends { visibility: { enabled: true } }
+      ? { visibility: ContentVisibilityFilter }
       : Record<never, never>) & {
       [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
         ContentFieldsOf<TDefinition>[K]
@@ -1832,8 +2050,9 @@ export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
 // Public projection
 // ---------------------------------------------------------------------------
 
-export interface ContentPublicRelation {
-  id: number;
+/** A to-one relation as the public API returns it. */
+export interface ContentPublicRelation<TId = number> {
+  id: TId;
 }
 
 /** The exposed field names of one content type, read off its resolved config. */
@@ -1843,8 +2062,8 @@ export type ContentPublicFieldName<TDefinition> = TDefinition extends {
   ? TField
   : never;
 
-type ContentPublicValue<TFields, TName extends string> = TName extends "id"
-  ? number
+type ContentPublicValue<TFields, TName extends string, TId> = TName extends "id"
+  ? TId
   : TName extends "createdAt" | "updatedAt"
     ? Date
     : TName extends "publishedAt"
@@ -1863,11 +2082,13 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
               ? ContentFileDescriptor | null
               : ContentFileDescriptor
             : TFields[TName] extends { kind: "relation"; multiple: true }
-              ? number[]
+              ? ContentRelationIdOf<TFields[TName]>[]
               : TFields[TName] extends { kind: "relation" }
                 ? TFields[TName] extends { nullable: true }
-                  ? ContentPublicRelation | null
-                  : ContentPublicRelation
+                  ? ContentPublicRelation<
+                      ContentRelationIdOf<TFields[TName]>
+                    > | null
+                  : ContentPublicRelation<ContentRelationIdOf<TFields[TName]>>
                 : ContentFieldValue<TFields[TName]>
         : never;
 
@@ -1933,7 +2154,11 @@ export type ContentPublicSelect<TDefinition> = Prettify<
     > & {
       [
         K in PublicFlatName<ContentPublicFieldName<TDefinition>>
-      ]: ContentPublicValue<ContentFieldsOf<TDefinition>, K>;
+      ]: ContentPublicValue<
+        ContentFieldsOf<TDefinition>,
+        K,
+        ContentIdOf<TDefinition>
+      >;
     }
 >;
 
@@ -1975,10 +2200,10 @@ export type ContentPublicListRow<TDefinition> =
  * narrower check is the runtime allowlist.
  */
 export type ContentPublicFilterInput<TDefinition> = Partial<
-  Record<
+  ContentCollectionFilters<
+    TDefinition,
     ContentPublicFieldName<TDefinition> &
-      ContentRelationCollectionName<TDefinition>,
-    ContentRelationFilter
+      ContentRelationCollectionName<TDefinition>
   > & {
     [
       K in ContentPublicFieldName<TDefinition> &

@@ -1,3 +1,5 @@
+import type { ContentId } from "@/content/ids";
+
 import type { ContentRowMutationResult } from "./list-mutations";
 
 export const CONTENT_BULK_CONCURRENCY = 4;
@@ -6,10 +8,10 @@ export const CONTENT_BULK_ACTIONS = ["publish", "unpublish", "delete"] as const;
 
 export type ContentBulkAction = (typeof CONTENT_BULK_ACTIONS)[number];
 
-export interface ContentBulkResult {
+export interface ContentBulkResult<TId extends ContentId = ContentId> {
   conflicted: number;
   failed: number;
-  succeeded: number[];
+  succeeded: TId[];
 }
 
 export const contentBulkActions = ({
@@ -30,11 +32,11 @@ const SERVER_ERROR: ContentRowMutationResult = {
   status: 500,
 };
 
-export const runContentBulkAction = async (
-  ids: readonly number[],
-  runOne: (id: number) => Promise<ContentRowMutationResult>,
-): Promise<ContentBulkResult> => {
-  const outcomes = new Map<number, ContentRowMutationResult>();
+export const runContentBulkAction = async <TId extends ContentId>(
+  ids: readonly TId[],
+  runOne: (id: TId) => Promise<ContentRowMutationResult>,
+): Promise<ContentBulkResult<TId>> => {
+  const outcomes = new Map<TId, ContentRowMutationResult>();
   const queue = [...ids];
 
   const worker = async () => {
@@ -50,7 +52,11 @@ export const runContentBulkAction = async (
     ),
   );
 
-  const result: ContentBulkResult = { conflicted: 0, failed: 0, succeeded: [] };
+  const result: ContentBulkResult<TId> = {
+    conflicted: 0,
+    failed: 0,
+    succeeded: [],
+  };
 
   for (const id of ids) {
     const outcome = outcomes.get(id) ?? SERVER_ERROR;

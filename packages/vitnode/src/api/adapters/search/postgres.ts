@@ -25,8 +25,10 @@ import type {
   SearchQueryParams,
   SearchResult,
 } from "@/api/models/search";
+import type { RegisteredContentType } from "@/content/registry";
 
 import { storageUrlOf } from "@/api/lib/storage-url";
+import { searchItemIdFromKey } from "@/api/models/search";
 import { core_files } from "@/database/files";
 import { core_search_index, resolveSearchTextConfig } from "@/database/search";
 import { core_users } from "@/database/users";
@@ -258,11 +260,13 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     const hasNextPage = rows.length > size;
     const sliced = rows.slice(0, size);
 
+    const contentTypes: RegisteredContentType[] | undefined =
+      c.get("core").contentTypes;
     const edges: SearchHit[] = sliced.map(row => ({
       id: row.id,
       pluginId: row.pluginId,
       itemType: row.itemType,
-      itemId: row.itemId,
+      itemId: searchItemIdFromKey(contentTypes, row.itemType, row.itemId),
       languageCode: row.languageCode,
       authorId: row.authorId,
       title: row.title,

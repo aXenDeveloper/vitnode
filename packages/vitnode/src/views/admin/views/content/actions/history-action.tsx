@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentId } from "@/content/ids";
 
 import type { ContentPanelProps } from "./content-panel";
 
@@ -27,7 +28,7 @@ export const HistoryContentPanel = ({
 }: ContentPanelProps & {
   contentTypeId: string;
   currentVersion: number;
-  id: number;
+  id: ContentId;
   permissionModule: string;
   pluginId: string;
   singular: string;

@@ -256,7 +256,7 @@ export const resolveAdmin = <TFields>(
   );
   if (notSearchable !== undefined) {
     throw new ContentEngineError(
-      `admin.list.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field.`,
+      `admin.list.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field, nor a richText field.`,
       { contentTypeId: id },
     );
   }

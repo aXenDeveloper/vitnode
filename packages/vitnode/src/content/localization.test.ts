@@ -243,7 +243,9 @@ describe("localization validation", () => {
           other: { ...fieldValue, localized: true } as never,
         },
       }),
-    ).toThrow(/Only blocks, slug, text, textarea fields and `field.group`/);
+    ).toThrow(
+      /Only blocks, richText, slug, text, textarea fields and `field.group`/,
+    );
   });
 
   it("rejects a localized field named after a translation column", () => {

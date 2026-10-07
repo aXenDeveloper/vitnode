@@ -27,9 +27,21 @@ const withDatabase = (url: string, database: string): string => {
   return parsed.toString();
 };
 
+type TestSnapshot = Awaited<ReturnType<typeof generateDrizzleJson>>;
+
 export const createTestDatabase = async (
   schema: Record<string, unknown>,
-  { onQuery }: { onQuery?: () => void } = {},
+  {
+    onQuery,
+    snapshot = current => current,
+  }: {
+    onQuery?: () => void;
+    /**
+     * Rewrites the schema snapshot before it is applied - how a test builds the
+     * database an *older* schema would have left behind, to migrate it forward.
+     */
+    snapshot?: (current: TestSnapshot) => TestSnapshot;
+  } = {},
 ): Promise<TestDatabaseHandle> => {
   if (!TEST_POSTGRES_URL) {
     throw new Error("VITNODE_TEST_POSTGRES_URL is not set.");
@@ -43,7 +55,7 @@ export const createTestDatabase = async (
   const url = withDatabase(TEST_POSTGRES_URL, name);
   const statements = await generateMigration(
     await generateDrizzleJson({}),
-    await generateDrizzleJson(schema),
+    snapshot(await generateDrizzleJson(schema)),
   );
 
   const setup = postgres(url, { max: 1, onnotice: () => {} });

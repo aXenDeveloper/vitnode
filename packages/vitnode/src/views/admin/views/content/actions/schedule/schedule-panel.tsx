@@ -6,6 +6,7 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
+import type { ContentId } from "@/content/ids";
 import type { ContentSchedule } from "@/content/schedules";
 
 import { DateFormat } from "@/components/date-format";
@@ -111,7 +112,7 @@ export const SchedulePanel = ({
   title,
 }: {
   contentTypeId: string;
-  id: number;
+  id: ContentId;
   singular: string;
   title: string;
 }) => {

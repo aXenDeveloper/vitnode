@@ -118,7 +118,7 @@ const assertLocalizedFields = (
 ): void => {
   if (Object.keys(localizedFields).length === 0) {
     throw new ContentEngineError(
-      "localization is enabled but no field is marked `localized: true`, so the generated translation table would hold nothing but its keys. Mark at least one text, textarea or slug field.",
+      "localization is enabled but no field is marked `localized: true`, so the generated translation table would hold nothing but its keys. Mark at least one text, textarea, richText or slug field.",
       { contentTypeId: id },
     );
   }

@@ -5,13 +5,15 @@ import * as m from "motion/react-m";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import type { DataTableRowId } from "./data-table-content";
+
 import { MotionFeatures } from "../motion-features";
 import { Button } from "../ui/button";
 import { TableCell, TableRow } from "../ui/table";
 
 export interface ExpandableDataTable<T> {
   canExpand?: (row: T) => boolean;
-  defaultExpanded?: number[];
+  defaultExpanded?: DataTableRowId[];
   render: (row: T) => React.ReactNode;
 }
 
@@ -19,10 +21,10 @@ export const useRowExpansionDataTable = ({
   defaultExpanded,
   rowIds,
 }: {
-  defaultExpanded?: number[];
-  rowIds: number[];
+  defaultExpanded?: DataTableRowId[];
+  rowIds: DataTableRowId[];
 }) => {
-  const [expanded, setExpanded] = React.useState<number[]>(
+  const [expanded, setExpanded] = React.useState<DataTableRowId[]>(
     defaultExpanded ?? [],
   );
   const pageKey = rowIds.join(",");
@@ -39,11 +41,11 @@ export const useRowExpansionDataTable = ({
   }
 
   const isExpanded = React.useCallback(
-    (id: number) => expanded.includes(id),
+    (id: DataTableRowId) => expanded.includes(id),
     [expanded],
   );
 
-  const toggle = React.useCallback((id: number) => {
+  const toggle = React.useCallback((id: DataTableRowId) => {
     setExpanded(current =>
       current.includes(id)
         ? current.filter(item => item !== id)

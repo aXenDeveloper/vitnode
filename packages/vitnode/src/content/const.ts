@@ -4,6 +4,34 @@ export const CONTENT_PUBLICATION_FIELDS = ["status", "publishedAt"] as const;
 
 export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
+/** The two system columns `visibility: { enabled: true }` adds to the base table. */
+export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
+
+/** The two record-level visibility mutations, and their route segments. */
+export const CONTENT_VISIBILITY_ACTIONS = ["hide", "unhide"] as const;
+
+/**
+ * The admin list's `visibility` filter. `hidden` is `hiddenAt IS NOT NULL`,
+ * `visible` is `hiddenAt IS NULL` - whatever the publication status says.
+ */
+export const CONTENT_VISIBILITY_FILTERS = ["hidden", "visible"] as const;
+
+/**
+ * How a content type's primary key is generated. `serial` is the default and the
+ * only strategy a content type had before; see `ids.ts`.
+ */
+export const CONTENT_ID_STRATEGIES = ["serial", "uuid", "bigint"] as const;
+
+export const CONTENT_DEFAULT_ID_STRATEGY = "serial";
+
+/**
+ * `varchar` length of an `itemId` in the tables shared by every content type -
+ * revisions, schedules, slug history and the search index. They hold
+ * `contentIdKey(id)`: the digits of a `serial` or `bigint` (at most 19) or a
+ * canonical UUID (36), with room to spare.
+ */
+export const CONTENT_ID_KEY_LENGTH = 64;
+
 export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
   "itemId",
   "languageId",
@@ -81,10 +109,22 @@ export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
 
 export const CONTENT_LOCALIZED_FIELD_KINDS = [
   "blocks",
+  "richText",
   "slug",
   "text",
   "textarea",
 ] as const;
+
+/**
+ * The most HTML one `richText` value may hold, in characters - checked on the
+ * way in and again after sanitising. Half a million characters is a long book
+ * chapter with heavy formatting, and it keeps one request from parking megabytes
+ * of markup in a row the list, the search index and every revision then copy.
+ */
+export const CONTENT_RICH_TEXT_MAX_HTML_LENGTH = 500_000;
+
+/** Appended to a searchable `richText` column to name its plain-text twin. */
+export const CONTENT_RICH_TEXT_SEARCH_SUFFIX = "Text";
 
 const localizedFieldKinds: ReadonlySet<string> = new Set(
   CONTENT_LOCALIZED_FIELD_KINDS,
@@ -140,6 +180,7 @@ export const CONTENT_ADVANCED_LEAF_KINDS = [
   "dateTime",
   "enum",
   "number",
+  "richText",
   "text",
   "textarea",
 ] as const;
@@ -208,6 +249,7 @@ export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "file",
   "number",
   "relation",
+  "richText",
   "slug",
   "text",
   "textarea",
@@ -225,9 +267,18 @@ export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
 export const CONTENT_SEARCH_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `search.descriptionField` may name. */
-export const CONTENT_SEARCH_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+export const CONTENT_SEARCH_DESCRIPTION_KINDS = [
+  "richText",
+  "text",
+  "textarea",
+] as const;
 
-export const CONTENT_SEARCH_TEXT_KINDS = ["slug", "text", "textarea"] as const;
+export const CONTENT_SEARCH_TEXT_KINDS = [
+  "richText",
+  "slug",
+  "text",
+  "textarea",
+] as const;
 
 /** The placeholder every `search.pathTemplate` must use. */
 export const CONTENT_SEARCH_SLUG_PLACEHOLDER = "{slug}";
@@ -241,8 +292,10 @@ export const CONTENT_SEARCH_PATH_MAX_LENGTH = 512;
 export const CONTENT_REVISION_OPERATIONS = [
   "create",
   "delete",
+  "hide",
   "publish",
   "restore",
+  "unhide",
   "unpublish",
   "update",
 ] as const;
@@ -310,7 +363,11 @@ export const CONTENT_SCHEDULE_CODES = {
 export const CONTENT_DELIVERY_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `delivery.seo.descriptionField` may name. */
-export const CONTENT_DELIVERY_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+export const CONTENT_DELIVERY_DESCRIPTION_KINDS = [
+  "richText",
+  "text",
+  "textarea",
+] as const;
 
 export const CONTENT_DELIVERY_NO_INDEX_KINDS = ["boolean"] as const;
 
@@ -367,6 +424,7 @@ export const CONTENT_PERMISSIONS = {
   create: "can_create",
   delete: "can_delete",
   edit: "can_edit",
+  hide: "can_hide",
   publish: "can_publish",
   restore: "can_restore",
   view: "can_view",
@@ -388,3 +446,27 @@ export const CONTENT_TRANSLATION_CONFLICT_CODES = {
 export const CONTENT_UNPROCESSABLE_CODES = {
   notRestorable: "CONTENT_REVISION_NOT_RESTORABLE",
 } as const;
+
+/** Machine-readable reasons a duplicate was refused. */
+export const CONTENT_DUPLICATE_CODES = {
+  /** Every slug candidate was taken, or kept being taken by concurrent writers. 409. */
+  slugConflict: "CONTENT_DUPLICATE_SLUG_CONFLICT",
+  /** A unique field would collide with the source and no override was given. 422. */
+  uniqueRequired: "CONTENT_DUPLICATE_UNIQUE_REQUIRED",
+} as const;
+
+/** How many slug candidates a duplicate considers: `hello-copy`, `hello-copy-2`, ... */
+export const CONTENT_DUPLICATE_SLUG_CANDIDATES = 20;
+
+/** How many writes a duplicate attempts when concurrent writers keep taking its slug. */
+export const CONTENT_DUPLICATE_SLUG_ATTEMPTS = 3;
+
+/** Appended to a copied slug that has no source field to derive a fresh one from. */
+export const CONTENT_DUPLICATE_SLUG_SUFFIX = "copy";
+
+/** The title suffix when no translated message is available. */
+export const CONTENT_DUPLICATE_TITLE_SUFFIX = "(Copy)";
+
+/** The server message holding the localized title suffix. */
+export const CONTENT_DUPLICATE_TITLE_SUFFIX_KEY =
+  "core.content.duplicate.title_suffix";

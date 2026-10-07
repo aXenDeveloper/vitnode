@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 
 import type { ContentLocaleInvalidation } from "../cache";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel } from "./model";
@@ -11,7 +12,8 @@ import {
   contentLocaleInvalidations,
   diffContentPublicLocaleStates,
 } from "../cache";
-import { CONTENT_SCHEDULE_ACTIONS } from "../const";
+import { CONTENT_ID_KEY_LENGTH, CONTENT_SCHEDULE_ACTIONS } from "../const";
+import { parseContentId } from "../ids";
 import { contentEditorialEffects } from "./editorial-effects";
 import { contentDefinitionOf, findContentModel } from "./model";
 import { contentPublicLocaleStates } from "./public-locales";
@@ -23,12 +25,13 @@ const scheduledLocales = async (
   c: Context,
   model: AnyContentModel,
   payload: ContentScheduleEffectsPayload,
+  itemId: ContentId,
   row: Record<string, unknown>,
 ): Promise<ContentLocaleInvalidation[]> => {
-  const after = await contentPublicLocaleStates(c, model, payload.itemId, {
+  const after = await contentPublicLocaleStates(c, model, itemId, {
     row,
   });
-  const before = await contentPublicLocaleStates(c, model, payload.itemId, {
+  const before = await contentPublicLocaleStates(c, model, itemId, {
     row: {
       ...row,
       // `publishedAt` only has to be a past instant for the predicate; the real
@@ -49,7 +52,14 @@ const scheduledLocales = async (
 export const contentScheduleEffectsPayloadSchema = z.object({
   changedFields: z.array(z.string()),
   contentTypeId: z.string().min(1),
-  itemId: z.number().int().positive(),
+  /**
+   * A number for a `serial` record, the canonical string for a `uuid` or
+   * `bigint` one - re-read under the content type's strategy before use.
+   */
+  itemId: z.union([
+    z.number().int().positive(),
+    z.string().min(1).max(CONTENT_ID_KEY_LENGTH),
+  ]),
   operation: z.enum(CONTENT_SCHEDULE_ACTIONS),
   pluginId: z.string().min(1),
   previousSlug: z.string().nullable(),
@@ -75,6 +85,7 @@ const reviveDates = (
     "createdAt",
     "updatedAt",
     ...(definition.publication.enabled ? ["publishedAt"] : []),
+    ...(definition.visibility.enabled ? ["hiddenAt"] : []),
     ...Object.entries(definition.fields)
       .filter(([, field]) => field.kind === "dateTime")
       .map(([name]) => name),
@@ -124,6 +135,20 @@ export const runContentScheduleEffects = async (
   const definition = contentDefinitionOf(entry.model);
   const row = reviveDates(definition, payload.row);
 
+  // Written by the executor under the same definition, so a miss means the
+  // content type's `idStrategy` changed between the two runs: nothing this run
+  // could announce would name the right record.
+  const itemId = parseContentId(definition.idStrategy, payload.itemId);
+  if (itemId === null) {
+    await recordContentScheduleEffectsError(
+      c.get("db"),
+      payload.scheduleId,
+      `Scheduled ${payload.operation} names ${JSON.stringify(payload.itemId)}, which is not a ${definition.idStrategy} identifier of "${payload.contentTypeId}".`,
+    );
+
+    return { status: "unregistered" };
+  }
+
   const outcome: ContentEditorialOutcome<AnyContentTypeDefinition> = {
     changed: true,
     changedFields: payload.changedFields,
@@ -160,23 +185,34 @@ export const runContentScheduleEffects = async (
     ? row[definition.publicApi.slugField]
     : undefined;
 
+  const isPublic = isContentRowPublic(row);
+
   const revalidation = await dispatchContentRevalidation(c, {
     contentTypeId: definition.id,
-    // A scheduled transition always flips public reachability, so it changes both the
-    // file it adds a line to (or removes one from) and the index that counts them.
-    // Absent for a content type without `delivery`, which keeps its tag list
-    // byte-identical.
+    // A scheduled transition flips public reachability - unless the record is
+    // hidden, in which case it was off the site before and stays off it after, and
+    // neither the sitemap file nor its index moved. Absent for a content type
+    // without `delivery`, which keeps its tag list byte-identical.
     ...(definition.delivery.enabled
-      ? { delivery: { sitemap: { contentChanged: true, indexChanged: true } } }
+      ? {
+          delivery: {
+            sitemap: {
+              contentChanged: payload.wasPublic || isPublic,
+              indexChanged: payload.wasPublic !== isPublic,
+            },
+          },
+        }
       : {}),
-    id: payload.itemId,
-    isPublic: isContentRowPublic(row),
+    id: itemId,
+    isPublic,
     // A scheduled transition moves the *record*, and the record's publication
     // state gates every language - so every locale that had a page, or has one
     // now, is expired. Absent for a content type that is not localized, which
     // leaves the flat fields below as the whole input, exactly as before.
     ...(definition.localization.enabled && definition.publicApi.enabled
-      ? { locales: await scheduledLocales(c, entry.model, payload, row) }
+      ? {
+          locales: await scheduledLocales(c, entry.model, payload, itemId, row),
+        }
       : {}),
     mode: "immediate",
     // Both, because a transition that moved the URL has to expire the one it

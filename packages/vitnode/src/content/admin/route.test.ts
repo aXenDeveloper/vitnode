@@ -109,6 +109,56 @@ describe("resolveContentAdminRoute", () => {
       ).toBeUndefined();
     });
 
+    describe("under another id strategy", () => {
+      const strategyOf = (idStrategy: "bigint" | "uuid") =>
+        defineContentType({
+          admin: { edit: { mode: "page" } },
+          fields: { title: field.text({ required: true }) },
+          id: `test.${idStrategy}`,
+          idStrategy,
+          tableName: `test_${idStrategy}`,
+        }) as AnyContentTypeDefinition;
+      const uuidType = strategyOf("uuid");
+      const bigintType = strategyOf("bigint");
+      const UUID = "0198f6f7-d4a2-7ce1-a2ee-4f5f1f2f3a4b";
+
+      it("reads a uuid record's edit URL as its canonical string", () => {
+        expect(
+          resolveContentAdminRoute(
+            ["test", "uuid", UUID, "edit"],
+            lookupOf(uuidType),
+          ),
+        ).toEqual({ action: "edit", contentTypeId: "test.uuid", itemId: UUID });
+      });
+
+      it("keeps a bigint beyond Number.MAX_SAFE_INTEGER exact", () => {
+        expect(
+          resolveContentAdminRoute(
+            ["test", "bigint", "9007199254740993", "edit"],
+            lookupOf(bigintType),
+          ),
+        ).toEqual({
+          action: "edit",
+          contentTypeId: "test.bigint",
+          itemId: "9007199254740993",
+        });
+      });
+
+      it.each([
+        ["an uppercase uuid", ["test", "uuid", UUID.toUpperCase(), "edit"]],
+        ["a number for a uuid", ["test", "uuid", "42", "edit"]],
+        ["a padded bigint", ["test", "bigint", "01", "edit"]],
+        [
+          "a bigint out of range",
+          ["test", "bigint", "9223372036854775808", "edit"],
+        ],
+      ])("resolves nothing for %s", (_name, slug) => {
+        expect(
+          resolveContentAdminRoute(slug, lookupOf(uuidType, bigintType)),
+        ).toBeUndefined();
+      });
+    });
+
     it("prefers an exact content type path over a create page", () => {
       // `blog/post/create` is a legal address, so the content type that really
       // lives there keeps its own list screen.

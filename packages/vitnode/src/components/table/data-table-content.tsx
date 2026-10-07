@@ -17,8 +17,14 @@ import {
   TableRow,
 } from "../ui/table";
 
+/**
+ * A row's identifier: a number for most tables, a string for a content type
+ * keyed by `uuid` or `bigint`.
+ */
+export type DataTableRowId = number | string;
+
 export interface DataTableTMin {
-  id: number;
+  id: DataTableRowId;
 }
 
 export interface SearchParamsDataTable<T = unknown> {

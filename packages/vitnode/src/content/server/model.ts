@@ -1,6 +1,7 @@
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
+import type { ContentIdOf } from "../ids";
 import type { ContentSchemas, ContentTranslationSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
@@ -179,6 +180,15 @@ export const createContentModel = <
       ? { columns: translationColumns, table: translationTable }
       : undefined;
 
+  /**
+   * The translation half `duplicate` copies through, per request. `undefined`
+   * for a content type without localization, which has nothing to copy there.
+   */
+  const duplicateTranslations = (c: Context) =>
+    translationSearch && translationSchemas
+      ? { ...translationSearch, model: () => buildTranslations(c) }
+      : undefined;
+
   const buildTranslations = (
     c: Context,
   ): ContentTranslationModel<TDefinition> => {
@@ -242,7 +252,10 @@ export const createContentModel = <
 
                     // Read in the caller's transaction, so a language created a
                     // moment ago in the same transaction is moved too.
-                    const rows = await translations.findManyForItem(itemId, {
+                    // Handed over as the content type's own id by the
+                    // editorial service, which read it off the base row.
+                    const recordId = itemId as ContentIdOf<TDefinition>;
+                    const rows = await translations.findManyForItem(recordId, {
                       tx,
                     });
 
@@ -265,7 +278,7 @@ export const createContentModel = <
                       }
 
                       const outcome = await editorial[operation](
-                        itemId,
+                        recordId,
                         row.locale,
                         { actor, tx },
                       );
@@ -280,6 +293,23 @@ export const createContentModel = <
             pluginId,
             schemas,
             table,
+            translations: (() => {
+              const half = duplicateTranslations(c);
+
+              return half && translationSchemas
+                ? {
+                    ...half,
+                    editorial: () =>
+                      createContentTranslationEditorialService({
+                        c,
+                        definition,
+                        pluginId,
+                        schemas: translationSchemas,
+                        translations: half.model(),
+                      }),
+                  }
+                : undefined;
+            })(),
           })
       : undefined,
     localization: definition.localization,
@@ -317,7 +347,7 @@ export const createContentModel = <
               definition,
               schemas,
               table,
-              translation: translationSearch,
+              translation: duplicateTranslations(c),
             }),
             translations,
           });
@@ -356,7 +386,7 @@ export const createContentModel = <
         definition,
         schemas,
         table,
-        translation: translationSearch,
+        translation: duplicateTranslations(c),
       }),
     table,
     translationColumns,

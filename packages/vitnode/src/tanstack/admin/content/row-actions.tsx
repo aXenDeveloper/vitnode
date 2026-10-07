@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   CalendarClockIcon,
+  CopyPlusIcon,
   EllipsisIcon,
   EyeIcon,
   EyeOffIcon,
@@ -13,10 +14,15 @@ import {
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import { useTranslations } from "use-intl";
+import { useFormatter, useTranslations } from "use-intl";
 
+import type { ContentId } from "@/content/ids";
 import type { RegisteredFrontendContentType } from "@/content/index";
-import type { ContentRowActionId } from "@/views/admin/views/content/actions/row-actions-model";
+import type {
+  ContentEditorialActionId,
+  ContentRowActionId,
+} from "@/views/admin/views/content/actions/row-actions-model";
+import type { ContentItem } from "@/views/admin/views/content/form/item-query";
 import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 import type { ContentRowMutationResult } from "@/views/admin/views/content/table/list-mutations";
 
@@ -35,16 +41,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { humanizeFieldName } from "@/content/admin/labels";
 import {
   CONTENT_PERMISSIONS,
   contentEditHref,
   contentPublicationTransition,
 } from "@/content/index";
 import {
+  contentVisibilityTransition,
+  isContentHidden,
+} from "@/content/visibility";
+import { ContentDuplicateDialog } from "@/views/admin/views/content/actions/duplicate-dialog";
+import {
+  CONTENT_EDITORIAL_ACTION_IDS,
+  CONTENT_LIST_ACTION_IDS,
   contentRowActionIds,
   contentRowActionsAreInline,
   isDestructiveContentRowAction,
 } from "@/views/admin/views/content/actions/row-actions-model";
+import {
+  CONTENT_VISIBILITY_ICONS,
+  ContentVisibilityDialog,
+} from "@/views/admin/views/content/actions/visibility-dialog";
+import { contentDuplicateErrorMessage } from "@/views/admin/views/content/lib/duplicate-feedback";
 import { contentErrorKey } from "@/views/admin/views/content/lib/mutation-feedback";
 import { contentRowTitle } from "@/views/admin/views/content/table/columns";
 
@@ -52,15 +71,35 @@ import { useAdminPermission } from "../permissions";
 import {
   contentApiTarget,
   deleteContentRow,
+  duplicateContentRow,
+  invalidateContentList,
+  readDuplicatedContent,
   setContentPublication,
+  setContentVisibility,
 } from "./query";
 import { ContentFormDialogSlot, ContentRowPanelSlot } from "./slot-render";
 import { contentAdminSlots, registeredContentRowPanels } from "./slots";
 
+/** The copy a duplicate made, read back so the list can open it. */
+export interface ContentDuplicatedRecord {
+  id: ContentId;
+  /** The copy as its edit screen reads it - from the cache that read warmed. */
+  row: ContentItem;
+  /** The copy's resolved title, suffix included. */
+  title: string;
+}
+
 export interface ContentRowActionsProps {
   entry: RegisteredFrontendContentType;
+  /** A field's label, for an error that names one. Humanised when absent. */
+  labelField?: (name: string) => string;
   /** The language the list is being read in. */
   locale: string;
+  /**
+   * Hands a fresh copy to the list, which opens it - its edit page, or the edit
+   * dialog. Absent, the copy simply appears in the refreshed list.
+   */
+  onDuplicated?: (copy: ContentDuplicatedRecord) => void;
   row: ContentRowData;
   /** The content type's noun, as this administrator reads it. */
   singular: string;
@@ -70,6 +109,11 @@ export interface ContentRowActionsProps {
 const versionOf = (row: ContentRowData): number =>
   typeof row.version === "number" ? row.version : 1;
 
+const isEditorialAction = (
+  id: ContentRowActionId,
+): id is ContentEditorialActionId =>
+  (CONTENT_EDITORIAL_ACTION_IDS as readonly string[]).includes(id);
+
 const useMutationToast = () => {
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
@@ -78,6 +122,7 @@ const useMutationToast = () => {
     (result: ContentRowMutationResult) => {
       const errorKey = contentErrorKey(result.status, {
         ...(result.conflict ? { conflict: result.conflict } : {}),
+        ...(result.delivery ? { delivery: result.delivery } : {}),
       });
 
       toast.error(tErrors("title"), {
@@ -105,6 +150,7 @@ const PublishRowAction = ({
   const tPublish = useTranslations("core.content.publish");
   const tUnpublish = useTranslations("core.content.unpublish");
   const tActions = useTranslations("core.content.actions");
+  const tVisibility = useTranslations("core.content.visibility");
   const queryClient = useQueryClient();
   const showError = useMutationToast();
   const canPublish = useAdminPermission({
@@ -121,16 +167,24 @@ const PublishRowAction = ({
   const t = published ? tUnpublish : tPublish;
   const label = tActions(action);
   const Icon = published ? EyeOffIcon : SendIcon;
+  const description = t.rich("desc", {
+    title: () => <span className="text-foreground font-bold">{title}</span>,
+  });
 
   return (
     <TooltipProvider>
       <Tooltip>
         <ConfirmActionAlertDialog
-          description={t.rich("desc", {
-            title: () => (
-              <span className="text-foreground font-bold">{title}</span>
-            ),
-          })}
+          description={
+            action === "publish" &&
+            isContentHidden({ hiddenAt: row.hiddenAt }) ? (
+              <>
+                {description} {tVisibility("publish_note")}
+              </>
+            ) : (
+              description
+            )
+          }
           icon={<Icon />}
           onSubmit={async ({ onClose }) => {
             const result = await setContentPublication(queryClient, {
@@ -248,9 +302,13 @@ const EditRowAction = ({
 };
 
 /** The icon each row action wears. Order and gating are the shared model's. */
-const ACTION_ICONS: Record<ContentRowActionId, React.ReactNode> = {
+const ACTION_ICONS: Record<
+  Exclude<ContentRowActionId, "visibility">,
+  React.ReactNode
+> = {
   delete: <Trash2Icon />,
   delivery: <LinkIcon />,
+  duplicate: <CopyPlusIcon />,
   history: <HistoryIcon />,
   preview: <EyeIcon />,
   schedule: <CalendarClockIcon />,
@@ -258,20 +316,23 @@ const ACTION_ICONS: Record<ContentRowActionId, React.ReactNode> = {
 
 const ContentRowActionsMenu = ({
   entry,
+  labelField = humanizeFieldName,
   locale,
+  onDuplicated,
   row,
   singular,
   title,
-}: {
-  entry: RegisteredFrontendContentType;
-  locale: string;
+}: Omit<ContentRowActionsProps, "row"> & {
   row: ContentRowData;
-  singular: string;
   title: string;
 }) => {
   const { definition, pluginId } = entry;
   const t = useTranslations("core.content");
   const tDelete = useTranslations("core.content.delete");
+  const tDuplicate = useTranslations("core.content.duplicate");
+  const tVisibility = useTranslations("core.content.visibility");
+  const tErrors = useTranslations("core.global.errors");
+  const format = useFormatter();
   const queryClient = useQueryClient();
   const showError = useMutationToast();
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -286,9 +347,19 @@ const ContentRowActionsMenu = ({
     permission: CONTENT_PERMISSIONS.view,
     plugin: pluginId,
   });
+  const canCreate = useAdminPermission({
+    module,
+    permission: CONTENT_PERMISSIONS.create,
+    plugin: pluginId,
+  });
   const canPublish = useAdminPermission({
     module,
     permission: CONTENT_PERMISSIONS.publish,
+    plugin: pluginId,
+  });
+  const canHide = useAdminPermission({
+    module,
+    permission: CONTENT_PERMISSIONS.hide,
     plugin: pluginId,
   });
   const canDelete = useAdminPermission({
@@ -297,21 +368,35 @@ const ContentRowActionsMenu = ({
     plugin: pluginId,
   });
 
+  const target = contentApiTarget(definition, pluginId);
+  const visibility = contentVisibilityTransition({
+    hiddenAt: row.hiddenAt,
+  });
   const slots = contentAdminSlots();
   const items = contentRowActionIds({
+    canCreate,
     canDelete,
+    canHide,
     canPublish,
     canView,
     delivery: definition.delivery.enabled,
+    duplication: definition.duplication.enabled,
     editorial: definition.editorial.enabled,
     preview: definition.editorial.preview.enabled,
-    renderable: ["delete", ...registeredContentRowPanels(slots)],
+    renderable: [
+      ...CONTENT_LIST_ACTION_IDS,
+      ...registeredContentRowPanels(slots),
+    ],
     scheduling: definition.editorial.scheduling.enabled,
+    visibility: definition.visibility.enabled,
   }).map(id => ({
     destructive: isDestructiveContentRowAction(id),
-    icon: ACTION_ICONS[id],
+    icon:
+      id === "visibility"
+        ? CONTENT_VISIBILITY_ICONS[visibility.action]
+        : ACTION_ICONS[id],
     id,
-    label: t(`actions.${id}`),
+    label: t(`actions.${id === "visibility" ? visibility.action : id}`),
   }));
 
   if (items.length === 0) return null;
@@ -328,8 +413,95 @@ const ContentRowActionsMenu = ({
       setPanel({ id, open: true });
     };
 
+  const duplicate = async (): Promise<boolean> => {
+    const result = await duplicateContentRow(queryClient, {
+      contentTypeId: definition.id,
+      id: row.id,
+      target,
+    });
+
+    if (result.error !== undefined || !result.duplicated) {
+      const message = contentDuplicateErrorMessage(result.duplicate, {
+        labelField,
+        list: names => format.list(names),
+      });
+
+      if (message) {
+        toast.error(tErrors("title"), {
+          description: tDuplicate(`errors.${message.key}`, message.values),
+        });
+      } else {
+        showError(result);
+      }
+
+      return false;
+    }
+
+    const { id, row: fallback, skippedLocales } = result.duplicated;
+    const copy = await readDuplicatedContent(queryClient, {
+      definition,
+      fallback,
+      id,
+      locale,
+      pluginId,
+    });
+
+    toast.success(tDuplicate("success", { name: singular }), {
+      description: copy.title,
+    });
+    if (skippedLocales.length > 0) {
+      toast.info(tDuplicate("skipped_title"), {
+        description: tDuplicate("skipped", {
+          locales: format.list(skippedLocales),
+        }),
+      });
+    }
+
+    onDuplicated?.({ id, row: copy.row, title: copy.title });
+
+    return true;
+  };
+
+  const toggleVisibility = async (): Promise<boolean> => {
+    const { action } = visibility;
+    const result = await setContentVisibility(queryClient, {
+      action,
+      contentTypeId: definition.id,
+      expectedVersion: definition.editorial.enabled
+        ? versionOf(row)
+        : undefined,
+      id: row.id,
+      target,
+    });
+
+    if (result.error !== undefined) {
+      if (result.conflict?.code === "CONTENT_VERSION_CONFLICT") {
+        // The row is stale. Re-read the list, so the next press carries the
+        // version somebody else just saved rather than conflicting again.
+        await invalidateContentList(queryClient, definition.id);
+        toast.error(tVisibility("conflict.title"), {
+          description: tVisibility("conflict.desc"),
+        });
+
+        return false;
+      }
+
+      showError(result);
+
+      return false;
+    }
+
+    toast.success(t(`${action}.success`, { name: singular }), {
+      description: title,
+    });
+
+    return true;
+  };
+
   const rowPanel =
-    panel && panel.id !== "delete" ? slots.rowPanels?.[panel.id] : undefined;
+    panel && isEditorialAction(panel.id)
+      ? slots.rowPanels?.[panel.id]
+      : undefined;
 
   return (
     <>
@@ -391,6 +563,29 @@ const ContentRowActionsMenu = ({
         </DropdownMenu>
       )}
 
+      {panel?.id === "duplicate" ? (
+        <ContentDuplicateDialog
+          finalFocus={triggerRef}
+          onConfirm={duplicate}
+          onOpenChange={closePanel}
+          open={panel.open}
+          singular={singular}
+          title={title}
+        />
+      ) : null}
+
+      {panel?.id === "visibility" ? (
+        <ContentVisibilityDialog
+          action={visibility.action}
+          finalFocus={triggerRef}
+          onConfirm={toggleVisibility}
+          onOpenChange={closePanel}
+          open={panel.open}
+          singular={singular}
+          title={title}
+        />
+      ) : null}
+
       {panel?.id === "delete" ? (
         <ConfirmActionAlertDialog
           description={tDelete.rich("desc", {
@@ -406,7 +601,7 @@ const ContentRowActionsMenu = ({
               contentTypeId: definition.id,
               editorial: definition.editorial.enabled,
               id: row.id,
-              target: contentApiTarget(definition, pluginId),
+              target,
               version: definition.editorial.enabled
                 ? versionOf(row)
                 : undefined,
@@ -458,7 +653,9 @@ const ContentRowActionsMenu = ({
 
 export const ContentRowActions = ({
   entry,
+  labelField,
   locale,
+  onDuplicated,
   row,
   singular,
 }: ContentRowActionsProps) => {
@@ -480,7 +677,9 @@ export const ContentRowActions = ({
       />
       <ContentRowActionsMenu
         entry={entry}
+        labelField={labelField}
         locale={locale}
+        onDuplicated={onDuplicated}
         row={row}
         singular={singular}
         title={title}

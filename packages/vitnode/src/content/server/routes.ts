@@ -4,14 +4,22 @@ import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 import type { StorageFileUploadResult } from "../../api/models/storage";
+import type { ContentId, ContentIdOf, ContentIdStrategy } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentFilterInput,
   ContentOrderableFieldName,
   ContentReferenceFieldName,
 } from "../types";
+import type {
+  ContentDuplicateOverrides,
+  ContentDuplicationMethods,
+  ContentEditorialDuplicationMethods,
+} from "./duplicate";
+import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPreviewTarget } from "./preview-target";
+import type { ContentVisibilityAction } from "./visibility";
 
 import { checkStaffPermission } from "../../api/lib/check-staff-permission";
 import { buildRoute } from "../../api/lib/route";
@@ -24,6 +32,7 @@ import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
   zodContentDeliveryConflict,
+  zodContentDuplicateRejection,
   zodContentScheduleRejection,
   zodContentUnprocessable,
 } from "../conflicts";
@@ -45,9 +54,18 @@ import {
   zodContentFileFieldValue,
   zodContentFileReferenceRejection,
 } from "../files";
+import {
+  contentIdKey,
+  contentIdSchema,
+  contentRelationStrategy,
+  parseContentId,
+  requireContentId,
+} from "../ids";
 import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
 import { resolveContentActor } from "./actor";
+import { duplicationMethods } from "./duplicate";
+import { contentDuplicateEffects } from "./duplicate-effects";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import {
@@ -59,12 +77,15 @@ import { withHttpErrors } from "./http-errors";
 import { findContentLanguage } from "./language-resolver";
 import {
   contentReferenceListColumns,
+  contentReferenceListIdsAreNumeric,
   withContentReferenceLists,
   zodContentReferenceListItem,
+  zodContentReferenceListItemAnyId,
 } from "./list-references";
 import { contentLocaleRouting } from "./locale-routing";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import { resolveContentLocalizedValues } from "./localized-display";
+import { contentDefinitionOf } from "./model";
 import {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -74,27 +95,75 @@ import { resolveContentPreviewTarget } from "./preview-target";
 import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
-import { identifier, jsonBody, jsonResponse, readJson } from "./route-helpers";
+import {
+  contentIdentifier,
+  jsonBody,
+  jsonResponse,
+  readJson,
+  readOptionalJson,
+} from "./route-helpers";
 import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
 import { buildContentTranslationRoutes } from "./translation-routes";
+import { editorialVisibilityMethods, visibilityMethods } from "./visibility";
+import { contentVisibilityEffects } from "./visibility-effects";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
 
-const zodOptions = z.object({
-  items: z.array(
-    z.object({
-      avatarColor: z.string().optional(),
-      /**
-       * Present when the target declares `admin.colorField` - a blog category
-       * is a colour as much as it is a word, and the picker draws it.
-       */
-      color: z.string().optional(),
-      label: z.string(),
-      nameCode: z.string().optional(),
-      value: z.number(),
-    }),
-  ),
-});
+/**
+ * The picker options response. `value` is a number for every target a
+ * `serial` content type can point at today; a content type with a `uuid` or
+ * `bigint` target answers strings for those, so its schema says either.
+ */
+const zodOptionsOf = (value: z.ZodType) =>
+  z.object({
+    items: z.array(
+      z.object({
+        avatarColor: z.string().optional(),
+        /**
+         * Present when the target declares `admin.colorField` - a blog category
+         * is a colour as much as it is a word, and the picker draws it.
+         */
+        color: z.string().optional(),
+        label: z.string(),
+        nameCode: z.string().optional(),
+        value,
+      }),
+    ),
+  });
+
+const zodOptions = zodOptionsOf(z.number());
+const zodOptionsAnyId = zodOptionsOf(z.union([z.number(), z.string()]));
+
+/**
+ * The id strategy one reference field's values follow: its target's for a
+ * relation, `serial` for a user.
+ */
+const referenceStrategy = (
+  definition: AnyContentTypeDefinition,
+  field: string,
+): ContentIdStrategy => {
+  const fieldValue = definition.fields[field];
+
+  return fieldValue?.kind === "relation"
+    ? contentRelationStrategy(definition, fieldValue)
+    : "serial";
+};
+
+/**
+ * One `?ids=` entry, read under the target's strategy. A serial target keeps
+ * reading it the way `Number` always has; the others accept only the canonical
+ * spelling.
+ */
+const parseOptionId = (
+  strategy: ContentIdStrategy,
+  value: string,
+): ContentId | null => {
+  if (strategy !== "serial") return parseContentId(strategy, value);
+
+  const number = Number(value);
+
+  return Number.isInteger(number) ? number : null;
+};
 
 const notFound = (definition: AnyContentTypeDefinition): HTTPException =>
   new HTTPException(404, {
@@ -113,11 +182,14 @@ const advancedForSearch = async (
   model: AnyContentModel,
   row: object,
 ): Promise<Record<string, unknown> | undefined> => {
-  const id = (row as { id?: unknown }).id;
+  const id = parseContentId(
+    contentDefinitionOf(model).idStrategy,
+    (row as { id?: unknown }).id,
+  );
 
-  return typeof id === "number"
-    ? await contentSearchAdvancedValues(c, model, id)
-    : undefined;
+  return id === null
+    ? undefined
+    : await contentSearchAdvancedValues(c, model, id);
 };
 
 /**
@@ -220,7 +292,11 @@ export const buildContentRoutes = <
       ? {
           references: z.record(
             z.string(),
-            z.array(zodContentReferenceListItem),
+            z.array(
+              contentReferenceListIdsAreNumeric(definition)
+                ? zodContentReferenceListItem
+                : zodContentReferenceListItemAnyId,
+            ),
           ),
         }
       : {}),
@@ -445,7 +521,7 @@ export const buildContentRoutes = <
    */
   const withRowTranslations = async (
     c: Context,
-    data: { edges: { id: number }[]; pageInfo: unknown },
+    data: { edges: { id: ContentId }[]; pageInfo: unknown },
     locale: string | undefined,
   ) => {
     const build = model.translationService;
@@ -471,18 +547,19 @@ export const buildContentRoutes = <
       )?.[0] ?? null;
 
     const rows = await translations.findManyRowsForItems(
-      data.edges.map(row => row.id),
+      data.edges.map(row => row.id as ContentIdOf<TDefinition>),
     );
-    const byItem = new Map<number, (typeof rows)[number][]>();
+    // Keyed by storage key, so a number and a string spelling of one id meet.
+    const byItem = new Map<string, (typeof rows)[number][]>();
     for (const row of rows) {
-      const itemId = row.itemId as number;
-      byItem.set(itemId, [...(byItem.get(itemId) ?? []), row]);
+      const itemKey = contentIdKey(row.itemId);
+      byItem.set(itemKey, [...(byItem.get(itemKey) ?? []), row]);
     }
 
     return {
       ...data,
       edges: data.edges.map(row => {
-        const all = byItem.get(row.id) ?? [];
+        const all = byItem.get(contentIdKey(row.id)) ?? [];
         const localizedValues = resolveContentLocalizedValues({
           defaultLocale: definition.localization.defaultLocale,
           fields: localizedFieldNames,
@@ -549,7 +626,14 @@ export const buildContentRoutes = <
         }),
       },
       responses: {
-        200: jsonResponse(zodOptions, `Up to ${CONTENT_OPTIONS_LIMIT} options`),
+        200: jsonResponse(
+          referenceFieldNames.every(
+            field => referenceStrategy(definition, field) === "serial",
+          )
+            ? zodOptions
+            : zodOptionsAnyId,
+          `Up to ${CONTENT_OPTIONS_LIMIT} options`,
+        ),
         400: { description: "Not a relation or user field" },
       },
     },
@@ -562,16 +646,17 @@ export const buildContentRoutes = <
       }
 
       const raw = c.req.query("ids");
-      // Anything that is not a whole number is dropped rather than refused: the
-      // list is a lookup key, and one malformed entry should cost that entry
-      // rather than the whole form's labels.
+      // Anything that is not an identifier of the target is dropped rather than
+      // refused: the list is a lookup key, and one malformed entry should cost
+      // that entry rather than the whole form's labels.
+      const strategy = referenceStrategy(definition, field);
       const ids =
         raw === undefined
           ? undefined
           : raw
               .split(",")
-              .map(value => Number(value.trim()))
-              .filter(value => Number.isInteger(value));
+              .map(value => parseOptionId(strategy, value.trim()))
+              .filter((value): value is ContentId => value !== null);
 
       const items = await model
         .service(c)
@@ -794,7 +879,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const service = model.service(c);
       const row = await service.findRowById(id);
       if (!row) throw notFound(definition);
@@ -878,6 +963,172 @@ export const buildContentRoutes = <
   });
 
   /**
+   * The patch shape of `schemas.update` without its "at least one field" rule, so
+   * an empty `overrides` means "copy as is" rather than a 400. Read off the
+   * object Zod keeps behind the refinement; never a default, so an omitted field
+   * keeps the source's value instead of the field's default.
+   */
+  const patchObject = (schema: z.ZodType): z.ZodObject =>
+    z.strictObject((schema as unknown as z.ZodObject).shape);
+
+  const translationSchemas = model.translationSchemas;
+  const duplicateBody = z.strictObject({
+    /** Shared values for the copy. A group merges leaf by leaf. */
+    overrides: patchObject(schemas.update).optional(),
+    ...(translationSchemas
+      ? {
+          /** Localized values per copied locale, merged the same way. */
+          translations: z
+            .record(
+              z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
+              patchObject(translationSchemas.update),
+            )
+            .optional(),
+        }
+      : {}),
+  });
+
+  const duplicateResponse = z.object({
+    /** The copy's identifier - where the AdminCP navigates next. */
+    id: contentIdSchema(definition.idStrategy),
+    /** The copied translations' locales, default locale first. */
+    locales: z.array(z.string()),
+    row: schemas.selectObject,
+    /** Source locales switched off in this install, which the copy does not carry. */
+    skippedLocales: z.array(z.string()),
+    sourceId: contentIdSchema(definition.idStrategy),
+  });
+
+  /**
+   * `POST /{id}/duplicate` - a draft copy of one record, its collections and every
+   * translation, in one transaction. Creating is what it does, so `can_create`
+   * gates it; reading the source is what it needs, so `can_view` is checked too.
+   * Mounted only for a content type with `duplication: { enabled: true }`.
+   */
+  const duplicate = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
+    route: {
+      method: "post",
+      path: "/{id}/duplicate",
+      description: `Duplicate a ${name} as a draft`,
+      request: { params: schemas.params, body: jsonBody(duplicateBody) },
+      responses: {
+        201: jsonResponse(duplicateResponse, `${name} duplicated as a draft`),
+        400: writeRejection("Invalid identifier or overrides"),
+        403: { description: "Missing can_create or can_view" },
+        404: { description: `${name} not found` },
+        409: jsonResponse(
+          z.union([
+            zodContentConflict,
+            zodContentDeliveryConflict,
+            zodContentDuplicateRejection,
+          ]),
+          "No free slug for the copy, or an override collides with another record",
+        ),
+        422: jsonResponse(
+          zodContentDuplicateRejection,
+          "A unique field needs an override",
+        ),
+      },
+    },
+    handler: async c => {
+      const canView = await checkStaffPermission(c, {
+        module,
+        permission: CONTENT_PERMISSIONS.view,
+        plugin: pluginId,
+        type: "admin",
+      });
+      if (!canView) {
+        throw new HTTPException(403, {
+          message: `You do not have permission to view this ${name}.`,
+        });
+      }
+
+      const id = contentIdentifier(c, definition);
+      const body = c.req.header("content-type")?.includes("json")
+        ? await readJson(c, duplicateBody)
+        : {};
+      // Validated by `duplicateBody`, which is built from these very schemas -
+      // the types are re-attached here, as `buildContentSchemas` does for its own.
+      const { overrides, translations } =
+        body as ContentDuplicateOverrides<TDefinition>;
+      const actor = resolveContentActor(c);
+
+      if (editorial) {
+        const outcome = await withHttpErrors(
+          "create",
+          async () =>
+            await duplicationMethods<
+              ContentEditorialDuplicationMethods<TDefinition>
+            >(definition, editorialService(c)).duplicate(id, {
+              actor,
+              overrides,
+              translations,
+            }),
+          { contentTypeId: definition.id, itemId: id, structured: true },
+        );
+        if (!outcome) throw notFound(definition);
+
+        await contentDuplicateEffects(
+          c,
+          model,
+          { kind: "editorial", outcome: outcome },
+          { actorUserId: actor.userId, pluginId },
+        );
+
+        return c.json(
+          {
+            id: requireContentId(
+              definition.idStrategy,
+              outcome.row.id,
+              definition.id,
+            ),
+            locales: outcome.translations.map(entry => entry.locale),
+            row: outcome.row,
+            skippedLocales: outcome.skippedLocales,
+            sourceId: id,
+          },
+          201,
+        );
+      }
+
+      const result = await withHttpErrors(
+        "create",
+        async () =>
+          await duplicationMethods<ContentDuplicationMethods<TDefinition>>(
+            definition,
+            model.service(c),
+          ).duplicate(id, { overrides, translations }),
+        { contentTypeId: definition.id, itemId: id, structured: true },
+      );
+      if (!result) throw notFound(definition);
+
+      await contentDuplicateEffects(
+        c,
+        model,
+        { kind: "plain", result: result },
+        { actorUserId: actor.userId, pluginId },
+      );
+
+      return c.json(
+        {
+          id: requireContentId(
+            definition.idStrategy,
+            result.row.id,
+            definition.id,
+          ),
+          locales: result.translations.map(entry => entry.locale),
+          row: result.row,
+          skippedLocales: result.skippedLocales,
+          sourceId: id,
+        },
+        201,
+      );
+    },
+  });
+
+  /**
    * The editorial `PUT`: same path and method, one extra key in the body.
    *
    * `expectedVersion` sits beside `values` rather than inside it because
@@ -905,7 +1156,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const { expectedVersion, values } = await readJson(
         c,
         schemas.updateEnvelope,
@@ -951,7 +1202,7 @@ export const buildContentRoutes = <
       const values = await readJson(c, schemas.update);
 
       const result = await withHttpErrors("update", async () =>
-        model.service(c).update(identifier(c), values),
+        model.service(c).update(contentIdentifier(c, definition), values),
       );
       if (!result) throw notFound(definition);
 
@@ -1005,7 +1256,7 @@ export const buildContentRoutes = <
         },
       },
       handler: async c => {
-        const id = identifier(c);
+        const id = contentIdentifier(c, definition);
 
         if (editorial) {
           const result = await withHttpErrors(
@@ -1062,6 +1313,117 @@ export const buildContentRoutes = <
       },
     });
 
+  /**
+   * `{ expectedVersion? }`, and the whole body optional: hiding overwrites no
+   * field value, so - like publishing - it is guarded on the state it changes,
+   * and the version is checked only when the client chose to send one. A content
+   * type without `editorial` has no version, and ignores it.
+   */
+  const visibilityBody = z.strictObject({
+    expectedVersion: z.number().int().positive().optional(),
+  });
+
+  /**
+   * `POST /{id}/hide` and `POST /{id}/unhide`.
+   *
+   * Their own permission, `can_hide`, rather than `can_publish`: taking a record
+   * off the site without unpublishing it is a moderation decision, and a site may
+   * want moderators who can do that without being able to publish anything.
+   * Idempotent like publishing - hiding a hidden record is a 200 that changed
+   * nothing, wrote no revision and announced nothing.
+   */
+  const visibilityRoute = (action: ContentVisibilityAction) =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.hide },
+      route: {
+        method: "post",
+        path: `/{id}/${action}` as const,
+        description:
+          action === "hide"
+            ? `Hide a ${name} from the public site, whatever its publication status`
+            : `Make a hidden ${name} publicly available again`,
+        request: {
+          params: schemas.params,
+          body: { ...jsonBody(visibilityBody), required: false },
+        },
+        responses: {
+          200: jsonResponse(
+            publicationResponse,
+            action === "hide"
+              ? `${name} hidden, or already hidden`
+              : `${name} visible again, or already visible`,
+          ),
+          400: invalidIdentifier,
+          404: { description: `${name} not found` },
+          ...(editorial
+            ? {
+                409: jsonResponse(
+                  conflictSchema,
+                  definition.delivery.redirects.enabled
+                    ? "The version moved, or another record took the address meanwhile"
+                    : "The version moved",
+                ),
+              }
+            : {}),
+        },
+      },
+      handler: async c => {
+        const id = contentIdentifier(c, definition);
+        const contentId = id;
+        const { expectedVersion } = await readOptionalJson(c, visibilityBody);
+        const actor = resolveContentActor(c);
+
+        let outcome: ContentEditorialOutcome<AnyContentTypeDefinition>;
+
+        if (editorial) {
+          const result = await withHttpErrors(
+            "update",
+            async () =>
+              await editorialVisibilityMethods(definition, editorialService(c))[
+                action
+              ](contentId, { actor, expectedVersion }),
+            { contentTypeId: definition.id, itemId: id, structured: true },
+          );
+          if (!result) throw notFound(definition);
+
+          outcome = result;
+        } else {
+          const result = await withHttpErrors(
+            "update",
+            async () =>
+              await visibilityMethods(definition, model.service(c))[action](
+                contentId,
+                { actorUserId: actor.userId },
+              ),
+          );
+          if (!result) throw notFound(definition);
+
+          // The editorial outcome's shape with no history behind it - the same
+          // thing the scheduled path builds - so both services share one set of
+          // effects, and a listener cannot tell which one hid the record.
+          outcome = {
+            changed: result.changed,
+            changedFields: [],
+            operation: action,
+            previousSlug: null,
+            restoredFromRevisionId: null,
+            revisionId: null,
+            row: result.row,
+            version: 0,
+            visibility: result.visibility,
+          };
+        }
+
+        // After the commit: the event, the search document turning private or
+        // public, the delivery events, and the front ends' caches. A no-op
+        // touches none of them.
+        await contentVisibilityEffects(c, model, outcome, { pluginId });
+
+        return c.json({ changed: outcome.changed, row: outcome.row }, 200);
+      },
+    });
+
   const zodRevisionMeta = z.object({
     actorName: z.string().nullable(),
     actorRoleColor: z.string().nullable(),
@@ -1084,7 +1446,7 @@ export const buildContentRoutes = <
   });
 
   const revisionParams = z.object({
-    id: z.coerce.number(),
+    id: schemas.params.shape.id,
     revisionId: z.coerce.number(),
   });
 
@@ -1144,10 +1506,13 @@ export const buildContentRoutes = <
       // Metadata only. Opening the history must not drag every historical
       // snapshot of a long article across the wire; the detail route loads one
       // on demand.
-      const page = await editorialService(c).revisions.list(identifier(c), {
-        cursor,
-        limit: first,
-      });
+      const page = await editorialService(c).revisions.list(
+        contentIdentifier(c, definition),
+        {
+          cursor,
+          limit: first,
+        },
+      );
 
       return c.json(page, 200);
     },
@@ -1172,7 +1537,7 @@ export const buildContentRoutes = <
       // revisions table is shared by every editorial content type in the
       // install, so an id on its own proves nothing about ownership.
       const revision = await editorialService(c).revisions.findById(
-        identifier(c),
+        contentIdentifier(c, definition),
         revisionIdentifier(c),
       );
       if (!revision) {
@@ -1211,7 +1576,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const revisionId = revisionIdentifier(c);
       const { expectedVersion } = await readJson(
         c,
@@ -1296,7 +1661,7 @@ export const buildContentRoutes = <
       const build = model.deliveryService;
       if (!build) throw notFound(definition);
 
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const locale = c.req.query("locale");
       const delivery = build(c, { pluginId });
 
@@ -1368,7 +1733,7 @@ export const buildContentRoutes = <
       // a record that exists and one that does not.
       assertPreviewIsServable();
 
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
 
       const row = await model.service(c).findById(id);
       if (!row) throw notFound(definition);
@@ -1479,7 +1844,9 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const edges = await schedulesModel(c).listForItem(identifier(c));
+      const edges = await schedulesModel(c).listForItem(
+        contentIdentifier(c, definition),
+      );
 
       return c.json(
         { edges, hasCronAdapter: c.get("core")?.hasCronAdapter ?? false },
@@ -1524,7 +1891,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const { action, scheduledFor } = await readJson(
         c,
         z.strictObject({
@@ -1581,7 +1948,7 @@ export const buildContentRoutes = <
       description: `Cancel a pending schedule for one ${name}`,
       request: {
         params: z.object({
-          id: z.coerce.number(),
+          id: schemas.params.shape.id,
           scheduleId: z.coerce.number(),
         }),
       },
@@ -1592,7 +1959,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const scheduleId = Number(c.req.param("scheduleId"));
       if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
         throw new HTTPException(400, {
@@ -1664,7 +2031,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const { expectedVersion } = await readJson(c, deleteEnvelope);
 
       // The history outlives the record: a final `delete` revision is what makes
@@ -1702,7 +2069,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
 
       const row = await withHttpErrors("delete", async () =>
         model.service(c).delete(id),
@@ -1741,6 +2108,14 @@ export const buildContentRoutes = <
     editorial ? editorialRemove : remove,
     ...(definition.publication.enabled
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
+      : []),
+    // Mounted only when the content type opts in, so no other content type gains
+    // an endpoint - or a permission row in the matrix - it does not use.
+    ...(definition.duplication.enabled ? [duplicate] : []),
+    // Mounted only with `visibility`, so every other content type's route list -
+    // and its permission matrix - is unchanged.
+    ...(definition.visibility.enabled
+      ? [visibilityRoute("hide"), visibilityRoute("unhide")]
       : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
     // Mounted only for a content type that declares a file field, so nothing

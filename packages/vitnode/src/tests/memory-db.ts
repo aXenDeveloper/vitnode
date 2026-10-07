@@ -9,6 +9,7 @@ import {
   StringChunk,
   Table,
 } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 
 export type MemoryRow = Record<string, unknown>;
 
@@ -619,6 +620,21 @@ const isSerial = (column: Column) =>
   column.columnType.includes("Serial") ||
   column.generatedIdentity !== undefined;
 
+/** A string-mode `bigint` identity hands its values out as decimal strings. */
+const isStringIdentity = (column: Column) =>
+  column.generatedIdentity !== undefined &&
+  column.columnType === "PgBigIntString";
+
+/** `uuid().defaultRandom()` - the one SQL default the memory database fakes. */
+const isRandomUuid = (column: Column) =>
+  column.columnType === "PgUUID" &&
+  is(column.default, SQL) &&
+  column.default.queryChunks.some(
+    chunk =>
+      is(chunk, StringChunk) &&
+      chunk.value.join("").includes("gen_random_uuid"),
+  );
+
 const uniqueViolation = (table: Table, key: string) =>
   Object.assign(
     new Error(
@@ -664,13 +680,21 @@ export const createMemoryDb = (seed: [Table, readonly object[]][] = []) => {
   type Undo = () => void;
 
   const nextSerial = (table: Table, key: string): number =>
-    rowsOf(table).reduce(
-      (highest, row) =>
-        typeof row[key] === "number" ? Math.max(highest, row[key]) : highest,
-      0,
-    ) + 1;
+    rowsOf(table).reduce((highest, row) => {
+      const value = row[key];
+      const numeric =
+        typeof value === "number"
+          ? value
+          : typeof value === "string" && /^[0-9]+$/.test(value)
+            ? Number(value)
+            : null;
+
+      return numeric === null ? highest : Math.max(highest, numeric);
+    }, 0) + 1;
 
   const defaultOf = (table: Table, key: string, column: Column): unknown => {
+    if (isRandomUuid(column)) return randomUUID();
+    if (isStringIdentity(column)) return String(nextSerial(table, key));
     if (column.defaultFn) return column.defaultFn();
     if (column.onUpdateFn) return column.onUpdateFn();
     if (column.default !== undefined) {

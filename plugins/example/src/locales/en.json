@@ -65,6 +65,35 @@
           "name": "Name",
           "createdAt": "Created"
         }
+      },
+      "tag": {
+        "label": "{count, plural, one {Tag} other {Tags}}",
+        "title": "Tags",
+        "desc": "Keyed by uuid - ids that give nothing away.",
+        "fields": {
+          "name": "Name",
+          "slug": "Slug",
+          "category": "Category",
+          "relatedTags": "Related tags",
+          "updatedAt": "Updated"
+        }
+      },
+      "event": {
+        "label": "{count, plural, one {Event} other {Events}}",
+        "title": "Events",
+        "desc": "Keyed by bigint - ids too large for a JavaScript number arrive as exact strings.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "body": "Description",
+          "primaryTag": "Main tag",
+          "category": "Category",
+          "tags": "Tags",
+          "relatedEvents": "Related events",
+          "sessions": "Sessions",
+          "gallery": "Gallery",
+          "updatedAt": "Updated"
+        }
       }
     },
     "guide": {
@@ -99,6 +128,9 @@
     "articles": {
       "published": "Published",
       "faq": "Frequently asked questions"
+    },
+    "events": {
+      "sessions": "Sessions"
     }
   },
   "@vitnode/example:article": "Articles",
@@ -112,5 +144,21 @@
   "@vitnode/example:category:can_view": "View categories",
   "@vitnode/example:category:can_create": "Create categories",
   "@vitnode/example:category:can_edit": "Edit categories",
-  "@vitnode/example:category:can_delete": "Delete categories"
+  "@vitnode/example:category:can_delete": "Delete categories",
+  "@vitnode/example:tag": "Tags",
+  "@vitnode/example:tag:can_view": "View tags",
+  "@vitnode/example:tag:can_create": "Create tags",
+  "@vitnode/example:tag:can_edit": "Edit tags",
+  "@vitnode/example:tag:can_delete": "Delete tags",
+  "@vitnode/example:tag:can_publish": "Publish and unpublish tags",
+  "@vitnode/example:tag:can_restore": "Restore an earlier version of a tag",
+  "@vitnode/example:tag:can_hide": "Hide and unhide tags",
+  "@vitnode/example:event": "Events",
+  "@vitnode/example:event:can_view": "View events",
+  "@vitnode/example:event:can_create": "Create events",
+  "@vitnode/example:event:can_edit": "Edit events",
+  "@vitnode/example:event:can_delete": "Delete events",
+  "@vitnode/example:event:can_publish": "Publish and unpublish events",
+  "@vitnode/example:event:can_restore": "Restore an earlier version of an event",
+  "@vitnode/example:event:can_hide": "Hide and unhide events"
 }

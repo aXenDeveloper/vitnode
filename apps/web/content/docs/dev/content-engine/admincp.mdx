@@ -6,6 +6,7 @@ icon: LayoutDashboard
 
 import { ImgDocs } from '@/components/fumadocs/img'
 import bulkPublish from './recipes-admin-bulk-publish.png'
+import rowActions from './content-row-actions.png'
 
 Every content type registered in `src/admin/content.tsx` gets an AdminCP list and a create and edit form without any UI code. Most changes are options in the definition's `admin` block. For anything the options cannot express, you replace a single cell, a single field or the whole form layout with your own component.
 
@@ -55,6 +56,22 @@ Ticking rows opens a bar with **Publish**, **Unpublish** and **Delete**. There i
 />
 
 Each action asks for confirmation and then calls the same route as the row buttons, record by record, so events, search indexing and revisions behave as if you clicked each row. When some records cannot be changed, for example because someone edited them meanwhile, the rest still go through. A toast says how many were skipped, and those rows stay ticked.
+
+## Duplicate and hide records
+
+The **More actions** menu of each row collects the less frequent actions. Two of them come from options in the definition:
+
+- **Duplicate** appears with [`duplication`](/docs/dev/content-engine/duplicate-content), for staff with `can_create` and `can_view`. It makes a draft copy and opens it.
+- **Hide** and **Unhide** appear with [`visibility`](/docs/dev/content-engine/content-visibility), for staff with `can_hide`. A hidden record gets a **Hidden** badge next to its status, and the toolbar gets a **Visibility** filter.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={rowActions}
+  alt="Articles list with the More actions menu of Hello world open, listing Preview, Schedule, History, Delivery, Duplicate, Hide and Delete"
+/>
+
+Each action asks for confirmation, refreshes the list and shows a toast. The edit page has a **Hide** or **Unhide** button next to the publishing controls.
 
 ## Group form fields into sections
 
@@ -146,7 +163,7 @@ export const DifficultyCell = ({
 );
 ```
 
-`skeleton` sets the loading placeholder for a field whose component is bigger than its kind suggests. The blog's `content` field is a `textarea` that renders a rich text editor, so it sets `skeleton: "editor"`. The options are `"editor"`, `"input"`, `"list"`, `"media"`, `"switch"` and `"textarea"`.
+`skeleton` sets the loading placeholder for a field whose component is bigger than its kind suggests. A `field.richText()` already gets the rich text editor and its skeleton, so you only need an override to change how the editor looks. The blog's `content` field overrides it to give the editor a taller writing area, and keeps `skeleton: "editor"`. The options are `"editor"`, `"input"`, `"list"`, `"media"`, `"switch"` and `"textarea"`.
 
 ## Replace the whole form layout
 

@@ -891,6 +891,40 @@ describe("SEO projection", () => {
       title: null,
     });
   });
+
+  it("describes a page with the words of a rich text body, never its markup", () => {
+    const storyType = defineContentType({
+      ...base,
+      id: "delivery.story",
+      tableName: "delivery_stories",
+      delivery: {
+        enabled: true,
+        seo: {
+          descriptionField: "excerpt",
+          fallbackDescriptionField: "body",
+          titleField: "title",
+        },
+      },
+      fields: { ...fields, body: field.richText({ required: true }) },
+      publicApi: { ...publicApi, fields: [...publicApi.fields, "body"] },
+    });
+
+    expect(
+      contentDeliverySeo(storyType, {
+        body: "<h2>Tom &amp; Jerry</h2><p>A <strong>chase</strong>.</p>",
+        excerpt: null,
+        title: "T",
+      }).description,
+    ).toBe("Tom & Jerry A chase.");
+    // An image is content, but not a description.
+    expect(
+      contentDeliverySeo(storyType, {
+        body: '<p><img src="/a.png"></p>',
+        excerpt: null,
+        title: "T",
+      }).description,
+    ).toBeNull();
+  });
 });
 
 describe("Open Graph projection", () => {

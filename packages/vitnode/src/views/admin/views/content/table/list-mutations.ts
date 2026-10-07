@@ -1,4 +1,6 @@
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
@@ -39,7 +41,7 @@ const readResult = async (
 };
 
 export interface ContentRowMutationArgs {
-  id: number;
+  id: ContentId;
   target: ContentApiTarget;
 }
 
@@ -54,6 +56,99 @@ export const setContentPublicationInBrowser = async ({
   await readResult(
     async () =>
       await contentApiFetch({
+        method: "post",
+        path: `/${id}/${action}`,
+        target,
+      }),
+  );
+
+export interface ContentDuplicateInput {
+  /** Shared values for the copy. A group merges leaf by leaf. */
+  overrides?: Record<string, unknown>;
+  /** Localized values per copied locale, merged the same way. */
+  translations?: Record<string, Record<string, unknown>>;
+}
+
+/** What `POST /{id}/duplicate` answers with on a `201`. */
+export interface ContentDuplicatePayload {
+  /** A number for a `serial` content type, the canonical string otherwise. */
+  id: ContentId;
+  /** The copied translations' locales, default locale first. */
+  locales: string[];
+  row: Record<string, unknown>;
+  /** Source locales switched off in this install, which the copy does not carry. */
+  skippedLocales: string[];
+  sourceId: ContentId;
+}
+
+export type ContentDuplicateMutationResult = ContentRowMutationResult & {
+  /** Present on success: the copy, so the caller can open it. */
+  duplicated?: ContentDuplicatePayload;
+};
+
+/**
+ * Copies one record as a draft. A refusal comes back with `duplicate` set when it
+ * names a field to fix - `CONTENT_DUPLICATE_SLUG_CONFLICT` (409) or
+ * `CONTENT_DUPLICATE_UNIQUE_REQUIRED` (422) - and with `status` either way.
+ */
+export const duplicateContentInBrowser = async ({
+  id,
+  input = {},
+  target,
+}: ContentRowMutationArgs & {
+  input?: ContentDuplicateInput;
+}): Promise<ContentDuplicateMutationResult> => {
+  let response: Response;
+
+  try {
+    response = await contentApiFetch({
+      body: input,
+      method: "post",
+      path: `/${id}/duplicate`,
+      target,
+    });
+  } catch {
+    return UNREACHABLE;
+  }
+
+  if (!response.ok) {
+    return {
+      ...contentFailureResult({
+        error: await response.text(),
+        status: response.status,
+      }),
+      status: response.status,
+    };
+  }
+
+  const duplicated = (await response.json()) as ContentDuplicatePayload;
+
+  return { duplicated, id: duplicated.id, status: response.status };
+};
+
+/**
+ * Hides or unhides one record from the table.
+ *
+ * Idempotent on the server, like publishing: hiding a record that is already
+ * hidden is a `200` that changed nothing, so a stale row resolves itself.
+ * `expectedVersion` is optional and only checked by an editorial content type -
+ * send the version the row was rendered with when a `409` should stop the click
+ * on a record somebody else just changed. Gated by `can_hide`.
+ */
+export const setContentVisibilityInBrowser = async ({
+  action,
+  expectedVersion,
+  id,
+  target,
+}: ContentRowMutationArgs & {
+  /** The transition to perform, from `contentVisibilityTransition`. */
+  action: ContentVisibilityAction;
+  expectedVersion?: number;
+}): Promise<ContentRowMutationResult> =>
+  await readResult(
+    async () =>
+      await contentApiFetch({
+        ...(expectedVersion === undefined ? {} : { body: { expectedVersion } }),
         method: "post",
         path: `/${id}/${action}`,
         target,

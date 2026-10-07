@@ -1,6 +1,7 @@
 import type { AnyPgColumn, AnyPgColumnBuilder } from "drizzle-orm/pg-core";
 
 import {
+  bigint,
   boolean,
   doublePrecision,
   integer,
@@ -8,10 +9,12 @@ import {
   serial,
   text,
   timestamp,
+  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
 import type { AnyBlockInstance } from "../../blocks/types";
+import type { ContentIdStrategy } from "../ids";
 import type { ContentFieldDescriptor } from "../types";
 
 import {
@@ -25,8 +28,47 @@ import { ContentEngineError } from "../errors";
 
 export type ColumnReferenceThunk = () => AnyPgColumn;
 
-export const buildSystemColumns = (): Record<string, AnyPgColumnBuilder> => ({
-  id: serial().primaryKey(),
+/**
+ * A content table's primary key, per id strategy.
+ *
+ * - `serial`: exactly the column every content type has always had.
+ * - `uuid`: `gen_random_uuid()`, so an insert that names no id still gets one.
+ * - `bigint`: an identity column in Drizzle's `string` mode - `bigserial` has no
+ *   string mode, and a JavaScript number would round anything above 2^53.
+ *   `BY DEFAULT` rather than `ALWAYS`, so an import can keep its own ids and a
+ *   sequence can be moved with `setval`.
+ */
+export const buildIdPrimaryKey = (
+  strategy: ContentIdStrategy,
+): AnyPgColumnBuilder => {
+  if (strategy === "uuid") return uuid().primaryKey().defaultRandom();
+  if (strategy === "bigint") {
+    return bigint({ mode: "string" })
+      .primaryKey()
+      .generatedByDefaultAsIdentity();
+  }
+
+  return serial().primaryKey();
+};
+
+/**
+ * A foreign key column of the type a `strategy` primary key has, nullable until
+ * the caller says otherwise.
+ * Every column that points at a content row - a to-one relation, a junction's
+ * two sides, a translation's or a child row's owner - is built here, so the
+ * types cannot disagree with the key they reference.
+ */
+export const buildIdForeignKey = (strategy: ContentIdStrategy) =>
+  strategy === "uuid"
+    ? uuid()
+    : strategy === "bigint"
+      ? bigint({ mode: "string" })
+      : integer();
+
+export const buildSystemColumns = (
+  strategy: ContentIdStrategy = "serial",
+): Record<string, AnyPgColumnBuilder> => ({
+  id: buildIdPrimaryKey(strategy),
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp()
     .notNull()
@@ -47,6 +89,23 @@ export const buildPublicationColumns = (): Record<
     .default("draft"),
 });
 
+/**
+ * `hiddenAt` and `hiddenBy` - added only when visibility is enabled.
+ *
+ * `hiddenAt` is the whole state: a record is hidden exactly when it is set, so
+ * there is no second flag that could disagree with it. `hiddenBy` is who did it,
+ * and goes back to `NULL` with the account rather than blocking its deletion.
+ */
+export const buildVisibilityColumns = (
+  userReference: ColumnReferenceThunk,
+): Record<string, AnyPgColumnBuilder> => ({
+  hiddenAt: timestamp(),
+  hiddenBy: integer().references(userReference, {
+    onDelete: "set null",
+    onUpdate: "cascade",
+  }),
+});
+
 export const buildEditorialColumns = (): Record<
   string,
   AnyPgColumnBuilder
@@ -56,14 +115,17 @@ export const buildEditorialColumns = (): Record<
 
 export const buildTranslationSystemColumns = ({
   itemReference,
+  itemStrategy = "serial",
   languageReference,
   onItemDelete = "cascade",
 }: {
   itemReference: ColumnReferenceThunk;
+  /** The owning content type's id strategy, which `itemId` follows. */
+  itemStrategy?: ContentIdStrategy;
   languageReference: ColumnReferenceThunk;
   onItemDelete?: "cascade";
 }): Record<string, AnyPgColumnBuilder> => ({
-  itemId: integer()
+  itemId: buildIdForeignKey(itemStrategy)
     .notNull()
     // Cascade: a record's translations are part of the record, so removing it
     // takes them with it in one statement - there is no loop over locales
@@ -112,11 +174,14 @@ export const buildContentColumn = ({
   fieldValue,
   name,
   reference,
+  referenceStrategy = "serial",
 }: {
   contentTypeId: string;
   fieldValue: ContentFieldDescriptor;
   name: string;
   reference?: ColumnReferenceThunk;
+  /** For a to-one `relation`: the target's id strategy, which the column follows. */
+  referenceStrategy?: ContentIdStrategy;
 }): AnyPgColumnBuilder => {
   const { nullable } = fieldValue;
 
@@ -198,15 +263,29 @@ export const buildContentColumn = ({
         );
       }
 
-      const column = integer().references(reference, {
+      // The column has the type of the key it points at: `integer` for a user
+      // or a serial target, `uuid` or `bigint` for the other strategies.
+      const column = (
+        fieldValue.kind === "relation"
+          ? buildIdForeignKey(referenceStrategy)
+          : integer()
+      ).references(reference, {
         onDelete: fieldValue.onDelete,
-        // Identifiers are `serial`, so an update is only ever a repair; cascade
-        // keeps children pointing at the right row either way.
+        // Identifiers are generated and never rewritten, so an update is only
+        // ever a repair; cascade keeps children pointing at the right row.
         onUpdate: "cascade",
       });
 
       return nullable ? column : column.notNull();
     }
+    // The very column a `textarea` generates, so switching a field between the
+    // two is a change of contract and never a migration.
+    case "richText":
+    case "textarea":
+      return withModifiers(text(), {
+        defaultValue: fieldValue.defaultValue,
+        nullable,
+      });
     case "slug":
       // Always NOT NULL and never defaulted: a row nobody can address by URL
       // is not worth allowing, and there is no sensible default URL.
@@ -220,10 +299,12 @@ export const buildContentColumn = ({
         }),
         { defaultValue: fieldValue.defaultValue, nullable },
       );
-    case "textarea":
-      return withModifiers(text(), {
-        defaultValue: fieldValue.defaultValue,
-        nullable,
-      });
   }
 };
+
+/**
+ * The plain-text twin of a searchable `richText` column. Nullable and never
+ * defaulted: it is derived on every write, and `NULL` is what a row written
+ * before the column existed holds until it is backfilled.
+ */
+export const buildContentSearchTextColumn = (): AnyPgColumnBuilder => text();

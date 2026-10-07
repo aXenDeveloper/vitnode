@@ -8,7 +8,10 @@ import type {
 import type {
   ContentCreatedPayload,
   ContentDeletedPayload,
+  ContentDuplicableCreatedPayload,
+  ContentDuplicatedPayload,
   ContentEventAction,
+  ContentHiddenPayload,
   ContentPublishedPayload,
   ContentTranslationCreatedPayload,
   ContentTranslationDeletedPayload,
@@ -16,24 +19,30 @@ import type {
   ContentTranslationRestoredPayload,
   ContentTranslationUnpublishedPayload,
   ContentTranslationUpdatedPayload,
+  ContentUnhiddenPayload,
   ContentUnpublishedPayload,
   ContentUpdatedPayload,
 } from "../events";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { contentEventName } from "../events";
 
 type ContentPayload =
-  | ContentCreatedPayload
-  | ContentDeletedPayload
-  | ContentPublishedPayload
-  | ContentTranslationCreatedPayload
-  | ContentTranslationDeletedPayload
-  | ContentTranslationPublishedPayload
+  | ContentCreatedPayload<ContentId>
+  | ContentDeletedPayload<ContentId>
+  | ContentDuplicableCreatedPayload<ContentId>
+  | ContentDuplicatedPayload<ContentId>
+  | ContentHiddenPayload<ContentId>
+  | ContentPublishedPayload<ContentId>
+  | ContentTranslationCreatedPayload<ContentId>
+  | ContentTranslationDeletedPayload<ContentId>
+  | ContentTranslationPublishedPayload<ContentId>
   | ContentTranslationRestoredPayload<AnyContentTypeDefinition>
-  | ContentTranslationUnpublishedPayload
+  | ContentTranslationUnpublishedPayload<ContentId>
   | ContentTranslationUpdatedPayload<AnyContentTypeDefinition>
-  | ContentUnpublishedPayload
+  | ContentUnhiddenPayload<ContentId>
+  | ContentUnpublishedPayload<ContentId>
   | ContentUpdatedPayload<AnyContentTypeDefinition>;
 
 interface ContentEventEmitter {

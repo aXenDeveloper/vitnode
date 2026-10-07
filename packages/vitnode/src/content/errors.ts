@@ -1,4 +1,5 @@
 import type { CONTENT_ADVANCED_CODES } from "./const";
+import type { ContentId } from "./ids";
 import type { ContentScheduleCode } from "./schedules";
 
 export type ContentAdvancedCode =
@@ -62,7 +63,7 @@ export class ContentVersionConflict extends ContentEngineError {
     contentTypeId: string;
     currentVersion: number;
     expectedVersion: number;
-    itemId: number;
+    itemId: ContentId;
   }) {
     super(
       `This record is at version ${currentVersion}, not ${expectedVersion}. Someone else saved it first.`,
@@ -77,7 +78,7 @@ export class ContentVersionConflict extends ContentEngineError {
 
   readonly currentVersion: number;
   readonly expectedVersion: number;
-  readonly itemId: number;
+  readonly itemId: ContentId;
 }
 
 /**
@@ -130,7 +131,7 @@ export class ContentTranslationVersionConflict extends ContentEngineError {
     contentTypeId: string;
     currentVersion: number;
     expectedVersion: number;
-    itemId: number;
+    itemId: ContentId;
     locale: string;
   }) {
     super(
@@ -147,7 +148,7 @@ export class ContentTranslationVersionConflict extends ContentEngineError {
 
   readonly currentVersion: number;
   readonly expectedVersion: number;
-  readonly itemId: number;
+  readonly itemId: ContentId;
   readonly locale: string;
 }
 
@@ -166,7 +167,7 @@ export class ContentDefaultTranslationRequired extends ContentEngineError {
     locale,
   }: {
     contentTypeId: string;
-    itemId: number;
+    itemId: ContentId;
     locale: string;
   }) {
     super(
@@ -179,7 +180,7 @@ export class ContentDefaultTranslationRequired extends ContentEngineError {
     this.locale = locale;
   }
 
-  readonly itemId: number;
+  readonly itemId: ContentId;
   readonly locale: string;
 }
 
@@ -190,7 +191,7 @@ export class ContentTranslationExists extends ContentEngineError {
     locale,
   }: {
     contentTypeId: string;
-    itemId: number;
+    itemId: ContentId;
     locale: string;
   }) {
     super(
@@ -203,7 +204,7 @@ export class ContentTranslationExists extends ContentEngineError {
     this.locale = locale;
   }
 
-  readonly itemId: number;
+  readonly itemId: ContentId;
   readonly locale: string;
 }
 
@@ -239,7 +240,7 @@ export class ContentTranslationItemMissing extends ContentEngineError {
     itemId,
   }: {
     contentTypeId: string;
-    itemId: number;
+    itemId: ContentId;
   }) {
     super(`No record with id ${itemId} to translate.`, { contentTypeId });
 
@@ -247,7 +248,7 @@ export class ContentTranslationItemMissing extends ContentEngineError {
     this.itemId = itemId;
   }
 
-  readonly itemId: number;
+  readonly itemId: ContentId;
 }
 
 /**
@@ -274,7 +275,7 @@ export class ContentAdvancedInputError extends ContentInputError {
     code: ContentAdvancedCode;
     contentTypeId: string;
     field: string;
-    ids: number[];
+    ids: ContentId[];
     message: string;
   }) {
     super(message, { contentTypeId });
@@ -287,7 +288,7 @@ export class ContentAdvancedInputError extends ContentInputError {
 
   readonly code: ContentAdvancedCode;
   readonly field: string;
-  readonly ids: number[];
+  readonly ids: ContentId[];
 }
 
 /**
@@ -373,4 +374,65 @@ export class ContentScheduleError extends ContentEngineError {
   }
 
   readonly code: ContentScheduleCode;
+}
+
+/**
+ * A duplicate could not find a free slug: every candidate is taken, or
+ * concurrent copies kept taking the one it picked.
+ *
+ * Per-request and structured, so the AdminCP can point at the slug field and
+ * ask for an override rather than show a bare 409.
+ */
+export class ContentDuplicateSlugConflict extends ContentEngineError {
+  constructor({
+    contentTypeId,
+    field,
+    locale,
+    slug,
+  }: {
+    contentTypeId: string;
+    field: string;
+    locale: null | string;
+    slug: string;
+  }) {
+    super(
+      locale === null
+        ? `Could not find a free "${field}" for the copy (last tried "${slug}"). Send "${field}" explicitly.`
+        : `Could not find a free "${field}" in "${locale}" for the copy (last tried "${slug}"). Send "${field}" explicitly.`,
+      { contentTypeId },
+    );
+
+    this.name = "ContentDuplicateSlugConflict";
+    this.field = field;
+    this.locale = locale;
+    this.slug = slug;
+  }
+
+  readonly field: string;
+  readonly locale: null | string;
+  readonly slug: string;
+}
+
+/**
+ * A duplicate would copy a unique value onto a second record. Thrown before
+ * anything is written; `fields` are canonical paths (`code`, `seo.handle`).
+ */
+export class ContentDuplicateUniqueRequired extends ContentEngineError {
+  constructor({
+    contentTypeId,
+    fields,
+  }: {
+    contentTypeId: string;
+    fields: string[];
+  }) {
+    super(
+      `A copy needs a new value for ${fields.map(name => `"${name}"`).join(", ")}: ${fields.length === 1 ? "it is" : "they are"} unique, and the source already holds the current one.`,
+      { contentTypeId },
+    );
+
+    this.name = "ContentDuplicateUniqueRequired";
+    this.fields = fields;
+  }
+
+  readonly fields: string[];
 }

@@ -4,6 +4,7 @@ import type { Context } from "hono";
 
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 
+import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentTranslationSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
@@ -34,12 +35,17 @@ import {
   contentValuesToColumns,
 } from "../paths";
 import {
+  contentRichTextSearchColumns,
+  withContentRichTextSearchText,
+} from "../rich-text";
+import {
   contentDatabase,
   findContentLanguage,
   listContentLanguages,
   resolveContentLanguage,
 } from "./language-resolver";
 import { diffChangedFields } from "./query";
+import { withContentRichTextWrites } from "./rich-text";
 import { createSlugNormalizer } from "./slugs";
 
 export interface ContentTranslationOptions {
@@ -81,61 +87,69 @@ export interface ContentTranslationTransitionResult<TDefinition> {
 
 export interface ContentTranslationModel<TDefinition> {
   create: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     values: ContentLocalizedValues<TDefinition>,
     options?: ContentTranslationCreateOptions,
   ) => Promise<ContentTranslationRow<TDefinition>>;
 
   delete: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options: ContentTranslationWriteOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
   exists: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<boolean>;
 
+  /**
+   * The base row's publication state - and its `hiddenAt` when the content type
+   * has `visibility`, because a hidden record is public in no language.
+   */
   findBasePublication: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,
-  ) => Promise<null | { publishedAt: Date | null; status: string | undefined }>;
+  ) => Promise<null | {
+    hiddenAt?: Date | null;
+    publishedAt: Date | null;
+    status: string | undefined;
+  }>;
   findByLanguageId: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     languageId: number,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
   findByLocale: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
 
   findManyByLanguageId: (
-    itemIds: readonly number[],
+    itemIds: readonly ContentIdOf<TDefinition>[],
     languageId: number,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
   /** Metadata for every translation of one record, without the values. */
   findManyForItem: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationMeta<TDefinition>[]>;
 
   findManyRowsForItem: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
 
   findManyRowsForItems: (
-    itemIds: readonly number[],
+    itemIds: readonly ContentIdOf<TDefinition>[],
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition>[]>;
 
   publish: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationTransitionOptions,
   ) => Promise<ContentTranslationTransitionResult<TDefinition> | null>;
@@ -150,13 +164,13 @@ export interface ContentTranslationModel<TDefinition> {
   ) => Promise<ContentLanguage>;
 
   unpublish: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     options?: ContentTranslationTransitionOptions,
   ) => Promise<ContentTranslationTransitionResult<TDefinition> | null>;
   /** Conditional `UPDATE` guarded by `expectedVersion`. A no-op writes nothing. */
   update: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     locale: string,
     values: ContentLocalizedUpdateValues<TDefinition>,
     options: ContentTranslationWriteOptions,
@@ -181,7 +195,7 @@ export const createContentTranslationModel = <
   c,
   columns,
   definition,
-  schemas,
+  schemas: definitionSchemas,
   table,
   translationTable,
 }: {
@@ -195,6 +209,16 @@ export const createContentTranslationModel = <
   translationTable: PgTable;
 }): ContentTranslationModel<TDefinition> => {
   const contentTypeId = definition.id;
+  // Rich text is sanitised and validated as part of the parse, so every write
+  // below - and anything built on this service - stores sanitised HTML.
+  const schemas = withContentRichTextWrites(
+    definitionSchemas,
+    definition.fields,
+  );
+  // The plain-text twins of searchable localized rich text columns.
+  const richTextSearch = contentRichTextSearchColumns(definition).filter(
+    entry => entry.localized,
+  );
 
   if (!definition.localization.enabled) {
     throw new ContentEngineError(
@@ -276,7 +300,7 @@ export const createContentTranslationModel = <
     ({
       ...publicationOf(row),
       createdAt: row.createdAt as Date,
-      itemId: row.itemId as number,
+      itemId: row.itemId as ContentId,
       languageId: row.languageId as number,
       locale,
       updatedAt: row.updatedAt as Date,
@@ -302,7 +326,7 @@ export const createContentTranslationModel = <
     typeof row.version === "number" ? row.version : 1;
 
   const readOne = async (
-    itemId: number,
+    itemId: ContentId,
     languageId: number,
     database: ContentDatabase,
   ): Promise<null | Record<string, unknown>> => {
@@ -327,7 +351,7 @@ export const createContentTranslationModel = <
   };
 
   const transition = async (
-    itemId: number,
+    itemId: ContentId,
     locale: string,
     options: ContentTranslationTransitionOptions,
     {
@@ -395,7 +419,7 @@ export const createContentTranslationModel = <
   };
 
   const assertItemExists = async (
-    itemId: number,
+    itemId: ContentId,
     database: ContentDatabase,
   ): Promise<void> => {
     const [row] = await database
@@ -442,7 +466,10 @@ export const createContentTranslationModel = <
       const [row] = await database
         .insert(translationTable)
         .values({
-          ...withCreateSlugs(contentValuesToColumns(localizedFields, parsed)),
+          ...withContentRichTextSearchText(
+            richTextSearch,
+            withCreateSlugs(contentValuesToColumns(localizedFields, parsed)),
+          ),
           itemId,
           languageId: target.id,
           ...(initialVersion === undefined ? {} : { version: initialVersion }),
@@ -526,10 +553,12 @@ export const createContentTranslationModel = <
 
     findBasePublication: async (itemId, options) => {
       const baseColumns = table as unknown as Record<string, PgColumn>;
+      const hideable = definition.visibility.enabled;
       const [row] = await db(options)
         .select(
           publication
             ? {
+                ...(hideable ? { hiddenAt: baseColumns.hiddenAt } : {}),
                 publishedAt: baseColumns.publishedAt,
                 status: baseColumns.status,
               }
@@ -543,6 +572,13 @@ export const createContentTranslationModel = <
       if (!publication) return { publishedAt: null, status: undefined };
 
       return {
+        ...(hideable
+          ? {
+              hiddenAt: toNullableDate(
+                (row as Record<string, unknown>).hiddenAt,
+              ),
+            }
+          : {}),
         publishedAt: toNullableDate(row.publishedAt),
         status: typeof row.status === "string" ? row.status : undefined,
       };
@@ -719,7 +755,10 @@ export const createContentTranslationModel = <
       const [row] = await database
         .update(translationTable)
         .set({
-          ...Object.fromEntries(changedColumns.map(key => [key, patch[key]])),
+          ...withContentRichTextSearchText(
+            richTextSearch,
+            Object.fromEntries(changedColumns.map(key => [key, patch[key]])),
+          ),
           version: sql`${versionColumn} + 1`,
         })
         .where(

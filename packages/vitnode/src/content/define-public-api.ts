@@ -230,7 +230,7 @@ export const resolvePublicApi = <TField extends string>(
     throw new ContentEngineError(
       resolveFieldTarget(fields, notSearchable)?.container === "repeatable"
         ? `publicApi.searchableFields includes the repeatable leaf "${notSearchable}", which lives on a child table rather than on the row. A list search is a predicate on the row; index it with \`search.contentFields\` instead.`
-        : `publicApi.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field.`,
+        : `publicApi.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field, nor a richText field.`,
       { contentTypeId: id },
     );
   }

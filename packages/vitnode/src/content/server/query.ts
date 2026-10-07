@@ -1,8 +1,9 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
 
+import type { ContentRichTextSearchColumn } from "../rich-text";
 import type {
   ContentFieldDescriptor,
   ContentFieldMap,
@@ -12,6 +13,7 @@ import type {
 import {
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_VISIBILITY_FILTERS,
   isContentPublicationStatus,
   isFilterableFieldKind,
 } from "../const";
@@ -36,7 +38,7 @@ export const escapeLikePattern = (value: string): string =>
   value.replace(/[\\%_]/g, match => `\\${match}`);
 
 export const buildSearchCondition = (
-  columns: readonly PgColumn[],
+  columns: readonly (PgColumn | SQL)[],
   term: string | undefined,
 ): SQL | undefined => {
   const trimmed = term?.trim();
@@ -45,6 +47,27 @@ export const buildSearchCondition = (
   const pattern = `%${escapeLikePattern(trimmed)}%`;
 
   return or(...columns.map(column => ilike(column, pattern)));
+};
+
+/**
+ * What a list search matches for one searchable name.
+ *
+ * The column itself, except for a `richText` field: that is matched on its
+ * plain-text twin, so a search for "class" finds the word rather than every
+ * styled span. A row written before the twin existed holds `NULL` there until
+ * it is backfilled, and falls back to the HTML column rather than vanishing
+ * from results.
+ */
+export const contentSearchColumn = (
+  columns: Record<string, PgColumn>,
+  name: string,
+  richText: ContentRichTextSearchColumn | null,
+): PgColumn | SQL => {
+  const column = columns[name];
+  const searchColumn = richText ? columns[richText.searchColumn] : undefined;
+  if (!searchColumn) return column;
+
+  return sql`coalesce(${searchColumn}, ${column})`;
 };
 
 const filterValue = (
@@ -78,6 +101,7 @@ export const buildFilterCondition = ({
   filters,
   membership,
   publication = false,
+  visibility = false,
 }: {
   /**
    * Narrows the filterable set further, for a caller with its own allowlist -
@@ -103,6 +127,12 @@ export const buildFilterCondition = ({
   ) => SQL | undefined;
   /** Whether `status` is a generated column and therefore filterable. */
   publication?: boolean;
+  /**
+   * Whether `visibility` is a filter: `hidden` or `visible`, against the
+   * generated `hiddenAt`. Never passed by the public services - a public reader
+   * cannot ask for hidden records, and their allowlist refuses the key anyway.
+   */
+  visibility?: boolean;
 }): SQL | undefined => {
   const conditions: SQL[] = [];
 
@@ -133,6 +163,25 @@ export const buildFilterCondition = ({
       continue;
     }
 
+    // Composes with `status` like any other equality: "published but hidden" is
+    // `status=published&visibility=hidden`, and is exactly the set of records a
+    // reader cannot reach although the AdminCP calls them published.
+    if (visibility && name === "visibility" && columns.hiddenAt) {
+      if (raw !== "hidden" && raw !== "visible") {
+        throw new ContentEngineError(
+          `Invalid visibility filter ${JSON.stringify(raw)}. Allowed values: ${CONTENT_VISIBILITY_FILTERS.join(", ")}.`,
+          { contentTypeId },
+        );
+      }
+
+      conditions.push(
+        raw === "hidden"
+          ? isNotNull(columns.hiddenAt)
+          : isNull(columns.hiddenAt),
+      );
+      continue;
+    }
+
     const fieldValue = fields[name];
 
     // A to-many relation has no column, so it is answered before the column
@@ -140,7 +189,12 @@ export const buildFilterCondition = ({
     // table rather than an equality against something that does not exist.
     if (fieldValue && isContentReferenceCollection(fieldValue)) {
       const filter = raw as ContentRelationFilter;
-      if (typeof filter?.contains !== "number") {
+      // A number or a string: which one is right is the target's strategy, and
+      // the membership condition checks it against that.
+      if (
+        typeof filter?.contains !== "number" &&
+        typeof filter?.contains !== "string"
+      ) {
         throw new ContentEngineError(
           `Filter "${name}" is a to-many relation, which takes \`{ contains: <id> }\` rather than a value.`,
           { contentTypeId },

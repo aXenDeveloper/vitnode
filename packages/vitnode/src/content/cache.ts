@@ -1,7 +1,9 @@
+import type { ContentId } from "./ids";
 import type { ContentLocalizationFallback } from "./types";
 
 import { CONTENT_CACHE_TAG_MAX_LENGTH } from "./const";
 import { clampWithFingerprint } from "./hash";
+import { contentIdKey } from "./ids";
 import { contentLocalesMatch, normalizeContentLocale } from "./locale";
 
 const tag = (...parts: (number | string)[]): string =>
@@ -26,9 +28,10 @@ export const contentPublicListTag = (
 /** One row, by identifier, in one locale. */
 export const contentPublicItemTag = (
   contentTypeId: string,
-  id: number,
+  id: ContentId,
   locale?: string,
-): string => tag(contentTypeId, "item", ...localeParts(locale), id);
+): string =>
+  tag(contentTypeId, "item", ...localeParts(locale), contentIdKey(id));
 
 export const contentPublicSlugTag = (
   contentTypeId: string,
@@ -38,9 +41,10 @@ export const contentPublicSlugTag = (
 
 export const contentDeliveryTag = (
   contentTypeId: string,
-  id: number,
+  id: ContentId,
   locale?: string,
-): string => tag(contentTypeId, "delivery", ...localeParts(locale), id);
+): string =>
+  tag(contentTypeId, "delivery", ...localeParts(locale), contentIdKey(id));
 
 export const contentDeliveryRedirectTag = (
   contentTypeId: string,
@@ -77,7 +81,7 @@ export interface ContentInvalidationInput {
   contentTypeId: string;
   /** Delivery tags, for a content type with `delivery: { enabled: true }`. */
   delivery?: ContentDeliveryInvalidation;
-  id: number;
+  id: ContentId;
   /** Whether the row is publicly reachable *after* the mutation. */
   isPublic: boolean;
 
@@ -150,7 +154,7 @@ const deliveryTags = ({
 }: {
   contentTypeId: string;
   delivery: ContentDeliveryInvalidation | undefined;
-  id: number;
+  id: ContentId;
   locales: readonly {
     isPublic: boolean;
     locale: string | undefined;
@@ -283,13 +287,21 @@ export const contentLocaleInvalidationMode = (
   return unchanged ? "stale-while-revalidate" : "immediate";
 };
 
+/**
+ * The JavaScript twin of `publishedCondition`. `hiddenAt` is optional so a row
+ * from a content type without `visibility` - or a translation row, which never
+ * carries one - is judged exactly as before; any set value means hidden.
+ */
 export const isContentPubliclyVisible = ({
+  hiddenAt,
   publishedAt,
   status,
 }: {
+  hiddenAt?: Date | null | string;
   publishedAt: Date | null | string | undefined;
   status: string | undefined;
 }): boolean => {
+  if (hiddenAt !== undefined && hiddenAt !== null) return false;
   if (status !== "published" || publishedAt === null) return false;
   if (publishedAt === undefined) return false;
 
@@ -304,6 +316,8 @@ export const isContentTranslationPubliclyVisible = ({
   translation,
 }: {
   base: {
+    /** Record-level hiding lives on the base row only. */
+    hiddenAt?: Date | null | string;
     publishedAt: Date | null | string | undefined;
     status: string | undefined;
   };

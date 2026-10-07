@@ -2,6 +2,7 @@ import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 
 import type { ContentTranslationConflict } from "../conflicts";
+import type { ContentId } from "../ids";
 
 import {
   CONTENT_DELIVERY_CODES,
@@ -42,7 +43,7 @@ export const withTranslationHttpErrors = async <TResult>(
   }: {
     contentTypeId: string;
     /** Absent on a read, which has no row to attribute a constraint failure to. */
-    itemId?: number;
+    itemId?: ContentId;
     locale?: string;
   },
 ): Promise<TResult> => {

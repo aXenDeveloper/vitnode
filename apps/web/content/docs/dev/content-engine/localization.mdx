@@ -36,7 +36,7 @@ export const recipeContentType = defineContentType({
 });
 ```
 
-`text`, `textarea`, `slug`, `blocks` and whole `group` fields can be localized. Numbers, booleans, enums, dates, files, users and relations are always shared. A slug and its `source` must both be localized or both shared.
+`text`, `textarea`, `richText`, `slug`, `blocks` and whole `group` fields can be localized. Numbers, booleans, enums, dates, files, users and relations are always shared. A slug and its `source` must both be localized or both shared.
 
 </Step>
 
@@ -69,7 +69,7 @@ The generated migration does not copy existing values into the translations tabl
 
 Open a recipe in the AdminCP. Each localized field has its own language selector, so you can translate the title without leaving the form. A value that is empty in your AdminCP language shows the default language instead, then any language that has text.
 
-With publication, every language has its own status. A translation is public only when both the record and that translation are published. With `editorial`, each language also keeps its own revisions.
+With publication, every language has its own status. A translation is public only when both the record and that translation are published, and the record is not [hidden](/docs/dev/content-engine/content-visibility). With `editorial`, each language also keeps its own revisions.
 
 ## Pick the language in the public API
 

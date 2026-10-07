@@ -142,4 +142,78 @@ describe("ContentCell", () => {
 
     expect(screen.getByText(COVER.name)).toBeTruthy();
   });
+
+  it("shows the words of a rich text value, never its markup", () => {
+    const BODY: ContentColumnSpec = {
+      kind: "richText",
+      label: "Body",
+      name: "body",
+    };
+    const { container } = cell(
+      BODY,
+      rowWith({ body: '<p class="x">Tom &amp; <strong>Jerry</strong></p>' }),
+    );
+
+    expect(container.textContent).toBe("Tom & Jerry");
+    expect(container.querySelector("strong")).toBeNull();
+  });
+
+  it("shows the empty label for a rich text value that is only markup", () => {
+    cell(
+      { kind: "richText", label: "Body", name: "body" },
+      rowWith({ body: "<p><br></p>" }),
+    );
+
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  describe("status with visibility", () => {
+    const STATUS: ContentColumnSpec = {
+      kind: "publication",
+      label: "Status",
+      name: "status",
+    };
+    const labels = { draft: "Draft", hidden: "Hidden", published: "Published" };
+
+    it("says Hidden in words beside a published record readers cannot reach", () => {
+      render(
+        <ContentCell
+          emptyLabel="—"
+          row={rowWith({
+            hiddenAt: "2026-10-01T09:00:00.000Z",
+            status: "published",
+          })}
+          spec={STATUS}
+          statusLabels={labels}
+        />,
+      );
+
+      expect(screen.getByText("Published")).toBeTruthy();
+      expect(screen.getByText("Hidden")).toBeTruthy();
+    });
+
+    it("shows no badge for a visible record", () => {
+      render(
+        <ContentCell
+          emptyLabel="—"
+          row={rowWith({ hiddenAt: null, status: "published" })}
+          spec={STATUS}
+          statusLabels={labels}
+        />,
+      );
+
+      expect(screen.getByText("Published")).toBeTruthy();
+      expect(screen.queryByText("Hidden")).toBeNull();
+    });
+
+    it("shows no badge for a content type without visibility", () => {
+      cell(
+        STATUS,
+        rowWith({ hiddenAt: "2026-10-01T09:00:00.000Z", status: "draft" }),
+      );
+
+      expect(screen.getByText("Draft")).toBeTruthy();
+      expect(screen.queryByText("Hidden")).toBeNull();
+    });
+  });
 });

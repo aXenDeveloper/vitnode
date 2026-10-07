@@ -3,6 +3,7 @@ import { createContentModel } from "@vitnode/core/content/server";
 import { advancedArticleContentType } from "@/content/advanced-article";
 
 import { example_categories } from "./categories";
+import { example_tags } from "./tags";
 
 export const advancedArticleContent = createContentModel(
   advancedArticleContentType,
@@ -13,6 +14,7 @@ export const advancedArticleContent = createContentModel(
       // rather than a column on the row, but the target is just as much a fact
       // this module has to supply.
       categories: () => example_categories.id,
+      tags: () => example_tags.id,
       // `relatedArticles` is deliberately absent. It is a `self: true`
       // relation, and the engine resolves it from the table it is building:
       // writing `() => advancedArticleContent.table.id` here would reference
@@ -23,7 +25,7 @@ export const advancedArticleContent = createContentModel(
   },
 );
 
-// Five exports, not one. Drizzle Kit discovers each table from its export when
+// Six exports, not one. Drizzle Kit discovers each table from its export when
 // it globs the built `dist/src/database/*.js`, so a junction or child table
 // without one would simply be missing from the migration.
 export const example_advanced_articles = advancedArticleContent.table;
@@ -31,6 +33,8 @@ export const example_advanced_articles_translations =
   advancedArticleContent.translationTable;
 export const example_advanced_articles_categories =
   advancedArticleContent.advancedTables.junctions.categories;
+export const example_advanced_articles_tags =
+  advancedArticleContent.advancedTables.junctions.tags;
 export const example_advanced_articles_related_articles =
   advancedArticleContent.advancedTables.junctions.relatedArticles;
 export const example_advanced_articles_faq =

@@ -227,3 +227,41 @@ describe("one page, as the table model", () => {
     expect(zodContentListPage.safeParse({ edges: [] }).success).toBe(false);
   });
 });
+
+describe("the list page", () => {
+  const pageInfo = {
+    count: 2,
+    currentPage: 1,
+    endCursor: null,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    pageSize: 25,
+    startCursor: null,
+    totalCount: 2,
+    totalPages: 1,
+  };
+
+  it("reads rows of a uuid or a bigint content type with their ids intact", () => {
+    const page = zodContentListPage.parse({
+      edges: [
+        { id: "047d2c6c-1d86-47e2-bcd3-2df9f5359541", labels: {} },
+        { id: "9007199254740994", labels: {} },
+      ],
+      pageInfo,
+    });
+
+    expect(page.edges.map(row => row.id)).toEqual([
+      "047d2c6c-1d86-47e2-bcd3-2df9f5359541",
+      "9007199254740994",
+    ]);
+  });
+
+  it("still reads a serial content type's rows as numbers", () => {
+    const page = zodContentListPage.parse({
+      edges: [{ id: 7, labels: {} }],
+      pageInfo: { ...pageInfo, count: 1, totalCount: 1 },
+    });
+
+    expect(page.edges[0]?.id).toBe(7);
+  });
+});

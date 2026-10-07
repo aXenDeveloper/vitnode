@@ -84,6 +84,13 @@ the historical records already in Postgres.
   mapping.
 </Callout>
 
+<Callout type="info" title="Indexes created before uuid and bigint ids">
+  Documents now carry an `itemKey` keyword with the record id as text, so
+  [uuid and bigint](/docs/dev/content-engine/id-strategy) records can be found.
+  Older documents get it on the next **Rebuild index**. Until then, results fall
+  back to the numeric `itemId`, which works for serial ids only.
+</Callout>
+
 <Callout type="warn" title="Keep Postgres">
   Do not delete `core_search_index`. It remains VitNode's source of truth and
   lets you switch providers without losing your map back home.

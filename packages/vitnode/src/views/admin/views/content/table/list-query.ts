@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { AdminTablePage } from "@/views/admin/table/params";
 
+import { contentAnyIdSchema } from "@/content/ids";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { ContentApiRequest, ContentApiTarget } from "../content-request";
@@ -28,7 +29,7 @@ const zodPageInfo = z.object({
 
 const zodListRow = z
   .object({
-    id: z.number(),
+    id: contentAnyIdSchema,
     labels: z.record(z.string(), z.string().nullable()),
     translation: z
       .object({

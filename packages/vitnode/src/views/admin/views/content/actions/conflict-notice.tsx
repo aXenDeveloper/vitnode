@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { stripHtml } from "@/lib/strip-html";
 
 export interface ContentConflictState {
   currentVersion: number;
@@ -51,6 +52,11 @@ const RemoteChanges = ({
   const changed = spec.fields.filter(
     field => asText(latest[field.name]) !== asText(opened[field.name]),
   );
+  // Compared as stored, shown as read: a rich text body lists its words.
+  const display = (kind: string, value: unknown): string =>
+    kind === "richText" && typeof value === "string"
+      ? asText(stripHtml(value))
+      : asText(value);
 
   if (changed.length === 0) return null;
 
@@ -60,10 +66,10 @@ const RemoteChanges = ({
         <li className="flex flex-wrap items-baseline gap-2" key={field.name}>
           <span className="font-medium">{field.label}</span>
           <span className="text-muted-foreground line-through">
-            {asText(opened[field.name])}
+            {display(field.kind, opened[field.name])}
           </span>
           <span aria-hidden>→</span>
-          <span>{asText(latest[field.name])}</span>
+          <span>{display(field.kind, latest[field.name])}</span>
         </li>
       ))}
     </ul>

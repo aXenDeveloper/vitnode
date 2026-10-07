@@ -1183,6 +1183,9 @@
         "published_at": "Published",
         "more_actions": "More actions"
       },
+      "filters": {
+        "all": "All"
+      },
       "actions": {
         "edit": "Edit",
         "publish": "Publish",
@@ -1191,7 +1194,10 @@
         "schedule": "Schedule",
         "history": "History",
         "delivery": "Delivery",
-        "delete": "Delete"
+        "delete": "Delete",
+        "duplicate": "Duplicate",
+        "hide": "Hide",
+        "unhide": "Unhide"
       },
       "create": {
         "title": "Create {name}",
@@ -1221,6 +1227,18 @@
         "conflict": {
           "title": "This record changed",
           "desc": "Someone saved it after this page loaded, so it was not deleted. Refresh the list, check what changed, and delete it again if you still want to."
+        }
+      },
+      "duplicate": {
+        "title": "Duplicate {name}",
+        "desc": "Make a draft copy of <title></title>? Every field and translation is copied, and nothing about the copy is public until you publish it.",
+        "confirm": "Yes, duplicate it",
+        "success": "{name} duplicated as a draft.",
+        "skipped_title": "Some languages were left out",
+        "skipped": "Not copied: {locales}. Those languages are switched off on this site.",
+        "errors": {
+          "slug_conflict": "The copy needs its own {field}, and every address based on \"{slug}\" is taken. Change the original's {field}, then duplicate it again.",
+          "unique_required": "{count, plural, one {{fields} has to be unique} other {{fields} have to be unique}}, so the copy can't reuse the original's value. Create a new record instead, or change the value on the original first."
         }
       },
       "bulk": {
@@ -1259,6 +1277,30 @@
         "confirm": "Yes, unpublish it",
         "success": "{name} has been unpublished.",
         "action": "Unpublish"
+      },
+      "hide": {
+        "title": "Hide {name}",
+        "desc": "Hide <title></title>? It disappears from the public site, search and the sitemap right away. It is not unpublished - unhide it whenever you like.",
+        "confirm": "Yes, hide it",
+        "success": "{name} is now hidden."
+      },
+      "unhide": {
+        "title": "Unhide {name}",
+        "desc": "Unhide <title></title>? Readers can reach it again only if it is published - a draft stays private.",
+        "confirm": "Yes, unhide it",
+        "success": "{name} is visible again."
+      },
+      "visibility": {
+        "label": "Visibility",
+        "hidden": "Hidden",
+        "visible": "Visible",
+        "hidden_since": "Hidden since {date}",
+        "hidden_desc": "Hidden from the public site, search and the sitemap. Publishing a hidden record does not make it public.",
+        "publish_note": "Publishing a hidden record does not make it public.",
+        "conflict": {
+          "title": "This record changed",
+          "desc": "Someone saved it after this page loaded, so its visibility was not changed. The list has been refreshed - check what changed and try again."
+        }
       },
       "status": {
         "label": "Status",
@@ -1318,7 +1360,9 @@
           "publish": "Published",
           "unpublish": "Unpublished",
           "restore": "Restored",
-          "delete": "Deleted"
+          "delete": "Deleted",
+          "hide": "Hidden",
+          "unhide": "Unhidden"
         },
         "restore": {
           "action": "Restore",
@@ -1399,6 +1443,7 @@
         "can_edit": "Edit",
         "can_delete": "Delete",
         "can_publish": "Publish and unpublish",
+        "can_hide": "Hide and unhide",
         "can_restore": "Restore an earlier version"
       },
       "errors": {

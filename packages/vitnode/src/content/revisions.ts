@@ -3,6 +3,7 @@ import type {
   CONTENT_REVISION_OPERATIONS,
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "./const";
+import type { ContentId } from "./ids";
 
 export type ContentRevisionOperation =
   (typeof CONTENT_REVISION_OPERATIONS)[number];
@@ -20,8 +21,10 @@ export interface ContentActor {
 export type ContentSnapshotScalar = boolean | null | number | string;
 
 export type ContentSnapshotValue =
+  | ContentId[]
+  // A to-many reference: numbers for users, files and serial targets, strings
+  // for `uuid` and `bigint` targets.
   | ContentSnapshotScalar
-  | number[]
   | Record<string, ContentSnapshotScalar>
   | Record<string, ContentSnapshotScalar>[];
 
@@ -30,12 +33,20 @@ export interface ContentRevisionSnapshot {
   createdAt: string;
   /** Every declared field, by name. */
   fields: Record<string, ContentSnapshotValue>;
-  id: number;
+  /** The record: a number for `serial`, the canonical string otherwise. */
+  id: ContentId;
   /** Present only for a content type with the publication lifecycle. */
   publication?: { publishedAt: null | string; status: string };
   schemaVersion: number;
   updatedAt: string;
   version: number;
+  /**
+   * Present only for a content type with `visibility`. A record of what the
+   * visibility was at this version - never something a restore puts back:
+   * restoring an old version brings back its *field values*, and a record hidden
+   * today stays hidden.
+   */
+  visibility?: { hiddenAt: null | string; hiddenBy: null | number };
 }
 
 export interface ContentTranslationRevisionSnapshot {
@@ -43,7 +54,8 @@ export interface ContentTranslationRevisionSnapshot {
   createdAt: string;
   /** Every *localized* field, by name. */
   fields: Record<string, ContentSnapshotValue>;
-  itemId: number;
+  /** A number for a `serial` record, the canonical string otherwise. */
+  itemId: ContentId;
   languageId: number;
   /** The canonical `core_languages.code` at the time of the mutation. */
   locale: string;

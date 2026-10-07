@@ -4,6 +4,7 @@ import React from "react";
 import type {
   ColumnDef,
   DataTableProps,
+  DataTableRowId,
   DataTableTMin,
 } from "./data-table-content";
 
@@ -38,8 +39,8 @@ import {
 interface ExpansionColumnDataTable<T extends DataTableTMin> {
   canExpand: (row: T) => boolean;
   expandedIdOf: (row: T) => string;
-  isExpanded: (id: number) => boolean;
-  toggle: (id: number) => void;
+  isExpanded: (id: DataTableRowId) => boolean;
+  toggle: (id: DataTableRowId) => void;
 }
 
 const reorderColumn = <T extends DataTableTMin>(): ColumnDef<T> => ({
@@ -124,7 +125,7 @@ const ReorderableBodyDataTable = <T extends DataTableTMin>({
   searchParams,
 }: Pick<DataTableProps<T>, "filters" | "order"> & {
   renderRow: (row: T) => React.ReactNode;
-  reorder: (activeId: number, overId: number) => void;
+  reorder: (activeId: DataTableRowId, overId: DataTableRowId) => void;
   reorderable: NonNullable<DataTableProps<T>["reorderable"]>;
   rows: T[];
   searchParams: URLSearchParams;
@@ -138,7 +139,7 @@ const ReorderableBodyDataTable = <T extends DataTableTMin>({
       },
       filterIds: filters?.map(filter => filter.id) ?? [],
     });
-  const rowLabelOf = (id: number) => {
+  const rowLabelOf = (id: DataTableRowId) => {
     const row = rows.find(item => item.id === id);
 
     return row ? reorderable.getRowLabel?.(row) : undefined;

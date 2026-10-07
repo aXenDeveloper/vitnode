@@ -23,6 +23,7 @@ export const recipeContentType = defineContentType({
 | `id`           | `string`                                      | Yes      |         | `plugin.entity`, lowercase and dot separated, for example `example.recipe`   |
 | `tableName`    | `string`                                      | Yes      |         | Postgres table name: snake_case, starts with a letter, at most 63 characters |
 | `fields`       | `Record<string, field>`                       | Yes      |         | At least one field built with a [`field.*` helper](/docs/dev/content-engine/fields) |
+| `idStrategy`   | `"serial"` \| `"uuid"` \| `"bigint"`           | No       | `"serial"` | Type of the primary key. See [`idStrategy`](#idstrategy)                 |
 | `admin`        | [`admin`](#admin)                             | No       | `{}`    | AdminCP URL, list and form                                                   |
 | `indexes`      | [`indexes`](#indexes)                         | No       | `[]`    | Extra database indexes                                                       |
 | `publication`  | `{ enabled: true }`                           | No       | off     | Adds `status` and `publishedAt`, and the `can_publish` permission            |
@@ -31,6 +32,8 @@ export const recipeContentType = defineContentType({
 | `editorial`    | [`editorial`](#editorial)                     | No       | off     | Revisions, previews, scheduling and a `version` column                       |
 | `localization` | [`localization`](#localization)               | No       | off     | A translations table for `localized: true` fields                            |
 | `search`       | [`search`](#search)                           | No       | off     | Adds records to the site search index                                        |
+| `visibility`   | `{ enabled: true }`                           | No       | off     | Adds `hiddenAt` and `hiddenBy`, and the `can_hide` permission. See [`visibility`](#visibility) |
+| `duplication`  | [`duplication`](#duplication)                 | No       | off     | A Duplicate action and a `POST /{id}/duplicate` route                        |
 
 To turn a feature off, leave its block out. The `enabled` keys accept only `true`.
 
@@ -38,7 +41,7 @@ To turn a feature off, leave its block out. The `enabled` keys accept only `true
 
 - **`id`** must match `plugin.entity` with at least two segments. Later segments may contain dashes. With `search` or `editorial` it can be at most 100 characters.
 - **Field names** are camelCase and start with a lowercase letter.
-- **Reserved field names:** `id`, `createdAt` and `updatedAt` always; `status` and `publishedAt` with `publication`; `version` with `editorial`. The pagination parameters `cursor`, `first`, `last`, `order`, `orderBy` and `search` are refused too.
+- **Reserved field names:** `id`, `createdAt` and `updatedAt` always; `status` and `publishedAt` with `publication`; `version` with `editorial`; `hiddenAt`, `hiddenBy` and `visibility` with `visibility`. The pagination parameters `cursor`, `first`, `last`, `order`, `orderBy` and `search` are refused too.
 - **Entity key:** the id without its first segment, with further dots turned into `_` (`example.recipe` → `recipe`). Translations live under `{pluginId}.content.{entityKey}`.
 - **Permission module:** the entity key by default, so permissions are named `@vitnode/example:recipe:can_view`. Override it with `admin.permissionModule`.
 
@@ -49,6 +52,8 @@ To turn a feature off, leave its block out. The `enabled` keys accept only `true
 | `publicApi`                  | `publication`                                                |
 | `search`                     | `publication` and `publicApi`                                |
 | `delivery`                   | `publicApi`                                                  |
+| `visibility`                 | `publication`                                                |
+| `duplication.titleSuffix: true` | `admin.titleField` pointing at a `field.text()`           |
 | `delivery.redirects`         | `editorial`, and a localized slug on a localized type        |
 | `delivery.sitemap`           | `publication`                                                |
 | `delivery.hreflang`          | `localization`                                               |
@@ -63,12 +68,12 @@ To turn a feature off, leave its block out. The `enabled` keys accept only `true
 | --------------------------- | ---------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `path`                      | `string`                                 | the id with dots as slashes (`example/recipe`)   | AdminCP URL under `/admin/content/`. Lowercase segments; the last cannot be `create` or `edit`; unique site-wide |
 | `permissionModule`          | `string`                                 | the entity key                                   | Middle part of the permission names                                                          |
-| `titleField`                | field name or `null`                     | first text or textarea field                     | Names a record in headings, dialogs and toasts                                                |
+| `titleField`                | field name or `null`                     | first text or textarea field, never rich text    | Names a record in headings, dialogs and toasts                                                |
 | `colorField`                | field name                               |                                                  | A shared field holding a color, shown as a swatch next to the title in pickers and cells    |
 | `create.mode`, `edit.mode`  | `"dialog"` \| `"page"`                   | `"dialog"`                                       | Open the form in a dialog or on its own page                                                 |
 | `navigation.enabled`        | `boolean`                                | `true`                                           | `false` hides the sidebar entry                                                              |
 | `list.columns`              | field names                              | `status` (with publication), shared columns, `updatedAt` | Table columns, in order                                                             |
-| `list.searchableFields`     | text, textarea or slug fields            | shared text and textarea fields                  | Fields the search box matches. Localized fields match in any language                        |
+| `list.searchableFields`     | text, textarea, rich text or slug fields | shared text and textarea fields                  | Fields the search box matches. Localized fields match in any language. A rich text field is matched by its [plain text](/docs/dev/content-engine/rich-text#search-and-seo) |
 | `list.orderableFields`      | shared scalar fields                     | `[]`                                             | Sortable fields you declared. `id`, `createdAt`, `updatedAt`, `status`, `publishedAt` and `version` are always sortable and must not be listed |
 | `list.defaultOrderBy`       | column name                              | `"updatedAt"`                                    | Must be a system column or in `orderableFields`                                              |
 | `list.defaultOrder`         | `"asc"` \| `"desc"`                      | `"desc"`                                         |                                                                                              |
@@ -85,7 +90,7 @@ How these options look on screen is covered in [Customize the AdminCP](/docs/dev
 | `enabled`          | `true`               |                  | Required                                                                                      |
 | `path`             | `string`             |                  | One lowercase segment, at most 64 characters, not `admin`, unique within the plugin. Routes live at `/api/{pluginId}/content/{path}` |
 | `fields`           | field names          |                  | The allowlist. Exactly one top-level slug field. May include `id`, `createdAt`, `updatedAt` and `publishedAt`. Not `status`, not `field.user()`; list group leaves as `"seo.title"` |
-| `searchableFields` | exposed fields       | `[]`             | Text, textarea or slug fields matched by `?search=`                                           |
+| `searchableFields` | exposed fields       | `[]`             | Text, textarea, rich text or slug fields matched by `?search=`                                |
 | `filterableFields` | exposed fields       | `[]`             | Boolean, enum, number, relation, slug or text fields, each its own query parameter            |
 | `orderableFields`  | exposed fields       | `[]`             | Accepted by `?orderBy=`. `publishedAt` is always added. No localized, file or to-many fields  |
 | `defaultOrderBy`   | column name          | `"publishedAt"`  |                                                                                               |
@@ -100,8 +105,8 @@ How these options look on screen is covered in [Customize the AdminCP](/docs/dev
 | `redirects.enabled`            | `boolean`               | `false`                     | Old slugs answer `308` to the current URL                                   |
 | `seo.titleField`               | text field              |                             | Page title                                                                  |
 | `seo.fallbackTitleField`       | text field              |                             | Used when `titleField` is empty                                             |
-| `seo.descriptionField`         | text or textarea field  |                             | Meta description, stripped of HTML and cut to 160 characters               |
-| `seo.fallbackDescriptionField` | text or textarea field  |                             | Used when `descriptionField` is empty                                       |
+| `seo.descriptionField`         | text, textarea or rich text field |                   | Meta description. The API returns a rich text value as plain text; the page head cuts it to 160 characters |
+| `seo.fallbackDescriptionField` | text, textarea or rich text field |                   | Used when `descriptionField` is empty                                       |
 | `seo.noIndexField`             | shared boolean field    |                             | `true` marks the page `noindex` and leaves it out of the sitemap            |
 | `seo.openGraph`                | `{ titleField?, descriptionField? }` |                |                                                                             |
 | `sitemap.enabled`              | `boolean`               | `false`                     | Lists published URLs at `/delivery/sitemap`                                 |
@@ -136,12 +141,39 @@ Every SEO field must be in `publicApi.fields`. A localized type also needs `"id"
 | ------------------ | ---------------- | ------------------------------------------------------------------------------- |
 | `enabled`          | `true`           | Required                                                                        |
 | `titleField`       | text field       | Required. Not nullable, and in `publicApi.fields`                               |
-| `contentFields`    | field names      | Required. Slug, text or textarea fields that are public                         |
+| `contentFields`    | field names      | Required. Slug, text, textarea or rich text fields that are public              |
 | `pathTemplate`     | `string`         | Required. The result URL with exactly one `{slug}`, such as `/recipes/{slug}`. A page must serve it |
-| `descriptionField` | text or textarea | Optional, and public                                                            |
+| `descriptionField` | text, textarea or rich text | Optional, and public                                                 |
 | `authorField`      | `field.user()`   | Optional. Credits people in the index; it does not have to be public            |
 
-Drafts are indexed as private documents; public search returns only published records.
+Drafts and hidden records are indexed as private documents; public search returns only published, visible records.
+
+## `visibility`
+
+| Name      | Type   | Description |
+| --------- | ------ | ----------- |
+| `enabled` | `true` | Required. Needs `publication` |
+
+Adds the nullable `hiddenAt` and `hiddenBy` columns, the `can_hide` permission, `POST /{id}/hide` and `POST /{id}/unhide`, and a Visibility filter in the AdminCP list. A hidden record is left out of every public read. See [Hide content](/docs/dev/content-engine/content-visibility).
+
+## `duplication`
+
+| Name          | Type      | Default                                   | Description                                                   |
+| ------------- | --------- | ----------------------------------------- | ------------------------------------------------------------- |
+| `enabled`     | `true`    |                                           | Required                                                      |
+| `titleSuffix` | `boolean` | `true` when `admin.titleField` is a `field.text()` | Adds a localized "(Copy)" to the copy's title. `true` needs a text title field |
+
+Duplicating needs `can_create` and `can_view`; there is no separate permission. See [Duplicate content](/docs/dev/content-engine/duplicate-content).
+
+## `idStrategy`
+
+| Value      | Postgres key                                 | In JSON              |
+| ---------- | -------------------------------------------- | -------------------- |
+| `"serial"` | `serial`                                     | number               |
+| `"uuid"`   | `uuid`, `DEFAULT gen_random_uuid()`          | lowercase string     |
+| `"bigint"` | `bigint GENERATED BY DEFAULT AS IDENTITY`    | decimal string       |
+
+Foreign keys, junction tables and the translations table follow the key type of the record they reference. Changing the strategy of a content type that already has records needs a hand-written data migration. See [Record ID strategies](/docs/dev/content-engine/id-strategy).
 
 ## `indexes`
 

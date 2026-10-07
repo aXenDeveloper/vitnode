@@ -74,6 +74,8 @@ The plain service does not emit events, store revisions or check versions. The g
 | `update(id, values)`                 | `{ row, changedFields }`, or `null` when the id does not exist          |
 | `delete(id)`                         | The deleted row, or `null`                                              |
 | `publish(id)`, `unpublish(id)`       | `{ changed, publishedAt, row }`, or `null`. Only with `publication`     |
+| `hide(id)`, `unhide(id)`             | `{ changed, hiddenAt, hiddenBy, row }`, or `null`. Only with `visibility` |
+| `duplicate(sourceId, options?)`      | `{ row, sourceId, translations, skippedLocales }`, or `null`. Only with `duplication` |
 | `advanced(id)`, `advancedFields(id, fields)` | Values of to-many, repeatable and group fields                  |
 | `options(field, search?, ids?)`      | `{ value, label, color? }[]` for a relation or user picker              |
 | `relations.<field>`                  | `add`, `remove`, `set`, `reorder`, `get` for a to-many field            |
@@ -99,6 +101,79 @@ await editorial.update(
 ```
 
 When the record's version is no longer `3`, the call throws `ContentVersionConflict` from `@vitnode/core/content`. It carries `itemId`, `expectedVersion` and `currentVersion`, and the generated routes turn it into a `409` with the code `CONTENT_VERSION_CONFLICT`. Background jobs pass `CONTENT_SYSTEM_ACTOR` instead of a request's actor.
+
+## Hide and duplicate
+
+A content type with [`visibility`](/docs/dev/content-engine/content-visibility) or [`duplication`](/docs/dev/content-engine/duplicate-content) adds methods to both services. They exist in the type only when the option is enabled, so calling `hide` on a content type without visibility is a compile error.
+
+| Method                               | Plain service options        | Editorial service options                  |
+| ------------------------------------ | ---------------------------- | ------------------------------------------ |
+| `hide(id, options)`, `unhide(id, options)` | `{ actorUserId?, tx? }` | `{ actor, expectedVersion?, tx? }`          |
+| `duplicate(sourceId, options)`       | `{ overrides?, translations?, tx? }` | `{ actor, overrides?, translations?, tx? }` |
+
+Hiding a record that is already hidden returns `changed: false` and writes nothing. The editorial `hide` and `unhide` raise the version and store a revision. The editorial `duplicate` stores a first revision for the copy and each copied translation.
+
+Like the other service methods, these emit no events. The generated routes run the effects after the transaction commits, and your own code can do the same with the helpers from `@vitnode/core/content/server`:
+
+```ts
+import {
+  contentVisibilityEffects,
+  resolveContentActor,
+} from "@vitnode/core/content/server";
+
+const outcome = await editorial.hide(recipeId, {
+  actor: resolveContentActor(c),
+});
+
+if (outcome) {
+  await contentVisibilityEffects(c, recipeContent, outcome, {
+    pluginId: CONFIG_PLUGIN.pluginId,
+  });
+}
+```
+
+`contentVisibilityEffects` emits `hidden` or `unhidden`, updates the search index and the delivery data, and notifies [revalidation origins](/docs/dev/content-engine/public-api-and-caching#caching). It does nothing for an outcome with `changed: false`. For a duplicate, call `contentDuplicateEffects`, shown in [Duplicate content](/docs/dev/content-engine/duplicate-content#duplicate-from-your-own-code).
+
+## Content IDs
+
+Service methods take and return ids typed by the content type's [`idStrategy`](/docs/dev/content-engine/id-strategy): `ContentIdOf<typeof recipeContentType>` is `number` for a serial type and `string` for a uuid or bigint type. Never convert an id with `Number()` in code that may meet a bigint type, because ids above 2^53 lose precision.
+
+A custom route reads an id from a URL as text. Parse it with the content type's strategy before calling the service, so a malformed id answers `400` instead of reaching the database:
+
+```ts title="plugins/example/src/api/modules/events/summary.route.ts"
+import { parseContentIdOf } from "@vitnode/core/content";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { HTTPException } from "hono/http-exception";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { eventContentType } from "@/content/event";
+import { eventContent } from "@/database/events";
+
+export const eventSummaryRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    path: "/{id}/summary",
+    description: "Title and status of one event",
+    responses: { 200: { description: "The event summary" } },
+  },
+  handler: async c => {
+    const id = parseContentIdOf(eventContentType, c.req.param("id"));
+    if (id === null) {
+      throw new HTTPException(400, { message: "Invalid event id." });
+    }
+
+    const event = await eventContent.service(c).findById(id);
+    if (!event) throw new HTTPException(404, { message: "Event not found." });
+
+    return c.json({ id: event.id, status: event.status });
+  },
+});
+```
+
+`id` is a `string` here, because `example.event` uses bigint. With OpenAPI request validation, use `contentIdParamSchema(eventContentType.idStrategy)` for the path parameter instead. It accepts exactly what `parseContentIdOf` accepts and turns a serial id into a number.
+
+Code that handles content types it does not know statically uses `ContentId` (`number | string`) and `contentAnyIdSchema`. To store an id in a text column, a cache key or a log line, use `contentIdKey(id)`; it keeps a serial id's digits unchanged. The generated routes parse their ids with an internal helper that is not exported, so use these helpers in your own code. The full list is in [Record ID strategies](/docs/dev/content-engine/id-strategy#helpers).
 
 ## Reuse the schemas
 
@@ -169,7 +244,7 @@ export const adminModule = buildModule({
 
 | Event                       | Payload                                                       | Available with      |
 | --------------------------- | ------------------------------------------------------------- | ------------------- |
-| `created`, `deleted`        | `{ contentId }`                                               | always              |
+| `created`, `deleted`        | `{ contentId }`; `created` adds `duplicatedFromId?` with `duplication` | always    |
 | `updated`                   | `{ contentId, changedFields }`                                | always              |
 | `published`                 | `{ contentId, publishedAt, scheduledBy?, scheduleId? }`       | `publication`       |
 | `unpublished`               | `{ contentId, scheduledBy?, scheduleId? }`                    | `publication`       |
@@ -178,5 +253,8 @@ export const adminModule = buildModule({
 | `schedule_cancelled`        | `{ contentId, action, actorUserId, scheduleId }`              | `editorial.scheduling` |
 | `translation_created`, `translation_updated`, `translation_deleted`, `translation_published`, `translation_unpublished`, `translation_restored` | `{ contentId, languageId, locale, version, … }` | `localization` |
 | `delivery_slug_changed`, `delivery_redirect_created` | `{ contentId, locale, canonicalPath, previousPath, previousSlug, … }` | `delivery` |
+| `duplicated`                | `{ actorUserId, contentId, contentTypeId, sourceId }`         | `duplication`       |
+| `hidden`                    | `{ actorUserId, contentId, hiddenAt }`                        | `visibility`        |
+| `unhidden`                  | `{ actorUserId, contentId }`                                  | `visibility`        |
 
 No event fires when a save changes nothing. Every event, including core's, is listed in [Built-in events](/docs/dev/events/built-in-events).

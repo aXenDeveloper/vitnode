@@ -2,8 +2,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  testBigintEventContentType,
   testEditorialNoteContentType,
   testEditorialPostContentType,
+  testUuidTagContentType,
 } from "../../tests/content-fixtures";
 import {
   createContentPreviewToken,
@@ -143,5 +145,48 @@ describe("verifyContentPreviewToken", () => {
     ];
 
     expect(failures).toEqual([null, null, null, null, null]);
+  });
+});
+
+describe("tokens for every id strategy", () => {
+  const BEYOND_SAFE = "9007199254740993";
+  const UUID = "0198f6f7-d4a2-7ce1-a2ee-4f5f1f2f3a4b";
+
+  const round = (
+    definition:
+      typeof testBigintEventContentType | typeof testUuidTagContentType,
+    itemId: number | string,
+  ) =>
+    verifyContentPreviewToken({
+      definition,
+      now: NOW,
+      pluginId: PLUGIN,
+      secret: SECRET,
+      token: createContentPreviewToken({
+        definition,
+        itemId,
+        now: NOW,
+        pluginId: PLUGIN,
+        revisionId: 1,
+        secret: SECRET,
+        version: 1,
+      }).token,
+    });
+
+  it("carries a bigint beyond Number.MAX_SAFE_INTEGER as its exact digits", () => {
+    expect(round(testBigintEventContentType, BEYOND_SAFE)?.i).toBe(BEYOND_SAFE);
+  });
+
+  it("carries a uuid as its canonical spelling", () => {
+    expect(round(testUuidTagContentType, UUID)?.i).toBe(UUID);
+  });
+
+  it("refuses a signed id the content type's strategy cannot read", () => {
+    expect(round(testUuidTagContentType, 7)).toBeNull();
+    expect(round(testBigintEventContentType, UUID)).toBeNull();
+  });
+
+  it("still verifies a serial token whose id is a number, as every token minted before was", () => {
+    expect(verify(mint({ itemId: 7 }).token)?.i).toBe(7);
   });
 });

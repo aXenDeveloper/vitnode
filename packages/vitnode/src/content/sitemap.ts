@@ -1,15 +1,18 @@
+import type { ContentId } from "./ids";
 import type { ContentSitemapChangeFrequency } from "./types";
 
 import {
   CONTENT_SITEMAP_DEFAULT_PAGE_SIZE,
   CONTENT_SITEMAP_MAX_URLS,
 } from "./const";
+import { contentIdKey } from "./ids";
 
 /** One line of a sitemap, as the delivery service produces it. */
 export interface ContentSitemapEntry {
   /** One of the seven `changefreq` values, or `null` to omit the element. */
   changeFrequency: ContentSitemapChangeFrequency | null;
-  itemId: number;
+  /** The record's id under its content type's strategy. */
+  itemId: ContentId;
 
   lastModified: Date;
   /** The language this URL is in, or `null` for a nonlocalized content type. */
@@ -44,11 +47,12 @@ export const contentSitemapXml = ({
   origin,
 }: {
   /**
-   * The alternates of each entry, keyed by `itemId`. Omit it and no `xhtml:link`
+   * The alternates of each entry, keyed by `itemId` - or by its `contentIdKey`,
+   * as `readDeliveryAlternatesMany` returns them. Omit it and no `xhtml:link`
    * element is emitted at all, which is a valid sitemap and the right default.
    */
   alternates?: ReadonlyMap<
-    number,
+    ContentId,
     readonly { locale: string; origin?: string; path: string }[]
   >;
   entries: readonly ContentSitemapEntry[];
@@ -78,7 +82,9 @@ export const contentSitemapXml = ({
       lines.push(`    <priority>${formatPriority(entry.priority)}</priority>`);
     }
 
-    for (const alternate of alternates?.get(entry.itemId) ?? []) {
+    for (const alternate of alternates?.get(entry.itemId) ??
+      alternates?.get(contentIdKey(entry.itemId)) ??
+      []) {
       const href = absolute(alternate.origin ?? origin, alternate.path);
       if (href === null) continue;
 

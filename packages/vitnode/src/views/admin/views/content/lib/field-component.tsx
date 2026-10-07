@@ -1,3 +1,4 @@
+import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
@@ -6,6 +7,7 @@ import type {
   ContentFileDescriptor,
   ContentFileFieldValue,
 } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
@@ -19,6 +21,7 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 
+import { ContentFormFieldSkeleton } from "../form/skeleton";
 import { ContentGroupField } from "./group-field";
 import { ContentOptionSwatch } from "./option-swatch";
 import { contentOptionsQueryKey } from "./options-query";
@@ -26,6 +29,15 @@ import { ContentRelationSetField } from "./relation-set-field";
 import { ContentRepeatableField } from "./repeatable-field";
 import { ContentUserField } from "./user-field";
 import { ContentUserSetField } from "./user-set-field";
+
+// The editor is TipTap and every extension it loads, so it is fetched when a
+// form first renders a rich text field - never with the list screen.
+const AutoFormEditor = React.lazy(
+  async () =>
+    await import("@/components/form/fields/editor").then(mod => ({
+      default: mod.AutoFormEditor,
+    })),
+);
 
 export interface ContentOption {
   avatarColor?: string;
@@ -37,7 +49,8 @@ export interface ContentOption {
 
 export type ContentOptionsLoader = (args: {
   field: string;
-  ids?: number[];
+  /** The target's ids: numbers for users and serial targets, strings otherwise. */
+  ids?: ContentId[];
   search: string;
 }) => Promise<ContentOption[]>;
 
@@ -249,6 +262,15 @@ export const ContentField = ({
           spec={spec}
           {...props}
         />
+      );
+
+    case "richText":
+      return (
+        <React.Suspense
+          fallback={<ContentFormFieldSkeleton control="editor" />}
+        >
+          <AutoFormEditor label={spec.label} multiLang={multiLang} {...props} />
+        </React.Suspense>
       );
 
     case "textarea":

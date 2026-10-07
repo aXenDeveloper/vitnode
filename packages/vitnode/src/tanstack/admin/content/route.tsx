@@ -2,6 +2,7 @@ import { notFound } from "@tanstack/react-router";
 import { createTranslator } from "use-intl";
 
 import type { ContentLabelTranslator } from "@/content/admin/labels";
+import type { ContentId } from "@/content/ids";
 import type {
   ContentAdminAction,
   ContentFrontendRegistry,
@@ -36,7 +37,7 @@ export interface ContentAdminScreen {
   action: ContentAdminAction;
   entry: RegisteredFrontendContentType;
   /** The record being edited. Only ever set for `edit`. */
-  itemId?: number;
+  itemId?: ContentId;
 }
 
 export const resolveContentAdminScreen = (
@@ -67,7 +68,7 @@ export interface ContentAdminRouteData {
   adminPath: string;
   contentTypeId: string;
   description: string | undefined;
-  itemId?: number;
+  itemId?: ContentId;
 
   labels: ContentRouteLabels;
 

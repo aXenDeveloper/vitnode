@@ -3,6 +3,7 @@ import type {
   PermissionStaffEntryInput,
   PermissionStaffModulesInput,
 } from "../api/lib/permission-staff";
+import type { ContentId } from "./ids";
 import type { AnyContentTypeDefinition } from "./types";
 
 import {
@@ -16,6 +17,7 @@ import {
   RESERVED_FILTER_KEYS,
 } from "./const";
 import { ContentEngineError } from "./errors";
+import { contentIdKey } from "./ids";
 import { partitionContentFields } from "./localization";
 
 /** A definition plus the plugin that registered it. */
@@ -342,9 +344,9 @@ export const contentCreateHref = (
 /** `/admin/content/blog/articles/42/edit` - the generated edit **page**. */
 export const contentEditHref = (
   definition: ContentAdminAddressable,
-  itemId: number,
+  itemId: ContentId,
 ): string =>
-  `${contentAdminHref(definition)}/${itemId}/${CONTENT_ADMIN_EDIT_SEGMENT}`;
+  `${contentAdminHref(definition)}/${contentIdKey(itemId)}/${CONTENT_ADMIN_EDIT_SEGMENT}`;
 
 /**
  * The edit URL with `{id}` still in it.
@@ -355,11 +357,7 @@ export const contentEditHref = (
  */
 export const contentEditHrefTemplate = (
   definition: ContentAdminAddressable,
-): string =>
-  contentEditHref(
-    definition,
-    CONTENT_EDIT_HREF_PLACEHOLDER as unknown as number,
-  );
+): string => contentEditHref(definition, CONTENT_EDIT_HREF_PLACEHOLDER);
 
 /** The token {@link contentEditHrefTemplate} leaves behind for the client. */
 export const CONTENT_EDIT_HREF_PLACEHOLDER = "{id}";
@@ -394,6 +392,16 @@ export const contentPermissionEntries = (
         {
           dependsOn: [CONTENT_PERMISSIONS.view],
           permission: CONTENT_PERMISSIONS.publish,
+        },
+      ]
+    : []),
+  // Hiding takes a record off the public site without unpublishing it, so it
+  // is gated like publishing: on its own, and for both directions.
+  ...(definition?.visibility.enabled
+    ? [
+        {
+          dependsOn: [CONTENT_PERMISSIONS.view],
+          permission: CONTENT_PERMISSIONS.hide,
         },
       ]
     : []),
@@ -488,6 +496,8 @@ export const contentFilterableFields = (
       .filter(([, field]) => isFilterableFieldKind(field.kind))
       .map(([name]) => name),
     ...(definition.publication.enabled ? ["status"] : []),
+    // The hidden/visible filter, carried through the list URL like `status`.
+    ...(definition.visibility.enabled ? ["visibility"] : []),
   ].sort((a, b) => a.localeCompare(b));
 };
 

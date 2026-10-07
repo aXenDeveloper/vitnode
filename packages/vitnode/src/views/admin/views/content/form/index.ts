@@ -25,3 +25,9 @@ export {
 } from "./skeleton";
 export { ContentFormStatusSwitch } from "./status-switch";
 export { useContentFormValues, useSetContentFormValue } from "./values";
+export {
+  ContentFormHiddenBadge,
+  ContentFormHiddenNotice,
+  ContentFormVisibilityToggle,
+  useContentFormHidden,
+} from "./visibility";

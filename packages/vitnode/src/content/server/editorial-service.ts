@@ -1,6 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
+  PgTable,
   PgTableWithColumns,
   TableConfig,
 } from "drizzle-orm/pg-core";
@@ -8,13 +9,17 @@ import type { Context } from "hono";
 
 import { and, eq, ne, sql } from "drizzle-orm";
 
+import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentActor, ContentRevisionOperation } from "../revisions";
 import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
   ContentChangedPath,
   ContentCreateInput,
+  ContentFieldsOf,
   ContentInnerFieldsOf,
+  ContentLocalizedValues,
+  ContentReferenceIdOf,
   ContentRelationCollectionName,
   ContentRepeatableFieldName,
   ContentRepeatableInputRow,
@@ -25,23 +30,41 @@ import type {
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentDeliveryOutcome } from "./delivery-writes";
+import type {
+  ContentDuplicateTranslationSource,
+  ContentEditorialDuplicationMethods,
+} from "./duplicate";
 import type { ContentRevisionsModel } from "./revisions-model";
 import type { ContentSchedulesModel } from "./schedules-model";
 import type { ContentDatabase } from "./service";
+import type { ContentTranslationEditorialService } from "./translation-editorial-service";
+import type { ContentTranslationModel } from "./translation-model";
+import type {
+  ContentEditorialVisibilityMethods,
+  ContentEditorialVisibilityOptions,
+  ContentVisibilityAction,
+  ContentVisibilityChange,
+  ContentVisibilityMembers,
+} from "./visibility";
 
-import { isContentPubliclyVisible } from "../cache";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
 } from "../const";
 import {
   ContentEngineError,
   ContentRevisionNotRestorable,
   ContentVersionConflict,
 } from "../errors";
+import { contentRelationStrategy, requireContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
+import {
+  contentRichTextSearchColumns,
+  withContentRichTextSearchText,
+} from "../rich-text";
 import {
   buildContentRelationOperations,
   buildContentRepeatableOperations,
@@ -51,6 +74,7 @@ import {
   applyContentDeliveryWrite,
   contentSlugHistoryFor,
 } from "./delivery-writes";
+import { runContentDuplicate } from "./duplicate";
 import {
   assertContentFileReferences,
   ContentFileReferenceError,
@@ -67,8 +91,15 @@ import {
   projectRevisionSnapshot,
 } from "./revision-snapshot";
 import { createContentRevisionsModel } from "./revisions-model";
+import { withContentRichTextWrites } from "./rich-text";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
+import {
+  isContentBaseRowPublic,
+  isInVisibilityState,
+  visibilityChange,
+  visibilityValues,
+} from "./visibility";
 
 export interface ContentEditorialOutcome<TDefinition> {
   /** `false` when nothing moved: no write, no revision, no event, no tags. */
@@ -77,6 +108,8 @@ export interface ContentEditorialOutcome<TDefinition> {
   changedFields: ContentChangedPath<TDefinition>[];
 
   delivery?: ContentDeliveryOutcome;
+  /** Set by `duplicate` on the copy's `create`: the record it was copied from. */
+  duplicatedFromId?: ContentId;
 
   movedTranslations?: number;
   operation: ContentRevisionOperation;
@@ -88,6 +121,11 @@ export interface ContentEditorialOutcome<TDefinition> {
   revisionId: null | number;
   row: ContentSelect<TDefinition>;
   version: number;
+  /**
+   * Set only by `hide` and `unhide`: who asked, the visibility columns before
+   * the write, and the public reachability on both sides of it.
+   */
+  visibility?: ContentVisibilityChange;
 }
 
 export interface ContentEditorialOptions {
@@ -107,25 +145,41 @@ export interface ContentEditorialPublicationOptions extends ContentEditorialOpti
   expectedVersion?: number;
 }
 
-export interface ContentEditorialService<TDefinition> {
+export type ContentEditorialService<TDefinition> =
+  ContentEditorialServiceBase<TDefinition> &
+    ContentVisibilityMembers<
+      TDefinition,
+      ContentEditorialVisibilityMethods<TDefinition>
+    > &
+    (TDefinition extends { duplication: { enabled: true } }
+      ? ContentEditorialDuplicationMethods<TDefinition>
+      : Partial<
+          Record<keyof ContentEditorialDuplicationMethods<TDefinition>, never>
+        >);
+
+export interface ContentEditorialServiceBase<TDefinition> {
   create: (
     values: ContentCreateInput<TDefinition>,
     options: ContentEditorialOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition>>;
 
   delete: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   publish: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options: ContentEditorialPublicationOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 
-  relations: Record<
-    ContentRelationCollectionName<TDefinition>,
-    ContentEditorialRelationMethods<TDefinition>
-  >;
+  relations: {
+    [
+      K in ContentRelationCollectionName<TDefinition>
+    ]: ContentEditorialRelationMethods<
+      TDefinition,
+      ContentReferenceIdOf<ContentFieldsOf<TDefinition>[K]>
+    >;
+  };
   /** The editorial repeatable operations, each carrying its own child shape. */
   repeatable: {
     [
@@ -133,7 +187,7 @@ export interface ContentEditorialService<TDefinition> {
     ]: ContentEditorialRepeatableMethods<TDefinition, K>;
   };
   restore: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     revisionId: number,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
@@ -142,37 +196,44 @@ export interface ContentEditorialService<TDefinition> {
 
   schedules: ContentSchedulesModel | undefined;
   unpublish: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     options: ContentEditorialPublicationOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   update: (
-    id: number,
+    id: ContentIdOf<TDefinition>,
     values: ContentUpdateInput<TDefinition>,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
 
-export interface ContentEditorialRelationMethods<TDefinition> {
+/** The editorial collection API of one to-many reference. See `ContentRelationMethods`. */
+export interface ContentEditorialRelationMethods<
+  TDefinition,
+  TRelatedId = ContentId,
+> {
   add: (
-    itemId: number,
-    relatedItemId: number,
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemId: TRelatedId,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   /** The current targets, in stored order. Reads take no version. */
-  get: (itemId: number, options?: ContentEditorialOptions) => Promise<number[]>;
+  get: (
+    itemId: ContentIdOf<TDefinition>,
+    options?: ContentEditorialOptions,
+  ) => Promise<TRelatedId[]>;
   remove: (
-    itemId: number,
-    relatedItemId: number,
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemId: TRelatedId,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   reorder: (
-    itemId: number,
-    relatedItemIds: readonly number[],
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemIds: readonly TRelatedId[],
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   set: (
-    itemId: number,
-    relatedItemIds: readonly number[],
+    itemId: ContentIdOf<TDefinition>,
+    relatedItemIds: readonly TRelatedId[],
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
@@ -180,35 +241,35 @@ export interface ContentEditorialRelationMethods<TDefinition> {
 /** The editorial repeatable operations, typed from the field's own leaves. */
 export interface ContentEditorialRepeatableMethods<TDefinition, TName> {
   create: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     values: ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   delete: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     childId: number,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   list: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     options?: ContentEditorialOptions,
   ) => Promise<
     ContentRepeatableRow<ContentInnerFieldsOf<TDefinition, TName>>[]
   >;
   reorder: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     childIds: readonly number[],
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   set: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     rows: readonly ContentRepeatableInputRow<
       ContentInnerFieldsOf<TDefinition, TName>
     >[],
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   update: (
-    itemId: number,
+    itemId: ContentIdOf<TDefinition>,
     childId: number,
     values: Partial<ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>>,
     options: ContentEditorialWriteOptions,
@@ -224,8 +285,9 @@ export const createContentEditorialService = <
   columns,
   definition,
   pluginId,
-  schemas,
+  schemas: definitionSchemas,
   table,
+  translations,
 }: {
   /** The collection store, or nothing for a content type that declares none. */
   advanced?: ContentAdvancedStore;
@@ -234,7 +296,7 @@ export const createContentEditorialService = <
   cascadeTranslations?:
     | ((options: {
         actor: ContentActor;
-        itemId: number;
+        itemId: ContentId;
         operation: "publish" | "unpublish";
         tx: ContentDatabase;
       }) => Promise<number>)
@@ -244,6 +306,16 @@ export const createContentEditorialService = <
   pluginId: string;
   schemas: ContentSchemas<TDefinition>;
   table: PgTableWithColumns<TableConfig>;
+  /**
+   * The translation half, for a localized content type: `duplicate` copies every
+   * language through its editorial create, in the copy's transaction.
+   */
+  translations?: {
+    columns: Record<string, PgColumn>;
+    editorial: () => ContentTranslationEditorialService<TDefinition>;
+    model: () => ContentTranslationModel<TDefinition>;
+    table: PgTable;
+  };
 }): ContentEditorialService<TDefinition> => {
   if (!definition.editorial.enabled) {
     throw new ContentEngineError(
@@ -253,6 +325,15 @@ export const createContentEditorialService = <
   }
 
   const contentTypeId = definition.id;
+  // Rich text is sanitised and validated as part of the parse, so every write
+  // below - and anything built on this service - stores sanitised HTML.
+  const schemas = withContentRichTextWrites(
+    definitionSchemas,
+    definition.fields,
+  );
+  const richTextSearch = contentRichTextSearchColumns(definition).filter(
+    entry => !entry.localized,
+  );
   const store = advanced;
   // Shared fields only, everywhere below. A localized field is a column on the
   // translation table, so selecting it here would address something that does not
@@ -287,6 +368,10 @@ export const createContentEditorialService = <
     ...CONTENT_SYSTEM_FIELDS,
     ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
     ...CONTENT_EDITORIAL_FIELDS,
+    // Selected on every read and returned by every write, so each "was it
+    // public?" this service asks - delivery, the transition's before-state -
+    // sees `hiddenAt` without a second query.
+    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
   ];
   const ownColumnNames = [
     ...generatedColumnNames,
@@ -321,28 +406,34 @@ export const createContentEditorialService = <
     definition.delivery.enabled && definition.delivery.slugScope === "shared";
   const slugHistory = contentSlugHistoryFor({ c, definition, pluginId });
 
-  /** Whether a base row is publicly reachable right now. `false` without publication. */
+  /**
+   * Whether a base row is publicly reachable right now - published, live and not
+   * hidden. `false` without publication.
+   */
   const publiclyVisible = (row: null | Record<string, unknown>): boolean => {
     if (row === null || !publication) return false;
 
-    return isContentPubliclyVisible({
-      publishedAt: row.publishedAt as Date | null | undefined,
-      status: typeof row.status === "string" ? row.status : undefined,
-    });
+    return isContentBaseRowPublic(row);
   };
 
   /**
-   * The publication state a row held *before* a transition.
+   * The row as it stood *before* a publish or an unpublish.
    *
    * Reconstructed rather than re-read, and it is not a guess: a transition is
    * guarded on the state it changes, so a `publish` that returned a row can only
    * have found it unpublished, and an `unpublish` can only have found it published.
    * A second `SELECT` would race with the writer that just won.
+   *
+   * Everything else is the returned row, unchanged - `hiddenAt` above all. A
+   * transition never writes it, so a hidden record was hidden before its publish
+   * and is hidden after it, and both sides report "not public": publishing a
+   * hidden record reserves no address and adds no sitemap line.
    */
   const invert = (
     operation: "publish" | "unpublish",
     row: Record<string, unknown>,
   ): Record<string, unknown> => ({
+    ...row,
     publishedAt: row.publishedAt,
     status: operation === "publish" ? "draft" : "published",
   });
@@ -363,7 +454,7 @@ export const createContentEditorialService = <
     }: {
       after: null | Record<string, unknown>;
       before: null | Record<string, unknown>;
-      itemId: number;
+      itemId: ContentId;
     },
   ): Promise<ContentDeliveryOutcome | undefined> => {
     if (!deliveryEnabled) return undefined;
@@ -405,7 +496,7 @@ export const createContentEditorialService = <
   };
 
   const readOne = async (
-    id: number,
+    id: ContentId,
     database: ContentDatabase,
   ): Promise<null | Record<string, unknown>> => {
     const [row] = await database
@@ -445,7 +536,11 @@ export const createContentEditorialService = <
       version: number;
     },
   ): Promise<number> => {
-    const itemId = typeof row.id === "number" ? row.id : 0;
+    const itemId = requireContentId(
+      definition.idStrategy,
+      row.id,
+      contentTypeId,
+    );
     // Read **after** the write and **inside** the transaction, so the snapshot
     // is the post-mutation state rather than the state the caller sent. A delete
     // is the one case where the rows are already gone, and the caller passes the
@@ -489,7 +584,7 @@ export const createContentEditorialService = <
    */
   const lockRow = async (
     tx: ContentDatabase,
-    id: number,
+    id: ContentId,
     { force = false }: { force?: boolean } = {},
   ): Promise<boolean> => {
     if (!force && !store?.enabled) return true;
@@ -515,7 +610,7 @@ export const createContentEditorialService = <
    */
   const guardedWrite = async (
     tx: ContentDatabase,
-    id: number,
+    id: ContentId,
     expectedVersion: number,
     values: Record<string, unknown>,
   ): Promise<null | Record<string, unknown>> => {
@@ -562,7 +657,7 @@ export const createContentEditorialService = <
    */
   const cascade = async (
     tx: ContentDatabase,
-    itemId: number,
+    itemId: ContentId,
     operation: "publish" | "unpublish",
     actor: ContentActor,
   ): Promise<number> => {
@@ -583,7 +678,7 @@ export const createContentEditorialService = <
    * `cascadeTranslations`.
    */
   const transition = async (
-    id: number,
+    id: ContentId,
     options: ContentEditorialPublicationOptions,
     operation: "publish" | "unpublish",
     values: Record<string, unknown>,
@@ -665,7 +760,7 @@ export const createContentEditorialService = <
       // coming back and its old URLs should redirect again when it does.
       const delivery = await applyDelivery(tx, {
         after: row,
-        before: { ...row, ...invert(operation, row) },
+        before: invert(operation, row),
         itemId: id,
       });
 
@@ -682,6 +777,110 @@ export const createContentEditorialService = <
         version,
       };
     });
+
+  /**
+   * Hide and unhide: a version bump, a revision and - for a shared slug - the
+   * same delivery bookkeeping an unpublish and a publish do, all in one
+   * transaction.
+   *
+   * The row is locked and read first, so the before-state is the real one: the
+   * effects need to know whether the record was public a moment ago, and a hidden
+   * draft never was. The publication columns are not in the `SET` and never will
+   * be, so hiding cannot publish and unhiding cannot unpublish.
+   *
+   * Like a transition, it is guarded on the state it changes - which is what makes
+   * a repeat a harmless no-op - with `expectedVersion` checked on top when given.
+   */
+  const visibilityTransition = async (
+    id: ContentId,
+    options: ContentEditorialVisibilityOptions,
+    action: ContentVisibilityAction,
+  ): Promise<ContentEditorialOutcome<TDefinition> | null> =>
+    await transact(options, async tx => {
+      const [current] = await tx
+        .select(ownSelection())
+        .from(table)
+        .where(eq(primaryCursor, id))
+        .limit(1)
+        .for("update");
+      if (!current) return null;
+
+      if (
+        options.expectedVersion !== undefined &&
+        versionOf(current) !== options.expectedVersion
+      ) {
+        throw new ContentVersionConflict({
+          contentTypeId,
+          currentVersion: versionOf(current),
+          expectedVersion: options.expectedVersion,
+          itemId: id,
+        });
+      }
+
+      if (isInVisibilityState(action, current)) {
+        return {
+          changed: false,
+          changedFields: [],
+          operation: action,
+          previousSlug: slugOf(current),
+          restoredFromRevisionId: null,
+          revisionId: null,
+          row: toRow(current),
+          version: versionOf(current),
+        };
+      }
+
+      const row = await guardedWrite(
+        tx,
+        id,
+        versionOf(current),
+        visibilityValues(action, options.actor.userId),
+      );
+      if (!row) return null;
+
+      const version = versionOf(row);
+      const revisionId = await capture(tx, {
+        actor: options.actor,
+        changedFields: [],
+        operation: action,
+        row,
+        version,
+      });
+
+      // A hide is an unpublish as far as the address is concerned - the history
+      // keeps the slug, so unhiding brings its redirects back - and an unhide is a
+      // publish: the slug is reserved again, and refused if another record took it
+      // in the meantime.
+      const delivery = await applyDelivery(tx, {
+        after: row,
+        before: current,
+        itemId: id,
+      });
+
+      return {
+        changed: true,
+        changedFields: [],
+        ...(delivery === undefined ? {} : { delivery }),
+        operation: action,
+        previousSlug: slugOf(current),
+        restoredFromRevisionId: null,
+        revisionId,
+        row: toRow(row),
+        version,
+        visibility: visibilityChange({
+          actorUserId: options.actor.userId,
+          after: row,
+          before: current,
+        }),
+      };
+    });
+
+  const hideableMethods: ContentEditorialVisibilityMethods<TDefinition> = {
+    hide: async (id, options) =>
+      await visibilityTransition(id, options, "hide"),
+    unhide: async (id, options) =>
+      await visibilityTransition(id, options, "unhide"),
+  };
 
   /**
    * Every editorial collection mutation needs an actor and an expected version.
@@ -705,7 +904,7 @@ export const createContentEditorialService = <
   };
 
   const runCollection = async (
-    itemId: number,
+    itemId: ContentId,
     field: string,
     compute: (current: unknown[]) => unknown[],
     options: Partial<ContentEditorialWriteOptions> | undefined,
@@ -720,7 +919,7 @@ export const createContentEditorialService = <
       const next = compute(Array.isArray(value) ? value : []);
 
       return await editorial.update(
-        itemId,
+        itemId as ContentIdOf<TDefinition>,
         schemas.update.parse({
           [field]: next,
         }),
@@ -730,7 +929,7 @@ export const createContentEditorialService = <
   };
 
   const collectionApi = {
-    read: async (itemId: number, field: string, options: unknown) => {
+    read: async (itemId: ContentId, field: string, options: unknown) => {
       const loaded = await store?.load(
         itemId,
         (options as ContentEditorialOptions | undefined)?.tx ?? c.get("db"),
@@ -742,7 +941,7 @@ export const createContentEditorialService = <
     },
     run: runCollection,
     write: async (
-      itemId: number,
+      itemId: ContentId,
       field: string,
       next: readonly unknown[],
       options: Partial<ContentEditorialWriteOptions> | undefined,
@@ -754,7 +953,7 @@ export const createContentEditorialService = <
       const write = assertWriteOptions(field, options);
 
       return await editorial.update(
-        itemId,
+        itemId as ContentIdOf<TDefinition>,
         { [field]: [...next] } as ContentUpdateInput<TDefinition>,
         write,
       );
@@ -776,10 +975,15 @@ export const createContentEditorialService = <
   > = {};
 
   for (const field of relations) {
+    const fieldValue = definition.fields[field];
     mutableRelations[field] = buildContentRelationOperations({
       api: collectionApi,
       contentTypeId,
       field,
+      strategy:
+        fieldValue.kind === "relation"
+          ? contentRelationStrategy(definition, fieldValue)
+          : "serial",
     });
   }
   for (const field of repeatables) {
@@ -787,10 +991,10 @@ export const createContentEditorialService = <
       api: collectionApi,
       contentTypeId,
       field,
-    }) as ContentEditorialRepeatableMethods<TDefinition, never>;
+    }) as unknown as ContentEditorialRepeatableMethods<TDefinition, never>;
   }
 
-  const editorial: ContentEditorialService<TDefinition> = {
+  const editorial: ContentEditorialServiceBase<TDefinition> = {
     create: async (values, options) =>
       await transact(options, async tx => {
         const parsed = schemas.create.parse(values) as Record<string, unknown>;
@@ -802,15 +1006,23 @@ export const createContentEditorialService = <
 
         const [row] = await tx
           .insert(table)
-          .values(toInsertColumns(fields, withCreateSlugs(parsed)))
+          .values(
+            withContentRichTextSearchText(
+              richTextSearch,
+              toInsertColumns(fields, withCreateSlugs(parsed)),
+            ),
+          )
           .returning(ownSelection());
 
         // In the same transaction as the row: a create that committed its
         // categories and rolled back its article would leave junction rows
         // pointing at nothing.
-        if (store?.enabled && typeof row.id === "number") {
-          await store.write(tx, row.id, parsed);
-        }
+        const itemId = requireContentId(
+          definition.idStrategy,
+          row.id,
+          contentTypeId,
+        );
+        if (store?.enabled) await store.write(tx, itemId, parsed);
 
         const version = versionOf(row);
         const revisionId = await capture(tx, {
@@ -829,7 +1041,7 @@ export const createContentEditorialService = <
         const delivery = await applyDelivery(tx, {
           after: row,
           before: null,
-          itemId: typeof row.id === "number" ? row.id : 0,
+          itemId,
         });
 
         return {
@@ -943,7 +1155,10 @@ export const createContentEditorialService = <
 
         // Currently declared fields only. A field the content type has since
         // dropped is ignored; one added since is absent, so the record keeps
-        // what it has.
+        // what it has. The snapshot's `publication` and `visibility` blocks are
+        // never read here: restoring version 3 of a record that is hidden today
+        // brings back version 3's words and leaves it hidden, and the same for
+        // its publication status.
         const projected = projectRevisionSnapshot(
           definition,
           revision.snapshot,
@@ -1031,7 +1246,10 @@ export const createContentEditorialService = <
           id,
           options.expectedVersion,
           changedPaths.length > 0
-            ? changedPathsToColumns(fields, patch, changedPaths)
+            ? withContentRichTextSearchText(
+                richTextSearch,
+                changedPathsToColumns(fields, patch, changedPaths),
+              )
             : {},
         );
         if (!row) return null;
@@ -1071,10 +1289,11 @@ export const createContentEditorialService = <
         };
       }),
 
-    relations: mutableRelations,
+    relations:
+      mutableRelations as unknown as ContentEditorialServiceBase<TDefinition>["relations"],
 
     repeatable:
-      mutableRepeatables as ContentEditorialService<TDefinition>["repeatable"],
+      mutableRepeatables as ContentEditorialServiceBase<TDefinition>["repeatable"],
 
     revisions,
 
@@ -1147,7 +1366,10 @@ export const createContentEditorialService = <
           id,
           options.expectedVersion,
           changedPaths.length > 0
-            ? changedPathsToColumns(fields, patch, changedPaths)
+            ? withContentRichTextSearchText(
+                richTextSearch,
+                changedPathsToColumns(fields, patch, changedPaths),
+              )
             : {},
         );
         if (!row) return null;
@@ -1186,5 +1408,79 @@ export const createContentEditorialService = <
       }),
   };
 
-  return editorial;
+  // The copy goes through `editorial.create` and each language through its own
+  // editorial create, so every one of them starts with its `create` revision.
+  const duplication: ContentEditorialDuplicationMethods<TDefinition> = {
+    duplicate: async (sourceId, options) => {
+      const result = await runContentDuplicate(
+        {
+          advanced: store,
+          c,
+          columns,
+          definition,
+          pluginId,
+          table,
+          // Erased to `ContentId`: the duplicate only ever hands back the
+          // canonical id it read off this content type's row.
+          translation: translations as
+            | undefined
+            | {
+                columns: Record<string, PgColumn>;
+                model: () => ContentDuplicateTranslationSource;
+                table: PgTable;
+              },
+        },
+        sourceId,
+        options,
+        {
+          base: async (values, tx) =>
+            await editorial.create(values as ContentCreateInput<TDefinition>, {
+              actor: options.actor,
+              tx,
+            }),
+          idOf: outcome =>
+            requireContentId(
+              definition.idStrategy,
+              (outcome.row as { id: unknown }).id,
+              contentTypeId,
+            ),
+          translation: async (itemId, locale, values, tx) => {
+            if (!translations) {
+              throw new ContentEngineError(
+                "Duplicating a translation needs the translation editorial service.",
+                { contentTypeId },
+              );
+            }
+
+            return await translations
+              .editorial()
+              .create(
+                itemId as ContentIdOf<TDefinition>,
+                locale,
+                values as ContentLocalizedValues<TDefinition>,
+                { actor: options.actor, tx },
+              );
+          },
+        },
+      );
+
+      return result
+        ? {
+            ...result.base,
+            duplicatedFromId: sourceId,
+            skippedLocales: result.skippedLocales,
+            sourceId,
+            translations: result.translations,
+          }
+        : null;
+    },
+  };
+
+  // The duplication half is resolved from `TDefinition["duplication"]`, still a
+  // type parameter here; the runtime flag reads the same field.
+  return {
+    ...editorial,
+    ...(definition.duplication.enabled ? duplication : {}),
+    ...(definition.visibility.enabled ? hideableMethods : {}),
+  } as ContentEditorialService<TDefinition>;
 };

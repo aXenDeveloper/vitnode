@@ -12,6 +12,7 @@ import type {
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { contentRevisionDiff } from "@/content/revisions";
+import { htmlToText, isHtmlEmpty, stripHtml } from "@/lib/strip-html";
 
 const TEXTAREA_PREVIEW_LINES = 8;
 
@@ -46,22 +47,33 @@ const Value = ({
   emptyLabel,
   kind,
   labels,
+  leafKinds,
   options,
   value,
 }: {
   emptyLabel: string;
   kind: string;
   labels: Record<string, string>;
+  /** A group's leaf kinds, so a rich text leaf reads as text too. */
+  leafKinds?: Record<string, string>;
   options?: Record<string, string>;
   value: ContentSnapshotValue | undefined;
 }) => {
   if (isBlank(value)) return <Empty label={emptyLabel} />;
+  // Markup is not what an editor changed - the words are. An editor left at
+  // `<p></p>` changed nothing a reader would see.
+  if (kind === "richText" && typeof value === "string" && isHtmlEmpty(value)) {
+    return <Empty label={emptyLabel} />;
+  }
 
   if (Array.isArray(value)) {
-    if (typeof value[0] === "number") {
+    // A list of identifiers: numbers for users, files and serial targets,
+    // canonical strings for `uuid` and `bigint` targets. Anything else in an
+    // array is a repeatable's rows.
+    if (typeof value[0] === "number" || typeof value[0] === "string") {
       return (
         <span>
-          {(value as number[])
+          {(value as (number | string)[])
             .map(id => labels[String(id)] ?? `#${id}`)
             .join(", ")}
         </span>
@@ -80,7 +92,14 @@ const Value = ({
       <span className="wrap-break-word">
         {Object.entries(value as Record<string, unknown>)
           .filter(([, leaf]) => leaf !== null && leaf !== "")
-          .map(([leaf, leafValue]) => `${leaf}: ${String(leafValue)}`)
+          .map(
+            ([leaf, leafValue]) =>
+              `${leaf}: ${
+                leafKinds?.[leaf] === "richText"
+                  ? stripHtml(String(leafValue))
+                  : String(leafValue)
+              }`,
+          )
           .join(", ")}
       </span>
     );
@@ -107,8 +126,10 @@ const Value = ({
     case "user":
       return <span>{labels[String(value)] ?? `#${String(value)}`}</span>;
 
+    case "richText":
     case "textarea": {
-      const text = String(value);
+      const text =
+        kind === "richText" ? htmlToText(String(value)) : String(value);
       const lines = text.split("\n");
 
       return lines.length > TEXTAREA_PREVIEW_LINES ? (
@@ -137,6 +158,7 @@ const Side = ({
   emptyLabel: string;
   kind: string;
   labels: Record<string, string>;
+  leafKinds?: Record<string, string>;
   options?: Record<string, string>;
   value: ContentSnapshotValue | undefined;
 }) => {
@@ -211,6 +233,9 @@ export const RevisionDiff = ({
           emptyLabel,
           kind,
           labels,
+          leafKinds: Object.fromEntries(
+            (field?.fields ?? []).map(leaf => [leaf.name, leaf.kind]),
+          ),
           options: field?.options,
         };
 

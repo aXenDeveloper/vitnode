@@ -3,9 +3,11 @@ import type { Context } from "hono";
 
 import { eq } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
+import { parseContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import {
@@ -23,7 +25,24 @@ import {
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
 export type ContentSearchOperation =
-  "create" | "delete" | "publish" | "restore" | "unpublish" | "update";
+  | "create"
+  | "delete"
+  | "hide"
+  | "publish"
+  | "restore"
+  | "unhide"
+  | "unpublish"
+  | "update";
+
+/**
+ * The mutations that move public reachability without moving a field: the
+ * document is rewritten - public or private - exactly when the row moved.
+ */
+const isReachabilityOperation = (operation: ContentSearchOperation): boolean =>
+  operation === "publish" ||
+  operation === "unpublish" ||
+  operation === "hide" ||
+  operation === "unhide";
 
 export interface ContentSearchSyncInput {
   advanced?: Record<string, unknown>;
@@ -57,8 +76,9 @@ const decide = (
   if (operation === "delete") return "delete";
 
   // An idempotent transition is a no-op for the same reason it emits no event:
-  // the document is already there and would be rewritten byte for byte.
-  if (operation === "publish" || operation === "unpublish") {
+  // the document is already there and would be rewritten byte for byte. A hide
+  // and an unhide are transitions too: the document stays, as a private one.
+  if (isReachabilityOperation(operation)) {
     return changed === true ? "upsert" : "skip";
   }
 
@@ -82,10 +102,12 @@ export const syncContentSearch = async (
   input: ContentSearchSyncInput,
 ): Promise<ContentSearchSyncOutcome> => {
   const values = input.row as Record<string, unknown>;
-  const itemId = typeof values.id === "number" ? values.id : 0;
-  const documentId = contentSearchDocumentId(definition, itemId);
+  // Read under the content type's strategy: a `uuid` or `bigint` row's id is a
+  // string, and treating it as "no id" would silently never index it.
+  const itemId = parseContentId(definition.idStrategy, values.id);
+  const documentId = contentSearchDocumentId(definition, itemId ?? 0);
 
-  if (!definition.search.enabled || itemId === 0) {
+  if (!definition.search.enabled || itemId === null) {
     return { action: "skip", documentId };
   }
 
@@ -196,7 +218,7 @@ interface TranslationRecord {
 const readTranslations = async (
   c: Context,
   model: AnyContentModel,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<TranslationRecord[]> => {
   const columns: null | Record<string, PgColumn> = model.translationColumns;
   const table: null | PgTable = model.translationTable;
@@ -256,12 +278,12 @@ export const syncContentLocalizedSearch = async (
 ): Promise<ContentSearchSyncOutcome[]> => {
   const definition = contentDefinitionOf(model);
   const values = input.row as Record<string, unknown>;
-  const itemId = typeof values.id === "number" ? values.id : 0;
+  const itemId = parseContentId(definition.idStrategy, values.id);
 
   if (
     !definition.search.enabled ||
     !definition.localization.enabled ||
-    itemId === 0
+    itemId === null
   ) {
     return [];
   }
@@ -295,10 +317,7 @@ export const syncContentLocalizedSearch = async (
 
   // An idempotent transition is a no-op for the same reason it emits no event:
   // every document is already exactly what it would be rewritten to.
-  if (
-    (input.operation === "publish" || input.operation === "unpublish") &&
-    input.changed !== true
-  ) {
+  if (isReachabilityOperation(input.operation) && input.changed !== true) {
     return [];
   }
 
@@ -380,10 +399,10 @@ export const syncContentLocalizedSearch = async (
 export const contentSearchAdvancedValues = async (
   c: Context,
   model: AnyContentModel,
-  itemId: number,
+  itemId: ContentId,
 ): Promise<Record<string, unknown> | undefined> => {
   const wanted = contentSearchIndexedCollections(contentDefinitionOf(model));
-  if (wanted.length === 0 || itemId === 0) return undefined;
+  if (wanted.length === 0) return undefined;
 
   return await model.service(c).advancedFields(itemId, wanted);
 };
@@ -409,7 +428,7 @@ const write = async (
     action: "delete" | "upsert";
     documentId: string;
     input: { operation: ContentSearchOperation; pluginId?: string };
-    itemId: number;
+    itemId: ContentId;
     run: () => Promise<void>;
   },
 ): Promise<ContentSearchSyncOutcome> => {

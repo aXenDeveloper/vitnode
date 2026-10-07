@@ -1,0 +1,153 @@
+---
+title: Duplicate content
+description: Let editors copy a Content Engine record as a new draft, with its translations, relations and repeatable rows, from the AdminCP or from your own code.
+icon: Copy
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import duplicateDialog from './content-duplicate-dialog.png'
+
+Duplication copies one record into a new draft: every field, every translation, relations in their order and repeatable rows. The blog uses it so an editor can start a new article from a similar one, or prepare a rewrite of a published article without touching the live version.
+
+<Steps>
+
+<Step>
+
+### Turn on duplication
+
+The blog's article content type turns it on with one line:
+
+```ts title="plugins/blog/src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  id: "blog.post",
+  tableName: "blog_posts",
+  duplication: { enabled: true }, // [!code ++]
+  // ...
+});
+```
+
+There is no migration and no new permission. Duplicating needs `can_create` and `can_view`, because it creates a record by reading another: for the blog, **Create articles** and **View articles list**. Run `pnpm build:plugins` and restart `pnpm dev`.
+
+</Step>
+
+<Step>
+
+### Duplicate an article in the AdminCP
+
+Open **AdminCP → Blog → Articles**, open the **More actions** menu of an article and choose **Duplicate**. Confirm with **Yes, duplicate it**:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={duplicateDialog}
+  alt="Duplicate Article dialog asking to make a draft copy of Hello world, with Cancel and Yes, duplicate it buttons"
+/>
+
+The list refreshes, a toast says the article was duplicated as a draft, and the copy opens on its edit page. If some of the source's languages are switched off on this site, a second toast lists the ones that were left out.
+
+</Step>
+
+</Steps>
+
+Duplicating the blog's "Hello world", published in English and Polish with two categories and two ordered authors, creates a draft with:
+
+| Language | Title                | Slug                 |
+| -------- | -------------------- | -------------------- |
+| English  | Hello world (Copy)   | `hello-world-copy`   |
+| Polish   | Witaj świecie (Copy) | `witaj-swiecie-copy` |
+
+The copy has the same categories and the same authors in the same order, and each language starts its own revision history.
+
+## What the copy contains
+
+| Copied                                                                                   | Not copied                                                                            |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Every declared field, including rich text, groups and widgets                            | Revisions, scheduled publishing and preview links                                     |
+| Repeatable rows, as new rows in the same order                                           | Slug history and redirects                                                            |
+| Relation, user and file references, in their order. Files are reused, not uploaded again | Published state and `publishedAt`: the copy is a draft                                |
+| Every translation, each as a draft with its own first revision                           | Hidden state: the copy is never [hidden](/docs/dev/content-engine/content-visibility) |
+
+The copy gets a new id, new timestamps and `version` 1. It all happens in one database transaction, so a failure leaves nothing behind.
+
+### Titles and slugs
+
+When `admin.titleField` is a `field.text()`, the copy's title gets a suffix in each language, such as "Hello world (Copy)". The source title is shortened when the suffix would push it past the field's `maxLength`. Turn the suffix off with `duplication: { enabled: true, titleSuffix: false }`. `titleSuffix: true` with a title field that is not text throws when the content type is defined.
+
+The suffix is the core message `core.content.duplicate.title_suffix`, resolved in each copied language and falling back to "(Copy)".
+
+Each slug is regenerated from the copy's title, so `hello-world` becomes `hello-world-copy`. A slug without a `source` gets `-copy` appended. When that slug is taken, by a live record or by another record's old URL, the engine tries `-2`, `-3` and so on, up to 20 candidates.
+
+### Unique fields
+
+A `field.text({ unique: true })` cannot keep the source's value. Duplicating such a record without a new value fails before anything is written, with `422` and the code `CONTENT_DUPLICATE_UNIQUE_REQUIRED`. Pass the new value as an override from the API, as shown below.
+
+## Duplicate from the API
+
+The admin module of a content type with duplication has `POST /{id}/duplicate`. For the blog, the module is named after its permission module, `posts`:
+
+```http
+POST /api/@vitnode/blog/admin/content/posts/701/duplicate
+Content-Type: application/json
+
+{
+  "translations": {
+    "en": { "title": "Hello again", "friendlyUrl": "hello-again" },
+    "pl": { "title": "Witaj ponownie" }
+  }
+}
+```
+
+The body is optional:
+
+| Name           | Type                                     | Description                                                                                            |
+| -------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `overrides`    | Partial shared field values              | Values the copy takes instead of the source's. A group is merged leaf by leaf. Validated like a create |
+| `translations` | `{ [locale]: partial localized values }` | Localized values per copied language. A language the source has no translation in is a `400`           |
+
+A slug you pass in `overrides` or `translations` is used as it is, without `-copy`. A title you pass is used without the "(Copy)" suffix. In the example above, the English copy is "Hello again" at `hello-again`, and the Polish copy is "Witaj ponownie" with the slug `witaj-ponownie` generated from that title.
+
+The response is `201` with `{ id, sourceId, row, locales, skippedLocales }`: the copy's id, the source id, the new row, the copied languages and the languages left out because they are switched off.
+
+| Status | When                                                                                                                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `400`  | An invalid id, override or translation                                                                                                     |
+| `403`  | Missing `can_create` or `can_view`                                                                                                         |
+| `404`  | The source does not exist                                                                                                                  |
+| `409`  | No free slug was found (`CONTENT_DUPLICATE_SLUG_CONFLICT`, with `field`, `locale` and `slug`), or an override collides with another record |
+| `422`  | A unique field needs an override (`CONTENT_DUPLICATE_UNIQUE_REQUIRED`, with `fields`)                                                      |
+
+## Duplicate from your own code
+
+`postContent.service(c).duplicate(sourceId, options)` and `editorialService(c, …).duplicate(sourceId, { actor, ...options })` take the same `overrides` and `translations`, plus `tx`. Both exist only when duplication is enabled, and both return `null` when the source does not exist.
+
+The services do not emit events or index the copy. Run `contentDuplicateEffects` from `@vitnode/core/content/server` after the transaction commits, as the generated route does:
+
+```ts
+import {
+  contentDuplicateEffects,
+  resolveContentActor,
+} from "@vitnode/core/content/server";
+
+const { editorialService } = postContent;
+if (!editorialService) throw new Error("Articles have no editorial features.");
+
+const actor = resolveContentActor(c);
+const outcome = await editorialService(c, {
+  pluginId: CONFIG_PLUGIN.pluginId,
+}).duplicate(sourceId, { actor });
+
+if (outcome) {
+  await contentDuplicateEffects(
+    c,
+    postContent,
+    { kind: "editorial", outcome },
+    { actorUserId: actor.userId, pluginId: CONFIG_PLUGIN.pluginId },
+  );
+}
+```
+
+The effects emit `content.blog.post.created` with `duplicatedFromId`, one `translation_created` per copied language, and then `content.blog.post.duplicated`. They also add the copy to the search index as a private draft. The blog's legacy `blog.post.created` is re-emitted once for the copy. See [Services, schemas and events](/docs/dev/content-engine/services-and-api#events).
+
+## Check the result
+
+Duplicate "Hello world" and open the list. "Hello world (Copy)" is a **Draft**, and `/blog/hello-world-copy` answers `404` until you publish it. Open the original's **History**: it has no new revision, because the source is only read.

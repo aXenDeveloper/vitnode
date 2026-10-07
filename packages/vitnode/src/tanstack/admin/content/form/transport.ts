@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
 import type { ContentFormTransport } from "@/views/admin/views/content/form/transport";
 
@@ -16,6 +17,7 @@ import {
   listContentTranslationsInBrowser,
   loadContentOptionsInBrowser,
   readContentRowInBrowser,
+  setContentHiddenInBrowser,
   setContentPublishedInBrowser,
 } from "@/views/admin/views/content/form/mutations-api";
 
@@ -40,7 +42,7 @@ export const contentFormTransport = (
   queryClient: QueryClient,
 ): ContentFormTransport => {
   /** What a successful write to one record owes the rest of the AdminCP. */
-  const settled = async (contentTypeId: string, itemId?: number) => {
+  const settled = async (contentTypeId: string, itemId?: ContentId) => {
     await invalidateContentAfterWrite(queryClient, {
       contentTypeId,
       ...(itemId === undefined ? {} : { itemId }),
@@ -129,6 +131,19 @@ export const contentFormTransport = (
 
     reloadRow: async (contentTypeId, itemId) =>
       await readContentRowInBrowser(targetFor(contentTypeId), itemId),
+
+    setHidden: async (contentTypeId, itemId, action, expectedVersion) => {
+      const result = await setContentHiddenInBrowser(
+        targetFor(contentTypeId),
+        itemId,
+        action,
+        expectedVersion,
+      );
+
+      if (result.error === undefined) await settled(contentTypeId, itemId);
+
+      return result;
+    },
 
     unpublish: async (contentTypeId, itemId) => {
       const result = await setContentPublishedInBrowser(

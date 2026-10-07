@@ -1,6 +1,10 @@
 import type { ContentFieldDescriptor } from "./types";
 
-import { CONTENT_ENUM_DEFAULT_LENGTH } from "./const";
+import { isHtmlEmpty, stripHtml } from "../lib/strip-html";
+import {
+  CONTENT_ENUM_DEFAULT_LENGTH,
+  CONTENT_RICH_TEXT_MAX_HTML_LENGTH,
+} from "./const";
 
 const DEFAULT_MUST_FIT =
   "A default is what gets written whenever the field is left empty, so it has to satisfy the field's own rules.";
@@ -61,6 +65,42 @@ const textIssue = (
 
   if (maxLength !== undefined && defaultValue.length > maxLength) {
     return `Field "${name}" has a default of ${JSON.stringify(defaultValue)}, which is ${defaultValue.length} characters against a maxLength of ${maxLength}. ${DEFAULT_MUST_FIT}`;
+  }
+
+  return null;
+};
+
+/**
+ * `textIssue` for HTML: the bounds count plain text, and a default that is only
+ * markup is "no value" rather than a value too short for `minLength`.
+ */
+const richTextIssue = (
+  name: string,
+  { defaultValue, maxLength, minLength }: LengthConstraints,
+): null | string => {
+  const bounds = textIssue(name, {
+    defaultValue: undefined,
+    maxLength,
+    minLength,
+  });
+  if (bounds !== null) return bounds;
+
+  if (typeof defaultValue !== "string") return null;
+
+  if (defaultValue.length > CONTENT_RICH_TEXT_MAX_HTML_LENGTH) {
+    return `Field "${name}" has a default of ${defaultValue.length} characters of HTML, above the ${CONTENT_RICH_TEXT_MAX_HTML_LENGTH} every rich text value is held to. ${DEFAULT_MUST_FIT}`;
+  }
+
+  if (isHtmlEmpty(defaultValue)) return null;
+
+  const { length } = stripHtml(defaultValue);
+
+  if (minLength !== undefined && length < minLength) {
+    return `Field "${name}" has a default whose text is ${length} characters against a minLength of ${minLength}. ${DEFAULT_MUST_FIT}`;
+  }
+
+  if (maxLength !== undefined && length > maxLength) {
+    return `Field "${name}" has a default whose text is ${length} characters against a maxLength of ${maxLength}. ${DEFAULT_MUST_FIT}`;
   }
 
   return null;
@@ -145,6 +185,8 @@ export const scalarFieldConstraintIssue = (
   if (fieldValue.kind === "text" || fieldValue.kind === "textarea") {
     return textIssue(name, fieldValue);
   }
+
+  if (fieldValue.kind === "richText") return richTextIssue(name, fieldValue);
 
   if (fieldValue.kind === "number") return numberIssue(name, fieldValue);
 
