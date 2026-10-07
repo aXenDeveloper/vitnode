@@ -245,3 +245,38 @@ export const vitNodeApiConfig = buildApiConfig({
 ```
 
 Leave it unset when your pages read the public API on every request.
+
+Because the request carries your `CRON_SECRET` - the same key that runs every cron job - VitNode is picky about where it sends it:
+
+- Each origin must use `https`. Plain `http` is only allowed for `localhost` and `127.0.0.1`.
+- Outside development, nothing is sent while `CRON_SECRET` is unset or still the built-in default. The API logs a warning once and the scheduled run records the origins as not delivered.
+
+### Build the revalidate endpoint
+
+Your endpoint is the lock on that door, so check two things before you expire anything:
+
+1. **The bearer, in constant time.** A plain `===` stops at the first wrong character, and that timing leaks the secret one character at a time.
+2. **The `x-vitnode-timestamp` header.** It holds the send time in milliseconds. Refuse anything more than 5 minutes away from your clock, so a captured request can't be replayed next week.
+
+```ts title="apps/web/src/routes/api/vitnode/content/revalidate.ts"
+import { createHash, timingSafeEqual } from "node:crypto";
+
+const MAX_SKEW_MS = 5 * 60 * 1000;
+
+// Hashing first gives both sides the same length, which `timingSafeEqual` needs.
+const digest = (value: string) => createHash("sha256").update(value).digest();
+
+export const isTrustedRevalidation = (request: Request): boolean => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+
+  const bearer = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
+  if (!bearer || !timingSafeEqual(digest(bearer), digest(secret))) return false;
+
+  const sentAt = Number(request.headers.get("x-vitnode-timestamp"));
+
+  return Number.isFinite(sentAt) && Math.abs(Date.now() - sentAt) <= MAX_SKEW_MS;
+};
+```
+
+Answer `403` when it returns `false` - VitNode reads that as a wrong secret and skips the retry - and a `2xx` once the tags are expired. The JSON body is the invalidation input: the content type, the record `id`, its `slugs` and whether it `wasPublic` and `isPublic`. Pass it to `contentInvalidationTags` from `@vitnode/core/content` to get the exact tags to expire.

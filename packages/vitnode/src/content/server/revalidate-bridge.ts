@@ -5,7 +5,7 @@ import type {
   ContentInvalidationMode,
 } from "../cache";
 
-import { CONFIG } from "../../lib/config";
+import { CONFIG, isCronSecretRejected } from "../../lib/config";
 import { contentInvalidationTags } from "../cache";
 
 /** The path a front end mounts if it wants to be told. */
@@ -23,6 +23,41 @@ const RETRY_DELAY_MS = 250;
 export interface ContentRevalidationRequest extends ContentInvalidationInput {
   mode: ContentInvalidationMode;
 }
+
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "[::1]", "localhost"]);
+
+/**
+ * Each misconfiguration is reported once per process. Every scheduled run hits
+ * the same one, and a warning per run buries the log it is meant to stand out
+ * in.
+ */
+const warned = new Set<string>();
+
+const warnOnce = (c: Context, key: string, message: string): void => {
+  if (warned.has(key)) return;
+  warned.add(key);
+  void log(c, message, "warn");
+};
+
+/**
+ * The bearer is `CRON_SECRET` itself - the key to every cron job - so it only
+ * travels over TLS. Plain `http` is allowed for a loopback front end, which is
+ * what development looks like.
+ */
+const isSafeOrigin = (origin: string): boolean => {
+  if (CONFIG.node_development) return true;
+
+  try {
+    const url = new URL(origin);
+
+    return (
+      url.protocol === "https:" ||
+      (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+};
 
 const sleep = async (ms: number): Promise<void> =>
   await new Promise(resolve => setTimeout(resolve, ms));
@@ -49,6 +84,20 @@ export const dispatchContentRevalidation = async (
   if (origins.length === 0) return { attempted: 0, delivered: 0 };
 
   const secret = c.get("core")?.cronSecret ?? CONFIG.cronJobSecret;
+
+  // The built-in default is in the repository, so outside development sending
+  // it proves nothing and hands it to every origin listed. Every origin counts
+  // as not delivered, so the run records the failure instead of hiding it.
+  if (isCronSecretRejected(secret)) {
+    warnOnce(
+      c,
+      "secret",
+      "Not notifying content.revalidateOrigins: CRON_SECRET is unset or still the built-in default. Set CRON_SECRET to a random value.",
+    );
+
+    return { attempted: origins.length, delivered: 0 };
+  }
+
   const body = JSON.stringify(input);
   let delivered = 0;
 
@@ -56,6 +105,15 @@ export const dispatchContentRevalidation = async (
   // with separate caches, and a stale page on one is not a reason for a stale
   // page on all of them.
   for (const origin of origins) {
+    if (!isSafeOrigin(origin)) {
+      warnOnce(
+        c,
+        `origin:${origin}`,
+        `Not notifying ${origin}: content.revalidateOrigins must use https (plain http only for localhost), because the request carries CRON_SECRET.`,
+      );
+      continue;
+    }
+
     if (await post(c, origin, body, secret)) delivered += 1;
   }
 
@@ -114,11 +172,15 @@ const post = async (
  * Logging is itself best effort: it writes to the database, so it can fail for
  * the same reasons the request did.
  */
-const log = async (c: Context, message: string): Promise<void> => {
+const log = async (
+  c: Context,
+  message: string,
+  level: "error" | "warn" = "error",
+): Promise<void> => {
   const text = `[content-revalidate] ${message}`;
 
   try {
-    await c.get("log")?.error(text);
+    await c.get("log")?.[level](text);
   } catch {
     // The logger writes to the database, so it can fail for the same reason the
     // request did. The console is the only place left.
