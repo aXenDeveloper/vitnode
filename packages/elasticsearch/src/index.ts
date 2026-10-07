@@ -8,12 +8,24 @@ import type {
 } from "@vitnode/core/api/models/search";
 
 import { Client, errors } from "@elastic/elasticsearch";
-import {
-  MAX_SEARCH_OFFSET,
-  parseSearchOffset,
-} from "@vitnode/core/api/lib/search-offset";
 
 const DEFAULT_INDEX = "vitnode";
+// Elasticsearch's default `max_result_window`. Same clamp as core's
+// `parseSearchOffset`, kept local because `@vitnode/core` is only a dev
+// dependency of this package - type imports are erased, values are not.
+const MAX_SEARCH_OFFSET = 10_000;
+
+const parseSearchOffset = (
+  cursor: string | undefined,
+  max: number,
+): number | undefined => {
+  if (!cursor) return undefined;
+
+  const parsed = Number(cursor);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return undefined;
+
+  return Math.min(parsed, Math.max(0, max));
+};
 const DEFAULT_SIZE = 20;
 const MAX_SIZE = 100;
 
