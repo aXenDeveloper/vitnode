@@ -16,6 +16,49 @@ export interface AdminStaffPermission {
   plugin?: string;
 }
 
+// Every guard `buildRoute` installs, so a test can prove a mounted route is
+// gated by looking at its handlers instead of driving it.
+const staffPermissionGuards = new WeakSet<MiddlewareHandler>();
+
+interface MountedRoute {
+  handler: unknown;
+  method: string;
+  path: string;
+}
+
+const unwrapHandler = (handler: unknown): unknown =>
+  typeof handler === "function" && "__COMPOSED_HANDLER" in handler
+    ? unwrapHandler(handler.__COMPOSED_HANDLER)
+    : handler;
+
+/**
+ * `"METHOD /path"` of every route under an `/admin/` segment of `hono` that has
+ * no `adminStaffPermission`. Routes in `allowlist` (same format) are skipped.
+ */
+export const findAdminRoutesWithoutStaffPermission = (
+  hono: { routes: readonly MountedRoute[] },
+  allowlist: readonly string[] = [],
+): string[] => {
+  const guarded = new Map<string, boolean>();
+
+  for (const { handler, method, path } of hono.routes) {
+    // `use()` middleware, e.g. the admin session check, is not a route.
+    if (method === "ALL" || !/(^|\/)admin(\/|$)/.test(path)) continue;
+
+    const label = `${method} ${path}`;
+    const handlerFn = unwrapHandler(handler);
+    const isGuard =
+      typeof handlerFn === "function" &&
+      staffPermissionGuards.has(handlerFn as MiddlewareHandler);
+    guarded.set(label, (guarded.get(label) ?? false) || isGuard);
+  }
+
+  return [...guarded]
+    .filter(([label, isGuarded]) => !isGuarded && !allowlist.includes(label))
+    .map(([label]) => label)
+    .sort();
+};
+
 export const buildRoute = <
   Plugin extends string,
   P extends string,
@@ -40,7 +83,7 @@ export const buildRoute = <
 
   if (adminStaffPermission) {
     const { plugin, module, permission } = adminStaffPermission;
-    middleware.push(async (c, next) => {
+    const guard: MiddlewareHandler = async (c, next) => {
       await assertStaffPermission(c, {
         type: "admin",
         plugin: plugin ?? pluginId,
@@ -48,7 +91,9 @@ export const buildRoute = <
         permission,
       });
       await next();
-    });
+    };
+    staffPermissionGuards.add(guard);
+    middleware.push(guard);
   }
 
   if (route.withCaptcha) {
