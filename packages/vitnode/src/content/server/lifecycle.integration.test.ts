@@ -3,7 +3,7 @@ import type { Context } from "hono";
 
 import { eq } from "drizzle-orm";
 import { createTranslator } from "use-intl";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it } from "vitest";
 
 import {
   core_content_file_refs,
@@ -124,9 +124,9 @@ describePostgres(
 
     it("copies a hidden, published story as a visible draft with sanitized HTML", async () => {
       const c = context();
-      const editorial = stories.editorialService(c, {
-        pluginId: "@vitnode/test",
-      });
+      const editorialService = stories.editorialService;
+      if (!editorialService) throw new Error("Stories are editorial.");
+      const editorial = editorialService(c, { pluginId: "@vitnode/test" });
 
       const created = await editorial.create(
         {
