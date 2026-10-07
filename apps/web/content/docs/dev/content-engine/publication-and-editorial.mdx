@@ -31,9 +31,9 @@ Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. The migratio
 
 ## Revisions
 
-Every create, update, publish, unpublish and restore stores a snapshot in `core_content_revisions`. `revisions.retention` keeps the newest 1 to 500 snapshots per record, 50 by default.
+Every create, update, publish, unpublish and restore stores a snapshot in `core_content_revisions`, and so does every hide and unhide with [visibility](/docs/dev/content-engine/content-visibility). `revisions.retention` keeps the newest 1 to 500 snapshots per record, 50 by default.
 
-Open a record's history in the AdminCP to compare each revision with the one before it and restore an earlier version. Restoring needs `can_restore`, creates a new revision and emits `content.example.recipe.restored`.
+Open a record's history in the AdminCP to compare each revision with the one before it and restore an earlier version. Restoring needs `can_restore`, creates a new revision and emits `content.example.recipe.restored`. A restore brings back field values only: it never changes whether the record is published or hidden.
 
 ## Safe concurrent edits
 
@@ -63,12 +63,13 @@ A schedule is a queued task that runs at the chosen time. The queue is drained b
 
 A time up to two minutes in the past is accepted; anything older is rejected with `CONTENT_SCHEDULE_IN_PAST`. An unpublish cannot be scheduled before a pending publish.
 
-Booking a schedule emits `content.example.recipe.scheduled`, and cancelling it emits `schedule_cancelled`. When the time comes, the record is published or unpublished and the usual `published` or `unpublished` event carries the `scheduleId`. If your front end caches pages, [`content.revalidateOrigins`](/docs/dev/content-engine/public-api-and-caching#caching) tells it about the change.
+Booking a schedule emits `content.example.recipe.scheduled`, and cancelling it emits `schedule_cancelled`. When the time comes, the record is published or unpublished and the usual `published` or `unpublished` event carries the `scheduleId`. If your front end caches pages, [`content.revalidateOrigins`](/docs/dev/content-engine/public-api-and-caching#caching) tells it about the change. A scheduled publish of a hidden record leaves it hidden, so nothing public changes.
 
 ## How publishing behaves
 
 - New records start as drafts.
 - Publishing sets `publishedAt` once. Unpublishing and publishing again keeps the original date.
-- A record is public only when its status is `published` and its `publishedAt` is not in the future.
+- A record is public only when its status is `published`, its `publishedAt` is not in the future, and it is not [hidden](/docs/dev/content-engine/content-visibility).
+- Publishing, unpublishing and scheduled publishing never change visibility. Publishing a hidden record keeps it off the site until someone unhides it.
 
 Every `editorial` option is in the [content type reference](/docs/dev/content-engine/reference#editorial).

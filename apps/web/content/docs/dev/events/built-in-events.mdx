@@ -574,7 +574,7 @@ means `content.blog.post.created`.
 
 Which actions exist depends on what the definition opts into. A content type
 that declares nothing beyond its fields emits three events; one that declares
-everything emits sixteen.
+everything emits nineteen.
 
 | The definition declares              | Events it adds                                                      |
 | ------------------------------------ | ------------------------------------------------------------------- |
@@ -586,6 +586,8 @@ everything emits sixteen.
 | `localization` **and** `publication` | `translation_published`, `translation_unpublished`                  |
 | `localization` **and** `editorial`   | `translation_restored`                                              |
 | `delivery`                           | `delivery_slug_changed`, `delivery_redirect_created`                |
+| `duplication`                        | `duplicated`                                                        |
+| `visibility`                         | `hidden`, `unhidden`                                                |
 
 The gating is in the types, not just at runtime: `ContentEventsFor` expands to
 literal keys only for the features the definition enables. The example plugin's
@@ -606,6 +608,9 @@ the map and a listener for it does not compile.
 | `restored`           | `{ contentId, changedFields, version, revisionId, restoredFromRevisionId }` | A record is rolled back to an earlier revision - emitted **instead of** `updated` |
 | `scheduled`          | `{ contentId, action, actorUserId, scheduledFor, scheduleId }`              | A publish or unpublish is booked for later                                        |
 | `schedule_cancelled` | `{ contentId, action, actorUserId, scheduleId }`                            | A pending booking is called off                                                   |
+| `duplicated`         | `{ actorUserId, contentId, contentTypeId, sourceId }`                       | A record was copied into a new draft - after the copy's own `created`             |
+| `hidden`             | `{ actorUserId, contentId, hiddenAt }`                                      | A visible record is taken off the public site without being unpublished          |
+| `unhidden`           | `{ actorUserId, contentId }`                                                | A hidden record is made visible again                                             |
 
 <Accordions>
 <Accordion title="created, updated and deleted">
@@ -620,6 +625,11 @@ the map and a listener for it does not compile.
       description:
         "Update only - the fields whose value actually changed, narrowed to this content type's own field names. An update that changes nothing emits no event at all.",
       type: 'ContentFieldName<TDefinition>[]',
+    },
+    duplicatedFromId: {
+      description:
+        'Created only, on a content type with `duplication` - the record this one was copied from. Absent for an ordinary create, so a listener can tell copies apart without waiting for `duplicated`.',
+      type: 'number',
     },
   }}
 />
@@ -701,8 +711,8 @@ than a rewrite - which is why a restore emits one event and not both.
 />
 
 **A listener would** do exactly what its `updated` listener does. A restore
-never moves `status` or `publishedAt`, so nothing watching visibility has to
-handle it.
+never moves `status`, `publishedAt` or `hiddenAt`, so nothing watching
+visibility has to handle it.
 
 </Accordion>
 <Accordion title="scheduled and schedule_cancelled">
@@ -741,6 +751,69 @@ with `scheduleId` and `scheduledBy` set.
 
 **A listener would** show an editorial calendar, warn an author that two
 bookings collide, or pre-warm a render shortly before `scheduledFor`.
+
+</Accordion>
+<Accordion title="duplicated">
+
+A [duplicate](/docs/dev/content-engine/duplicate-content) first emits the
+copy's ordinary `created` (with `duplicatedFromId`) and one
+`translation_created` per copied language, then `duplicated`. Indexing and
+cache work already ran for `created`, so `duplicated` is a notification only.
+
+<TypeTable
+  type={{
+    actorUserId: {
+      description:
+        'The staff member who asked for the copy, or null for the system or an API key.',
+      type: 'null | number',
+    },
+    contentId: {
+      description: 'Id of the new draft.',
+      type: 'number',
+    },
+    contentTypeId: {
+      description: 'The content type id, such as `blog.post`.',
+      type: 'string',
+    },
+    sourceId: {
+      description: 'Id of the record that was copied. It is only read, never changed.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** credit the original author in an audit log, or link the
+copy to its source in a plugin-owned table.
+
+</Accordion>
+<Accordion title="hidden and unhidden">
+
+[Hiding](/docs/dev/content-engine/content-visibility) takes a record off the
+public site without touching `status` or `publishedAt`, so a hidden record emits
+neither `unpublished` nor, when unhidden, `published`. Hiding a record that is
+already hidden emits nothing.
+
+<TypeTable
+  type={{
+    actorUserId: {
+      description:
+        'The staff member who hid or unhid it, or null for the system.',
+      type: 'null | number',
+    },
+    contentId: {
+      description: 'Id of the record.',
+      type: 'number',
+    },
+    hiddenAt: {
+      description: 'Hidden only - when the record was hidden.',
+      type: 'Date',
+    },
+  }}
+/>
+
+**A listener would** purge a CDN entry, pull the record from an external
+search engine, or notify the author that a moderator took their article down.
+Hiding a draft emits the event too, though nothing public changed.
 
 </Accordion>
 </Accordions>
@@ -993,7 +1066,9 @@ inspects `failures` and retries the whole delivery when it is non-empty.
   publication transitions, per-locale translation events and slug history. The
   six names below are re-emitted from those by listeners registered on the
   plugin's own `admin` module, so existing consumers keep working. Prefer the
-  `content.*` ones for anything new.
+  `content.*` ones for anything new. A duplicated article re-emits
+  `blog.post.created` once; `duplicated`, `hidden` and `unhidden` have no blog
+  adapter.
 </Callout>
 
 | Event                   | Payload                   | Re-emitted from                 |

@@ -1,0 +1,119 @@
+---
+title: Rich text fields
+description: Store formatted text in a Content Engine content type with field.richText. Editors get a rich text editor, the API sanitizes every write, and search and SEO read plain text.
+icon: PenLine
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import editor from './rich-text-editor.png'
+
+`field.richText()` stores formatted text, such as an article body or recipe instructions, as an HTML string. Editors write it in the AdminCP rich text editor. The API sanitizes the HTML on every write and checks that a required value holds real content, not only an empty `<p></p>`.
+
+Use it instead of `field.textarea()` whenever the value contains formatting. A textarea stores whatever string it receives, and the API does not sanitize it.
+
+<Steps>
+
+<Step>
+
+### Declare the field
+
+Add a rich text field to the recipe from [Create your first content type](/docs/dev/content-engine/defining-a-content-type):
+
+```ts title="plugins/example/src/content/recipe.ts"
+fields: {
+  title: field.text({ required: true, maxLength: 120 }),
+  instructions: field.richText({ required: true, maxLength: 20000 }), // [!code ++]
+},
+```
+
+The field takes the same options as a textarea: `required`, `nullable`, `defaultValue`, `localized`, `minLength`, `maxLength` and `description`. `minLength` and `maxLength` count the characters of the plain text, not the markup, so bold text and links do not use up the limit. All options are in [Fields](/docs/dev/content-engine/fields#rich-text).
+
+</Step>
+
+<Step>
+
+### Build and migrate
+
+Run `pnpm build:plugins && pnpm db:migrate` and restart `pnpm dev`. A rich text field is a Postgres `text` column, the same column a textarea gets. Switching an existing `field.textarea()` to `field.richText()` produces no column change.
+
+When the field is listed in `admin.list.searchableFields` or `publicApi.searchableFields`, the migration also adds a plain-text twin column. See [Search and SEO](#search-and-seo) below.
+
+</Step>
+
+<Step>
+
+### Write in the AdminCP
+
+Open **AdminCP → Example → Recipes** and create a recipe. The rich text field renders the editor, with headings, lists, links, tables and more:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={editor}
+  alt="The Content field of a blog article in the AdminCP: a toolbar with paragraph style, bold, italic, text color, lists, link, emoji, table and embed buttons above a paragraph and a bulleted list"
+/>
+
+The editor loads lazily, so it does not slow down the rest of the form. A `localized` rich text field gets a language switcher like any other translated field. To use your own component, override the field with `contentTypeAdmin`, as described in [Customize the AdminCP](/docs/dev/content-engine/admincp#replace-a-field-or-a-cell).
+
+</Step>
+
+<Step>
+
+### Render it on a page
+
+The public API returns the HTML string. Render it with `EditorContent`, which sanitizes it again before inserting it:
+
+```tsx title="plugins/example/src/pages/recipe-page.tsx"
+import { EditorContent } from '@vitnode/core/components/ui/editor-content'
+
+export const RecipeInstructions = ({ html }: { html: string }) => (
+  <EditorContent content={html} />
+)
+```
+
+Never render the value with `dangerouslySetInnerHTML` yourself. `EditorContent` applies the same allowlist the API used on write.
+
+</Step>
+
+</Steps>
+
+## What is sanitized and validated
+
+Every write path sanitizes rich text before saving it: create, update, restore, translations, repeatable rows, duplicates and AI translations. The sanitizer keeps the formatting the editor produces and removes everything else:
+
+- **Kept:** paragraphs, headings, lists, task lists, quotes, code, tables, links, images, audio and the editor's inline styles (color, font size, text alignment).
+- **Removed:** `<script>`, `<style>`, event handler attributes such as `onclick`, and URLs with a scheme other than `http`, `https` or `mailto`, such as `javascript:` or `data:`.
+
+After sanitizing, the API validates the result:
+
+| Check      | Rule                                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `required` | The value must hold text, or an image or audio element with a `src`. `<p></p>`, `<p><br></p>`, `&nbsp;` or a lone `<hr>` count as empty |
+| Length     | `minLength` and `maxLength` apply to the plain text. An image-only value fails `minLength`                                              |
+| Size       | At most 500,000 characters of HTML (`CONTENT_RICH_TEXT_MAX_HTML_LENGTH`), checked before and after sanitizing                           |
+
+A value that fails is rejected with `400` and an error on that field, which the AdminCP shows under the editor. Input that sanitizes to nothing, such as a lone `<script>`, fails `required`. An optional field that is empty after sanitizing is stored as `null` when it is `nullable`, and as `""` otherwise.
+
+The browser runs only the cheap checks (required and length). Sanitizing happens on the server, so the sanitizer never ships to the browser.
+
+## Search and SEO
+
+Search and SEO read plain text extracted from the HTML. Block elements become separate lines, entities such as `&amp;` are decoded once, and scripts and styles are dropped.
+
+- **Site search:** `search.contentFields` and `search.descriptionField` accept rich text fields and index their plain text.
+- **AdminCP and public API search:** a rich text field in `admin.list.searchableFields` or `publicApi.searchableFields` gets a nullable `text` column named after it with a `Text` suffix, such as `instructionsText`, on the same table as the field. Every write keeps it up to date, and `?search=` matches it instead of the raw HTML, so searching for `strong` does not find every bold word. A field name whose twin collides with another column, or is longer than 63 characters, throws when the content type is defined.
+- **SEO:** a rich text field can be `delivery.seo.descriptionField` or its fallback. The delivery API returns its plain text, and a value with only an image falls back to the next field.
+
+The same extractor is exported as `htmlToText` and `stripHtml` from `@vitnode/core/lib/strip-html`, if you need plain text in your own code.
+
+A rich text field cannot be a slug `source`, a `titleField` fallback, a filter, a `unique` field or part of a widget. Name it explicitly when you want it searchable: it is never added to the AdminCP search box by default.
+
+## Check the result
+
+Save a recipe with some bold text and a `<script>` pasted into the HTML, then read it back:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/recipes/shakshuka-for-two"
+```
+
+The `instructions` value is HTML with the formatting intact and no script. Saving the recipe with an empty editor answers with a required-field error under **Instructions**.

@@ -1,0 +1,159 @@
+---
+title: Hide content
+description: Take a published Content Engine record off the public site, search and sitemap without unpublishing it, then bring it back with the same URL and publish date.
+icon: EyeOff
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import hideDialog from './content-hide-dialog.png'
+import hiddenFilter from './content-hidden-filter.png'
+import hiddenEditor from './content-hidden-editor.png'
+
+Hiding takes a record off the public site immediately while it stays published. Use it for moderation, legal holds or a quick fix: the record disappears from the public API, its page, search and the sitemap, and unhiding brings it back with its original URL and publish date.
+
+| You want to                                                            | Use                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Take a record down for now and put it back as it was                   | Hide                                                         |
+| Turn a record back into a draft to rework it before it goes live again | [Unpublish](/docs/dev/content-engine/public-api-and-caching) |
+| Remove it for good                                                     | Delete                                                       |
+
+## Before you begin
+
+Hiding needs [`publication`](/docs/dev/content-engine/public-api-and-caching), because a record that is never public has nothing to hide from.
+
+<Steps>
+
+<Step>
+
+### Turn on visibility
+
+Add `visibility` to the content type:
+
+```ts title="plugins/example/src/content/recipe.ts"
+export const recipeContentType = defineContentType({
+  id: 'example.recipe',
+  tableName: 'example_recipes',
+  publication: { enabled: true },
+  visibility: { enabled: true }, // [!code ++]
+  // ...
+})
+```
+
+`visibility` without `publication` throws when the content type is defined. With `visibility`, `hiddenAt`, `hiddenBy` and `visibility` are reserved and cannot be field names.
+
+</Step>
+
+<Step>
+
+### Build and migrate
+
+Run `pnpm build:plugins && pnpm db:migrate`, then restart `pnpm dev`. The migration adds two nullable columns to the main table:
+
+```sql title="migration.sql (breakpoints removed)"
+ALTER TABLE "example_recipes" ADD COLUMN "hiddenAt" timestamp;
+ALTER TABLE "example_recipes" ADD COLUMN "hiddenBy" integer;
+CREATE INDEX "example_recipes_hidden_by_idx" ON "example_recipes" ("hiddenBy");
+ALTER TABLE "example_recipes" ADD CONSTRAINT "example_recipes_hiddenBy_core_users_id_fkey" FOREIGN KEY ("hiddenBy") REFERENCES "core_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+```
+
+Existing records stay visible. `hiddenAt` is when the record was hidden and `hiddenBy` is the staff member who hid it.
+
+</Step>
+
+<Step>
+
+### Label the permission
+
+Visibility adds a `can_hide` permission, separate from `can_publish`, so a moderator can take records down without being able to publish. Label it next to your other permissions:
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example:recipe:can_hide": "Hide and unhide recipes"
+}
+```
+
+Grant it to administrators in **AdminCP → Staff → Administrators**.
+
+</Step>
+
+<Step>
+
+### Hide a record
+
+Open **AdminCP → Example → Recipes**, open the **More actions** menu of a published row and choose **Hide**. Confirm with **Yes, hide it**:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={hideDialog}
+  alt="Hide Article dialog explaining that Second post disappears from the public site, search and the sitemap right away and is not unpublished, with Cancel and Yes, hide it buttons"
+/>
+
+The row keeps its **Published** badge and gets a **Hidden** badge next to it. Its tooltip shows when it was hidden. The **Visibility** filter in the list toolbar shows only hidden or only visible records, and it combines with the **Status** filter:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={hiddenFilter}
+  alt="Articles list filtered by Visibility: Hidden, showing Second post with Published and Hidden badges"
+/>
+
+The edit page shows the same badge, an **Unhide** button and a note that publishing a hidden record does not make it public:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={hiddenEditor}
+  alt="Edit page header of a hidden article with Draft and Published toggle, a Hidden badge, an Unhide button and the note Hidden from the public site, search and the sitemap"
+/>
+
+Choose **Unhide** in the same menu to bring the record back.
+
+</Step>
+
+</Steps>
+
+## What hiding does
+
+A record is public only when it is published, its `publishedAt` is not in the future, and it is not hidden. While a record is hidden:
+
+- The public API list leaves it out and its detail route answers `404`, in every language, including a language that falls back to the default one.
+- Its [page](/docs/dev/content-engine/content-delivery-and-seo) answers `404`, and so do its old slugs instead of redirecting.
+- The sitemap and `hreflang` alternates leave it out, and site search marks its document private.
+- Signed [preview links](/docs/dev/content-engine/publication-and-editorial#preview-links) still work, and the AdminCP still shows it.
+
+Hiding changes nothing else. `status` and `publishedAt` stay as they are, so unhiding a published record puts it back with its original date. Publishing, unpublishing or a scheduled publish never change visibility: publishing a hidden record keeps it off the site until someone unhides it. Restoring a revision never changes visibility either.
+
+With [`editorial`](/docs/dev/content-engine/publication-and-editorial), hiding and unhiding raise the record's `version` and store a revision. Hiding a record that is already hidden changes nothing: no write, no revision and no event.
+
+Hiding is per record. To take one language off the site, unpublish that translation instead.
+
+## Hide from the API
+
+The admin module has `POST /{id}/hide` and `POST /{id}/unhide`. Both need `can_hide` and accept an optional body:
+
+```json
+{ "expectedVersion": 4 }
+```
+
+With `expectedVersion`, the call fails with `409` and `CONTENT_VERSION_CONFLICT` when someone saved the record meanwhile, like any [editorial write](/docs/dev/content-engine/publication-and-editorial#safe-concurrent-edits). Both routes answer `200` with `{ changed, row }`, where `changed` is `false` when the record already was in that state. A missing record is `404`. Unhiding can also fail with `409` when the record's URL was taken by another record while it was hidden.
+
+The admin list route accepts `?visibility=hidden` or `?visibility=visible`, and it combines with `?status=`.
+
+From your own code, the services have `hide(id, options)` and `unhide(id, options)` when visibility is enabled. The editorial service takes `{ actor, expectedVersion?, tx? }` and the plain service `{ actorUserId?, tx? }`. Neither emits events: run `contentVisibilityEffects` from `@vitnode/core/content/server` after the transaction commits, like the generated routes do. See [Services, schemas and events](/docs/dev/content-engine/services-and-api#hide-and-duplicate).
+
+## Events and caches
+
+A hide emits `content.example.recipe.hidden` with `{ actorUserId, contentId, hiddenAt }`, and an unhide emits `unhidden` with `{ actorUserId, contentId }`. Both update the search index and the delivery data.
+
+Front ends listed in [`content.revalidateOrigins`](/docs/dev/content-engine/public-api-and-caching#caching) are notified immediately when a hide or unhide changes what the public can see. Hiding a draft notifies nobody, because nothing public changed.
+
+## Check the result
+
+Hide a published recipe, then request it:
+
+```bash
+curl -i "http://localhost:3000/api/@vitnode/example/content/recipes/shakshuka-for-two"
+```
+
+It answers `404`, like a draft. Unhide it and the same request returns the recipe with its original `publishedAt`.
