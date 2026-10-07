@@ -6,6 +6,7 @@ import { EditorContent } from "@vitnode/core/components/ui/editor-content";
 import {
   ContentFormActions,
   ContentFormField,
+  ContentFormHiddenNotice,
   ContentFormStatusSwitch,
   useContentForm,
   useContentFormValues,
@@ -491,6 +492,7 @@ export const ArticleEditor = () => {
             ref={panelRef}
             tabIndex={-1}
           >
+            <ContentFormHiddenNotice />
             <ReadinessList
               actionsFor={actionsFor}
               checks={checks}

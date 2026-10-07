@@ -15,6 +15,14 @@ export const blogPostContentType = defineContentType({
 
   publication: { enabled: true },
 
+  // "Duplicate" in the article list: a draft copy with every translation, the
+  // title suffixed with a localized "(Copy)" and fresh per-language slugs.
+  duplication: { enabled: true },
+
+  // Take a published article off the site - list, page, search, sitemap -
+  // without unpublishing it, and put it back with one click.
+  visibility: { enabled: true },
+
   editorial: {
     enabled: true,
     revisions: { retention: 20 },

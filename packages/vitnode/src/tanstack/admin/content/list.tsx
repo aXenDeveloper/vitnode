@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -15,7 +16,11 @@ import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableSkeleton } from "@/components/table/data-table-content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { buildContentColumnSpec, CONTENT_PERMISSIONS } from "@/content/index";
+import {
+  buildContentColumnSpec,
+  CONTENT_PERMISSIONS,
+  contentEditHref,
+} from "@/content/index";
 import { contentLabelsFrom } from "@/views/admin/views/content/content-labels";
 import { contentBulkActions } from "@/views/admin/views/content/table/bulk-actions-model";
 import {
@@ -24,6 +29,7 @@ import {
   contentTableOrder,
   contentTableSearchEnabled,
 } from "@/views/admin/views/content/table/columns";
+import { contentListToolbarFilters } from "@/views/admin/views/content/table/list-filters";
 
 import type { AdminTableNavigate } from "../table-search";
 import type {
@@ -31,6 +37,7 @@ import type {
   ContentListRouteSearch,
   UncheckedContentListSearch,
 } from "./route-search";
+import type { ContentDuplicatedRecord } from "./row-actions";
 
 import { useLocale } from "../../i18n/locale";
 import { useAdminPermission } from "../permissions";
@@ -43,6 +50,8 @@ import {
   contentListSearchParams,
 } from "./route-search";
 import { ContentRowActions } from "./row-actions";
+import { ContentFormDialogSlot } from "./slot-render";
+import { contentAdminSlots } from "./slots";
 
 /** What the list screen needs on top of the route data the loader returned. */
 export interface ContentListScreenProps {
@@ -91,6 +100,10 @@ const ContentListTable = ({
     permission: CONTENT_PERMISSIONS.publish,
     plugin: pluginId,
   });
+  const routerNavigate = useNavigate();
+  const [duplicated, setDuplicated] =
+    React.useState<ContentDuplicatedRecord | null>(null);
+  const formDialog = contentAdminSlots().FormDialog;
   const isNarrowed =
     Boolean(params.search) || Object.keys(params.filters).length > 0;
   const bulkActions = contentBulkActions({
@@ -112,6 +125,45 @@ const ContentListTable = ({
     [definition, navigate, search],
   );
 
+  /**
+   * A fresh copy opens where this content type edits: its own page, or the
+   * edit dialog. Held here rather than in the row, because the refreshed list
+   * may no longer contain the row the copy was made from.
+   */
+  const onDuplicated = React.useCallback(
+    (copy: ContentDuplicatedRecord) => {
+      if (definition.admin.edit.mode === "page") {
+        void routerNavigate({
+          // The AdminCP's hrefs are still number-typed; a serial id is one.
+          to: contentEditHref(definition, copy.id as number),
+        });
+
+        return;
+      }
+
+      setDuplicated(copy);
+    },
+    [definition, routerNavigate],
+  );
+
+  const filters = React.useMemo(
+    () =>
+      contentListToolbarFilters(definition, {
+        all: t("filters.all"),
+        status: {
+          draft: t("status.draft"),
+          label: t("status.label"),
+          published: t("status.published"),
+        },
+        visibility: {
+          hidden: t("visibility.hidden"),
+          label: t("visibility.label"),
+          visible: t("visibility.visible"),
+        },
+      }),
+    [definition, t],
+  );
+
   const columns = React.useMemo(
     () =>
       buildContentTableColumns({
@@ -120,6 +172,9 @@ const ContentListTable = ({
           empty: t("table.empty_value"),
           status: {
             draft: t("status.draft"),
+            ...(definition.visibility.enabled
+              ? { hidden: t("visibility.hidden") }
+              : {}),
             published: t("status.published"),
           },
         },
@@ -127,13 +182,25 @@ const ContentListTable = ({
         renderRowActions: (row: ContentRowData) => (
           <ContentRowActions
             entry={entry}
+            labelField={labels.labelField}
             locale={locale}
+            onDuplicated={onDuplicated}
             row={row}
             singular={labels.singular}
           />
         ),
       }),
-    [columnSpecs, entry, labels.singular, locale, registration, t],
+    [
+      columnSpecs,
+      definition.visibility.enabled,
+      entry,
+      labels.labelField,
+      labels.singular,
+      locale,
+      onDuplicated,
+      registration,
+      t,
+    ],
   );
 
   return (
@@ -156,11 +223,30 @@ const ContentListTable = ({
             : { description: t("empty.desc"), title: t("empty.title") }
         }
         edges={data.edges}
+        filters={filters.length > 0 ? filters : undefined}
         id={`content-${definition.id}`}
         order={contentTableOrder(definition)}
         pageInfo={data.pageInfo}
         search={contentTableSearchEnabled(definition)}
       />
+
+      {duplicated && formDialog ? (
+        <ContentFormDialogSlot
+          action="edit"
+          dialog={formDialog}
+          entry={entry}
+          key={String(duplicated.id)}
+          onOpenChange={open => {
+            if (!open) setDuplicated(null);
+          }}
+          open
+          row={{ labels: {}, ...duplicated.row }}
+          singular={labels.singular}
+          title={duplicated.title}
+        >
+          {null}
+        </ContentFormDialogSlot>
+      ) : null}
     </DataTableNavigationProvider>
   );
 };
@@ -207,13 +293,18 @@ export const ContentListScreen = ({
 }: ContentListScreenProps) => {
   const entry = registry.byId(contentTypeId);
   const t = useTranslations() as unknown as ContentLabelTranslator;
+  // Memoised so the row actions' `labelField` keeps its identity, and the
+  // table's columns are not rebuilt on every render of this screen.
+  const labels = React.useMemo(
+    () => (entry ? contentLabelsFrom(entry, t) : null),
+    [entry, t],
+  );
 
   // The loader already answered `notFound()` for an unresolvable path, so this
   // is unreachable in a mounted route - and it is what lets everything below
   // read a resolved entry rather than an optional one.
-  if (!entry) return null;
+  if (!entry || !labels) return null;
 
-  const labels = contentLabelsFrom(entry, t);
   /**
    * The loader's parameters, or the same arithmetic run again.
    *
@@ -233,7 +324,10 @@ export const ContentListScreen = ({
       fallback={
         <DataTableSkeleton
           columns={contentTableColumnCount(columnSpecs)}
-          toolbar={contentTableSearchEnabled(entry.definition)}
+          toolbar={
+            contentTableSearchEnabled(entry.definition) ||
+            entry.definition.publication.enabled
+          }
         />
       }
     >

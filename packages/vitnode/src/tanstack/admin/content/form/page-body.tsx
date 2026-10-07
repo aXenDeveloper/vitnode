@@ -119,6 +119,7 @@ const ContentEditScreen = ({
       spec={spec}
       title={title}
       translations={translations}
+      visibility={entry.definition.visibility.enabled}
     />
   );
 };

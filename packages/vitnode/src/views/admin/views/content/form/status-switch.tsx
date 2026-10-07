@@ -9,6 +9,7 @@ import { isContentPublished } from "@/content/publication";
 
 import { useContentForm } from "./context";
 import { ContentFormButtonSkeleton } from "./skeleton";
+import { ContentFormHiddenBadge, useContentFormHidden } from "./visibility";
 
 type StatusOption = "draft" | "published";
 
@@ -25,6 +26,7 @@ export const ContentFormStatusSwitch = ({
   const { mode, publication, singular, skeleton, title } = useContentForm();
   const [pending, setPending] = React.useState<null | StatusOption>(null);
   const buttonsRef = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const hidden = useContentFormHidden();
 
   if (!publication.enabled || mode === "create") return null;
   if (skeleton) return <ContentFormButtonSkeleton />;
@@ -115,14 +117,23 @@ export const ContentFormStatusSwitch = ({
         </div>
       </TooltipWithContent>
 
+      <ContentFormHiddenBadge />
+
       <ConfirmActionAlertDialog
-        description={tContent.rich(`${action}.desc`, {
-          title: () => (
-            <span className="text-foreground font-bold">
-              {title ?? singular}
-            </span>
-          ),
-        })}
+        description={
+          <>
+            {tContent.rich(`${action}.desc`, {
+              title: () => (
+                <span className="text-foreground font-bold">
+                  {title ?? singular}
+                </span>
+              ),
+            })}
+            {hidden && action === "publish"
+              ? ` ${tContent("visibility.publish_note")}`
+              : null}
+          </>
+        }
         icon={action === "publish" ? <SendIcon /> : <EyeOffIcon />}
         onOpenChange={open => {
           if (!open) setPending(null);

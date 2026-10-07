@@ -27,6 +27,7 @@ export interface ContentFormPageProps {
   spec: ContentFormSpec;
   title?: string;
   translations?: readonly TranslationRow[];
+  visibility?: boolean;
 }
 
 export const ContentFormPage = ({
