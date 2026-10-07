@@ -5,6 +5,8 @@ import { lookup as dnsLookup } from "node:dns";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
 
+import { detectImageMimeType } from "./image-signature";
+
 export const REMOTE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 const REMOTE_IMAGE_MAX_DIMENSION = 8192;
@@ -218,18 +220,13 @@ export type RemoteImageMimeType = "image/jpeg" | "image/png" | "image/webp";
 export const sniffImageMimeType = (
   bytes: Uint8Array,
 ): null | RemoteImageMimeType => {
-  const starts = (signature: number[], offset = 0) =>
-    signature.every((byte, index) => bytes[offset + index] === byte);
+  const detected = detectImageMimeType(bytes);
 
-  if (starts([0xff, 0xd8, 0xff])) return "image/jpeg";
-  if (starts([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
-    return "image/png";
-  }
-  if (starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8)) {
-    return "image/webp";
-  }
-
-  return null;
+  return detected === "image/jpeg" ||
+    detected === "image/png" ||
+    detected === "image/webp"
+    ? detected
+    : null;
 };
 
 const readUint16BE = (bytes: Uint8Array, offset: number) =>

@@ -4,12 +4,17 @@
 import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
+import { crc32 } from "node:zlib";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
 import { StorageImageUnprocessableError, StorageModel } from "./storage";
 
-const makeCtx = (image?: { quality?: number; webp?: boolean }) => {
+const makeCtx = (image?: {
+  maxPixels?: number;
+  quality?: number;
+  webp?: boolean;
+}) => {
   const upload = vi.fn(
     ({ key }: { body: Buffer; contentType?: string; key: string }) => ({
       key,
@@ -60,6 +65,25 @@ const makeJpeg = async (quality: number): Promise<Buffer> =>
 
 const fileFrom = (buf: Buffer, name: string, type: string): File =>
   new File([new Uint8Array(buf)], name, { type });
+
+/**
+ * A real 1x1 PNG whose IHDR is rewritten to claim `width` x `height`, with a
+ * valid CRC - the header an image bomb carries, without allocating the bomb.
+ */
+const pngClaiming = async (width: number, height: number): Promise<Buffer> => {
+  const png = Buffer.from(
+    await sharp({
+      create: { background: "#fff", channels: 3, height: 1, width: 1 },
+    })
+      .png()
+      .toBuffer(),
+  );
+  png.writeUInt32BE(width, 16);
+  png.writeUInt32BE(height, 20);
+  png.writeUInt32BE(crc32(png.subarray(12, 29)), 29);
+
+  return png;
+};
 
 describe("StorageModel image optimization", () => {
   it("converts a processed image to WebP by default", async () => {
@@ -162,7 +186,7 @@ describe("StorageModel image optimization", () => {
         .catch((error: unknown) => error);
     };
 
-    it("names libvips' own reason when the bytes will not decode", async () => {
+    it("refuses bytes that are not the declared format before decoding them", async () => {
       const error = await failing(
         Buffer.from("this is not a png at all"),
         "hero.png",
@@ -173,9 +197,20 @@ describe("StorageModel image optimization", () => {
       const { message, status } = error as HTTPException;
       expect(status).toBe(400);
       // The declared format, so a JPEG renamed `.png` reads as the mismatch it is.
-      expect(message).toContain("PNG");
-      expect(message).toContain("unsupported image format");
+      expect(message).toContain("not a PNG image");
       expect(message).toMatch(/truncated/i);
+    });
+
+    it("names libvips' own reason when a signed file will not decode", async () => {
+      const header = Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00,
+      ]);
+      const error = await failing(header, "hero.png", "image/png");
+
+      expect(error).toBeInstanceOf(HTTPException);
+      const { message, status } = error as HTTPException;
+      expect(status).toBe(400);
+      expect(message).toContain("Could not read this PNG file");
     });
 
     it("says empty rather than corrupt for an empty upload", async () => {
@@ -296,6 +331,121 @@ describe("StorageModel image optimization", () => {
       });
 
       expect(upload.mock.calls[0][0].contentType).toBe("image/webp");
+    });
+  });
+
+  /**
+   * sharp's own ceiling is ~268 million pixels. A single-colour 16383x16383 PNG
+   * is under a megabyte on the wire and around a gigabyte once libwebp has it.
+   */
+  describe("when the image has too many pixels", () => {
+    it("refuses an image bomb with a 400 before decoding it", async () => {
+      const { ctx, upload, insertValues } = makeCtx({ quality: 85 });
+
+      const error = await new StorageModel(ctx)
+        .upload({
+          file: fileFrom(
+            await pngClaiming(16383, 16383),
+            "bomb.png",
+            "image/png",
+          ),
+          folder: "avatars",
+        })
+        .then(() => null)
+        .catch((error: unknown) => error);
+
+      expect(error).toBeInstanceOf(StorageImageUnprocessableError);
+      expect((error as HTTPException).status).toBe(400);
+      expect((error as HTTPException).message).toContain("40,000,000 pixels");
+      expect(upload).not.toHaveBeenCalled();
+      expect(insertValues).not.toHaveBeenCalled();
+    });
+
+    it("honours a configured maxPixels", async () => {
+      const { ctx, upload } = makeCtx({ maxPixels: 10_000, quality: 85 });
+
+      const error = await new StorageModel(ctx)
+        .upload({
+          file: fileFrom(await makeJpeg(90), "photo.jpg", "image/jpeg"),
+          folder: "photos",
+        })
+        .then(() => null)
+        .catch((error: unknown) => error);
+
+      expect(error).toBeInstanceOf(StorageImageUnprocessableError);
+      expect((error as HTTPException).status).toBe(400);
+      expect((error as HTTPException).message).toContain("10,000 pixels");
+      expect(upload).not.toHaveBeenCalled();
+    });
+
+    it("accepts an image at the configured limit", async () => {
+      const { ctx, upload } = makeCtx({ maxPixels: 320 * 180, quality: 85 });
+
+      await new StorageModel(ctx).upload({
+        file: fileFrom(await makeJpeg(90), "photo.jpg", "image/jpeg"),
+        folder: "photos",
+      });
+
+      expect(upload).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("when the declared type does not match the bytes", () => {
+    const attempt = async (
+      image: Parameters<typeof makeCtx>[0],
+      file: File,
+    ) => {
+      const { ctx, upload } = makeCtx(image);
+      const error = await new StorageModel(ctx)
+        .upload({ file, folder: "photos" })
+        .then(() => null)
+        .catch((error: unknown) => error);
+
+      return { error, upload };
+    };
+
+    it("refuses a JPEG sent as a PNG", async () => {
+      const { error, upload } = await attempt(
+        { quality: 85 },
+        fileFrom(await makeJpeg(90), "photo.png", "image/png"),
+      );
+
+      expect(error).toBeInstanceOf(HTTPException);
+      expect((error as HTTPException).status).toBe(400);
+      expect((error as HTTPException).message).toContain(
+        "sent as PNG, but its contents are JPEG",
+      );
+      expect(upload).not.toHaveBeenCalled();
+    });
+
+    it("refuses markup sent as a GIF even with image processing off", async () => {
+      const { error, upload } = await attempt(
+        undefined,
+        fileFrom(
+          Buffer.from("<html><script>alert(1)</script></html>"),
+          "cat.gif",
+          "image/gif",
+        ),
+      );
+
+      expect((error as HTTPException).status).toBe(400);
+      expect((error as HTTPException).message).toContain("not a GIF image");
+      expect(upload).not.toHaveBeenCalled();
+    });
+
+    it("leaves SVG to its own type", async () => {
+      const svg = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+      );
+      const { ctx, upload } = makeCtx({ quality: 85 });
+
+      await new StorageModel(ctx).upload({
+        file: fileFrom(svg, "logo.svg", "image/svg+xml"),
+        folder: "logos",
+      });
+
+      expect(upload.mock.calls[0][0].body.equals(svg)).toBe(true);
+      expect(upload.mock.calls[0][0].contentType).toBe("image/svg+xml");
     });
   });
 

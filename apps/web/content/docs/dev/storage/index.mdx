@@ -99,16 +99,26 @@ export const uploadCoverRoute = buildRoute({
 
 ## Image Optimization
 
-The storage service can automatically convert uploaded images to WebP and constrain dimensions:
+Turn on `storage.image` and VitNode re-encodes JPEG, PNG, AVIF, TIFF and WebP uploads with [sharp](https://sharp.pixelplumbing.com/), converts them to WebP, and records their pixel dimensions:
 
-```ts
-const uploaded = await c.get("storage").upload({
-  file,
-  folder: "avatars",
-  convertImagesToWebp: true, // [!code ++]
-  maxDimensions: { width: 1200, height: 1200 }, // [!code ++]
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    adapter: LocalStorageAdapter(),
+    image: { // [!code ++:5]
+      quality: 85, // 1-100, defaults to 85
+      webp: true, // set to false to keep the original format
+      maxPixels: 40_000_000, // width x height, defaults to 40 million
+    },
+  },
 })
 ```
+
+`maxPixels` is your guard against image bombs - a tiny PNG that claims to be 16383x16383 pixels and unpacks into gigabytes of memory. Anything over the limit is refused with a `400` before a single pixel is decoded. The default fits an 8K photo with room to spare, so most installs never need to touch it.
+
+### What gets checked on every upload
+
+Whether or not `storage.image` is set, an upload declared as JPEG, PNG, WebP, GIF, AVIF or TIFF must actually *be* that format. The type a client sends is just a claim (a browser guesses it from the file name), so VitNode reads the file's first bytes and refuses a mismatch - say, an HTML page named `cat.gif` - with a `400`. SVG and non-image files have no fixed signature and are not affected; limit them with `allowedMimeTypes`.
 
 ---
 

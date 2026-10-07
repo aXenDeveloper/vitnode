@@ -7,6 +7,10 @@ import { createHash } from "node:crypto";
 import type { StorageFileInUseBody } from "@/lib/files/in-use";
 
 import {
+  detectImageMimeType,
+  isSignedImageMimeType,
+} from "@/api/lib/image-signature";
+import {
   findUserImageHolders,
   releaseUserImageHolders,
 } from "@/api/lib/user-images";
@@ -24,6 +28,14 @@ import { formatBytes } from "@/lib/format-bytes";
 import { enqueueAltAfterUpload } from "../lib/ai/alt";
 
 const DEFAULT_IMAGE_QUALITY = 85;
+
+/**
+ * The most pixels sharp will decode, unless `storage.image.maxPixels` says
+ * otherwise. sharp's own default is ~268 million, and a 16383x16383 PNG of one
+ * colour compresses to under a megabyte while asking libwebp for gigabytes.
+ * 40 megapixels still fits an 8K frame (33 MP) with room to spare.
+ */
+export const DEFAULT_IMAGE_MAX_PIXELS = 40_000_000;
 
 // Formats sharp can lossily re-encode. SVG/GIF are intentionally excluded to
 // preserve vectors and animation.
@@ -141,6 +153,47 @@ const exceedsWebpLimit = (
 const imageFormatName = (mimeType: string): string =>
   (mimeType.split("/")[1] ?? mimeType).toUpperCase();
 
+const tooManyPixels = ({
+  dimensions,
+  maxPixels,
+}: {
+  dimensions: null | { height: number; width: number };
+  maxPixels: number;
+}): StorageImageUnprocessableError => {
+  const size = dimensions
+    ? `${dimensions.width}\u00d7${dimensions.height} pixels`
+    : "larger than allowed";
+
+  return new StorageImageUnprocessableError(
+    `This image is ${size}. The maximum is ${maxPixels.toLocaleString("en-US")} pixels in total - resize it and upload it again.`,
+  );
+};
+
+/**
+ * The declared type is what the client said, and it is also what a storage
+ * provider will later serve the object as. For the raster formats that carry a
+ * signature, the bytes have to agree.
+ */
+const assertDeclaredImageType = (body: Buffer, mimeType: string): void => {
+  if (!isSignedImageMimeType(mimeType)) return;
+
+  const declared = imageFormatName(mimeType);
+  if (body.length === 0) {
+    throw new HTTPException(400, {
+      message: `This ${declared} file is empty.`,
+    });
+  }
+
+  const detected = detectImageMimeType(body);
+  if (detected === mimeType) return;
+
+  throw new HTTPException(400, {
+    message: detected
+      ? `This file was sent as ${declared}, but its contents are ${imageFormatName(detected)}. Save it as ${declared} or give it the right extension, then upload it again.`
+      : `This file was sent as ${declared}, but its contents are not a ${declared} image. It may be truncated, or another format saved under the wrong extension.`,
+  });
+};
+
 const reasonSuffix = (error: unknown): string => {
   const first =
     error instanceof Error
@@ -229,6 +282,10 @@ export class StorageModel {
 
     const quality = image.quality ?? DEFAULT_IMAGE_QUALITY;
     const toWebp = image.webp !== false;
+    const maxPixels = image.maxPixels ?? DEFAULT_IMAGE_MAX_PIXELS;
+    // Enforced by libvips while it reads the header, so an oversized image is
+    // refused before a single pixel of it is decoded.
+    const sharpOptions = { limitInputPixels: maxPixels };
 
     let sharp;
     try {
@@ -250,8 +307,15 @@ export class StorageModel {
     // sent people off to re-export an image that was never corrupt.
     let metadata;
     try {
-      metadata = await sharp(body).metadata();
+      metadata = await sharp(body, sharpOptions).metadata();
     } catch (error) {
+      if (
+        error instanceof Error &&
+        /exceeds pixel limit/i.test(error.message)
+      ) {
+        throw tooManyPixels({ dimensions: null, maxPixels });
+      }
+
       throw new HTTPException(400, {
         message: `Could not read this ${imageFormatName(mimeType)} file${reasonSuffix(error)}. It may be truncated, or another format saved under the wrong extension.`,
       });
@@ -272,6 +336,10 @@ export class StorageModel {
         ? { width: metadata.width, height: metadata.height }
         : null;
 
+    if (dimensions && dimensions.width * dimensions.height > maxPixels) {
+      throw tooManyPixels({ dimensions, maxPixels });
+    }
+
     // A 2944x16384 PNG is one pixel too tall for WebP and an entirely valid PNG,
     // so it is stored as a PNG. Checked here rather than caught from the encoder
     // because the right answer is not to refuse the upload: `storage.image.webp`
@@ -286,7 +354,9 @@ export class StorageModel {
 
     let output: Buffer;
     try {
-      output = await sharp(body).toFormat(targetFormat, { quality }).toBuffer();
+      output = await sharp(body, sharpOptions)
+        .toFormat(targetFormat, { quality })
+        .toBuffer();
     } catch (error) {
       throw imageEncodeFailure({
         dimensions,
@@ -481,10 +551,10 @@ export class StorageModel {
       });
     }
 
-    const processed = await this.processImage(
-      Buffer.from(await file.arrayBuffer()),
-      file.type,
-    );
+    const body = Buffer.from(await file.arrayBuffer());
+    assertDeclaredImageType(body, file.type);
+
+    const processed = await this.processImage(body, file.type);
 
     // When a conversion changed the format, reflect the new extension in both
     // the stored key and the display name so downloads and previews are honest.
