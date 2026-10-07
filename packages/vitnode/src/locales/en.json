@@ -25,6 +25,7 @@
   "@vitnode/core:system:can_send_test_email": "Send test email",
   "@vitnode/core:system:can_test_storage": "Test storage",
   "@vitnode/core:system:can_test_ai": "Test AI",
+  "@vitnode/core:system:can_manage_search": "Rebuild and clear the search index",
   "@vitnode/core:files": "Files",
   "@vitnode/core:files:can_view": "View uploaded files",
   "@vitnode/core:files:can_download": "Download files",

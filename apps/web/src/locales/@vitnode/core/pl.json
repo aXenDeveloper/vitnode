@@ -47,6 +47,7 @@
   "@vitnode/core:staff_moderators:can_edit": "Edytowanie uprawnień moderatorów",
   "@vitnode/core:staff_moderators:can_view": "Wyświetlanie listy moderatorów",
   "@vitnode/core:system": "System",
+  "@vitnode/core:system:can_manage_search": "Przebudowa i czyszczenie indeksu wyszukiwania",
   "@vitnode/core:system:can_send_test_email": "Wysyłanie testowej wiadomości e-mail",
   "@vitnode/core:system:can_test_ai": "Testowanie AI",
   "@vitnode/core:system:can_test_storage": "Testowanie magazynu plików",

@@ -10,7 +10,7 @@ export const zodClearSearchSchema = z.object({
 
 export const clearSearchDebugAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: { module: "system", permission: "can_view" },
+  adminStaffPermission: { module: "system", permission: "can_manage_search" },
   route: {
     method: "post",
     description:
