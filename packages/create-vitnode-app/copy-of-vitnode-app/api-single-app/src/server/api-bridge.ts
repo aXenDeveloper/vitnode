@@ -1,11 +1,21 @@
+/** What the in-process API reads the visitor's address from - see `client-ip.ts`. */
+export interface ApiBridgeEnv {
+  clientAddress?: string;
+}
 
-export type ApiBridge = (request: Request) => Promise<Response> | Response
+export type ApiBridge = (
+  request: Request,
+  env?: ApiBridgeEnv,
+) => Promise<Response> | Response;
 
 interface FetchableApp {
-  fetch: (request: Request) => Promise<Response> | Response
+  fetch: (
+    request: Request,
+    env?: ApiBridgeEnv,
+  ) => Promise<Response> | Response;
 }
 
 export const createApiBridge =
   (app: FetchableApp): ApiBridge =>
-  async (request) =>
-    app.fetch(request)
+  async (request, env) =>
+    app.fetch(request, env);

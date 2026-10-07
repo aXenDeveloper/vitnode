@@ -7,7 +7,11 @@ import {
   resolveForwardedIpSecret,
   verifyForwardedFor,
 } from "@/lib/fetcher/forwarded-signature.server";
-import { FORWARDED_IP_FALLBACK } from "@/lib/fetcher/request-context";
+import { CONFIG } from "@/lib/config";
+import {
+  FORWARDED_IP_FALLBACK,
+  resolveVisitorIp,
+} from "@/lib/fetcher/request-context";
 
 const UNKNOWN_CLIENT_IP = "127.0.0.1";
 
@@ -52,6 +56,13 @@ const denoSocketAddress = (
   return isRecord(remoteAddr) ? nonEmptyString(remoteAddr.hostname) : undefined;
 };
 
+/**
+ * The API mounted in-process by a host app (the Single App's `/api/*` route)
+ * has no socket of its own; the host hands over the one it accepted.
+ */
+const hostSocketAddress = (env: Record<string, unknown>): string | undefined =>
+  nonEmptyString(env.clientAddress);
+
 const socketAddress = (c: Context): string | undefined => {
   const env: unknown = c.env;
   if (!isRecord(env)) return undefined;
@@ -59,8 +70,22 @@ const socketAddress = (c: Context): string | undefined => {
   return (
     nodeSocketAddress(env) ??
     bunSocketAddress(env, c.req.raw) ??
-    denoSocketAddress(env)
+    denoSocketAddress(env) ??
+    hostSocketAddress(env)
   );
+};
+
+// Behind `VITNODE_TRUSTED_PROXY_HOPS` proxies the socket is the closest proxy,
+// so the visitor is that many hops from the right of `X-Forwarded-For`.
+// Anything further left is client-written and never read.
+const proxiedAddress = (c: Context): string | undefined => {
+  const address = resolveVisitorIp({
+    forwardedFor: c.req.header("x-forwarded-for"),
+    socketAddress: socketAddress(c),
+    trustedProxyHops: CONFIG.trustedProxyHops,
+  });
+
+  return address && isIP(address) ? address : socketAddress(c);
 };
 
 const signedForwardedAddress = (c: Context): string | undefined => {
@@ -79,7 +104,7 @@ const signedForwardedAddress = (c: Context): string | undefined => {
 };
 
 export const resolveClientIp = (c: Context): string =>
-  signedForwardedAddress(c) ?? socketAddress(c) ?? UNKNOWN_CLIENT_IP;
+  signedForwardedAddress(c) ?? proxiedAddress(c) ?? UNKNOWN_CLIENT_IP;
 
 export const clientIpMiddleware = async (
   c: Context,
