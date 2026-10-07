@@ -1,6 +1,6 @@
 import type { LanguageModel } from "ai";
 
-import { stripHtml } from "@vitnode/core/lib/strip-html";
+import { htmlToText } from "@vitnode/core/lib/strip-html";
 import { generateText } from "ai";
 
 export type AiTextFormat = "html" | "text";
@@ -75,7 +75,7 @@ export const writeExcerptWithAi = async ({
       "Make it specific to the article, never generic, and do not start with the title.",
       "Answer with the excerpt only, without quotes, notes or explanations.",
     ].join("\n"),
-    prompt: `Title: ${title}\n\nArticle:\n${stripHtml(content).slice(0, 12_000)}`,
+    prompt: `Title: ${title}\n\nArticle:\n${htmlToText(content).slice(0, 12_000)}`,
   });
 
   return unquote(text);

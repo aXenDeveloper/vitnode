@@ -34,12 +34,17 @@ import {
   contentValuesToColumns,
 } from "../paths";
 import {
+  contentRichTextSearchColumns,
+  withContentRichTextSearchText,
+} from "../rich-text";
+import {
   contentDatabase,
   findContentLanguage,
   listContentLanguages,
   resolveContentLanguage,
 } from "./language-resolver";
 import { diffChangedFields } from "./query";
+import { withContentRichTextWrites } from "./rich-text";
 import { createSlugNormalizer } from "./slugs";
 
 export interface ContentTranslationOptions {
@@ -181,7 +186,7 @@ export const createContentTranslationModel = <
   c,
   columns,
   definition,
-  schemas,
+  schemas: definitionSchemas,
   table,
   translationTable,
 }: {
@@ -195,6 +200,16 @@ export const createContentTranslationModel = <
   translationTable: PgTable;
 }): ContentTranslationModel<TDefinition> => {
   const contentTypeId = definition.id;
+  // Rich text is sanitised and validated as part of the parse, so every write
+  // below - and anything built on this service - stores sanitised HTML.
+  const schemas = withContentRichTextWrites(
+    definitionSchemas,
+    definition.fields,
+  );
+  // The plain-text twins of searchable localized rich text columns.
+  const richTextSearch = contentRichTextSearchColumns(definition).filter(
+    entry => entry.localized,
+  );
 
   if (!definition.localization.enabled) {
     throw new ContentEngineError(
@@ -442,7 +457,10 @@ export const createContentTranslationModel = <
       const [row] = await database
         .insert(translationTable)
         .values({
-          ...withCreateSlugs(contentValuesToColumns(localizedFields, parsed)),
+          ...withContentRichTextSearchText(
+            richTextSearch,
+            withCreateSlugs(contentValuesToColumns(localizedFields, parsed)),
+          ),
           itemId,
           languageId: target.id,
           ...(initialVersion === undefined ? {} : { version: initialVersion }),
@@ -719,7 +737,10 @@ export const createContentTranslationModel = <
       const [row] = await database
         .update(translationTable)
         .set({
-          ...Object.fromEntries(changedColumns.map(key => [key, patch[key]])),
+          ...withContentRichTextSearchText(
+            richTextSearch,
+            Object.fromEntries(changedColumns.map(key => [key, patch[key]])),
+          ),
           version: sql`${versionColumn} + 1`,
         })
         .where(

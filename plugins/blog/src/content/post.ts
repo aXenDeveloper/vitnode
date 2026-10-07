@@ -50,7 +50,10 @@ export const blogPostContentType = defineContentType({
       maxLength: 255,
       source: "title",
     }),
-    content: field.textarea({ localized: true, required: true }),
+    // HTML from the article editor: sanitised on every write - the AI
+    // translation included - and required to hold text or media, not just
+    // `<p></p>`. The same `text` column a textarea generated.
+    content: field.richText({ localized: true, required: true }),
     excerpt: field.textarea({
       localized: true,
       nullable: true,

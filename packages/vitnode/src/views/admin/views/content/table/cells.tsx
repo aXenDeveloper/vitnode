@@ -19,6 +19,7 @@ import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { UserFormat } from "@/components/user-format";
 import { isContentPublished } from "@/content/publication";
+import { stripHtml } from "@/lib/strip-html";
 
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
@@ -233,6 +234,18 @@ const ContentCellValue = ({
           )}
           {published ? statusLabels.published : statusLabels.draft}
         </Badge>
+      );
+    }
+
+    // The words, never the markup - a list cell is not the place for a body's
+    // `<p class="...">`. Media-only bodies read as empty.
+    case "richText": {
+      const text = stripHtml(asText(value));
+
+      return text === "" ? (
+        <Empty label={emptyLabel} />
+      ) : (
+        <span className="line-clamp-2 max-w-sm whitespace-normal">{text}</span>
       );
     }
 

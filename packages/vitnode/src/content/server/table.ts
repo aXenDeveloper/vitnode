@@ -30,8 +30,10 @@ import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
 import { contentStorageColumns } from "../paths";
+import { contentRichTextSearchColumns } from "../rich-text";
 import {
   buildContentColumn,
+  buildContentSearchTextColumn,
   buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
@@ -159,6 +161,12 @@ export const createContentTable = <
     });
   }
 
+  for (const entry of contentRichTextSearchColumns(definition)) {
+    if (entry.localized) continue;
+
+    columns[entry.searchColumn] = buildContentSearchTextColumn();
+  }
+
   // Checked against the *declared* fields rather than the flattened columns: a
   // to-many relation needs a reference thunk for its junction table's foreign
   // key, and it has no column here to be found by.
@@ -217,6 +225,11 @@ export const contentTableColumns = <
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
     ...Object.keys(contentStorageColumns(sharedFields)),
+    // Registered under their own names, never under the field's: selecting
+    // `columns.body` must keep returning the HTML.
+    ...contentRichTextSearchColumns(definition)
+      .filter(entry => !entry.localized)
+      .map(entry => entry.searchColumn),
   ];
 
   return {

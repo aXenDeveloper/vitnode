@@ -28,6 +28,7 @@ import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
+import { contentRichTextSearchColumnOf } from "../rich-text";
 import { findContentLanguage } from "./language-resolver";
 import { createContentPublicRowHydrator } from "./public-row-hydration";
 import {
@@ -44,6 +45,7 @@ import {
   buildFilterCondition,
   buildOrderColumn,
   buildSearchCondition,
+  contentSearchColumn,
 } from "./query";
 
 const LANGUAGE_KEY = "_languageId";
@@ -430,11 +432,23 @@ export const createContentLocalizedPublicService = <
 
       const term = query.search;
       const sharedSearch = buildSearchCondition(
-        sharedSearchable.map(name => columns[name]),
+        sharedSearchable.map(name =>
+          contentSearchColumn(
+            columns,
+            name,
+            contentRichTextSearchColumnOf(definition, name),
+          ),
+        ),
         term,
       );
       const localizedSearch = buildSearchCondition(
-        localizedSearchable.map(name => translationColumns[name]),
+        localizedSearchable.map(name =>
+          contentSearchColumn(
+            translationColumns,
+            name,
+            contentRichTextSearchColumnOf(definition, name),
+          ),
+        ),
         term,
       );
 

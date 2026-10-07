@@ -84,6 +84,7 @@ import {
   isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
+import { assertContentRichTextSearchColumns } from "./rich-text";
 import { buildContentSchemas } from "./schemas";
 
 const slugifyModule = (value: string): string =>
@@ -444,6 +445,14 @@ export const defineContentType = <
     publicationEnabled,
     localizedFields,
   );
+
+  // Both search allowlists are final here, and a searchable rich text field
+  // generates a plain-text column whose name has to be free.
+  assertContentRichTextSearchColumns(id, {
+    admin: resolvedAdmin,
+    fields: fieldMap,
+    publicApi: resolvedPublicApi,
+  });
 
   const resolvedSearch = resolveSearch(
     id,

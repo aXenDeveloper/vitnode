@@ -24,6 +24,11 @@ import {
   contentInnerFields,
   isContentReferenceCollection,
 } from "../paths";
+import {
+  contentRichTextIssue,
+  contentRichTextPlainText,
+  isContentRichTextEmpty,
+} from "../rich-text";
 import { humanizeFieldName } from "./labels";
 
 export interface ContentFormFieldSpec {
@@ -229,10 +234,9 @@ export const projectFormField = (
           ? { targetContentTypeId: fieldValue.target().id }
           : {}),
       };
-    case "slug":
-      // No default and no minimum: an empty slug input means "derive it",
-      // and the server is what decides whether that is possible.
-      return { ...base, maxLength: fieldValue.maxLength };
+    // A rich text field's bounds count plain text; the form schema knows that
+    // from `kind`, so the spec carries the same three keys a textarea does.
+    case "richText":
     case "text":
     case "textarea":
       return {
@@ -241,6 +245,10 @@ export const projectFormField = (
         maxLength: fieldValue.maxLength,
         minLength: fieldValue.minLength,
       };
+    case "slug":
+      // No default and no minimum: an empty slug input means "derive it",
+      // and the server is what decides whether that is possible.
+      return { ...base, maxLength: fieldValue.maxLength };
     default:
       return base;
   }
@@ -453,6 +461,13 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
         .min(spec.minItems ?? 0)
         .max(spec.maxItems ?? Number.MAX_SAFE_INTEGER);
     }
+    // The editor's HTML, held to the field's rules on its plain text - an empty
+    // editor is `<p></p>`, which `z.string().min(1)` would wave through.
+    case "richText":
+      return z.string().superRefine((value, ctx) => {
+        const issue = contentRichTextIssue(spec, value);
+        if (issue !== null) ctx.addIssue({ code: "custom", message: issue });
+      });
     case "user":
       // A to-many people field holds identifiers, exactly as a to-many relation
       // does: the set picker renders the names it fetched and stores what the
@@ -552,7 +567,13 @@ const localizedValueForApi = (
   fieldSpec: ContentFormFieldSpec,
   raw: string,
 ): unknown => {
-  if (raw.trim() !== "") return raw;
+  // An editor left at `<p></p>` is a language nobody wrote, exactly like an
+  // empty input - not a translation whose body is empty markup.
+  const empty =
+    fieldSpec.kind === "richText"
+      ? isContentRichTextEmpty(raw)
+      : raw.trim() === "";
+  if (!empty) return raw;
   // An empty slug means "derive it from the source field in this language".
   if (EMPTY_MEANS_UNSET.has(fieldSpec.kind)) return undefined;
   if (fieldSpec.nullable) return null;
@@ -626,8 +647,19 @@ const localizedFieldSchema = (
   // language switcher can read it back through `getMultiLangConstraints`.
   // `minLength` deliberately is not: an empty box would fail it, and an empty box
   // is how "no translation" looks.
+  //
+  // A rich text value is HTML, so neither bound can sit on the item: both count
+  // the plain text, and are checked per language below.
+  const richText = fieldSpec.kind === "richText";
   let value = z.string();
-  if (fieldSpec.maxLength !== undefined) value = value.max(fieldSpec.maxLength);
+  if (fieldSpec.maxLength !== undefined && !richText) {
+    value = value.max(fieldSpec.maxLength);
+  }
+
+  const isEmpty = (raw: string): boolean =>
+    richText ? isContentRichTextEmpty(raw) : raw.trim() === "";
+  const lengthOf = (raw: string): number =>
+    richText ? contentRichTextPlainText(raw).length : raw.length;
 
   const entries = z.array(z.object({ languageCode: z.string(), value }));
 
@@ -635,14 +667,24 @@ const localizedFieldSchema = (
     .superRefine((rows, ctx) => {
       for (const row of rows) {
         const text = row.value ?? "";
-        if (text.trim() === "") continue;
+        if (isEmpty(text)) continue;
         if (
           fieldSpec.minLength !== undefined &&
-          text.length < fieldSpec.minLength
+          lengthOf(text) < fieldSpec.minLength
         ) {
           ctx.addIssue({
             code: "custom",
             message: `${fieldSpec.label} needs at least ${fieldSpec.minLength} characters in "${row.languageCode}".`,
+          });
+        }
+        if (
+          richText &&
+          fieldSpec.maxLength !== undefined &&
+          lengthOf(text) > fieldSpec.maxLength
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message: `${fieldSpec.label} can hold at most ${fieldSpec.maxLength} characters in "${row.languageCode}".`,
           });
         }
       }
@@ -651,7 +693,7 @@ const localizedFieldSchema = (
         return;
       }
 
-      if (getLangValue(rows, defaultLocale).trim() === "") {
+      if (isEmpty(getLangValue(rows, defaultLocale))) {
         ctx.addIssue({
           code: "custom",
           message: `${fieldSpec.label} is required in "${defaultLocale}", the language every record is stored in.`,

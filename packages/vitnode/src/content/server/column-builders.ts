@@ -207,6 +207,14 @@ export const buildContentColumn = ({
 
       return nullable ? column : column.notNull();
     }
+    // The very column a `textarea` generates, so switching a field between the
+    // two is a change of contract and never a migration.
+    case "richText":
+    case "textarea":
+      return withModifiers(text(), {
+        defaultValue: fieldValue.defaultValue,
+        nullable,
+      });
     case "slug":
       // Always NOT NULL and never defaulted: a row nobody can address by URL
       // is not worth allowing, and there is no sensible default URL.
@@ -220,10 +228,12 @@ export const buildContentColumn = ({
         }),
         { defaultValue: fieldValue.defaultValue, nullable },
       );
-    case "textarea":
-      return withModifiers(text(), {
-        defaultValue: fieldValue.defaultValue,
-        nullable,
-      });
   }
 };
+
+/**
+ * The plain-text twin of a searchable `richText` column. Nullable and never
+ * defaulted: it is derived on every write, and `NULL` is what a row written
+ * before the column existed holds until it is backfilled.
+ */
+export const buildContentSearchTextColumn = (): AnyPgColumnBuilder => text();

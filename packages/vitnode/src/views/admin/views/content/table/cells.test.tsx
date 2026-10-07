@@ -142,4 +142,28 @@ describe("ContentCell", () => {
 
     expect(screen.getByText(COVER.name)).toBeTruthy();
   });
+
+  it("shows the words of a rich text value, never its markup", () => {
+    const BODY: ContentColumnSpec = {
+      kind: "richText",
+      label: "Body",
+      name: "body",
+    };
+    const { container } = cell(
+      BODY,
+      rowWith({ body: '<p class="x">Tom &amp; <strong>Jerry</strong></p>' }),
+    );
+
+    expect(container.textContent).toBe("Tom & Jerry");
+    expect(container.querySelector("strong")).toBeNull();
+  });
+
+  it("shows the empty label for a rich text value that is only markup", () => {
+    cell(
+      { kind: "richText", label: "Body", name: "body" },
+      rowWith({ body: "<p><br></p>" }),
+    );
+
+    expect(screen.getByText("—")).toBeTruthy();
+  });
 });

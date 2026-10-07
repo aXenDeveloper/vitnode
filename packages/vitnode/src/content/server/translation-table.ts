@@ -21,8 +21,10 @@ import { ContentEngineError } from "../errors";
 import { contentTranslationPrimaryKeyName } from "../indexes";
 import { partitionContentFields } from "../localization";
 import { contentStorageColumns } from "../paths";
+import { contentRichTextSearchColumns } from "../rich-text";
 import {
   buildContentColumn,
+  buildContentSearchTextColumn,
   buildTranslationPublicationColumns,
   buildTranslationSystemColumns,
 } from "./column-builders";
@@ -64,6 +66,12 @@ export const createContentTranslationTable = <
 
   for (const [name, fieldValue] of Object.entries(localizedFields)) {
     columns[name] = buildContentColumn({ contentTypeId, fieldValue, name });
+  }
+
+  for (const entry of contentRichTextSearchColumns(definition)) {
+    if (!entry.localized) continue;
+
+    columns[entry.searchColumn] = buildContentSearchTextColumn();
   }
 
   const { translationIndexes, translationTableName } = localization;
@@ -109,6 +117,9 @@ export const contentTranslationTableColumns = <
       ? CONTENT_TRANSLATION_PUBLICATION_FIELDS
       : []),
     ...Object.keys(contentStorageColumns(localizedFields)),
+    ...contentRichTextSearchColumns(definition)
+      .filter(entry => entry.localized)
+      .map(entry => entry.searchColumn),
   ];
 
   return {

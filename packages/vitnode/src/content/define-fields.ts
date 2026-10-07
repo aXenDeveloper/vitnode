@@ -110,6 +110,7 @@ const FIELD_KINDS = new Set<string>([
   "number",
   "relation",
   "repeatable",
+  "richText",
   "slug",
   "text",
   "textarea",

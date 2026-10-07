@@ -92,10 +92,22 @@ export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
 
 export const CONTENT_LOCALIZED_FIELD_KINDS = [
   "blocks",
+  "richText",
   "slug",
   "text",
   "textarea",
 ] as const;
+
+/**
+ * The most HTML one `richText` value may hold, in characters - checked on the
+ * way in and again after sanitising. Half a million characters is a long book
+ * chapter with heavy formatting, and it keeps one request from parking megabytes
+ * of markup in a row the list, the search index and every revision then copy.
+ */
+export const CONTENT_RICH_TEXT_MAX_HTML_LENGTH = 500_000;
+
+/** Appended to a searchable `richText` column to name its plain-text twin. */
+export const CONTENT_RICH_TEXT_SEARCH_SUFFIX = "Text";
 
 const localizedFieldKinds: ReadonlySet<string> = new Set(
   CONTENT_LOCALIZED_FIELD_KINDS,
@@ -151,6 +163,7 @@ export const CONTENT_ADVANCED_LEAF_KINDS = [
   "dateTime",
   "enum",
   "number",
+  "richText",
   "text",
   "textarea",
 ] as const;
@@ -219,6 +232,7 @@ export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "file",
   "number",
   "relation",
+  "richText",
   "slug",
   "text",
   "textarea",
@@ -236,9 +250,18 @@ export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
 export const CONTENT_SEARCH_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `search.descriptionField` may name. */
-export const CONTENT_SEARCH_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+export const CONTENT_SEARCH_DESCRIPTION_KINDS = [
+  "richText",
+  "text",
+  "textarea",
+] as const;
 
-export const CONTENT_SEARCH_TEXT_KINDS = ["slug", "text", "textarea"] as const;
+export const CONTENT_SEARCH_TEXT_KINDS = [
+  "richText",
+  "slug",
+  "text",
+  "textarea",
+] as const;
 
 /** The placeholder every `search.pathTemplate` must use. */
 export const CONTENT_SEARCH_SLUG_PLACEHOLDER = "{slug}";
@@ -321,7 +344,11 @@ export const CONTENT_SCHEDULE_CODES = {
 export const CONTENT_DELIVERY_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `delivery.seo.descriptionField` may name. */
-export const CONTENT_DELIVERY_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+export const CONTENT_DELIVERY_DESCRIPTION_KINDS = [
+  "richText",
+  "text",
+  "textarea",
+] as const;
 
 export const CONTENT_DELIVERY_NO_INDEX_KINDS = ["boolean"] as const;
 

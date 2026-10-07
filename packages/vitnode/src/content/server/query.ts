@@ -1,8 +1,9 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
+import type { ContentRichTextSearchColumn } from "../rich-text";
 import type {
   ContentFieldDescriptor,
   ContentFieldMap,
@@ -36,7 +37,7 @@ export const escapeLikePattern = (value: string): string =>
   value.replace(/[\\%_]/g, match => `\\${match}`);
 
 export const buildSearchCondition = (
-  columns: readonly PgColumn[],
+  columns: readonly (PgColumn | SQL)[],
   term: string | undefined,
 ): SQL | undefined => {
   const trimmed = term?.trim();
@@ -45,6 +46,27 @@ export const buildSearchCondition = (
   const pattern = `%${escapeLikePattern(trimmed)}%`;
 
   return or(...columns.map(column => ilike(column, pattern)));
+};
+
+/**
+ * What a list search matches for one searchable name.
+ *
+ * The column itself, except for a `richText` field: that is matched on its
+ * plain-text twin, so a search for "class" finds the word rather than every
+ * styled span. A row written before the twin existed holds `NULL` there until
+ * it is backfilled, and falls back to the HTML column rather than vanishing
+ * from results.
+ */
+export const contentSearchColumn = (
+  columns: Record<string, PgColumn>,
+  name: string,
+  richText: ContentRichTextSearchColumn | null,
+): PgColumn | SQL => {
+  const column = columns[name];
+  const searchColumn = richText ? columns[richText.searchColumn] : undefined;
+  if (!searchColumn) return column;
+
+  return sql`coalesce(${searchColumn}, ${column})`;
 };
 
 const filterValue = (

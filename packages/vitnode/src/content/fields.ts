@@ -11,6 +11,7 @@ import type {
   ContentOnDelete,
   ContentRelationField,
   ContentRepeatableField,
+  ContentRichTextField,
   ContentSlugField,
   ContentSlugRequired,
   ContentTextareaField,
@@ -87,6 +88,36 @@ const textarea = <
   ...shared(args),
   defaultValue: args.defaultValue as TDefault,
   kind: "textarea",
+  localized: localizedOf(args),
+});
+
+/**
+ * Formatted text edited with the AdminCP's rich text editor and stored as HTML.
+ *
+ * Same column as `textarea`, so switching a field between the two changes no
+ * schema. What changes is the contract: the server sanitises every write,
+ * `required` refuses an editor that holds nothing but empty markup, and
+ * `minLength` / `maxLength` count the plain text a reader sees.
+ */
+const richText = <
+  TRequired extends boolean = false,
+  TNullable extends boolean = false,
+  TDefault extends string | undefined = undefined,
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & {
+      defaultValue?: TDefault;
+      /** Most characters of plain text, markup excluded. */
+      maxLength?: number;
+      /** Fewest characters of plain text, markup excluded. */
+      minLength?: number;
+    } = {},
+): ContentRichTextField<TRequired, TNullable, TDefault, TLocalized> => ({
+  ...args,
+  ...shared(args),
+  defaultValue: args.defaultValue as TDefault,
+  kind: "richText",
   localized: localizedOf(args),
 });
 
@@ -357,6 +388,7 @@ export const field = {
   number,
   relation,
   repeatable,
+  richText,
   slug,
   text,
   textarea,

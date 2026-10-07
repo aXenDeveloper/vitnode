@@ -112,6 +112,28 @@ export interface ContentTextareaField<
   minLength?: number;
 }
 
+/**
+ * Formatted text from the AdminCP editor, stored as an HTML string in a `text`
+ * column - the same column a `textarea` generates.
+ *
+ * Every write is sanitised on the server, `required` means "has text or media",
+ * and `minLength` / `maxLength` count the *plain text*, never the markup.
+ */
+export interface ContentRichTextField<
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+  TDefault extends string | undefined = string | undefined,
+  TLocalized extends boolean = boolean,
+> extends ContentFieldShared<TRequired, TNullable> {
+  defaultValue: TDefault;
+  kind: "richText";
+  localized: TLocalized;
+  /** Most characters of plain text, markup excluded. */
+  maxLength?: number;
+  /** Fewest characters of plain text, markup excluded. */
+  minLength?: number;
+}
+
 export interface ContentNumberField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
@@ -269,6 +291,7 @@ export type ContentFieldDescriptor =
   | ContentNumberField
   | ContentRelationField
   | ContentRepeatableField
+  | ContentRichTextField
   | ContentSlugField
   | ContentTextareaField
   | ContentTextField
@@ -281,6 +304,7 @@ export type ContentLeafFieldDescriptor =
   | ContentDateTimeField
   | ContentEnumField
   | ContentNumberField
+  | ContentRichTextField
   | ContentTextareaField
   | ContentTextField;
 
@@ -649,8 +673,9 @@ export interface ContentAdminListConfig<
    */
   orderableFields?: ScalarColumnFieldKeys<TFields>[];
   /**
-   * `text`, `textarea` and `slug` fields the list's search box matches. A
-   * localized field matches its value in any language.
+   * `text`, `textarea`, `richText` and `slug` fields the list's search box
+   * matches. A localized field matches its value in any language. A `richText`
+   * field is matched on its plain text, never on its markup.
    */
   searchableFields?: ScalarDisplayFieldKeys<TFields>[];
   thumbnailField?: ContentSingleFileFieldKeys<TFields>;
