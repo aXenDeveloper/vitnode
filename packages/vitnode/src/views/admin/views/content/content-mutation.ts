@@ -1,6 +1,7 @@
 import type {
   ContentConflict,
   ContentDeliveryConflict,
+  ContentDuplicateRejection,
   ContentScheduleRejection,
   ContentTranslationConflict,
   ContentUnprocessable,
@@ -37,6 +38,8 @@ export interface ContentMutationResult {
   conflict?: ContentConflict;
 
   delivery?: ContentDeliveryConflict;
+  /** Why a duplicate was refused: no free slug (409) or a unique field (422). */
+  duplicate?: ContentDuplicateRejection;
   error?: string;
 
   id?: number;

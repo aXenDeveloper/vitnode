@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
+  CONTENT_DUPLICATE_CODES,
   CONTENT_SCHEDULE_CODES,
   CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
@@ -176,6 +177,45 @@ export const parseContentUnprocessable = (
 
   try {
     const parsed = zodContentUnprocessable.safeParse(JSON.parse(body));
+
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Why a duplicate was refused, when it was refused for a reason a form can act
+ * on: a slug with no free candidate (409, names the field and the locale) or a
+ * unique field that needs an override (422, names every such field).
+ */
+export const zodContentDuplicateRejection = z.discriminatedUnion("code", [
+  z.object({
+    code: z.literal(CONTENT_DUPLICATE_CODES.slugConflict),
+    contentTypeId: z.string(),
+    field: z.string(),
+    locale: z.string().nullable(),
+    slug: z.string(),
+  }),
+  z.object({
+    code: z.literal(CONTENT_DUPLICATE_CODES.uniqueRequired),
+    contentTypeId: z.string(),
+    fields: z.array(z.string()),
+  }),
+]);
+
+export type ContentDuplicateRejection = z.infer<
+  typeof zodContentDuplicateRejection
+>;
+
+/** Reads a duplicate rejection out of a response body, or `null`. */
+export const parseContentDuplicateRejection = (
+  body: string | undefined,
+): ContentDuplicateRejection | null => {
+  if (body === undefined || body === "") return null;
+
+  try {
+    const parsed = zodContentDuplicateRejection.safeParse(JSON.parse(body));
 
     return parsed.success ? parsed.data : null;
   } catch {
