@@ -3,7 +3,10 @@ node_modules
 dist
 dist-ssr
 *.local
-.env
+# Every mode Vite loads (`.env.production`, `.env.staging.local`, ...) - only
+# the example file is committed.
+.env*
+!.env.example
 .nitro
 .tanstack
 .wrangler

@@ -5,11 +5,10 @@ node_modules
 .turbo
 
 # Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Every mode Vite loads (`.env.production`, `.env.staging.local`, ...) - only
+# the example file is committed.
+.env*
+!.env.example
 
 # Build Outputs
 out/
