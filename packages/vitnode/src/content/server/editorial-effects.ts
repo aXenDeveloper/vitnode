@@ -24,8 +24,10 @@ const EVENT_ACTION: Record<
 > = {
   create: "created",
   delete: "deleted",
+  hide: "hidden",
   publish: "published",
   restore: "restored",
+  unhide: "unhidden",
   unpublish: "unpublished",
   update: "updated",
 };
@@ -51,6 +53,26 @@ const payloadFor = (
   };
 
   switch (outcome.operation) {
+    // `ContentHiddenPayload` / `ContentUnhiddenPayload`. The revision and version
+    // ride along only when there is one - a content type without `editorial`
+    // has neither, and its payload is exactly the documented shape.
+    case "hide":
+    case "unhide": {
+      const row = outcome.row as { hiddenAt?: unknown; id?: unknown };
+      const payload: Record<string, unknown> = {
+        actorUserId: outcome.visibility?.actorUserId ?? null,
+        contentId: row.id,
+        ...(outcome.revisionId === null
+          ? {}
+          : { revisionId: outcome.revisionId, version: outcome.version }),
+      };
+
+      if (outcome.operation === "hide" && row.hiddenAt instanceof Date) {
+        payload.hiddenAt = row.hiddenAt;
+      }
+
+      return payload;
+    }
     case "publish": {
       const publishedAt = (outcome.row as { publishedAt?: unknown })
         .publishedAt;

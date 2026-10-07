@@ -1318,7 +1318,9 @@
           "publish": "Published",
           "unpublish": "Unpublished",
           "restore": "Restored",
-          "delete": "Deleted"
+          "delete": "Deleted",
+          "hide": "Hidden",
+          "unhide": "Unhidden"
         },
         "restore": {
           "action": "Restore",

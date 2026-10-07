@@ -7,6 +7,15 @@ export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 /** The two system columns `visibility: { enabled: true }` adds to the base table. */
 export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
 
+/** The two record-level visibility mutations, and their route segments. */
+export const CONTENT_VISIBILITY_ACTIONS = ["hide", "unhide"] as const;
+
+/**
+ * The admin list's `visibility` filter. `hidden` is `hiddenAt IS NOT NULL`,
+ * `visible` is `hiddenAt IS NULL` - whatever the publication status says.
+ */
+export const CONTENT_VISIBILITY_FILTERS = ["hidden", "visible"] as const;
+
 /**
  * How a content type's primary key is generated. `serial` is the default and the
  * only strategy a content type had before; see `ids.ts`.
@@ -252,8 +261,10 @@ export const CONTENT_SEARCH_PATH_MAX_LENGTH = 512;
 export const CONTENT_REVISION_OPERATIONS = [
   "create",
   "delete",
+  "hide",
   "publish",
   "restore",
+  "unhide",
   "unpublish",
   "update",
 ] as const;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { ContentPublicationAction } from "@/content/publication";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
 
@@ -193,6 +194,37 @@ export const setContentPublishedInBrowser = async (
 ): Promise<ContentMutationResult> => {
   const result = await send(
     { method: "post", path: `/${id}/${action}`, target },
+    zodPublicationResult,
+  );
+
+  if (!succeeded(result, 200)) return failure(result);
+
+  return { version: versionOf(result.data?.row) };
+};
+
+/**
+ * Hides or unhides the record the form is editing.
+ *
+ * Returns the version the record holds afterwards: on an editorial content type
+ * a hide is a new version with its own revision, and the form's next save needs
+ * that precondition rather than the one it opened with. A `409` carries
+ * `CONTENT_VERSION_CONFLICT` when `expectedVersion` was sent and somebody saved
+ * first, or `CONTENT_DELIVERY_SLUG_RESERVED` when an unhide finds its address
+ * taken by another record.
+ */
+export const setContentHiddenInBrowser = async (
+  target: ContentApiTarget,
+  id: number,
+  action: ContentVisibilityAction,
+  expectedVersion?: number,
+): Promise<ContentMutationResult> => {
+  const result = await send(
+    {
+      ...(expectedVersion === undefined ? {} : { body: { expectedVersion } }),
+      method: "post",
+      path: `/${id}/${action}`,
+      target,
+    },
     zodPublicationResult,
   );
 

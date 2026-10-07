@@ -4,14 +4,17 @@ import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 import type { StorageFileUploadResult } from "../../api/models/storage";
+import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentFilterInput,
   ContentOrderableFieldName,
   ContentReferenceFieldName,
 } from "../types";
+import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPreviewTarget } from "./preview-target";
+import type { ContentVisibilityAction } from "./visibility";
 
 import { checkStaffPermission } from "../../api/lib/check-staff-permission";
 import { buildRoute } from "../../api/lib/route";
@@ -74,9 +77,17 @@ import { resolveContentPreviewTarget } from "./preview-target";
 import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
-import { identifier, jsonBody, jsonResponse, readJson } from "./route-helpers";
+import {
+  identifier,
+  jsonBody,
+  jsonResponse,
+  readJson,
+  readOptionalJson,
+} from "./route-helpers";
 import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
 import { buildContentTranslationRoutes } from "./translation-routes";
+import { editorialVisibilityMethods, visibilityMethods } from "./visibility";
+import { contentVisibilityEffects } from "./visibility-effects";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
 
@@ -1062,6 +1073,119 @@ export const buildContentRoutes = <
       },
     });
 
+  /**
+   * `{ expectedVersion? }`, and the whole body optional: hiding overwrites no
+   * field value, so - like publishing - it is guarded on the state it changes,
+   * and the version is checked only when the client chose to send one. A content
+   * type without `editorial` has no version, and ignores it.
+   */
+  const visibilityBody = z.strictObject({
+    expectedVersion: z.number().int().positive().optional(),
+  });
+
+  /**
+   * `POST /{id}/hide` and `POST /{id}/unhide`.
+   *
+   * Their own permission, `can_hide`, rather than `can_publish`: taking a record
+   * off the site without unpublishing it is a moderation decision, and a site may
+   * want moderators who can do that without being able to publish anything.
+   * Idempotent like publishing - hiding a hidden record is a 200 that changed
+   * nothing, wrote no revision and announced nothing.
+   */
+  const visibilityRoute = (action: ContentVisibilityAction) =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.hide },
+      route: {
+        method: "post",
+        path: `/{id}/${action}` as const,
+        description:
+          action === "hide"
+            ? `Hide a ${name} from the public site, whatever its publication status`
+            : `Make a hidden ${name} publicly available again`,
+        request: {
+          params: schemas.params,
+          body: { ...jsonBody(visibilityBody), required: false },
+        },
+        responses: {
+          200: jsonResponse(
+            publicationResponse,
+            action === "hide"
+              ? `${name} hidden, or already hidden`
+              : `${name} visible again, or already visible`,
+          ),
+          400: invalidIdentifier,
+          404: { description: `${name} not found` },
+          ...(editorial
+            ? {
+                409: jsonResponse(
+                  conflictSchema,
+                  definition.delivery.redirects.enabled
+                    ? "The version moved, or another record took the address meanwhile"
+                    : "The version moved",
+                ),
+              }
+            : {}),
+        },
+      },
+      handler: async c => {
+        const id = identifier(c);
+        // Serial until the ID strategies land, and `identifier` has already
+        // proven it a positive integer.
+        const contentId = id as ContentIdOf<TDefinition>;
+        const { expectedVersion } = await readOptionalJson(c, visibilityBody);
+        const actor = resolveContentActor(c);
+
+        let outcome: ContentEditorialOutcome<AnyContentTypeDefinition>;
+
+        if (editorial) {
+          const result = await withHttpErrors(
+            "update",
+            async () =>
+              await editorialVisibilityMethods(definition, editorialService(c))[
+                action
+              ](contentId, { actor, expectedVersion }),
+            { contentTypeId: definition.id, itemId: id, structured: true },
+          );
+          if (!result) throw notFound(definition);
+
+          outcome = result;
+        } else {
+          const result = await withHttpErrors(
+            "update",
+            async () =>
+              await visibilityMethods(definition, model.service(c))[action](
+                contentId,
+                { actorUserId: actor.userId },
+              ),
+          );
+          if (!result) throw notFound(definition);
+
+          // The editorial outcome's shape with no history behind it - the same
+          // thing the scheduled path builds - so both services share one set of
+          // effects, and a listener cannot tell which one hid the record.
+          outcome = {
+            changed: result.changed,
+            changedFields: [],
+            operation: action,
+            previousSlug: null,
+            restoredFromRevisionId: null,
+            revisionId: null,
+            row: result.row,
+            version: 0,
+            visibility: result.visibility,
+          };
+        }
+
+        // After the commit: the event, the search document turning private or
+        // public, the delivery events, and the front ends' caches. A no-op
+        // touches none of them.
+        await contentVisibilityEffects(c, model, outcome, { pluginId });
+
+        return c.json({ changed: outcome.changed, row: outcome.row }, 200);
+      },
+    });
+
   const zodRevisionMeta = z.object({
     actorName: z.string().nullable(),
     actorRoleColor: z.string().nullable(),
@@ -1741,6 +1865,11 @@ export const buildContentRoutes = <
     editorial ? editorialRemove : remove,
     ...(definition.publication.enabled
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
+      : []),
+    // Mounted only with `visibility`, so every other content type's route list -
+    // and its permission matrix - is unchanged.
+    ...(definition.visibility.enabled
+      ? [visibilityRoute("hide"), visibilityRoute("unhide")]
       : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
     // Mounted only for a content type that declares a file field, so nothing

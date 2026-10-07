@@ -23,7 +23,24 @@ import {
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
 export type ContentSearchOperation =
-  "create" | "delete" | "publish" | "restore" | "unpublish" | "update";
+  | "create"
+  | "delete"
+  | "hide"
+  | "publish"
+  | "restore"
+  | "unhide"
+  | "unpublish"
+  | "update";
+
+/**
+ * The mutations that move public reachability without moving a field: the
+ * document is rewritten - public or private - exactly when the row moved.
+ */
+const isReachabilityOperation = (operation: ContentSearchOperation): boolean =>
+  operation === "publish" ||
+  operation === "unpublish" ||
+  operation === "hide" ||
+  operation === "unhide";
 
 export interface ContentSearchSyncInput {
   advanced?: Record<string, unknown>;
@@ -57,8 +74,9 @@ const decide = (
   if (operation === "delete") return "delete";
 
   // An idempotent transition is a no-op for the same reason it emits no event:
-  // the document is already there and would be rewritten byte for byte.
-  if (operation === "publish" || operation === "unpublish") {
+  // the document is already there and would be rewritten byte for byte. A hide
+  // and an unhide are transitions too: the document stays, as a private one.
+  if (isReachabilityOperation(operation)) {
     return changed === true ? "upsert" : "skip";
   }
 
@@ -295,10 +313,7 @@ export const syncContentLocalizedSearch = async (
 
   // An idempotent transition is a no-op for the same reason it emits no event:
   // every document is already exactly what it would be rewritten to.
-  if (
-    (input.operation === "publish" || input.operation === "unpublish") &&
-    input.changed !== true
-  ) {
+  if (isReachabilityOperation(input.operation) && input.changed !== true) {
     return [];
   }
 

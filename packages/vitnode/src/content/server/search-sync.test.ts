@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestCache } from "@/tests/cache";
 import {
   testCategoryContentType,
+  testHideablePostContentType,
   testPostContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
@@ -17,6 +18,7 @@ import {
 
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
+import { syncContentSearch } from "./search-sync";
 
 const categories = createContentModel(testCategoryContentType);
 const searchable = createContentModel(testSearchablePostContentType);
@@ -501,5 +503,77 @@ describe("content search lifecycle synchronization", () => {
       expect(search.index).not.toHaveBeenCalled();
       expect(search.delete).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("hide and unhide", () => {
+  const searchOf = () => {
+    const search = { delete: vi.fn(), index: vi.fn() };
+    const c = {
+      get: (key: string) => (key === "search" ? search : undefined),
+    } as unknown as Context;
+
+    return { c, search };
+  };
+
+  const row = {
+    createdAt: CREATED_AT,
+    excerpt: "Excerpt.",
+    hiddenAt: null as Date | null,
+    hiddenBy: null,
+    id: 9,
+    publishedAt: PUBLISHED_AT,
+    slug: "hidden-world",
+    status: "published" as const,
+    title: "Hidden world",
+    updatedAt: CREATED_AT,
+    version: 3,
+  };
+
+  it("rewrites a hidden record's document as private, with no URL", async () => {
+    const { c, search } = searchOf();
+
+    const outcome = await syncContentSearch(c, testHideablePostContentType, {
+      changed: true,
+      operation: "hide",
+      row: { ...row, hiddenAt: new Date("2026-03-01T00:00:00.000Z") },
+    });
+
+    expect(outcome.action).toBe("upsert");
+    expect(search.index).toHaveBeenCalledWith(
+      expect.objectContaining({ isPublic: false, itemId: 9 }),
+    );
+    expect(search.index.mock.calls[0][0]).not.toHaveProperty("url");
+  });
+
+  it("makes it public again on unhide", async () => {
+    const { c, search } = searchOf();
+
+    await syncContentSearch(c, testHideablePostContentType, {
+      changed: true,
+      operation: "unhide",
+      row,
+    });
+
+    expect(search.index).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isPublic: true,
+        url: "/hideable-posts/hidden-world",
+      }),
+    );
+  });
+
+  it("touches nothing for a repeat", async () => {
+    const { c, search } = searchOf();
+
+    const outcome = await syncContentSearch(c, testHideablePostContentType, {
+      changed: false,
+      operation: "hide",
+      row,
+    });
+
+    expect(outcome.action).toBe("skip");
+    expect(search.index).not.toHaveBeenCalled();
+    expect(search.delete).not.toHaveBeenCalled();
   });
 });

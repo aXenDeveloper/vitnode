@@ -410,6 +410,7 @@ export const defineContentType = <
     fields: sharedColumns,
     publication: publicationEnabled,
     tableName,
+    visibility: visibilityEnabled,
   });
 
   // Every declared field, in declaration order: the AdminCP renders one form,
@@ -580,6 +581,7 @@ export const defineContentType = <
       localization: resolvedLocalization,
       publicApi: resolvedPublicApi,
       publication: publicationEnabled,
+      visibility: visibilityEnabled,
     }),
     search: resolvedSearch as ResolvedContentSearchConfig<
       ContentSearchEnabled<TSearch>

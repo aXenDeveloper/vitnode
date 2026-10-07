@@ -75,6 +75,7 @@ const reviveDates = (
     "createdAt",
     "updatedAt",
     ...(definition.publication.enabled ? ["publishedAt"] : []),
+    ...(definition.visibility.enabled ? ["hiddenAt"] : []),
     ...Object.entries(definition.fields)
       .filter(([, field]) => field.kind === "dateTime")
       .map(([name]) => name),
@@ -160,17 +161,26 @@ export const runContentScheduleEffects = async (
     ? row[definition.publicApi.slugField]
     : undefined;
 
+  const isPublic = isContentRowPublic(row);
+
   const revalidation = await dispatchContentRevalidation(c, {
     contentTypeId: definition.id,
-    // A scheduled transition always flips public reachability, so it changes both the
-    // file it adds a line to (or removes one from) and the index that counts them.
-    // Absent for a content type without `delivery`, which keeps its tag list
-    // byte-identical.
+    // A scheduled transition flips public reachability - unless the record is
+    // hidden, in which case it was off the site before and stays off it after, and
+    // neither the sitemap file nor its index moved. Absent for a content type
+    // without `delivery`, which keeps its tag list byte-identical.
     ...(definition.delivery.enabled
-      ? { delivery: { sitemap: { contentChanged: true, indexChanged: true } } }
+      ? {
+          delivery: {
+            sitemap: {
+              contentChanged: payload.wasPublic || isPublic,
+              indexChanged: payload.wasPublic !== isPublic,
+            },
+          },
+        }
       : {}),
     id: payload.itemId,
-    isPublic: isContentRowPublic(row),
+    isPublic,
     // A scheduled transition moves the *record*, and the record's publication
     // state gates every language - so every locale that had a page, or has one
     // now, is expired. Absent for a content type that is not localized, which

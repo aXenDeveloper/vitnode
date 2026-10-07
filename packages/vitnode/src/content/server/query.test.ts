@@ -9,6 +9,7 @@ import { field } from "@/content/fields";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testHideableNoteContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
@@ -297,6 +298,60 @@ describe("buildFilterCondition", () => {
       expect(compile(filter({ status: "archived" })).params).toEqual([
         "archived",
       ]);
+    });
+  });
+
+  describe("visibility", () => {
+    const hideableColumns = contentTableColumns(
+      testHideableNoteContentType,
+      createContentTable(testHideableNoteContentType),
+    );
+    const visibilityFilter = (
+      filters: Record<string, unknown>,
+      visibility = true,
+    ) =>
+      buildFilterCondition({
+        columns: hideableColumns,
+        contentTypeId: testHideableNoteContentType.id,
+        fields: testHideableNoteContentType.fields,
+        filters,
+        publication: true,
+        visibility,
+      });
+
+    it("reads `hidden` as hiddenAt IS NOT NULL and `visible` as IS NULL", () => {
+      expect(compile(visibilityFilter({ visibility: "hidden" })).sql).toBe(
+        '("test_hideable_notes"."hiddenAt" is not null)',
+      );
+      expect(compile(visibilityFilter({ visibility: "visible" })).sql).toBe(
+        '("test_hideable_notes"."hiddenAt" is null)',
+      );
+    });
+
+    it("composes with the status filter", () => {
+      const { params, sql } = compile(
+        visibilityFilter({ status: "published", visibility: "hidden" }),
+      );
+
+      expect(sql).toBe(
+        '(("test_hideable_notes"."status" = $1) and (("test_hideable_notes"."hiddenAt" is not null)))',
+      );
+      expect(params).toEqual(["published"]);
+    });
+
+    it.each([["secret"], [""], [null], [true]])(
+      "rejects %j before it reaches SQL",
+      value => {
+        expect(() => visibilityFilter({ visibility: value })).toThrow(
+          /Invalid visibility filter/,
+        );
+      },
+    );
+
+    it("is an unknown filter for a content type without visibility", () => {
+      expect(() => visibilityFilter({ visibility: "hidden" }, false)).toThrow(
+        /Unknown filter "visibility"/,
+      );
     });
 
     it("does not accept a status filter when publication is off", () => {

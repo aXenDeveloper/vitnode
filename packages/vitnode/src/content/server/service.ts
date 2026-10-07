@@ -31,6 +31,13 @@ import type {
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentPickerTarget } from "./references";
+import type {
+  ContentVisibilityAction,
+  ContentVisibilityMembers,
+  ContentVisibilityMethods,
+  ContentVisibilityOptions,
+  ContentVisibilityResult,
+} from "./visibility";
 
 import { withPagination } from "../../api/lib/with-pagination";
 import {
@@ -39,6 +46,7 @@ import {
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
 } from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
@@ -66,6 +74,12 @@ import {
   toLabel,
 } from "./references";
 import { createSlugNormalizer } from "./slugs";
+import {
+  isInVisibilityState,
+  visibilityChange,
+  visibilityStateOf,
+  visibilityValues,
+} from "./visibility";
 
 /** Display labels for `user` and `relation` values, keyed by field name. */
 export type ContentLabels = Record<string, null | string>;
@@ -218,6 +232,7 @@ export interface ContentPublicationMethods<TDefinition> {
 }
 
 export type ContentService<TDefinition> = ContentServiceBase<TDefinition> &
+  ContentVisibilityMembers<TDefinition, ContentVisibilityMethods<TDefinition>> &
   (TDefinition extends { publication: { enabled: true } }
     ? ContentPublicationMethods<TDefinition>
     : Partial<Record<keyof ContentPublicationMethods<TDefinition>, never>>);
@@ -334,6 +349,7 @@ export const createContentService = <
     ...CONTENT_SYSTEM_FIELDS,
     ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
+    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
   ];
   const ownColumnNames = [
     ...generatedColumnNames,
@@ -624,6 +640,71 @@ export const createContentService = <
   };
 
   /**
+   * Hides or unhides one record.
+   *
+   * Read under `FOR UPDATE` first, so the before-state the effects need - was it
+   * public a moment ago? - is the row as it really was rather than a guess, and
+   * two concurrent hides cannot both stamp `hiddenAt`. `status` and `publishedAt`
+   * are never in the `SET`: hiding is a separate axis from publication.
+   */
+  const visibilityTransition = async (
+    id: number,
+    action: ContentVisibilityAction,
+    options: ContentVisibilityOptions | undefined,
+  ): Promise<ContentVisibilityResult<TDefinition> | null> =>
+    await inTransaction(options, async tx => {
+      const [current] = await tx
+        .select(ownSelection())
+        .from(table)
+        .where(eq(primaryCursor, id))
+        .limit(1)
+        .for("update");
+      if (!current) return null;
+
+      if (isInVisibilityState(action, current)) {
+        const state = visibilityStateOf(current);
+
+        return {
+          changed: false,
+          ...state,
+          row: toRow(current),
+          visibility: visibilityChange({
+            actorUserId: options?.actorUserId,
+            after: current,
+            before: current,
+          }),
+        };
+      }
+
+      const [row] = await tx
+        .update(table)
+        .set(visibilityValues(action, options?.actorUserId))
+        .where(eq(primaryCursor, id))
+        .returning(ownSelection());
+      if (!row) return null;
+
+      return {
+        changed: true,
+        ...visibilityStateOf(row),
+        row: toRow(row),
+        visibility: visibilityChange({
+          actorUserId: options?.actorUserId,
+          after: row,
+          before: current,
+        }),
+      };
+    });
+
+  // Serial today, so the identifier is a number at runtime; `ContentIdOf` keeps
+  // the signature honest for the strategies that are not.
+  const hideableMethods: ContentVisibilityMethods<TDefinition> = {
+    hide: async (id, options) =>
+      await visibilityTransition(id as number, "hide", options),
+    unhide: async (id, options) =>
+      await visibilityTransition(id as number, "unhide", options),
+  };
+
+  /**
    * Runs `body` in the caller's transaction, or in one opened for it.
    *
    * A create or update that also writes collections has to be atomic: a base row
@@ -789,6 +870,7 @@ export const createContentService = <
           filters: filters,
           membership: store?.membershipCondition,
           publication,
+          visibility: definition.visibility.enabled,
         }),
         searchCondition(query.search),
       ].filter((item): item is SQL => item !== undefined);
@@ -1126,5 +1208,6 @@ export const createContentService = <
   return {
     ...service,
     ...(publication ? publicationMethods : {}),
+    ...(definition.visibility.enabled ? hideableMethods : {}),
   } as ContentService<TDefinition>;
 };

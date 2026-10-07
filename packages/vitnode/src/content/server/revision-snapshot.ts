@@ -126,6 +126,13 @@ export const contentRevisionSnapshot = (
     };
   }
 
+  if (definition.visibility.enabled) {
+    snapshot.visibility = {
+      hiddenAt: toIsoOrNull(values.hiddenAt),
+      hiddenBy: typeof values.hiddenBy === "number" ? values.hiddenBy : null,
+    };
+  }
+
   return snapshot;
 };
 
