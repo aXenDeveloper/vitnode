@@ -17,8 +17,8 @@ export const versionsPackageJson = {
 
   react: "^19.3",
   reactDom: "^19.3",
-  useIntl: "^4.14.8",
-  lucide: "^1.49",
+  useIntl: "^4.14.9",
+  lucide: "^1.52",
   sonner: "^2.0.8",
   dotenv: "^18.0",
 

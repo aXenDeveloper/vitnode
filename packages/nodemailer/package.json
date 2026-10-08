@@ -30,7 +30,7 @@
     "lint:fix": "oxlint --type-aware --fix"
   },
   "dependencies": {
-    "nodemailer": "^10.0.13"
+    "nodemailer": "^10.0.16"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",

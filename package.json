@@ -25,12 +25,12 @@
     "doctor": "npx react-doctor@latest"
   },
   "devDependencies": {
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "@vitnode/config": "workspace:*",
     "oxfmt": "^0.72.0",
-    "react-doctor": "^0.9.14",
+    "react-doctor": "^0.9.17",
     "tsx": "^4.23.15",
-    "turbo": "^2.11.5",
+    "turbo": "^2.11.7",
     "typescript": "^6.0.3",
     "zod": "^4.6.5"
   },

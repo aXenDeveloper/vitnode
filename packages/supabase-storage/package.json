@@ -30,7 +30,7 @@
     "lint:fix": "oxlint --type-aware --fix"
   },
   "dependencies": {
-    "@supabase/storage-js": "^2.117.2"
+    "@supabase/storage-js": "^2.117.3"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",

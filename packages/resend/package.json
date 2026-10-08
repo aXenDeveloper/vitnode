@@ -29,7 +29,7 @@
     "lint:fix": "oxlint --type-aware --fix"
   },
   "dependencies": {
-    "resend": "^6.31.0"
+    "resend": "^6.32.1"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",
