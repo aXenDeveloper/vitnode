@@ -1,5 +1,3 @@
-
-
 import { validateEnvironment } from "./environment.ts";
 import { FileCopyManager } from "./files/file-copy-manager.ts";
 import { VersionManager } from "./version-manager.ts";

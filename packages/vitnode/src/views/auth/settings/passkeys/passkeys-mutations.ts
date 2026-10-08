@@ -14,12 +14,14 @@ export type AddPasskeyFailure =
   | PasskeyCeremonyFailure;
 
 export type AddPasskeyResult =
-  { failure: AddPasskeyFailure; ok: false } | { ok: true; passkey: Passkey };
+  | { failure: AddPasskeyFailure; ok: false }
+  | { ok: true; passkey: Passkey };
 
 export type AddPasskey = () => Promise<AddPasskeyResult>;
 
 export type RenamePasskeyResult =
-  { failure: "not_found" | "server_error"; ok: false } | { ok: true };
+  | { failure: "not_found" | "server_error"; ok: false }
+  | { ok: true };
 
 export type RenamePasskey = (args: {
   id: number;

@@ -1,6 +1,6 @@
-# (VitNode) ESLint Config
+# (VitNode) Config
 
-This package provides a default ESLint configuration, TypeScript configuration, and Prettier configuration for VitNode projects.
+This package provides a default Oxlint configuration, TypeScript configuration, and Oxfmt configuration for VitNode projects.
 
 <p align="center">
   <br>
@@ -17,12 +17,32 @@ This package provides a default ESLint configuration, TypeScript configuration, 
 
 ## Usage
 
-### ESLint (eslint.config.mjs)
+### Oxlint (oxlint.config.ts)
 
-```js
-import eslintVitNode from "@vitnode/config/eslint";
+Install `oxlint` and `oxlint-tsgolint`, then extend the shared config. Add `@vitnode/config/oxlint.react` for React projects.
 
-export default [...eslintVitNode];
+```ts
+import vitnode, { ignorePatterns } from "@vitnode/config/oxlint";
+import vitnodeReact from "@vitnode/config/oxlint.react";
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+  extends: [vitnode, vitnodeReact],
+  ignorePatterns: [...ignorePatterns, ".output/**"],
+});
+```
+
+`ignorePatterns` are not inherited through `extends`, so spread the exported list into your own.
+
+Run it with type-aware rules enabled:
+
+```json
+{
+  "scripts": {
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix"
+  }
+}
 ```
 
 ### TypeScript (tsconfig.json)
@@ -33,18 +53,27 @@ export default [...eslintVitNode];
 }
 ```
 
-### Prettier (.prettierrc.mjs)
+### Oxfmt (oxfmt.config.ts)
 
-```js
-import vitnodePrettier from "@vitnode/config/prettierrc";
+Install `oxfmt`, then spread the shared config. Oxfmt is a Prettier-compatible formatter, minus the waiting.
 
-/**
- * @see https://prettier.io/docs/en/configuration.html
- * @type {import("prettier").Config}
- */
-const config = {
-  ...vitnodePrettier,
-};
+```ts
+import vitnode from "@vitnode/config/oxfmt";
+import { defineConfig } from "oxfmt";
 
-export default config;
+export default defineConfig({
+  ...vitnode,
+  ignorePatterns: [".output", "dist"],
+});
+```
+
+No Prettier plugins needed: Tailwind class sorting is built in (`sortTailwindcss`, including classes inside `cn()`).
+
+```json
+{
+  "scripts": {
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  }
+}
 ```

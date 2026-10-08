@@ -168,8 +168,8 @@ export const defineContentType = <
   // intersection member is not an inference site, so inferring the object is
   // the only way the three `enabled` literals survive.
   TEditorial extends
-    ContentEditorialConfig<TPublicEnabled, TPublication> | { enabled: false } =
-    { enabled: false },
+    | ContentEditorialConfig<TPublicEnabled, TPublication>
+    | { enabled: false } = { enabled: false },
   // The whole `localization` argument, inferred as one type, for the same reason
   // `TSearch` and `TEditorial` are: an intersection member is not an inference
   // site, so this is the only way the `enabled` literal survives - and every

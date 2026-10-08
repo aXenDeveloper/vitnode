@@ -2,7 +2,9 @@ import { fingerprint } from "@/content/hash";
 import { getLangValue, upsertLangValue } from "@/lib/helpers/multi-lang";
 
 type FieldValue =
-  string | undefined | { languageCode: string; value: string }[];
+  | string
+  | undefined
+  | { languageCode: string; value: string }[];
 
 export const fieldTextOf = (value: unknown, language: string): string =>
   typeof value === "string" || Array.isArray(value)

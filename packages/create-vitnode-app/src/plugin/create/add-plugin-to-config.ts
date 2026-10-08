@@ -11,7 +11,10 @@ import {
 } from "./route-templates.js";
 
 export type RegisterPluginStatus =
-  "already-registered" | "no-config-call" | "no-plugins-array" | "registered";
+  | "already-registered"
+  | "no-config-call"
+  | "no-plugins-array"
+  | "registered";
 
 export interface RegisterPluginResult {
   source: string;

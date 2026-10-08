@@ -428,7 +428,8 @@ describe("a nested plugin subtree", () => {
     // once a router initialises it - and no router is created here.
     for (const child of layout.children ?? []) {
       const parentOf = (child as AnyRoute).options.getParentRoute as
-        (() => AnyRoute) | undefined;
+        | (() => AnyRoute)
+        | undefined;
 
       expect(parentOf?.()).toBe(layout);
     }
@@ -609,7 +610,8 @@ describe("a plugin route's loader", () => {
     const container = (tree.children ?? []).find(
       (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
     );
-    const loader = (container?.children?.[0] as AnyRoute).options.loader as (
+    const [mounted] = (container?.children ?? []) as AnyRoute[];
+    const loader = mounted.options.loader as (
       args: unknown,
     ) => Promise<{ data: unknown; search: unknown }>;
 
@@ -665,7 +667,8 @@ describe("a plugin route's loader", () => {
     const container = (tree.children ?? []).find(
       (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
     );
-    const loader = (container?.children?.[0] as AnyRoute).options.loader as (
+    const [mounted] = (container?.children ?? []) as AnyRoute[];
+    const loader = mounted.options.loader as (
       args: unknown,
     ) => Promise<unknown>;
 
@@ -817,7 +820,8 @@ describe("a route's eager search schema", () => {
     const container = (tree.children ?? []).find(
       (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
     );
-    const loader = (container?.children?.[0] as AnyRoute).options.loader as (
+    const [mounted] = (container?.children ?? []) as AnyRoute[];
+    const loader = mounted.options.loader as (
       args: unknown,
     ) => Promise<{ search: unknown }>;
 
@@ -856,7 +860,8 @@ describe("a plugin route's head", () => {
     const container = (tree.children ?? []).find(
       (child: AnyRoute) => optionsOf(child).id === PLUGIN_ROUTES_ROUTE_ID,
     );
-    const head = (container?.children?.[0] as AnyRoute).options.head as (
+    const [mounted] = (container?.children ?? []) as AnyRoute[];
+    const head = mounted.options.head as (
       args: unknown,
     ) => Promise<{ meta?: { content?: string; title?: string }[] }>;
 

@@ -22,7 +22,8 @@ interface LanguageSwitcherPendingProps {
 }
 
 export type LanguageSwitcherMenuProps = (
-  LanguageSwitcherPendingProps | LanguageSwitcherReadyProps
+  | LanguageSwitcherPendingProps
+  | LanguageSwitcherReadyProps
 ) & {
   isPending?: boolean;
   options: LocaleConfig[];

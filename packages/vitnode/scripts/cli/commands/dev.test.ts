@@ -387,7 +387,8 @@ describe("the dev request log", () => {
     const { lines, ui } = plainUi();
     const plugin = createDevReporter(ui, { defaultPort: 3000, root: "/app" });
     let middleware:
-      ((req: unknown, res: unknown, next: () => void) => void) | undefined;
+      | ((req: unknown, res: unknown, next: () => void) => void)
+      | undefined;
     (plugin.configureServer as (server: unknown) => void)({
       middlewares: { use: (fn: typeof middleware) => (middleware = fn) },
     });

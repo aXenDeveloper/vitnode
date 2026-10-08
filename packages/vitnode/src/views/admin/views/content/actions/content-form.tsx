@@ -179,7 +179,8 @@ const ContentFormFields = ({
   );
 
   const files = data?.files as
-    Record<string, ContentFileFieldValue> | undefined;
+    | Record<string, ContentFileFieldValue>
+    | undefined;
 
   const localizedFields = React.useMemo(
     () => contentLocalizedFieldNames(spec),

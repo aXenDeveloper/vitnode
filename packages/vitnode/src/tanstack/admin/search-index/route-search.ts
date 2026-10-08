@@ -5,7 +5,8 @@ export interface SearchIndexRouteSearch {
 
 /** A search as it arrives, before anything has checked it. */
 export type UncheckedSearchIndexSearch =
-  Record<string, unknown> | SearchIndexRouteSearch;
+  | Record<string, unknown>
+  | SearchIndexRouteSearch;
 
 export const normalizeSearchIndexRouteSearch = (
   input: UncheckedSearchIndexSearch,

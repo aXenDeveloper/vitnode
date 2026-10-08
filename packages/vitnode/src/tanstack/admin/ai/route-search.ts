@@ -58,7 +58,8 @@ export type AiHistoryRouteSearch = AiHistoryFilters &
   >;
 
 export type UncheckedAiHistorySearch =
-  AiHistoryRouteSearch | Record<string, unknown>;
+  | AiHistoryRouteSearch
+  | Record<string, unknown>;
 
 const KEY_PATTERN = /^[\w@:./-]{1,255}$/;
 

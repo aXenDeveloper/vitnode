@@ -11,7 +11,6 @@ import { createContentTable } from "./table";
 
 const categories = createContentTable(testCategoryContentType);
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- read as a type
 const articles = createContentTable(testArticleContentType, {
   references: { category: () => categories.id },
 });

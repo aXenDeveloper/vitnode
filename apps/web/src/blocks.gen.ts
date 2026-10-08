@@ -26,11 +26,13 @@
 
 import type { BlockPluginSource } from '@vitnode/core/widgets'
 
-import { createBlockRegistry, setDefaultBlockRegistry } from '@vitnode/core/widgets'
+import {
+  createBlockRegistry,
+  setDefaultBlockRegistry,
+} from '@vitnode/core/widgets'
 
 import { blocks as blocks0 } from '@vitnode/core/widgets/built-in'
 import { blocks as blocks1 } from '@vitnode/example/widgets'
-
 
 export const pluginBlocks = [
   blocks0, // @vitnode/core

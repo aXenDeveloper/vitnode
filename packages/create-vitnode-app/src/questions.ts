@@ -7,11 +7,11 @@ import { getAvailablePackageManagers } from "./helpers/get-available-package-man
 
 export interface CreateCliReturn {
   docker?: boolean;
-  eslint: boolean;
   git: boolean;
   install: boolean;
   mode: "apiMonorepo" | "onlyApi" | "singleApp";
   monorepo?: boolean;
+  oxlint: boolean;
   packageManager: string;
 }
 
@@ -21,7 +21,7 @@ export const createQuestionsCli = async (
   const optionsFromProgram = program.opts();
   const options: CreateCliReturn = {
     packageManager: optionsFromProgram.packageManager,
-    eslint: optionsFromProgram.eslint,
+    oxlint: optionsFromProgram.oxlint,
     git: !optionsFromProgram.skipGit,
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
@@ -89,9 +89,9 @@ export const createQuestionsCli = async (
     });
   }
 
-  if (optionsFromProgram.eslint === undefined) {
-    options.eslint = await confirm({
-      message: `Would you like to use ${color.blue("ESLint & Prettier")}?`,
+  if (optionsFromProgram.oxlint === undefined) {
+    options.oxlint = await confirm({
+      message: `Would you like to use ${color.blue("Oxlint & Oxfmt")}?`,
     });
   }
 

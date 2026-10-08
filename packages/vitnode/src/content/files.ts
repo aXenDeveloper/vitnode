@@ -45,7 +45,9 @@ export const zodContentFileDescriptor = z.strictObject({
 });
 
 export type ContentFileFieldValue =
-  ContentFileDescriptor | ContentFileDescriptor[] | null;
+  | ContentFileDescriptor
+  | ContentFileDescriptor[]
+  | null;
 
 /** The response schema for {@link ContentFileFieldValue}. */
 export const zodContentFileFieldValue = z.union([

@@ -23,7 +23,12 @@ import {
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
 export type ContentSearchOperation =
-  "create" | "delete" | "publish" | "restore" | "unpublish" | "update";
+  | "create"
+  | "delete"
+  | "publish"
+  | "restore"
+  | "unpublish"
+  | "update";
 
 export interface ContentSearchSyncInput {
   advanced?: Record<string, unknown>;

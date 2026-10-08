@@ -18,7 +18,12 @@ export interface PaginationCursor {
 }
 
 type CursorKind =
-  "bigint" | "boolean" | "number" | "string" | "temporal" | "uuid";
+  | "bigint"
+  | "boolean"
+  | "number"
+  | "string"
+  | "temporal"
+  | "uuid";
 
 const KIND_BY_DATA_TYPE: Record<string, CursorKind> = {
   bigint: "bigint",

@@ -1,5 +1,6 @@
 export type PermissionStaffEntryInput =
-  string | { dependsOn?: string[]; permission: string };
+  | string
+  | { dependsOn?: string[]; permission: string };
 
 /**
  * Author-facing module map - what a plugin declares in its API config.

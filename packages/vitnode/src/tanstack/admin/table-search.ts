@@ -24,7 +24,8 @@ export interface AdminTableRouteSearch<TOrderBy extends string = string> {
 }
 
 export type UncheckedAdminTableSearch<TOrderBy extends string = string> =
-  AdminTableRouteSearch<TOrderBy> | Record<string, unknown>;
+  | AdminTableRouteSearch<TOrderBy>
+  | Record<string, unknown>;
 
 const rawParamsOf = (
   input: UncheckedAdminTableSearch,

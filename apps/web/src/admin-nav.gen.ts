@@ -20,7 +20,6 @@ import { adminNavBundle } from '@vitnode/core/tanstack/admin'
 import { adminNav as adminNav0 } from '@vitnode/blog/admin/nav'
 import { adminNav as adminNav1 } from '@vitnode/example/admin/nav'
 
-
 export const pluginAdminNav = [
   adminNav0, // @vitnode/blog
   adminNav1, // @vitnode/example

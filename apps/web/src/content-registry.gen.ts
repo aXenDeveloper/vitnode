@@ -15,11 +15,13 @@
 
 import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
 
-import { buildContentFrontendRegistry, setContentFrontendRegistry } from '@vitnode/core/content'
+import {
+  buildContentFrontendRegistry,
+  setContentFrontendRegistry,
+} from '@vitnode/core/content'
 
 import { adminContent as adminContent0 } from '@vitnode/blog/admin/content'
 import { adminContent as adminContent1 } from '@vitnode/example/admin/content'
-
 
 export const pluginContentTypes = [
   adminContent0, // @vitnode/blog

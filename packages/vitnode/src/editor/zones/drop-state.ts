@@ -1,5 +1,9 @@
 export type ZoneDropState =
-  "idle" | "inserting" | "over" | "rejected" | "targeting";
+  | "idle"
+  | "inserting"
+  | "over"
+  | "rejected"
+  | "targeting";
 
 export interface ZoneDropStateArgs {
   active: boolean;

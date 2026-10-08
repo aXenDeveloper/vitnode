@@ -2,7 +2,11 @@ import { fingerprint } from "@/content/hash";
 import { getLangValue } from "@/lib/helpers/multi-lang";
 
 export type TranslationFreshness =
-  "edited" | "fresh" | "missing" | "outdated" | "untracked";
+  | "edited"
+  | "fresh"
+  | "missing"
+  | "outdated"
+  | "untracked";
 
 export interface TranslationSourceRecord {
   field: string;
@@ -12,7 +16,9 @@ export interface TranslationSourceRecord {
 }
 
 type FieldValue =
-  string | undefined | { languageCode: string; value: string }[];
+  | string
+  | undefined
+  | { languageCode: string; value: string }[];
 
 const textOf = (value: unknown, locale: string): string =>
   typeof value === "string" || Array.isArray(value)

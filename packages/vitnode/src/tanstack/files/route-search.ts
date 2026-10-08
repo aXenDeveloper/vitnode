@@ -22,7 +22,8 @@ export interface MyFilesRouteSearch {
 }
 
 export type UncheckedMyFilesSearch =
-  MyFilesRouteSearch | Record<string, unknown>;
+  | MyFilesRouteSearch
+  | Record<string, unknown>;
 
 const rawParamsOf = (input: UncheckedMyFilesSearch): RawMyFilesParams => ({
   cursor: asSearchValue(input.cursor),

@@ -50,7 +50,8 @@ interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
 }
 
 export type ColumnDef<T extends DataTableTMin> =
-  AccessorColumnDef<T> | DisplayColumnDef<T>;
+  | AccessorColumnDef<T>
+  | DisplayColumnDef<T>;
 
 export type DataTableProps<T extends DataTableTMin> = Omit<
   React.ComponentProps<typeof Table>,

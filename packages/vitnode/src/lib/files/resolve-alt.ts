@@ -4,7 +4,11 @@ export interface ImageAltOccurrence {
 }
 
 export type ImageAltSource =
-  "decorative" | "fallback" | "file" | "missing" | "occurrence";
+  | "decorative"
+  | "fallback"
+  | "file"
+  | "missing"
+  | "occurrence";
 
 export interface ResolvedImageAlt {
   alt: string;

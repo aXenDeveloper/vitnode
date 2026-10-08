@@ -1,7 +1,7 @@
 {
   "name": "@vitnode/config",
   "version": "2.0.0-canary.13",
-  "description": "ESLint, Prettier, TypeScript (TSConfig) config for VitNode",
+  "description": "Oxlint, Oxfmt, TypeScript (TSConfig) config for VitNode",
   "author": "VitNode Team",
   "license": "MIT",
   "homepage": "https://vitnode.com",
@@ -14,48 +14,46 @@
     "vitnode",
     "typescript",
     "tsconfig",
-    "eslint",
-    "prettier"
+    "oxlint",
+    "oxfmt"
   ],
   "type": "module",
   "exports": {
-    "./eslint": {
-      "import": "./eslint.config.mjs",
-      "default": "./eslint.config.mjs"
+    "./oxlint": {
+      "types": "./oxlint.config.d.mts",
+      "import": "./oxlint.config.mjs",
+      "default": "./oxlint.config.mjs"
     },
-    "./eslint.react": {
-      "import": "./eslint.react.config.mjs",
-      "default": "./eslint.react.config.mjs"
+    "./oxlint.react": {
+      "types": "./oxlint.react.config.d.mts",
+      "import": "./oxlint.react.config.mjs",
+      "default": "./oxlint.react.config.mjs"
     },
     "./tsconfig": {
       "import": "./tsconfig.json",
       "default": "./tsconfig.json"
     },
-    "./prettierrc": {
-      "import": "./prettierrc.mjs",
-      "default": "./prettierrc.mjs"
+    "./oxfmt": {
+      "types": "./oxfmt.config.d.mts",
+      "import": "./oxfmt.config.mjs",
+      "default": "./oxfmt.config.mjs"
     }
   },
   "peerDependencies": {
-    "eslint": "^10.0.0",
-    "prettier": "^3.x.x",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "typescript": "6.0.x"
   },
   "devDependencies": {
-    "eslint": "^10.11.0",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "typescript": "^6.0.3"
   },
   "dependencies": {
     "@eslint-react/eslint-plugin": "^5.23.3",
-    "@eslint/js": "^10.0.1",
-    "@shadcn/lint": "^0.2.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-perfectionist": "^5.12.1",
-    "eslint-plugin-prettier": "^5.5.6",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.2",
-    "prettier-plugin-tailwindcss": "^0.8.1",
-    "typescript-eslint": "^8.71.0"
+    "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.2"
   }
 }

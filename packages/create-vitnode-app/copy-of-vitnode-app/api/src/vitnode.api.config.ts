@@ -1,6 +1,6 @@
+import { coreRelations } from "@vitnode/core/database/relations";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { config } from "dotenv";
-import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 config({

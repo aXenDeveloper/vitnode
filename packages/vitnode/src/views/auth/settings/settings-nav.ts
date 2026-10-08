@@ -4,7 +4,12 @@ import { normalizeUrl } from "@/lib/utils";
 export const SETTINGS_ROOT_HREF = "/settings";
 
 export type SettingsNavKey =
-  "ai" | "devices" | "notifications" | "overview" | "security" | "sso";
+  | "ai"
+  | "devices"
+  | "notifications"
+  | "overview"
+  | "security"
+  | "sso";
 
 export interface SettingsNavItem {
   href: string;

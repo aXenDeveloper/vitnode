@@ -1,5 +1,6 @@
 export type EmojiIconValue =
-  { type: "emoji"; value: string } | { type: "icon"; value: string };
+  | { type: "emoji"; value: string }
+  | { type: "icon"; value: string };
 
 export const EMOJI_ICON_MAX_LENGTH = 64;
 

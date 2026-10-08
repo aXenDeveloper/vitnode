@@ -31,6 +31,7 @@ const PRESETS = [
 
 export default function DatePickerRangeExample() {
   const id = React.useId()
+  const [today] = React.useState(() => new Date())
   const [preset, setPreset] = React.useState<null | Preset>('last-7-days')
   const [range, setRange] = React.useState(() => resolve('last-7-days'))
 
@@ -40,8 +41,8 @@ export default function DatePickerRangeExample() {
       <DateRangePicker<Preset>
         activePreset={preset}
         align="start"
-        disabledDays={{ after: new Date() }}
-        endMonth={new Date()}
+        disabledDays={{ after: today }}
+        endMonth={today}
         id={id}
         onChange={(next) => {
           setPreset(null)

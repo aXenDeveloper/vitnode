@@ -350,7 +350,8 @@ describe("the OpenAPI contract for that 400", () => {
 
     return (
       entry?.route.responses?.[400] as
-        undefined | { content?: Record<string, { schema: unknown }> }
+        | undefined
+        | { content?: Record<string, { schema: unknown }> }
     )?.content?.["application/json"]?.schema;
   };
 

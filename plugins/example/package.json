@@ -16,8 +16,8 @@
   "scripts": {
     "build:plugins": "vitnode build",
     "dev": "vitnode dev",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -42,7 +42,8 @@
     "@types/react-dom": "^19.3.0",
     "@vitnode/config": "workspace:*",
     "cn": "^0.4.0",
-    "eslint": "^10.11.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "postgres": "^3.4.9",
     "tsc-alias": "^1.9.7",
     "typescript": "^6.0.3",

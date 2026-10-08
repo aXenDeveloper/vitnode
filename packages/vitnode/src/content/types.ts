@@ -2004,4 +2004,5 @@ export type ContentPublicFilterInput<TDefinition> = Partial<
  * allowlist error.
  */
 export type ContentPublicOrderableFieldName<TDefinition> =
-  "publishedAt" | PublicFlatName<ContentPublicFieldName<TDefinition>>;
+  | "publishedAt"
+  | PublicFlatName<ContentPublicFieldName<TDefinition>>;

@@ -56,7 +56,8 @@ export interface ContentTranslationRevisionSnapshot {
 }
 
 export type ContentAnyRevisionSnapshot =
-  ContentRevisionSnapshot | ContentTranslationRevisionSnapshot;
+  | ContentRevisionSnapshot
+  | ContentTranslationRevisionSnapshot;
 
 /** One revision as the history list shows it - metadata, never the snapshot. */
 export interface ContentRevisionMeta {

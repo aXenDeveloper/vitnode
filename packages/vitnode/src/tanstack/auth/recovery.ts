@@ -22,7 +22,8 @@ export const normalizePasswordResetSearch = (
 };
 
 export type PasswordResetMode =
-  { link: RecoveryLink; mode: "change" } | { mode: "request" };
+  | { link: RecoveryLink; mode: "change" }
+  | { mode: "request" };
 
 export const passwordResetMode = (
   search: PasswordResetSearch,

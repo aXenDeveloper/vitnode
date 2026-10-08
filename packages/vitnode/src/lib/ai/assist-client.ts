@@ -23,7 +23,8 @@ export const AI_CLIENT_ERROR_CODES = [
 ] as const;
 
 export type AiClientErrorCode =
-  "unknown" | (typeof AI_CLIENT_ERROR_CODES)[number];
+  | "unknown"
+  | (typeof AI_CLIENT_ERROR_CODES)[number];
 
 export class AiRequestError extends Error {
   constructor(code: AiClientErrorCode, status: number) {

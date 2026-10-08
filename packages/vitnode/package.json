@@ -69,11 +69,12 @@
     "@vitnode/config": "workspace:*",
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",
-    "eslint": "^10.11.0",
     "hono": "^4.13.12",
     "jiti": "^2.7.0",
     "jsdom": "^30.1.1",
     "lucide-react": "^1.49.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-email": "^6.11.0",
@@ -215,8 +216,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:types": "vitest run --typecheck.only",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix"
   },
   "type": "module",
   "dependencies": {

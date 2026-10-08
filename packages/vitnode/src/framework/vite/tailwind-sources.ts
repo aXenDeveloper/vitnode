@@ -55,7 +55,7 @@ const buildsTailwind = (
   code: string,
   id: string,
   readStylesheet: (path: string) => null | string,
-  seen: Set<string> = new Set(),
+  seen = new Set<string>(),
 ): boolean => {
   if (TAILWIND_IMPORT.test(code)) return true;
 

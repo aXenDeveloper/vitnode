@@ -204,7 +204,7 @@ export class VersionManager {
 
       child.on("error", reject);
       child.stderr.on("data", (chunk: Buffer) => errorMessages.push(chunk));
-      child.on("exit", (code) => {
+      child.on("exit", code => {
         if (code === 0) {
           resolve(undefined);
         } else {

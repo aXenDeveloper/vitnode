@@ -117,9 +117,9 @@ export const createPluginVitNode = async ({
   pluginPath,
   pluginName,
   install,
-  eslint,
+  oxlint,
 }: CreatePluginCliReturn & {
-  eslint: boolean;
+  oxlint: boolean;
   pluginName: string;
   pluginPath: string;
 }) => {
@@ -173,31 +173,31 @@ export const createPluginVitNode = async ({
   await createPluginPackageJSON({
     pluginName,
     pluginPath,
-    eslint,
+    oxlint,
   });
 
-  if (eslint) {
-    spinner.text = "Setting up ESLint...";
-    const templateEslintPath = join(
+  if (oxlint) {
+    spinner.text = "Setting up Oxlint...";
+    const templateOxlintPath = join(
       __dirname,
       "..",
       "..",
       "..",
       "..",
       "copy-of-vitnode-app",
-      "eslint-react",
+      "oxlint-react",
     );
 
-    if (!existsSync(templateEslintPath)) {
+    if (!existsSync(templateOxlintPath)) {
       spinner.fail(
-        `\n${color.red("Error!")} ESLint template path ${color.cyan(
-          templateEslintPath,
+        `\n${color.red("Error!")} Oxlint template path ${color.cyan(
+          templateOxlintPath,
         )} does not exist.`,
       );
       process.exit(1);
     }
 
-    await cp(templateEslintPath, pluginPath, { recursive: true });
+    await cp(templateOxlintPath, pluginPath, { recursive: true });
   }
 
   // Find the root of the monorepo (where turbo.json is located)

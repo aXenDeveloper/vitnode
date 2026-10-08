@@ -66,7 +66,10 @@ export interface SsoAccountProfile {
 }
 
 export type SsoLinkOutcome =
-  "already_linked" | "linked" | "provider_in_use" | "taken";
+  | "already_linked"
+  | "linked"
+  | "provider_in_use"
+  | "taken";
 
 export type SsoDisconnectOutcome = "blocked" | "disconnected" | "not_found";
 

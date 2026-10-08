@@ -52,7 +52,8 @@ export type EmailModelSendArgs = {
   locale?: string;
   replyTo?: string;
   subject:
-    ((props: Pick<DefaultTemplateEmailProps, "i18n">) => string) | string;
+    | ((props: Pick<DefaultTemplateEmailProps, "i18n">) => string)
+    | string;
 } & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
 export interface BuiltEmail {

@@ -30,7 +30,8 @@ export interface RouteBreadcrumbDeferred {
 }
 
 export type RouteBreadcrumb =
-  RouteBreadcrumbDeclaration | RouteBreadcrumbDeferred;
+  | RouteBreadcrumbDeclaration
+  | RouteBreadcrumbDeferred;
 
 export const breadcrumbDeferred = (
   resolve: RouteBreadcrumbDeferred["resolve"],

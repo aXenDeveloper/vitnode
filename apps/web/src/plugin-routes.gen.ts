@@ -22,7 +22,6 @@ import { routes as pluginRoutes0 } from '@vitnode/blog/routes'
 import { routes as pluginRoutes1 } from '@vitnode/core/routes'
 import { routes as pluginRoutes2 } from '@vitnode/example/routes'
 
-
 export const pluginRouteSources = [
   {
     pluginId: '@vitnode/blog',

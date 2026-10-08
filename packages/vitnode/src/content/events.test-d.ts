@@ -13,9 +13,7 @@ type ArticleEvents = ContentEventsFor<typeof testArticleContentType>;
 // known, which is exactly what makes the whole approach viable.
 declare module "../api/models/events" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the members come from the mapped type
-  interface VitNodeEvents extends ContentEventsFor<
-    typeof testArticleContentType
-  > {}
+  interface VitNodeEvents extends ArticleEvents {}
 }
 
 describe("content events", () => {

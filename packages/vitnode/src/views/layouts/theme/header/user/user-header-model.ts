@@ -43,7 +43,10 @@ export interface UserHeaderMenuItem {
 }
 
 export type UserHeaderMenuItemKey =
-  "admin_cp" | "files" | "my_profile" | "settings";
+  | "admin_cp"
+  | "files"
+  | "my_profile"
+  | "settings";
 
 /**
  * The signed-in visitor's menu, grouped exactly as it is drawn.

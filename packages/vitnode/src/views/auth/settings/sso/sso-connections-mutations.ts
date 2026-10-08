@@ -37,7 +37,8 @@ export type StartSsoConnectionFailure =
   | "server_error";
 
 export type StartSsoConnectionResult =
-  { failure: StartSsoConnectionFailure; ok: false } | { ok: true; url: string };
+  | { failure: StartSsoConnectionFailure; ok: false }
+  | { ok: true; url: string };
 
 export type StartSsoConnection = (args: {
   fields?: SsoProfileField[];
@@ -181,7 +182,8 @@ export const disconnectSsoConnectionInBrowser: DisconnectSsoConnection =
   };
 
 export type SaveSsoPreferencesResult =
-  { failure: "invalid_source" | "server_error"; ok: false } | { ok: true };
+  | { failure: "invalid_source" | "server_error"; ok: false }
+  | { ok: true };
 
 export type SaveSsoPreferences = (args: {
   sources: Partial<SsoProfileSources>;
@@ -214,7 +216,11 @@ export const saveSsoPreferencesInBrowser: SaveSsoPreferences = async ({
 };
 
 export type SsoFieldOutcome =
-  "failed" | "missing" | "not_allowed" | "unchanged" | "updated";
+  | "failed"
+  | "missing"
+  | "not_allowed"
+  | "unchanged"
+  | "updated";
 
 export type ApplySsoImportResult =
   | {
