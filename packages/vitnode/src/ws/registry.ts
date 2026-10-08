@@ -150,7 +150,7 @@ interface RealtimePubSubMessage {
   id: string;
   origin: string;
   room?: string;
-  type: "broadcast" | "room" | "sendToUser";
+  type: "broadcast" | "instance" | "room" | "sendToUser";
   userId?: number;
 }
 
@@ -185,6 +185,33 @@ export const onRemoteRoomMessage = (
     roomListeners.delete(listener);
   };
 };
+
+type InstanceMessageListener = (message: {
+  data: unknown;
+  /** The id of the instance that published it. */
+  origin: string;
+  topic: string;
+}) => void;
+
+const instanceListeners = new Set<InstanceMessageListener>();
+
+/**
+ * Observe what other instances published with {@link publishToInstances}.
+ * Those messages never reach a socket: they carry state an instance keeps in
+ * memory about its own sockets (who is in a room) for the other instances.
+ */
+export const onInstanceMessage = (
+  listener: InstanceMessageListener,
+): (() => void) => {
+  instanceListeners.add(listener);
+
+  return () => {
+    instanceListeners.delete(listener);
+  };
+};
+
+/** This process' id, as the other instances see it in `onInstanceMessage`. */
+export const getRealtimeInstanceId = (): string => instanceId;
 
 const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
   if (!publisher) return;
@@ -223,6 +250,14 @@ export const initRealtimePubSub = (client: CacheClient | null): void => {
           const message = JSON.parse(raw) as RealtimePubSubMessage;
           // Skip our own echo - the publisher already delivered locally.
           if (message.origin === instanceId) return;
+          if (message.type === "instance") {
+            const { data, id: topic, origin } = message;
+            instanceListeners.forEach(listener => {
+              listener({ data, origin, topic });
+            });
+
+            return;
+          }
           if (message.type === "room" && typeof message.room === "string") {
             const { data, id, room } = message;
             roomListeners.forEach(listener => listener(room, id, data));
@@ -236,6 +271,15 @@ export const initRealtimePubSub = (client: CacheClient | null): void => {
     .catch(() => {
       // Realtime stays single-instance; local clients still get their messages.
     });
+};
+
+/**
+ * Tell the other instances something about this one, under `topic`. Nothing is
+ * delivered to a socket, and without Redis nothing happens at all: a single
+ * instance has nobody to tell.
+ */
+export const publishToInstances = (topic: string, data: unknown): void => {
+  publish({ data, id: topic, type: "instance" });
 };
 
 export interface VitNodeRealtime {

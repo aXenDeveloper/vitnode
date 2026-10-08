@@ -108,12 +108,92 @@ export const ChatRoom = ({ roomId }: { roomId: string }) => {
 
 ---
 
+## Rooms
+
+A room is a named group of browser tabs, such as everyone looking at one chat thread or editing one record. Send a message to a room and only its members get it, on every API instance. A room is any string your feature picks, for example `chat:42`.
+
+### Join and leave per tab
+
+All tabs of a browser share one socket, so a socket joins a room on behalf of a tab. Let each tab send its own random `clientId` with every message, and join or leave with it:
+
+```ts title="plugins/chat/src/api/modules/rooms/rooms.socket.ts"
+import { buildWebSocket } from "@vitnode/core/api/lib/websocket"
+import { wsRegistry } from "@vitnode/core/ws/registry"
+
+interface RoomMessage {
+  clientId: string
+  roomId: string
+  type: "join" | "leave"
+}
+
+export const roomsSocket = buildWebSocket<RoomMessage>({
+  id: "presence",
+  onMessage: ({ data, ws }) => {
+    const room = `chat:${data.roomId}`
+
+    // [!code ++:5]
+    if (data.type === "join") {
+      wsRegistry.join(ws, room, data.clientId)
+    } else {
+      wsRegistry.leave(ws, room, data.clientId)
+    }
+  },
+})
+```
+
+Register the socket on its module with `webSockets: [roomsSocket]`. The socket stays in the room until its last tab leaves, so a closed tab never cuts off the others. Check who may join (the session on `c`, a permission) before calling `join`: a room is only as private as that check.
+
+`join` and `leave` return `true` when they changed something. `wsRegistry.membersOf(room)` lists the members on this instance and `wsRegistry.roomsOf(ws)` lists the rooms of one socket.
+
+### Send to a room
+
+```ts
+// [!code ++:4]
+c.get("realtime").toRoom(`chat:${roomId}`, chatChannel, {
+  roomId,
+  message: "Hello!",
+  senderId: user.id,
+})
+```
+
+Each socket in the room receives the payload once, however many of its tabs joined. Put the room or record in the payload so every tab can ignore what is not its own.
+
+### Clean up when a socket closes
+
+A socket that closes leaves all of its rooms. Use `onConnectionClose` to update your own state, such as an "online now" list:
+
+```ts title="plugins/chat/src/api/modules/rooms/presence.ts"
+import { wsRegistry } from "@vitnode/core/ws/registry"
+
+// [!code ++:5]
+wsRegistry.onConnectionClose((ws, left) => {
+  for (const { memberId, room } of left) {
+    markOffline(room, memberId)
+  }
+})
+```
+
+`left` holds every `{ memberId, room }` the socket was in. Register the listener once, at module load.
+
+### Rooms on several instances
+
+With `REDIS_URL` set, `toRoom` also publishes the message over Redis, and every other instance delivers it to its own members. Room membership itself stays local to each instance.
+
+When an instance keeps per-room state in memory, it can follow the other instances:
+
+- `onRemoteRoomMessage((room, id, data) => ...)` sees room messages from other instances before they reach local sockets. A collaborative document uses it to apply the same edit to its own copy.
+- `publishToInstances(topic, data)` and `onInstanceMessage(({ topic, data, origin }) => ...)` exchange data between instances that never reaches a socket, such as each instance's list of members. Republish it periodically and let entries from a silent instance expire, so a crashed instance leaves no ghosts.
+
+Without Redis, all of this works on a single instance with no extra setup: `toRoom` delivers locally and instance messages go nowhere.
+
+---
+
 ## Architectural Highlights
 
 - **Single Connection**: Only one `/api/ws` socket is opened per client. All features share it via message multiplexing.
 - **Tab Leader Election**: When a user opens multiple tabs, a Web Lock elects one leader tab to hold the socket, distributing messages across tabs via `BroadcastChannel`.
 - **Automatic Reconnect**: Backoff retry automatically re-establishes dropped connections within seconds.
-- **Multiple Instances**: With `REDIS_URL` set, `sendToUser` and `broadcast` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
+- **Multiple Instances**: With `REDIS_URL` set, `sendToUser`, `broadcast` and `toRoom` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
 
 ## Learn More
 
