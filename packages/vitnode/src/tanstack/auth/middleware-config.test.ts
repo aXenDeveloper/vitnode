@@ -1,7 +1,8 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  DEFERRED_MIDDLEWARE_CONFIG,
   knownMiddlewareConfig,
   loadMiddlewareConfig,
   middlewareConfigQueryOptions,
@@ -51,5 +52,37 @@ describe("loadMiddlewareConfig", () => {
 
     expect(fetchesOf(queryClient)).toBe(1);
     expect(config).toEqual(known);
+  });
+});
+
+describe("middlewareConfigQueryOptions", () => {
+  const isStale = (data: MiddlewareConfigState) =>
+    new QueryObserver(
+      seeded(data),
+      middlewareConfigQueryOptions(),
+    ).getCurrentResult().isStale;
+
+  it("asks again as soon as a page shipped without the configuration", () => {
+    expect(isStale(DEFERRED_MIDDLEWARE_CONFIG)).toBe(true);
+  });
+
+  it("asks again after the API could not answer", () => {
+    expect(isStale(UNKNOWN_MIDDLEWARE_CONFIG)).toBe(true);
+  });
+
+  it("keeps a known configuration fresh", () => {
+    expect(
+      isStale(
+        knownMiddlewareConfig({
+          ai: { models: [] },
+          bottomBar: [],
+          isEmail: true,
+          navigation: [],
+          passkeys: false,
+          password: true,
+          sso: [],
+        }),
+      ),
+    ).toBe(false);
   });
 });

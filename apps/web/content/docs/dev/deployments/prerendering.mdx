@@ -1,0 +1,127 @@
+---
+title: Prerender Static Pages
+description: Render marketing pages once during the build and serve them as static HTML files, in every language your app speaks.
+icon: FileCode
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Prerendering renders a page once, during `vitnode build`, and saves it as an HTML file the server sends as-is. Use it for pages that look the same for every visitor - a home page, a pricing page, a list of solutions. Your server stops rendering them on every request, and visitors get the page as fast as a static file can travel.
+
+Pages that change per visitor - settings, anything behind a sign-in, a feed of new posts - stay server-rendered. You do not need to change them.
+
+## Prerender your pages
+
+<Steps>
+<Step>
+
+### List the pages
+
+Create a module with the paths to prerender. Write each path once, without a locale prefix:
+
+```ts title="src/prerender.ts"
+export const PRERENDERED_PATHS = ['/', '/pricing', '/solutions']
+```
+
+A route with a parameter, such as `/solutions/$slug`, is never found on its own. List every value you want as a file: `/solutions/help-center`.
+
+</Step>
+<Step>
+
+### Hand the list to Nitro
+
+Pass the paths through `prerenderRoutes` from `@vitnode/core/framework/vite` and give the result to the `prerender.routes` option of `nitro()`:
+
+```ts title="vite.config.ts"
+import { prerenderRoutes, vitnode } from '@vitnode/core/framework/vite' // [!code highlight]
+import { nitro } from 'nitro/vite'
+import { defineConfig } from 'vite'
+
+import { PRERENDERED_PATHS } from './src/prerender.ts' // [!code highlight]
+import { vitNodeConfig } from './src/vitnode.config.ts' // [!code highlight]
+
+export default defineConfig({
+  plugins: [
+    vitnode({ appRoot: import.meta.dirname }),
+    nitro({
+      // [!code highlight:6]
+      prerender: {
+        routes: prerenderRoutes({
+          i18n: vitNodeConfig.i18n,
+          paths: PRERENDERED_PATHS,
+        }),
+      },
+    }),
+    // tailwindcss(), tanstackStart(), viteReact() as before
+  ],
+})
+```
+
+`prerenderRoutes` writes every path once per enabled locale, using the same URL rules as the router. With English as the default and Polish as a second locale, `/pricing` becomes `/pricing` and `/pl/pricing`, and a translated path from `i18n.routePaths` is used where one exists.
+
+Vite loads this file before anything else is built, so keep the `.ts` extension on local imports and keep the path module free of components.
+
+</Step>
+<Step>
+
+### Build
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build the app">
+
+```bash tab="bun"
+bun run build
+```
+
+```bash tab="pnpm"
+pnpm build
+```
+
+```bash tab="npm"
+npm run build
+```
+
+</Tabs>
+
+Nitro starts a temporary server, requests every route, and writes the HTML into `.output/public` before it packages your production server.
+
+</Step>
+</Steps>
+
+## Check the result
+
+Each listed route has its own file, one folder per path:
+
+```text
+.output/public/index.html
+.output/public/pricing/index.html
+.output/public/pl/pricing/index.html
+```
+
+Start the app with `vitnode start` and compare the headers of a prerendered page and a server-rendered one:
+
+```bash
+curl -sI http://localhost:3000/pricing
+curl -sI http://localhost:3000/login
+```
+
+The prerendered page answers with an `etag` and a `last-modified` date. The server-rendered page answers with `cache-control: private, no-store` instead, because VitNode renders it for one visitor.
+
+## What a prerendered page leaves out
+
+A prerendered file is shared by every visitor and built without your API, so VitNode leaves out anything that comes from the database or belongs to one visitor. Your build does not need a database.
+
+- **The user menu loads in the browser.** The main layout skips reading the session while prerendering. The header ships with a placeholder where the avatar goes, and the browser fills it in once the page loads - the same thing a server-rendered page shows for a split second.
+- **The header navigation loads in the browser.** The links you edit in **AdminCP → System → Navigation** are not part of the file. The header shows a placeholder in their place, the browser asks the API for the links once the page loads, and a change shows up right away, without a rebuild.
+- **The language choice is stored by the browser.** A visit to `/pl/...` normally sets the locale cookie in the server's response. A static file has no such response, so VitNode sets the same cookie from the browser when the page loads.
+
+## Pages you should not prerender
+
+<Callout type="warn" title="Per-domain locales cannot be prerendered">
+  With `i18n.domains`, one path serves a different language on every domain, and
+  one file cannot do that. `prerenderRoutes` throws a `PrerenderDomainsError`
+  instead of writing the wrong language. Keep those pages server-rendered.
+</Callout>
+
+Only list pages that look the same for everyone. A page behind a sign-in would be prerendered as a signed-out visitor sees it, and every signed-in visitor would get that copy.
+
+A page whose own loader reads from your API - a list of the latest blog posts, for example - needs that API and its database during the build, and its content stays as it was at build time. Keep such pages server-rendered too.

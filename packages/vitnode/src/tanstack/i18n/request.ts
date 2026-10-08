@@ -2,11 +2,8 @@ import "@tanstack/react-start/server-only";
 
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 
-import {
-  LOCALE_COOKIE_NAME,
-  readLocaleCookie,
-  serializeLocaleCookie,
-} from "@/lib/i18n/locale-cookie";
+import { serializeLocaleCookie } from "@/lib/i18n/locale-cookie";
+import { urlLocaleToRemember } from "@/lib/i18n/remembered-locale";
 
 import { requestHostOf } from "./host";
 
@@ -76,18 +73,20 @@ export const handleLocaleRequest = (
   // Read before anything redirects. `extractLocaleFromPath` answers only for a
   // prefix this app actually writes, so `/en/admin` - the default locale spelled
   // out - is a URL to canonicalise rather than a choice to record.
-  const urlLocale = localeRouting.extractLocaleFromPath(pathname, { host });
-  const cookieLocale = readLocaleCookie(
-    request.headers.get("cookie"),
-    LOCALE_COOKIE_NAME,
-  );
+  const rememberedLocale = urlLocaleToRemember({
+    cookieHeader: request.headers.get("cookie"),
+    host,
+    localeRouting,
+    pathname,
+  });
   // Only when it would actually change something. A `Set-Cookie` on every
   // request to a prefixed URL makes each of them individually cacheable and
   // achieves nothing else.
-  const setCookie =
-    urlLocale && urlLocale !== cookieLocale
-      ? serializeLocaleCookie(urlLocale, { secure: url.protocol === "https:" })
-      : undefined;
+  const setCookie = rememberedLocale
+    ? serializeLocaleCookie(rememberedLocale, {
+        secure: url.protocol === "https:",
+      })
+    : undefined;
 
   const redirectTo = localeRouting.redirectUrlFor(url, { host });
   if (redirectTo === undefined) return setCookie ? { setCookie } : {};

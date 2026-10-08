@@ -4,7 +4,7 @@ import { DateRangePicker } from '@vitnode/core/components/ui/date-range-picker'
 import { Label } from '@vitnode/core/components/ui/label'
 import React from 'react'
 
-type Preset = 'last-30-days' | 'last-7-days' | 'this-month'
+type Preset = 'last-7-days' | 'last-30-days' | 'this-month'
 
 const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate())

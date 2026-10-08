@@ -4,26 +4,30 @@ import { cn } from "cn";
 import type { HeaderNavItem } from "./header-nav";
 
 import { HEADER_HREF } from "./header-nav";
-import { HeaderNavMenu } from "./header-nav-menu";
+import { HeaderNavMenu, HeaderNavSkeleton } from "./header-nav-menu";
 
 export interface HeaderLayoutContentProps extends Omit<
   React.ComponentProps<"header">,
   "children"
 > {
+  isNavigationPending?: boolean;
   logo: React.ReactNode;
   mobileUser?: React.ReactNode;
   moreNavigationLabel: string;
   navigation: HeaderNavItem[];
+  navigationLoadingLabel: string;
   notifications?: React.ReactNode;
   user?: React.ReactNode;
 }
 
 export const HeaderLayoutContent = ({
   className,
+  isNavigationPending = false,
   logo,
   mobileUser,
   moreNavigationLabel,
   navigation,
+  navigationLoadingLabel,
   notifications,
   user,
   ...props
@@ -38,11 +42,15 @@ export const HeaderLayoutContent = ({
     <div className="dark:bg-background/75 bg-card/75 container mx-auto flex h-14 items-center border-b px-4 py-2 backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
       <Link to={HEADER_HREF.home}>{logo}</Link>
 
-      <HeaderNavMenu
-        className="ms-4"
-        moreLabel={moreNavigationLabel}
-        navigation={navigation}
-      />
+      {isNavigationPending ? (
+        <HeaderNavSkeleton className="ms-4" label={navigationLoadingLabel} />
+      ) : (
+        <HeaderNavMenu
+          className="ms-4"
+          moreLabel={moreNavigationLabel}
+          navigation={navigation}
+        />
+      )}
 
       <div className="ms-auto flex shrink-0 items-center gap-2">
         {notifications}

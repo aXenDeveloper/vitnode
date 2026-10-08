@@ -3,6 +3,8 @@ export { vitNodeEnv } from "./env";
 export { vitNodeOptimizeDeps } from "./optimize-deps";
 export type { VitNodePluginRoutesOptions } from "./plugin-routes";
 export { vitNodePluginRoutes } from "./plugin-routes";
+export type { PrerenderRoutesOptions } from "./prerender-routes";
+export { PrerenderDomainsError, prerenderRoutes } from "./prerender-routes";
 export type { VitNodeSsrExternalsOptions } from "./ssr-externals";
 export { vitNodeSsrExternals } from "./ssr-externals";
 export type { VitNodeTailwindSourcesOptions } from "./tailwind-sources";

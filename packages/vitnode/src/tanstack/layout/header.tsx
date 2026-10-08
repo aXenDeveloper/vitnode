@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AbstractIntlMessages } from "use-intl";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import React from "react";
 import { createTranslator, useTranslations } from "use-intl";
 
@@ -21,6 +21,7 @@ import { MobileNavBar } from "@/views/layouts/theme/header/mobile-nav/mobile-nav
 import { navigationOutsideBottomBar } from "@/views/layouts/theme/header/mobile-nav/mobile-nav-model";
 
 import {
+  DEFERRED_MIDDLEWARE_CONFIG,
   middlewareConfigQueryOptions,
   useMiddlewareConfigQuery,
 } from "../auth/middleware-config";
@@ -28,7 +29,10 @@ import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { NotificationsBell } from "../notifications/bell";
+import { isPrerenderRequest } from "../prerender";
 import { MobileUserMenu } from "./mobile-user-menu";
+
+const NO_MESSAGES: AbstractIntlMessages = {};
 
 const asNavigationNodes = (
   items: readonly PublicNavigationItem[],
@@ -63,11 +67,15 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
     [...config.navigation, ...bottomBarNodes],
     GLOBAL_NAMESPACE,
   );
-  const { data } = useSuspenseQuery(intlQueryOptions({ locale, namespaces }));
+  const { data, isPlaceholderData } = useQuery({
+    ...intlQueryOptions({ locale, namespaces }),
+    placeholderData: keepPreviousData,
+  });
+  const messages = data?.messages ?? NO_MESSAGES;
 
   const translate = React.useMemo(
-    () => headerNavTranslator(locale, data.messages),
-    [data.messages, locale],
+    () => headerNavTranslator(locale, messages),
+    [messages, locale],
   );
   const navigation = React.useMemo(
     () => headerNavItemsFrom({ items: config.navigation, locale, translate }),
@@ -85,6 +93,7 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
   return (
     <>
       <HeaderLayoutContent
+        isNavigationPending={config.isDeferred || isPlaceholderData}
         logo={logo}
         mobileUser={
           <MobileUserMenu
@@ -94,6 +103,7 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
         }
         moreNavigationLabel={t("more_navigation")}
         navigation={navigation}
+        navigationLoadingLabel={t("loading")}
         notifications={<NotificationsBell />}
         user={user}
       />
@@ -102,20 +112,17 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
   );
 };
 
-export const loadMainShell = async ({
+const loadShellNavigation = async ({
   locale,
   queryClient,
 }: {
   locale: string;
   queryClient: QueryClient;
 }): Promise<void> => {
-  const [config] = await Promise.all([
-    queryClient.query({
-      ...middlewareConfigQueryOptions(),
-      staleTime: "static",
-    }),
-    prefetchSession(queryClient),
-  ]);
+  const config = await queryClient.query({
+    ...middlewareConfigQueryOptions(),
+    staleTime: "static",
+  });
 
   await queryClient.query({
     ...intlQueryOptions({
@@ -127,4 +134,26 @@ export const loadMainShell = async ({
     }),
     staleTime: "static",
   });
+};
+
+export const loadMainShell = async (
+  context: { locale: string; queryClient: QueryClient },
+  {
+    isPrerendering = isPrerenderRequest,
+  }: { isPrerendering?: () => boolean } = {},
+): Promise<void> => {
+  if (isPrerendering()) {
+    context.queryClient.setQueryData(
+      middlewareConfigQueryOptions().queryKey,
+      DEFERRED_MIDDLEWARE_CONFIG,
+    );
+    await loadShellNavigation(context);
+
+    return;
+  }
+
+  await Promise.all([
+    loadShellNavigation(context),
+    prefetchSession(context.queryClient),
+  ]);
 };

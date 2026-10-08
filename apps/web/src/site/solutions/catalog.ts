@@ -36,6 +36,8 @@ const SOLUTION_CATALOG = {
 
 export type SolutionSlug = keyof typeof SOLUTION_CATALOG
 
+export const SOLUTION_SLUGS = Object.keys(SOLUTION_CATALOG) as SolutionSlug[]
+
 const isSolutionSlug = (slug: string): slug is SolutionSlug =>
   Object.hasOwn(SOLUTION_CATALOG, slug)
 

@@ -13,11 +13,13 @@ import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 export type MiddlewareConfig = z.infer<typeof routeMiddlewareSchema>;
 
 export interface MiddlewareConfigState extends MiddlewareConfig {
+  isDeferred: boolean;
   isKnown: boolean;
 }
 
 export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   ai: { models: [] },
+  isDeferred: false,
   isEmail: false,
   isKnown: false,
   navigation: [],
@@ -27,10 +29,15 @@ export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   sso: [],
 });
 
+export const DEFERRED_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
+  ...UNKNOWN_MIDDLEWARE_CONFIG,
+  isDeferred: true,
+});
+
 /** The API's answer, marked as one. */
 export const knownMiddlewareConfig = (
   config: MiddlewareConfig,
-): MiddlewareConfigState => ({ ...config, isKnown: true });
+): MiddlewareConfigState => ({ ...config, isDeferred: false, isKnown: true });
 
 const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
   try {
@@ -61,7 +68,8 @@ export const middlewareConfigQueryOptions = () =>
   queryOptions({
     queryFn: async () => await fetchMiddlewareConfig(),
     queryKey: MIDDLEWARE_QUERY_KEY,
-    staleTime: MIDDLEWARE_STALE_TIME,
+    refetchOnMount: query => (query.state.data?.isKnown ? true : "always"),
+    staleTime: query => (query.state.data?.isKnown ? MIDDLEWARE_STALE_TIME : 0),
   });
 
 export const loadMiddlewareConfig = async (
