@@ -1176,6 +1176,13 @@ issue or PR - adding an event is a one-line `emit` plus an entry in the
 `VitNodeEvents` map. (`user.deleted` is the special case: it is already on the
 map, and waits on core growing a user-deletion flow.)
 
+Live editing is quiet on the bus too. Taking or giving back a field lock,
+autosaving the shared draft and every keystroke in a co-edited rich text field
+happen many times a minute and change nothing anyone outside the form relies
+on, so none of them is an event. What does reach the bus is the commit: when
+someone presses **Save**, the record emits its usual `updated` (and its
+translations theirs), exactly as it would without live editing.
+
 ## Next
 
 <Cards>

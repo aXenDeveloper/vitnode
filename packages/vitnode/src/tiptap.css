@@ -192,3 +192,13 @@
     @apply text-muted-foreground pointer-events-none float-start h-0 content-[attr(data-placeholder)];
   }
 }
+
+/* Co-editing: another person's caret and the name above it. Colors come
+   inline from the person's avatar color. */
+.collaboration-carets__caret {
+  @apply pointer-events-none relative -mx-px border-x break-normal;
+}
+
+.collaboration-carets__label {
+  @apply absolute start-0 -top-5 rounded-sm rounded-es-none px-1.5 py-0.5 text-xs leading-none font-semibold whitespace-nowrap select-none;
+}

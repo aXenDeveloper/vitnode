@@ -3,6 +3,16 @@ export {
   type ContentLiveContextValue,
   useContentLive,
 } from "../live/context";
+export {
+  ContentLiveFieldPresence,
+  ContentLiveLanguagePresence,
+  ContentLivePresence,
+} from "../live/presence";
+export {
+  type ContentRichTextEditorHandle,
+  useContentRichTextEditor,
+  useContentRichTextReplace,
+} from "../live/rich-text";
 export { ContentLiveStatus } from "../live/status";
 export type {
   ContentLiveDraftEvent,

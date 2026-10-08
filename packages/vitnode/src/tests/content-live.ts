@@ -65,6 +65,8 @@ export const createFakeDocumentStore = () => {
 
 export interface FakeLiveSocket {
   c: Context;
+  /** Hears every live message this socket receives from now on. */
+  listen: (listener: (message: ContentLiveServerMessage) => void) => () => void;
   /** Every live message this socket received, oldest first. */
   received: () => ContentLiveServerMessage[];
   ws: WSContext;
@@ -109,11 +111,15 @@ export const createLiveHarness = (options: Partial<ServerOptions> = {}) => {
 
   const socket = (user: Partial<ContentLiveUser> & { id: number }) => {
     const sent: { data: ContentLiveServerMessage; id: string }[] = [];
+    const listeners = new Set<(message: ContentLiveServerMessage) => void>();
     const ws = {
       send: (raw: string) => {
-        sent.push(
-          JSON.parse(raw) as { data: ContentLiveServerMessage; id: string },
-        );
+        const message = JSON.parse(raw) as {
+          data: ContentLiveServerMessage;
+          id: string;
+        };
+        sent.push(message);
+        for (const listener of listeners) listener(message.data);
       },
     } as unknown as WSContext;
     const c = {} as Context;
@@ -128,6 +134,13 @@ export const createLiveHarness = (options: Partial<ServerOptions> = {}) => {
 
     return {
       c,
+      listen: listener => {
+        listeners.add(listener);
+
+        return () => {
+          listeners.delete(listener);
+        };
+      },
       received: () => sent.map(message => message.data),
       ws,
     } satisfies FakeLiveSocket;

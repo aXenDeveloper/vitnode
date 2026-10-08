@@ -1,8 +1,11 @@
 import { cn } from "cn";
+import React from "react";
 import { useTranslations } from "use-intl";
 
 import { FieldLabel } from "@/components/ui/field";
 import { useFormField } from "@/components/ui/form";
+
+import { AutoFormLabelAddonContext } from "./label-addon";
 
 export const AutoFormLabel = ({
   children,
@@ -16,6 +19,7 @@ export const AutoFormLabel = ({
 }) => {
   const t = useTranslations("core.global");
   const { formItemId } = useFormField();
+  const addon = React.use(AutoFormLabelAddonContext);
 
   return (
     <FieldLabel
@@ -30,6 +34,11 @@ export const AutoFormLabel = ({
       {...props}
     >
       {children}
+      {addon ? (
+        <span aria-hidden className="inline-flex items-center">
+          {addon}
+        </span>
+      ) : null}
       {isOptional && (
         <span className="text-muted-foreground text-xs">{t("optional")}</span>
       )}

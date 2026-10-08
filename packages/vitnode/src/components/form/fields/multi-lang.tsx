@@ -22,6 +22,10 @@ import {
 
 import { useMultiLangDefaultLanguage } from "./multi-lang-default-language";
 import { useMultiLangLanguage } from "./multi-lang-language";
+import {
+  MultiLangPresenceContext,
+  MultiLangShownLanguageContext,
+} from "./multi-lang-presence";
 
 export { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 export type {
@@ -49,9 +53,15 @@ const useMultiLangSelection = (
     }),
   );
 
+  const language = lockedLanguage ?? selected;
+  const reportShown = React.use(MultiLangShownLanguageContext);
+  React.useEffect(() => {
+    reportShown?.(language);
+  }, [language, reportShown]);
+
   return {
     canSelect: lockedLanguage === null && languages.length > 1,
-    language: lockedLanguage ?? selected,
+    language,
     languages,
     setSelected,
   };
@@ -119,6 +129,12 @@ export const MultiLangSelect = ({
   selected: string;
 }) => {
   const t = useTranslations("core.global");
+  const presence = React.use(MultiLangPresenceContext);
+  const elsewhere =
+    presence !== null &&
+    languages.some(
+      language => language.code !== selected && presence.busy(language.code),
+    );
 
   return (
     <Select
@@ -135,11 +151,15 @@ export const MultiLangSelect = ({
         size="sm"
       >
         <SelectValue />
+        {elsewhere ? (
+          <span aria-hidden className="bg-primary size-1.5 rounded-full" />
+        ) : null}
       </SelectTrigger>
       <SelectContent align="end">
         {languages.map(language => (
           <SelectItem key={language.code} value={language.code}>
             {language.name}
+            {presence?.marker(language.code)}
           </SelectItem>
         ))}
       </SelectContent>

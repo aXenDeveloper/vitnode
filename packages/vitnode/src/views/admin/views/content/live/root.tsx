@@ -17,6 +17,7 @@ import type { ContentLiveResetReason } from "./use-session";
 import { useContentFormNavigation } from "../form/navigation";
 import { useContentFormTransport } from "../form/transport";
 import { ContentLiveContext } from "./context";
+import { createContentRichTextRegistry } from "./rich-text";
 import { useContentLiveSession } from "./use-session";
 import {
   contentDraftDiffers,
@@ -86,6 +87,12 @@ export const ContentLiveRoot = ({
     locale: spec.defaultLocale,
   });
   const { onDraft, onReset, readDrafts } = session;
+
+  // Once co-edited, always co-edited for this form: switching editors when the
+  // socket blinks would drop what the shared document holds.
+  const [coEditing, setCoEditing] = React.useState(false);
+  if (session.live && !coEditing) setCoEditing(true);
+  const [richText] = React.useState(createContentRichTextRegistry);
 
   /** The draft the form opened on: read once, and again after a reset. */
   const [opening, setOpening] = React.useState<
@@ -277,8 +284,10 @@ export const ContentLiveRoot = ({
 
   const value: ContentLiveContextValue = {
     autosave: { flush, queue },
+    coEditing,
     itemId,
     locale: spec.defaultLocale,
+    richText,
     session,
     spec,
     status: { ...status, dirty: contentDraftDiffers(row, rows, drafts) },

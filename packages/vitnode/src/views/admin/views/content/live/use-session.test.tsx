@@ -14,7 +14,7 @@ import {
 import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import type { ContentFormTransport } from "../form/transport";
-import type { ContentLiveDraftEvent } from "./use-session";
+import type { ContentLiveDraftEvent, ContentLiveSession } from "./use-session";
 
 import { ContentFormTransportProvider } from "../form/transport";
 import { useContentLiveSession } from "./use-session";
@@ -73,10 +73,16 @@ const joinsOn = (socket: FakeWebSocket | undefined) =>
 
 const Probe = ({
   onDraft,
+  onSession,
 }: {
   onDraft?: (event: ContentLiveDraftEvent) => void;
+  onSession?: (session: ContentLiveSession) => void;
 }) => {
   const session = useContentLiveSession({ ...ROOM, locale: "en" });
+  React.useEffect(() => {
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent -- hands the hook's API to the test
+    onSession?.(session);
+  });
 
   React.useEffect(() => {
     if (!onDraft) return;
@@ -116,13 +122,16 @@ const transportOf = () => {
   };
 };
 
-const mount = (onDraft?: (event: ContentLiveDraftEvent) => void) => {
+const mount = (
+  onDraft?: (event: ContentLiveDraftEvent) => void,
+  onSession?: (session: ContentLiveSession) => void,
+) => {
   const fake = transportOf();
 
   const view = render(
     <ContentFormTransportProvider value={fake.transport}>
       <VitNodeWebSocketProvider>
-        <Probe onDraft={onDraft} />
+        <Probe onDraft={onDraft} onSession={onSession} />
       </VitNodeWebSocketProvider>
     </ContentFormTransportProvider>,
   );
@@ -284,6 +293,100 @@ describe("useContentLiveSession", () => {
         room: ROOM,
         type: "leave",
       });
+    });
+
+    it("takes its seat again when the server says it lost it", () => {
+      mount();
+      act(() => sockets[0]?.open());
+      const clientId = joinsOn(sockets[0])[0]?.clientId ?? "";
+      act(() =>
+        sockets[0]?.push({
+          clientId,
+          members: [member(clientId, "Anna")],
+          room: ROOM,
+          type: "joined",
+        }),
+      );
+
+      act(() => {
+        sockets[0]?.push({
+          clientId,
+          code: "NOT_JOINED",
+          room: ROOM,
+          type: "error",
+        });
+        // A second refusal while the join is on its way asks for nothing more.
+        sockets[0]?.push({
+          clientId,
+          code: "NOT_JOINED",
+          room: ROOM,
+          type: "error",
+        });
+      });
+
+      expect(joinsOn(sockets[0])).toHaveLength(2);
+      expect(screen.getByTestId("live").textContent).toBe("true");
+    });
+
+    it("keeps its seat over a document's error, and loses it when refused", () => {
+      mount();
+      act(() => sockets[0]?.open());
+      const clientId = joinsOn(sockets[0])[0]?.clientId ?? "";
+      act(() =>
+        sockets[0]?.push({
+          clientId,
+          members: [member(clientId, "Anna")],
+          room: ROOM,
+          type: "joined",
+        }),
+      );
+
+      act(() => {
+        sockets[0]?.push({
+          clientId,
+          code: "NOT_FOUND",
+          room: ROOM,
+          type: "error",
+        });
+        sockets[0]?.push({
+          clientId,
+          code: "INVALID_MESSAGE",
+          type: "error",
+        });
+      });
+      expect(screen.getByTestId("live").textContent).toBe("true");
+
+      act(() =>
+        sockets[0]?.push({
+          clientId,
+          code: "FORBIDDEN",
+          room: ROOM,
+          type: "error",
+        }),
+      );
+      expect(screen.getByTestId("live").textContent).toBe("false");
+    });
+
+    it("stays in its language while it moves to a shared field", () => {
+      let session: ContentLiveSession | undefined;
+      mount(undefined, current => {
+        session = current;
+      });
+      act(() => sockets[0]?.open());
+
+      act(() => {
+        session?.focus("title", "pl");
+        session?.focus("categoryId", null);
+        session?.focus(null, null);
+      });
+
+      expect(
+        sockets[0]?.sent.filter(message => message.type === "focus"),
+      ).toEqual([
+        expect.objectContaining({ field: "title", locale: "pl" }),
+        expect.objectContaining({ field: "categoryId", locale: "pl" }),
+        expect.objectContaining({ field: null, locale: "pl" }),
+      ]);
     });
   });
 

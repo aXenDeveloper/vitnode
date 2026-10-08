@@ -1,4 +1,9 @@
-import { EditorContent, type Extensions, useEditor } from "@tiptap/react";
+import {
+  type Editor,
+  EditorContent,
+  type Extensions,
+  useEditor,
+} from "@tiptap/react";
 import { cn } from "cn";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -20,6 +25,11 @@ export type TipTapEditorBaseProps = Omit<
   disableScroll?: boolean;
   /** Appended after the built-in extensions - collaboration, for one. */
   extensions?: Extensions;
+  /**
+   * Hears the editor instance once it exists, and `null` when it goes away -
+   * for code that drives the editor with commands.
+   */
+  onEditor?: (editor: Editor | null) => void;
   placeholder?: string;
   /**
    * Keep the editor's own undo history. `false` when something else owns it:
@@ -71,6 +81,7 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
     value: _value,
     onChange: _onChange,
     onBlur,
+    onEditor,
     ...rest
   } = props;
   const t = useTranslations("core.global.editor");
@@ -113,6 +124,18 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
       props.onChange?.(currentEditor.getHTML());
     },
   });
+
+  const announceEditor = React.useEffectEvent((next: Editor | null) => {
+    onEditor?.(next);
+  });
+  React.useEffect(() => {
+    if (!editor) return;
+    announceEditor(editor);
+
+    return () => {
+      announceEditor(null);
+    };
+  }, [editor]);
 
   if (!editor) return <EditorSkeleton className={className} />;
 

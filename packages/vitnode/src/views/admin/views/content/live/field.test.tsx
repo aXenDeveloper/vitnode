@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AnyFormFieldApi } from "@/components/form/auto-form";
@@ -6,7 +7,16 @@ import type {
   ContentFormFieldSpec,
   ContentFormSpec,
 } from "@/content/admin/spec";
-import type { ContentFieldLock } from "@/content/live/protocol";
+import type {
+  ContentFieldLock,
+  ContentLiveMember,
+} from "@/content/live/protocol";
+
+import { AutoFormLabelAddonContext } from "@/components/form/common/label-addon";
+import { useMultiLangField } from "@/components/form/fields/multi-lang";
+import { MultiLangPresenceContext } from "@/components/form/fields/multi-lang-presence";
+import { LanguagesProvider } from "@/components/languages-provider";
+import { EditorCollaborationContext } from "@/components/tiptap/collaboration";
 
 import type { ContentFormTransport } from "../form/transport";
 import type { ContentLiveContextValue } from "./context";
@@ -15,6 +25,7 @@ import type { ContentLiveDraftEvent, ContentLiveSession } from "./use-session";
 import { ContentFormTransportProvider } from "../form/transport";
 import { ContentLiveContext } from "./context";
 import { CONTENT_FIELD_LOCK_BLUR_GRACE_MS, ContentLiveField } from "./field";
+import { createContentRichTextRegistry } from "./rich-text";
 
 const ME = 1;
 const ANNA = 2;
@@ -38,6 +49,78 @@ const spec: ContentFormSpec = {
   titleField: "title",
 };
 
+const languages = [
+  { code: "en", name: "English" },
+  { code: "pl", name: "Polski" },
+];
+
+const localizedTitle: ContentFormFieldSpec = { ...fieldSpec, localized: true };
+
+const content: ContentFormFieldSpec = {
+  kind: "richText",
+  label: "Content",
+  localized: true,
+  name: "content",
+  nullable: false,
+  required: true,
+};
+
+const memberOf = (
+  userId: number,
+  name: string,
+  where: Pick<ContentLiveMember, "field" | "locale">,
+): ContentLiveMember => ({
+  avatarColor: "2563eb",
+  clientId: `${name}-tab`,
+  name,
+  nameCode: name,
+  userId,
+  ...where,
+});
+
+const EditorProbe = () =>
+  React.use(EditorCollaborationContext) ? (
+    <p>shared editor</p>
+  ) : (
+    <p>local editor</p>
+  );
+
+/** A localized text field with its own language switcher, as buttons. */
+const SwitchableTitle = () => {
+  const { currentValue, selected, setSelected } = useMultiLangField({
+    name: "title",
+    onBlur: () => undefined,
+    onChange: () => undefined,
+    value: [
+      { languageCode: "en", value: "Hello" },
+      { languageCode: "pl", value: "Cześć" },
+    ],
+  });
+  const addon = React.use(AutoFormLabelAddonContext);
+  const presence = React.use(MultiLangPresenceContext);
+
+  return (
+    <>
+      <span data-testid="label-addon">{addon}</span>
+      {languages.map(language => (
+        <button
+          aria-pressed={selected === language.code}
+          key={language.code}
+          onClick={() => {
+            setSelected(language.code);
+          }}
+          type="button"
+        >
+          {language.name}
+          {presence?.busy(language.code) ? " (busy)" : null}
+          {presence?.marker(language.code)}
+        </button>
+      ))}
+      <input aria-label="Title" readOnly value={currentValue} />
+    </>
+  );
+};
+
 const lockOf = (userId: number, name: string): ContentFieldLock => ({
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
   field: "title",
@@ -45,14 +128,28 @@ const lockOf = (userId: number, name: string): ContentFieldLock => ({
   user: { id: userId, name },
 });
 
-const setup = ({ locks = [] }: { locks?: ContentFieldLock[] } = {}) => {
+const setup = ({
+  children = <input aria-label="Title" defaultValue="Hello" />,
+  coEditing = false,
+  locks = [],
+  members = [],
+  target = fieldSpec,
+  value = "Hello",
+}: {
+  children?: React.ReactNode;
+  coEditing?: boolean;
+  locks?: ContentFieldLock[];
+  members?: ContentLiveMember[];
+  target?: ContentFormFieldSpec;
+  value?: unknown;
+} = {}) => {
   const draftListeners = new Set<(event: ContentLiveDraftEvent) => void>();
   const session: ContentLiveSession = {
     clientId: "tab-1",
     focus: vi.fn(),
-    live: false,
+    live: coEditing,
     locks,
-    members: [],
+    members,
     onDraft: listener => {
       draftListeners.add(listener);
 
@@ -76,8 +173,10 @@ const setup = ({ locks = [] }: { locks?: ContentFieldLock[] } = {}) => {
       }),
       queue: vi.fn(),
     },
+    coEditing,
     itemId: 7,
-    locale: null,
+    locale: target.localized === true ? "en" : null,
+    richText: createContentRichTextRegistry(),
     session,
     spec,
     status: { dirty: false, failed: false, savedAt: null, saving: false },
@@ -91,24 +190,26 @@ const setup = ({ locks = [] }: { locks?: ContentFieldLock[] } = {}) => {
   );
   const transport = { lock } as unknown as ContentFormTransport;
   const field: AnyFormFieldApi = {
-    name: "title",
+    name: target.name,
     onBlur: vi.fn(),
     onChange: vi.fn(),
-    value: "Hello",
+    value,
   };
 
-  render(
+  const view = render(
     <ContentFormTransportProvider value={transport}>
-      <ContentLiveContext value={live}>
-        <ContentLiveField field={field} fieldSpec={fieldSpec}>
-          <input aria-label="Title" defaultValue="Hello" />
-        </ContentLiveField>
-        <button type="button">Elsewhere</button>
-      </ContentLiveContext>
+      <LanguagesProvider languages={languages}>
+        <ContentLiveContext value={live}>
+          <ContentLiveField field={field} fieldSpec={target}>
+            {children}
+          </ContentLiveField>
+          <button type="button">Elsewhere</button>
+        </ContentLiveContext>
+      </LanguagesProvider>
     </ContentFormTransportProvider>,
   );
 
-  return { draftListeners, field, live, lock };
+  return { draftListeners, field, live, lock, view };
 };
 
 afterEach(() => {
@@ -227,5 +328,134 @@ describe("ContentLiveField", () => {
     });
 
     expect(field.onChange).not.toHaveBeenCalled();
+  });
+
+  it("locks the language its switcher shows, and moves the lock with it", async () => {
+    const { live, lock } = setup({
+      children: <SwitchableTitle />,
+      target: localizedTitle,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Polski" }));
+    await act(async () => {
+      fireEvent.focus(screen.getByRole("textbox", { name: "Title" }));
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(lock).toHaveBeenCalledWith("test.note", 7, {
+        action: "acquire",
+        field: "title",
+        locale: "pl",
+      });
+    });
+    expect(live.session.focus).toHaveBeenLastCalledWith("title", "pl");
+
+    // Still in the field, the editor switches back to English.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "English" }));
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(lock).toHaveBeenCalledWith("test.note", 7, {
+        action: "release",
+        field: "title",
+        locale: "pl",
+      });
+    });
+    await vi.waitFor(() => {
+      expect(lock).toHaveBeenLastCalledWith("test.note", 7, {
+        action: "acquire",
+        field: "title",
+        locale: "en",
+      });
+    });
+  });
+
+  it("shows who else is in the field, in the language shown", () => {
+    setup({
+      children: <SwitchableTitle />,
+      coEditing: true,
+      members: [
+        memberOf(ANNA, "Anna", { field: "title", locale: "pl" }),
+        memberOf(3, "Ben", { field: "title", locale: "en" }),
+      ],
+      target: localizedTitle,
+    });
+
+    const addon = screen.getByTestId("label-addon");
+    expect(within(addon).getByTitle("Ben")).toBeTruthy();
+    expect(within(addon).queryByTitle("Anna")).toBeNull();
+    expect(
+      screen.getByRole("group", {
+        description: "core.content.live.presence.field",
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Polski/ }));
+
+    expect(within(addon).getByTitle("Anna")).toBeTruthy();
+    expect(within(addon).queryByTitle("Ben")).toBeNull();
+  });
+
+  it("marks the languages someone else is editing on the switcher", () => {
+    setup({
+      children: <SwitchableTitle />,
+      coEditing: true,
+      members: [memberOf(ANNA, "Anna", { field: "title", locale: "pl" })],
+      target: localizedTitle,
+    });
+
+    const polish = screen.getByRole("button", { name: /Polski/ });
+    expect(polish.textContent).toContain("(busy)");
+    expect(within(polish).getByTitle("Anna")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /English/ }).textContent,
+    ).not.toContain("(busy)");
+  });
+
+  it("co-edits rich text: no lock, no draft autosave, the shared editor", async () => {
+    const { draftListeners, field, live, lock, view } = setup({
+      children: (
+        <>
+          <EditorProbe />
+          <input aria-label="Content" />
+        </>
+      ),
+      coEditing: true,
+      target: content,
+      value: [{ languageCode: "en", value: { type: "doc" } }],
+    });
+
+    expect(screen.getByText("shared editor")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.focus(screen.getByRole("textbox", { name: "Content" }));
+      await Promise.resolve();
+    });
+    expect(lock).not.toHaveBeenCalled();
+    expect(live.session.focus).toHaveBeenCalledWith("content", "en");
+
+    // Someone's autosaved draft never lands in a co-edited document.
+    act(() => {
+      for (const listener of draftListeners) {
+        listener({
+          by: { id: ANNA, name: "Anna" },
+          locale: "en",
+          updatedAt: new Date().toISOString(),
+          values: { content: { content: [], type: "doc" } },
+        });
+      }
+    });
+    expect(field.onChange).not.toHaveBeenCalled();
+    view.unmount();
+    expect(live.autosave.queue).not.toHaveBeenCalled();
+  });
+
+  it("keeps the local editor for rich text without a socket", () => {
+    setup({ children: <EditorProbe />, target: content, value: [] });
+
+    expect(screen.getByText("local editor")).toBeTruthy();
   });
 });

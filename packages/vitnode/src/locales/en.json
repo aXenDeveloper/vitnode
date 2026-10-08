@@ -1631,6 +1631,16 @@
       "live": {
         "is_editing": "is editing",
         "locked_desc": "Read-only while they edit. Their changes show up here as they type.",
+        "presence": {
+          "label": "{count, plural, one {# other person is} other {# other people are}} in this record",
+          "more": "and {count, plural, one {# more person} other {# more people}}: {names}",
+          "viewing": "looking around",
+          "in_language": "working in {language}",
+          "editing_field": "editing {field} ({language})",
+          "editing_shared": "editing {field}",
+          "field": "Also in this field: {names}",
+          "language": "{count, plural, one {{names} is working in this language} other {{names} are working in this language}}"
+        },
         "status": {
           "saving": "Saving…",
           "saved": "Draft saved at {time}",

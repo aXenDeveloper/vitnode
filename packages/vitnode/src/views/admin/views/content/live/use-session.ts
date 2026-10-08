@@ -116,6 +116,11 @@ export const useContentLiveSession = ({
     field: null | string;
     locale: null | string;
   }>(null);
+  /** The language this tab works in: the last one a field was focused in. */
+  const languageRef = React.useRef(locale);
+  /** A join is on its way and its reply has not arrived. */
+  const joiningRef = React.useRef(false);
+  const joinedRef = React.useRef(false);
 
   const emitDraft = React.useCallback((event: ContentLiveDraftEvent) => {
     seenDraftsRef.current.set(draftKey(event.locale), event.updatedAt);
@@ -175,8 +180,27 @@ export const useContentLiveSession = ({
         return;
       case "error":
         if (message.clientId !== clientId) return;
+        if (message.room && !sameContentLiveRoom(message.room, room)) return;
+
+        if (message.code === "NOT_JOINED") {
+          // The server lost this tab's seat (a missed heartbeat, an instance
+          // restart) or a document it had open: take the seat again. Its
+          // `joined` reply reopens the documents.
+          if (!joiningRef.current && readyStateRef.current === 1) {
+            joiningRef.current = true;
+            send({ clientId, locale: languageRef.current, room, type: "join" });
+          }
+
+          return;
+        }
+        // A rich text document that is not one is the document's problem, and
+        // a malformed message is a bug: neither costs the seat.
+        if (message.code === "INVALID_MESSAGE") return;
+        if (message.code === "NOT_FOUND" && joinedRef.current) return;
+
         // Refused or not there: stay on HTTP polling, which re-checks the
         // permission on every request anyway.
+        joiningRef.current = false;
         setJoined(false);
 
         return;
@@ -187,6 +211,7 @@ export const useContentLiveSession = ({
         ) {
           return;
         }
+        joiningRef.current = false;
         setJoined(true);
         setMembers(message.members);
         const me = message.members.find(member => member.clientId === clientId);
@@ -229,12 +254,14 @@ export const useContentLiveSession = ({
   React.useEffect(() => {
     if (readyState !== 1) return;
 
-    send({ clientId, locale, room, type: "join" });
+    joiningRef.current = true;
+    send({ clientId, locale: languageRef.current, room, type: "join" });
 
     return () => {
+      joiningRef.current = false;
       setJoined(false);
     };
-  }, [clientId, locale, readyState, room, send]);
+  }, [clientId, readyState, room, send]);
 
   // Leave on unmount, on a room change, and when the page goes away.
   React.useEffect(() => {
@@ -250,6 +277,9 @@ export const useContentLiveSession = ({
   }, [clientId, room, send]);
 
   const live = joined && readyState === 1;
+  React.useEffect(() => {
+    joinedRef.current = live;
+  }, [live]);
 
   // Every (re)join: whatever moved while this tab was not in the room was
   // never delivered, and the room has forgotten where this tab was.
@@ -303,10 +333,14 @@ export const useContentLiveSession = ({
 
   const focus = React.useCallback(
     (field: null | string, fieldLocale: null | string) => {
-      focusedRef.current = { field, locale: fieldLocale };
+      // A shared field (or no field) keeps the language the person is in, so
+      // the language switcher still shows them there.
+      if (fieldLocale !== null) languageRef.current = fieldLocale;
+      const next = { field, locale: languageRef.current };
+      focusedRef.current = next;
       if (readyStateRef.current !== 1) return;
 
-      send({ clientId, field, locale: fieldLocale, room, type: "focus" });
+      send({ clientId, room, type: "focus", ...next });
     },
     [clientId, room, send],
   );

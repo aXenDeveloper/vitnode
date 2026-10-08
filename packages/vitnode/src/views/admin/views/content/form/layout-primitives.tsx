@@ -4,6 +4,7 @@ import React from "react";
 import { PageTitle } from "@/components/ui/page-title";
 
 import { useContentLive } from "../live/context";
+import { ContentLivePresence } from "../live/presence";
 import { ContentLiveStatus } from "../live/status";
 import { useContentForm } from "./context";
 
@@ -29,7 +30,10 @@ export const ContentFormHeader = ({
         live ? (
           <div className="flex flex-col gap-1">
             {header.desc}
-            <ContentLiveStatus />
+            <div className="flex flex-wrap items-center gap-3">
+              <ContentLivePresence />
+              <ContentLiveStatus />
+            </div>
           </div>
         ) : (
           header.desc

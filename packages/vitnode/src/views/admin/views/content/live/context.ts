@@ -2,6 +2,7 @@ import React from "react";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
 
+import type { ContentRichTextRegistry } from "./rich-text";
 import type { ContentLiveSession } from "./use-session";
 
 export interface ContentLiveAutosaveStatus {
@@ -21,10 +22,19 @@ export interface ContentLiveContextValue {
     /** Schedules one field's API value for the next autosave. */
     queue: (field: string, locale: null | string, value: unknown) => void;
   };
+  /**
+   * Rich text is co-edited through Yjs: true from the first time the socket
+   * let this tab in, and it stays true through a dropped connection - the
+   * shared document keeps what is typed meanwhile and sends it on reconnect.
+   * Without a socket at all, rich text falls back to a locked field.
+   */
+  coEditing: boolean;
   /** The record the session is for. */
   itemId: number;
   /** The language a localized field locks in when the layout pins none. */
   locale: null | string;
+  /** The open co-edited editors, for code that writes through them. */
+  richText: ContentRichTextRegistry;
   session: ContentLiveSession;
   spec: ContentFormSpec;
   status: ContentLiveAutosaveStatus;

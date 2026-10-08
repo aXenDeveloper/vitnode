@@ -1,10 +1,14 @@
-import type React from "react";
+import React from "react";
 
 import type { TipTapEditorBaseProps } from "@/components/tiptap/tiptap-editor";
 import type { FormFieldApi } from "@/components/ui/form";
 import type { RichTextDocument } from "@/content/rich-text/document";
 import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 
+import {
+  CollaborativeEditorSlot,
+  EditorCollaborationContext,
+} from "@/components/tiptap/collaboration";
 import { Editor } from "@/components/ui/editor";
 import { FormControl, FormMessage, useFormField } from "@/components/ui/form";
 import { isRichTextEmpty } from "@/content/rich-text/document";
@@ -162,6 +166,7 @@ const MultiLangJsonEditor = ({
     isFilled: hasDocumentContent,
   });
   const labelledBy = useEditorLabelledBy(label);
+  const collaborative = React.use(EditorCollaborationContext);
 
   return (
     <MultiLangEditorLayout
@@ -174,15 +179,29 @@ const MultiLangJsonEditor = ({
       onSelect={setSelected}
       selected={selected}
     >
-      <Editor
-        aria-labelledby={labelledBy}
-        format="json"
-        key={selected}
-        onBlur={field.onBlur}
-        onChange={setValue}
-        value={currentValue ?? null}
-        {...props}
-      />
+      {collaborative ? (
+        // Its own shared document per language: remounted like the editor.
+        <CollaborativeEditorSlot
+          aria-labelledby={labelledBy}
+          key={selected}
+          locale={selected}
+          onBlur={field.onBlur}
+          onChange={setValue}
+          render={collaborative}
+          value={currentValue ?? null}
+          {...props}
+        />
+      ) : (
+        <Editor
+          aria-labelledby={labelledBy}
+          format="json"
+          key={selected}
+          onBlur={field.onBlur}
+          onChange={setValue}
+          value={currentValue ?? null}
+          {...props}
+        />
+      )}
     </MultiLangEditorLayout>
   );
 };
@@ -200,6 +219,7 @@ export const AutoFormEditor = ({
   ...props
 }: AutoFormEditorProps) => {
   const labelledBy = useEditorLabelledBy(label);
+  const collaborative = React.use(EditorCollaborationContext);
 
   if (multiLang && format === "json") {
     return (
@@ -236,7 +256,17 @@ export const AutoFormEditor = ({
       )}
 
       <FormControl>
-        {format === "json" ? (
+        {format === "json" && collaborative ? (
+          <CollaborativeEditorSlot
+            aria-labelledby={labelledBy}
+            locale={null}
+            onBlur={field.onBlur}
+            onChange={field.onChange}
+            render={collaborative}
+            value={field.value ?? null}
+            {...props}
+          />
+        ) : format === "json" ? (
           <Editor
             aria-labelledby={labelledBy}
             format="json"

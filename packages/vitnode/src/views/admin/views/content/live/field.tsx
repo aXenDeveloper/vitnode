@@ -6,7 +6,14 @@ import type { ContentFormFieldSpec } from "@/content/admin/spec";
 import type { ContentFieldLock } from "@/content/live/protocol";
 
 import { Avatar } from "@/components/avatar";
+import { AutoFormLabelAddonContext } from "@/components/form/common/label-addon";
 import { useMultiLangLanguage } from "@/components/form/fields/multi-lang-language";
+import {
+  type MultiLangPresence,
+  MultiLangPresenceContext,
+  MultiLangShownLanguageContext,
+} from "@/components/form/fields/multi-lang-presence";
+import { EditorCollaborationContext } from "@/components/tiptap/collaboration";
 import {
   contentApiValueToFormField,
   contentFormFieldToApi,
@@ -17,6 +24,19 @@ import type { ContentLiveContextValue } from "./context";
 
 import { useContentFormTransport } from "../form/transport";
 import { useContentLive } from "./context";
+import {
+  ContentLiveFieldPresence,
+  ContentLiveLanguagePresence,
+  useContentLiveNames,
+} from "./presence";
+import {
+  contentLiveFieldEditors,
+  contentLiveLanguageEditors,
+} from "./presence-model";
+import {
+  ContentLiveRichTextFieldContext,
+  renderContentLiveCollaborativeEditor,
+} from "./rich-text-field";
 
 /**
  * How long a field keeps its lock after focus leaves it. A select or a picker
@@ -25,7 +45,6 @@ import { useContentLive } from "./context";
  */
 export const CONTENT_FIELD_LOCK_BLUR_GRACE_MS = 1_500;
 
-/** `richText` is not a field kind yet: it arrives with the rich text phase. */
 const isRichText = (kind: string): boolean => kind === "richText";
 
 const isExpired = (lock: ContentFieldLock): boolean =>
@@ -89,18 +108,28 @@ const LiveField = ({
   fieldSpec: ContentFormFieldSpec;
   live: ContentLiveContextValue;
 }) => {
+  const t = useTranslations("core.content.live.presence");
+  const names = useContentLiveNames();
   const transport = useContentFormTransport();
   const pinned = useMultiLangLanguage();
   const badgeId = React.useId();
+  const presenceId = React.useId();
   const { autosave, session, spec } = live;
   const name = fieldSpec.name;
-  const locale = fieldSpec.localized === true ? (pinned ?? live.locale) : null;
-  // Rich text is co-edited through Yjs while the socket is live, so everyone
-  // types in it at once and it takes no lock; without a socket it locks.
-  const lockable = !(isRichText(fieldSpec.kind) && session.live);
+  const localized = fieldSpec.localized === true;
+  /** The language the field's own switcher shows, when it has one. */
+  const [shown, setShown] = React.useState<null | string>(null);
+  const locale = localized ? (pinned ?? shown ?? live.locale) : null;
+  // Rich text is co-edited through Yjs once the socket let this tab in, so
+  // everyone types in it at once and it takes no lock - and its shared
+  // document is its autosave. Without a socket it is a locked field.
+  const coEdited = isRichText(fieldSpec.kind) && live.coEditing;
+  const lockable = !coEdited;
 
   const [held, setHeld] = React.useState(false);
   const heldRef = React.useRef(false);
+  /** The language of the lock held: the switcher may have moved on since. */
+  const heldLocaleRef = React.useRef<null | string>(null);
   const busyRef = React.useRef<Promise<void>>(Promise.resolve());
   const releaseTimerRef =
     React.useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -122,21 +151,26 @@ const LiveField = ({
     setHeld(value);
   };
 
-  const request = async (action: "acquire" | "release" | "renew") =>
+  const request = async (
+    action: "acquire" | "release" | "renew",
+    lockLocale: null | string,
+  ) =>
     await transport.lock(spec.contentTypeId, live.itemId, {
       action,
       field: name,
-      locale,
+      locale: lockLocale,
     });
 
   const acquire = async () => {
     if (heldRef.current || !lockable) return;
 
-    const result = await request("acquire");
+    const target = locale;
+    const result = await request("acquire", target);
     if (result.lock) {
       session.rememberSelf(result.lock.user.id);
+      heldLocaleRef.current = target;
       markHeld(focusedRef.current);
-      if (!focusedRef.current) await request("release");
+      if (!focusedRef.current) await request("release", target);
 
       return;
     }
@@ -149,13 +183,13 @@ const LiveField = ({
 
     await autosave.flush();
     markHeld(false);
-    await request("release");
+    await request("release", heldLocaleRef.current);
   };
 
   const renew = async () => {
     if (!heldRef.current) return;
 
-    const result = await request("renew");
+    const result = await request("renew", heldLocaleRef.current);
     if (result.lock) return;
 
     // The lease ran out and someone else took it, or it vanished.
@@ -199,6 +233,16 @@ const LiveField = ({
     [],
   );
 
+  // Another language on the switcher is another lock: give the old one back
+  // and, still in the field, take the new one.
+  React.useEffect(() => {
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the language moves inside the field's own switcher, which knows nothing of locks
+    if (!heldRef.current || heldLocaleRef.current === locale) return;
+
+    run("release");
+    if (focusedRef.current) run("acquire");
+  }, [locale]);
+
   // Autosave what this person types, while the field is theirs - from the
   // first change after taking the lock, so merely visiting a field writes
   // nothing.
@@ -207,7 +251,7 @@ const LiveField = ({
   /** The value when focus arrived, which can be before the lock did. */
   const focusValueRef = React.useRef<null | string>(null);
   const queueChange = React.useEffectEvent(() => {
-    if (!held) {
+    if (!held || !lockable) {
       baselineRef.current = null;
 
       return;
@@ -232,7 +276,8 @@ const LiveField = ({
   // Everyone else's autosaves land in this field - never while it is ours.
   const applyDraft = React.useEffectEvent(
     (event: { locale: null | string; values: Record<string, unknown> }) => {
-      if (!(name in event.values)) return;
+      // A co-edited document arrives through Yjs, never through the draft.
+      if (!lockable || !(name in event.values)) return;
       if (heldRef.current && event.locale === locale) return;
       if (
         fieldSpec.localized === true
@@ -269,24 +314,86 @@ const LiveField = ({
     if (next instanceof Node && event.currentTarget.contains(next)) return;
 
     focusedRef.current = false;
-    session.focus(null, null);
+    session.focus(null, locale);
     clearTimeout(releaseTimerRef.current);
     releaseTimerRef.current = setTimeout(() => {
       if (!focusedRef.current) run("release");
     }, CONTENT_FIELD_LOCK_BLUR_GRACE_MS);
   };
 
+  const editors = session.live
+    ? contentLiveFieldEditors(session.members, session, { field: name, locale })
+    : [];
+  const describedBy =
+    [lockedByOther ? badgeId : null, editors.length > 0 ? presenceId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+  const languagePresence: MultiLangPresence | null =
+    localized && session.live
+      ? {
+          busy: code =>
+            contentLiveLanguageEditors(session.members, session, {
+              field: name,
+              locale: code,
+            }).length > 0,
+          marker: code => (
+            <ContentLiveLanguagePresence
+              className="ms-auto"
+              field={name}
+              locale={code}
+            />
+          ),
+        }
+      : null;
+
+  let content = children;
+  if (coEdited) {
+    content = (
+      <ContentLiveRichTextFieldContext value={name}>
+        <EditorCollaborationContext
+          value={renderContentLiveCollaborativeEditor}
+        >
+          {content}
+        </EditorCollaborationContext>
+      </ContentLiveRichTextFieldContext>
+    );
+  }
+
   return (
     <div className="flex min-w-0 flex-col">
       <fieldset
-        aria-describedby={lockedByOther ? badgeId : undefined}
+        aria-describedby={describedBy}
         className="min-w-0"
         disabled={lockedByOther}
         onBlurCapture={onBlurCapture}
         onFocusCapture={onFocusCapture}
       >
-        {children}
+        <MultiLangShownLanguageContext value={setShown}>
+          <MultiLangPresenceContext value={languagePresence}>
+            <AutoFormLabelAddonContext
+              value={
+                editors.length > 0 ? (
+                  <ContentLiveFieldPresence
+                    decorative
+                    field={name}
+                    locale={locale}
+                  />
+                ) : null
+              }
+            >
+              {content}
+            </AutoFormLabelAddonContext>
+          </MultiLangPresenceContext>
+        </MultiLangShownLanguageContext>
       </fieldset>
+      {editors.length > 0 ? (
+        <span className="sr-only" id={presenceId}>
+          {t("field", {
+            count: editors.length,
+            names: names(editors),
+          })}
+        </span>
+      ) : null}
       <ContentFieldLockBadge
         id={badgeId}
         live={live}

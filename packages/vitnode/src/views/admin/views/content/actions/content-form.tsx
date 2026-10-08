@@ -47,6 +47,7 @@ import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
 import { ContentLiveField } from "../live/field";
+import { ContentLivePresence } from "../live/presence";
 import { ContentLiveRoot } from "../live/root";
 import { ContentLiveStatus } from "../live/status";
 import { overlayContentDrafts } from "../live/values";
@@ -547,7 +548,12 @@ const ContentFormFields = ({
               ) : (
                 <>
                   <ContentFormHeader />
-                  {presentation === "page" ? null : <ContentLiveStatus />}
+                  {presentation === "page" || !live ? null : (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <ContentLivePresence />
+                      <ContentLiveStatus />
+                    </div>
+                  )}
 
                   {publication && data ? (
                     <ContentFormPublication
