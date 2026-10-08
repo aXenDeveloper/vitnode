@@ -202,7 +202,6 @@ export const OutdatedBanner = ({
   sourceName,
 }: {
   action?: React.ReactNode;
-  /** The translated fields whose source changed, already labelled. */
   fields: string[];
   onDismiss: () => void;
   sourceName: string;

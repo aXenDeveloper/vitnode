@@ -1,12 +1,12 @@
 ---
 title: AI Actions
-description: Define managed AI features with defineAiAction, register them in a plugin and run them with c.get("ai").run() - with permissions, limits, budgets and history handled by VitNode Core.
+description: Define managed AI features with defineAiAction, register them in a plugin and run them with c.get("ai").run(). VitNode Core handles permissions, limits, budgets and history.
 icon: Wand
 ---
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-An **AI action** is one AI feature a plugin offers - "write an excerpt", "translate a field", "suggest tags". The plugin describes the prompt and the input and output shapes. VitNode Core runs it: it picks the model, checks permissions, enforces limits, holds budget, calls the provider, validates the answer and records what it cost.
+An **AI action** is one AI feature a plugin offers, such as "write an excerpt", "translate a field" or "suggest tags". The plugin describes the prompt and the input and output shapes. VitNode Core runs it: it picks the model, checks permissions, enforces limits, holds budget, calls the provider, validates the answer and records what it cost.
 
 ```ts
 const { output } = await c.get('ai').run({
@@ -32,7 +32,7 @@ Actions answer those once, in Core:
 
 ## Create an action
 
-The example adds a "summarize topic" button to a forum plugin's AdminCP.
+This example adds a "summarize topic" button to a forum plugin's AdminCP.
 
 <Steps>
 
@@ -197,13 +197,13 @@ export const summarizeTopicRoute = buildRoute({
 })
 ```
 
-`output` is typed as `string` - inferred from the action's `outputSchema`. When the run fails, `run()` throws an `AiError` and the route answers with its [error code](#error-codes).
+TypeScript infers `output` as `string` from the action's `outputSchema`. When the run fails, `run()` throws an `AiError` and the route answers with its [error code](#error-codes).
 
 </Step>
 
 </Steps>
 
-The `@vitnode/blog` plugin is a complete real example: `plugins/blog/src/api/ai/actions.ts` and its `admin/ai` routes.
+For a complete, real example, read the `@vitnode/blog` plugin: `plugins/blog/src/api/ai/actions.ts` and its `admin/ai` routes.
 
 ## Action ids
 
@@ -222,13 +222,13 @@ Two plugins may both have an `excerpt.generate`; their canonical keys differ. Th
 
 ## Title, description and icon
 
-Every action shows up as a row on **AI → Actions**, as a feature on the role form's **AI** tab and in a member's AI usage, so it needs a human name in every language:
+Every action appears as a row on **Artificial Intelligence (AI) → Actions**, as a feature on the role form's **Artificial intelligence (AI)** tab and in a member's AI usage. Each of those needs a human name in every language:
 
-- **`title`** (required) - the message key of a short name, e.g. `ai_actions.@vitnode/forum.topic_summarize.title` for "Summarize topic".
-- **`description`** (required) - the message key of one sentence on what it does.
-- **`icon`** (optional) - a [Lucide](https://lucide.dev/icons) icon name in kebab case, e.g. `languages` or `wand-sparkles`. Without one, the row shows a sparkles icon.
+- **`title`** (required): the message key of a short name, e.g. `ai_actions.@vitnode/forum.topic_summarize.title` for "Summarize topic".
+- **`description`** (required): the message key of one sentence on what it does.
+- **`icon`** (optional): a [Lucide](https://lucide.dev/icons) icon name in kebab case, e.g. `languages` or `wand-sparkles`. Without one, the row shows a sparkles icon.
 
-The API returns both keys as they are, and the AdminCP and the member's settings translate them in the language the page is showing. A language without the key falls back to the default language's text. Keep the keys in your plugin's `src/locales/en.json` under `ai_actions` → your plugin id, and translate them like any other [plugin message](/docs/dev/i18n/messages).
+The API returns both keys untranslated. The AdminCP and the member's settings translate them into the page's language. A language without the key falls back to the default language's text. Keep the keys in your plugin's `src/locales/en.json` under `ai_actions` → your plugin id, and translate them like any other [plugin message](/docs/dev/i18n/messages).
 
 <Callout type="info" title="Plain text still works">
   A `title` or `description` that is not a message key is shown as written. That
@@ -241,14 +241,14 @@ A blank title or description, or an icon that isn't a kebab-case name, throws at
 
 `promptVersion` is stored with every run. Bump it whenever the prompt changes meaningfully, so the history shows which prompt produced which result.
 
-`buildPrompt(input, { instructions })` returns either `{ prompt, system? }` or `{ messages, system? }`. `instructions` is optional extra guidance an admin set for this action in the AdminCP, or `null` - append it to the system prompt.
+`buildPrompt(input, { instructions })` returns either `{ prompt, system? }` or `{ messages, system? }`. `instructions` is optional extra guidance an admin set for this action in the AdminCP, or `null`. Append it to the system prompt.
 
 ## Input and output
 
 - **`inputSchema`** (Zod) validates the input before anything else happens. Invalid input fails with `AI_INVALID_INPUT`.
-- **`measureInput(input)`** returns the number of characters counted against `maxInputCharacters`. By default every string in the input counts. Override it when only part of the input reaches the prompt - the blog excerpt counts only the text it extracts from the HTML.
-- **`output: "text"`** - the model returns text, `parseText(text, input)` turns it into your output, then `outputSchema` checks it. Throw from `parseText()` to reject an answer.
-- **`output: "object"`** - the model returns structured JSON validated by `outputSchema`. The action must require the `structured-output` capability, and it cannot be streamed.
+- **`measureInput(input)`** returns the number of characters counted against `maxInputCharacters`. By default every string in the input counts. Override it when only part of the input reaches the prompt. The blog excerpt, for example, counts only the text it extracts from the HTML.
+- **`output: "text"`** makes the model return text. `parseText(text, input)` turns it into your output, then `outputSchema` checks it. Throw from `parseText()` to reject an answer.
+- **`output: "object"`** makes the model return structured JSON, which `outputSchema` validates. The action must require the `structured-output` capability, and it cannot be streamed.
 
 An empty answer, a `parseText()` that throws or a schema mismatch fails with `AI_INVALID_OUTPUT`. The user is not charged for it.
 
@@ -282,11 +282,11 @@ export const TOPIC_TAGS_AI_ACTION = aiActionRef(
 )
 ```
 
-`actors: ["system"]` makes this a background-only action, so it needs no `authorize()` - see [Actors](#actors-users-and-the-system).
+`actors: ["system"]` makes this a background-only action, so it needs no `authorize()`. See [Actors](#actors-users-and-the-system).
 
 ### Images
 
-For a vision action, require `image-input` and pass the image **bytes** as a `file` part - read them server-side (for example with `c.get("storage").readBytes(key, maxBytes)`), so no private file ever has to be made public for the provider:
+For a vision action, require `image-input` and pass the image **bytes** as a `file` part. Read them server-side, for example with `c.get("storage").readBytes(key, maxBytes)`, so no private file ever has to be made public for the provider:
 
 ```ts
 buildPrompt: (input) => ({
@@ -302,11 +302,11 @@ buildPrompt: (input) => ({
 }),
 ```
 
-`maxImages` defaults to `1` for these actions and bounds how many images one run may send. Only models that declare `image-input` are used - see [Model capabilities](/docs/dev/ai#model-capabilities).
+`maxImages` defaults to `1` for these actions and bounds how many images one run may send. Only models that declare `image-input` are used. See [Model capabilities](/docs/dev/ai#model-capabilities).
 
 ## Permissions and authorize()
 
-Every action names a **permission**. Admins grant it per role on the **AI** tab of the role form. Several actions may share one key - they then share one switch and one daily counter.
+Every action names a **permission**. Admins grant it per role on the **Artificial intelligence (AI)** tab of the role form. Several actions may share one key. They then share one switch and one daily counter.
 
 ```ts
 permission: 'summarize' // same as { key: 'summarize', defaultGranted: false }
@@ -327,7 +327,7 @@ authorize: async ({ c, input, userId }) =>
 
 ## Actors: users and the system
 
-`actors` decides who may run an action. The server decides the actor - never the request.
+`actors` decides who may run an action. The server sets the actor; the request never does.
 
 | Actor    | Runs with                   | Charged to                                     |
 | :------- | :-------------------------- | :--------------------------------------------- |
@@ -336,7 +336,7 @@ authorize: async ({ c, input, userId }) =>
 
 The default is `["user"]`. `run()` uses the signed-in AdminCP user first, then the site user. Without one, it fails with `AI_UNAUTHORIZED`.
 
-Use `runAsSystem()` only from trusted server code - cron jobs, queue tasks, event listeners. No route should pass a client's request into it.
+Use `runAsSystem()` only from trusted server code: cron jobs, queue tasks, event listeners. No route should pass a client's request into it.
 
 ```ts title="plugins/forum/src/api/cron/tag-topics.cron.ts"
 import { isAiError } from '@vitnode/core/api/lib/ai/errors'
@@ -385,7 +385,7 @@ export const tagTopicsCron = buildCron({
 - `maxRetries` is extra attempts on the same model after a failed provider call.
 - `maxSteps` is model round trips inside one attempt (tool loops). Each step is billed as its own call.
 - `dailyLimit` counts runs per user per day for the action's permission key. A role's daily limit takes precedence over the admin's action setting, which takes precedence over this default.
-- `maxImages` cannot be changed by admins - it bounds the budget reserved for images.
+- Admins cannot change `maxImages`, because it bounds the budget reserved for images.
 
 Admins can also, per action: switch it off, assign a model, assign a fallback model, and add `instructions`.
 
@@ -399,7 +399,7 @@ Admins can also, per action: switch it off, assign a model, assign a fallback mo
       required: true,
     },
     input: {
-      description: 'Validated against the action’s inputSchema.',
+      description: "Validated against the action's inputSchema.",
       type: 'Input',
       required: true,
     },
@@ -410,7 +410,7 @@ Admins can also, per action: switch it off, assign a model, assign a fallback mo
     },
     idempotencyKey: {
       description:
-        'A key the same actor can submit only once. A repeat fails with AI_DUPLICATE_REQUEST and the earlier runId - even if the earlier run failed.',
+        'A key the same actor can submit only once. A repeat fails with AI_DUPLICATE_REQUEST and the earlier runId, even if the earlier run failed.',
       type: 'string',
     },
     signal: {
@@ -439,7 +439,7 @@ Admins can also, per action: switch it off, assign a model, assign a fallback mo
 }
 ```
 
-It is safe to return `usage` to the browser. It never contains prices or provider details.
+You can safely return `usage` to the browser: it never contains prices or provider details.
 
 ## What happens during a run
 
@@ -447,9 +447,9 @@ It is safe to return `usage` to the browser. It never contains prices or provide
 2. Check the global AI switch and the action's switch.
 3. For users: check the role permission, then `authorize()`.
 4. Measure the input and the number of images.
-5. Pick the model: the admin's choice, or the first configured model with every required capability. Resolve the optional fallback - an incompatible fallback is skipped.
+5. Pick the model: the admin's choice, or the first configured model with every required capability. Resolve the optional fallback, skipping an incompatible one.
 6. **Reserve** budget for the worst case and check rate and concurrency limits, in one short database transaction.
-7. Call the provider - outside any transaction. Retry up to `maxRetries` times, then try the fallback model once.
+7. Call the provider outside any transaction. Retry up to `maxRetries` times, then try the fallback model once.
 8. Validate the output.
 9. **Settle**: charge the real cost and release the rest of the reservation.
 10. Emit `ai.run.completed` or `ai.run.failed`.
@@ -474,11 +474,11 @@ handler: async (c) => {
 }
 ```
 
-The stream also returns `result`, a promise that resolves to the validated output once the stream ends, and rejects with an `AiError` if the full text is invalid. A stream makes one attempt on the primary model - no retries, no fallback. If the reader cancels, the run settles as `canceled` and the user is not charged.
+The stream also returns `result`, a promise that resolves to the validated output once the stream ends, and rejects with an `AiError` if the full text is invalid. A stream makes one attempt on the primary model, with no retries and no fallback. If the reader cancels, the run settles as `canceled` and the user is not charged.
 
 ## Error codes
 
-Every refusal and failure is an `AiError` with a stable `code`. Routes answer with this JSON body - the browser should key its messages on `code`, never on the English `message`:
+Every refusal and failure is an `AiError` with a stable `code`. Routes answer with this JSON body. Key the browser's messages on `code`, never on the English `message`:
 
 ```json
 {
@@ -524,7 +524,7 @@ Each run that got past the reservation emits one event after it settles:
 | `ai.run.completed` | `actionKey`, `actorType`, `runId`, `userId`              |
 | `ai.run.failed`    | `actionKey`, `actorType`, `errorCode`, `runId`, `userId` |
 
-`userId` is `null` for system runs. Refusals before the reservation - no permission, limit reached - emit nothing. A listener that throws never breaks the run.
+`userId` is `null` for system runs. Refusals before the reservation, such as a missing permission or a reached limit, emit nothing. A listener that throws never breaks the run.
 
 ```ts title="plugins/forum/src/api/lib/ai-events.ts"
 import { buildEventListener } from '@vitnode/core/api/lib/events'

@@ -16,7 +16,6 @@ import type { AdminAiUserOverride } from "../ai-query";
 import { fromAiDecimal, toAiDecimal } from "../ai-decimal";
 
 export interface AiUserOverrideFormProps {
-  /** The exception being edited. Absent when adding one. */
   data: AdminAiUserOverride | null;
   onSave: (
     body: AdminAiUserOverrideInput,

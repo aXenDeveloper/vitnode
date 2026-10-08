@@ -38,7 +38,9 @@ describe("QuickAskPanel", () => {
   it("offers the rewrite operations and runs the one clicked", () => {
     const { onRun } = renderPanel();
 
-    fireEvent.click(button("core.global.ai_assist.quick_ask.operation.shorten"));
+    fireEvent.click(
+      button("core.global.ai_assist.quick_ask.operation.shorten"),
+    );
     fireEvent.click(button("core.global.ai_assist.quick_ask.tones.formal"));
 
     expect(onRun).toHaveBeenNthCalledWith(1, {
@@ -55,7 +57,9 @@ describe("QuickAskPanel", () => {
   it("shows the bound before anything runs", () => {
     renderPanel({ estimate: "12.5" });
 
-    expect(screen.getByText("core.global.ai_assist.quick_ask.estimate")).toBeTruthy();
+    expect(
+      screen.getByText("core.global.ai_assist.quick_ask.estimate"),
+    ).toBeTruthy();
   });
 
   it("sends a custom request only with an instruction", () => {
@@ -98,7 +102,9 @@ describe("QuickAskPanel", () => {
       stale: true,
     });
 
-    expect(screen.getByText("core.global.ai_assist.quick_ask.stale")).toBeTruthy();
+    expect(
+      screen.getByText("core.global.ai_assist.quick_ask.stale"),
+    ).toBeTruthy();
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
         name: "core.global.ai_assist.quick_ask.replace",

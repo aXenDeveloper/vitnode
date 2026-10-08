@@ -7,10 +7,6 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import { zodAiModel } from "../schemas";
 
-/**
- * Models from `vitnode.api.config.ts`, read only - their capabilities and
- * price live in the config. Provider objects and keys never leave the server.
- */
 export const listAiModelsAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },

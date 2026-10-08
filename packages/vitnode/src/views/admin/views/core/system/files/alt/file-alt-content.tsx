@@ -12,7 +12,6 @@ import {
   saveFileAltPolicy,
 } from "./file-alt-query";
 
-/** The dialog's body: one image's ALT text, loaded when the dialog opens. */
 export const FileAltContent = ({
   canEdit,
   fileId,

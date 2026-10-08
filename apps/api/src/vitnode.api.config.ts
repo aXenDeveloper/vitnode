@@ -40,11 +40,7 @@ export const vitNodeApiConfig = buildApiConfig({
         id: "default",
         name: "Claude Sonnet 5",
         model: "anthropic/claude-sonnet-5",
-        // Declared, never guessed: image ALT text runs only on models that
-        // say they accept images.
         capabilities: ["text", "image-input", "structured-output", "streaming"],
-        // USD per 1M tokens, as decimal strings. Example values - copy yours
-        // from the provider's price list. Without a price, costs are unknown.
         pricing: {
           rates: {
             inputPerMillion: "3",

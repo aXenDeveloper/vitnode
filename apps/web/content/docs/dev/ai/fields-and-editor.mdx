@@ -21,7 +21,7 @@ excerpt: field.textarea({
 }),
 ```
 
-No route, no button and no form code to write - Core provides all of it.
+You write no route, no button and no form code. Core provides all of it.
 
 ## Add AI to a field in your plugin
 
@@ -33,7 +33,7 @@ The `@vitnode/example` plugin suggests an article teaser from its title and prod
 
 ### Define the action
 
-The action's input is **one string per source field, plus `locale`** - the language being edited. Match `inputSchema` to that shape.
+The action's input is **one string per source field, plus `locale`** for the language being edited. Match `inputSchema` to that shape.
 
 ```ts title="plugins/example/src/api/ai/actions.ts"
 import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
@@ -83,7 +83,7 @@ export const articleExcerptAiAction = defineAiAction({
 })
 ```
 
-The real file turns the locale code into a language name with `Intl.DisplayNames` - models write better for "Polish" than for "pl".
+The real file turns the locale code into a language name with `Intl.DisplayNames`, because models write better for "Polish" than for "pl".
 
 </Step>
 
@@ -127,7 +127,7 @@ excerpt: field.textarea({
 
 ### Give editors access
 
-The editor's role needs the action's permission and an AI points allowance - see [Access & limits](/docs/dev/ai/admin#access--limits). With `defaultGranted: true` the permission is on until a role says otherwise, but the default monthly points are `0`, so non-root editors still need an allowance.
+The editor's role needs the action's permission and an AI points allowance. See [AI access](/docs/dev/ai/admin#ai-access). With `defaultGranted: true` the permission is on until a role says otherwise, but the default monthly points are `0`, so non-root editors still need an allowance.
 
 </Step>
 
@@ -156,7 +156,7 @@ The editor's role needs the action's permission and an AI points allowance - see
   }}
 />
 
-`ai` is plain JSON on the field definition - it reaches the browser too. Nothing AI-specific is stored with the content.
+`ai` is plain JSON on the field definition, so it reaches the browser too. Nothing AI-specific is stored with the content.
 
 ### Mistakes fail early
 
@@ -171,14 +171,14 @@ The **AI** button appears only when the server says this admin may start the act
 
 1. **Generate** sends the source fields in the language being edited. It is disabled with _"Fill in title first"_ while a source field is empty.
 2. The suggestion appears in a review panel: **Discard**, **Try again** or **Use suggestion**.
-3. **Use suggestion** puts the text into the field - only the edited language changes. Saving still goes through the normal form, validation and revisions.
+3. **Use suggestion** puts the text into the field. Only the edited language changes. Saving still goes through the normal form, validation and revisions.
 
 The panel warns before stale text replaces anything:
 
-- **The sources changed** since the suggestion was made - _"The text it was written from changed since. Try again for an up-to-date suggestion."_
-- **The editor typed into the field** after asking - the accept button becomes **Replace my newer text**.
+- **The sources changed** since the suggestion was made: _"The text it was written from changed since. Try again for an up-to-date suggestion."_
+- **The editor typed into the field** after asking: the accept button becomes **Replace my newer text**.
 
-Accepting or discarding is recorded on the run for statistics only. It never changes what was charged. Errors are shown per [error code](/docs/dev/ai/actions#error-codes) - _"The AI provider failed. Nothing was charged to you."_, _"You reached today's limit for this AI feature."_ and so on.
+Accepting or discarding is recorded on the run for statistics only. It never changes what was charged. Each [error code](/docs/dev/ai/actions#error-codes) has its own message, such as _"The AI provider failed. Nothing was charged to you."_ or _"You reached today's limit for this AI feature."_
 
 ## Run actions from your own UI
 
@@ -193,7 +193,7 @@ The field button uses generic routes that run **any** registered user action. Yo
 | `GET /ai/available`                        | Site member | Action keys this member may start.          |
 | `POST /ai/runs/{id}/feedback`              | Site member | Record `{ accepted }`.                      |
 
-The body is `{ action, input, idempotencyKey?, resource?, sourceFingerprint? }`. It never carries a model, a price or an actor - the server decides those. There is no extra staff permission on these routes on purpose: the action's AI permission and its `authorize()` decide.
+The body is `{ action, input, idempotencyKey?, resource?, sourceFingerprint? }`. It never carries a model, a price or an actor. The server decides those. There is no extra staff permission on these routes on purpose: the action's AI permission and its `authorize()` decide.
 
 The browser helpers wrap them. The blog's pre-publication review is a complete example:
 
@@ -217,7 +217,7 @@ try {
 }
 ```
 
-`requestAiAssist()` calls `POST /admin/ai/assist` with a fresh idempotency key and throws an `AiRequestError` on failure. The available-actions list only decides which buttons to show - every run is authorized again on the server.
+`requestAiAssist()` calls `POST /admin/ai/assist` with a fresh idempotency key and throws an `AiRequestError` on failure. The available-actions list only decides which buttons to show. The server authorizes every run again.
 
 ## Quick Ask in the rich text editor
 
@@ -226,7 +226,7 @@ Quick Ask is the **Quick Ask (AI)** button in the Tiptap rich text editor toolba
 | Operation        | Action key                               | Does                                                       |
 | :--------------- | :--------------------------------------- | :--------------------------------------------------------- |
 | Shorten          | `@vitnode/core:editor.selection.rewrite` | Tighter text, same meaning.                                |
-| Correct writing  | `@vitnode/core:editor.selection.rewrite` | Spelling, grammar, punctuation - nothing else.             |
+| Correct writing  | `@vitnode/core:editor.selection.rewrite` | Spelling, grammar and punctuation only.                    |
 | Simplify         | `@vitnode/core:editor.selection.rewrite` | Simpler words, shorter sentences.                          |
 | Change the tone  | `@vitnode/core:editor.selection.rewrite` | Friendly, formal, confident or neutral.                    |
 | Continue writing | `@vitnode/core:editor.quick-ask`         | One or two paragraphs from where the text ends.            |
@@ -235,17 +235,18 @@ Quick Ask is the **Quick Ask (AI)** button in the Tiptap rich text editor toolba
 <Callout type="warn" title="Off until an admin grants it">
   Both actions share the permission `@vitnode/core:editor.assist` with
   `defaultGranted: false`. Nobody but root sees Quick Ask until an admin allows
-  it for a role in **AI → Access & limits** - and gives that role points.
+  it for a role in **Artificial Intelligence (AI) → Access & limits** and gives
+  that role points.
 </Callout>
 
 How it behaves:
 
-- **Bounded context.** It sends the selection (up to 8,000 characters) and up to 1,500 characters before and after it - never the whole document.
+- **Bounded context.** It sends the selection (up to 8,000 characters) and up to 1,500 characters before and after it. It never sends the whole document.
 - **Streamed and previewed.** The answer streams into a preview. **Stop** cancels it; a canceled run charges the member no points.
-- **Cost shown first.** With a selection, the panel shows _"One request costs at most N AI points - usually much less."_ - the reservation bound, not a price.
+- **Cost shown first.** With a selection, the panel shows the reservation bound, not a price: _"One request costs at most N AI points - usually much less."_
 - **Plain text only.** The answer becomes paragraphs and hard breaks. It is never parsed as HTML, so it cannot inject markup, links or scripts.
 - **Stale selection.** If the selected text changed while the answer was written, **Replace selection** is disabled; **Insert below** still works.
-- **One-step undo.** Applying is one editor transaction. The toast's **Undo** - or Ctrl+Z - restores the text exactly.
+- **One-step undo.** Applying is one editor transaction. The toast's **Undo** or Ctrl+Z restores the text exactly.
 - **Nothing is saved** until the form is saved.
 - **Content language.** It writes in the language of the field being edited (the multi-language tab), not the interface language.
 - **Streaming models only.** Streamed runs use only models that declare the `streaming` capability; without one, Quick Ask fails with `AI_MODEL_INCOMPATIBLE`.
@@ -271,7 +272,7 @@ The stream routes accept the same body as `/ai/run` and answer `application/x-nd
 
 A failure after the stream started arrives as `{"e":{"code":"AI_TIMEOUT","message":"…"}}`. Limits and budgets are checked before the first byte, so refusals are ordinary JSON error responses. Only `text` actions stream.
 
-`/estimate` answers `{ maxPoints, maxUsd }` - the most the run could cost, or `null` when no pricing bounds it.
+`/estimate` answers `{ maxPoints, maxUsd }`: the most the run could cost, or `null` when no pricing bounds it.
 
 Use the browser helpers from `@vitnode/core/lib/ai/stream-client` in your own editor tools:
 
@@ -291,7 +292,7 @@ const summary = await streamAiAction({
 })
 ```
 
-`estimateAiAction({ action, input, scope })` resolves to the maximum points as a string, or `null`. The editor-side helpers - `takeQuickAskSnapshot()`, `isQuickAskStale()` and `applyQuickAskResult()` - live in `@vitnode/core/components/tiptap/quick-ask/quick-ask-editor`.
+`estimateAiAction({ action, input, scope })` resolves to the maximum points as a string, or `null`. The editor-side helpers `takeQuickAskSnapshot()`, `isQuickAskStale()` and `applyQuickAskResult()` live in `@vitnode/core/components/tiptap/quick-ask/quick-ask-editor`.
 
 ## Rich-text translation keeps its structure
 
@@ -315,14 +316,14 @@ parseText: (text, input) => {
 
 ## Translation freshness
 
-VitNode records **what each translated field was translated from** - a fingerprint of the source text - in `core_ai_translation_sources`. Comparing it with today's source tells exactly which fields are outdated. Timestamps are never used.
+For each translated field, VitNode stores a fingerprint of **the source text it was translated from** in `core_ai_translation_sources`. Comparing that fingerprint with the current source shows exactly which fields are outdated. VitNode never uses timestamps for this.
 
 | Status      | Meaning                                                                   |
 | :---------- | :------------------------------------------------------------------------ |
 | `fresh`     | Translated from the source as it is now.                                  |
 | `edited`    | As above, and a person changed the translation since. Their changes stay. |
 | `outdated`  | The source changed after the translation was made.                        |
-| `untracked` | No record of what it was translated from - no claim either way.           |
+| `untracked` | No record of what it was translated from, so no claim either way.         |
 | `missing`   | Nothing translated yet.                                                   |
 
 Use `useTranslationFreshness()` inside a Content Engine form:
@@ -363,7 +364,7 @@ The records are read and written with `GET` and `PUT /admin/ai/translation-sourc
 
 ## Pre-publication review
 
-The blog's `@vitnode/blog:article.review` action is an optional read-through in the article editor's side panel. It is an `output: "object"` action - it needs a `structured-output` model - and returns:
+The blog's `@vitnode/blog:article.review` action is an optional read-through in the article editor's side panel. It is an `output: "object"` action, so it needs a `structured-output` model. It returns:
 
 ```ts
 {
@@ -376,7 +377,7 @@ The blog's `@vitnode/blog:article.review` action is an optional read-through in 
 }
 ```
 
-- It **never verifies facts**. The prompt forbids judging whether facts are true - it has nothing to check them against.
+- It **never verifies facts**. The prompt forbids judging whether facts are true, because the model has nothing to check them against.
 - It **never gates publishing**. The deterministic readiness checks decide; publishing works the same with or without a review.
 
 It is a good template for structured, advisory AI in your own plugin.

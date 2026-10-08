@@ -67,7 +67,7 @@ export const formattedPlaces = (
 
   return {
     fractionDigits: fraction.length,
-    scaled: Number(integer + fraction) || 0,
+    scaled: Number(integer + fraction),
     segments: parts.flatMap((part): NumberSegment[] =>
       part.type === "integer" || part.type === "fraction"
         ? [...part.value].map(() => ({ exponent: exponent--, kind: "digit" }))

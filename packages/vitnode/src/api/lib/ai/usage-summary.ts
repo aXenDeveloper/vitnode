@@ -1,39 +1,42 @@
 import type { Context } from "hono";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 
-import type { AiLedger } from "./ledger";
+import type { AiLedger, AiUserPolicy } from "./ledger";
 
-import { core_ai_budget_periods } from "../../../database/ai";
+import { core_ai_budget_periods, core_ai_runs } from "../../../database/ai";
+import { AI_USAGE_WARNING_SHARE } from "../../../lib/ai/usage-tone";
 import { GLOBAL_SCOPE, userDailyScope, userScope } from "./budget";
-import { formatDecimal, formatDecimalOrNull, parseDecimal } from "./decimal";
+import {
+  formatDecimal,
+  formatDecimalOrNull,
+  maxDecimal,
+  parseDecimal,
+} from "./decimal";
 import { periodContaining } from "./periods";
-
-/** Notice thresholds shown to users. */
-export const AI_USAGE_WARNING_RATIO = 0.8;
 
 export interface AiUserActionUsage {
   dailyLimit: null | number;
   description: null | string;
+  icon: null | string;
   key: string;
+  monthPoints: string;
   permissionKey: string;
+  title: string;
   usedToday: number;
 }
 
 export interface AiUserUsage {
   actions: AiUserActionUsage[];
-  /** `false` when an admin switched AI off for everyone. */
   enabled: boolean;
   notice: "exhausted" | "near_limit" | "no_allowance" | "none" | "site_paused";
   points: {
     available: null | string;
     reserved: string;
-    /** `null` is unlimited. */
     total: null | string;
     used: string;
   };
   resetsAt: string;
-  /** The site budget, not the user's own limit, is what stops them. */
   sitePaused: boolean;
 }
 
@@ -56,10 +59,6 @@ const readRow = async (
   return row;
 };
 
-/**
- * One user's own AI allowance. Always scoped by the session's user id - no
- * parameter can point it at somebody else.
- */
 export const loadUserAiUsage = async (
   c: Context,
   ledger: AiLedger,
@@ -77,21 +76,30 @@ export const loadUserAiUsage = async (
     .all()
     .filter(action => action.definition.actors.includes("user"));
 
-  const policies = new Map<
-    string,
-    Awaited<ReturnType<AiLedger["resolveUserPolicy"]>>
-  >();
+  const permissionDefaults = new Map<string, boolean>();
   for (const action of userActions) {
-    if (policies.has(action.permissionKey)) continue;
-    policies.set(
-      action.permissionKey,
-      await ledger.resolveUserPolicy({
-        defaultGranted: action.definition.permission.defaultGranted,
-        permissionKey: action.permissionKey,
-        userId,
-      }),
-    );
+    if (!permissionDefaults.has(action.permissionKey)) {
+      permissionDefaults.set(
+        action.permissionKey,
+        action.definition.permission.defaultGranted,
+      );
+    }
   }
+  const policies = new Map<string, AiUserPolicy>(
+    await Promise.all(
+      [...permissionDefaults].map(
+        async ([permissionKey, defaultGranted]) =>
+          [
+            permissionKey,
+            await ledger.resolveUserPolicy({
+              defaultGranted,
+              permissionKey,
+              userId,
+            }),
+          ] as const,
+      ),
+    ),
+  );
   const allowance =
     [...policies.values()][0] ??
     (await ledger.resolveUserPolicy({
@@ -108,11 +116,7 @@ export const loadUserAiUsage = async (
   const reserved = parseDecimal(own?.reservedAmount ?? "0");
   const total = allowance.monthlyPoints;
   const available =
-    total === null
-      ? null
-      : total - used - reserved > 0n
-        ? total - used - reserved
-        : 0n;
+    total === null ? null : maxDecimal(total - used - reserved, 0n);
 
   const globalLimit = settings.monthlyBudgetUsd;
   const sitePaused =
@@ -122,39 +126,66 @@ export const loadUserAiUsage = async (
         parseDecimal(global?.reservedAmount ?? "0") >=
         globalLimit);
 
-  const actions: AiUserActionUsage[] = [];
-  for (const action of userActions) {
+  const monthPointsByAction = new Map(
+    (
+      await db
+        .select({
+          actionKey: core_ai_runs.actionKey,
+          points: sql<string>`coalesce(sum(${core_ai_runs.chargedPoints}), 0)`,
+        })
+        .from(core_ai_runs)
+        .where(
+          and(
+            eq(core_ai_runs.actorType, "user"),
+            eq(core_ai_runs.userId, userId),
+            gte(core_ai_runs.createdAt, month.start),
+          ),
+        )
+        .groupBy(core_ai_runs.actionKey)
+    ).map(row => [row.actionKey, formatDecimal(parseDecimal(row.points))]),
+  );
+
+  const grantedActions = userActions.flatMap(action => {
     const policy = policies.get(action.permissionKey);
-    if (!policy?.granted) continue;
-    const daily = await readRow(
-      db,
-      userDailyScope(userId, action.permissionKey),
-      day.start,
-    );
-    const actionSettings = await ledger.loadActionSettings(action.key);
+
+    return policy?.granted ? [{ action, policy }] : [];
+  });
+  const actionUsages = await Promise.all(
+    grantedActions.map(async ({ action, policy }) => {
+      const [daily, actionSettings] = await Promise.all([
+        readRow(db, userDailyScope(userId, action.permissionKey), day.start),
+        ledger.loadActionSettings(action.key),
+      ]);
+
+      return { action, actionSettings, daily, policy };
+    }),
+  );
+  const actions: AiUserActionUsage[] = [];
+  for (const { action, actionSettings, daily, policy } of actionUsages) {
     if (actionSettings?.enabled === false) continue;
     actions.push({
-      // The same order the runner enforces: role grant, admin setting, default.
       dailyLimit:
         policy.dailyLimit ??
         actionSettings?.dailyLimit ??
         action.definition.defaults.dailyLimit,
-      description: action.definition.description ?? null,
+      description: action.definition.description,
+      icon: action.definition.icon ?? null,
       key: action.key,
+      monthPoints: monthPointsByAction.get(action.key) ?? "0",
       permissionKey: action.permissionKey,
+      title: action.definition.title,
       usedToday: Number(parseDecimal(daily?.spentAmount ?? "0") / 10n ** 12n),
     });
   }
 
   let notice: AiUserUsage["notice"] = "none";
   if (sitePaused) notice = "site_paused";
-  // Never had points this period: not "used up" - there was nothing to use.
   else if (total === 0n) notice = "no_allowance";
   else if (total !== null && available === 0n) notice = "exhausted";
   else if (
     total !== null &&
     total > 0n &&
-    Number(used + reserved) >= Number(total) * AI_USAGE_WARNING_RATIO
+    Number(used + reserved) >= Number(total) * AI_USAGE_WARNING_SHARE
   ) {
     notice = "near_limit";
   }

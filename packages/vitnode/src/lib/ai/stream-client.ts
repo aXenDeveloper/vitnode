@@ -2,27 +2,18 @@ import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
 import {
-  AI_CLIENT_ERROR_CODES,
-  type AiClientErrorCode,
   AiRequestError,
   readAiErrorCode,
+  toAiClientErrorCode,
 } from "./assist-client";
 
-/** Which session an AI request runs under: the AdminCP's, or the member's. */
 export type AiAssistScope = "admin" | "user";
 
-/** AdminCP pages live under `/admin`; everything else is the public site. */
 export const aiAssistScope = (): AiAssistScope =>
   typeof window !== "undefined" &&
   /^\/admin(\/|$)/.test(window.location.pathname)
     ? "admin"
     : "user";
-
-const codeOf = (value: unknown): AiClientErrorCode =>
-  typeof value === "string" &&
-  (AI_CLIENT_ERROR_CODES as readonly string[]).includes(value)
-    ? (value as AiClientErrorCode)
-    : "unknown";
 
 export interface AiStreamSummary {
   chargedPoints: string;
@@ -30,11 +21,6 @@ export interface AiStreamSummary {
   runId: number;
 }
 
-/**
- * Streams a text action. `onDelta` receives each piece as it arrives; the
- * promise resolves with the run summary or rejects with an `AiRequestError`.
- * Aborting `signal` cancels the provider call - the user is not charged.
- */
 export const streamAiAction = async ({
   action,
   input,
@@ -56,7 +42,7 @@ export const streamAiAction = async ({
           args: { body },
           method: "post",
           module: "admin/ai",
-          options: { credentials: "include", signal },
+          options: { signal },
           path: "/assist/stream",
         })
       : await fetcherClient({
@@ -64,7 +50,7 @@ export const streamAiAction = async ({
           args: { body },
           method: "post",
           module: "ai",
-          options: { credentials: "include", signal },
+          options: { signal },
           path: "/stream",
         });
   if (!response.ok || !response.body) {
@@ -88,7 +74,8 @@ export const streamAiAction = async ({
         t?: string;
       };
       if (typeof event.t === "string") onDelta(event.t);
-      if (event.e) throw new AiRequestError(codeOf(event.e.code), 200);
+      if (event.e)
+        throw new AiRequestError(toAiClientErrorCode(event.e.code), 200);
       if (event.done) return event.done;
     }
   }
@@ -96,7 +83,6 @@ export const streamAiAction = async ({
   throw new AiRequestError("AI_PROVIDER_FAILED", 200);
 };
 
-/** The most one request could cost, in points - a bound, never a price. */
 export const estimateAiAction = async ({
   action,
   input,
@@ -114,7 +100,6 @@ export const estimateAiAction = async ({
           args: { body },
           method: "post",
           module: "admin/ai",
-          options: { credentials: "include" },
           path: "/assist/estimate",
         })
       : await fetcherClient({
@@ -122,7 +107,6 @@ export const estimateAiAction = async ({
           args: { body },
           method: "post",
           module: "ai",
-          options: { credentials: "include" },
           path: "/estimate",
         });
   if (!response.ok) return null;

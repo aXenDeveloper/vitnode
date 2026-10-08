@@ -240,7 +240,6 @@ describePostgres("AI routes (real PostgreSQL)", () => {
       aliceRunIds.sort((a, b) => a - b),
     );
     expect(bob.items).toHaveLength(2);
-    // A cursor from someone else's history widens nothing.
     const sneaky = (await (
       await request(`/ai/history?before=2147483647`, {
         user: ALICE,
@@ -256,6 +255,42 @@ describePostgres("AI routes (real PostgreSQL)", () => {
       points: { total: string; used: string };
     };
     expect(usage.points).toMatchObject({ total: "1000", used: "40" });
+  });
+
+  it("narrows a user's history to one feature and totals its month", async () => {
+    const page = (await (
+      await request(
+        "/ai/history?action=%40acme%2Fnotes%3Asummary.generate&limit=1",
+        { user: BOB },
+      )
+    ).json()) as {
+      items: { actionKey: string }[];
+      nextBefore: null | number;
+    };
+    const other = (await (
+      await request("/ai/history?action=%40acme%2Fnotes%3Aother", {
+        user: BOB,
+      })
+    ).json()) as { items: unknown[] };
+    const usage = (await (
+      await request("/ai/usage", { user: BOB })
+    ).json()) as {
+      actions: { key: string; monthPoints: string; title: string }[];
+      points: { used: string };
+    };
+
+    expect(page.items).toEqual([
+      expect.objectContaining({ actionKey: "@acme/notes:summary.generate" }),
+    ]);
+    expect(page.nextBefore).not.toBeNull();
+    expect(other.items).toEqual([]);
+    expect(usage.actions).toEqual([
+      expect.objectContaining({
+        key: "@acme/notes:summary.generate",
+        monthPoints: usage.points.used,
+      }),
+    ]);
+    expect(usage.actions[0]?.title).toBeTruthy();
   });
 
   it("only lets a user give feedback on their own run", async () => {
@@ -302,7 +337,6 @@ describePostgres("AI routes (real PostgreSQL)", () => {
 
     expect(withView.status).toBe(200);
     expect(without.status).toBe(403);
-    // can_view does not include can_manage.
     expect(manage.status).toBe(403);
   });
 
@@ -348,8 +382,6 @@ describePostgres("AI routes (real PostgreSQL)", () => {
   });
 
   it("reports known cost, coverage and averages without counting unknown as zero", async () => {
-    // One more run, on a model with no pricing: its cost is unknown. That is
-    // only allowed with no cap in the way, so the site budget goes too.
     models = [{ ...models[0], pricing: undefined }];
     await database.db
       .update(aiTables.core_ai_settings)
@@ -393,7 +425,6 @@ describePostgres("AI routes (real PostgreSQL)", () => {
     expect(overview.range.start).toBe(`${overview.today.slice(0, 7)}-01`);
     expect(overview.compare.kind).toBe("month-to-date");
     expect(overview.range.totals.operations).toBe(4);
-    // 3 known runs at $0.02 each: the unknown one adds no cost, never $0 of it.
     expect(overview.range.totals.knownOperations).toBe(3);
     expect(overview.range.totals.knownCostUsd).toBe("0.06");
     expect(
@@ -462,6 +493,7 @@ describePostgres("AI routes (real PostgreSQL)", () => {
           actions: [
             {
               icon: null,
+              description: "Test action.",
               key: "@acme/notes:summary.generate",
               title: "Test action",
             },
@@ -598,7 +630,6 @@ describePostgres("AI maintenance (real PostgreSQL)", () => {
   it("settles a run whose process died as uncertain, charging the site but not the user", async () => {
     const runId = await reserve(1, new Date(Date.now() - 10_000));
     await ledger.markRunning(runId, new Date(Date.now() - 5_000));
-    // The provider call started and never reported back.
     await ledger.beginCall({
       attempt: 1,
       modelId: "default",

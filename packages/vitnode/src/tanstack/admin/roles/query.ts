@@ -98,7 +98,6 @@ export const useAdminRoleMutations = (): {
         if (isAdminMutationError(result)) return result;
         await invalidateAfterAdminRoleChange(queryClient, adminUserId);
 
-        // AI access lives in its own tables, saved once the role exists.
         if (values.ai) {
           const aiResult = await updateAdminAiRoleAccess({
             ...values.ai,

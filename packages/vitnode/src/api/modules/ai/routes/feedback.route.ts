@@ -6,10 +6,6 @@ import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_ai_runs } from "@/database/ai";
 
-/**
- * Records whether a suggestion was accepted. Tracking only - billing already
- * happened when the suggestion was delivered.
- */
 export const aiFeedbackRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {

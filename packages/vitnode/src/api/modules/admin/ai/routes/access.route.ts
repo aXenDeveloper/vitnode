@@ -11,15 +11,13 @@ import {
 } from "@/database/ai";
 import { core_roles } from "@/database/roles";
 
+import { zodDecimalString } from "../schemas";
+
 const decimalOrNull = (value: null | string | undefined) =>
   value === null || value === undefined
     ? null
     : formatDecimal(parseDecimal(value));
 
-/**
- * The AI permissions users can be granted, and what one role grants. The
- * role form's AI tab reads it; `roleId` is absent when creating a role.
- */
 export const getAiRoleAccessAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
@@ -154,7 +152,6 @@ export const getAiRoleAccessAdminRoute = buildRoute({
   },
 });
 
-/** One user's AI exception, shown on the user's AdminCP page. */
 export const getAiUserOverrideAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
@@ -205,8 +202,6 @@ export const getAiUserOverrideAdminRoute = buildRoute({
   },
 });
 
-const zodDecimal = z.string().regex(/^\d+(\.\d{1,12})?$/);
-
 export const updateAiRoleAccessAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_manage" },
@@ -228,7 +223,7 @@ export const updateAiRoleAccessAdminRoute = buildRoute({
                   permission: z.string().min(3).max(255),
                 }),
               ),
-              monthlyPoints: zodDecimal.nullable(),
+              monthlyPoints: zodDecimalString.nullable(),
               roleId: z.number().int(),
               unlimited: z.boolean(),
             }),
@@ -308,7 +303,7 @@ export const updateAiUserOverrideAdminRoute = buildRoute({
           "application/json": {
             schema: z.object({
               blocked: z.boolean(),
-              monthlyPoints: zodDecimal.nullable(),
+              monthlyPoints: zodDecimalString.nullable(),
               unlimited: z.boolean(),
               userId: z.number().int(),
             }),

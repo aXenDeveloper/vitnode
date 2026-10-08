@@ -113,12 +113,10 @@ export const ChartTooltipCard = ({
 
 export const AiDelta = ({
   current,
-  label,
   previous,
   tone,
 }: {
   current: number;
-  label?: string;
   previous: number;
   tone: AiDeltaTone;
 }) => {
@@ -160,9 +158,6 @@ export const AiDelta = ({
       <Icon aria-hidden className="size-3.5" />
       <span className="sr-only">{up ? t("up") : t("down")}</span>
       {formatter.percent(Math.abs(change))}
-      {label ? (
-        <span className="text-muted-foreground font-normal">{label}</span>
-      ) : null}
     </span>
   );
 };

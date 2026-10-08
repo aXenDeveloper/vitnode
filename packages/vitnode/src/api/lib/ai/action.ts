@@ -7,7 +7,6 @@ import type { AiModelCapability } from "./capabilities";
 
 import { isAiModelCapability } from "./capabilities";
 
-/** Who an AI run is for. Decided by the server, never by the request. */
 export type AiActorType = "system" | "user";
 
 export interface AiResourceRef {
@@ -15,13 +14,11 @@ export interface AiResourceRef {
   type: string;
 }
 
-/** What a prompt builder hands to the Vercel AI SDK. */
 export type AiPrompt =
   | { messages: ModelMessage[]; system?: string }
   | { prompt: string; system?: string };
 
 export interface AiPromptContext {
-  /** Extra editorial instructions an admin set for this action, if any. */
   instructions: null | string;
 }
 
@@ -32,26 +29,17 @@ export interface AiAuthorizeContext<Input> {
   userId: number;
 }
 
-/**
- * The permission a role needs to use the action. Several actions can share
- * one key - every Quick Ask variant needs `editor.assist`, for example.
- * `defaultGranted` is what applies while no role has a row for the key.
- */
 export interface AiPermissionDescriptor {
   defaultGranted: boolean;
   key: string;
 }
 
 export interface AiActionDefaults {
-  /** Optional per-user daily invocation limit; `null` for none. */
   dailyLimit: null | number;
-  /** Images sent in one call - bounds the reservation of a vision action. */
   maxImages: number;
   maxInputCharacters: number;
   maxOutputTokens: number;
-  /** Extra attempts after a failed provider call. */
   maxRetries: number;
-  /** Model round trips per attempt (tool loops). */
   maxSteps: number;
   timeoutMs: number;
 }
@@ -66,12 +54,7 @@ interface AiActionDefinitionBase<
   InputSchema extends z.ZodType,
   OutputSchema extends z.ZodType,
 > {
-  /** `system` actions run only from trusted server code (cron, queue). */
   actors?: readonly AiActorType[];
-  /**
-   * Checks the actor may touch the resource the input came from. Required for
-   * user actions: an AI permission never replaces access to the content.
-   */
   authorize?(
     context: AiAuthorizeContext<z.output<InputSchema>>,
   ): boolean | Promise<boolean>;
@@ -81,21 +64,15 @@ interface AiActionDefinitionBase<
       AiActionDefaults,
       "maxInputCharacters" | "maxOutputTokens" | "timeoutMs"
     >;
-  /** One sentence on what the action does, shown in the AdminCP. */
   description: string;
-  /** A Lucide icon name in kebab case, e.g. `languages`. */
   icon?: string;
-  /** Local id, unique within the plugin: `excerpt.generate`. */
   id: Id;
   inputSchema: InputSchema;
-  /** Characters counted against `maxInputCharacters`. Defaults to every string in the input. */
   measureInput?(input: z.output<InputSchema>): number;
   outputSchema: OutputSchema;
   permission: AiPermissionDescriptor | string;
-  /** Bump whenever the prompt changes meaningfully; it is stored with every run. */
   promptVersion: number;
   requiredCapabilities: readonly AiModelCapability[];
-  /** Short name shown in the AdminCP: `Generate excerpt`. */
   title: string;
 }
 
@@ -105,7 +82,6 @@ export interface AiTextActionDefinition<
   OutputSchema extends z.ZodType,
 > extends AiActionDefinitionBase<Id, InputSchema, OutputSchema> {
   output: "text";
-  /** Turns the model's text into the output, before the output schema checks it. */
   parseText(text: string, input: z.output<InputSchema>): z.input<OutputSchema>;
 }
 
@@ -127,7 +103,6 @@ export type AiActionDefinition<
   | AiObjectActionDefinition<Id, InputSchema, OutputSchema>
   | AiTextActionDefinition<Id, InputSchema, OutputSchema>;
 
-/** A definition after `defineAiAction` filled in its defaults. */
 export type ResolvedAiActionDefinition<
   Id extends string = string,
   InputSchema extends z.ZodType = z.ZodType,
@@ -187,21 +162,6 @@ const assertInRange = (
   }
 };
 
-/** Checks a limit an admin or a definition chose. Exported for the settings routes. */
-export const isValidAiLimit = (
-  field: keyof AiActionDefaults,
-  value: number,
-): boolean => {
-  const { max, min } = AI_ACTION_LIMITS[field];
-
-  return Number.isInteger(value) && value >= min && value <= max;
-};
-
-/**
- * Declares one AI action a plugin offers. The plugin hands the result to
- * `buildApiPlugin({ aiActions })`; Core owns the model, the limits and the
- * accounting of every run.
- */
 export function defineAiAction<
   const Id extends string,
   InputSchema extends z.ZodType,
@@ -314,7 +274,6 @@ export function defineAiAction<
   };
 }
 
-/** Characters in every string of a value - the default input measure. */
 export const countInputCharacters = (value: unknown): number => {
   if (typeof value === "string") return value.length;
   if (Array.isArray(value)) {

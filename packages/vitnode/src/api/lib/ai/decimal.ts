@@ -1,12 +1,3 @@
-/**
- * Fixed-point decimal money. Every amount is a `bigint` of 10^-12 units, so a
- * price of $0.075 per million tokens (7.5e-8 per token) is exact, and summing
- * a thousand calls never drifts the way JavaScript floats do.
- *
- * Amounts cross the API and the database as decimal strings. PostgreSQL stores
- * them as `numeric(24, 12)`, the same scale, so a round trip is lossless.
- */
-
 export const DECIMAL_SCALE = 12;
 const SCALE_FACTOR = 10n ** BigInt(DECIMAL_SCALE);
 
@@ -21,7 +12,6 @@ export class DecimalParseError extends Error {
   }
 }
 
-/** Parses `"0.0003"`, `"12"` or `"-1.5"`. Digits beyond the scale are rounded half up. */
 export const parseDecimal = (value: string): Decimal => {
   const match = DECIMAL_PATTERN.exec(value.trim());
   if (!match) throw new DecimalParseError(value);
@@ -35,16 +25,11 @@ export const parseDecimal = (value: string): Decimal => {
   return sign ? -units : units;
 };
 
-/** `null` in, `null` out - unknown stays unknown. */
 export const parseDecimalOrNull = (
   value: null | string | undefined,
 ): Decimal | null =>
   value === null || value === undefined ? null : parseDecimal(value);
 
-/**
- * From a provider-reported JavaScript number. Goes through the shortest string
- * that round-trips the float, not through float arithmetic.
- */
 export const decimalFromNumber = (value: number): Decimal => {
   if (!Number.isFinite(value)) {
     throw new DecimalParseError(String(value));
@@ -57,7 +42,6 @@ export const decimalFromNumber = (value: number): Decimal => {
 export const decimalFromInteger = (value: bigint | number): Decimal =>
   BigInt(value) * SCALE_FACTOR;
 
-/** Canonical string, trailing zeros trimmed: `"0.0003"`, `"12"`. */
 export const formatDecimal = (value: Decimal): string => {
   const negative = value < 0n;
   const absolute = negative ? -value : value;
@@ -73,17 +57,14 @@ export const formatDecimal = (value: Decimal): string => {
 export const formatDecimalOrNull = (value: Decimal | null): null | string =>
   value === null ? null : formatDecimal(value);
 
-/** `a * b` for two decimals, rounded half up at the scale. */
 export const multiplyDecimal = (a: Decimal, b: Decimal): Decimal =>
   divideRound(a * b, SCALE_FACTOR);
 
-/** `amount * count`, where `count` is a whole number such as tokens. */
 export const multiplyByInteger = (
   amount: Decimal,
   count: bigint | number,
 ): Decimal => amount * BigInt(count);
 
-/** `a / b`, rounded half up at the scale. */
 export const divideDecimal = (a: Decimal, b: Decimal): Decimal => {
   if (b === 0n) throw new RangeError("Division by zero.");
 
@@ -103,7 +84,6 @@ export const sumDecimals = (values: Decimal[]): Decimal =>
   values.reduce((total, value) => total + value, 0n);
 
 export const maxDecimal = (a: Decimal, b: Decimal): Decimal => (a > b ? a : b);
-export const minDecimal = (a: Decimal, b: Decimal): Decimal => (a < b ? a : b);
 
 const divideRound = (numerator: bigint, denominator: bigint): bigint => {
   const negative = numerator < 0n !== denominator < 0n;
@@ -112,12 +92,4 @@ const divideRound = (numerator: bigint, denominator: bigint): bigint => {
   const quotient = (n * 2n + d) / (d * 2n);
 
   return negative ? -quotient : quotient;
-};
-
-/** Rounds up to the scale's last digit - for reservations, never down. */
-export const ceilDivideDecimal = (a: Decimal, b: Decimal): Decimal => {
-  if (b <= 0n) throw new RangeError("Division by a non-positive number.");
-  const numerator = a * SCALE_FACTOR;
-
-  return numerator >= 0n ? (numerator + b - 1n) / b : -(-numerator / b);
 };

@@ -2,10 +2,6 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 import { HTTPException } from "hono/http-exception";
 
-/**
- * Stable error codes every AI route answers with. The browser keys its
- * messages on `code`, never on the English `message`.
- */
 export const AI_ERROR_STATUS = {
   AI_NOT_CONFIGURED: 400,
   AI_INVALID_INPUT: 400,
@@ -35,9 +31,7 @@ export const AI_ERROR_CODES = Object.keys(AI_ERROR_STATUS) as AiErrorCode[];
 export interface AiErrorBody {
   code: AiErrorCode;
   message: string;
-  /** When a limit resets, for limit and budget errors. */
   resetsAt?: string;
-  /** The run the error belongs to, when one was recorded. */
   runId?: number;
 }
 

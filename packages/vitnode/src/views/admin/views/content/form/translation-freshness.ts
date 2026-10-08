@@ -25,12 +25,6 @@ const recordsKey = (contentTypeId: string, itemId: number) => [
   itemId,
 ];
 
-/**
- * Field-level translation freshness for one article, from what each field
- * was translated from - never from timestamps. A new AI translation (or a
- * "mark as up to date") is remembered and recorded only once the article is
- * saved, so the record always describes text that was actually kept.
- */
 export const useTranslationFreshness = <Field extends string>({
   contentTypeId,
   fields,
@@ -76,31 +70,33 @@ export const useTranslationFreshness = <Field extends string>({
         if (entries.length === 0) return;
         pendingRef.current.clear();
         const byLocale = Map.groupBy(entries, entry => entry.locale);
-        for (const [locale, group] of byLocale) {
-          await fetcher({
-            plugin: "@vitnode/core",
-            method: "put",
-            module: "admin/ai",
-            path: "/translation-sources",
-            args: {
-              body: {
-                contentTypeId,
-                fields: group.map(entry => ({
-                  field: entry.field,
-                  origin: entry.origin,
-                  sourceFingerprint: entry.sourceFingerprint,
-                  targetFingerprint: fieldFingerprint(
-                    valuesRef.current[entry.field],
-                    locale,
-                  ),
-                })),
-                itemId: savedId,
-                locale,
-                sourceLocale: source,
+        await Promise.all(
+          [...byLocale].map(async ([locale, group]) => {
+            await fetcher({
+              plugin: "@vitnode/core",
+              method: "put",
+              module: "admin/ai",
+              path: "/translation-sources",
+              args: {
+                body: {
+                  contentTypeId,
+                  fields: group.map(entry => ({
+                    field: entry.field,
+                    origin: entry.origin,
+                    sourceFingerprint: entry.sourceFingerprint,
+                    targetFingerprint: fieldFingerprint(
+                      valuesRef.current[entry.field],
+                      locale,
+                    ),
+                  })),
+                  itemId: savedId,
+                  locale,
+                  sourceLocale: source,
+                },
               },
-            },
-          });
-        }
+            });
+          }),
+        );
         await queryClient.invalidateQueries({
           queryKey: recordsKey(contentTypeId, savedId),
         });
@@ -114,10 +110,9 @@ export const useTranslationFreshness = <Field extends string>({
       locale,
       records,
       sourceLocale: source,
-      values: values,
+      values,
     });
 
-  /** Outdated fields a person changed since the AI wrote them - never overwritten automatically. */
   const editedByPerson = (locale: string, field: Field) => {
     const record = records.find(
       entry => entry.locale === locale && entry.field === field,
@@ -149,11 +144,9 @@ export const useTranslationFreshness = <Field extends string>({
       Object.entries(freshnessOf(locale))
         .filter(([, status]) => status === "outdated")
         .map(([field]) => field as Field),
-    /** After an AI translation is placed in the form. Recorded on save. */
     rememberAiTranslation: (locale: string, field: Field) => {
       remember(locale, field, "ai");
     },
-    /** A person confirms these translations match today's source. Recorded on save. */
     markReviewed: (locale: string, reviewed: readonly Field[]) => {
       for (const field of reviewed) remember(locale, field, "human");
     },

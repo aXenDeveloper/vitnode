@@ -4,6 +4,7 @@ import React from "react";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { AdminAiRolePermission } from "@/views/admin/views/core/ai/ai-query";
 
+import { AiActionIcon } from "@/components/ai/action-icon";
 import {
   Accordion,
   AccordionContent,
@@ -17,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AiActionIcon } from "@/views/admin/views/core/ai/ai-labels";
 
 const LIMIT_PANEL = "limit";
 

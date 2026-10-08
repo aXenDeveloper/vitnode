@@ -1821,7 +1821,7 @@
         },
         "ai": {
           "title": "Użycie AI",
-          "desc": "Twoje miesięczne punkty AI, dzienne limity funkcji i ostatnie operacje.",
+          "desc": "Ile kosztowała Cię każda funkcja AI w tym miesiącu i ile zostało z dzisiejszego limitu.",
           "notice": {
             "disabled": {
               "title": "Funkcje AI są wyłączone",
@@ -1844,32 +1844,6 @@
               "desc": "Funkcje AI wymagają miesięcznego limitu punktów, a Twój wynosi obecnie zero. Jeśli chcesz je wypróbować, zapytaj administratora."
             }
           },
-          "points": {
-            "title": "Miesięczny limit",
-            "footer": "Punkty są rezerwowane na czas działania funkcji AI, a pobierany jest tylko rzeczywisty koszt. Niewykorzystane punkty nie przechodzą na kolejny miesiąc.",
-            "used": "Wykorzystane punkty",
-            "used_of": "{used} z {total} pkt",
-            "used_unlimited": "{used} pkt (bez limitu)",
-            "available": "Dostępne",
-            "reserved": "Zarezerwowane",
-            "resets": "Odnowienie",
-            "unlimited": "Bez limitu"
-          },
-          "daily": {
-            "title": "Dzienne limity funkcji",
-            "footer": "Niektóre funkcje ograniczają też liczbę użyć dziennie, niezależnie od punktów.",
-            "used_of": "{used} z {limit} dzisiaj",
-            "no_limit": "{used} dzisiaj, bez dziennego limitu",
-            "empty": "Na Twoim koncie nie ma dostępnych funkcji AI."
-          },
-          "history": {
-            "title": "Ostatnie operacje",
-            "footer": "Widać tu tylko Twoje operacje. Polecenia i wygenerowane teksty nigdy nie są zapisywane.",
-            "empty": "Nie korzystano jeszcze z funkcji AI.",
-            "points": "{points} pkt",
-            "no_charge": "Bez opłaty",
-            "load_more": "Wczytaj więcej"
-          },
           "status": {
             "reserved": "W kolejce",
             "running": "W toku",
@@ -1877,6 +1851,38 @@
             "failed": "Błąd",
             "canceled": "Anulowano",
             "uncertain": "Weryfikacja"
+          },
+          "points": {
+            "left": "Pozostało {available} z {total} punktów",
+            "percent_used": "Wykorzystano {percent}",
+            "used_of": "Wykorzystano {used} z {total} punktów",
+            "renews": "Odnowienie {date}",
+            "unlimited": "Nielimitowane punkty",
+            "unlimited_used": "W tym miesiącu wykorzystano {used} punktów",
+            "none": "Brak punktów AI w tym miesiącu"
+          },
+          "features": {
+            "title": "Twoje funkcje AI",
+            "footer": "Widzisz to tylko Ty i administratorzy. Polecenia i odpowiedzi nigdy nie są zapisywane.",
+            "empty_title": "Brak funkcji AI",
+            "empty_desc": "Gdy rola przyzna Ci punkty AI, każda dostępna funkcja pojawi się tutaj razem z jej kosztem.",
+            "today": "Dziś {used} / {limit}",
+            "today_no_limit": "Dziś {used}",
+            "limit_reached": "Limit osiągnięty",
+            "month_points": "{points} pkt w tym miesiącu",
+            "limit_desc": "Możesz jej użyć {limit, plural, one {# raz} few {# razy} many {# razy} other {# razy}} dziennie. Licznik zeruje się o północy.",
+            "no_limit_desc": "Nie ma dziennego limitu - obowiązują tylko Twoje miesięczne punkty.",
+            "runs_empty": "Ta funkcja nie była jeszcze używana w tym miesiącu.",
+            "show_more": "Pokaż więcej",
+            "charge": "{points} pkt",
+            "no_charge": "Bez opłaty",
+            "charging": "Naliczanie…",
+            "runs_error": "Nie udało się wczytać użyć tej funkcji.",
+            "retry": "Spróbuj ponownie"
+          },
+          "overview": {
+            "title": "Punkty AI",
+            "details": "Zobacz swoje funkcje AI"
           }
         }
       },

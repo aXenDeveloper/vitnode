@@ -37,11 +37,7 @@ const Fact = ({
 
 const tokens = (value: null | number) => value ?? "—";
 
-export const AiRunSummaryContent = ({
-  run,
-}: {
-  run: AdminAiRunDetail["run"];
-}) => {
+const AiRunSummaryContent = ({ run }: { run: AdminAiRunDetail["run"] }) => {
   const t = useTranslations("admin.ai.history.detail");
   const tOrigin = useTranslations("admin.ai.origin");
   const locale = useLocale();

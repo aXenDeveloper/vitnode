@@ -28,7 +28,6 @@ export const getFileAltAdminRoute = buildRoute({
                   code: z.string(),
                   name: z.string(),
                   origin: z.enum(["ai", "human"]).nullable(),
-                  /** An AI text written for an older version of the file. */
                   stale: z.boolean(),
                   text: z.string().nullable(),
                   updatedAt: z.date().nullable(),
@@ -86,11 +85,6 @@ export const getFileAltAdminRoute = buildRoute({
   },
 });
 
-/**
- * A person's ALT text. It always wins: the automatic job never overwrites a
- * human row. An empty text is allowed and means "intentionally no
- * description" - different from no row at all.
- */
 export const updateFileAltAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_edit_alt" },
@@ -155,20 +149,16 @@ export const updateFileAltAdminRoute = buildRoute({
         set: { ...values, updatedAt: new Date() },
         target: [core_files_alt.fileId, core_files_alt.languageCode],
       });
-    await c
-      .get("events")
-      .emit("files.alt.updated", {
-        fileId: id,
-        languageCodes: [languageCode],
-        origin: "human",
-      })
-      .catch(() => undefined);
+    await c.get("events").emit("files.alt.updated", {
+      fileId: id,
+      languageCodes: [languageCode],
+      origin: "human",
+    });
 
     return c.json({ ok: true as const }, 200);
   },
 });
 
-/** Removes one language's ALT text, so the automatic job may write it again. */
 export const deleteFileAltAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_edit_alt" },
@@ -203,14 +193,11 @@ export const deleteFileAltAdminRoute = buildRoute({
       )
       .returning({ origin: core_files_alt.origin });
     if (removed.length > 0) {
-      await c
-        .get("events")
-        .emit("files.alt.updated", {
-          fileId: id,
-          languageCodes: [languageCode],
-          origin: removed[0].origin,
-        })
-        .catch(() => undefined);
+      await c.get("events").emit("files.alt.updated", {
+        fileId: id,
+        languageCodes: [languageCode],
+        origin: removed[0].origin,
+      });
     }
 
     return c.json({ ok: true as const }, 200);

@@ -3,9 +3,9 @@ import { z } from "zod";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { defineAiAction } from "./action";
+import { languageName } from "./language-name";
 import { aiActionRef } from "./registry";
 
-/** Bounds of what the editor sends: the selection and a little context. */
 export const QUICK_ASK_LIMITS = {
   context: 1_500,
   instruction: 500,
@@ -24,14 +24,6 @@ export const QUICK_ASK_TONES = [
   "friendly",
   "neutral",
 ] as const;
-
-const languageName = (code: string) => {
-  try {
-    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-};
 
 const PLAIN_TEXT_RULES = [
   "Answer with plain text only: no Markdown, no HTML, no quotes, no notes.",
@@ -62,14 +54,8 @@ const OPERATION_INSTRUCTIONS: Record<
   tone: "Rewrite the text in the requested tone, keeping its meaning.",
 };
 
-/**
- * The text a person typed in their own editor is the only input: nothing is
- * read from the server, so there is no content to authorize beyond being
- * signed in - and the input is bounded.
- */
 const ownDraft = () => true;
 
-/** Shorten, correct, simplify or change the tone of a selection. */
 export const editorRewriteAiAction = defineAiAction({
   authorize: ownDraft,
   buildPrompt: (input, { instructions }) => ({
@@ -114,7 +100,6 @@ export const editorRewriteAiAction = defineAiAction({
   requiredCapabilities: ["text"],
 });
 
-/** Continue the text, or follow a custom instruction about the selection. */
 export const editorQuickAskAiAction = defineAiAction({
   authorize: ownDraft,
   buildPrompt: (input, { instructions }) => ({

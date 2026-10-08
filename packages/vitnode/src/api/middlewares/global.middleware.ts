@@ -114,7 +114,6 @@ export interface EnvVariablesVitNode {
   cache: CacheModel;
   core: {
     ai?: VitNodeApiConfig["ai"];
-    /** Every plugin's AI actions, validated across all plugins at boot. */
     aiActions: AiActionRegistry;
     authorization: {
       adminCookieExpires: number;
@@ -278,7 +277,6 @@ export const globalMiddleware = ({
 
   const cronMetadata = collectCronJobs(plugins);
 
-  // Across *all* plugins: `buildApiPlugin` only sees its own actions.
   const aiActionsMetadata = collectAiActions(plugins);
 
   const eventsMetadata: EventListenerConfig[] = plugins.flatMap(plugin =>

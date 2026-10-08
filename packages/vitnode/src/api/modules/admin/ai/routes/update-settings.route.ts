@@ -32,8 +32,6 @@ export const updateAiSettingsAdminRoute = buildRoute({
   },
   handler: async c => {
     const body = c.req.valid("json");
-    // New paid automation is never unlimited: a background job with no cap
-    // would spend until somebody noticed.
     if (body.altEnabled && body.monthlyBudgetUsd === null) {
       throw new HTTPException(400, {
         message:

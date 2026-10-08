@@ -34,6 +34,9 @@ export interface FileAltEditorProps {
 const isPolicy = (value: string): value is FileAltPolicy =>
   FILE_ALT_POLICIES.some(policy => policy === value);
 
+const storedVersionKey = (language: FileAltLanguage) =>
+  `${language.code}:${String(language.updatedAt)}:${language.origin}`;
+
 const OriginBadges = ({ language }: { language: FileAltLanguage }) => {
   const t = useTranslations("admin.system.files.alt.origin");
 
@@ -289,9 +292,7 @@ export const FileAltEditor = ({
           {data.languages.map(language => (
             <AltLanguageItem
               canEdit={canEdit}
-              // A save or removal remounts the row, so its form starts from the
-              // stored text rather than what was last typed.
-              key={`${language.code}:${String(language.updatedAt)}:${language.origin}`}
+              key={storedVersionKey(language)}
               language={language}
               onRemove={onRemove}
               onSave={onSave}

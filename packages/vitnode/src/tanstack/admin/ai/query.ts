@@ -36,11 +36,6 @@ export const adminAiUserOverrideQuery = adminAiUserOverrideQueryOptions;
 export const adminAiHistoryQuery = adminAiHistoryQueryOptions;
 export const adminAiRunQuery = adminAiRunQueryOptions;
 
-/**
- * Every AI screen reads from the others' data - a settings change moves the
- * overview, an action change moves history filters - so one write expires
- * them all.
- */
 export const invalidateAdminAi = async (
   queryClient: QueryClient,
   adminUserId: AdminIdentity,

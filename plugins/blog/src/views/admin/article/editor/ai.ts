@@ -36,11 +36,6 @@ export const translateArticleText = async (body: {
   return text;
 };
 
-/**
- * Writes an excerpt through Core's shared AI assist route - the same action
- * and mechanism the generic `ai` field option uses, so limits, history and
- * accounting are identical wherever the button is.
- */
 export const writeArticleExcerpt = async (input: {
   content: string;
   locale: string;

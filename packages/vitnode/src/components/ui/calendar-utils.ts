@@ -2,24 +2,20 @@ const WEEK_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 type WeekDay = (typeof WEEK_DAYS)[number];
 
-const readFirstDay = (locale: Intl.Locale): unknown => {
+const readWeekInfo = (locale: Intl.Locale): unknown => {
   if ("getWeekInfo" in locale && typeof locale.getWeekInfo === "function") {
-    const info: unknown = locale.getWeekInfo();
-
-    return info && typeof info === "object" && "firstDay" in info
-      ? info.firstDay
-      : undefined;
+    return locale.getWeekInfo();
   }
 
-  if ("weekInfo" in locale) {
-    const info: unknown = locale.weekInfo;
+  return "weekInfo" in locale ? locale.weekInfo : undefined;
+};
 
-    return info && typeof info === "object" && "firstDay" in info
-      ? info.firstDay
-      : undefined;
-  }
+const readFirstDay = (locale: Intl.Locale): unknown => {
+  const info = readWeekInfo(locale);
 
-  return undefined;
+  return info && typeof info === "object" && "firstDay" in info
+    ? info.firstDay
+    : undefined;
 };
 
 export const getFirstDayOfWeek = (locale: string): undefined | WeekDay => {

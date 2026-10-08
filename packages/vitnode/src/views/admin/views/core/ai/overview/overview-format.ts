@@ -23,43 +23,51 @@ export const useOverviewFormat = () => {
           ? { maximumSignificantDigits: 2 }
           : { maximumFractionDigits: Math.abs(value) < 10 ? 2 : 0 }),
       }).format(value);
-    const percent = (value: number, digits = 1) =>
+    const percentFormats = new Map<number, Intl.NumberFormat>();
+    const percent = (value: number, digits = 1) => {
+      let formatter = percentFormats.get(digits);
+      if (!formatter) {
+        formatter = new Intl.NumberFormat(locale, {
+          maximumFractionDigits: digits,
+          style: "percent",
+        });
+        percentFormats.set(digits, formatter);
+      }
+
+      return formatter.format(value);
+    };
+    const countFormat = new Intl.NumberFormat(locale);
+    const count = (value: number) => countFormat.format(Math.round(value));
+    const compactFormat = new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 1,
+      notation: "compact",
+    });
+    const compact = (value: number) => compactFormat.format(value);
+
+    const usdNumberFormat = (maximumFractionDigits: number) =>
       new Intl.NumberFormat(locale, {
-        maximumFractionDigits: digits,
+        currency: "USD",
+        maximumFractionDigits,
+        minimumFractionDigits: 2,
+        style: "currency",
+      });
+    const metricNumberFormats = {
+      count: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+      percent: new Intl.NumberFormat(locale, {
+        maximumFractionDigits: 2,
         style: "percent",
-      }).format(value);
-    const count = (value: number) =>
-      new Intl.NumberFormat(locale).format(Math.round(value));
-    const compact = (value: number) =>
-      new Intl.NumberFormat(locale, {
+      }),
+      tokens: new Intl.NumberFormat(locale, {
         maximumFractionDigits: 1,
         notation: "compact",
-      }).format(value);
-
-    const numberFormat = (kind: AiMetricFormat, value: number) => {
-      switch (kind) {
-        case "count":
-          return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-        case "percent":
-          return new Intl.NumberFormat(locale, {
-            maximumFractionDigits: 2,
-            style: "percent",
-          });
-        case "tokens":
-          return new Intl.NumberFormat(locale, {
-            maximumFractionDigits: 1,
-            notation: "compact",
-          });
-        case "usd":
-          return new Intl.NumberFormat(locale, {
-            currency: "USD",
-            maximumFractionDigits:
-              value !== 0 && Math.abs(value) < 0.01 ? 6 : 2,
-            minimumFractionDigits: 2,
-            style: "currency",
-          });
-      }
+      }),
+      usd: usdNumberFormat(2),
+      usdFraction: usdNumberFormat(6),
     };
+    const numberFormat = (kind: AiMetricFormat, value: number) =>
+      kind === "usd" && value !== 0 && Math.abs(value) < 0.01
+        ? metricNumberFormats.usdFraction
+        : metricNumberFormats[kind];
     const metric = (kind: AiMetricFormat) => (value: number) => {
       switch (kind) {
         case "count":
@@ -82,8 +90,6 @@ export const useOverviewFormat = () => {
 
     return {
       axis,
-      compact,
-      count,
       day: (day: string) =>
         format.dateTime(dayAsDate(day), {
           day: "numeric",
@@ -125,8 +131,6 @@ export const useOverviewFormat = () => {
     };
   }, [format, locale]);
 };
-
-export type OverviewFormat = ReturnType<typeof useOverviewFormat>;
 
 export const useCompareLabel = (data: AdminAiOverview): string => {
   const t = useTranslations("admin.ai.overview.compare");

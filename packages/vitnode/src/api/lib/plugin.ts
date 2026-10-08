@@ -42,7 +42,6 @@ export interface BuildPluginApiReturn<
   Modules extends readonly BaseBuildModuleReturn<P>[] =
     readonly BaseBuildModuleReturn<P>[],
 > {
-  /** AI actions the plugin offers; Core runs, limits and accounts them. */
   aiActions?: AnyAiActionDefinition[];
   blocks?: BlockPluginSource;
   contentModels?: AnyContentModel[];
@@ -113,8 +112,6 @@ export function buildApiPlugin<
 
   collectNavigationPresets([{ navigation, pluginId }]);
 
-  // Duplicates inside one plugin are refused here, named by that plugin;
-  // the API boot repeats the check across every plugin.
   collectAiActions([{ aiActions, pluginId }]);
 
   const hono = new OpenAPIHono();

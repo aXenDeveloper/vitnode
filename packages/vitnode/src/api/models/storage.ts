@@ -85,11 +85,6 @@ export interface StorageStaticConfig {
 export interface StorageApiPlugin {
   delete: (key: string) => Promise<void>;
   getUrl: (key: string) => string;
-  /**
-   * Reads a stored object's bytes server-side, refusing anything over
-   * `maxBytes` (`null`). Optional: without it the object is fetched from its
-   * server-reachable URL - the URL itself is never handed to anyone else.
-   */
   read?: (
     key: string,
     options: { maxBytes: number },
@@ -430,11 +425,6 @@ export class StorageModel {
     return this.requireProvider().getUrl(key);
   }
 
-  /**
-   * A stored object's bytes, bounded: `null` when it is missing or larger than
-   * `maxBytes`. Used to hand an image to an AI provider as bytes, so a
-   * private file never has to be made public for it.
-   */
   async readBytes(key: string, maxBytes: number): Promise<Buffer | null> {
     const provider = this.requireProvider();
     if (provider.read) {
@@ -567,7 +557,6 @@ export class StorageModel {
       });
     }
 
-    // Images get their ALT job straight away when automatic ALT is on.
     await enqueueAltAfterUpload(this.c, { id: created.id, mimeType });
 
     return {

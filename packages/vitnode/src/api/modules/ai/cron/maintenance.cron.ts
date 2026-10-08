@@ -9,7 +9,6 @@ import {
 import { gatewayProviderAdapter } from "@/api/lib/ai/usage-cost";
 import { buildCron } from "@/api/lib/cron";
 
-/** Looks a gateway generation's billed cost up after the fact. */
 const gatewayWithLookup = gatewayProviderAdapter(async id => {
   const info = await gateway.getGenerationInfo({ id });
 

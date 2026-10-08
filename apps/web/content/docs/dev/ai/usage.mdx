@@ -1,6 +1,6 @@
 ---
 title: AI Usage
-description: Text generation, streaming responses, structured output, and embeddings using the Vercel AI SDK and VitNode model registry.
+description: Generate text, stream responses, get structured output and create embeddings with the Vercel AI SDK and the VitNode model registry.
 icon: Bot
 ---
 
@@ -8,17 +8,17 @@ import { ImgDocs } from '@/components/fumadocs/img'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import routing from './ai-registry-routing.svg'
 
-VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from `c.get("ai")` and call native SDK functions directly.
+VitNode uses the [Vercel AI SDK](https://ai-sdk.dev). Resolve a model from `c.get("ai")` and call the native SDK functions with it.
 
 <Callout
   type="warn"
   title="Building a feature users can trigger? Use an AI action"
 >
   Calling `generateText` with `c.get("ai").model()` bypasses permissions,
-  budgets, AI points and run history - nobody pays attention to the bill until
-  the bill arrives. For user-facing features, define an [AI
-  action](/docs/dev/ai/actions) and run it with `c.get("ai").run()`. Keep direct
-  SDK calls for internal tooling you fully control.
+  budgets, AI points and run history. Nobody watches the bill until it arrives.
+  For user-facing features, define an [AI action](/docs/dev/ai/actions) and run
+  it with `c.get("ai").run()`. Keep direct SDK calls for internal tooling you
+  fully control.
 </Callout>
 
 <ImgDocs
@@ -27,9 +27,9 @@ VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from 
   withoutBackground
 />
 
-## Model Resolvers
+## Model resolvers
 
-| Resolver                          | Returned Type    | Used By                                        |
+| Resolver                          | Returned type    | Used by                                        |
 | :-------------------------------- | :--------------- | :--------------------------------------------- |
 | `c.get("ai").model(id?)`          | `LanguageModel`  | `generateText`, `streamText`, `generateObject` |
 | `c.get("ai").embeddingModel(id?)` | `EmbeddingModel` | `embed`, `embedMany`                           |
@@ -37,9 +37,9 @@ VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Resolve models from 
 
 ---
 
-## 1. Text Generation
+## 1. Text generation
 
-Generate text responses in a Hono API route:
+Generate text in a Hono API route:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/summarize.route.ts"
 import { buildRoute } from '@vitnode/core/api/lib/route'
@@ -81,9 +81,9 @@ ${text}`,
 
 ---
 
-## 2. Streaming Responses
+## 2. Streaming responses
 
-Stream LLM responses directly to the client:
+Stream the model's answer to the client as it arrives:
 
 ```ts
 import { streamText } from 'ai'
@@ -101,9 +101,9 @@ handler: async (c) => {
 
 ---
 
-## 3. Structured Output (`generateObject`)
+## 3. Structured output (`generateObject`)
 
-Extract strongly typed JSON from model completions using Zod:
+Get typed JSON back from the model, shaped by a Zod schema:
 
 ```ts
 import { generateObject } from 'ai'
@@ -125,9 +125,9 @@ const { object } = await generateObject({
 
 ---
 
-## 4. Generating Embeddings
+## 4. Generating embeddings
 
-Calculate vector embeddings for semantic search:
+Turn text into a vector embedding for semantic search:
 
 ```ts
 import { embed } from 'ai'
@@ -139,7 +139,7 @@ const { embedding } = await embed({
 })
 ```
 
-## Learn More
+## Learn more
 
 <Cards>
   <Card

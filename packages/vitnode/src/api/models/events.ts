@@ -8,14 +8,12 @@ import type { SsoProfileField } from "@/lib/sso-profile";
 import type { EventListenerConfig } from "../lib/events";
 
 export interface VitNodeEvents {
-  /** A managed AI run delivered a valid result. */
   "ai.run.completed": {
     actionKey: string;
     actorType: "system" | "user";
     runId: number;
     userId: null | number;
   };
-  /** A managed AI run ended without a valid result (failure, cancel, invalid output). */
   "ai.run.failed": {
     actionKey: string;
     actorType: "system" | "user";
@@ -27,7 +25,6 @@ export interface VitNodeEvents {
     changedZones: string[];
     pageId: string;
   };
-  /** Default ALT text of an image in core_files was written. */
   "files.alt.updated": {
     fileId: number;
     languageCodes: string[];

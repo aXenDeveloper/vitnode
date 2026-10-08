@@ -50,8 +50,14 @@ const plugins: DemoPlugin[] = [
   },
 ]
 
-const PluginRow = ({ plugin }: { plugin: DemoPlugin }) => {
-  const [enabled, setEnabled] = React.useState(plugin.enabled)
+const PluginRow = ({
+  defaultEnabled,
+  plugin,
+}: {
+  defaultEnabled: boolean
+  plugin: DemoPlugin
+}) => {
+  const [enabled, setEnabled] = React.useState(defaultEnabled)
 
   return (
     <div className="not-prose flex items-center gap-3">
@@ -105,7 +111,9 @@ export default function DataTableCustomRowsExample() {
         totalCount: plugins.length,
         totalPages: 1,
       }}
-      renderRow={({ row }) => <PluginRow plugin={row} />}
+      renderRow={({ row }) => (
+        <PluginRow defaultEnabled={row.enabled} plugin={row} />
+      )}
     />
   )
 }

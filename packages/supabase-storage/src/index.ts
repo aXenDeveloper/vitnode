@@ -37,8 +37,6 @@ export const SupabaseStorageAdapter = ({
     getClient().from(bucket).getPublicUrl(key).data.publicUrl;
 
   return {
-    // Downloads with the service key, so a private bucket works without
-    // making any object public.
     read: async (key: string, { maxBytes }: { maxBytes: number }) => {
       const { data, error } = await getClient().from(bucket).download(key);
       if (error || data.size > maxBytes) return null;

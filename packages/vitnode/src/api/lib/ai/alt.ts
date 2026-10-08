@@ -26,11 +26,8 @@ import { periodContaining } from "./periods";
 
 export const ALT_QUEUE = "ai";
 export const ALT_TASK_NAME = "alt-generate";
-/** The largest original the job will read; bigger files are skipped. */
 export const ALT_MAX_SOURCE_BYTES = 20 * 1024 * 1024;
-/** Longest edge of the copy sent to the provider. */
 const ALT_MAX_EDGE_PX = 1024;
-/** Files looked at per detection run, beyond the ones enqueued. */
 const ALT_SCAN_WINDOW = 200;
 
 type AltStatus = (typeof core_files_alt_state.$inferInsert)["status"];
@@ -57,10 +54,6 @@ const setAltState = async (
     });
 };
 
-/**
- * The languages ALT is written in: every registered site language.
- * `core_languages` has no "active" flag - registered is available.
- */
 export const altLanguages = async (db: Db): Promise<string[]> => {
   const rows = await db
     .select({ code: core_languages.code })
@@ -70,11 +63,6 @@ export const altLanguages = async (db: Db): Promise<string[]> => {
   return rows.map(row => row.code);
 };
 
-/**
- * Languages a file still needs an AI description in. A human row - even an
- * intentionally empty one - is never "missing". An AI row written for an
- * older version of the file is.
- */
 export const missingAltLanguages = (
   rows: {
     fileFingerprint: null | string;
@@ -92,7 +80,6 @@ export const missingAltLanguages = (
     return fingerprint !== null && row.fileFingerprint !== fingerprint;
   });
 
-/** Queues one image. Durable dedupe: a file already queued is queued once. */
 export const enqueueAltGeneration = async (
   c: Context,
   fileId: number,
@@ -110,30 +97,20 @@ export const enqueueAltGeneration = async (
   return !deduplicated;
 };
 
-/**
- * Called after an upload: an image gets its ALT job right away, when the
- * feature is on. A failure here never fails the upload - the hourly sweep is
- * the repair path.
- */
+const enqueueAltWhenEnabled = async (c: Context, fileId: number) => {
+  const settings = await c.get("ai").ledger().loadSettings();
+  if (!settings.enabled || !settings.altEnabled) return;
+  await enqueueAltGeneration(c, fileId);
+};
+
 export const enqueueAltAfterUpload = async (
   c: Context,
   file: { id: number; mimeType: null | string },
 ): Promise<void> => {
   if (!isAltImage(file.mimeType)) return;
-  try {
-    const settings = await c.get("ai").ledger().loadSettings();
-    if (!settings.enabled || !settings.altEnabled) return;
-    await enqueueAltGeneration(c, file.id);
-  } catch {
-    /* the sweep catches up */
-  }
+  await enqueueAltWhenEnabled(c, file.id).catch(() => undefined);
 };
 
-/**
- * The repair sweep: bounded batches in id order from a stored cursor, so it
- * resumes where it stopped. When it reaches the end it starts over, so new
- * languages and missed uploads are always found again - nothing starves.
- */
 export const detectMissingAlt = async (
   c: Context<EnvVitNode>,
 ): Promise<{ enqueued: number; scanned: number }> => {
@@ -217,8 +194,6 @@ export const detectMissingAlt = async (
   for (const file of files) {
     if (enqueued >= settings.altBatchSize) break;
     lastId = file.id;
-    // A file that just failed or was unreadable waits its back-off, so the
-    // sweep never spends the budget on the same broken file every hour.
     if (backOff.has(file.id)) continue;
     const missing = missingAltLanguages(
       rows.filter(entry => entry.fileId === file.id),
@@ -229,8 +204,6 @@ export const detectMissingAlt = async (
     if (await enqueueAltGeneration(c, file.id)) enqueued += 1;
   }
 
-  // Wrap to the start once the end was reached, so the next sweep revisits
-  // every image - a language added since is noticed there.
   const nextCursor =
     files.length < ALT_SCAN_WINDOW && enqueued < settings.altBatchSize
       ? 0
@@ -246,7 +219,6 @@ export const detectMissingAlt = async (
   return { enqueued, scanned: files.length };
 };
 
-/** A bounded copy of the image for the provider, and the original's fingerprint. */
 const prepareImage = async (
   c: Context,
   file: { key: string; mimeType: null | string },
@@ -274,16 +246,10 @@ const prepareImage = async (
 
     return { bytes: resized, fingerprint, mediaType: "image/webp" };
   } catch {
-    // Without sharp the original goes as it is - still bounded by its size.
     return { bytes: original, fingerprint, mediaType };
   }
 };
 
-/**
- * Writes one AI description, only if a person has not written that language
- * and the file is still the version it was written for. Never overwrites a
- * human row; never writes for a file whose policy changed meanwhile.
- */
 export const writeAiAlt = async (
   db: Db,
   {
@@ -329,9 +295,6 @@ const deferForBudget = async (
   settings: AiSettingsSnapshot,
 ): Promise<never> => {
   await setAltState(db, fileId, "waiting_budget");
-  // The budget frees up at the start of the next period - no point asking
-  // the provider, or burning a retry, before then. Checked hourly meanwhile in
-  // case an admin raises the budget.
   const nextPeriod = periodContaining(
     new Date(),
     "month",
@@ -352,15 +315,8 @@ const CONFIG_CODES = new Set([
   "AI_PRICING_MISSING",
 ]);
 
-/** Files that failed or could not be read are revisited at most this often. */
 export const ALT_RETRY_AFTER_MS = 24 * 3_600_000;
 
-/**
- * One image, end to end: check, read, describe once, translate into the
- * missing languages, write conditionally. Every write rechecks the file's
- * version; persisted results are reused on retry, so a crash costs at most
- * the call that was in flight.
- */
 export const processAltForFile = async (
   c: Context<EnvVitNode>,
   fileId: number,
@@ -388,15 +344,17 @@ export const processAltForFile = async (
     return { written: [] };
   }
 
-  const languages = await altLanguages(db);
-  const existing = await db
-    .select({
-      fileFingerprint: core_files_alt.fileFingerprint,
-      languageCode: core_files_alt.languageCode,
-      origin: core_files_alt.origin,
-    })
-    .from(core_files_alt)
-    .where(eq(core_files_alt.fileId, fileId));
+  const [languages, existing] = await Promise.all([
+    altLanguages(db),
+    db
+      .select({
+        fileFingerprint: core_files_alt.fileFingerprint,
+        languageCode: core_files_alt.languageCode,
+        origin: core_files_alt.origin,
+      })
+      .from(core_files_alt)
+      .where(eq(core_files_alt.fileId, fileId)),
+  ]);
   if (missingAltLanguages(existing, languages, file.fingerprint).length === 0) {
     await setAltState(db, fileId, "completed");
 
@@ -415,7 +373,6 @@ export const processAltForFile = async (
     return { written: [] };
   }
   if (file.fingerprint !== image.fingerprint) {
-    // An older file, or one whose bytes changed: its AI texts no longer match.
     await db
       .update(core_files)
       .set({ fingerprint: image.fingerprint })
@@ -436,10 +393,6 @@ export const processAltForFile = async (
 
   try {
     if (!analysis) {
-      // Another worker may still be describing this exact version (a lease
-      // that has not expired). Wait for it instead of paying twice. A run
-      // that died is settled by maintenance; after that, one new call is the
-      // price of a crash - exactly-once is not promised.
       const [inFlight] = await db
         .select({ id: core_ai_runs.id })
         .from(core_ai_runs)
@@ -502,7 +455,6 @@ export const processAltForFile = async (
         await writeAiAlt(db, { fileId, fingerprint, languageCode, runId, text })
       ) {
         written.push(languageCode);
-        // Per language, as it lands: a later failure must not hide it.
         await c
           .get("events")
           ?.emit("files.alt.updated", {
@@ -522,9 +474,6 @@ export const processAltForFile = async (
       return await deferForBudget(db, fileId, settings);
     }
     if (error instanceof QueueDeferError) throw error;
-    // Configuration problems no retry can fix: record them and stop, instead
-    // of spending the queue's attempts. An admin fixes the setup; the sweep
-    // picks the file up again after its back-off.
     if (isAiError(error) && CONFIG_CODES.has(error.code)) {
       await setAltState(db, fileId, "failed", error.code);
 

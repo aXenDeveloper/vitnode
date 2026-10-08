@@ -13,8 +13,6 @@ export const articleContentType = defineContentType({
     slug: field.slug({ source: "title" }),
     // `unique: true` is all it takes to get a unique index in the migration.
     code: field.text({ required: true, maxLength: 100, unique: true }),
-    // AI assistance is metadata on the field: the AdminCP shows an AI button
-    // that suggests a teaser from these fields. Nothing else to build.
     excerpt: field.textarea({
       ai: {
         action: "@vitnode/example:article.excerpt",

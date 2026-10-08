@@ -23,11 +23,12 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
 
 export const visibleSettingsNavItems = ({
   ai,
+  aiFeatures = true,
   passkeys,
   sso = [],
 }: {
-  /** The site's configured AI models - the panel is hidden without any. */
   ai?: { models: readonly unknown[] };
+  aiFeatures?: boolean;
   passkeys: boolean;
   sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
@@ -35,7 +36,7 @@ export const visibleSettingsNavItems = ({
     item =>
       (item.key !== "security" || passkeys) &&
       (item.key !== "sso" || sso.length > 0) &&
-      (item.key !== "ai" || (ai?.models.length ?? 0) > 0),
+      (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)),
   );
 
 /** Whether one navigation item is the panel `pathname` is showing. */

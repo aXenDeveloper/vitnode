@@ -9,7 +9,6 @@ import { periodContaining } from "./periods";
 
 export type AiBudgetUnit = "count" | "points" | "usd";
 
-/** One budget or counter a run must hold room in. */
 export interface AiBudgetItem {
   amount: Decimal;
   exceededCode: AiErrorCode;
@@ -33,13 +32,6 @@ export const userScope = (userId: number) => `user:${userId}`;
 export const userDailyScope = (userId: number, permissionKey: string) =>
   `user:${userId}:daily:${permissionKey}`;
 
-/**
- * Every budget the request touches, sorted by `scopeKey` - the one lock order
- * every reservation and settlement uses, so two runs can never deadlock.
- *
- * The system actor never touches a user's points or daily counters; it still
- * holds room in the global budget.
- */
 export const planBudgetItems = (
   request: Pick<
     AiReservationRequest,
@@ -103,11 +95,6 @@ export const planBudgetItems = (
   return items.sort((a, b) => (a.scopeKey < b.scopeKey ? -1 : 1));
 };
 
-/**
- * The first budget the run does not fit in, or `null` when it fits all.
- * A capped money budget cannot be held without an upper bound, so an
- * unpriced run is refused there instead of being let through for free.
- */
 export const findExceededBudget = (
   items: AiBudgetItem[],
   rows: Map<string, AiBudgetRowState>,
@@ -128,12 +115,6 @@ export const findExceededBudget = (
   return null;
 };
 
-/**
- * What the user is charged for: the calls that produced the delivered result.
- * A failed attempt before it - a timeout, a provider error - is the site's
- * cost alone. A delivered call whose cost is unknown is charged the whole
- * hold: unknown is never free.
- */
 export const deliveredCostUsd = (
   calls: { costUsd: Decimal | null; status: string }[],
   reservedUsd: Decimal,
@@ -144,15 +125,6 @@ export const deliveredCostUsd = (
   return succeeded.reduce((total, call) => total + (call.costUsd ?? 0n), 0n);
 };
 
-/**
- * What settling one reservation moves into `spent`.
- *
- * - Money budgets always pay what the site paid. An unknown cost is charged
- *   the full reservation - never zero.
- * - Personal points and daily counts are charged only when a valid result was
- *   delivered, and points only for the calls that produced it. A provider
- *   failure or a cancellation costs the user nothing.
- */
 export const settlementCharge = ({
   chargedUsd,
   delivered,

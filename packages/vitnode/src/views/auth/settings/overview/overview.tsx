@@ -34,6 +34,7 @@ export interface SettingsOverviewUser extends PersonalInformationUser {
 }
 
 export const OverviewSettingsContent = ({
+  aiPoints,
   canEditPersonalInfo,
   editor,
   personalFields,
@@ -41,6 +42,7 @@ export const OverviewSettingsContent = ({
   onUpdate,
   user,
 }: {
+  aiPoints?: React.ReactNode;
   canEditPersonalInfo: boolean;
   editor?: UserImageEditor;
   onTimeZoneUpdate: UpdateTimeZone;
@@ -141,6 +143,8 @@ export const OverviewSettingsContent = ({
           </li>
         )}
       </SettingsGroup>
+
+      {aiPoints}
     </>
   );
 };

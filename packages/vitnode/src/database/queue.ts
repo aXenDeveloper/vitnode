@@ -29,10 +29,6 @@ export const core_queue = camelCase.table.withRLS(
       .defaultNow()
       .$onUpdate(() => new Date()),
     completedAt: t.timestamp(),
-    /**
-     * At most one pending or running task per key: dispatching the same work
-     * twice (an upload and the repair sweep) queues it once.
-     */
     dedupeKey: t.varchar({ length: 255 }),
   }),
   t => [

@@ -5,7 +5,6 @@ import { AI_MODEL_CAPABILITIES } from "@/api/lib/ai/capabilities";
 import { zodAiPricing } from "@/api/lib/ai/pricing";
 import { AI_RUN_STATUSES } from "@/database/ai";
 
-/** USD or points as a decimal string - money never travels as a float. */
 export const zodDecimalString = z
   .string()
   .regex(/^\d+(\.\d{1,12})?$/, 'Use a non-negative decimal, e.g. "25.00".');

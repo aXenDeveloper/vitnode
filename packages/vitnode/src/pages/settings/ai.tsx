@@ -1,11 +1,13 @@
+import { notFound } from "@tanstack/react-router";
+
 import type { PluginRoutePageProps } from "@/routing";
 
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { AiUsagePanelContent } from "@/tanstack/settings-ai/panel";
 import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import {
-  aiHistoryQueryOptions,
   aiUsageQueryOptions,
+  hasAiFeatures,
 } from "@/views/auth/settings/ai/ai-usage-query";
 
 interface AiUsageData {
@@ -20,16 +22,12 @@ export const route = defineAuthenticatedRoute<AiUsageData>({
   load: async ({ context }) => {
     const userId = context.auth.user.id;
 
-    await Promise.all([
-      context.queryClient.query({
-        ...aiUsageQueryOptions({ userId }),
-        staleTime: "static",
-      }),
-      context.queryClient.infiniteQuery({
-        ...aiHistoryQueryOptions({ userId }),
-        staleTime: "static",
-      }),
-    ]);
+    const usage = await context.queryClient.query({
+      ...aiUsageQueryOptions({ userId }),
+      staleTime: "static",
+    });
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    if (!hasAiFeatures(usage)) throw notFound();
 
     return { userId };
   },

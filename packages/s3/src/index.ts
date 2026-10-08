@@ -62,8 +62,6 @@ export const S3StorageAdapter = ({
       );
     },
     getUrl,
-    // Reads with the adapter's own credentials, so a private bucket works
-    // without making any object public.
     read: async (key: string, { maxBytes }: { maxBytes: number }) => {
       try {
         const object = await getClient().send(

@@ -48,24 +48,9 @@ export type Prettify<T> = { [K in keyof T]: T[K] } & {};
 // derived from them.
 // ---------------------------------------------------------------------------
 
-/**
- * AI assistance on a text field: a registered AI action that writes a
- * suggestion for it from other fields. Plain JSON - the definition also
- * reaches the browser. Storage is the field's own; nothing AI-specific is
- * stored with the content.
- */
 export interface ContentFieldAiAssist {
-  /** Canonical AI action key, `<pluginId>:<localId>`. */
   action: `${string}:${string}`;
-  /**
-   * `suggestion`: the editor previews the result and accepts or discards it.
-   * Nothing is ever written to the field without that acceptance.
-   */
   mode: "suggestion";
-  /**
-   * Fields the action reads, in the locale being edited. The action's input
-   * is `{ [field]: value, locale }` - one key per source field.
-   */
   sourceFields: readonly string[];
 }
 

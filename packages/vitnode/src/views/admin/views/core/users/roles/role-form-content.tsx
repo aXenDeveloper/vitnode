@@ -52,12 +52,10 @@ const aiGrantChoiceOf = (granted: boolean | undefined): AiGrantChoice =>
 const isAiGrantChoice = (value: unknown): value is AiGrantChoice =>
   AI_GRANTS.some(choice => choice === value);
 
-/** The role's AI allowance and grants, as the AI access API takes them. */
 export type AdminRoleAiValues = Omit<AdminAiRoleAccessInput, "roleId">;
 
 /** The shape the roles API takes, as the form produces it. */
 export interface AdminRoleFormValues {
-  /** Present when the form showed the AI tab. */
   ai?: AdminRoleAiValues;
   allowEditPersonalInfo: boolean;
   allowUploadAvatar: boolean;
@@ -89,7 +87,6 @@ export interface AdminRoleFormData {
 }
 
 export interface AdminRoleFormProps {
-  /** Adds the AI tab. Only for admins who may manage AI access. */
   ai?: AdminAiRoleAccess;
   data?: AdminRoleFormData;
   /** Performs the write. `id` is present exactly when this is an edit. */
@@ -479,7 +476,6 @@ const AdminRoleFormWithAi = ({
   return <AdminRoleFormContent ai={data} {...props} />;
 };
 
-/** The create/edit dialog body: the AI tab joins when `aiAccessQuery` is given. */
 export const AdminRoleFormDialogContent = ({
   aiAccessQuery,
   ...props

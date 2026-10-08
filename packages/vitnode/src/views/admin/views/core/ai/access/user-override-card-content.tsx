@@ -90,7 +90,6 @@ const OverrideSummary = ({
   );
 };
 
-/** One member's AI exception: blocked, unlimited or their own allowance. */
 export const AiUserOverrideCardContent = ({
   canManage,
   onDelete,
@@ -177,8 +176,12 @@ export const AiUserOverrideCardContent = ({
                       disabled={isDeleting}
                       onClick={async () => {
                         setIsDeleting(true);
-                        const result = await onDelete(userId);
-                        setIsDeleting(false);
+                        let result: Awaited<ReturnType<typeof onDelete>>;
+                        try {
+                          result = await onDelete(userId);
+                        } finally {
+                          setIsDeleting(false);
+                        }
                         if ("error" in result) {
                           toast.error(tError("title"), {
                             description: tError("internal_server_error"),

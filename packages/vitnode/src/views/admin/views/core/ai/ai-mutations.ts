@@ -18,7 +18,6 @@ export type AdminAiActionInput = z.infer<typeof zodAiActionSettingsInput>;
 export interface AdminAiRoleAccessInput {
   grants: {
     dailyLimit: null | number;
-    /** `null` removes the row, so the action's default applies. */
     granted: boolean | null;
     permission: string;
   }[];

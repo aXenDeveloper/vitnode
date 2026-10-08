@@ -35,13 +35,6 @@ import {
 
 import { useAvailableAiActions } from "./use-available-ai-actions";
 
-/**
- * The AI button of a text field with `ai` assistance. It asks the field's
- * action for a suggestion from the source fields, in the language being
- * edited, and shows it for review: nothing reaches the field until the
- * editor accepts it, and saving goes through the normal form, validation and
- * revisions. Shown only when the server says this admin may use the action.
- */
 export const AiFieldAssist = ({
   ai,
   fieldName,
@@ -188,7 +181,6 @@ export const AiFieldAssist = ({
   );
 };
 
-/** The review panel: suggestion, freshness warnings and the three choices. */
 export const AiSuggestionBody = ({
   missingSources,
   onAccept,

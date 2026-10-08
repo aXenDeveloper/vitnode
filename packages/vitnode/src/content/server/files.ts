@@ -48,9 +48,6 @@ export const contentFileCollectionFields = (
 
 /** The columns a descriptor is built from. Never `key`, and never `metadata`. */
 const fileSelection = {
-  // Default ALT texts travel with image descriptors, so every page that shows
-  // the image can resolve one in its own language. Folded into the same
-  // statement: a page of descriptors stays one round trip.
   alts: sql<null | Record<string, string>>`(
     SELECT jsonb_object_agg(${core_files_alt.languageCode}, ${core_files_alt.text})
     FROM ${core_files_alt}

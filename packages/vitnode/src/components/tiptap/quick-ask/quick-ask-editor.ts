@@ -1,6 +1,5 @@
 import type { Editor, JSONContent } from "@tiptap/react";
 
-/** Mirrors the server's bounds (`QUICK_ASK_LIMITS`): nothing larger is sent. */
 export const QUICK_ASK_CLIENT_LIMITS = {
   context: 1_500,
   selection: 8_000,
@@ -14,10 +13,6 @@ export interface QuickAskSnapshot {
   to: number;
 }
 
-/**
- * What Quick Ask sends: the selection and a bounded slice of text around it -
- * never the whole document.
- */
 export const takeQuickAskSnapshot = (editor: Editor): QuickAskSnapshot => {
   const { doc, selection } = editor.state;
   const { from, to } = selection;
@@ -35,10 +30,6 @@ export const takeQuickAskSnapshot = (editor: Editor): QuickAskSnapshot => {
   };
 };
 
-/**
- * Whether the text the request was made from is still in place. A suggestion
- * for text that changed - or moved - must not replace it blindly.
- */
 export const isQuickAskStale = (
   editor: Editor,
   snapshot: Pick<QuickAskSnapshot, "from" | "selection" | "to">,
@@ -52,11 +43,6 @@ export const isQuickAskStale = (
   );
 };
 
-/**
- * Model output as document nodes, built from plain text only: paragraphs on
- * blank lines, hard breaks on single ones. The output is never parsed as
- * HTML, so it cannot inject markup, links or scripts into the document.
- */
 export const quickAskTextToNodes = (text: string): JSONContent[] =>
   text
     .replace(/\r\n?/g, "\n")
@@ -73,10 +59,6 @@ export const quickAskTextToNodes = (text: string): JSONContent[] =>
       type: "paragraph",
     }));
 
-/**
- * Applies a suggestion in one transaction, so a single Undo restores the
- * text exactly as it was.
- */
 export const applyQuickAskResult = (
   editor: Editor,
   {
@@ -90,7 +72,6 @@ export const applyQuickAskResult = (
   if (nodes.length === 0) return false;
 
   if (mode === "replace") {
-    // One paragraph replacing text inside a paragraph stays inline.
     const content = nodes.length === 1 ? (nodes[0].content ?? []) : nodes;
 
     return editor.chain().focus().insertContentAt({ from, to }, content).run();

@@ -154,8 +154,6 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
   );
   const { files } = useContentForm();
   const cover = files?.coverImage;
-  // The image's own default ALT (Core Files) in this language - used whenever
-  // the article leaves its override empty.
   const fileAlt =
     cover && !Array.isArray(cover) ? cover.alts?.[selected] : undefined;
 

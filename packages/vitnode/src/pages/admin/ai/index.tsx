@@ -23,7 +23,6 @@ export const route = defineAdminRoute<
   AdminAiOverviewRouteData,
   AiOverviewRouteSearch
 >({
-  // `head` after `load`, always.
   load: async ({ context, search, t }) =>
     await loadAdminAiOverviewRoute({
       ...context,

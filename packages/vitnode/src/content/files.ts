@@ -23,10 +23,6 @@ export {
 } from "./file-rules";
 
 export interface ContentFileDescriptor {
-  /**
-   * The image's default ALT text per language code (Core Files). An occurrence
-   * override still wins - see `resolveImageAlt`.
-   */
   alts?: Record<string, string>;
   height?: number;
   id: number;

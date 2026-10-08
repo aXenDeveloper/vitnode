@@ -28,10 +28,6 @@ export const zodExcerptAiSchema = z.object({
   title: z.string().trim().min(1).max(255),
 });
 
-/**
- * Articles are edited by staff who may edit posts. The AI permission adds to
- * that check - it never replaces it.
- */
 const canEditPosts = async ({
   c,
 }: {
@@ -44,7 +40,7 @@ const canEditPosts = async ({
     type: "admin",
   });
 
-export const translateFieldAiAction = defineAiAction({
+const translateFieldAiAction = defineAiAction({
   authorize: canEditPosts,
   buildPrompt: (input, { instructions }) =>
     buildTranslatePrompt(input, instructions),
@@ -61,8 +57,6 @@ export const translateFieldAiAction = defineAiAction({
   measureInput: input => input.text.length,
   output: "text",
   outputSchema: z.string().min(1),
-  // Rich text keeps its structure or is refused: links, attributes and blocks
-  // are compared tag by tag, not trusted to the prompt.
   parseText: (text, input) => {
     if (input.format === "text") return unquote(text);
     const translated = text.trim();
@@ -75,7 +69,7 @@ export const translateFieldAiAction = defineAiAction({
   requiredCapabilities: ["text"],
 });
 
-export const excerptAiAction = defineAiAction({
+const excerptAiAction = defineAiAction({
   authorize: canEditPosts,
   buildPrompt: (input, { instructions }) =>
     buildExcerptPrompt(input, instructions),
@@ -99,14 +93,14 @@ export const excerptAiAction = defineAiAction({
   requiredCapabilities: ["text"],
 });
 
-export const ARTICLE_REVIEW_AREAS = [
+const ARTICLE_REVIEW_AREAS = [
   "clarity",
   "completeness",
   "structure",
   "tone",
 ] as const;
 
-export const zodArticleReview = z.object({
+const zodArticleReview = z.object({
   suggestions: z
     .array(
       z.object({
@@ -119,13 +113,7 @@ export const zodArticleReview = z.object({
   summary: z.string().min(1).max(400),
 });
 
-/**
- * An optional editorial read-through before publishing: suggestions about
- * clarity and completeness, as structured data. It never verifies facts -
- * it has no evidence to check them against - and it never blocks or
- * publishes anything.
- */
-export const articleReviewAiAction = defineAiAction({
+const articleReviewAiAction = defineAiAction({
   authorize: canEditPosts,
   buildPrompt: (input, { instructions }) => ({
     prompt: `Title: ${input.title}\n\nExcerpt: ${input.excerpt?.trim() ? input.excerpt : "(none)"}\n\nArticle:\n${stripHtml(input.content).slice(0, 30_000)}`,

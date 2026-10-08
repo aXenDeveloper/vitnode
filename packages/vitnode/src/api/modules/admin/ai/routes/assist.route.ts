@@ -6,11 +6,6 @@ import {
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 
-/**
- * The AdminCP twin of `POST /ai/run`: the same runner, for the AdminCP
- * session. There is no separate staff permission on purpose - the action's
- * AI permission and its authorize() check (e.g. "may edit posts") decide.
- */
 export const assistAiAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {

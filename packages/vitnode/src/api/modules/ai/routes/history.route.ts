@@ -6,12 +6,8 @@ import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_ai_runs } from "@/database/ai";
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
-/**
- * The signed-in user's own recent AI operations. The user id comes from the
- * session; no query parameter can widen it.
- */
 export const aiHistoryRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
@@ -20,12 +16,14 @@ export const aiHistoryRoute = buildRoute({
     path: "/history",
     request: {
       query: z.object({
+        action: z.string().min(1).max(255).optional(),
         before: z.coerce
           .number()
           .int()
           .positive()
           .max(2_147_483_647)
           .optional(),
+        limit: z.coerce.number().int().min(1).max(50).optional(),
       }),
     },
     responses: {
@@ -56,7 +54,7 @@ export const aiHistoryRoute = buildRoute({
   handler: async c => {
     const user = c.get("user");
     if (!user) throw new HTTPException(401);
-    const { before } = c.req.valid("query");
+    const { action, before, limit = DEFAULT_PAGE_SIZE } = c.req.valid("query");
 
     const rows = await c
       .get("db")
@@ -75,17 +73,18 @@ export const aiHistoryRoute = buildRoute({
           eq(core_ai_runs.actorType, "user"),
           eq(core_ai_runs.userId, user.id),
           before ? lt(core_ai_runs.id, before) : undefined,
+          action ? eq(core_ai_runs.actionKey, action) : undefined,
         ),
       )
       .orderBy(desc(core_ai_runs.id))
-      .limit(PAGE_SIZE + 1);
+      .limit(limit + 1);
 
-    const items = rows.slice(0, PAGE_SIZE);
+    const items = rows.slice(0, limit);
 
     return c.json(
       {
         items,
-        nextBefore: rows.length > PAGE_SIZE ? (items.at(-1)?.id ?? null) : null,
+        nextBefore: rows.length > limit ? (items.at(-1)?.id ?? null) : null,
       },
       200,
     );

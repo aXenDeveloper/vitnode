@@ -12,7 +12,7 @@ VitNode integrates the [Vercel AI SDK](https://ai-sdk.dev). Register models in `
 
 ### 1. Configure models in the API config
 
-You can configure models via string identifiers (using AI Gateway) or direct provider instances:
+A model can be an AI Gateway id string or a direct provider instance:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 import { openai } from '@ai-sdk/openai'
@@ -58,7 +58,7 @@ handler: async (c) => {
 }
 ```
 
-For internal tooling you can also resolve the raw model and call the SDK directly - see [AI Usage](/docs/dev/ai/usage).
+For internal tooling, you can also resolve the raw model and call the SDK directly. See [AI Usage](/docs/dev/ai/usage).
 
 ---
 
@@ -66,12 +66,12 @@ For internal tooling you can also resolve the raw model and call the SDK directl
 
 A capability says what a configured language model can do. VitNode never guesses it from the model's name. A model without `capabilities` is treated as `["text"]`.
 
-| Capability          | Meaning                                                            |
-| :------------------ | :----------------------------------------------------------------- |
-| `text`              | Text in, text out.                                                 |
-| `image-input`       | Accepts images in the prompt (vision).                             |
-| `structured-output` | Returns reliable JSON objects (`Output.object`).                   |
-| `streaming`         | Streams tokens - required by `c.get("ai").stream()` and Quick Ask. |
+| Capability          | Meaning                                                           |
+| :------------------ | :---------------------------------------------------------------- |
+| `text`              | Text in, text out.                                                |
+| `image-input`       | Accepts images in the prompt (vision).                            |
+| `structured-output` | Returns reliable JSON objects (`Output.object`).                  |
+| `streaming`         | Streams tokens. Required by `c.get("ai").stream()` and Quick Ask. |
 
 Every [AI action](/docs/dev/ai/actions) declares the capabilities it needs. When a run starts, VitNode picks the first configured model that has all of them. If no model fits, the run fails with `AI_MODEL_INCOMPATIBLE` before anything is sent to a provider.
 
@@ -79,8 +79,8 @@ Every [AI action](/docs/dev/ai/actions) declares the capabilities it needs. When
   `image-input` means the model can _read_ images, which features such as image
   ALT text need. Generating images is a different thing: register those models
   under `imageModels` and resolve them with `c.get("ai").imageModel()`. Add
-  `image-input` only to models whose provider docs say they accept images -
-  otherwise VitNode keeps images away from them.
+  `image-input` only to models whose provider docs say they accept images.
+  Otherwise VitNode keeps images away from them.
 </Callout>
 
 ---
@@ -107,9 +107,9 @@ Every [AI action](/docs/dev/ai/actions) declares the capabilities it needs. When
 }
 ```
 
-This config is the only place prices live - the AdminCP shows no price editor, so a price change is a code change you deploy. A malformed price stops the server at boot.
+Prices live only in this config. The AdminCP has no price editor, so a price change is a code change you deploy. A malformed price stops the server at boot.
 
-Without pricing, a call's cost stays **unknown** - never zero. Under a budget cap, a model with no pricing is refused with `AI_PRICING_MISSING`. Tiers, flat fees and gateway vs direct pricing are covered in [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits#model-pricing).
+Without pricing, a call's cost stays **unknown**, never zero. Under a budget cap, a model with no pricing is refused with `AI_PRICING_MISSING`. Tiers, flat fees and gateway vs direct pricing are covered in [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits#model-pricing).
 
 ### Model options
 
@@ -148,7 +148,7 @@ Without pricing, a call's cost stays **unknown** - never zero. Under a budget ca
   }}
 />
 
-`ai` also accepts `providerAdapters` - readers for providers that report their own cost. The AI Gateway and OpenRouter readers are built in. See [Provider-reported cost](/docs/dev/ai/costs-and-limits#provider-reported-cost).
+`ai` also accepts `providerAdapters`: readers for providers that report their own cost. The AI Gateway and OpenRouter readers are built in. See [Provider-reported cost](/docs/dev/ai/costs-and-limits#provider-reported-cost).
 
 ---
 
@@ -226,9 +226,9 @@ export const ModelPicker = () => {
 }
 ```
 
-The first entry is the default - the one `c.get("ai").model()` resolves when a
-handler is given no id. The list is empty when no `ai.models` are configured, so
-a picker can hide itself rather than offering nothing.
+The first entry is the default, which `c.get("ai").model()` resolves when a
+handler gets no id. The list is empty when no `ai.models` are configured, so
+a picker can hide itself instead of offering nothing.
 
 ## Learn more
 
@@ -262,11 +262,6 @@ a picker can hide itself rather than offering nothing.
     title="AI Usage"
     description="Streaming text, structured outputs, and embeddings"
     href="/docs/dev/ai/usage"
-  />
-  <Card
-    title="Future Ideas"
-    description="What is not built yet, and today's known limitations"
-    href="/docs/dev/ai/future"
   />
   <Card
     title="Search & Discovery"

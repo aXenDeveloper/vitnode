@@ -1,12 +1,3 @@
-/**
- * The structural skeleton of an HTML fragment: every tag, in order, with the
- * attributes a translation must never touch. Text and translatable attributes
- * (`alt`, `title`, `aria-label`, `placeholder`) are left out.
- *
- * A rich-text translation is accepted only when its skeleton equals the
- * source's - a prompt asking the model to "preserve HTML" is not a guarantee.
- */
-
 const TAG_PATTERN = /<\s*(\/?)\s*([a-zA-Z][\w:-]*)([^>]*?)(\/?)\s*>/g;
 const ATTRIBUTE_PATTERN =
   /([^\s"'=<>`/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
@@ -41,7 +32,6 @@ export const htmlSkeleton = (html: string): string[] =>
     return attributes ? `<${name} ${attributes}>` : `<${name}>`;
   });
 
-/** The first difference between two skeletons, or `null` when they match. */
 export const htmlStructureDifference = (
   source: string,
   translated: string,
@@ -65,7 +55,6 @@ export class HtmlStructureError extends Error {
   }
 }
 
-/** Throws when the translation changed tags, links or attributes. */
 export const assertSameHtmlStructure = (
   source: string,
   translated: string,

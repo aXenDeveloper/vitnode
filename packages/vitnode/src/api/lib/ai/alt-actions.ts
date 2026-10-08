@@ -3,9 +3,9 @@ import { z } from "zod";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { defineAiAction } from "./action";
+import { languageName } from "./language-name";
 import { aiActionRef } from "./registry";
 
-/** Image types sent to a vision model. Anything else is never analysed. */
 export const ALT_IMAGE_MEDIA_TYPES = [
   "image/gif",
   "image/jpeg",
@@ -13,7 +13,6 @@ export const ALT_IMAGE_MEDIA_TYPES = [
   "image/webp",
 ] as const;
 
-/** The language the image-level base description is written in. */
 export const ALT_BASE_LANGUAGE = "en";
 
 const unquote = (text: string) =>
@@ -22,19 +21,6 @@ const unquote = (text: string) =>
     .replace(/^["“„'](.*)["”'"]$/su, "$1")
     .trim();
 
-const languageName = (code: string) => {
-  try {
-    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-};
-
-/**
- * Describes one image once, in English - the base every language is
- * translated from. Runs only as the system actor: there is no user whose
- * points it could spend.
- */
 export const altGenerateAiAction = defineAiAction({
   actors: ["system"],
   buildPrompt: (input, { instructions }) => ({
@@ -76,13 +62,12 @@ export const altGenerateAiAction = defineAiAction({
   measureInput: () => 0,
   output: "text",
   outputSchema: z.string().min(1).max(500),
-  parseText: text => unquote(text),
+  parseText: unquote,
   permission: { defaultGranted: false, key: "media.alt" },
   promptVersion: 1,
   requiredCapabilities: ["text", "image-input"],
 });
 
-/** Translates a base description into one site language. */
 export const altTranslateAiAction = defineAiAction({
   actors: ["system"],
   buildPrompt: (input, { instructions }) => ({
@@ -110,7 +95,7 @@ export const altTranslateAiAction = defineAiAction({
   }),
   output: "text",
   outputSchema: z.string().min(1).max(500),
-  parseText: text => unquote(text),
+  parseText: unquote,
   permission: { defaultGranted: false, key: "media.alt" },
   promptVersion: 1,
   requiredCapabilities: ["text"],

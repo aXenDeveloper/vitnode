@@ -20,8 +20,7 @@ import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import type { AdminAiActionInput } from "../ai-mutations";
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
 
-/** The select's spelling of `null`: the action's own default model. */
-export const AI_DEFAULT_MODEL = "__default__";
+const AI_DEFAULT_MODEL = "__default__";
 
 type LimitField = Exclude<
   keyof typeof AI_ACTION_LIMITS,

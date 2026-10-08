@@ -26,17 +26,11 @@ import type { AiReservationRequest } from "./ledger";
 import { formatDecimal, parseDecimal } from "./decimal";
 import { PostgresAiLedger } from "./postgres-ledger";
 
-/**
- * Proves the reservation guarantees against PostgreSQL itself: row locks,
- * transaction isolation and unique indexes are what make them hold, so a fake
- * could only ever restate the intent.
- */
 describePostgres("PostgresAiLedger (real PostgreSQL)", () => {
   let database: TestDatabaseHandle;
   let ledger: PostgresAiLedger;
   let month = 0;
 
-  /** A month of its own per test, so budgets never leak between tests. */
   const freshNow = () => {
     month += 1;
 
@@ -352,7 +346,6 @@ describePostgres("PostgresAiLedger (real PostgreSQL)", () => {
     await finishCall(reserved.runId, "0.05");
     await settle(reserved.runId);
 
-    // A smaller allowance after a role change: the 50 points already spent stay spent.
     const next = await ledger.reserve(
       request({
         now,

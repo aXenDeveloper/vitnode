@@ -10,8 +10,11 @@ export const zodAiUserUsage = z.object({
     z.object({
       dailyLimit: z.number().nullable(),
       description: z.string().nullable(),
+      icon: z.string().nullable(),
       key: z.string(),
+      monthPoints: z.string(),
       permissionKey: z.string(),
+      title: z.string(),
       usedToday: z.number(),
     }),
   ),
@@ -33,7 +36,6 @@ export const zodAiUserUsage = z.object({
   sitePaused: z.boolean(),
 });
 
-/** The signed-in user's own allowance - there is no parameter for anybody else. */
 export const aiUsageRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {

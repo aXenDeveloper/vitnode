@@ -11,6 +11,7 @@ import { useTranslations } from "use-intl";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
 
+import { AiActionIcon } from "@/components/ai/action-icon";
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import {
@@ -41,8 +42,6 @@ import {
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
 import type { AiActionFormProps } from "./action-form-content";
 
-import { AiActionIcon } from "../ai-labels";
-
 const AiActionFormContent = React.lazy(async () =>
   import("./action-form-content").then(module => ({
     default: module.AiActionFormContent,
@@ -58,7 +57,7 @@ export interface AiActionsContentProps {
 
 type ManageProps = Pick<AiActionsContentProps, "models" | "onSave">;
 
-export const EditAiActionAction = ({
+const EditAiActionAction = ({
   action,
   models,
   onSave,
@@ -271,7 +270,7 @@ export const AiActionsContent = ({
     (a, b) => a.localeCompare(b),
   );
   const search = readTableSearch(searchParams);
-  const selectedPlugins = readTableFilter(searchParams, PLUGIN_FILTER);
+  const selectedPlugins = new Set(readTableFilter(searchParams, PLUGIN_FILTER));
   const rows: AiActionRowData[] = actions
     .map(action => withTranslatedAiActionText(tAll, action))
     .toSorted(
@@ -282,8 +281,7 @@ export const AiActionsContent = ({
     .filter(
       action =>
         matchesSearch(action, search) &&
-        (selectedPlugins.length === 0 ||
-          selectedPlugins.includes(action.pluginId)),
+        (selectedPlugins.size === 0 || selectedPlugins.has(action.pluginId)),
     );
   const pageSize = readTablePageSize(searchParams);
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));

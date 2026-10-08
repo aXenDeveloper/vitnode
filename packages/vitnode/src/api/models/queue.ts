@@ -4,10 +4,6 @@ import { core_queue } from "@/database/queue";
 
 export interface QueueDispatchArgs {
   availableAt?: Date;
-  /**
-   * Durable deduplication: while a task with this key is pending or running,
-   * dispatching it again adds nothing. Enforced by a unique index.
-   */
   dedupeKey?: string;
   maxAttempts?: number;
   name: string;

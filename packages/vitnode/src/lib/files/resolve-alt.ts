@@ -1,18 +1,5 @@
-/**
- * Which ALT text one image occurrence renders with, in order:
- *
- * 1. the occurrence itself - an explicit text, or decorative (`""`);
- * 2. the file's default ALT in the requested language (Core Files);
- * 3. the file's default ALT in a fallback language;
- * 4. nothing known: `""`, flagged `missing` so editors can be told.
- *
- * An explicit empty value is kept as it is: a person decided the image says
- * nothing, and a fallback must not overrule that.
- */
 export interface ImageAltOccurrence {
-  /** The text this occurrence set, if any. `null`/`undefined` means "not set". */
   alt?: null | string;
-  /** This occurrence is decorative - screen readers skip it. */
   decorative?: boolean;
 }
 
@@ -30,7 +17,6 @@ export const resolveImageAlt = ({
   locale,
   occurrence = {},
 }: {
-  /** The file's default ALT per language code, from its descriptor. */
   alts?: null | Record<string, string>;
   fallbackLocales?: readonly string[];
   locale: string;

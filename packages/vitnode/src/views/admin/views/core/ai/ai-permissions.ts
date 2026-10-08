@@ -8,7 +8,6 @@ const ai = (permission: string): PermissionsStaffArgs => ({
   plugin: CONFIG_PLUGIN.pluginId,
 });
 
-/** The AI screens' staff permissions - `ai` on `@vitnode/core`. */
 export const ADMIN_AI_PERMISSIONS = {
   manage: ai("can_manage"),
   view: ai("can_view"),

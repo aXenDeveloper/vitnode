@@ -13,7 +13,6 @@ const AdminAiActionsPage = ({
 );
 
 export const route = defineAdminRoute<AdminAiRouteData>({
-  // `head` after `load`, always.
   load: async ({ context, t }) =>
     await loadAdminAiActionsRoute({ ...context, t }),
   head: ({ loaderData }) => ({ ...loaderData }),

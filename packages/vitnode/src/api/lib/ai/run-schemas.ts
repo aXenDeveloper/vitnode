@@ -1,12 +1,9 @@
 import { z } from "zod";
 
-/** What a browser may send to run an action. Never a model, price or actor. */
 export const zodAiRunBody = z.object({
   action: z.string().min(3).max(255),
-  /** Retries of one user gesture reuse the key, so they never charge twice. */
   idempotencyKey: z.string().min(8).max(128).optional(),
   input: z.unknown(),
-  /** Recorded with the run; access is still decided by the action's authorize(). */
   resource: z
     .object({
       id: z.union([z.string().max(255), z.number()]).nullable(),

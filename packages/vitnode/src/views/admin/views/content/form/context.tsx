@@ -25,10 +25,6 @@ export interface ContentFormContextValue {
   markHeaderRendered?: () => void;
   markRendered?: (name: string) => void;
   mode: "create" | "edit";
-  /**
-   * Runs `listener` after every successful save, with the saved item's id.
-   * Returns an unsubscribe function. Listener failures never fail the save.
-   */
   onSaved?: (
     listener: (saved: { itemId: number }) => Promise<void> | void,
   ) => () => void;

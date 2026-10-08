@@ -4,13 +4,6 @@ import type { AiRunRequest } from "./runner";
 
 import { isAiError } from "./errors";
 
-/**
- * Streams an AI action as newline-delimited JSON:
- * `{"t":"…"}` per text delta, then `{"done":{…}}`, or `{"e":{code,message}}`.
- * Limits and budgets are checked before the first byte, so those failures
- * are ordinary JSON error responses. When the client disconnects, the
- * provider call is canceled and the user is not charged.
- */
 export const AI_NDJSON_HEADERS = {
   "Content-Type": "application/x-ndjson; charset=utf-8",
 } as const;

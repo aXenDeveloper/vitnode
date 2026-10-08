@@ -24,7 +24,6 @@ export const route = defineAdminRoute<
   AdminAiHistoryRouteData,
   AiHistoryRouteSearch
 >({
-  // `head` after `load`, always.
   load: async ({ context, search, t }) =>
     await loadAdminAiHistoryRoute({
       ...context,

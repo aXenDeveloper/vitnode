@@ -12,15 +12,15 @@ import { useTranslations } from "use-intl";
 
 import { CONFIG_PLUGIN } from "@/const";
 
-export const ARTICLE_REVIEW_ACTION = `${CONFIG_PLUGIN.pluginId}:article.review`;
+const ARTICLE_REVIEW_ACTION = `${CONFIG_PLUGIN.pluginId}:article.review`;
 
-export interface ArticleReviewSuggestion {
+interface ArticleReviewSuggestion {
   area: "clarity" | "completeness" | "structure" | "tone";
   message: string;
   priority: "high" | "low";
 }
 
-export interface ArticleReview {
+interface ArticleReview {
   suggestions: ArticleReviewSuggestion[];
   summary: string;
 }
@@ -31,8 +31,7 @@ const isReview = (value: unknown): value is ArticleReview =>
   typeof (value as { summary?: unknown }).summary === "string" &&
   Array.isArray((value as { suggestions?: unknown }).suggestions);
 
-/** The review result - suggestions only, presented as such. */
-export const ArticleReviewResult = ({ review }: { review: ArticleReview }) => {
+const ArticleReviewResult = ({ review }: { review: ArticleReview }) => {
   const t = useTranslations("@vitnode/blog.admin.article.editor.review");
 
   return (
@@ -66,10 +65,6 @@ export const ArticleReviewResult = ({ review }: { review: ArticleReview }) => {
   );
 };
 
-/**
- * Optional AI review before publishing. It sits beside the deterministic
- * checks and never gates them: publishing works the same with or without it.
- */
 export const ArticleAiReview = ({
   content,
   excerpt,

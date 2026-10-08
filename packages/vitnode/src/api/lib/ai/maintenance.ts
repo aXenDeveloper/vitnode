@@ -31,12 +31,6 @@ import { usdToPoints } from "./ledger";
 import { PostgresAiLedger, summarizeCalls } from "./postgres-ledger";
 import { resolveProviderAdapter } from "./usage-cost";
 
-/**
- * Runs whose execution lease expired - the process died mid-call - become
- * `uncertain`. Their holds are settled as unknown cost: the site is charged
- * the whole reservation, because the provider may have billed work nobody
- * saw. The user is charged nothing - no result reached them.
- */
 export const expireAiLeases = async (
   db: AiDatabase,
   now = new Date(),
@@ -66,11 +60,6 @@ export const expireAiLeases = async (
   return expired.length;
 };
 
-/**
- * Replaces an estimated or unknown cost with the amount the provider billed,
- * once, with an audit row. The budgets move by the difference - the earlier
- * charge is corrected, never counted twice.
- */
 export const applyAiCostAdjustment = async (
   db: AiDatabase,
   {
@@ -127,8 +116,6 @@ export const applyAiCostAdjustment = async (
       .where(eq(core_ai_calls.runId, run.id));
     const totals = summarizeCalls(calls);
 
-    // Only a settled run has charged anything; a pending one settles later
-    // from the corrected call, so its delta is zero now.
     if (run.settlement !== "settled" || totals.costUsd === null) {
       await tx
         .update(core_ai_runs)
@@ -193,10 +180,6 @@ export const applyAiCostAdjustment = async (
     return true;
   });
 
-/**
- * Asks providers that report billed cost out of band (the AI Gateway) for
- * the real amount of recent estimated or unknown calls.
- */
 export const reconcileAiCosts = async (
   db: AiDatabase,
   adapters: AiProviderAdapter[],
@@ -249,7 +232,6 @@ export const reconcileAiCosts = async (
   return adjusted;
 };
 
-/** History is kept on its own schedule, never tied to the queue's cleanup. */
 export const pruneAiHistory = async (
   db: AiDatabase,
   retentionDays: number,

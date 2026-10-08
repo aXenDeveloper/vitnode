@@ -50,29 +50,23 @@ import {
   normalizeUsage,
   resolveCost,
   resolveProviderAdapter,
+  UNKNOWN_AI_USAGE,
 } from "./usage-cost";
 
-/** Tokens one image may count as, when a model entry does not say. */
 export const DEFAULT_IMAGE_INPUT_TOKENS = 2_000;
-/** Fixed prompt overhead (roles, separators) added to every bound. */
 const PROMPT_OVERHEAD_TOKENS = 64;
-/** Slack added to an execution lease beyond the timeouts it covers. */
 const LEASE_SLACK_MS = 60_000;
 
 export interface AiRunRequest {
   action: string;
-  /** A client-supplied key; the same key never runs - or charges - twice. */
   idempotencyKey?: string;
   input: unknown;
   resource?: AiResourceRef;
   signal?: AbortSignal;
-  /** Fingerprint of the content the input came from, to detect stale results. */
   sourceFingerprint?: string;
 }
 
-/** Safe usage metadata a route may return to the browser. */
 export interface AiRunUsage {
-  /** Points charged to the user, full precision; `"0"` for system work. */
   chargedPoints: string;
   costKnown: boolean;
   modelId: string;
@@ -85,10 +79,8 @@ export interface AiRunResult<Output> {
 }
 
 export interface AiStreamResult<Output> {
-  /** Resolves when the stream ends, with the validated output. Rejects with an `AiError`. */
   result: Promise<AiRunResult<Output>>;
   runId: number;
-  /** Text deltas. Cancelling it cancels the provider call. */
   textStream: ReadableStream<string>;
 }
 
@@ -98,7 +90,6 @@ interface Actor {
 }
 
 interface ResolvedModel {
-  capabilities: readonly string[];
   definition: AIModelDefinition;
   pricing: AiEffectivePricing | null;
   provider: string;
@@ -132,14 +123,6 @@ interface CallOutcome {
   usage: AiUsage;
 }
 
-const UNKNOWN_USAGE: AiUsage = {
-  cacheReadTokens: null,
-  cacheWriteTokens: null,
-  inputTokens: null,
-  outputTokens: null,
-  reasoningTokens: null,
-};
-
 export const providerIdOf = (model: LanguageModel): string =>
   typeof model === "string" ? "gateway" : model.provider;
 
@@ -148,7 +131,6 @@ export const providerModelIdOf = (model: LanguageModel): string =>
 
 const utf8Length = (text: string) => new TextEncoder().encode(text).length;
 
-/** Text bytes and image parts of a prompt - the input token upper bound. */
 export const measurePrompt = (
   prompt: AiPrompt,
 ): { bytes: number; images: number } => {
@@ -178,11 +160,6 @@ export const measurePrompt = (
   return { bytes, images };
 };
 
-/**
- * Runs managed AI actions: authorization, model choice, budgets, provider
- * calls, accounting, validation and settlement - in that order, every time.
- * Provider calls never run inside a database transaction.
- */
 export class AiRunner {
   constructor({
     adapters,
@@ -247,8 +224,6 @@ export class AiRunner {
           : {}),
       });
 
-      // Every step is one billable provider call: the first fills the row
-      // opened above, later ones get their own. The run sums them once.
       const outcomes = result.steps.map(step =>
         this.describeCall(model, {
           images: plan.promptImages,
@@ -359,7 +334,6 @@ export class AiRunner {
     error: unknown,
     signal: AbortSignal | undefined,
   ): CallOutcome {
-    // The model answered, but not with a valid object: billed like a success.
     if (NoObjectGeneratedError.isInstance(error) && error.usage) {
       return {
         ...this.describeCall(model, {
@@ -373,7 +347,6 @@ export class AiRunner {
       };
     }
 
-    // A definitive error response: the provider generated nothing to bill.
     if (APICallError.isInstance(error) && error.statusCode !== undefined) {
       return {
         cost: { amountUsd: "0", source: "provider" },
@@ -382,12 +355,10 @@ export class AiRunner {
         providerModelId: model.providerModelId,
         providerRequestId: null,
         status: "failed",
-        usage: { ...UNKNOWN_USAGE, inputTokens: 0, outputTokens: 0 },
+        usage: { ...UNKNOWN_AI_USAGE, inputTokens: 0, outputTokens: 0 },
       };
     }
 
-    // Aborted, timed out or cut off: the provider may have billed work we
-    // never saw. Unknown - and so charged in full - never free.
     let errorCode: AiErrorCode = "AI_PROVIDER_FAILED";
     if (signal?.aborted) errorCode = "AI_CANCELED";
     else if (isTimeout(error)) errorCode = "AI_TIMEOUT";
@@ -405,7 +376,7 @@ export class AiRunner {
       providerModelId: model.providerModelId,
       providerRequestId: null,
       status: "failed",
-      usage: UNKNOWN_USAGE,
+      usage: UNKNOWN_AI_USAGE,
     };
   }
 
@@ -414,11 +385,9 @@ export class AiRunner {
     payload: VitNodeEvents[K],
   ): Promise<void> {
     try {
-      const events = this.c.get("events");
-      if (!events) return;
-      await events.emit(name, payload);
+      await this.c.get("events").emit(name, payload);
     } catch {
-      /* events never break a run */
+      return;
     }
   }
 
@@ -434,13 +403,9 @@ export class AiRunner {
     );
 
     let lastError: AiErrorCode = "AI_PROVIDER_FAILED";
-    const candidates: { attempts: number; model: ResolvedModel }[] = [
-      { attempts: 1 + plan.maxRetries, model: plan.primary },
-      ...(plan.fallback ? [{ attempts: 1, model: plan.fallback }] : []),
-    ];
     let attempt = 0;
 
-    for (const candidate of candidates) {
+    for (const candidate of modelAttempts(plan)) {
       for (let index = 0; index < candidate.attempts; index++) {
         attempt += 1;
         const call = await this.callOnce(
@@ -513,7 +478,6 @@ export class AiRunner {
     return plan.timeoutMs * attempts + LEASE_SLACK_MS;
   }
 
-  /** Everything up to - not including - the reservation. No money moves here. */
   private async prepare(
     request: AiRunRequest,
     actor: Actor,
@@ -571,11 +535,10 @@ export class AiRunner {
           "You do not have access to this AI feature.",
         );
       }
-      // An AI permission never replaces access to the content itself.
       const allowed = definition.authorize
         ? await definition.authorize({
             c: this.c,
-            input: input,
+            input,
             resource: request.resource,
             userId: actor.userId,
           })
@@ -601,8 +564,6 @@ export class AiRunner {
       );
     }
 
-    // Streaming is a declared capability like any other: a model whose entry
-    // does not say it streams is never asked to.
     const required: readonly AiModelCapability[] = streaming
       ? [...definition.requiredCapabilities, "streaming"]
       : definition.requiredCapabilities;
@@ -610,7 +571,6 @@ export class AiRunner {
       required,
       actionSettings?.modelId ?? null,
     );
-    // An incompatible or removed fallback is skipped, never used blindly.
     const fallback = actionSettings?.fallbackModelId
       ? this.tryResolveModel(required, actionSettings.fallbackModelId)
       : null;
@@ -648,19 +608,10 @@ export class AiRunner {
     };
   }
 
-  /**
-   * The most the whole run can cost: every attempt, every step, and the
-   * fallback - each at its model's dearest rates with the full output budget.
-   * `null` when a model has no pricing and so nothing can bound it.
-   */
   private reservationUsd(plan: ExecutionPlan): Decimal | null {
     const { bytes, images } = measurePrompt(plan.prompt);
-    const runs: { attempts: number; model: ResolvedModel }[] = [
-      { attempts: 1 + plan.maxRetries, model: plan.primary },
-      ...(plan.fallback ? [{ attempts: 1, model: plan.fallback }] : []),
-    ];
     const parts: Decimal[] = [];
-    for (const { attempts, model } of runs) {
+    for (const { attempts, model } of modelAttempts(plan)) {
       if (!model.pricing) return null;
       const imageTokens =
         images *
@@ -768,7 +719,6 @@ export class AiRunner {
     }
 
     return {
-      capabilities: capabilitiesOf(entry),
       definition: entry,
       pricing: this.resolvePricing(entry),
       provider: providerIdOf(entry.model),
@@ -776,7 +726,6 @@ export class AiRunner {
     };
   }
 
-  /** The price set on the model in `vitnode.api.config.ts`, if any. */
   private resolvePricing(entry: AIModelDefinition): AiEffectivePricing | null {
     if (!entry.pricing) return null;
 
@@ -812,14 +761,15 @@ export class AiRunner {
       resolveResult = resolve;
       rejectResult = reject;
     });
-    // A caller that only reads the stream must not see an unhandled rejection.
     result.catch(() => undefined);
 
     let callId: null | number = null;
     let text = "";
     let finished = false;
-    let activeStream: null | ReturnType<typeof streamText> = null;
-    let activeReader: null | ReadableStreamDefaultReader<string> = null;
+    let active: null | {
+      reader: ReadableStreamDefaultReader<string>;
+      stream: ReturnType<typeof streamText>;
+    } = null;
 
     const finish = async (
       outcome: CallOutcome,
@@ -865,9 +815,7 @@ export class AiRunner {
       },
       pull: async streamController => {
         try {
-          if (!activeStream) {
-            // Recorded on the first read, right before the provider call: a
-            // stream nobody reads costs nothing and records no call.
+          if (!active) {
             callId = await this.ledger.beginCall({
               attempt: 1,
               modelId: model.definition.id,
@@ -876,7 +824,7 @@ export class AiRunner {
               runId,
               startedAt: new Date(),
             });
-            activeStream = streamText({
+            const stream = streamText({
               ...promptArgs(plan.prompt),
               abortSignal: combineSignals(controller.signal, plan.timeoutMs),
               maxOutputTokens: plan.maxOutputTokens,
@@ -888,11 +836,9 @@ export class AiRunner {
                 recordOutputs: false,
               },
             });
-            activeReader = activeStream.textStream.getReader();
+            active = { reader: stream.textStream.getReader(), stream };
           }
-          const reader = activeReader;
-          if (!reader) return;
-          const { done, value } = await reader.read();
+          const { done, value } = await active.reader.read();
           if (!done) {
             text += value;
             streamController.enqueue(value);
@@ -900,10 +846,9 @@ export class AiRunner {
             return;
           }
 
-          const stream = activeStream;
           const [usage, finalStep] = await Promise.all([
-            stream.usage,
-            stream.finalStep,
+            active.stream.usage,
+            active.stream.finalStep,
           ]);
           const metadata = finalStep.providerMetadata;
           const response = finalStep.response;
@@ -969,7 +914,7 @@ export class AiRunner {
             providerModelId: model.providerModelId,
             providerRequestId: null,
             status: "failed",
-            usage: UNKNOWN_USAGE,
+            usage: UNKNOWN_AI_USAGE,
           },
           false,
           "AI_CANCELED",
@@ -1014,11 +959,6 @@ export class AiRunner {
     return parsed.success ? { ok: true, output: parsed.data } : { ok: false };
   }
 
-  /**
-   * The most a run could cost the signed-in user, before running it - the
-   * same upper bound the reservation would hold. A bound, never a price:
-   * the real charge is usually far lower. `null` when no pricing bounds it.
-   */
   async estimate(
     request: AiRunRequest,
   ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
@@ -1031,20 +971,14 @@ export class AiRunner {
     };
   }
 
-  /** Runs an action for the signed-in user (AdminCP session first). */
   async run(request: AiRunRequest): Promise<AiRunResult<unknown>> {
     return await this.execute(request, this.currentUser());
   }
 
-  /**
-   * Runs an action as the trusted system actor - for cron and queue code only.
-   * There is no route that reaches this with a client's input.
-   */
   async runAsSystem(request: AiRunRequest): Promise<AiRunResult<unknown>> {
     return await this.execute(request, { type: "system", userId: null });
   }
 
-  /** Streams a text action for the signed-in user. */
   async stream(request: AiRunRequest): Promise<AiStreamResult<unknown>> {
     const plan = await this.prepare(request, this.currentUser(), {
       streaming: true,
@@ -1060,6 +994,13 @@ export class AiRunner {
     return this.startStream(plan, runId, request.signal);
   }
 }
+
+const modelAttempts = (
+  plan: ExecutionPlan,
+): { attempts: number; model: ResolvedModel }[] => [
+  { attempts: 1 + plan.maxRetries, model: plan.primary },
+  ...(plan.fallback ? [{ attempts: 1, model: plan.fallback }] : []),
+];
 
 const promptArgs = (
   prompt: AiPrompt,
@@ -1103,6 +1044,3 @@ const FAILURE_MESSAGES: Partial<Record<AiErrorCode, string>> = {
 
 export const failureMessage = (code: AiErrorCode): string =>
   FAILURE_MESSAGES[code] ?? "The AI request failed.";
-
-export const pointsForUsd = (usd: Decimal): string =>
-  formatDecimal(usdToPoints(usd));

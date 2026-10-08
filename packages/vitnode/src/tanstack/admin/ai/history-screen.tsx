@@ -81,7 +81,6 @@ export const AdminAiHistoryRouteContent = ({
             filters={filters}
             models={modelsData.models}
             onFilterChange={next => {
-              // A new filter starts from the first page.
               void navigate({
                 resetScroll: false,
                 search: normalizeAiHistoryRouteSearch({

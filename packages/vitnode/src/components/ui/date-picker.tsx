@@ -28,13 +28,17 @@ const DatePicker = ({
   placeholder,
   allowClear,
   calendarProps,
-  dateFormat = { dateStyle: "long" },
+  dateFormat = DEFAULT_DATE_FORMAT,
   className,
   onBlur,
   ...props
 }: DatePickerProps) => {
   const t = useTranslations("core.global");
   const locale = useLocale();
+  const dateFormatter = React.useMemo(
+    () => new Intl.DateTimeFormat(locale, dateFormat),
+    [dateFormat, locale],
+  );
   const [open, setOpen] = React.useState(false);
 
   const select = (date: Date | undefined) => {
@@ -59,7 +63,7 @@ const DatePicker = ({
         <CalendarIcon className="text-muted-foreground" />
         <span className={cn("truncate", !value && "text-muted-foreground")}>
           {value
-            ? new Intl.DateTimeFormat(locale, dateFormat).format(value)
+            ? dateFormatter.format(value)
             : (placeholder ?? t("calendar.pick_date"))}
         </span>
       </PopoverTrigger>
@@ -84,5 +88,7 @@ const DatePicker = ({
     </Popover>
   );
 };
+
+const DEFAULT_DATE_FORMAT: Intl.DateTimeFormatOptions = { dateStyle: "long" };
 
 export { DatePicker, type DatePickerProps };

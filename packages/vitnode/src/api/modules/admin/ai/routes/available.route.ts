@@ -5,7 +5,6 @@ import { availableAiActions } from "@/api/lib/ai/available-actions";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 
-/** Which AI actions the signed-in admin may start - for showing AI buttons. */
 export const availableAiActionsAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {

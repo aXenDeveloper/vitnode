@@ -40,7 +40,6 @@ const FILES_EDIT_ALT = {
   plugin: CONFIG_PLUGIN.pluginId,
 } as const;
 
-/** Opens an image's ALT text. Anyone on this screen may read it. */
 const EditAltAction = ({ id, name }: { id: number; name: string }) => {
   const t = useTranslations("admin.system.files.alt");
   const canEdit = useAdminStaffPermission(FILES_EDIT_ALT);
@@ -86,8 +85,7 @@ export const FileRowActions = ({
   canDelete: boolean;
   canDownload: boolean;
   id: number;
-  /** Images get an ALT text action. */
-  mimeType?: null | string;
+  mimeType: null | string;
   name: string;
   onDelete: DeleteAdminFile;
 }) => {

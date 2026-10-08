@@ -337,11 +337,6 @@ export const bindSelfRelations = (
 
 const AI_ACTION_KEY_PATTERN = /^[^:\s]+:[a-z0-9][a-z0-9.-]*$/;
 
-/**
- * Checks every field's `ai` assistance against the content type: a canonical
- * action key, existing source fields, and never the field itself. Whether the
- * action is registered is checked at API boot, once every plugin is known.
- */
 export const assertFieldAiAssist = (
   id: string,
   fieldMap: ContentFieldMap,

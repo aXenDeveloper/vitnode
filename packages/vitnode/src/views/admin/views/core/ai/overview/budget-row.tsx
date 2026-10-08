@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SlidingNumber } from "@/components/ui/sliding-number";
 import { aiMonthOf, countAiDays, shiftAiMonth } from "@/lib/ai/overview-range";
+import { AI_USAGE_TONE_BAR, aiUsageTone } from "@/lib/ai/usage-tone";
 
 import type { AdminAiOverview } from "../ai-query";
 
@@ -140,8 +141,11 @@ export const AiBudgetRow = ({
   const nextMonth = shiftAiMonth(budget.month, 1);
   const firstMonth = data.firstDay ? aiMonthOf(data.firstDay) : budget.month;
   const monthDays = countAiDays(budget);
-  const warn =
+  const share = limit === null || limit <= 0 ? 0 : spent / limit;
+  const forecastOver =
     limit !== null && (budget.live ? forecast > limit : spent > limit);
+  const tone = aiUsageTone(share);
+  const barTone = tone === "normal" && forecastOver ? "warning" : tone;
 
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
@@ -188,6 +192,16 @@ export const AiBudgetRow = ({
             {limit === null
               ? null
               : ` ${t("of_limit", { limit: formatter.usd(limit) })}`}
+            {limit === null ? null : (
+              <span
+                className={cn(
+                  "ms-2 font-medium",
+                  barTone === "critical" && "text-destructive",
+                )}
+              >
+                {formatter.percent(share, 0)}
+              </span>
+            )}
           </span>
           <span>
             {budget.live
@@ -219,7 +233,7 @@ export const AiBudgetRow = ({
               <div
                 className={cn(
                   "h-full rounded-full",
-                  warn ? "bg-warn" : "bg-primary",
+                  AI_USAGE_TONE_BAR[barTone],
                 )}
                 style={{ width: `${Math.min(spent / limit, 1) * 100}%` }}
               />

@@ -1,8 +1,3 @@
-/**
- * Calendar periods in the site's time zone, stored as UTC instants. A monthly
- * allowance resets at local midnight on the 1st, wherever the server runs.
- */
-
 export type AiPeriodKind = "day" | "month";
 
 export interface AiPeriod {
@@ -58,7 +53,6 @@ const localParts = (date: Date, timeZone: string): LocalParts => {
   };
 };
 
-/** Milliseconds the zone is ahead of UTC at `date`. */
 const offsetAt = (date: Date, timeZone: string): number => {
   const parts = localParts(date, timeZone);
   const asUtc = Date.UTC(
@@ -73,7 +67,6 @@ const offsetAt = (date: Date, timeZone: string): number => {
   return asUtc - Math.floor(date.getTime() / 1000) * 1000;
 };
 
-/** The UTC instant of a local wall-clock midnight. Handles DST shifts. */
 const zonedMidnight = (
   year: number,
   month: number,
@@ -96,12 +89,15 @@ export const isValidTimeZone = (timeZone: string): boolean => {
   }
 };
 
+const zoneOrUtc = (timeZone: string) =>
+  isValidTimeZone(timeZone) ? timeZone : "UTC";
+
 export const periodContaining = (
   now: Date,
   kind: AiPeriodKind,
   timeZone = "UTC",
 ): AiPeriod => {
-  const zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
+  const zone = zoneOrUtc(timeZone);
   const { day, month, year } = localParts(now, zone);
 
   if (kind === "day") {
@@ -130,14 +126,14 @@ export const periodContaining = (
 const pad = (value: number, length = 2) => String(value).padStart(length, "0");
 
 export const localDayOf = (date: Date, timeZone = "UTC"): string => {
-  const zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
+  const zone = zoneOrUtc(timeZone);
   const { day, month, year } = localParts(date, zone);
 
   return `${pad(year, 4)}-${pad(month)}-${pad(day)}`;
 };
 
 export const localDayStart = (day: string, timeZone = "UTC"): Date => {
-  const zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
+  const zone = zoneOrUtc(timeZone);
   const [year = 1970, month = 1, date = 1] = day.split("-").map(Number);
 
   return zonedMidnight(year, month, date, zone);

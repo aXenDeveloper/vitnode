@@ -23,31 +23,20 @@ const QUEUE_BATCH_SIZE = 25;
 const QUEUE_LOCK_KEY = "queue:process";
 const QUEUE_LOCK_TTL_SECONDS = 55;
 const QUEUE_RETENTION_DAYS = 7;
-/** A task running longer than this is presumed abandoned (its process died). */
-export const DEFAULT_QUEUE_LEASE_SECONDS = 600;
+const DEFAULT_QUEUE_LEASE_SECONDS = 600;
 
-/**
- * Queues the general worker leaves alone. AI work runs on its own cron with
- * its own small batch, so a slow model never holds up e-mails.
- */
-export const DEDICATED_QUEUES = ["ai"] as const;
+const DEDICATED_QUEUES = ["ai"] as const;
 
-export interface ProcessQueueOptions {
+interface ProcessQueueOptions {
   batchSize?: number;
   lockKey?: string;
-  /** Process only these queues; omit for every queue not dedicated elsewhere. */
   queues?: string[];
 }
 
-/**
- * Tasks stuck in `processing` past their lease go back to `pending` - the
- * attempt is spent - or to `failed` when none are left. Without this, a crash
- * mid-task left it `processing` forever.
- */
-export const recoverAbandonedQueueTasks = async (
+const recoverAbandonedQueueTasks = async (
   c: Context<EnvVitNode>,
-  now = new Date(),
-): Promise<number> => {
+  now: Date,
+): Promise<void> => {
   const leases = new Map(
     c
       .get("core")
@@ -77,7 +66,6 @@ export const recoverAbandonedQueueTasks = async (
     )
     .limit(100);
 
-  let recovered = 0;
   for (const task of stuck) {
     const lease =
       leases.get(`${task.pluginId}:${task.name}`) ??
@@ -89,9 +77,7 @@ export const recoverAbandonedQueueTasks = async (
       continue;
     }
     const exhausted = task.attempts >= task.maxAttempts;
-    // Conditional on the reservation we saw: a task its worker finished in
-    // the meantime is left alone.
-    const updated = await db
+    await db
       .update(core_queue)
       .set({
         completedAt: exhausted ? now : null,
@@ -105,12 +91,8 @@ export const recoverAbandonedQueueTasks = async (
           eq(core_queue.status, "processing"),
           eq(core_queue.reservedAt, task.reservedAt),
         ),
-      )
-      .returning({ id: core_queue.id });
-    recovered += updated.length;
+      );
   }
-
-  return recovered;
 };
 
 type QueueRow = typeof core_queue.$inferSelect;
@@ -255,8 +237,6 @@ export const processQueueTasks = async (
       await claimQueueTasks(c, queueFilter, now, batchSize),
     );
 
-    // Queue rows are a work list, never a record: AI spending and history
-    // live in core_ai_runs, which this cleanup does not touch.
     const cutoff = new Date(
       now.getTime() - QUEUE_RETENTION_DAYS * 24 * 60 * 60 * 1000,
     );

@@ -1,7 +1,6 @@
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
-/** Error codes the browser has messages for; anything else is `unknown`. */
 export const AI_CLIENT_ERROR_CODES = [
   "AI_ACTION_DISABLED",
   "AI_BUDGET_EXHAUSTED",
@@ -41,22 +40,24 @@ export class AiRequestError extends Error {
 export const aiErrorCodeOf = (error: unknown): AiClientErrorCode =>
   error instanceof AiRequestError ? error.code : "unknown";
 
+export const toAiClientErrorCode = (value: unknown): AiClientErrorCode =>
+  typeof value === "string" &&
+  (AI_CLIENT_ERROR_CODES as readonly string[]).includes(value)
+    ? (value as AiClientErrorCode)
+    : "unknown";
+
 export const readAiErrorCode = async (
   response: Response,
 ): Promise<AiClientErrorCode> => {
   try {
     const body = (await response.json()) as { code?: unknown };
-    const code = typeof body.code === "string" ? body.code : "";
 
-    return (AI_CLIENT_ERROR_CODES as readonly string[]).includes(code)
-      ? (code as AiClientErrorCode)
-      : "unknown";
+    return toAiClientErrorCode(body.code);
   } catch {
     return "unknown";
   }
 };
 
-/** Runs an action for the signed-in admin; resolves with its validated output. */
 export const requestAiAssist = async ({
   action,
   input,
@@ -80,7 +81,7 @@ export const requestAiAssist = async ({
     },
     method: "post",
     module: "admin/ai",
-    options: { credentials: "include", signal },
+    options: { signal },
     path: "/assist",
   });
   if (!response.ok) {
@@ -91,7 +92,6 @@ export const requestAiAssist = async ({
   return { output, runId };
 };
 
-/** Records acceptance for analytics. Never affects billing; failures are ignored. */
 export const sendAiFeedback = async ({
   accepted,
   runId,
@@ -99,31 +99,24 @@ export const sendAiFeedback = async ({
 }: {
   accepted: boolean;
   runId: number;
-  /** The session the run belongs to - AdminCP or the public site. */
   scope?: "admin" | "user";
 }): Promise<void> => {
-  try {
-    const args = { body: { accepted }, params: { id: runId } };
-    if (scope === "admin") {
-      await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
-        args,
-        method: "post",
-        module: "admin/ai",
-        options: { credentials: "include" },
-        path: "/assist/runs/{id}/feedback",
-      });
-    } else {
-      await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
-        args,
-        method: "post",
-        module: "ai",
-        options: { credentials: "include" },
-        path: "/runs/{id}/feedback",
-      });
-    }
-  } catch {
-    /* tracking only */
-  }
+  const args = { body: { accepted }, params: { id: runId } };
+  const feedback =
+    scope === "admin"
+      ? fetcherClient({
+          plugin: CONFIG_PLUGIN.pluginId,
+          args,
+          method: "post",
+          module: "admin/ai",
+          path: "/assist/runs/{id}/feedback",
+        })
+      : fetcherClient({
+          plugin: CONFIG_PLUGIN.pluginId,
+          args,
+          method: "post",
+          module: "ai",
+          path: "/runs/{id}/feedback",
+        });
+  await feedback.catch(() => undefined);
 };

@@ -22,12 +22,6 @@ import {
   adminAiSettingsQuery,
 } from "./query";
 
-/**
- * `/admin/core/ai/*`, as everything a TanStack Start route needs and nothing
- * a route owns. Every screen reads `ai:can_view`; writes are gated on
- * `ai:can_manage` in the screens themselves.
- */
-
 export const ADMIN_AI_NAMESPACES = [
   "admin.ai",
   "ai_actions",
@@ -52,7 +46,6 @@ type AdminAiLoaderContext = AdminScreenContext & { t: PluginRouteTranslator };
 
 const STATIC = { staleTime: "static" } as const;
 
-/** The permission check and the identity every AI screen starts from. */
 const enter = ({ adminAccess }: AdminAiLoaderContext): AdminIdentity => {
   requireAdminPermission(adminAccess, ADMIN_AI_PERMISSIONS.view);
 

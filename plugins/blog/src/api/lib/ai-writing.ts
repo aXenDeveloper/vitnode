@@ -1,22 +1,12 @@
 import type { AiPrompt } from "@vitnode/core/api/lib/ai/action";
 
+import { languageName } from "@vitnode/core/api/lib/ai/language-name";
 import { stripHtml } from "@vitnode/core/lib/strip-html";
 
 export type AiTextFormat = "html" | "text";
 
 export const EXCERPT_RECOMMENDED_LENGTH = 160;
-/** How much article text the excerpt prompt reads. */
-export const EXCERPT_SOURCE_CHARACTERS = 12_000;
-
-const languageName = (locale: string) => {
-  try {
-    return (
-      new Intl.DisplayNames(["en"], { type: "language" }).of(locale) ?? locale
-    );
-  } catch {
-    return locale;
-  }
-};
+const EXCERPT_SOURCE_CHARACTERS = 12_000;
 
 export const unquote = (text: string) =>
   text

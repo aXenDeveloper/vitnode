@@ -76,7 +76,6 @@ const AdminRoleFormDialogContent = React.lazy(async () =>
 );
 
 export interface RolesAdminTableProps {
-  /** Adds the AI tab to the role form; omit when the admin can't manage AI. */
   aiAccessQuery?: AdminRoleAiAccessQuery;
   data: AdminRolesPage;
   onDelete: (args: {

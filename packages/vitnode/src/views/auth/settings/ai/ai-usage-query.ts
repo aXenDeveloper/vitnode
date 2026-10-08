@@ -16,12 +16,14 @@ export type AiUsageNotice = (typeof AI_USAGE_NOTICES)[number];
 export interface AiUsageAction {
   dailyLimit: null | number;
   description: null | string;
+  icon: null | string;
   key: string;
+  monthPoints: string;
   permissionKey: string;
+  title: string;
   usedToday: number;
 }
 
-/** `GET /ai/usage` - the signed-in user's own allowance. */
 export interface AiUsage {
   actions: AiUsageAction[];
   enabled: boolean;
@@ -29,13 +31,15 @@ export interface AiUsage {
   points: {
     available: null | string;
     reserved: string;
-    /** `null` is unlimited. */
     total: null | string;
     used: string;
   };
   resetsAt: string;
   sitePaused: boolean;
 }
+
+export const hasAiFeatures = (usage: Pick<AiUsage, "actions" | "enabled">) =>
+  usage.enabled && usage.actions.length > 0;
 
 export interface AiHistoryItem {
   accepted: boolean | null;
@@ -79,12 +83,25 @@ export const fetchAiUsage: AiUsageFetcher = async () => {
   return await response.json();
 };
 
-export type AiHistoryFetcher = (before?: number) => Promise<AiHistoryPage>;
+export interface AiHistoryFilter {
+  action?: string;
+  limit?: number;
+}
 
-export const fetchAiHistory: AiHistoryFetcher = async before => {
+export type AiHistoryFetcher = (
+  before?: number,
+  filter?: AiHistoryFilter,
+) => Promise<AiHistoryPage>;
+
+export const fetchAiHistory: AiHistoryFetcher = async (before, filter = {}) => {
   const response = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
-    args: { query: before === undefined ? {} : { before } },
+    args: {
+      query: {
+        ...filter,
+        ...(before === undefined ? {} : { before }),
+      },
+    },
     method: "get",
     module: "ai",
     path: "/history",
@@ -107,22 +124,22 @@ export const aiUsageQueryRoot = (userId: number) =>
 
 export const aiUsageQueryOptions = ({ userId }: { userId: number }) =>
   queryOptions({
-    // The owner comes from the session cookie on the server; `userId` only
-    // keeps one account's cache from answering for another.
     queryFn: async () => await fetchAiUsage(),
     queryKey: [...aiUsageQueryRoot(userId), "usage"] as const,
     retry: false,
-    /** {@link OPERATIONAL_STALE_TIME} - Points move every time an AI feature runs. */
     staleTime: OPERATIONAL_STALE_TIME,
   });
 
-export const aiHistoryQueryOptions = ({ userId }: { userId: number }) =>
+export const aiHistoryQueryOptions = ({
+  userId,
+  ...filter
+}: AiHistoryFilter & { userId: number }) =>
   infiniteQueryOptions({
     getNextPageParam: (lastPage: AiHistoryPage) =>
       lastPage.nextBefore ?? undefined,
     initialPageParam: undefined as number | undefined,
-    queryFn: async ({ pageParam }) => await fetchAiHistory(pageParam),
-    queryKey: [...aiUsageQueryRoot(userId), "history"] as const,
+    queryFn: async ({ pageParam }) => await fetchAiHistory(pageParam, filter),
+    queryKey: [...aiUsageQueryRoot(userId), "history", filter] as const,
     retry: false,
     staleTime: OPERATIONAL_STALE_TIME,
   });

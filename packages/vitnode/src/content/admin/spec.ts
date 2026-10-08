@@ -28,7 +28,6 @@ import {
 import { humanizeFieldName } from "./labels";
 
 export interface ContentFormFieldSpec {
-  /** `text`/`textarea` fields only: the AI assistance the field offers. */
   ai?: ContentFieldAiAssist;
   allowedExtensions?: string[];
   /** `file` fields only: the media types the field accepts, lowercased. */

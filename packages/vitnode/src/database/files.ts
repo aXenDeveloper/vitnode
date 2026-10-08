@@ -19,16 +19,7 @@ export const core_files = camelCase.table.withRLS(
     }),
     pluginId: t.varchar({ length: 100 }),
     metadata: t.jsonb().$type<Record<string, unknown>>().notNull().default({}),
-    /**
-     * SHA-256 of the stored bytes, set at upload (or on first ALT analysis for
-     * older files). An AI description belongs to one fingerprint: a changed
-     * file never silently keeps an obsolete one.
-     */
     fingerprint: t.varchar({ length: 64 }),
-    /**
-     * `automatic` lets the ALT job describe the image, `manual` leaves it to
-     * people, `disabled` keeps the file away from any external AI.
-     */
     altPolicy: t
       .varchar({ enum: ["automatic", "manual", "disabled"], length: 16 })
       .notNull()
@@ -41,12 +32,6 @@ export const core_files = camelCase.table.withRLS(
   ],
 );
 
-/**
- * The default ALT text of an image in core_files, one row per language. An
- * empty `text` is an intentional "no description" a person chose; a missing
- * row is a description nobody wrote yet. Decorative use belongs to the
- * occurrence (the article, the page), not to the file.
- */
 export const core_files_alt = camelCase.table.withRLS(
   "core_files_alt",
   t => ({
@@ -61,7 +46,6 @@ export const core_files_alt = camelCase.table.withRLS(
       .references(() => core_languages.code, { onDelete: "cascade" }),
     text: t.text().notNull(),
     origin: t.varchar({ enum: ["ai", "human"], length: 10 }).notNull(),
-    /** The file fingerprint an AI text was written for. */
     fileFingerprint: t.varchar({ length: 64 }),
     runId: t.integer().references(() => core_ai_runs.id, {
       onDelete: "set null",
@@ -83,10 +67,6 @@ export const core_files_alt = camelCase.table.withRLS(
   ],
 );
 
-/**
- * One image-level analysis per file fingerprint - the base description every
- * language is translated from. Adding a language reuses it.
- */
 export const core_files_alt_analysis = camelCase.table.withRLS(
   "core_files_alt_analysis",
   t => ({
@@ -110,7 +90,6 @@ export const core_files_alt_analysis = camelCase.table.withRLS(
   ],
 );
 
-/** Latest ALT processing state per file, for the AdminCP progress view. */
 export const core_files_alt_state = camelCase.table.withRLS(
   "core_files_alt_state",
   t => ({

@@ -44,7 +44,9 @@ describe("AiSuggestionBody", () => {
         name: "core.global.ai_assist.generate",
       }).disabled,
     ).toBe(true);
-    expect(screen.getByText("core.global.ai_assist.missing_sources")).toBeTruthy();
+    expect(
+      screen.getByText("core.global.ai_assist.missing_sources"),
+    ).toBeTruthy();
   });
 
   it("shows the suggestion for review and lets the editor accept or discard it", () => {
@@ -67,9 +69,13 @@ describe("AiSuggestionBody", () => {
     renderBody({ staleSource: true, suggestion: "Teaser", targetEdited: true });
 
     expect(screen.getByText("core.global.ai_assist.stale_source")).toBeTruthy();
-    expect(screen.getByText("core.global.ai_assist.target_edited")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "core.global.ai_assist.replace_anyway" }),
+      screen.getByText("core.global.ai_assist.target_edited"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "core.global.ai_assist.replace_anyway",
+      }),
     ).toBeTruthy();
   });
 

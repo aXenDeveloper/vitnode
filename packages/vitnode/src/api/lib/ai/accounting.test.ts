@@ -95,7 +95,6 @@ describe("pricing", () => {
       }),
     );
 
-    // 7000*3 + 2000*0.3 + 1000*3.75 + 500*15 = 21000+600+3750+7500 per 1M
     expect(result).toEqual({ amount: usd("0.03285"), status: "complete" });
   });
 
@@ -155,7 +154,6 @@ describe("pricing", () => {
       outputTokens: 1_000,
     });
 
-    // Tier rates (6 in, 22.5 out) beat the base tier's cache-write rate.
     expect(formatDecimal(bound)).toBe("1.8225");
     expect(
       formatDecimal(
@@ -287,7 +285,6 @@ describe("calendar periods", () => {
     );
 
     expect(period.start.toISOString()).toBe("2026-09-30T22:00:00.000Z");
-    // October 25th switches Warsaw to winter time: November starts at 23:00 UTC.
     expect(period.end.toISOString()).toBe("2026-10-31T23:00:00.000Z");
   });
 

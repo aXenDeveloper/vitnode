@@ -25,7 +25,6 @@ import { UserPersonalCard, UserPreferencesCard } from "./user-profile-cards";
 import { UserRolesCardContent } from "./user-roles-content";
 
 export interface UserDetailProps {
-  /** The member's AI exception card, when the admin may see AI access. */
   aiAccess?: React.ReactNode;
   canEdit: boolean;
   connectedAccounts: React.ReactNode;

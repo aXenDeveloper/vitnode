@@ -54,10 +54,8 @@ export type AdminAiSettings = z.infer<typeof zodAiSettingsResponse>;
 export type AdminAiModel = z.infer<typeof zodAiModel>;
 export type AdminAiAction = z.infer<typeof zodAiAction>;
 
-/** `GET /admin/ai/access/roles` - what the role form's AI tab edits. */
 export interface AdminAiRoleAccess {
   permissions: AdminAiRolePermission[];
-  /** `null` when creating a role. */
   role: null | {
     grants: {
       dailyLimit: null | number;
@@ -81,14 +79,12 @@ export interface AdminAiRolePermission {
   key: string;
 }
 
-/** `GET /admin/ai/access/users/{userId}`. */
 export interface AdminAiUserOverride {
   blocked: boolean;
   monthlyPoints: null | string;
   unlimited: boolean;
 }
 
-/** One row of the AI history, as JSON delivers it. */
 export interface AdminAiRunRow {
   accepted: boolean | null;
   actionKey: string;
@@ -145,7 +141,6 @@ export interface AdminAiRunAdjustment {
   reason: string;
 }
 
-/** `GET /admin/ai/history/{id}`. */
 export interface AdminAiRunDetail {
   adjustments: AdminAiRunAdjustment[];
   calls: AdminAiRunCall[];
@@ -167,7 +162,6 @@ export const AI_HISTORY_TABLE_CONTRACT: AdminTableContract<AiHistoryOrderBy> = {
 export const AI_HISTORY_ACTOR_TYPES = ["user", "system"] as const;
 export type AiHistoryActorType = (typeof AI_HISTORY_ACTOR_TYPES)[number];
 
-/** The filters the history route reads, one value each. */
 export interface AiHistoryFilters {
   action?: string;
   actorType?: AiHistoryActorType;
@@ -349,7 +343,6 @@ export const fetchAdminAiRun: AdminAiRunFetcher = async id => {
   return await response.json();
 };
 
-/** Every cached read of the AI screens for one admin. */
 export const adminAiQueryRoot = (adminUserId: AdminIdentity) =>
   adminScopedQueryRoot(ADMIN_AI_SCREEN, adminUserId);
 
@@ -372,7 +365,6 @@ export const adminAiOverviewQueryOptions = ({
       search.month ?? null,
     ),
     retry: false,
-    /** {@link OPERATIONAL_STALE_TIME} - Spending moves with every run. */
     staleTime: OPERATIONAL_STALE_TIME,
   });
 

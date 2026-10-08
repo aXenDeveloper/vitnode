@@ -151,11 +151,9 @@ export class PostgresAiLedger implements AiLedger {
     const items = planBudgetItems(request);
 
     return await this.db.transaction(async tx => {
-      if (request.idempotencyKey) {
-        const existing = await this.findIdempotentRun(tx, request);
-        if (existing) {
-          return { code: "AI_DUPLICATE_REQUEST", ok: false, runId: existing };
-        }
+      const existing = await this.findIdempotentRun(tx, request);
+      if (existing) {
+        return { code: "AI_DUPLICATE_REQUEST", ok: false, runId: existing };
       }
 
       for (const item of items) {
@@ -201,8 +199,6 @@ export class PostgresAiLedger implements AiLedger {
         ]),
       );
 
-      // Rate and concurrency are checked under the actor's own budget lock, so
-      // two requests of one user are serialised here and cannot both slip in.
       const rejected = await this.checkThrottles(tx, request);
       if (rejected) return rejected;
 
@@ -369,17 +365,10 @@ export class PostgresAiLedger implements AiLedger {
       );
   }
 
-  /**
-   * One short transaction: make sure every budget row exists, lock them all in
-   * `scopeKey` order, check rate, concurrency and every cap, then write the
-   * run and its holds. Nothing slow happens while the locks are held.
-   */
   async reserve(request: AiReservationRequest): Promise<AiReservationResult> {
     try {
       return await this.reserveOnce(request);
     } catch (error) {
-      // Two submissions with one idempotency key raced past the lookup: the
-      // unique index let exactly one in. The other is a duplicate, not a failure.
       if (
         request.idempotencyKey &&
         pgErrorCode(error) === PG_ERROR_CODES.uniqueViolation
@@ -466,10 +455,6 @@ export class PostgresAiLedger implements AiLedger {
     });
   }
 
-  /**
-   * Idempotent by construction: the run's `settlement` flips from `pending`
-   * exactly once, under the row lock, and only that transaction moves money.
-   */
   async settle(
     runId: number,
     settlement: AiSettlement,
@@ -483,8 +468,8 @@ export class PostgresAiLedger implements AiLedger {
       if (run?.settlement !== "pending") {
         return {
           applied: false,
-          chargedPoints: parseDecimalOrNull(run?.chargedPoints ?? null) ?? 0n,
-          chargedUsd: parseDecimalOrNull(run?.chargedUsd ?? null) ?? 0n,
+          chargedPoints: parseDecimalOrNull(run?.chargedPoints) ?? 0n,
+          chargedUsd: parseDecimalOrNull(run?.chargedUsd) ?? 0n,
           costKnown: run?.costUsd !== null && run?.costUsd !== undefined,
         };
       }
@@ -495,7 +480,6 @@ export class PostgresAiLedger implements AiLedger {
         .where(eq(core_ai_calls.runId, runId));
       const totals = summarizeCalls(calls);
       const reservedUsd = parseDecimal(run.reservedUsd);
-      // Unknown is never free: an unknown cost is charged the whole hold.
       const chargedUsd =
         totals.costUsd ?? maxDecimal(reservedUsd, totals.knownUsd);
 
@@ -534,17 +518,18 @@ export class PostgresAiLedger implements AiLedger {
           .for("update");
       }
 
+      const deliveredUsd = deliveredCostUsd(
+        calls.map(call => ({
+          costUsd: parseDecimalOrNull(call.costUsd),
+          status: call.status,
+        })),
+        reservedUsd,
+      );
       let chargedPoints = 0n;
       for (const hold of holds) {
         const charge = settlementCharge({
           chargedUsd,
-          deliveredUsd: deliveredCostUsd(
-            calls.map(call => ({
-              costUsd: parseDecimalOrNull(call.costUsd),
-              status: call.status,
-            })),
-            reservedUsd,
-          ),
+          deliveredUsd,
           delivered: settlement.delivered,
           unit: hold.unit,
         });
@@ -614,11 +599,6 @@ interface PolicyInputs {
   root: boolean;
 }
 
-/**
- * Multiple roles, existing semantics: any role that grants, grants. Allowances
- * are individual: the largest one applies - they are never summed into a pool.
- * An explicit user override replaces whatever the roles give.
- */
 export const resolvePolicy = ({
   defaultGranted,
   defaultMonthlyPoints,
@@ -644,10 +624,7 @@ export const resolvePolicy = ({
   let monthlyPoints: Decimal | null;
   if (override?.unlimited) {
     monthlyPoints = null;
-  } else if (
-    override?.monthlyPoints !== null &&
-    override?.monthlyPoints !== undefined
-  ) {
+  } else if (override && override.monthlyPoints !== null) {
     monthlyPoints = override.monthlyPoints;
   } else if (root || policies.some(policy => policy.unlimited)) {
     monthlyPoints = null;
@@ -662,7 +639,6 @@ export const resolvePolicy = ({
 
 type CallRow = typeof core_ai_calls.$inferSelect;
 
-/** Sums a run's calls once. A run is "known" only when every call is. */
 export const summarizeCalls = (calls: CallRow[]) => {
   const sumOf = (pick: (call: CallRow) => null | number) => {
     const values = calls.map(pick);

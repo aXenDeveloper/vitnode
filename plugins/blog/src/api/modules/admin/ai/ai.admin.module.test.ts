@@ -224,9 +224,7 @@ describe("blog AI admin routes", () => {
   });
 
   it("runs through the shared runner and records the run", async () => {
-    const { app, ledger } = await createApp({
-      model: modelAnswering("Cześć"),
-    });
+    const { app, ledger } = await createApp();
 
     await post(app, "/translate", {
       format: "text",

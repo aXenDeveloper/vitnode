@@ -9,10 +9,6 @@ import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_ai_translation_sources } from "@/database/ai";
 
-/**
- * Translation records belong to content: whoever may edit the content type
- * may read and write them - nobody else.
- */
 const assertCanEditContent = async (c: Context, contentTypeId: string) => {
   const registered = c
     .get("core")
@@ -29,7 +25,7 @@ const assertCanEditContent = async (c: Context, contentTypeId: string) => {
   if (!allowed) throw new HTTPException(403);
 };
 
-const zodRecord = z.object({
+const zodTranslationSourceRecord = z.object({
   field: z.string(),
   locale: z.string(),
   origin: z.enum(["ai", "human"]),
@@ -56,7 +52,7 @@ export const getTranslationSourcesAdminRoute = buildRoute({
       200: {
         content: {
           "application/json": {
-            schema: z.object({ records: z.array(zodRecord) }),
+            schema: z.object({ records: z.array(zodTranslationSourceRecord) }),
           },
         },
         description: "Translation source records",

@@ -6,7 +6,6 @@ import type { AiUsage } from "./usage-cost";
 import {
   decimalFromInteger,
   divideByInteger,
-  formatDecimal,
   maxDecimal,
   multiplyByInteger,
   parseDecimal,
@@ -20,31 +19,19 @@ const zodPrice = z
     'A price is a non-negative decimal string, e.g. "3.00".',
   );
 
-/** USD per one million tokens (and per request/image for flat units). */
 export const zodAiPricingRates = z.object({
   inputPerMillion: zodPrice,
   outputPerMillion: zodPrice,
   cacheReadPerMillion: zodPrice.optional(),
   cacheWritePerMillion: zodPrice.optional(),
-  /** A flat amount billed for every call, e.g. a gateway fee. */
   perRequest: zodPrice.optional(),
-  /** A flat amount per input image, for providers that bill images separately. */
   perImage: zodPrice.optional(),
 });
 
 export type AiPricingRates = z.infer<typeof zodAiPricingRates>;
 
-/**
- * How one model is priced on one connection. A gateway and the direct
- * provider are different connections with different prices - never assume
- * one from the other.
- */
 export const zodAiPricing = z.object({
   rates: zodAiPricingRates,
-  /**
-   * Long-context pricing: when a call's input tokens exceed `aboveInputTokens`,
-   * the whole call is billed at that tier's rates. Sorted ascending.
-   */
   tiers: z
     .array(
       z.object({
@@ -57,11 +44,6 @@ export const zodAiPricing = z.object({
 
 export type AiPricing = z.infer<typeof zodAiPricing>;
 
-/**
- * Checks every model's `pricing` in `vitnode.api.config.ts` at boot - the
- * config is the only place prices live, so a typo must stop the server, not
- * turn into an unknown cost on every run.
- */
 export const assertAiModelPricing = (
   models: readonly { id: string; pricing?: unknown }[],
 ): void => {
@@ -99,14 +81,6 @@ const ratesFor = (pricing: AiPricing, inputTokens: number): AiPricingRates => {
   );
 };
 
-/**
- * Prices one call from its reported usage. Anything the pricing cannot price
- * exactly - unknown token counts, cache tokens without a cache rate - makes
- * the result `incomplete` rather than silently cheaper.
- *
- * Reasoning tokens are never added on top: the AI SDK reports them as part of
- * `outputTokens`, and providers bill them as output.
- */
 export const priceUsage = (
   pricing: AiPricing,
   usage: AiUsage,
@@ -149,10 +123,6 @@ export const priceUsage = (
   return { status: "complete", amount: sumDecimals(parts) };
 };
 
-/**
- * The most one call can cost: every input token billed at the dearest input
- * rate of the dearest tier it could fall into, and the full output budget.
- */
 export const maxCallCost = (
   pricing: AiPricing,
   {
@@ -188,7 +158,6 @@ export const maxCallCost = (
     .reduce(maxDecimal, decimalFromInteger(0));
 };
 
-/** A stable label for config-declared pricing, so a snapshot names its source. */
 export const pricingFingerprint = (pricing: AiPricing): string => {
   const text = JSON.stringify(pricing);
   let hash = 0x811c9dc5;
@@ -199,5 +168,3 @@ export const pricingFingerprint = (pricing: AiPricing): string => {
 
   return hash.toString(16).padStart(8, "0");
 };
-
-export const formatUsd = (amount: Decimal): string => formatDecimal(amount);

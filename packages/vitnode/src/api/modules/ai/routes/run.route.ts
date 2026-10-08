@@ -6,11 +6,6 @@ import {
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 
-/**
- * Runs any registered user action for the signed-in user. Safe as a generic
- * endpoint because every user action must declare authorize(), and the
- * runner checks the AI permission, limits and budgets before any call.
- */
 export const runAiRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {

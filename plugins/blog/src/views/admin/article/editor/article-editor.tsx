@@ -89,8 +89,6 @@ export const ArticleEditor = ({
     source,
     values,
   });
-  // Field-level: a translation is outdated when a field's source changed
-  // after it was translated - known from recorded fingerprints, not dates.
   const outdated = locales.filter(
     code => code !== source && freshness.outdatedFields(code).length > 0,
   );
@@ -152,11 +150,7 @@ export const ArticleEditor = ({
     if (fields.includes("friendlyUrl")) await translateField("friendlyUrl", to);
   };
 
-  /**
-   * Outdated fields the AI may update: a field a person edited since its
-   * translation is left for them to review - never overwritten in bulk.
-   */
-  const changedFields = (to: string) =>
+  const aiUpdatableFields = (to: string) =>
     freshness
       .outdatedFields(to)
       .filter(field => !freshness.editedByPerson(to, field));
@@ -406,13 +400,14 @@ export const ArticleEditor = ({
                   <OutdatedBanner
                     action={
                       <>
-                        {ai.available && changedFields(target).length > 0 ? (
+                        {ai.available &&
+                        aiUpdatableFields(target).length > 0 ? (
                           <AiButton
                             label={t("translate.update_changed")}
                             onClick={() => {
                               void translateFields(
                                 target,
-                                changedFields(target),
+                                aiUpdatableFields(target),
                               );
                             }}
                             pending={AI_TRANSLATED_FIELDS.some(field =>

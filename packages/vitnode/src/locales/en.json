@@ -1263,7 +1263,7 @@
         },
         "ai": {
           "title": "AI usage",
-          "desc": "Your monthly AI points, what each feature allows per day and what you've used recently.",
+          "desc": "What each AI feature cost you this month, and how much of today's limit is left.",
           "notice": {
             "disabled": {
               "title": "AI features are switched off",
@@ -1286,32 +1286,6 @@
               "desc": "AI features need a monthly allowance, and yours is currently zero. Ask an administrator if you'd like to try them."
             }
           },
-          "points": {
-            "title": "Monthly allowance",
-            "footer": "Points are reserved while an AI feature runs and only the actual cost is charged. Unused points don't roll over.",
-            "used": "Points used",
-            "used_of": "{used} of {total} points",
-            "used_unlimited": "{used} points (unlimited)",
-            "available": "Available",
-            "reserved": "Reserved",
-            "resets": "Resets on",
-            "unlimited": "Unlimited"
-          },
-          "daily": {
-            "title": "Daily limits per feature",
-            "footer": "Some features also limit how many times a day you can use them, whatever your points.",
-            "used_of": "{used} of {limit} today",
-            "no_limit": "{used} today, no daily limit",
-            "empty": "No AI features are available to your account."
-          },
-          "history": {
-            "title": "Recent operations",
-            "footer": "Only your own operations are listed. Prompts and generated text are never stored.",
-            "empty": "You haven't used any AI features yet.",
-            "points": "{points} pts",
-            "no_charge": "Not charged",
-            "load_more": "Load more"
-          },
           "status": {
             "reserved": "Queued",
             "running": "Running",
@@ -1319,6 +1293,38 @@
             "failed": "Failed",
             "canceled": "Canceled",
             "uncertain": "Checking"
+          },
+          "points": {
+            "left": "{available} of {total} points left",
+            "percent_used": "{percent} used",
+            "used_of": "{used} of {total} points used",
+            "renews": "Renews {date}",
+            "unlimited": "Unlimited points",
+            "unlimited_used": "{used} points used this month",
+            "none": "No AI points this month"
+          },
+          "features": {
+            "title": "Your AI features",
+            "footer": "Only you and administrators can see this. Prompts and answers are never stored.",
+            "empty_title": "No AI features yet",
+            "empty_desc": "Once a role gives you AI points, each feature you can use is listed here with what it cost you.",
+            "today": "{used} / {limit} today",
+            "today_no_limit": "{used} today",
+            "limit_reached": "Limit reached",
+            "month_points": "{points} pts this month",
+            "limit_desc": "You can run it {limit, plural, one {# time} other {# times}} a day. The count resets at midnight.",
+            "no_limit_desc": "It has no daily limit - only your monthly points apply.",
+            "runs_empty": "You haven't used this feature this month.",
+            "show_more": "Show more runs",
+            "charge": "{points} pts",
+            "no_charge": "No charge",
+            "charging": "Charging…",
+            "runs_error": "Couldn't load this feature's runs.",
+            "retry": "Try again"
+          },
+          "overview": {
+            "title": "AI points",
+            "details": "See your AI features"
           }
         }
       }

@@ -1,8 +1,3 @@
-/**
- * AI points for display: at most one decimal place, and `<0.1` for any
- * positive amount too small to show - never a misleading `0`. Points are
- * kept at full precision everywhere else; this is presentation only.
- */
 export const formatAiPoints = (
   points: null | string,
   locale = "en",
@@ -19,7 +14,6 @@ export const formatAiPoints = (
   );
 };
 
-/** USD for the AdminCP: small amounts keep enough digits to be meaningful. */
 export const formatAiUsd = (usd: null | string, locale = "en"): string => {
   if (usd === null) return "—";
   const value = Number(usd);

@@ -184,7 +184,6 @@ describe("AiRunner.run", () => {
     });
 
     expect(result.output).toBe("A short summary.");
-    // 10 input * $1000/1M + 5 output * $2000/1M = $0.02 = 20 points.
     expect(result.usage).toEqual({
       chargedPoints: "20",
       costKnown: true,
@@ -241,8 +240,6 @@ describe("AiRunner.run", () => {
 
     const result = await runner.run({ action: SUMMARY, input: { text: "x" } });
 
-    // The lost attempt's cost is unknown: the site pays the whole hold,
-    // the user pays only the 20 points of the answer they got.
     expect(result.usage).toMatchObject({
       chargedPoints: "20",
       costKnown: false,

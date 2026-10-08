@@ -23,7 +23,6 @@ import {
   openRouterProviderAdapter,
 } from "../lib/ai/usage-cost";
 
-/** A run request whose action key carries its types. */
 export type TypedAiRunRequest<Input, Output> = Omit<
   AiRunRequest,
   "action" | "input"
@@ -33,21 +32,11 @@ export type TypedAiRunRequest<Input, Output> = Omit<
 };
 
 export interface AIModelDefinition {
-  /**
-   * What the model can do. Omitted means `["text"]` - vision is never assumed.
-   * Add `"image-input"` only for a model that accepts images in the prompt.
-   */
   capabilities?: AiModelCapability[];
   id: string;
-  /** Tokens one input image counts as at most, for reservations. Default 2000. */
   imageInputTokens?: number;
   model: LanguageModel;
   name: string;
-  /**
-   * The price of this model *on this connection*. A gateway and the direct
-   * provider bill differently - set the one you actually pay. Admins can
-   * override it in the AdminCP; without any pricing, costs stay unknown.
-   */
   pricing?: AiPricing;
 }
 
@@ -72,10 +61,6 @@ export interface AIConfig {
   imageModels?: AIImageModelDefinition[];
 
   models: AIModelDefinition[];
-  /**
-   * Readers for provider-reported cost and request ids. The AI Gateway and
-   * OpenRouter readers are built in; add one for another provider.
-   */
   providerAdapters?: AiProviderAdapter[];
 }
 
@@ -130,19 +115,16 @@ export class AIModel {
     return this.runnerInstance;
   }
 
-  /** Every registered AI action, from every plugin. */
   actions(): AiActionRegistry {
     return this.c.get("core")?.aiActions ?? new AiActionRegistry([]);
   }
 
-  /** Capabilities of a configured language model; `["text"]` when undeclared. */
   capabilities(id?: string): AiModelCapability[] {
     const entry = this.definition(id);
 
     return [...(entry.capabilities ?? DEFAULT_AI_MODEL_CAPABILITIES)];
   }
 
-  /** The configured entry of a language model, including its metadata. */
   definition(id?: string): AIModelDefinition {
     const { models } = this.config();
     const found = id ? models.find(entry => entry.id === id) : models[0];
@@ -177,7 +159,6 @@ export class AIModel {
     return found.model;
   }
 
-  /** The upper bound a run could cost the signed-in user, without running it. */
   async estimate(
     request: AiRunRequest,
   ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
@@ -206,7 +187,6 @@ export class AIModel {
     return found.model;
   }
 
-  /** Where AI money and history are recorded. */
   ledger(): AiLedger {
     return this.ledgerOverride ?? new PostgresAiLedger(this.c.get("db"));
   }
@@ -230,10 +210,6 @@ export class AIModel {
       provider: providerIdOf(entry.model),
     }));
   }
-  /**
-   * Runs a registered action for the signed-in user through the shared
-   * runner: authorization, limits, accounting and validation included.
-   */
   async run<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,
   ): Promise<AiRunResult<Output>>;
@@ -241,7 +217,6 @@ export class AIModel {
   async run(request: AiRunRequest): Promise<AiRunResult<unknown>> {
     return await this.runner().run(request);
   }
-  /** Runs an action as the trusted system actor. Server code only. */
   async runAsSystem<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,
   ): Promise<AiRunResult<Output>>;
@@ -250,7 +225,6 @@ export class AIModel {
     return await this.runner().runAsSystem(request);
   }
 
-  /** Streams a text action for the signed-in user. */
   async stream<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,
   ): Promise<AiStreamResult<Output>>;

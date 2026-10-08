@@ -70,7 +70,6 @@ const MultiLangEditor = ({
       </div>
 
       <FormControl>
-        {/* Tells editor tools (Quick Ask) which language this text is in. */}
         <MultiLangSelectedContext value={selected}>
           <Editor
             aria-labelledby={labelledBy}

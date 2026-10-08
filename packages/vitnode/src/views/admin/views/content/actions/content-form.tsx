@@ -259,13 +259,9 @@ const ContentFormFields = ({
 
     const savedId = mutation.id ?? data?.id;
     if (savedId !== undefined) {
-      await Promise.all(
+      await Promise.allSettled(
         [...savedListenersRef.current].map(async listener => {
-          try {
-            await listener({ itemId: savedId });
-          } catch {
-            /* a listener never fails the save */
-          }
+          await listener({ itemId: savedId });
         }),
       );
     }

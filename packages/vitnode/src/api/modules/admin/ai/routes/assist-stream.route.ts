@@ -8,7 +8,6 @@ import {
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 
-/** Streams a text action for the signed-in admin (the editor's Quick Ask). */
 export const assistStreamAiAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
@@ -36,8 +35,6 @@ export const assistStreamAiAdminRoute = buildRoute({
       resource: body.resource ?? undefined,
     });
 
-    // A streamed body has no typed JSON response for the OpenAPI handler type
-    // to check; limits were already enforced before the first byte.
     return new Response(stream, {
       headers: AI_NDJSON_HEADERS,
       status: 200,

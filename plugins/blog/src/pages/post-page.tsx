@@ -107,8 +107,6 @@ const BlogPostPage = ({
       {item.coverImage ? (
         <img
           alt={
-            // The article's own ALT wins; otherwise the image's default ALT
-            // from Core Files in this page's language, then the site's.
             resolveImageAlt({
               alts: item.coverImage.alts,
               fallbackLocales: [getIntlRuntime().defaultLocale],

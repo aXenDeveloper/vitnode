@@ -18,14 +18,11 @@ export interface FileAltLanguage {
   code: string;
   name: string;
   origin: "ai" | "human" | null;
-  /** An AI text written for an older version of the file. */
   stale: boolean;
-  /** `""` is a deliberate "no description"; `null` is nothing written yet. */
   text: null | string;
   updatedAt: Date | null | string;
 }
 
-/** `GET /admin/files/{id}/alt`. */
 export interface FileAlt {
   altPolicy: FileAltPolicy;
   languages: FileAltLanguage[];

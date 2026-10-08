@@ -1,19 +1,62 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { UpdatePersonalInformation } from "@/views/auth/settings/overview/personal-update";
 import type { UpdateTimeZone } from "@/views/auth/settings/overview/time-zone-update";
 
+import { AiPointsContent } from "@/views/auth/settings/ai/ai-usage-content";
+import {
+  aiUsageQueryOptions,
+  hasAiFeatures,
+} from "@/views/auth/settings/ai/ai-usage-query";
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
 import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
+import {
+  SETTINGS_ROW,
+  SettingsGroup,
+} from "@/views/auth/settings/settings-group";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 
+import { useMiddlewareConfigQuery } from "../auth/middleware-config";
 import { invalidateSession, sessionQueryOptions } from "../auth/session-query";
 import { useOwnUserImageEditor } from "../profile/own-image-editor";
 import { userProfileQuery } from "../profile/query";
 import { personalInfoPolicyQuery } from "./personal-policy";
+
+const OverviewAiPoints = ({ userId }: { userId: number }) => {
+  const t = useTranslations("core.auth.settings.ai.overview");
+  const { data: config } = useMiddlewareConfigQuery();
+  const { data: usage } = useQuery({
+    ...aiUsageQueryOptions({ userId }),
+    enabled: (config.ai?.models.length ?? 0) > 0,
+  });
+
+  if (!usage || !hasAiFeatures(usage)) return null;
+
+  return (
+    <SettingsGroup title={t("title")}>
+      <li className={SETTINGS_ROW}>
+        <AiPointsContent usage={usage} />
+      </li>
+      <li className={SETTINGS_ROW}>
+        <Link
+          className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+          to="/settings/ai"
+        >
+          {t("details")}
+        </Link>
+      </li>
+    </SettingsGroup>
+  );
+};
 
 export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
   const { data: profile } = useSuspenseQuery(userProfileQuery(nameCode));
@@ -62,6 +105,7 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
 
   return (
     <OverviewSettingsContent
+      aiPoints={<OverviewAiPoints userId={session.user.id} />}
       canEditPersonalInfo={policy.canEdit}
       editor={editor}
       onTimeZoneUpdate={onTimeZoneUpdate}

@@ -52,7 +52,6 @@ const generatedText = (text: string) => ({
   warnings: [],
 });
 
-/** Answers a vision prompt with a description, anything else with a translation. */
 const createModel = () => {
   const calls = { translate: [] as string[], vision: 0 };
   const model = new MockLanguageModelV4({
@@ -273,7 +272,6 @@ describePostgres("automatic ALT (real PostgreSQL)", () => {
         ),
       );
 
-    // A replaced file gets a new fingerprint; its AI texts are now stale.
     bytes = Buffer.from("second version of the image");
     await database.db
       .update(core_files)
@@ -310,7 +308,6 @@ describePostgres("automatic ALT (real PostgreSQL)", () => {
       .where(eq(core_files_alt_state.fileId, fileId));
     expect(state.status).toBe("waiting_budget");
 
-    // Through the queue: the task returns to pending with its attempt given back.
     await database.db.delete(core_queue);
     await enqueueAltGeneration(context(), fileId);
     await processQueueTasks(context(), { queues: [ALT_QUEUE] });
@@ -377,7 +374,6 @@ describePostgres("automatic ALT (real PostgreSQL)", () => {
 
   it("records a configuration problem once instead of burning retries", async () => {
     const fileId = await insertFile();
-    // A text-only model cannot read images: no retry will change that.
     models = [{ ...models[0], capabilities: ["text"] }];
 
     await expect(processAltForFile(context(), fileId)).resolves.toEqual({

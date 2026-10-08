@@ -8,7 +8,6 @@ export const altGenerateQueueTask = buildQueueTask({
   description:
     "Describe one image and translate its ALT text into missing languages",
   maxAttempts: 3,
-  // One image: a vision call and a few short translations.
   leaseSeconds: 15 * 60,
   handler: async (c, payload) => {
     const { fileId } = z.object({ fileId: z.number().int() }).parse(payload);

@@ -57,16 +57,9 @@ type Phase =
 
 const TONES = ["friendly", "formal", "confident", "neutral"] as const;
 
-/**
- * Quick Ask: rewrite the selection, continue the text or follow a custom
- * request - streamed, previewed, then applied only when the writer chooses.
- * Applying is one editor transaction, so Undo restores the text.
- */
 export const QuickAskAction = () => {
   const t = useTranslations("core.global.ai_assist.quick_ask");
   const tError = useTranslations("core.global.ai_assist.error");
-  // The language of the text being edited - a multi-language field's tab -
-  // and only then the interface language.
   const lockedLanguage = useMultiLangLanguage();
   const selectedLanguage = useMultiLangSelected();
   const contentLanguage = lockedLanguage ?? selectedLanguage;
@@ -81,7 +74,6 @@ export const QuickAskAction = () => {
   const [estimate, setEstimate] = React.useState<null | string>(null);
   const [snapshot, setSnapshot] = React.useState<null | QuickAskSnapshot>(null);
   const abortRef = React.useRef<AbortController | null>(null);
-  // Re-evaluated on every editor change while a result waits for a decision.
   const stale = useEditorState({
     editor,
     selector: ctx =>
@@ -141,7 +133,6 @@ export const QuickAskAction = () => {
     setOpen(true);
     setEstimate(null);
     if (canRewrite && taken.selection) {
-      // A bound for one request, shown before anything runs.
       void estimateAiAction({
         ...inputFor({ kind: "rewrite", operation: "shorten" }, taken),
         scope,
@@ -236,14 +227,9 @@ export const QuickAskAction = () => {
   );
 };
 
-/**
- * Quick Ask needs the app's query client to learn which AI actions the
- * person may use; an editor rendered without one simply has no AI button.
- */
 export const QuickAskSlot = () =>
   React.use(QueryClientContext) ? <QuickAskAction /> : null;
 
-/** The panel's content for each phase - separate so it can be tested by DOM. */
 export const QuickAskPanel = ({
   canAsk,
   canRewrite,

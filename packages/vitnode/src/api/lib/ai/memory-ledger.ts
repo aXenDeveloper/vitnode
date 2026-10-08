@@ -16,8 +16,10 @@ import type {
 import {
   deliveredCostUsd,
   findExceededBudget,
+  GLOBAL_SCOPE,
   planBudgetItems,
   settlementCharge,
+  userScope,
 } from "./budget";
 import { maxDecimal, parseDecimalOrNull, sumDecimals } from "./decimal";
 import { DEFAULT_AI_SETTINGS } from "./postgres-ledger";
@@ -43,11 +45,6 @@ export interface MemoryAiCall extends AiCallStart {
   id: number;
 }
 
-/**
- * An in-process ledger with the same budget rules as the Postgres one. It is a
- * seam for route and runner tests - it proves behaviour, not concurrency. The
- * concurrency guarantees are proven against PostgreSQL itself.
- */
 export class MemoryAiLedger implements AiLedger {
   constructor({
     actionSettings = {},
@@ -266,11 +263,11 @@ export class MemoryAiLedger implements AiLedger {
 
     const runCalls = this.calls.filter(call => call.runId === runId);
     const costs = runCalls.map(call =>
-      parseDecimalOrNull(call.finish?.cost.amountUsd ?? null),
+      parseDecimalOrNull(call.finish?.cost.amountUsd),
     );
     const deliveredUsd = deliveredCostUsd(
       runCalls.map(call => ({
-        costUsd: parseDecimalOrNull(call.finish?.cost.amountUsd ?? null),
+        costUsd: parseDecimalOrNull(call.finish?.cost.amountUsd),
         status: call.finish?.status ?? "uncertain",
       })),
       run.reservedUsd,
@@ -310,17 +307,15 @@ export class MemoryAiLedger implements AiLedger {
     });
   }
 
-  /** Points a user has spent this month, for assertions. */
   spentPoints(userId: number): Decimal {
     return sumDecimals(
       [...this.budgets.values()]
-        .filter(row => row.scopeKey === `user:${userId}`)
+        .filter(row => row.scopeKey === userScope(userId))
         .map(row => row.spentAmount),
     );
   }
 
-  /** USD the site has spent this month, for assertions. */
-  spentUsd(scopeKey = "global"): Decimal {
+  spentUsd(scopeKey = GLOBAL_SCOPE): Decimal {
     return sumDecimals(
       [...this.budgets.values()]
         .filter(row => row.scopeKey === scopeKey)

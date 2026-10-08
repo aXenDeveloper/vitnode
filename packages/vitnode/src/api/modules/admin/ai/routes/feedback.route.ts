@@ -6,7 +6,6 @@ import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_ai_runs } from "@/database/ai";
 
-/** The AdminCP twin of `POST /ai/runs/{id}/feedback`. Tracking only. */
 export const aiFeedbackAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
