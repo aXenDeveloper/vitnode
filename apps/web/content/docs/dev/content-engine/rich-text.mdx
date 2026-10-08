@@ -11,7 +11,7 @@ icon: Pilcrow
 Add the field to a content type. A blog article body is the typical case:
 
 ```ts title="plugins/blog/src/content/post.ts"
-import { defineContentType, field } from "@vitnode/core/content";
+import { defineContentType, field } from '@vitnode/core/content'
 
 export const blogPostContentType = defineContentType({
   // id, tableName, localization, publicApi as before
@@ -19,7 +19,7 @@ export const blogPostContentType = defineContentType({
     title: field.text({ localized: true, required: true, maxLength: 255 }),
     content: field.richText({ localized: true, required: true }), // [!code highlight]
   },
-});
+})
 ```
 
 The value is a ProseMirror document, the same JSON Tiptap's `editor.getJSON()` returns:
@@ -42,21 +42,21 @@ The AdminCP form shows the editor automatically. It is loaded lazily, so forms w
 Import `RichTextContent` from `@vitnode/core/components/rich-text` and pass the document. It works during SSR and in the browser:
 
 ```tsx title="plugins/blog/src/pages/post-page.tsx"
-import { RichTextContent } from "@vitnode/core/components/rich-text";
-import { zodRichTextDocument } from "@vitnode/core/content";
-import { z } from "zod";
+import { RichTextContent } from '@vitnode/core/components/rich-text'
+import { zodRichTextDocument } from '@vitnode/core/content'
+import { z } from 'zod'
 
 const zodBlogPost = z.object({
   content: zodRichTextDocument,
   title: z.string(),
-});
+})
 
 const BlogPostPage = ({ item }: { item: z.infer<typeof zodBlogPost> }) => (
   <article>
     <h1>{item.title}</h1>
     <RichTextContent className="leading-relaxed" content={item.content} />
   </article>
-);
+)
 ```
 
 The output is wrapped in `<div class="tiptap">` and uses the same classes as the editor (`list-disc`, `tableWrapper`, `tiptap-panel` and so on), so the existing `@vitnode/core/styles/tiptap.css` styles it.
@@ -82,7 +82,11 @@ Pass `nodes` or `marks` to change how one type renders. The keys are ProseMirror
   }}
   nodes={{
     heading: ({ children, node }) =>
-      node.attrs?.level === 2 ? <h2 className="scroll-mt-20">{children}</h2> : <h3>{children}</h3>,
+      node.attrs?.level === 2 ? (
+        <h2 className="scroll-mt-20">{children}</h2>
+      ) : (
+        <h3>{children}</h3>
+      ),
   }}
 />
 ```
@@ -93,16 +97,16 @@ A custom renderer is your code, so it skips the built-in link and style allowlis
 
 Three helpers work on the server and in the browser without React. Import them from `@vitnode/core/content`:
 
-| Helper                     | Returns   | Use it for                                                                 |
-| -------------------------- | --------- | -------------------------------------------------------------------------- |
-| `richTextToPlainText(doc)` | `string`  | Search, excerpts, AI prompts, word counts. One line per block, no markup  |
-| `richTextToHtml(doc)`      | `string`  | Emails and feeds. Escaped, with the same allowlists as `RichTextContent`   |
-| `isRichTextEmpty(doc)`     | `boolean` | Checking whether a document has any text or media                          |
+| Helper                     | Returns   | Use it for                                                               |
+| -------------------------- | --------- | ------------------------------------------------------------------------ |
+| `richTextToPlainText(doc)` | `string`  | Search, excerpts, AI prompts, word counts. One line per block, no markup |
+| `richTextToHtml(doc)`      | `string`  | Emails and feeds. Escaped, with the same allowlists as `RichTextContent` |
+| `isRichTextEmpty(doc)`     | `boolean` | Checking whether a document has any text or media                        |
 
 ```ts
-import { richTextToPlainText } from "@vitnode/core/content";
+import { richTextToPlainText } from '@vitnode/core/content'
 
-const words = richTextToPlainText(post.content).split(/\s+/).length;
+const words = richTextToPlainText(post.content).split(/\s+/).length
 ```
 
 The Content Engine uses them for you: the site search indexes the words of a rich text field, `delivery.seo.descriptionField` can name one and gets plain text, and the revision history compares documents as text.

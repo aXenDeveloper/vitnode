@@ -21,14 +21,14 @@ Live editing needs an [editorial content type](/docs/dev/content-engine/publicat
 
 ```ts title="plugins/blog/src/content/post.ts"
 export const blogPostContentType = defineContentType({
-  id: "blog.post",
-  tableName: "blog_posts",
+  id: 'blog.post',
+  tableName: 'blog_posts',
   editorial: { enabled: true }, // [!code highlight]
   fields: {
     title: field.text({ localized: true, required: true }),
     content: field.richText({ localized: true, required: true }),
   },
-});
+})
 ```
 
 Open an existing record in the AdminCP and you are in a live session. A form that creates a new record is not live yet, because there is no record to share.
@@ -87,20 +87,20 @@ Restoring a revision or deleting the record throws the drafts, locks and shared 
 
 Presence and co-editing travel over the [WebSocket](/docs/dev/websocket) at `/api/ws`, so they need a long-lived Node server, such as the separate `apps/api` server or a [self-hosted](/docs/dev/deployments/self-hosted) install.
 
-| Deployment | Autosave and locks | Presence | Rich text |
-| --- | --- | --- | --- |
-| Long-lived Node server | Live | Yes | Co-edited |
-| Serverless, such as [Vercel](/docs/dev/deployments/cloud/vercel) | Checked every 10 seconds | No | One editor at a time, locked like a plain field |
+| Deployment                                                       | Autosave and locks       | Presence | Rich text                                       |
+| ---------------------------------------------------------------- | ------------------------ | -------- | ----------------------------------------------- |
+| Long-lived Node server                                           | Live                     | Yes      | Co-edited                                       |
+| Serverless, such as [Vercel](/docs/dev/deployments/cloud/vercel) | Checked every 10 seconds | No       | One editor at a time, locked like a plain field |
 
 With more than one API instance, set `REDIS_URL`. Instances share presence and shared-document updates over Redis pub/sub; without it, editors connected to different instances do not see each other.
 
 ## Where the data lives
 
-| Table | Holds |
-| --- | --- |
-| `core_content_drafts` | The shared draft of plain fields, one row per record and language |
-| `core_content_field_locks` | Active field locks, with their holder and expiry |
-| `core_content_documents` | The Yjs state of each rich text field, per record and language |
+| Table                      | Holds                                                             |
+| -------------------------- | ----------------------------------------------------------------- |
+| `core_content_drafts`      | The shared draft of plain fields, one row per record and language |
+| `core_content_field_locks` | Active field locks, with their holder and expiry                  |
+| `core_content_documents`   | The Yjs state of each rich text field, per record and language    |
 
 The daily `content-editorial-cleanup` cron removes expired locks, and drafts and documents nobody touched for 30 days. A stale draft whose record has not changed since is kept, because it is somebody's unsaved work.
 
@@ -108,12 +108,12 @@ The daily `content-editorial-cleanup` cron removes expired locks, and drafts and
 
 The AdminCP calls these routes for you. They are mounted under the content type's admin module, for example `/api/@vitnode/blog/admin/content/posts`, and all of them need `can_edit`.
 
-| Method and path | Body | Result |
-| --- | --- | --- |
-| `GET /{id}/locks` | | `{ locks }`: unexpired locks of the record |
-| `POST /{id}/locks` | `{ field, locale, action }` with `action` `acquire`, `renew` or `release` | `{ lock }`, or `409` `CONTENT_FIELD_LOCKED` with the current holder |
-| `GET /{id}/draft` | | `{ shared, translations }`: the shared draft and one draft per language |
-| `PUT /{id}/draft` | `{ locale, values }` | `{ updatedAt }`, or `409` `CONTENT_FIELD_NOT_LOCKED` for fields you do not hold |
+| Method and path    | Body                                                                      | Result                                                                          |
+| ------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `GET /{id}/locks`  |                                                                           | `{ locks }`: unexpired locks of the record                                      |
+| `POST /{id}/locks` | `{ field, locale, action }` with `action` `acquire`, `renew` or `release` | `{ lock }`, or `409` `CONTENT_FIELD_LOCKED` with the current holder             |
+| `GET /{id}/draft`  |                                                                           | `{ shared, translations }`: the shared draft and one draft per language         |
+| `PUT /{id}/draft`  | `{ locale, values }`                                                      | `{ updatedAt }`, or `409` `CONTENT_FIELD_NOT_LOCKED` for fields you do not hold |
 
 `locale` is `null` for a field that is not localized and the language code otherwise. A draft write only accepts fields you currently hold a lock on, and validates each value with the field's own rules.
 
@@ -126,7 +126,7 @@ import {
   ContentLiveFieldPresence,
   ContentLivePresence,
   ContentLiveStatus,
-} from "@vitnode/core/content/admin-form";
+} from '@vitnode/core/content/admin-form'
 
 export const ArticleHeader = ({ locale }: { locale: string }) => (
   <header className="flex items-center justify-between gap-4">
@@ -137,16 +137,16 @@ export const ArticleHeader = ({ locale }: { locale: string }) => (
     <ContentLiveStatus />
     <ContentLivePresence />
   </header>
-);
+)
 ```
 
-| Export | What it renders |
-| --- | --- |
-| `ContentLivePresence` | Avatars of everyone else in the record. `max` sets how many show before **+N**, 5 by default. |
-| `ContentLiveFieldPresence` | Avatars of the people in one `field` and `locale`. |
-| `ContentLiveLanguagePresence` | Who is working in one `locale`. |
-| `ContentLiveStatus` | The autosave state: **Saving…**, **Draft saved at…**, **Unsaved changes**. |
-| `useContentLive()` | The session itself: members, locks and autosave status. |
+| Export                        | What it renders                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `ContentLivePresence`         | Avatars of everyone else in the record. `max` sets how many show before **+N**, 5 by default.                             |
+| `ContentLiveFieldPresence`    | Avatars of the people in one `field` and `locale`.                                                                        |
+| `ContentLiveLanguagePresence` | Who is working in one `locale`.                                                                                           |
+| `ContentLiveStatus`           | The autosave state: **Saving…**, **Draft saved at…**, **Unsaved changes**.                                                |
+| `useContentLive()`            | The session itself: members, locks and autosave status.                                                                   |
 | `useContentRichTextReplace()` | A function that replaces a rich text field's content through the shared editor, so everyone sees it and it can be undone. |
 
 All of them render nothing, or return `null`, outside a live form, so the same layout works for the create form.
