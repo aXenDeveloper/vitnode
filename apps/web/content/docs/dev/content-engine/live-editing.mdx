@@ -4,6 +4,10 @@ description: Let several editors work on one Content Engine record at once. Auto
 icon: Users
 ---
 
+import { ImgDocs } from '@/components/fumadocs/img'
+import coEditing from './live-editing-co-editing.png'
+import fieldLock from './live-editing-field-lock.png'
+
 Live editing lets a whole team work on the same record at the same time without stepping on each other. Every editorial content type gets it automatically in the AdminCP:
 
 - **Autosave.** Changes are saved to a shared draft a moment after you stop typing. Nothing reaches the published record until someone presses **Save** or **Publish**.
@@ -33,6 +37,12 @@ Everyone in the session needs the content type's `can_edit` permission. Viewing 
 
 ## What editors see
 
+### Presence
+
+The form header shows the avatars of everyone else in the record, up to five and then **+N**. Hover or focus an avatar to see where that person is, for example "Anna, editing Title (PL)". A small avatar next to a field's label shows who is in that field, in the language you are looking at. The language switcher marks each language someone is working in.
+
+One person with several tabs counts once, and you never see yourself.
+
 ### Autosave and the shared draft
 
 About 1.5 seconds after you stop typing, your changes are saved to the record's draft. The form header shows the state: **Saving…**, **Draft saved at 14:32**, or **Unsaved changes** when the draft differs from the published record.
@@ -45,13 +55,29 @@ Clicking into a plain field takes a lock on that field, in that language. The lo
 
 While Anna holds the title, everyone else sees the title read-only with **Anna is editing**, and the value updates live as she types. When she moves on, the field becomes editable again.
 
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={fieldLock}
+  alt="Blog article form seen by Anna: the title is read-only and shows Test is editing, with Test's avatar in the header"
+/>
+
 A lock that is not renewed, because a laptop went to sleep or a tab crashed, expires on its own after 60 seconds.
 
 ### Co-editing rich text
 
-Rich text fields are not locked. Everyone in the same field and language types into one shared document, and each person's cursor and selection show with their name and color. Undo only undoes your own changes.
+Rich text fields are not locked. Everyone in the same field and language types into one shared document, and each person's cursor and selection show with their name in their avatar color. Undo only undoes your own changes.
 
-The shared document is saved on the server about two seconds after the last change, so it is autosaved too. **Save** writes its current content to the record as JSON.
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={coEditing}
+  alt="Blog article editor seen by Anna while Test types: Test's caret with a name label in the text, and Test's avatar next to the Content label"
+/>
+
+Each language has its own shared document, and switching the language swaps the editor. The first time anyone opens a field, one tab fills the shared document from the record. If the connection drops, the editor keeps what you type and sends it when the connection is back.
+
+The shared document is saved on the server about two seconds after the last change, so it is autosaved too, and it never goes into the draft. **Save** writes its current content, everyone's edits included, to the record as JSON.
 
 ### Resets
 
@@ -93,24 +119,34 @@ The AdminCP calls these routes for you. They are mounted under the content type'
 
 ## Use live state in a custom form layout
 
-A plugin that replaces the edit form [with its own layout](/docs/dev/content-engine/admincp) can read the session from `@vitnode/core/content/admin-form`:
+A plugin that replaces the edit form [with its own layout](/docs/dev/content-engine/admincp) gets the same presence UI from `@vitnode/core/content/admin-form`:
 
 ```tsx title="plugins/blog/src/views/admin/article/editor/header.tsx"
 import {
+  ContentLiveFieldPresence,
+  ContentLivePresence,
   ContentLiveStatus,
-  useContentLive,
 } from "@vitnode/core/content/admin-form";
 
-export const ArticleHeader = () => {
-  const live = useContentLive();
-
-  return (
-    <header className="flex items-center justify-between gap-4">
-      <ContentLiveStatus />
-      {live ? <span>{live.session.members.length}</span> : null}
-    </header>
-  );
-};
+export const ArticleHeader = ({ locale }: { locale: string }) => (
+  <header className="flex items-center justify-between gap-4">
+    <div className="flex items-center gap-2">
+      <h2>Title</h2>
+      <ContentLiveFieldPresence field="title" locale={locale} />
+    </div>
+    <ContentLiveStatus />
+    <ContentLivePresence />
+  </header>
+);
 ```
 
-`useContentLive()` returns `null` outside a live form, so the same layout works for the create form.
+| Export | What it renders |
+| --- | --- |
+| `ContentLivePresence` | Avatars of everyone else in the record. `max` sets how many show before **+N**, 5 by default. |
+| `ContentLiveFieldPresence` | Avatars of the people in one `field` and `locale`. |
+| `ContentLiveLanguagePresence` | Who is working in one `locale`. |
+| `ContentLiveStatus` | The autosave state: **Saving…**, **Draft saved at…**, **Unsaved changes**. |
+| `useContentLive()` | The session itself: members, locks and autosave status. |
+| `useContentRichTextReplace()` | A function that replaces a rich text field's content through the shared editor, so everyone sees it and it can be undone. |
+
+All of them render nothing, or return `null`, outside a live form, so the same layout works for the create form.

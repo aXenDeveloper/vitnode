@@ -148,7 +148,7 @@ it. **Generate from title** builds the friendly URL from the translated title.
 With AI configured, the editor adds:
 
 - **Translate** on each field, and **Translate missing fields** for a whole
-  language. Content keeps its HTML structure.
+  language. Content keeps its formatting.
 - **Write with AI** on the excerpt, which writes it from the title and content.
 
 <Callout type="info" title="When the AI buttons appear">
@@ -158,12 +158,27 @@ With AI configured, the editor adds:
 </Callout>
 
 AI never saves for you. Read the suggestion, then press **Save changes**.
+While others are editing the article, a translated body goes into the shared
+editor as one change, so everyone sees it and you can undo it.
+
+### Write together
+
+Several people can work on one article at once. The header shows who else is
+in it, and small avatars next to a field show who is editing it. The title,
+slug, excerpt and other plain fields are edited by one person at a time; the
+article body is shared, with everyone's cursor visible. Your changes are
+autosaved to a draft until someone presses **Save changes**. See
+[Live editing and autosave](/docs/dev/content-engine/live-editing) for how it
+works and what it needs on your server.
 
 ### Upgrade an existing blog
 
 Articles have a localized **Excerpt** field. Search results use it as the
-description and fall back to the article content when it is empty. Run your
-migrations after you upgrade `@vitnode/blog`:
+description and fall back to the article content when it is empty. The article
+content is now stored as [rich text](/docs/dev/content-engine/rich-text) JSON
+instead of HTML; the migration keeps the words of existing articles as one
+paragraph, so re-check their formatting. Run your migrations after you upgrade
+`@vitnode/blog`:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the blog excerpt">
 
