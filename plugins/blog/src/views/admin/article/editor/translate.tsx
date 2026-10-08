@@ -7,6 +7,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@vitnode/core/components/ui/dropdown-menu";
+import { ContentLiveLanguagePresence } from "@vitnode/core/content/admin-form";
 import { cn } from "cn";
 import {
   ArrowRightIcon,
@@ -77,6 +78,7 @@ export const TranslateMenu = ({
               >
                 <StatusDot status={status} />
                 <span className="flex-1">{language.name}</span>
+                <ContentLiveLanguagePresence locale={language.code} />
                 <span className="text-muted-foreground text-xs">
                   {status === "missing"
                     ? t("missing", { count: language.missing })

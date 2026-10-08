@@ -6,7 +6,10 @@ import {
   useMultiLangField,
 } from "@vitnode/core/components/form/fields/multi-lang";
 import { FormControl, FormMessage } from "@vitnode/core/components/ui/form";
-import { useContentForm } from "@vitnode/core/content/admin-form";
+import {
+  ContentLiveFieldPresence,
+  useContentForm,
+} from "@vitnode/core/content/admin-form";
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
@@ -66,7 +69,14 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
           value={currentValue}
         />
       </FormControl>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        {/* The field announces its editors; these are the faces. */}
+        <ContentLiveFieldPresence
+          className="me-auto"
+          decorative
+          field={field.name}
+          locale={selected}
+        />
         <CharacterCount field="title" value={currentValue} />
       </div>
       <FormMessage />
@@ -76,7 +86,7 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
 
 export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog.content.post.fields");
-  const { currentValue, setValue } = useMultiLangField(
+  const { currentValue, selected, setValue } = useMultiLangField(
     field as MultiLangFieldProps["field"],
   );
 
@@ -99,6 +109,11 @@ export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
             value={currentValue}
           />
         </FormControl>
+        <ContentLiveFieldPresence
+          decorative
+          field={field.name}
+          locale={selected}
+        />
       </div>
       <FormMessage />
     </>

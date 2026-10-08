@@ -10,8 +10,11 @@ import {
   ContentFormActions,
   ContentFormField,
   ContentFormStatusSwitch,
+  ContentLivePresence,
   useContentForm,
   useContentFormValues,
+  useContentLive,
+  useContentRichTextReplace,
   useSetContentFormValue,
   useTranslationFreshness,
 } from "@vitnode/core/content/admin-form";
@@ -81,6 +84,8 @@ export const ArticleEditor = ({
     valuesRef.current = values;
   });
   const setFormValue = useSetContentFormValue();
+  const live = useContentLive();
+  const replaceRichText = useContentRichTextReplace();
   const { emojis } = useEditorConfig();
   const ai = useArticleAi();
   const [target, setTarget] = React.useState<null | string>(null);
@@ -117,8 +122,6 @@ export const ArticleEditor = ({
     );
   };
 
-  // The editor is uncontrolled once it mounts, so a document written from
-  // outside it remounts it on the new value.
   const setContent = (locale: string, document: RichTextDocument) => {
     setFormValue(
       "content",
@@ -128,6 +131,15 @@ export const ArticleEditor = ({
         document,
       ),
     );
+    // Co-edited, the document goes in through the shared editor - one
+    // transaction everyone in the article sees, and can undo.
+    if (replaceRichText) {
+      replaceRichText("content", locale, document);
+
+      return;
+    }
+    // Alone, the editor is uncontrolled once it mounts, so a document written
+    // from outside it remounts it on the new value.
     setContentRevision(revision => revision + 1);
   };
 
@@ -282,6 +294,13 @@ export const ArticleEditor = ({
   };
 
   const fieldLocale = target ?? source;
+
+  // The language on screen is the one this editor works in: the others see
+  // them there on the language menu even before a field has focus.
+  const focusLanguage = live?.session.focus;
+  React.useEffect(() => {
+    focusLanguage?.(null, fieldLocale);
+  }, [fieldLocale, focusLanguage]);
   const excerptPending = ai.isPending(`excerpt:${fieldLocale}`);
   const fieldActions: ArticleFieldActions = ai.available
     ? {
@@ -384,6 +403,7 @@ export const ArticleEditor = ({
           ) : null}
           <h1 className="sr-only">{header?.title ?? t("heading")}</h1>
           <div className="flex-1" />
+          <ContentLivePresence />
           {translationLanguages.length > 0 ? (
             target ? (
               <ActiveTranslation
