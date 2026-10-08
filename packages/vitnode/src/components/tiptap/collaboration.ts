@@ -28,9 +28,12 @@ export const EditorCollaborationContext = React.createContext<
  * component of its own, so it takes a `key` and the props a `FormControl`
  * adds (`id`, `aria-describedby`, `aria-invalid`).
  */
-export const CollaborativeEditorSlot = async ({
+export const CollaborativeEditorSlot = ({
   render,
   ...props
 }: CollaborativeEditorProps & {
   render: (props: CollaborativeEditorProps) => React.ReactNode;
-}) => render(props);
+}): React.JSX.Element =>
+  // Wrapped in an element rather than returned as is: `ReactNode` includes a
+  // promise, and an async component suspends on a new promise every render.
+  React.createElement(React.Fragment, null, render(props));
