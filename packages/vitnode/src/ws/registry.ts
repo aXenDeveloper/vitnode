@@ -6,6 +6,20 @@ import type { VitNodeWSChannel, VitNodeWSMessage } from "./types";
 
 const connections = new Map<WSContext, null | number>();
 
+/**
+ * Room name -> socket -> the members (one per browser tab) that joined through
+ * that socket. A browser shares one socket across its tabs, so a socket stays
+ * in a room while at least one of its tabs is.
+ */
+const rooms = new Map<string, Map<WSContext, Set<string>>>();
+
+type ConnectionCloseListener = (
+  ws: WSContext,
+  left: { memberId: string; room: string }[],
+) => void;
+
+const closeListeners = new Set<ConnectionCloseListener>();
+
 let webSocketEnabled = false;
 
 /** Called once when the app mounts the `/ws` handler. */
@@ -32,8 +46,80 @@ export const wsRegistry = {
   broadcast: (id: string, data: unknown): void => {
     connections.forEach((_userId, ws) => sendTo(ws, id, data));
   },
+  /**
+   * Add one member (a browser tab) of `ws` to `room`. Idempotent. Returns `true`
+   * when the member was not in the room yet.
+   */
+  join: (ws: WSContext, room: string, memberId: string): boolean => {
+    const sockets = rooms.get(room) ?? new Map<WSContext, Set<string>>();
+    rooms.set(room, sockets);
+    const members = sockets.get(ws) ?? new Set<string>();
+    sockets.set(ws, members);
+
+    if (members.has(memberId)) return false;
+    members.add(memberId);
+
+    return true;
+  },
+  /**
+   * Remove one member of `ws` from `room`. Returns `true` when it was there.
+   */
+  leave: (ws: WSContext, room: string, memberId: string): boolean => {
+    const sockets = rooms.get(room);
+    const members = sockets?.get(ws);
+    if (!sockets || !members?.delete(memberId)) return false;
+
+    if (members.size === 0) sockets.delete(ws);
+    if (sockets.size === 0) rooms.delete(room);
+
+    return true;
+  },
+  /** Every member of `room` on this instance, with the socket it uses. */
+  membersOf: (room: string): { memberId: string; ws: WSContext }[] =>
+    [...(rooms.get(room) ?? new Map<WSContext, Set<string>>())].flatMap(
+      ([ws, members]) => [...members].map(memberId => ({ memberId, ws })),
+    ),
+  /** Run `listener` whenever a socket closes, with the rooms it was in. */
+  onConnectionClose: (listener: ConnectionCloseListener): (() => void) => {
+    closeListeners.add(listener);
+
+    return () => {
+      closeListeners.delete(listener);
+    };
+  },
   remove: (ws: WSContext): void => {
     connections.delete(ws);
+
+    const left: { memberId: string; room: string }[] = [];
+    rooms.forEach((sockets, room) => {
+      const members = sockets.get(ws);
+      if (!members) return;
+
+      members.forEach(memberId => left.push({ memberId, room }));
+      sockets.delete(ws);
+      if (sockets.size === 0) rooms.delete(room);
+    });
+
+    if (left.length === 0) return;
+
+    closeListeners.forEach(listener => {
+      try {
+        listener(ws, left);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("WebSocket close listener error:", error);
+      }
+    });
+  },
+  /** Every room `ws` has at least one member in. */
+  roomsOf: (ws: WSContext): string[] =>
+    [...rooms].filter(([, sockets]) => sockets.has(ws)).map(([room]) => room),
+  /**
+   * Send `{ id, data }` once to every socket with a member in `room`. Tabs that
+   * share the socket filter the payload themselves.
+   */
+  toRoom: (room: string, id: string, data: unknown): void => {
+    rooms.get(room)?.forEach((_members, ws) => sendTo(ws, id, data));
   },
   /** Send `{ id, data }` only to the connections owned by `userId`. */
   sendToUser: (userId: number, id: string, data: unknown): void => {
@@ -63,7 +149,8 @@ interface RealtimePubSubMessage {
   data: unknown;
   id: string;
   origin: string;
-  type: "broadcast" | "sendToUser";
+  room?: string;
+  type: "broadcast" | "room" | "sendToUser";
   userId?: number;
 }
 
@@ -75,7 +162,28 @@ const deliverLocally = (message: RealtimePubSubMessage): void => {
     typeof message.userId === "number"
   ) {
     wsRegistry.sendToUser(message.userId, message.id, message.data);
+  } else if (message.type === "room" && typeof message.room === "string") {
+    wsRegistry.toRoom(message.room, message.id, message.data);
   }
+};
+
+const roomListeners = new Set<
+  (room: string, id: string, data: unknown) => void
+>();
+
+/**
+ * Observe room messages published by other instances, before they are
+ * delivered to local members. Features that keep per-room state in memory (a
+ * collaborative document) use it to stay in step with the other instances.
+ */
+export const onRemoteRoomMessage = (
+  listener: (room: string, id: string, data: unknown) => void,
+): (() => void) => {
+  roomListeners.add(listener);
+
+  return () => {
+    roomListeners.delete(listener);
+  };
 };
 
 const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
@@ -115,6 +223,10 @@ export const initRealtimePubSub = (client: CacheClient | null): void => {
           const message = JSON.parse(raw) as RealtimePubSubMessage;
           // Skip our own echo - the publisher already delivered locally.
           if (message.origin === instanceId) return;
+          if (message.type === "room" && typeof message.room === "string") {
+            const { data, id, room } = message;
+            roomListeners.forEach(listener => listener(room, id, data));
+          }
           deliverLocally(message);
         } catch {
           // Ignore malformed payloads.
@@ -140,6 +252,15 @@ export interface VitNodeRealtime {
     channel: VitNodeWSChannel<unknown, Receive>,
     data: Receive,
   ) => void;
+  /**
+   * Push a payload to every member of a room, on every instance. Members join
+   * with `wsRegistry.join`; a room is any string a feature chooses.
+   */
+  toRoom: <Receive>(
+    room: string,
+    channel: VitNodeWSChannel<unknown, Receive>,
+    data: Receive,
+  ) => void;
 }
 
 export const realtime: VitNodeRealtime = {
@@ -150,5 +271,9 @@ export const realtime: VitNodeRealtime = {
   sendToUser: (userId, channel, data) => {
     wsRegistry.sendToUser(userId, channel.id, data);
     publish({ data, id: channel.id, type: "sendToUser", userId });
+  },
+  toRoom: (room, channel, data) => {
+    wsRegistry.toRoom(room, channel.id, data);
+    publish({ data, id: channel.id, room, type: "room" });
   },
 };
