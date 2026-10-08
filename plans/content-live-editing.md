@@ -1,6 +1,6 @@
 # Content Engine: live editing, autosave and presence
 
-Status: in progress (canary). Owner: Content Engine.
+Status: implemented on canary (phases 0-5). Owner: Content Engine.
 
 ## Goals
 
@@ -225,3 +225,27 @@ Vitest, following `AGENTS.md`: no `vi.mock` where a seam exists.
 
 Anchored comments, suggestion mode, AI as a visible collaborator, version
 history from Yjs snapshots, co-editing the visual page editor.
+
+## Known limitations
+
+Found while building and testing; none blocks the feature.
+
+- **Rate limit.** In production the API allows 80 requests a minute per IP.
+  One idle editor makes about 18. Autosave and lock renewals add more while
+  typing, so a large team behind one office IP can reach the limit.
+  Candidates: send autosave over the socket when it is live, or exempt
+  AdminCP sessions.
+- **Seeding race.** If someone types into a brand-new shared document before
+  the chosen tab seeds it from the record, the seed is skipped.
+- **Rich text and "Unsaved changes".** The status comes from the draft, which
+  never holds co-edited rich text.
+- **AI writes to plain fields** (excerpt, alt text) are not autosaved or
+  broadcast, because they are not made while holding the field's lock.
+- **Cross-instance edges.** An instance may persist a document just before it
+  hears about a reset; a user who leaves and rejoins at the same moment can
+  lose their locks. Leases expire within 60 s either way.
+- **Translation delete** does not reset the live state of that language.
+- **Data migration.** Existing blog HTML keeps its words as one paragraph. A
+  full HTML to JSON conversion script is still to be written before the
+  stable release.
+
