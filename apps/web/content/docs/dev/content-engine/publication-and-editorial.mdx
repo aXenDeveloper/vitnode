@@ -41,6 +41,8 @@ Each editorial write raises the record's `version` by one and only succeeds when
 
 Calls to the edit routes must send it too. `PUT /api/@vitnode/example/admin/content/recipe/{id}` takes `{ "expectedVersion": 3, "values": { "title": "…" } }`, and `DELETE` takes `{ "expectedVersion": 3 }`. In your own server code, use `recipeContent.editorialService` to get the same check; see [Services, schemas and events](/docs/dev/content-engine/services-and-api#editorial-writes).
 
+In the AdminCP, editors rarely hit this conflict: [live editing](/docs/dev/content-engine/live-editing) autosaves to a shared draft and locks each field to one editor at a time.
+
 ## Preview links
 
 A preview link lets a reviewer read a draft without signing in. Previews need `publicApi`, because the preview shows the same fields as the public API. Links are HMAC-signed and expire after `expiresInMinutes`, from 1 to 1440 minutes, 15 by default.
