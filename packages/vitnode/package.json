@@ -114,6 +114,16 @@
       "types": "./dist/src/content/server/index.d.ts",
       "default": "./dist/src/content/server/index.js"
     },
+    "./content/rich-text": {
+      "import": "./dist/src/content/rich-text/index.js",
+      "types": "./dist/src/content/rich-text/index.d.ts",
+      "default": "./dist/src/content/rich-text/index.js"
+    },
+    "./components/rich-text": {
+      "import": "./dist/src/components/rich-text/index.js",
+      "types": "./dist/src/components/rich-text/index.d.ts",
+      "default": "./dist/src/components/rich-text/index.js"
+    },
     "./content/editor": {
       "import": "./dist/src/content/editor/index.js",
       "types": "./dist/src/content/editor/index.d.ts",

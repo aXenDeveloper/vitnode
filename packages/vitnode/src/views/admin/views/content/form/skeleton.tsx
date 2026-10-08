@@ -49,6 +49,7 @@ const controlOfKind: Record<string, ContentFormSkeletonControl> = {
   number: "input",
   relation: "input",
   repeatable: "list",
+  richText: "editor",
   slug: "input",
   text: "input",
   textarea: "textarea",

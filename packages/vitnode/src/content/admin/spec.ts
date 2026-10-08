@@ -25,6 +25,11 @@ import {
   contentInnerFields,
   isContentReferenceCollection,
 } from "../paths";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+  type RichTextDocument,
+} from "../rich-text/document";
 import { humanizeFieldName } from "./labels";
 
 export interface ContentFormFieldSpec {
@@ -406,6 +411,27 @@ export const buildGroupFormSchema = (
   spec: ContentFormFieldSpec,
 ): z.ZodObject<z.ZodRawShape> => leafObjectSchema(spec);
 
+/**
+ * What a rich text field holds in a form: a document, checked for shape only.
+ * The server walks the whole tree; the form only has to know it is one, and
+ * stays cheap for `z.toJSONSchema`, which `AutoForm` runs on every render.
+ */
+const richTextFormSchema = (spec: ContentFormFieldSpec): z.ZodType => {
+  const doc = z.looseObject({
+    content: z.array(z.record(z.string(), z.unknown())).optional(),
+    type: z.literal("doc"),
+  });
+
+  return spec.required && !spec.nullable
+    ? doc.refine(
+        value => isRichTextDocument(value) && !isRichTextEmpty(value),
+        {
+          message: `${spec.label} is empty.`,
+        },
+      )
+    : doc;
+};
+
 const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   const schema = z.array(z.number());
 
@@ -470,6 +496,8 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
         .min(spec.minItems ?? 0)
         .max(spec.maxItems ?? Number.MAX_SAFE_INTEGER);
     }
+    case "richText":
+      return richTextFormSchema(spec);
     case "user":
       // A to-many people field holds identifiers, exactly as a to-many relation
       // does: the set picker renders the names it fetched and stores what the
@@ -567,8 +595,17 @@ const isLocalizedFieldName = (spec: ContentFormSpec, name: string): boolean =>
 
 const localizedValueForApi = (
   fieldSpec: ContentFormFieldSpec,
-  raw: string,
+  raw: unknown,
 ): unknown => {
+  if (fieldSpec.kind === "richText") {
+    if (isRichTextDocument(raw) && !isRichTextEmpty(raw)) return raw;
+
+    // An empty editor in a language means "no translation of this field",
+    // exactly as an empty text box does.
+    return fieldSpec.nullable ? null : undefined;
+  }
+
+  if (typeof raw !== "string") return undefined;
   if (raw.trim() !== "") return raw;
   // An empty slug means "derive it from the source field in this language".
   if (EMPTY_MEANS_UNSET.has(fieldSpec.kind)) return undefined;
@@ -589,7 +626,7 @@ export const contentFormValuesToTranslations = (
     const entries = values[fieldSpec.name];
     if (!Array.isArray(entries)) continue;
 
-    for (const entry of entries as MultiLangValue) {
+    for (const entry of entries as MultiLangValue<unknown>) {
       const locale = entry.languageCode;
       if (typeof locale !== "string" || locale === "") continue;
 
@@ -618,6 +655,21 @@ export const contentFormInitialValues = (
   for (const fieldSpec of spec.fields) {
     if (fieldSpec.localized !== true) continue;
 
+    if (fieldSpec.kind === "richText") {
+      let documents: MultiLangValue<null | RichTextDocument> = [];
+      for (const translation of translations) {
+        const stored = translation.values[fieldSpec.name];
+        documents = upsertLangValue<null | RichTextDocument>(
+          documents,
+          translation.locale,
+          isRichTextDocument(stored) ? stored : null,
+        );
+      }
+
+      initial[fieldSpec.name] = documents;
+      continue;
+    }
+
     let value: MultiLangValue = [];
     for (const translation of translations) {
       const stored = translation.values[fieldSpec.name];
@@ -633,6 +685,35 @@ export const contentFormInitialValues = (
 
   return initial;
 };
+
+const localizedRichTextSchema = (
+  fieldSpec: ContentFormFieldSpec,
+  defaultLocale: null | string,
+  initial: MultiLangValue<unknown>,
+): z.ZodType =>
+  z
+    .array(
+      z.object({
+        languageCode: z.string(),
+        value: richTextFormSchema({ ...fieldSpec, required: false }).nullable(),
+      }),
+    )
+    .superRefine((rows, ctx) => {
+      if (!fieldSpec.required || fieldSpec.nullable || defaultLocale === null) {
+        return;
+      }
+
+      const stored = rows.find(
+        row => row.languageCode === defaultLocale,
+      )?.value;
+      if (!isRichTextDocument(stored) || isRichTextEmpty(stored)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${fieldSpec.label} is required in "${defaultLocale}", the language every record is stored in.`,
+        });
+      }
+    })
+    .default(initial);
 
 const localizedFieldSchema = (
   fieldSpec: ContentFormFieldSpec,
@@ -695,6 +776,18 @@ export const buildFormSchemaFromSpec = (
       spec.fields.map(fieldSpec => {
         // A localized field holds every language at once, so its rules are
         // per-language rather than per-field.
+        if (fieldSpec.localized === true && fieldSpec.kind === "richText") {
+          return [
+            fieldSpec.name,
+            localizedRichTextSchema(
+              fieldSpec,
+              spec.defaultLocale,
+              (values?.[fieldSpec.name] as
+                MultiLangValue<unknown> | undefined) ?? [],
+            ),
+          ];
+        }
+
         if (fieldSpec.localized === true) {
           return [
             fieldSpec.name,

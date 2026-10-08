@@ -68,7 +68,7 @@ To turn a feature off, leave its block out. The `enabled` keys accept only `true
 | `create.mode`, `edit.mode`  | `"dialog"` \| `"page"`                   | `"dialog"`                                       | Open the form in a dialog or on its own page                                                 |
 | `navigation.enabled`        | `boolean`                                | `true`                                           | `false` hides the sidebar entry                                                              |
 | `list.columns`              | field names                              | `status` (with publication), shared columns, `updatedAt` | Table columns, in order                                                             |
-| `list.searchableFields`     | text, textarea or slug fields            | shared text and textarea fields                  | Fields the search box matches. Localized fields match in any language                        |
+| `list.searchableFields`     | text, textarea, richText or slug fields  | shared text and textarea fields                  | Fields the search box matches. Localized fields match in any language                        |
 | `list.orderableFields`      | shared scalar fields                     | `[]`                                             | Sortable fields you declared. `id`, `createdAt`, `updatedAt`, `status`, `publishedAt` and `version` are always sortable and must not be listed |
 | `list.defaultOrderBy`       | column name                              | `"updatedAt"`                                    | Must be a system column or in `orderableFields`                                              |
 | `list.defaultOrder`         | `"asc"` \| `"desc"`                      | `"desc"`                                         |                                                                                              |
@@ -85,7 +85,7 @@ How these options look on screen is covered in [Customize the AdminCP](/docs/dev
 | `enabled`          | `true`               |                  | Required                                                                                      |
 | `path`             | `string`             |                  | One lowercase segment, at most 64 characters, not `admin`, unique within the plugin. Routes live at `/api/{pluginId}/content/{path}` |
 | `fields`           | field names          |                  | The allowlist. Exactly one top-level slug field. May include `id`, `createdAt`, `updatedAt` and `publishedAt`. Not `status`, not `field.user()`; list group leaves as `"seo.title"` |
-| `searchableFields` | exposed fields       | `[]`             | Text, textarea or slug fields matched by `?search=`                                           |
+| `searchableFields` | exposed fields       | `[]`             | Text, textarea, richText or slug fields matched by `?search=`. Rich text matches its words only |
 | `filterableFields` | exposed fields       | `[]`             | Boolean, enum, number, relation, slug or text fields, each its own query parameter            |
 | `orderableFields`  | exposed fields       | `[]`             | Accepted by `?orderBy=`. `publishedAt` is always added. No localized, file or to-many fields  |
 | `defaultOrderBy`   | column name          | `"publishedAt"`  |                                                                                               |
@@ -100,8 +100,8 @@ How these options look on screen is covered in [Customize the AdminCP](/docs/dev
 | `redirects.enabled`            | `boolean`               | `false`                     | Old slugs answer `308` to the current URL                                   |
 | `seo.titleField`               | text field              |                             | Page title                                                                  |
 | `seo.fallbackTitleField`       | text field              |                             | Used when `titleField` is empty                                             |
-| `seo.descriptionField`         | text or textarea field  |                             | Meta description, stripped of HTML and cut to 160 characters               |
-| `seo.fallbackDescriptionField` | text or textarea field  |                             | Used when `descriptionField` is empty                                       |
+| `seo.descriptionField`         | text, textarea or richText field |                             | Meta description, stripped of HTML and cut to 160 characters               |
+| `seo.fallbackDescriptionField` | text, textarea or richText field |                             | Used when `descriptionField` is empty                                       |
 | `seo.noIndexField`             | shared boolean field    |                             | `true` marks the page `noindex` and leaves it out of the sitemap            |
 | `seo.openGraph`                | `{ titleField?, descriptionField? }` |                |                                                                             |
 | `sitemap.enabled`              | `boolean`               | `false`                     | Lists published URLs at `/delivery/sitemap`                                 |
@@ -136,9 +136,9 @@ Every SEO field must be in `publicApi.fields`. A localized type also needs `"id"
 | ------------------ | ---------------- | ------------------------------------------------------------------------------- |
 | `enabled`          | `true`           | Required                                                                        |
 | `titleField`       | text field       | Required. Not nullable, and in `publicApi.fields`                               |
-| `contentFields`    | field names      | Required. Slug, text or textarea fields that are public                         |
+| `contentFields`    | field names      | Required. Slug, text, textarea or richText fields that are public               |
 | `pathTemplate`     | `string`         | Required. The result URL with exactly one `{slug}`, such as `/recipes/{slug}`. A page must serve it |
-| `descriptionField` | text or textarea | Optional, and public                                                            |
+| `descriptionField` | text, textarea or richText | Optional, and public                                                  |
 | `authorField`      | `field.user()`   | Optional. Credits people in the index; it does not have to be public            |
 
 Drafts are indexed as private documents; public search returns only published records.

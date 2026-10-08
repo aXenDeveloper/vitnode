@@ -18,6 +18,7 @@ import type {
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
 } from "./const";
 import type { ContentFileDescriptor } from "./files";
+import type { RichTextDocument } from "./rich-text/document";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -117,6 +118,17 @@ export interface ContentTextareaField<
   localized: TLocalized;
   maxLength?: number;
   minLength?: number;
+}
+
+export interface ContentRichTextField<
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+  TLocalized extends boolean = boolean,
+> extends ContentFieldShared<TRequired, TNullable> {
+  kind: "richText";
+  localized: TLocalized;
+  /** Largest serialized document, in bytes. Defaults to 1 MB. */
+  maxBytes?: number;
 }
 
 export interface ContentNumberField<
@@ -276,6 +288,7 @@ export type ContentFieldDescriptor =
   | ContentNumberField
   | ContentRelationField
   | ContentRepeatableField
+  | ContentRichTextField
   | ContentSlugField
   | ContentTextareaField
   | ContentTextField
@@ -328,7 +341,9 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
       ? TValue
       : TField extends { kind: "file" | "number" | "relation" | "user" }
         ? number
-        : string;
+        : TField extends { kind: "richText" }
+          ? RichTextDocument
+          : string;
 
 /** The scalar half of {@link ContentFieldInput}. `dateTime` crosses as ISO. */
 type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
@@ -339,7 +354,9 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
       ? TValue
       : TField extends { kind: "file" | "number" | "relation" | "user" }
         ? number
-        : string;
+        : TField extends { kind: "richText" }
+          ? RichTextDocument
+          : string;
 
 /** Every leaf of a group, as it comes back. Nested, never flattened. */
 type ContentGroupValue<TFields> = Prettify<{

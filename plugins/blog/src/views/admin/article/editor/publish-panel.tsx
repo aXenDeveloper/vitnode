@@ -2,7 +2,6 @@ import type { ContentFileFieldValue } from "@vitnode/core/content/files";
 
 import { Button } from "@vitnode/core/components/ui/button";
 import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
-import { stripHtml } from "@vitnode/core/lib/strip-html";
 import { cn } from "cn";
 import { CircleAlertIcon, CircleCheckIcon, SparklesIcon } from "lucide-react";
 import React from "react";
@@ -11,6 +10,7 @@ import { useTranslations } from "use-intl";
 import {
   type ArticleCheck,
   type ArticleValues,
+  fieldText,
   RECOMMENDED_LENGTH,
 } from "./readiness";
 
@@ -199,11 +199,11 @@ export const Previews = ({
   const excerpt = pick("excerpt");
   const description =
     excerpt.text.trim() ||
-    stripHtml(
-      getLangValue(values.content, locale) ||
-        getLangValue(values.content, source),
+    (
+      fieldText(values, "content", locale) ||
+      fieldText(values, "content", source)
     )
-      .trim()
+      .replace(/\s+/g, " ")
       .slice(0, RECOMMENDED_LENGTH.excerpt);
   const searchTitle =
     title.text.length > RECOMMENDED_LENGTH.title

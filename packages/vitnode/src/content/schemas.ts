@@ -44,6 +44,10 @@ import {
   isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
+import {
+  createRichTextDocumentSchema,
+  RICH_TEXT_ABSOLUTE_MAX_BYTES,
+} from "./rich-text/document";
 
 /** What a content type without `publicApi` carries: nothing exposed at all. */
 const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
@@ -230,6 +234,12 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
         }),
       );
     }
+    // What is stored is what crosses back: the document is read as it was
+    // written, and the field's own size limit is a rule for *writing* it.
+    case "richText":
+      return createRichTextDocumentSchema({
+        maxBytes: RICH_TEXT_ABSOLUTE_MAX_BYTES,
+      });
     case "slug":
       // Never empty: the service normalises before writing, and a value that
       // folds to nothing is rejected rather than stored.
@@ -250,6 +260,14 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
 /** The value as it arrives from a client. `dateTime` is an ISO 8601 string. */
 const baseInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   if (fieldValue.kind === "dateTime") return z.iso.datetime();
+  // `required` is "not empty" for a document: `{ type: "doc" }` is present,
+  // and says nothing.
+  if (fieldValue.kind === "richText") {
+    return createRichTextDocumentSchema({
+      maxBytes: fieldValue.maxBytes,
+      required: fieldValue.required,
+    });
+  }
 
   return baseSelectSchema(fieldValue);
 };
@@ -274,6 +292,7 @@ const applyPresence = (
     fieldValue.kind !== "group" &&
     fieldValue.kind !== "relation" &&
     fieldValue.kind !== "repeatable" &&
+    fieldValue.kind !== "richText" &&
     fieldValue.kind !== "slug" &&
     fieldValue.kind !== "user" &&
     fieldValue.defaultValue !== undefined

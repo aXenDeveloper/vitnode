@@ -8,11 +8,17 @@ import {
 } from "../cache";
 import { partitionContentFields } from "../localization";
 import { readContentPath, splitContentFieldPath } from "../paths";
+import { isRichTextDocument } from "../rich-text/document";
+import { richTextToPlainText } from "../rich-text/plain-text";
 import { contentSearchUrl } from "../search";
 
 /** Collapses whitespace so a multi-line value cannot break a result heading. */
-const normalize = (value: unknown): string =>
-  typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+const normalize = (value: unknown): string => {
+  // A rich text field is indexed as its words, never as its JSON.
+  const text = isRichTextDocument(value) ? richTextToPlainText(value) : value;
+
+  return typeof text === "string" ? text.replace(/\s+/g, " ").trim() : "";
+};
 
 const readSearchValue = (
   values: Record<string, unknown>,

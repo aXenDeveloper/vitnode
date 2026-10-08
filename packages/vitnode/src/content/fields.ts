@@ -12,6 +12,7 @@ import type {
   ContentOnDelete,
   ContentRelationField,
   ContentRepeatableField,
+  ContentRichTextField,
   ContentSlugField,
   ContentSlugRequired,
   ContentTextareaField,
@@ -90,6 +91,28 @@ const textarea = <
   ...shared(args),
   defaultValue: args.defaultValue as TDefault,
   kind: "textarea",
+  localized: localizedOf(args),
+});
+
+/**
+ * A rich text document - ProseMirror JSON in a `jsonb` column, edited with the
+ * Tiptap editor and rendered with `RichTextContent`. `required` means "not
+ * empty", not just "present".
+ */
+const richText = <
+  TRequired extends boolean = false,
+  TNullable extends boolean = false,
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & {
+      /** Largest serialized document, in bytes. Defaults to 1 MB. */
+      maxBytes?: number;
+    } = {},
+): ContentRichTextField<TRequired, TNullable, TLocalized> => ({
+  ...args,
+  ...shared(args),
+  kind: "richText",
   localized: localizedOf(args),
 });
 
@@ -360,6 +383,7 @@ export const field = {
   number,
   relation,
   repeatable,
+  richText,
   slug,
   text,
   textarea,

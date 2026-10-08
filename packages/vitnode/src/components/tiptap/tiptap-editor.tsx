@@ -1,23 +1,48 @@
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, type Extensions, useEditor } from "@tiptap/react";
 import { cn } from "cn";
+import React from "react";
 import { useTranslations } from "use-intl";
+
+import type { RichTextDocument } from "@/content/rich-text/document";
 
 import { useEditorConfig } from "@/components/editor-provider";
 
 import { TipTapDragHandle } from "./drag-handle";
 import { EditorSkeleton } from "./editor-skeleton";
 import { createTipTapExtensions } from "./extension";
+import { editorEmojiItems, toRichTextDocument } from "./rich-text-json";
 import { TipTapToolbar } from "./toolbar/tiptap-toolbar";
 
-export type TipTapEditorProps = Omit<
+export type TipTapEditorBaseProps = Omit<
   React.ComponentProps<"div">,
-  "onChange"
+  "defaultValue" | "onChange"
 > & {
   disableScroll?: boolean;
-  onChange?: (value: string) => void;
+  /** Appended after the built-in extensions - collaboration, for one. */
+  extensions?: Extensions;
   placeholder?: string;
+  /**
+   * Keep the editor's own undo history. `false` when something else owns it:
+   * Yjs keeps a per-user history of a shared document.
+   */
+  undoRedo?: boolean;
+};
+
+export type TipTapEditorHtmlProps = TipTapEditorBaseProps & {
+  /** HTML in, HTML out. The default. */
+  format?: "html";
+  onChange?: (value: string) => void;
   value?: string;
 };
+
+export type TipTapEditorJsonProps = TipTapEditorBaseProps & {
+  /** A ProseMirror document in, a ProseMirror document out. */
+  format: "json";
+  onChange?: (value: RichTextDocument) => void;
+  value?: null | RichTextDocument;
+};
+
+export type TipTapEditorProps = TipTapEditorHtmlProps | TipTapEditorJsonProps;
 
 const textboxAttributesOf = ({
   describedBy,
@@ -33,24 +58,33 @@ const textboxAttributesOf = ({
   ...(invalid === true || invalid === "true" ? { "aria-invalid": "true" } : {}),
 });
 
-export const TipTapEditor = ({
-  "aria-describedby": describedBy,
-  "aria-labelledby": labelledBy,
-  className,
-  disableScroll,
-  placeholder,
-  value = "",
-  onChange,
-  onBlur,
-  ...props
-}: TipTapEditorProps) => {
+export const TipTapEditor = (props: TipTapEditorProps) => {
+  const {
+    "aria-describedby": describedBy,
+    "aria-labelledby": labelledBy,
+    className,
+    disableScroll,
+    extensions,
+    format: _format,
+    placeholder,
+    undoRedo,
+    value: _value,
+    onChange: _onChange,
+    onBlur,
+    ...rest
+  } = props;
   const t = useTranslations("core.global.editor");
   const { emojis } = useEditorConfig();
+  const emojiItems = React.useMemo(() => editorEmojiItems(emojis), [emojis]);
   const editor = useEditor({
-    extensions: createTipTapExtensions({
-      customEmojis: emojis,
-      placeholder: placeholder ?? t("placeholder"),
-    }),
+    extensions: [
+      ...createTipTapExtensions({
+        customEmojis: emojis,
+        placeholder: placeholder ?? t("placeholder"),
+        undoRedo,
+      }),
+      ...(extensions ?? []),
+    ],
     editorProps: {
       attributes: {
         class:
@@ -59,15 +93,24 @@ export const TipTapEditor = ({
         "aria-multiline": "true",
         ...textboxAttributesOf({
           describedBy,
-          invalid: props["aria-invalid"],
+          invalid: rest["aria-invalid"],
           labelledBy,
         }),
       },
     },
-    content: value,
+    content:
+      props.format === "json" ? (props.value ?? null) : (props.value ?? ""),
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
-      onChange?.(currentEditor.getHTML());
+      if (props.format === "json") {
+        props.onChange?.(
+          toRichTextDocument(currentEditor.getJSON(), emojiItems),
+        );
+
+        return;
+      }
+
+      props.onChange?.(currentEditor.getHTML());
     },
   });
 
@@ -81,7 +124,7 @@ export const TipTapEditor = ({
         className,
       )}
       onBlur={onBlur}
-      {...props}
+      {...rest}
     >
       <TipTapToolbar editor={editor} />
       <TipTapDragHandle editor={editor} />

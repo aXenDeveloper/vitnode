@@ -81,6 +81,7 @@ export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
 
 export const CONTENT_LOCALIZED_FIELD_KINDS = [
   "blocks",
+  "richText",
   "slug",
   "text",
   "textarea",
@@ -208,6 +209,7 @@ export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "file",
   "number",
   "relation",
+  "richText",
   "slug",
   "text",
   "textarea",
@@ -225,9 +227,18 @@ export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
 export const CONTENT_SEARCH_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `search.descriptionField` may name. */
-export const CONTENT_SEARCH_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+export const CONTENT_SEARCH_DESCRIPTION_KINDS = [
+  "richText",
+  "text",
+  "textarea",
+] as const;
 
-export const CONTENT_SEARCH_TEXT_KINDS = ["slug", "text", "textarea"] as const;
+export const CONTENT_SEARCH_TEXT_KINDS = [
+  "richText",
+  "slug",
+  "text",
+  "textarea",
+] as const;
 
 /** The placeholder every `search.pathTemplate` must use. */
 export const CONTENT_SEARCH_SLUG_PLACEHOLDER = "{slug}";
@@ -310,7 +321,11 @@ export const CONTENT_SCHEDULE_CODES = {
 export const CONTENT_DELIVERY_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `delivery.seo.descriptionField` may name. */
-export const CONTENT_DELIVERY_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+export const CONTENT_DELIVERY_DESCRIPTION_KINDS = [
+  "richText",
+  "text",
+  "textarea",
+] as const;
 
 export const CONTENT_DELIVERY_NO_INDEX_KINDS = ["boolean"] as const;
 

@@ -23,11 +23,15 @@ export const SUPPORTED_HEADINGS_LEVELS = [1, 2, 3, 4] as const;
 export const createTipTapExtensions = ({
   customEmojis,
   placeholder,
+  undoRedo = true,
 }: {
   customEmojis?: EditorEmojiSection[];
   placeholder?: string;
+  /** `false` when something else owns the history - Yjs, in a shared document. */
+  undoRedo?: boolean;
 } = {}): Extensions => [
   StarterKit.configure({
+    ...(undoRedo ? {} : { undoRedo: false }),
     orderedList: {
       HTMLAttributes: {
         class: "list-decimal",

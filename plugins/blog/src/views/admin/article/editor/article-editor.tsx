@@ -1,8 +1,11 @@
+import type { RichTextDocument } from "@vitnode/core/content/rich-text";
+
 import { Link } from "@tanstack/react-router";
+import { useEditorConfig } from "@vitnode/core/components/editor-provider";
 import { MultiLangLanguageContext } from "@vitnode/core/components/form/fields/multi-lang-language";
 import { useLanguages } from "@vitnode/core/components/languages-provider";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { Button } from "@vitnode/core/components/ui/button";
-import { EditorContent } from "@vitnode/core/components/ui/editor-content";
 import {
   ContentFormActions,
   ContentFormField,
@@ -22,7 +25,11 @@ import { ArrowLeftIcon, ListChecksIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { translateArticleText, writeArticleExcerpt } from "./ai";
+import {
+  translateArticleContent,
+  translateArticleText,
+  writeArticleExcerpt,
+} from "./ai";
 import { ArticleAiReview } from "./ai-review";
 import {
   type ArticleFieldActions,
@@ -32,7 +39,10 @@ import { type CheckAction, Previews, ReadinessList } from "./publish-panel";
 import {
   type ArticleCheck,
   articleChecks,
+  articleContent,
+  type ArticleTextField,
   type ArticleValues,
+  fieldText,
   REQUIRED_TRANSLATED_FIELDS,
   type TranslatedField,
   translatedFieldStatus,
@@ -71,6 +81,7 @@ export const ArticleEditor = ({
     valuesRef.current = values;
   });
   const setFormValue = useSetContentFormValue();
+  const { emojis } = useEditorConfig();
   const ai = useArticleAi();
   const [target, setTarget] = React.useState<null | string>(null);
   const [contentRevision, setContentRevision] = React.useState(0);
@@ -96,7 +107,7 @@ export const ArticleEditor = ({
   const ready = checks.filter(check => check.ok).length;
 
   const setLangValue = (
-    field: TranslatedField,
+    field: ArticleTextField,
     locale: string,
     text: string,
   ) => {
@@ -104,7 +115,20 @@ export const ArticleEditor = ({
       field,
       upsertLangValue(valuesRef.current[field], locale, text),
     );
-    if (field === "content") setContentRevision(revision => revision + 1);
+  };
+
+  // The editor is uncontrolled once it mounts, so a document written from
+  // outside it remounts it on the new value.
+  const setContent = (locale: string, document: RichTextDocument) => {
+    setFormValue(
+      "content",
+      upsertLangValue<null | RichTextDocument>(
+        valuesRef.current.content,
+        locale,
+        document,
+      ),
+    );
+    setContentRevision(revision => revision + 1);
   };
 
   const statusOf = (field: TranslatedField, locale: string) =>
@@ -123,11 +147,27 @@ export const ArticleEditor = ({
     await ai.run(
       `${field}:${to}`,
       async () => {
+        if (field === "content") {
+          const document = articleContent(valuesRef.current, source);
+          if (!document) return;
+
+          setContent(
+            to,
+            await translateArticleContent({
+              customEmojis: emojis,
+              document,
+              from: source,
+              to,
+            }),
+          );
+
+          return;
+        }
+
         setLangValue(
           field,
           to,
           await translateArticleText({
-            format: field === "content" ? "html" : "text",
             from: source,
             text: getLangValue(valuesRef.current[field], source),
             to,
@@ -175,9 +215,9 @@ export const ArticleEditor = ({
           "excerpt",
           locale,
           await writeArticleExcerpt({
-            content:
-              getLangValue(current.content, locale) ||
-              getLangValue(current.content, source),
+            content: (fieldText(current, "content", locale)
+              ? articleContent(current, locale)
+              : articleContent(current, source)) ?? { type: "doc" },
             locale,
             title:
               getLangValue(current.title, locale) ||
@@ -497,8 +537,8 @@ export const ArticleEditor = ({
                     action={fieldAction("content", target)}
                     source={
                       <div className="pt-16" lang={source}>
-                        <EditorContent
-                          content={getLangValue(values.content, source)}
+                        <RichTextContent
+                          content={articleContent(values, source)}
                         />
                       </div>
                     }

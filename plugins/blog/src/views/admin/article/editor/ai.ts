@@ -1,3 +1,6 @@
+import type { EditorEmojiSection } from "@vitnode/core/components/editor-provider";
+import type { RichTextDocument } from "@vitnode/core/content/rich-text";
+
 import {
   AiRequestError,
   requestAiAssist,
@@ -5,6 +8,8 @@ import {
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { CONFIG_PLUGIN } from "@/const";
+
+import { articleContentFromHtml } from "./content-html";
 
 export class ArticleAiError extends Error {
   constructor(status: number) {
@@ -17,7 +22,6 @@ export class ArticleAiError extends Error {
 }
 
 export const translateArticleText = async (body: {
-  format: "html" | "text";
   from: string;
   text: string;
   to: string;
@@ -27,7 +31,7 @@ export const translateArticleText = async (body: {
     method: "post",
     module: "admin/ai",
     path: "/translate",
-    args: { body },
+    args: { body: { ...body, format: "text" } },
   });
   if (response.status !== 200) throw new ArticleAiError(response.status);
 
@@ -36,8 +40,33 @@ export const translateArticleText = async (body: {
   return text;
 };
 
+export const translateArticleContent = async ({
+  customEmojis,
+  document,
+  from,
+  to,
+}: {
+  customEmojis?: EditorEmojiSection[];
+  document: RichTextDocument;
+  from: string;
+  to: string;
+}): Promise<RichTextDocument> => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "post",
+    module: "admin/ai",
+    path: "/translate",
+    args: { body: { document, format: "richText", from, to } },
+  });
+  if (response.status !== 200) throw new ArticleAiError(response.status);
+
+  const { text } = await response.json();
+
+  return articleContentFromHtml(text, { customEmojis });
+};
+
 export const writeArticleExcerpt = async (input: {
-  content: string;
+  content: RichTextDocument;
   locale: string;
   title: string;
 }): Promise<string> => {

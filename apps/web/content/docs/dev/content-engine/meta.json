@@ -19,6 +19,7 @@
     "---Reference---",
     "reference",
     "fields",
+    "rich-text",
     "database-and-migrations",
     "plugin-registration"
   ]

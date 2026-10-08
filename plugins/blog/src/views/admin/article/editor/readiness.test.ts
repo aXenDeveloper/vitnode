@@ -1,19 +1,34 @@
+import type { RichTextDocument } from "@vitnode/core/content/rich-text";
+
 import { describe, expect, it } from "vitest";
 
 import {
   articleChecks,
   type ArticleValues,
+  fieldText,
   translatedFieldStatus,
 } from "./readiness";
 
-const lang = (entries: Record<string, string>) =>
+const lang = <TValue = string>(entries: Record<string, TValue>) =>
   Object.entries(entries).map(([languageCode, value]) => ({
     languageCode,
     value,
   }));
 
+const doc = (...paragraphs: string[]): RichTextDocument => ({
+  content: paragraphs.map(text =>
+    text === ""
+      ? { type: "paragraph" }
+      : { content: [{ text, type: "text" }], type: "paragraph" },
+  ),
+  type: "doc",
+});
+
 const values: ArticleValues = {
-  content: lang({ en: "<p>Hello world</p>", pl: "<p></p>" }),
+  content: lang<null | RichTextDocument>({
+    en: doc("Hello world"),
+    pl: doc(""),
+  }),
   coverImage: 12,
   coverImageAlt: lang({ en: "A dashboard" }),
   excerpt: lang({ en: "Short summary" }),
@@ -24,8 +39,33 @@ const values: ArticleValues = {
   }),
 };
 
+describe("fieldText", () => {
+  it("reads the article body as the words of its document", () => {
+    expect(
+      fieldText(
+        {
+          content: lang<null | RichTextDocument>({ en: doc("One", "", "Two") }),
+        },
+        "content",
+        "en",
+      ),
+    ).toBe("One\nTwo");
+  });
+
+  it("reads a language with no document as empty", () => {
+    expect(
+      fieldText(
+        { content: lang<null | RichTextDocument>({ pl: null }) },
+        "content",
+        "pl",
+      ),
+    ).toBe("");
+    expect(fieldText(values, "content", "de")).toBe("");
+  });
+});
+
 describe("translatedFieldStatus", () => {
-  it("treats an editor holding only empty markup as missing", () => {
+  it("treats an editor holding only an empty paragraph as missing", () => {
     expect(
       translatedFieldStatus(values, "content", { source: "en", target: "pl" }),
     ).toBe("missing");

@@ -24,6 +24,7 @@ import {
   normalizeContentFileExtensions,
   normalizeContentFileMimeTypes,
 } from "./files";
+import { RICH_TEXT_ABSOLUTE_MAX_BYTES } from "./rich-text/document";
 
 /** A slug can only be derived from a field that holds a single line of text. */
 const SLUG_SOURCE_KINDS = new Set<ContentFieldDescriptor["kind"]>(["text"]);
@@ -52,6 +53,8 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   // to-many file field *is* writable, for the same reason a to-many relation is:
   // the empty set is its default, and it has no column to default at all.
   if (fieldValue.kind === "file") return fieldValue.multiple;
+  // No default: an empty document is what `nullable` or `required` decide.
+  if (fieldValue.kind === "richText") return false;
 
   return fieldValue.defaultValue !== undefined;
 };
@@ -101,6 +104,7 @@ const FIELD_KINDS = new Set<string>([
   "number",
   "relation",
   "repeatable",
+  "richText",
   "slug",
   "text",
   "textarea",
@@ -240,6 +244,20 @@ export const assertField = (
     if (maxLength !== undefined && maxLength <= 0) {
       throw new ContentEngineError(
         `Field "${name}" has a maxLength of ${maxLength}; it must be positive.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  if (fieldValue.kind === "richText" && fieldValue.maxBytes !== undefined) {
+    const { maxBytes } = fieldValue;
+    if (
+      !Number.isInteger(maxBytes) ||
+      maxBytes <= 0 ||
+      maxBytes > RICH_TEXT_ABSOLUTE_MAX_BYTES
+    ) {
+      throw new ContentEngineError(
+        `Field "${name}" has a maxBytes of ${maxBytes}; it must be a whole number of bytes between 1 and ${RICH_TEXT_ABSOLUTE_MAX_BYTES}.`,
         { contentTypeId: id },
       );
     }

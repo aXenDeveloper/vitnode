@@ -50,7 +50,9 @@ export const blogPostContentType = defineContentType({
       maxLength: 255,
       source: "title",
     }),
-    content: field.textarea({ localized: true, required: true }),
+    // ProseMirror JSON, rendered on the server by `RichTextContent` - the public
+    // page never downloads the editor.
+    content: field.richText({ localized: true, required: true }),
     excerpt: field.textarea({
       ai: {
         action: "@vitnode/blog:excerpt.generate",

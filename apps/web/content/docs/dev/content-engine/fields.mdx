@@ -22,6 +22,7 @@ fields: {
 | ------------------- | ---------------------------------------- | --------------------------------- | ------------------ |
 | `field.text()`      | `varchar(maxLength)`, 255 by default     | Text input                        | Yes                |
 | `field.textarea()`  | `text`                                   | Textarea                          | Yes                |
+| `field.richText()`  | `jsonb`                                  | Rich text editor                  | Yes                |
 | `field.number()`    | `integer` or `double precision`          | Number input with steppers        | No                 |
 | `field.boolean()`   | `boolean`                                | Switch                            | No                 |
 | `field.enum()`      | `varchar(length)`, 64 by default         | Select, or radio buttons          | No                 |
@@ -63,6 +64,24 @@ A single `field.user()` and a single `field.file()` are nullable unless you say 
 | `localized`    | `boolean` | `false` | Stores the value per language. Needs [`localization`](/docs/dev/content-engine/localization) |
 
 Set `maxLength` on every `text` field. Without it, validation accepts any length and Postgres rejects values over 255 characters with an error.
+
+## Rich text
+
+`field.richText()` stores formatted text - headings, lists, links, tables - as a ProseMirror JSON document in a `jsonb` column. The AdminCP edits it with the Tiptap editor, and your public page renders it with `RichTextContent`, which never downloads the editor.
+
+```ts
+content: field.richText({ localized: true, required: true }),
+```
+
+| Option        | Type      | Default   | Description                                                                 |
+| ------------- | --------- | --------- | --------------------------------------------------------------------------- |
+| `required`    | `boolean` | `false`   | The document must have content. `{ type: "doc" }` with an empty paragraph is refused |
+| `nullable`    | `boolean` | `false`   | The column accepts `NULL`                                                   |
+| `maxBytes`    | `number`  | 1 MB      | Largest document, measured as UTF-8 JSON. Up to 16 MB                       |
+| `localized`   | `boolean` | `false`   | Stores one document per language                                            |
+| `description` | `string`  |           | Shown under the editor                                                      |
+
+A rich text field has no `defaultValue`, so set `required` or `nullable`. Validation also refuses documents nested deeper than 64 levels. [Rich text](/docs/dev/content-engine/rich-text) covers rendering and the helpers for plain text and HTML.
 
 ## Number
 

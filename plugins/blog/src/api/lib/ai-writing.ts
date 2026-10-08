@@ -1,7 +1,6 @@
 import type { AiPrompt } from "@vitnode/core/api/lib/ai/action";
 
 import { languageName } from "@vitnode/core/api/lib/ai/language-name";
-import { stripHtml } from "@vitnode/core/lib/strip-html";
 
 export type AiTextFormat = "html" | "text";
 
@@ -41,8 +40,8 @@ export const buildTranslatePrompt = (
   prompt: text,
 });
 
-export const excerptSource = (content: string) =>
-  stripHtml(content).slice(0, EXCERPT_SOURCE_CHARACTERS);
+export const excerptSource = (plainText: string) =>
+  plainText.slice(0, EXCERPT_SOURCE_CHARACTERS);
 
 export const buildExcerptPrompt = (
   {

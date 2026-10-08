@@ -327,6 +327,25 @@ export type {
   ContentTranslationRevisionOperation,
   ContentTranslationRevisionSnapshot,
 } from "./revisions";
+export {
+  createRichTextDocumentSchema,
+  emptyRichTextDocument,
+  escapeRichTextHtml,
+  isRichTextDocument,
+  isRichTextEmpty,
+  RICH_TEXT_DEFAULT_MAX_BYTES,
+  RICH_TEXT_MAX_DEPTH,
+  richTextToHtml,
+  richTextToPlainText,
+  sanitizeRichTextHref,
+  zodRichTextDocument,
+} from "./rich-text";
+export type {
+  RichTextDocument,
+  RichTextMark,
+  RichTextNode,
+  RichTextSchemaOptions,
+} from "./rich-text";
 export { contentScheduleTimingError } from "./schedules";
 export type {
   ContentSchedule,
@@ -410,6 +429,7 @@ export type {
   ContentReferenceField,
   ContentReferenceFieldName,
   ContentRelationField,
+  ContentRichTextField,
   ContentSchedulingEnabled,
   ContentSearchAuthorField,
   ContentSearchConfig,

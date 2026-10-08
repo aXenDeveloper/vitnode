@@ -22,6 +22,8 @@ import { ContentEngineError } from "./errors";
 import { normalizeContentLocale } from "./locale";
 import { readContentPath, splitContentFieldPath } from "./paths";
 import { contentPublicHref, contentPublicUrl } from "./public-url";
+import { isRichTextDocument } from "./rich-text/document";
+import { richTextToPlainText } from "./rich-text/plain-text";
 
 /** Kinds the three SEO slots accept, as runtime sets. */
 const titleKinds: ReadonlySet<string> = new Set(CONTENT_DELIVERY_TITLE_KINDS);
@@ -612,7 +614,10 @@ const readSeoText = (
   for (const name of [primary, fallback]) {
     if (name === null) continue;
 
-    const value = readContentPath(row, name);
+    const raw = readContentPath(row, name);
+    // A rich text description is its words: the host truncates them, and
+    // markup has no place in a meta tag.
+    const value = isRichTextDocument(raw) ? richTextToPlainText(raw) : raw;
     if (typeof value !== "string") continue;
 
     const trimmed = value.trim();

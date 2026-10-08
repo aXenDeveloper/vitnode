@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import type {
   ContentFieldDescriptor,
@@ -38,7 +38,18 @@ export const buildSearchCondition = (
 
   const pattern = containsLikePattern(trimmed);
 
-  return or(...columns.map(column => ilike(column, pattern)));
+  return or(
+    ...columns.map(column =>
+      // A rich text column is a ProseMirror document. Matching its JSON would
+      // find "paragraph" in every row, so only the text nodes are searched.
+      column.getSQLType() === "jsonb"
+        ? ilike(
+            sql`jsonb_path_query_array(${column}, 'strict $.**.text')::text`,
+            pattern,
+          )
+        : ilike(column, pattern),
+    ),
+  );
 };
 
 const filterValue = (

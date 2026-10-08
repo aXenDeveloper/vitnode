@@ -14,8 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  findLangValue,
   getLangValue,
-  pickLangCode,
+  pickLangCodeWhere,
   upsertLangValue,
 } from "@/lib/helpers/multi-lang";
 
@@ -32,37 +33,78 @@ export interface MultiLangFieldProps {
   field: FormFieldApi<MultiLangValue | undefined>;
 }
 
-export const useMultiLangField = (
-  field: MultiLangFieldProps["field"],
-  { isFilled }: { isFilled?: (text: string) => boolean } = {},
+const useMultiLangSelection = (
+  isFilledIn: (languageCode: string) => boolean,
 ) => {
   const languages = useLanguages();
   const locale = useLocale();
   const defaultLanguage = useMultiLangDefaultLanguage();
   const lockedLanguage = useMultiLangLanguage();
-  const { value } = field;
   const [selected, setSelected] = React.useState(() =>
-    pickLangCode({
+    pickLangCodeWhere({
       defaultLanguage,
-      isFilled,
+      isFilledIn,
       languageCodes: languages.map(language => language.code),
       locale,
-      value,
     }),
   );
 
-  const language = lockedLanguage ?? selected;
+  return {
+    canSelect: lockedLanguage === null && languages.length > 1,
+    language: lockedLanguage ?? selected,
+    languages,
+    setSelected,
+  };
+};
+
+const hasText = (text: string): boolean => text.trim() !== "";
+
+export const useMultiLangField = (
+  field: MultiLangFieldProps["field"],
+  { isFilled = hasText }: { isFilled?: (text: string) => boolean } = {},
+) => {
+  const { value } = field;
+  const { canSelect, language, languages, setSelected } = useMultiLangSelection(
+    code => isFilled(getLangValue(value, code)),
+  );
 
   const setValue = (newValue: string) => {
     field.onChange(upsertLangValue(value, language, newValue));
   };
 
   return {
-    canSelect: lockedLanguage === null && languages.length > 1,
+    canSelect,
     languages,
     selected: language,
     setSelected,
     currentValue: getLangValue(value, language),
+    setValue,
+  };
+};
+
+/**
+ * {@link useMultiLangField} for a value that is not text - a rich text
+ * document, say. `currentValue` is `undefined` for a language with no value.
+ */
+export const useMultiLangValueField = <TValue,>(
+  field: FormFieldApi<MultiLangValue<TValue> | undefined>,
+  { isFilled }: { isFilled: (value: TValue | undefined) => boolean },
+) => {
+  const { value } = field;
+  const { canSelect, language, languages, setSelected } = useMultiLangSelection(
+    code => isFilled(findLangValue(value, code)),
+  );
+
+  const setValue = (newValue: TValue) => {
+    field.onChange(upsertLangValue(value, language, newValue));
+  };
+
+  return {
+    canSelect,
+    languages,
+    selected: language,
+    setSelected,
+    currentValue: findLangValue(value, language),
     setValue,
   };
 };
