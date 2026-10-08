@@ -1627,6 +1627,26 @@
         "errors": {
           "version_conflict": "Someone else saved this language while you were editing."
         }
+      },
+      "live": {
+        "is_editing": "is editing",
+        "locked_desc": "Read-only while they edit. Their changes show up here as they type.",
+        "status": {
+          "saving": "Saving…",
+          "saved": "Draft saved at {time}",
+          "unsaved": "Unsaved changes",
+          "failed": "Draft not saved"
+        },
+        "reset": {
+          "restored": {
+            "title": "This record was restored",
+            "desc": "Someone restored an earlier version, so the form now shows it. Unsaved drafts were cleared."
+          },
+          "deleted": {
+            "title": "This record was deleted",
+            "desc": "Someone deleted it while you were editing. Nothing here can be saved anymore."
+          }
+        }
       }
     },
     "editor": {

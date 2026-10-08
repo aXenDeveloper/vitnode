@@ -1,0 +1,294 @@
+import React from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+
+import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentDrafts } from "@/content/live/http";
+
+import { CONTENT_DRAFT_AUTOSAVE_MS } from "@/content/live/protocol";
+
+import type { ContentRow, TranslationRow } from "../content-mutation";
+import type {
+  ContentLiveAutosaveStatus,
+  ContentLiveContextValue,
+} from "./context";
+import type { ContentLiveResetReason } from "./use-session";
+
+import { useContentFormNavigation } from "../form/navigation";
+import { useContentFormTransport } from "../form/transport";
+import { ContentLiveContext } from "./context";
+import { useContentLiveSession } from "./use-session";
+import {
+  contentDraftDiffers,
+  contentDraftMovedReferences,
+  contentDraftValue,
+  mergeContentDraft,
+} from "./values";
+
+/** What the form opens on: the record, its languages, and the shared draft. */
+export interface ContentLiveFormState {
+  drafts: ContentDrafts | null;
+  /** Labels for references the draft moved, keyed by field. */
+  labels: Record<string, string>;
+  row: ContentRow;
+  translations: readonly TranslationRow[];
+}
+
+interface Reloaded {
+  for: ContentRow;
+  row: ContentRow;
+  translations: readonly TranslationRow[];
+}
+
+interface PendingValue {
+  field: string;
+  locale: null | string;
+  value: unknown;
+}
+
+const IDLE: ContentLiveAutosaveStatus = {
+  dirty: false,
+  failed: false,
+  savedAt: null,
+  saving: false,
+};
+
+/**
+ * Live editing around one existing record's form: the room, the draft the
+ * form opens on, the autosave queue and what happens when the record is
+ * restored or deleted under it.
+ *
+ * Renders `fallback` until the draft has been read, so the form never opens
+ * on values it is about to replace. After a reset it remounts the form on the
+ * reloaded record.
+ */
+export const ContentLiveRoot = ({
+  children,
+  data,
+  fallback,
+  spec,
+  translations,
+}: {
+  children: (state: ContentLiveFormState) => React.ReactNode;
+  data: ContentRow;
+  fallback: React.ReactNode;
+  spec: ContentFormSpec;
+  translations: readonly TranslationRow[];
+}) => {
+  const t = useTranslations("core.content.live");
+  const transport = useContentFormTransport();
+  const { refresh } = useContentFormNavigation();
+  const contentTypeId = spec.contentTypeId;
+  const itemId = data.id;
+  const session = useContentLiveSession({
+    contentTypeId,
+    itemId,
+    locale: spec.defaultLocale,
+  });
+  const { onDraft, onReset, readDrafts } = session;
+
+  /** The draft the form opened on: read once, and again after a reset. */
+  const [opening, setOpening] = React.useState<
+    undefined | { drafts: ContentDrafts | null; labels: Record<string, string> }
+  >(undefined);
+  /** The draft as it is now, every autosave folded in. */
+  const [drafts, setDrafts] = React.useState<ContentDrafts | null>(null);
+  const [reloaded, setReloaded] = React.useState<null | Reloaded>(null);
+  const [generation, setGeneration] = React.useState(0);
+  const [status, setStatus] =
+    React.useState<Omit<ContentLiveAutosaveStatus, "dirty">>(IDLE);
+
+  const row = reloaded?.for === data ? reloaded.row : data;
+  const rows = reloaded?.for === data ? reloaded.translations : translations;
+
+  const draftsRef = React.useRef(drafts);
+  React.useEffect(() => {
+    draftsRef.current = drafts;
+  }, [drafts]);
+
+  /**
+   * The draft, and the names behind any reference it moved - the form shows a
+   * picked category by name, and the record only knows its old one's.
+   */
+  const load = React.useEffectEvent(async (base?: ContentRow) => {
+    const read = await readDrafts();
+    const moved = contentDraftMovedReferences(spec, base ?? row, read);
+    const found = await Promise.all(
+      moved.map(async ({ field, id }) => {
+        const [option] = await transport.loadOptions(contentTypeId, field, "", [
+          id,
+        ]);
+
+        return option ? ([[field, option.label]] as const) : [];
+      }),
+    );
+
+    return { labels: Object.fromEntries(found.flat()), read };
+  });
+
+  React.useEffect(() => {
+    let active = true;
+
+    void load().then(result => {
+      if (!active) return;
+      setOpening({ drafts: result.read, labels: result.labels });
+      setDrafts(result.read);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  React.useEffect(
+    () =>
+      onDraft(event => {
+        setDrafts(current => mergeContentDraft(current, event));
+      }),
+    [onDraft],
+  );
+
+  const pendingRef = React.useRef(new Map<string, PendingValue>());
+  const timerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const chainRef = React.useRef<Promise<void>>(Promise.resolve());
+
+  const saveNow = React.useCallback(async () => {
+    clearTimeout(timerRef.current);
+    timerRef.current = undefined;
+
+    const batch = [...pendingRef.current.values()];
+    pendingRef.current.clear();
+    if (batch.length === 0) return;
+
+    const byLocale = new Map<null | string, Record<string, unknown>>();
+    for (const { field, locale, value } of batch) {
+      byLocale.set(locale, { ...byLocale.get(locale), [field]: value });
+    }
+
+    setStatus(current => ({ ...current, saving: true }));
+    let failed = false;
+    let savedAt: null | string = null;
+
+    for (const [locale, values] of byLocale) {
+      const result = await transport.saveDraft(contentTypeId, itemId, {
+        locale,
+        values,
+      });
+
+      if (result.updatedAt === undefined) {
+        failed = true;
+        continue;
+      }
+
+      const updatedAt = result.updatedAt;
+      savedAt = updatedAt;
+      setDrafts(current =>
+        mergeContentDraft(current, {
+          by: null,
+          locale,
+          updatedAt,
+          values,
+        }),
+      );
+    }
+
+    setStatus(current => ({
+      failed,
+      saving: false,
+      savedAt: savedAt ?? current.savedAt,
+    }));
+  }, [contentTypeId, itemId, transport]);
+
+  const flush = React.useCallback(async () => {
+    chainRef.current = chainRef.current.then(saveNow, saveNow);
+    await chainRef.current;
+  }, [saveNow]);
+
+  const queue = React.useCallback(
+    (field: string, locale: null | string, value: unknown) => {
+      const key = `${locale ?? ""}\u0000${field}`;
+      const stored = contentDraftValue(draftsRef.current, field, locale);
+
+      if (stored && JSON.stringify(stored.value) === JSON.stringify(value)) {
+        pendingRef.current.delete(key);
+
+        return;
+      }
+
+      pendingRef.current.set(key, { field, locale, value });
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        void flush();
+      }, CONTENT_DRAFT_AUTOSAVE_MS);
+    },
+    [flush],
+  );
+
+  // Whatever is still waiting goes out with the form.
+  React.useEffect(
+    () => () => {
+      void flush();
+    },
+    [flush],
+  );
+
+  const reset = React.useEffectEvent(async (reason: ContentLiveResetReason) => {
+    pendingRef.current.clear();
+    clearTimeout(timerRef.current);
+
+    if (reason === "deleted") {
+      toast.warning(t("reset.deleted.title"), {
+        description: t("reset.deleted.desc"),
+      });
+      refresh();
+
+      return;
+    }
+
+    const [fresh, list] = await Promise.all([
+      transport.reloadRow(contentTypeId, itemId),
+      spec.defaultLocale === null
+        ? Promise.resolve({ edges: [...rows] })
+        : transport.listTranslations(contentTypeId, itemId),
+    ]);
+    const next = fresh.row ? { ...data, ...fresh.row } : row;
+    const { labels, read } = await load(next);
+
+    setReloaded({ for: data, row: next, translations: list.edges });
+    setOpening({ drafts: read, labels });
+    setDrafts(read);
+    setStatus(IDLE);
+    setGeneration(current => current + 1);
+    toast.info(t("reset.restored.title"), {
+      description: t("reset.restored.desc"),
+    });
+    refresh();
+  });
+
+  React.useEffect(
+    () =>
+      onReset(reason => {
+        void reset(reason);
+      }),
+    [onReset],
+  );
+
+  if (opening === undefined) return <>{fallback}</>;
+
+  const value: ContentLiveContextValue = {
+    autosave: { flush, queue },
+    itemId,
+    locale: spec.defaultLocale,
+    session,
+    spec,
+    status: { ...status, dirty: contentDraftDiffers(row, rows, drafts) },
+  };
+
+  return (
+    <ContentLiveContext value={value}>
+      <React.Fragment key={generation}>
+        {children({ ...opening, row, translations: rows })}
+      </React.Fragment>
+    </ContentLiveContext>
+  );
+};

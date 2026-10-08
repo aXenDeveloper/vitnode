@@ -431,6 +431,18 @@ const updateShape = (
     }),
   );
 
+/**
+ * One field's value schema exactly as the `update` route validates it, for a
+ * write that carries a few fields at a time (the live editing draft).
+ */
+export const contentFieldUpdateSchema = (
+  fields: ContentFieldMap,
+  name: string,
+): undefined | z.ZodType =>
+  fields[name] === undefined
+    ? undefined
+    : (updateShape(fields, [name])[name] as z.ZodType);
+
 const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
   Object.fromEntries(
     Object.entries(fields)

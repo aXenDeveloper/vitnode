@@ -70,7 +70,7 @@ const originalNameOf = (table: Table): string => {
 };
 
 const WORD_PATTERN =
-  /\s*(>=|<=|<>|!=|::|[(),*=<>]|'(?:[^']|'')*'|"[^"]*"|\d+(?:\.\d+)?|[A-Za-z_][\w]*)/y;
+  /\s*(>=|<=|<>|!=|::|\|\||[(),*=<>]|'(?:[^']|'')*'|"[^"]*"|\d+(?:\.\d+)?|[A-Za-z_][\w]*)/y;
 
 const tokenizeText = (text: string): Token[] => {
   const tokens: Token[] = [];
@@ -206,8 +206,24 @@ const parseTokens = (tokens: Token[], source: string) => {
     return node;
   };
 
+  // `||` binds tighter than any comparison: jsonb merge, or text concatenation.
+  const parseConcat = (): Node => {
+    let node = parseCast();
+    while (isWord("||")) {
+      position++;
+      node = {
+        kind: "compare",
+        left: node,
+        operator: "||",
+        right: parseCast(),
+      };
+    }
+
+    return node;
+  };
+
   const parseComparison = (): Node => {
-    const left = parseCast();
+    const left = parseConcat();
     const token = peek();
     if (token?.kind !== "word") return left;
 
@@ -218,7 +234,7 @@ const parseTokens = (tokens: Token[], source: string) => {
         kind: "compare",
         left,
         operator: token.value === "!=" ? "<>" : token.value,
-        right: parseCast(),
+        right: parseConcat(),
       };
     }
     if (token.value === "is") {
@@ -366,8 +382,21 @@ const textOf = (value: unknown): string => {
 const isMissing = (value: unknown): value is null | undefined =>
   value === null || value === undefined;
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 const compare = (left: unknown, operator: string, right: unknown) => {
   if (isMissing(left) || isMissing(right)) return null;
+  if (operator === "||") {
+    if (isPlainObject(left) && isPlainObject(right)) {
+      return { ...left, ...right };
+    }
+    if (typeof left === "string" && typeof right === "string") {
+      return left + right;
+    }
+
+    return unsupported(`"||" between ${typeof left} and ${typeof right}`);
+  }
   if (operator === "=") return equal(left, right);
   if (operator === "<>") return !equal(left, right);
   const a = comparable(left) as number | string;

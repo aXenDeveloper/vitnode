@@ -25,6 +25,7 @@ import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
 import type { ContentFormSkeletonOverrides } from "../form/skeleton";
 import type { ContentOptionsLoader } from "../lib/field-component";
+import type { ContentLiveFormState } from "../live/root";
 import type { ContentConflictState } from "./conflict-notice";
 
 import { ContentFormProvider } from "../form/context";
@@ -45,6 +46,10 @@ import { useContentFormTransport } from "../form/transport";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
+import { ContentLiveField } from "../live/field";
+import { ContentLiveRoot } from "../live/root";
+import { ContentLiveStatus } from "../live/status";
+import { overlayContentDrafts } from "../live/values";
 import { ConflictNotice } from "./conflict-notice";
 
 export interface ContentFormProps {
@@ -122,19 +127,42 @@ export const ContentForm = ({
     };
   }, [contentTypeId, data, pendingRow, transport]);
 
-  if (loaded === null || pendingRow) {
+  const skeleton = (
+    <ContentFormSkeleton
+      contentTypeId={spec.contentTypeId}
+      header={props.presentation === "page" ? props.header : undefined}
+      layout={props.layout}
+      mode={data ? "edit" : "create"}
+      pluginId={spec.pluginId}
+      publication={props.publication}
+      shape={contentSpecSkeletonShape(spec, fieldSkeletons)}
+      singular={props.singular}
+      title={props.title}
+    />
+  );
+
+  if (loaded === null || pendingRow) return skeleton;
+
+  // Live editing (locks, the shared draft, autosave) needs a record version,
+  // so it is an existing record of an editorial content type or nothing.
+  if (row && spec.editorial === true) {
     return (
-      <ContentFormSkeleton
-        contentTypeId={spec.contentTypeId}
-        header={props.presentation === "page" ? props.header : undefined}
-        layout={props.layout}
-        mode={data ? "edit" : "create"}
-        pluginId={spec.pluginId}
-        publication={props.publication}
-        shape={contentSpecSkeletonShape(spec, fieldSkeletons)}
-        singular={props.singular}
-        title={props.title}
-      />
+      <ContentLiveRoot
+        data={row}
+        fallback={skeleton}
+        spec={spec}
+        translations={loaded}
+      >
+        {live => (
+          <ContentFormFields
+            data={live.row}
+            live={live}
+            spec={spec}
+            translations={live.translations}
+            {...props}
+          />
+        )}
+      </ContentLiveRoot>
     );
   }
 
@@ -153,6 +181,7 @@ const ContentFormFields = ({
   fieldOverrides = {},
   header,
   layout,
+  live,
   onCreated,
   presentation = "dialog",
   publication = false,
@@ -160,7 +189,10 @@ const ContentFormFields = ({
   spec,
   title,
   translations = [],
-}: ContentFormProps) => {
+}: ContentFormProps & {
+  /** The shared draft the form opens on, when the record is edited live. */
+  live?: ContentLiveFormState;
+}) => {
   const t = useTranslations("core.content");
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
@@ -203,10 +235,17 @@ const ContentFormFields = ({
 
   const [opened, setOpened] = React.useState(() => translations);
 
-  const values = React.useMemo(
-    () => contentFormInitialValues(spec, data, opened),
-    [spec, data, opened],
-  );
+  const drafts = live?.drafts ?? null;
+  const draftLabels = live?.labels;
+  const values = React.useMemo(() => {
+    if (!data || !drafts) return contentFormInitialValues(spec, data, opened);
+
+    // The draft only changes what the form opens on. `data` and `opened` stay
+    // the committed record, so Save still sees every drafted value as a change.
+    const overlaid = overlayContentDrafts(data, opened, drafts, draftLabels);
+
+    return contentFormInitialValues(spec, overlaid.data, overlaid.translations);
+  }, [spec, data, opened, drafts, draftLabels]);
 
   const formSchema = React.useMemo(
     () => buildFormSchemaFromSpec(spec, values),
@@ -425,22 +464,24 @@ const ContentFormFields = ({
       // suspends on promise children, so the dialog spins forever.
       component: props => {
         const Override = fieldOverrides[fieldSpec.name];
-        if (Override) {
-          return (
-            <Override {...props} multiLang={fieldSpec.localized === true} />
-          );
-        }
 
+        // A no-op outside a live session; inside one it holds the field's lock.
         return (
-          <ContentField
-            files={files}
-            loadOptions={loadOptions}
-            spec={fieldSpec}
-            uploadFile={async ({ field, file }) =>
-              await uploadContentFile({ field, file, spec })
-            }
-            {...props}
-          />
+          <ContentLiveField field={props.field} fieldSpec={fieldSpec}>
+            {Override ? (
+              <Override {...props} multiLang={fieldSpec.localized === true} />
+            ) : (
+              <ContentField
+                files={files}
+                loadOptions={loadOptions}
+                spec={fieldSpec}
+                uploadFile={async ({ field, file }) =>
+                  await uploadContentFile({ field, file, spec })
+                }
+                {...props}
+              />
+            )}
+          </ContentLiveField>
         );
       },
     }),
@@ -506,6 +547,7 @@ const ContentFormFields = ({
               ) : (
                 <>
                   <ContentFormHeader />
+                  {presentation === "page" ? null : <ContentLiveStatus />}
 
                   {publication && data ? (
                     <ContentFormPublication

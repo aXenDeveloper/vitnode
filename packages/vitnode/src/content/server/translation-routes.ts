@@ -25,6 +25,7 @@ import {
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "../const";
 import { resolveContentActor } from "./actor";
+import { resetContentLiveRecord } from "./live/hooks";
 import { contentLocaleRouting } from "./locale-routing";
 import {
   assertContentPreviewIsServable,
@@ -629,6 +630,11 @@ export const buildContentTranslationRoutes = <
       }
 
       await announce(c, outcome);
+      await resetContentLiveRecord(
+        c,
+        { contentTypeId: definition.id, itemId: id },
+        "restored",
+      );
 
       return c.json({ changed: outcome.changed, row: outcome.row }, 200);
     },

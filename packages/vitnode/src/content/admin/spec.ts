@@ -80,6 +80,11 @@ export interface ContentFormSpec {
   contentTypeId: string;
 
   defaultLocale: null | string;
+  /**
+   * Present on an editorial content type: its records have a version, which is
+   * what live editing (field locks, the shared draft, autosave) measures against.
+   */
+  editorial?: true;
   fields: ContentFormFieldSpec[];
 
   permissionModule: string;
@@ -283,6 +288,7 @@ export const buildContentFormSpec = ({
     defaultLocale: definition.localization.enabled
       ? definition.localization.defaultLocale
       : null,
+    ...(definition.editorial.enabled ? { editorial: true as const } : {}),
     permissionModule: definition.permissionModule,
     pluginId,
     titleField: definition.admin.titleField,
@@ -772,3 +778,70 @@ export const buildFormSchemaFromSpec = (
       }),
     ),
   );
+
+/**
+ * One field's form value as the API takes it - what live editing autosaves
+ * into the shared draft. `undefined` while the value is not writable yet (it
+ * fails the field's own rules, or it is empty where empty means "unset"), so a
+ * half-typed value is simply not autosaved.
+ *
+ * `locale` picks the language of a localized field, which holds them all.
+ */
+export const contentFormFieldToApi = (
+  spec: ContentFormSpec,
+  fieldSpec: ContentFormFieldSpec,
+  value: unknown,
+  locale: null | string,
+): undefined | { value: unknown } => {
+  if (fieldSpec.localized === true) {
+    if (locale === null) return undefined;
+
+    const converted = localizedValueForApi(
+      fieldSpec,
+      getLangValue(value as MultiLangValue | undefined, locale),
+    );
+
+    return converted === undefined ? undefined : { value: converted };
+  }
+
+  const schema = buildFormSchemaFromSpec({ ...spec, fields: [fieldSpec] })
+    .shape[fieldSpec.name];
+  const parsed = schema ? z.safeParse(schema, value) : undefined;
+  if (!parsed?.success || parsed.data === undefined) return undefined;
+
+  return {
+    value: contentFormValuesToPayload(spec, { [fieldSpec.name]: parsed.data })[
+      fieldSpec.name
+    ],
+  };
+};
+
+/**
+ * The reverse of {@link contentFormFieldToApi}: an API value written into the
+ * form value a field holds now. A localized field changes only `locale`; a
+ * single reference keeps the label it already shows for the same identifier.
+ */
+export const contentApiValueToFormField = (
+  fieldSpec: ContentFormFieldSpec,
+  value: unknown,
+  current: unknown,
+  locale: null | string,
+): unknown => {
+  if (fieldSpec.localized === true) {
+    if (locale === null) return current;
+
+    return upsertLangValue(
+      current as MultiLangValue | undefined,
+      locale,
+      typeof value === "string" ? value : "",
+    );
+  }
+
+  const shown = current as null | Partial<ContentReferenceOption> | undefined;
+  const label =
+    shown?.value !== undefined && shown.value === String(value)
+      ? (shown.label ?? null)
+      : null;
+
+  return toInitialValue(fieldSpec, value, { [fieldSpec.name]: label });
+};
