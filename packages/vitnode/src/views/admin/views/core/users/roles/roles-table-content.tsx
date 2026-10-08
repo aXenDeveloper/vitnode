@@ -320,7 +320,7 @@ const EditRoleAction = ({
         </DialogTrigger>
       </TooltipWithContent>
 
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
@@ -416,7 +416,7 @@ export const CreateRoleAction = ({
         {t("title")}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>{t("desc")}</DialogDescription>

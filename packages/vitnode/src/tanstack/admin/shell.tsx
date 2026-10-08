@@ -21,6 +21,7 @@ import { AdminNavProvider, useAdminNav } from "./nav";
 import { AdminPermissionsProvider } from "./permissions";
 import { AdminSearch } from "./search";
 import { AdminSessionGuard } from "./session-guard";
+import { readAdminSidebarOpen } from "./sidebar-state";
 import { AdminUserBar } from "./user-bar";
 
 export const AdminShellContent = ({
@@ -70,8 +71,10 @@ const AdminShellFrame = ({
 
   const pathname = useRouterState({ select: state => state.location.pathname });
 
+  const [defaultSidebarOpen] = React.useState(readAdminSidebarOpen);
+
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <SidebarAdminContent userBar={<AdminUserBar />}>
         <NavSidebarAdminContent nav={nav} pathname={pathname} />
       </SidebarAdminContent>

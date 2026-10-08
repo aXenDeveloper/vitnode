@@ -71,7 +71,12 @@ export interface AdminAiRoleAccess {
 }
 
 export interface AdminAiRolePermission {
-  actions: { icon: null | string; key: string; title: string }[];
+  actions: {
+    description: string;
+    icon: null | string;
+    key: string;
+    title: string;
+  }[];
   defaultGranted: boolean;
   key: string;
 }

@@ -324,7 +324,7 @@
           "title": "Użytkownicy"
         },
         "ai": {
-          "title": "AI",
+          "title": "Sztuczna Inteligencja (AI)",
           "overview": "Przegląd",
           "actions": "Akcje",
           "history": "Historia"
@@ -548,7 +548,7 @@
         "content": "Treść",
         "general": "Ogólne",
         "profile": "Profil",
-        "ai": "AI"
+        "ai": "Sztuczna inteligencja (AI)"
       }
     },
     "staff": {

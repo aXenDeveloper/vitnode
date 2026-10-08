@@ -3,7 +3,6 @@ import {
   CpuIcon,
   GaugeIcon,
   SettingsIcon,
-  SparklesIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 import React from "react";
@@ -23,7 +22,6 @@ import {
 } from "@/components/table/url-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import {
   Sheet,
   SheetContent,
@@ -42,6 +40,8 @@ import {
 
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
 import type { AiActionFormProps } from "./action-form-content";
+
+import { AiActionIcon } from "../ai-labels";
 
 const AiActionFormContent = React.lazy(async () =>
   import("./action-form-content").then(module => ({
@@ -113,32 +113,6 @@ export const EditAiActionAction = ({
     </Sheet>
   );
 };
-
-const AiActionIcon = ({
-  enabled,
-  icon,
-}: {
-  enabled: boolean;
-  icon: null | string;
-}) => (
-  <span
-    aria-hidden
-    className={cn(
-      "flex size-9 shrink-0 items-center justify-center rounded-md transition-colors",
-      enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-    )}
-  >
-    {icon ? (
-      <DynamicIcon
-        className="size-4"
-        fallback={<SparklesIcon className="size-4" />}
-        name={icon}
-      />
-    ) : (
-      <SparklesIcon className="size-4" />
-    )}
-  </span>
-);
 
 const AiActionEnabledSwitch = ({
   action,

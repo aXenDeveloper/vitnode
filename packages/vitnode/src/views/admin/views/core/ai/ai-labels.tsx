@@ -1,7 +1,9 @@
 import { cn } from "cn";
+import { SparklesIcon } from "lucide-react";
 import { useLocale, useTranslations } from "use-intl";
 
 import { Badge } from "@/components/ui/badge";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { formatAiUsd } from "@/lib/ai/format-points";
 import { aiRunStatusVariant, isAiRunStatus } from "@/lib/ai/run-status";
 
@@ -107,3 +109,29 @@ export const formatAiShare = (share: number, locale: string): string =>
     maximumFractionDigits: share > 0 && share < 0.01 ? 1 : 0,
     style: "percent",
   }).format(share);
+
+export const AiActionIcon = ({
+  enabled,
+  icon,
+}: {
+  enabled: boolean;
+  icon: null | string;
+}) => (
+  <span
+    aria-hidden
+    className={cn(
+      "flex size-9 shrink-0 items-center justify-center rounded-md transition-colors",
+      enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+    )}
+  >
+    {icon ? (
+      <DynamicIcon
+        className="size-4"
+        fallback={<SparklesIcon className="size-4" />}
+        name={icon}
+      />
+    ) : (
+      <SparklesIcon className="size-4" />
+    )}
+  </span>
+);

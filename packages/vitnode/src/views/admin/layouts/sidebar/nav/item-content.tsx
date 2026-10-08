@@ -69,7 +69,9 @@ export const ItemNavAdminContent = ({
   const content = (
     <>
       {icon ?? <MenuIcon />}
-      <span>{title}</span>
+      <span className="min-w-0 truncate" title={title}>
+        {title}
+      </span>
     </>
   );
 
@@ -169,7 +171,9 @@ export const ItemNavAdminContent = ({
                   />
                 }
               >
-                {item.title}
+                <span className="min-w-0 truncate" title={item.title}>
+                  {item.title}
+                </span>
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
           ))}

@@ -40,6 +40,7 @@ export const getAiRoleAccessAdminRoute = buildRoute({
                 z.object({
                   actions: z.array(
                     z.object({
+                      description: z.string(),
                       icon: z.string().nullable(),
                       key: z.string(),
                       title: z.string(),
@@ -77,7 +78,12 @@ export const getAiRoleAccessAdminRoute = buildRoute({
     const permissions = new Map<
       string,
       {
-        actions: { icon: null | string; key: string; title: string }[];
+        actions: {
+          description: string;
+          icon: null | string;
+          key: string;
+          title: string;
+        }[];
         defaultGranted: boolean;
       }
     >();
@@ -88,6 +94,7 @@ export const getAiRoleAccessAdminRoute = buildRoute({
         defaultGranted: action.definition.permission.defaultGranted,
       };
       entry.actions.push({
+        description: action.definition.description,
         icon: action.definition.icon ?? null,
         key: action.key,
         title: action.definition.title,

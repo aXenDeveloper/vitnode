@@ -21,12 +21,11 @@ import { AutoFormEmojiIcon } from "@/components/form/fields/emoji-icon";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormNumber } from "@/components/form/fields/number";
-import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { useDialog } from "@/components/ui/dialog";
 import {
   type AiActionTranslate,
-  translateAiActionText,
+  withTranslatedAiActionText,
 } from "@/lib/ai/action-text";
 import { EMOJI_ICON_MAX_LENGTH } from "@/lib/emoji-icon";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
@@ -34,6 +33,8 @@ import {
   fromAiDecimal,
   toAiDecimal,
 } from "@/views/admin/views/core/ai/ai-decimal";
+
+import { AutoFormAiPermission } from "./ai-permission-field";
 
 export const ROLE_IMAGE_SIZE_MAX_KB = 1024 * 1024;
 export const ROLE_DEFAULT_AVATAR_SIZE_KB = 2048;
@@ -196,48 +197,47 @@ const aiFields = (
     id: "aiMonthlyPoints",
     tab: "ai",
   },
-  ...ai.permissions.flatMap((permission, index) => [
-    {
-      component: (props: ItemAutoFormComponentProps) => (
-        <AutoFormSelect
-          {...props}
-          description={permission.key}
-          label={permission.actions
-            .map(action => translateAiActionText(tAll, action.title))
-            .join(", ")}
-          labels={[
-            {
-              label: permission.defaultGranted
-                ? t("form.ai.grant.default_allowed")
-                : t("form.ai.grant.default_denied"),
-              value: "default",
-            },
-            { label: t("form.ai.grant.allow"), value: "allow" },
-            { label: t("form.ai.grant.deny"), value: "deny" },
-          ]}
-        />
-      ),
-      id: aiGrantId(index),
-      tab: "ai",
-    },
-    {
-      component: (props: ItemAutoFormComponentProps) => (
-        <AutoFormNullableNumber
-          {...props}
-          label={t("form.ai.daily_limit")}
-          min={0}
-          orLabel={t("form.ai.or")}
-          step={1}
-          toggleLabel={t("form.ai.action_default")}
-          unitLabel={t("form.ai.per_day")}
-        />
-      ),
-      hidden: (values: Record<string, unknown>) =>
-        values[aiGrantId(index)] !== "allow",
-      id: aiLimitId(index),
-      tab: "ai",
-    },
-  ]),
+  ...ai.permissions.map((permission, index) => ({
+    children: [
+      {
+        component: (props: ItemAutoFormComponentProps) => (
+          <AutoFormNullableNumber
+            {...props}
+            label={t("form.ai.daily_limit")}
+            min={0}
+            orLabel={t("form.ai.or")}
+            step={1}
+            toggleLabel={t("form.ai.action_default")}
+            unitLabel={t("form.ai.per_day")}
+          />
+        ),
+        id: aiLimitId(index),
+      },
+    ],
+    component: (props: ItemAutoFormComponentProps) => (
+      <AutoFormAiPermission
+        {...props}
+        labels={[
+          {
+            label: permission.defaultGranted
+              ? t("form.ai.grant.default_allowed")
+              : t("form.ai.grant.default_denied"),
+            value: "default",
+          },
+          { label: t("form.ai.grant.allow"), value: "allow" },
+          { label: t("form.ai.grant.deny"), value: "deny" },
+        ]}
+        permission={{
+          ...permission,
+          actions: permission.actions.map(action =>
+            withTranslatedAiActionText(tAll, action),
+          ),
+        }}
+      />
+    ),
+    id: aiGrantId(index),
+    tab: "ai",
+  })),
 ];
 
 export const AdminRoleFormContent = ({

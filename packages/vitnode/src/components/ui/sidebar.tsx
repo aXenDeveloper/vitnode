@@ -28,12 +28,13 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+import { SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_COOKIE_NAME } from "./sidebar-cookie";
+
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+const SIDEBAR_TOOLTIP_DELAY = 100;
 
 interface SidebarContextProps {
   isMobile: boolean;
@@ -242,9 +243,11 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
         >
-          <TooltipGroup side={side === "left" ? "right" : "left"}>
-            {children}
-          </TooltipGroup>
+          <TooltipProvider delay={SIDEBAR_TOOLTIP_DELAY}>
+            <TooltipGroup side={side === "left" ? "right" : "left"}>
+              {children}
+            </TooltipGroup>
+          </TooltipProvider>
         </div>
       </div>
     </div>

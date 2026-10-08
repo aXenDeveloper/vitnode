@@ -1897,7 +1897,7 @@
           "search": "Search"
         },
         "ai": {
-          "title": "AI",
+          "title": "Artificial Intelligence (AI)",
           "overview": "Overview",
           "actions": "Actions",
           "history": "History"
@@ -2323,7 +2323,7 @@
         "general": "General",
         "content": "Content",
         "profile": "Profile",
-        "ai": "AI"
+        "ai": "Artificial intelligence (AI)"
       },
       "form": {
         "name": "Name",
