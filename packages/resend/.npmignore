@@ -2,5 +2,4 @@
 /src
 /node_modules
 /tsconfig.json
-/.swcrc
 /oxlint.config.ts

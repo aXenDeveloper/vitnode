@@ -56,8 +56,6 @@ export const createPluginPackageJSON = async ({
     },
     devDependencies: {
       "@react-email/ui": versionsPackageJson.reactEmailUi,
-      "@swc/cli": versionsPackageJson.swcCli,
-      "@swc/core": versionsPackageJson.swcCore,
       "@types/react": versionsPackageJson.typesReact,
       "@types/react-dom": versionsPackageJson.typesReactDom,
       "@vitnode/config": vitnodeVersionRange,
@@ -66,7 +64,7 @@ export const createPluginPackageJSON = async ({
         oxlint: versionsPackageJson.oxlint,
         "oxlint-tsgolint": versionsPackageJson.oxlintTsgolint,
       }),
-      "tsc-alias": versionsPackageJson.tscAlias,
+      tsdown: versionsPackageJson.tsdown,
       typescript: versionsPackageJson.typescript,
       vitest: versionsPackageJson.vitest,
     },

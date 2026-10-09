@@ -33,13 +33,11 @@
     "@elastic/elasticsearch": "^9.5.1"
   },
   "devDependencies": {
-    "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.16.13",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
     "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2003",
-    "tsc-alias": "^1.9.7",
+    "tsdown": "^0.23.0",
     "typescript": "^6.0.3"
   }
 }

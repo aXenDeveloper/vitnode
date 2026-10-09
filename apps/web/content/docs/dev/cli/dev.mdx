@@ -4,7 +4,7 @@ description: Start a VitNode app, API app or plugin package in development with 
 icon: Play
 ---
 
-`vitnode dev` starts whatever the current folder is: an app gets a Vite dev server, an API app gets a watching Node or Bun process, and a plugin package gets its compilers in watch mode. Run it from the project's folder.
+`vitnode dev` starts whatever the current folder is: an app gets a Vite dev server, an API app gets a watching Node or Bun process, and a plugin package gets tsdown and the type checker in watch mode. Run it from the project's folder.
 
 ```bash
 vitnode dev
@@ -91,7 +91,7 @@ Otherwise it runs on Node with `tsx watch`.
 
 ## Develop a plugin package
 
-In a plugin package, `vitnode dev` regenerates the plugin's API registry and runs `tsc`, `swc` and `tsc-alias` in watch mode. Apps that use the plugin import its `dist` folder, so they reload as you save.
+In a plugin package, `vitnode dev` regenerates the plugin's API registry, then watches `src` with tsdown and runs `tsc` in watch mode to report type errors. Apps that use the plugin import its `dist` folder, so they reload as you save.
 
 ```txt
 ◆ VitNode
@@ -99,9 +99,14 @@ In a plugin package, `vitnode dev` regenerates the plugin's API registry and run
 
   ✓ API registry generated
   ● Watching sources - apps using this plugin reload as dist/ changes
+
+tsdown js    Rebuilt in 71ms.
+tsdown types Rebuilt in 4493ms.
 ```
 
-If one compiler crashes, the CLI stops the others and exits with code `1`.
+The JavaScript (`tsdown js`) is rebuilt within milliseconds of a save. Declarations (`tsdown types`) follow once TypeScript catches up, so your editor sees new types a few seconds later. A syntax error is printed and the next save rebuilds. If a watcher fails to start, for example because tsdown is not installed, the CLI stops the others and exits with code `1`.
+
+[Build and watch a plugin](/docs/dev/plugins/build) covers added and deleted files, assets and what your app sees while a rebuild is written.
 
 ## Next steps
 

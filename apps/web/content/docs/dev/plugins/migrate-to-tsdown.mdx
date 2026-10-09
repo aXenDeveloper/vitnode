@@ -1,0 +1,118 @@
+---
+title: Migrate a plugin from SWC to tsdown
+description: Move an existing VitNode plugin or adapter package from SWC and tsc-alias to the tsdown build vitnode build now uses.
+icon: ArrowRightLeft
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Plugins generated before the switch to tsdown compiled with `tsc`, SWC and `tsc-alias`. `vitnode build` and `vitnode dev` no longer run those tools, so an older plugin needs `tsdown` instead. Your sources, exports and import paths stay the same, and the migration takes about five minutes.
+
+<Steps>
+  <Step>
+
+### Swap the build dependencies
+
+In the plugin's folder, remove SWC and `tsc-alias`, then add tsdown:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Replace SWC with tsdown'>
+
+```bash tab="bun"
+bun remove @swc/cli @swc/core tsc-alias
+bun add -D tsdown
+```
+
+```bash tab="pnpm"
+pnpm remove @swc/cli @swc/core tsc-alias
+pnpm add -D tsdown
+```
+
+```bash tab="npm"
+npm uninstall @swc/cli @swc/core tsc-alias
+npm i -D tsdown
+```
+
+</Tabs>
+
+Keep `typescript`: the build still uses it for declarations and type checking. If a standalone API app in your workspace builds with `tsc-alias`, keep it there. Only plugin packages switched.
+
+  </Step>
+  <Step>
+
+### Delete `.swcrc`
+
+Delete `.swcrc` from the plugin, and the `/.swcrc` line from its `.npmignore`. VitNode owns the build configuration, so there is nothing to replace it with.
+
+  </Step>
+  <Step>
+
+### Check `package.json`
+
+The scripts should call the CLI, and `exports` should point into `./dist/src/`, which is how the CLI recognizes a plugin package now that `.swcrc` is gone:
+
+```json title="package.json"
+{
+  "type": "module",
+  "scripts": {
+    "build:plugins": "vitnode build",
+    "dev": "vitnode dev"
+  },
+  "exports": {
+    "./locales/*.json": "./src/locales/*.json",
+    "./*": {
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts",
+      "default": "./dist/src/*.js"
+    }
+  }
+}
+```
+
+If your scripts still run `tsc`, `swc` and `tsc-alias` directly, replace them with these two.
+
+  </Step>
+  <Step>
+
+### Build the plugin
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Build the plugin'>
+
+```bash tab="bun"
+bun run build:plugins
+```
+
+```bash tab="pnpm"
+pnpm build:plugins
+```
+
+```bash tab="npm"
+npm run build:plugins
+```
+
+</Tabs>
+
+The first build removes leftovers from the old build that no source produces anymore, such as a stray `dist/vitest.config.d.ts`. Files outside `dist/src` are not touched.
+
+  </Step>
+</Steps>
+
+## Check the result
+
+Validate the plugin from the app that uses it, through the same loaders the app runs:
+
+```bash
+vitnode plugin validate <plugin-name>
+```
+
+`dist/src` holds one `.js`, `.d.ts` and `.d.ts.map` per module, plus copies of your JSON and CSS. Then start `vitnode dev` in the plugin and save a file: the app reloads with the change.
+
+## Troubleshooting
+
+| Message                                                    | Fix                                                                                    |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `... is not a VitNode app, API or plugin package.`         | Add `tsconfig.build.json`, or point `exports` into `./dist/src/`                        |
+| `Could not find "tsdown" from ...`                         | Install `tsdown` in the plugin as shown in the first step                              |
+| `Build failed: tsc exited with code 2`                     | A type error. The build prints it; the old build failed on it too                      |
+| A file you put in `dist/src` by hand disappears            | Move it to `src`. Non-code files there are copied to `dist/src` on every build        |
+
+[Build and watch a plugin](/docs/dev/plugins/build) explains what the new build does with each file.

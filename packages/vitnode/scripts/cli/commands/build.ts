@@ -1,5 +1,5 @@
 import type { AppBuildOptions } from "../builder/app-build";
-import type { StepRunner } from "../builder/compiler-build";
+import type { LoadTsdown, StepRunner } from "../builder/compiler-build";
 import type { MeasuredFile } from "../builder/output-files";
 import type { BuildRoute } from "../builder/routes";
 import type { CommandContext, Env, OutputOptions } from "../context";
@@ -11,9 +11,9 @@ import { runAppBuild } from "../builder/app-build";
 import {
   apiBuildSteps,
   listOutput,
-  packageBuildSteps,
   prepareRegistryStep,
   runCompilerSteps,
+  runPackageBuild,
 } from "../builder/compiler-build";
 import { createPackageOwner } from "../builder/package-owner";
 import {
@@ -45,6 +45,7 @@ export interface BuildOptions extends OutputOptions {
 
 export interface BuildDeps {
   appBuild?: Partial<Pick<AppBuildOptions, "captureOutput" | "loadVite">>;
+  loadTsdown?: LoadTsdown;
   now?: () => number;
   runStep?: StepRunner;
 }
@@ -152,10 +153,10 @@ export const runBuildCommand = async (
   if (project.kind === "package") {
     ui.header(`Building ${project.name}`);
     if (isPluginPackage(project.root)) prepareRegistryStep(project, ui);
-    await runCompilerSteps({
+    await runPackageBuild({
+      loadTsdown: deps.loadTsdown,
       project,
       runStep: deps.runStep,
-      steps: packageBuildSteps(),
       ui,
     });
   } else if (

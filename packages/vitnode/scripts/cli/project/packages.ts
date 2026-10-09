@@ -110,17 +110,17 @@ export const resolveBin = (
 export const importFromProject = async <T>(
   root: string,
   specifier: string,
-): Promise<T> => {
-  let file: string;
+): Promise<T> =>
+  (await import(pathToFileURL(resolveFromProject(root, specifier)).href)) as T;
 
+/** Where `specifier` resolves from the project, or a `ConfigError` saying how to install it. */
+export const resolveFromProject = (root: string, specifier: string): string => {
   try {
-    file = createRequire(join(root, "package.json")).resolve(specifier);
+    return createRequire(join(root, "package.json")).resolve(specifier);
   } catch (error) {
     throw new ConfigError(`Could not find "${specifier}" from ${root}.`, {
       cause: error,
       hint: `Install it in the project, e.g. pnpm add -D ${specifier}`,
     });
   }
-
-  return (await import(pathToFileURL(file).href)) as T;
 };

@@ -78,11 +78,24 @@ Nothing is static until you ask for it. [Prerender static pages](/docs/dev/deplo
 
 The same command builds other project types:
 
-| Project        | What `vitnode build` does                                                   |
-| -------------- | --------------------------------------------------------------------------- |
-| API app (Node) | Compiles with `tsc` and `tsc-alias` into `dist`, then lists the output      |
-| API app (Bun)  | Nothing: Bun runs `src/index.ts` directly                                   |
-| Plugin package | Emits type declarations, compiles with `swc` and rewrites aliases in `dist` |
+| Project        | What `vitnode build` does                                                         |
+| -------------- | --------------------------------------------------------------------------------- |
+| API app (Node) | Compiles with `tsc` and `tsc-alias` into `dist`, then lists the output            |
+| API app (Bun)  | Nothing: Bun runs `src/index.ts` directly                                         |
+| Plugin package | Compiles `src` into `dist/src` with tsdown and checks types with `tsc --noEmit` |
+
+```txt title="vitnode build in a plugin package"
+◆ VitNode
+  Building @acme/blog
+
+  ✓ API registry generated
+  ✓ Compiling sources  8.0s
+  ✓ Checking types  7.3s
+
+  ✓ Built in 8.0s
+```
+
+Compiling and type checking run at the same time, and both must pass. [Build and watch a plugin](/docs/dev/plugins/build) explains what ends up in `dist`.
 
 ## When a build fails
 

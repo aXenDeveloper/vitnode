@@ -11,8 +11,8 @@ import { findPackageRoot, readPackageJson } from "./packages";
  *
  * - `app` - a TanStack Start application, built and served by Vite.
  * - `api` - a standalone Hono API, compiled by `tsc` and run by Node.
- * - `package` - a plugin or adapter package, compiled into `dist` for apps to
- *   import. This is what `vitnode build` and `vitnode dev` have always meant
+ * - `package` - a plugin or adapter package, compiled by tsdown into `dist`
+ *   for apps to import. This is what `vitnode build` and `vitnode dev` have always meant
  *   inside one, and they still do.
  */
 export type ProjectKind = "api" | "app" | "package";
@@ -55,12 +55,25 @@ const firstExisting = (root: string, files: readonly string[]) => {
   return found === undefined ? null : join(root, found);
 };
 
+/**
+ * Whether a package's `exports` point into `dist/src` - the folder `vitnode
+ * build` writes. Together with `tsconfig.build.json` that is what makes a
+ * folder a VitNode package; a tool that only compiles with `tsc` (as
+ * `create-vitnode-app` does) exports nothing from there.
+ */
+const exportsBuildOutput = (exports: unknown): boolean => {
+  if (typeof exports === "string") return exports.startsWith("./dist/src/");
+  if (exports === null || typeof exports !== "object") return false;
+
+  return Object.values(exports).some(exportsBuildOutput);
+};
+
 export const kindOf = (root: string): null | ProjectKind => {
   if (firstExisting(root, VITE_CONFIGS) !== null) return "app";
   if (existsSync(join(root, "src", "vitnode.api.config.ts"))) return "api";
   if (
     existsSync(join(root, "tsconfig.build.json")) &&
-    existsSync(join(root, ".swcrc"))
+    exportsBuildOutput(readPackageJson(root)?.exports)
   ) {
     return "package";
   }
@@ -91,7 +104,7 @@ export const detectProject = (cwd: string): Project => {
       {
         details: [
           "An app has a vite.config.ts, an API has src/vitnode.api.config.ts,",
-          "and a plugin package has tsconfig.build.json and .swcrc.",
+          "and a plugin package has tsconfig.build.json and exports from ./dist/src/.",
         ],
         hint: isWorkspaceRoot(root, packageJson)
           ? "This is a workspace root - run the command inside one of its apps, e.g. cd apps/web."

@@ -5,9 +5,11 @@
   "defaultOpen": true,
   "pages": [
     "create",
+    "build",
     "api",
     "admin",
     "navigation",
+    "migrate-to-tsdown",
     "..."
   ]
 }

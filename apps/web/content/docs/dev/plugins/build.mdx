@@ -1,0 +1,141 @@
+---
+title: Build and watch a plugin
+description: How vitnode build compiles a plugin package with tsdown, how vitnode dev watches it, and what ends up in dist.
+icon: Hammer
+---
+
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+
+`vitnode build` turns a plugin's `src` folder into `dist/src`: one JavaScript file, one declaration file (`.d.ts`) and one declaration map per module. `vitnode dev` does the same in watch mode, so an app using the plugin reloads as you save. There is no build config to write. VitNode owns it, and every plugin and adapter package is built the same way.
+
+## What tsdown does
+
+[tsdown](https://tsdown.dev) is the compiler behind both commands. It runs in **unbundle mode**: every module is compiled on its own instead of being merged into one bundle, so `src/pages/home-page.tsx` becomes `dist/src/pages/home-page.js`.
+
+<Files>
+  <Folder name="plugins/site-notes" defaultOpen>
+    <Folder name="src" defaultOpen>
+      <Folder name="locales">
+        <File name="en.json" />
+        <File name="index.ts" />
+      </Folder>
+      <File name="config.tsx" />
+      <File name="routes.ts" />
+    </Folder>
+    <Folder name="dist/src" defaultOpen>
+      <Folder name="locales">
+        <File name="en.json" />
+        <File name="index.js" />
+        <File name="index.d.ts" />
+        <File name="index.d.ts.map" />
+      </Folder>
+      <File name="config.js" />
+      <File name="config.d.ts" />
+      <File name="config.d.ts.map" />
+      <File name="routes.js" />
+      <File name="routes.d.ts" />
+      <File name="routes.d.ts.map" />
+    </Folder>
+  </Folder>
+</Files>
+
+Every `.ts` and `.tsx` file under `src` is compiled, not only what an `index.ts` imports, because the plugin's `"./*"` export makes each module public. Test files (`*.test.ts`, `*.test.tsx`, `*.test-d.ts`), `src/tests/`, `__tests__/` and `__fixtures__/` folders stay out of `dist`.
+
+The output is ES modules that Node and Vite load as they are:
+
+- **Imports of packages stay imports.** React, Hono, Drizzle, `@vitnode/core` and every other package are left for the app to install, exactly as written.
+- **Relative imports get their `.js` extension**, and dynamic imports such as `lazy(() => import("./pages/home-page"))` keep working.
+- **`@/` aliases become relative paths**, in the JavaScript and in the declarations. The aliases come from `paths` in `tsconfig.build.json`.
+- **JSX** uses React's automatic runtime (`react/jsx-runtime`).
+- **File names are kept**, so `auth.server.ts` stays `auth.server.js`. Modules keep their side effects; nothing is tree-shaken away.
+
+A production build is minified and ships declaration maps, but no JavaScript source maps. `vitnode dev` writes readable JavaScript with source maps instead.
+
+## Assets and aliases
+
+Every file under `src` that is not code (locale JSON, CSS, images for emails) is copied to the same place under `dist/src`. Imports of those files stay imports, with their import attributes:
+
+```ts title="src/locales/index.ts"
+export default {
+  en: async () => await import("./en.json", { with: { type: "json" } }),
+};
+```
+
+`dist/src/locales/index.js` imports `./en.json` next to it, so the compiled module finds its JSON the way the source did. An app loads your translations through the `"./locales/*.json"` export instead, which points at `src/locales`.
+
+## Types and declarations
+
+Two TypeScript jobs run side by side, and both must pass:
+
+| Job            | What it does                                                                   |
+| -------------- | ------------------------------------------------------------------------------ |
+| tsdown         | Writes the `.d.ts` files and their maps with the TypeScript compiler           |
+| `tsc --noEmit` | Type checks the whole package with `tsconfig.build.json` and fails on an error |
+
+Declarations are written from every file `tsconfig.build.json` includes. That matters for files nothing imports, such as `global.d.ts` and the generated `types/api-registry.gen.d.ts`: they are what lets `fetcher({ plugin: "@acme/site-notes", ... })` infer its response, and that inferred type lands in your `.d.ts` files.
+
+You don't need `isolatedDeclarations` or explicit return types. Inferred types come out the same as `tsc` would write them.
+
+## What a plugin package needs
+
+| File                  | Why                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `package.json`        | `"type": "module"`, `exports` pointing into `./dist/src/`, and `tsdown` and `typescript` in `devDependencies` |
+| `tsconfig.json`       | Compiler options for your editor, with `"paths": { "@/*": ["./src/*"] }`                |
+| `tsconfig.build.json` | The same, without tests: what `vitnode build` compiles and type checks                  |
+
+The CLI treats a folder as a plugin package when it has `tsconfig.build.json` and its `exports` point into `./dist/src/`. `create-vitnode-app` generates all three files. A `tsdown.config.ts` in a plugin is not read.
+
+## How `vitnode dev` watches a plugin
+
+`vitnode dev` runs three watchers:
+
+- **tsdown js** rebuilds the JavaScript and copies changed assets, usually within 100 ms for a plugin.
+- **tsdown types** rebuilds the declarations once TypeScript has caught up, a few seconds later.
+- **`tsc --watch --noEmit`** prints type errors.
+
+The two tsdown watchers run as separate processes, so the TypeScript compiler never holds back the JavaScript your app reloads.
+
+Adding, deleting or renaming a file restarts both tsdown watchers with the new list of modules, after a short pause so a branch switch counts as one change. Output for a deleted module is removed from `dist/src`. A file that fails to compile is reported, the last good output stays in place, and the next save rebuilds.
+
+<kbd>Ctrl</kbd>+<kbd>C</kbd> stops every watcher. If one of them exits on its own, the CLI stops the rest and exits with an error.
+
+## How dist stays consistent
+
+A build only writes to `dist/src`, and only files whose content changed. An app watching the plugin reloads for the module you edited, not for every file in the package. After a successful build, files under `dist/src` that no source produces anymore are deleted. Nothing outside `dist/src` is touched, so don't keep hand-written files in `dist/src`.
+
+Writes are not atomic. A changed file is overwritten in place, so for a moment an app's dev server can see the old or a partly written file, and may reload once more when the write finishes. Since only changed files are written, this window covers the files you edited.
+
+## Plugin, CLI and app builds
+
+VitNode uses different builds for different things. This page is about the first one.
+
+| Build          | Who runs it                        | Tool                                                        |
+| -------------- | ---------------------------------- | ----------------------------------------------------------- |
+| Plugin package | `vitnode build` in a plugin        | tsdown in unbundle mode, plus `tsc --noEmit`                |
+| VitNode CLI    | `pnpm build:scripts` in `@vitnode/core` | tsdown with `packages/vitnode/tsdown.config.ts`, into `dist/scripts` |
+| App            | `vitnode build` in an app          | Vite and TanStack Start, unchanged                          |
+
+`@vitnode/core` itself is built as a plugin package into `dist/src`. Its CLI build writes `dist/scripts` and only cleans that folder, so the two never delete each other's output.
+
+## Limitations
+
+- tsdown needs Node.js `^22.18.0`, `^24.11.0` or `26` and later.
+- Declarations are generated by the TypeScript compiler, which is the slow part of a build. In watch mode they arrive a few seconds after the JavaScript. For a package as large as `@vitnode/core`, adding or deleting a file rebuilds all of its declarations.
+- Each JavaScript rebuild renders every module of the package again and writes only the changed ones. That takes under 100 ms for a typical plugin and about 2 seconds for the roughly 1,600 modules of `@vitnode/core`.
+- A re-export-only `index.ts` may get no `.d.ts.map`, so "Go to definition" stops at its `.d.ts` first.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Migrate a plugin from SWC"
+    description="Move an existing plugin from SWC and tsc-alias to tsdown"
+    href="/docs/dev/plugins/migrate-to-tsdown"
+  />
+  <Card
+    title="Plugin CLI"
+    description="List and validate plugins"
+    href="/docs/dev/cli/plugins"
+  />
+</Cards>

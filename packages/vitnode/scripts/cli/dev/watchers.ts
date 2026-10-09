@@ -1,10 +1,13 @@
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { RunProcessOptions, SignalSource } from "../project/processes";
 import type { Project } from "../project/project";
 import type { Runtime } from "../project/runtime";
 import type { Ui } from "../ui/ui";
 
+import { typeCheckStep } from "../builder/compiler-build";
 import { EXIT_CODE, RuntimeError } from "../errors";
 import { resolveBin } from "../project/packages";
 import { ProcessGroup, waitForShutdownSignal } from "../project/processes";
@@ -16,28 +19,36 @@ export interface Watcher {
   bin: null | { name: string; package: string };
 }
 
-/** The plugin package's three compilers, each in watch mode. */
+/**
+ * How to start the package watch runner: the built `package-watch.js` next to
+ * the CLI bundle, or - when the CLI itself runs from TypeScript, as in its own
+ * tests - the runner's source through tsx.
+ */
+export const packageWatchRunner = (): string[] => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const built = join(here, "package-watch.js");
+
+  return existsSync(built)
+    ? [built]
+    : ["--import", "tsx", join(here, "..", "..", "package-watch.ts")];
+};
+
+/**
+ * A plugin package in development: `tsc` reporting type errors, and tsdown
+ * rebuilding `dist/src` as sources change - the JavaScript and the
+ * declarations in a process each, so the JavaScript an app reloads never
+ * waits for the TypeScript compiler.
+ *
+ * tsdown runs in child processes - the runner above - rather than in the CLI:
+ * stopping the group then ends every watcher it started.
+ */
 export const packageWatchers = (): Watcher[] => [
   {
-    args: ["-w", "-p", "tsconfig.build.json", "--preserveWatchOutput"],
+    args: typeCheckStep(true).args,
     bin: { name: "tsc", package: "typescript" },
   },
-  {
-    args: [
-      "src",
-      "-d",
-      "dist",
-      "--config-file",
-      ".swcrc",
-      "--copy-files",
-      "-w",
-    ],
-    bin: { name: "swc", package: "@swc/cli" },
-  },
-  {
-    args: ["-w", "-p", "tsconfig.build.json"],
-    bin: { name: "tsc-alias", package: "tsc-alias" },
-  },
+  { args: [...packageWatchRunner(), "javascript"], bin: null },
+  { args: [...packageWatchRunner(), "declarations"], bin: null },
 ];
 
 /**

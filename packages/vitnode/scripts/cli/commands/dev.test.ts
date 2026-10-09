@@ -83,12 +83,17 @@ const until = async (check: () => boolean) => {
 
 describe("vitnode dev in a plugin package", () => {
   beforeEach(() => {
-    write("package.json", JSON.stringify({ name: "@acme/blog" }));
+    write(
+      "package.json",
+      JSON.stringify({
+        exports: { "./*": "./dist/src/*.js" },
+        name: "@acme/blog",
+      }),
+    );
     write("tsconfig.build.json", "{}");
-    write(".swcrc", "{}");
   });
 
-  it("runs the three compilers in watch mode and stops them on Ctrl+C", async () => {
+  it("runs tsdown and the type checker in watch mode and stops them on Ctrl+C", async () => {
     const group = fakeGroup();
     const { context, runtime } = createTestContext({ cwd: root });
 
@@ -98,12 +103,19 @@ describe("vitnode dev in a plugin package", () => {
 
     expect(await running).toBe(0);
     expect(group.stop).toHaveBeenCalledOnce();
+    expect(group.spawned[0].args.slice(1)).toEqual([
+      "--noEmit",
+      "-p",
+      "tsconfig.build.json",
+      "-w",
+      "--preserveWatchOutput",
+    ]);
+    // tsdown, the JavaScript and the declarations each in a runner of its own.
     expect(
-      group.spawned.map(options => options.args.slice(1).join(" ")),
+      group.spawned.slice(1).map(options => options.args.slice(-2)),
     ).toEqual([
-      "-w -p tsconfig.build.json --preserveWatchOutput",
-      "src -d dist --config-file .swcrc --copy-files -w",
-      "-w -p tsconfig.build.json",
+      [expect.stringMatching(/package-watch\.(?:js|ts)$/), "javascript"],
+      [expect.stringMatching(/package-watch\.(?:js|ts)$/), "declarations"],
     ]);
     // Run by Node itself, never through a shell.
     expect(
