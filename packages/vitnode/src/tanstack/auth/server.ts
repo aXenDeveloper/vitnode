@@ -10,9 +10,9 @@ import { createAuthOperations } from "./transport-operations";
  *
  * `allowSaveCookies: true` on exactly the flows whose answer carries the
  * session cookie - sign-in, every passkey sign-in step, sign-out, the three SSO
- * steps and sign-up. A
- * password reset request and a token-based password change never mint a
- * session, so neither has ever relayed a cookie and neither does here.
+ * steps and sign-up. A password reset request, a token-based password change
+ * and both email confirmation calls never mint a session, so none of them
+ * relays a cookie.
  */
 const operations = createAuthOperations({
   changePasswordFromReset: async data =>
@@ -88,6 +88,16 @@ const operations = createAuthOperations({
       path: "/reset-password",
     }),
 
+  resendEmailVerification: async ({ captchaToken, email }) =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      captchaToken,
+      args: { body: { email } },
+      method: "post",
+      module: "users",
+      path: "/verify-email/resend",
+    }),
+
   signIn: async data =>
     await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
@@ -146,6 +156,15 @@ const operations = createAuthOperations({
       module: "users/sso",
       path: "/{providerId}",
     }),
+
+  verifyEmail: async data =>
+    await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { body: data },
+      method: "post",
+      module: "users",
+      path: "/verify-email",
+    }),
 });
 
 export const changePasswordFromResetOnApi = operations.changePasswordFromReset;
@@ -156,9 +175,11 @@ export const finishPasskeySignInOnApi = operations.finishPasskeySignIn;
 export const linkSsoOnApi = operations.linkSso;
 export const readSessionOnApi = operations.readSession;
 export const requestPasswordResetOnApi = operations.requestPasswordReset;
+export const resendEmailVerificationOnApi = operations.resendEmailVerification;
 export const signInOnApi = operations.signIn;
 export const signOutOnApi = operations.signOut;
 export const signUpOnApi = operations.signUp;
 export const startAdminPasskeySignInOnApi = operations.startAdminPasskeySignIn;
 export const startPasskeySignInOnApi = operations.startPasskeySignIn;
 export const startSsoOnApi = operations.startSso;
+export const verifyEmailOnApi = operations.verifyEmail;

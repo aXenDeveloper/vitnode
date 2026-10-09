@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Mail, MailboxIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
@@ -8,6 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+import { AUTH_HREF } from "../auth-link";
+import { rememberEmail } from "../remembered-email";
 
 export const EmailConfirmationView = ({ email }: { email: string }) => {
   const t = useTranslations("core.auth.sign_up.email_confirmation");
@@ -30,8 +34,24 @@ export const EmailConfirmationView = ({ email }: { email: string }) => {
           </div>
         </div>
 
-        <p className="text-muted-foreground text-center text-sm">
+        <p className="text-muted-foreground text-center text-sm leading-relaxed text-pretty">
           {t("check_spam")}
+        </p>
+
+        <p className="text-muted-foreground text-center text-sm leading-relaxed text-pretty">
+          {t.rich("resend", {
+            link: text => (
+              <Link
+                className="text-primary font-semibold"
+                onClick={() => {
+                  rememberEmail(email);
+                }}
+                to={AUTH_HREF.verifyEmail}
+              >
+                {text}
+              </Link>
+            ),
+          })}
         </p>
       </CardContent>
     </Card>

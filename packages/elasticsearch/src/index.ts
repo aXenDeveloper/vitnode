@@ -12,6 +12,19 @@ import { Client, errors } from "@elastic/elasticsearch";
 const DEFAULT_INDEX = "vitnode";
 const DEFAULT_SIZE = 20;
 const MAX_SIZE = 100;
+const MAX_SEARCH_OFFSET = 10_000;
+
+const parseSearchOffset = (
+  cursor: string | undefined,
+  max: number,
+): number | undefined => {
+  if (!cursor) return undefined;
+
+  const parsed = Number(cursor);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return undefined;
+
+  return Math.min(parsed, max);
+};
 
 interface RankingOptions {
   authorBoost?: { authorIds: number[]; weight: number };
@@ -400,7 +413,8 @@ export const ElasticsearchSearchAdapter = (
       await ensureIndex();
 
       const size = Math.min(params.first ?? DEFAULT_SIZE, MAX_SIZE);
-      const from = params.cursor ? Number(params.cursor) : 0;
+      const from =
+        parseSearchOffset(params.cursor, MAX_SEARCH_OFFSET - size) ?? 0;
 
       const res = await getClient().search<EsSource>({
         index,

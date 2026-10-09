@@ -98,6 +98,20 @@ Pass the component itself, not `<Logo />`. Keep it lean: your Vite build
 executes this file too, so a logo that imports half your UI makes every
 regeneration pass slower.
 
+### View transitions
+
+Navigations crossfade and the logo morphs between layouts by default. Set
+`viewTransitions` to `false` to swap pages instantly instead:
+
+```ts title="src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  // ...
+  viewTransitions: false,
+})
+```
+
+See [View transitions](/docs/ui/view-transitions) for what this changes.
+
 ### Enabled plugins
 
 Register a plugin with its own factory:
@@ -209,11 +223,11 @@ export const startInstance = createVitNodeStart({ config: vitNodeConfig })
 
 `createVitNodeStart` installs three things, and none of them is optional:
 
-| Middleware    | What it does                                                                              |
-| :------------ | :---------------------------------------------------------------------------------------- |
-| **CSRF**      | Rejects cross-site requests to server functions (`handlerType === 'serverFn'`)            |
-| **Locale**    | Canonical `308` redirects, the remembered-locale cookie, and the document cache directive |
-| **Documents** | Forces `Cache-Control: private, no-store` onto every HTML response                        |
+| Middleware    | What it does                                                                               |
+| :------------ | :----------------------------------------------------------------------------------------- |
+| **CSRF**      | Rejects cross-site requests to server functions (`handlerType === 'serverFn'`)             |
+| **Locale**    | Canonical `308` redirects, the remembered-locale cookie, and the document cache directive  |
+| **Documents** | Forces `Cache-Control: private, no-store` and adds security headers to every HTML response |
 
 <Callout type="warn" title="Why the factory exists">
   Start installs its own CSRF middleware *only* while an app declares no
@@ -242,6 +256,34 @@ Only `text/html` responses are touched. Everything else keeps what it had.
   than bending it: Swagger UI at `/api/swagger` is HTML, so it gets the document
   directive like any other page an operator reads.
 </Callout>
+
+### Security headers on every page
+
+Every HTML response also gets a small, conservative set of security headers:
+
+| Header                    | Value                             | Why                                                       |
+| :------------------------ | :-------------------------------- | :-------------------------------------------------------- |
+| `Content-Security-Policy` | `frame-ancestors 'self'`          | Other sites cannot frame your pages (hello, clickjacking) |
+| `X-Frame-Options`         | `SAMEORIGIN`                      | The same, for browsers that predate `frame-ancestors`     |
+| `X-Content-Type-Options`  | `nosniff`                         | The browser trusts the declared content type              |
+| `Referrer-Policy`         | `strict-origin-when-cross-origin` | Paths and query strings stay out of other sites' logs     |
+
+There is no script policy and no HSTS by default - a strict script CSP breaks
+plugins in creative ways, and HSTS is a promise you should only make once your
+domain is HTTPS for good. A header a route sets for itself always wins. To add,
+change or drop one install-wide, pass `securityHeaders` (`false` removes a
+default):
+
+```ts title="apps/web/src/start.ts"
+export const startInstance = createVitNodeStart({
+  config: vitNodeConfig,
+  // [!code ++:4]
+  securityHeaders: {
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Referrer-Policy': 'no-referrer',
+  },
+})
+```
 
 ### Adding your own middleware
 

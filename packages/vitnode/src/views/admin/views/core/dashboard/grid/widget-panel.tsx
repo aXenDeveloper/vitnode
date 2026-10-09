@@ -128,13 +128,15 @@ export const WidgetPanel = ({
       className={cn(
         "mt-4 flex w-full",
         !isOpen && "hidden",
-        "motion-reduce:transition-none md:fixed md:inset-e-0 md:top-16 md:bottom-0 md:z-10 md:mt-0 md:flex md:w-(--dashboard-panel-width) md:transition-transform md:duration-200 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
-        !isOpen && "md:translate-x-full md:rtl:-translate-x-full",
+        "motion-reduce:transition-none md:fixed md:inset-e-2 md:top-2 md:bottom-2 md:z-10 md:mt-0 md:flex md:w-(--admin-aside-width) md:transition-transform md:duration-200 md:ease-[cubic-bezier(0.32,0.72,0,1)]",
+        !isOpen &&
+          "md:translate-x-[calc(100%+0.5rem)] md:rtl:-translate-x-[calc(100%+0.5rem)]",
       )}
+      data-admin-aside={isOpen ? "open" : "closed"}
       inert={!isOpen}
     >
       <Sidebar
-        className="bg-sidebar h-auto w-full rounded-xl border md:h-full md:rounded-none md:border-0 md:border-s"
+        className="bg-background h-auto w-full overflow-hidden rounded-xl border md:h-full md:border-0 md:shadow-sm"
         collapsible="none"
       >
         <React.Activity mode={properties ? "hidden" : "visible"}>

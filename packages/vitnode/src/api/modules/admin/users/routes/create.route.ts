@@ -3,22 +3,28 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/lib/route";
 import { PasswordModel } from "@/api/models/password";
 import { UserModel } from "@/api/models/user";
+import {
+  USER_EMAIL_MAX_LENGTH,
+  USER_NAME_MAX_LENGTH,
+  USER_PASSWORD_MAX_LENGTH,
+} from "@/api/modules/users/credential-limits";
 import { CONFIG_PLUGIN } from "@/config";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const zodCreateUserAdminSchema = z.object({
-  email: z.email().toLowerCase().openapi({
+  email: z.email().max(USER_EMAIL_MAX_LENGTH).toLowerCase().openapi({
     example: "test@test.com",
   }),
   name: z
     .string()
     .openapi({ example: "test" })
     .min(3)
+    .max(USER_NAME_MAX_LENGTH)
     .refine(val => nameRegex.test(val), {
       message: "Invalid name",
     }),
-  password: z.string().min(8).openapi({
+  password: z.string().min(8).max(USER_PASSWORD_MAX_LENGTH).openapi({
     example: "Test123!",
   }),
 });

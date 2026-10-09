@@ -31,12 +31,14 @@ setAuthTransport({
     return await Promise.resolve({ user: null });
   },
   requestPasswordReset: unreachable,
+  resendEmailVerification: unreachable,
   signIn: unreachable,
   signOut: unreachable,
   signUp: unreachable,
   startAdminPasskeySignIn: unreachable,
   startPasskeySignIn: unreachable,
   startSso: unreachable,
+  verifyEmail: unreachable,
 });
 
 const KNOWN_CONFIG = knownMiddlewareConfig({

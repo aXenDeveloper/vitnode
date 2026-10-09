@@ -11,7 +11,7 @@ export const zodRebuildSearchSchema = z.object({
 
 export const rebuildSearchDebugAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: { module: "system", permission: "can_view" },
+  adminStaffPermission: { module: "system", permission: "can_manage_search" },
   route: {
     method: "post",
     description:

@@ -1,3 +1,4 @@
+export { escapeLikePattern } from "../../lib/api/like-pattern";
 export { CONTENT_SYSTEM_ACTOR, resolveContentActor } from "./actor";
 export {
   buildContentColumn,
@@ -170,7 +171,6 @@ export {
   buildOrderColumn,
   buildSearchCondition,
   diffChangedFields,
-  escapeLikePattern,
   toColumnValues,
 } from "./query";
 export { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";

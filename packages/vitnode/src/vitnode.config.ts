@@ -43,6 +43,7 @@ export interface VitNodeConfig<
     ThemeProviderProps,
     "attribute" | "children" | "disableTransitionOnChange" | "enableSystem"
   >;
+  viewTransitions?: boolean;
 }
 
 export interface VitNodeServerConfig<
@@ -119,7 +120,9 @@ export interface VitNodeApiConfig {
   metadata: VitNodeMetadata;
   notifications?: Partial<NotificationWorkerSettings>;
   plugins: BuildPluginApiReturn[];
-  rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
+  rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix"> & {
+    auth?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
+  };
 
   redis?: CacheConfig;
 
@@ -131,6 +134,7 @@ export interface VitNodeApiConfig {
     adapter?: StorageApiPlugin;
 
     image?: {
+      maxPixels?: number;
       quality?: number;
       webp?: boolean;
     };

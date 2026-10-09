@@ -4,12 +4,18 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { cn } from "cn";
+import { ChevronRightIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { UpdatePersonalInformation } from "@/views/auth/settings/overview/personal-update";
 import type { UpdateTimeZone } from "@/views/auth/settings/overview/time-zone-update";
 
+import {
+  AiPointsBreakdown,
+  AiUnlimitedPointsSummary,
+} from "@/views/auth/settings/ai/ai-points-breakdown";
 import { AiPointsContent } from "@/views/auth/settings/ai/ai-usage-content";
 import {
   aiUsageQueryOptions,
@@ -43,15 +49,27 @@ const OverviewAiPoints = ({ userId }: { userId: number }) => {
 
   return (
     <SettingsGroup title={t("title")}>
-      <li className={SETTINGS_ROW}>
-        <AiPointsContent usage={usage} />
-      </li>
+      {usage.points.total === null ? (
+        <>
+          <li className={cn(SETTINGS_ROW, "items-start")}>
+            <AiUnlimitedPointsSummary usage={usage} />
+          </li>
+          <li className={SETTINGS_ROW}>
+            <AiPointsBreakdown actions={usage.actions} />
+          </li>
+        </>
+      ) : (
+        <li className={SETTINGS_ROW}>
+          <AiPointsContent usage={usage} />
+        </li>
+      )}
       <li className={SETTINGS_ROW}>
         <Link
-          className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+          className="text-primary inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline"
           to="/settings/ai"
         >
           {t("details")}
+          <ChevronRightIcon aria-hidden className="size-4 rtl:-scale-x-100" />
         </Link>
       </li>
     </SettingsGroup>

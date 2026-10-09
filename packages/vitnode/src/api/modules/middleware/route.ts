@@ -26,6 +26,7 @@ export const routeMiddlewareSchema = z.object({
       id: z.string(),
       name: z.string(),
       icon: z.string().optional(),
+      brandColor: z.string().optional(),
     }),
   ),
   isEmail: z.boolean(),
@@ -70,7 +71,12 @@ export const routeMiddleware = buildRoute({
         password: c.get("core").authorization.password.enabled,
         navigation,
         bottomBar,
-        sso: sso.map(s => ({ id: s.id, name: s.name, icon: s.icon })),
+        sso: sso.map(s => ({
+          id: s.id,
+          name: s.name,
+          icon: s.icon,
+          brandColor: s.brandColor,
+        })),
         captcha: c.get("core").captcha
           ? {
               siteKey: c.get("core").captcha?.siteKey ?? "",

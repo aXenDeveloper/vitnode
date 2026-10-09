@@ -83,6 +83,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_send_test_email", dependsOn: ["can_view"] },
         { permission: "can_test_storage", dependsOn: ["can_view"] },
         { permission: "can_test_ai", dependsOn: ["can_view"] },
+        { permission: "can_manage_search", dependsOn: ["can_view"] },
       ],
       files: [
         "can_view",

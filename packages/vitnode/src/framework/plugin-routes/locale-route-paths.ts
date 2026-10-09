@@ -45,7 +45,9 @@ export const i18nFromLoadedConfig = (
   return isLocaleRoutePathsConfig(i18n) ? i18n : undefined;
 };
 
-const hostRouteSegments = (path: string): null | PluginRouteSegment[] => {
+export const hostRouteSegments = (
+  path: string,
+): null | PluginRouteSegment[] => {
   const parts = path.split("/").filter(part => part.length > 0);
   const segments = parts.map((part): PluginRouteSegment => {
     if (part === "$") return { kind: "splat" };

@@ -3,6 +3,7 @@ import { MegaphoneIcon } from "lucide-react";
 import type { BlockComponentProps, BlockData } from "../types";
 
 import { field } from "../../content/fields";
+import { isValidNavigationHref } from "../../lib/navigation";
 import { defineBlock } from "../define";
 
 const ctaFields = {
@@ -27,12 +28,14 @@ const Cta = ({ data }: BlockComponentProps<CtaData>) => (
       ) : null}
     </div>
 
-    <a
-      className="bg-primary text-primary-foreground hover:bg-primary/80 focus-visible:ring-ring/50 inline-flex w-fit shrink-0 items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
-      href={data.href}
-    >
-      {data.label}
-    </a>
+    {isValidNavigationHref(data.href) ? (
+      <a
+        className="bg-primary text-primary-foreground hover:bg-primary/80 focus-visible:ring-ring/50 inline-flex w-fit shrink-0 items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+        href={data.href}
+      >
+        {data.label}
+      </a>
+    ) : null}
   </section>
 );
 

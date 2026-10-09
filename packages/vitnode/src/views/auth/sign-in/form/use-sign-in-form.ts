@@ -11,6 +11,7 @@ import type {
   SignInMutationResult,
 } from "./schema";
 
+import { rememberEmail } from "../../remembered-email";
 import { createSignInFormSchema, signInFormOutcome } from "./schema";
 
 export type SignInSubmit = (
@@ -33,6 +34,8 @@ export const useSignInForm = ({ onSignIn }: { onSignIn: SignInSubmit }) => {
     const outcome = signInFormOutcome(await onSignIn(values));
 
     if (outcome?.kind === "field") {
+      if (outcome.error === "email_not_verified") rememberEmail(values.email);
+
       setFailure(current => ({
         error: outcome.error,
         repeat: current.error === outcome.error ? current.repeat + 1 : 0,

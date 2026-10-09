@@ -79,7 +79,7 @@ const AdminShellFrame = ({
         <NavSidebarAdminContent nav={nav} pathname={pathname} />
       </SidebarAdminContent>
 
-      <SidebarInset>
+      <SidebarInset className="transition-[margin] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] [--admin-aside-width:clamp(18rem,26vw,24rem)] motion-reduce:transition-none md:has-data-[admin-aside=open]:me-[calc(var(--admin-aside-width)+1rem)]">
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1 shrink-0" />
           {breadcrumb != null && (

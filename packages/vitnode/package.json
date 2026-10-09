@@ -204,7 +204,8 @@
       "default": "./dist/src/*.js"
     },
     "./locales/*.json": "./src/locales/*.json",
-    "./styles/tiptap.css": "./src/tiptap.css"
+    "./styles/tiptap.css": "./src/tiptap.css",
+    "./styles/view-transitions.css": "./src/view-transitions.css"
   },
   "scripts": {
     "build:scripts": "tsup",

@@ -10,6 +10,7 @@ import { usePasskeySupport } from "../../passkeys/webauthn";
 
 export type PasskeySignInFeedback =
   | "cancelled"
+  | "email_not_verified"
   | "expired"
   | "failed"
   | "not_staff"

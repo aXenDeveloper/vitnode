@@ -3,10 +3,12 @@ import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
 
+import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { PageTitle } from "@/components/ui/page-title";
 import { SearchHeaderActions } from "@/views/admin/views/core/advanced/search/search-header-actions";
 import { SearchIndexContent } from "@/views/admin/views/core/advanced/search/search-index-content";
+import { ADMIN_SEARCH_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 
 import type { AdminTableNavigate } from "../table-search";
 import type { AdminSearchIndexRouteData } from "./route";
@@ -53,7 +55,9 @@ export const AdminSearchIndexRouteContent = ({
     <RouteMessages namespaces={ADMIN_SEARCH_INDEX_NAMESPACES}>
       <div className="p-6">
         <PageTitle desc={description} h1={title}>
-          <SearchHeaderActions onRebuild={actions.rebuild} />
+          <AdminStaffPermissionGate {...ADMIN_SEARCH_PERMISSIONS.manage}>
+            <SearchHeaderActions onRebuild={actions.rebuild} />
+          </AdminStaffPermissionGate>
         </PageTitle>
 
         <DataTableNavigationProvider value={navigation}>

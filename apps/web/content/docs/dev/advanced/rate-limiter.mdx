@@ -26,6 +26,31 @@ export const vitNodeApiConfig = buildApiConfig({
 
 The default configuration allows **80 requests per 60 seconds** per IP address.
 
+IPv6 visitors are counted per `/64` network, not per address - an ISP usually hands one person a whole `/64`, and we'd rather not give them 18 quintillion fresh budgets.
+
+## Stricter budget for sign-in
+
+Routes that check a password or send an email to whoever is named in the request get a second, much smaller budget on top of the global one: **10 requests per 60 seconds** per IP address. That covers:
+
+- `POST /users/sign_in` and `POST /users/sign_up`
+- `POST /users/reset-password` and `POST /users/change-password`
+- `POST /users/verify-email` and `POST /users/verify-email/resend`
+- `POST /users/passkeys/sign-in` and `POST /users/passkeys/admin-sign-in`
+
+Tune it with `rateLimiter.auth`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  rateLimiter: {
+    // [!code ++:4]
+    auth: {
+      points: 5,
+      duration: 60,
+    },
+  },
+})
+```
+
 <Callout type="info" title="Disabled in development">
   Rate limiting is automatically bypassed when `NODE_ENV=development` to prevent interruptions during local coding.
 </Callout>
@@ -73,7 +98,7 @@ When your web app renders a page on the server, it calls the API itself - so the
 The API never believes a plain `X-Forwarded-For` header (anyone can type one). Instead, the web server works out the visitor's address, signs it with a key derived from your `CRON_SECRET` - the secret the web app and the API already share - and the API checks that signature before trusting it.
 
 - Set the same `CRON_SECRET` in both apps (you need it there anyway).
-- Tell the web app how many proxies sit in front of it with `VITNODE_TRUSTED_PROXY_HOPS`. It skips exactly that many hops from the right of `X-Forwarded-For` and ignores everything further left, because a visitor can write whatever they like there.
+- Tell each app how many proxies sit in front of it with `VITNODE_TRUSTED_PROXY_HOPS`. It skips exactly that many hops from the right of `X-Forwarded-For` and ignores everything further left, because a visitor can write whatever they like there. The API reads it too, for browser calls that reach it through your proxy - in a split deployment, set it to the proxies in front of the **API**, and leave it at `0` if the API is only reachable from the web server.
 - The API trusts the forwarded address only when the signature matches and is less than 5 minutes old.
 - While `CRON_SECRET` is unset or still a published placeholder, nothing is trusted: the API keys every request on the connection address.
 
@@ -106,6 +131,11 @@ The API never believes a plain `X-Forwarded-For` header (anyone can type one). I
       default: "60",
       description: "Window length in seconds before points reset.",
       type: "number",
+    },
+    auth: {
+      default: "{ points: 10, duration: 60 }",
+      description: "Separate budget for sign-in, sign-up, password reset and passkey sign-in.",
+      type: "{ points?: number; duration?: number }",
     },
   }}
 />

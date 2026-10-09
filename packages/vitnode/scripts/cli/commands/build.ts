@@ -1,7 +1,8 @@
 import type { AppBuildOptions } from "../builder/app-build";
 import type { StepRunner } from "../builder/compiler-build";
 import type { MeasuredFile } from "../builder/output-files";
-import type { CommandContext, OutputOptions } from "../context";
+import type { BuildRoute } from "../builder/routes";
+import type { CommandContext, Env, OutputOptions } from "../context";
 import type { Project } from "../project/project";
 import type { Ui } from "../ui/ui";
 
@@ -19,6 +20,7 @@ import {
   renderAnalysis,
   renderComparison,
   renderOutput,
+  renderRoutes,
   renderWarnings,
 } from "../builder/report";
 import {
@@ -31,6 +33,8 @@ import {
 import { collectWarnings } from "../builder/warnings";
 import { errorMessage, EXIT_CODE } from "../errors";
 import { isPluginPackage } from "../plugins/discover";
+import { detectPackageManager } from "../project/package-manager";
+import { readPackageJson } from "../project/packages";
 import { detectProject } from "../project/project";
 import { detectRuntime } from "../project/runtime";
 import { formatDuration, plural } from "../ui/format";
@@ -88,7 +92,12 @@ const reportAppBuild = (
   {
     analyze,
     bundlerWarnings,
-  }: { analyze: boolean; bundlerWarnings: readonly string[] },
+    reportRoutes,
+  }: {
+    analyze: boolean;
+    bundlerWarnings: readonly string[];
+    reportRoutes: (() => readonly BuildRoute[]) | null;
+  },
 ) => {
   const analyses = analyze
     ? safely(ui, "Bundle analysis", () =>
@@ -113,6 +122,21 @@ const reportAppBuild = (
       `${plural(bundlerWarnings.length, "bundler warning")} hidden - run with --verbose to see them.`,
     );
   }
+
+  if (reportRoutes !== null) {
+    safely(ui, "Route summary", () => {
+      renderRoutes(ui, reportRoutes());
+    });
+  }
+};
+
+const startCommand = (project: Project, env: Env): string => {
+  const packageManager = detectPackageManager(project.root, env);
+
+  return packageManager === undefined ||
+    readPackageJson(project.root)?.scripts?.start === undefined
+    ? "vitnode start"
+    : `${packageManager} start`;
 };
 
 export const runBuildCommand = async (
@@ -163,13 +187,16 @@ export const runBuildCommand = async (
     reportAppBuild(ui, project, result.files, {
       analyze,
       bundlerWarnings: result.bundlerWarnings,
+      reportRoutes: result.reportRoutes,
     });
   }
 
   ui.line();
   ui.success(`Built in ${formatDuration(now() - startedAt)}`);
   if (project.kind !== "package") {
-    ui.note(`Run ${ui.colors.command("vitnode start")} to serve it.`);
+    ui.note(
+      `Run ${ui.colors.command(startCommand(project, env))} to serve it.`,
+    );
   }
   ui.line();
 

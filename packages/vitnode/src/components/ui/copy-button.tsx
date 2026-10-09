@@ -22,7 +22,7 @@ type CopyButtonProps = Omit<
   VariantProps<typeof buttonVariants> & {
     children?: React.ReactNode;
     className?: string;
-    content: string;
+    content: (() => Promise<string> | string) | string;
     copied?: boolean;
     delay?: number;
     onCopiedChange?: (copied: boolean) => void;
@@ -54,6 +54,28 @@ const useIconMotion = () => {
       } as const,
     },
   };
+};
+
+const writeToClipboard = async (content: CopyButtonProps["content"]) => {
+  if (typeof content === "string") {
+    await navigator.clipboard.writeText(content);
+
+    return;
+  }
+
+  if (typeof ClipboardItem === "undefined" || !navigator.clipboard.write) {
+    await navigator.clipboard.writeText(await content());
+
+    return;
+  }
+
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      "text/plain": Promise.resolve()
+        .then(content)
+        .then(text => new Blob([text], { type: "text/plain" })),
+    }),
+  ]);
 };
 
 const CopiedCheck = ({
@@ -94,6 +116,7 @@ function CopyButton({
   const t = useTranslations("core.global");
   const [uncontrolledCopied, setUncontrolledCopied] = React.useState(false);
   const [copyCount, setCopyCount] = React.useState(0);
+  const [isLoading, setIsLoading] = React.useState(false);
   const isCopied = copied ?? uncontrolledCopied;
   const iconMotion = useIconMotion();
 
@@ -117,12 +140,17 @@ function CopyButton({
   }, [isCopied, delay, copyCount]);
 
   const copyToClipboard = async () => {
+    if (isLoading) return;
+    setIsLoading(typeof content !== "string");
+
     try {
-      await navigator.clipboard.writeText(content);
+      await writeToClipboard(content);
       setCopied(true);
       setCopyCount(count => count + 1);
     } catch {
       toast.error(t("errors.title"), { description: t("copy_failed") });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -132,6 +160,7 @@ function CopyButton({
   return (
     <MotionFeatures>
       <ButtonPrimitive
+        aria-busy={isLoading || undefined}
         aria-label={ariaLabel ?? (hasLabel ? undefined : stateLabel)}
         className={cn(
           buttonVariants({

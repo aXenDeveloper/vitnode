@@ -39,6 +39,7 @@ export type {
 } from "./locale-route-paths.js";
 export {
   assertLocaleRoutePaths,
+  hostRouteSegments,
   i18nFromLoadedConfig,
   localeRoutePathTargets,
 } from "./locale-route-paths.js";

@@ -2,10 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import {
-  assertStaffPermission,
-  getUserRoleIds,
-} from "@/api/lib/check-staff-permission";
+import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { CONFIG_PLUGIN } from "@/config";
@@ -13,6 +10,10 @@ import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 
 import { staffPermissionModuleByType, staffTypeSchema } from "../lib/schema";
+import {
+  assertCanManageStaffEntry,
+  assertNotOwnStaffEntry,
+} from "../lib/staff-entry-guards";
 
 const tableByType = {
   admin: core_admin_permissions,
@@ -69,6 +70,8 @@ export const deleteStaffAdminRoute = buildRoute({
         protected: table.protected,
         userId: table.userId,
         roleId: table.roleId,
+        unrestricted: table.unrestricted,
+        permissions: table.permissions,
       })
       .from(table)
       .where(eq(table.id, entryId))
@@ -84,19 +87,12 @@ export const deleteStaffAdminRoute = buildRoute({
 
     // An admin cannot remove the entry that governs their own access - their own
     // user entry or an entry for any role they belong to (primary or secondary).
-    const currentUser = c.get("admin")?.user;
-    const currentUserRoleIds = currentUser
-      ? await getUserRoleIds(c, currentUser)
-      : [];
-    const isSelf =
-      currentUser != null &&
-      ((entry.userId != null && entry.userId === currentUser.id) ||
-        (entry.roleId != null && currentUserRoleIds.includes(entry.roleId)));
-    if (isSelf) {
-      throw new HTTPException(403, {
-        message: "You cannot remove your own staff permissions.",
-      });
-    }
+    await assertNotOwnStaffEntry(
+      c,
+      entry,
+      "You cannot remove your own staff permissions.",
+    );
+    await assertCanManageStaffEntry(c, { type, entry });
 
     await c.get("db").delete(table).where(eq(table.id, entryId));
 

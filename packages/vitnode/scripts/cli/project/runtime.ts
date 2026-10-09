@@ -1,9 +1,6 @@
-import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-
 import type { Env } from "../context";
 
-import { readPackageJson } from "./packages";
+import { declaredPackageManager } from "./package-manager";
 
 /**
  * What a standalone API app runs on.
@@ -14,9 +11,6 @@ import { readPackageJson } from "./packages";
  * rather than asking.
  */
 export type Runtime = "bun" | "node";
-
-const OTHER_LOCKFILES = ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"];
-const BUN_LOCKFILES = ["bun.lock", "bun.lockb"];
 
 /**
  * Bun when the CLI itself runs under Bun, when Bun started the script that
@@ -32,22 +26,7 @@ export const detectRuntime = (
   if (versions.bun !== undefined) return "bun";
   if (env.npm_config_user_agent?.startsWith("bun/")) return "bun";
 
-  let current = resolve(root);
-  for (;;) {
-    const manager = readPackageJson(current)?.packageManager;
-    if (manager !== undefined)
-      return manager.startsWith("bun@") ? "bun" : "node";
-    if (BUN_LOCKFILES.some(file => existsSync(join(current, file)))) {
-      return "bun";
-    }
-    if (OTHER_LOCKFILES.some(file => existsSync(join(current, file)))) {
-      return "node";
-    }
-
-    const parent = dirname(current);
-    if (parent === current) return "node";
-    current = parent;
-  }
+  return declaredPackageManager(root) === "bun" ? "bun" : "node";
 };
 
 /**

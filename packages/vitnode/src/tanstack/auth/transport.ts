@@ -8,6 +8,8 @@ import type {
   PasskeySignInStartResult,
   PasswordResetRequestInput,
   PasswordResetRequestResult,
+  ResendEmailVerificationInput,
+  ResendEmailVerificationResult,
   SignInInput,
   SignInResult,
   SignOutInput,
@@ -19,6 +21,8 @@ import type {
   SsoLinkResult,
   SsoStartInput,
   SsoStartResult,
+  VerifyEmailInput,
+  VerifyEmailResult,
 } from "./contract";
 import type { SessionApi } from "./session-api";
 
@@ -41,12 +45,16 @@ export interface AuthTransport {
   requestPasswordReset: (
     input: PasswordResetRequestInput,
   ) => Promise<PasswordResetRequestResult>;
+  resendEmailVerification: (
+    input: ResendEmailVerificationInput,
+  ) => Promise<ResendEmailVerificationResult>;
   signIn: (input: SignInInput) => Promise<SignInResult>;
   signOut: (input: SignOutInput) => Promise<SignOutResult>;
   signUp: (input: SignUpInput) => Promise<SignUpResult>;
   startAdminPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startPasskeySignIn: () => Promise<PasskeySignInStartResult>;
   startSso: (input: SsoStartInput) => Promise<SsoStartResult>;
+  verifyEmail: (input: VerifyEmailInput) => Promise<VerifyEmailResult>;
 }
 
 let registered: AuthTransport | undefined;

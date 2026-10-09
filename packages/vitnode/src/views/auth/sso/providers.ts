@@ -1,14 +1,17 @@
 import type { SSOIconSource } from "./icon";
 
+import { ssoBrandColor } from "./brand";
 import { ssoIconSource } from "./icon";
 
 export interface SSOProvider {
+  brandColor?: string;
   icon?: SSOIconSource;
   id: string;
   name: string;
 }
 
 interface UnverifiedProvider {
+  brandColor?: unknown;
   icon?: unknown;
   id: string;
   name: string;
@@ -23,22 +26,45 @@ const isProvider = (value: unknown): value is UnverifiedProvider =>
 
 const warned = new Set<string>();
 
-const warnAboutIcon = (providerId: string) => {
-  if (process.env.NODE_ENV !== "development" || warned.has(providerId)) return;
+const warnOnce = (key: string, message: string) => {
+  if (process.env.NODE_ENV !== "development" || warned.has(key)) return;
 
-  warned.add(providerId);
+  warned.add(key);
   // oxlint-disable-next-line no-console
-  console.warn(
-    `[vitnode] the SSO provider "${providerId}" sent an icon its button cannot render, so it renders without one. An icon has to be a single <svg> element carrying nothing executable - no <script>, <style>, event handlers - or a URL to an image.`,
-  );
+  console.warn(message);
 };
 
-const toProvider = ({ icon, id, name }: UnverifiedProvider): SSOProvider => {
+const isPresent = (value: unknown) => value !== null && value !== undefined;
+
+const toProvider = ({
+  brandColor,
+  icon,
+  id,
+  name,
+}: UnverifiedProvider): SSOProvider => {
   const source = ssoIconSource(icon);
+  const color = ssoBrandColor(brandColor);
 
-  if (!source && icon !== null && icon !== undefined) warnAboutIcon(id);
+  if (!source && isPresent(icon)) {
+    warnOnce(
+      `${id}:icon`,
+      `[vitnode] the SSO provider "${id}" sent an icon its button cannot render, so it renders without one. An icon has to be a single <svg> element carrying nothing executable - no <script>, <style>, event handlers - or a URL to an image.`,
+    );
+  }
 
-  return source ? { icon: source, id, name } : { id, name };
+  if (!color && isPresent(brandColor)) {
+    warnOnce(
+      `${id}:brandColor`,
+      `[vitnode] the SSO provider "${id}" sent a brand color its button cannot use, so the button stays neutral. A brand color has to be a hex value such as "#5865F2".`,
+    );
+  }
+
+  return {
+    ...(color ? { brandColor: color } : {}),
+    ...(source ? { icon: source } : {}),
+    id,
+    name,
+  };
 };
 
 export const normalizeSSOProviders = (value: unknown): SSOProvider[] => {

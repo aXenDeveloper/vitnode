@@ -3,20 +3,11 @@
   "ui": "tui",
   "tasks": {
     "test": {
-      "dependsOn": ["^test"],
       "cache": false,
       "passThroughEnv": ["VITNODE_TEST_POSTGRES_URL"]
     },
     "test:types": {
       "dependsOn": ["^test:types"],
-      "cache": false
-    },
-    "web#test": {
-      "dependsOn": ["^build:plugins", "build"],
-      "cache": false
-    },
-    "web#test:types": {
-      "dependsOn": ["^build:plugins"],
       "cache": false
     },
     "docker:dev": {

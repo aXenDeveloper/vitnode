@@ -2,8 +2,9 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
+import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { CONFIG_PLUGIN } from "@/config";
-import { core_users } from "@/database/users";
+import { core_users, core_users_confirm_emails } from "@/database/users";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
@@ -56,7 +57,7 @@ export const verifyEmailUserAdminRoute = buildRoute({
     const db = c.get("db");
 
     const [user] = await db
-      .select({ id: core_users.id })
+      .select({ emailVerified: core_users.emailVerified, id: core_users.id })
       .from(core_users)
       .where(eq(core_users.id, userId))
       .limit(1);
@@ -72,9 +73,20 @@ export const verifyEmailUserAdminRoute = buildRoute({
       .set({ emailVerified: true })
       .where(eq(core_users.id, user.id))
       .returning({
+        email: core_users.email,
         name: core_users.name,
         emailVerified: core_users.emailVerified,
       });
+
+    await db
+      .delete(core_users_confirm_emails)
+      .where(eq(core_users_confirm_emails.userId, user.id));
+    if (!user.emailVerified) {
+      await invalidateSessionCacheForUser(c, user.id);
+      await c
+        .get("events")
+        .emit("user.email.verified", { email: updated.email, userId: user.id });
+    }
 
     return c.json(
       { name: updated.name, emailVerified: updated.emailVerified },

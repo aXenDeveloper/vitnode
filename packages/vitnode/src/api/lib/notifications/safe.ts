@@ -1,3 +1,5 @@
+import { redactSecrets } from "@/api/lib/redact";
+
 const MAX_TARGET_LENGTH = 2048;
 const MAX_TEXT_LENGTH = 500;
 const MAX_ERROR_LENGTH = 500;
@@ -42,13 +44,7 @@ export const sanitizeDeliveryError = (error: unknown): string => {
         ? error
         : "Unknown error";
 
-  return raw
-    .replace(/[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+/g, "[email]")
-    .replace(
-      /(key|token|secret|password|authorization)=[^\s&]+/gi,
-      "$1=[redacted]",
-    )
-    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, "Bearer [redacted]")
+  return redactSecrets(raw)
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, MAX_ERROR_LENGTH);

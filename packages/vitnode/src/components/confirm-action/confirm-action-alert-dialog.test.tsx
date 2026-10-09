@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Trash2Icon } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";

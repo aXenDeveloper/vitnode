@@ -7,6 +7,10 @@ import { core_content_file_refs } from "@/database/content";
 
 import { STORAGE_FILE_IN_USE, StorageModel } from "./storage";
 
+const PNG_SIGNATURE = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+
 const makeCtx = (
   overrides: { admin?: unknown; storage?: unknown } = {},
 ): {
@@ -150,7 +154,7 @@ const makeDeleteCtx = (
 describe("StorageModel.upload", () => {
   it("uploads under {year}/{month}/{folder} with a generated file name", async () => {
     const { ctx, insertValues, upload } = makeCtx();
-    const file = new File(["hello"], "photo.png", { type: "image/png" });
+    const file = new File([PNG_SIGNATURE], "photo.png", { type: "image/png" });
 
     const result = await new StorageModel(ctx).upload({
       file,
@@ -180,7 +184,7 @@ describe("StorageModel.upload", () => {
 
   it("records the admin's user id when uploaded from an admin session", async () => {
     const { ctx, insertValues } = makeCtx({ admin: { user: { id: 42 } } });
-    const file = new File(["hi"], "a.png", { type: "image/png" });
+    const file = new File([PNG_SIGNATURE], "a.png", { type: "image/png" });
 
     await new StorageModel(ctx).upload({ file, folder: "avatars" });
 
@@ -190,7 +194,7 @@ describe("StorageModel.upload", () => {
 
   it("uses an explicit userId over the detected session user", async () => {
     const { ctx, insertValues } = makeCtx({ admin: { user: { id: 42 } } });
-    const file = new File(["hi"], "a.png", { type: "image/png" });
+    const file = new File([PNG_SIGNATURE], "a.png", { type: "image/png" });
 
     // Admin uploading on behalf of user 123 - explicit owner wins over admin (42).
     await new StorageModel(ctx).upload({
@@ -204,7 +208,7 @@ describe("StorageModel.upload", () => {
 
   it("throws when no storage provider is configured", async () => {
     const { ctx, upload } = makeCtx({ storage: undefined });
-    const file = new File(["hi"], "a.png", { type: "image/png" });
+    const file = new File([PNG_SIGNATURE], "a.png", { type: "image/png" });
 
     await expect(
       new StorageModel(ctx).upload({ file, folder: "avatars" }),
@@ -240,7 +244,7 @@ describe("StorageModel.upload", () => {
 
   it("uploads when the file passes size and type validation", async () => {
     const { ctx, upload } = makeCtx();
-    const file = new File(["ok"], "photo.png", { type: "image/png" });
+    const file = new File([PNG_SIGNATURE], "photo.png", { type: "image/png" });
 
     await new StorageModel(ctx).upload({
       file,

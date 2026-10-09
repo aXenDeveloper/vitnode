@@ -4,6 +4,7 @@
 !/src/locales
 !/src/locales/**
 !/src/tiptap.css
+!/src/view-transitions.css
 !/src/emoji-picker.css
 
 /node_modules

@@ -15,9 +15,11 @@ interface Env {
 }
 
 const resolve = async ({
+  env,
   headers,
   socket,
 }: {
+  env?: Record<string, unknown>;
   headers?: Record<string, string>;
   socket?: string;
 }): Promise<string> => {
@@ -28,9 +30,10 @@ const resolve = async ({
   const res = await app.request(
     "/",
     { headers },
-    socket === undefined
-      ? undefined
-      : { incoming: { socket: { remoteAddress: socket } } },
+    env ??
+      (socket === undefined
+        ? undefined
+        : { incoming: { socket: { remoteAddress: socket } } }),
   );
 
   return await res.text();
@@ -64,6 +67,72 @@ describe("clientIpMiddleware", () => {
     await expect(
       resolve({ headers: { "x-forwarded-for": "9.9.9.9, 203.0.113.7" } }),
     ).resolves.toBe("127.0.0.1");
+  });
+
+  it("uses the address a host app hands over when it mounts the API in-process", async () => {
+    await expect(
+      resolve({ env: { clientAddress: "203.0.113.7" } }),
+    ).resolves.toBe("203.0.113.7");
+  });
+
+  describe("behind trusted proxies", () => {
+    const PROXY = "10.0.0.5";
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("takes the hop the closest trusted proxy appended", async () => {
+      vi.stubEnv("VITNODE_TRUSTED_PROXY_HOPS", "1");
+
+      await expect(
+        resolve({
+          socket: PROXY,
+          headers: { "x-forwarded-for": "9.9.9.9, 203.0.113.7" },
+        }),
+      ).resolves.toBe("203.0.113.7");
+    });
+
+    it("skips one hop per trusted proxy", async () => {
+      vi.stubEnv("VITNODE_TRUSTED_PROXY_HOPS", "2");
+
+      await expect(
+        resolve({
+          socket: PROXY,
+          headers: { "x-forwarded-for": "9.9.9.9, 203.0.113.7, 10.0.0.4" },
+        }),
+      ).resolves.toBe("203.0.113.7");
+    });
+
+    it("applies to the address a host app hands over", async () => {
+      vi.stubEnv("VITNODE_TRUSTED_PROXY_HOPS", "1");
+
+      await expect(
+        resolve({
+          env: { clientAddress: PROXY },
+          headers: { "x-forwarded-for": "203.0.113.7" },
+        }),
+      ).resolves.toBe("203.0.113.7");
+    });
+
+    it("keeps the socket when the trusted hop is not an IP address", async () => {
+      vi.stubEnv("VITNODE_TRUSTED_PROXY_HOPS", "1");
+
+      await expect(
+        resolve({
+          socket: PROXY,
+          headers: { "x-forwarded-for": "not-an-ip" },
+        }),
+      ).resolves.toBe(PROXY);
+    });
+
+    it("never reads a forwarded chain without a socket to anchor it", async () => {
+      vi.stubEnv("VITNODE_TRUSTED_PROXY_HOPS", "1");
+
+      await expect(
+        resolve({ headers: { "x-forwarded-for": "203.0.113.7" } }),
+      ).resolves.toBe("127.0.0.1");
+    });
   });
 
   describe("with a signed forwarded address from the web server", () => {

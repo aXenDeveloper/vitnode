@@ -47,6 +47,7 @@
   "@vitnode/core:staff_moderators:can_edit": "Edytowanie uprawnień moderatorów",
   "@vitnode/core:staff_moderators:can_view": "Wyświetlanie listy moderatorów",
   "@vitnode/core:system": "System",
+  "@vitnode/core:system:can_manage_search": "Przebudowa i czyszczenie indeksu wyszukiwania",
   "@vitnode/core:system:can_send_test_email": "Wysyłanie testowej wiadomości e-mail",
   "@vitnode/core:system:can_test_ai": "Testowanie AI",
   "@vitnode/core:system:can_test_storage": "Testowanie magazynu plików",
@@ -1510,22 +1511,27 @@
         "overview": {
           "accountTitle": "Konto",
           "desc": "Twój awatar i dane Twojego konta.",
-          "edit": "Edytuj",
+          "editProfile": "Edytuj profil",
+          "editProfileDesc": "Zmień dane osobowe i strefę czasową za jednym razem.",
           "email": "Adres e-mail",
           "firstName": "Imię",
           "headline": "Nagłówek",
           "headlineDesc": "Jedna linijka o Tobie, do {max} znaków.",
           "lastName": "Nazwisko",
+          "name": "Imię i nazwisko",
           "nickname": "Pseudonim",
           "notSet": "Nie ustawiono",
           "personalDesc": "Opowiedz społeczności, kim jesteś. Każde pole jest opcjonalne.",
           "personalTitle": "Informacje osobiste",
           "phone": "Telefon",
           "profileTitle": "Profil",
+          "realName": "Prawdziwe imię",
+          "realNameHidden": "Ukryte",
+          "realNameShown": "Widoczne na profilu",
           "role": "Rola",
           "save": "Zapisz zmiany",
-          "saved": "Informacje osobiste zaktualizowane.",
-          "savedDesc": "Twój profil od razu pokazuje nowe dane.",
+          "saved": "Zaktualizowano profil",
+          "savedDesc": "Zmiany są widoczne od razu.",
           "secondaryRoles": "Role dodatkowe",
           "showRealName": "Pokazuj moje prawdziwe imię",
           "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim.",
@@ -1534,9 +1540,7 @@
           "timeZone": "Strefa czasowa",
           "timeZoneDesc": "Szukaj po mieście, np. Warsaw lub New York.",
           "timeZoneAuto": "Automatycznie - z Twojego języka",
-          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})",
-          "timeZoneSaved": "Zapisano strefę czasową",
-          "timeZoneSavedDesc": "Podsumowania i daty są teraz w strefie {timeZone}."
+          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})"
         },
         "passkeys": {
           "add": "Dodaj klucz dostępu",
@@ -1858,7 +1862,14 @@
             "used_of": "Wykorzystano {used} z {total} punktów",
             "renews": "Odnowienie {date}",
             "unlimited": "Nielimitowane punkty",
-            "unlimited_used": "W tym miesiącu wykorzystano {used} punktów",
+            "unlimited_desc": "Bez miesięcznego limitu. Licznik wykorzystania zeruje się {date}.",
+            "this_month": "pkt w tym miesiącu",
+            "breakdown": {
+              "label": "Na co poszły Twoje punkty w tym miesiącu",
+              "other": "{count, plural, one {# inna funkcja} few {# inne funkcje} many {# innych funkcji} other {# innych funkcji}}",
+              "points": "{points} pkt",
+              "empty": "W tym miesiącu nic jeszcze nie wykorzystano. Gdy użyjesz funkcji AI, zobaczysz tutaj, na co idą Twoje punkty."
+            },
             "none": "Brak punktów AI w tym miesiącu"
           },
           "features": {
@@ -1897,6 +1908,11 @@
           "access_denied": {
             "desc": "Adres e-mail lub hasło są nieprawidłowe. Spróbuj ponownie i sprawdź, czy nie masz włączonego Caps Locka.",
             "title": "Nieprawidłowe dane logowania"
+          },
+          "email_not_verified": {
+            "title": "Najpierw potwierdź swój e-mail",
+            "desc": "Hasło jest poprawne, ale adres e-mail tego konta nie został jeszcze potwierdzony. Kliknij link, który wysłaliśmy, i zaloguj się ponownie.",
+            "resend": "Wyślij nowy link potwierdzający"
           }
         },
         "passkey": {
@@ -1929,6 +1945,10 @@
             "not_staff": {
               "title": "Brak dostępu do AdminCP",
               "desc": "Klucz dostępu jest prawidłowy, ale to konto nie może otworzyć AdminCP. Jeśli uważasz, że to pomyłka, skontaktuj się z administratorem."
+            },
+            "email_not_verified": {
+              "title": "Najpierw potwierdź swój e-mail",
+              "desc": "Adres e-mail tego konta nie został jeszcze potwierdzony. Kliknij link, który wysłaliśmy, i spróbuj ponownie."
             }
           },
           "unsupported_hint": "Ta przeglądarka nie obsługuje kluczy dostępu. Zaloguj się adresem e-mail i hasłem."
@@ -1955,7 +1975,8 @@
         "email_confirmation": {
           "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem.",
           "desc": "Wysłaliśmy link potwierdzający na Twój adres e-mail",
-          "title": "Sprawdź swoją skrzynkę"
+          "title": "Sprawdź swoją skrzynkę",
+          "resend": "Nie dotarł? <link>Wyślij nowy link</link>."
         },
         "newsletter": {
           "desc": "Otrzymuj najnowsze informacje i aktualizacje.",
@@ -2025,8 +2046,47 @@
           "title": "Połącz <provider></provider> ze swoim kontem"
         },
         "or": "Lub kontynuuj przez e-mail",
+        "continue_with": "Kontynuuj przez {provider}",
         "connection": {
           "pending": "Kończymy z {provider}…"
+        }
+      },
+      "verify_email": {
+        "title": "Potwierdź swój e-mail",
+        "confirm": {
+          "desc": "Już prawie! Potwierdź, że to Twój adres e-mail, a Twoje konto będzie gotowe.",
+          "submit": "Potwierdź adres e-mail"
+        },
+        "success": {
+          "title": "E-mail potwierdzony",
+          "desc": "Dzięki! Adres <email></email> jest potwierdzony - możesz się teraz zalogować.",
+          "sign_in": "Przejdź do logowania"
+        },
+        "invalid": {
+          "title": "Ten link już nie działa",
+          "desc": "Mógł wygasnąć lub został już użyty. Poproś o nowy, a od razu go wyślemy.",
+          "resend": "Wyślij nowy link"
+        },
+        "resend": {
+          "title": "Wyślij ponownie e-mail z potwierdzeniem",
+          "desc": "Podaj adres e-mail, którego użyłeś przy rejestracji, a wyślemy Ci nowy link potwierdzający.",
+          "submit": "Wyślij link potwierdzający",
+          "confirmation": {
+            "title": "Sprawdź swoją skrzynkę",
+            "desc": "Jeśli ten adres należy do konta czekającego na potwierdzenie, nowy link jest już w drodze na:",
+            "check_spam": "Jeśli nie widzisz wiadomości w skrzynce odbiorczej, sprawdź folder ze spamem."
+          }
+        },
+        "email": {
+          "subject": "Potwierdź swój adres e-mail",
+          "greeting": "Witaj {name}!",
+          "intro": "Dziękujemy za rejestrację! Potwierdź, że to Twój adres e-mail, aby dokończyć zakładanie konta.",
+          "button": "Potwierdź adres e-mail",
+          "instructions": "Kliknij powyższy przycisk, aby potwierdzić swój adres e-mail. Zalogujesz się, gdy tylko zostanie potwierdzony.",
+          "no_action": "Jeśli nie zakładałeś konta, możesz bezpiecznie zignorować tę wiadomość - nikt nie zaloguje się tym adresem, dopóki nie zostanie potwierdzony.",
+          "security_note": "Ze względów bezpieczeństwa: to żądanie zostało wysłane z adresu IP: {ip}",
+          "help": "Jeśli masz problem z powyższym przyciskiem, skopiuj i wklej poniższy adres URL do przeglądarki:",
+          "expire_time": "Ten link wygaśnie {date}"
         }
       }
     },

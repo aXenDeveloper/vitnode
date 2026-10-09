@@ -25,6 +25,7 @@ import type {
   LocaleRoutePathsConfig,
   PluginRouteCompilerSource,
 } from "../plugin-routes";
+import type { RouteReportEntry, RouteReportInput } from "./route-report";
 
 import { generateAdminNavSource } from "../admin-nav";
 import { generateApiRegistrySource } from "../api-registry";
@@ -47,6 +48,7 @@ import {
 } from "../plugin-routes";
 import { createGenerationQueue } from "./generation-queue";
 import { versionedModuleUrl } from "./module-version";
+import { buildRouteReport } from "./route-report";
 
 const ROUTES_SUBPATH = "routes";
 
@@ -529,12 +531,13 @@ const discover = async (
 
   const contentUrls = await loadPluginContentUrls(contentModules);
 
+  const hostRoutes = readHostRoutes(
+    appRoot,
+    hostRoutesConfigFor(appRoot, options.hostRoutesDir),
+  );
   const compiled = compilePluginRoutes({
     contentUrls,
-    hostRoutes: readHostRoutes(
-      appRoot,
-      hostRoutesConfigFor(appRoot, options.hostRoutesDir),
-    ),
+    hostRoutes,
     i18n,
     sources: loaded.map(({ source }) => source),
   });
@@ -558,6 +561,8 @@ const discover = async (
       specifier,
     })),
     contentRegistry: contentRegistry.modules,
+    hostRoutes,
+    i18n,
     packageMessages,
     watch,
   };
@@ -575,12 +580,16 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
+type DiscoveredRoutes = Omit<RouteReportInput, "htmlPaths" | "i18n"> & {
+  i18n: RouteReportInput["i18n"] | undefined;
+};
+
 /** All seven generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
   onLoaded?: (watch: string[]) => void,
-): Promise<void> => {
+): Promise<DiscoveredRoutes> => {
   const paths = pathsFor(appRoot);
   const {
     adminNav,
@@ -589,6 +598,8 @@ const writeGenerated = async (
     compiled,
     contentModules,
     contentRegistry,
+    hostRoutes,
+    i18n,
     packageMessages,
   } = await discover(appRoot, options, onLoaded);
 
@@ -614,29 +625,53 @@ const writeGenerated = async (
     ),
     removeIfPresent(paths.staleManifest),
   ]);
+
+  return { hostRoutes, i18n, pluginRoutes: compiled.manifest };
 };
+
+export interface VitNodePluginRoutesApi {
+  routeReport: (htmlPaths: readonly string[]) => RouteReportEntry[];
+}
 
 export const vitNodePluginRoutes = (
   options: VitNodePluginRoutesOptions,
-): Plugin => {
+): Plugin<VitNodePluginRoutesApi> => {
   const { appRoot } = options;
   const configPath = pathsFor(appRoot).config;
   const routesDir = hostRoutesConfigFor(appRoot, options.hostRoutesDir).dir;
+  let discovered: DiscoveredRoutes | undefined;
 
   return {
+    api: {
+      routeReport: htmlPaths => {
+        if (discovered?.i18n === undefined) {
+          throw new Error(
+            `${ERROR_PREFIX} The route report needs the i18n configuration from ${relative(appRoot, configPath)}, and none was read.`,
+          );
+        }
+
+        return buildRouteReport({
+          ...discovered,
+          htmlPaths,
+          i18n: discovered.i18n,
+        });
+      },
+    },
+
     config: async () => {
-      await writeGenerated(appRoot, options);
+      discovered = await writeGenerated(appRoot, options);
     },
 
     configureServer: server => {
       const watched = new Set<string>([configPath]);
 
       const queue = createGenerationQueue(
-        async () =>
-          writeGenerated(appRoot, options, files => {
+        async () => {
+          await writeGenerated(appRoot, options, files => {
             files.forEach(file => watched.add(file));
             server.watcher.add(files);
-          }),
+          });
+        },
         error => {
           server.config.logger.error(String(error));
         },

@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 
+import { isIP } from "node:net";
 import {
   type IRateLimiterOptions,
   type RateLimiterAbstract,
@@ -42,9 +43,38 @@ const createRateLimiter = ({
   });
 };
 
+export const rateLimitKey = (ipAddress: string): string => {
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ipAddress);
+  if (mapped) return mapped[1];
+  if (isIP(ipAddress) !== 6) return ipAddress;
+
+  const [head, tail = ""] = ipAddress.toLowerCase().split("::");
+  const headGroups = head ? head.split(":") : [];
+  const tailGroups = tail ? tail.split(":") : [];
+  const groups = ipAddress.includes("::")
+    ? [
+        ...headGroups,
+        ...Array<string>(8 - headGroups.length - tailGroups.length).fill("0"),
+        ...tailGroups,
+      ]
+    : headGroups;
+
+  return `${groups
+    .slice(0, 4)
+    .map(group => group.replace(/^0+(?=.)/, ""))
+    .join(":")}::/64`;
+};
+
 export const rateLimiterMiddleware = (
-  options?: Omit<IRateLimiterOptions, "keyPrefix">,
+  options?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>,
   storeClient?: CacheClient | null,
+  {
+    defaults = { duration: 60, points: 80 },
+    keyPrefix = "vitnode-api-rate-limiter",
+  }: {
+    defaults?: { duration: number; points: number };
+    keyPrefix?: string;
+  } = {},
 ) => {
   if (CONFIG.node_development) {
     // In development, we disable the rate limiter for easier testing
@@ -53,18 +83,18 @@ export const rateLimiterMiddleware = (
     };
   }
 
-  const duration = options?.duration ?? 60;
+  const duration = options?.duration ?? defaults.duration;
 
   const rateLimiter = createRateLimiter({
     ...options,
-    keyPrefix: "vitnode-api-rate-limiter",
+    keyPrefix,
     duration,
-    points: options?.points ?? 80,
+    points: options?.points ?? defaults.points,
     storeClient,
   });
 
   return async (c: Context, next: Next) => {
-    const key = c.get("ipAddress");
+    const key = rateLimitKey(c.get("ipAddress"));
 
     try {
       await rateLimiter.consume(key);
@@ -83,4 +113,32 @@ export const rateLimiterMiddleware = (
 
     await next();
   };
+};
+
+const AUTH_RATE_LIMITED_PATHS = [
+  "/@vitnode/core/users/sign_in",
+  "/@vitnode/core/users/sign_up",
+  "/@vitnode/core/users/reset-password",
+  "/@vitnode/core/users/verify-email",
+  "/@vitnode/core/users/verify-email/resend",
+  "/@vitnode/core/users/change-password",
+  "/@vitnode/core/users/passkeys/sign-in",
+  "/@vitnode/core/users/passkeys/admin-sign-in",
+] as const;
+
+const isAuthRateLimitedRequest = (c: Context): boolean =>
+  c.req.method === "POST" &&
+  AUTH_RATE_LIMITED_PATHS.some(path => c.req.path.endsWith(path));
+
+export const authRateLimiterMiddleware = (
+  options?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>,
+  storeClient?: CacheClient | null,
+) => {
+  const limit = rateLimiterMiddleware(options, storeClient, {
+    defaults: { duration: 60, points: 10 },
+    keyPrefix: "vitnode-api-auth-rate-limiter",
+  });
+
+  return async (c: Context, next: Next) =>
+    isAuthRateLimitedRequest(c) ? limit(c, next) : next();
 };

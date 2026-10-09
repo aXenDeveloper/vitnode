@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: "jsdom",
+    environment: "node",
+    pool: "threads",
     setupFiles: ["./src/tests/setup.ts"],
     // `*.test-d.ts` files assert types only. They run under `pnpm test:types`
     // (`vitest --typecheck`) and are skipped by the normal runtime suite.

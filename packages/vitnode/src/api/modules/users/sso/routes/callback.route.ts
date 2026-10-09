@@ -26,7 +26,6 @@ export const callbackRoute = buildRoute({
           "application/json": {
             schema: z.object({
               id: z.number(),
-              token: z.string(),
             }),
           },
         },
@@ -63,10 +62,8 @@ export const callbackRoute = buildRoute({
       );
     }
 
-    const { token } = await new SessionModel(c).createSessionByUserId(
-      outcome.userId,
-    );
+    await new SessionModel(c).createSessionByUserId(outcome.userId);
 
-    return c.json({ id: outcome.userId, token }, 200);
+    return c.json({ id: outcome.userId }, 200);
   },
 });

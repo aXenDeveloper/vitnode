@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render as renderDom, screen } from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { describe, expect, it } from "vitest";

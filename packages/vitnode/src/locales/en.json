@@ -25,6 +25,7 @@
   "@vitnode/core:system:can_send_test_email": "Send test email",
   "@vitnode/core:system:can_test_storage": "Test storage",
   "@vitnode/core:system:can_test_ai": "Test AI",
+  "@vitnode/core:system:can_manage_search": "Rebuild and clear the search index",
   "@vitnode/core:files": "Files",
   "@vitnode/core:files:can_view": "View uploaded files",
   "@vitnode/core:files:can_download": "Download files",
@@ -757,6 +758,7 @@
     "auth": {
       "sso": {
         "or": "Or continue with email",
+        "continue_with": "Continue with {provider}",
         "access_denied": "You have denied access to the application or the request has expired. Please try again.",
         "email_exists": {
           "title": "You cannot sign in with <provider></provider>",
@@ -833,7 +835,8 @@
         "email_confirmation": {
           "title": "Check your email",
           "desc": "We've sent a confirmation link to your email address",
-          "check_spam": "If you don't see the email in your inbox, please check your spam folder."
+          "check_spam": "If you don't see the email in your inbox, please check your spam folder.",
+          "resend": "Didn't get it? <link>Send a new link</link>."
         },
         "unavailable": {
           "title": "Registration is unavailable",
@@ -856,6 +859,11 @@
           "access_denied": {
             "title": "Invalid credentials",
             "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."
+          },
+          "email_not_verified": {
+            "title": "Confirm your email first",
+            "desc": "Your password is right, but this account's email address isn't confirmed yet. Click the link we emailed you, then sign in again.",
+            "resend": "Send a new confirmation link"
           }
         },
         "submit": "Login",
@@ -890,6 +898,10 @@
             "not_staff": {
               "title": "No AdminCP access",
               "desc": "Your passkey checks out, but this account can't open the AdminCP. Ask an administrator if you think that's a mistake."
+            },
+            "email_not_verified": {
+              "title": "Confirm your email first",
+              "desc": "This account's email address isn't confirmed yet. Click the link we emailed you, then try again."
             }
           }
         },
@@ -931,7 +943,12 @@
           "desc": "Your avatar and the details on your account.",
           "profileTitle": "Profile",
           "accountTitle": "Account",
-          "edit": "Edit",
+          "editProfile": "Edit profile",
+          "editProfileDesc": "Change your personal details and time zone in one go.",
+          "name": "Name",
+          "realName": "Real name",
+          "realNameShown": "Shown on your profile",
+          "realNameHidden": "Hidden",
           "personalTitle": "Personal Information",
           "personalDesc": "Tell the community who you are. Every field is optional.",
           "nickname": "Nickname",
@@ -947,16 +964,14 @@
           "headlineDesc": "One line about you, up to {max} characters.",
           "notSet": "Not set",
           "save": "Save changes",
-          "saved": "Personal information updated.",
-          "savedDesc": "Your profile shows the new details right away.",
+          "saved": "Profile updated",
+          "savedDesc": "Your changes show up right away.",
           "regionTitle": "Region",
           "regionDesc": "Digest emails and dates follow this time zone.",
           "timeZone": "Time zone",
           "timeZoneDesc": "Search by city, like Warsaw or New York.",
           "timeZoneAuto": "Automatic - from your language",
-          "timeZoneUseDevice": "Use this device's time zone ({timeZone})",
-          "timeZoneSaved": "Time zone saved",
-          "timeZoneSavedDesc": "Digests and dates now follow {timeZone}."
+          "timeZoneUseDevice": "Use this device's time zone ({timeZone})"
         },
         "devices": {
           "title": "Devices",
@@ -1300,7 +1315,14 @@
             "used_of": "{used} of {total} points used",
             "renews": "Renews {date}",
             "unlimited": "Unlimited points",
-            "unlimited_used": "{used} points used this month",
+            "unlimited_desc": "No monthly cap. Your usage count starts over on {date}.",
+            "this_month": "pts this month",
+            "breakdown": {
+              "label": "Where your points went this month",
+              "other": "{count, plural, one {# other feature} other {# other features}}",
+              "points": "{points} pts",
+              "empty": "Nothing used this month yet. Once you run an AI feature, you'll see where your points go."
+            },
             "none": "No AI points this month"
           },
           "features": {
@@ -1325,6 +1347,33 @@
           "overview": {
             "title": "AI points",
             "details": "See your AI features"
+          }
+        }
+      },
+      "verify_email": {
+        "title": "Confirm your email",
+        "confirm": {
+          "desc": "Almost there! Confirm that this is your email address and your account is ready to go.",
+          "submit": "Confirm email address"
+        },
+        "success": {
+          "title": "Email confirmed",
+          "desc": "Thanks! <email></email> is confirmed - you can sign in now.",
+          "sign_in": "Go to sign in"
+        },
+        "invalid": {
+          "title": "This link doesn't work anymore",
+          "desc": "It may have expired or already been used. Ask for a fresh one and we'll send it right over.",
+          "resend": "Send a new link"
+        },
+        "resend": {
+          "title": "Resend confirmation email",
+          "desc": "Enter the email address you signed up with and we'll send you a new confirmation link.",
+          "submit": "Send confirmation link",
+          "confirmation": {
+            "title": "Check your email",
+            "desc": "If this address has an account waiting to be confirmed, a new link is on its way to:",
+            "check_spam": "If you don't see the email in your inbox, please check your spam folder."
           }
         }
       }

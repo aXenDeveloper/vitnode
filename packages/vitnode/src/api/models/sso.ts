@@ -42,6 +42,7 @@ export interface SSOProviderUser {
 }
 
 export interface SSOApiPlugin {
+  brandColor?: string;
   fetchToken: (
     code: string,
   ) => Promise<{ access_token: string; token_type: string }>;

@@ -5,11 +5,8 @@ node_modules
 .turbo
 
 # Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
 # Build Outputs
 out/

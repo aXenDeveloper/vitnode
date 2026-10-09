@@ -108,6 +108,7 @@ export const zodPasskeyErrorSchema = z.object({
   error: z.enum([
     "admin_session_required",
     "already_registered",
+    "email_not_verified",
     "invalid_challenge",
     "last_recovery_method",
     "not_found",

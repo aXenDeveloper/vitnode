@@ -18,6 +18,16 @@ const CALLOUT_VARIANTS = {
   warning: 'warning',
 } as const satisfies Record<string, AlertVariant>
 
+const CALLOUT_TITLE_COLORS = {
+  destructive: 'text-destructive',
+  info: 'text-primary',
+  success: 'text-success',
+  warning: 'text-warn',
+} as const satisfies Record<
+  (typeof CALLOUT_VARIANTS)[keyof typeof CALLOUT_VARIANTS],
+  string
+>
+
 export const Callout = ({
   children,
   className,
@@ -36,7 +46,13 @@ export const Callout = ({
     variant={CALLOUT_VARIANTS[type]}
     {...props}
   >
-    {title ? <AlertTitle className="my-0">{title}</AlertTitle> : null}
+    {title ? (
+      <AlertTitle
+        className={cn('my-0', CALLOUT_TITLE_COLORS[CALLOUT_VARIANTS[type]])}
+      >
+        {title}
+      </AlertTitle>
+    ) : null}
     <AlertDescription className="prose-no-margin">{children}</AlertDescription>
   </Alert>
 )

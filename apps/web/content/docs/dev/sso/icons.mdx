@@ -1,15 +1,26 @@
 ---
-title: Provider Icons
-description: Put a brand mark on your SSO login buttons - an inline SVG or image URL from the adapter, or a React component registered in the browser.
+title: Provider Icons and Colors
+description: Put a brand mark and a brand color on your SSO login buttons - an inline SVG or image URL and a hex color from the adapter, or a React component registered in the browser.
 icon: Image
 ---
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-The built-in Google, Discord and Facebook adapters already carry their brand
-marks, so `/login` and `/register` render them without any configuration. A
-custom adapter starts out as text only - a **GitHub** button with no octocat -
-and there are two ways to give it a mark.
+import { ImgDocs } from '@/components/fumadocs/img'
+
+import loginSsoButtons from './icons/login-sso-buttons.png'
+
+Every SSO provider gets a full-width **Continue with _Provider_** button on
+`/login` and `/register`. The built-in Google, Discord and Facebook adapters
+already carry their brand marks and colors, so those buttons look right without
+any configuration. A custom adapter starts out as a neutral button with
+text only - a **GitHub** button with no octocat - and this page shows how to
+give it a mark and a color.
+
+<ImgDocs
+  alt="The VitNode login page with a blurple Continue with Discord button, a white Continue with Google button with the four-color G, and a blue Continue with Facebook button above the email form"
+  src={loginSsoButtons}
+/>
 
 ## From the adapter (SVG or image)
 
@@ -28,8 +39,10 @@ export const GitHubSSOApiPlugin = (): SSOApiPlugin => ({
 ```
 
 Use `fill="currentColor"` and leave the width and height off: the mark then
-takes the button's text colour in both light and dark mode, and is sized to
-match the label.
+takes the button's text color in both light and dark mode - white on a
+[brand-colored button](#brand-color) - and is sized to match the label. A
+multicolor mark, such as Google's four-color G, keeps its own fills; give its
+adapter no brand color so it sits on the neutral button it was designed for.
 
 An image works the same way:
 
@@ -102,7 +115,33 @@ copy `.svg` files into `dist`, so either copy it as part of your build or keep
 the markup in a `.ts` constant, the way VitNode's own adapters do.
 
 If you would rather have a component than a string, register it in the browser
-instead - that is the next section.
+instead - see [From the browser](#from-the-browser-react-component-or-jsx).
+
+## Brand color
+
+Add a `brandColor` to fill the button with the provider's color, the way the
+built-in Discord (`#5865F2`) and Facebook (`#0866FF`) adapters do:
+
+```ts title="apps/api/src/utils/sso/github.ts"
+export const GitHubSSOApiPlugin = (): SSOApiPlugin => ({
+  id: 'github',
+  name: 'GitHub',
+  icon: githubIcon,
+  // [!code ++]
+  brandColor: '#24292F',
+  // ... getUrl, fetchToken, fetchUser
+})
+```
+
+The value has to be a hex color - `#RGB` or `#RRGGBB`. The button picks its
+own text color: white when white text reaches a 4.5:1 contrast ratio on your
+color, near-black otherwise, so a yellow brand still gets a readable label. A
+`currentColor` icon follows that text color.
+
+Leave `brandColor` out and the button stays neutral, with a border. That is the
+right choice for providers whose guidelines ask for a neutral button, such as
+Google and Microsoft. A value that is not a hex color is ignored the same way,
+and in development the console names the provider.
 
 ## From the browser (React component or JSX)
 
@@ -133,6 +172,12 @@ needs a wrapper element.
 
 <TypeTable
   type={{
+    'SSOApiPlugin.brandColor': {
+      description:
+        "Optional hex color (#RGB or #RRGGBB) that fills the provider's button. The label turns white or near-black, whichever reads better. Leave it out for a neutral button.",
+      required: false,
+      type: 'string',
+    },
     'SSOApiPlugin.icon': {
       description:
         "Optional brand mark for the provider's button: inline SVG markup (an .svg file's contents included), an http(s) URL, a root-relative path, or a data:image URI.",

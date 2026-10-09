@@ -70,7 +70,9 @@ also accepts `username` and `password` for a self-hosted secured cluster.
 
 Restart the API, then open **Core → Advanced → Search** in the AdminCP and run
 **Rebuild index**. New changes are mirrored automatically; the rebuild fills
-the historical records already in Postgres.
+the historical records already in Postgres. Rebuilding (and clearing a
+collection) needs the **Rebuild and clear the search index** permission
+(`system:can_manage_search`) - viewing the page alone is not enough.
 
 {/* Image prompt: VitNode AdminCP search page showing Elasticsearch as connected, one “Rebuild index” button, a progress state, and collection counts. Dark theme, 1440x900. */}
 

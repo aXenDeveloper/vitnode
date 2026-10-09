@@ -1,6 +1,6 @@
 ---
 title: Tooltip
-description: A small hint on hover or focus, with a half-second delay, warm-up between neighbours and a gliding group mode for toolbars.
+description: A small hint on hover or focus, with a short delay, warm-up between neighbours and a gliding group mode for toolbars.
 icon: MessageCircleMore
 ---
 
@@ -55,7 +55,7 @@ import { TooltipWithContent } from '@vitnode/core/components/ui/tooltip'
 
 <Preview name="tooltip-delay" />
 
-Tooltips wait 500ms, so they don't flash as the cursor passes by. Once one is
+Tooltips wait 200ms, so they don't flash as the cursor passes by. Once one is
 open, its neighbours open instantly. Hover the left row, then slide along it.
 
 VitNode already mounts a `TooltipProvider` for the whole app. Wrap a section in
@@ -126,7 +126,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
     'TooltipProvider.delay': {
       description: 'Wait before opening, in milliseconds.',
       type: 'number',
-      default: '500',
+      default: '200',
     },
     'TooltipProvider.timeout': {
       description:

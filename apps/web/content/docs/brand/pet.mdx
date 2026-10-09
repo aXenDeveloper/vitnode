@@ -1,0 +1,110 @@
+---
+title: Pet
+description: Tabby, the VitNode pet - an animated SVG mascot with 14 states for welcome screens, loading, empty states and error pages, plus SVG and PNG downloads.
+icon: Cat
+---
+
+Tabby is VitNode's pet: a striped hexagon cat that ships as one React component
+with 14 states. Drop it into an empty state, a loading screen or an error page
+and the page instantly feels less like a stack trace.
+
+<Preview name="pet" />
+
+## Use the pet
+
+Import `Pet` from core and pick a `state`. The pet scales to its box, so size it
+with Tailwind classes. Keep roughly a 7:8 width-to-height ratio.
+
+```tsx title="welcome.tsx"
+import { Pet } from '@vitnode/core/components/pet/pet'
+
+export const Welcome = () => <Pet className="h-44 w-40" state="hello" />
+```
+
+## States
+
+<Preview name="pet-states" className="*:max-w-full" />
+
+Every card has three buttons:
+
+- **Copy** puts the SVG markup on your clipboard, ready to paste into code or a
+  design tool.
+- **SVG** downloads an animated file. The animation styles travel inside it, so
+  Tabby keeps moving wherever you open it.
+- **PNG** downloads a still, 1024 px wide image with a transparent background.
+
+| State       | Use it for                     |
+| ----------- | ------------------------------ |
+| `idle`      | Default pose                   |
+| `hello`     | Onboarding and welcome screens |
+| `coding`    | Docs and developer pages       |
+| `coffee`    | Breaks and quiet days          |
+| `love`      | Thank-you screens              |
+| `music`     | Media and playlists            |
+| `sleeping`  | Idle or maintenance mode       |
+| `thinking`  | Loading states                 |
+| `celebrate` | Success and first publish      |
+| `searching` | Empty search results           |
+| `offline`   | Lost connections               |
+| `oops`      | 404 pages                      |
+| `dizzy`     | 500 errors                     |
+| `building`  | Maintenance and coming soon    |
+
+## Error pages
+
+`ErrorContent` draws the status code in huge digits and lets Tabby stand in for
+the middle one: a 404 shows `oops` between the two 4s, and a 500 shows `dizzy`
+between the 5 and the 0. The built-in pages need no extra code. Other codes, such
+as 403, keep all three digits and skip the pet. Screen readers hear the code and
+title together, not the decorative digits.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    state: {
+      description: 'Which pose and animation to show.',
+      type: 'PetState',
+      default: "'idle'",
+    },
+    label: {
+      description:
+        'Accessible name. Without it, the pet is decorative and hidden from screen readers.',
+      type: 'string',
+    },
+    className: {
+      description: 'Classes for the SVG, usually its size.',
+      type: 'string',
+    },
+  }}
+/>
+
+## Accessibility
+
+- The pet is decorative by default (`aria-hidden`). When it is the only thing
+  that explains the screen, pass a `label` and it becomes an image with that
+  name.
+- Only parts move: tail, ears, blinks, paws and props. The body never floats.
+- All animation stops when the visitor turns on reduced motion.
+
+## Related
+
+<Cards>
+  <Card
+    title="Empty"
+    href="/docs/ui/empty"
+    description="Empty states that a pet fits into."
+  />
+  <Card
+    title="Motion"
+    href="/docs/ui/motion"
+    description="The motion rules the pet follows."
+  />
+  <Card
+    title="Accessibility"
+    href="/docs/ui/accessibility"
+    description="Labels, reduced motion and screen readers."
+  />
+</Cards>

@@ -1,6 +1,7 @@
 import type { Ui } from "../ui/ui";
 import type { ChunkAnalysis } from "./analysis";
 import type { FileCategory, MeasuredFile } from "./output-files";
+import type { BuildRoute, RouteMode } from "./routes";
 import type { SizeSeverity } from "./size-severity";
 import type { SnapshotComparison } from "./snapshot";
 import type { BuildWarning } from "./warnings";
@@ -265,4 +266,122 @@ export const renderWarnings = (ui: Ui, warnings: readonly BuildWarning[]) => {
   }
 
   ui.note("Size warnings are recommendations - they never fail a build.");
+};
+
+const ROUTE_CHILD_LIMIT = 6;
+
+const ADMIN_PREFIX = "/admin";
+
+const isAdminRoute = (route: BuildRoute) =>
+  route.path === ADMIN_PREFIX || route.path.startsWith(`${ADMIN_PREFIX}/`);
+
+const routeMark = (ui: Ui, mode: RouteMode) => {
+  switch (mode) {
+    case "dynamic":
+      return ui.colors.muted(ui.symbols.fn);
+    case "partial":
+      return ui.symbols.dot;
+    case "static":
+      return ui.colors.success(ui.symbols.pending);
+  }
+};
+
+const ROUTE_LEGEND: { description: string; label: string; mode: RouteMode }[] =
+  [
+    {
+      description: "prerendered as static HTML",
+      label: "Static",
+      mode: "static",
+    },
+    {
+      description: "some paths prerendered, the rest rendered on demand",
+      label: "Partial",
+      mode: "partial",
+    },
+    {
+      description: "rendered on demand",
+      label: "Dynamic",
+      mode: "dynamic",
+    },
+  ];
+
+interface RouteLine {
+  children: string[];
+  detail?: string;
+  mode: RouteMode;
+  path: string;
+}
+
+const routeLines = (ui: Ui, routes: readonly BuildRoute[]): RouteLine[] => {
+  const collapsed = new Set(
+    ui.verbose
+      ? []
+      : routes.filter(route => isAdminRoute(route) && route.mode === "dynamic"),
+  );
+  const lines: RouteLine[] = routes
+    .filter(route => !collapsed.has(route))
+    .map(route => ({
+      children:
+        route.staticPaths.length === 1 && route.staticPaths[0] === route.path
+          ? []
+          : route.staticPaths,
+      mode: route.mode,
+      path: route.path,
+    }));
+
+  if (collapsed.size > 0) {
+    lines.push({
+      children: [],
+      detail: `${plural(collapsed.size, "AdminCP route")} (--verbose lists all)`,
+      mode: "dynamic",
+      path: `${ADMIN_PREFIX}/*`,
+    });
+  }
+
+  return lines.sort((a, b) => (a.path < b.path ? -1 : 1));
+};
+
+export const renderRoutes = (ui: Ui, routes: readonly BuildRoute[]) => {
+  if (routes.length === 0) return;
+
+  const { bar, corner, tee } = ui.symbols;
+  const lines = routeLines(ui, routes);
+
+  ui.section("Routes");
+
+  lines.forEach((line, index) => {
+    const isLast = index === lines.length - 1;
+    const detail =
+      line.detail === undefined ? "" : `  ${ui.colors.muted(line.detail)}`;
+    ui.line(
+      `  ${ui.colors.muted(isLast ? corner : tee)} ${routeMark(ui, line.mode)} ${line.path}${detail}`,
+    );
+
+    const shown = ui.verbose
+      ? line.children
+      : line.children.slice(0, ROUTE_CHILD_LIMIT);
+    const hidden = line.children.length - shown.length;
+    const rail = isLast ? " " : bar;
+    const children = [
+      ...shown,
+      ...(hidden > 0 ? [`… ${plural(hidden, "more path")}`] : []),
+    ];
+
+    children.forEach((child, childIndex) => {
+      const branch = childIndex === children.length - 1 ? corner : tee;
+      ui.line(
+        `  ${ui.colors.muted(rail)}   ${ui.colors.muted(branch)} ${ui.colors.muted(child)}`,
+      );
+    });
+  });
+
+  const used = new Set(lines.map(line => line.mode));
+  const legend = ROUTE_LEGEND.filter(entry => used.has(entry.mode));
+  const labelWidth = Math.max(...legend.map(entry => entry.label.length));
+  ui.line();
+  legend.forEach(entry => {
+    ui.line(
+      `  ${routeMark(ui, entry.mode)}  ${padEnd(entry.label, labelWidth)}   ${ui.colors.muted(entry.description)}`,
+    );
+  });
 };

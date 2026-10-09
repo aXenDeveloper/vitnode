@@ -21,6 +21,7 @@ export const signInWithPassword = async ({
     .select({
       id: core_users.id,
       email: core_users.email,
+      emailVerified: core_users.emailVerified,
       password: core_users.password,
     })
     .from(core_users)
@@ -46,5 +47,5 @@ export const signInWithPassword = async ({
     throw new HTTPException(403);
   }
 
-  return { id: user.id, email: user.email };
+  return { id: user.id, email: user.email, emailVerified: user.emailVerified };
 };

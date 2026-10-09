@@ -16,6 +16,7 @@ import {
   pluginRouteSpecs,
   withVitNodeRoutes,
 } from "@vitnode/core/tanstack/plugin-routes";
+import { navigationViewTransition } from "@vitnode/core/tanstack/view-transitions";
 
 // Imported for its side effect: this module calls `configureIntl`, which is
 // what registers the locale rules every route's redirects are rewritten by.
@@ -24,6 +25,7 @@ import { pluginRouteSources } from "./plugin-routes.gen";
 import { Route as adminShellRoute } from "./routes/_admin";
 import { Route as mainShellRoute } from "./routes/_main";
 import { routeTree as fileRouteTree } from "./routeTree.gen";
+import { vitNodeConfig } from "./vitnode.config";
 
 configureContentRegistry(
   async () => (await import("./content-registry.gen")).contentRegistry,
@@ -53,6 +55,9 @@ export function getRouter() {
     defaultPendingMinMs: 300,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    defaultViewTransition: navigationViewTransition(
+      vitNodeConfig.viewTransitions,
+    ),
     defaultStaleReloadMode: "blocking",
     rewrite: createLocaleRewrite(() => holder.current),
     routeTree,

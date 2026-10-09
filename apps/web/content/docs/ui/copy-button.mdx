@@ -56,6 +56,32 @@ const [copied, setCopied] = React.useState(false)
 <CopyButton content={inviteLink} copied={copied} onCopiedChange={setCopied} />
 ```
 
+## Async content
+
+Text that has to be fetched first? Pass a function instead of a string. It runs
+on click, the button is `aria-busy` while it waits, and extra clicks are ignored
+until it settles.
+
+```tsx
+<CopyButton
+  content={async () => {
+    const res = await fetch('/docs/dev.md')
+    if (!res.ok) throw new Error(`Failed to load ${res.url}`)
+
+    return await res.text()
+  }}
+  size="sm"
+  variant="secondary"
+>
+  Copy Markdown
+</CopyButton>
+```
+
+Safari only lets a page write to the clipboard during the click itself, so the
+pending text goes in as a `ClipboardItem` promise. Browsers without
+`ClipboardItem` wait for the text, then copy it. A rejected promise shows the
+same error toast as a blocked clipboard.
+
 ## Accessibility
 
 - A polite live region announces "Copied".
@@ -70,8 +96,9 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 <TypeTable
   type={{
     content: {
-      description: 'Text written to the clipboard.',
-      type: 'string',
+      description:
+        'Text written to the clipboard, or an async function that resolves it on click.',
+      type: 'string | (() => Promise<string>)',
       required: true,
     },
     copied: { description: 'Controls the copied state.', type: 'boolean' },

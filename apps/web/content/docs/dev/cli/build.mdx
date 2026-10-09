@@ -39,12 +39,40 @@ Server  .output/server
   ✓ index.mjs   1.2 MB
 
   ✓ Built in 1m 6s
-  Run vitnode start to serve it.
+  Run pnpm start to serve it.
 ```
+
+The last line names your app's `start` script, run with the package manager you use - `pnpm start`, `bun start`, `yarn start` or `npm start`. An app without a `start` script is told to run `vitnode start` instead.
 
 The steps are the build environments your app really has. For a TanStack Start app with Nitro, that is the client, the server, then Nitro's packaged server. VitNode's Vite plugin generates plugin routes and registries while the configuration loads.
 
 The symbols mark how a file compares with its size budget: `✓` is fine, `!` is worth a look and `▲` is large. From the second build on, you also see what grew or shrank since the last one. [Bundle size report](/docs/dev/cli/bundle-size) explains the thresholds, the comparison and `--analyze`.
+
+### See which pages are static
+
+The build ends with every route your app serves - your own route files and the pages of core and every plugin - marked by how each one is served:
+
+```txt title="vitnode build (end of the output, shortened)"
+Routes
+  ├ ○ /
+  │   ├ /
+  │   └ /pl
+  ├ ƒ /admin/*  24 AdminCP routes (--verbose lists all)
+  ├ ƒ /login
+  ├ ● /solutions/:slug
+  │   ├ /solutions/help-center
+  │   ├ /pl/solutions/help-center
+  │   └ … 8 more paths
+  └ ƒ /users/:nameCode
+
+  ○  Static    prerendered as static HTML
+  ●  Partial   some paths prerendered, the rest rendered on demand
+  ƒ  Dynamic   rendered on demand
+```
+
+A route is **static** when every language has a prerendered file, and **partial** when some of its paths do - a route with a parameter, such as `/solutions/:slug`, is always partial once any of its values is prerendered. The paths under a route are the files the build wrote, each page followed by its translations. The AdminCP is never prerendered, so its routes share one line unless you pass `--verbose`.
+
+Nothing is static until you ask for it. [Prerender static pages](/docs/dev/deployments/prerendering) shows how.
 
 ## Build an API app or a plugin
 

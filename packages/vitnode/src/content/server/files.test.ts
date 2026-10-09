@@ -30,6 +30,7 @@ const fileRow = (
     mimeType: null | string;
     name: string;
     size: number;
+    userId: null | number;
   }> = {},
 ) => ({
   id,
@@ -50,11 +51,15 @@ const fileRow = (
  */
 const makeCtx = (
   rows: ReturnType<typeof fileRow>[],
-  { hasAdapter = true }: { hasAdapter?: boolean } = {},
+  {
+    adminId,
+    hasAdapter = true,
+  }: { adminId?: number; hasAdapter?: boolean } = {},
 ) => {
   const where = vi.fn().mockResolvedValue(rows);
   const select = vi.fn(() => ({ from: vi.fn(() => ({ where })) }));
   const store: Record<string, unknown> = {
+    admin: adminId === undefined ? undefined : { user: { id: adminId } },
     core: {
       storage: hasAdapter
         ? { adapter: { delete: vi.fn(), getUrl: vi.fn(), upload: vi.fn() } }
@@ -240,6 +245,116 @@ describe("resolveContentPublicRowFiles", () => {
     );
 
     expect(row.cover).toBeNull();
+  });
+});
+
+describe("assertContentFileReferences, for a signed-in editor", () => {
+  const EDITOR_ID = 3;
+  const OTHER_USER_ID = 8;
+
+  const check = async (
+    values: Record<string, unknown>,
+    rows: ReturnType<typeof fileRow>[],
+    existing?: Record<string, unknown>,
+  ) => {
+    const { ctx } = makeCtx(rows, { adminId: EDITOR_ID });
+
+    return await assertContentFileReferences(
+      ctx,
+      testFilePostContentType,
+      values,
+      undefined,
+      existing ? { existing: async () => Promise.resolve(existing) } : {},
+    )
+      .then(() => null)
+      .catch((error: unknown) => error as ContentFileReferenceError);
+  };
+
+  it("accepts a file uploaded for this content type by anybody", async () => {
+    expect(
+      await check({ cover: 1 }, [
+        fileRow(1, {
+          metadata: { contentTypeId: testFilePostContentType.id },
+          userId: OTHER_USER_ID,
+        }),
+      ]),
+    ).toBeNull();
+  });
+
+  it("accepts a file the editor uploaded themselves", async () => {
+    expect(
+      await check({ cover: 1 }, [fileRow(1, { userId: EDITOR_ID })]),
+    ).toBeNull();
+  });
+
+  it.each([
+    ["another user's file", { userId: OTHER_USER_ID }],
+    [
+      "a file uploaded for another content type",
+      { metadata: { contentTypeId: "other.type" }, userId: OTHER_USER_ID },
+    ],
+    ["a file nobody owns", { userId: null }],
+  ])("refuses %s exactly like a missing one", async (_label, overrides) => {
+    const error = await check({ cover: 1 }, [fileRow(1, overrides)]);
+
+    expect(error?.code).toBe("CONTENT_FILE_NOT_FOUND");
+    expect(error?.field).toBe("cover");
+    expect(error?.detail).toBe(
+      'File 1 does not exist, so "cover" cannot point at it.',
+    );
+  });
+
+  it("keeps a foreign file the record already holds", async () => {
+    expect(
+      await check(
+        { cover: 1, title: "Renamed" },
+        [fileRow(1, { userId: OTHER_USER_ID })],
+        { cover: 1 },
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses a foreign file the record does not hold", async () => {
+    const error = await check(
+      { cover: 2 },
+      [fileRow(2, { userId: OTHER_USER_ID })],
+      { cover: 1 },
+    );
+
+    expect(error?.code).toBe("CONTENT_FILE_NOT_FOUND");
+  });
+
+  it("still applies the field's rules to a file the record holds", async () => {
+    const error = await check(
+      { animation: 5 },
+      [
+        fileRow(5, {
+          mimeType: "application/pdf",
+          name: "spec.pdf",
+          userId: OTHER_USER_ID,
+        }),
+      ],
+      { animation: 5 },
+    );
+
+    expect(error?.code).toBe("CONTENT_FILE_MIME_TYPE_NOT_ALLOWED");
+  });
+
+  it("does not read the record when every file is the editor's to use", async () => {
+    const existing = vi.fn();
+    const { ctx } = makeCtx([fileRow(1, { userId: EDITOR_ID })], {
+      adminId: EDITOR_ID,
+    });
+
+    await assertContentFileReferences(
+      ctx,
+      testFilePostContentType,
+      { cover: 1 },
+      undefined,
+      { existing },
+    );
+
+    expect(existing).not.toHaveBeenCalled();
   });
 });
 

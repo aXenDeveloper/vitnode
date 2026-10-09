@@ -26,6 +26,7 @@ import type {
   SearchResult,
 } from "@/api/models/search";
 
+import { parseSearchOffset } from "@/api/lib/search-offset";
 import { storageUrlOf } from "@/api/lib/storage-url";
 import { core_files } from "@/database/files";
 import { core_search_index, resolveSearchTextConfig } from "@/database/search";
@@ -123,16 +124,6 @@ const buildFilters = (
   return conditions.length ? and(...conditions) : undefined;
 };
 
-/**
- * The furthest into a relevance-ranked result set a caller may page.
- *
- * Relevance ordering has no stable key to seek on, so its cursor is an offset -
- * and an offset is the one pagination shape whose cost grows with the page
- * number. Nobody reaches page ten thousand of a search by reading; they reach it
- * by editing the URL.
- */
-const MAX_SEARCH_OFFSET = 10_000;
-
 export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   name: "postgres",
   // Two capabilities that are both true for the same reason: this provider's
@@ -190,13 +181,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     // query's `OFFSET`. `Number("abc")` is `NaN`, which Postgres rejects as a
     // 500 rather than a bad request, and an unbounded one is a full scan a
     // client can ask for by typing a big number into a URL.
-    const parsedCursor = params.cursor ? Number(params.cursor) : undefined;
-    const cursorValue =
-      parsedCursor !== undefined &&
-      Number.isSafeInteger(parsedCursor) &&
-      parsedCursor >= 0
-        ? Math.min(parsedCursor, MAX_SEARCH_OFFSET)
-        : undefined;
+    const cursorValue = parseSearchOffset(params.cursor);
 
     const orderBy: SQL[] = [];
     let where = filters;
