@@ -41,6 +41,6 @@
     "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2003",
     "tsc-alias": "^1.9.7",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }

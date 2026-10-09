@@ -31,7 +31,7 @@
     "react-doctor": "^0.9.17",
     "tsx": "^4.23.15",
     "turbo": "^2.11.7",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "zod": "^4.6.5"
   },
   "engines": {

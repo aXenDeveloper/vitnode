@@ -48,7 +48,7 @@
     "@vitnode/config": "workspace:*",
     "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2003",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }
 }
