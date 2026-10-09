@@ -28,7 +28,7 @@
     "@vitnode/node-cron": "workspace:*",
     "@vitnode/supabase-storage": "workspace:*",
     "drizzle-kit": "1.0.0-rc.4",
-    "drizzle-orm": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.5-5935859",
     "hono": "^4.13.13",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

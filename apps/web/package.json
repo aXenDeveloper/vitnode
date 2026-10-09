@@ -33,7 +33,7 @@
     "d3-shape": "^3.2.0",
     "dotenv": "^18.0.6",
     "drizzle-kit": "1.0.0-rc.4",
-    "drizzle-orm": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.5-5935859",
     "fumadocs-core": "16.17.1",
     "fumadocs-mdx": "^15.4.6",
     "fumadocs-ui": "npm:@fumadocs/base-ui@16.17.1",
