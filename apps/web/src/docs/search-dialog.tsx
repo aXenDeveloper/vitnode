@@ -1,4 +1,4 @@
-import { useDocsSearch } from 'fumadocs-core/search/client'
+import { useFetchSearch } from 'fumadocs-core/search/client'
 import {
   SearchDialog,
   SearchDialogClose,
@@ -14,15 +14,14 @@ import {
 import { DOCS_SEARCH_PATH } from './shared'
 
 const DocsSearchDialog = (props: SharedProps) => {
-  const { query, search, setSearch } = useDocsSearch({
+  const { data, isLoading, onSearchChange, search } = useFetchSearch({
     api: DOCS_SEARCH_PATH,
-    type: 'fetch',
   })
 
   return (
     <SearchDialog
-      isLoading={query.isLoading}
-      onSearchChange={setSearch}
+      isLoading={isLoading}
+      onSearchChange={onSearchChange}
       search={search}
       {...props}
     >
@@ -33,7 +32,7 @@ const DocsSearchDialog = (props: SharedProps) => {
           <SearchDialogInput />
           <SearchDialogClose />
         </SearchDialogHeader>
-        <SearchDialogList items={query.data !== 'empty' ? query.data : null} />
+        <SearchDialogList items={data?.items ?? null} />
       </SearchDialogContent>
     </SearchDialog>
   )

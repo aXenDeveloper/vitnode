@@ -4,10 +4,7 @@ import { cn } from 'cn'
 import { ArrowRight, Bird, Bot, CodeXml, Scale } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 
-import { HeroIconField } from '@/site/home/illustrations/hero-icon-field'
-import { HeroPreview } from '@/site/home/illustrations/hero-preview'
-import { HeroStrands } from '@/site/home/illustrations/hero-strands'
-import { usePointerParallax } from '@/site/home/use-pointer-parallax'
+import { HeroWall } from '@/site/home/illustrations/hero-wall/hero-wall'
 import { BUTTON } from '@/site/marketing/shared'
 
 const TRUST = [
@@ -18,19 +15,14 @@ const TRUST = [
 
 export const HeroSection = () => {
   const t = useTranslations('site.home.hero')
-  const { handlers, targetRef } = usePointerParallax<HTMLDivElement>()
 
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate overflow-hidden -mt-10"
-      {...handlers}
+      className="relative isolate -mt-10 overflow-hidden"
     >
-      <HeroIconField />
-      <HeroStrands className="bottom-0 h-112 sm:h-136" />
-
-      <div className="container mx-auto grid items-center gap-12 px-4 pt-16 pb-12 sm:px-6 sm:pt-24 lg:grid-cols-2 lg:py-28">
-        <div className="flex flex-col gap-6">
+      <div className="container mx-auto grid items-center gap-10 px-4 pt-16 sm:px-6 sm:pt-24 lg:grid-cols-2 lg:gap-6 lg:py-16">
+        <div className="relative z-10 flex flex-col gap-6">
           <p className="bg-primary/10 text-primary inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold">
             <Bird aria-hidden className="size-3.5 shrink-0" />
             {t('canary')}
@@ -81,7 +73,7 @@ export const HeroSection = () => {
           </ul>
         </div>
 
-        <HeroPreview ref={targetRef} />
+        <HeroWall />
       </div>
     </section>
   )

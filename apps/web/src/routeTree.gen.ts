@@ -21,7 +21,6 @@ import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs.{$}[.]md'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
 import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
-import { Route as MainProtoAiUnlimitedRouteImport } from './routes/_main/proto/ai-unlimited'
 import { Route as MainSolutionsIndexRouteImport } from './routes/_main/solutions/index'
 import { Route as MainSolutionsSlugRouteImport } from './routes/_main/solutions/$slug'
 import { Route as AdminAdminCoreIndexRouteImport } from './routes/_admin/admin.core.index'
@@ -83,11 +82,6 @@ const DocsDocsSplatRoute = DocsDocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => DocsRoute,
 } as any)
-const MainProtoAiUnlimitedRoute = MainProtoAiUnlimitedRouteImport.update({
-  id: '/proto/ai-unlimited',
-  path: '/proto/ai-unlimited',
-  getParentRoute: () => MainRoute,
-} as any)
 const MainSolutionsIndexRoute = MainSolutionsIndexRouteImport.update({
   id: '/solutions/',
   path: '/solutions/',
@@ -113,7 +107,6 @@ export interface FileRoutesByFullPath {
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/docs/$': typeof DocsDocsSplatRoute
-  '/proto/ai-unlimited': typeof MainProtoAiUnlimitedRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs/': typeof DocsDocsIndexRoute
   '/solutions/': typeof MainSolutionsIndexRoute
@@ -128,7 +121,6 @@ export interface FileRoutesByTo {
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/docs/$': typeof DocsDocsSplatRoute
-  '/proto/ai-unlimited': typeof MainProtoAiUnlimitedRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs': typeof DocsDocsIndexRoute
   '/solutions': typeof MainSolutionsIndexRoute
@@ -147,7 +139,6 @@ export interface FileRoutesById {
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/_main/': typeof MainIndexRoute
   '/_docs/docs/$': typeof DocsDocsSplatRoute
-  '/_main/proto/ai-unlimited': typeof MainProtoAiUnlimitedRoute
   '/_main/solutions/$slug': typeof MainSolutionsSlugRoute
   '/_docs/docs/': typeof DocsDocsIndexRoute
   '/_main/solutions/': typeof MainSolutionsIndexRoute
@@ -164,7 +155,6 @@ export interface FileRouteTypes {
     | '/docs/search'
     | '/docs/{$}.md'
     | '/docs/$'
-    | '/proto/ai-unlimited'
     | '/solutions/$slug'
     | '/docs/'
     | '/solutions/'
@@ -179,7 +169,6 @@ export interface FileRouteTypes {
     | '/docs/search'
     | '/docs/{$}.md'
     | '/docs/$'
-    | '/proto/ai-unlimited'
     | '/solutions/$slug'
     | '/docs'
     | '/solutions'
@@ -197,7 +186,6 @@ export interface FileRouteTypes {
     | '/docs/{$}.md'
     | '/_main/'
     | '/_docs/docs/$'
-    | '/_main/proto/ai-unlimited'
     | '/_main/solutions/$slug'
     | '/_docs/docs/'
     | '/_main/solutions/'
@@ -301,13 +289,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsDocsSplatRouteImport
       parentRoute: typeof DocsRoute
     }
-    '/_main/proto/ai-unlimited': {
-      id: '/_main/proto/ai-unlimited'
-      path: '/proto/ai-unlimited'
-      fullPath: '/proto/ai-unlimited'
-      preLoaderRoute: typeof MainProtoAiUnlimitedRouteImport
-      parentRoute: typeof MainRoute
-    }
     '/_main/solutions/': {
       id: '/_main/solutions/'
       path: '/solutions'
@@ -357,7 +338,6 @@ const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 interface MainRouteChildren {
   MainPluginsRoute: typeof MainPluginsRoute
   MainIndexRoute: typeof MainIndexRoute
-  MainProtoAiUnlimitedRoute: typeof MainProtoAiUnlimitedRoute
   MainSolutionsSlugRoute: typeof MainSolutionsSlugRoute
   MainSolutionsIndexRoute: typeof MainSolutionsIndexRoute
 }
@@ -365,7 +345,6 @@ interface MainRouteChildren {
 const MainRouteChildren: MainRouteChildren = {
   MainPluginsRoute: MainPluginsRoute,
   MainIndexRoute: MainIndexRoute,
-  MainProtoAiUnlimitedRoute: MainProtoAiUnlimitedRoute,
   MainSolutionsSlugRoute: MainSolutionsSlugRoute,
   MainSolutionsIndexRoute: MainSolutionsIndexRoute,
 }

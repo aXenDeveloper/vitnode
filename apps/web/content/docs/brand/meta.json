@@ -1,0 +1,7 @@
+{
+  "title": "Brand",
+  "description": "VitNode's look and personality, starting with Tabby the pet",
+  "icon": "Sparkles",
+  "root": true,
+  "pages": ["index", "pet"]
+}

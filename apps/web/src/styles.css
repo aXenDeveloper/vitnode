@@ -90,12 +90,14 @@
   --dev-color: oklch(0.55 0.145 50);
   --ui-color: oklch(0.52 0.102 170);
   --guides-color: oklch(0.45 0.16 264);
+  --brand-color: oklch(0.55 0.17 10);
 }
 
 .dark {
   --dev-color: oklch(0.75 0.166 50);
   --ui-color: oklch(0.7 0.138 170);
   --guides-color: oklch(0.65 0.16 264);
+  --brand-color: oklch(0.72 0.15 10);
 }
 
 .dev {
@@ -108,6 +110,10 @@
 
 .ui {
   --color-fd-primary: var(--ui-color);
+}
+
+.brand {
+  --color-fd-primary: var(--brand-color);
 }
 
 @layer base {

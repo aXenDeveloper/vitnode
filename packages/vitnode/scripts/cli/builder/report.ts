@@ -313,11 +313,13 @@ interface RouteLine {
 }
 
 const routeLines = (ui: Ui, routes: readonly BuildRoute[]): RouteLine[] => {
-  const collapsed = ui.verbose
-    ? []
-    : routes.filter(route => isAdminRoute(route) && route.mode === "dynamic");
+  const collapsed = new Set(
+    ui.verbose
+      ? []
+      : routes.filter(route => isAdminRoute(route) && route.mode === "dynamic"),
+  );
   const lines: RouteLine[] = routes
-    .filter(route => !collapsed.includes(route))
+    .filter(route => !collapsed.has(route))
     .map(route => ({
       children:
         route.staticPaths.length === 1 && route.staticPaths[0] === route.path
@@ -327,10 +329,10 @@ const routeLines = (ui: Ui, routes: readonly BuildRoute[]): RouteLine[] => {
       path: route.path,
     }));
 
-  if (collapsed.length > 0) {
+  if (collapsed.size > 0) {
     lines.push({
       children: [],
-      detail: `${plural(collapsed.length, "AdminCP route")} (--verbose lists all)`,
+      detail: `${plural(collapsed.size, "AdminCP route")} (--verbose lists all)`,
       mode: "dynamic",
       path: `${ADMIN_PREFIX}/*`,
     });

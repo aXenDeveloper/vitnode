@@ -22,7 +22,7 @@ type CopyButtonProps = Omit<
   VariantProps<typeof buttonVariants> & {
     children?: React.ReactNode;
     className?: string;
-    content: (() => Promise<string>) | string;
+    content: (() => Promise<string> | string) | string;
     copied?: boolean;
     delay?: number;
     onCopiedChange?: (copied: boolean) => void;
@@ -71,9 +71,9 @@ const writeToClipboard = async (content: CopyButtonProps["content"]) => {
 
   await navigator.clipboard.write([
     new ClipboardItem({
-      "text/plain": content().then(
-        text => new Blob([text], { type: "text/plain" }),
-      ),
+      "text/plain": Promise.resolve()
+        .then(content)
+        .then(text => new Blob([text], { type: "text/plain" })),
     }),
   ]);
 };

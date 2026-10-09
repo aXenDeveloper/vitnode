@@ -72,7 +72,7 @@ export const DocsPageHeader = ({
   return (
     <header className="flex items-center gap-10 border-b pt-2 pb-10">
       <div className="flex min-w-0 flex-1 flex-col gap-4">
-        {(icon || sectionPath.length > 0) && (
+        {(Boolean(icon) || sectionPath.length > 0) && (
           <div className="flex items-center gap-3">
             {icon && (
               <span

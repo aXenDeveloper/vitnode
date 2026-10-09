@@ -166,6 +166,17 @@ describe("CopyButton", () => {
     ).toBeTruthy();
   });
 
+  it("copies text read lazily from a synchronous content function", async () => {
+    const writeText = stubClipboard(async () => {});
+    let markup = "<svg />";
+    render(<CopyButton content={() => markup} />);
+    markup = "<svg>tabby</svg>";
+
+    await clickAndFlush(screen.getByRole("button"));
+
+    expect(writeText).toHaveBeenCalledWith("<svg>tabby</svg>");
+  });
+
   it("hands a pending clipboard item to the clipboard when supported", async () => {
     class FakeClipboardItem {
       readonly items: Record<string, Promise<Blob>>;
