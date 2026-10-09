@@ -34,7 +34,7 @@ export const VitNodeProviders = ({
   const logo = React.useMemo(() => <Logo />, [Logo]);
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!(debug && CONFIG.node_development)) return;
 
     void import("react-scan").then(({ scan }) => scan({ enabled: true }));

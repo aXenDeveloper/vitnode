@@ -16,7 +16,7 @@ export const getDocsPage = createServerFn({ method: 'GET' })
   .handler(({ data: slugs }) => {
     const page = source.getPage(slugs)
 
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     if (!page) throw notFound()
 
     const ancestors = getBreadcrumbItems(page.url, source.getPageTree(), {})

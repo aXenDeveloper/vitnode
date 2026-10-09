@@ -81,7 +81,7 @@ export function processCronJobs(
 
   for (const job of cronJobs) {
     if (!validateCronSchedule(job.schedule)) {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.warn(
         `\x1b[34m[VitNode]\x1b[0m \x1b[33mInvalid cron schedule for job "${job.pluginId}:${job.module}:${job.name}"\x1b[0m: ${job.schedule}`,
       );

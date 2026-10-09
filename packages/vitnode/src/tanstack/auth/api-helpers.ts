@@ -4,7 +4,7 @@ export const callUsersApi = async <TResponse>(
   try {
     return await call();
   } catch (error) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error("[auth] users API call failed", error);
 
     return null;

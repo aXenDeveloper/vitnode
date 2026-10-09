@@ -250,7 +250,7 @@ const CalendarDayButton = ({
   const ref = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (modifiers.focused) ref.current?.focus();
   }, [modifiers.focused]);
 

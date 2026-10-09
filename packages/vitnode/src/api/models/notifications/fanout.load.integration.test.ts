@@ -144,7 +144,7 @@ describePostgres("notification fan-out with 1,000 recipients", () => {
     expect(accessCalls).toBeLessThanOrEqual(batchesPerWorker * 2 + 4);
     expect(fanoutQueries).toBeLessThan(RECIPIENTS);
 
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.info(
       `[1,000 recipients] publish ${publishMs.toFixed(0)} ms, fan-out ${fanoutMs.toFixed(0)} ms, ${fanoutQueries} queries for ${expected} recipients, ${accessCalls} access checks`,
     );

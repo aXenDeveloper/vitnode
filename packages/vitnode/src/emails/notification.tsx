@@ -38,7 +38,7 @@ export default function NotificationEmailTemplate({
         {intro ? <Text className="text-muted-foreground">{intro}</Text> : null}
 
         {entries.map((entry, index) => (
-          // eslint-disable-next-line @eslint-react/no-array-index-key
+          // oxlint-disable-next-line @eslint-react/no-array-index-key
           <Section key={index}>
             {index > 0 ? <Hr className="border-border" /> : null}
             {entries.length > 1 ? (

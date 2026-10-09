@@ -46,7 +46,7 @@ export interface AiActionDefaults {
 
 export type AiActionOutputMode = "object" | "text";
 
-/* eslint-disable @typescript-eslint/method-signature-style -- method
+/* oxlint-disable typescript/method-signature-style -- method
    signatures are bivariant, which keeps a typed action assignable to the
    registry's `AnyAiActionDefinition`. */
 interface AiActionDefinitionBase<
@@ -93,7 +93,7 @@ export interface AiObjectActionDefinition<
   output: "object";
 }
 
-/* eslint-enable @typescript-eslint/method-signature-style */
+/* oxlint-enable typescript/method-signature-style */
 
 export type AiActionDefinition<
   Id extends string = string,

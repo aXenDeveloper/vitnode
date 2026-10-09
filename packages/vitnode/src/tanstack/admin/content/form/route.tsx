@@ -31,7 +31,7 @@ const missingContentRecord = (error: unknown): never => {
   ) {
     // TanStack Router's own control-flow signal, answered by the host's
     // `notFoundComponent` - the same one `requireAdminPermission` throws.
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     throw notFound();
   }
 

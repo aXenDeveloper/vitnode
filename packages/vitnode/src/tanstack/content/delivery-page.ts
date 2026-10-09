@@ -27,7 +27,7 @@ export type ContentDeliveryPageResolution =
 export const contentPageItem = <TItem>(
   item: null | TItem | undefined,
 ): TItem => {
-  // eslint-disable-next-line @typescript-eslint/only-throw-error
+  // oxlint-disable-next-line typescript/only-throw-error
   if (item === null || item === undefined) throw notFound();
 
   return item;
@@ -44,14 +44,14 @@ export const contentDeliveryPage = <
   resolution: TResolution;
 }): { item: TItem; metadata: Extract<TResolution, { type: "content" }> } => {
   if (resolution.type === "redirect") {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     throw redirect({
       href: resolution.location,
       statusCode: resolution.status,
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/only-throw-error
+  // oxlint-disable-next-line typescript/only-throw-error
   if (resolution.type === "not_found") throw notFound();
 
   return {

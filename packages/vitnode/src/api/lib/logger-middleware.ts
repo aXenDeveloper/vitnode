@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 import type { Context } from "hono";
 
 import { core_logs } from "@/database/logs";

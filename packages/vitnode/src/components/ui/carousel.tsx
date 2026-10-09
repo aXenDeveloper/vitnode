@@ -77,9 +77,9 @@ function Carousel({
 
   const onSelect = React.useCallback((api: CarouselApi) => {
     if (!api) return;
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    // oxlint-disable-next-line @eslint-react/set-state-in-effect
     setCanScrollPrev(api.canScrollPrev());
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    // oxlint-disable-next-line @eslint-react/set-state-in-effect
     setCanScrollNext(api.canScrollNext());
   }, []);
 
@@ -112,15 +112,15 @@ function Carousel({
   };
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!api || !setApi) return;
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent
     setApi(api);
   }, [api, setApi]);
 
   React.useEffect(() => {
     if (!api) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect
     onSelect(api);
     api.on("reInit", onSelect);
     api.on("select", onSelect);

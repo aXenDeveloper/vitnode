@@ -13,7 +13,7 @@ export const getNextCronRunDate = (
 
     return interval.next().toDate();
   } catch (err) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(
       `\x1b[34m[VitNode]\x1b[0m \x1b[38;5;208mError parsing schedule for nextRun\x1b[0m: ${schedule}`,
       err,

@@ -179,7 +179,7 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: (undefined | { message?: string })[];
 }) {
-  // eslint-disable-next-line @typescript-eslint/promise-function-async
+  // oxlint-disable-next-line typescript/promise-function-async
   const content = useMemo(() => {
     if (children) {
       return children;
@@ -201,7 +201,7 @@ function FieldError({
       <ul className="ms-4 flex list-disc flex-col gap-1">
         {uniqueErrors.map(
           (error, index) =>
-            // eslint-disable-next-line @eslint-react/no-array-index-key
+            // oxlint-disable-next-line @eslint-react/no-array-index-key
             error?.message && <li key={index}>{error.message}</li>,
         )}
       </ul>

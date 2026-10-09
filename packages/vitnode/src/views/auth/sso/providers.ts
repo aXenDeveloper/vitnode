@@ -27,7 +27,7 @@ const warnAboutIcon = (providerId: string) => {
   if (process.env.NODE_ENV !== "development" || warned.has(providerId)) return;
 
   warned.add(providerId);
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.warn(
     `[vitnode] the SSO provider "${providerId}" sent an icon its button cannot render, so it renders without one. An icon has to be a single <svg> element carrying nothing executable - no <script>, <style>, event handlers - or a URL to an image.`,
   );

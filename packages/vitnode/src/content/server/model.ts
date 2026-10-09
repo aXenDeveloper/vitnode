@@ -121,7 +121,7 @@ export type AnyContentModel =
   // TypeScript then structurally compares every concrete `ContentModel<T>`
   // against it, which is the comparison being avoided. Read the definition
   // back through `contentDefinitionOf` instead.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   any>;
 
 export const contentDefinitionOf = (

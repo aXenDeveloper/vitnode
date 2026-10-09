@@ -81,15 +81,15 @@ export const ContentFormProvider = ({
   const { fieldNames, header, skeleton } = value;
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the placeholder renders whatever the layout asks for, so there is nothing to warn about
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the placeholder renders whatever the layout asks for, so there is nothing to warn about
     if (process.env.NODE_ENV === "production" || skeleton) return;
 
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent -- nothing leaves this component; the effect is where it has to be computed, because what it compares against is what the children recorded while rendering
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent -- nothing leaves this component; the effect is where it has to be computed, because what it compares against is what the children recorded while rendering
     const missing = fieldNames.filter(name => !renderedRef.current.has(name));
 
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the only consumer of `missing` is the `console.warn` below
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the only consumer of `missing` is the `console.warn` below
     if (missing.length > 0) {
-      // eslint-disable-next-line no-console -- development-only diagnostic
+      // oxlint-disable-next-line no-console -- development-only diagnostic
       console.warn(
         `[vitnode] Content form layout did not render: ${missing.join(", ")}. Add <ContentFormField name="..." /> for each, or remove them from admin.form.fields.`,
       );
@@ -98,9 +98,9 @@ export const ContentFormProvider = ({
     // A page without its heading has no title, no back link and - when the
     // layout also skipped `ContentFormActions` - no way to save. Same failure
     // shape as a forgotten field, same treatment.
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the only consumer is the `console.warn` below, and it has to run after the children rendered
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the only consumer is the `console.warn` below, and it has to run after the children rendered
     if (header && !headerRenderedRef.current) {
-      // eslint-disable-next-line no-console -- development-only diagnostic
+      // oxlint-disable-next-line no-console -- development-only diagnostic
       console.warn(
         "[vitnode] Content form layout did not render <ContentFormHeader />. A page-mode layout places the heading and the back link itself - add it, with <ContentFormActions /> inside if the submit buttons belong beside them.",
       );

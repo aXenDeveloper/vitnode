@@ -20,7 +20,7 @@ const source = (...parts: string[]): string =>
 
 const lazyPage = (specifier: string) =>
   lazy(
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    // oxlint-disable-next-line typescript/no-implied-eval
     new Function(
       `return () => import("${specifier}")`,
     )() as () => Promise<unknown>,

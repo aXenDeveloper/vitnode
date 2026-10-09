@@ -1,6 +1,6 @@
-/* eslint-disable react-you-might-not-need-an-effect/no-external-store-subscription */
-/* eslint-disable @eslint-react/set-state-in-effect */
-/* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
+/* oxlint-disable react-you-might-not-need-an-effect/no-external-store-subscription */
+/* oxlint-disable @eslint-react/set-state-in-effect */
+/* oxlint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 import type { z } from "zod";
 
 import React from "react";
@@ -89,7 +89,7 @@ export const useCaptcha = (
   React.useEffect(() => {
     if (!captcha) {
       // If no captcha is required, consider it "ready"
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect
       setIsReady(true);
 
       return;
@@ -127,7 +127,7 @@ export const useCaptcha = (
         widget.innerHTML = "";
       }
     };
-    // eslint-disable-next-line @eslint-react/exhaustive-deps
+    // oxlint-disable-next-line @eslint-react/exhaustive-deps
   }, [locale, captcha?.type, captcha?.siteKey]);
 
   const getToken = async (): Promise<string> => {
@@ -144,7 +144,7 @@ export const useCaptcha = (
               });
               resolve(token);
             } catch (error) {
-              // eslint-disable-next-line no-console
+              // oxlint-disable-next-line no-console
               console.error("Captcha error", error);
               resolve("");
             }

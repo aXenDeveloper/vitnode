@@ -30,7 +30,7 @@ type LucideIconLoader = () => Promise<{ __iconData?: LucideIconData }>;
 
 let loaders: Promise<Map<string, LucideIconLoader>> | undefined;
 
-// eslint-disable-next-line @typescript-eslint/promise-function-async
+// oxlint-disable-next-line typescript/promise-function-async
 const loadIconLoaders = (): Promise<Map<string, LucideIconLoader>> => {
   loaders ??= import("lucide-react/dynamicIconImports.mjs").then(
     ({ default: imports }) => {
@@ -87,7 +87,7 @@ export const seedLucideIcons = (seeded: LucideIconSnapshot): void => {
   notify();
 };
 
-// eslint-disable-next-line @typescript-eslint/promise-function-async
+// oxlint-disable-next-line typescript/promise-function-async
 export const loadLucideIcon = (name: string) => {
   const cached = requests.get(name);
 
@@ -114,7 +114,7 @@ export const loadLucideIcon = (name: string) => {
 
 let everyIcon: Promise<void> | undefined;
 
-// eslint-disable-next-line @typescript-eslint/promise-function-async
+// oxlint-disable-next-line typescript/promise-function-async
 export const preloadAllLucideIcons = (): Promise<void> => {
   everyIcon ??= loadIconLoaders().then(async resolved => {
     const loaded = await Promise.all(
@@ -149,7 +149,7 @@ export const LucideIconCollectorContext = React.createContext<
 
 let registry: Promise<LucideIconRegistry> | undefined;
 
-// eslint-disable-next-line @typescript-eslint/promise-function-async
+// oxlint-disable-next-line typescript/promise-function-async
 export const loadLucideIcons = (): Promise<LucideIconRegistry> => {
   registry ??= import("lucide-react").then(({ icons }) => {
     const components = icons as unknown as Record<

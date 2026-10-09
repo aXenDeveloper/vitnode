@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 import type { Messages, MessagesSource } from "./types";
 
 import { deepMerge } from "./deep-merge";

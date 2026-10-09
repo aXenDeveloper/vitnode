@@ -122,7 +122,7 @@ const log = async (c: Context, message: string): Promise<void> => {
   } catch {
     // The logger writes to the database, so it can fail for the same reason the
     // request did. The console is the only place left.
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(text);
   }
 };

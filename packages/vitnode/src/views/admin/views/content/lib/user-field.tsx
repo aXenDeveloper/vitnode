@@ -70,7 +70,7 @@ export const ContentUserField = ({
       .catch((error: unknown) => {
         // A face is a nicety. Failing to fetch one leaves the placeholder,
         // which is exactly what the field renders without it anyway.
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.error(error);
       });
 

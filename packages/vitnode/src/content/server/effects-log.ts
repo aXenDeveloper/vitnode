@@ -42,7 +42,7 @@ export const reportContentEventFailures = async (
     // The logger writes to the database, so it can fail for the same reason the
     // transport did. Both are best effort *after* a committed write, and neither
     // may turn it into a failed request - so the console is the last resort.
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(`[VitNode] ${message}`);
   }
 };

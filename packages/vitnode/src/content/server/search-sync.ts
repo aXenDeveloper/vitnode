@@ -142,7 +142,7 @@ export const syncContentSearch = async (
     try {
       await c.get("log").error(message);
     } catch {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.error(
         `[VitNode] Failed to log content search failure: ${message}`,
       );
@@ -439,7 +439,7 @@ const write = async (
     try {
       await c.get("log").error(message);
     } catch {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.error(
         `[VitNode] Failed to log content search failure: ${message}`,
       );

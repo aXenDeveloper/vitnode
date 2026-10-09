@@ -35,7 +35,7 @@ export const readAdminSessionThrough = async <TSession>(
 
     return adminSessionReadFromStatus(status, session);
   } catch (error) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error("[admin] the admin session could not be read", error);
 
     return adminSessionFailureFromError(error);

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { lazyImportSpecifier } from "./component-source.js";
 
 const callback = (source: string): unknown =>
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  // oxlint-disable-next-line typescript/no-implied-eval
   new Function(`return ${source}`)() as unknown;
 
 describe("lazyImportSpecifier", () => {

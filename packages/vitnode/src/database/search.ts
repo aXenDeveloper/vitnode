@@ -46,7 +46,7 @@ export const DEFAULT_SEARCH_TEXT_CONFIG = "simple";
 // by the search adapter so `websearch_to_tsquery` matches the stored vector.
 export const resolveSearchTextConfig = (languageCode?: null | string): string =>
   (languageCode &&
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
     SEARCH_TEXT_CONFIGS[languageCode.split("-")[0]?.toLowerCase() ?? ""]) ||
   DEFAULT_SEARCH_TEXT_CONFIG;
 

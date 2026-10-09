@@ -32,7 +32,7 @@ const warn = (seen: null | Set<string>, key: string, message: string): void => {
   if (!seen || seen.has(key)) return;
 
   seen.add(key);
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.warn(`\x1b[34m[VitNode]\x1b[0m \x1b[33m${message}\x1b[0m`);
 };
 

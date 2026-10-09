@@ -39,7 +39,7 @@ const ensureProfile = async (
     });
   } catch (error) {
     if (isProfileNotFound(error)) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      // oxlint-disable-next-line typescript/only-throw-error
       throw notFound();
     }
 
@@ -57,7 +57,7 @@ export const loadProfileRoute = async ({
 }): Promise<ProfileRouteData> => {
   const nameCode = normalizeProfileNameCode(raw);
   if (nameCode === null) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     throw notFound();
   }
 

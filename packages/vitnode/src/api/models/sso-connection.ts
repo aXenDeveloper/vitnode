@@ -312,7 +312,7 @@ export class SsoConnectionModel {
   private warn(step: string, error: unknown) {
     if (!CONFIG.node_development) return;
 
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.warn(
       `\x1b[34m[VitNode]\x1b[0m \x1b[33mSSO connection ${step} failed:\x1b[0m ${describeError(error)}`,
     );

@@ -75,11 +75,11 @@ export function handleVitNodeWebSocket(
             Promise.resolve(
               target.onMessage({ c, data: message.data, send, ws }),
             ).catch((error: unknown) => {
-              // eslint-disable-next-line no-console
+              // oxlint-disable-next-line no-console
               console.error("WebSocket handler error:", error);
             });
           } catch (error) {
-            // eslint-disable-next-line no-console
+            // oxlint-disable-next-line no-console
             console.error("WebSocket handler error:", error);
           }
 

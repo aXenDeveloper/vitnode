@@ -97,7 +97,7 @@ export const themeScriptSource = ({
  */
 export const ThemeScript = ({ nonce, ...props }: ThemeScriptProps) => (
   <script
-    // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
+    // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
     dangerouslySetInnerHTML={{ __html: themeScriptSource(props) }}
     nonce={typeof window === "undefined" ? nonce : ""}
     suppressHydrationWarning

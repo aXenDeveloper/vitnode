@@ -75,7 +75,7 @@ export interface NotificationTypeDefinition<TData = Record<string, unknown>> {
 }
 
 export type AnyNotificationTypeDefinition =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   NotificationTypeDefinition<any>;
 
 export interface RegisteredNotificationType {

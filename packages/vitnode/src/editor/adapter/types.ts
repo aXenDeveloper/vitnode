@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-invalid-void-type */
+/* oxlint-disable typescript/no-invalid-void-type */
 import type { VisualEditorSnapshot } from "../state/types";
 
 export interface VisualEditorSaveInput {

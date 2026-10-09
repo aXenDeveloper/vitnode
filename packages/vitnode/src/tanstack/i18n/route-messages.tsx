@@ -40,6 +40,6 @@ export const RouteMessages = ({
   // argument because `HostIntlProvider` requires it - `use-intl`'s own
   // `IntlProvider` does, and widening the registry's type to make it optional
   // would stop that provider satisfying it. It is the same element either way.
-  // eslint-disable-next-line @eslint-react/jsx-no-children-prop
+  // oxlint-disable-next-line @eslint-react/jsx-no-children-prop
   return createElement(hostIntlProvider, { ...intlProps, children: provided });
 };

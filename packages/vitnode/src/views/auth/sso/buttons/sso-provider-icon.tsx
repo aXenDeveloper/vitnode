@@ -30,7 +30,7 @@ export const SSOProviderIcon = ({ provider }: { provider: SSOProvider }) => {
     <span
       aria-hidden
       className="inline-flex size-4 shrink-0 items-center justify-center [&>svg]:size-full"
-      // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
+      // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
       dangerouslySetInnerHTML={{ __html: provider.icon.markup }}
     />
   );

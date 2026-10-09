@@ -62,7 +62,7 @@ export function AsyncPicker<TOption extends AsyncPickerOption>({
         // A search that fails is an empty list plus a console line, never a
         // thrown error: this sits inside a form, and taking the page down
         // because a lookup timed out loses whatever else was typed.
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.error(error);
         setOptions([]);
       } finally {

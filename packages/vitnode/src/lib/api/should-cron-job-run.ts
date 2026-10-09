@@ -15,7 +15,7 @@ export const shouldCronJobRun = (
 
     return nextScheduledRun <= now;
   } catch (err) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(
       `\x1b[34m[VitNode]\x1b[0m \x1b[38;5;208mError parsing schedule\x1b[0m: ${schedule}`,
       err,

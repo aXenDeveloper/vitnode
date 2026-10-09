@@ -177,9 +177,9 @@ export const AutoFormFile = ({
   otherProps: { isOptional },
   // Only the language-aware inputs implement this - dropped here so it never
   // lands on the DOM element below. A file is never localized.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   multiLang,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
 }: AutoFormFileProps) => {
   const t = useTranslations("core.global.file");

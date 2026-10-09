@@ -52,7 +52,7 @@ const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
 
     return knownMiddlewareConfig(await response.json());
   } catch (error) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error("[auth] middleware configuration unavailable", error);
 
     return UNKNOWN_MIDDLEWARE_CONFIG;

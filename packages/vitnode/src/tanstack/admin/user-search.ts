@@ -39,7 +39,7 @@ export const readAdminUserSearch = async (
       nameCode: user.nameCode,
     }));
   } catch (error) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error("[admin] the user search could not be read", error);
 
     return [];

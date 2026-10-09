@@ -117,7 +117,7 @@ export async function getConfig<T extends ConfigName = "config">({
       interopDefault: true,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     const loaded = (await jiti.import(configPath)) as any;
     const config = loaded[configVarName];
 

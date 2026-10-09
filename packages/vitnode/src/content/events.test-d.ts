@@ -12,7 +12,7 @@ type ArticleEvents = ContentEventsFor<typeof testArticleContentType>;
 // The pattern plugins use. It compiles only if the mapped keys are statically
 // known, which is exactly what makes the whole approach viable.
 declare module "../api/models/events" {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the members come from the mapped type
+  // oxlint-disable-next-line typescript/no-empty-object-type -- the members come from the mapped type
   interface VitNodeEvents extends ArticleEvents {}
 }
 

@@ -44,7 +44,7 @@ export interface DefaultTemplateEmailProps extends Pick<
 > {
   i18n: {
     locale: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     messages: Record<string, any>;
   };
   templateProps: {
@@ -126,7 +126,7 @@ export default function DefaultTemplateEmail({
             <Section className="my-8 text-center text-sm">
               <Link className="text-muted-foreground" href={metadata.url}>
                 {metadata.shortTitle ?? metadata.title} ©{" "}
-                {/* eslint-disable-next-line @eslint-react/purity */}
+                {/* oxlint-disable-next-line @eslint-react/purity */}
                 {new Date().getFullYear()}
               </Link>
             </Section>
