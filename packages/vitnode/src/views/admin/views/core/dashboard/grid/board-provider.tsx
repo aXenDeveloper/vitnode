@@ -439,19 +439,7 @@ export const DashboardBoardProvider = ({
         onDragStart={onDragStart}
         sensors={sensors}
       >
-        <div
-          className={cn(
-            "transition-[padding] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
-            isEditing && "md:pe-(--dashboard-panel-width)",
-          )}
-          style={
-            {
-              "--dashboard-panel-width": "clamp(18rem, 26vw, 24rem)",
-            } as React.CSSProperties
-          }
-        >
-          {children}
-        </div>
+        {children}
 
         <DragOverlay
           dropAnimation={

@@ -2,18 +2,26 @@ import { Skeleton } from '@vitnode/core/components/ui/skeleton'
 import { cn } from 'cn'
 
 const DocsHeadingPendingSkeleton = () => (
-  <div aria-hidden="true" className="flex flex-col gap-4">
-    <div className="flex items-center gap-2">
-      <Skeleton className="h-3.5 w-16" />
-      <Skeleton className="h-3.5 w-24" />
+  <div
+    aria-hidden="true"
+    className="flex items-center gap-10 border-b pt-2 pb-10"
+  >
+    <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-10 rounded-xl md:hidden" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+      <Skeleton className="h-9 w-3/5 max-w-sm md:h-10" />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-4/5" />
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <Skeleton className="h-8 w-36 rounded-md" />
+        <Skeleton className="h-8 w-20 rounded-md" />
+      </div>
     </div>
-
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <Skeleton className="h-9 w-3/5 max-w-xs sm:h-10" />
-      <Skeleton className="h-8 w-24 rounded-md" />
-    </div>
-
-    <Skeleton className="h-5 w-4/5 max-w-md" />
+    <Skeleton className="size-40 shrink-0 rounded-4xl max-md:hidden" />
   </div>
 )
 
@@ -74,36 +82,40 @@ const DocsSidebarGroupPendingSkeleton = ({ links }: { links: number }) => (
 export const DocsShellPendingSkeleton = () => (
   <div
     aria-busy="true"
-    className="flex min-h-dvh flex-col"
+    className="bg-card flex min-h-dvh flex-col md:flex-row"
     data-slot="route-pending"
   >
     <DocsPendingStatus />
 
     <header
       aria-hidden="true"
-      className="flex h-14 shrink-0 items-center gap-4 border-b px-4 md:px-6"
+      className="flex h-14 shrink-0 items-center gap-4 px-4 md:hidden"
     >
       <Skeleton className="h-6 w-30" />
-      <Skeleton className="h-8 w-full max-w-sm rounded-xl max-md:hidden" />
 
       <div className="ms-auto flex items-center gap-3">
-        <Skeleton className="h-4 w-24 max-lg:hidden" />
+        <Skeleton className="size-8 rounded-md" />
         <Skeleton className="size-8 rounded-md" />
       </div>
     </header>
 
-    <div className="flex flex-1">
-      <aside
-        aria-hidden="true"
-        className="bg-card flex w-67 shrink-0 flex-col gap-6 border-e p-4 max-md:hidden"
-      >
-        <Skeleton className="h-11 w-full rounded-lg" />
+    <aside
+      aria-hidden="true"
+      className="flex w-67 shrink-0 flex-col gap-6 p-4 max-md:hidden"
+    >
+      <Skeleton className="h-7 w-30" />
 
-        <DocsSidebarGroupPendingSkeleton links={4} />
-        <DocsSidebarGroupPendingSkeleton links={3} />
-        <DocsSidebarGroupPendingSkeleton links={2} />
-      </aside>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-9 w-full rounded-lg" />
+      </div>
 
+      <DocsSidebarGroupPendingSkeleton links={4} />
+      <DocsSidebarGroupPendingSkeleton links={3} />
+      <DocsSidebarGroupPendingSkeleton links={2} />
+    </aside>
+
+    <div className="bg-background flex flex-1 xl:my-2 xl:me-2 xl:rounded-2xl xl:border xl:shadow-sm">
       <div className={DOCS_PAGE_FRAME}>
         <DocsHeadingPendingSkeleton />
         <DocsProsePendingSkeleton />

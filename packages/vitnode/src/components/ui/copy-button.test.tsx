@@ -150,4 +150,89 @@ describe("CopyButton", () => {
 
     expect(writeText).not.toHaveBeenCalled();
   });
+
+  it("copies text resolved from async content", async () => {
+    const writeText = stubClipboard(async () => {});
+    render(<CopyButton content={async () => "# Page"} />);
+
+    await clickAndFlush(screen.getByRole("button"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith("# Page");
+    expect(
+      screen.getByRole("button", { name: "core.global.copied" }),
+    ).toBeTruthy();
+  });
+
+  it("hands a pending clipboard item to the clipboard when supported", async () => {
+    class FakeClipboardItem {
+      readonly items: Record<string, Promise<Blob>>;
+
+      constructor(items: Record<string, Promise<Blob>>) {
+        this.items = items;
+      }
+    }
+    vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+    const write = vi.fn(async (_items: FakeClipboardItem[]) => {});
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { write, writeText: vi.fn() },
+    });
+    render(<CopyButton content={async () => "# Page"} />);
+
+    await clickAndFlush(screen.getByRole("button"));
+
+    expect(write).toHaveBeenCalledTimes(1);
+    const [item] = write.mock.calls[0][0];
+    const blob = await item.items["text/plain"];
+    expect(await blob.text()).toBe("# Page");
+    vi.unstubAllGlobals();
+  });
+
+  it("shows an error toast when async content fails", async () => {
+    const writeText = stubClipboard(async () => {});
+    const toastError = vi.spyOn(toast, "error");
+    render(
+      <CopyButton
+        content={async () => Promise.reject(new Error("Not Found"))}
+      />,
+    );
+
+    await clickAndFlush(screen.getByRole("button"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(writeText).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith("core.global.errors.title", {
+      description: "core.global.copy_failed",
+    });
+  });
+
+  it("ignores clicks while async content is loading", async () => {
+    stubClipboard(async () => {});
+    let resolveContent: (value: string) => void = () => {};
+    const content = vi.fn(
+      async () =>
+        new Promise<string>(resolve => {
+          resolveContent = resolve;
+        }),
+    );
+    render(<CopyButton content={content} />);
+
+    await clickAndFlush(screen.getByRole("button"));
+    expect(screen.getByRole("button").getAttribute("aria-busy")).toBe("true");
+    await clickAndFlush(screen.getByRole("button"));
+
+    expect(content).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveContent("done");
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("button").getAttribute("aria-busy")).toBeNull();
+  });
 });

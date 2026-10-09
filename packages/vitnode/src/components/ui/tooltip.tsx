@@ -2,16 +2,22 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { cn } from "cn";
 import React from "react";
 
+const TOOLTIP_OPEN_DELAY = 200;
+
+const TooltipDelayContext = React.createContext(TOOLTIP_OPEN_DELAY);
+
 function TooltipProvider({
-  delay = 500,
+  delay = TOOLTIP_OPEN_DELAY,
   ...props
 }: TooltipPrimitive.Provider.Props) {
   return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delay={delay}
-      {...props}
-    />
+    <TooltipDelayContext value={delay}>
+      <TooltipPrimitive.Provider
+        data-slot="tooltip-provider"
+        delay={delay}
+        {...props}
+      />
+    </TooltipDelayContext>
   );
 }
 
@@ -19,8 +25,16 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
-function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+function TooltipTrigger({ delay, ...props }: TooltipPrimitive.Trigger.Props) {
+  const providerDelay = React.use(TooltipDelayContext);
+
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      delay={delay ?? providerDelay}
+      {...props}
+    />
+  );
 }
 
 function TooltipContent({
@@ -161,15 +175,18 @@ function useIsInTooltipGroup() {
 
 function TooltipGroupTrigger({
   content,
+  delay,
   ...props
 }: Omit<TooltipPrimitive.Trigger.Props, "content" | "handle" | "payload"> & {
   content: React.ReactNode;
 }) {
   const handle = React.use(TooltipGroupContext);
+  const providerDelay = React.use(TooltipDelayContext);
 
   return (
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"
+      delay={delay ?? providerDelay}
       handle={handle ?? undefined}
       payload={content}
       {...props}

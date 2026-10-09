@@ -1,5 +1,19 @@
 @import '../styles.css';
+@import 'fumadocs-ui/css/generated/spacious.css';
 @import 'fumadocs-ui/css/shadcn.css';
 @import 'fumadocs-ui/css/preset.css';
 
 @source '../../node_modules/fumadocs-ui/dist/**/*.js';
+
+:root:not(.dark) #fd-spacious-layout {
+  background-color: var(--color-fd-background);
+}
+
+:root:not(.dark) #nd-sidebar {
+  background-color: var(--background);
+  --color-fd-accent: var(--accent);
+}
+
+:root:not(.dark) #fd-spacious-layout .prose {
+  --tw-prose-body: oklch(0.373 0.003 264);
+}

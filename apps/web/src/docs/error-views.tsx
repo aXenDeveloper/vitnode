@@ -3,7 +3,7 @@ import {
   ErrorActions,
   NotFound,
 } from '@vitnode/core/tanstack/layout'
-import { DocsPage } from 'fumadocs-ui/layouts/notebook/page'
+import { DocsPage } from 'fumadocs-ui/layouts/spacious/page'
 
 const DocsErrorFrame = ({ children }: { children: React.ReactNode }) => (
   <DocsPage

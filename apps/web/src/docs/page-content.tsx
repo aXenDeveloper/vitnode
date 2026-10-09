@@ -1,16 +1,11 @@
-import {
-  DocsBody,
-  DocsDescription,
-  DocsPage,
-  DocsTitle,
-  MarkdownCopyButton,
-  ViewOptionsPopover,
-} from 'fumadocs-ui/layouts/notebook/page'
+import { DocsBody, DocsPage } from 'fumadocs-ui/layouts/spacious/page'
 import { use } from 'react'
 
 import type { DocsPageData } from './transport'
 
 import { getMDXComponents } from './mdx-components'
+import { DocsPageFooter } from './page-footer'
+import { DocsPageHeader } from './page-header'
 import { docs } from './source'
 
 export const DocsPageContent = ({
@@ -26,20 +21,20 @@ export const DocsPageContent = ({
   const MDX = page.body
 
   return (
-    <DocsPage tableOfContent={{ single: false, style: 'clerk' }} toc={toc}>
-      <DocsTitle className="text-balance">{page.title}</DocsTitle>
-      <DocsDescription className="text-pretty">
-        {page.description}
-      </DocsDescription>
+    <DocsPage
+      breadcrumb={{ enabled: false }}
+      slots={{ footer: DocsPageFooter }}
+      tableOfContent={{ single: false, style: 'clerk' }}
+      toc={toc}
+    >
+      <DocsPageHeader
+        description={page.description}
+        githubUrl={githubUrl}
+        markdownUrl={markdownUrl}
+        title={page.title}
+      />
 
-      <div className="border-b pb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <MarkdownCopyButton markdownUrl={markdownUrl} />
-          <ViewOptionsPopover githubUrl={githubUrl} markdownUrl={markdownUrl} />
-        </div>
-      </div>
-
-      <DocsBody>
+      <DocsBody className="pt-2">
         <MDX components={getMDXComponents()} />
       </DocsBody>
     </DocsPage>

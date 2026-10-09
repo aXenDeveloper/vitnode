@@ -4,12 +4,14 @@ import { Step, Steps } from 'fumadocs-ui/components/steps'
 import defaultMdxComponents from 'fumadocs-ui/mdx'
 
 import { Callout } from './callout'
+import { Card } from './card'
 import { Preview } from './preview'
 
 export const getMDXComponents = (components?: MDXComponents) =>
   ({
     ...defaultMdxComponents,
     Callout,
+    Card,
     Preview,
     Step,
     Steps,
