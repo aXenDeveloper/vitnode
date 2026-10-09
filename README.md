@@ -20,8 +20,8 @@ installable plugins instead of becoming permanent residents of one giant app.
 
 ## Start here
 
-You need Node.js 22+ and Postgres (or Docker). Create an app with the package
-manager you use every day:
+You need Node.js 22.18+ (or 24.11+, or 26+) and Postgres (or Docker). Create an
+app with the package manager you use every day:
 
 ### Bun
 

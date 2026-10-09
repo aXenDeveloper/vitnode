@@ -6,16 +6,19 @@ import color from "picocolors";
 
 import { createVitNode } from "./create/create-vitnode.js";
 import { packageJson } from "./helpers/get-package-json.js";
+import {
+  isSupportedNodeVersion,
+  supportedNodeRangeLabel,
+} from "./helpers/node-version.js";
 import { validateNpmName } from "./helpers/validate-pkg.js";
 import { createPlugin } from "./plugin/index.js";
 import { createQuestionsCli } from "./questions.js";
 import { validationProject } from "./validation.js";
 
-const [major] = process.versions.node.split(".").map(Number);
-if (major < 20) {
+if (!isSupportedNodeVersion(process.versions.node)) {
   console.error(
     color.red(
-      `\nError: VitNode requires Node.js version 20 or higher.\nYou are currently using Node.js ${process.versions.node}\n`,
+      `\nError: VitNode requires Node.js ${supportedNodeRangeLabel}.\nYou are currently using Node.js ${process.versions.node}\n`,
     ),
   );
   process.exit(1);
