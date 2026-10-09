@@ -13,7 +13,7 @@ import loginSsoButtons from './icons/login-sso-buttons.png'
 Every SSO provider gets a full-width **Continue with _Provider_** button on
 `/login` and `/register`. The built-in Google, Discord and Facebook adapters
 already carry their brand marks and colors, so those buttons look right without
-any configuration. A custom adapter starts out as a plain white button with
+any configuration. A custom adapter starts out as a neutral button with
 text only - a **GitHub** button with no octocat - and this page shows how to
 give it a mark and a color.
 
@@ -42,7 +42,7 @@ Use `fill="currentColor"` and leave the width and height off: the mark then
 takes the button's text color in both light and dark mode - white on a
 [brand-colored button](#brand-color) - and is sized to match the label. A
 multicolor mark, such as Google's four-color G, keeps its own fills; give its
-adapter no brand color so it sits on the white button it was designed for.
+adapter no brand color so it sits on the neutral button it was designed for.
 
 An image works the same way:
 
@@ -138,7 +138,7 @@ own text color: white when white text reaches a 4.5:1 contrast ratio on your
 color, near-black otherwise, so a yellow brand still gets a readable label. A
 `currentColor` icon follows that text color.
 
-Leave `brandColor` out and the button stays white with a border. That is the
+Leave `brandColor` out and the button stays neutral, with a border. That is the
 right choice for providers whose guidelines ask for a neutral button, such as
 Google and Microsoft. A value that is not a hex color is ignored the same way,
 and in development the console names the provider.

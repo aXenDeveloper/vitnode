@@ -43,10 +43,14 @@ const contrastRatio = (lighter: number, darker: number) =>
 
 export const ssoBrandForeground = (brandColor: string): string => {
   const luminance = relativeLuminance(brandColor);
-  const onLight = contrastRatio(1, luminance);
-  const onDark = contrastRatio(luminance, relativeLuminance(DARK_FOREGROUND));
+  const whiteTextContrast = contrastRatio(1, luminance);
+  const darkTextContrast = contrastRatio(
+    luminance,
+    relativeLuminance(DARK_FOREGROUND),
+  );
 
-  return onLight >= MIN_TEXT_CONTRAST || onLight >= onDark
+  return whiteTextContrast >= MIN_TEXT_CONTRAST ||
+    whiteTextContrast >= darkTextContrast
     ? LIGHT_FOREGROUND
     : DARK_FOREGROUND;
 };

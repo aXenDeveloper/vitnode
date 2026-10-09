@@ -22,15 +22,6 @@ const renderButtons = (onSelectProvider: SSOSelectProvider) =>
     </IntlProvider>,
   );
 
-const deferred = () => {
-  let resolve: (value: SSOStartResult) => void = () => undefined;
-  const promise = new Promise<SSOStartResult>(done => {
-    resolve = done;
-  });
-
-  return { promise, resolve };
-};
-
 describe("SSOButtonsContent", () => {
   it("renders one button per provider", () => {
     renderButtons(vi.fn());
@@ -41,8 +32,9 @@ describe("SSOButtonsContent", () => {
   });
 
   it("starts the chosen provider and locks the row while it redirects", async () => {
-    const start = deferred();
-    const onSelectProvider = vi.fn(async () => start.promise);
+    const onSelectProvider = vi.fn(
+      async () => new Promise<SSOStartResult>(() => undefined),
+    );
     renderButtons(onSelectProvider);
 
     const [discord, google] = screen.getAllByRole("button");
