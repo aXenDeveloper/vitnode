@@ -5,9 +5,11 @@ import {
   lazy,
   page,
 } from "@vitnode/core/routing";
+import { contentListSearch } from "@vitnode/core/tanstack/content";
 
 import type { ExampleSearch } from "./pages/example-page";
 
+import { articleContentType } from "./content/article";
 import { browseSearch } from "./pages/browse-search";
 import { zonesSearch } from "./pages/zones-search";
 
@@ -48,6 +50,12 @@ export const routes = definePluginRoutes([
         component: lazy(() => import("./pages/guide-topic-page")),
       }),
     ],
+  }),
+
+  page("/articles", {
+    component: lazy(() => import("./pages/articles-page")),
+    messages: ["@vitnode/example.articles"],
+    search: contentListSearch(articleContentType),
   }),
 
   page("/articles/:slug", {

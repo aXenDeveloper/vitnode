@@ -2626,7 +2626,9 @@
           }
         }
       },
-      "unsaved_changes": "Niezapisane zmiany"
+      "unsaved_changes": "Niezapisane zmiany",
+      "search": "Szukaj",
+      "all": "Wszystkie"
     },
     "navigation": {
       "discover": {

@@ -1341,6 +1341,48 @@ export interface ContentDeliveryRedirectsConfig {
   enabled: true;
 }
 
+/**
+ * A public page listing the published records, such as `/blog`.
+ *
+ * The page reads `?page=`, `?q=` (when `publicApi.searchableFields` is set) and
+ * one parameter per field in `filters` from its URL, and asks the public list
+ * route for exactly that. Anything else in the URL is ignored.
+ */
+export interface ContentDeliveryListConfig<TFilter extends string = string> {
+  enabled: true;
+  /** Fields from `publicApi.filterableFields` the page reads from its URL. */
+  filters?: readonly TFilter[];
+  /** Records per page, 1-50. Defaults to 12. */
+  pageSize?: number;
+  /** The page's English route, with no parameters. Defaults to `/{publicApi.path}`. */
+  path?: string;
+}
+
+/** How a list page reads one filter from its URL. */
+export type ContentDeliveryListFilterKind =
+  | "boolean"
+  | "enum"
+  | "number"
+  | "reference"
+  | "text";
+
+export interface ResolvedContentDeliveryListFilter {
+  kind: ContentDeliveryListFilterKind;
+  name: string;
+  /** The allowed values of an `enum` filter, `null` for every other kind. */
+  values: null | readonly string[];
+}
+
+/** `delivery.list` after `defineContentType` has filled in every default. */
+export interface ResolvedContentDeliveryListConfig {
+  enabled: boolean;
+  filters: readonly ResolvedContentDeliveryListFilter[];
+  pageSize: number;
+  path: string;
+  /** Whether the page passes `?q=` to the API, from `publicApi.searchableFields`. */
+  searchable: boolean;
+}
+
 export interface ContentDeliverySitemapConfig {
   /** One of the seven `changefreq` values the protocol defines. */
   changeFrequency?: ContentSitemapChangeFrequency;
@@ -1385,9 +1427,11 @@ export interface ContentDeliveryConfig<
   TTitle extends string = string,
   TDescription extends string = string,
   TNoIndex extends string = string,
+  TFilter extends string = string,
 > {
   enabled: TPublicEnabled extends true ? true : never;
   hreflang?: ContentDeliveryHreflangConfig;
+  list?: ContentDeliveryListConfig<TFilter> | { enabled: false };
   path?: string;
 
   redirects?: TPublicEnabled extends true
@@ -1424,6 +1468,7 @@ export interface ResolvedContentDeliveryConfig<
 > {
   enabled: TEnabled;
   hreflang: { xDefault: "defaultLocale" | null };
+  list: ResolvedContentDeliveryListConfig;
   path: string;
   redirects: { enabled: boolean };
   seo: ResolvedContentDeliverySeoConfig;

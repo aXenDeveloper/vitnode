@@ -7,6 +7,8 @@ import type {
   ContentSitemapChangeFrequency,
   DeliverableContentTypeDefinition,
   ResolvedContentDeliveryConfig,
+  ResolvedContentDeliveryListConfig,
+  ResolvedContentDeliveryListFilter,
   ResolvedContentPublicApiConfig,
 } from "./types";
 
@@ -16,6 +18,7 @@ import {
   CONTENT_DELIVERY_NO_INDEX_KINDS,
   CONTENT_DELIVERY_PATH_MAX_LENGTH,
   CONTENT_DELIVERY_TITLE_KINDS,
+  CONTENT_PUBLIC_MAX_PAGE_SIZE,
   isContentSitemapChangeFrequency,
 } from "./const";
 import { ContentEngineError } from "./errors";
@@ -32,10 +35,23 @@ const noIndexKinds: ReadonlySet<string> = new Set(
   CONTENT_DELIVERY_NO_INDEX_KINDS,
 );
 
+/** Records a list page shows when `delivery.list.pageSize` is not set. */
+export const CONTENT_DELIVERY_LIST_DEFAULT_PAGE_SIZE = 12;
+
+/** The disabled default every content type without `delivery.list` carries. */
+export const contentDeliveryListDisabled: ResolvedContentDeliveryListConfig = {
+  enabled: false,
+  filters: [],
+  pageSize: CONTENT_DELIVERY_LIST_DEFAULT_PAGE_SIZE,
+  path: "",
+  searchable: false,
+};
+
 /** The disabled default every content type without `delivery` carries. */
 export const contentDeliveryDisabled: ResolvedContentDeliveryConfig<false> = {
   enabled: false,
   hreflang: { xDefault: null },
+  list: contentDeliveryListDisabled,
   path: "",
   redirects: { enabled: false },
   seo: {
@@ -206,6 +222,138 @@ const resolveContentDeliveryPath = ({
   }
 
   return parsed.path;
+};
+
+const resolveContentDeliveryListPath = ({
+  id,
+  path,
+  publicPath,
+}: {
+  id: string;
+  path: string | undefined;
+  publicPath: string;
+}): string => {
+  if (path === undefined) return `/${publicPath}`;
+
+  if (
+    typeof path !== "string" ||
+    path.length > CONTENT_DELIVERY_PATH_MAX_LENGTH
+  ) {
+    throw new ContentEngineError(
+      `delivery.list.path must be a string of at most ${CONTENT_DELIVERY_PATH_MAX_LENGTH} characters.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const parsed = parseRoutePath(path);
+  if (!parsed.ok) {
+    throw new ContentEngineError(
+      `delivery.list.path is not a valid route path: ${parsed.reason}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const dynamic = parsed.segments.find(segment => segment.kind !== "static");
+  if (dynamic) {
+    throw new ContentEngineError(
+      `delivery.list.path "${path}" declares ${dynamic.kind === "param" ? `":${dynamic.name}"` : '"*"'}. A list page lists every published record, so its URL has no parameters - narrow it with \`filters\` and a query string instead.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const [first] = parsed.segments;
+  if (first?.kind === "static" && RESERVED_DELIVERY_PREFIXES.has(first.value)) {
+    throw new ContentEngineError(
+      `delivery.list.path "${path}" starts with "/${first.value}", which is reserved for the ${first.value === "api" ? "API" : "AdminCP"} and never served as a public page.`,
+      { contentTypeId: id },
+    );
+  }
+
+  return parsed.path;
+};
+
+const listFilterOf = (
+  descriptor: ContentFieldDescriptor,
+  name: string,
+): ResolvedContentDeliveryListFilter => {
+  switch (descriptor.kind) {
+    case "boolean":
+      return { kind: "boolean", name, values: null };
+    case "enum":
+      return {
+        kind: "enum",
+        name,
+        values: [...(descriptor as { values: readonly string[] }).values],
+      };
+    case "number":
+      return { kind: "number", name, values: null };
+    case "relation":
+    case "user":
+      return { kind: "reference", name, values: null };
+    default:
+      return { kind: "text", name, values: null };
+  }
+};
+
+const resolveContentDeliveryList = ({
+  fields,
+  id,
+  list,
+  publicApi,
+}: {
+  fields: ContentFieldMap;
+  id: string;
+  list: ContentDeliveryConfig["list"];
+  publicApi: ResolvedContentPublicApiConfig;
+}): ResolvedContentDeliveryListConfig => {
+  if (!list?.enabled) return contentDeliveryListDisabled;
+
+  const pageSize = list.pageSize ?? CONTENT_DELIVERY_LIST_DEFAULT_PAGE_SIZE;
+  if (
+    !Number.isInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > CONTENT_PUBLIC_MAX_PAGE_SIZE
+  ) {
+    throw new ContentEngineError(
+      `delivery.list.pageSize is ${pageSize}; it must be a whole number from 1 to ${CONTENT_PUBLIC_MAX_PAGE_SIZE}, the most the public list route returns in one page.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const names = (list.filters ?? []).map(String);
+  const duplicate = names.find(
+    (name, position) => names.indexOf(name) !== position,
+  );
+  if (duplicate !== undefined) {
+    throw new ContentEngineError(
+      `delivery.list.filters lists "${duplicate}" twice.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const filters = names.map(name => {
+    const target = resolveSeoTarget(fields, name);
+    if (!publicApi.filterableFields.includes(name) || target === null) {
+      throw new ContentEngineError(
+        `delivery.list.filters includes "${name}", which is not in publicApi.filterableFields. The page passes each filter to the public list route, which only accepts the fields that allowlist names.`,
+        { contentTypeId: id },
+      );
+    }
+
+    return listFilterOf(target.descriptor, name);
+  });
+
+  return {
+    enabled: true,
+    filters,
+    pageSize,
+    path: resolveContentDeliveryListPath({
+      id,
+      path: list.path,
+      publicPath: publicApi.path,
+    }),
+    searchable: publicApi.searchableFields.length > 0,
+  };
 };
 
 export const resolveContentDelivery = ({
@@ -428,6 +576,12 @@ export const resolveContentDelivery = ({
   return {
     enabled: true,
     hreflang: { xDefault: delivery.hreflang?.xDefault ?? null },
+    list: resolveContentDeliveryList({
+      fields,
+      id,
+      list: delivery.list,
+      publicApi,
+    }),
     path,
     redirects: { enabled: redirects },
     seo: {

@@ -189,7 +189,8 @@ export const defineContentType = <
         ContentEditorialEnabled<TEditorial>,
         ContentDeliveryTitleField<TFields, TPublicField>,
         ContentDeliveryDescriptionField<TFields, TPublicField>,
-        ContentDeliveryNoIndexField<TFields, TPublicField>
+        ContentDeliveryNoIndexField<TFields, TPublicField>,
+        TPublicField
       >
     | { enabled: false } = { enabled: false },
   TPublicPath extends string = string,

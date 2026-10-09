@@ -68,6 +68,19 @@ const plainType = defineContentType({
 });
 
 describe("delivery configuration", () => {
+  it("lets a list page filter only by a public field", () => {
+    defineContentType({
+      ...shared,
+      id: "typed.private-filter",
+      delivery: {
+        enabled: true,
+        // @ts-expect-error - `internalCode` is not in publicApi.fields.
+        list: { enabled: true, filters: ["internalCode"] },
+      },
+      tableName: "typed_private_filter",
+    });
+  });
+
   it("keeps the `enabled` literal, so every conditional resolves", () => {
     expectTypeOf(deliveredType.delivery.enabled).toEqualTypeOf<true>();
     expectTypeOf(plainType.delivery.enabled).toEqualTypeOf<false>();

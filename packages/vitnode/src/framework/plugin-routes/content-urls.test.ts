@@ -157,6 +157,52 @@ describe("content URLs served by page routes", () => {
     expect(error.message).toContain('Declared in "@vitnode/blog/content".');
   });
 
+  it("fails on a delivery.list.path no page serves", () => {
+    const error = failureOf(() =>
+      compilePluginRoutes({
+        contentUrls: [
+          blogContent({
+            ...BLOG_POST,
+            delivery: {
+              ...BLOG_POST.delivery,
+              list: { enabled: true, path: "/blog" },
+            },
+          }),
+        ],
+        sources: [blogPage()],
+      }),
+    );
+
+    expect(error.code).toBe("content-url-without-page");
+    expect(error.setting).toBe("delivery.list.path");
+    expect(error.pattern).toBe("/blog");
+    expect(error.message).toContain('Add a page route at "/blog"');
+    expect(error.message).toContain("`list: { enabled: false }`");
+  });
+
+  it("accepts a delivery.list.path a plugin page serves", () => {
+    expect(() =>
+      compilePluginRoutes({
+        contentUrls: [
+          blogContent({
+            ...BLOG_POST,
+            delivery: {
+              ...BLOG_POST.delivery,
+              list: { enabled: true, path: "/blog" },
+            },
+          }),
+        ],
+        sources: [
+          routesOf(
+            "@vitnode/blog",
+            page("/blog", { component: lazyPage() }),
+            page("/blog/:slug", { component: lazyPage() }),
+          ),
+        ],
+      }),
+    ).not.toThrow();
+  });
+
   it("fails on a search.pathTemplate no page serves", () => {
     const error = failureOf(() =>
       compilePluginRoutes({

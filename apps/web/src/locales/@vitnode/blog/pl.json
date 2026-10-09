@@ -129,6 +129,19 @@
     "title": "Blog",
     "post": {
       "published": "Opublikowano"
+    },
+    "list": {
+      "title": "Blog",
+      "desc": "Nowości, poradniki i historie od naszego zespołu.",
+      "search": "Szukaj artykułów",
+      "empty": {
+        "title": "Nie ma jeszcze artykułów",
+        "desc": "Zajrzyj wkrótce - pierwszy jest już w drodze."
+      },
+      "no_results": {
+        "title": "Żaden artykuł nie pasuje do wyszukiwania",
+        "desc": "Spróbuj innego słowa albo wyczyść wyszukiwanie, aby zobaczyć wszystkie artykuły."
+      }
     }
   },
   "@vitnode/blog:categories": "Kategorie",

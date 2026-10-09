@@ -98,7 +98,19 @@
     },
     "articles": {
       "published": "Published",
-      "faq": "Frequently asked questions"
+      "faq": "Frequently asked questions",
+      "list": {
+        "title": "Articles",
+        "desc": "Every published example article, newest first.",
+        "search": "Search articles",
+        "featured": "Featured",
+        "featured_only": "Featured only",
+        "not_featured": "Not featured",
+        "empty": {
+          "title": "No articles found",
+          "desc": "Publish an article in the AdminCP, or clear the search and filters."
+        }
+      }
     }
   },
   "@vitnode/example:article": "Articles",

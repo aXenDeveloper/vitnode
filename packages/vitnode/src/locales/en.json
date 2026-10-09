@@ -643,7 +643,9 @@
           }
         }
       },
-      "unsaved_changes": "Unsaved changes"
+      "unsaved_changes": "Unsaved changes",
+      "search": "Search",
+      "all": "All"
     },
     "navigation": {
       "discover": {
