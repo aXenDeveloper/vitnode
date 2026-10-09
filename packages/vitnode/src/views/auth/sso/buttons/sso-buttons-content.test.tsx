@@ -49,6 +49,25 @@ describe("SSOButtonsContent", () => {
     expect((google as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("unlocks the row when starting the provider throws", async () => {
+    const onSelectProvider = vi.fn(async () =>
+      Promise.reject(new Error("malformed response")),
+    );
+    renderButtons(onSelectProvider);
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button")[0]);
+    });
+
+    const buttons = screen.getAllByRole("button", {
+      name: "core.auth.sso.continue_with",
+    });
+    expect(buttons).toHaveLength(2);
+    expect(
+      buttons.every(button => !(button as HTMLButtonElement).disabled),
+    ).toBe(true);
+  });
+
   it("unlocks the row when the provider could not be started", async () => {
     const onSelectProvider = vi.fn(async () => ({ message: "failed" }));
     renderButtons(onSelectProvider);

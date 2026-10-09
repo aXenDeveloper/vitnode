@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import type { SSOProvider } from "../providers";
 
-import { ssoBrandForeground } from "../brand";
+import { ssoBrandColors } from "../brand";
 import { SSOProviderIcon } from "./sso-provider-icon";
 
 export type SSOStartResult = undefined | { message?: string };
@@ -16,15 +16,19 @@ export type SSOStartResult = undefined | { message?: string };
 export type SSOSelectProvider = (providerId: string) => Promise<SSOStartResult>;
 
 const BRAND_FILL =
-  "border-transparent bg-(--sso-brand) text-(--sso-brand-foreground) hover:bg-(--sso-brand) hover:brightness-90 dark:hover:brightness-110";
+  "border-transparent bg-(--sso-brand) text-(--sso-brand-foreground) hover:bg-(--sso-brand-hover)";
 
-const brandStyle = (brandColor: string | undefined) =>
-  brandColor
-    ? ({
-        "--sso-brand": brandColor,
-        "--sso-brand-foreground": ssoBrandForeground(brandColor),
-      } as React.CSSProperties)
-    : undefined;
+const brandStyle = (brandColor: string | undefined) => {
+  if (!brandColor) return undefined;
+
+  const { foreground, hover } = ssoBrandColors(brandColor);
+
+  return {
+    "--sso-brand": brandColor,
+    "--sso-brand-foreground": foreground,
+    "--sso-brand-hover": hover,
+  } as React.CSSProperties;
+};
 
 export const SSOButtonsContent = ({
   onSelectProvider,
@@ -43,15 +47,21 @@ export const SSOButtonsContent = ({
     return null;
   }
 
+  const failToStart = () => {
+    setPendingId(null);
+    toast.error(tErrors("title"), {
+      description: tErrors("internal_server_error"),
+    });
+  };
+
   const selectProvider = async (providerId: string) => {
     setPendingId(providerId);
-    const result = await onSelectProvider(providerId);
 
-    if (result?.message) {
-      setPendingId(null);
-      toast.error(tErrors("title"), {
-        description: tErrors("internal_server_error"),
-      });
+    try {
+      const result = await onSelectProvider(providerId);
+      if (result?.message) failToStart();
+    } catch {
+      failToStart();
     }
   };
 
