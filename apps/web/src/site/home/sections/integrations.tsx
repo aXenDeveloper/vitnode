@@ -1,5 +1,3 @@
-import type { LucideIcon } from 'lucide-react'
-
 import { Link } from '@tanstack/react-router'
 import {
   Tooltip,
@@ -7,7 +5,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@vitnode/core/components/ui/tooltip'
-import { Sparkles } from 'lucide-react'
 
 import {
   AmazonS3Mark,
@@ -16,12 +13,15 @@ import {
   ReCaptchaMark,
 } from '@/site/home/sections/logos/integration-logos'
 import { INTEGRATION_MARKS } from '@/site/home/sections/logos/integration-marks'
-import { MarketingSection, TextLink } from '@/site/marketing/shared'
+import {
+  MarketingSection,
+  SectionHeading,
+  TextLink,
+} from '@/site/marketing/shared'
 
 type Destination = { docs: string } | { href: string }
 
 type Logo =
-  | { glyph: LucideIcon }
   | { logo: React.ElementType<{ className: string }> }
   | { mark: string }
 
@@ -109,7 +109,7 @@ const ELASTICSEARCH: Integration = {
 const AI_SDK: Integration = {
   color: FOREGROUND,
   docs: 'dev/ai',
-  glyph: Sparkles,
+  mark: INTEGRATION_MARKS.vercel,
   name: 'AI SDK',
   role: 'AI models',
 }
@@ -149,18 +149,18 @@ const DOCKER: Integration = {
 const WIDE_COLUMNS: Integration[][] = [
   [DOCKER],
   [NODEMAILER, TAILWIND],
-  [DRIZZLE, TANSTACK_START, TURNSTILE],
-  [ELASTICSEARCH, HONO],
-  [POSTGRESQL, REACT, S3],
+  [REACT, TANSTACK_START, S3],
+  [HONO, DRIZZLE],
+  [ELASTICSEARCH, POSTGRESQL, TURNSTILE],
   [AI_SDK, RECAPTCHA],
   [NODE_CRON],
 ]
 
 const COMPACT_COLUMNS: Integration[][] = [
   [NODEMAILER, TAILWIND],
-  [DRIZZLE, TANSTACK_START, TURNSTILE],
-  [NODE_CRON, ELASTICSEARCH, HONO, DOCKER],
-  [POSTGRESQL, REACT, S3],
+  [REACT, TANSTACK_START, S3],
+  [DOCKER, HONO, DRIZZLE, NODE_CRON],
+  [ELASTICSEARCH, POSTGRESQL, TURNSTILE],
   [AI_SDK, RECAPTCHA],
 ]
 
@@ -220,9 +220,6 @@ const TileFace = ({ integration }: { integration: Integration }) => (
 
 const IntegrationMark = ({ integration }: { integration: Integration }) => {
   const className = 'mk-integration-mark sm:size-8 lg:size-11'
-
-  if ('glyph' in integration)
-    return <integration.glyph aria-hidden className={className} />
 
   if ('logo' in integration) return <integration.logo className={className} />
 
@@ -318,18 +315,12 @@ export const IntegrationsSection = () => (
     id="integrations"
     labelledBy="integrations-title"
   >
-    <div className="flex flex-col items-center gap-5">
-      <p className="bg-card text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium">
-        <span aria-hidden className="bg-primary size-1.5 rounded-full" />
-        Integrations
-      </p>
-      <h2
-        className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
-        id="integrations-title"
-      >
-        Made of parts you already know.
-      </h2>
-    </div>
+    <SectionHeading
+      align="center"
+      eyebrow="Integrations"
+      id="integrations-title"
+      title="Made of parts you already know."
+    />
 
     <TooltipProvider delay={200}>
       <IntegrationComb columns={COMPACT_COLUMNS} layout="compact" />
@@ -337,10 +328,10 @@ export const IntegrationsSection = () => (
     </TooltipProvider>
 
     <div className="flex flex-col items-center gap-4">
-      <p className="text-muted-foreground max-w-xl text-lg leading-relaxed text-pretty">
-        TanStack Start renders the pages, Hono serves the API and Drizzle talks
-        to PostgreSQL. Email, storage, search, captcha, AI and cron are adapters
-        you pick in config.
+      <p className="text-muted-foreground font-book max-w-xl text-lg leading-relaxed text-pretty">
+        The four in the middle are the core: TanStack Start renders the pages,
+        Hono serves the API and Drizzle talks to PostgreSQL. Everything around
+        them is an adapter you pick in config.
       </p>
       <TextLink params={{ _splat: 'dev' }} to="/docs/$">
         Explore the docs
