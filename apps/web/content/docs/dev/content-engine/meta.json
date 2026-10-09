@@ -8,6 +8,7 @@
     "defining-a-content-type",
     "public-api-and-caching",
     "content-delivery-and-seo",
+    "list-pages",
     "---Model your content---",
     "relations-and-advanced-modeling",
     "localization",
@@ -18,6 +19,7 @@
     "production-and-security",
     "---Reference---",
     "reference",
+    "list-pages-reference",
     "fields",
     "database-and-migrations",
     "plugin-registration"

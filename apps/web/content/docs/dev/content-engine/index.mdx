@@ -40,7 +40,7 @@ export const recipeContentType = defineContentType({
 | Every content type   | Staff routes and `can_view`, `can_create`, `can_edit` and `can_delete` permissions                    |
 | `publication`        | Draft and published states, `can_publish`, and Publish buttons                                        |
 | `publicApi`          | Read-only public routes that return only the fields you list                                          |
-| `delivery`           | Page URL resolution, SEO metadata, slug redirects and sitemap entries                                 |
+| `delivery`           | Page URL resolution, SEO metadata, slug redirects, sitemap entries and an optional list page          |
 | `editorial`          | Revision history with restore, signed preview links and scheduled publishing                          |
 | `localization`       | A translations table, per-language fields and per-language publishing                                 |
 | `search`             | Records in the site [search](/docs/dev/search) index                                                  |
@@ -54,6 +54,7 @@ Content types live in code and in your migrations, not in the database. There is
 | Build a content type from scratch, with AdminCP screens         | [Create your first content type](/docs/dev/content-engine/defining-a-content-type)             |
 | Add drafts and a public, read-only API                          | [Publish content with a public API](/docs/dev/content-engine/public-api-and-caching)           |
 | Give each record its own page with SEO metadata                 | [Show content on a public page](/docs/dev/content-engine/content-delivery-and-seo)             |
+| List published records with pagination, search and filters      | [Show a list of records](/docs/dev/content-engine/list-pages)                                  |
 | Link records together, group fields or repeat rows              | [Relations and advanced fields](/docs/dev/content-engine/relations-and-advanced-modeling)      |
 | Translate content into several languages                        | [Translate content](/docs/dev/content-engine/localization)                                     |
 | Keep revisions, share draft previews or schedule publishing     | [Revisions, previews and scheduling](/docs/dev/content-engine/publication-and-editorial)       |
