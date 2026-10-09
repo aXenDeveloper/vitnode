@@ -34,7 +34,7 @@ export const createVitNode = async ({
   root,
   appName,
   packageManager,
-  eslint,
+  oxlint,
   git,
   install,
   docker,
@@ -164,26 +164,26 @@ export const createVitNode = async ({
     );
   }
 
-  if (eslint) {
-    spinner.text = "Copying ESLint & Prettier files...";
+  if (oxlint) {
+    spinner.text = "Copying Oxlint & Oxfmt files...";
     if (monorepo) {
       if (existsSync(monorepoStructure.api)) {
-        await cp(join(templatePath, "eslint"), monorepoStructure.api, {
+        await cp(join(templatePath, "oxlint"), monorepoStructure.api, {
           recursive: true,
         });
       }
       if (existsSync(monorepoStructure.web)) {
-        await cp(join(templatePath, "eslint-react"), monorepoStructure.web, {
+        await cp(join(templatePath, "oxlint-react"), monorepoStructure.web, {
           recursive: true,
         });
       }
     } else {
       if (mode === "onlyApi") {
-        await cp(join(templatePath, "eslint"), root, {
+        await cp(join(templatePath, "oxlint"), root, {
           recursive: true,
         });
       } else if (mode === "singleApp") {
-        await cp(join(templatePath, "eslint-react"), root, {
+        await cp(join(templatePath, "oxlint-react"), root, {
           recursive: true,
         });
       }
@@ -212,7 +212,7 @@ export const createVitNode = async ({
     root,
     appName,
     packageManager,
-    eslint,
+    oxlint,
     docker,
     mode,
     monorepo,

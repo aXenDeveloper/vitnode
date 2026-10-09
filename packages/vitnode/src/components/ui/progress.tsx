@@ -37,11 +37,14 @@ const IndeterminateSweep = () => {
 function Progress({
   className,
   children,
+  indicatorClassName,
   value,
   min = 0,
   max = 100,
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root>) {
+}: React.ComponentProps<typeof ProgressPrimitive.Root> & {
+  indicatorClassName?: string;
+}) {
   const isIndeterminate = value === null || !Number.isFinite(value);
 
   return (
@@ -70,7 +73,10 @@ function Progress({
           </ProgressPrimitive.Indicator>
         ) : (
           <ProgressPrimitive.Indicator
-            className="bg-primary ease-fluid h-full origin-left transition-transform duration-300 motion-reduce:transition-none rtl:origin-right"
+            className={cn(
+              "bg-primary ease-fluid h-full origin-left transition-[transform,background-color] duration-300 motion-reduce:transition-none rtl:origin-right",
+              indicatorClassName,
+            )}
             data-slot="progress-indicator"
             style={{
               width: "100%",

@@ -1,0 +1,347 @@
+---
+title: Costs, Points & Budgets
+description: How VitNode prices every AI call, converts it to AI points, reserves budget before a provider call and charges users only for results they receive.
+icon: Coins
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+Every [AI action](/docs/dev/ai/actions) run is priced in **USD** and charged to the site's budget. Runs started by users are also charged in **AI points**. VitNode reserves the worst case before calling a provider, then settles the real cost afterwards. Users pay only for results they receive.
+
+```text
+1,000 input tokens  × $3  / 1M = $0.003
+  200 output tokens × $15 / 1M = $0.003
+                         total = $0.006  →  6 AI points
+```
+
+## Usage and cost of a call
+
+Each provider call is stored with its token usage and its cost:
+
+```ts
+interface AiUsage {
+  inputTokens: number | null
+  outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheWriteTokens: number | null
+  reasoningTokens: number | null // already part of outputTokens
+}
+
+type AiCost =
+  | { source: 'provider'; amountUsd: string }
+  | { source: 'pricing'; amountUsd: string; pricingVersion: string }
+  | { source: 'unknown'; amountUsd: null; reason: string }
+```
+
+Amounts are decimal strings with 12 decimal places, stored as `numeric(24, 12)` in PostgreSQL. Money never passes through JavaScript floats, so a thousand tiny calls add up exactly.
+
+### Unknown is not zero
+
+`null` means "nobody told us". `0` means "we know it was zero". VitNode keeps them apart everywhere:
+
+- A provider that does not report token usage gives `null` tokens and an `unknown` cost.
+- A model without pricing gives an `unknown` cost, with the reason `"no pricing"`.
+- An `unknown` cost is never shown or summed as `$0`. When it must be charged, it is charged as the **full reservation**: the most the call could have cost.
+
+## How cost is resolved
+
+For every call, VitNode takes the first of these that is available:
+
+1. **Provider-reported cost**: what the provider says it billed (AI Gateway, OpenRouter).
+2. **Pricing**: token usage × the `pricing` of the model in `vitnode.api.config.ts`.
+3. **Unknown**: never zero.
+
+Each estimated call stores the pricing version it used (`config:<fingerprint>` of the price). Changing a price later never rewrites history.
+
+## Model pricing
+
+Every model sets its own price in `vitnode.api.config.ts`. It is the only place prices live. There is no price editor in the AdminCP and no automatic sync, so what you deploy is what VitNode charges. A price that isn't a decimal string stops the server at boot instead of quietly turning every cost into `unknown`.
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+ai: {
+  models: [
+    {
+      id: 'default',
+      name: 'Claude Sonnet 5',
+      model: 'anthropic/claude-sonnet-5',
+      capabilities: ['text', 'image-input', 'structured-output', 'streaming'],
+      // [!code ++:3]
+      pricing: {
+        rates: { inputPerMillion: '3', outputPerMillion: '15' },
+      },
+    },
+  ],
+},
+```
+
+Prices are USD **per one million tokens**, as decimal strings. The full shape:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+pricing: {
+  rates: {
+    inputPerMillion: '3',
+    outputPerMillion: '15',
+    cacheReadPerMillion: '0.30',
+    cacheWritePerMillion: '3.75',
+  },
+  // [!code ++:6]
+  tiers: [
+    {
+      aboveInputTokens: 200_000,
+      rates: { inputPerMillion: '6', outputPerMillion: '22.5' },
+    },
+  ],
+}
+```
+
+<TypeTable
+  type={{
+    inputPerMillion: {
+      description: 'Uncached input tokens.',
+      type: 'string',
+      required: true,
+    },
+    outputPerMillion: {
+      description: 'Output tokens, reasoning tokens included.',
+      type: 'string',
+      required: true,
+    },
+    cacheReadPerMillion: {
+      description: 'Input tokens read from the prompt cache.',
+      type: 'string',
+    },
+    cacheWritePerMillion: {
+      description: 'Input tokens written to the prompt cache.',
+      type: 'string',
+    },
+    perRequest: {
+      description: 'A flat fee per call, e.g. a gateway fee.',
+      type: 'string',
+    },
+    perImage: {
+      description:
+        'A flat fee per input image, for providers that bill images separately.',
+      type: 'string',
+    },
+  }}
+/>
+
+How the rates apply:
+
+- **Cache tokens** are priced separately from uncached input. If a call reports cache tokens but the pricing has no cache rate, the cost becomes `unknown` rather than quietly cheaper.
+- **Tiers** price long-context calls. When a call's input tokens exceed `aboveInputTokens`, the **whole call** uses that tier's rates. A tier's `rates` replace the base rates entirely, so repeat the cache prices inside the tier if the provider charges them.
+- **Reasoning tokens** are already part of `outputTokens`. They are stored for display, never billed twice.
+- **Flat units** (`perRequest`, `perImage`) are added on top of the token cost.
+
+Here is a worked example with the pricing above, for 10,000 input tokens (2,000 cache reads, 1,000 cache writes) and 500 output tokens:
+
+```text
+7,000 uncached    × $3    / 1M = $0.021
+2,000 cache read  × $0.30 / 1M = $0.0006
+1,000 cache write × $3.75 / 1M = $0.00375
+  500 output      × $15   / 1M = $0.0075
+                         total = $0.03285  →  32.85 AI points
+```
+
+### Gateway vs direct pricing
+
+`pricing` is the price **on this connection**. The AI Gateway and the direct provider are different connections, and they can bill differently. Set the price you actually pay.
+
+| Connection                                        | Reports its cost?           | What VitNode needs           |
+| :------------------------------------------------ | :-------------------------- | :--------------------------- |
+| AI Gateway id, e.g. `'anthropic/claude-sonnet-5'` | Often, in response metadata | `pricing` for reservations   |
+| OpenRouter-compatible provider                    | Yes, `usage.cost`           | `pricing` for reservations   |
+| Direct provider, e.g. `openai('gpt-4o-mini')`     | No                          | `pricing` for every estimate |
+
+When a provider changes its prices, update `pricing` and deploy. Runs already charged keep the price version they were charged at.
+
+<Callout type="warn" title="Reported cost does not replace pricing under a cap">
+  The reservation happens _before_ the call, so it can only use pricing. A
+  gateway model that reports its cost but has no pricing at all is still refused
+  with `AI_PRICING_MISSING` while a budget cap applies.
+</Callout>
+
+### Provider-reported cost
+
+Provider adapters read cost and request ids from a provider's response metadata. The AI Gateway and OpenRouter adapters are built in. Every other provider reports no cost, so pricing estimates it.
+
+Add an adapter for another provider that reports its cost:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import type { AiProviderAdapter } from '@vitnode/core/api/lib/ai/usage-cost'
+
+import { decimalFromNumber } from '@vitnode/core/api/lib/ai/decimal'
+
+const acmeAdapter: AiProviderAdapter = {
+  id: 'acme',
+  matches: (providerId) => providerId.startsWith('acme'),
+  reportedCost: (metadata) => {
+    const cost = metadata?.acme?.costUsd
+
+    return typeof cost === 'number' ? decimalFromNumber(cost) : null
+  },
+  requestId: ({ responseId }) => responseId ?? null,
+}
+
+export const vitNodeApiConfig = buildApiConfig({
+  ai: {
+    models: [/* ... */],
+    providerAdapters: [acmeAdapter], // [!code ++]
+  },
+})
+```
+
+`matches()` receives the model's provider id: `"gateway"` for AI Gateway string ids, otherwise the SDK model's `provider`. Your adapters are checked before the built-in ones. An optional `lookupCost(requestId)` lets reconciliation ask for the billed amount later.
+
+## Runs with several calls
+
+One run can make several provider calls: a retry, a fallback model, or extra steps in a tool loop. Each one is stored as its own call with its own usage and cost.
+
+The run's cost is the sum of its calls, computed once at settlement. It is **known** only when every call's cost is known. If any call is unknown, the run is unknown and is charged as described in [Who pays what](#who-pays-what).
+
+## Reconciliation and adjustments
+
+Some providers report the billed amount only after the response. The AI Gateway, for example, can look a generation up by its id. Reconciliation revisits recent calls whose cost was estimated or unknown, asks the provider adapter's `lookupCost()`, and replaces the cost with the billed amount.
+
+Every correction:
+
+- writes an **audit row** with the previous cost, the new cost and the difference;
+- happens **once** per call, so a second attempt changes nothing;
+- moves the budgets by the **difference** only, so nothing is counted twice;
+- adjusts the user's points only if the user was charged for that run.
+
+A provider-reported cost is final and is never reconciled.
+
+## AI points
+
+Users are charged in **AI points**, not dollars:
+
+> **1 AI point = 0.001 USD** of API cost (conversion version 1)
+
+| API cost | AI points |
+| :------- | :-------- |
+| $0.0003  | 0.3       |
+| $0.003   | 3         |
+| $0.012   | 12        |
+| $1       | 1,000     |
+
+- Points are an internal usage unit. Nobody buys them.
+- Points keep full precision when stored and charged. The UI shows at most one decimal, and `<0.1` for tiny positive amounts.
+- The conversion version is stored on every run. A future rate change becomes a new version, and old runs keep theirs.
+
+## Budgets
+
+Every run holds room in each budget that applies to it:
+
+| Budget        | Unit   | Applies to  | Limit set by                          | On overflow              |
+| :------------ | :----- | :---------- | :------------------------------------ | :----------------------- |
+| Site (global) | USD    | Every run   | Monthly site budget (`null` = no cap) | `AI_BUDGET_EXHAUSTED`    |
+| System        | USD    | System runs | Optional system budget (`null` = off) | `AI_BUDGET_EXHAUSTED`    |
+| User          | Points | User runs   | Role policies and user overrides      | `AI_USER_LIMIT_REACHED`  |
+| Daily         | Runs   | User runs   | Daily limit per permission            | `AI_DAILY_LIMIT_REACHED` |
+
+The system budget is an extra cap on background work, such as automatic image ALT text. System runs never touch a user's points or daily counters, but they still count against the site budget.
+
+Budgets are calendar periods in the **site's time zone** (the default language's time zone). A monthly budget resets at local midnight on the 1st, wherever the server runs. Limit errors include `resetsAt`.
+
+## Reservations
+
+Before any provider call, VitNode **reserves** the most the run could possibly cost:
+
+- every attempt (`1 + maxRetries`), every step (`maxSteps`) and the fallback model;
+- each at the model's dearest input rate and the highest tier the input could reach;
+- the full `maxOutputTokens` for every call;
+- the prompt measured in UTF-8 bytes, plus `imageInputTokens` per image. A prompt never has more tokens than bytes.
+
+The reservation is a conservative upper bound. Settlement charges the real cost and releases the rest.
+
+How it stays correct with many API instances:
+
+- Reserving is **one short database transaction**. It locks the budget rows, checks the rate, concurrency and every cap, then writes the run and its holds.
+- Budget rows are always locked in the **same order** (by scope key), so two runs can never deadlock.
+- **No transaction is open during the provider call.** A slow model never holds a database lock.
+- Settlement is **idempotent**. A run settles exactly once, and a second settlement changes nothing.
+
+## Who pays what
+
+| Outcome                                    | Site budget (USD)                 | User points and daily count        |
+| :----------------------------------------- | :-------------------------------- | :--------------------------------- |
+| Valid result delivered, cost known         | Real cost                         | Real cost in points, +1 run        |
+| Valid result delivered, cost unknown       | Full reservation                  | Full reservation in points, +1 run |
+| Retry: a lost attempt, then a valid answer | Full reservation (unknown)        | Only the answering call, +1 run    |
+| Provider returned an error                 | Real cost (usually $0)            | Nothing                            |
+| Invalid output (empty, failed validation)  | Real cost, since tokens were used | Nothing                            |
+| Timeout or canceled                        | Full reservation (unknown)        | Nothing                            |
+| Process died mid-call (lease expired)      | Full reservation (unknown)        | Nothing                            |
+
+**A user is charged only when a valid result is delivered.** When the provider fails, times out, or the answer is unusable, the site pays for whatever the provider may have billed. Reconciliation can correct an unknown charge later.
+
+Runs whose process died stay `running` until their lease expires, which takes `timeoutMs` per possible attempt plus one minute. The `ai-maintenance` cron (every 10 minutes) then settles them as `uncertain`. The same cron reconciles costs and prunes history, so the host must run VitNode's cron. See [Cron](/docs/dev/cron).
+
+## Role policies and user overrides
+
+Admins control who may use AI and how much in the AdminCP:
+
+- **AI permissions per role**: on the **Artificial intelligence (AI)** tab of the role form, grant or deny each action permission, with an optional daily limit.
+- **Monthly point policies per role**: on the same tab, set an allowance in points, or unlimited.
+- **Default monthly points**: the site-wide allowance when no role policy gives more (**Artificial Intelligence (AI) → Overview → Settings**).
+- **User overrides**: on the **AI access** card of a member's AdminCP page, block them, make them unlimited, or set their own allowance.
+
+How multiple roles combine:
+
+- **Any granting role grants.** A permission no role mentions falls back to the action's `defaultGranted`.
+- **The largest allowance wins.** Allowances are never summed: a user in "Editors" (500 points) and "Moderators" (2,000 points) gets 2,000, not 2,500. The default monthly points act as a floor.
+- **The largest daily limit wins** among granting roles. A granting role with no daily limit lifts the role limit, and the action's own daily limit applies.
+- **Root roles** always have access, with no personal point cap.
+- **A user override replaces** what the roles give. A blocked user cannot run any action.
+
+<Callout type="warn" title="Users start with zero points">
+  The default monthly points are `0`. Until an admin sets a role policy, an
+  override or a higher default, only root roles can run priced user actions.
+  Everyone else gets `AI_USER_LIMIT_REACHED`.
+</Callout>
+
+## Rate and concurrency limits
+
+| Setting             | Default | Counts                                     |
+| :------------------ | :------ | :----------------------------------------- |
+| Requests per minute | 10      | Runs a user started in the last 60 seconds |
+| User concurrency    | 2       | A user's runs still in flight              |
+| System concurrency  | 2       | System runs still in flight                |
+
+VitNode checks both inside the reservation transaction, under the same locks as the budgets. Two requests from one user cannot both slip past the limit. A refused run fails with `AI_RATE_LIMITED` or `AI_CONCURRENCY_LIMITED` before any provider call.
+
+## Missing pricing
+
+When a model has no effective pricing, VitNode cannot bound the run:
+
+- **Under any money cap**, the run is refused with `AI_PRICING_MISSING` before any provider call. The site budget, the system budget and the user's points all count as money caps.
+- **Daily run counts** need no pricing.
+- **With no cap at all**, the run goes ahead. Its cost is recorded as `unknown` and counted among unknown costs in the AdminCP.
+
+Add `pricing` to the model in `vitnode.api.config.ts` to fix it.
+
+## History and retention
+
+Every run and every provider call is stored in PostgreSQL: action, actor, model, prompt version, tokens, cost source, charges, status and error code.
+
+History is kept for **365 days** by default (adjustable from 7 to 3,650). Pruning runs on its own schedule, independent of queue cleanup, and removes only settled runs and finished budget periods with nothing reserved.
+
+## No Redis required
+
+Budgets, reservations, rate limits, concurrency and idempotency keys live in PostgreSQL and change inside transactions. AI accounting is correct with any number of API instances, with or without `REDIS_URL`.
+
+## Learn more
+
+<Cards>
+  <Card
+    title="AI Actions"
+    description="Define and run managed AI features"
+    href="/docs/dev/ai/actions"
+  />
+  <Card
+    title="AI Setup"
+    description="Configure models, capabilities and pricing"
+    href="/docs/dev/ai"
+  />
+</Cards>

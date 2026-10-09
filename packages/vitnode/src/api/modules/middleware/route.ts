@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AI_MODEL_CAPABILITIES } from "@/api/lib/ai/capabilities";
 import { buildRoute } from "@/api/lib/route";
 import { loadPublicNavigationMenus } from "@/api/modules/admin/navigation/lib/cache";
 import {
@@ -12,9 +13,11 @@ export const routeMiddlewareSchema = z.object({
   ai: z.object({
     models: z.array(
       z.object({
+        capabilities: z.array(z.enum(AI_MODEL_CAPABILITIES)),
         id: z.string(),
         model: z.string(),
         name: z.string(),
+        provider: z.string(),
       }),
     ),
   }),

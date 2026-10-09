@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { createHash } from "node:crypto";
 
 import type { StorageFileInUseBody } from "@/lib/files/in-use";
 
@@ -19,6 +20,8 @@ import {
 } from "@/lib/api/upload";
 import { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 import { formatBytes } from "@/lib/format-bytes";
+
+import { enqueueAltAfterUpload } from "../lib/ai/alt";
 
 const DEFAULT_IMAGE_QUALITY = 85;
 
@@ -82,6 +85,10 @@ export interface StorageStaticConfig {
 export interface StorageApiPlugin {
   delete: (key: string) => Promise<void>;
   getUrl: (key: string) => string;
+  read?: (
+    key: string,
+    options: { maxBytes: number },
+  ) => Promise<null | Uint8Array>;
   static?: StorageStaticConfig;
   upload: (args: StorageUploadArgs) => Promise<StorageUploadResult>;
 }
@@ -418,6 +425,41 @@ export class StorageModel {
     return this.requireProvider().getUrl(key);
   }
 
+  async readBytes(key: string, maxBytes: number): Promise<Buffer | null> {
+    const provider = this.requireProvider();
+    if (provider.read) {
+      const bytes = await provider.read(key, { maxBytes });
+
+      return bytes && bytes.byteLength <= maxBytes ? Buffer.from(bytes) : null;
+    }
+
+    const response = await fetch(provider.getUrl(key));
+    if (!response.ok || !response.body) return null;
+    const declared = Number(response.headers.get("content-length") ?? "0");
+    if (declared > maxBytes) {
+      await response.body.cancel();
+
+      return null;
+    }
+
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const reader = response.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+
+        return null;
+      }
+      chunks.push(value);
+    }
+
+    return Buffer.concat(chunks);
+  }
+
   async upload({
     allowedMimeTypes,
     file,
@@ -488,6 +530,9 @@ export class StorageModel {
           size,
           userId: ownerId,
           pluginId: this.c.get("plugin")?.id ?? null,
+          fingerprint: createHash("sha256")
+            .update(processed.body)
+            .digest("hex"),
           metadata: {
             ...(metadata ?? {}),
             ...(processed.dimensions
@@ -511,6 +556,8 @@ export class StorageModel {
           "The file was stored but could not be recorded in the database, so it cannot be referenced. Nothing was kept - try again.",
       });
     }
+
+    await enqueueAltAfterUpload(this.c, { id: created.id, mimeType });
 
     return {
       ...result,

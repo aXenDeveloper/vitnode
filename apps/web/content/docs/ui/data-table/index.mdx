@@ -148,6 +148,16 @@ rowOpens={user => navigate({ to: `/admin/core/users/${user.id}` })}
     href="/docs/ui/data-table/draggable-rows"
     description="Reorder rows and save the order."
   />
+  <Card
+    title="Custom rows"
+    href="/docs/ui/data-table/custom-rows"
+    description="Render each row as your own layout instead of cells."
+  />
+  <Card
+    title="Grouped rows"
+    href="/docs/ui/data-table/grouped-rows"
+    description="Sort rows into categories, each under its own heading."
+  />
 </Cards>
 
 ## API
@@ -163,9 +173,17 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
     },
     columns: {
       description:
-        'Accessor columns (`accessorKey: keyof T`) or display columns (`id: string`).',
-      required: true,
+        'Accessor columns (`accessorKey: keyof T`) or display columns (`id: string`). Leave out when you pass `renderRow`.',
       type: `ColumnDef<T>[]`,
+    },
+    renderRow: {
+      description:
+        'Renders each row as one full-width layout instead of column cells. Takes over from `columns`.',
+      type: '(data: { row: T; allData: T[] }) => ReactNode',
+    },
+    groupBy: {
+      description: 'Puts rows under a heading for each group.',
+      type: 'GroupByDataTable<T>',
     },
     edges: {
       description: 'The rows of the current page.',

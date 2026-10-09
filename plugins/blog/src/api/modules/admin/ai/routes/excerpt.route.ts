@@ -1,15 +1,8 @@
 import { buildRoute } from "@vitnode/core/api/lib/route";
-import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { writeExcerptWithAi } from "@/api/lib/ai-writing";
+import { EXCERPT_AI_ACTION, zodExcerptAiSchema } from "@/api/ai/actions";
 import { CONFIG_PLUGIN } from "@/const";
-
-export const zodExcerptAiSchema = z.object({
-  content: z.string().trim().min(1).max(200_000),
-  locale: z.string().min(2).max(16),
-  title: z.string().trim().min(1).max(255),
-});
 
 export const excerptAiAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -32,22 +25,19 @@ export const excerptAiAdminRoute = buildRoute({
         },
         description: "The written excerpt",
       },
-      400: { description: "No AI model is configured" },
+      400: { description: "No AI model is configured or the input is invalid" },
+      403: { description: "No access to posts or to this AI feature" },
+      429: { description: "A personal AI limit was reached" },
+      502: { description: "The AI provider failed or answered unusably" },
+      503: { description: "AI is switched off or the site budget is used up" },
     },
   },
   handler: async c => {
-    if (!c.get("core").ai?.models.length) {
-      throw new HTTPException(400, { message: "No AI models configured" });
-    }
-
-    const { content, locale, title } = c.req.valid("json");
-    const excerpt = await writeExcerptWithAi({
-      content,
-      locale,
-      model: c.get("ai").model(),
-      title,
+    const { output } = await c.get("ai").run({
+      action: EXCERPT_AI_ACTION,
+      input: c.req.valid("json"),
     });
 
-    return c.json({ text: excerpt }, 200);
+    return c.json({ text: output }, 200);
   },
 });

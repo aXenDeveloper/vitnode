@@ -17,6 +17,7 @@ export {
   MAX_NAMESPACES,
   validateIntlInput,
 } from "./query";
+export { RememberUrlLocale } from "./remember-url-locale";
 export { RouteMessages } from "./route-messages";
 export type {
   ConfigureIntlOptions,

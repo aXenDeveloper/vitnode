@@ -13,7 +13,12 @@ import { ContentFormProvider } from "./context";
 import { ContentFormHeader, ContentFormSection } from "./layout-primitives";
 
 export type ContentFormSkeletonControl =
-  "editor" | "input" | "list" | "media" | "switch" | "textarea";
+  | "editor"
+  | "input"
+  | "list"
+  | "media"
+  | "switch"
+  | "textarea";
 
 interface ContentFormSkeletonField {
   control: ContentFormSkeletonControl;

@@ -1,4 +1,9 @@
 import { defineRoutes, index, layout, lazy, page } from "./routing";
+import { ADMIN_AI_NAMESPACES } from "./tanstack/admin/ai/route";
+import {
+  normalizeAiHistoryRouteSearch,
+  normalizeAiOverviewSearch,
+} from "./tanstack/admin/ai/route-search";
 import { contentListRouteSearch } from "./tanstack/admin/content/route-search";
 import { ADMIN_CRON_NAMESPACES } from "./tanstack/admin/cron/route";
 import { normalizeCronRouteSearch } from "./tanstack/admin/cron/route-search";
@@ -158,6 +163,11 @@ export const routes = defineRoutes([
         pendingComponent: FormPendingSkeleton,
         search: normalizeSsoSettingsSearch,
       }),
+
+      page("ai", {
+        component: lazy(() => import("./pages/settings/ai")),
+        pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
     ],
   }),
 
@@ -185,6 +195,29 @@ export const routes = defineRoutes([
     pendingComponent: AuthPendingSkeleton,
     requires: "admin-guest",
     search: normalizeAdminSignInSearch,
+  }),
+
+  page("/admin/core/ai", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/ai/index")),
+    messages: ADMIN_AI_NAMESPACES,
+    pendingComponent: CardsPendingSkeleton,
+    search: normalizeAiOverviewSearch,
+  }),
+
+  page("/admin/core/ai/actions", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/ai/actions")),
+    messages: ADMIN_AI_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+  }),
+
+  page("/admin/core/ai/history", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/ai/history")),
+    messages: ADMIN_AI_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+    search: normalizeAiHistoryRouteSearch,
   }),
 
   page("/admin/core/advanced/cron", {

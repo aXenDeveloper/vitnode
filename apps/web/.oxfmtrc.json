@@ -1,0 +1,18 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 80,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/.output",
+    "**/.nitro",
+    "**/.tanstack",
+    "**/.vercel",
+    "**/.turbo",
+    "**/*.gen.ts",
+    "**/*.gen.d.ts"
+  ]
+}

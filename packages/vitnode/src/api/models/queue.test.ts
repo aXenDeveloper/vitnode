@@ -12,11 +12,13 @@ const harness = ({ plugin }: { plugin?: string } = {}) => {
   const handle = (name: string) => ({
     insert: () => ({
       values: (values: Record<string, unknown>) => ({
-        returning: async () => {
-          inserts.push({ handle: name, values });
+        onConflictDoNothing: () => ({
+          returning: async () => {
+            inserts.push({ handle: name, values });
 
-          return await Promise.resolve([{ id: 1 }]);
-        },
+            return await Promise.resolve([{ id: 1 }]);
+          },
+        }),
       }),
     }),
   });

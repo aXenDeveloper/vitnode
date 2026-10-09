@@ -1,0 +1,476 @@
+import type { z } from "zod";
+
+import { queryOptions } from "@tanstack/react-query";
+
+import type { zodAiOverview } from "@/api/modules/admin/ai/routes/overview.route";
+import type {
+  zodAiAction,
+  zodAiModel,
+  zodAiSettingsResponse,
+} from "@/api/modules/admin/ai/schemas";
+import type { AiOverviewPreset } from "@/lib/ai/overview-range";
+import type { AiRunStatusValue } from "@/lib/ai/run-status";
+import type {
+  AdminTableContract,
+  AdminTablePage,
+  AdminTableParams,
+} from "@/views/admin/table/params";
+import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
+
+import { CONFIG_PLUGIN } from "@/config";
+import {
+  OPERATIONAL_STALE_TIME,
+  RECORD_STALE_TIME,
+} from "@/lib/query-freshness";
+import { fetcher } from "@/tanstack/fetcher";
+import {
+  AdminRequestError,
+  describeAdminParams,
+} from "@/views/admin/admin-request";
+import {
+  adminScopedQueryKey,
+  adminScopedQueryRoot,
+} from "@/views/admin/views/core/shared/admin-scope";
+
+export const ADMIN_AI_SCREEN = "ai";
+
+export interface AiOverviewSearch {
+  from?: string;
+  month?: string;
+  range?: AiOverviewPreset;
+  to?: string;
+}
+
+export type AdminAiOverview = z.infer<typeof zodAiOverview>;
+
+export type AiUsageTotals = AdminAiOverview["range"]["totals"];
+
+export type AiUsageDay = AdminAiOverview["range"]["days"][number];
+
+export type AiUsageEntity = AdminAiOverview["byAction"][number];
+
+export type AdminAiSettings = z.infer<typeof zodAiSettingsResponse>;
+
+export type AdminAiModel = z.infer<typeof zodAiModel>;
+export type AdminAiAction = z.infer<typeof zodAiAction>;
+
+export interface AdminAiRoleAccess {
+  permissions: AdminAiRolePermission[];
+  role: null | {
+    grants: {
+      dailyLimit: null | number;
+      granted: boolean;
+      permission: string;
+    }[];
+    monthlyPoints: null | string;
+    root: boolean;
+    unlimited: boolean;
+  };
+}
+
+export interface AdminAiRolePermission {
+  actions: {
+    description: string;
+    icon: null | string;
+    key: string;
+    title: string;
+  }[];
+  defaultGranted: boolean;
+  key: string;
+}
+
+export interface AdminAiUserOverride {
+  blocked: boolean;
+  monthlyPoints: null | string;
+  unlimited: boolean;
+}
+
+export interface AdminAiRunRow {
+  accepted: boolean | null;
+  actionKey: string;
+  actorType: "system" | "user";
+  chargedPoints: null | string;
+  chargedUsd: null | string;
+  costSource: null | string;
+  costUsd: null | string;
+  createdAt: Date | string;
+  errorCode: null | string;
+  finishedAt: Date | null | string;
+  id: number;
+  inputTokens: null | number;
+  modelId: null | string;
+  outputTokens: null | number;
+  provider: null | string;
+  resourceId: null | string;
+  resourceType: null | string;
+  status: AiRunStatusValue;
+  user: null | { id: number; name: string; nameCode: string };
+}
+
+export interface AdminAiRunCall {
+  attempt: number;
+  cacheReadTokens: null | number;
+  cacheWriteTokens: null | number;
+  costReason: null | string;
+  costSource: string;
+  costUsd: null | string;
+  errorCode: null | string;
+  finishedAt: Date | null | string;
+  id: number;
+  images: number;
+  inputTokens: null | number;
+  modelId: string;
+  outputTokens: null | number;
+  pricingVersion: null | string;
+  provider: string;
+  providerModelId: null | string;
+  providerRequestId: null | string;
+  reasoningTokens: null | number;
+  startedAt: Date | string;
+  status: string;
+}
+
+export interface AdminAiRunAdjustment {
+  createdAt: Date | string;
+  deltaUsd: string;
+  id: number;
+  newCostUsd: string;
+  newSource: string;
+  previousCostUsd: null | string;
+  previousSource: string;
+  reason: string;
+}
+
+export interface AdminAiRunDetail {
+  adjustments: AdminAiRunAdjustment[];
+  calls: AdminAiRunCall[];
+  run: AdminAiRunRow & {
+    promptVersion: number;
+    reservedPoints: string;
+    reservedUsd: string;
+    settlement: string;
+  };
+}
+
+export const AI_HISTORY_ORDER_BY = ["createdAt"] as const;
+export type AiHistoryOrderBy = (typeof AI_HISTORY_ORDER_BY)[number];
+
+export const AI_HISTORY_TABLE_CONTRACT: AdminTableContract<AiHistoryOrderBy> = {
+  orderBy: AI_HISTORY_ORDER_BY,
+};
+
+export const AI_HISTORY_ACTOR_TYPES = ["user", "system"] as const;
+export type AiHistoryActorType = (typeof AI_HISTORY_ACTOR_TYPES)[number];
+
+export interface AiHistoryFilters {
+  action?: string;
+  actorType?: AiHistoryActorType;
+  modelId?: string;
+  status?: AiRunStatusValue;
+}
+
+export type AiHistoryParams = AiHistoryFilters &
+  Omit<AdminTableParams<AiHistoryOrderBy>, "orderBy" | "search" | "status">;
+
+export type AdminAiHistoryPage = AdminTablePage<AdminAiRunRow>;
+
+export type AdminAiOverviewFetcher = (
+  search: AiOverviewSearch,
+) => Promise<AdminAiOverview>;
+
+export const fetchAdminAiOverview: AdminAiOverviewFetcher = async search => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: search },
+    method: "get",
+    module: "admin/ai",
+    path: "/overview",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the AI overview",
+      describeAdminParams(search),
+    );
+  }
+
+  return await response.json();
+};
+
+export type AdminAiSettingsFetcher = () => Promise<AdminAiSettings>;
+
+export const fetchAdminAiSettings: AdminAiSettingsFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/ai",
+    path: "/settings",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the AI settings");
+  }
+
+  return await response.json();
+};
+
+export type AdminAiModelsFetcher = () => Promise<{ models: AdminAiModel[] }>;
+
+export const fetchAdminAiModels: AdminAiModelsFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/ai",
+    path: "/models",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the AI models");
+  }
+
+  return await response.json();
+};
+
+export type AdminAiActionsFetcher = () => Promise<{
+  actions: AdminAiAction[];
+}>;
+
+export const fetchAdminAiActions: AdminAiActionsFetcher = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "admin/ai",
+    path: "/actions",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "the AI actions");
+  }
+
+  return await response.json();
+};
+
+export type AdminAiRoleAccessFetcher = (
+  roleId: null | number,
+) => Promise<AdminAiRoleAccess>;
+
+export const fetchAdminAiRoleAccess: AdminAiRoleAccessFetcher =
+  async roleId => {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { query: roleId === null ? {} : { roleId } },
+      method: "get",
+      module: "admin/ai",
+      path: "/access/roles",
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the AI access of a role",
+        `roleId=${roleId ?? "new"}`,
+      );
+    }
+
+    return await response.json();
+  };
+
+export type AdminAiUserOverrideFetcher = (
+  userId: number,
+) => Promise<{ override: AdminAiUserOverride | null }>;
+
+export const fetchAdminAiUserOverride: AdminAiUserOverrideFetcher =
+  async userId => {
+    const response = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      args: { params: { userId } },
+      method: "get",
+      module: "admin/ai",
+      path: "/access/users/{userId}",
+    });
+
+    if (!response.ok) {
+      throw new AdminRequestError(
+        response.status,
+        "the AI exception of a user",
+        `userId=${userId}`,
+      );
+    }
+
+    return await response.json();
+  };
+
+export type AdminAiHistoryFetcher = (
+  params: AiHistoryParams,
+) => Promise<AdminAiHistoryPage>;
+
+export const fetchAdminAiHistory: AdminAiHistoryFetcher = async params => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: params },
+    method: "get",
+    module: "admin/ai",
+    path: "/history",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(
+      response.status,
+      "the AI history",
+      describeAdminParams(params),
+    );
+  }
+
+  return await response.json();
+};
+
+export type AdminAiRunFetcher = (id: number) => Promise<AdminAiRunDetail>;
+
+export const fetchAdminAiRun: AdminAiRunFetcher = async id => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { params: { id } },
+    method: "get",
+    module: "admin/ai",
+    path: "/history/{id}",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, "an AI run", `id=${id}`);
+  }
+
+  return await response.json();
+};
+
+export const adminAiQueryRoot = (adminUserId: AdminIdentity) =>
+  adminScopedQueryRoot(ADMIN_AI_SCREEN, adminUserId);
+
+export const adminAiOverviewQueryOptions = ({
+  adminUserId,
+  search,
+}: {
+  adminUserId: AdminIdentity;
+  search: AiOverviewSearch;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiOverview(search),
+    queryKey: adminScopedQueryKey(
+      ADMIN_AI_SCREEN,
+      adminUserId,
+      "overview",
+      search.range ?? null,
+      search.from ?? null,
+      search.to ?? null,
+      search.month ?? null,
+    ),
+    retry: false,
+    staleTime: OPERATIONAL_STALE_TIME,
+  });
+
+export const adminAiSettingsQueryOptions = ({
+  adminUserId,
+}: {
+  adminUserId: AdminIdentity;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiSettings(),
+    queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "settings"),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiModelsQueryOptions = ({
+  adminUserId,
+}: {
+  adminUserId: AdminIdentity;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiModels(),
+    queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "models"),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiActionsQueryOptions = ({
+  adminUserId,
+}: {
+  adminUserId: AdminIdentity;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiActions(),
+    queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "actions"),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiRoleAccessQueryOptions = ({
+  adminUserId,
+  roleId,
+}: {
+  adminUserId: AdminIdentity;
+  roleId: null | number;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiRoleAccess(roleId),
+    queryKey: adminScopedQueryKey(
+      ADMIN_AI_SCREEN,
+      adminUserId,
+      "role-access",
+      roleId,
+    ),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiUserOverrideQueryOptions = ({
+  adminUserId,
+  userId,
+}: {
+  adminUserId: AdminIdentity;
+  userId: number;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiUserOverride(userId),
+    queryKey: adminScopedQueryKey(
+      ADMIN_AI_SCREEN,
+      adminUserId,
+      "user-override",
+      userId,
+    ),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });
+
+export const adminAiHistoryQueryOptions = ({
+  adminUserId,
+  params,
+}: {
+  adminUserId: AdminIdentity;
+  params: AiHistoryParams;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiHistory(params),
+    queryKey: adminScopedQueryKey(
+      ADMIN_AI_SCREEN,
+      adminUserId,
+      "history",
+      params,
+    ),
+    retry: false,
+    staleTime: OPERATIONAL_STALE_TIME,
+  });
+
+export const adminAiRunQueryOptions = ({
+  adminUserId,
+  id,
+}: {
+  adminUserId: AdminIdentity;
+  id: number;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchAdminAiRun(id),
+    queryKey: adminScopedQueryKey(ADMIN_AI_SCREEN, adminUserId, "run", id),
+    retry: false,
+    staleTime: RECORD_STALE_TIME,
+  });

@@ -5,6 +5,7 @@ import type {
   ContentBooleanField,
   ContentDateTimeField,
   ContentEnumField,
+  ContentFieldAiAssist,
   ContentFileField,
   ContentGroupField,
   ContentNumberField,
@@ -57,6 +58,7 @@ const text = <
 >(
   args: LocalizableArgs<TLocalized> &
     SharedArgs<TRequired, TNullable> & {
+      ai?: ContentFieldAiAssist;
       defaultValue?: TDefault;
       maxLength?: number;
       minLength?: number;
@@ -78,6 +80,7 @@ const textarea = <
 >(
   args: LocalizableArgs<TLocalized> &
     SharedArgs<TRequired, TNullable> & {
+      ai?: ContentFieldAiAssist;
       defaultValue?: TDefault;
       maxLength?: number;
       minLength?: number;

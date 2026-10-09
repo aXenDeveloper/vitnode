@@ -13,6 +13,7 @@ import { adminRolesQuery } from "./query";
 export const ADMIN_ROLES_NAMESPACES = [
   "admin.global",
   "admin.role",
+  "ai_actions",
   "core.global",
 ] as const;
 

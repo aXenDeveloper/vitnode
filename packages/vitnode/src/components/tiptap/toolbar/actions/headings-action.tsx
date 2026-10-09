@@ -83,7 +83,10 @@ export const HeadingsAction = () => {
                   editor.chain().focus().setParagraph().run();
                 } else {
                   const level = parseInt(item.value.split("-")[1]) as
-                    1 | 2 | 3 | 4;
+                    | 1
+                    | 2
+                    | 3
+                    | 4;
                   editor.chain().focus().toggleHeading({ level }).run();
                 }
               }}

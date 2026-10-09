@@ -3,9 +3,13 @@ import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
 
-import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
+import {
+  AdminStaffPermissionGate,
+  useAdminStaffPermission,
+} from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { PageTitle } from "@/components/ui/page-title";
+import { ADMIN_AI_PERMISSIONS } from "@/views/admin/views/core/ai/ai-permissions";
 import { ADMIN_ROLE_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 import { searchAdminRolesInBrowser } from "@/views/admin/views/core/users/roles/roles-query";
 import {
@@ -18,6 +22,7 @@ import type { AdminRolesRouteData } from "./route";
 import type { RolesRouteSearch, UncheckedRolesSearch } from "./route-search";
 
 import { RouteMessages } from "../../i18n/route-messages";
+import { adminAiRoleAccessQuery } from "../ai/query";
 import { useAdminRoleMutations } from "./query";
 import { adminRolesQuery } from "./query";
 import { ADMIN_ROLES_NAMESPACES } from "./route";
@@ -38,6 +43,15 @@ export const AdminRolesRouteContent = ({
 }: AdminRolesRouteProps) => {
   const { data } = useSuspenseQuery(adminRolesQuery({ adminUserId, params }));
   const { onDelete, onSave, onSaved } = useAdminRoleMutations();
+  const canManageAi = useAdminStaffPermission(ADMIN_AI_PERMISSIONS.manage);
+  const aiAccessQuery = React.useMemo(
+    () =>
+      canManageAi
+        ? (roleId: null | number) =>
+            adminAiRoleAccessQuery({ adminUserId, roleId })
+        : undefined,
+    [adminUserId, canManageAi],
+  );
 
   const navigation = React.useMemo<DataTableNavigation>(
     () => ({
@@ -57,12 +71,17 @@ export const AdminRolesRouteContent = ({
       <div className="p-6">
         <PageTitle desc={description} h1={title}>
           <AdminStaffPermissionGate {...ADMIN_ROLE_PERMISSIONS.create}>
-            <CreateRoleAction onSave={onSave} onSaved={onSaved} />
+            <CreateRoleAction
+              aiAccessQuery={aiAccessQuery}
+              onSave={onSave}
+              onSaved={onSaved}
+            />
           </AdminStaffPermissionGate>
         </PageTitle>
 
         <DataTableNavigationProvider value={navigation}>
           <RolesAdminTableContent
+            aiAccessQuery={aiAccessQuery}
             data={data}
             onDelete={onDelete}
             onSave={onSave}

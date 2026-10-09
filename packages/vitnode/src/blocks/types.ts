@@ -137,7 +137,10 @@ export interface BlockRegistry {
 }
 
 export type BlockRenderFallbackReason =
-  "invalid-data" | "not-allowed" | "unknown-type" | "unknown-variant";
+  | "invalid-data"
+  | "not-allowed"
+  | "unknown-type"
+  | "unknown-variant";
 
 export interface BlockRenderFallbackProps {
   instance: AnyBlockInstance;

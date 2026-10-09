@@ -22,7 +22,8 @@ export const ADMIN_HOME_PATH = "/admin/core";
 export const ADMIN_RETURN_TO_PARAM = "returnTo";
 
 export type AdminAccess<TSession> =
-  AdminSessionDenied | AdminSessionGranted<TSession>;
+  | AdminSessionDenied
+  | AdminSessionGranted<TSession>;
 
 /** The API answered `200`: this browser holds an admin session. */
 export interface AdminSessionGranted<TSession> {
@@ -36,11 +37,13 @@ export interface AdminSessionDenied {
 }
 
 export type AdminSessionFailure =
-  { httpStatus?: number; status: "api_error" } | { status: "network_error" };
+  | { httpStatus?: number; status: "api_error" }
+  | { status: "network_error" };
 
 /** Everything a read of the admin session endpoint can produce. */
 export type AdminSessionRead<TSession> =
-  AdminAccess<TSession> | AdminSessionFailure;
+  | AdminAccess<TSession>
+  | AdminSessionFailure;
 
 /** Whether a read produced a decision rather than a failure. */
 export const isAdminAccess = <TSession>(

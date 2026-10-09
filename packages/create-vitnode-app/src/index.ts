@@ -49,7 +49,7 @@ const init = async () => {
       "Specify the package manager to use",
     ).choices(["npm", "pnpm", "bun"]),
   );
-  program.option("--eslint", "Initialize with ESLint & Prettier config.");
+  program.option("--oxlint", "Initialize with Oxlint & Oxfmt config.");
   program.option(
     "--skip-install",
     "Skip installing packages after initializing the project.",

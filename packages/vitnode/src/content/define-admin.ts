@@ -392,7 +392,8 @@ export const resolveAdmin = <TFields>(
   const thumbnailField = admin.list?.thumbnailField ?? null;
   if (thumbnailField !== null) {
     const descriptor = fields[thumbnailField] as
-      ContentFieldDescriptor | undefined;
+      | ContentFieldDescriptor
+      | undefined;
     if (
       descriptor?.kind !== "file" ||
       descriptor.multiple ||

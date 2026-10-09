@@ -16,6 +16,7 @@ import {
   MultiLangSelect,
   useMultiLangField,
 } from "./multi-lang";
+import { MultiLangSelectedContext } from "./multi-lang-language";
 
 type AutoFormInputProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "value"> & {
@@ -52,7 +53,16 @@ const MultiLangInput = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={
+            labelRight ? (
+              <MultiLangSelectedContext value={selected}>
+                {labelRight}
+              </MultiLangSelectedContext>
+            ) : undefined
+          }
+        >
           {label}
         </AutoFormLabel>
       )}

@@ -9,7 +9,9 @@ import {
 import { core_users, core_users_sso } from "@/database/users";
 
 export type PasskeyCeremony =
-  "admin_sign_in" | "authentication" | "registration";
+  | "admin_sign_in"
+  | "authentication"
+  | "registration";
 
 export interface PasskeyRecord {
   aaguid: null | string;

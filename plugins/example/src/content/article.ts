@@ -13,7 +13,15 @@ export const articleContentType = defineContentType({
     slug: field.slug({ source: "title" }),
     // `unique: true` is all it takes to get a unique index in the migration.
     code: field.text({ required: true, maxLength: 100, unique: true }),
-    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    excerpt: field.textarea({
+      ai: {
+        action: "@vitnode/example:article.excerpt",
+        mode: "suggestion",
+        sourceFields: ["title", "code"],
+      },
+      maxLength: 500,
+      nullable: true,
+    }),
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
     featured: field.boolean({ defaultValue: false }),
 

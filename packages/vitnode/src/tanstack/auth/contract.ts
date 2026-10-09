@@ -46,14 +46,16 @@ export const ssoCallbackInputSchema = z.object({
 export type SsoCallbackInput = z.infer<typeof ssoCallbackInputSchema>;
 
 export type SignInResult =
-  { ok: false; reason: "access_denied" | "server_error" } | { ok: true };
+  | { ok: false; reason: "access_denied" | "server_error" }
+  | { ok: true };
 
 export type PasskeySignInOptions = z.infer<
   typeof zodPasskeyAuthenticationOptionsSchema
 >;
 
 export type PasskeySignInOptionsBody =
-  PasskeySignInOptions | { error: PasskeyErrorCode };
+  | PasskeySignInOptions
+  | { error: PasskeyErrorCode };
 
 export interface PasskeySignInInput {
   response: z.input<typeof zodPasskeyAuthenticationResponseSchema>;
@@ -75,7 +77,8 @@ export type AdminPasskeySignInResult =
   | { ok: true };
 
 export type SignOutResult =
-  { ok: false; reason: "server_error" } | { ok: true };
+  | { ok: false; reason: "server_error" }
+  | { ok: true };
 
 export type SsoStartResult =
   | { ok: false; reason: "server_error" | "unknown_provider" }

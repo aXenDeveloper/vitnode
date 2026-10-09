@@ -10,23 +10,23 @@ import { pluginPackageExports } from "./route-templates.js";
 const writeJson = async (path: string, data: unknown) =>
   writeFile(path, JSON.stringify(data, null, 2));
 
-export const pluginScripts = (eslint: boolean) => ({
+export const pluginScripts = (oxlint: boolean) => ({
   "build:plugins": "vitnode build",
   dev: "vitnode dev",
   test: "vitest run",
   "test:watch": "vitest",
-  ...withIf(eslint, {
-    lint: "turbo lint",
-    "lint:fix": "turbo lint:fix",
+  ...withIf(oxlint, {
+    lint: "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
   }),
 });
 
 export const createPluginPackageJSON = async ({
   pluginName,
   pluginPath,
-  eslint,
+  oxlint,
 }: {
-  eslint: boolean;
+  oxlint: boolean;
   pluginName: string;
   pluginPath: string;
 }) => {
@@ -37,7 +37,7 @@ export const createPluginPackageJSON = async ({
     version: "0.1.0",
     private: true,
     type: "module",
-    scripts: pluginScripts(eslint),
+    scripts: pluginScripts(oxlint),
     exports: pluginPackageExports(),
     dependencies: {
       "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
@@ -62,8 +62,9 @@ export const createPluginPackageJSON = async ({
       "@types/react-dom": versionsPackageJson.typesReactDom,
       "@vitnode/config": vitnodeVersionRange,
       cn: versionsPackageJson.cn,
-      ...withIf(eslint, {
-        eslint: versionsPackageJson.eslint,
+      ...withIf(oxlint, {
+        oxlint: versionsPackageJson.oxlint,
+        "oxlint-tsgolint": versionsPackageJson.oxlintTsgolint,
       }),
       "tsc-alias": versionsPackageJson.tscAlias,
       typescript: versionsPackageJson.typescript,

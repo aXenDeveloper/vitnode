@@ -23,9 +23,17 @@ const paths = (root: string) => ({
 /**
  * Shared blocks
  */
-const eslintScripts = {
-  lint: "eslint .",
-  "lint:fix": "eslint . --fix",
+const oxlintScripts = {
+  lint: "oxlint --type-aware",
+  "lint:fix": "oxlint --type-aware --fix",
+};
+const formatScripts = {
+  format: "oxfmt",
+};
+const oxcDevDeps = {
+  oxfmt: versionsPackageJson.oxfmt,
+  oxlint: versionsPackageJson.oxlint,
+  "oxlint-tsgolint": versionsPackageJson.oxlintTsgolint,
 };
 const i18nCommands = [
   "i18n:create",
@@ -72,7 +80,7 @@ const dockerDevScript = (appName: string) =>
  * script, so nothing in this line makes the frontend own migrations.
  */
 export const rootScripts = (
-  enableEslint: boolean,
+  enableOxlint: boolean,
   enableDocker: boolean,
   appName: string,
   pm: string,
@@ -85,9 +93,10 @@ export const rootScripts = (
   build: "turbo build",
   start: "turbo start",
   ...i18nRootScripts(pm, i18nAppDir),
-  ...withIf(enableEslint, {
+  ...withIf(enableOxlint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
+    ...formatScripts,
   }),
   ...withIf(enableDocker, { "docker:dev": dockerDevScript(appName) }),
 });
@@ -109,7 +118,7 @@ export const rootScripts = (
  */
 export const apiScripts = (
   pm: string,
-  eslint: boolean,
+  oxlint: boolean,
   docker: boolean,
   onlyApi: boolean,
   appName: string,
@@ -124,7 +133,8 @@ export const apiScripts = (
     start: "vitnode start",
     "dev:email": "email dev --dir src/emails",
     ...i18nScripts,
-    ...withIf(eslint, eslintScripts),
+    ...withIf(oxlint, oxlintScripts),
+    ...withIf(oxlint && onlyApi, formatScripts),
     ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
   };
 };
@@ -156,7 +166,7 @@ export const apiScripts = (
  * It never touches a plugin page - see `@vitnode/core/framework/vite`.
  */
 export const singleAppScripts = (
-  eslint: boolean,
+  oxlint: boolean,
   docker: boolean,
   appName: string,
 ) => ({
@@ -167,35 +177,25 @@ export const singleAppScripts = (
   build: "vitnode build",
   start: "vitnode start",
   ...i18nScripts,
-  ...withIf(eslint, eslintScripts),
+  ...withIf(oxlint, { ...oxlintScripts, ...formatScripts }),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
 });
 
-export const webScripts = (eslint: boolean) => ({
+export const webScripts = (oxlint: boolean) => ({
   dev: "vitnode dev",
   build: "vitnode build",
   start: "vitnode start",
   ...i18nScripts,
-  ...withIf(eslint, eslintScripts),
+  ...withIf(oxlint, oxlintScripts),
 });
 
 /**
  * Dependency builders
  */
-const baseDevDeps = (eslint: boolean, includePrettier: boolean) => ({
+const rootDevDeps = (oxlint: boolean) => ({
   "@types/node": versionsPackageJson.typesNode,
-  "@vitnode/config": "", // filled with local version dynamically
-  ...withIf(eslint, {
-    eslint: versionsPackageJson.eslint,
-    ...withIf(includePrettier, {
-      prettier: versionsPackageJson.prettier,
-      "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
-    }),
-  }),
-});
-
-const rootDevDeps = (eslint: boolean) => ({
-  ...baseDevDeps(eslint, true),
+  "@vitnode/config": "",
+  ...withIf(oxlint, oxcDevDeps),
   turbo: versionsPackageJson.turbo,
   typescript: versionsPackageJson.typescript,
   zod: versionsPackageJson.zod,
@@ -215,7 +215,7 @@ const apiDeps = {
   zod: versionsPackageJson.zod,
 };
 
-const apiDevDeps = (pm: string, eslint: boolean) => ({
+const apiDevDeps = (pm: string, oxlint: boolean) => ({
   "@hono/node-server": "^2.0",
   "@react-email/ui": versionsPackageJson.reactEmailUi,
   ...(pm === "bun" ? { "@types/bun": versionsPackageJson.typesBun } : {}),
@@ -225,10 +225,7 @@ const apiDevDeps = (pm: string, eslint: boolean) => ({
   cn: versionsPackageJson.cn,
   "@vitnode/config": "",
   dotenv: versionsPackageJson.dotenv,
-  ...withIf(eslint, {
-    eslint: versionsPackageJson.eslint,
-    // Prettier in API only when onlyApi + eslint in original code – we'll preserve by passing include later if needed
-  }),
+  ...withIf(oxlint, oxcDevDeps),
   "tsc-alias": versionsPackageJson.tscAlias,
   tsx: versionsPackageJson.tsx,
   typescript: versionsPackageJson.typescript,
@@ -281,14 +278,10 @@ const tanstackWebDevDeps = {
   vite: versionsPackageJson.vite,
 };
 
-const singleAppDevDeps = (eslint: boolean) => ({
+const singleAppDevDeps = (oxlint: boolean) => ({
   ...tanstackWebDevDeps,
   "@react-email/ui": versionsPackageJson.reactEmailUi,
-  ...withIf(eslint, {
-    eslint: versionsPackageJson.eslint,
-    prettier: versionsPackageJson.prettier,
-    "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
-  }),
+  ...withIf(oxlint, oxcDevDeps),
   turbo: versionsPackageJson.turbo,
 });
 
@@ -297,10 +290,10 @@ const webDeps = {
   shadcn: versionsPackageJson.shadcn,
 };
 
-const webDevDeps = (eslint: boolean) => ({
+const webDevDeps = (oxlint: boolean) => ({
   ...tanstackWebDevDeps,
   "class-variance-authority": versionsPackageJson.cva,
-  ...withIf(eslint, { eslint: versionsPackageJson.eslint }),
+  ...withIf(oxlint, oxcDevDeps),
 });
 
 /**
@@ -310,16 +303,16 @@ export const createPackageJSON = async ({
   appName,
   packageManager,
   root,
-  eslint,
+  oxlint,
   docker,
   mode,
   monorepo,
 }: {
   appName: string;
   docker?: boolean;
-  eslint: boolean;
   mode: Mode;
   monorepo?: boolean;
+  oxlint: boolean;
   packageManager: string;
   root: string;
 }) => {
@@ -338,14 +331,14 @@ export const createPackageJSON = async ({
       name: appName,
       private: true,
       scripts: rootScripts(
-        eslint,
+        oxlint,
         !!docker,
         appName,
         packageManager,
         isSingleApp ? "apps/web" : "apps/api",
       ),
       devDependencies: {
-        ...rootDevDeps(eslint),
+        ...rootDevDeps(oxlint),
         "@vitnode/config": vitnodeVersionRange,
       },
       packageManager: pmSpec,
@@ -363,7 +356,7 @@ export const createPackageJSON = async ({
     type: "module",
     scripts: apiScripts(
       packageManager,
-      eslint,
+      oxlint,
       !!docker,
       mode === "onlyApi",
       appName,
@@ -373,14 +366,8 @@ export const createPackageJSON = async ({
       "@vitnode/core": vitnodeVersionRange,
     },
     devDependencies: {
-      ...apiDevDeps(packageManager, eslint),
+      ...apiDevDeps(packageManager, oxlint),
       "@vitnode/config": vitnodeVersionRange,
-      ...(eslint && mode === "onlyApi"
-        ? {
-            prettier: versionsPackageJson.prettier,
-            "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
-          }
-        : {}),
       // TS pipeline pieces when not using Bun for dev
       ...(packageManager === "bun" ? {} : {}),
     },
@@ -393,13 +380,13 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
-      scripts: singleAppScripts(eslint, !!docker, appName),
+      scripts: singleAppScripts(oxlint, !!docker, appName),
       dependencies: {
         ...singleAppDeps,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {
-        ...singleAppDevDeps(eslint),
+        ...singleAppDevDeps(oxlint),
         "@vitnode/config": vitnodeVersionRange,
       },
       packageManager: pmSpec,
@@ -417,13 +404,13 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
-      scripts: webScripts(eslint),
+      scripts: webScripts(oxlint),
       dependencies: {
         ...webDeps,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {
-        ...webDevDeps(eslint),
+        ...webDevDeps(oxlint),
         "@vitnode/config": vitnodeVersionRange,
       },
     };

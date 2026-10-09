@@ -142,5 +142,21 @@
   "@vitnode/blog:posts:can_edit": "Edytowanie artykułów",
   "@vitnode/blog:posts:can_publish": "Publikowanie i cofanie publikacji artykułów",
   "@vitnode/blog:posts:can_restore": "Przywracanie wcześniejszej wersji artykułu",
-  "@vitnode/blog:posts:can_view": "Wyświetlanie listy artykułów"
+  "@vitnode/blog:posts:can_view": "Wyświetlanie listy artykułów",
+  "ai_actions": {
+    "@vitnode/blog": {
+      "article_review": {
+        "title": "Sprawdź artykuł przed publikacją",
+        "description": "Podpowiada, jak poprawić przejrzystość i kompletność przed publikacją."
+      },
+      "excerpt_generate": {
+        "title": "Wygeneruj zajawkę",
+        "description": "Pisze krótką zajawkę artykułu."
+      },
+      "field_translate": {
+        "title": "Przetłumacz pole artykułu",
+        "description": "Tłumaczy jedno pole artykułu na inny język."
+      }
+    }
+  }
 }

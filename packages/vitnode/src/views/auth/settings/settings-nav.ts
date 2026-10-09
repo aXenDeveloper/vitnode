@@ -4,7 +4,12 @@ import { normalizeUrl } from "@/lib/utils";
 export const SETTINGS_ROOT_HREF = "/settings";
 
 export type SettingsNavKey =
-  "devices" | "notifications" | "overview" | "security" | "sso";
+  | "ai"
+  | "devices"
+  | "notifications"
+  | "overview"
+  | "security"
+  | "sso";
 
 export interface SettingsNavItem {
   href: string;
@@ -18,19 +23,25 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: "/settings/devices", key: "devices" },
   { href: "/settings/security", key: "security" },
   { href: "/settings/sso", key: "sso" },
+  { href: "/settings/ai", key: "ai" },
 ];
 
 export const visibleSettingsNavItems = ({
+  ai,
+  aiFeatures = true,
   passkeys,
   sso = [],
 }: {
+  ai?: { models: readonly unknown[] };
+  aiFeatures?: boolean;
   passkeys: boolean;
   sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
   SETTINGS_NAV_ITEMS.filter(
     item =>
       (item.key !== "security" || passkeys) &&
-      (item.key !== "sso" || sso.length > 0),
+      (item.key !== "sso" || sso.length > 0) &&
+      (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)),
   );
 
 /** Whether one navigation item is the panel `pathname` is showing. */

@@ -76,6 +76,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "motion/react",
   "motion/react-m",
   "react-colorful",
+  "react-day-picker",
   "react-resizable-panels",
   "react-scan",
   "sanitize-html",

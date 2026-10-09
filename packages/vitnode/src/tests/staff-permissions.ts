@@ -24,7 +24,8 @@ export const grantStaffPermissions = async (
     userId,
   }: {
     permissions:
-      PermissionsStaffArgs[] | (StaffPermissionSet & { staff?: boolean });
+      | PermissionsStaffArgs[]
+      | (StaffPermissionSet & { staff?: boolean });
     type?: PermissionStaffType;
     userId: number;
   },

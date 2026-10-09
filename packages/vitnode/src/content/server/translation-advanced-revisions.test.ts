@@ -480,9 +480,7 @@ describe("restoring a localized group", () => {
     });
 
     expect(model.update.mock.calls[0][2]).not.toHaveProperty("status");
-    expect((outcome?.row as unknown as { status: string }).status).toBe(
-      "published",
-    );
+    expect(outcome?.row).toHaveProperty("status", "published");
     // The version still moves forward, and the new revision records the state.
     expect(outcome?.version).toBe(2);
     expect(revisions.written[0].snapshot.publication?.status).toBe("published");

@@ -26,11 +26,11 @@
   "scripts": {
     "build:plugins": "vitnode build",
     "dev:plugins": "vitnode dev",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix"
   },
   "dependencies": {
-    "nodemailer": "^10.0.13"
+    "nodemailer": "^10.0.16"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",
@@ -38,7 +38,8 @@
     "@types/nodemailer": "^8.0.2",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
-    "eslint": "^10.11.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "tsc-alias": "^1.9.7",
     "typescript": "^6.0.3"
   }

@@ -24,7 +24,8 @@ export const isAdminTabHeartbeatFresh = (
 };
 
 export type AdminTabHeartbeat =
-  { available: false } | { available: true; heartbeat: null | string };
+  | { available: false }
+  | { available: true; heartbeat: null | string };
 
 export const readAdminTabHeartbeat = (): AdminTabHeartbeat => {
   try {

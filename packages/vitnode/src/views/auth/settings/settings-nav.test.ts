@@ -28,4 +28,28 @@ describe("visibleSettingsNavItems", () => {
       ),
     ).toEqual(["overview", "notifications", "devices"]);
   });
+
+  it("shows AI usage only while the site has an AI model configured", () => {
+    expect(
+      visibleSettingsNavItems({
+        ai: { models: [{ id: "fast" }] },
+        passkeys: false,
+      }).map(item => item.key),
+    ).toEqual(["overview", "notifications", "devices", "ai"]);
+    expect(
+      visibleSettingsNavItems({ ai: { models: [] }, passkeys: false }).map(
+        item => item.key,
+      ),
+    ).toEqual(["overview", "notifications", "devices"]);
+  });
+
+  it("hides AI usage from a member without any AI feature", () => {
+    expect(
+      visibleSettingsNavItems({
+        ai: { models: [{ id: "fast" }] },
+        aiFeatures: false,
+        passkeys: false,
+      }).map(item => item.key),
+    ).toEqual(["overview", "notifications", "devices"]);
+  });
 });

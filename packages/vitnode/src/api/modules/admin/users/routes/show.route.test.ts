@@ -30,7 +30,10 @@ const CAN_VIEW: PermissionsStaffArgs = {
 };
 
 type TargetShape =
-  "admin" | "member" | "moderator" | "root via a secondary role";
+  | "admin"
+  | "member"
+  | "moderator"
+  | "root via a secondary role";
 
 const entryRow = (entry: Record<string, unknown>) => ({
   permissions: [],

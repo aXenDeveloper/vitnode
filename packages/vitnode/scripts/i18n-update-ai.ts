@@ -210,7 +210,7 @@ const translateBatch = async ({
     model,
     output: Output.array({ element: z.string() }),
     temperature: 0,
-    system: [
+    instructions: [
       "You are a professional software localization translator.",
       `Translate each string from English into ${languageName} (${code}).`,
       "Input is a JSON array of strings. Return a JSON array of the same length, in the same order - one translation per input string, and nothing else.",

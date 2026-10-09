@@ -4,7 +4,8 @@ export interface AdminMutationError {
 }
 
 export type AdminMutationResult<TData> =
-  { data: TData } | { error: AdminMutationError };
+  | { data: TData }
+  | { error: AdminMutationError };
 
 /** A thrown `500`, an unreachable API, and a rejected fetch all land here. */
 export const ADMIN_MUTATION_UNREACHABLE = 500;

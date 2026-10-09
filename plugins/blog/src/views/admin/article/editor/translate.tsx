@@ -197,10 +197,12 @@ export const PairRow = ({
 
 export const OutdatedBanner = ({
   action,
+  fields,
   onDismiss,
   sourceName,
 }: {
   action?: React.ReactNode;
+  fields: string[];
   onDismiss: () => void;
   sourceName: string;
 }) => {
@@ -212,7 +214,10 @@ export const OutdatedBanner = ({
       role="status"
     >
       <span className="min-w-0 flex-1 leading-relaxed text-pretty">
-        {t("outdated_banner", { language: sourceName })}
+        {t("outdated_fields", {
+          fields: fields.join(", "),
+          language: sourceName,
+        })}
       </span>
       <div className="flex gap-1">
         {action}

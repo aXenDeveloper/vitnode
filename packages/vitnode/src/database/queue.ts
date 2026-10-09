@@ -1,4 +1,5 @@
-import { camelCase, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { camelCase, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const core_queue = camelCase.table.withRLS(
   "core_queue",
@@ -28,9 +29,15 @@ export const core_queue = camelCase.table.withRLS(
       .defaultNow()
       .$onUpdate(() => new Date()),
     completedAt: t.timestamp(),
+    dedupeKey: t.varchar({ length: 255 }),
   }),
   t => [
     index("core_queue_status_available_at_idx").on(t.status, t.availableAt),
     index("core_queue_created_at_id_idx").on(t.createdAt, t.id),
+    uniqueIndex("core_queue_dedupe_active_unique")
+      .on(t.pluginId, t.dedupeKey)
+      .where(
+        sql`"dedupeKey" IS NOT NULL AND status IN ('pending', 'processing')`,
+      ),
   ],
 );

@@ -63,23 +63,45 @@ The generator creates the package and adds its workspace dependency. Enable the
 feature by registering it in the host’s `vitnode.config.ts`:
 
 ```ts
-import { myPlugin } from '@acme/my-plugin/config'
+import { myPlugin } from "@acme/my-plugin/config";
 
-plugins: [myPlugin()]
+plugins: [myPlugin()];
 ```
 
 ## Options
 
-| Option | Description |
-| --- | --- |
-| `--package-manager` | Choose `npm` or `pnpm` for the generated project. |
-| `--eslint` | Include ESLint and Prettier configuration. |
-| `--skip-install` | Skip dependency installation after scaffolding. |
-| `--skip-git` | Skip initializing a git repository (created on `main` after install). |
-| `--mode` | Choose `singleApp`, `apiMonorepo`, or `onlyApi`. |
-| `--monorepo` | Create a workspace layout for plugins and multiple applications. |
-| `--docker` | Include local Docker services. |
-| `--plugin` | Create a VitNode plugin package. |
+| Option              | Description                                                           |
+| ------------------- | --------------------------------------------------------------------- |
+| `--package-manager` | Choose `npm` or `pnpm` for the generated project.                     |
+| `--oxlint`          | Include Oxlint and Oxfmt configuration.                               |
+| `--skip-install`    | Skip dependency installation after scaffolding.                       |
+| `--skip-git`        | Skip initializing a git repository (created on `main` after install). |
+| `--mode`            | Choose `singleApp`, `apiMonorepo`, or `onlyApi`.                      |
+| `--monorepo`        | Create a workspace layout for plugins and multiple applications.      |
+| `--docker`          | Include local Docker services.                                        |
+| `--plugin`          | Create a VitNode plugin package.                                      |
+
+## Linting
+
+With `--oxlint` (or "yes" at the Oxlint & Oxfmt prompt), every app gets an
+`oxlint.config.ts` built on `@vitnode/config/oxlint`, an `oxfmt.config.ts` built
+on `@vitnode/config/oxfmt`, and these scripts:
+
+```json
+{
+  "lint": "oxlint --type-aware",
+  "lint:fix": "oxlint --type-aware --fix",
+  "format": "oxfmt"
+}
+```
+
+`format` lives at the project root (or the app root outside a monorepo); run
+`oxfmt --check` in CI. `--type-aware` runs the TypeScript-powered rules through
+`oxlint-tsgolint`, which is installed for you.
+
+Oxfmt is Prettier-compatible, so your code looks the same, just formatted much
+faster. There are no Prettier plugins to install: Tailwind class sorting is
+built in.
 
 Read the [VitNode documentation](https://vitnode.com/docs/dev) for setup,
 plugins, deployment, and AdminCP guides.

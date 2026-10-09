@@ -27,7 +27,8 @@ export const captureProcessOutput = (): OutputCapture => {
       typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"),
     );
     const callback = rest.find(arg => typeof arg === "function") as
-      (() => void) | undefined;
+      | (() => void)
+      | undefined;
     callback?.();
 
     return true;

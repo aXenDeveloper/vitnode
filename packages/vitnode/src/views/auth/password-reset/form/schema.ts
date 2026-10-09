@@ -25,7 +25,8 @@ export interface PasswordResetSubmitValues {
 }
 
 export type PasswordResetMutationResult =
-  undefined | { message: "Internal Server Error" };
+  | undefined
+  | { message: "Internal Server Error" };
 
 export const passwordResetFormOutcome = (
   result: PasswordResetMutationResult,

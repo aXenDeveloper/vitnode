@@ -24,3 +24,54 @@ export const numberPlaces = (value: number) => {
     scaled: Number(integer + fraction),
   };
 };
+
+export type NumberSegment =
+  | { exponent: number; kind: "digit" }
+  | { key: string; kind: "text"; text: string };
+
+const ASCII_DIGITS = /^\d*$/;
+
+export const formattedPlaces = (
+  formatter: Intl.NumberFormat,
+  value: number,
+): {
+  fractionDigits: number;
+  scaled: number;
+  segments: NumberSegment[];
+} => {
+  const parts = formatter.formatToParts(value);
+  const digitsOf = (type: "fraction" | "integer") =>
+    parts
+      .filter(part => part.type === type)
+      .map(part => part.value)
+      .join("");
+  const integer = digitsOf("integer");
+  const fraction = digitsOf("fraction");
+
+  if (!ASCII_DIGITS.test(integer + fraction)) {
+    return {
+      fractionDigits: 0,
+      scaled: 0,
+      segments: [{ key: "value", kind: "text", text: formatter.format(value) }],
+    };
+  }
+
+  let exponent = integer.length - 1;
+  const seen = new Map<string, number>();
+  const keyOf = (type: string) => {
+    const count = seen.get(type) ?? 0;
+    seen.set(type, count + 1);
+
+    return `${type}-${count}`;
+  };
+
+  return {
+    fractionDigits: fraction.length,
+    scaled: Number(integer + fraction),
+    segments: parts.flatMap((part): NumberSegment[] =>
+      part.type === "integer" || part.type === "fraction"
+        ? [...part.value].map(() => ({ exponent: exponent--, kind: "digit" }))
+        : [{ key: keyOf(part.type), kind: "text", text: part.value }],
+    ),
+  };
+};

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -169,5 +169,80 @@ describe("ContentDataTable clickable rows", () => {
     fireEvent.click(button);
 
     expect(rowOpens).not.toHaveBeenCalled();
+  });
+});
+
+describe("ContentDataTable custom rows and groups", () => {
+  interface Plugin extends DataTableTMin {
+    category: string;
+    name: string;
+  }
+
+  const plugins: Plugin[] = [
+    { category: "Content", id: 1, name: "Blog" },
+    { category: "Community", id: 2, name: "Forum" },
+    { category: "Content", id: 3, name: "Wiki" },
+  ];
+
+  const renderList = (
+    props: Partial<React.ComponentProps<typeof ContentDataTable<Plugin>>>,
+  ) =>
+    render(
+      <DataTableNavigationProvider
+        value={{ navigate: vi.fn(), searchParams: new URLSearchParams() }}
+      >
+        <ContentDataTable<Plugin>
+          edges={plugins}
+          id="plugins"
+          order={{ defaultOrder: { column: "name", order: "asc" } }}
+          pageInfo={{ ...mockPageInfo, count: 3, totalCount: 3 }}
+          renderRow={({ row }) => <article>{row.name} card</article>}
+          {...props}
+        />
+      </DataTableNavigationProvider>,
+    );
+
+  it("renders each row through renderRow without a column header", () => {
+    renderList({});
+
+    expect(screen.getByText("Blog card")).toBeTruthy();
+    expect(screen.queryAllByRole("columnheader")).toHaveLength(0);
+  });
+
+  it("keeps the select-all header when custom rows are selectable", () => {
+    renderList({ bulkActions: <button type="button">Delete</button> });
+
+    expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("checkbox").length).toBe(plugins.length + 1);
+  });
+
+  it("puts rows under a heading for their group, in first-seen order", () => {
+    renderList({
+      groupBy: {
+        key: row => row.category,
+        label: group => `${group.key} plugins`,
+      },
+    });
+
+    const groups = screen
+      .getAllByRole("rowgroup")
+      .filter(group => within(group).queryByRole("rowheader"));
+    expect(groups).toHaveLength(2);
+    expect(within(groups[0]).getByText("Content plugins")).toBeTruthy();
+    expect(within(groups[0]).getByText("Blog card")).toBeTruthy();
+    expect(within(groups[0]).getByText("Wiki card")).toBeTruthy();
+    expect(within(groups[0]).getByText("2")).toBeTruthy();
+    expect(within(groups[1]).getByText("Forum card")).toBeTruthy();
+  });
+
+  it("groups regular column rows too", () => {
+    renderList({
+      columns: [{ accessorKey: "name", header: "Name" }],
+      groupBy: { key: row => row.category },
+      renderRow: undefined,
+    });
+
+    expect(screen.getByRole("columnheader", { name: "Name" })).toBeTruthy();
+    expect(screen.getByRole("rowheader", { name: /Community/ })).toBeTruthy();
   });
 });

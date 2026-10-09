@@ -8,6 +8,8 @@
     "pagination",
     "bulk-actions",
     "expandable-rows",
-    "draggable-rows"
+    "draggable-rows",
+    "custom-rows",
+    "grouped-rows"
   ]
 }

@@ -28,14 +28,27 @@ export const vitNodeApiConfig = buildApiConfig({
   ai: {
     models: [
       {
-        id: "default",
-        name: "Claude Sonnet 5",
-        model: "anthropic/claude-sonnet-5",
-      },
-      {
         id: "fast",
         name: "Google Gemini 3.5 Flash Lite",
         model: google("gemini-3.5-flash-lite"),
+        capabilities: ["text", "image-input", "structured-output", "streaming"],
+        pricing: {
+          rates: { inputPerMillion: "0.1", outputPerMillion: "0.4" },
+        },
+      },
+      {
+        id: "default",
+        name: "Claude Sonnet 5",
+        model: "anthropic/claude-sonnet-5",
+        capabilities: ["text", "image-input", "structured-output", "streaming"],
+        pricing: {
+          rates: {
+            inputPerMillion: "3",
+            outputPerMillion: "15",
+            cacheReadPerMillion: "0.3",
+            cacheWritePerMillion: "3.75",
+          },
+        },
       },
     ],
     embeddingModels: [

@@ -4,8 +4,17 @@ import { blocks } from "@/blocks/built-in";
 import { CONFIG_PLUGIN } from "@/config";
 import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
+import {
+  altGenerateAiAction,
+  altTranslateAiAction,
+} from "./lib/ai/alt-actions";
+import {
+  editorQuickAskAiAction,
+  editorRewriteAiAction,
+} from "./lib/ai/editor-actions";
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
+import { aiModule } from "./modules/ai/ai.module";
 import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
@@ -17,6 +26,12 @@ import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
+  aiActions: [
+    altGenerateAiAction,
+    altTranslateAiAction,
+    editorRewriteAiAction,
+    editorQuickAskAiAction,
+  ],
   blocks,
   editablePages: [settingsPage],
   navigation: [
@@ -28,6 +43,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     usersModule,
     notificationsModule,
     adminModule,
+    aiModule,
     contentModule,
     cronModule,
     pagesModule,
@@ -70,6 +86,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
       ],
       files: [
         "can_view",
+        { permission: "can_edit_alt", dependsOn: ["can_view"] },
         { permission: "can_download", dependsOn: ["can_view"] },
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
@@ -85,6 +102,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_edit", dependsOn: ["can_view"] },
         { permission: "can_manage", dependsOn: ["can_view"] },
       ],
+      ai: ["can_view", { permission: "can_manage", dependsOn: ["can_view"] }],
       cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
       staff_moderators: [
         "can_view",

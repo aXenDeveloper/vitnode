@@ -334,3 +334,43 @@ export const bindSelfRelations = (
 
   return bound;
 };
+
+const AI_ACTION_KEY_PATTERN = /^[^:\s]+:[a-z0-9][a-z0-9.-]*$/;
+
+export const assertFieldAiAssist = (
+  id: string,
+  fieldMap: ContentFieldMap,
+): void => {
+  for (const [name, fieldValue] of Object.entries(fieldMap)) {
+    if (fieldValue.kind !== "text" && fieldValue.kind !== "textarea") continue;
+    const { ai } = fieldValue;
+    if (!ai) continue;
+
+    if (!AI_ACTION_KEY_PATTERN.test(ai.action)) {
+      throw new ContentEngineError(
+        `Field "${name}" names AI action "${ai.action}". Use the canonical "<pluginId>:<actionId>" key.`,
+        { contentTypeId: id },
+      );
+    }
+    if (ai.mode !== "suggestion") {
+      throw new ContentEngineError(
+        `Field "${name}" has an unsupported AI mode "${String(ai.mode)}".`,
+        { contentTypeId: id },
+      );
+    }
+    for (const source of ai.sourceFields) {
+      if (source === name) {
+        throw new ContentEngineError(
+          `Field "${name}" cannot use itself as an AI source field.`,
+          { contentTypeId: id },
+        );
+      }
+      if (!Object.hasOwn(fieldMap, source)) {
+        throw new ContentEngineError(
+          `Field "${name}" reads AI source field "${source}", which this content type does not have.`,
+          { contentTypeId: id },
+        );
+      }
+    }
+  }
+};

@@ -19,7 +19,8 @@ export interface QueuedFileUpload {
 
 /** One row of a file collection: a stored file, or a slot still uploading. */
 export type FileGalleryToken =
-  { id: number; kind: "file" } | { kind: "pending"; order: number };
+  | { id: number; kind: "file" }
+  | { kind: "pending"; order: number };
 
 export type FileUploadAnchor = null | number;
 

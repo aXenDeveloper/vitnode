@@ -24,6 +24,9 @@
   "@vitnode/core:notifications:can_edit": "Edycja ustawień powiadomień",
   "@vitnode/core:notifications:can_manage": "Testowe e-maile, czyszczenie i strefa zagrożenia: wstrzymanie, anulowanie e-maili, oznaczanie jako przeczytane, usuwanie i reset preferencji",
   "@vitnode/core:notifications:can_view": "Podgląd ustawień i stanu dostarczania powiadomień",
+  "@vitnode/core:ai": "AI",
+  "@vitnode/core:ai:can_view": "Wyświetlanie użycia, ustawień i historii AI",
+  "@vitnode/core:ai:can_manage": "Zarządzanie ustawieniami, modelami, cenami i dostępem AI",
   "@vitnode/core:queue": "Zadania w kolejce",
   "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
   "@vitnode/core:roles": "Role",
@@ -319,6 +322,12 @@
           "list": "Lista użytkowników",
           "roles": "Role",
           "title": "Użytkownicy"
+        },
+        "ai": {
+          "title": "Sztuczna Inteligencja (AI)",
+          "overview": "Przegląd",
+          "actions": "Akcje",
+          "history": "Historia"
         }
       },
       "search": {
@@ -503,6 +512,24 @@
           "or": "lub",
           "total_max_storage": "Całkowity maks. rozmiar pamięci",
           "unlimited": "Bez limitu"
+        },
+        "ai": {
+          "unlimited": "Punkty bez limitu",
+          "unlimited_desc": "Użytkowników z tą rolą nie zatrzyma miesięczny limit. Budżet strony nadal obowiązuje.",
+          "monthly_points": "Punkty miesięczne",
+          "monthly_points_desc": "Punkty, które co miesiąc dostaje każdy użytkownik z tą rolą. Przy kilku rolach liczy się największy przydział, nigdy suma.",
+          "site_default": "Domyślne strony",
+          "points_unit": "pkt",
+          "or": "lub",
+          "grant": {
+            "default_allowed": "Domyślnie (dozwolone)",
+            "default_denied": "Domyślnie (niedozwolone)",
+            "allow": "Zezwól",
+            "deny": "Zabroń"
+          },
+          "daily_limit": "Dzienny limit",
+          "action_default": "Limit akcji",
+          "per_day": "użyć / dzień"
         }
       },
       "list": {
@@ -520,7 +547,8 @@
       "tabs": {
         "content": "Treść",
         "general": "Ogólne",
-        "profile": "Profil"
+        "profile": "Profil",
+        "ai": "Sztuczna inteligencja (AI)"
       }
     },
     "staff": {
@@ -669,7 +697,49 @@
           "description": "Pliki przesłane w obrębie witryny pojawią się tutaj.",
           "title": "Nie przesłano żadnych plików"
         },
-        "title": "Pliki"
+        "title": "Pliki",
+        "alt": {
+          "open": "Edytuj tekst ALT",
+          "title": "Tekst ALT",
+          "languages": "Opis w każdym języku",
+          "empty_hint": "Czytniki ekranu odczytują go na głos. Zapisz pusty tekst, aby oznaczyć obraz jako dekoracyjny - celowo nie będzie miał opisu, a automatyczny ALT go nie ruszy.",
+          "intentionally_empty": "Celowo bez opisu (obraz dekoracyjny).",
+          "text_label": "Tekst ALT: {language}",
+          "save": "Zapisz",
+          "saved": {
+            "title": "Zapisano tekst ALT",
+            "desc": "Opis w języku {language} jest teraz Twój; automatyczny ALT go nie nadpisze.",
+            "desc_empty": "Obraz oznaczono jako dekoracyjny w języku {language}."
+          },
+          "origin": {
+            "ai": "AI",
+            "human": "Napisany przez człowieka",
+            "missing": "Brak",
+            "stale": "Nieaktualny"
+          },
+          "remove": {
+            "button": "Usuń",
+            "hint": "Po usunięciu automatyczny ALT może napisać go ponownie.",
+            "success": "Usunięto tekst ALT",
+            "success_desc": "Automatyczny ALT może ponownie opisać obraz w języku {language}."
+          },
+          "policy": {
+            "label": "Automatyczny ALT dla tego obrazu",
+            "saved": "Zapisano ustawienie ALT",
+            "automatic": {
+              "label": "Automatyczny",
+              "desc": "AI pisze opis w każdym języku, w którym go brakuje. Tekst napisany przez człowieka nigdy nie jest nadpisywany."
+            },
+            "manual": {
+              "label": "Tylko ręcznie",
+              "desc": "Opisy dla tego obrazu piszą wyłącznie ludzie."
+            },
+            "disabled": {
+              "label": "Wyłączony",
+              "desc": "Obraz nigdy nie jest wysyłany do zewnętrznej AI. Używaj dla prywatnych lub wrażliwych obrazów."
+            }
+          }
+        }
       },
       "integrations": {
         "ai": {
@@ -1032,6 +1102,344 @@
       "verify_email": {
         "label": "Zweryfikuj adres e-mail",
         "success": "Adres e-mail został zweryfikowany."
+      },
+      "ai": {
+        "title": "Dostęp do AI",
+        "desc": "Własna reguła tego użytkownika, ważniejsza niż jego role.",
+        "follows_roles": "Brak wyjątku - decydują role.",
+        "blocked": "Zablokowany",
+        "unlimited": "Bez limitu",
+        "points_month": "{points} pkt / miesiąc",
+        "edit": "Edytuj wyjątek AI",
+        "form_desc": "Zastępuje to, co dają role użytkownika, dopóki nie zostanie usunięty.",
+        "remove": {
+          "title": "Usuń wyjątek AI",
+          "desc": "Użytkownik wróci do tego, na co pozwalają role.",
+          "cancel": "Anuluj",
+          "confirm": "Usuń",
+          "success": "Usunięto wyjątek",
+          "success_desc": "Użytkownik znów korzysta z ustawień ról."
+        },
+        "form": {
+          "blocked": "Zablokuj funkcje AI",
+          "blocked_desc": "Ten użytkownik nie może używać żadnej funkcji AI, niezależnie od ról.",
+          "unlimited": "Punkty bez limitu",
+          "unlimited_desc": "Nie zatrzyma go miesięczny limit. Budżet strony nadal obowiązuje.",
+          "monthly_points": "Punkty miesięczne",
+          "monthly_points_desc": "Osobisty przydział zamiast tego z ról.",
+          "from_roles": "Według ról",
+          "points_unit": "pkt",
+          "or": "lub",
+          "submit": "Zapisz wyjątek",
+          "saved": {
+            "title": "Zapisano wyjątek",
+            "desc": "Obowiązuje od następnej operacji AI użytkownika."
+          }
+        }
+      }
+    },
+    "ai": {
+      "cost": {
+        "unknown": "Nieznany",
+        "source": {
+          "provider": "Podany przez dostawcę",
+          "estimated": "Szacunkowy",
+          "mixed": "Częściowo szacunkowy",
+          "unknown": "Koszt nieznany"
+        }
+      },
+      "status": {
+        "reserved": "Zarezerwowano",
+        "running": "W toku",
+        "succeeded": "Sukces",
+        "failed": "Błąd",
+        "canceled": "Anulowano",
+        "uncertain": "Niepewny"
+      },
+      "origin": {
+        "user": "Użytkownicy",
+        "system": "Zadania w tle"
+      },
+      "overview": {
+        "title": "Przegląd AI",
+        "desc": "Ile kosztuje AI, na co idą pieniądze i na ile pewne są te liczby.",
+        "disabled": {
+          "title": "AI jest wyłączone na całej stronie",
+          "desc": "Żadna funkcja AI nie zadziała, dopóki nie zostanie włączona ponownie.",
+          "link": "Otwórz ustawienia AI"
+        },
+        "range": {
+          "label": "Zakres dat",
+          "this-month": "Ten miesiąc",
+          "last-month": "Poprzedni miesiąc",
+          "7d": "Ostatnie 7 dni",
+          "30d": "Ostatnie 30 dni",
+          "90d": "Ostatnie 90 dni"
+        },
+        "compare": {
+          "month": "vs {month}",
+          "previous_days": "vs {count, plural, one {poprzedni dzień} few {poprzednie # dni} many {poprzednich # dni} other {poprzednich # dni}}",
+          "range": "vs {range}"
+        },
+        "basis": {
+          "this-month": "tego miesiąca",
+          "last-month": "poprzedniego miesiąca",
+          "7d": "ostatnich 7 dni",
+          "30d": "ostatnich 30 dni",
+          "90d": "ostatnich 90 dni",
+          "custom": "okresu {range}"
+        },
+        "budget": {
+          "title": "Budżet: {month}",
+          "show_month": "Pokaż budżet za {month}",
+          "of_limit": "z {limit}",
+          "day_of": "dzień {day} z {days}",
+          "month_closed": "zamknięty",
+          "no_limit": "Nie ustawiono miesięcznego budżetu.",
+          "set_limit": "Ustaw go",
+          "meter": "Wykorzystano {spent} z {limit}",
+          "forecast_over": "W tym tempie {forecast} do {end}, {over} ponad budżet",
+          "forecast_inside": "W tym tempie {forecast} do {end}, w ramach budżetu",
+          "forecast_no_limit": "W tym tempie {forecast} do {end}",
+          "basis": "Na podstawie {basis}: {rate} dziennie.",
+          "change_limit": "Zmień budżet",
+          "closed": "{month} zamknięty na {spent}, {share} budżetu",
+          "closed_no_limit": "{month} zamknięty na {spent}",
+          "pace_over": "W tempie {basis} ({rate} dziennie) miesiąc kosztuje {monthly}, {over} ponad budżet.",
+          "pace_inside": "W tempie {basis} ({rate} dziennie) miesiąc kosztuje {monthly}, w ramach budżetu.",
+          "pace_no_limit": "W tempie {basis} ({rate} dziennie) miesiąc kosztuje {monthly}."
+        },
+        "metrics": {
+          "hint": "Zmiana {compare}",
+          "spend": "Wydatki",
+          "per_run": "Koszt uruchomienia",
+          "runs": "Uruchomienia",
+          "failure_rate": "Odsetek błędów",
+          "tokens": "Tokeny",
+          "known": "Znany koszt"
+        },
+        "delta": {
+          "no_previous": "Brak wcześniejszych danych",
+          "no_change": "Bez zmian",
+          "up": "Wzrost",
+          "down": "Spadek"
+        },
+        "chart": {
+          "limit": "Budżet {limit}",
+          "budget_title": "Wydatki w miesiącu {month} na tle budżetu",
+          "budget_description": "Narastające wydatki w miesiącu {month} na tle miesięcznego budżetu, z miesiącem {previous} jako linią przerywaną i prognozą do końca miesiąca.",
+          "forecast": "Prognoza",
+          "forecast_to": "Prognoza do {end}",
+          "spent_so_far": "Wydano do tej pory",
+          "running_total": "{metric}, suma narastająco",
+          "running_average": "{metric}, średnia do tej pory",
+          "running_description": "{title} za {range}. Linia przerywana to porównanie ({compare}).",
+          "so_far": "Do tej pory",
+          "budget": "Budżet"
+        },
+        "breakdown": {
+          "title": "Na co idą pieniądze",
+          "split": "Podział według",
+          "by_action": "Według akcji",
+          "by_model": "Według modelu",
+          "action": "Akcja",
+          "model": "Model",
+          "other": "Inne ({count})",
+          "empty": "W tym zakresie nic jeszcze nie działało.",
+          "chart_label": "{measure} – ranking",
+          "chart_description": "{measure} według akcji lub modelu, w kolejności, z porównaniem ({compare}) jako znacznikiem na każdym pasku. Tabela poniżej zawiera te same liczby.",
+          "now": "Ten zakres",
+          "tick": "Znacznik: poprzedni zakres",
+          "unpriced": "{count, plural, one {# uruchomienie nie ma ceny i nie jest liczone} few {# uruchomienia nie mają ceny i nie są liczone} many {# uruchomień nie ma ceny i nie jest liczonych} other {# uruchomienia nie mają ceny i nie są liczone}} w kosztach.",
+          "add_price": "Dodaj cenę",
+          "change": "Zmiana {compare}"
+        },
+        "measure": {
+          "cost": "Koszt",
+          "ops": "Uruchomienia",
+          "failures": "Błędy",
+          "tokens": "Tokeny"
+        }
+      },
+      "settings": {
+        "title": "Ustawienia AI",
+        "desc": "Główny przełącznik, budżety i limity, w ramach których działa każda funkcja AI.",
+        "open": "Ustawienia",
+        "time_zone": "Miesięczne budżety i limity odnawiają się o północy w strefie {timeZone}.",
+        "sections": {
+          "budget": "Budżet",
+          "limits": "Limity",
+          "alt": "Tekst ALT"
+        },
+        "enabled": {
+          "label": "Funkcje AI",
+          "desc": "Główny przełącznik. Po wyłączeniu żadna funkcja AI nie działa - ani dla użytkowników, ani w tle."
+        },
+        "monthly_budget": {
+          "label": "Miesięczny budżet strony",
+          "desc": "Najwięcej, ile cała strona może wydać na AI w miesiącu. Po jego wyczerpaniu wszystkie funkcje AI czekają do następnego miesiąca."
+        },
+        "system_budget": {
+          "label": "Budżet zadań w tle",
+          "desc": "Osobny limit dla automatyzacji, np. tekstu ALT, w ramach budżetu strony."
+        },
+        "no_limit": "Bez limitu",
+        "or": "lub",
+        "default_points": {
+          "label": "Domyślne punkty miesięczne",
+          "desc": "Tyle dostaje użytkownik co miesiąc, chyba że jego rola mówi inaczej. Jeden punkt to {usd}."
+        },
+        "points_unit": "pkt",
+        "requests_per_minute": {
+          "label": "Żądania na minutę",
+          "desc": "Jak często jeden użytkownik może uruchomić funkcję AI."
+        },
+        "user_concurrency": {
+          "label": "Równoległe operacje użytkownika",
+          "desc": "Ile funkcji AI jeden użytkownik może mieć uruchomionych naraz."
+        },
+        "system_concurrency": {
+          "label": "Równoległe operacje w tle",
+          "desc": "Ile zadań AI w tle może działać naraz na całej stronie."
+        },
+        "retention": {
+          "label": "Przechowuj historię przez",
+          "desc": "Starsze wpisy operacji są usuwane. Polecenia i wyniki i tak nigdy nie są zapisywane."
+        },
+        "days_unit": "dni",
+        "alt": {
+          "enabled": {
+            "label": "Twórz tekst ALT automatycznie",
+            "desc": "Opisuj przesłane obrazy w tle. Wymaga miesięcznego budżetu strony, więc nigdy nie wyda pieniędzy bez limitu."
+          },
+          "needs_budget": "Ustaw miesięczny budżet strony, zanim włączysz automatyczny tekst ALT.",
+          "batch_size": {
+            "label": "Obrazów w kolejce na przegląd",
+            "desc": "Ile obrazów bez tekstu ALT dodaje do kolejki jeden cogodzinny przegląd. Następnie zadanie opisuje je po dwa, co minutę."
+          }
+        },
+        "submit": "Zapisz ustawienia",
+        "saved": {
+          "title": "Zapisano ustawienia AI",
+          "desc": "Nowe limity obowiązują od następnej operacji AI."
+        }
+      },
+      "actions": {
+        "title": "Akcje AI",
+        "desc": "Każda funkcja AI zarejestrowana przez wtyczki: włączaj je, wybieraj model i ustawiaj limity. Modele i ceny ustawia się w vitnode.api.config.ts.",
+        "disabled": "Wył.",
+        "no_compatible": "Brak zgodnego modelu, więc nie może działać",
+        "empty": {
+          "title": "Brak akcji AI",
+          "desc": "Akcje AI rejestrują wtyczki; gdy któraś to zrobi, pojawi się tutaj."
+        },
+        "form": {
+          "open": "Konfiguruj",
+          "enabled": "Włączona",
+          "enabled_desc": "Wyłączona akcja nie zadziała dla nikogo.",
+          "model": "Model",
+          "model_desc": "Widoczne są tylko modele mające wszystkie możliwości wymagane przez akcję.",
+          "model_default": "Domyślny strony",
+          "fallback": "Model zapasowy",
+          "fallback_desc": "Używany, gdy główny model zawiedzie.",
+          "instructions": "Wytyczne redakcyjne",
+          "instructions_desc": "Dodatkowe wskazówki dołączane do polecenia, np. ton albo styl. Do 2000 znaków.",
+          "daily_limit": "Użycia na użytkownika dziennie",
+          "max_input_characters": "Maks. znaków na wejściu",
+          "max_output_tokens": "Maks. tokenów wyjścia",
+          "max_retries": "Maks. ponowień",
+          "max_steps": "Maks. kroków",
+          "timeout": "Limit czasu",
+          "or": "lub",
+          "use_default": "Domyślnie ({value})",
+          "use_default_none": "Domyślnie (bez limitu)",
+          "submit": "Zapisz akcję",
+          "saved": {
+            "title": "Zapisano akcję",
+            "desc": "{title} używa nowych ustawień od następnego uruchomienia."
+          },
+          "open_label": "Konfiguruj: {title}",
+          "limits": {
+            "title": "Limity",
+            "desc": "Zostaw limit domyślny, aby używać wartości dostarczonej przez wtyczkę."
+          }
+        },
+        "search": "Szukaj akcji...",
+        "daily_limit": "{count, plural, one {# użycie} few {# użycia} many {# użyć} other {# użycia}} na użytkownika dziennie",
+        "toggle_label": "Włącz {title}",
+        "toggled": {
+          "on": "{title} jest włączona",
+          "on_desc": "Użytkownicy mogą jej znowu używać od następnego żądania.",
+          "off": "{title} jest wyłączona",
+          "off_desc": "Nie zadziała dla nikogo, dopóki jej nie włączysz."
+        },
+        "no_results": {
+          "title": "Żadna akcja nie pasuje do wyszukiwania",
+          "desc": "Spróbuj tytułu akcji, słowa z jej opisu albo jej klucza.",
+          "clear": "Wyczyść wyszukiwanie"
+        },
+        "plugin": "Wtyczka"
+      },
+      "history": {
+        "title": "Historia AI",
+        "desc": "Każda operacja AI: kto ją uruchomił, który model odpowiedział i ile to kosztowało.",
+        "charged_reservation": "Pobrano {amount} (rezerwacja)",
+        "filters": {
+          "all": "Wszystkie",
+          "status": "Status",
+          "actor": "Źródło",
+          "action": "Akcja",
+          "model": "Model"
+        },
+        "list": {
+          "action": "Akcja",
+          "status": "Status",
+          "actor": "Kto",
+          "model": "Model",
+          "cost": "Koszt",
+          "points": "Punkty",
+          "created": "Kiedy",
+          "details": "Szczegóły"
+        },
+        "empty": {
+          "title": "Brak operacji AI",
+          "desc": "Nic jeszcze nie pasuje do tych filtrów."
+        },
+        "detail": {
+          "title": "Operacja #{id}",
+          "status": "Status",
+          "actor": "Kto",
+          "model": "Model",
+          "cost": "Koszt",
+          "cost_source": "Źródło kosztu",
+          "charged": "Pobrano",
+          "reserved": "Zarezerwowano",
+          "points_unit": "pkt",
+          "settlement": "Rozliczenie",
+          "tokens": "Tokeny wej. / wyj.",
+          "created": "Start",
+          "finished": "Koniec",
+          "prompt_version": "Wersja polecenia",
+          "resource": "Zasób",
+          "error": "Błąd",
+          "accepted": "Sugestia",
+          "accepted_yes": "Przyjęta",
+          "accepted_no": "Nieprzyjęta",
+          "privacy": "Polecenia i wyniki nigdy nie są zapisywane - tylko to, ile to trwało i kosztowało.",
+          "calls": {
+            "title": "Wywołania dostawcy",
+            "empty": "Nie wywołano żadnego dostawcy.",
+            "attempt": "Próba",
+            "model": "Model",
+            "status": "Status",
+            "tokens": "Tokeny wej. / wyj.",
+            "cost": "Koszt"
+          },
+          "adjustments": {
+            "title": "Korekty kosztu",
+            "change": "{from} → {to}"
+          }
+        }
       }
     }
   },
@@ -1096,7 +1504,8 @@
           "overview": "Przegląd",
           "security": "Bezpieczeństwo",
           "sso": "Połączone konta",
-          "notifications": "Powiadomienia"
+          "notifications": "Powiadomienia",
+          "ai": "Użycie AI"
         },
         "overview": {
           "accountTitle": "Konto",
@@ -1408,6 +1817,72 @@
             "immediate": "Od razu",
             "daily": "Podsumowanie dzienne",
             "weekly": "Podsumowanie tygodniowe"
+          }
+        },
+        "ai": {
+          "title": "Użycie AI",
+          "desc": "Ile kosztowała Cię każda funkcja AI w tym miesiącu i ile zostało z dzisiejszego limitu.",
+          "notice": {
+            "disabled": {
+              "title": "Funkcje AI są wyłączone",
+              "desc": "Ta strona nie oferuje teraz funkcji AI. Twoje punkty poczekają, aż wrócą."
+            },
+            "site_paused": {
+              "title": "Funkcje AI są wstrzymane dla wszystkich",
+              "desc": "Strona wykorzystała miesięczny budżet AI. To nie kwestia Twojego limitu - funkcje wrócą po odnowieniu budżetu albo gdy administrator go zwiększy."
+            },
+            "exhausted": {
+              "title": "Wykorzystano wszystkie punkty AI",
+              "desc": "Twój limit odnowi się {resetsAt}. Do tego czasu funkcje AI nie zadziałają na Twoim koncie."
+            },
+            "near_limit": {
+              "title": "Wykorzystano ponad 80% punktów AI",
+              "desc": "Gospodaruj resztą rozważnie - limit odnowi się {resetsAt}."
+            },
+            "no_allowance": {
+              "title": "Twoja rola nie obejmuje jeszcze punktów AI",
+              "desc": "Funkcje AI wymagają miesięcznego limitu punktów, a Twój wynosi obecnie zero. Jeśli chcesz je wypróbować, zapytaj administratora."
+            }
+          },
+          "status": {
+            "reserved": "W kolejce",
+            "running": "W toku",
+            "succeeded": "Gotowe",
+            "failed": "Błąd",
+            "canceled": "Anulowano",
+            "uncertain": "Weryfikacja"
+          },
+          "points": {
+            "left": "Pozostało {available} z {total} punktów",
+            "percent_used": "Wykorzystano {percent}",
+            "used_of": "Wykorzystano {used} z {total} punktów",
+            "renews": "Odnowienie {date}",
+            "unlimited": "Nielimitowane punkty",
+            "unlimited_used": "W tym miesiącu wykorzystano {used} punktów",
+            "none": "Brak punktów AI w tym miesiącu"
+          },
+          "features": {
+            "title": "Twoje funkcje AI",
+            "footer": "Widzisz to tylko Ty i administratorzy. Polecenia i odpowiedzi nigdy nie są zapisywane.",
+            "empty_title": "Brak funkcji AI",
+            "empty_desc": "Gdy rola przyzna Ci punkty AI, każda dostępna funkcja pojawi się tutaj razem z jej kosztem.",
+            "today": "Dziś {used} / {limit}",
+            "today_no_limit": "Dziś {used}",
+            "limit_reached": "Limit osiągnięty",
+            "month_points": "{points} pkt w tym miesiącu",
+            "limit_desc": "Możesz jej użyć {limit, plural, one {# raz} few {# razy} many {# razy} other {# razy}} dziennie. Licznik zeruje się o północy.",
+            "no_limit_desc": "Nie ma dziennego limitu - obowiązują tylko Twoje miesięczne punkty.",
+            "runs_empty": "Ta funkcja nie była jeszcze używana w tym miesiącu.",
+            "show_more": "Pokaż więcej",
+            "charge": "{points} pkt",
+            "no_charge": "Bez opłaty",
+            "charging": "Naliczanie…",
+            "runs_error": "Nie udało się wczytać użyć tej funkcji.",
+            "retry": "Spróbuj ponownie"
+          },
+          "overview": {
+            "title": "Punkty AI",
+            "details": "Zobacz swoje funkcje AI"
           }
         }
       },
@@ -2001,7 +2476,97 @@
         "settings": "Ustawienia powiadomień",
         "action_failed": "Nie udało się. Powiadomienia zostały odświeżone."
       },
-      "tab_has_errors": "Zawiera błędy"
+      "tab_has_errors": "Zawiera błędy",
+      "calendar": {
+        "previous_month": "Przejdź do poprzedniego miesiąca",
+        "next_month": "Przejdź do następnego miesiąca",
+        "month": "Wybierz miesiąc",
+        "year": "Wybierz rok",
+        "navigation": "Nawigacja kalendarza",
+        "week_number": "Tydzień {week}",
+        "week_number_header": "Numer tygodnia",
+        "today": "Dzisiaj",
+        "selected": "wybrano",
+        "pick_date": "Wybierz datę",
+        "presets": "Szybkie zakresy",
+        "pick_range": "Wybierz datę początkową i końcową",
+        "range_days": "{count, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}}",
+        "apply_range": "Zastosuj zakres"
+      },
+      "ai_assist": {
+        "button": "AI",
+        "open": "Sugestia AI dla pola {field}",
+        "title": "Sugestia AI",
+        "desc": "Napisana na podstawie innych pól w języku {language}. Sprawdź ją przed użyciem.",
+        "missing_sources": "Najpierw uzupełnij: {fields}.",
+        "generating": "Piszę sugestię…",
+        "generate": "Wygeneruj",
+        "regenerate": "Spróbuj ponownie",
+        "discard": "Odrzuć",
+        "accept": "Użyj sugestii",
+        "replace_anyway": "Zastąp mój nowszy tekst",
+        "stale_source": "Tekst źródłowy zmienił się od tego czasu. Wygeneruj ponownie, aby mieć aktualną sugestię.",
+        "target_edited": "Pole zostało zmienione po wysłaniu prośby. Użycie sugestii zastąpi nowszy tekst.",
+        "accepted": {
+          "title": "Dodano sugestię",
+          "desc": "Zapisz formularz, aby ją zachować."
+        },
+        "error": {
+          "title": "Brak sugestii AI",
+          "AI_ACTION_DISABLED": "Administrator wyłączył tę funkcję AI.",
+          "AI_BUDGET_EXHAUSTED": "Budżet AI strony został chwilowo wyczerpany. To nie jest Twój limit.",
+          "AI_CANCELED": "Żądanie zostało anulowane.",
+          "AI_CONCURRENCY_LIMITED": "Inne Twoje żądanie AI jeszcze trwa. Spróbuj za chwilę.",
+          "AI_DAILY_LIMIT_REACHED": "Osiągnięto dzisiejszy limit tej funkcji AI.",
+          "AI_DISABLED": "Funkcje AI są wyłączone na tej stronie.",
+          "AI_INPUT_TOO_LARGE": "Tekst jest za długi dla tej funkcji AI.",
+          "AI_INVALID_INPUT": "Brakuje części tekstu źródłowego lub jest niepoprawna.",
+          "AI_INVALID_OUTPUT": "Odpowiedź AI nie nadawała się do użycia. Nic nie zostało pobrane.",
+          "AI_MODEL_INCOMPATIBLE": "Żaden skonfigurowany model AI jeszcze tego nie potrafi.",
+          "AI_NOT_CONFIGURED": "Nie skonfigurowano modelu AI.",
+          "AI_PRICING_MISSING": "Model AI nie ma cennika, więc nie można ograniczyć kosztu.",
+          "AI_PROVIDER_FAILED": "Dostawca AI zawiódł. Nic nie zostało pobrane.",
+          "AI_RATE_LIMITED": "Zbyt wiele żądań AI. Spróbuj za minutę.",
+          "AI_TIMEOUT": "Dostawca AI odpowiadał zbyt długo. Nic nie zostało pobrane.",
+          "AI_UNAUTHORIZED": "Nie masz dostępu do tej funkcji AI lub tej treści.",
+          "AI_USER_LIMIT_REACHED": "Wykorzystano wszystkie punkty AI w tym miesiącu.",
+          "unknown": "Coś poszło nie tak. Spróbuj ponownie.",
+          "AI_DUPLICATE_REQUEST": "To żądanie zostało już wysłane. Spróbuj ponownie, aby wysłać nowe."
+        },
+        "quick_ask": {
+          "label": "Szybkie pytanie (AI)",
+          "writing": "Piszę…",
+          "stop": "Zatrzymaj",
+          "discard": "Odrzuć",
+          "insert_below": "Wstaw poniżej",
+          "replace": "Zastąp zaznaczenie",
+          "stale": "Zaznaczony tekst zmienił się w trakcie pisania odpowiedzi. Wstaw ją poniżej albo zamknij i spróbuj ponownie.",
+          "tone": "Zmień ton",
+          "select_text": "Zaznacz tekst, aby go przepisać.",
+          "operation": {
+            "shorten": "Skróć",
+            "correct": "Popraw pisownię",
+            "simplify": "Uprość",
+            "continue": "Pisz dalej"
+          },
+          "tones": {
+            "friendly": "Przyjazny",
+            "formal": "Formalny",
+            "confident": "Pewny siebie",
+            "neutral": "Neutralny"
+          },
+          "custom_label": "Albo zapytaj o cokolwiek w sprawie zaznaczenia",
+          "custom_placeholder": "np. Zamień to w listę punktów",
+          "ask": "Zapytaj",
+          "estimate": "Jedno żądanie kosztuje najwyżej {points} punktów AI – zwykle znacznie mniej.",
+          "applied": {
+            "title": "Dodano tekst AI",
+            "desc": "Nic nie jest zapisane, dopóki nie zapiszesz formularza.",
+            "undo": "Cofnij"
+          }
+        }
+      },
+      "unsaved_changes": "Niezapisane zmiany"
     },
     "navigation": {
       "discover": {
@@ -2151,7 +2716,53 @@
       "retry": "Spróbuj ponownie",
       "empty_title": "Na razie pusto",
       "empty_unread_title": "Brak nieprzeczytanych powiadomień",
-      "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj."
+      "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj.",
+      "unavailable": "To powiadomienie nie jest już dostępne.",
+      "categories": {
+        "account": "Konto",
+        "content": "Treści",
+        "social": "Społeczność",
+        "system": "System"
+      },
+      "types": {
+        "admin_message": {
+          "label": "Wiadomości od administratorów",
+          "description": "Ogłoszenia, które administrator wysyła bezpośrednio do Ciebie."
+        }
+      },
+      "email": {
+        "action": "Zobacz",
+        "preferences": "Zarządzaj ustawieniami powiadomień",
+        "digest_subject_daily": "Twoje dzienne podsumowanie: {count, plural, one {# powiadomienie} few {# powiadomienia} many {# powiadomień} other {# powiadomienia}}",
+        "digest_subject_weekly": "Twoje tygodniowe podsumowanie: {count, plural, one {# powiadomienie} few {# powiadomienia} many {# powiadomień} other {# powiadomienia}}",
+        "digest_heading_daily": "Oto co wydarzyło się dzisiaj",
+        "digest_heading_weekly": "Oto co wydarzyło się w tym tygodniu",
+        "digest_more": "I {count, plural, one {# kolejne powiadomienie czeka} few {# kolejne powiadomienia czekają} many {# kolejnych powiadomień czeka} other {# kolejnego powiadomienia czeka}} na Ciebie.",
+        "test_subject": "Testowy e-mail z powiadomieniem",
+        "test_title": "E-maile z powiadomieniami działają",
+        "test_body": "Jeśli to czytasz, e-maile z powiadomieniami z tej strony docierają do Twojej skrzynki. Nic nie musisz robić."
+      }
+    }
+  },
+  "@vitnode/core:files:can_edit_alt": "Edycja tekstu alternatywnego obrazów",
+  "ai_actions": {
+    "@vitnode/core": {
+      "alt_generate": {
+        "title": "Wygeneruj tekst ALT obrazu",
+        "description": "Opisuje obraz z core_files jako jego bazowy tekst ALT."
+      },
+      "alt_translate": {
+        "title": "Przetłumacz tekst ALT obrazu",
+        "description": "Tłumaczy bazowy tekst ALT obrazu na język strony."
+      },
+      "editor_quick_ask": {
+        "title": "Szybkie pytanie",
+        "description": "Kontynuuje tekst albo wykonuje własne polecenie dotyczące zaznaczenia."
+      },
+      "editor_rewrite": {
+        "title": "Przeredaguj zaznaczony tekst",
+        "description": "Przeredagowuje zaznaczony tekst: skraca, poprawia, upraszcza albo zmienia ton."
+      }
     }
   }
 }

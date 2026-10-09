@@ -98,7 +98,8 @@ export const isContentFileCollection = (
 
 /** Every descriptor that can be the near side of a generated junction table. */
 export type ContentCollectionReference =
-  ContentFileField | ContentReferenceField;
+  | ContentFileField
+  | ContentReferenceField;
 
 /** The to-many reference descriptor, or `null` when the field is not one. */
 export const asContentReferenceCollection = (

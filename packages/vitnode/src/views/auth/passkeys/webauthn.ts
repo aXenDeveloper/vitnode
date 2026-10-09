@@ -14,7 +14,10 @@ import {
 import React from "react";
 
 export type PasskeyCeremonyFailure =
-  "already_registered" | "cancelled" | "failed" | "unsupported";
+  | "already_registered"
+  | "cancelled"
+  | "failed"
+  | "unsupported";
 
 export type PasskeyCeremonyResult<Response> =
   | { failure: PasskeyCeremonyFailure; ok: false }

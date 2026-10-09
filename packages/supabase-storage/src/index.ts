@@ -37,6 +37,12 @@ export const SupabaseStorageAdapter = ({
     getClient().from(bucket).getPublicUrl(key).data.publicUrl;
 
   return {
+    read: async (key: string, { maxBytes }: { maxBytes: number }) => {
+      const { data, error } = await getClient().from(bucket).download(key);
+      if (error || data.size > maxBytes) return null;
+
+      return new Uint8Array(await data.arrayBuffer());
+    },
     delete: async (key: string): Promise<void> => {
       const { error } = await getClient().from(bucket).remove([key]);
       if (error) throw error;

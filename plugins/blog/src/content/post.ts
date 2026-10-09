@@ -52,6 +52,11 @@ export const blogPostContentType = defineContentType({
     }),
     content: field.textarea({ localized: true, required: true }),
     excerpt: field.textarea({
+      ai: {
+        action: "@vitnode/blog:excerpt.generate",
+        mode: "suggestion",
+        sourceFields: ["title", "content"],
+      },
       localized: true,
       nullable: true,
       maxLength: 300,

@@ -1,4 +1,3 @@
-import type { ContentFormTranslationMeta } from "@vitnode/core/content/admin-form";
 import type { MultiLangValue } from "@vitnode/core/lib/helpers/multi-lang";
 
 import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
@@ -56,32 +55,6 @@ export const translatedFieldStatus = (
   if (hasFieldText(values, field, target)) return "done";
 
   return hasFieldText(values, field, source) ? "missing" : "unavailable";
-};
-
-const timeOf = (value: null | string | undefined): null | number => {
-  if (!value) return null;
-  const time = new Date(value).getTime();
-
-  return Number.isNaN(time) ? null : time;
-};
-
-export const outdatedLocales = (
-  translations: readonly ContentFormTranslationMeta[],
-  source: string,
-): string[] => {
-  const sourceTime = timeOf(
-    translations.find(row => row.locale === source)?.updatedAt,
-  );
-  if (sourceTime === null) return [];
-
-  return translations
-    .filter(row => row.locale !== source)
-    .filter(row => {
-      const time = timeOf(row.updatedAt);
-
-      return time !== null && time < sourceTime;
-    })
-    .map(row => row.locale);
 };
 
 const startedLocales = (

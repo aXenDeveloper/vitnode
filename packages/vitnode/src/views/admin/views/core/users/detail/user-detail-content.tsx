@@ -25,6 +25,7 @@ import { UserPersonalCard, UserPreferencesCard } from "./user-profile-cards";
 import { UserRolesCardContent } from "./user-roles-content";
 
 export interface UserDetailProps {
+  aiAccess?: React.ReactNode;
   canEdit: boolean;
   connectedAccounts: React.ReactNode;
   devices: React.ReactNode;
@@ -41,6 +42,7 @@ export interface UserDetailProps {
 }
 
 export const UserDetailContent = ({
+  aiAccess,
   canEdit,
   connectedAccounts,
   devices,
@@ -87,6 +89,7 @@ export const UserDetailContent = ({
         />
         {connectedAccounts}
         {devices}
+        {aiAccess}
       </aside>
 
       <Tabs className="min-w-0 gap-4" defaultValue="activity">

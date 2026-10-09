@@ -3,6 +3,7 @@ import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { buildContentPublicModule } from "@vitnode/core/content/server";
 
+import { articleExcerptAiAction } from "@/api/ai/actions";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { settingsPage } from "@/content/settings-page";
@@ -18,6 +19,7 @@ import "@/api/lib/events";
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    aiActions: [articleExcerptAiAction],
     blocks: widgets,
     editablePages: [settingsPage],
     navigation: [{ href: "/example/browse", icon: "list", id: "browse" }],

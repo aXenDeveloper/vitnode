@@ -3,6 +3,7 @@ import {
   LayoutDashboardIcon,
   ServerIcon,
   ShieldUserIcon,
+  SparklesIcon,
   UsersRoundIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -215,6 +216,28 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.staff.admins"),
           href: "/admin/core/staff/admins",
           permission: core("staff_admins"),
+        },
+      ],
+    },
+    {
+      href: "/admin/core/ai",
+      title: key("admin.global.nav.ai.title"),
+      icon: <SparklesIcon />,
+      items: [
+        {
+          title: key("admin.global.nav.ai.overview"),
+          href: "/admin/core/ai",
+          permission: core("ai"),
+        },
+        {
+          title: key("admin.global.nav.ai.actions"),
+          href: "/admin/core/ai/actions",
+          permission: core("ai"),
+        },
+        {
+          title: key("admin.global.nav.ai.history"),
+          href: "/admin/core/ai/history",
+          permission: core("ai"),
         },
       ],
     },

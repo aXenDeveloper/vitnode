@@ -6,6 +6,7 @@ import {
   useMultiLangField,
 } from "@vitnode/core/components/form/fields/multi-lang";
 import { FormControl, FormMessage } from "@vitnode/core/components/ui/form";
+import { useContentForm } from "@vitnode/core/content/admin-form";
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
@@ -151,6 +152,10 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
   const { currentValue, selected, setValue } = useMultiLangField(
     field as MultiLangFieldProps["field"],
   );
+  const { files } = useContentForm();
+  const cover = files?.coverImage;
+  const fileAlt =
+    cover && !Array.isArray(cover) ? cover.alts?.[selected] : undefined;
 
   return (
     <>
@@ -167,13 +172,18 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
           onChange={event => {
             setValue(event.target.value);
           }}
-          placeholder={t("admin.article.editor.alt.placeholder")}
+          placeholder={
+            fileAlt?.trim()
+              ? fileAlt
+              : t("admin.article.editor.alt.placeholder")
+          }
           value={currentValue}
         />
       </FormControl>
       <div className="flex items-start justify-between gap-3">
         <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
           {t("admin.article.editor.alt.hint")}
+          {fileAlt ? ` ${t("admin.article.editor.alt.file_default")}` : null}
         </p>
         <CharacterCount field="coverImageAlt" value={currentValue} />
       </div>

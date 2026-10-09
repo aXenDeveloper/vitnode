@@ -179,7 +179,8 @@ const ContentFormFields = ({
   );
 
   const files = data?.files as
-    Record<string, ContentFileFieldValue> | undefined;
+    | Record<string, ContentFileFieldValue>
+    | undefined;
 
   const localizedFields = React.useMemo(
     () => contentLocalizedFieldNames(spec),
@@ -257,6 +258,15 @@ const ContentFormFields = ({
 
     if (mutation.version !== undefined) setExpectedVersion(mutation.version);
 
+    const savedId = mutation.id ?? data?.id;
+    if (savedId !== undefined) {
+      await Promise.allSettled(
+        [...savedListenersRef.current].map(async listener => {
+          await listener({ itemId: savedId });
+        }),
+      );
+    }
+
     toast.success(t(`${action}.success`, { name: singular }), {
       description: title,
     });
@@ -264,6 +274,20 @@ const ContentFormFields = ({
 
     return true;
   };
+
+  const savedListenersRef = React.useRef(
+    new Set<(saved: { itemId: number }) => Promise<void> | void>(),
+  );
+  const onSaved = React.useCallback(
+    (listener: (saved: { itemId: number }) => Promise<void> | void) => {
+      savedListenersRef.current.add(listener);
+
+      return () => {
+        savedListenersRef.current.delete(listener);
+      };
+    },
+    [],
+  );
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
     submitted,
@@ -452,6 +476,7 @@ const ContentFormFields = ({
                 header: presentation === "page" ? header : undefined,
                 localizedFieldNames: localizedFields,
                 mode: data ? "edit" : "create",
+                onSaved,
                 publication: {
                   canPublish,
                   enabled: publication,

@@ -47,7 +47,8 @@
           },
           "alt": {
             "placeholder": "What the image shows",
-            "hint": "Read aloud by screen readers instead of the image."
+            "hint": "Read aloud by screen readers instead of the image.",
+            "file_default": "Left empty, the image's default ALT text shown above is used."
           },
           "counter": {
             "title": "Search results show about {max} characters.",
@@ -77,7 +78,17 @@
               "missing": "Missing",
               "unavailable": "Nothing to translate"
             },
-            "field_into": "Translate into {language}"
+            "field_into": "Translate into {language}",
+            "outdated_fields": "Changed in {language} since translated: {fields}.",
+            "update_changed": "Update changed fields with AI",
+            "mark_reviewed": "Mark as up to date",
+            "fields": {
+              "title": "title",
+              "content": "content",
+              "excerpt": "excerpt",
+              "coverImageAlt": "image ALT text",
+              "friendlyUrl": "URL"
+            }
           },
           "ai": {
             "write_excerpt": "Write with AI",
@@ -116,6 +127,20 @@
             },
             "details": "Details",
             "cover": "Cover image"
+          },
+          "review": {
+            "title": "AI review (optional)",
+            "run": "Review with AI",
+            "again": "Review again",
+            "disclaimer": "Suggestions about clarity and completeness. It does not check facts and never blocks publishing.",
+            "nothing": "No suggestions - nice work.",
+            "high": "Worth fixing",
+            "areas": {
+              "clarity": "Clarity",
+              "completeness": "Completeness",
+              "structure": "Structure",
+              "tone": "Tone"
+            }
           }
         }
       },
@@ -142,5 +167,21 @@
   "@vitnode/blog:categories:can_view": "View categories list",
   "@vitnode/blog:categories:can_create": "Create categories",
   "@vitnode/blog:categories:can_edit": "Edit categories",
-  "@vitnode/blog:categories:can_delete": "Delete categories"
+  "@vitnode/blog:categories:can_delete": "Delete categories",
+  "ai_actions": {
+    "@vitnode/blog": {
+      "article_review": {
+        "title": "Review article before publishing",
+        "description": "Suggests clarity and completeness improvements before publishing."
+      },
+      "excerpt_generate": {
+        "title": "Generate excerpt",
+        "description": "Writes a short excerpt for an article."
+      },
+      "field_translate": {
+        "title": "Translate article field",
+        "description": "Translates one field of an article into another language."
+      }
+    }
+  }
 }

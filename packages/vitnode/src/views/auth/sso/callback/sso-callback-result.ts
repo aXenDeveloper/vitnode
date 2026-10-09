@@ -3,7 +3,8 @@ import type { SSOLinkOffer } from "../link/schema";
 export type SSOCallbackFailure = "email_exists" | "unknown";
 
 export type SSOCallbackResult =
-  undefined | { failure?: SSOCallbackFailure; offer?: SSOLinkOffer };
+  | undefined
+  | { failure?: SSOCallbackFailure; offer?: SSOLinkOffer };
 
 export const ssoCallbackResultFromStatus = (
   status: number,

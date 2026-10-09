@@ -1,0 +1,403 @@
+---
+title: AI in Fields & the Editor
+description: Add an AI suggestion button to a Content Engine text field with one option, use Quick Ask in the rich text editor, validate rich-text translations, track which translations are outdated, and offer an optional pre-publication review.
+icon: TextCursorInput
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+Give a Content Engine `text` or `textarea` field an `ai` option and the AdminCP form shows an **AI** button next to it. The button runs a registered [AI action](/docs/dev/ai/actions) with the other fields as input, shows the suggestion for review, and writes nothing until the editor accepts it.
+
+```ts title="plugins/blog/src/content/post.ts"
+excerpt: field.textarea({
+  ai: {
+    action: '@vitnode/blog:excerpt.generate',
+    mode: 'suggestion',
+    sourceFields: ['title', 'content'],
+  },
+  localized: true,
+  nullable: true,
+  maxLength: 300,
+}),
+```
+
+You write no route, no button and no form code. Core provides all of it.
+
+## Add AI to a field in your plugin
+
+The `@vitnode/example` plugin suggests an article teaser from its title and product code. Here is the whole feature.
+
+<Steps>
+
+<Step>
+
+### Define the action
+
+The action's input is **one string per source field, plus `locale`** for the language being edited. Match `inputSchema` to that shape.
+
+```ts title="plugins/example/src/api/ai/actions.ts"
+import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
+import { checkStaffPermission } from '@vitnode/core/api/lib/check-staff-permission'
+import { z } from 'zod'
+
+import { CONFIG_PLUGIN } from '@/const'
+import { articleContentType } from '@/content/article'
+
+export const articleExcerptAiAction = defineAiAction({
+  id: 'article.excerpt',
+  description: 'Suggests a teaser for an example article.',
+  promptVersion: 1,
+  permission: { key: 'article.excerpt', defaultGranted: true },
+  requiredCapabilities: ['text'],
+  defaults: {
+    maxInputCharacters: 400,
+    maxOutputTokens: 120,
+    timeoutMs: 20_000,
+  },
+  // [!code ++:5]
+  inputSchema: z.object({
+    code: z.string().max(100),
+    locale: z.string().min(2).max(16),
+    title: z.string().min(1).max(200),
+  }),
+  output: 'text',
+  outputSchema: z.string().min(1).max(500),
+  parseText: (text) => text.trim().replace(/^["“](.*)["”]$/su, '$1'),
+  buildPrompt: (input, { instructions }) => ({
+    prompt: `Title: ${input.title}\nProduct code: ${input.code}`,
+    system: [
+      'You write a one-sentence teaser for an article in a demo catalogue.',
+      `Write it in ${input.locale}, under 200 characters.`,
+      'Answer with the teaser only, without quotes.',
+      ...(instructions ? [instructions] : []),
+    ].join('\n'),
+  }),
+  // The AI permission never replaces access to the content.
+  authorize: async ({ c }) =>
+    await checkStaffPermission(c, {
+      module: articleContentType.permissionModule,
+      permission: 'can_edit',
+      plugin: CONFIG_PLUGIN.pluginId,
+      type: 'admin',
+    }),
+})
+```
+
+The real file turns the locale code into a language name with `Intl.DisplayNames`, because models write better for "Polish" than for "pl".
+
+</Step>
+
+<Step>
+
+### Register it
+
+```ts title="plugins/example/src/config.api.ts"
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    aiActions: [articleExcerptAiAction], // [!code ++]
+    modules: [adminModule /* ... */],
+  })
+```
+
+</Step>
+
+<Step>
+
+### Point the field at it
+
+Use the canonical key, `<pluginId>:<localId>`:
+
+```ts title="plugins/example/src/content/article.ts"
+excerpt: field.textarea({
+  // [!code ++:5]
+  ai: {
+    action: '@vitnode/example:article.excerpt',
+    mode: 'suggestion',
+    sourceFields: ['title', 'code'],
+  },
+  maxLength: 500,
+  nullable: true,
+}),
+```
+
+</Step>
+
+<Step>
+
+### Give editors access
+
+The editor's role needs the action's permission and an AI points allowance. See [AI access](/docs/dev/ai/admin#ai-access). With `defaultGranted: true` the permission is on until a role says otherwise, but the default monthly points are `0`, so non-root editors still need an allowance.
+
+</Step>
+
+</Steps>
+
+### The `ai` field option
+
+<TypeTable
+  type={{
+    action: {
+      description: 'Canonical action key, `<pluginId>:<localId>`.',
+      type: '`${string}:${string}`',
+      required: true,
+    },
+    mode: {
+      description: 'The editor previews the result and accepts or discards it.',
+      type: '"suggestion"',
+      required: true,
+    },
+    sourceFields: {
+      description:
+        'Fields the action reads, in the locale being edited. Each becomes a key of the input.',
+      type: 'readonly string[]',
+      required: true,
+    },
+  }}
+/>
+
+`ai` is plain JSON on the field definition, so it reaches the browser too. Nothing AI-specific is stored with the content.
+
+### Mistakes fail early
+
+- **When the content type is defined**, `defineContentType()` throws if the key is not `<pluginId>:<localId>`, `mode` is not `"suggestion"`, a source field does not exist, or the field lists itself as a source.
+- **At boot**, VitNode throws if no installed plugin registers the action, or the action is system-only (`actors: ["system"]`).
+
+The input shape is not checked at boot. A mismatch between `sourceFields` and `inputSchema` shows up as `AI_INVALID_INPUT` on the first click.
+
+## What editors see
+
+The **AI** button appears only when the server says this admin may start the action: AI is on, the action is enabled, a configured model can run it, and their roles grant its permission.
+
+1. **Generate** sends the source fields in the language being edited. It is disabled with _"Fill in title first"_ while a source field is empty.
+2. The suggestion appears in a review panel: **Discard**, **Try again** or **Use suggestion**.
+3. **Use suggestion** puts the text into the field. Only the edited language changes. Saving still goes through the normal form, validation and revisions.
+
+The panel warns before stale text replaces anything:
+
+- **The sources changed** since the suggestion was made: _"The text it was written from changed since. Try again for an up-to-date suggestion."_
+- **The editor typed into the field** after asking: the accept button becomes **Replace my newer text**.
+
+Accepting or discarding is recorded on the run for statistics only. It never changes what was charged. Each [error code](/docs/dev/ai/actions#error-codes) has its own message, such as _"The AI provider failed. Nothing was charged to you."_ or _"You reached today's limit for this AI feature."_
+
+## Run actions from your own UI
+
+The field button uses generic routes that run **any** registered user action. Your own AdminCP components can use them too:
+
+| Route                                      | Session     | Purpose                                     |
+| :----------------------------------------- | :---------- | :------------------------------------------ |
+| `POST /admin/ai/assist`                    | AdminCP     | Run an action, JSON in, JSON out.           |
+| `GET /admin/ai/assist/available`           | AdminCP     | Action keys this admin may start.           |
+| `POST /admin/ai/assist/runs/{id}/feedback` | AdminCP     | Record `{ accepted }` for one of your runs. |
+| `POST /ai/run`                             | Site member | Run an action, JSON in, JSON out.           |
+| `GET /ai/available`                        | Site member | Action keys this member may start.          |
+| `POST /ai/runs/{id}/feedback`              | Site member | Record `{ accepted }`.                      |
+
+The body is `{ action, input, idempotencyKey?, resource?, sourceFingerprint? }`. It never carries a model, a price or an actor. The server decides those. There is no extra staff permission on these routes on purpose: the action's AI permission and its `authorize()` decide.
+
+The browser helpers wrap them. The blog's pre-publication review is a complete example:
+
+```tsx title="plugins/blog/src/views/admin/article/editor/ai-review.tsx"
+import { useAvailableAiActions } from '@vitnode/core/components/ai/use-available-ai-actions'
+import {
+  aiErrorCodeOf,
+  requestAiAssist,
+} from '@vitnode/core/lib/ai/assist-client'
+
+const { data: available = [] } = useAvailableAiActions('admin')
+if (!available.includes('@vitnode/blog:article.review')) return null
+
+try {
+  const { output, runId } = await requestAiAssist({
+    action: '@vitnode/blog:article.review',
+    input: { content, excerpt, locale, title },
+  })
+} catch (error) {
+  setError(aiErrorCodeOf(error)) // e.g. "AI_USER_LIMIT_REACHED"
+}
+```
+
+`requestAiAssist()` calls `POST /admin/ai/assist` with a fresh idempotency key and throws an `AiRequestError` on failure. The available-actions list only decides which buttons to show. The server authorizes every run again.
+
+## Quick Ask in the rich text editor
+
+Quick Ask is the **Quick Ask (AI)** button in the Tiptap rich text editor toolbar. It works on the selection and the text around it:
+
+| Operation        | Action key                               | Does                                                       |
+| :--------------- | :--------------------------------------- | :--------------------------------------------------------- |
+| Shorten          | `@vitnode/core:editor.selection.rewrite` | Tighter text, same meaning.                                |
+| Correct writing  | `@vitnode/core:editor.selection.rewrite` | Spelling, grammar and punctuation only.                    |
+| Simplify         | `@vitnode/core:editor.selection.rewrite` | Simpler words, shorter sentences.                          |
+| Change the tone  | `@vitnode/core:editor.selection.rewrite` | Friendly, formal, confident or neutral.                    |
+| Continue writing | `@vitnode/core:editor.quick-ask`         | One or two paragraphs from where the text ends.            |
+| Ask anything     | `@vitnode/core:editor.quick-ask`         | A custom request about the selection (max 500 characters). |
+
+<Callout type="warn" title="Off until an admin grants it">
+  Both actions share the permission `@vitnode/core:editor.assist` with
+  `defaultGranted: false`. Nobody but root sees Quick Ask until an admin allows
+  it for a role in **Artificial Intelligence (AI) → Access & limits** and gives
+  that role points.
+</Callout>
+
+How it behaves:
+
+- **Bounded context.** It sends the selection (up to 8,000 characters) and up to 1,500 characters before and after it. It never sends the whole document.
+- **Streamed and previewed.** The answer streams into a preview. **Stop** cancels it; a canceled run charges the member no points.
+- **Cost shown first.** With a selection, the panel shows the reservation bound, not a price: _"One request costs at most N AI points - usually much less."_
+- **Plain text only.** The answer becomes paragraphs and hard breaks. It is never parsed as HTML, so it cannot inject markup, links or scripts.
+- **Stale selection.** If the selected text changed while the answer was written, **Replace selection** is disabled; **Insert below** still works.
+- **One-step undo.** Applying is one editor transaction. The toast's **Undo** or Ctrl+Z restores the text exactly.
+- **Nothing is saved** until the form is saved.
+- **Content language.** It writes in the language of the field being edited (the multi-language tab), not the interface language.
+- **Streaming models only.** Streamed runs use only models that declare the `streaming` capability; without one, Quick Ask fails with `AI_MODEL_INCOMPATIBLE`.
+
+Quick Ask uses the AdminCP routes on `/admin` pages and the member routes everywhere else.
+
+### Streaming and estimate routes
+
+| Route                            | Session     |
+| :------------------------------- | :---------- |
+| `POST /admin/ai/assist/stream`   | AdminCP     |
+| `POST /admin/ai/assist/estimate` | AdminCP     |
+| `POST /ai/stream`                | Site member |
+| `POST /ai/estimate`              | Site member |
+
+The stream routes accept the same body as `/ai/run` and answer `application/x-ndjson`, one JSON object per line:
+
+```text
+{"t":"A tighter "}
+{"t":"version of the paragraph."}
+{"done":{"runId":812,"chargedPoints":"0.42","costKnown":true,"modelId":"default"}}
+```
+
+A failure after the stream started arrives as `{"e":{"code":"AI_TIMEOUT","message":"…"}}`. Limits and budgets are checked before the first byte, so refusals are ordinary JSON error responses. Only `text` actions stream.
+
+`/estimate` answers `{ maxPoints, maxUsd }`: the most the run could cost, or `null` when no pricing bounds it.
+
+Use the browser helpers from `@vitnode/core/lib/ai/stream-client` in your own editor tools:
+
+```ts
+import {
+  aiAssistScope,
+  streamAiAction,
+} from '@vitnode/core/lib/ai/stream-client'
+
+const controller = new AbortController()
+const summary = await streamAiAction({
+  action: '@vitnode/core:editor.selection.rewrite',
+  input: { after, before, locale, operation: 'shorten', selection },
+  onDelta: (delta) => setPreview((text) => text + delta),
+  scope: aiAssistScope(), // "admin" on /admin pages, otherwise "user"
+  signal: controller.signal, // controller.abort() stops paying
+})
+```
+
+`estimateAiAction({ action, input, scope })` resolves to the maximum points as a string, or `null`. The editor-side helpers `takeQuickAskSnapshot()`, `isQuickAskStale()` and `applyQuickAskResult()` live in `@vitnode/core/components/tiptap/quick-ask/quick-ask-editor`.
+
+## Rich-text translation keeps its structure
+
+Asking a model to "preserve the HTML" is not a guarantee. The blog's `field.translate` action checks it instead:
+
+```ts title="plugins/blog/src/api/ai/actions.ts"
+import { assertSameHtmlStructure } from '@vitnode/core/api/lib/ai/html-structure'
+
+parseText: (text, input) => {
+  if (input.format === 'text') return unquote(text)
+  const translated = text.trim()
+  assertSameHtmlStructure(input.text, translated) // [!code highlight]
+
+  return translated
+},
+```
+
+`assertSameHtmlStructure(source, translated)` compares every tag in order, with its attributes. Text and the translatable attributes `alt`, `title`, `aria-label` and `placeholder` may change; tags, links and other attributes may not. A difference throws `HtmlStructureError`, the run fails with `AI_INVALID_OUTPUT`, and the editor is not charged.
+
+`htmlStructureDifference()` returns the first difference as a string (or `null`) when you want to report it instead of throwing.
+
+## Translation freshness
+
+For each translated field, VitNode stores a fingerprint of **the source text it was translated from** in `core_ai_translation_sources`. Comparing that fingerprint with the current source shows exactly which fields are outdated. VitNode never uses timestamps for this.
+
+| Status      | Meaning                                                                   |
+| :---------- | :------------------------------------------------------------------------ |
+| `fresh`     | Translated from the source as it is now.                                  |
+| `edited`    | As above, and a person changed the translation since. Their changes stay. |
+| `outdated`  | The source changed after the translation was made.                        |
+| `untracked` | No record of what it was translated from, so no claim either way.         |
+| `missing`   | Nothing translated yet.                                                   |
+
+Use `useTranslationFreshness()` inside a Content Engine form:
+
+```tsx title="plugins/blog/src/views/admin/article/editor/article-editor.tsx"
+import {
+  useContentForm,
+  useContentFormValues,
+  useTranslationFreshness,
+} from '@vitnode/core/content/admin-form'
+
+const { defaultLocale } = useContentForm()
+const values = useContentFormValues()
+
+const freshness = useTranslationFreshness({
+  contentTypeId,
+  fields: ['title', 'content', 'excerpt'],
+  itemId, // undefined while creating
+  source: defaultLocale ?? 'en',
+  values,
+})
+
+freshness.freshnessOf('pl') // { title: 'fresh', content: 'outdated', excerpt: 'missing' }
+freshness.outdatedFields('pl') // ['content']
+freshness.editedByPerson('pl', 'content') // true when a person changed the AI text
+
+// After placing an AI translation into the form:
+freshness.rememberAiTranslation('pl', 'content')
+// When a person confirms the translations still match the source:
+freshness.markReviewed('pl', freshness.outdatedFields('pl'))
+```
+
+`rememberAiTranslation()` and `markReviewed()` record nothing immediately. They are written when the form is saved, through the form's `onSaved` hook, so a record always describes text that was actually kept. Your own form code can subscribe the same way: `useContentForm().onSaved?.(async ({ itemId }) => { … })` returns an unsubscribe function.
+
+The blog uses this to show which languages are outdated, to update only outdated fields that no person edited, and to let an editor mark a translation as reviewed.
+
+The records are read and written with `GET` and `PUT /admin/ai/translation-sources`. Both require `can_edit` on the content type's own permission module.
+
+## Pre-publication review
+
+The blog's `@vitnode/blog:article.review` action is an optional read-through in the article editor's side panel. It is an `output: "object"` action, so it needs a `structured-output` model. It returns:
+
+```ts
+{
+  summary: string,
+  suggestions: Array<{
+    area: 'clarity' | 'completeness' | 'structure' | 'tone',
+    message: string,
+    priority: 'high' | 'low',
+  }>, // at most 8
+}
+```
+
+- It **never verifies facts**. The prompt forbids judging whether facts are true, because the model has nothing to check them against.
+- It **never gates publishing**. The deterministic readiness checks decide; publishing works the same with or without a review.
+
+It is a good template for structured, advisory AI in your own plugin.
+
+## Learn more
+
+<Cards>
+  <Card
+    title="AI Actions"
+    description="defineAiAction options, actors and error codes"
+    href="/docs/dev/ai/actions"
+  />
+  <Card
+    title="Content Engine fields"
+    description="field.text, field.textarea and every other field type"
+    href="/docs/dev/content-engine/fields"
+  />
+  <Card
+    title="AdminCP & Account Usage"
+    description="Grant AI permissions and points to roles"
+    href="/docs/dev/ai/admin"
+  />
+</Cards>

@@ -38,31 +38,29 @@ export const DocsShellContent = ({
             { active: 'nested-url', text: 'Documentation', url: '/docs' },
           ]}
           nav={{ mode: 'top', title: <LogoVitNode className="w-30" /> }}
-          sidebar={{
-            tabs: {
-              transform(option) {
-                const tab = docsSectionOf(option.url)
-                if (!(tab && option.icon)) return option
+          slots={{ themeSwitch: ThemeSwitcher }}
+          tabs={{
+            transform(option) {
+              const tab = docsSectionOf(option.url)
+              if (!(tab && option.icon)) return option
 
-                const color = `var(--${tab}-color, var(--color-fd-foreground))`
+              const color = `var(--${tab}-color, var(--color-fd-foreground))`
 
-                return {
-                  ...option,
-                  icon: (
-                    <div
-                      className="size-full rounded-lg max-md:border max-md:bg-(--tab-color)/10 max-md:p-1.5 [&_svg]:size-full"
-                      style={
-                        { '--tab-color': color, color } as React.CSSProperties
-                      }
-                    >
-                      {option.icon}
-                    </div>
-                  ),
-                }
-              },
+              return {
+                ...option,
+                icon: (
+                  <div
+                    className="size-full rounded-lg max-md:border max-md:bg-(--tab-color)/10 max-md:p-1.5 [&_svg]:size-full"
+                    style={
+                      { '--tab-color': color, color } as React.CSSProperties
+                    }
+                  >
+                    {option.icon}
+                  </div>
+                ),
+              }
             },
           }}
-          slots={{ themeSwitch: ThemeSwitcher }}
           tree={pageTree}
         >
           {children}

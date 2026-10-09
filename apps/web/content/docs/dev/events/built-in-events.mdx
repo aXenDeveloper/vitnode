@@ -510,6 +510,32 @@ own preferences are saved, by them or by staff on their AdminCP user page.
 pauses, deletes or resets everything, or note when staff changed how a single
 member is notified.
 
+## AI events
+
+Declared in `VitNodeEvents` in `packages/vitnode/src/api/models/events.ts`.
+The two `ai.run.*` events are emitted by the shared AI runner (see
+[AI Actions](/docs/dev/ai/actions)). They fire **after** the run was settled,
+so its cost and points are already in the history when a listener reads it. A
+failing listener never breaks the run - or the ALT write.
+
+| Event               | Payload                                              | Fires when                                                                                                   |
+| ------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `ai.run.completed`  | `{ actionKey, actorType, runId, userId }`            | A managed AI run delivered a valid result                                                                    |
+| `ai.run.failed`     | `{ actionKey, actorType, errorCode, runId, userId }` | A run ended without a valid result: provider failure, cancel, bad output                                     |
+| `files.alt.updated` | `{ fileId, languageCodes, origin }`                  | An image's default ALT text was written - by [automatic ALT text](/docs/dev/ai/automatic-alt) or by a person |
+
+`userId` is `null` for system work such as automatic ALT text. Prompts and
+outputs are never part of the payload.
+
+`files.alt.updated` fires after the `core_files_alt` rows were written.
+`languageCodes` lists only the languages that actually changed, and `origin` is
+`"ai"` for the background job or `"human"` for `PUT /admin/files/{id}/alt`.
+Removing a language's ALT text emits nothing.
+
+**A listener would** post a notice when an editor's AI suggestion fails, count
+AI usage per plugin in your own analytics, or purge cached pages that render an
+image whose ALT text just changed.
+
 ## Page layout events
 
 One name, declared in `VitNodeEvents` in
@@ -919,7 +945,7 @@ An interactive publish is emitted once, by the route that performed it, and
 carries no `scheduleId`.
 
 The other way out is an idempotency key on whatever the listener writes. A
-notification published with `idempotencyKey: \`post:${payload.contentId}\``
+notification published with `` idempotencyKey: `post:${payload.contentId}` ``
 turns a second run into a no-op. See
 [Idempotency keys](/docs/dev/notifications/publishing#choose-an-idempotency-key).
 

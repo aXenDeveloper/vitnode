@@ -8,9 +8,27 @@ import type { SsoProfileField } from "@/lib/sso-profile";
 import type { EventListenerConfig } from "../lib/events";
 
 export interface VitNodeEvents {
+  "ai.run.completed": {
+    actionKey: string;
+    actorType: "system" | "user";
+    runId: number;
+    userId: null | number;
+  };
+  "ai.run.failed": {
+    actionKey: string;
+    actorType: "system" | "user";
+    errorCode: null | string;
+    runId: number;
+    userId: null | number;
+  };
   "core.page-layout.updated": {
     changedZones: string[];
     pageId: string;
+  };
+  "files.alt.updated": {
+    fileId: number;
+    languageCodes: string[];
+    origin: "ai" | "human";
   };
   "navigation.created": {
     navigationId: number;

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type {
   AnyContentTypeDefinition,
+  ContentFieldAiAssist,
   ContentFieldDescriptor,
   ContentFieldKind,
 } from "../types";
@@ -27,6 +28,7 @@ import {
 import { humanizeFieldName } from "./labels";
 
 export interface ContentFormFieldSpec {
+  ai?: ContentFieldAiAssist;
   allowedExtensions?: string[];
   /** `file` fields only: the media types the field accepts, lowercased. */
   allowedMimeTypes?: string[];
@@ -237,6 +239,15 @@ export const projectFormField = (
     case "textarea":
       return {
         ...base,
+        ...(fieldValue.ai
+          ? {
+              ai: {
+                action: fieldValue.ai.action,
+                mode: fieldValue.ai.mode,
+                sourceFields: [...fieldValue.ai.sourceFields],
+              },
+            }
+          : {}),
         defaultValue: fieldValue.defaultValue,
         maxLength: fieldValue.maxLength,
         minLength: fieldValue.minLength,
@@ -693,7 +704,9 @@ export const buildFormSchemaFromSpec = (
         // a shared `baseFieldSchema` cannot see.
         if (fieldSpec.kind === "group") {
           const current = values?.[fieldSpec.name] as
-            null | Record<string, unknown> | undefined;
+            | null
+            | Record<string, unknown>
+            | undefined;
           const object = leafObjectSchema(fieldSpec, current ?? undefined);
           const nullable: z.ZodType = fieldSpec.nullable
             ? object.nullable()

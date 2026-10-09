@@ -35,13 +35,13 @@ export const createPlugin = async ({
     });
   }
 
-  const { pluginName, pluginPath, eslint } =
+  const { pluginName, pluginPath, oxlint } =
     await validationProjectForPlugin(name);
   const options = await createPluginQuestionsCli(program);
   await createPluginVitNode({
     pluginName,
     pluginPath,
-    eslint,
+    oxlint,
     ...options,
   });
 };

@@ -75,7 +75,7 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  let eslint = false;
+  let oxlint = false;
 
   try {
     const packageJson: PackageJSON = JSON.parse(
@@ -95,9 +95,9 @@ export const validationProjectForPlugin = async (projectPath: string) => {
       process.exit(1);
     }
 
-    eslint = !!(
-      packageJson.dependencies?.eslint ??
-      packageJson.devDependencies?.eslint ??
+    oxlint = !!(
+      packageJson.dependencies?.oxlint ??
+      packageJson.devDependencies?.oxlint ??
       false
     );
   } catch (error) {
@@ -155,5 +155,5 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  return { pluginName, pluginPath, eslint };
+  return { pluginName, pluginPath, oxlint };
 };

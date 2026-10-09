@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   articleChecks,
   type ArticleValues,
-  outdatedLocales,
   translatedFieldStatus,
 } from "./readiness";
 
@@ -46,30 +45,6 @@ describe("translatedFieldStatus", () => {
         { source: "en", target: "pl" },
       ),
     ).toBe("unavailable");
-  });
-});
-
-describe("outdatedLocales", () => {
-  it("lists translations saved before the source language last changed", () => {
-    expect(
-      outdatedLocales(
-        [
-          { locale: "en", updatedAt: "2026-10-03T10:00:00Z" },
-          { locale: "pl", updatedAt: "2026-10-01T10:00:00Z" },
-          { locale: "de", updatedAt: "2026-10-03T11:00:00Z" },
-        ],
-        "en",
-      ),
-    ).toEqual(["pl"]);
-  });
-
-  it("knows nothing without the source row", () => {
-    expect(
-      outdatedLocales(
-        [{ locale: "pl", updatedAt: "2026-10-01T10:00:00Z" }],
-        "en",
-      ),
-    ).toEqual([]);
   });
 });
 

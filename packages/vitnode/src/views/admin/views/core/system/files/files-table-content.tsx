@@ -106,17 +106,17 @@ export const FilesTableContent = ({
           id: "actions",
           header: "",
           align: "right",
-          className: "w-10",
-          cell: ({ row }) =>
-            canDownload || canDelete ? (
-              <FileRowActions
-                canDelete={canDelete}
-                canDownload={canDownload}
-                id={row.id}
-                name={row.name}
-                onDelete={onDeleteFile}
-              />
-            ) : null,
+          className: "w-28",
+          cell: ({ row }) => (
+            <FileRowActions
+              canDelete={canDelete}
+              canDownload={canDownload}
+              id={row.id}
+              mimeType={row.mimeType}
+              name={row.name}
+              onDelete={onDeleteFile}
+            />
+          ),
         },
       ]}
       customNoResults={{

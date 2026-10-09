@@ -10,6 +10,7 @@ import {
   useContentForm,
   useContentFormValues,
   useSetContentFormValue,
+  useTranslationFreshness,
 } from "@vitnode/core/content/admin-form";
 import { slugify } from "@vitnode/core/content/slug";
 import {
@@ -22,6 +23,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { translateArticleText, writeArticleExcerpt } from "./ai";
+import { ArticleAiReview } from "./ai-review";
 import {
   type ArticleFieldActions,
   ArticleFieldActionsContext,
@@ -31,7 +33,6 @@ import {
   type ArticleCheck,
   articleChecks,
   type ArticleValues,
-  outdatedLocales,
   REQUIRED_TRANSLATED_FIELDS,
   type TranslatedField,
   translatedFieldStatus,
@@ -52,15 +53,15 @@ const AI_TRANSLATED_FIELDS = [
   "coverImageAlt",
 ] as const satisfies readonly TranslatedField[];
 
-export const ArticleEditor = () => {
+export const ArticleEditor = ({
+  contentTypeId,
+  itemId,
+}: {
+  contentTypeId: string;
+  itemId: number | undefined;
+}) => {
   const t = useTranslations("@vitnode/blog.admin.article.editor");
-  const {
-    defaultLocale,
-    files,
-    header,
-    markHeaderRendered,
-    translations = [],
-  } = useContentForm();
+  const { defaultLocale, files, header, markHeaderRendered } = useContentForm();
   const languages = useLanguages();
   const source = defaultLocale ?? languages[0]?.code ?? "en";
   const locales = languages.map(language => language.code);
@@ -81,7 +82,16 @@ export const ArticleEditor = () => {
   const languageName = (code: string) =>
     languages.find(language => language.code === code)?.name ?? code;
   const sourceName = languageName(source);
-  const outdated = outdatedLocales(translations, source);
+  const freshness = useTranslationFreshness({
+    contentTypeId,
+    fields: AI_TRANSLATED_FIELDS,
+    itemId,
+    source,
+    values,
+  });
+  const outdated = locales.filter(
+    code => code !== source && freshness.outdatedFields(code).length > 0,
+  );
   const checks = articleChecks({ locales, outdated, source, values });
   const ready = checks.filter(check => check.ok).length;
 
@@ -123,6 +133,7 @@ export const ArticleEditor = () => {
             to,
           }),
         );
+        freshness.rememberAiTranslation(to, field);
       },
       t("translate.active", { language: languageName(to) }),
     );
@@ -138,6 +149,11 @@ export const ArticleEditor = () => {
     );
     if (fields.includes("friendlyUrl")) await translateField("friendlyUrl", to);
   };
+
+  const aiUpdatableFields = (to: string) =>
+    freshness
+      .outdatedFields(to)
+      .filter(field => !freshness.editedByPerson(to, field));
 
   const missingFields = (to: string) =>
     [...AI_TRANSLATED_FIELDS, "friendlyUrl" as const].filter(
@@ -383,21 +399,42 @@ export const ArticleEditor = () => {
                 {outdated.includes(target) && !dismissed.includes(target) ? (
                   <OutdatedBanner
                     action={
-                      ai.available ? (
-                        <AiButton
-                          label={t("translate.update_all")}
+                      <>
+                        {ai.available &&
+                        aiUpdatableFields(target).length > 0 ? (
+                          <AiButton
+                            label={t("translate.update_changed")}
+                            onClick={() => {
+                              void translateFields(
+                                target,
+                                aiUpdatableFields(target),
+                              );
+                            }}
+                            pending={AI_TRANSLATED_FIELDS.some(field =>
+                              ai.isPending(`${field}:${target}`),
+                            )}
+                            pendingLabel={t("ai.translating")}
+                          />
+                        ) : null}
+                        <Button
                           onClick={() => {
-                            void translateFields(target, [
-                              ...AI_TRANSLATED_FIELDS,
-                            ]);
+                            freshness.markReviewed(
+                              target,
+                              freshness.outdatedFields(target),
+                            );
+                            setDismissed(current => [...current, target]);
                           }}
-                          pending={AI_TRANSLATED_FIELDS.some(field =>
-                            ai.isPending(`${field}:${target}`),
-                          )}
-                          pendingLabel={t("ai.translating")}
-                        />
-                      ) : null
+                          size="xs"
+                          type="button"
+                          variant="ghost"
+                        >
+                          {t("translate.mark_reviewed")}
+                        </Button>
+                      </>
                     }
+                    fields={freshness
+                      .outdatedFields(target)
+                      .map(field => t(`translate.fields.${field}`))}
                     onDismiss={() => {
                       setDismissed(current => [...current, target]);
                     }}
@@ -496,6 +533,12 @@ export const ArticleEditor = () => {
               checks={checks}
               languageName={languageName}
               sourceName={sourceName}
+            />
+            <ArticleAiReview
+              content={getLangValue(values.content, fieldLocale)}
+              excerpt={getLangValue(values.excerpt, fieldLocale)}
+              locale={fieldLocale}
+              title={getLangValue(values.title, fieldLocale)}
             />
             <Previews
               cover={files?.coverImage}

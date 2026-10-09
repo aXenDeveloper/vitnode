@@ -69,7 +69,8 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     | undefined;
 
   publicService:
-    ((c: Context) => ContentPublicService<TDefinition>) | undefined;
+    | ((c: Context) => ContentPublicService<TDefinition>)
+    | undefined;
   /** The definition's schemas, re-typed for this concrete content type. */
   schemas: ContentSchemas<TDefinition>;
   /** Typed repository bound to the request's database handle. */
@@ -95,13 +96,14 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   translationSchemas: ContentTranslationSchemas<TDefinition> | null;
 
   translationService:
-    ((c: Context) => ContentTranslationModel<TDefinition>) | undefined;
+    | ((c: Context) => ContentTranslationModel<TDefinition>)
+    | undefined;
 
   translationTable: ContentTranslationTableFor<TDefinition> | null;
 }
 
-export type AnyContentModel = ContentModel<
-  // Deliberately `any` rather than `AnyContentTypeDefinition`, and
+export type AnyContentModel =
+  ContentModel<// Deliberately `any` rather than `AnyContentTypeDefinition`, and
   // load-bearing. `ContentModel` mentions its definition in both directions -
   // `create` takes `ContentCreateInput<TDefinition>`, `findMany` returns
   // `ContentListRow<TDefinition>` - so it is genuinely invariant. It only ever
@@ -120,8 +122,7 @@ export type AnyContentModel = ContentModel<
   // against it, which is the comparison being avoided. Read the definition
   // back through `contentDefinitionOf` instead.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  any
->;
+  any>;
 
 export const contentDefinitionOf = (
   model: AnyContentModel,

@@ -7,6 +7,7 @@ import type {
   ContentFileFieldValue,
 } from "@/content/files";
 
+import { AiFieldAssist } from "@/components/ai/ai-field-assist";
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
 import { AutoFormFile } from "@/components/form/fields/file";
@@ -204,6 +205,9 @@ export const ContentField = ({
     ...rest,
     otherProps: { ...rest.otherProps, isOptional },
   };
+  const aiAssist = spec.ai ? (
+    <AiFieldAssist ai={spec.ai} fieldName={spec.name} multiLang={multiLang} />
+  ) : undefined;
 
   switch (spec.kind) {
     case "boolean":
@@ -255,6 +259,7 @@ export const ContentField = ({
       return (
         <AutoFormTextarea
           label={spec.label}
+          labelRight={aiAssist}
           multiLang={multiLang}
           rows={5}
           {...props}
@@ -270,7 +275,12 @@ export const ContentField = ({
 
     default:
       return (
-        <AutoFormInput label={spec.label} multiLang={multiLang} {...props} />
+        <AutoFormInput
+          label={spec.label}
+          labelRight={aiAssist}
+          multiLang={multiLang}
+          {...props}
+        />
       );
   }
 };

@@ -13,6 +13,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { parseEmojiIcon } from "@/lib/emoji-icon";
 import { isExternalNavigationHref } from "@/lib/navigation";
 
@@ -328,3 +329,27 @@ export const HeaderNavMenu = ({
     </div>
   );
 };
+
+const NAV_SKELETON_WIDTHS = ["w-20", "w-24", "w-16"] as const;
+
+export const HeaderNavSkeleton = ({
+  className,
+  label,
+}: {
+  className?: string;
+  label: string;
+}) => (
+  <div
+    aria-busy="true"
+    className={cn(
+      "hidden min-w-0 flex-1 items-center gap-1 sm:flex",
+      className,
+    )}
+    role="status"
+  >
+    <span className="sr-only">{label}</span>
+    {NAV_SKELETON_WIDTHS.map(width => (
+      <Skeleton className={cn("h-9", width)} key={width} />
+    ))}
+  </div>
+);

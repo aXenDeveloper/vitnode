@@ -23,6 +23,7 @@ export {
 } from "./file-rules";
 
 export interface ContentFileDescriptor {
+  alts?: Record<string, string>;
   height?: number;
   id: number;
   mimeType: null | string;
@@ -33,6 +34,7 @@ export interface ContentFileDescriptor {
 }
 
 export const zodContentFileDescriptor = z.strictObject({
+  alts: z.record(z.string(), z.string()).optional(),
   height: z.number().int().positive().optional(),
   id: z.number().int().positive(),
   mimeType: z.string().nullable(),
@@ -43,7 +45,9 @@ export const zodContentFileDescriptor = z.strictObject({
 });
 
 export type ContentFileFieldValue =
-  ContentFileDescriptor | ContentFileDescriptor[] | null;
+  | ContentFileDescriptor
+  | ContentFileDescriptor[]
+  | null;
 
 /** The response schema for {@link ContentFileFieldValue}. */
 export const zodContentFileFieldValue = z.union([

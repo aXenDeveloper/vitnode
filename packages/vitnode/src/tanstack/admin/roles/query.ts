@@ -8,6 +8,8 @@ import type { AdminRoleFormProps } from "@/views/admin/views/core/users/roles/ro
 import type { AdminRolesParams } from "@/views/admin/views/core/users/roles/roles-query";
 import type { RolesAdminTableProps } from "@/views/admin/views/core/users/roles/roles-table-content";
 
+import { updateAdminAiRoleAccess } from "@/views/admin/views/core/ai/ai-mutations";
+import { isAdminMutationError } from "@/views/admin/views/core/shared/admin-mutation";
 import {
   createAdminRole,
   deleteAdminRole,
@@ -19,6 +21,7 @@ import {
   fetchAdminRolesPage,
 } from "@/views/admin/views/core/users/roles/roles-query";
 
+import { invalidateAdminAi } from "../ai/query";
 import { useAdminIdentity } from "../identity";
 import { invalidateAdminSession } from "../session-query";
 import { invalidateAdminUsers } from "../users/query";
@@ -89,9 +92,19 @@ export const useAdminRoleMutations = (): {
         const result =
           id === undefined
             ? await createAdminRole(body)
-            : await updateAdminRole(id, body);
-        if ("data" in result) {
-          await invalidateAfterAdminRoleChange(queryClient, adminUserId);
+            : await updateAdminRole(id, body).then(updated =>
+                isAdminMutationError(updated) ? updated : { data: { id } },
+              );
+        if (isAdminMutationError(result)) return result;
+        await invalidateAfterAdminRoleChange(queryClient, adminUserId);
+
+        if (values.ai) {
+          const aiResult = await updateAdminAiRoleAccess({
+            ...values.ai,
+            roleId: result.data.id,
+          });
+          await invalidateAdminAi(queryClient, adminUserId);
+          if (isAdminMutationError(aiResult)) return aiResult;
         }
 
         return result;

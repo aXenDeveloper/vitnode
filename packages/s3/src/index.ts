@@ -6,6 +6,7 @@ import type {
 
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -61,6 +62,21 @@ export const S3StorageAdapter = ({
       );
     },
     getUrl,
+    read: async (key: string, { maxBytes }: { maxBytes: number }) => {
+      try {
+        const object = await getClient().send(
+          new GetObjectCommand({ Bucket: bucket, Key: key }),
+        );
+        if ((object.ContentLength ?? 0) > maxBytes || !object.Body) {
+          return null;
+        }
+        const bytes = await object.Body.transformToByteArray();
+
+        return bytes.byteLength > maxBytes ? null : bytes;
+      } catch {
+        return null;
+      }
+    },
     upload: async ({
       body,
       contentType,

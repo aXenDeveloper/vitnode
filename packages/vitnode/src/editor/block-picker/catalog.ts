@@ -52,7 +52,10 @@ export interface MergedBlockCatalog {
 }
 
 export type BlockCatalogNotice =
-  "empty" | "no_results" | "none_installed" | null;
+  | "empty"
+  | "no_results"
+  | "none_installed"
+  | null;
 
 export const LAYOUT_CATALOG_GROUP_ID = "layout";
 

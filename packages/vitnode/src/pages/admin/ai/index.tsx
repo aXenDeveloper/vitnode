@@ -1,0 +1,37 @@
+import type { PluginRoutePageProps } from "@/routing";
+import type { AdminAiOverviewRouteData } from "@/tanstack/admin/ai/route";
+import type { AiOverviewRouteSearch } from "@/tanstack/admin/ai/route-search";
+
+import { AdminAiOverviewRouteContent } from "@/tanstack/admin/ai/overview-screen";
+import { loadAdminAiOverviewRoute } from "@/tanstack/admin/ai/route";
+import { adminBreadcrumb } from "@/tanstack/admin/breadcrumb";
+import { defineAdminRoute } from "@/tanstack/plugin-routes";
+
+const AdminAiOverviewPage = ({
+  loaderData,
+  navigate,
+  search,
+}: PluginRoutePageProps<AdminAiOverviewRouteData, AiOverviewRouteSearch>) => (
+  <AdminAiOverviewRouteContent
+    {...loaderData}
+    navigate={navigate}
+    settingsOpen={search.settings === "open"}
+  />
+);
+
+export const route = defineAdminRoute<
+  AdminAiOverviewRouteData,
+  AiOverviewRouteSearch
+>({
+  load: async ({ context, search, t }) =>
+    await loadAdminAiOverviewRoute({
+      ...context,
+      search,
+      t,
+    }),
+  head: ({ loaderData }) => ({ ...loaderData }),
+
+  breadcrumb: adminBreadcrumb({ segments: ["core", "ai"] }),
+});
+
+export default AdminAiOverviewPage;

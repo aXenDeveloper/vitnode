@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { digitFaceOffset, numberPlaces } from "./sliding-number-utils";
+import {
+  digitFaceOffset,
+  formattedPlaces,
+  numberPlaces,
+} from "./sliding-number-utils";
 
 describe("digitFaceOffset", () => {
   it("puts the current digit in view and its neighbours above and below", () => {
@@ -53,5 +57,62 @@ describe("numberPlaces", () => {
       fractionDigits: 1,
       scaled: 3,
     });
+  });
+});
+
+describe("formattedPlaces", () => {
+  const segmentsOf = (formatter: Intl.NumberFormat, value: number) =>
+    formattedPlaces(formatter, value).segments.map(segment =>
+      segment.kind === "digit" ? segment.exponent : segment.text,
+    );
+
+  it("rolls only the digits and keeps currency signs and separators still", () => {
+    const usd = new Intl.NumberFormat("en-US", {
+      currency: "USD",
+      style: "currency",
+    });
+
+    expect(segmentsOf(usd, 1234.5)).toEqual([
+      "$",
+      3,
+      ",",
+      2,
+      1,
+      0,
+      ".",
+      -1,
+      -2,
+    ]);
+    expect(formattedPlaces(usd, 1234.5)).toMatchObject({
+      fractionDigits: 2,
+      scaled: 123_450,
+    });
+  });
+
+  it("keeps percent signs and compact suffixes as text", () => {
+    expect(
+      segmentsOf(
+        new Intl.NumberFormat("en-US", {
+          maximumFractionDigits: 2,
+          style: "percent",
+        }),
+        0.2222,
+      ),
+    ).toEqual([1, 0, ".", -1, -2, "%"]);
+    expect(
+      segmentsOf(
+        new Intl.NumberFormat("en-US", {
+          maximumFractionDigits: 1,
+          notation: "compact",
+        }),
+        1500,
+      ),
+    ).toEqual([0, ".", -1, "K"]);
+  });
+
+  it("falls back to plain text for digits it cannot roll", () => {
+    expect(
+      formattedPlaces(new Intl.NumberFormat("ar-EG"), 42).segments,
+    ).toEqual([{ key: "value", kind: "text", text: "٤٢" }]);
   });
 });

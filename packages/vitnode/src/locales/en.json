@@ -34,6 +34,9 @@
   "@vitnode/core:navigation:can_create": "Add main menu items",
   "@vitnode/core:navigation:can_edit": "Edit and reorder main menu items",
   "@vitnode/core:navigation:can_delete": "Remove main menu items",
+  "@vitnode/core:ai": "AI",
+  "@vitnode/core:ai:can_view": "View AI usage, settings and history",
+  "@vitnode/core:ai:can_manage": "Manage AI settings, models, pricing and access",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:notifications": "Notifications",
@@ -549,7 +552,97 @@
         "settings": "Notification settings",
         "action_failed": "That didn't work. Your notifications were refreshed."
       },
-      "tab_has_errors": "Has errors"
+      "tab_has_errors": "Has errors",
+      "calendar": {
+        "previous_month": "Go to the previous month",
+        "next_month": "Go to the next month",
+        "month": "Choose the month",
+        "year": "Choose the year",
+        "navigation": "Calendar navigation",
+        "week_number": "Week {week}",
+        "week_number_header": "Week number",
+        "today": "Today",
+        "selected": "selected",
+        "pick_date": "Pick a date",
+        "presets": "Quick ranges",
+        "pick_range": "Pick a start and an end date",
+        "range_days": "{count, plural, one {# day} other {# days}}",
+        "apply_range": "Apply range"
+      },
+      "ai_assist": {
+        "button": "AI",
+        "open": "AI suggestion for {field}",
+        "title": "AI suggestion",
+        "desc": "Written from the other fields in {language}. Review it before you use it.",
+        "missing_sources": "Fill in {fields} first.",
+        "generating": "Writing a suggestion…",
+        "generate": "Generate",
+        "regenerate": "Try again",
+        "discard": "Discard",
+        "accept": "Use suggestion",
+        "replace_anyway": "Replace my newer text",
+        "stale_source": "The text it was written from changed since. Try again for an up-to-date suggestion.",
+        "target_edited": "You edited this field after asking. Using the suggestion replaces your newer text.",
+        "accepted": {
+          "title": "Suggestion added",
+          "desc": "Save the form to keep it. You can undo by editing the field."
+        },
+        "error": {
+          "title": "No AI suggestion",
+          "AI_ACTION_DISABLED": "An administrator switched this AI feature off.",
+          "AI_BUDGET_EXHAUSTED": "The site's AI budget is used up for now. It is not your limit.",
+          "AI_CANCELED": "The request was canceled.",
+          "AI_CONCURRENCY_LIMITED": "Another AI request of yours is still running. Try again in a moment.",
+          "AI_DAILY_LIMIT_REACHED": "You reached today's limit for this AI feature.",
+          "AI_DISABLED": "AI features are switched off on this site.",
+          "AI_INPUT_TOO_LARGE": "The text is too long for this AI feature.",
+          "AI_INVALID_INPUT": "Some of the source text is missing or invalid.",
+          "AI_INVALID_OUTPUT": "The AI answer was not usable. Nothing was charged to you.",
+          "AI_MODEL_INCOMPATIBLE": "No configured AI model can do this yet.",
+          "AI_NOT_CONFIGURED": "No AI model is configured.",
+          "AI_PRICING_MISSING": "The AI model has no pricing, so its cost cannot be limited.",
+          "AI_PROVIDER_FAILED": "The AI provider failed. Nothing was charged to you.",
+          "AI_RATE_LIMITED": "Too many AI requests. Try again in a minute.",
+          "AI_TIMEOUT": "The AI provider took too long. Nothing was charged to you.",
+          "AI_UNAUTHORIZED": "You do not have access to this AI feature or this content.",
+          "AI_USER_LIMIT_REACHED": "You used all your AI points for this month.",
+          "unknown": "Something went wrong. Try again.",
+          "AI_DUPLICATE_REQUEST": "This request was already sent. Try again for a new one."
+        },
+        "quick_ask": {
+          "label": "Quick Ask (AI)",
+          "writing": "Writing…",
+          "stop": "Stop",
+          "discard": "Discard",
+          "insert_below": "Insert below",
+          "replace": "Replace selection",
+          "stale": "The selected text changed while the answer was written. Insert it below, or close and try again.",
+          "tone": "Change the tone",
+          "select_text": "Select some text to rewrite it.",
+          "operation": {
+            "shorten": "Shorten",
+            "correct": "Correct writing",
+            "simplify": "Simplify",
+            "continue": "Continue writing"
+          },
+          "tones": {
+            "friendly": "Friendly",
+            "formal": "Formal",
+            "confident": "Confident",
+            "neutral": "Neutral"
+          },
+          "custom_label": "Or ask anything about the selection",
+          "custom_placeholder": "e.g. Turn this into a bulleted summary",
+          "ask": "Ask",
+          "estimate": "One request costs at most {points} AI points - usually much less.",
+          "applied": {
+            "title": "AI text added",
+            "desc": "Nothing is saved until you save the form.",
+            "undo": "Undo"
+          }
+        }
+      },
+      "unsaved_changes": "Unsaved changes"
     },
     "navigation": {
       "discover": {
@@ -831,7 +924,8 @@
           "devices": "Devices",
           "security": "Security",
           "sso": "Connected accounts",
-          "notifications": "Notifications"
+          "notifications": "Notifications",
+          "ai": "AI usage"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -1165,6 +1259,72 @@
             "immediate": "Right away",
             "daily": "Daily digest",
             "weekly": "Weekly digest"
+          }
+        },
+        "ai": {
+          "title": "AI usage",
+          "desc": "What each AI feature cost you this month, and how much of today's limit is left.",
+          "notice": {
+            "disabled": {
+              "title": "AI features are switched off",
+              "desc": "This site isn't offering AI features right now. Your points stay put until they're back."
+            },
+            "site_paused": {
+              "title": "AI features are paused for everyone",
+              "desc": "The site reached its monthly AI budget. This isn't about your allowance - features come back when the budget resets or an administrator raises it."
+            },
+            "exhausted": {
+              "title": "You've used all your AI points",
+              "desc": "Your allowance refills on {resetsAt}. Until then AI features won't run for your account."
+            },
+            "near_limit": {
+              "title": "You've used over 80% of your AI points",
+              "desc": "Spend the rest wisely - your allowance refills on {resetsAt}."
+            },
+            "no_allowance": {
+              "title": "Your role doesn't include AI points yet",
+              "desc": "AI features need a monthly allowance, and yours is currently zero. Ask an administrator if you'd like to try them."
+            }
+          },
+          "status": {
+            "reserved": "Queued",
+            "running": "Running",
+            "succeeded": "Done",
+            "failed": "Failed",
+            "canceled": "Canceled",
+            "uncertain": "Checking"
+          },
+          "points": {
+            "left": "{available} of {total} points left",
+            "percent_used": "{percent} used",
+            "used_of": "{used} of {total} points used",
+            "renews": "Renews {date}",
+            "unlimited": "Unlimited points",
+            "unlimited_used": "{used} points used this month",
+            "none": "No AI points this month"
+          },
+          "features": {
+            "title": "Your AI features",
+            "footer": "Only you and administrators can see this. Prompts and answers are never stored.",
+            "empty_title": "No AI features yet",
+            "empty_desc": "Once a role gives you AI points, each feature you can use is listed here with what it cost you.",
+            "today": "{used} / {limit} today",
+            "today_no_limit": "{used} today",
+            "limit_reached": "Limit reached",
+            "month_points": "{points} pts this month",
+            "limit_desc": "You can run it {limit, plural, one {# time} other {# times}} a day. The count resets at midnight.",
+            "no_limit_desc": "It has no daily limit - only your monthly points apply.",
+            "runs_empty": "You haven't used this feature this month.",
+            "show_more": "Show more runs",
+            "charge": "{points} pts",
+            "no_charge": "No charge",
+            "charging": "Charging…",
+            "runs_error": "Couldn't load this feature's runs.",
+            "retry": "Try again"
+          },
+          "overview": {
+            "title": "AI points",
+            "details": "See your AI features"
           }
         }
       }
@@ -1741,6 +1901,12 @@
           "cron": "Cron Jobs",
           "queue": "Queue Tasks",
           "search": "Search"
+        },
+        "ai": {
+          "title": "Artificial Intelligence (AI)",
+          "overview": "Overview",
+          "actions": "Actions",
+          "history": "History"
         }
       },
       "search": {
@@ -2087,6 +2253,40 @@
         },
         "submit": "Create User",
         "success": "User \"{name}\" has been created."
+      },
+      "ai": {
+        "title": "AI access",
+        "desc": "This member's own rule, ahead of their roles.",
+        "follows_roles": "No exception - their roles decide.",
+        "blocked": "Blocked",
+        "unlimited": "Unlimited",
+        "points_month": "{points} points / month",
+        "edit": "Edit AI exception",
+        "form_desc": "This replaces what the member's roles give them until it's removed.",
+        "remove": {
+          "title": "Remove AI exception",
+          "desc": "The member goes back to what their roles allow.",
+          "cancel": "Cancel",
+          "confirm": "Remove",
+          "success": "Exception removed",
+          "success_desc": "The member follows their roles again."
+        },
+        "form": {
+          "blocked": "Block AI features",
+          "blocked_desc": "This member can't use any AI feature, whatever their roles allow.",
+          "unlimited": "Unlimited points",
+          "unlimited_desc": "Never stopped by a monthly allowance. The site budget still applies.",
+          "monthly_points": "Monthly points",
+          "monthly_points_desc": "A personal allowance instead of the one from their roles.",
+          "from_roles": "Use their roles",
+          "points_unit": "points",
+          "or": "or",
+          "submit": "Save exception",
+          "saved": {
+            "title": "Exception saved",
+            "desc": "It applies to the member's next AI operation."
+          }
+        }
       }
     },
     "role": {
@@ -2128,7 +2328,8 @@
       "tabs": {
         "general": "General",
         "content": "Content",
-        "profile": "Profile"
+        "profile": "Profile",
+        "ai": "Artificial intelligence (AI)"
       },
       "form": {
         "name": "Name",
@@ -2160,6 +2361,24 @@
             "max_size": "Maximum cover size",
             "max_size_desc": "The largest cover image a member of this role can upload, in kB."
           }
+        },
+        "ai": {
+          "unlimited": "Unlimited points",
+          "unlimited_desc": "Members with this role are never stopped by their monthly allowance. The site budget still applies.",
+          "monthly_points": "Monthly points",
+          "monthly_points_desc": "Points every member with this role gets each month. A member with several roles gets the largest allowance, never the sum.",
+          "site_default": "Use the site default",
+          "points_unit": "points",
+          "or": "or",
+          "grant": {
+            "default_allowed": "Default (allowed)",
+            "default_denied": "Default (not allowed)",
+            "allow": "Allow",
+            "deny": "Deny"
+          },
+          "daily_limit": "Daily limit",
+          "action_default": "Use the action's limit",
+          "per_day": "runs / day"
         }
       }
     },
@@ -2619,6 +2838,48 @@
         "noResults": {
           "title": "No files uploaded",
           "description": "Files uploaded across the site will appear here."
+        },
+        "alt": {
+          "open": "Edit ALT text",
+          "title": "ALT text",
+          "languages": "Description per language",
+          "empty_hint": "Screen readers read this aloud. Save an empty text to mark the image as decorative - it then intentionally has no description, and automatic ALT leaves it alone.",
+          "intentionally_empty": "Intentionally left without a description (decorative image).",
+          "text_label": "ALT text in {language}",
+          "save": "Save",
+          "saved": {
+            "title": "ALT text saved",
+            "desc": "The {language} description is now yours; automatic ALT won't overwrite it.",
+            "desc_empty": "The image is marked as decorative in {language}."
+          },
+          "origin": {
+            "ai": "AI",
+            "human": "Written by a person",
+            "missing": "Missing",
+            "stale": "Outdated"
+          },
+          "remove": {
+            "button": "Remove",
+            "hint": "Removing lets automatic ALT write it again.",
+            "success": "ALT text removed",
+            "success_desc": "Automatic ALT may describe the image in {language} again."
+          },
+          "policy": {
+            "label": "Automatic ALT for this image",
+            "saved": "ALT setting saved",
+            "automatic": {
+              "label": "Automatic",
+              "desc": "AI writes a description in every language that is missing one. Text written by a person is never overwritten."
+            },
+            "manual": {
+              "label": "Manual only",
+              "desc": "Only people write descriptions for this image."
+            },
+            "disabled": {
+              "label": "Disabled",
+              "desc": "The image is never sent to an external AI. Use it for private or sensitive images."
+            }
+          }
         }
       }
     },
@@ -2798,6 +3059,331 @@
         "bottomBar": "Bottom bar",
         "headerDesc": "In the header on tablets and desktops, and in the side menu on phones.",
         "bottomBarDesc": "Up to three links at the bottom of the screen on phones, plus a Menu tab with the rest of the header menu."
+      }
+    },
+    "ai": {
+      "cost": {
+        "unknown": "Unknown",
+        "source": {
+          "provider": "Provider-reported",
+          "estimated": "Estimated",
+          "mixed": "Partly estimated",
+          "unknown": "Cost unknown"
+        }
+      },
+      "status": {
+        "reserved": "Reserved",
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "canceled": "Canceled",
+        "uncertain": "Uncertain"
+      },
+      "origin": {
+        "user": "Members",
+        "system": "Background jobs"
+      },
+      "overview": {
+        "title": "AI overview",
+        "desc": "What AI costs, where it goes and how sure we are about the numbers.",
+        "disabled": {
+          "title": "AI is switched off site-wide",
+          "desc": "No AI feature runs for anyone until it's switched back on.",
+          "link": "Open AI settings"
+        },
+        "range": {
+          "label": "Date range",
+          "this-month": "This month",
+          "last-month": "Last month",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days",
+          "90d": "Last 90 days"
+        },
+        "compare": {
+          "month": "vs {month}",
+          "previous_days": "vs previous {count, plural, one {day} other {# days}}",
+          "range": "vs {range}"
+        },
+        "basis": {
+          "this-month": "this month so far",
+          "last-month": "last month",
+          "7d": "the last 7 days",
+          "30d": "the last 30 days",
+          "90d": "the last 90 days",
+          "custom": "{range}"
+        },
+        "budget": {
+          "title": "{month} budget",
+          "show_month": "Show the budget for {month}",
+          "of_limit": "of {limit}",
+          "day_of": "day {day} of {days}",
+          "month_closed": "closed",
+          "no_limit": "No monthly budget is set.",
+          "set_limit": "Set one",
+          "meter": "{spent} of {limit} used",
+          "forecast_over": "On pace for {forecast} by {end}, {over} over the budget",
+          "forecast_inside": "On pace for {forecast} by {end}, inside the budget",
+          "forecast_no_limit": "On pace for {forecast} by {end}",
+          "basis": "Based on {basis}: {rate} a day.",
+          "change_limit": "Change the budget",
+          "closed": "{month} closed at {spent}, {share} of the budget",
+          "closed_no_limit": "{month} closed at {spent}",
+          "pace_over": "At the pace of {basis} ({rate} a day), a month costs {monthly}, {over} over the budget.",
+          "pace_inside": "At the pace of {basis} ({rate} a day), a month costs {monthly}, inside the budget.",
+          "pace_no_limit": "At the pace of {basis} ({rate} a day), a month costs {monthly}."
+        },
+        "metrics": {
+          "hint": "Change {compare}",
+          "spend": "Spend",
+          "per_run": "Cost per run",
+          "runs": "Runs",
+          "failure_rate": "Failure rate",
+          "tokens": "Tokens",
+          "known": "Cost known"
+        },
+        "delta": {
+          "no_previous": "No earlier data",
+          "no_change": "No change",
+          "up": "Up",
+          "down": "Down"
+        },
+        "chart": {
+          "limit": "Budget {limit}",
+          "budget_title": "{month} spend against the budget",
+          "budget_description": "Running total of {month} spend against the monthly budget, with {previous} as a dashed line and a forecast to the end of the month.",
+          "forecast": "Forecast",
+          "forecast_to": "Forecast to {end}",
+          "spent_so_far": "Spent so far",
+          "running_total": "{metric}, running total",
+          "running_average": "{metric}, average to date",
+          "running_description": "{title} for {range}. The dashed line is the comparison ({compare}).",
+          "so_far": "So far",
+          "budget": "Budget"
+        },
+        "breakdown": {
+          "title": "Where it goes",
+          "split": "Split by",
+          "by_action": "By action",
+          "by_model": "By model",
+          "action": "Action",
+          "model": "Model",
+          "other": "Other ({count})",
+          "empty": "Nothing ran in this range yet.",
+          "chart_label": "{measure} ranked",
+          "chart_description": "{measure} by action or model, ranked, with the comparison ({compare}) as a mark on each bar. The table below has the same numbers.",
+          "now": "This range",
+          "tick": "Mark: the range before",
+          "unpriced": "{count, plural, one {# run has} other {# runs have}} no price and {count, plural, one {isn't} other {aren't}} counted in cost.",
+          "add_price": "Add a price",
+          "change": "Change {compare}"
+        },
+        "measure": {
+          "cost": "Cost",
+          "ops": "Runs",
+          "failures": "Failures",
+          "tokens": "Tokens"
+        }
+      },
+      "settings": {
+        "title": "AI settings",
+        "desc": "The site-wide switch, budgets and limits every AI feature runs under.",
+        "open": "Settings",
+        "time_zone": "Monthly budgets and allowances reset at midnight in {timeZone}.",
+        "sections": {
+          "budget": "Budget",
+          "limits": "Limits",
+          "alt": "ALT text"
+        },
+        "enabled": {
+          "label": "AI features",
+          "desc": "The master switch. Turned off, no AI feature runs for anyone - members or background jobs."
+        },
+        "monthly_budget": {
+          "label": "Monthly site budget",
+          "desc": "The most the whole site may spend on AI in a month. When it runs out, every AI feature pauses until the next month."
+        },
+        "system_budget": {
+          "label": "Background jobs budget",
+          "desc": "A separate cap for automation such as ALT text, inside the site budget."
+        },
+        "no_limit": "No limit",
+        "or": "or",
+        "default_points": {
+          "label": "Default monthly points",
+          "desc": "What a member gets each month unless their role says otherwise. One point is worth {usd}."
+        },
+        "points_unit": "points",
+        "requests_per_minute": {
+          "label": "Requests per minute",
+          "desc": "How often one member may start an AI feature."
+        },
+        "user_concurrency": {
+          "label": "Parallel runs per member",
+          "desc": "How many AI features one member may have running at once."
+        },
+        "system_concurrency": {
+          "label": "Parallel background runs",
+          "desc": "How many background AI jobs may run at once across the site."
+        },
+        "retention": {
+          "label": "Keep history for",
+          "desc": "Older operation records are deleted. Prompts and outputs are never stored either way."
+        },
+        "days_unit": "days",
+        "alt": {
+          "enabled": {
+            "label": "Write ALT text automatically",
+            "desc": "Describe uploaded images in the background. Needs a monthly site budget, so it can never spend without a cap."
+          },
+          "needs_budget": "Set a monthly site budget before turning on automatic ALT text.",
+          "batch_size": {
+            "label": "Images queued per sweep",
+            "desc": "How many images missing ALT text one hourly sweep queues. The worker then describes them two at a time, every minute."
+          }
+        },
+        "submit": "Save settings",
+        "saved": {
+          "title": "AI settings saved",
+          "desc": "New limits apply to the next AI operation."
+        }
+      },
+      "actions": {
+        "title": "AI actions",
+        "desc": "Every AI feature your plugins register: switch them on or off, pick their model and set their limits. Models and prices live in vitnode.api.config.ts.",
+        "disabled": "Off",
+        "no_compatible": "No compatible model, so it can't run",
+        "empty": {
+          "title": "No AI actions yet",
+          "desc": "Plugins register AI actions; once one does, it shows up here."
+        },
+        "form": {
+          "open": "Configure",
+          "enabled": "Enabled",
+          "enabled_desc": "A disabled action refuses to run for anyone.",
+          "model": "Model",
+          "model_desc": "Only models with every capability this action needs are listed.",
+          "model_default": "Site default",
+          "fallback": "Fallback model",
+          "fallback_desc": "Tried when the main model fails.",
+          "instructions": "Editorial instructions",
+          "instructions_desc": "Extra guidance added to the prompt, e.g. tone or house style. Up to 2,000 characters.",
+          "daily_limit": "Runs per member per day",
+          "max_input_characters": "Max input characters",
+          "max_output_tokens": "Max output tokens",
+          "max_retries": "Max retries",
+          "max_steps": "Max steps",
+          "timeout": "Timeout",
+          "or": "or",
+          "use_default": "Use default ({value})",
+          "use_default_none": "Use default (no limit)",
+          "submit": "Save action",
+          "saved": {
+            "title": "Action saved",
+            "desc": "{title} uses the new settings from its next run."
+          },
+          "open_label": "Configure {title}",
+          "limits": {
+            "title": "Limits",
+            "desc": "Leave a limit on its default to follow the value the plugin ships with."
+          }
+        },
+        "search": "Search actions...",
+        "daily_limit": "{count, plural, one {# run} other {# runs}} per member a day",
+        "toggle_label": "Enable {title}",
+        "toggled": {
+          "on": "{title} is on",
+          "on_desc": "Members can run it again from their next request.",
+          "off": "{title} is off",
+          "off_desc": "It refuses to run for anyone until you switch it back on."
+        },
+        "no_results": {
+          "title": "No actions match your search",
+          "desc": "Try the action's title, a word from its description or its key.",
+          "clear": "Clear search"
+        },
+        "plugin": "Plugin"
+      },
+      "history": {
+        "title": "AI history",
+        "desc": "Every AI operation: who ran it, which model answered and what it cost.",
+        "charged_reservation": "Charged {amount} (reserved)",
+        "filters": {
+          "all": "All",
+          "status": "Status",
+          "actor": "Origin",
+          "action": "Action",
+          "model": "Model"
+        },
+        "list": {
+          "action": "Action",
+          "status": "Status",
+          "actor": "By",
+          "model": "Model",
+          "cost": "Cost",
+          "points": "Points",
+          "created": "When",
+          "details": "Details"
+        },
+        "empty": {
+          "title": "No AI operations",
+          "desc": "Nothing matches these filters yet."
+        },
+        "detail": {
+          "title": "Run #{id}",
+          "status": "Status",
+          "actor": "By",
+          "model": "Model",
+          "cost": "Cost",
+          "cost_source": "Cost source",
+          "charged": "Charged",
+          "reserved": "Reserved",
+          "points_unit": "pts",
+          "settlement": "Settlement",
+          "tokens": "Tokens in / out",
+          "created": "Started",
+          "finished": "Finished",
+          "prompt_version": "Prompt version",
+          "resource": "Resource",
+          "error": "Error",
+          "accepted": "Suggestion",
+          "accepted_yes": "Accepted",
+          "accepted_no": "Not accepted",
+          "privacy": "Prompts and outputs are never stored - only what it took and what it cost.",
+          "calls": {
+            "title": "Provider calls",
+            "empty": "No provider was called.",
+            "attempt": "Attempt",
+            "model": "Model",
+            "status": "Status",
+            "tokens": "Tokens in / out",
+            "cost": "Cost"
+          },
+          "adjustments": {
+            "title": "Cost corrections",
+            "change": "{from} → {to}"
+          }
+        }
+      }
+    }
+  },
+  "@vitnode/core:files:can_edit_alt": "Edit image ALT text",
+  "ai_actions": {
+    "@vitnode/core": {
+      "alt_generate": {
+        "title": "Generate image ALT text",
+        "description": "Describes an image in core_files as its base ALT text."
+      },
+      "alt_translate": {
+        "title": "Translate image ALT text",
+        "description": "Translates an image's base ALT text into a site language."
+      },
+      "editor_quick_ask": {
+        "title": "Quick Ask",
+        "description": "Continues the text or follows a custom request about the selection."
+      },
+      "editor_rewrite": {
+        "title": "Rewrite selected text",
+        "description": "Rewrites the selected text: shorter, corrected, simpler or in another tone."
       }
     }
   }

@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { spawnCommand } from "./spawn-command.js";
 
 export type InitGitResult =
-  "already-in-repository" | "created" | "failed" | "git-unavailable";
+  | "already-in-repository"
+  | "created"
+  | "failed"
+  | "git-unavailable";
 
 export const DEFAULT_GIT_BRANCH = "main";
 

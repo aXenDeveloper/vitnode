@@ -1,4 +1,9 @@
-import { DownloadIcon, LoaderCircleIcon, Trash2Icon } from "lucide-react";
+import {
+  CaptionsIcon,
+  DownloadIcon,
+  LoaderCircleIcon,
+  Trash2Icon,
+} from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -6,23 +11,81 @@ import { useTranslations } from "use-intl";
 import type { FileInUse } from "@/lib/files/in-use";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
+import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 
 import type { DeleteAdminFile } from "../files-delete";
 
+const FileAltContent = React.lazy(async () =>
+  import("../alt/file-alt-content").then(module => ({
+    default: module.FileAltContent,
+  })),
+);
+
+const FILES_EDIT_ALT = {
+  module: "files",
+  permission: "can_edit_alt",
+  plugin: CONFIG_PLUGIN.pluginId,
+} as const;
+
+const EditAltAction = ({ id, name }: { id: number; name: string }) => {
+  const t = useTranslations("admin.system.files.alt");
+  const canEdit = useAdminStaffPermission(FILES_EDIT_ALT);
+
+  return (
+    <Dialog>
+      <TooltipWithContent text={t("open")}>
+        <DialogTrigger
+          render={
+            <Button aria-label={t("open")} size="icon-sm" variant="ghost" />
+          }
+        >
+          <CaptionsIcon />
+        </DialogTrigger>
+      </TooltipWithContent>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription className="truncate">{name}</DialogDescription>
+        </DialogHeader>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center p-6">
+              <Spinner size="xl" />
+            </div>
+          }
+        >
+          <FileAltContent canEdit={canEdit} fileId={id} />
+        </React.Suspense>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const FileRowActions = ({
   canDelete,
   canDownload,
   id,
+  mimeType,
   name,
   onDelete,
 }: {
   canDelete: boolean;
   canDownload: boolean;
   id: number;
+  mimeType: null | string;
   name: string;
   onDelete: DeleteAdminFile;
 }) => {
@@ -63,12 +126,16 @@ export const FileRowActions = ({
     }
   };
 
-  if (!canDownload && !canDelete) {
+  const isImage = mimeType?.startsWith("image/") ?? false;
+
+  if (!canDownload && !canDelete && !isImage) {
     return null;
   }
 
   return (
     <div className="flex items-center justify-end gap-1">
+      {isImage ? <EditAltAction id={id} name={name} /> : null}
+
       {canDownload && (
         <TooltipWithContent text={t("actions.download")}>
           <Button

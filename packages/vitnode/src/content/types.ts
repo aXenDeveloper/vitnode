@@ -48,6 +48,12 @@ export type Prettify<T> = { [K in keyof T]: T[K] } & {};
 // derived from them.
 // ---------------------------------------------------------------------------
 
+export interface ContentFieldAiAssist {
+  action: `${string}:${string}`;
+  mode: "suggestion";
+  sourceFields: readonly string[];
+}
+
 export interface ContentFieldShared<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
@@ -68,6 +74,7 @@ export interface ContentTextField<
   TDefault extends string | undefined = string | undefined,
   TLocalized extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
+  ai?: ContentFieldAiAssist;
   // Declared non-optional (but possibly `undefined`) so `HasColumnDefault` can
   // tell "no default" from "defaulted": an optional property would always
   // include `undefined` in its type and the distinction would be lost.
@@ -104,6 +111,7 @@ export interface ContentTextareaField<
   TDefault extends string | undefined = string | undefined,
   TLocalized extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
+  ai?: ContentFieldAiAssist;
   defaultValue: TDefault;
   kind: "textarea";
   localized: TLocalized;
@@ -1996,4 +2004,5 @@ export type ContentPublicFilterInput<TDefinition> = Partial<
  * allowlist error.
  */
 export type ContentPublicOrderableFieldName<TDefinition> =
-  "publishedAt" | PublicFlatName<ContentPublicFieldName<TDefinition>>;
+  | "publishedAt"
+  | PublicFlatName<ContentPublicFieldName<TDefinition>>;

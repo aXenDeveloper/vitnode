@@ -53,6 +53,62 @@ right sheets take 3/4 of a phone screen and cap at `max-w-sm` from `sm` up.
 <SheetContent side="left">...</SheetContent>
 ```
 
+## Forms
+
+<Preview name="sheet-form" />
+
+A sheet suits short settings: a handful of fields about one thing. Place the
+fields with `layout` in a scrollable body, and end with `AutoFormSheetFooter`.
+It shows an "Unsaved changes" note, a Cancel button that closes the sheet, and
+a Save button that stays disabled until something changes.
+
+```tsx
+import { AutoFormSheetFooter } from '@vitnode/core/components/form/auto-form-sheet-footer'
+```
+
+```tsx
+const [open, setOpen] = React.useState(false)
+
+<Sheet onOpenChange={setOpen} open={open}>
+  <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg">
+    <SheetHeader className="border-b pe-14">
+      <SheetTitle>Welcome message</SheetTitle>
+    </SheetHeader>
+    <AutoForm
+      className="flex min-h-0 flex-1 flex-col gap-0"
+      fields={fields}
+      formSchema={formSchema}
+      layout={(rendered) => (
+        <>
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5">
+            {rendered.enabled}
+            {rendered.welcome}
+          </div>
+          <AutoFormSheetFooter submitLabel="Save message" />
+        </>
+      )}
+      onSubmit={async (values) => {
+        await save(values)
+        setOpen(false)
+      }}
+    />
+  </SheetContent>
+</Sheet>
+```
+
+Control `open` so a successful save can close the sheet. Pass `disabled` to the
+footer when the viewer may only read the settings.
+
+### Sheet, dialog or page?
+
+Choose the surface by how much there is to edit:
+
+| Settings | Use | Example in VitNode |
+| :------- | :-- | :----------------- |
+| A handful of fields about one thing | Sheet | AI settings, one AI action |
+| Several sections or tabs | [Dialog](/docs/ui/dialog#forms) | A role's settings |
+| A full editor with its own preview | A page | Editing an article |
+
 ## Sheet or Drawer?
 
 A sheet is a dialog that slides. A [Drawer](/docs/ui/drawer) also follows your

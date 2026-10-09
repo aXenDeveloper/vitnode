@@ -15,6 +15,7 @@ import { InsertAction } from "./actions/insert-action";
 import { ItalicAction } from "./actions/italic-action";
 import { LinkAction } from "./actions/link-action";
 import { ListAction } from "./actions/list-action";
+import { QuickAskSlot } from "./actions/quick-ask-action";
 import { TableAction } from "./actions/table-action";
 import { TextFormatMore } from "./actions/text-format-more/text-format-more";
 import { useRovingToolbar } from "./use-roving-toolbar";
@@ -51,6 +52,7 @@ export const TipTapToolbar = ({ editor }: { editor: Editor }) => {
           <CodeBlockAction />
           <Separator orientation="vertical" />
           <InsertAction />
+          <QuickAskSlot />
         </div>
       </TooltipGroup>
     </ToolbarEditorContext>

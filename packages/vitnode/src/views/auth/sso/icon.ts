@@ -1,5 +1,6 @@
 export type SSOIconSource =
-  { kind: "image"; src: string } | { kind: "svg"; markup: string };
+  | { kind: "image"; src: string }
+  | { kind: "svg"; markup: string };
 
 const MAX_ICON_LENGTH = 16_384;
 

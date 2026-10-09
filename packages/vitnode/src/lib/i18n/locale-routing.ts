@@ -41,7 +41,11 @@ export interface LocaleHostContext {
 }
 
 export type ResolvedLocaleSource =
-  "accept-language" | "cookie" | "default" | "domain" | "prefix";
+  | "accept-language"
+  | "cookie"
+  | "default"
+  | "domain"
+  | "prefix";
 
 export interface ResolvedPublicPathname {
   internalPathname: string;

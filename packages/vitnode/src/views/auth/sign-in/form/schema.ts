@@ -8,7 +8,8 @@ export interface SignInFormMessages {
 }
 
 export type SignInMutationResult =
-  undefined | { message: "access_denied" | "Internal Server Error" };
+  | undefined
+  | { message: "access_denied" | "Internal Server Error" };
 
 /** What the form renders after a failed attempt, or nothing at all. */
 export type SignInFormError = "" | "access_denied";

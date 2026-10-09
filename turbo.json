@@ -60,10 +60,10 @@
       "env": ["POSTGRES_URL", "VITNODE_API_URL", "VITNODE_WEB_URL"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "cache": false
     },
     "lint:fix": {
-      "dependsOn": ["^lint:fix"]
+      "cache": false
     },
     "start": {
       "dependsOn": ["^start"]

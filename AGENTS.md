@@ -12,6 +12,10 @@ pass: Test123!
 - No `any`; use `unknown` as rarely as possible.
 - Use `AutoForm` for forms instead of hand-built form components.
 - Use `React.lazy` + `Suspense` for content-heavy dialogs (e.g. dialogs in forms).
+- Pick the editing surface by the size of the settings:
+  - **Sheet** for short settings - a handful of fields about one thing (an AI action, the AI settings). Scrollable body plus `AutoFormSheetFooter` from `@vitnode/core/components/form/auto-form-sheet-footer`; close the sheet after a successful save.
+  - **Dialog** for bigger settings - several sections or tabs (a role's settings). Lazy-load the form.
+  - **Page** for the biggest - a full editor with its own navigation and preview (editing an article).
 - After create/edit/delete: refresh the table data and show a `sonner` toast with a description.
 - `<Activity>` hides and restores children's UI and internal state:
 
@@ -55,6 +59,7 @@ import { Activity } from "react";
 - Always implement best practices for performance, security, and accessibility.
 - Semantic HTML (`main`, `header`) with correct ARIA roles/attributes, `sr-only` for screen-reader-only text, and alt text on all images unless decorative or repetitive.
 - Emit events for important actions (create, update, delete) so other components can react; use events instead of prop drilling or context. Document them in `apps/web/content/docs/dev/events/built-in-events.mdx`.
+- APIs return i18n keys, never translated text, for anything the UI shows (titles, descriptions, labels a plugin registers). The web translates them with `use-intl`, so the text follows the UI's language and the cached response works in every language. Translate on the server only for output with no UI, such as emails.
 - AI features use the Vercel AI SDK only - resolve models via the `c.get("ai")` registry and call native SDK functions.
 
 # Design

@@ -72,7 +72,11 @@ export class SsoConnectionError extends Error {
 }
 
 export type SsoFieldOutcome =
-  "failed" | "missing" | "not_allowed" | "unchanged" | "updated";
+  | "failed"
+  | "missing"
+  | "not_allowed"
+  | "unchanged"
+  | "updated";
 
 export type SsoFieldOutcomes = Partial<
   Record<SsoProfileField, SsoFieldOutcome>
@@ -769,11 +773,13 @@ export class SsoConnectionModel {
       if (!providerId) continue;
 
       const adapter = this.adapters.find(one => one.id === providerId);
-      if (!(
-        connected.has(providerId) &&
-        adapter &&
-        supportedProfileFields(adapter).includes(field)
-      )) {
+      if (
+        !(
+          connected.has(providerId) &&
+          adapter &&
+          supportedProfileFields(adapter).includes(field)
+        )
+      ) {
         throw new SsoConnectionError("invalid_source", 400);
       }
     }

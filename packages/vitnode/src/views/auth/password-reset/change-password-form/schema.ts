@@ -22,7 +22,8 @@ export type ChangePasswordFormValues = z.infer<ChangePasswordFormSchema>;
 export type ChangePasswordSubmitValues = RecoveryLink & { password: string };
 
 export type ChangePasswordMutationResult =
-  undefined | { message: "internal_server_error" | "invalid_token" };
+  | undefined
+  | { message: "internal_server_error" | "invalid_token" };
 
 export const changePasswordFormOutcome = (
   result: ChangePasswordMutationResult,

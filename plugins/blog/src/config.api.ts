@@ -3,6 +3,7 @@ import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { buildContentPublicModule } from "@vitnode/core/content/server";
 
+import { blogAiActions } from "@/api/ai/actions";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { categoryContent } from "@/database/categories";
@@ -11,6 +12,7 @@ import { postContent } from "@/database/posts";
 export const blogApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    aiActions: blogAiActions,
     modules: [
       adminModule,
       buildContentPublicModule({
