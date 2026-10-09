@@ -7,6 +7,7 @@ export interface Symbols {
   corner: string;
   dot: string;
   error: string;
+  fn: string;
   large: string;
   line: string;
   pending: string;
@@ -25,6 +26,7 @@ const UNICODE: Symbols = {
   corner: "└",
   dot: "●",
   error: "✖",
+  fn: "ƒ",
   large: "▲",
   line: "─",
   pending: "○",
@@ -43,6 +45,7 @@ const ASCII: Symbols = {
   corner: "`-",
   dot: "*",
   error: "x",
+  fn: "f",
   large: "^",
   line: "-",
   pending: "o",

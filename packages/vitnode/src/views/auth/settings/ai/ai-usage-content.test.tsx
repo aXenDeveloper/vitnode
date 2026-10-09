@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { describe, expect, it } from "vitest";
 
@@ -123,6 +129,50 @@ describe("AiUsageContent", () => {
     expect(
       screen.getByText("core.auth.settings.ai.points.unlimited"),
     ).toBeTruthy();
+  });
+
+  it("breaks an unlimited allowance down by the features that used it", () => {
+    const base = usage().actions[0];
+    renderUsage(
+      usage({
+        actions: [
+          { ...base, key: "translate", monthPoints: "4", title: "Translate" },
+          base,
+          { ...base, key: "tags", monthPoints: "0", title: "Suggest tags" },
+        ],
+        points: { available: null, reserved: "0", total: null, used: "16.5" },
+      }),
+    );
+
+    const breakdown = screen.getByRole("list", {
+      name: "core.auth.settings.ai.points.breakdown.label",
+    });
+    const rows = within(breakdown).getAllByRole("listitem");
+
+    expect(rows.map(row => row.textContent)).toEqual([
+      expect.stringContaining("Generate excerpt"),
+      expect.stringContaining("Translate"),
+    ]);
+    expect(rows[0].textContent).toContain("76%");
+    expect(within(breakdown).queryByText("Suggest tags")).toBeNull();
+  });
+
+  it("says nothing was used yet instead of drawing an empty breakdown", () => {
+    renderUsage(
+      usage({
+        actions: [{ ...usage().actions[0], monthPoints: "0" }],
+        points: { available: null, reserved: "0", total: null, used: "0" },
+      }),
+    );
+
+    expect(
+      screen.getByText("core.auth.settings.ai.points.breakdown.empty"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("list", {
+        name: "core.auth.settings.ai.points.breakdown.label",
+      }),
+    ).toBeNull();
   });
 
   it("lists each feature by its title with today's use", () => {

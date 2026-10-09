@@ -942,7 +942,12 @@
           "desc": "Your avatar and the details on your account.",
           "profileTitle": "Profile",
           "accountTitle": "Account",
-          "edit": "Edit",
+          "editProfile": "Edit profile",
+          "editProfileDesc": "Change your personal details and time zone in one go.",
+          "name": "Name",
+          "realName": "Real name",
+          "realNameShown": "Shown on your profile",
+          "realNameHidden": "Hidden",
           "personalTitle": "Personal Information",
           "personalDesc": "Tell the community who you are. Every field is optional.",
           "nickname": "Nickname",
@@ -958,16 +963,14 @@
           "headlineDesc": "One line about you, up to {max} characters.",
           "notSet": "Not set",
           "save": "Save changes",
-          "saved": "Personal information updated.",
-          "savedDesc": "Your profile shows the new details right away.",
+          "saved": "Profile updated",
+          "savedDesc": "Your changes show up right away.",
           "regionTitle": "Region",
           "regionDesc": "Digest emails and dates follow this time zone.",
           "timeZone": "Time zone",
           "timeZoneDesc": "Search by city, like Warsaw or New York.",
           "timeZoneAuto": "Automatic - from your language",
-          "timeZoneUseDevice": "Use this device's time zone ({timeZone})",
-          "timeZoneSaved": "Time zone saved",
-          "timeZoneSavedDesc": "Digests and dates now follow {timeZone}."
+          "timeZoneUseDevice": "Use this device's time zone ({timeZone})"
         },
         "devices": {
           "title": "Devices",
@@ -1311,7 +1314,14 @@
             "used_of": "{used} of {total} points used",
             "renews": "Renews {date}",
             "unlimited": "Unlimited points",
-            "unlimited_used": "{used} points used this month",
+            "unlimited_desc": "No monthly cap. Your usage count starts over on {date}.",
+            "this_month": "pts this month",
+            "breakdown": {
+              "label": "Where your points went this month",
+              "other": "{count, plural, one {# other feature} other {# other features}}",
+              "points": "{points} pts",
+              "empty": "Nothing used this month yet. Once you run an AI feature, you'll see where your points go."
+            },
             "none": "No AI points this month"
           },
           "features": {

@@ -5,6 +5,7 @@ import type { OutputCapture } from "../ui/capture-output";
 import type { TaskHandle, Ui } from "../ui/ui";
 import type { EnvironmentInfo } from "./collector";
 import type { MeasuredFile } from "./output-files";
+import type { BuildRoute } from "./routes";
 
 import { isPluginPackage } from "../plugins/discover";
 import { importFromProject, readPackageJson } from "../project/packages";
@@ -13,12 +14,13 @@ import { createBuildCollector } from "./collector";
 import { describeBuildError } from "./error-context";
 import { measureFiles } from "./measure";
 import { createPackageOwner } from "./package-owner";
+import { htmlPathsUnder, routeReportApiOf } from "./routes";
 
 /** The slice of Vite's JavaScript API a build needs. */
 export interface ViteBuildApi {
   createBuilder: (config: InlineConfig) => Promise<{
     buildApp: () => Promise<unknown>;
-    config: { plugins: readonly { name: string }[] };
+    config: { plugins: readonly { api?: unknown; name: string }[] };
   }>;
 }
 
@@ -37,6 +39,7 @@ export interface AppBuildResult {
   /** Environments that wrote what ships, in build order. */
   environments: string[];
   files: MeasuredFile[];
+  reportRoutes: (() => BuildRoute[]) | null;
 }
 
 const ENVIRONMENT_LABELS: Record<string, string> = {
@@ -110,6 +113,7 @@ export const runAppBuild = async ({
 
   const capture = ui.verbose ? null : captureOutput();
   const configTask = ui.task("Loading configuration");
+  let routeReportApi: ReturnType<typeof routeReportApiOf> = null;
 
   try {
     const builder = await vite.createBuilder({
@@ -129,6 +133,8 @@ export const runAppBuild = async ({
         ? "Configuration loaded, plugin routes generated"
         : "Configuration loaded",
     );
+
+    routeReportApi = routeReportApiOf(builder.config.plugins);
 
     await builder.buildApp();
   } catch (error) {
@@ -166,9 +172,17 @@ export const runAppBuild = async ({
     ),
   );
 
+  const publicDir = shipped.find(
+    environment => environment.consumer === "client",
+  )?.outDir;
+
   return {
     bundlerWarnings,
     environments: shipped.map(environment => environment.name),
     files,
+    reportRoutes:
+      routeReportApi === null || publicDir == null
+        ? null
+        : () => routeReportApi.routeReport(htmlPathsUnder(publicDir)),
   };
 };

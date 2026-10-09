@@ -121,9 +121,12 @@ list they appear in.
 ### Personal information
 
 `firstName`, `lastName`, `phone` and `headline` are the user's own to set, at **Settings →
-Overview** (`/settings`). All three are optional, all three are stored as `null`
-rather than an empty string when cleared, and the session payload carries them
-so anything already reading the session can show them without a second request.
+Overview** (`/settings`). The Profile card lists them read-only; **Edit profile**
+opens one sheet with every field, the **Show my real name** switch and the time
+zone, so changing three things takes one save instead of three. Every field is
+optional, stored as `null` rather than an empty string when cleared, and the
+session payload carries them so anything already reading the session can show
+them without a second request.
 
 | Method  | Path                                 | Who                                  |
 | :------ | :----------------------------------- | :----------------------------------- |
@@ -143,9 +146,9 @@ public profile payload - only the account's own session carries it.
 
 ### Time zone
 
-`timeZone` sits under **Region** on **Settings → Overview**. It takes any IANA
-name, like `Europe/Warsaw`, and **Use this device's time zone** fills it in from
-the browser in one click. `null` means "follow my language", then UTC.
+`timeZone` sits under **Region** in the same **Edit profile** sheet. It takes any
+IANA name, like `Europe/Warsaw`, and **Use this device's time zone** fills the
+field from the browser in one click - it still waits for **Save changes**. `null` means "follow my language", then UTC.
 Notification digests go out in this time zone, and the session carries it, so
 `c.get("user")?.timeZone` is there for anything else that wants local time.
 
@@ -200,8 +203,8 @@ administrator who switched it off on one role would find it silently re-granted
 by every other role the member happens to hold, and the setting would almost
 never take effect.
 
-The settings card hides its **Edit** button when the answer is no, and
-`PATCH /users/me` answers `403` regardless of what the UI showed.
+The **Edit profile** sheet then shows only the time zone, which every member may
+change, and `PATCH /users/me` answers `403` regardless of what the UI showed.
 
 ### Turning fields off for the whole install
 

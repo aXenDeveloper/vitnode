@@ -11,8 +11,8 @@ import { PageTitle } from "@/components/ui/page-title";
 import { displayNameOf } from "@/lib/user-personal-information";
 import { SelfUserImageDialog } from "@/views/profile/images/self-image-dialog";
 
-import type { PersonalInformationUser } from "./personal-content";
 import type { UpdatePersonalInformation } from "./personal-update";
+import type { ProfileSummaryUser } from "./profile-summary";
 import type { UpdateTimeZone } from "./time-zone-update";
 
 import {
@@ -20,17 +20,14 @@ import {
   SETTINGS_ROW_LABEL,
   SettingsGroup,
 } from "../settings-group";
-import { PersonalInformationContent } from "./personal-content";
-import { RealNameRow } from "./real-name-row";
-import { TimeZoneGroup } from "./time-zone-row";
+import { ProfileSheet } from "./profile-sheet";
+import { ProfileSummary } from "./profile-summary";
 
-export interface SettingsOverviewUser extends PersonalInformationUser {
+export interface SettingsOverviewUser extends ProfileSummaryUser {
   avatarColor: string;
   avatarUrl: null | string;
-  name: string;
   nameCode: string;
   role: ProfileRole;
-  timeZone: null | string;
 }
 
 export const OverviewSettingsContent = ({
@@ -67,7 +64,10 @@ export const OverviewSettingsContent = ({
         subtitle={tSettings("title")}
       />
 
-      <SettingsGroup title={t("profileTitle")}>
+      <SettingsGroup
+        footer={canEditPersonalInfo ? t("personalDesc") : undefined}
+        title={t("profileTitle")}
+      >
         <li className={SETTINGS_ROW}>
           <Avatar
             className="size-12 shrink-0"
@@ -83,33 +83,27 @@ export const OverviewSettingsContent = ({
               @{user.nameCode}
             </span>
           </div>
-          {editor ? (
-            <SelfUserImageDialog
-              editor={editor}
-              hasImage={user.avatarUrl !== null}
-              kind="avatar"
-              size="icon-sm"
+          <div className="flex shrink-0 items-center gap-2">
+            {editor ? (
+              <SelfUserImageDialog
+                editor={editor}
+                hasImage={user.avatarUrl !== null}
+                kind="avatar"
+                size="icon-sm"
+              />
+            ) : null}
+            <ProfileSheet
+              canEdit={canEditPersonalInfo}
+              fields={personalFields}
+              onTimeZoneUpdate={onTimeZoneUpdate}
+              onUpdate={onUpdate}
+              user={user}
             />
-          ) : null}
+          </div>
         </li>
 
-        {personalFields.showRealName ? (
-          <RealNameRow
-            canEdit={canEditPersonalInfo}
-            checked={user.showRealName}
-            onUpdate={onUpdate}
-          />
-        ) : null}
+        <ProfileSummary fields={personalFields} user={user} />
       </SettingsGroup>
-
-      <PersonalInformationContent
-        canEdit={canEditPersonalInfo}
-        fields={personalFields}
-        onUpdate={onUpdate}
-        user={user}
-      />
-
-      <TimeZoneGroup onUpdate={onTimeZoneUpdate} timeZone={user.timeZone} />
 
       <SettingsGroup title={t("accountTitle")}>
         <li className={SETTINGS_ROW}>

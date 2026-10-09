@@ -24,6 +24,10 @@ import { AI_USAGE_TONE_BAR, aiUsageTone } from "@/lib/ai/usage-tone";
 
 import type { AiHistoryItem, AiUsage, AiUsageAction } from "./ai-usage-query";
 
+import {
+  AiPointsBreakdown,
+  AiUnlimitedPointsSummary,
+} from "./ai-points-breakdown";
 import { aiHistoryQueryOptions } from "./ai-usage-query";
 
 const FEATURE_RUNS_PAGE = 5;
@@ -94,12 +98,10 @@ export const AiPointsContent = ({ usage }: { usage: AiUsage }) => {
 
   if (total === null) {
     return (
-      <p className="text-sm leading-relaxed">
-        <span className="font-medium">{t("unlimited")}</span>{" "}
-        <span className="text-muted-foreground tabular-nums">
-          {t("unlimited_used", { used: usedLabel })}
-        </span>
-      </p>
+      <div className="flex flex-col gap-4">
+        <AiUnlimitedPointsSummary usage={usage} />
+        <AiPointsBreakdown actions={usage.actions} />
+      </div>
     );
   }
 

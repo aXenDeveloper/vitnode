@@ -1511,22 +1511,27 @@
         "overview": {
           "accountTitle": "Konto",
           "desc": "Twój awatar i dane Twojego konta.",
-          "edit": "Edytuj",
+          "editProfile": "Edytuj profil",
+          "editProfileDesc": "Zmień dane osobowe i strefę czasową za jednym razem.",
           "email": "Adres e-mail",
           "firstName": "Imię",
           "headline": "Nagłówek",
           "headlineDesc": "Jedna linijka o Tobie, do {max} znaków.",
           "lastName": "Nazwisko",
+          "name": "Imię i nazwisko",
           "nickname": "Pseudonim",
           "notSet": "Nie ustawiono",
           "personalDesc": "Opowiedz społeczności, kim jesteś. Każde pole jest opcjonalne.",
           "personalTitle": "Informacje osobiste",
           "phone": "Telefon",
           "profileTitle": "Profil",
+          "realName": "Prawdziwe imię",
+          "realNameHidden": "Ukryte",
+          "realNameShown": "Widoczne na profilu",
           "role": "Rola",
           "save": "Zapisz zmiany",
-          "saved": "Informacje osobiste zaktualizowane.",
-          "savedDesc": "Twój profil od razu pokazuje nowe dane.",
+          "saved": "Zaktualizowano profil",
+          "savedDesc": "Zmiany są widoczne od razu.",
           "secondaryRoles": "Role dodatkowe",
           "showRealName": "Pokazuj moje prawdziwe imię",
           "showRealNameDesc": "Twój profil pokazuje imię i nazwisko zamiast pseudonimu. Do czasu ich ustawienia używany jest pseudonim.",
@@ -1535,9 +1540,7 @@
           "timeZone": "Strefa czasowa",
           "timeZoneDesc": "Szukaj po mieście, np. Warsaw lub New York.",
           "timeZoneAuto": "Automatycznie - z Twojego języka",
-          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})",
-          "timeZoneSaved": "Zapisano strefę czasową",
-          "timeZoneSavedDesc": "Podsumowania i daty są teraz w strefie {timeZone}."
+          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})"
         },
         "passkeys": {
           "add": "Dodaj klucz dostępu",
@@ -1859,7 +1862,14 @@
             "used_of": "Wykorzystano {used} z {total} punktów",
             "renews": "Odnowienie {date}",
             "unlimited": "Nielimitowane punkty",
-            "unlimited_used": "W tym miesiącu wykorzystano {used} punktów",
+            "unlimited_desc": "Bez miesięcznego limitu. Licznik wykorzystania zeruje się {date}.",
+            "this_month": "pkt w tym miesiącu",
+            "breakdown": {
+              "label": "Na co poszły Twoje punkty w tym miesiącu",
+              "other": "{count, plural, one {# inna funkcja} few {# inne funkcje} many {# innych funkcji} other {# innych funkcji}}",
+              "points": "{points} pkt",
+              "empty": "W tym miesiącu nic jeszcze nie wykorzystano. Gdy użyjesz funkcji AI, zobaczysz tutaj, na co idą Twoje punkty."
+            },
             "none": "Brak punktów AI w tym miesiącu"
           },
           "features": {

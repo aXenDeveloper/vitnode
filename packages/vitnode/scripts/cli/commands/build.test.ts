@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { ViteBuildApi } from "../builder/app-build";
+import type { BuildRoute } from "../builder/routes";
 
 import { snapshotPathFor } from "../builder/snapshot";
 import { RuntimeError } from "../errors";
@@ -67,7 +68,13 @@ const call = (
  */
 const fakeVite = (
   environments: FakeEnvironment[],
-  { fail }: { fail?: Error } = {},
+  {
+    fail,
+    routeReport,
+  }: {
+    fail?: Error;
+    routeReport?: (htmlPaths: readonly string[]) => BuildRoute[];
+  } = {},
 ): ViteBuildApi & { configs: InlineConfig[] } => {
   const configs: InlineConfig[] = [];
 
@@ -123,7 +130,14 @@ const fakeVite = (
               await call(plugin, "closeBundle", context);
           }
         },
-        config: { plugins: [{ name: "vitnode:plugin-routes" }] },
+        config: {
+          plugins: [
+            {
+              api: routeReport === undefined ? undefined : { routeReport },
+              name: "vitnode:plugin-routes",
+            },
+          ],
+        },
       };
     },
   };
@@ -445,5 +459,127 @@ describe("a failed build", () => {
     ).catch((thrown: unknown) => thrown)) as RuntimeError;
 
     expect(failure.details).toEqual(["Something odd"]);
+  });
+});
+
+describe("vitnode build route summary", () => {
+  const writeHtml = (...files: string[]) => {
+    files.forEach(file => {
+      const path = join(root, ".output/public", file);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, "<!doctype html>");
+    });
+  };
+
+  const ROUTES: BuildRoute[] = [
+    { mode: "static", path: "/", staticPaths: ["/", "/pl"] },
+    {
+      mode: "partial",
+      path: "/solutions/:slug",
+      staticPaths: ["/solutions/help-center"],
+    },
+    { mode: "dynamic", path: "/login", staticPaths: [] },
+    { mode: "dynamic", path: "/admin/core", staticPaths: [] },
+    { mode: "dynamic", path: "/admin/core/users", staticPaths: [] },
+  ];
+
+  it("asks the routes plugin about every HTML file the build wrote", async () => {
+    writeHtml(
+      "index.html",
+      "pl/index.html",
+      "solutions/help-center/index.html",
+    );
+    let received: readonly string[] = [];
+
+    await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 }), {
+        routeReport: htmlPaths => {
+          received = htmlPaths;
+
+          return ROUTES;
+        },
+      }),
+    );
+
+    expect(received).toEqual(["/", "/pl", "/solutions/help-center"]);
+  });
+
+  it("ends with every route marked by how it is served", async () => {
+    const { runtime } = await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 }), {
+        routeReport: () => ROUTES,
+      }),
+    );
+    const output = runtime.output();
+
+    expect(output).toContain("Routes");
+    expect(output).toContain("├ ○ /\n");
+    expect(output).toContain("│   └ /pl");
+    expect(output).toContain("● /solutions/:slug");
+    expect(output).toContain("ƒ /login");
+    expect(output).toContain("ƒ /admin/*  2 AdminCP routes");
+    expect(output).not.toContain("/admin/core/users");
+    expect(output).toMatch(/○ {2}Static\s+prerendered as static HTML/);
+    expect(output.indexOf("Routes")).toBeGreaterThan(
+      output.indexOf("Client JS"),
+    );
+  });
+
+  it("lists every AdminCP route with --verbose", async () => {
+    const { runtime } = await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 }), {
+        routeReport: () => ROUTES,
+      }),
+      { verbose: true },
+    );
+
+    expect(runtime.output()).toContain("ƒ /admin/core/users");
+  });
+
+  it("skips the section rather than fail a finished build", async () => {
+    const { code, runtime } = await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 }), {
+        routeReport: () => {
+          throw new Error("no i18n configuration");
+        },
+      }),
+    );
+
+    expect(code).toBe(0);
+    expect(runtime.output()).toContain(
+      "Route summary skipped: no i18n configuration",
+    );
+  });
+
+  it("leaves the section out for an app VitNode does not route", async () => {
+    const { runtime } = await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 })),
+    );
+
+    expect(runtime.output()).not.toContain("Routes");
+  });
+});
+
+describe("vitnode build start hint", () => {
+  it("names the start script with the package manager the app uses", async () => {
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ name: "web", scripts: { start: "vitnode start" } }),
+    );
+
+    const { runtime } = await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 })),
+      { env: { npm_config_user_agent: "pnpm/10.18.0 npm/? node/v24.15.0" } },
+    );
+
+    expect(runtime.output()).toContain("Run pnpm start to serve it.");
+  });
+
+  it("falls back to vitnode start for an app without a start script", async () => {
+    const { runtime } = await build(
+      fakeVite(appBuild({ admin: 1000, index: 1000 })),
+    );
+
+    expect(runtime.output()).toContain("Run vitnode start to serve it.");
   });
 });
