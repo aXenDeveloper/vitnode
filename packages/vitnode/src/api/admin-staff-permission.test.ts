@@ -25,6 +25,13 @@ const ALLOWLIST = [
   "GET /admin/staff/entry/:type/:id",
   "PATCH /admin/staff/entry/:type/:id",
   "DELETE /admin/staff/entry/:type/:id",
+  "POST /admin/ai/assist",
+  "POST /admin/ai/assist/stream",
+  "POST /admin/ai/assist/estimate",
+  "GET /admin/ai/assist/available",
+  "POST /admin/ai/assist/runs/:id/feedback",
+  "GET /admin/ai/translation-sources",
+  "PUT /admin/ai/translation-sources",
 ];
 
 const ok = {

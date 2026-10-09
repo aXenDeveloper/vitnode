@@ -32,7 +32,8 @@ export interface ResendVerificationSubmitValues {
  * outcome here that could tell them apart.
  */
 export type ResendVerificationMutationResult =
-  undefined | { message: "Internal Server Error" };
+  | undefined
+  | { message: "Internal Server Error" };
 
 export type ResendVerificationSubmit = (
   values: ResendVerificationSubmitValues,

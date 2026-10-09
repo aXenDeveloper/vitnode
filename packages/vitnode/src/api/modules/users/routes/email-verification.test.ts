@@ -196,7 +196,8 @@ describe("signing up on an install that sends email", () => {
     const [row] = h.confirmationRows();
     expect(row?.token).toBe(sha256(LINK_TOKEN));
     expect(row?.token).not.toBe(LINK_TOKEN);
-    const expiresIn = (row?.expiresAt as Date).getTime() - Date.now();
+    expect(row?.expiresAt).toBeInstanceOf(Date);
+    const expiresIn = Number(row?.expiresAt) - Date.now();
     expect(expiresIn).toBeGreaterThan(EMAIL_VERIFICATION_TTL_MS - 60_000);
     expect(expiresIn).toBeLessThanOrEqual(EMAIL_VERIFICATION_TTL_MS);
   });

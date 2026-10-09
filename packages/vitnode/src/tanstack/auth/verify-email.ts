@@ -18,7 +18,8 @@ export const normalizeVerifyEmailSearch = (
  * visitor needing a new link rather than a button that is bound to fail.
  */
 export type VerifyEmailMode =
-  { mode: "confirm"; token: string } | { mode: "resend" };
+  | { mode: "confirm"; token: string }
+  | { mode: "resend" };
 
 export const verifyEmailMode = (search: VerifyEmailSearch): VerifyEmailMode => {
   const parsed = verifyEmailInputSchema.safeParse({ token: search.token });
@@ -36,7 +37,9 @@ export const VERIFY_EMAIL_NAMESPACES = [
 ] as const;
 
 export type EmailVerificationAvailability =
-  "available" | "disabled" | "unknown";
+  | "available"
+  | "disabled"
+  | "unknown";
 
 /**
  * Whether this install confirms addresses at all - only one that can send

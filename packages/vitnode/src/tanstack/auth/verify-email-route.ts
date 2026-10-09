@@ -29,6 +29,6 @@ export const loadVerifyEmailRoute = async ({
   if (availability === "unknown") throw new EmailVerificationUnknownError();
 
   // TanStack Router's own control-flow signal, like `redirect()`.
-  // eslint-disable-next-line @typescript-eslint/only-throw-error
+  // oxlint-disable-next-line typescript/only-throw-error
   if (availability === "disabled") throw notFound();
 };
