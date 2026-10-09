@@ -41,7 +41,7 @@
     "@tanstack/react-router": "^1.170.41",
     "@vitnode/core": "workspace:*",
     "ai": "^7.0.131",
-    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.5-5935859",
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.13.13",
     "lucide-react": "^1.52.0",

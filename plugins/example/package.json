@@ -25,7 +25,7 @@
     "@hono/zod-openapi": "^1.6.3",
     "@tanstack/react-form": "^1.33.5",
     "@vitnode/core": "workspace:*",
-    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.5-5935859",
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.13.13",
     "lucide-react": "^1.52.0",

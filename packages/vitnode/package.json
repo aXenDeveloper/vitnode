@@ -67,7 +67,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-v8": "^5.0.3",
     "@vitnode/config": "workspace:*",
-    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.5-5935859",
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.13.13",
     "jiti": "^2.7.0",
