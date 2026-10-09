@@ -44,6 +44,7 @@ export const FacebookSSOApiPlugin = ({
   });
 
   return {
+    brandColor: "#0866FF",
     icon: FACEBOOK_ICON,
     id,
     name: "Facebook",

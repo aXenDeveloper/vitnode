@@ -67,6 +67,24 @@ describe("normalising the SSO provider list", () => {
     ]);
   });
 
+  it("keeps a hex brand color and drops anything else", () => {
+    expect(
+      normalizeSSOProviders([
+        { brandColor: "#5865F2", id: "discord", name: "Discord" },
+        { brandColor: " #FFF ", id: "white", name: "White" },
+        { brandColor: "red", id: "named", name: "Named" },
+        { brandColor: "#5865F2; background: url(x)", id: "css", name: "CSS" },
+        { brandColor: 42, id: "number", name: "Number" },
+      ]),
+    ).toEqual([
+      { brandColor: "#5865f2", id: "discord", name: "Discord" },
+      { brandColor: "#fff", id: "white", name: "White" },
+      { id: "named", name: "Named" },
+      { id: "css", name: "CSS" },
+      { id: "number", name: "Number" },
+    ]);
+  });
+
   it("keeps the first of two providers sharing an id", () => {
     // React keys the row by id, so a duplicate is a warning plus a button that
     // cannot be told apart from the one above it.

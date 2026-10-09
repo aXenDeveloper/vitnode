@@ -43,6 +43,7 @@ export interface VitNodeConfig<
     ThemeProviderProps,
     "attribute" | "children" | "disableTransitionOnChange" | "enableSystem"
   >;
+  viewTransitions?: boolean;
 }
 
 export interface VitNodeServerConfig<

@@ -1,0 +1,255 @@
+---
+title: View transitions
+description: Animate page changes, morph the logo between layouts and animate components with React's ViewTransition in VitNode, or turn view transitions off in vitnode.config.ts.
+icon: Layers2
+---
+
+VitNode uses the browser's View Transition API in two places. Every navigation
+to another page crossfades in 150ms, and the logo glides from the site header
+to the docs header. Inside a page, React's
+[`<ViewTransition>`](https://react.dev/reference/react/ViewTransition) animates
+a component when it appears, leaves or changes.
+
+## Page transitions
+
+Click any link in the sidebar: the old page fades out while the new one fades
+in. Your router turns this on with `navigationViewTransition`:
+
+```tsx title="src/router.tsx"
+import { navigationViewTransition } from '@vitnode/core/tanstack/view-transitions'
+
+import { vitNodeConfig } from './vitnode.config'
+
+const router = createTanStackRouter({
+  defaultViewTransition: navigationViewTransition(
+    vitNodeConfig.viewTransitions,
+  ),
+  // ...
+})
+```
+
+The router starts the transition only after the next page has loaded, so the
+old page never freezes while data is fetched. Changes that only touch the
+query string, like paging a table or typing in a filter, skip the animation.
+
+The timing lives in `@vitnode/core/styles/view-transitions.css`, which your
+`styles.css` imports:
+
+```css title="src/styles.css"
+@import '@vitnode/core/styles/view-transitions.css';
+```
+
+## Morph the logo between layouts
+
+Go to the [home page](/) and click **Docs** in the header. The logo moves and
+resizes into the docs header instead of fading. Both logos carry the same
+`view-transition-name`, so the browser treats them as one element:
+
+```tsx
+import { LOGO_VIEW_TRANSITION_NAME } from '@vitnode/core/tanstack/view-transitions'
+
+;<Link style={{ viewTransitionName: LOGO_VIEW_TRANSITION_NAME }} to="/">
+  <Logo />
+</Link>
+```
+
+The site header already does this for the logo you set in
+[`vitnode.config.ts`](/docs/dev/configuration#logo). Add the same style to a
+logo in your own layout to join in.
+
+<Callout type="warn" title="One name per page">
+  A `view-transition-name` must be unique among the visible elements on a page.
+  If two visible elements share a name, the browser skips the whole transition.
+  Put the name on one wrapper, not on a logo component that a footer renders
+  too.
+</Callout>
+
+## Animate a component with ViewTransition
+
+<Preview name="view-transition-enter-exit" className="*:max-w-full" />
+
+Wrap the element in `<ViewTransition>` and change state inside
+`startTransition`. React animates the element with the class you pass to
+`enter` or `exit`:
+
+```tsx
+import { startTransition, ViewTransition } from 'react'
+
+{
+  isOpen && (
+    <ViewTransition enter="vt-slide-up" exit="vt-slide-down">
+      <Notification />
+    </ViewTransition>
+  )
+}
+
+;<Button onClick={() => startTransition(() => setIsOpen((open) => !open))}>
+  Toggle
+</Button>
+```
+
+The class becomes a view transition class, so you style it with the
+`::view-transition-*` pseudo-elements:
+
+```css
+@keyframes vt-slide-in {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.97;
+  }
+}
+
+@keyframes vt-slide-out {
+  to {
+    opacity: 0;
+    translate: 0 0.25rem;
+    scale: 0.98;
+  }
+}
+
+::view-transition-new(.vt-slide-up) {
+  animation: vt-slide-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+::view-transition-old(.vt-slide-down) {
+  animation: vt-slide-out 150ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+```
+
+The exit is shorter and travels less than the enter: once something is
+dismissed, it should get out of the way. A plain `setState` outside
+`startTransition` updates instantly, with no animation.
+
+## Shared element transitions
+
+<Preview name="view-transition-shared" className="*:max-w-full" />
+
+Give two `<ViewTransition>` boundaries the same `name`. When one unmounts and
+the other mounts in the same transition, React morphs the first into the
+second:
+
+```tsx
+<ViewTransition name={`plugin-${plugin.id}`} share="vt-morph">
+  <PluginCard plugin={plugin} />
+</ViewTransition>
+```
+
+Build each name from a stable id, so a list item and its detail view match.
+The same uniqueness rule as the logo applies.
+
+The browser stretches both snapshots to the morphing box by default, which
+squashes text when the shape changes. Keep them at their natural size and let
+the box clip them instead:
+
+```css
+::view-transition-group(.vt-morph) {
+  overflow: clip;
+  border-radius: var(--radius-xl);
+  animation-duration: 250ms;
+  animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+::view-transition-old(.vt-morph),
+::view-transition-new(.vt-morph) {
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+```
+
+A shared element is already on screen, so it moves with an ease-in-out curve
+rather than the ease-out used for things that appear. When the icon or title
+sits in a different spot in each view, give it its own `name` too
+(`${name}-mark`, `${name}-title`). It then travels on its own path instead of
+showing up twice while the boxes crossfade.
+
+## Direction with transition types
+
+<Preview name="view-transition-types" className="*:max-w-full" />
+
+Call `addTransitionType` inside `startTransition` to tag the update, then map
+each type to a class. Here **Next** slides in from the right and **Back** from
+the left:
+
+```tsx
+import { addTransitionType, startTransition, ViewTransition } from 'react'
+
+const go = (direction: 'back' | 'forward') => {
+  startTransition(() => {
+    addTransitionType(direction)
+    setIndex((index) => index + (direction === 'forward' ? 1 : -1))
+  })
+}
+
+;<ViewTransition
+  default="none"
+  enter={{
+    back: 'vt-from-left',
+    default: 'none',
+    forward: 'vt-from-right',
+  }}
+  exit={{
+    back: 'vt-to-right',
+    default: 'none',
+    forward: 'vt-to-left',
+  }}
+  key={index}
+>
+  <Step index={index} />
+</ViewTransition>
+```
+
+Changing `key` makes React treat each step as a new element, so the old step
+exits while the new one enters. Keep the card's border and background outside
+the `<ViewTransition>`: snapshots are drawn above the page and ignore
+`overflow: hidden`, so only content that stays inside the padding should move.
+
+<Callout title="Why page changes don't use ViewTransition">
+  TanStack Router renders a route change as a synchronous update, and React
+  only runs `<ViewTransition>` animations for updates inside `startTransition`.
+  That is why navigations use the router's `defaultViewTransition` and
+  `<ViewTransition>` covers changes inside a page.
+</Callout>
+
+## Turn view transitions off
+
+Set `viewTransitions` to `false` in your shared config:
+
+```ts title="src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  // ...
+  viewTransitions: false,
+})
+```
+
+Navigations then swap pages instantly and the logo no longer morphs. The
+option is `true` by default. React `<ViewTransition>` boundaries in your own
+components still animate, because they don't go through the router.
+
+## Reduced motion
+
+When the system asks for reduced motion, the router skips page transitions and
+`view-transitions.css` turns off every view transition animation, including
+your own `<ViewTransition>` classes. Browsers without the View Transition API
+just swap the content instantly.
+
+## Related
+
+<Cards>
+  <Card
+    title="Motion"
+    href="/docs/ui/motion"
+    description="Easing, timing and interruptible transitions."
+  />
+  <Card
+    title="Configuration"
+    href="/docs/dev/configuration"
+    description="Every option in vitnode.config.ts."
+  />
+  <Card
+    title="Accessibility"
+    href="/docs/ui/accessibility"
+    description="Focus, labels, contrast and user preferences."
+  />
+</Cards>

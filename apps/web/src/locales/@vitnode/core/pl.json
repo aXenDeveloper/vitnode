@@ -2046,6 +2046,7 @@
           "title": "Połącz <provider></provider> ze swoim kontem"
         },
         "or": "Lub kontynuuj przez e-mail",
+        "continue_with": "Kontynuuj przez {provider}",
         "connection": {
           "pending": "Kończymy z {provider}…"
         }

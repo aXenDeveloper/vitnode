@@ -98,6 +98,20 @@ Pass the component itself, not `<Logo />`. Keep it lean: your Vite build
 executes this file too, so a logo that imports half your UI makes every
 regeneration pass slower.
 
+### View transitions
+
+Navigations crossfade and the logo morphs between layouts by default. Set
+`viewTransitions` to `false` to swap pages instantly instead:
+
+```ts title="src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  // ...
+  viewTransitions: false,
+})
+```
+
+See [View transitions](/docs/ui/view-transitions) for what this changes.
+
 ### Enabled plugins
 
 Register a plugin with its own factory:

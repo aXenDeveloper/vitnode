@@ -102,7 +102,7 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-A **GitHub** login button automatically renders on `/login` and `/register`, and `/login/sso/github` routes incoming authentication requests. It is text-only until you give the adapter an [icon](/docs/dev/sso/icons).
+A **GitHub** login button automatically renders on `/login` and `/register`, and `/login/sso/github` routes incoming authentication requests. It is a plain white button until you give the adapter an [icon and a brand color](/docs/dev/sso/icons).
 
 ---
 
@@ -121,7 +121,12 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
       type: "string",
     },
     icon: {
-      description: "Brand mark for the login button: inline SVG markup or an image URL. See Provider Icons.",
+      description: "Brand mark for the login button: inline SVG markup or an image URL. See Provider Icons and Colors.",
+      required: false,
+      type: "string",
+    },
+    brandColor: {
+      description: "Hex color (#RGB or #RRGGBB) that fills the login button. The label turns white or near-black, whichever reads better. See Provider Icons and Colors.",
       required: false,
       type: "string",
     },
@@ -148,7 +153,7 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
   }}
 />
 
-See [Provider Icons](/docs/dev/sso/icons) for the accepted `icon` formats, and for registering a React component instead.
+See [Provider Icons and Colors](/docs/dev/sso/icons) for the accepted `icon` and `brandColor` formats, and for registering a React component instead.
 
 ## Profile data
 

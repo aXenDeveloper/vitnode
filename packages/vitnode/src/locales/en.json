@@ -758,6 +758,7 @@
     "auth": {
       "sso": {
         "or": "Or continue with email",
+        "continue_with": "Continue with {provider}",
         "access_denied": "You have denied access to the application or the request has expired. Please try again.",
         "email_exists": {
           "title": "You cannot sign in with <provider></provider>",

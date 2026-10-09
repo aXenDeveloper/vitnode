@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
+import { LOGO_VIEW_TRANSITION_NAME } from "@/tanstack/view-transitions";
+
 import type { HeaderNavItem } from "./header-nav";
 
 import { HEADER_HREF } from "./header-nav";
@@ -40,7 +42,13 @@ export const HeaderLayoutContent = ({
     {...props}
   >
     <div className="dark:bg-background/75 bg-card/75 container mx-auto flex h-14 items-center border-b px-4 py-2 backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
-      <Link to={HEADER_HREF.home}>{logo}</Link>
+      <Link
+        className="flex shrink-0 items-center"
+        style={{ viewTransitionName: LOGO_VIEW_TRANSITION_NAME }}
+        to={HEADER_HREF.home}
+      >
+        {logo}
+      </Link>
 
       {isNavigationPending ? (
         <HeaderNavSkeleton className="ms-4" label={navigationLoadingLabel} />

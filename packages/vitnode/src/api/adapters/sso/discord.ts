@@ -129,6 +129,7 @@ export const DiscordSSOApiPlugin = ({
 
       return url.toString();
     },
+    brandColor: "#5865F2",
     icon: DISCORD_ICON,
     id,
     name: "Discord",

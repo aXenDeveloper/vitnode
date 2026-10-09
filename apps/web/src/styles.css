@@ -3,6 +3,7 @@
 @import 'tw-animate-css';
 @import './theme.css';
 @import '@vitnode/core/styles/tiptap.css';
+@import '@vitnode/core/styles/view-transitions.css';
 @import './site/marketing/marketing.css';
 
 @custom-variant dark (&:where(.dark, .dark *));

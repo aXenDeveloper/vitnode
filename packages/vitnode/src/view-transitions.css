@@ -1,0 +1,26 @@
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-group(vitnode-logo),
+::view-transition-old(vitnode-logo),
+::view-transition-new(vitnode-logo) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+::view-transition-old(vitnode-logo),
+::view-transition-new(vitnode-logo) {
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

@@ -2,6 +2,7 @@
 @import "shadcn/tailwind.css";
 @import "tw-animate-css";
 @import "@vitnode/core/styles/tiptap.css";
+@import "@vitnode/core/styles/view-transitions.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));

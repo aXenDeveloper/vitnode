@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 import { act, fireEvent, render, screen, within } from "@testing-library/react";

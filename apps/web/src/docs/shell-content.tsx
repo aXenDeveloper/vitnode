@@ -3,6 +3,7 @@ import type { Root } from 'fumadocs-core/page-tree'
 import { useRouterState } from '@tanstack/react-router'
 import { LogoVitNode } from '@vitnode/core/components/logo-vitnode'
 import { ThemeSwitcher } from '@vitnode/core/components/switchers/themes/theme-switcher'
+import { LOGO_VIEW_TRANSITION_NAME } from '@vitnode/core/tanstack/view-transitions'
 import { cn } from 'cn'
 import { DocsLayout, useSpaciousLayout } from 'fumadocs-ui/layouts/spacious'
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
@@ -15,7 +16,13 @@ const DocsSearchDialog = React.lazy(async () => await import('./search-dialog'))
 const DocsNavTitle = () => {
   const logoId = useId()
 
-  return <LogoVitNode className="w-30" idPrefix={logoId} />
+  return (
+    <LogoVitNode
+      className="w-30"
+      idPrefix={logoId}
+      style={{ viewTransitionName: LOGO_VIEW_TRANSITION_NAME }}
+    />
+  )
 }
 
 const DocsActions = ({ className, ...props }: React.ComponentProps<'div'>) => {
