@@ -87,10 +87,6 @@ export const signUpRoute = buildRoute({
     if (data.emailVerified) {
       await new SessionModel(c).createSessionByUserId(data.id);
     } else {
-      // The account exists either way. A link that failed to go out is not a
-      // reason to answer this sign-up with an error - the member would retry,
-      // hit "email already exists", and be stuck - so it is logged and the
-      // member can ask for another one from the sign-in page.
       try {
         await new EmailVerificationModel(c).send(data);
       } catch (error) {

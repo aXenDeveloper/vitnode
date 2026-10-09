@@ -12,11 +12,6 @@ export const normalizeVerifyEmailSearch = (
   return typeof token === "string" && token !== "" ? { token } : {};
 };
 
-/**
- * `confirm` for a URL that carries a usable link, `resend` for anything else -
- * the bare page, and a token that could never be valid, both of which leave the
- * visitor needing a new link rather than a button that is bound to fail.
- */
 export type VerifyEmailMode =
   | { mode: "confirm"; token: string }
   | { mode: "resend" };
@@ -29,7 +24,6 @@ export const verifyEmailMode = (search: VerifyEmailSearch): VerifyEmailMode => {
     : { mode: "resend" };
 };
 
-/** What both verify-email screens render strings from, crumb included. */
 export const VERIFY_EMAIL_NAMESPACES = [
   "core.global",
   "core.auth.sign_up",
@@ -41,11 +35,6 @@ export type EmailVerificationAvailability =
   | "disabled"
   | "unknown";
 
-/**
- * Whether this install confirms addresses at all - only one that can send
- * email does. Without an adapter every account is confirmed at sign-up, and the
- * page has nothing to offer.
- */
 export const emailVerificationAvailability = ({
   isEmail,
   isKnown,

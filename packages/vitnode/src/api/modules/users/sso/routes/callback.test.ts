@@ -133,7 +133,6 @@ describe("signing in through an SSO provider", () => {
     const response = await h.signInThroughGoogle();
 
     expect(response.status).toBe(200);
-    // The session token lives in the HttpOnly cookie, never in the body.
     expect(await response.json()).toEqual({ id: 7 });
     expect(h.createSession).toHaveBeenCalledWith(7);
     expect(h.createAdminSession).not.toHaveBeenCalled();

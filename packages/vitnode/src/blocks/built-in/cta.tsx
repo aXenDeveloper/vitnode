@@ -28,7 +28,6 @@ const Cta = ({ data }: BlockComponentProps<CtaData>) => (
       ) : null}
     </div>
 
-    {/* Same rule as a menu item: a site path or an https URL, never `javascript:`. */}
     {isValidNavigationHref(data.href) ? (
       <a
         className="bg-primary text-primary-foreground hover:bg-primary/80 focus-visible:ring-ring/50 inline-flex w-fit shrink-0 items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"

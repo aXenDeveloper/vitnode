@@ -120,10 +120,6 @@ export interface VitNodeApiConfig {
   notifications?: Partial<NotificationWorkerSettings>;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix"> & {
-    /**
-     * Separate, smaller budget for sign-in, sign-up, password reset and passkey
-     * sign-in. Defaults to 10 requests per 60 seconds per address.
-     */
     auth?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
   };
 
@@ -137,11 +133,6 @@ export interface VitNodeApiConfig {
     adapter?: StorageApiPlugin;
 
     image?: {
-      /**
-       * Largest image, in total pixels (width x height), that will be decoded.
-       * Anything bigger is refused with a 400 before it is processed.
-       * Defaults to 40 million.
-       */
       maxPixels?: number;
       quality?: number;
       webp?: boolean;

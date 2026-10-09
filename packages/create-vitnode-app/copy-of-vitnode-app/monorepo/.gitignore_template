@@ -6,8 +6,6 @@ node_modules
 .pnp.js
 
 # Local env files
-# Every mode Vite loads (`.env.production`, `.env.staging.local`, ...) - only
-# the example file is committed.
 .env*
 !.env.example
 

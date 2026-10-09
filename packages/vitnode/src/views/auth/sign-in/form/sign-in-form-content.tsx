@@ -50,7 +50,6 @@ export const SignInFormContent = ({
   showResetPassword = false,
 }: {
   onSignIn: SignInSubmit;
-  /** Where "send a new confirmation link" goes for an unconfirmed account. */
   resendVerificationHref?: string;
   resetPasswordHref?: string;
   /** Whether this deployment has an email adapter that can send a reset link. */

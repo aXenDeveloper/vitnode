@@ -225,11 +225,6 @@ export const changePasswordFromResetAction: ChangePasswordSubmit =
       await authTransport().changePasswordFromReset(values),
     );
 
-/**
- * Spends the confirmation link a sign-up emailed. No session comes back - the
- * member signs in with their own password afterwards - so there is no identity
- * boundary to cross and nothing cached to drop.
- */
 export const confirmEmailAction =
   (token: string): ConfirmEmailSubmit =>
   async () =>

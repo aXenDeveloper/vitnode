@@ -141,7 +141,6 @@ const emailNotVerifiedBodySchema = z.object({
   error: z.literal("email_not_verified"),
 });
 
-/** Whether a refused sign-in was refused only because the address is unconfirmed. */
 export const isEmailNotVerifiedBody = (body: unknown): boolean =>
   emailNotVerifiedBodySchema.safeParse(body).success;
 
@@ -171,7 +170,6 @@ export const passkeySignInStartResultFromStatus = (
   return { ok: true, options: body };
 };
 
-/** What every passkey sign-in, public or AdminCP, can answer. */
 type PasskeyCeremonyResult =
   | { ok: false; reason: "access_denied" | "expired" | "server_error" }
   | { ok: true };
@@ -426,7 +424,6 @@ export const changePasswordResultFromStatus = (
   return { ok: false, reason: "server_error" };
 };
 
-/** The link a confirmation email carries - the same alphabet a reset token uses. */
 export const verifyEmailInputSchema = z.object({
   token: z
     .string()
@@ -461,7 +458,6 @@ export const verifyEmailResultFromStatus = (
   return { ok: false, reason: "server_error" };
 };
 
-/** A request for a fresh confirmation link: one address, and the captcha. */
 export const resendEmailVerificationInputSchema =
   passwordResetRequestInputSchema;
 
@@ -469,10 +465,6 @@ export type ResendEmailVerificationInput = z.infer<
   typeof resendEmailVerificationInputSchema
 >;
 
-/**
- * Like a reset request, an accepted resend says nothing about the address - the
- * API answers the same 201 whether or not there was anything to send.
- */
 export type ResendEmailVerificationResult = PasswordResetRequestResult;
 
 export const resendEmailVerificationResultFromStatus =

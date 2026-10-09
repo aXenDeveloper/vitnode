@@ -85,9 +85,6 @@ const exceedsCeiling = (
   );
 };
 
-// A staff entry may only be changed or removed by someone who holds everything
-// it grants - otherwise a limited administrator could demote or delete a more
-// privileged one. Root and unrestricted callers are exempt.
 export const assertCanManageStaffEntry = async (
   c: Context,
   { type, entry }: { entry: StaffEntryGrant; type: PermissionStaffType },

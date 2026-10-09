@@ -56,10 +56,6 @@ const denoSocketAddress = (
   return isRecord(remoteAddr) ? nonEmptyString(remoteAddr.hostname) : undefined;
 };
 
-/**
- * The API mounted in-process by a host app (the Single App's `/api/*` route)
- * has no socket of its own; the host hands over the one it accepted.
- */
 const hostSocketAddress = (env: Record<string, unknown>): string | undefined =>
   nonEmptyString(env.clientAddress);
 
@@ -75,9 +71,6 @@ const socketAddress = (c: Context): string | undefined => {
   );
 };
 
-// Behind `VITNODE_TRUSTED_PROXY_HOPS` proxies the socket is the closest proxy,
-// so the visitor is that many hops from the right of `X-Forwarded-For`.
-// Anything further left is client-written and never read.
 const proxiedAddress = (c: Context): string | undefined => {
   const address = resolveVisitorIp({
     forwardedFor: c.req.header("x-forwarded-for"),

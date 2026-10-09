@@ -1,10 +1,3 @@
-/**
- * Raster image types whose bytes are checked against the type the client
- * declared. A browser fills `File.type` in from the file name, and any other
- * client sends whatever it likes - so "image/png" on its own says nothing about
- * what was uploaded. SVG and every non-image type are deliberately absent: they
- * have no fixed signature, and they are not this check's business.
- */
 export const SIGNED_IMAGE_MIME_TYPES = [
   "image/avif",
   "image/gif",
@@ -32,18 +25,12 @@ const readUint32BE = (bytes: Uint8Array, offset: number): number =>
 
 const AVIF_BRANDS = new Set(["avif", "avis"]);
 
-/**
- * An AVIF file opens with an ISO-BMFF `ftyp` box whose major or compatible
- * brands include `avif` (still) or `avis` (sequence). A HEIC photo shares the
- * box and differs only in its brands, which is why they are read at all.
- */
 const isAvif = (bytes: Uint8Array): boolean => {
   if (ascii(bytes, 4, 4) !== "ftyp") return false;
 
   const boxSize = Math.min(readUint32BE(bytes, 0), bytes.length, 256);
   if (AVIF_BRANDS.has(ascii(bytes, 8, 4))) return true;
 
-  // Compatible brands start after the major brand (4) and minor version (4).
   for (let offset = 16; offset + 4 <= boxSize; offset += 4) {
     if (AVIF_BRANDS.has(ascii(bytes, offset, 4))) return true;
   }
@@ -51,7 +38,6 @@ const isAvif = (bytes: Uint8Array): boolean => {
   return false;
 };
 
-/** Reads the format from the file's leading bytes, or `null` if none matches. */
 export const detectImageMimeType = (
   bytes: Uint8Array,
 ): null | SignedImageMimeType => {

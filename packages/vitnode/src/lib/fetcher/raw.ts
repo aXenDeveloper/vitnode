@@ -110,10 +110,6 @@ export const rawApiFetch = async ({
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
   });
 
-  // Only the path. The origin is the internal `VITNODE_API_URL`, and the query
-  // can carry credentials - the SSO callback forwards the OAuth `code` and
-  // `state` - while this message reaches logs and, from a loader, the error
-  // payload serialised into the SSR HTML.
   const loggedPath = url.pathname;
 
   if (response.status === 500) {

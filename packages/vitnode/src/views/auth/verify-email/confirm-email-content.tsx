@@ -93,13 +93,6 @@ const InvalidLinkView = ({ resendHref }: { resendHref: string }) => {
   );
 };
 
-/**
- * The screen a confirmation link opens.
- *
- * It waits for a click rather than spending the link on load: mail scanners and
- * link previews open every URL in an email, and one that confirmed on arrival
- * would let a scanner confirm an account its owner never asked for.
- */
 export const ConfirmEmailContent = ({
   onConfirm,
   resendHref = AUTH_HREF.verifyEmail,

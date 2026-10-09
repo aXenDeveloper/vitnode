@@ -43,7 +43,6 @@ const Hero = ({ data }: BlockComponentProps<HeroData>) => {
         </p>
       ) : null}
 
-      {/* Same rule as a menu item: a site path or an https URL, never `javascript:`. */}
       {data.linkHref &&
       data.linkLabel &&
       isValidNavigationHref(data.linkHref) ? (

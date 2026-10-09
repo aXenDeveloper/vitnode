@@ -10,25 +10,15 @@ import { CONFIG } from "@/lib/config";
 
 import { invalidateSessionCacheForUser } from "./session-revoke";
 
-/** How long a confirmation link stays usable. */
 export const EMAIL_VERIFICATION_TTL_MS = 1000 * 60 * 60 * 24;
 
-/** How long a resend request is ignored after a link was issued. */
 export const EMAIL_VERIFICATION_RESEND_COOLDOWN_MS = 1000 * 60 * 5;
 
-/** The error body every refused sign-in of an unconfirmed account carries. */
 export const EMAIL_NOT_VERIFIED = "email_not_verified";
 
-/**
- * Whether this install asks members to confirm their address.
- *
- * Only an install that can send email can ask - without an adapter sign-up
- * marks every account as confirmed, so there is nothing left to enforce.
- */
 export const isEmailVerificationRequired = (c: Context): boolean =>
   Boolean(c.get("core").email?.adapter);
 
-/** `true` when this account must confirm its address before it signs in. */
 export const mustVerifyEmail = (
   c: Context,
   user: { emailVerified: boolean },
@@ -56,16 +46,6 @@ export class EmailVerificationModel {
     return crypto.createHash("sha256").update(token).digest("hex");
   }
 
-  /**
-   * Replaces the account's confirmation link with a fresh one and emails it.
-   *
-   * Only the digest is stored - the raw token travels in the email and nowhere
-   * else, exactly like a password reset link. With `respectCooldown` a link
-   * issued in the last five minutes is left alone and nothing is sent, which is
-   * what keeps the public resend endpoint from becoming a mail cannon.
-   *
-   * @returns whether an email was sent.
-   */
   async send(
     user: EmailVerificationRecipient,
     { respectCooldown = false }: { respectCooldown?: boolean } = {},
@@ -125,15 +105,6 @@ export class EmailVerificationModel {
     return true;
   }
 
-  /**
-   * Spends a confirmation link and marks its account as confirmed.
-   *
-   * The row is deleted and read back in one statement, so two clicks racing
-   * each other cannot both succeed - the link is single-use by construction,
-   * not by a check that could be interleaved.
-   *
-   * @returns the confirmed account, or `null` for a wrong, spent or expired link.
-   */
   async verify(token: string): Promise<null | { email: string; id: number }> {
     const db = this.c.get("db");
 
@@ -155,7 +126,6 @@ export class EmailVerificationModel {
       .where(eq(core_users.id, spent.userId))
       .returning({ email: core_users.email, id: core_users.id });
 
-    // Any link still out there for this account has nothing left to confirm.
     await db
       .delete(core_users_confirm_emails)
       .where(eq(core_users_confirm_emails.userId, spent.userId));

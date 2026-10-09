@@ -19,8 +19,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local env files
-# Every mode Vite loads (`.env.production`, `.env.staging.local`, ...) - only
-# the example file is committed.
 .env*
 !.env.example
 
@@ -30,5 +28,5 @@ yarn-error.log*
 # Local storage adapter uploads
 /public/uploads
 
-# VitNode - Postgres data of `docker-compose.yml` (mounted at ./docker/dev)
+# VitNode
 /docker

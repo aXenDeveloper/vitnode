@@ -7,7 +7,6 @@ import { core_content_file_refs } from "@/database/content";
 
 import { STORAGE_FILE_IN_USE, StorageModel } from "./storage";
 
-// The bytes have to open like a PNG for an `image/png` upload to be accepted.
 const PNG_SIGNATURE = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);

@@ -999,8 +999,6 @@ export const createContentEditorialService = <
         // satisfies a `maxBytes` somebody has since lowered is a different
         // question, and the answer is the same 422 a dropped column gets.
         try {
-          // Every file id here comes from this record's own history, so its
-          // origin was settled when the revision was written.
           await assertContentFileReferences(c, definition, patch, tx, {
             existing: async () => Promise.resolve(patch),
           });

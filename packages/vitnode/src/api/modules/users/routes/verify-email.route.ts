@@ -46,10 +46,6 @@ export const verifyEmailRoute = buildRoute({
   handler: async c => {
     const { token } = c.req.valid("json");
 
-    // Deliberately no session here. Whoever holds the link owns the mailbox,
-    // not necessarily the password - an account somebody else registered with
-    // your address is confirmed by your click, but it must not sign *you* into
-    // a stranger's account. The member signs in with their own password next.
     const user = await new EmailVerificationModel(c).verify(token);
 
     if (!user) {

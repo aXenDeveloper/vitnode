@@ -1,18 +1,7 @@
-import { Hr, Link, Section, Text } from "react-email";
-import { createTranslator } from "use-intl";
-
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from "./default-template";
-import { EmailButton } from "./ui/button";
-import {
-  EmailCard,
-  EmailCardContent,
-  EmailCardDescription,
-  EmailCardFooter,
-  EmailCardHeader,
-  EmailCardTitle,
-} from "./ui/card";
+import { ActionLinkEmail } from "./ui/action-link-email";
 
 interface ResetPasswordEmailTemplateProps extends DefaultTemplateEmailProps {
   expiryDate: Date;
@@ -61,89 +50,14 @@ ResetPasswordEmailTemplate.PreviewProps = {
 } satisfies ResetPasswordEmailTemplateProps;
 
 export default function ResetPasswordEmailTemplate({
-  i18n,
   resetUrl,
-  expiryDate,
-  userIpAddress,
-  user,
   ...props
 }: ResetPasswordEmailTemplateProps) {
-  const t = createTranslator(i18n);
-
-  const userName = user?.name ?? "there";
-
   return (
-    <DefaultTemplateEmail
-      i18n={i18n}
-      templateProps={{
-        ...props.templateProps,
-        previewText: t("core.auth.reset_password.email.subject"),
-      }}
-      user={user}
-    >
-      <EmailCard>
-        <EmailCardHeader>
-          <EmailCardTitle>
-            {t("core.auth.reset_password.email.greeting", { name: userName })}
-          </EmailCardTitle>
-          <EmailCardDescription>
-            {t("core.auth.reset_password.email.intro")}
-          </EmailCardDescription>
-        </EmailCardHeader>
-
-        <EmailCardContent>
-          <Section className="text-center">
-            <EmailButton className="min-w-[200px]" href={resetUrl} size="lg">
-              {t("core.auth.reset_password.email.button")}
-            </EmailButton>
-          </Section>
-
-          <Text className="text-muted-foreground mt-6 text-sm leading-relaxed">
-            {t("core.auth.reset_password.email.instructions")}
-          </Text>
-
-          <Text className="text-muted-foreground mt-4 text-sm leading-relaxed">
-            {t("core.auth.reset_password.email.expire_time", {
-              date: expiryDate.toLocaleString(i18n.locale, {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZoneName: "short",
-              }),
-            })}
-          </Text>
-        </EmailCardContent>
-
-        <EmailCardFooter>
-          <Hr className="border-border my-4 w-full border-t border-solid" />
-
-          <Text className="text-muted-foreground m-0 text-sm leading-relaxed">
-            {t("core.auth.reset_password.email.no_action")}
-          </Text>
-
-          {userIpAddress && (
-            <Text className="text-muted-foreground mt-4 text-xs">
-              {t("core.auth.reset_password.email.security_note", {
-                ip: userIpAddress,
-              })}
-            </Text>
-          )}
-        </EmailCardFooter>
-      </EmailCard>
-
-      <Section className="mt-6">
-        <Text className="text-muted-foreground text-sm">
-          {t("core.auth.reset_password.email.help")}
-        </Text>
-        <Link
-          className="text-primary text-sm break-all underline"
-          href={resetUrl}
-        >
-          {resetUrl}
-        </Link>
-      </Section>
-    </DefaultTemplateEmail>
+    <ActionLinkEmail
+      {...props}
+      actionUrl={resetUrl}
+      namespace="core.auth.reset_password.email"
+    />
   );
 }

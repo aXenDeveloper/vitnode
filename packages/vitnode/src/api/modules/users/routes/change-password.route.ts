@@ -90,10 +90,6 @@ export const changePasswordRoute = buildRoute({
     ]);
     await c.get("events").emit("user.password.updated", { userId });
 
-    // The reset link went to the account's own address, so following it proves
-    // the mailbox just as a confirmation link would. Someone who registered
-    // before confirmation emails went out - or lost theirs - is not left locked
-    // out after choosing a new password.
     const [confirmed] = await c
       .get("db")
       .update(core_users)

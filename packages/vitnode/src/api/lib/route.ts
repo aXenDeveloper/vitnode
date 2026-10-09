@@ -16,8 +16,6 @@ export interface AdminStaffPermission {
   plugin?: string;
 }
 
-// Every guard `buildRoute` installs, so a test can prove a mounted route is
-// gated by looking at its handlers instead of driving it.
 const staffPermissionGuards = new WeakSet<MiddlewareHandler>();
 
 interface MountedRoute {
@@ -31,18 +29,12 @@ const unwrapHandler = (handler: unknown): unknown =>
     ? unwrapHandler(handler.__COMPOSED_HANDLER)
     : handler;
 
-/**
- * `"METHOD /path"` of every route under an `/admin/` segment of `hono` that has
- * no `adminStaffPermission`. Routes in `allowlist` (same format) are skipped.
- */
-export const findAdminRoutesWithoutStaffPermission = (
-  hono: { routes: readonly MountedRoute[] },
-  allowlist: readonly string[] = [],
-): string[] => {
+export const findAdminRoutesWithoutStaffPermission = (hono: {
+  routes: readonly MountedRoute[];
+}): string[] => {
   const guarded = new Map<string, boolean>();
 
   for (const { handler, method, path } of hono.routes) {
-    // `use()` middleware, e.g. the admin session check, is not a route.
     if (method === "ALL" || !/(^|\/)admin(\/|$)/.test(path)) continue;
 
     const label = `${method} ${path}`;
@@ -54,7 +46,7 @@ export const findAdminRoutesWithoutStaffPermission = (
   }
 
   return [...guarded]
-    .filter(([label, isGuarded]) => !isGuarded && !allowlist.includes(label))
+    .filter(([, isGuarded]) => !isGuarded)
     .map(([label]) => label)
     .sort();
 };

@@ -43,11 +43,6 @@ const createRateLimiter = ({
   });
 };
 
-/**
- * An IPv6 visitor is routinely handed a whole /64, so keying on the full address
- * gives one attacker 2^64 fresh buckets. Count the network instead. IPv4-mapped
- * addresses (`::ffff:203.0.113.7`) are the IPv4 visitor they wrap.
- */
 export const rateLimitKey = (ipAddress: string): string => {
   const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ipAddress);
   if (mapped) return mapped[1];
@@ -120,12 +115,7 @@ export const rateLimiterMiddleware = (
   };
 };
 
-/**
- * Routes that test a credential or send an email to whoever is named in the
- * body. The global budget is sized for browsing, which is ~115k password
- * guesses a day per address; these get their own, much smaller one.
- */
-export const AUTH_RATE_LIMITED_PATHS = [
+const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/sign_in",
   "/@vitnode/core/users/sign_up",
   "/@vitnode/core/users/reset-password",
@@ -136,7 +126,7 @@ export const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/passkeys/admin-sign-in",
 ] as const;
 
-export const isAuthRateLimitedRequest = (c: Context): boolean =>
+const isAuthRateLimitedRequest = (c: Context): boolean =>
   c.req.method === "POST" &&
   AUTH_RATE_LIMITED_PATHS.some(path => c.req.path.endsWith(path));
 

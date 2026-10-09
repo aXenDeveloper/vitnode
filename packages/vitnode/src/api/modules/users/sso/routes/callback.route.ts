@@ -62,7 +62,6 @@ export const callbackRoute = buildRoute({
       );
     }
 
-    // The session lives in the HttpOnly cookie only - see the sign-in route.
     await new SessionModel(c).createSessionByUserId(outcome.userId);
 
     return c.json({ id: outcome.userId }, 200);

@@ -29,12 +29,6 @@ import { enqueueAltAfterUpload } from "../lib/ai/alt";
 
 const DEFAULT_IMAGE_QUALITY = 85;
 
-/**
- * The most pixels sharp will decode, unless `storage.image.maxPixels` says
- * otherwise. sharp's own default is ~268 million, and a 16383x16383 PNG of one
- * colour compresses to under a megabyte while asking libwebp for gigabytes.
- * 40 megapixels still fits an 8K frame (33 MP) with room to spare.
- */
 export const DEFAULT_IMAGE_MAX_PIXELS = 40_000_000;
 
 // Formats sharp can lossily re-encode. SVG/GIF are intentionally excluded to
@@ -169,11 +163,6 @@ const tooManyPixels = ({
   );
 };
 
-/**
- * The declared type is what the client said, and it is also what a storage
- * provider will later serve the object as. For the raster formats that carry a
- * signature, the bytes have to agree.
- */
 const assertDeclaredImageType = (body: Buffer, mimeType: string): void => {
   if (!isSignedImageMimeType(mimeType)) return;
 
@@ -283,8 +272,6 @@ export class StorageModel {
     const quality = image.quality ?? DEFAULT_IMAGE_QUALITY;
     const toWebp = image.webp !== false;
     const maxPixels = image.maxPixels ?? DEFAULT_IMAGE_MAX_PIXELS;
-    // Enforced by libvips while it reads the header, so an oversized image is
-    // refused before a single pixel of it is decoded.
     const sharpOptions = { limitInputPixels: maxPixels };
 
     let sharp;

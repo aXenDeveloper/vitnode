@@ -1,4 +1,3 @@
-/** What the in-process API reads the visitor's address from - see `client-ip.ts`. */
 export interface ApiBridgeEnv {
   clientAddress?: string;
 }

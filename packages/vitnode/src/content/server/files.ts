@@ -234,22 +234,9 @@ export const resolveContentPublicRowFiles = async (
 };
 
 export interface ContentFileReferenceOptions {
-  /**
-   * The values the record already holds - or, for a restore, held. A file id
-   * found in them is accepted whatever its origin, so a record keeps saving with
-   * the files it has. Only read when some id fails the origin check.
-   */
   existing?: () => Promise<Record<string, unknown>>;
 }
 
-/**
- * Whether a caller may point a field at a file it did not just keep.
- *
- * Only a file uploaded through this content type's own upload route, or one the
- * calling user uploaded themselves - never somebody else's avatar or another
- * plugin's attachment found by counting ids. Server code running without a
- * user (a job, a seed) picks its own ids and is trusted.
- */
 const isContentFileOriginAllowed = (
   row: ContentFileOriginRow,
   {
@@ -309,8 +296,6 @@ export const assertContentFileReferences = async (
   for (const { id, name } of named) {
     const descriptor = byId.get(id);
 
-    // A file the caller may not use answers exactly like one that does not
-    // exist, so the error is not a way to learn which ids are taken.
     if (!descriptor) {
       throw new ContentFileReferenceError({
         code: CONTENT_FILE_CODES.missing,

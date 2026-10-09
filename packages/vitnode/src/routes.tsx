@@ -126,8 +126,6 @@ export const routes = defineRoutes([
 
   page("/login/verify-email", {
     component: lazy(() => import("./pages/login/verify-email")),
-    // Declared rather than loaded inside `load`: the crumb renders one of
-    // these strings, and a breadcrumb is drawn outside the page.
     messages: VERIFY_EMAIL_NAMESPACES,
     pendingComponent: AuthPendingSkeleton,
     search: normalizeVerifyEmailSearch,

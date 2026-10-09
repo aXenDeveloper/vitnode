@@ -49,8 +49,6 @@ export const resendVerificationRoute = buildRoute({
     },
   },
   handler: async c => {
-    // Decided before the address is looked at, so the answer is the same for
-    // every caller - see the reset route for why that matters.
     if (!isEmailVerificationRequired(c)) {
       throw new HTTPException(404, {
         message: "Email verification is not available",
@@ -73,8 +71,6 @@ export const resendVerificationRoute = buildRoute({
       .limit(2);
     const user = pickAccountForEmail(candidates, email);
 
-    // No account, or nothing left to confirm: the same 201 as a real send, so
-    // this endpoint cannot be used to find out which addresses are registered.
     if (!user || user.emailVerified) {
       return RESPONSE_TEXT;
     }

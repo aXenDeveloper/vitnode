@@ -57,9 +57,6 @@ export const signInRoute = buildRoute({
       201: {
         content: {
           "application/json": {
-            // The session token travels in the HttpOnly cookie and nowhere
-            // else. Echoing it here handed it to every script on the page,
-            // which is the one thing HttpOnly exists to prevent.
             schema: z.object({
               id: z.number(),
             }),
@@ -79,10 +76,6 @@ export const signInRoute = buildRoute({
     });
 
     if (isAdmin) {
-      // The AdminCP admits staff only, and staff are chosen by an
-      // administrator - so it does not wait on the address being confirmed.
-      // An install that just started sending confirmation emails would
-      // otherwise lock every existing administrator out of the AdminCP.
       await new SessionAdminModel(c).createSessionByUserId(data.id);
 
       return c.json({ id: data.id }, 201);

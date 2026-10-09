@@ -66,10 +66,6 @@ const makeJpeg = async (quality: number): Promise<Buffer> =>
 const fileFrom = (buf: Buffer, name: string, type: string): File =>
   new File([new Uint8Array(buf)], name, { type });
 
-/**
- * A real 1x1 PNG whose IHDR is rewritten to claim `width` x `height`, with a
- * valid CRC - the header an image bomb carries, without allocating the bomb.
- */
 const pngClaiming = async (width: number, height: number): Promise<Buffer> => {
   const png = Buffer.from(
     await sharp({
@@ -334,10 +330,6 @@ describe("StorageModel image optimization", () => {
     });
   });
 
-  /**
-   * sharp's own ceiling is ~268 million pixels. A single-colour 16383x16383 PNG
-   * is under a megabyte on the wire and around a gigabyte once libwebp has it.
-   */
   describe("when the image has too many pixels", () => {
     it("refuses an image bomb with a 400 before decoding it", async () => {
       const { ctx, upload, insertValues } = makeCtx({ quality: 85 });

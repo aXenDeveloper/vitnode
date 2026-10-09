@@ -113,11 +113,6 @@ export function VitNodeAPI({
 
   const webOrigin = CONFIG.web.origin;
 
-  // API responses are JSON, so the browser-hardening headers cost nothing.
-  // Left out on purpose: HSTS (with `includeSubDomains` it would pin every
-  // subdomain of a Single App's host - the proxy's call to make) and
-  // `Cross-Origin-Resource-Policy` (uploads served from the API's origin are
-  // embedded by the web origin in a split deployment).
   app.use(
     secureHeaders({
       crossOriginResourcePolicy: false,

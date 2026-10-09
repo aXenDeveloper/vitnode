@@ -47,9 +47,5 @@ export const signInWithPassword = async ({
     throw new HTTPException(403);
   }
 
-  // Whether the address is confirmed is only ever reported from here - after
-  // the password has been proven. Saying so any earlier would tell a stranger
-  // which addresses hold an unconfirmed account without them knowing a single
-  // password.
   return { id: user.id, email: user.email, emailVerified: user.emailVerified };
 };

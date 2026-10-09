@@ -56,10 +56,6 @@ export const passkeyAuthenticationVerifyRoute = buildRoute({
         response,
         "authentication",
       );
-      // The same rule as a password sign-in: an install that sends
-      // confirmation emails does not open a session for an address nobody has
-      // confirmed yet. Checked after the passkey verified, so a stranger learns
-      // nothing from it.
       const [user] = await c
         .get("db")
         .select({ emailVerified: core_users.emailVerified })

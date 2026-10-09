@@ -24,8 +24,6 @@ export const VerifyEmailRouteContent = ({ search }: VerifyEmailRouteProps) => {
       <VerifyEmailContent>
         {mode.mode === "confirm" ? (
           <ConfirmEmailContent
-            // A different link is a different confirmation: whatever the last
-            // one ended in must not carry over to it.
             key={mode.token}
             onConfirm={confirmEmailAction(mode.token)}
           />

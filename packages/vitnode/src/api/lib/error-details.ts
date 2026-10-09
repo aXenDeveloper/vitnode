@@ -13,12 +13,7 @@ const DRIVER_FIELDS = [
 
 const MAX_CAUSE_DEPTH = 5;
 
-// drizzle-orm's `DrizzleQueryError` is `Failed query: <sql>\nparams: <values>`,
-// and the values are whatever was bound - addresses, password hashes, secrets.
-// The SQL keeps its `$1` placeholders, so it stays.
 const QUERY_PARAMS = /^(Failed query: [\s\S]*?)\nparams: [\s\S]*$/;
-// Postgres echoes the offending values in `detail`:
-// `Key (email)=(bob@example.com) already exists.`, `Failing row contains (...)`.
 const DETAIL_FAILING_ROW = /Failing row contains \([\s\S]*\)/;
 const DETAIL_KEY_VALUES = /=\([\s\S]*\)/;
 
@@ -66,11 +61,6 @@ const describeOne = (error: unknown): string => {
   return redactMessage(String(error));
 };
 
-/**
- * One line per error in the `cause` chain, for logs. Bound query parameters,
- * values Postgres echoes back and credential-looking strings are redacted - the
- * result ends up in `core_logs` and on the console.
- */
 export const describeError = (error: unknown): string => {
   const seen = new Set<unknown>();
   const parts: string[] = [];

@@ -10,9 +10,8 @@ import type {
 import { Client, errors } from "@elastic/elasticsearch";
 
 const DEFAULT_INDEX = "vitnode";
-// Elasticsearch's default `max_result_window`. Same clamp as core's
-// `parseSearchOffset`, kept local because `@vitnode/core` is only a dev
-// dependency of this package - type imports are erased, values are not.
+const DEFAULT_SIZE = 20;
+const MAX_SIZE = 100;
 const MAX_SEARCH_OFFSET = 10_000;
 
 const parseSearchOffset = (
@@ -24,10 +23,8 @@ const parseSearchOffset = (
   const parsed = Number(cursor);
   if (!Number.isSafeInteger(parsed) || parsed < 0) return undefined;
 
-  return Math.min(parsed, Math.max(0, max));
+  return Math.min(parsed, max);
 };
-const DEFAULT_SIZE = 20;
-const MAX_SIZE = 100;
 
 interface RankingOptions {
   authorBoost?: { authorIds: number[]; weight: number };
@@ -416,8 +413,6 @@ export const ElasticsearchSearchAdapter = (
       await ensureIndex();
 
       const size = Math.min(params.first ?? DEFAULT_SIZE, MAX_SIZE);
-      // `from + size` past `max_result_window` (10,000 by default) is a 500 from
-      // Elasticsearch, and so is `from: NaN`.
       const from =
         parseSearchOffset(params.cursor, MAX_SEARCH_OFFSET - size) ?? 0;
 

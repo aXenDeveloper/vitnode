@@ -34,8 +34,6 @@ export const useSignInForm = ({ onSignIn }: { onSignIn: SignInSubmit }) => {
     const outcome = signInFormOutcome(await onSignIn(values));
 
     if (outcome?.kind === "field") {
-      // Carried to the resend screen, so asking for a new link is one click
-      // rather than typing the address a second time.
       if (outcome.error === "email_not_verified") rememberEmail(values.email);
 
       setFailure(current => ({

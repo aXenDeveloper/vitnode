@@ -78,7 +78,6 @@ export const verifyEmailUserAdminRoute = buildRoute({
         emailVerified: core_users.emailVerified,
       });
 
-    // A confirmation link still in the member's inbox has nothing left to do.
     await db
       .delete(core_users_confirm_emails)
       .where(eq(core_users_confirm_emails.userId, user.id));

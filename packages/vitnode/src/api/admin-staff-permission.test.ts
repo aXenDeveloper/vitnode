@@ -6,21 +6,10 @@ import { buildModule } from "./lib/module";
 import { buildRoute, findAdminRoutesWithoutStaffPermission } from "./lib/route";
 import { newBuildPluginApiCore } from "./plugin";
 
-/**
- * Admin routes that check staff permissions somewhere other than
- * `adminStaffPermission`. Every entry needs a reason.
- */
 const ALLOWLIST = [
-  // The admin session itself - what the AdminCP reads before it knows anything
-  // about the caller's permissions. Signed-in admin only.
   "GET /admin/session",
-  // The static list of permissions every plugin declares, needed to render the
-  // staff editor. No records, signed-in admin only.
   "GET /admin/staff/permission-catalog",
-  // Handler-checked: any of several permissions may list roles.
   "GET /admin/roles/list",
-  // Handler-checked: the permission depends on the `{type}` path parameter
-  // (`staff_admins` or `staff_moderators`).
   "POST /admin/staff/entry/:type",
   "GET /admin/staff/entry/:type/:id",
   "PATCH /admin/staff/entry/:type/:id",
@@ -77,7 +66,6 @@ describe("findAdminRoutesWithoutStaffPermission", () => {
 
 describe("core admin routes", () => {
   it("all require a staff permission, or are explicitly allowlisted", () => {
-    // Exact, so a stale allowlist entry fails as loudly as a new open route.
     expect(
       findAdminRoutesWithoutStaffPermission(newBuildPluginApiCore.hono),
     ).toEqual([...ALLOWLIST].sort());

@@ -26,11 +26,6 @@ export interface ContentRevalidationRequest extends ContentInvalidationInput {
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "[::1]", "localhost"]);
 
-/**
- * Each misconfiguration is reported once per process. Every scheduled run hits
- * the same one, and a warning per run buries the log it is meant to stand out
- * in.
- */
 const warned = new Set<string>();
 
 const warnOnce = (c: Context, key: string, message: string): void => {
@@ -39,11 +34,6 @@ const warnOnce = (c: Context, key: string, message: string): void => {
   void log(c, message, "warn");
 };
 
-/**
- * The bearer is `CRON_SECRET` itself - the key to every cron job - so it only
- * travels over TLS. Plain `http` is allowed for a loopback front end, which is
- * what development looks like.
- */
 const isSafeOrigin = (origin: string): boolean => {
   if (CONFIG.node_development) return true;
 
@@ -85,9 +75,6 @@ export const dispatchContentRevalidation = async (
 
   const secret = c.get("core")?.cronSecret ?? CONFIG.cronJobSecret;
 
-  // The built-in default is in the repository, so outside development sending
-  // it proves nothing and hands it to every origin listed. Every origin counts
-  // as not delivered, so the run records the failure instead of hiding it.
   if (isCronSecretRejected(secret)) {
     warnOnce(
       c,

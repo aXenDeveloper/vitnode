@@ -25,7 +25,6 @@ describe("parseSearchOffset", () => {
   });
 
   it("clamps to a caller's own window", () => {
-    // Elasticsearch refuses `from + size` past 10,000, so it asks for less.
     expect(parseSearchOffset("99999999", MAX_SEARCH_OFFSET - 20)).toBe(9980);
     expect(parseSearchOffset("5", -10)).toBe(0);
   });

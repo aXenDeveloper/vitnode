@@ -51,11 +51,6 @@ export const resetPasswordRoute = buildRoute({
   handler: async c => {
     assertPasswordSignInEnabled(c);
 
-    // Before the lookup, and the same for every address. It used to be left to
-    // the email model, which only ran for an address that had an account: an
-    // unknown one got the usual 201 and a known one a 500 "Email provider not
-    // found" - so on an install without email the response said outright
-    // whether an address was registered.
     if (!c.get("core").email?.adapter) {
       throw new HTTPException(404, {
         message: "Password reset is not available",

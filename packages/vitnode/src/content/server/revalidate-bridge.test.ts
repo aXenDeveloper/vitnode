@@ -43,7 +43,6 @@ const harness = ({
   return { c, fetch, log };
 };
 
-// A fresh module per test, so the warn-once memory does not leak between them.
 const load = async () => await import("./revalidate-bridge");
 
 describe("dispatchContentRevalidation", () => {

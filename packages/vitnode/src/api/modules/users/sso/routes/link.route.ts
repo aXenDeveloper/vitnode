@@ -68,7 +68,6 @@ export const linkRoute = buildRoute({
       providerId,
       token,
     });
-    // The session lives in the HttpOnly cookie only - see the sign-in route.
     await new SessionModel(c).createSessionByUserId(userId);
 
     return c.json({ id: userId }, 201);

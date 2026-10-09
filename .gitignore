@@ -5,8 +5,6 @@ node_modules
 .turbo
 
 # Local env files
-# Every mode Vite loads (`.env.production`, `.env.staging.local`, ...) - only
-# the example file is committed.
 .env*
 !.env.example
 

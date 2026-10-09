@@ -18,10 +18,6 @@ export interface VitNodeStartOptions<
   config: VitNodeConfig<AppLocales>;
 
   requestMiddleware?: readonly AnyRequestMiddleware[];
-  /**
-   * Extra or replacement headers for rendered HTML pages, laid over
-   * `DOCUMENT_SECURITY_HEADERS`. `false` drops a default.
-   */
   securityHeaders?: DocumentSecurityHeaders;
 }
 
