@@ -193,10 +193,10 @@ export const createAuthOperations = <TSession>(
 
       throw new Error(`the session route answered ${response.status}`);
     } catch (error) {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.error(`[auth] ${SESSION_UNAVAILABLE}`, error);
 
-      // eslint-disable-next-line preserve-caught-error
+      // oxlint-disable-next-line preserve-caught-error
       throw new Error(SESSION_UNAVAILABLE);
     }
   },

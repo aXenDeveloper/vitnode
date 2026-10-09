@@ -20,6 +20,6 @@ export const requireAdminPermission = (
   // TanStack Router's own control-flow signal - a typed value the router catches
   // and turns into the nearest `notFoundComponent`. Throwing it is what stops
   // the loader.
-  // eslint-disable-next-line @typescript-eslint/only-throw-error
+  // oxlint-disable-next-line typescript/only-throw-error
   throw notFound();
 };

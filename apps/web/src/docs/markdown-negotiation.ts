@@ -27,7 +27,7 @@ export const markdownNegotiationMiddleware = createMiddleware().server(
       .filter(Boolean)
     url.pathname = encodeMarkdownUrl(slugs)
 
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     throw redirect({ headers: { Vary: 'Accept' }, href: url.href })
   },
 )

@@ -23,7 +23,7 @@ const headFor = (slug: string) => {
 
 export const Route = createFileRoute('/_main/solutions/$slug')({
   loader: ({ params }) => {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     if (!findSolutionEntry(params.slug)) throw notFound()
 
     return { slug: params.slug }

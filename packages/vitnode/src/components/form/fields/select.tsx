@@ -19,11 +19,11 @@ import { AutoFormLabel } from "../common/label";
 export const AutoFormSelect = ({
   label,
   field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
   // Only the language-aware inputs implement this - dropped here so it never
   // lands on the DOM element the rest props spread into.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   multiLang,
   description,
   otherProps: { enum: enumValues = [], isOptional },

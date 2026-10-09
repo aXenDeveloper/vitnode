@@ -73,12 +73,12 @@ export const AutoFormUser = ({
   description,
   disabled,
   field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
   label,
   labelRight,
   // Language-aware inputs only - dropped so it never reaches the DOM.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   multiLang,
   otherProps,
   placeholder,

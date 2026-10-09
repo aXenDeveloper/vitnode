@@ -22,7 +22,7 @@ export type {
   PluginRoutePageHead,
   PluginRoutesMountOptions,
 } from "./mount";
-// eslint-disable-next-line @typescript-eslint/no-deprecated
+// oxlint-disable-next-line typescript/no-deprecated
 export { withPluginRoutes, withVitNodeRoutes } from "./mount";
 export type { PluginRouteSpec } from "./specs";
 export { pluginRouteSpecs } from "./specs";

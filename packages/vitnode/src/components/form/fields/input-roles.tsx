@@ -53,11 +53,11 @@ export const AutoFormRoles = ({
   disabled,
   excludeIds = [],
   field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
   label,
   labelRight,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   multiLang,
   multiple = false,
   otherProps,

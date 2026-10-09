@@ -29,7 +29,7 @@ export const adminLayoutRoute = (navModule: AdminNavModule) => ({
       : await ensureAdminAccess(context.queryClient);
 
     if (!canEnterAdmin(access)) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      // oxlint-disable-next-line typescript/only-throw-error
       throw redirect({
         search: { returnTo: adminReturnToFor(location) },
         to: ADMIN_ENTRY_PATH,

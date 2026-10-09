@@ -77,7 +77,7 @@ import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
 declare module "hono" {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // oxlint-disable-next-line typescript/no-empty-object-type
   interface ContextVariableMap extends EnvVariablesVitNode {}
 }
 

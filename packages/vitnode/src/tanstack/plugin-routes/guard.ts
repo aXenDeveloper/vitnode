@@ -50,7 +50,7 @@ export const pluginRouteGuard = (
       // TanStack Router's own control-flow signal: `redirect()` returns a typed
       // redirect object the router catches and turns into a navigation, or a
       // 302 during SSR. Throwing it is what stops the guard.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      // oxlint-disable-next-line typescript/only-throw-error
       throw redirect({
         // The *internal* path - the locale has already been stripped by the
         // rewrite - so the value that round-trips through the login URL carries
@@ -74,7 +74,7 @@ export const pluginRouteGuard = (
 
       const { returnTo } = (search ?? {}) as { returnTo?: unknown };
 
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      // oxlint-disable-next-line typescript/only-throw-error
       throw redirect(
         internalDestination(
           sanitizeAdminReturnTo(
@@ -97,7 +97,7 @@ export const pluginRouteGuard = (
     // `buildLocation` and never runs the locale rewrite - a Polish visitor would
     // land on the English page. `postAuthDestination` has already refused every
     // origin, scheme and login-loop spelling, and falls back to `/`.
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     throw redirect(parseInternalDestination(postAuthDestination(returnTo)));
   };
 };

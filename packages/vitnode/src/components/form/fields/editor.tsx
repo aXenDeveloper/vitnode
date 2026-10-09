@@ -94,7 +94,7 @@ export const AutoFormEditor = ({
   description,
   otherProps: { isOptional },
   field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
   multiLang,
   ...props

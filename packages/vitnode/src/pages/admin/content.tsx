@@ -31,7 +31,7 @@ let registryPromise: Promise<ContentFrontendRegistry> | undefined;
 
 // Not `async`: `use()` suspends on promise *identity*, and an async wrapper
 // would hand it a new promise on every render.
-// eslint-disable-next-line @typescript-eslint/promise-function-async
+// oxlint-disable-next-line typescript/promise-function-async
 const contentRegistry = (): Promise<ContentFrontendRegistry> => {
   registryPromise ??= getContentRegistryLoader()();
 

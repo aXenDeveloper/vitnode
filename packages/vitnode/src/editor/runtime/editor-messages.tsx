@@ -40,6 +40,6 @@ export const EditorMessages = ({
 
   if (!hostIntlProvider) return provided;
 
-  // eslint-disable-next-line @eslint-react/jsx-no-children-prop
+  // oxlint-disable-next-line @eslint-react/jsx-no-children-prop
   return createElement(hostIntlProvider, { ...intlProps, children: provided });
 };

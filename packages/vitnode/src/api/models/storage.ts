@@ -234,7 +234,7 @@ export class StorageModel {
     try {
       const { default: s } = await import("sharp");
       sharp = s;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // oxlint-disable-next-line no-unused-vars
     } catch (err) {
       throw new HTTPException(500, {
         message:

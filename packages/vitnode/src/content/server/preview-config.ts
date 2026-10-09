@@ -58,7 +58,7 @@ export const warnAboutContentPreviewConfig = ({
 
   const names = previewable.map(entry => entry.definition.id).join(", ");
 
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.warn(
     `[Content Engine] ${names} ${previewable.length === 1 ? "has" : "have"} \`editorial.preview\` enabled, but preview links cannot be built: ${problems.join(" ")} Preview stays disabled until then.`,
   );

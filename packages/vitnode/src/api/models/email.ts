@@ -35,7 +35,7 @@ export interface EmailApiPlugin {
     subject: string;
     text: string;
     to: string;
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    // oxlint-disable-next-line typescript/no-invalid-void-type
   }) => Promise<EmailSendResult | void>;
 }
 

@@ -41,7 +41,7 @@ export const LocalEventsAdapter = (): EventsApiPlugin => ({
         try {
           await c.get("log").error(message);
         } catch {
-          // eslint-disable-next-line no-console
+          // oxlint-disable-next-line no-console
           console.error(
             `[VitNode] Failed to log event listener failure: ${message}`,
           );

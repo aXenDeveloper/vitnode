@@ -28,11 +28,11 @@ export const AutoFormNumber = ({
   className,
   description,
   field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
   label,
   labelRight,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   multiLang,
   otherProps: { isOptional },
   placeholder,

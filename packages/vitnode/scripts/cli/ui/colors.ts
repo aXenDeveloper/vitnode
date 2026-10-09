@@ -35,7 +35,7 @@ export const createPalette = (enabled: boolean): Palette => {
   };
 };
 
-// eslint-disable-next-line no-control-regex
+// oxlint-disable-next-line no-control-regex
 const ANSI_PATTERN = /\x1b\[[0-9;?]*[A-Za-z]/g;
 
 export const stripAnsi = (text: string): string =>

@@ -213,7 +213,7 @@ export const searchAdminUsersInBrowser: AdminUserSearchOptions =
       return adminUserOptionsFrom(await response.json());
     } catch (error) {
       // The picker answers with an empty list, so this is the only trace.
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.error("[admin] the user search could not be read", error);
 
       return [];

@@ -59,7 +59,7 @@ export const clearSearchDebugAdminRoute = buildRoute({
     try {
       await c.get("log").warn(message);
     } catch {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.warn(
         `[VitNode] Failed to persist search cleanup audit: ${message}`,
       );

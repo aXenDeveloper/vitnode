@@ -46,7 +46,7 @@ export function collectCronJobs(
 }
 
 const reportFailedCronTick = (reason: string) => {
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.error(
     `\x1b[34m[VitNode]\x1b[0m \x1b[31mCron tick failed\x1b[0m: ${reason}`,
   );

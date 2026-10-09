@@ -51,7 +51,7 @@ export const runAdminApiMutation = async <TData>({
   } catch (error) {
     // The one place a caller cannot see: the status it gets back says only
     // "unreachable", and this is what says *why*.
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error("[admin] a mutation could not be sent", error);
 
     return { error: { status: ADMIN_MUTATION_UNREACHABLE } };

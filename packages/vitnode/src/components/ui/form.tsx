@@ -32,7 +32,7 @@ export interface FormFieldApi<TValue = unknown> {
   value: TValue;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// oxlint-disable-next-line typescript/no-explicit-any
 export type AnyFormFieldApi = FormFieldApi<any>;
 
 export interface FormFieldError {
@@ -215,7 +215,7 @@ function Form({
   const context = React.useMemo(() => ({ form, mode }), [form, mode]);
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (disableBeforeUnload) return;
 
     setIsDirty?.(formIsDirty);

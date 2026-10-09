@@ -240,7 +240,7 @@ const logDiagnosticFailure = async (
   try {
     await c.get("log").error(message);
   } catch {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(`[VitNode] ${message}`);
   }
 };

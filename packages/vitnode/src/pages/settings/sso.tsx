@@ -36,7 +36,7 @@ export const route = defineAuthenticatedRoute<SsoData, SsoSettingsSearch>({
 
     if (!config.isKnown) throw new MiddlewareConfigUnknownError();
 
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     if (config.sso.length === 0) throw notFound();
 
     const { id: userId, nameCode } = context.auth.user;

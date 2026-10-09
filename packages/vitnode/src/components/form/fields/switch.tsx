@@ -20,11 +20,11 @@ export const AutoFormSwitch = ({
   label,
   field,
   children,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   itemParams,
   // Only the language-aware inputs implement this - dropped here so it never
   // lands on the DOM element the rest props spread into.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line no-unused-vars
   multiLang,
   labelRight,
   otherProps: { isOptional },

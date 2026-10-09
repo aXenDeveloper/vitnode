@@ -28,7 +28,7 @@ export const route = defineAuthenticatedRoute<SecurityData>({
 
     if (!config.isKnown) throw new MiddlewareConfigUnknownError();
 
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     if (!config.passkeys) throw notFound();
 
     const userId = context.auth.user.id;
