@@ -7,6 +7,7 @@ import { fumadocsMdx } from 'fumadocs-mdx/vite'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 
+import { docsPrerenderPaths } from './src/docs/prerender.ts'
 import { PRERENDERED_PATHS } from './src/site/prerender.ts'
 import { vitNodeConfig } from './src/vitnode.config.ts'
 
@@ -24,7 +25,7 @@ const config = defineConfig({
       prerender: {
         routes: prerenderRoutes({
           i18n: vitNodeConfig.i18n,
-          paths: PRERENDERED_PATHS,
+          paths: [...PRERENDERED_PATHS, ...docsPrerenderPaths()],
         }),
       },
     }),
