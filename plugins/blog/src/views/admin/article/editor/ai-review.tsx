@@ -1,7 +1,10 @@
+import type { RichTextDocument } from "@vitnode/core/content/rich-text";
+
 import { useAvailableAiActions } from "@vitnode/core/components/ai/use-available-ai-actions";
 import { Badge } from "@vitnode/core/components/ui/badge";
 import { Button } from "@vitnode/core/components/ui/button";
 import { Spinner } from "@vitnode/core/components/ui/spinner";
+import { isRichTextEmpty } from "@vitnode/core/content/rich-text";
 import {
   aiErrorCodeOf,
   requestAiAssist,
@@ -71,7 +74,7 @@ export const ArticleAiReview = ({
   locale,
   title,
 }: {
-  content: string;
+  content: null | RichTextDocument;
   excerpt: string;
   locale: string;
   title: string;
@@ -111,7 +114,7 @@ export const ArticleAiReview = ({
           {t("title")}
         </h2>
         <Button
-          disabled={pending || !title.trim() || !content.trim()}
+          disabled={pending || !title.trim() || isRichTextEmpty(content)}
           onClick={() => void run()}
           size="xs"
           type="button"

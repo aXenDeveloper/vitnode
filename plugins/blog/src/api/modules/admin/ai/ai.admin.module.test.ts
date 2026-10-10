@@ -64,6 +64,11 @@ const grant = async (cache: CacheModel, canEdit: boolean) => {
   );
 };
 
+const bodyDocument = {
+  content: [{ content: [{ text: "Body", type: "text" }], type: "paragraph" }],
+  type: "doc",
+};
+
 const modelAnswering = (text: string) =>
   new MockLanguageModelV4({
     doGenerate: {
@@ -297,9 +302,26 @@ describe("blog AI admin routes", () => {
     });
 
     const response = await post(app, "/translate", {
-      format: "html",
+      document: {
+        content: [
+          {
+            content: [
+              { text: "Hello ", type: "text" },
+              {
+                marks: [
+                  { attrs: { href: "https://vitnode.com" }, type: "link" },
+                ],
+                text: "link",
+                type: "text",
+              },
+            ],
+            type: "paragraph",
+          },
+        ],
+        type: "doc",
+      },
+      format: "richText",
       from: "en",
-      text: '<p>Hello <a href="https://vitnode.com">link</a></p>',
       to: "pl",
     });
 
@@ -315,7 +337,7 @@ describe("blog AI admin routes", () => {
     });
 
     const response = await post(app, "/excerpt", {
-      content: "<p>Body</p>",
+      content: bodyDocument,
       locale: "en",
       title: "Title",
     });
@@ -369,7 +391,7 @@ describe("blog AI admin routes", () => {
     app.post("/review", async c => {
       const result = await c.get("ai").run({
         action: ARTICLE_REVIEW_AI_ACTION,
-        input: { content: "<p>Body</p>", locale: "en", title: "Title" },
+        input: { content: bodyDocument, locale: "en", title: "Title" },
       });
 
       return c.json(result.output);
@@ -388,7 +410,7 @@ describe("blog AI admin routes", () => {
     app.post("/review", async c => {
       await c.get("ai").run({
         action: ARTICLE_REVIEW_AI_ACTION,
-        input: { content: "<p>Body</p>", locale: "en", title: "Title" },
+        input: { content: bodyDocument, locale: "en", title: "Title" },
       });
 
       return c.json({});

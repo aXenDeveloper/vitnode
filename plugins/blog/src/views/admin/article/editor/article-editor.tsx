@@ -595,7 +595,7 @@ export const ArticleEditor = ({
               sourceName={sourceName}
             />
             <ArticleAiReview
-              content={getLangValue(values.content, fieldLocale)}
+              content={articleContent(values, fieldLocale)}
               excerpt={getLangValue(values.excerpt, fieldLocale)}
               locale={fieldLocale}
               title={getLangValue(values.title, fieldLocale)}
