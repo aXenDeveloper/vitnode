@@ -116,6 +116,9 @@ export const blogPostContentType = defineContentType({
 
   delivery: {
     enabled: true,
+    // `/blog`: the newest articles first, nine to a page so the grid fills its
+    // three columns, with a search box over the title and the content.
+    list: { enabled: true, pageSize: 9 },
     redirects: { enabled: true },
     seo: {
       titleField: "title",

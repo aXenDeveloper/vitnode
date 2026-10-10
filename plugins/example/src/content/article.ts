@@ -92,6 +92,8 @@ export const articleContentType = defineContentType({
 
   delivery: {
     enabled: true,
+    // `/articles`, with a "Featured" filter read from `?featured=true`.
+    list: { enabled: true, filters: ["featured"] },
     redirects: { enabled: true },
     seo: {
       titleField: "title",

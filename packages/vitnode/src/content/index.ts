@@ -171,10 +171,12 @@ export {
 } from "./const";
 export { defineContentType } from "./define";
 export {
+  CONTENT_DELIVERY_LIST_DEFAULT_PAGE_SIZE,
   contentDeliveryAlternateHref,
   contentDeliveryDisabled,
   contentDeliveryHreflang,
   contentDeliveryInternalPath,
+  contentDeliveryListDisabled,
   contentDeliveryOpenGraph,
   contentDeliveryPath,
   contentDeliveryPublicUrl,
@@ -364,6 +366,8 @@ export type {
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
   ContentDeliveryHreflangConfig,
+  ContentDeliveryListConfig,
+  ContentDeliveryListFilterKind,
   ContentDeliveryNoIndexField,
   ContentDeliveryOpenGraphConfig,
   ContentDeliveryRedirectsConfig,
@@ -443,6 +447,8 @@ export type {
   PublicFilterableContentFieldName,
   ResolvedContentAdminConfig,
   ResolvedContentDeliveryConfig,
+  ResolvedContentDeliveryListConfig,
+  ResolvedContentDeliveryListFilter,
   ResolvedContentDeliverySeoConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentIndex,

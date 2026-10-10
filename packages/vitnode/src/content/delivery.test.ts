@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { testContentLocaleRouting } from "@/tests/content-fixtures";
 
+import type { ContentDeliveryListConfig } from "./types";
+
 import { defineContentType } from "./define";
 import {
   contentDeliveryHreflang,
@@ -68,6 +70,13 @@ describe("delivery definition validation", () => {
     expect(plainType.delivery).toStrictEqual({
       enabled: false,
       hreflang: { xDefault: null },
+      list: {
+        enabled: false,
+        filters: [],
+        pageSize: 12,
+        path: "",
+        searchable: false,
+      },
       path: "",
       redirects: { enabled: false },
       seo: {
@@ -615,6 +624,127 @@ describe("delivery.path", () => {
   it("refuses the AdminCP and API prefixes", () => {
     expect(() => withPath("/admin/:slug")).toThrow(/reserved for the AdminCP/);
     expect(() => withPath("/api/:slug")).toThrow(/reserved for the API/);
+  });
+});
+
+describe("delivery.list", () => {
+  const listFields = {
+    ...fields,
+    level: field.enum({ defaultValue: "easy", values: ["easy", "hard"] }),
+  };
+  const listPublicApi = {
+    ...publicApi,
+    fields: [...publicApi.fields, "hidden", "views", "level"],
+    filterableFields: ["hidden", "views", "level"],
+    searchableFields: ["title"],
+  } as const;
+  // Typed as `never` filters so a runtime-only refusal can still be asserted;
+  // the field names themselves are checked by the types elsewhere.
+  const withList = (list: ContentDeliveryListConfig) =>
+    defineContentType({
+      ...base,
+      id: "delivery.listed",
+      delivery: {
+        enabled: true,
+        list: list as ContentDeliveryListConfig<never>,
+      },
+      fields: listFields,
+      publicApi: listPublicApi,
+      tableName: "delivery_listed",
+    });
+
+  it("defaults the page to the public API segment with 12 records", () => {
+    const type = withList({ enabled: true });
+
+    expect(type.delivery.list).toStrictEqual({
+      enabled: true,
+      filters: [],
+      pageSize: 12,
+      path: "/articles",
+      searchable: true,
+    });
+  });
+
+  it("is off when the content type declares no list", () => {
+    expect(articleType.delivery.list.enabled).toBe(false);
+  });
+
+  it("records how each filter is read from the URL", () => {
+    const type = withList({
+      enabled: true,
+      filters: ["hidden", "views", "level"],
+      pageSize: 24,
+      path: "/library",
+    });
+
+    expect(type.delivery.list.path).toBe("/library");
+    expect(type.delivery.list.pageSize).toBe(24);
+    expect(type.delivery.list.filters).toStrictEqual([
+      { kind: "boolean", name: "hidden", values: null },
+      { kind: "number", name: "views", values: null },
+      { kind: "enum", name: "level", values: ["easy", "hard"] },
+    ]);
+  });
+
+  it("is not searchable without publicApi.searchableFields", () => {
+    expect(
+      defineContentType({
+        ...base,
+        id: "delivery.unsearchable",
+        delivery: { enabled: true, list: { enabled: true } },
+        fields,
+        publicApi,
+        tableName: "delivery_unsearchable",
+      }).delivery.list.searchable,
+    ).toBe(false);
+  });
+
+  it("refuses a filter the public list route does not accept", () => {
+    expect(() => withList({ enabled: true, filters: ["title"] })).toThrow(
+      /"title", which is not in publicApi.filterableFields/,
+    );
+  });
+
+  it("refuses a filter listed twice", () => {
+    expect(() =>
+      withList({ enabled: true, filters: ["hidden", "hidden"] }),
+    ).toThrow(/lists "hidden" twice/);
+  });
+
+  it("refuses a page size the public API cannot return", () => {
+    expect(() => withList({ enabled: true, pageSize: 0 })).toThrow(
+      /pageSize is 0/,
+    );
+    expect(() => withList({ enabled: true, pageSize: 51 })).toThrow(
+      /pageSize is 51/,
+    );
+    expect(() => withList({ enabled: true, pageSize: 2.5 })).toThrow(
+      /pageSize is 2.5/,
+    );
+  });
+
+  it("refuses a path with a parameter", () => {
+    expect(() =>
+      withList({ enabled: true, path: "/articles/:category" }),
+    ).toThrow(/declares ":category"/);
+    expect(() => withList({ enabled: true, path: "/articles/*" })).toThrow(
+      /declares "\*"/,
+    );
+  });
+
+  it("refuses the AdminCP and API prefixes", () => {
+    expect(() => withList({ enabled: true, path: "/admin/list" })).toThrow(
+      /reserved for the AdminCP/,
+    );
+    expect(() => withList({ enabled: true, path: "/api" })).toThrow(
+      /reserved for the API/,
+    );
+  });
+
+  it("refuses a route the router could not parse", () => {
+    expect(() => withList({ enabled: true, path: "articles" })).toThrow(
+      /delivery.list.path is not a valid route path/,
+    );
   });
 });
 

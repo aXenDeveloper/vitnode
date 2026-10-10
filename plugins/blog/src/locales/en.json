@@ -154,6 +154,19 @@
     },
     "post": {
       "published": "Published"
+    },
+    "list": {
+      "title": "Blog",
+      "desc": "News, guides and stories from our team.",
+      "search": "Search articles",
+      "empty": {
+        "title": "No articles yet",
+        "desc": "Check back soon - the first one is on its way."
+      },
+      "no_results": {
+        "title": "No articles match your search",
+        "desc": "Try a different word, or clear the search to see every article."
+      }
     }
   },
   "@vitnode/blog:posts": "Articles",

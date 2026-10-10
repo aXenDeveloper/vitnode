@@ -1,0 +1,323 @@
+---
+title: Show a list of records
+description: Give a Content Engine content type a public list page, such as /recipes, with pagination, a search box, filters and SEO that keeps search and filter results out of the index.
+icon: LayoutGrid
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import recipesList from './recipes-list-page.png'
+import recipesFiltered from './recipes-list-filtered.png'
+
+A list page shows every published record of a content type at one URL, such as `/recipes`. Turn on `delivery.list` and the Content Engine reads the page number, the search term and your filters from the URL, asks the public API for exactly that page, and builds the page's SEO tags. Your plugin renders the page from ready-made components, so a list with pagination, search and filters is one route and one file.
+
+## Before you begin
+
+The content type needs [delivery](/docs/dev/content-engine/content-delivery-and-seo), which already gives each recipe its own page at `/recipes/:slug`. This guide continues the recipes example.
+
+<Steps>
+
+<Step>
+
+### Turn on the list page
+
+Add `list` to the `delivery` block. Every filter must already be in `publicApi.filterableFields`, because the page passes it to the public list route:
+
+```ts title="plugins/example/src/content/recipe.ts"
+publicApi: {
+  enabled: true,
+  path: "recipes",
+  fields: ["title", "slug", "summary", "cookingTime", "difficulty", "vegetarian", "publishedAt"],
+  searchableFields: ["title", "summary"],
+  filterableFields: ["difficulty", "vegetarian"],
+  orderableFields: ["cookingTime"],
+},
+delivery: {
+  enabled: true,
+  seo: { titleField: "title", descriptionField: "summary" },
+  sitemap: { enabled: true, changeFrequency: "weekly" },
+  list: { // [!code ++:5]
+    enabled: true,
+    pageSize: 6,
+    filters: ["difficulty", "vegetarian"],
+  },
+},
+```
+
+- The page lives at `/{publicApi.path}`, here `/recipes`. Set `list.path` for another URL, such as `/cookbook`. It cannot have parameters.
+- `pageSize` is how many records one page shows, from 1 to 50. The default is 12.
+- The search box works because `publicApi.searchableFields` is set. Without it, the page ignores `?q=`.
+
+</Step>
+
+<Step>
+
+### Claim the URL
+
+Add a page for the list path in your plugin's routes. `contentListSearch` reads the page's URL using the definition, so `?vegetarian=true` becomes a boolean and a misspelled `?difficulty=` is dropped instead of breaking the page:
+
+```ts title="plugins/example/src/routes.ts"
+import { contentListSearch } from "@vitnode/core/tanstack/content"; // [!code ++]
+
+import { recipeContentType } from "./content/recipe"; // [!code ++]
+
+export const routes = definePluginRoutes([
+  page("/recipes", { // [!code ++:5]
+    component: lazy(() => import("./pages/recipes-page")),
+    messages: ["@vitnode/example.recipes"],
+    search: contentListSearch(recipeContentType),
+  }),
+  page("/recipes/:slug", {
+    component: lazy(() => import("./pages/recipe-page")),
+    messages: ["@vitnode/example.recipes"],
+  }),
+]);
+```
+
+Like the record URL, the list URL is checked when you build. If no page serves `/recipes`, `dev` and `build` stop with `content-url-without-page` and point at `delivery.list.path`.
+
+</Step>
+
+<Step>
+
+### Write the page
+
+The loader turns the URL into an API query with `contentListQuery` and checks the answer with `contentListPage`. The component puts the search box, two filters, the cards and the page links together:
+
+```tsx title="plugins/example/src/pages/recipes-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+import type { ContentListSearch } from "@vitnode/core/tanstack/content";
+
+import { contentDeliveryInternalPath } from "@vitnode/core/content";
+import { definePluginRoute } from "@vitnode/core/routing";
+import {
+  ContentCard,
+  ContentList,
+  ContentListEmpty,
+  ContentListFilter,
+  ContentListItem,
+  contentListPage,
+  contentListPageHead,
+  ContentListPagination,
+  contentListQuery,
+  ContentListSearchForm,
+} from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { recipeContentType } from "@/content/recipe";
+
+const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+
+const zodRecipeCard = z.object({
+  cookingTime: z.number(),
+  difficulty: z.enum(DIFFICULTIES),
+  slug: z.string(),
+  summary: z.string().nullable(),
+  title: z.string(),
+});
+
+const loadRecipes = async (search: ContentListSearch) => {
+  const response = await fetcher({
+    plugin: "@vitnode/example",
+    method: "get",
+    module: "content/recipes",
+    path: "/",
+    args: { query: contentListQuery(recipeContentType, search) },
+  });
+  if (response.status !== 200) {
+    throw new Error(`Listing recipes answered ${response.status}.`);
+  }
+
+  const { edges, pageInfo } = await response.json();
+
+  return contentListPage({
+    list: { edges: z.array(zodRecipeCard).parse(edges), pageInfo },
+    search,
+  });
+};
+
+type RecipesPageData = Awaited<ReturnType<typeof loadRecipes>>;
+
+export const route = definePluginRoute<RecipesPageData, ContentListSearch>({
+  load: async ({ search }) => await loadRecipes(search),
+  head: ({ search, t }) =>
+    contentListPageHead(recipeContentType, {
+      description: t("@vitnode/example.recipes.list.desc"),
+      search,
+      title: t("@vitnode/example.recipes.list.title"),
+    }),
+});
+
+const RecipesPage = ({
+  loaderData: { edges, pageInfo },
+  search,
+}: PluginRoutePageProps<RecipesPageData, ContentListSearch>) => {
+  const t = useTranslations("@vitnode/example.recipes");
+
+  return (
+    <div className="container mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:py-12">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-foreground text-3xl font-semibold text-balance md:text-4xl">
+          {t("list.title")}
+        </h1>
+        <p className="text-muted-foreground text-lg leading-relaxed text-pretty">
+          {t("list.desc")}
+        </p>
+      </header>
+
+      <ContentListSearchForm
+        className="max-w-xl"
+        label={t("list.search")}
+        placeholder={t("list.search")}
+        search={search}
+      />
+
+      <div className="flex flex-col gap-4 md:flex-row md:gap-8">
+        <ContentListFilter
+          label={t("difficulty")}
+          name="difficulty"
+          options={DIFFICULTIES.map(value => ({
+            label: t(`level.${value}`),
+            value,
+          }))}
+          search={search}
+        />
+        <ContentListFilter
+          label={t("vegetarian")}
+          name="vegetarian"
+          options={[
+            { label: t("yes"), value: true },
+            { label: t("no"), value: false },
+          ]}
+          search={search}
+        />
+      </div>
+
+      {edges.length === 0 ? (
+        <ContentListEmpty
+          description={t("list.empty.desc")}
+          title={t("list.empty.title")}
+        />
+      ) : (
+        <ContentList>
+          {edges.map(recipe => (
+            <ContentListItem key={recipe.slug}>
+              <ContentCard
+                description={recipe.summary}
+                href={
+                  contentDeliveryInternalPath({
+                    definition: recipeContentType,
+                    slug: recipe.slug,
+                  }) ?? "/recipes"
+                }
+                meta={`${t("minutes", { count: recipe.cookingTime })} · ${t(`level.${recipe.difficulty}`)}`}
+                title={recipe.title}
+              />
+            </ContentListItem>
+          ))}
+        </ContentList>
+      )}
+
+      <ContentListPagination
+        page={pageInfo.currentPage ?? 1}
+        search={search}
+        totalPages={pageInfo.totalPages}
+      />
+    </div>
+  );
+};
+
+export default RecipesPage;
+```
+
+- The `response.status` check narrows the response to the `200` answer. Before it, `response.json()` is `unknown`, because the route can also answer `400`.
+- The public API returns rows typed loosely, so the Zod schema picks and checks the fields the cards use.
+- `contentDeliveryInternalPath` builds `/recipes/{slug}` from `delivery.path`, so the cards follow if you move the record pages.
+- `contentListPage` answers `404` for a page past the end, such as `?page=9` when there are two pages.
+
+</Step>
+
+<Step>
+
+### Add the page strings
+
+The page reuses the recipe strings from [Show content on a public page](/docs/dev/content-engine/content-delivery-and-seo#add-the-page-strings) and adds a `list` group to the same namespace:
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example": {
+    "recipes": {
+      "list": {
+        "title": "Recipes",
+        "desc": "Dishes our community cooks again and again.",
+        "search": "Search recipes",
+        "empty": {
+          "title": "No recipes found",
+          "desc": "Try another word, or clear the filters to see every recipe."
+        }
+      }
+    }
+  }
+}
+```
+
+The **Search** button, **All**, **Previous** and **Next** come from VitNode's own translations, so you do not add them.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Run `pnpm build:plugins`, restart `pnpm dev` and open `http://localhost:3000/recipes`. Delivery adds no database columns, so there is nothing to migrate. The newest recipes come first, six to a page, with page links underneath:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={recipesList}
+  alt="Recipes list page with a search box, Difficulty and Vegetarian filters set to All, six recipe cards and page links 1, 2 and Next"
+/>
+
+Click **Easy** under **Difficulty** and **Yes** under **Vegetarian**. The URL becomes `/recipes?difficulty=easy&vegetarian=true`, only the matching recipes stay, and the page links disappear because everything fits on one page:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={recipesFiltered}
+  alt="Recipes list filtered to Easy and Vegetarian Yes, showing two cards: Shakshuka for two and Chickpea curry"
+/>
+
+Changing a filter or the search term always goes back to page 1, because page 2 of all recipes is not page 2 of the vegetarian ones. The draft recipe never appears, the same as in the public API.
+
+### What search engines see
+
+Only the plain first page is meant for search results. View the source of `/recipes` and `/recipes?vegetarian=true` to compare:
+
+| URL                        | `<head>`                                                       |
+| -------------------------- | -------------------------------------------------------------- |
+| `/recipes`                 | Canonical link to `/recipes`, plus one `hreflang` per language |
+| `/recipes?page=2`          | `<meta name="robots" content="noindex, follow">`               |
+| `/recipes?vegetarian=true` | `<meta name="robots" content="noindex, follow">`               |
+| `/recipes?q=risotto`       | `<meta name="robots" content="noindex, follow">`               |
+| `/recipes?page=9`          | The app's not-found page with a `404`                          |
+
+`noindex, follow` keeps the many filter combinations out of the index while crawlers still follow the cards to every recipe page. The links are plain `<a href>` elements, so they also work before JavaScript loads.
+
+## How the URL becomes an API request
+
+`contentListQuery` maps the page's URL onto the [public list route](/docs/dev/content-engine/public-api-and-caching#public-api-routes):
+
+| Page URL                   | Public API query            |
+| -------------------------- | --------------------------- |
+| `/recipes`                 | `?first=6`                  |
+| `/recipes?page=2`          | `?first=6&page=2`           |
+| `/recipes?q=risotto`       | `?first=6&search=risotto`   |
+| `/recipes?vegetarian=true` | `?first=6&vegetarian=true`  |
+
+Parameters the content type did not declare, such as `?utm_source=newsletter`, are dropped before the request.
+
+## Related
+
+- [List page reference](/docs/dev/content-engine/list-pages-reference): every helper and component with its props.
+- [Content type reference](/docs/dev/content-engine/reference#delivery): every `delivery.list` option.

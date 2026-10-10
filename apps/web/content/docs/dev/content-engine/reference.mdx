@@ -51,6 +51,7 @@ To turn a feature off, leave its block out. The `enabled` keys accept only `true
 | `delivery`                   | `publicApi`                                                  |
 | `delivery.redirects`         | `editorial`, and a localized slug on a localized type        |
 | `delivery.sitemap`           | `publication`                                                |
+| `delivery.list.filters`      | each field in `publicApi.filterableFields`                   |
 | `delivery.hreflang`          | `localization`                                               |
 | `editorial.preview`          | `publicApi`                                                  |
 | `editorial.scheduling`       | `publication`                                                |
@@ -108,6 +109,10 @@ How these options look on screen is covered in [Customize the AdminCP](/docs/dev
 | `sitemap.changeFrequency`      | `"always"` … `"never"`  |                             |                                                                             |
 | `sitemap.priority`             | `number` from 0 to 1    |                             |                                                                             |
 | `hreflang.xDefault`            | `"defaultLocale"`       |                             | Reports an `x-default` alternate in the API metadata                        |
+| `list.enabled`                 | `boolean`               | `false`                     | Adds a public [list page](/docs/dev/content-engine/list-pages)              |
+| `list.path`                    | `string`                | `/{publicApi.path}`         | The list page's English route. No parameters, not under `/admin` or `/api`  |
+| `list.pageSize`                | `number` from 1 to 50   | `12`                        | Records per page                                                            |
+| `list.filters`                 | field names             | `[]`                        | Filters the page reads from its URL. Each must be in `publicApi.filterableFields` |
 
 Every SEO field must be in `publicApi.fields`. A localized type also needs `"id"` there.
 

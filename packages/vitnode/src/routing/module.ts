@@ -1,5 +1,8 @@
 /** What a crawler may do with a plugin page. */
-export type PluginRouteRobots = "index, follow" | "noindex, nofollow";
+export type PluginRouteRobots =
+  | "index, follow"
+  | "noindex, follow"
+  | "noindex, nofollow";
 
 export interface PluginRouteHead {
   alternates?: Readonly<Record<string, string>>;

@@ -1,0 +1,81 @@
+---
+title: List page reference
+description: Every helper and component VitNode provides for Content Engine list pages, from @vitnode/core/tanstack/content, with parameters, defaults and return values.
+icon: BookOpen
+---
+
+Everything a [list page](/docs/dev/content-engine/list-pages) uses comes from `@vitnode/core/tanstack/content`. The helpers read a content type's resolved `delivery.list`, so any definition returned by `defineContentType` can be passed where a `definition` is expected.
+
+```ts
+import {
+  contentListPage,
+  contentListPageHead,
+  contentListQuery,
+  contentListSearch,
+} from "@vitnode/core/tanstack/content";
+```
+
+## `ContentListSearch`
+
+The page's URL after `contentListSearch` has read it.
+
+| Key                | Type                             | Description                                                 |
+| ------------------ | -------------------------------- | ----------------------------------------------------------- |
+| `page`             | `number`                         | Set from 2 upwards. Page 1 has no `?page=`, so it has one URL |
+| `q`                | `string`                         | The trimmed search term, at most 256 characters             |
+| any declared filter | `boolean` \| `number` \| `string` | One key per field in `delivery.list.filters`               |
+
+## Helpers
+
+| Helper | Returns | Behavior |
+| ------ | ------- | -------- |
+| `contentListSearch(definition)` | `(input) => ContentListSearch` | The route's `search` validator. Drops a value it cannot read instead of failing |
+| `contentListQuery(definition, search)` | `ContentListQuery` | The `args.query` of the public list route: `first`, plus `page`, `search` and each filter as strings |
+| `contentListPage({ list, search })` | the `list` it was given | Throws `notFound()` when `search.page` is past the last page |
+| `contentListPageHead(definition, options)` | `PluginRouteHead` | The route's `head`. See below |
+| `nextContentListSearch(search, changes)` | `ContentListSearch` | The search of a link that changes the list. `undefined` removes a key, and any change except `page` goes back to page 1 |
+| `isContentListIndexable(search)` | `boolean` | `true` only for the plain first page |
+
+### How filters are read
+
+`contentListSearch` reads each filter by the kind of its field:
+
+| Field kind                     | URL value             | Search value |
+| ------------------------------ | --------------------- | ------------ |
+| `field.boolean()`              | `true` or `false`     | `boolean`    |
+| `field.enum()`                 | one of its `values`   | `string`     |
+| `field.number()`               | a finite number       | `number`     |
+| `field.relation()`, `field.user()` | a positive whole number | `number` |
+| `field.text()`, `field.slug()` | up to 255 characters  | `string`     |
+
+### `contentListPageHead` options
+
+| Name          | Type                              | Required | Default          | Description                       |
+| ------------- | --------------------------------- | -------- | ---------------- | --------------------------------- |
+| `search`      | `ContentListSearch \| undefined`  | Yes      |                  | The `search` that `head` receives |
+| `title`       | `string`                          | No       |                  | The page title, already translated |
+| `description` | `string`                          | No       |                  | The meta description              |
+| `locales`     | `readonly string[]`               | No       | every app locale | Languages that get an `hreflang` link |
+
+The plain first page gets a canonical link and one alternate per language, all pointing at `delivery.list.path`. Any other page returns `robots: "noindex, follow"` and no alternates.
+
+## Components
+
+All components render semantic HTML, take a `className`, and translate their own labels through the `core.global` namespace.
+
+| Component | Renders | Props |
+| --------- | ------- | ----- |
+| `ContentList` | A `<ul>` grid: one column on phones, two from `sm`, three from `lg` | Any `<ul>` prop |
+| `ContentListItem` | An `<li>` for one card | Any `<li>` prop |
+| `ContentCard` | An `<article>` with an optional image, a meta line, the title as a link and a description | `href`, `title`, `description?`, `image?` (`{ src, alt, width?, height? }`), `meta?`, `headingLevel?` (`2` or `3`, default `2`) |
+| `ContentListEmpty` | A `role="status"` message for an empty list | `title?`, `description?`. Defaults to "No results found" |
+| `ContentListPagination` | A `<nav>` with previous, numbered and next links | `page`, `totalPages`, `search`. Renders nothing for one page |
+| `ContentListSearchForm` | A `role="search"` `GET` form with a search field and a **Search** button | `search`, `label?`, `placeholder?` |
+| `ContentListFilter` | A `<nav>` with a visible label and a row of links, **All** first | `name`, `label`, `options` (`{ label, value }[]`), `search`, `allLabel?` |
+
+### Links and accessibility
+
+- Pagination and filter links are plain `<a href>` elements built with the router's `Link`, so they work without JavaScript and crawlers can follow them. The current page and the active filter carry `aria-current="page"`.
+- `ContentCard` makes only the title a link for assistive technology. The image links to the same page with `tabIndex={-1}` and `aria-hidden`, so a keyboard user reaches each record once.
+- `ContentListSearchForm` submits as a normal `GET` form without JavaScript. With it, the router navigates without a reload. Active filters travel along as hidden fields.
+- `ContentListPagination` shows the first page, the last page and the neighbours of the current one, with an ellipsis for the gaps.

@@ -10,7 +10,10 @@ export type ContentUrlErrorCode =
   | "incomplete-content-types"
   | "invalid-content-types-module";
 
-export type ContentUrlSetting = "delivery.path" | "search.pathTemplate";
+export type ContentUrlSetting =
+  | "delivery.list.path"
+  | "delivery.path"
+  | "search.pathTemplate";
 
 export interface ContentUrlErrorDetails {
   code: ContentUrlErrorCode;
@@ -39,7 +42,12 @@ export class ContentUrlError extends Error {
 }
 
 export interface ContentUrlDefinition {
-  delivery: { enabled: boolean; path: string };
+  delivery: {
+    enabled: boolean;
+    /** Optional so a definition built before list pages existed still reads. */
+    list?: { enabled: boolean; path: string };
+    path: string;
+  };
   id: string;
   search: { enabled: boolean; pathTemplate: string };
 }
@@ -60,6 +68,15 @@ export const contentPublicUrls = (
       declared: definition.delivery.path,
       routePath: definition.delivery.path,
       setting: "delivery.path",
+    });
+  }
+
+  const list = definition.delivery.list;
+  if (definition.delivery.enabled && list?.enabled && list.path !== "") {
+    urls.push({
+      declared: list.path,
+      routePath: list.path,
+      setting: "delivery.list.path",
     });
   }
 
