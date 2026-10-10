@@ -73,11 +73,6 @@ const DiscardChanges = ({
   );
 };
 
-/**
- * "Saving…", "Draft saved 3 minutes ago", "Unsaved changes": what autosave did
- * with this person's typing, announced politely. Renders nothing outside a
- * live form, so a layout can place it unconditionally.
- */
 export const ContentLiveStatus = ({ className }: { className?: string }) => {
   const t = useTranslations("core.content.live.status");
   const live = useContentLive();
@@ -114,9 +109,7 @@ export const ContentLiveStatus = ({ className }: { className?: string }) => {
           </span>
         ) : null}
       </p>
-      {dirty && live.discard ? (
-        <DiscardChanges onDiscard={live.discard} />
-      ) : null}
+      {dirty ? <DiscardChanges onDiscard={live.discard} /> : null}
     </div>
   );
 };

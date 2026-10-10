@@ -23,30 +23,19 @@ export type TipTapEditorBaseProps = Omit<
   "defaultValue" | "onChange"
 > & {
   disableScroll?: boolean;
-  /** Appended after the built-in extensions - collaboration, for one. */
   extensions?: Extensions;
-  /**
-   * Hears the editor instance once it exists, and `null` when it goes away -
-   * for code that drives the editor with commands.
-   */
   onEditor?: (editor: Editor | null) => void;
   placeholder?: string;
-  /**
-   * Keep the editor's own undo history. `false` when something else owns it:
-   * Yjs keeps a per-user history of a shared document.
-   */
   undoRedo?: boolean;
 };
 
 export type TipTapEditorHtmlProps = TipTapEditorBaseProps & {
-  /** HTML in, HTML out. The default. */
   format?: "html";
   onChange?: (value: string) => void;
   value?: string;
 };
 
 export type TipTapEditorJsonProps = TipTapEditorBaseProps & {
-  /** A ProseMirror document in, a ProseMirror document out. */
   format: "json";
   onChange?: (value: RichTextDocument) => void;
   value?: null | RichTextDocument;

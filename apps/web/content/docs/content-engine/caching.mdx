@@ -1,6 +1,6 @@
 ---
 title: Caching
-description: How VitNode Content Engine public reads are cached, from TanStack Query in the app to cache tags and content.revalidateOrigins for a separate front end.
+description: Cache VitNode Content Engine public reads with TanStack Query in the app, and expire them in a separate front end with cache tags and content.revalidateOrigins.
 icon: Zap
 ---
 
@@ -129,7 +129,7 @@ The request carries:
 - `x-vitnode-timestamp`, the send time in milliseconds.
 - A JSON body with the `contentInvalidationTags` input plus `mode`, which is always `"immediate"` for a scheduled run.
 
-Because the secret travels with it, outside development each origin must use `https` (plain `http` only for `localhost` and `127.0.0.1`), and nothing is sent while `CRON_SECRET` is unset or still the default. VitNode tries each origin twice. It does not retry a `403`, which it reads as a wrong secret.
+The secret travels with the request, so outside development each origin must use `https`. Plain `http` is allowed only for `localhost` and `127.0.0.1`. VitNode sends nothing while `CRON_SECRET` is unset or still the default. It tries each origin twice and does not retry a `403`, which it reads as a wrong secret.
 
 ### Build the revalidate endpoint
 

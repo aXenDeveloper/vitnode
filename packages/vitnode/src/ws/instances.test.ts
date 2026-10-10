@@ -13,7 +13,6 @@ import {
   wsRegistry,
 } from "./registry";
 
-/** A pub/sub client whose subscriber callback the test can call itself. */
 const bus = () => {
   const published: string[] = [];
   let deliver: ((raw: string) => void) | undefined;
@@ -44,7 +43,6 @@ const bus = () => {
 
   return {
     client: client as unknown as CacheClient,
-    /** Hand a message to this instance as if another instance published it. */
     fromOtherInstance: (message: Record<string, unknown>) => {
       deliver?.(JSON.stringify({ origin: "other-instance", ...message }));
     },

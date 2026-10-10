@@ -78,7 +78,6 @@ const Value = ({
 }) => {
   if (isBlank(value)) return <Empty label={emptyLabel} />;
 
-  // A document is compared as the words a reader sees, never as its JSON.
   if (isRichTextDocument(value)) {
     return <TextPreview text={richTextToPlainText(value)} />;
   }

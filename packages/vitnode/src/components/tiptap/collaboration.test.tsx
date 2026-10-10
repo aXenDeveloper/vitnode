@@ -19,8 +19,6 @@ describe("CollaborativeEditorSlot", () => {
       />,
     );
 
-    // An async slot would hand React a new promise on every render: the field
-    // would suspend, remount and reopen its shared document in a loop.
     expect(screen.getByText("Shared editor (pl)")).toBeTruthy();
     expect(editor).toHaveBeenCalledTimes(1);
   });

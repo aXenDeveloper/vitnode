@@ -234,8 +234,6 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
         }),
       );
     }
-    // What is stored is what crosses back: the document is read as it was
-    // written, and the field's own size limit is a rule for *writing* it.
     case "richText":
       return createRichTextDocumentSchema({
         maxBytes: RICH_TEXT_ABSOLUTE_MAX_BYTES,
@@ -260,8 +258,6 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
 /** The value as it arrives from a client. `dateTime` is an ISO 8601 string. */
 const baseInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   if (fieldValue.kind === "dateTime") return z.iso.datetime();
-  // `required` is "not empty" for a document: `{ type: "doc" }` is present,
-  // and says nothing.
   if (fieldValue.kind === "richText") {
     return createRichTextDocumentSchema({
       maxBytes: fieldValue.maxBytes,
@@ -450,10 +446,6 @@ const updateShape = (
     }),
   );
 
-/**
- * One field's value schema exactly as the `update` route validates it, for a
- * write that carries a few fields at a time (the live editing draft).
- */
 export const contentFieldUpdateSchema = (
   fields: ContentFieldMap,
   name: string,

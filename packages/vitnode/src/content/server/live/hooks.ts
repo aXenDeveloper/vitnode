@@ -7,11 +7,6 @@ import type {
 
 import { broadcastContentLive } from "./broadcast";
 
-/**
- * Lifecycle seams between the live socket and the HTTP side of live editing,
- * so neither imports the other. Listeners register at module load.
- */
-
 type UserLeftListener = (args: {
   c: Context;
   room: ContentLiveRoomRef;
@@ -27,7 +22,6 @@ type ResetListener = (args: {
 const userLeftListeners = new Set<UserLeftListener>();
 const resetListeners = new Set<ResetListener>();
 
-/** Runs when a user has no member (tab) left in a record's room. */
 export const onContentLiveUserLeft = (
   listener: UserLeftListener,
 ): (() => void) => {
@@ -38,7 +32,6 @@ export const onContentLiveUserLeft = (
   };
 };
 
-/** Runs when a record's working state must be thrown away. */
 export const onContentLiveReset = (listener: ResetListener): (() => void) => {
   resetListeners.add(listener);
 
@@ -71,10 +64,6 @@ export const contentLiveUserLeft = async (
   await runAll(userLeftListeners, args);
 };
 
-/**
- * Drop a record's drafts, locks and collaborative documents, then tell every
- * member to reload. Called after a revision restore and after a delete.
- */
 export const resetContentLiveRecord = async (
   c: Context,
   room: ContentLiveRoomRef,

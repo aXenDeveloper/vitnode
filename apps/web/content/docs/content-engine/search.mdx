@@ -52,8 +52,8 @@ export const articleContentType = defineContentType({
 
 - `titleField` is the result heading. It must be a `field.text()` that is not nullable.
 - `descriptionField` is optional and leads the result excerpt. Text, textarea or rich text.
-- `contentFields` is the searchable body: at least one field, no duplicates. Text, textarea, rich text or slug fields, plus repeatable leaves such as `"faq.answer"`. Rich text is indexed as its words, never as JSON. The title always ranks higher than the body, so listing it here as well only repeats it in the excerpt.
-- `pathTemplate` is the result URL. It starts with `/` and contains `{slug}` exactly once. Leave the language out: your i18n settings add it (see [Localized content types](#localized-content-types)).
+- `contentFields` is the searchable body. It takes at least one field and no duplicates. Text, textarea, rich text or slug fields, plus repeatable leaves such as `"faq.answer"`. Rich text is indexed as its words, never as JSON. The title always ranks higher than the body, so listing it here as well only repeats it in the excerpt.
+- `pathTemplate` is the result URL. It starts with `/` and contains `{slug}` exactly once. Leave the language out, because your i18n settings add it (see [Localized content types](#localized-content-types)).
 - `authorField` is optional and credits a top-level `field.user()` on [member timelines](/docs/dev/search#member-timelines).
 
 Every field except `authorField` must be in `publicApi.fields`. Otherwise a result snippet would leak a private value, so the definition throws instead: `search.titleField names "x", which is not in publicApi.fields.` `authorField` may stay private, which is why `author` is not in the public list above. All options are in the [reference](/docs/content-engine/reference#search).
@@ -141,6 +141,6 @@ curl "http://localhost:3000/api/@vitnode/core/search?search=hello&types=example.
 }
 ```
 
-Unpublish the article and run the request again: `edges` is empty. If a record you published before adding `search` is missing, reindex the collection.
+Unpublish the article and run the request again. This time `edges` is empty. If a record you published before adding `search` is missing, reindex the collection.
 
 The index runs on Postgres full-text search by default. To switch engines, or to index data that is not a content type, see [Search & Discovery](/docs/dev/search) and [Elasticsearch](/docs/dev/search-elasticsearch).

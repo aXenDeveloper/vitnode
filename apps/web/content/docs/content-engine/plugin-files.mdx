@@ -4,7 +4,7 @@ description: Reference for the files and exports a VitNode plugin needs for Cont
 icon: Package
 ---
 
-A plugin's content types are read from several small files instead of one big config. Each file is loaded by a different part of the app, so a public page never downloads the AdminCP's forms and a browser never sees your database code. [First content type](/docs/content-engine/create-a-content-type) writes each file step by step; this page is the lookup.
+VitNode reads a plugin's content types from several small files instead of one big config. A different part of the app loads each file, so a public page never downloads the AdminCP's forms and a browser never sees your database code. [First content type](/docs/content-engine/create-a-content-type) writes each file step by step; this page is the lookup.
 
 ## Files at a glance
 
@@ -21,7 +21,7 @@ A plugin's content types are read from several small files instead of one big co
 | `src/config.tsx`                        | The plugin                         | The app's `vitnode.config.ts`              | Plugin id, `messages`, `localeFiles` and `routes` only             |
 | `src/locales/en.json`                   | JSON                               | The app, through `localeFiles`             | Labels for content types, fields and permissions                   |
 
-A content type with an AdminCP screen needs an entry in both `admin/nav` and `admin/content`: the first adds the sidebar link, the second the screen behind it. They are separate files so the sidebar stays small on every AdminCP page, while form and editor code loads only with the screen.
+A content type with an AdminCP screen needs an entry in both `admin/nav` and `admin/content`. The first adds the sidebar link, the second the screen behind it. They are separate files so the sidebar stays small on every AdminCP page, while form and editor code loads only with the screen.
 
 Without custom cells, fields or layouts, `admin/content` can re-export the nav list:
 
@@ -74,7 +74,7 @@ Resolution only works when the plugin id equals the npm package name and the pac
 }
 ```
 
-Tables are the exception: Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly for every plugin in the API config. Export each table from those files, or it never reaches a migration. [Database](/docs/content-engine/database#export-every-table) shows a model with several tables.
+Tables are the exception. Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly for every plugin in the API config. Export each table from those files, or it never reaches a migration. [Database](/docs/content-engine/database#export-every-table) shows a model with several tables.
 
 ## Keep `config.tsx` small
 

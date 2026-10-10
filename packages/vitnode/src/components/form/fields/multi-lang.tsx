@@ -16,6 +16,7 @@ import {
 import {
   findLangValue,
   getLangValue,
+  hasText,
   pickLangCodeWhere,
   upsertLangValue,
 } from "@/lib/helpers/multi-lang";
@@ -71,8 +72,6 @@ const useMultiLangSelection = (
   };
 };
 
-const hasText = (text: string): boolean => text.trim() !== "";
-
 export const useMultiLangField = (
   field: MultiLangFieldProps["field"],
   { isFilled = hasText }: { isFilled?: (text: string) => boolean } = {},
@@ -96,10 +95,6 @@ export const useMultiLangField = (
   };
 };
 
-/**
- * {@link useMultiLangField} for a value that is not text - a rich text
- * document, say. `currentValue` is `undefined` for a language with no value.
- */
 export const useMultiLangValueField = <TValue,>(
   field: FormFieldApi<MultiLangValue<TValue> | undefined>,
   { isFilled }: { isFilled: (value: TValue | undefined) => boolean },

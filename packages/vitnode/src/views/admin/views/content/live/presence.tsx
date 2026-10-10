@@ -28,7 +28,6 @@ const avatarUser = (member: ContentLiveMember) => ({
   nameCode: member.nameCode ?? member.name,
 });
 
-/** "Anna, Ben and Cleo", in the reader's language. */
 export const useContentLiveNames = () => {
   const locale = useLocale();
 
@@ -38,7 +37,6 @@ export const useContentLiveNames = () => {
     );
 };
 
-/** "editing Title (PL)": where one member is, from what presence says. */
 const useActivity = () => {
   const t = useTranslations("core.content.live.presence");
 
@@ -59,18 +57,11 @@ const useActivity = () => {
   };
 };
 
-/**
- * Everyone else in the record: one avatar per person, however many tabs they
- * have open, with where they are ("Anna, editing Title (PL)") on hover, on
- * focus and for screen readers. Renders nothing outside a live form, or when
- * the editor is alone.
- */
 export const ContentLivePresence = ({
   className,
   max = 5,
 }: {
   className?: string;
-  /** Avatars shown before the rest fold into "+N". */
   max?: number;
 }) => {
   const t = useTranslations("core.content.live.presence");
@@ -151,15 +142,15 @@ export const ContentLivePresence = ({
   );
 };
 
+const SMALL_AVATARS_MAX = 3;
+
 const SmallAvatars = ({
   members,
-  max = 3,
 }: {
-  max?: number;
   members: readonly ContentLiveMember[];
 }) => (
   <span aria-hidden className="inline-flex items-center *:not-first:-ms-1.5">
-    {members.slice(0, max).map(member => (
+    {members.slice(0, SMALL_AVATARS_MAX).map(member => (
       <Avatar
         alt=""
         className="ring-background ring-2"
@@ -169,19 +160,14 @@ const SmallAvatars = ({
         user={avatarUser(member)}
       />
     ))}
-    {members.length > max ? (
+    {members.length > SMALL_AVATARS_MAX ? (
       <span className="bg-muted text-muted-foreground ring-background inline-flex size-5 items-center justify-center rounded-full text-xs tabular-nums ring-2">
-        +{members.length - max}
+        +{members.length - SMALL_AVATARS_MAX}
       </span>
     ) : null}
   </span>
 );
 
-/**
- * The other people in one field, as small avatars - for a field's label. A
- * localized field counts only the people in `locale`. Renders nothing outside
- * a live form or when the field is free.
- */
 export const ContentLiveFieldPresence = ({
   className,
   decorative = false,
@@ -189,10 +175,8 @@ export const ContentLiveFieldPresence = ({
   locale,
 }: {
   className?: string;
-  /** The avatars only: the field announces its editors some other way. */
   decorative?: boolean;
   field: string;
-  /** The language shown, `null` for a field that is not localized. */
   locale: null | string;
 }) => {
   const t = useTranslations("core.content.live.presence");
@@ -218,10 +202,6 @@ export const ContentLiveFieldPresence = ({
   );
 };
 
-/**
- * The other people working in one language - of the whole record, or of one
- * field when `field` is given. For a language switcher.
- */
 export const ContentLiveLanguagePresence = ({
   className,
   field,

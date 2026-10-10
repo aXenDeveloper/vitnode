@@ -80,8 +80,8 @@ A feature block is on when it is present. `publicApi`, `localization` and `searc
 
 Two names are derived from the id:
 
-- **Entity key:** the id without its first segment, further dots turned into `_`. `example.article` becomes `article`. Strings live under `{pluginId}.content.{entityKey}`, for example `@vitnode/example.content.article`.
-- **Permission module:** the entity key with anything outside `a-z0-9` turned into `_`, so `example.localized-article` becomes `localized_article`. Permissions are named `@vitnode/example:article:can_view`. Override it with `admin.permissionModule`.
+- The **entity key** is the id without its first segment, with further dots turned into `_`. `example.article` becomes `article`. Strings live under `{pluginId}.content.{entityKey}`, for example `@vitnode/example.content.article`.
+- The **permission module** is the entity key with anything outside `a-z0-9` turned into `_`, so `example.localized-article` becomes `localized_article`. Permissions are named `@vitnode/example:article:can_view`. Override it with `admin.permissionModule`.
 
 Every content type gets `can_view`, `can_create`, `can_edit` and `can_delete`. `publication` adds `can_publish` and `editorial` adds `can_restore`.
 
@@ -107,7 +107,7 @@ Controls the generated AdminCP screens. Guide: [Customize the AdminCP](/docs/con
 | `form.fields`           | field names                            | Every field except `field.blocks()`, in declaration order                  | Fields in the generated form                                                                                                                                               |
 | `form.sections`         | `{ name: string; fields: string[] }[]` | `[]`                                                                       | Groups the form into titled sections. Cannot be combined with `form.fields`                                                                                                |
 
-A section `name` is lowercase `a-z0-9_` and starting with a letter, because it is the key its heading is read from. Each field goes in one section only, and no section can be empty.
+A section `name` is lowercase `a-z0-9_` and starts with a letter, because it is the key its heading is read from. Each field goes in one section only, and no section can be empty.
 
 ```ts title="plugins/blog/src/content/post.ts"
 admin: {
@@ -252,7 +252,7 @@ Keeps published records in the [site search index](/docs/dev/search). Drafts nev
 | `descriptionField` | field name  | No       | Shown in result excerpts. Text, textarea or richText                                                                                  |
 | `authorField`      | field name  | No       | A top-level `field.user()` credited in the index. It does not have to be public                                                       |
 
-Every field except `authorField` must be in `publicApi.fields`, or a result snippet would leak a private value. Leave the language out of `pathTemplate`: your [i18n settings](/docs/dev/i18n) add the locale prefix.
+Every field except `authorField` must be in `publicApi.fields`, or a result snippet would leak a private value. Leave the language out of `pathTemplate`, because your [i18n settings](/docs/dev/i18n) add the locale prefix.
 
 ```ts title="plugins/example/src/content/article.ts"
 search: {

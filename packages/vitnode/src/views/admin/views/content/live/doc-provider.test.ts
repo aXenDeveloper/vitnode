@@ -34,16 +34,11 @@ afterEach(() => {
   harnesses.splice(0).forEach(live => live.stop());
 });
 
-/**
- * The real live server behind fake sockets. A "browser" is one socket shared by
- * its tabs, the way the WebSocket manager shares one across tabs.
- */
 const setup = () => {
   const live = createLiveHarness();
   harnesses.push(live);
   const pending = new Set<Promise<void>>();
 
-  /** Waits until the server has handled everything sent so far. */
   const settle = async () => {
     while (pending.size > 0) await Promise.all([...pending]);
   };
@@ -97,9 +92,7 @@ const setup = () => {
     };
 
     return {
-      /** Hand the tabs a message as if the socket had delivered it. */
       deliver: relay,
-      /** The socket closes: the server forgets every seat on it. */
       drop: () => {
         setLive(false);
         stopListening();
@@ -243,7 +236,6 @@ describe("createContentDocProvider", () => {
     anna.type(text => text.insert(0, "Kept"));
     await settle();
 
-    // The instance unloaded the document under the tab.
     live.server.documents.resetRecord(room);
     anna.type(text => text.insert(text.length, " and more"));
     await settle();
@@ -261,7 +253,6 @@ describe("createContentDocProvider", () => {
     const anna = annaBrowser.tab("anna-1", "Anna");
     await settle();
 
-    // The seed waited for someone to listen.
     let seeds = 0;
     anna.provider.onSeed(() => {
       seeds += 1;
@@ -285,7 +276,6 @@ describe("createContentDocProvider", () => {
     await annaBrowser.join("anna-1");
     const anna = annaBrowser.tab("anna-1", "Anna");
     let seeds = 0;
-    // An empty record: the seeder has nothing to write.
     anna.provider.onSeed(() => {
       seeds += 1;
     });
@@ -297,7 +287,6 @@ describe("createContentDocProvider", () => {
     await annaBrowser.join("anna-1");
     await settle();
 
-    // The server asked again after the reconnect; the provider had answered.
     expect(
       ofType(annaBrowser.received(), "doc:seed").filter(
         seed => seed.clientId === "anna-1",
@@ -340,8 +329,6 @@ describe("createContentDocProvider", () => {
     const anna = annaBrowser.tab("anna-1", "Anna");
     await settle();
 
-    // What the record room hears when a revision is restored: the server
-    // drops the documents, and the form remounts on the restored record.
     live.server.documents.resetRecord(room);
     annaBrowser.deliver({ reason: "restored", room, type: "reset" });
     anna.type(text => text.insert(0, "Stale"));

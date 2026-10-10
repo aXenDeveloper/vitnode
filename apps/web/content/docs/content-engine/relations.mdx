@@ -181,7 +181,7 @@ A relation takes ids. A to-many relation and a repeatable take the whole list, w
 }
 ```
 
-A repeatable row with an `id` updates that row, a row without one is created, and rows you leave out are deleted. An `id` that belongs to another record is refused with `CONTENT_REPEATABLE_UNKNOWN_CHILD`. To change one link or one row without sending the list, use the [content service](/docs/content-engine/services): `relations.categories.add()`, `.remove()`, `.set()`, `.reorder()` and `.get()`, or `repeatable.faq.create()`, `.update()`, `.delete()`, `.reorder()`, `.set()` and `.list()`.
+A repeatable row with an `id` updates that row, a row without one is created, and rows you leave out are deleted. The API refuses an `id` that belongs to another record with `CONTENT_REPEATABLE_UNKNOWN_CHILD`. To change one link or one row without sending the list, use the [content service](/docs/content-engine/services): `relations.categories.add()`, `.remove()`, `.set()`, `.reorder()` and `.get()`, or `repeatable.faq.create()`, `.update()`, `.delete()`, `.reorder()`, `.set()` and `.list()`.
 
 ## Check the result
 

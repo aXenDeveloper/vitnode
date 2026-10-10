@@ -264,7 +264,6 @@ export const resolveContentDelivery = ({
   // a version to guard nor a history to write, so accepting this would be accepting a
   // feature that records nothing.
   //
-  // Refused rather than downgraded to `redirects: false`: an author who
   // asked for redirects and silently got none would find out from a broken link
   // months later. The type system refuses it too - see `ContentDeliveryConfig`.
   if (redirects && !editorial) {
@@ -619,8 +618,6 @@ const readSeoText = (
     if (name === null) continue;
 
     const raw = readContentPath(row, name);
-    // A rich text description is its words: the host truncates them, and
-    // markup has no place in a meta tag.
     const value = isRichTextDocument(raw) ? richTextToPlainText(raw) : raw;
     if (typeof value !== "string") continue;
 

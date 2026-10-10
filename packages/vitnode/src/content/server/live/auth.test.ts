@@ -32,7 +32,6 @@ const PLUGIN_ID = "@vitnode/example";
 const notes = createContentModel(testEditorialNoteContentType);
 const categories = createContentModel(testCategoryContentType);
 
-/** A guide with a collaborative field, as the rich text field kind declares it. */
 const guideWithRichText = {
   ...testLocalizedGuideContentType,
   fields: {

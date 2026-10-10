@@ -94,11 +94,6 @@ const textarea = <
   localized: localizedOf(args),
 });
 
-/**
- * A rich text document - ProseMirror JSON in a `jsonb` column, edited with the
- * Tiptap editor and rendered with `RichTextContent`. `required` means "not
- * empty", not just "present".
- */
 const richText = <
   TRequired extends boolean = false,
   TNullable extends boolean = false,
@@ -106,7 +101,6 @@ const richText = <
 >(
   args: LocalizableArgs<TLocalized> &
     SharedArgs<TRequired, TNullable> & {
-      /** Largest serialized document, in bytes. Defaults to 1 MB. */
       maxBytes?: number;
     } = {},
 ): ContentRichTextField<TRequired, TNullable, TLocalized> => ({

@@ -35,12 +35,10 @@ import { contentLiveUserLeft } from "./hooks";
 import { clientIdOf, contentLiveClientMessageSchema } from "./messages";
 import { createContentLivePresence } from "./presence";
 
-/** The instance-to-instance topic presence snapshots travel on. */
 export const CONTENT_LIVE_PRESENCE_TOPIC = `${contentLiveChannel.id}:presence`;
 
 const DOC_ROOM_PREFIX = "content-doc:";
 
-/** One socket, with the request context it was opened with. */
 export interface ContentLiveConnection {
   c: Context;
   ws: WSContext;
@@ -77,7 +75,7 @@ const sendTo = (ws: WSContext, data: ContentLiveServerMessage): void => {
   try {
     ws.send(JSON.stringify({ data, id: contentLiveChannel.id }));
   } catch {
-    // The socket is closing; its close listener cleans up.
+    return;
   }
 };
 
@@ -89,30 +87,16 @@ const roomOf = (message: ContentLiveClientMessage): ContentLiveRoomRef =>
         itemId: message.doc.itemId,
       };
 
-/**
- * The live editing socket of the Content Engine: authorization, presence and
- * the collaborative documents, behind one `onMessage`.
- *
- * Every dependency with a side effect outside this instance (the registry, the
- * database, Redis, the clock) is a parameter, so tests drive the real logic
- * without a socket server.
- */
 export const createContentLiveServer = ({
   authorize = authorizeContentLive,
   authTtlMs,
   createStore = createContentDocumentStore,
   isDocValid = isContentLiveDocValid,
   now = Date.now,
-  persistMs,
   publish = snapshot => {
     publishToInstances(CONTENT_LIVE_PRESENCE_TOPIC, snapshot);
   },
   registry = wsRegistry,
-  relay = (room, message) => {
-    realtime.toRoom(room, contentLiveChannel, message);
-  },
-  sweepMs = CONTENT_LIVE_HEARTBEAT_MS,
-  timeoutMs,
   userLeft = contentLiveUserLeft,
 }: {
   authorize?: (
@@ -123,14 +107,8 @@ export const createContentLiveServer = ({
   createStore?: (c: Context) => ContentDocumentStore;
   isDocValid?: typeof isContentLiveDocValid;
   now?: () => number;
-  persistMs?: number;
-  /** Tell the other instances who is in a room here. */
   publish?: (snapshot: ContentLivePresenceSnapshot) => void;
   registry?: Pick<typeof wsRegistry, "join" | "leave" | "toRoom">;
-  /** Deliver to a document room on every instance. */
-  relay?: (room: string, message: ContentLiveServerMessage) => void;
-  sweepMs?: number;
-  timeoutMs?: number;
   userLeft?: typeof contentLiveUserLeft;
 } = {}) => {
   const auth = createContentLiveAuthCache({ authorize, now, ttlMs: authTtlMs });
@@ -147,7 +125,6 @@ export const createContentLiveServer = ({
     },
     now,
     publish,
-    timeoutMs,
   });
 
   const documents = createContentDocuments<ContentLiveConnection>({
@@ -157,8 +134,9 @@ export const createContentLiveServer = ({
     leave: ({ ws }, room, clientId) => {
       registry.leave(ws, room, clientId);
     },
-    persistMs,
-    relay,
+    relay: (room, message) => {
+      realtime.toRoom(room, contentLiveChannel, message);
+    },
     send: ({ ws }, message) => {
       sendTo(ws, message);
     },
@@ -173,11 +151,6 @@ export const createContentLiveServer = ({
     return created;
   };
 
-  /**
-   * Everything that follows members leaving a record room, however they left.
-   * Called right after they were removed from presence, before anything is
-   * awaited, so two tabs of one user closing together report the user once.
-   */
   const afterLeft = async (entries: LocalMember[]): Promise<void> => {
     const gone = new Map<string, LocalMember>();
     for (const entry of entries) {
@@ -237,7 +210,7 @@ export const createContentLiveServer = ({
       sweep().catch((error: unknown) => {
         logError("Content live sweep error:", error);
       });
-    }, sweepMs);
+    }, CONTENT_LIVE_HEARTBEAT_MS);
     sweeper.unref?.();
   };
 
@@ -252,7 +225,6 @@ export const createContentLiveServer = ({
       sendTo(ws, { clientId, code, room, type: "error" });
     };
 
-    /** Authorize (cached); a member that lost access leaves the room. */
     const guard = async (): Promise<ContentLiveAuthorization> => {
       const result = await auth.authorize(c, ws, room);
       if (!result.ok) {
@@ -271,8 +243,6 @@ export const createContentLiveServer = ({
 
       const previous = presence.get(room, clientId);
       if (previous && previous.connection !== connection) {
-        // Presence lists every `clientId`, so one cannot be taken over by
-        // somebody else; the same person's tab may move to a new socket.
         if (previous.member.userId !== result.user.id) {
           fail("FORBIDDEN");
 
@@ -376,7 +346,6 @@ export const createContentLiveServer = ({
 
   return {
     documents,
-    /** The socket's `onMessage`. Messages of one socket run one at a time. */
     handle: async ({
       c,
       data,
@@ -398,8 +367,6 @@ export const createContentLiveServer = ({
       }
 
       const connection = connectionOf(c, ws);
-      // A join must be done before the focus sent right after it is read, and
-      // one tab's Yjs updates should reach the room in the order it sent them.
       const previous = queues.get(ws) ?? Promise.resolve();
       const current = previous.then(async () => {
         await handleMessage(connection, parsed.data);
@@ -410,7 +377,6 @@ export const createContentLiveServer = ({
       queues.set(ws, settled);
       await settled;
     },
-    /** Registry close listener: everything the closed socket had joined. */
     onConnectionClose: (
       ws: WSContext,
       left: { memberId: string; room: string }[],
@@ -437,7 +403,6 @@ export const createContentLiveServer = ({
         logError("Content live close error:", error);
       });
     },
-    /** Another instance's presence snapshot. */
     onInstanceMessage: ({
       data,
       origin,
@@ -451,13 +416,10 @@ export const createContentLiveServer = ({
       const parsed = snapshotSchema.safeParse(data);
       if (!parsed.success) return;
 
-      // A newcomer learns about this instance's members right away rather
-      // than at the next refresh.
       if (presence.applyRemote(origin, parsed.data)) {
         presence.refresh(parsed.data.room);
       }
     },
-    /** A room message another instance relayed: keep loaded documents in step. */
     onRemoteRoomMessage: (room: string, id: string, data: unknown): void => {
       if (id !== contentLiveChannel.id) return;
       if (room.startsWith(DOC_ROOM_PREFIX)) {
@@ -468,7 +430,6 @@ export const createContentLiveServer = ({
       const reset = resetSchema.safeParse(data);
       if (reset.success) documents.resetRecord(reset.data.room);
     },
-    /** `onContentLiveReset` listener: drop the record's documents. */
     onReset: async ({
       c,
       room,

@@ -2,12 +2,6 @@ import { z } from "zod";
 
 import { CONTENT_LOCALE_MAX_LENGTH } from "../const";
 
-/**
- * The HTTP half of live editing: field locks and the shared draft. The socket
- * carries the same facts as `locks` and `draft` messages, and a tab without a
- * socket polls these routes instead.
- */
-
 export const CONTENT_LIVE_CODES = {
   draftInvalid: "CONTENT_DRAFT_INVALID",
   draftScope: "CONTENT_DRAFT_WRONG_SCOPE",
@@ -15,11 +9,7 @@ export const CONTENT_LIVE_CODES = {
   notLocked: "CONTENT_FIELD_NOT_LOCKED",
 } as const;
 
-export const CONTENT_FIELD_LOCK_ACTIONS = [
-  "acquire",
-  "renew",
-  "release",
-] as const;
+const CONTENT_FIELD_LOCK_ACTIONS = ["acquire", "renew", "release"] as const;
 
 export type ContentFieldLockAction =
   (typeof CONTENT_FIELD_LOCK_ACTIONS)[number];
@@ -40,18 +30,15 @@ export const zodContentFieldLockList = z.object({
 export const zodContentFieldLockRequest = z.strictObject({
   action: z.enum(CONTENT_FIELD_LOCK_ACTIONS),
   field: z.string().min(1).max(100),
-  /** `null` for a shared field, a language code for a localized one. */
   locale: zodLocale,
 });
 
 export const zodContentFieldLockResponse = z.object({
-  /** `null` once released. */
   lock: zodContentFieldLock.nullable(),
 });
 
 export const zodContentFieldLocked = z.object({
   code: z.literal(CONTENT_LIVE_CODES.locked),
-  /** Who holds it, or `null` when a renew found no lock of the caller's. */
   lock: zodContentFieldLock.nullable(),
 });
 
@@ -82,7 +69,6 @@ export const zodContentDraftWrite = z.strictObject({
 
 export const zodContentDraftWritten = z.object({ updatedAt: z.string() });
 
-/** Fields a draft write was refused for, and why. */
 export const zodContentDraftRejection = z.object({
   code: z.enum([
     CONTENT_LIVE_CODES.draftInvalid,

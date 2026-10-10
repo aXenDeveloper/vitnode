@@ -85,10 +85,6 @@ export interface ContentFormSpec {
   contentTypeId: string;
 
   defaultLocale: null | string;
-  /**
-   * Present on an editorial content type: its records have a version, which is
-   * what live editing (field locks, the shared draft, autosave) measures against.
-   */
   editorial?: true;
   fields: ContentFormFieldSpec[];
   liveEditing?: true;
@@ -413,11 +409,6 @@ export const buildGroupFormSchema = (
   spec: ContentFormFieldSpec,
 ): z.ZodObject<z.ZodRawShape> => leafObjectSchema(spec);
 
-/**
- * What a rich text field holds in a form: a document, checked for shape only.
- * The server walks the whole tree; the form only has to know it is one, and
- * stays cheap for `z.toJSONSchema`, which `AutoForm` runs on every render.
- */
 const richTextFormSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   const doc = z.looseObject({
     content: z.array(z.record(z.string(), z.unknown())).optional(),
@@ -602,8 +593,6 @@ const localizedValueForApi = (
   if (fieldSpec.kind === "richText") {
     if (isRichTextDocument(raw) && !isRichTextEmpty(raw)) return raw;
 
-    // An empty editor in a language means "no translation of this field",
-    // exactly as an empty text box does.
     return fieldSpec.nullable ? null : undefined;
   }
 
@@ -875,14 +864,6 @@ export const buildFormSchemaFromSpec = (
     ),
   );
 
-/**
- * One field's form value as the API takes it - what live editing autosaves
- * into the shared draft. `undefined` while the value is not writable yet (it
- * fails the field's own rules, or it is empty where empty means "unset"), so a
- * half-typed value is simply not autosaved.
- *
- * `locale` picks the language of a localized field, which holds them all.
- */
 export const contentFormFieldToApi = (
   spec: ContentFormSpec,
   fieldSpec: ContentFormFieldSpec,
@@ -902,8 +883,8 @@ export const contentFormFieldToApi = (
 
   const schema = buildFormSchemaFromSpec({ ...spec, fields: [fieldSpec] })
     .shape[fieldSpec.name];
-  const parsed = schema ? z.safeParse(schema, value) : undefined;
-  if (!parsed?.success || parsed.data === undefined) return undefined;
+  const parsed = z.safeParse(schema, value);
+  if (!parsed.success || parsed.data === undefined) return undefined;
 
   return {
     value: contentFormValuesToPayload(spec, { [fieldSpec.name]: parsed.data })[
@@ -912,11 +893,6 @@ export const contentFormFieldToApi = (
   };
 };
 
-/**
- * The reverse of {@link contentFormFieldToApi}: an API value written into the
- * form value a field holds now. A localized field changes only `locale`; a
- * single reference keeps the label it already shows for the same identifier.
- */
 export const contentApiValueToFormField = (
   fieldSpec: ContentFormFieldSpec,
   value: unknown,

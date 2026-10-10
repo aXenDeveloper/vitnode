@@ -34,7 +34,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** One browser tab with its own Y.Doc, talking to the server. */
 const setup = () => {
   const live = createLiveHarness();
   harnesses.push(live);
@@ -50,7 +49,6 @@ const setup = () => {
 
     await live.send(target, { clientId, locale: "en", room, type: "join" });
 
-    /** Apply whatever the server sent this socket since the last sync. */
     const sync = () => {
       const received = target.received();
       for (const message of received.slice(seen)) {
@@ -333,7 +331,6 @@ describe("seeding an empty document", () => {
 
     expect(anna.seeds()).toEqual([]);
 
-    // The other instance gave up its claim: the next sweep picks a tab here.
     await live.store.store.releaseSeed(doc);
     await live.server.sweep();
 

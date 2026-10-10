@@ -117,7 +117,6 @@ export const contentFormTransport = (
     listTranslations: async (contentTypeId, itemId) =>
       await listContentTranslationsInBrowser(targetFor(contentTypeId), itemId),
 
-    // Autosave never touches the record, so nothing cached about it is stale.
     lock: async (contentTypeId, itemId, request) =>
       await changeContentLockInBrowser(
         targetFor(contentTypeId),

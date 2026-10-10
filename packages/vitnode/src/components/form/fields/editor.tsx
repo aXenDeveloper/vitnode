@@ -40,10 +40,6 @@ const useEditorLabelledBy = (label: React.ReactNode): string | undefined => {
 
 type AutoFormEditorProps = ItemAutoFormComponentProps &
   TipTapEditorBaseProps & {
-    /**
-     * `html` (the default) stores an HTML string. `json` stores a ProseMirror
-     * document - what a Content Engine `field.richText()` holds.
-     */
     format?: "html" | "json";
     multiLang?: boolean;
   };
@@ -175,7 +171,6 @@ const MultiLangJsonEditor = ({
       selected={selected}
     >
       {collaborative ? (
-        // Its own shared document per language: remounted like the editor.
         <CollaborativeEditorSlot
           aria-labelledby={labelledBy}
           key={selected}

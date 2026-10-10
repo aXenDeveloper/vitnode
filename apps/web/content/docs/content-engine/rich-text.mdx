@@ -44,9 +44,9 @@ The column is `jsonb`, and the value is a ProseMirror document, the same JSON th
 }
 ```
 
-Every write is validated. The value must be a `doc`, nest at most 64 levels deep, and fit in `maxBytes` as UTF-8 JSON (1 MB by default, up to 16 MB). With `required: true`, a document without any text or media is refused, so an empty editor cannot be saved. A rich text field has no default, so set `required` or `nullable`.
+The Content Engine validates every write. The value must be a `doc`, nest at most 64 levels deep, and fit in `maxBytes` as UTF-8 JSON (1 MB by default, up to 16 MB). With `required: true`, a document without any text or media is refused, so an empty editor cannot be saved. A rich text field has no default, so set `required` or `nullable`.
 
-The AdminCP form shows the editor for the field automatically, and loads it only when the form has a rich text field:
+The AdminCP form shows the editor for the field, and it loads the editor only when the form has a rich text field:
 
 <ImgDocs
   withoutBackground
@@ -126,7 +126,7 @@ import { richTextToPlainText } from "@vitnode/core/content";
 const words = richTextToPlainText(post.content).split(/\s+/).length;
 ```
 
-The Content Engine already uses them for you. Site search indexes the words of a rich text field listed in `search.contentFields`. A rich text field named in `delivery.seo.descriptionField` or `fallbackDescriptionField` becomes a plain text description, which is how the blog fills its meta description from `content` when an article has no excerpt. The revision history compares documents as text.
+The Content Engine already uses them. Site search indexes the words of a rich text field listed in `search.contentFields`. A rich text field named in `delivery.seo.descriptionField` or `fallbackDescriptionField` becomes a plain text description, which is how the blog fills its meta description from `content` when an article has no excerpt. The revision history compares documents as text.
 
 ## Use the editor in your own form
 

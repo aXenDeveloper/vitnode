@@ -72,7 +72,6 @@ const toFieldSnapshot = (
       : [];
   }
 
-  // A document is kept whole, so a restore puts back exactly what was there.
   if (fieldValue.kind === "richText") {
     const value = values[name];
 

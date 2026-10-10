@@ -6,7 +6,7 @@ icon: Radio
 
 Each content type emits events named `content.<id>.<action>` after a change, such as `content.example.article.published`. Subscribe to them to send a newsletter, sync an external index or purge a CDN, without touching the code that made the change.
 
-Events come from the generated routes, scheduled publishing and [`contentEditorialEffects`](/docs/content-engine/services#write-the-way-the-admincp-does). The plain `service(c)` emits nothing. A save that changes nothing emits nothing either.
+Events come from the generated routes, scheduled publishing and [`contentEditorialEffects`](/docs/content-engine/services#example-3-a-feature-this-article-button). The plain `service(c)` emits nothing. A save that changes nothing emits nothing either.
 
 ## Event reference
 
@@ -39,7 +39,7 @@ A few payload details that change what a listener does:
 - `scheduledBy` and `scheduleId` are set only when a schedule fired the change. `actorUserId` on `scheduled` is the same person as `scheduledBy` later.
 - The delivery events arrive alongside `updated`, `restored` or a publication event, never instead of them. `locale` is `null` for a shared slug.
 
-The listener also receives an envelope with the actor, the time and `pluginId`, which is always the plugin that owns the content type, even when a core queue task ran the change. Field-by-field descriptions are in [Built-in events](/docs/dev/events/built-in-events#content-engine-events).
+The listener also receives an envelope with the actor, the time and `pluginId`. `pluginId` is always the plugin that owns the content type, even when a core queue task ran the change. Field-by-field descriptions are in [Built-in events](/docs/dev/events/built-in-events#content-engine-events).
 
 ## Subscribe to an event
 
@@ -94,7 +94,7 @@ export const announceArticleListener = buildEventListener({
 
 ### Add it to a top-level module
 
-Listeners are collected only from the `events` array of a module passed directly to `buildApiPlugin`. A listener on a nested module is silently ignored.
+VitNode collects listeners only from the `events` array of a module passed directly to `buildApiPlugin`. A listener on a nested module is silently ignored.
 
 ```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
 export const adminModule = buildModule({
@@ -118,6 +118,6 @@ The blog plugin does the same with its `blogLegacyEventListeners`, which turn `c
 
 ## Check the result
 
-Restart `pnpm dev`, publish an article in **AdminCP → Example → Articles** and look for the debug line in the API terminal. A failing listener does not undo the change: the write has already committed, and the engine logs the failure.
+Restart `pnpm dev`, publish an article in **AdminCP → Example → Articles** and look for the debug line in the API terminal. A failing listener does not undo the change. The write has already committed, and the engine logs the failure.
 
 Events from a scheduled publish run in a queue task that retries on failure, so the same `published` event can arrive twice. Make work that must happen once idempotent, for example keyed on `scheduleId`. See [A scheduled event may arrive twice](/docs/dev/events/built-in-events#a-scheduled-event-may-arrive-twice).

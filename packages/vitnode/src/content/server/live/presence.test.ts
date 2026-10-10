@@ -367,7 +367,6 @@ describe("leaving", () => {
 });
 
 describe("members on another instance", () => {
-  /** Two servers, each instance telling the other through a fake Redis. */
   const twoInstances = () => {
     let now = 0;
     const delivered: { data: unknown; room: string }[] = [];
@@ -397,7 +396,6 @@ describe("members on another instance", () => {
     const second = harness({
       now: () => now,
       publish: forward("b", () => peers.first),
-      // The second instance has its own sockets, so its own registry.
       registry: {
         join: (_ws, room, memberId) => {
           const members = rooms.get(room) ?? new Set();
@@ -516,8 +514,6 @@ describe("members on another instance", () => {
       type: "join",
     });
 
-    // The second instance dies: no refresh, no goodbye. The first one keeps
-    // its own member alive.
     second.server.stop();
     setNow(CONTENT_LIVE_MEMBER_TIMEOUT_MS - 1_000);
     await first.send(anna, { clientId: "anna-1", room, type: "heartbeat" });

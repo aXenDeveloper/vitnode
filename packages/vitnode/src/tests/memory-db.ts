@@ -206,7 +206,6 @@ const parseTokens = (tokens: Token[], source: string) => {
     return node;
   };
 
-  // `||` binds tighter than any comparison: jsonb merge, or text concatenation.
   const parseConcat = (): Node => {
     let node = parseCast();
     while (isWord("||")) {

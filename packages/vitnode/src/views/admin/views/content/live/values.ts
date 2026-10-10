@@ -10,10 +10,9 @@ interface TranslationValues {
   values: Record<string, unknown>;
 }
 
-const same = (a: unknown, b: unknown): boolean =>
+export const sameContentValue = (a: unknown, b: unknown): boolean =>
   JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-/** The single-reference fields of the shared draft that point somewhere new. */
 export const contentDraftMovedReferences = (
   spec: ContentFormSpec,
   data: Record<string, unknown>,
@@ -26,7 +25,7 @@ export const contentDraftMovedReferences = (
       fieldSpec.multiple === true ||
       !isReferenceKind(fieldSpec.kind) ||
       typeof value !== "number" ||
-      same(value, data[name])
+      sameContentValue(value, data[name])
     ) {
       return [];
     }
@@ -34,12 +33,6 @@ export const contentDraftMovedReferences = (
     return [{ field: name, id: value }];
   });
 
-/**
- * The record and its translations with the shared draft laid over them - the
- * values the form opens on. Only what the form *shows* moves: the record the
- * form compares a Save against stays the committed one, so every drafted value
- * still counts as a change.
- */
 export const overlayContentDrafts = <
   TData extends Record<string, unknown>,
   TTranslation extends TranslationValues,
@@ -56,7 +49,7 @@ export const overlayContentDrafts = <
         ...data,
         ...drafts.shared.values,
         labels: {
-          ...(data.labels as Record<string, unknown> | undefined),
+          ...(typeof data.labels === "object" ? data.labels : null),
           ...labels,
         },
       }
@@ -76,7 +69,6 @@ export const overlayContentDrafts = <
   return { data: overlaid, translations: rows };
 };
 
-/** One more draft change folded into what this tab knows of the draft. */
 export const mergeContentDraft = (
   drafts: ContentDrafts | null,
   event: ContentLiveDraftEvent,
@@ -99,7 +91,6 @@ export const mergeContentDraft = (
       };
 };
 
-/** Whether the draft holds a value the committed record does not. */
 export const contentDraftDiffers = (
   data: Record<string, unknown>,
   translations: readonly TranslationValues[],
@@ -108,7 +99,7 @@ export const contentDraftDiffers = (
   if (!drafts) return false;
 
   const sharedDiffers = Object.entries(drafts.shared?.values ?? {}).some(
-    ([name, value]) => !same(value, data[name]),
+    ([name, value]) => !sameContentValue(value, data[name]),
   );
   if (sharedDiffers) return true;
 
@@ -116,12 +107,11 @@ export const contentDraftDiffers = (
     const row = translations.find(entry => entry.locale === locale);
 
     return Object.entries(draft.values).some(
-      ([name, value]) => !same(value, row?.values[name]),
+      ([name, value]) => !sameContentValue(value, row?.values[name]),
     );
   });
 };
 
-/** The value a draft holds for one field in one language, if any. */
 export const contentDraftValue = (
   drafts: ContentDrafts | null,
   field: string,

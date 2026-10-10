@@ -9,7 +9,7 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import publishRow from "./public-api-publish-row.webp";
 import publishConfirm from "./public-api-publish-confirm.webp";
 
-A content type is private until you opt in. This guide follows `example.article` from the example plugin: it gets a draft and a published state, and its published records become readable by anyone at `/api/@vitnode/example/content/articles`. You list exactly which fields leave the server.
+A content type is private until you opt in. This guide follows `example.article` from the example plugin. It gets a draft and a published state, and its published records become readable by anyone at `/api/@vitnode/example/content/articles`. You list exactly which fields leave the server.
 
 You need a content type with an AdminCP screen, like the one built in [Create a content type](/docs/content-engine/create-a-content-type).
 
@@ -236,7 +236,7 @@ export const fetchFeaturedArticles = async () => {
 };
 ```
 
-The path, the query and `pageInfo` are typed, but each record is typed as `Record<string, unknown>`, so parse the fields you use with Zod, as the example's article page does. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
+The path, the query and `pageInfo` are typed. Each record is a `Record<string, unknown>`, so parse the fields you use with Zod, as the example's article page does. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
 
 ## Public API routes
 

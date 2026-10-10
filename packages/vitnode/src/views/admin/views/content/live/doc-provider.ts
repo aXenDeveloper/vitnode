@@ -17,50 +17,33 @@ import {
   sameContentLiveRoom,
 } from "@/content/live/protocol";
 
-/**
- * How a document provider reaches the server: the live channel of the shared
- * socket, and whether this tab holds a seat in the record's room.
- */
 export interface ContentDocTransport {
-  /** Whether this tab is in the record's room right now. */
   isLive: () => boolean;
   onLiveChange: (listener: (live: boolean) => void) => () => void;
   send: (message: ContentLiveClientMessage) => void;
-  /** Every live message the socket delivers - for every tab of the browser. */
   subscribe: (
     listener: (message: ContentLiveServerMessage) => void,
   ) => () => void;
 }
 
-/** Who this tab is, as the carets of everyone else show it. */
 export interface ContentDocUser {
   color: string;
   name: string;
 }
 
 export interface ContentDocProvider {
-  /** Carets and selections. `CollaborationCaret` reads `provider.awareness`. */
   awareness: Awareness;
-  /** Closes the document on the server and drops this tab's caret. */
   destroy: () => void;
   doc: ContentLiveDocRef;
-  /**
-   * Called once when the server picks this tab to fill the empty document from
-   * the record. A seed that arrives before anyone listens waits for them.
-   */
   onSeed: (listener: () => void) => () => void;
-  /** Tells `listener` when {@link synced} changes. */
   subscribeSynced: (listener: () => void) => () => void;
-  /** Whether the document has caught up with the server once. */
   synced: () => boolean;
 }
 
-/** Marks Yjs and awareness changes that came from the server. */
 const REMOTE_ORIGIN = Symbol("content-doc-remote");
 
 const BASE64_CHUNK = 0x80_00;
 
-/** Base64 of bytes, without Node's `Buffer`: this runs in the browser. */
 export const encodeContentDocBytes = (bytes: Uint8Array): string => {
   let binary = "";
   for (let start = 0; start < bytes.length; start += BASE64_CHUNK) {
@@ -81,20 +64,6 @@ const isEmptyUpdate = (update: Uint8Array): boolean => {
   return structs.length === 0 && ds.clients.size === 0;
 };
 
-/**
- * One collaborative rich text document over the live channel: the client half
- * of `content/server/live/documents.ts`.
- *
- * It opens the document whenever the tab has a seat in the record's room - on
- * creation, on every (re)join, and when the server says the tab is not in the
- * document (`NOT_JOINED`, after it unloaded it) - each time with the local
- * state vector, so the server sends what the tab misses, and answers the
- * server's state vector with what the server misses. Edits made while the
- * socket was down travel that way too.
- *
- * Many tabs share one socket, so everything received is filtered by the
- * document and by this tab's `clientId`.
- */
 export const createContentDocProvider = ({
   clientId,
   doc,
@@ -112,16 +81,9 @@ export const createContentDocProvider = ({
   awareness.setLocalStateField("user", user);
 
   let destroyed = false;
-  /**
-   * The tab holds a seat in the record's room. Set by a `joined` reply as soon
-   * as it arrives - before React re-renders with the session's `live`.
-   */
   let seated = transport.isLive();
-  /** The record was restored or deleted: the form remounts, this goes quiet. */
   let stopped = false;
-  /** An open was sent on the current seat. */
   let opened = false;
-  /** An open was sent and its state vector has not arrived yet. */
   let awaitingOpen = false;
   let synced = false;
   let seed: "handled" | "none" | "pending" = "none";
@@ -154,7 +116,6 @@ export const createContentDocProvider = ({
       stateVector: encodeContentDocBytes(Y.encodeStateVector(ydoc)),
       type: "doc:open",
     });
-    // The server forgot this tab's caret along with its seat.
     sendAwareness();
   };
 
@@ -193,8 +154,6 @@ export const createContentDocProvider = ({
     origin: unknown,
   ): void => {
     if (origin === REMOTE_ORIGIN) return;
-    // Only this tab's own state: remote states that timed out locally are
-    // not news to anyone.
     const changed = [...added, ...updated, ...removed];
     if (!changed.includes(ydoc.clientID) || !canSend()) return;
 
@@ -208,6 +167,25 @@ export const createContentDocProvider = ({
     });
   };
   awareness.on("update", onAwareness);
+
+  const sendMissingUpdate = (stateVector: string): void => {
+    try {
+      const missing = Y.encodeStateAsUpdate(
+        ydoc,
+        decodeContentDocBytes(stateVector),
+      );
+      if (!isEmptyUpdate(missing) && canSend()) {
+        transport.send({
+          clientId,
+          doc,
+          type: "doc:update",
+          update: encodeContentDocBytes(missing),
+        });
+      }
+    } catch {
+      return;
+    }
+  };
 
   const onMessage = (message: ContentLiveServerMessage): void => {
     if (destroyed) return;
@@ -226,7 +204,7 @@ export const createContentDocProvider = ({
             applyAwarenessUpdate(awareness, bytes, REMOTE_ORIGIN);
           }
         } catch {
-          // A malformed relay: the next open resyncs the whole state.
+          return;
         }
 
         return;
@@ -243,22 +221,7 @@ export const createContentDocProvider = ({
         if (!sameContentLiveDoc(message.doc, doc)) return;
 
         awaitingOpen = false;
-        try {
-          const missing = Y.encodeStateAsUpdate(
-            ydoc,
-            decodeContentDocBytes(message.stateVector),
-          );
-          if (!isEmptyUpdate(missing) && canSend()) {
-            transport.send({
-              clientId,
-              doc,
-              type: "doc:update",
-              update: encodeContentDocBytes(missing),
-            });
-          }
-        } catch {
-          // Nothing to answer with; the next open tries again.
-        }
+        sendMissingUpdate(message.stateVector);
         markSynced();
 
         return;
@@ -268,16 +231,12 @@ export const createContentDocProvider = ({
           return;
         }
         if (message.room && !sameContentLiveRoom(message.room, doc)) return;
-        // The server unloaded the document (or lost the seat): open again,
-        // once per round trip.
         if (!awaitingOpen && seated) open();
 
         return;
       case "joined":
         if (message.clientId !== clientId) return;
         if (!sameContentLiveRoom(message.room, doc)) return;
-        // A (re)join is a fresh seat: the server knows nothing of this tab's
-        // documents.
         seated = true;
         open();
 
@@ -310,7 +269,6 @@ export const createContentDocProvider = ({
     destroy: () => {
       if (destroyed) return;
 
-      // Tell the others this caret is gone, then leave the document.
       removeAwarenessStates(awareness, [ydoc.clientID], "local");
       if (canSend()) transport.send({ clientId, doc, type: "doc:close" });
       destroyed = true;

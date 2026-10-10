@@ -14,7 +14,6 @@ import { wsRegistry } from "@/ws/registry";
 
 type ServerOptions = NonNullable<Parameters<typeof createContentLiveServer>[0]>;
 
-/** An in-memory document store that counts what it was asked to do. */
 export const createFakeDocumentStore = () => {
   const rows = new Map<string, Uint8Array>();
   const claims = new Set<string>();
@@ -65,17 +64,11 @@ export const createFakeDocumentStore = () => {
 
 export interface FakeLiveSocket {
   c: Context;
-  /** Hears every live message this socket receives from now on. */
   listen: (listener: (message: ContentLiveServerMessage) => void) => () => void;
-  /** Every live message this socket received, oldest first. */
   received: () => ContentLiveServerMessage[];
   ws: WSContext;
 }
 
-/**
- * A live server on fake sockets: each socket has its own `c`, and so its own
- * editor. Authorization is granted per socket, which the tests flip.
- */
 export const createLiveHarness = (options: Partial<ServerOptions> = {}) => {
   const users = new Map<Context, ContentLiveUser>();
   const denied = new Set<Context>();
@@ -155,7 +148,6 @@ export const createLiveHarness = (options: Partial<ServerOptions> = {}) => {
 
   return {
     deny: (target: FakeLiveSocket) => denied.add(target.c),
-    /** Close a socket the way the registry does. */
     disconnect: (target: FakeLiveSocket) => {
       wsRegistry.remove(target.ws);
     },
@@ -172,8 +164,6 @@ export const createLiveHarness = (options: Partial<ServerOptions> = {}) => {
   };
 };
 
-// An intersection rather than `Extract`: `doc:update` and `doc:awareness` share
-// one union member, which `Extract` would drop.
 type MessageOfType<TType> = ContentLiveServerMessage & { type: TType };
 
 export const ofType = <TType extends ContentLiveServerMessage["type"]>(

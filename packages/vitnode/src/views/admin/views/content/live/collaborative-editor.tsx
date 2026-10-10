@@ -35,10 +35,8 @@ import {
   contentLiveMemberColor,
 } from "./presence-model";
 
-/** The Yjs fragment `Collaboration` binds the editor to. */
 const FRAGMENT = "default";
 
-/** A caret with its owner's name, readable on their color. */
 const renderCaret = (user: Record<string, unknown>): HTMLElement => {
   const color =
     typeof user.color === "string" && user.color !== "transparent"
@@ -65,7 +63,6 @@ const renderSelection = (user: Record<string, unknown>) => ({
   )}33`,
 });
 
-/** The live channel of the shared socket, with the session's seat. */
 const useDocTransport = (live: boolean): ContentDocTransport => {
   const { send, subscribe } = useVitNodeWebSocketContext();
   const liveRef = React.useRef(live);
@@ -92,7 +89,6 @@ const useDocTransport = (live: boolean): ContentDocTransport => {
     [send, subscribe],
   );
 
-  // The seat comes and goes with the socket; the providers hear about it.
   React.useEffect(() => {
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- `live` arrives over the socket; this forwards it to providers outside React
     if (liveRef.current === live) return;
@@ -105,21 +101,12 @@ const useDocTransport = (live: boolean): ContentDocTransport => {
 
 interface Binding {
   provider: ContentDocProvider;
-  /** Who this tab was when the document opened; carets follow later changes. */
   user: ContentDocUser;
   ydoc: Y.Doc;
 }
 
 const subscribeNever = () => () => {};
 
-/**
- * The rich text editor of one field in one language, bound to the shared Yjs
- * document everyone in the record types into: live carets, a per-person undo
- * history, and the record's JSON as the starting point of an empty document.
- *
- * The form value follows the document (`onChange` on every change, remote
- * ones too), so `Save` commits what everyone sees.
- */
 export const ContentLiveRichTextEditor = ({
   className,
   field,
@@ -157,12 +144,8 @@ export const ContentLiveRichTextEditor = ({
     userRef.current = user;
   }, [user]);
 
-  // What an empty shared document starts from: the record (or its draft) as
-  // the form opened it - not what the editor reports once it is bound.
   const [seedValue] = React.useState(value);
 
-  // The document and its provider talk to the socket from the moment they
-  // exist, so they are made in an effect and torn down with it.
   const [binding, setBinding] = React.useState<Binding | null>(null);
   React.useEffect(() => {
     const ydoc = new Y.Doc();
@@ -217,18 +200,15 @@ export const ContentLiveRichTextEditor = ({
   React.useEffect(() => {
     if (!editor || !binding) return;
 
-    // The form follows the shared document from the moment it is bound.
     emit(editor);
 
     const stopSeed = binding.provider.onSeed(() => {
-      // Someone typed (or a translation landed) first: nothing to fill.
       if (binding.ydoc.getXmlFragment(FRAGMENT).length > 0) return;
       if (isRichTextEmpty(seedValue)) return;
 
       editor
         .chain()
         .command(({ tr }) => {
-          // Filling the document is not an edit anyone should undo.
           tr.setMeta("addToHistory", false);
 
           return true;
@@ -249,7 +229,6 @@ export const ContentLiveRichTextEditor = ({
     };
   }, [binding, editor, field, locale, richText, seedValue]);
 
-  // A name or color learned after the document opened reaches the carets.
   React.useEffect(() => {
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- `user` comes from presence over the socket, not from an event here
     if (!editor || editor.isDestroyed) return;

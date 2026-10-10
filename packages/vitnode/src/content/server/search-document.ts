@@ -14,7 +14,6 @@ import { contentSearchUrl } from "../search";
 
 /** Collapses whitespace so a multi-line value cannot break a result heading. */
 const normalize = (value: unknown): string => {
-  // A rich text field is indexed as its words, never as its JSON.
   const text = isRichTextDocument(value) ? richTextToPlainText(value) : value;
 
   return typeof text === "string" ? text.replace(/\s+/g, " ").trim() : "";

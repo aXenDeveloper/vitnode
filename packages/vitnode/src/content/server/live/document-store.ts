@@ -12,11 +12,7 @@ import { core_content_documents } from "@/database/content-documents";
 
 import type { ContentDocumentStore } from "./documents";
 
-/**
- * A seed claim older than this is taken over by the next opener: the instance
- * that held it stopped without seeding or releasing it.
- */
-export const CONTENT_DOCUMENT_SEED_CLAIM_MS = 30_000;
+const CONTENT_DOCUMENT_SEED_CLAIM_MS = 30_000;
 
 const table = core_content_documents;
 
@@ -47,14 +43,11 @@ const conflictTarget = [
   table.language,
 ];
 
-/** The `core_content_documents` store, on the request's database handle. */
 export const createContentDocumentStore = (
   c: Context,
 ): ContentDocumentStore => ({
   claimSeed: async doc => {
     const now = new Date();
-    // One statement, so two instances cannot both win: the insert succeeds for
-    // the first, and the update only takes over an unseeded, stale claim.
     const claimed = await c
       .get("db")
       .insert(table)
@@ -117,17 +110,11 @@ export const createContentDocumentStore = (
   },
 });
 
-/**
- * Delete collaborative documents nobody touched for
- * {@link CONTENT_LIVE_STALE_DAYS} days. Saving the record already committed
- * their content; a later open seeds a fresh document from the record.
- */
 export const cleanupStaleContentDocuments = async (
   c: Context,
-  { now = new Date() }: { now?: Date } = {},
 ): Promise<number> => {
   const before = new Date(
-    now.getTime() - CONTENT_LIVE_STALE_DAYS * 24 * 60 * 60 * 1000,
+    Date.now() - CONTENT_LIVE_STALE_DAYS * 24 * 60 * 60 * 1000,
   );
   const removed = await c
     .get("db")

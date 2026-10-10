@@ -550,8 +550,6 @@ describe("lifecycle", () => {
     await send("PUT", "/7/draft", {
       body: { locale: "pl", values: { title: "Cześć" } },
     });
-    // The shared draft was written on version 3 and the record is now at 4; the
-    // Polish one is still level with its translation.
     vi.spyOn(guides, "service").mockReturnValue({
       findRowById: async () => await Promise.resolve({ id: 7, version: 4 }),
     } as never);

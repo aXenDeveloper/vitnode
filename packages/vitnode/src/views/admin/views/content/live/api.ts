@@ -22,16 +22,13 @@ export type { ContentFieldLockAction };
 
 export interface ContentFieldLockResult {
   error?: string;
-  /** The caller's lock after the change; `null` once released. */
   lock?: ContentFieldLock | null;
-  /** Someone else holds it (`409`): who, when the API said. */
   lockedBy?: ContentFieldLock | null;
   status: number;
 }
 
 export interface ContentDraftSaveResult {
   error?: string;
-  /** Which fields were refused and why, for a `400` or a `409`. */
   rejection?: ContentDraftRejection;
   status: number;
   updatedAt?: string;

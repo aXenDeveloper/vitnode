@@ -299,7 +299,6 @@ describe("delivery events", () => {
   });
 
   it("adds neither for a content type without delivery", () => {
-    // The keys are gated on `delivery: true`, so a listener for one
     // cannot even be registered - which is what keeps every Stage 1-7 event map
     // byte-identical.
     expectTypeOf<ContentEventsFor<typeof plainType>>().not.toHaveProperty(

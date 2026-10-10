@@ -26,10 +26,8 @@ import {
   mergeContentDraft,
 } from "./values";
 
-/** What the form opens on: the record, its languages, and the shared draft. */
 export interface ContentLiveFormState {
   drafts: ContentDrafts | null;
-  /** Labels for references the draft moved, keyed by field. */
   labels: Record<string, string>;
   row: ContentRow;
   translations: readonly TranslationRow[];
@@ -56,15 +54,6 @@ const IDLE: ContentLiveAutosaveStatus = {
   saving: false,
 };
 
-/**
- * Live editing around one existing record's form: the room, the draft the
- * form opens on, the autosave queue and what happens when the record is
- * restored or deleted under it.
- *
- * Renders `fallback` until the draft has been read, so the form never opens
- * on values it is about to replace. After a reset it remounts the form on the
- * reloaded record.
- */
 export const ContentLiveRoot = ({
   children,
   data,
@@ -90,17 +79,13 @@ export const ContentLiveRoot = ({
   });
   const { onCommitted, onDraft, onReset, readDrafts } = session;
 
-  // Once co-edited, always co-edited for this form: switching editors when the
-  // socket blinks would drop what the shared document holds.
   const [coEditing, setCoEditing] = React.useState(false);
   if (session.live && !coEditing) setCoEditing(true);
   const [richText] = React.useState(createContentRichTextRegistry);
 
-  /** The draft the form opened on: read once, and again after a reset. */
   const [opening, setOpening] = React.useState<
     undefined | { drafts: ContentDrafts | null; labels: Record<string, string> }
   >(undefined);
-  /** The draft as it is now, every autosave folded in. */
   const [drafts, setDrafts] = React.useState<ContentDrafts | null>(null);
   const [reloaded, setReloaded] = React.useState<null | Reloaded>(null);
   const [generation, setGeneration] = React.useState(0);
@@ -115,10 +100,6 @@ export const ContentLiveRoot = ({
     draftsRef.current = drafts;
   }, [drafts]);
 
-  /**
-   * The draft, and the names behind any reference it moved - the form shows a
-   * picked category by name, and the record only knows its old one's.
-   */
   const load = React.useEffectEvent(async (base?: ContentRow) => {
     const read = await readDrafts();
     const moved = contentDraftMovedReferences(spec, base ?? row, read);
@@ -245,7 +226,6 @@ export const ContentLiveRoot = ({
     [flush],
   );
 
-  // Whatever is still waiting goes out with the form.
   React.useEffect(
     () => () => {
       void flush();

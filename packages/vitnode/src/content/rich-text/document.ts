@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-/**
- * A rich text value is a ProseMirror document as Tiptap's `editor.getJSON()`
- * returns it. Plain JSON: no class instances, no functions, nothing that needs
- * the editor to read it back.
- */
 export type RichTextAttrPrimitive = boolean | null | number | string;
 
 export type RichTextAttrValue = RichTextAttrPrimitive | RichTextAttrPrimitive[];
@@ -28,13 +23,10 @@ export interface RichTextDocument extends RichTextNode {
   type: "doc";
 }
 
-/** How deep `content` may nest. A real article stays well under ten. */
 export const RICH_TEXT_MAX_DEPTH = 64;
 
-/** The default ceiling on one document, serialized as UTF-8 JSON. */
 export const RICH_TEXT_DEFAULT_MAX_BYTES = 1024 * 1024;
 
-/** The ceiling a field's own `maxBytes` may raise the default to. */
 export const RICH_TEXT_ABSOLUTE_MAX_BYTES = 16 * 1024 * 1024;
 
 const RICH_TEXT_TYPE_PATTERN = /^[A-Za-z][\w-]{0,63}$/;
@@ -82,11 +74,6 @@ const zodDocumentShape = z.strictObject({
 const utf8Length = (value: string): number =>
   new TextEncoder().encode(value).length;
 
-/**
- * The checks that have to run before the recursive schema does: a document a
- * thousand levels deep would otherwise be walked by Zod first and measured
- * second. Iterative, so nothing here can overflow the stack either.
- */
 export const richTextLimitIssue = (
   value: unknown,
   {
@@ -96,15 +83,19 @@ export const richTextLimitIssue = (
 ): null | string => {
   const stack: [unknown, number][] = [[value, 1]];
 
-  while (stack.length > 0) {
-    const [node, depth] = stack.pop() ?? [null, 0];
+  for (let entry = stack.pop(); entry; entry = stack.pop()) {
+    const [node, depth] = entry;
     if (depth > maxDepth) {
       return `The document nests deeper than ${maxDepth} levels.`;
     }
 
-    const content = (node as null | { content?: unknown })?.content;
-    if (typeof node === "object" && Array.isArray(content)) {
-      for (const child of content) stack.push([child, depth + 1]);
+    if (
+      typeof node === "object" &&
+      node !== null &&
+      "content" in node &&
+      Array.isArray(node.content)
+    ) {
+      for (const child of node.content) stack.push([child, depth + 1]);
     }
   }
 
@@ -123,10 +114,8 @@ export const richTextLimitIssue = (
 };
 
 export interface RichTextSchemaOptions {
-  /** Largest serialized size, in bytes. Defaults to 1 MB. */
   maxBytes?: number;
   maxDepth?: number;
-  /** Refuse a document with nothing in it. See {@link isRichTextEmpty}. */
   required?: boolean;
 }
 
@@ -135,8 +124,6 @@ export const createRichTextDocumentSchema = ({
   maxDepth = RICH_TEXT_MAX_DEPTH,
   required = false,
 }: RichTextSchemaOptions = {}): z.ZodType<RichTextDocument> => {
-  // A shallow envelope first - it is also what an OpenAPI document shows - so
-  // the limits are measured before anything walks the tree recursively.
   const schema = z
     .looseObject({
       content: z.array(z.unknown()).optional(),
@@ -155,26 +142,20 @@ export const createRichTextDocumentSchema = ({
     : schema;
 };
 
-/** A ProseMirror document with the default limits. */
 export const zodRichTextDocument = createRichTextDocumentSchema();
 
-/** A cheap shape test, for code that is handed a value of unknown kind. */
 export const isRichTextDocument = (value: unknown): value is RichTextDocument =>
   typeof value === "object" &&
   value !== null &&
   !Array.isArray(value) &&
-  (value as { type?: unknown }).type === "doc";
+  "type" in value &&
+  value.type === "doc";
 
-/** An empty document, the value a new rich text field starts from. */
 export const emptyRichTextDocument = (): RichTextDocument => ({
   content: [{ type: "paragraph" }],
   type: "doc",
 });
 
-/**
- * Node types that hold other nodes and say nothing on their own. An empty list
- * or table is still an empty document; an emoji or an audio clip is not.
- */
 const STRUCTURAL_TYPES: ReadonlySet<string> = new Set([
   "blockquote",
   "bulletList",

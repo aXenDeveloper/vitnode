@@ -29,7 +29,6 @@ export const RECOMMENDED_LENGTH = {
   title: 60,
 } as const;
 
-/** Every translated field except the article body, which is a document. */
 export type ArticleTextField = Exclude<TranslatedField, "content">;
 
 export type ArticleValues = Partial<
@@ -39,7 +38,6 @@ export type ArticleValues = Partial<
   coverImage?: unknown;
 };
 
-/** The article body in one language, if that language has one. */
 export const articleContent = (
   values: ArticleValues,
   locale: string,

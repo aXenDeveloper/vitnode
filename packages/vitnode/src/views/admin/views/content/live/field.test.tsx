@@ -92,7 +92,6 @@ const EditorProbe = () =>
     <p>local editor</p>
   );
 
-/** A localized text field with its own language switcher, as buttons. */
 const SwitchableTitle = () => {
   const { currentValue, selected, setSelected } = useMultiLangField({
     name: "title",
@@ -236,7 +235,6 @@ describe("ContentLiveField", () => {
   it("is read-only and names the holder while someone else edits it", () => {
     setup({ locks: [lockOf(ANNA, "Anna")] });
 
-    // A disabled fieldset disables every control inside it, and says why.
     expect(screen.getByRole("group", { description: /Anna/ })).toHaveProperty(
       "disabled",
       true,
@@ -366,7 +364,6 @@ describe("ContentLiveField", () => {
     });
     expect(live.session.focus).toHaveBeenLastCalledWith("title", "pl");
 
-    // Still in the field, the editor switches back to English.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "English" }));
       await Promise.resolve();
@@ -464,7 +461,6 @@ describe("ContentLiveField", () => {
     expect(lock).not.toHaveBeenCalled();
     expect(live.session.focus).toHaveBeenCalledWith("content", "en");
 
-    // Someone's autosaved draft never lands in a co-edited document.
     act(() => {
       for (const listener of draftListeners) {
         listener({

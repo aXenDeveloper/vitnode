@@ -144,15 +144,11 @@ export const ArticleEditor = ({
         document,
       ),
     );
-    // Co-edited, the document goes in through the shared editor - one
-    // transaction everyone in the article sees, and can undo.
     if (replaceRichText) {
       replaceRichText("content", locale, document);
 
       return;
     }
-    // Alone, the editor is uncontrolled once it mounts, so a document written
-    // from outside it remounts it on the new value.
     setContentRevision(revision => revision + 1);
   };
 
@@ -325,8 +321,6 @@ export const ArticleEditor = ({
     }, 350);
   };
 
-  // The language on screen is the one this editor works in: the others see
-  // them there on the language menu even before a field has focus.
   const focusLanguage = live?.session.focus;
   React.useEffect(() => {
     focusLanguage?.(null, fieldLocale);

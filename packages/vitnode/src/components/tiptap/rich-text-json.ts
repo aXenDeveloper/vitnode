@@ -42,11 +42,6 @@ const toAttrs = (attrs: unknown): RichTextAttrs | undefined => {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
-/**
- * An emoji node stores only its shortcode. The glyph - or, for a custom emoji,
- * the image - is resolved here, while the emoji list is at hand, so a reader's
- * renderer never needs the 1,800-entry dataset to draw a smiley.
- */
 const withEmoji = (
   attrs: RichTextAttrs | undefined,
   emojis: EmojiItem[],
@@ -105,7 +100,6 @@ export const editorEmojiItems = (
   customEmojis?: EditorEmojiSection[],
 ): EmojiItem[] => [...gitHubEmojis, ...customEmojiToTipTap(customEmojis)];
 
-/** Tiptap's `getJSON()` as a {@link RichTextDocument}: plain JSON only. */
 export const toRichTextDocument = (
   json: JSONContent,
   emojis: EmojiItem[] = [],
@@ -119,11 +113,6 @@ export const toRichTextDocument = (
   return content.length > 0 ? { content, type: "doc" } : { type: "doc" };
 };
 
-/**
- * Parses HTML into a document with the editor's own schema. Browser only - it
- * needs a DOM. The one place HTML from outside (an AI translation, a paste)
- * becomes rich text.
- */
 export const richTextDocumentFromHtml = (
   html: string,
   { customEmojis }: { customEmojis?: EditorEmojiSection[] } = {},

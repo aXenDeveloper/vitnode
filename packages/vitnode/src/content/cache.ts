@@ -75,7 +75,6 @@ export interface ContentSitemapChange {
 
 export interface ContentInvalidationInput {
   contentTypeId: string;
-  /** Delivery tags, for a content type with `delivery: true`. */
   delivery?: ContentDeliveryInvalidation;
   id: number;
   /** Whether the row is publicly reachable *after* the mutation. */

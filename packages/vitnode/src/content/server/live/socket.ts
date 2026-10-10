@@ -8,18 +8,13 @@ import {
 import { onContentLiveReset } from "./hooks";
 import { createContentLiveServer } from "./server";
 
-/** The live editing server of this process. */
-export const contentLiveServer = createContentLiveServer();
+const contentLiveServer = createContentLiveServer();
 
 wsRegistry.onConnectionClose(contentLiveServer.onConnectionClose);
 onRemoteRoomMessage(contentLiveServer.onRemoteRoomMessage);
 onInstanceMessage(contentLiveServer.onInstanceMessage);
 onContentLiveReset(contentLiveServer.onReset);
 
-/**
- * Registered on core's `content` module with the id `live`, so its public id is
- * `contentLiveChannel.id` (`@vitnode/core_content_live`).
- */
 export const contentLiveWebSocket = buildWebSocket({
   description:
     "Content Engine live editing: presence and collaborative rich text documents.",

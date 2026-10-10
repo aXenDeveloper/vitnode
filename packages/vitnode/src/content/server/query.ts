@@ -40,8 +40,6 @@ export const buildSearchCondition = (
 
   return or(
     ...columns.map(column =>
-      // A rich text column is a ProseMirror document. Matching its JSON would
-      // find "paragraph" in every row, so only the text nodes are searched.
       column.getSQLType() === "jsonb"
         ? ilike(
             sql`jsonb_path_query_array(${column}, 'strict $.**.text')::text`,

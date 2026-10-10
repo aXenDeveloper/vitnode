@@ -1,6 +1,6 @@
 ---
 title: AdminCP
-description: Change how a Content Engine content type looks in the VitNode AdminCP, from list columns, search and sorting to form sections, page mode and custom cells, fields and layouts.
+description: Customize a Content Engine content type's screens in the VitNode AdminCP, including list columns, search, sorting, form sections, page mode and custom cells, fields and layouts.
 icon: LayoutDashboard
 ---
 
@@ -15,7 +15,7 @@ This page uses the example plugin's `example.article`. Its screen lives at `/adm
 
 ## Choose list columns, search and sorting
 
-The list is driven by `admin.list`:
+`admin.list` drives the list:
 
 ```ts title="plugins/example/src/content/article.ts"
 admin: {
@@ -57,7 +57,7 @@ admin: {
 | `defaultOrder`     | `"asc"` or `"desc"`. Defaults to `"desc"`.                                                                                                                                                                                                          |
 | `thumbnailField`   | A single shared `field.file()` drawn at the start of the title cell. `titleField` must be one of the `columns`.                                                                                                                                     |
 
-A to-many `field.user()` or `field.relation()` can be a column: people show with their role color and relations as badges, loaded once per page instead of once per row. A gallery (`field.file({ multiple: true })`), a group or a repeatable cannot. A file column shows a thumbnail and the file name, which is why `animation` above is a column but not sortable.
+A to-many `field.user()` or `field.relation()` can be a column. People show with their role color and relations as badges, loaded once per page instead of once per row. A gallery (`field.file({ multiple: true })`), a group or a repeatable cannot. A file column shows a thumbnail and the file name, which is why `animation` above is a column but not sortable.
 
 Every mistake here, such as an unknown field or a gallery in `columns`, throws a `ContentEngineError` when the plugin loads, so you find it before an editor does.
 

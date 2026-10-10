@@ -46,8 +46,6 @@ describe("the rich text renderer never ships the editor", () => {
   );
 
   it("walks the renderer it guards", () => {
-    // Otherwise the checks above would pass on a graph that stopped at the
-    // entry file - which is exactly the graph that cannot break.
     expect(reachedFiles(entries["components/rich-text"])).toEqual(
       expect.arrayContaining([
         "components/rich-text/rich-text-content.tsx",

@@ -115,7 +115,7 @@ This is the blog plugin's category dialog, where `name` is `field.text({ localiz
   alt="Create Category dialog: the Name input holds Breakfast and its language selector is open with English checked and Polski below"
 />
 
-Saving the form sends the shared fields and every language you typed into in one request, `POST /localized` for a new record or `PUT /{id}/localized` for an existing one, and the server writes them in one transaction. A new record must include its default language. A Polish-only edit does not touch the shared row, so it does not bump the record's version or expire the English cache.
+Saving the form sends the shared fields and every language you typed into in one request: `POST /localized` for a new record, `PUT /{id}/localized` for an existing one. The server writes them in one transaction. A new record must include its default language. A Polish-only edit does not touch the shared row, so it does not bump the record's version or expire the English cache.
 
 With publication, each language has its own status. Publishing the record publishes its languages too, and you can then unpublish one language alone. A translation is public only when both the record and that translation are published. With `editorial`, each language also keeps its own revisions and preview links.
 
@@ -144,7 +144,7 @@ content-language: pl
 {"title":"Witaj Content Engine","slug":"witaj-content-engine","body":"Jeden rekord, dwa języki.","featured":false,"publishedAt":"2026-10-10T10:57:12.452Z","locale":"pl"}
 ```
 
-The `locale` property says which language the body is in. When the requested translation is missing or unpublished, `fallback: "default"` serves the default language instead, so `"locale"` becomes `"en"`. With `fallback: "none"`, the default, the API returns `404`.
+The `locale` property says which language the body is in. When the requested translation is missing or unpublished, `fallback: "default"` serves the default language instead, so `"locale"` becomes `"en"`. With `fallback: "none"` (the default), the API returns `404`.
 
 In a page loader, pass the route's locale through. This is the example plugin's localized article page:
 

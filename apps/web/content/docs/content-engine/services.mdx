@@ -42,7 +42,7 @@ The three sections below build one real example for each.
 
 **Goal:** a public endpoint, `GET /api/@vitnode/example/articles/by-category/1`, that returns the three newest published articles in category `1`. Drafts must never appear, and neither may private fields.
 
-That is exactly what `publicService` guarantees: it returns what the [public API](/docs/content-engine/public-api) would, so you cannot leak a draft by accident.
+`publicService` guarantees exactly that. It returns what the [public API](/docs/content-engine/public-api) would, so you cannot leak a draft by accident.
 
 <Steps>
 <Step>
@@ -211,7 +211,7 @@ await c.get("db").transaction(async tx => {
 ```
 
 <Callout type="warn">
-  The plain service is quiet: it emits no [events](/docs/content-engine/events),
+  The plain service is quiet. It emits no [events](/docs/content-engine/events),
   writes no revisions and does not update the search index. If a listener or
   the site search should notice the change, use the editorial service from
   Example 3.
@@ -219,7 +219,7 @@ await c.get("db").transaction(async tx => {
 
 ## Example 3: a "Feature this article" button
 
-**Goal:** a staff endpoint, `POST /articles/1/feature`, that marks an article as featured, exactly as if someone had ticked **Featured** in the AdminCP and pressed **Save**: with a revision in the history, the `updated` event, a search index update, and protection against overwriting someone else's save.
+**Goal:** a staff endpoint, `POST /articles/1/feature`, that marks an article as featured, exactly as if someone had ticked **Featured** in the AdminCP and pressed **Save**. That means a revision in the history, the `updated` event, a search index update and protection against overwriting someone else's save.
 
 That is the `editorialService` (available with [`editorial`](/docs/content-engine/editorial)). It needs one extra input, `expectedVersion`: the version of the article the button's page loaded. If somebody saved the article in the meantime, the versions differ and the request fails with `409` instead of silently overwriting their work.
 

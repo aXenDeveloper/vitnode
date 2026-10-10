@@ -59,7 +59,6 @@ const renderElement = (element: RichTextElement, slot: string): string => {
 const renderText = (node: RichTextNode): string => {
   let html = escapeRichTextHtml(typeof node.text === "string" ? node.text : "");
 
-  // The first mark is the outermost, as ProseMirror serializes it.
   for (const mark of [...(node.marks ?? [])].reverse()) {
     const element = richTextMarkElement(mark);
     if (element) html = renderElement(element, html);
@@ -80,11 +79,5 @@ const renderNode = (node: RichTextNode, depth: number): string => {
   return element ? renderElement(element, inner) : inner;
 };
 
-/**
- * The document as an HTML string, for AI prompts, emails and feeds. It shares
- * the React renderer's allowlists - unsafe links and styles are dropped, every
- * text and attribute is escaped - and carries the same classes, so Tiptap can
- * parse it back and `.tiptap` styles it.
- */
 export const richTextToHtml = (doc: null | RichTextNode | undefined): string =>
   doc && typeof doc === "object" ? renderNode(doc, 0) : "";

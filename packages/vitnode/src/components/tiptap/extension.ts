@@ -27,7 +27,6 @@ export const createTipTapExtensions = ({
 }: {
   customEmojis?: EditorEmojiSection[];
   placeholder?: string;
-  /** `false` when something else owns the history - Yjs, in a shared document. */
   undoRedo?: boolean;
 } = {}): Extensions => [
   StarterKit.configure({

@@ -1765,7 +1765,7 @@ export const buildContentRoutes = <
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
       : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
-    ...(editorial && definition.liveEditing.enabled
+    ...(definition.liveEditing.enabled
       ? buildContentLiveRoutes(model, { pluginId })
       : []),
     // Mounted only for a content type that declares a file field, so nothing

@@ -1,6 +1,7 @@
 import type { EditorEmojiSection } from "@vitnode/core/components/editor-provider";
 import type { RichTextDocument } from "@vitnode/core/content/rich-text";
 
+import { richTextDocumentFromHtml } from "@vitnode/core/components/tiptap/rich-text-json";
 import {
   AiRequestError,
   requestAiAssist,
@@ -8,8 +9,6 @@ import {
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { CONFIG_PLUGIN } from "@/const";
-
-import { articleContentFromHtml } from "./content-html";
 
 export class ArticleAiError extends Error {
   constructor(status: number) {
@@ -62,7 +61,7 @@ export const translateArticleContent = async ({
 
   const { text } = await response.json();
 
-  return articleContentFromHtml(text, { customEmojis });
+  return richTextDocumentFromHtml(text, { customEmojis });
 };
 
 export const writeArticleExcerpt = async (input: {

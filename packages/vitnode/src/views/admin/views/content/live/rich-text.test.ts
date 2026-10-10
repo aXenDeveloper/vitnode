@@ -29,7 +29,6 @@ describe("createContentRichTextRegistry", () => {
     const polish = { replace: vi.fn() };
 
     registry.register("content", "pl", polish);
-    // Only once: a remount later does not write it again.
     registry.register("content", "pl", polish);
 
     expect(polish.replace).toHaveBeenCalledTimes(1);

@@ -78,7 +78,7 @@ const SuggestionCard = ({
 }) => {
   const t = useTranslations("@vitnode/blog.admin.article.editor.review");
   const [state, setState] = React.useState<SuggestionState>("idle");
-  const fix = suggestion.fix ?? null;
+  const { fix } = suggestion;
   const fixed = fix ? applyPassageFix(content, fix) : null;
 
   if (state === "applied" || state === "dismissed") {
@@ -134,7 +134,7 @@ const SuggestionCard = ({
         </>
       ) : null}
       <div className="-ms-2 flex flex-wrap gap-1">
-        {fix && state === "open" && fixed ? (
+        {state === "open" && fixed ? (
           <Button
             className="ms-2"
             onClick={() => {
@@ -229,9 +229,9 @@ export const ArticleAiReview = ({
       {review ? t("again") : t("run")}
     </Button>
   );
-  const high = review?.suggestions.filter(
-    item => item.priority === "high",
-  ).length;
+  const high = review
+    ? review.suggestions.filter(item => item.priority === "high").length
+    : 0;
 
   return (
     <div aria-live="polite" className="flex flex-col gap-5">
@@ -241,8 +241,8 @@ export const ArticleAiReview = ({
             {review.suggestions.length === 0
               ? t("nothing")
               : t("verdict", {
-                  high: high ?? 0,
-                  low: review.suggestions.length - (high ?? 0),
+                  high,
+                  low: review.suggestions.length - high,
                 })}
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed text-pretty">

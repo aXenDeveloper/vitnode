@@ -32,21 +32,12 @@ import {
   ContentLiveRichTextFieldContext,
   renderContentLiveCollaborativeEditor,
 } from "./rich-text-field";
+import { sameContentValue } from "./values";
 
-/**
- * How long a field keeps its lock after focus leaves it. A select or a picker
- * opens its list in a portal outside the field, and focus coming straight back
- * must not cost the lock - or a round trip.
- */
 export const CONTENT_FIELD_LOCK_BLUR_GRACE_MS = 1_500;
-
-const isRichText = (kind: string): boolean => kind === "richText";
 
 const isExpired = (lock: ContentFieldLock): boolean =>
   Date.parse(lock.expiresAt) <= Date.now();
-
-const same = (a: unknown, b: unknown): boolean =>
-  JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 const LockNotice = ({
   id,
@@ -88,18 +79,13 @@ const LiveField = ({
   const { autosave, session, spec } = live;
   const name = fieldSpec.name;
   const localized = fieldSpec.localized === true;
-  /** The language the field's own switcher shows, when it has one. */
   const [shown, setShown] = React.useState<null | string>(null);
   const locale = localized ? (pinned ?? shown ?? live.locale) : null;
-  // Rich text is co-edited through Yjs once the socket let this tab in, so
-  // everyone types in it at once and it takes no lock - and its shared
-  // document is its autosave. Without a socket it is a locked field.
-  const coEdited = isRichText(fieldSpec.kind) && live.coEditing;
+  const coEdited = fieldSpec.kind === "richText" && live.coEditing;
   const lockable = !coEdited;
 
   const [held, setHeld] = React.useState(false);
   const heldRef = React.useRef(false);
-  /** The language of the lock held: the switcher may have moved on since. */
   const heldLocaleRef = React.useRef<null | string>(null);
   const busyRef = React.useRef<Promise<void>>(Promise.resolve());
   const releaseTimerRef =
@@ -145,7 +131,6 @@ const LiveField = ({
 
       return;
     }
-    // Someone got there first: the list says who, so the field turns read-only.
     void session.refreshLocks();
   };
 
@@ -163,20 +148,16 @@ const LiveField = ({
     const result = await request("renew", heldLocaleRef.current);
     if (result.lock) return;
 
-    // The lease ran out and someone else took it, or it vanished.
     markHeld(false);
     if (focusedRef.current) await acquire();
     else void session.refreshLocks();
   };
 
-  // Timers and the unmount cleanup outlive the render that scheduled them, so
-  // they reach the lock through the latest render's functions.
   const actionsRef = React.useRef({ acquire, release, renew });
   React.useEffect(() => {
     actionsRef.current = { acquire, release, renew };
   });
 
-  /** One lock request at a time per field, in the order they were asked. */
   const run = (action: "acquire" | "release" | "renew") => {
     const task = async () => {
       await actionsRef.current[action]();
@@ -204,8 +185,6 @@ const LiveField = ({
     [],
   );
 
-  // Another language on the switcher is another lock: give the old one back
-  // and, still in the field, take the new one.
   React.useEffect(() => {
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the language moves inside the field's own switcher, which knows nothing of locks
     if (!heldRef.current || heldLocaleRef.current === locale) return;
@@ -214,12 +193,8 @@ const LiveField = ({
     if (focusedRef.current) run("acquire");
   }, [locale]);
 
-  // Autosave what this person types, while the field is theirs - from the
-  // first change after taking the lock, so merely visiting a field writes
-  // nothing.
   const valueKey = JSON.stringify(field.value ?? null);
   const baselineRef = React.useRef<null | string>(null);
-  /** The value when focus arrived, which can be before the lock did. */
   const focusValueRef = React.useRef<null | string>(null);
   const queueChange = React.useEffectEvent(() => {
     if (!held || !lockable) {
@@ -230,7 +205,6 @@ const LiveField = ({
     baselineRef.current ??= focusValueRef.current ?? valueKey;
     if (baselineRef.current === valueKey) return;
 
-    // Once changed, every later value goes out - reverting is a change too.
     baselineRef.current = "";
     const converted = contentFormFieldToApi(
       spec,
@@ -244,19 +218,11 @@ const LiveField = ({
     queueChange();
   }, [held, valueKey]);
 
-  // Everyone else's autosaves land in this field - never while it is ours.
   const applyDraft = React.useEffectEvent(
     (event: { locale: null | string; values: Record<string, unknown> }) => {
-      // A co-edited document arrives through Yjs, never through the draft.
       if (!lockable || !(name in event.values)) return;
       if (heldRef.current && event.locale === locale) return;
-      if (
-        fieldSpec.localized === true
-          ? event.locale === null
-          : event.locale !== null
-      ) {
-        return;
-      }
+      if (localized ? event.locale === null : event.locale !== null) return;
 
       const next = contentApiValueToFormField(
         fieldSpec,
@@ -264,7 +230,7 @@ const LiveField = ({
         field.value,
         event.locale,
       );
-      if (!same(next, field.value)) field.onChange(next);
+      if (!sameContentValue(next, field.value)) field.onChange(next);
     },
   );
 
@@ -375,12 +341,6 @@ const LiveField = ({
   );
 };
 
-/**
- * One form field inside a live session: focusing it takes the field's lock,
- * leaving it gives the lock back, and while someone else holds it the field is
- * read-only with their name beside it. Outside a live form it renders the
- * field untouched.
- */
 export const ContentLiveField = ({
   children,
   field,

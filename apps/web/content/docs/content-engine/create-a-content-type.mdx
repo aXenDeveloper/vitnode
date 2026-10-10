@@ -1,6 +1,6 @@
 ---
 title: First content type
-description: Build the example plugin's category content type with the VitNode Content Engine, from one TypeScript definition to a migrated table, an AdminCP screen, staff API routes and staff permissions.
+description: Build the example plugin's category content type with the VitNode Content Engine. One TypeScript definition gives you a migrated table, an AdminCP screen, staff API routes and staff permissions.
 icon: FileCode
 ---
 
@@ -118,7 +118,7 @@ export const exampleApiPlugin = () =>
   });
 ```
 
-The routes live under `/api/@vitnode/example/admin/content/category` and only answer staff signed in to the AdminCP. Keep the module named `admin`: the AdminCP session is checked on API paths that contain `/admin/`.
+The routes live under `/api/@vitnode/example/admin/content/category` and only answer staff signed in to the AdminCP. Keep the module named `admin`, because the API checks the AdminCP session on paths that contain `/admin/`.
 
 </Step>
 

@@ -73,8 +73,6 @@ const fileList = (
   return Array.isArray(value) ? value : [];
 };
 
-// The editor is the heaviest thing a form can render, so only a form with a
-// rich text field ever downloads it.
 const AutoFormEditor = React.lazy(async () =>
   import("@/components/form/fields/editor").then(module => ({
     default: module.AutoFormEditor,

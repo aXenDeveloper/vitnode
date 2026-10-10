@@ -2,15 +2,6 @@ import type { RichTextAttrs, RichTextMark, RichTextNode } from "./document";
 
 import { richTextToPlainText } from "./plain-text";
 
-/**
- * The renderer-neutral description of one node or mark: a tag, attributes,
- * inline styles and children, where {@link RICH_TEXT_SLOT} marks the place the
- * node's own content goes.
- *
- * Both renderers - React and the HTML string - walk the same description, so
- * a value that is refused here is refused everywhere. Attribute names are the
- * HTML ones (`class`, `colspan`); styles are camelCase, as React wants them.
- */
 export const RICH_TEXT_SLOT = 0;
 
 export type RichTextElementAttrValue = boolean | number | string;
@@ -27,7 +18,6 @@ export type RichTextElementChild =
   | string
   | typeof RICH_TEXT_SLOT;
 
-/** Tags that can never have children. */
 export const RICH_TEXT_VOID_TAGS: ReadonlySet<string> = new Set([
   "audio",
   "br",
@@ -37,10 +27,6 @@ export const RICH_TEXT_VOID_TAGS: ReadonlySet<string> = new Set([
   "input",
 ]);
 
-// ---------------------------------------------------------------------------
-// Allowlists
-// ---------------------------------------------------------------------------
-
 const SAFE_PROTOCOLS: ReadonlySet<string> = new Set([
   "http:",
   "https:",
@@ -48,16 +34,9 @@ const SAFE_PROTOCOLS: ReadonlySet<string> = new Set([
   "tel:",
 ]);
 
-// Control characters and whitespace are what browsers skip when they read a
-// scheme, so `java\tscript:` is still `javascript:` to them.
 // eslint-disable-next-line no-control-regex
 const IGNORED_IN_SCHEME = /[\u0000- \u007F-\u009F]/g;
 
-/**
- * A link target that is safe to put in `href`: `http:`, `https:`, `mailto:`,
- * `tel:`, a relative path or a fragment. Anything else - `javascript:`,
- * `data:`, `vbscript:` - is `null`.
- */
 export const sanitizeRichTextHref = (value: unknown): null | string => {
   if (typeof value !== "string") return null;
 
@@ -67,15 +46,12 @@ export const sanitizeRichTextHref = (value: unknown): null | string => {
   const compact = href.replace(IGNORED_IN_SCHEME, "");
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(compact)?.[1];
   if (scheme === undefined) {
-    // Protocol-relative `//host` is an absolute URL in disguise; it is fine,
-    // because it inherits `http:` or `https:` from the page.
     return href;
   }
 
   return SAFE_PROTOCOLS.has(`${scheme.toLowerCase()}:`) ? href : null;
 };
 
-/** A media source: `http:`, `https:` or relative. Never `data:` or `blob:`. */
 export const sanitizeRichTextSrc = (value: unknown): null | string => {
   const href = sanitizeRichTextHref(value);
   if (href === null) return null;
@@ -120,10 +96,6 @@ const PANEL_KINDS: ReadonlySet<string> = new Set([
 const CODE_LANGUAGE = /^[a-z0-9][\w#+.-]{0,31}$/i;
 
 const HEADING_LEVELS: ReadonlySet<number> = new Set([1, 2, 3, 4, 5, 6]);
-
-// ---------------------------------------------------------------------------
-// Nodes
-// ---------------------------------------------------------------------------
 
 const positiveInteger = (value: unknown): null | number =>
   typeof value === "number" && Number.isInteger(value) && value > 0
@@ -261,10 +233,6 @@ const emojiElement = (node: RichTextNode): RichTextElement => {
   return { attrs, children: [name === "" ? "" : `:${name}:`], tag: "span" };
 };
 
-/**
- * The element a node renders as, or `null` for a node this renderer does not
- * know - which then renders its children and nothing else.
- */
 export const richTextNodeElement = (
   node: RichTextNode,
 ): null | RichTextElement => {
@@ -381,10 +349,6 @@ export const richTextNodeElement = (
   }
 };
 
-// ---------------------------------------------------------------------------
-// Marks
-// ---------------------------------------------------------------------------
-
 const SIMPLE_MARKS: Readonly<Record<string, string>> = {
   bold: "strong",
   code: "code",
@@ -395,10 +359,6 @@ const SIMPLE_MARKS: Readonly<Record<string, string>> = {
   underline: "u",
 };
 
-/**
- * The element a mark wraps its text in, or `null` - for an unknown mark, and
- * for a link whose target was refused - which leaves the text as it is.
- */
 export const richTextMarkElement = (
   mark: RichTextMark,
 ): null | RichTextElement => {

@@ -49,7 +49,7 @@ delivery: {
 | `openGraph.titleField`           | text                     | Open Graph title, falls back to the page title               |
 | `openGraph.descriptionField`     | text, textarea, richText | Open Graph description, falls back to the page description   |
 
-Every field you name must also be in `publicApi.fields`, because the page shows it to anyone. Leave one out and the definition throws at startup with `... which is not in publicApi.fields`. A field inside a group works (`"seo.title"`), a field inside a repeatable does not, since a page has one title, not a list of them.
+Every field you name must also be in `publicApi.fields`, because the page shows it to anyone. Leave one out and the definition throws at startup with `... which is not in publicApi.fields`. A field inside a group works (`"seo.title"`). A field inside a repeatable does not, since a page has one title, not a list of them.
 
 Values are trimmed, and an empty one counts as missing, so the fallback kicks in. The blog uses that to describe posts that have no excerpt:
 
@@ -65,7 +65,7 @@ delivery: {
 
 `content` is rich text. The Content Engine turns it into plain text, and the page cuts it to 160 characters at a word boundary and adds `…`. No markup ever lands in a meta tag.
 
-The blog plugin's own article editor checks the fields this rule reads in its **SEO** sheet. The sheet belongs to the blog plugin, not to every Content Engine form. Here the post has no excerpt, so the **Excerpt** row is marked as missing: search results would fall back to the content.
+The blog plugin's own article editor checks the fields this rule reads in its **SEO** sheet. The sheet belongs to the blog plugin, not to every Content Engine form. Here the post has no excerpt, so the **Excerpt** row is marked as missing, and search results would fall back to the content.
 
 <ImgDocs
   withoutBackground
@@ -87,7 +87,7 @@ The page's `head` calls `contentDeliveryPageHead` with the resolve route's answe
 | `og:title`, `og:description`                | No                                          |
 
 <Callout type="warn">
-  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `example.article` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either: its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
+  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `example.article` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either, because its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
 </Callout>
 
 ## Hide a record from search engines
@@ -118,7 +118,7 @@ For a [localized](/docs/content-engine/localization) content type, the page head
 - A translation that is not published is not an alternate.
 - Delivery on a localized type needs `"id"` in `publicApi.fields`, because alternates are looked up by record id. The definition throws without it.
 
-`hreflang: { xDefault: "defaultLocale" }` adds `hreflang.xDefault` to the resolve route's answer, pointing at the record's default-language URL when that translation is published. It needs `localization`. The page head does not read this option: it adds its `x-default` link whenever the app's default language is among the alternates, with or without it. So the option matters when you read the resolve route yourself.
+`hreflang: { xDefault: "defaultLocale" }` adds `hreflang.xDefault` to the resolve route's answer, pointing at the record's default-language URL when that translation is published. It needs `localization`. The page head does not read this option. It adds its `x-default` link whenever the app's default language is among the alternates, with or without it, so the option only matters when you read the resolve route yourself.
 
 ```ts title="plugins/blog/src/content/post.ts"
 delivery: {
@@ -247,4 +247,4 @@ Then ask the resolve route what the page was given, `openGraph` and `robots` inc
 curl http://localhost:3000/api/@vitnode/example/content/articles/delivery/resolve/hello-content-engine
 ```
 
-Set `noIndex` on a test article, publish it, and run both commands again: the page gains the `robots` tag and the [sitemap](#sitemap) route stops listing it.
+Set `noIndex` on a test article, publish it, and run both commands again. The page gains the `robots` tag, and the [sitemap](#sitemap) route stops listing it.

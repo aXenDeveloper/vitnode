@@ -40,14 +40,6 @@ import { broadcastContentLive } from "./live/broadcast";
 import { resetContentLiveRecord } from "./live/hooks";
 import { identifier, jsonBody, jsonResponse, readJson } from "./route-helpers";
 
-/**
- * Field locks and the shared draft of one editorial content type: the HTTP
- * half of live editing. Every route needs `can_edit` - a lock or a draft is
- * the start of an edit, and a viewer has no business holding either.
- *
- * Mounted from `buildContentRoutes` for editorial content types only: a draft
- * is measured against the record's `version`, which only they have.
- */
 export const buildContentLiveRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,
@@ -62,7 +54,6 @@ export const buildContentLiveRoutes = <
 
   const { collectionFields, localizedFields, sharedFields } =
     partitionContentFields(definition.fields);
-  /** What a `null`-locale draft may carry: the same fields `update` takes. */
   const sharedWritable: ContentFieldMap = {
     ...sharedFields,
     ...collectionFields,
@@ -79,7 +70,6 @@ export const buildContentLiveRoutes = <
     itemId: id,
   });
 
-  /** The record, or a 404 - a lock on a record that is not there is nothing. */
   const findRecord = async (
     c: Context,
     id: number,
@@ -93,24 +83,14 @@ export const buildContentLiveRoutes = <
   };
 
   const editor = (c: Context): { id: number; name: string } => {
-    const admin = c.get("admin") as null | {
-      user?: { id?: unknown; name?: unknown };
-    };
-    const id = admin?.user?.id;
-    if (typeof id !== "number") {
+    const user = c.get("admin")?.user;
+    if (!user) {
       throw new HTTPException(401, { message: "Sign in to the AdminCP." });
     }
 
-    return {
-      id,
-      name: typeof admin?.user?.name === "string" ? admin.user.name : "",
-    };
+    return { id: user.id, name: user.name };
   };
 
-  /**
-   * The canonical spelling of a language the record can be written in, or a
-   * 400. A disabled language is read-only, so it takes no lock and no draft.
-   */
   const resolveLocale = async (c: Context, locale: string): Promise<string> => {
     const language = await findContentLanguage(c, locale);
     if (!language?.isEnabled) {
@@ -120,10 +100,6 @@ export const buildContentLiveRoutes = <
     return language.locale;
   };
 
-  /**
-   * Which language a field is locked or drafted in: `null` for a shared field,
-   * a real language for a localized one. Anything else is a 400.
-   */
   const scopeOf = async (
     c: Context,
     field: string,
@@ -280,8 +256,6 @@ export const buildContentLiveRoutes = <
       const user = editor(c);
       const names = Object.keys(body.values);
 
-      // Scope first: a localized field only with a locale, a shared field only
-      // without one - the two live in different drafts.
       const scope = body.locale === null ? sharedWritable : localizedFields;
       const outOfScope = names.filter(field => scope[field] === undefined);
       if (outOfScope.length > 0 || (body.locale !== null && !localized)) {
@@ -329,8 +303,6 @@ export const buildContentLiveRoutes = <
         );
       }
 
-      // Measured against what the draft was written on, so the cleanup job can
-      // tell a draft the record has since moved past from live work.
       const baseVersion =
         locale === null
           ? typeof record.version === "number"

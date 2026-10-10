@@ -24,18 +24,10 @@ import {
   encodeContentLiveBytes,
 } from "./messages";
 
-/** Where documents live between sessions. The database in production. */
 export interface ContentDocumentStore {
-  /**
-   * Reserve the right to seed an empty document. Atomic across instances: only
-   * one wins until the seed is stored or the claim goes stale.
-   */
   claimSeed: (doc: ContentLiveDocRef) => Promise<boolean>;
-  /** Delete every document of one record. */
   deleteRecord: (room: ContentLiveRoomRef) => Promise<void>;
-  /** The stored state, or `null` when there is none (or only a seed claim). */
   load: (doc: ContentLiveDocRef) => Promise<null | Uint8Array>;
-  /** Give up a seed claim nobody used, so another instance can seed. */
   releaseSeed: (doc: ContentLiveDocRef) => Promise<void>;
   save: (
     doc: ContentLiveDocRef,
@@ -46,9 +38,7 @@ export interface ContentDocumentStore {
 
 export type ContentDocumentResult = "INVALID_MESSAGE" | "NOT_JOINED" | "ok";
 
-/** Marks updates that came from another instance, so they are not relayed again. */
 const REMOTE_ORIGIN = Symbol("content-live-remote");
-/** Marks awareness changes the server makes itself (a member that left). */
 const SERVER_ORIGIN = Symbol("content-live-server");
 
 interface DocMember<TConnection> {
@@ -59,12 +49,10 @@ interface DocMember<TConnection> {
 interface LoadedDoc<TConnection> {
   awareness: Awareness;
   baseVersion: null | number;
-  /** This instance holds the seed claim of the (still empty) document. */
   claimed: boolean;
   dirty: boolean;
   doc: Y.Doc;
   members: Map<string, DocMember<TConnection>>;
-  /** Nothing is stored and nobody has typed yet: a client must seed it. */
   needsSeed: boolean;
   persistTimer: ReturnType<typeof setTimeout> | undefined;
   ref: ContentLiveDocRef;
@@ -103,32 +91,15 @@ const asRelayedUpdate = (
   return { type, update };
 };
 
-/**
- * The collaborative rich text documents loaded on this instance: one `Y.Doc`
- * and one `Awareness` per document, loaded on the first open and unloaded
- * (after a last persist) when the last local member closes it.
- *
- * Updates are applied here, relayed to the document's room on every instance,
- * and persisted after `persistMs` of quiet. Other instances apply the same
- * relayed updates to their own copy through {@link applyRemote}.
- */
 export const createContentDocuments = <TConnection>({
   join,
   leave,
-  maxUpdateBytes = CONTENT_LIVE_MAX_UPDATE_BYTES,
-  persistMs = CONTENT_DOCUMENT_PERSIST_MS,
   relay,
   send,
 }: {
-  /** Add the member to the document's registry room. */
   join: (connection: TConnection, room: string, clientId: string) => void;
-  /** Remove the member from the document's registry room. */
   leave: (connection: TConnection, room: string, clientId: string) => void;
-  maxUpdateBytes?: number;
-  persistMs?: number;
-  /** Deliver to everyone in a document room, on every instance. */
   relay: (room: string, message: ContentLiveServerMessage) => void;
-  /** Deliver to one socket. */
   send: (connection: TConnection, message: ContentLiveServerMessage) => void;
 }) => {
   const docs = new Map<string, LoadedDoc<TConnection>>();
@@ -172,7 +143,6 @@ export const createContentDocuments = <TConnection>({
       if (state && state.byteLength > 0) Y.applyUpdate(doc, state);
 
       const awareness = new Awareness(doc);
-      // The server is a relay, not a peer: it has no caret of its own.
       awareness.setLocalState(null);
       unrefTimer(awareness._checkInterval);
 
@@ -208,7 +178,6 @@ export const createContentDocuments = <TConnection>({
   const persist = async (entry: LoadedDoc<TConnection>): Promise<void> => {
     clearTimeout(entry.persistTimer);
     entry.persistTimer = undefined;
-    // An empty document is never stored: it would read back as "seeded".
     if (!entry.dirty || isEmptyDoc(entry.doc)) return;
 
     entry.dirty = false;
@@ -229,7 +198,7 @@ export const createContentDocuments = <TConnection>({
     clearTimeout(entry.persistTimer);
     entry.persistTimer = setTimeout(() => {
       void persist(entry);
-    }, persistMs);
+    }, CONTENT_DOCUMENT_PERSIST_MS);
     unrefTimer(entry.persistTimer);
   };
 
@@ -247,7 +216,6 @@ export const createContentDocuments = <TConnection>({
     entry.seeder = null;
   };
 
-  /** Ask one local member to fill the empty document from the record. */
   const pickSeeder = async (entry: LoadedDoc<TConnection>): Promise<void> => {
     if (!entry.needsSeed || entry.seeder !== null) return;
     if (entry.members.size === 0) return;
@@ -259,7 +227,6 @@ export const createContentDocuments = <TConnection>({
         logError("Content document seed claim error:", error);
       }
     }
-    // The claim was awaited: someone may have seeded or picked meanwhile.
     if (!entry.claimed || !entry.needsSeed || entry.seeder !== null) return;
 
     const [first] = entry.members;
@@ -284,7 +251,7 @@ export const createContentDocuments = <TConnection>({
   const decode = (value: string): null | Uint8Array => {
     const bytes = decodeContentLiveBytes(value);
 
-    return bytes.byteLength > maxUpdateBytes ? null : bytes;
+    return bytes.byteLength > CONTENT_LIVE_MAX_UPDATE_BYTES ? null : bytes;
   };
 
   const closeEntry = async (
@@ -320,7 +287,6 @@ export const createContentDocuments = <TConnection>({
     if (entry.members.size > 0) return;
 
     await persist(entry);
-    // Someone may have opened it while the state was being written.
     if (entry.members.size > 0) return;
 
     if (entry.claimed && entry.needsSeed) {
@@ -335,7 +301,6 @@ export const createContentDocuments = <TConnection>({
   };
 
   return {
-    /** Apply a document message another instance relayed. */
     applyRemote: (room: string, data: unknown): void => {
       const entry = docs.get(room);
       const message = asRelayedUpdate(data);
@@ -346,8 +311,6 @@ export const createContentDocuments = <TConnection>({
         if (message.type === "doc:update") {
           Y.applyUpdate(entry.doc, bytes, REMOTE_ORIGIN);
           markSeeded(entry);
-          // Kept dirty here too: if the instance that took the update dies
-          // before writing it, this copy still reaches the database.
           schedulePersist(entry);
         } else if (message.type === "doc:awareness") {
           applyAwarenessUpdate(entry.awareness, bytes, REMOTE_ORIGIN);
@@ -386,7 +349,6 @@ export const createContentDocuments = <TConnection>({
 
       return "ok";
     },
-    /** Close one member's document. Unloads it after the last local member. */
     close: async ({
       clientId,
       connection,
@@ -399,7 +361,6 @@ export const createContentDocuments = <TConnection>({
       const entry = memberOf(doc, clientId, connection);
       if (entry) await closeEntry(entry, clientId);
     },
-    /** Close every document of a record one member has open. */
     closeClient: async (
       room: ContentLiveRoomRef,
       clientId: string,
@@ -412,7 +373,6 @@ export const createContentDocuments = <TConnection>({
         entries.map(async entry => await closeEntry(entry, clientId)),
       );
     },
-    /** Close a member's document by its registry room name (a closed socket). */
     closeRoom: async (
       room: string,
       clientId: string,
@@ -423,15 +383,6 @@ export const createContentDocuments = <TConnection>({
         await closeEntry(entry, clientId);
       }
     },
-    /** Write every dirty document now. */
-    flush: async (): Promise<void> => {
-      await Promise.all(
-        [...docs.values()].map(async entry => await persist(entry)),
-      );
-    },
-    isOpen: (doc: ContentLiveDocRef, clientId: string): boolean =>
-      docs.get(contentLiveDocRoom(doc))?.members.has(clientId) ?? false,
-    /** The loaded copy of a document, for tests and diagnostics. */
     loaded: (doc: ContentLiveDocRef): undefined | Y.Doc =>
       docs.get(contentLiveDocRoom(doc))?.doc,
     open: async ({
@@ -467,7 +418,6 @@ export const createContentDocuments = <TConnection>({
         vector.byteLength > 0 ? vector : undefined,
       );
 
-      // The tab moved to another socket (the browser elected a new leader).
       const previous = entry.members.get(clientId);
       if (previous && previous.connection !== connection) {
         leave(previous.connection, entry.room, clientId);
@@ -508,7 +458,6 @@ export const createContentDocuments = <TConnection>({
 
       return "ok";
     },
-    /** Throw away a record's loaded documents without writing them. */
     resetRecord: (room: ContentLiveRoomRef): void => {
       for (const entry of [...docs.values()]) {
         if (!sameContentLiveRoom(entry.ref, room)) continue;
@@ -519,7 +468,6 @@ export const createContentDocuments = <TConnection>({
         unload(entry);
       }
     },
-    /** Pick a seeder for empty documents whose claim was taken elsewhere. */
     retrySeeding: async (): Promise<void> => {
       await Promise.all(
         [...docs.values()].map(async entry => await pickSeeder(entry)),
@@ -562,7 +510,3 @@ export const createContentDocuments = <TConnection>({
     },
   };
 };
-
-export type ContentDocuments<TConnection> = ReturnType<
-  typeof createContentDocuments<TConnection>
->;

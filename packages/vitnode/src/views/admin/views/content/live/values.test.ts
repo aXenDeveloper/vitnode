@@ -37,7 +37,6 @@ describe("overlayContentDrafts", () => {
     expect(overlaid.translations).toEqual([
       { locale: "en", values: { body: "Body", title: "Hello" } },
       { locale: "pl", values: { body: "Treść", title: "Cześć" } },
-      // A language drafted before it was ever saved.
       { locale: "de", values: { title: "Hallo" } },
     ]);
   });

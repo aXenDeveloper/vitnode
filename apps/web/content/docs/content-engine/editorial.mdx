@@ -91,7 +91,7 @@ Each editorial write raises the record's `version` by one and succeeds only when
 }
 ```
 
-The AdminCP sends the version for you. Your own calls to the edit routes must send it too: `PUT /{id}` takes `{ "expectedVersion": 3, "values": { "title": "…" } }` and `DELETE /{id}` takes `{ "expectedVersion": 3 }`. In server code, `articleContent.editorialService` does the same check; see [Write the way the AdminCP does](/docs/content-engine/services#write-the-way-the-admincp-does). A translation has its own version and fails with `CONTENT_TRANSLATION_VERSION_CONFLICT`.
+The AdminCP sends the version for you. Your own calls to the edit routes must send it too: `PUT /{id}` takes `{ "expectedVersion": 3, "values": { "title": "…" } }` and `DELETE /{id}` takes `{ "expectedVersion": 3 }`. In server code, `articleContent.editorialService` does the same check; see the [Feature this article example](/docs/content-engine/services#example-3-a-feature-this-article-button). A translation has its own version and fails with `CONTENT_TRANSLATION_VERSION_CONFLICT`.
 
 ## Preview links
 
@@ -104,7 +104,7 @@ A preview link lets a reviewer read a draft without signing in. In the AdminCP, 
   alt="Preview link dialog with a signed link to the Spring menu launches Monday article, a copy button, an Open button and an Expires in 30 minutes note"
 />
 
-The link is HMAC-signed, expires after `expiresInMinutes` (15 by default, 1 to 1440) and cannot be revoked early, so treat it like a password. It is pinned to the last saved version: it shows what **Save** committed, not unsaved [live editing](/docs/content-engine/live-editing) drafts.
+The link is HMAC-signed, expires after `expiresInMinutes` (15 by default, 1 to 1440) and cannot be revoked early, so treat it like a password. It is pinned to the last saved version, so it shows what **Save** committed, not unsaved [live editing](/docs/content-engine/live-editing) drafts.
 
 The link points to the first of these that exists:
 

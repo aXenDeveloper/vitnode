@@ -242,8 +242,6 @@ describe("the generated permission matrix", () => {
     // because one Save button writes one record.
     "PUT /{id}/localized": "can_edit",
     "PUT /{id}/translations/{locale}": "can_edit",
-    // Live editing: a lock or an autosaved draft is the start of an edit, so a
-    // viewer can neither hold one nor read the team's unsaved working copy.
     "GET /{id}/draft": "can_edit",
     "GET /{id}/locks": "can_edit",
     "POST /{id}/draft/discard": "can_edit",

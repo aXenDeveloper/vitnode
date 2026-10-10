@@ -1,6 +1,6 @@
 ---
 title: Fields
-description: Reference for every Content Engine field helper, from field.text to field.blocks, with its options, defaults, Postgres column and AdminCP form control.
+description: Reference for every Content Engine field helper, such as field.text, field.relation and field.blocks, with its options, defaults, Postgres column and AdminCP form control.
 icon: LayoutGrid
 ---
 
@@ -63,7 +63,7 @@ The second half holds the references: a user picker, two file dropzones and a re
 | `field.repeatable()` | A child table                                | A list of rows you can add, move, remove | No                 |
 | `field.blocks()`     | `jsonb`, `NOT NULL DEFAULT '[]'`             | Not in the form; edited as widgets       | Yes                |
 
-`user`, `file` and `relation` with `multiple: true` store their values in a junction table instead of a column. Localized fields live in the translation table, see [Translations](/docs/content-engine/localization).
+`user`, `file` and `relation` with `multiple: true` store their values in a junction table instead of a column. Localized fields live in the translation table. See [Translations](/docs/content-engine/localization).
 
 ## Shared options
 
@@ -170,7 +170,7 @@ slug: field.slug({ source: "title" }),
 | `localized`   | `boolean`            | No       | `false` | One slug per language                                      |
 | `description` | `string`             | No       |         | Shown under the input                                      |
 
-A slug has no `required` or `nullable` option: it is required when there is no `source`, and it is never empty. Every value is normalized, so `"Weekend Pancakes!"` becomes `weekend-pancakes`, and it is unique across the table (within each language when localized). The slug is derived only on create, so renaming the title later keeps the old URL. `source` must name a `field.text()`, and a localized slug needs a localized source.
+A slug has no `required` or `nullable` option. It is required when there is no `source`, and it is never empty. Every value is normalized, so `"Weekend Pancakes!"` becomes `weekend-pancakes`. Slugs are unique across the table, or within each language when localized. The slug is derived only on create, so renaming the title later keeps the old URL. `source` must name a `field.text()`, and a localized slug needs a localized source.
 
 ## User
 
@@ -211,7 +211,7 @@ gallery: field.file({ multiple: true, min: 1, max: 8, maxBytes: 5 * 1024 * 1024 
 
 A single file field is nullable unless you set `required: true`, and it cannot have a default or be localized. Translate a caption or alt text in a separate localized text field instead. Uploads go through the [storage](/docs/dev/storage) adapter and land in `core_files`. A file in use cannot be deleted, because the reference is `ON DELETE RESTRICT`.
 
-The public API returns a file as `{ id, name, url, mimeType, size, width, height }`, never as a raw id. A write may only point at a file uploaded for this content type, uploaded by the signed-in user, or already on the record. Anything else is refused with `CONTENT_FILE_NOT_FOUND`.
+The public API returns a file as `{ id, name, url, mimeType, size, width, height }`, never as a raw id. A write may only point at a file uploaded for this content type, uploaded by the signed-in user, or already on the record. The API refuses anything else with `CONTENT_FILE_NOT_FOUND`.
 
 ## Relation
 
@@ -283,7 +283,7 @@ content: field.blocks({ allowed: ["core:*", "example:callout", "example:features
 | `localized`   | `boolean`           | No       | `false` | Each language gets its own blocks              |
 | `description` | `string`            | No       |         |                                                |
 
-`field.widgets()` is the same helper under another name. A blocks field is never required or nullable: no blocks is an empty list. It does not appear in the AdminCP form. Editors place widgets on the page itself, as described in [The blocks() field](/docs/dev/widgets/blocks-field).
+`field.widgets()` is the same helper under another name. A blocks field is never required or nullable. No blocks means an empty list. It does not appear in the AdminCP form. Editors place widgets on the page itself, as described in [The blocks() field](/docs/dev/widgets/blocks-field).
 
 ## AI suggestions
 
@@ -304,7 +304,7 @@ excerpt: field.textarea({
 | Name           | Type                      | Required | Default | Description                                                            |
 | -------------- | ------------------------- | -------- | ------- | ---------------------------------------------------------------------- |
 | `action`       | `"<pluginId>:<actionId>"` | Yes      |         | A registered AI action                                                 |
-| `mode`         | `"suggestion"`            | Yes      |         | The only supported mode: the editor reviews the text before it is used |
+| `mode`         | `"suggestion"`            | Yes      |         | The only supported mode. The editor reviews the text before it is used |
 | `sourceFields` | `string[]`                | Yes      |         | Other fields of this content type sent to the action as input          |
 
 [AI in fields and the editor](/docs/dev/ai/fields-and-editor) shows how to write the action.

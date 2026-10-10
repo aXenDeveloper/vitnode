@@ -128,7 +128,6 @@ describe("zodRichTextDocument", () => {
     const schema = createRichTextDocumentSchema({ maxBytes: 200 });
 
     expect(schema.safeParse(paragraph("a".repeat(60))).success).toBe(true);
-    // The same 60 characters, 240 bytes.
     expect(schema.safeParse(paragraph("😀".repeat(30))).success).toBe(false);
   });
 
@@ -151,7 +150,6 @@ describe("zodRichTextDocument", () => {
 
   it("can be described as JSON Schema, which AutoForm and OpenAPI need", () => {
     expect(() => z.toJSONSchema(zodRichTextDocument)).not.toThrow();
-    // A request body is documented by its shallow envelope.
     expect(z.toJSONSchema(zodRichTextDocument, { io: "input" })).toMatchObject({
       properties: { type: { const: "doc" } },
       type: "object",

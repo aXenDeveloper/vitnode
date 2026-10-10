@@ -13,16 +13,10 @@ import { contentLiveRoom } from "@/content/live/protocol";
 import { findContentLanguage } from "@/content/server/language-resolver";
 import { findContentModel } from "@/content/server/model";
 
-/** How long a socket keeps a positive authorization for one room. */
-export const CONTENT_LIVE_AUTH_TTL_MS = 60_000;
+const CONTENT_LIVE_AUTH_TTL_MS = 60_000;
 
-/**
- * The field kind edited collaboratively. Compared as a string: the kind is
- * declared by the rich text field, not by the live layer.
- */
-export const CONTENT_LIVE_DOCUMENT_FIELD_KIND = "richText";
+const CONTENT_LIVE_DOCUMENT_FIELD_KIND = "richText";
 
-/** What presence shows about an editor. */
 export interface ContentLiveUser {
   avatarColor: null | string;
   id: number;
@@ -35,12 +29,10 @@ export type ContentLiveAuthorization =
   | {
       ok: true;
       user: ContentLiveUser;
-      /** The record's version when it was checked, `null` if it has none. */
       version: null | number;
     };
 
-/** A live-edited content type registered on this install, or `undefined`. */
-export const findLiveContentType = (
+const findLiveContentType = (
   c: Context,
   contentTypeId: string,
 ): RegisteredContentType | undefined =>
@@ -58,14 +50,6 @@ const versionOf = (row: object): null | number => {
   return typeof version === "number" ? version : null;
 };
 
-/**
- * Whether the socket's AdminCP session may edit one record live.
- *
- * The socket only carries the user session on `c`, so the AdminCP session is
- * resolved here from its cookie (it has `path=/` and rides the upgrade
- * request). The permission check takes that user explicitly: `c.get("admin")`
- * is never written, so nothing leaks into the next message on the socket.
- */
 export const authorizeContentLive = async (
   c: Context,
   room: ContentLiveRoomRef,
@@ -102,11 +86,6 @@ export const authorizeContentLive = async (
   };
 };
 
-/**
- * Remembers a positive authorization per socket and room for `ttlMs`, so a
- * keystroke does not cost a session lookup, while a revoked editor still loses
- * the room within a minute. Failures are never cached.
- */
 export const createContentLiveAuthCache = ({
   authorize = authorizeContentLive,
   now = Date.now,
@@ -150,11 +129,6 @@ export const createContentLiveAuthCache = ({
   };
 };
 
-/**
- * Whether a document reference names a collaborative field of the content
- * type, in a locale that exists when the field is localized and with no
- * locale when it is not.
- */
 export const isContentLiveDocValid = async (
   c: Context,
   doc: ContentLiveDocRef,
@@ -173,7 +147,5 @@ export const isContentLiveDocValid = async (
   if (!localized) return doc.locale === null;
   if (doc.locale === null) return false;
 
-  // Exact, not case-insensitive: the locale is part of the document's room, so
-  // "EN" and "en" would otherwise be two documents of one field.
   return (await findContentLanguage(c, doc.locale))?.locale === doc.locale;
 };

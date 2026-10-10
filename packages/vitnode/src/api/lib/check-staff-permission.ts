@@ -226,11 +226,6 @@ export const getStaffFlags = async (
   };
 };
 
-/**
- * {@link checkStaffPermission} for a user the caller resolved itself, such as a
- * socket that resolves its AdminCP session per message. Reads nothing from
- * `c.get("admin")` or `c.get("user")`.
- */
 export const checkStaffPermissionOfUser = async (
   c: Context,
   user: StaffUser,

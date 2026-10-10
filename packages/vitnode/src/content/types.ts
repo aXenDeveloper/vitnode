@@ -127,7 +127,6 @@ export interface ContentRichTextField<
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "richText";
   localized: TLocalized;
-  /** Largest serialized document, in bytes. Defaults to 1 MB. */
   maxBytes?: number;
 }
 
@@ -1195,7 +1194,6 @@ export type ContentOptionEnabled<TOption> = [TOption] extends [object | true]
   ? true
   : false;
 
-/** Whether a `search` argument opted in, by being present. */
 export type ContentSearchEnabled<TSearch> = ContentOptionEnabled<TSearch>;
 
 /**

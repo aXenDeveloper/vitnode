@@ -129,7 +129,6 @@ const sentOf = <TType extends ContentLiveClientMessage["type"]>(
       message.type === type,
   );
 
-/** What the server holds: everything the editor sent, applied in order. */
 const serverCopy = () => {
   const copy = new Y.Doc();
   for (const message of sentOf("doc:update")) {
@@ -156,7 +155,6 @@ const mount = (value: null | RichTextDocument) => {
   );
   act(() => sockets[0]?.open());
 
-  /** The server's answer to the open: nothing stored yet. */
   const answerOpen = async () => {
     act(() => {
       sockets[0]?.push({
@@ -195,7 +193,6 @@ describe("ContentLiveRichTextEditor", () => {
 
     await answerOpen();
 
-    // Yjs is the source: the record shows only once the server says so.
     expect(screen.getByRole("textbox").textContent).not.toContain(
       "From the record",
     );
@@ -226,7 +223,6 @@ describe("ContentLiveRichTextEditor", () => {
       "From the record",
     );
 
-    // Asked again, it has already seeded.
     act(() => {
       sockets[0]?.push({ clientId: ME.clientId, doc, type: "doc:seed" });
     });
@@ -285,7 +281,6 @@ describe("ContentLiveRichTextEditor", () => {
     const { answerOpen, live, view } = mount(null);
     await answerOpen();
 
-    // The socket outlives the form: only the editor goes.
     view.rerender(<VitNodeWebSocketProvider>{null}</VitNodeWebSocketProvider>);
 
     expect(sentOf("doc:close")).toEqual([

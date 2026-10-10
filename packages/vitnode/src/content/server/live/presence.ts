@@ -8,7 +8,6 @@ import {
   contentLiveRoom,
 } from "@/content/live/protocol";
 
-/** One instance's members of one record room, as it tells the others. */
 export interface ContentLivePresenceSnapshot {
   members: ContentLiveMember[];
   room: ContentLiveRoomRef;
@@ -21,27 +20,14 @@ export interface ContentLiveLocalMember<TConnection> {
   room: ContentLiveRoomRef;
 }
 
-/**
- * Who is in which record, on this instance and on the others.
- *
- * Local members are keyed by `clientId` (one per browser tab) and expire when
- * their heartbeats stop. Members of other instances arrive as snapshots, one
- * per instance and room, and expire when that instance stops refreshing them,
- * so a crashed instance cannot leave ghosts behind. Every change is delivered
- * to this instance's sockets as the union of both.
- */
 export const createContentLivePresence = <TConnection>({
   deliver,
   now = Date.now,
   publish,
-  timeoutMs = CONTENT_LIVE_MEMBER_TIMEOUT_MS,
 }: {
-  /** Send the room's member list to the sockets of this instance. */
   deliver: (room: ContentLiveRoomRef, members: ContentLiveMember[]) => void;
   now?: () => number;
-  /** Tell the other instances who is in a room here. */
   publish: (snapshot: ContentLivePresenceSnapshot) => void;
-  timeoutMs?: number;
 }) => {
   const refs = new Map<string, ContentLiveRoomRef>();
   const local = new Map<
@@ -105,7 +91,6 @@ export const createContentLivePresence = <TConnection>({
   };
 
   return {
-    /** Apply another instance's snapshot. Returns whether that instance is new to the room. */
     applyRemote: (
       origin: string,
       { members, room }: ContentLivePresenceSnapshot,
@@ -122,7 +107,10 @@ export const createContentLivePresence = <TConnection>({
         if (instances.size === 0) remote.delete(key);
       } else {
         refs.set(key, room);
-        instances.set(origin, { expiresAt: now() + timeoutMs, members });
+        instances.set(origin, {
+          expiresAt: now() + CONTENT_LIVE_MEMBER_TIMEOUT_MS,
+          members,
+        });
         remote.set(key, instances);
       }
 
@@ -131,7 +119,6 @@ export const createContentLivePresence = <TConnection>({
 
       return isNew && members.length > 0;
     },
-    /** Update the field and language a member is in. `false` if it is not here. */
     focus: (
       room: ContentLiveRoomRef,
       clientId: string,
@@ -155,12 +142,10 @@ export const createContentLivePresence = <TConnection>({
       clientId: string,
     ): ContentLiveLocalMember<TConnection> | undefined =>
       local.get(contentLiveRoom(room))?.get(clientId),
-    /** Whether `userId` still has a member (tab) in the room on this instance. */
     hasUser: (room: ContentLiveRoomRef, userId: number): boolean =>
       [...(local.get(contentLiveRoom(room))?.values() ?? [])].some(
         entry => entry.member.userId === userId,
       ),
-    /** Keep a member alive. `false` if it is not here. */
     heartbeat: (room: ContentLiveRoomRef, clientId: string): boolean => {
       const entry = local.get(contentLiveRoom(room))?.get(clientId);
       if (!entry) return false;
@@ -168,7 +153,6 @@ export const createContentLivePresence = <TConnection>({
 
       return true;
     },
-    /** Add or replace a member. Returns the room's members afterwards. */
     join: ({
       connection,
       member,
@@ -194,14 +178,9 @@ export const createContentLivePresence = <TConnection>({
 
       return membersOf(room);
     },
-    /** Every local member, for a socket that closed. */
     localMembers: (): ContentLiveLocalMember<TConnection>[] =>
       [...local.values()].flatMap(members => [...members.values()]),
     membersOf,
-    /**
-     * Re-send this instance's snapshot of every room it has members in, or of
-     * one room only.
-     */
     refresh: (only?: ContentLiveRoomRef): void => {
       const onlyKey = only ? contentLiveRoom(only) : undefined;
       for (const [key, members] of local) {
@@ -219,17 +198,13 @@ export const createContentLivePresence = <TConnection>({
       clientId: string,
     ): ContentLiveLocalMember<TConnection> | undefined =>
       removeLocal(contentLiveRoom(room), clientId),
-    /**
-     * Drop local members whose heartbeats stopped and other instances'
-     * snapshots that were not refreshed. Returns the local members removed.
-     */
     sweep: (): ContentLiveLocalMember<TConnection>[] => {
       const at = now();
       const removed: ContentLiveLocalMember<TConnection>[] = [];
 
       for (const [key, members] of [...local]) {
         for (const [clientId, entry] of [...members]) {
-          if (at - entry.lastSeen < timeoutMs) continue;
+          if (at - entry.lastSeen < CONTENT_LIVE_MEMBER_TIMEOUT_MS) continue;
           const gone = removeLocal(key, clientId);
           if (gone) removed.push(gone);
         }
@@ -253,7 +228,3 @@ export const createContentLivePresence = <TConnection>({
     },
   };
 };
-
-export type ContentLivePresence<TConnection> = ReturnType<
-  typeof createContentLivePresence<TConnection>
->;

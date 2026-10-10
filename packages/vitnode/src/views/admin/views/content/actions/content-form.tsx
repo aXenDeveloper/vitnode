@@ -145,7 +145,7 @@ export const ContentForm = ({
 
   if (loaded === null || pendingRow) return skeleton;
 
-  if (row && spec.liveEditing === true) {
+  if (row && spec.liveEditing) {
     return (
       <ContentLiveRoot
         data={row}
@@ -190,7 +190,6 @@ const ContentFormFields = ({
   title,
   translations = [],
 }: ContentFormProps & {
-  /** The shared draft the form opens on, when the record is edited live. */
   live?: ContentLiveFormState;
 }) => {
   const t = useTranslations("core.content");
@@ -241,8 +240,6 @@ const ContentFormFields = ({
   const values = React.useMemo(() => {
     if (!data || !drafts) return contentFormInitialValues(spec, data, opened);
 
-    // The draft only changes what the form opens on. `data` and `opened` stay
-    // the committed record, so Save still sees every drafted value as a change.
     const overlaid = overlayContentDrafts(data, opened, drafts, draftLabels);
 
     return contentFormInitialValues(spec, overlaid.data, overlaid.translations);
@@ -467,7 +464,6 @@ const ContentFormFields = ({
       component: props => {
         const Override = fieldOverrides[fieldSpec.name];
 
-        // A no-op outside a live session; inside one it holds the field's lock.
         return (
           <ContentLiveField field={props.field} fieldSpec={fieldSpec}>
             {Override ? (

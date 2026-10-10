@@ -283,7 +283,6 @@ describe("useContentLiveSession", () => {
       const { transport, view } = mount();
       act(() => sockets[0]?.open());
 
-      // The socket outlives the form: only the form unmounts.
       view.rerender(
         <ContentFormTransportProvider value={transport}>
           <VitNodeWebSocketProvider>{null}</VitNodeWebSocketProvider>
@@ -316,7 +315,6 @@ describe("useContentLiveSession", () => {
           room: ROOM,
           type: "error",
         });
-        // A second refusal while the join is on its way asks for nothing more.
         sockets[0]?.push({
           clientId,
           code: "NOT_JOINED",

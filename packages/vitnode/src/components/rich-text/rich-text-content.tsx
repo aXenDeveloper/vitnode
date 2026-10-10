@@ -16,16 +16,13 @@ import {
 } from "@/content/rich-text/elements";
 
 export interface RichTextNodeRendererProps {
-  /** The node's content, already rendered. */
   children?: React.ReactNode;
   node: RichTextNode;
 }
 
 export interface RichTextMarkRendererProps {
-  /** The text, with every inner mark already applied. */
   children?: React.ReactNode;
   mark: RichTextMark;
-  /** The text node the mark is on. */
   node: RichTextNode;
 }
 
@@ -40,9 +37,7 @@ export type RichTextMarkRenderer = (
 export interface RichTextContentProps {
   className?: string;
   content: null | RichTextDocument | undefined;
-  /** Renderers by mark type. They replace the built-in one for that type. */
   marks?: Readonly<Record<string, RichTextMarkRenderer>>;
-  /** Renderers by node type. They replace the built-in one for that type. */
   nodes?: Readonly<Record<string, RichTextNodeRenderer>>;
 }
 
@@ -54,8 +49,6 @@ interface RenderContext {
 const MAX_DEPTH = 256;
 
 const REACT_PROP_NAMES: Readonly<Record<string, string>> = {
-  // Uncontrolled on purpose: a task checkbox is a read-only picture of the
-  // document, and a controlled `checked` with no `onChange` is a React warning.
   checked: "defaultChecked",
   class: "className",
   colspan: "colSpan",
@@ -77,8 +70,6 @@ const renderElement = (
     return React.createElement(element.tag, props);
   }
 
-  // Passed as arguments rather than as one array: an element's own children
-  // are a fixed shape, never a list, so they need no keys.
   const children: React.ReactNode[] = [];
   for (const child of element.children ?? []) {
     if (child === RICH_TEXT_SLOT) children.push(slot);
@@ -96,7 +87,6 @@ const renderText = (
 ): React.ReactElement => {
   let content: React.ReactNode = typeof node.text === "string" ? node.text : "";
 
-  // The first mark is the outermost, as ProseMirror serializes it.
   for (const mark of [...(node.marks ?? [])].reverse()) {
     const Override = context.marks?.[mark.type];
     if (Override) {
@@ -148,12 +138,6 @@ const renderNode = (
   );
 };
 
-/**
- * Renders a rich text document to React - on the server and in the browser -
- * without Tiptap, ProseMirror or Yjs. Unknown nodes render their content, and
- * unknown marks render plain text. Links, media sources and styles go through
- * the same allowlists as `richTextToHtml`.
- */
 export const RichTextContent = ({
   className,
   content,

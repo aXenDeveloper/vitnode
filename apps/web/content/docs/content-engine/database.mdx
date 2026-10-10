@@ -110,7 +110,7 @@ Field names become snake_case in table names, so `relatedArticles` on `example_a
 - A **to-many field** gets `{tableName}_{field}` with `itemId`, `relatedItemId`, `position` and `createdAt`. The primary key is `(itemId, relatedItemId)`, so a record links to each target once.
 - A **repeatable field** gets `{tableName}_{field}` with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per subfield.
 
-Deleting a record deletes its junction and repeatable rows. Both kinds keep `position` unique per record, which is how the order editors set in the AdminCP survives.
+Deleting a record deletes its junction and repeatable rows. Both kinds keep `position` unique per record. That column holds the order an editor picks in the AdminCP.
 
 ## Generated indexes
 

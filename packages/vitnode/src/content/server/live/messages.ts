@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import type { ContentLiveClientMessage } from "@/content/live/protocol";
 
-/** The largest Yjs or awareness update one message may carry, decoded. */
 export const CONTENT_LIVE_MAX_UPDATE_BYTES = 2 * 1024 * 1024;
 
 const MAX_BASE64_LENGTH = Math.ceil(CONTENT_LIVE_MAX_UPDATE_BYTES / 3) * 4;
@@ -26,7 +25,6 @@ const doc = z.strictObject({
   locale,
 });
 
-/** The runtime check of every message a client sends on the live channel. */
 export const contentLiveClientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ clientId, locale, room, type: z.literal("join") }),
   z.strictObject({
@@ -56,7 +54,6 @@ export const contentLiveClientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ clientId, doc, type: z.literal("doc:close") }),
 ]) satisfies z.ZodType<ContentLiveClientMessage>;
 
-/** The `clientId` of a message, even a malformed one, to address the error. */
 export const clientIdOf = (data: unknown): string => {
   if (typeof data !== "object" || data === null || !("clientId" in data)) {
     return "";

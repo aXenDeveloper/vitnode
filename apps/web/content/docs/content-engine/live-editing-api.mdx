@@ -1,6 +1,6 @@
 ---
 title: Live editing API
-description: Reference for Content Engine live editing - deployment requirements, the field lock and draft HTTP routes, the WebSocket channel, timings, database tables and the components for custom AdminCP form layouts.
+description: Reference for Content Engine live editing, covering deployment requirements, the field lock and draft HTTP routes, the WebSocket channel, timings, database tables and the components for custom AdminCP form layouts.
 icon: Cable
 ---
 
@@ -15,13 +15,13 @@ Live editing runs on two channels. Field locks and the shared draft are plain HT
 | Long-lived Node API server with the WebSocket                      | Live, pushed over the socket | Yes      | Co-edited                                       |
 | No WebSocket, such as [Vercel](/docs/dev/deployments/cloud/vercel) | Polled over HTTP every 10 s  | No       | One editor at a time, locked like a plain field |
 
-A form without a socket polls `GET /{id}/locks` and `GET /{id}/draft` every 10 seconds, on top of lock renewals. Every request counts against the [rate limiter](/docs/dev/advanced/rate-limiter), which is keyed by IP address. A newsroom behind one office IP can reach the default of 80 requests a minute, and a refused lock request leaves the field without autosave, so raise `rateLimiter.points` if that is you.
+A form without a socket polls `GET /{id}/locks` and `GET /{id}/draft` every 10 seconds, on top of lock renewals. Every request counts against the [rate limiter](/docs/dev/advanced/rate-limiter), which is keyed by IP address. A newsroom behind one office IP can reach the default of 80 requests a minute. A refused lock request leaves the field without autosave, so raise `rateLimiter.points` if that is you.
 
 With more than one API instance, set `REDIS_URL`. Instances share presence and document updates over Redis pub/sub. Without it, editors connected to different instances do not see each other.
 
 ## HTTP routes
 
-Mounted under the content type's staff API module. Every route needs an AdminCP session and the type's `can_edit` permission, and answers `404` for a record that does not exist.
+The routes live under the content type's staff API module. Every route needs an AdminCP session and the type's `can_edit` permission, and answers `404` for a record that does not exist.
 
 | Method and path            | Body                        | Success                                                                  | Errors                                                                                         |
 | -------------------------- | --------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -121,7 +121,7 @@ The daily `content-editorial-cleanup` [cron job](/docs/dev/cron) removes expired
 
 ## Use live state in a custom form layout
 
-A plugin that replaces the edit form with [its own layout](/docs/content-engine/admincp) keeps locks and outlines for free: every field rendered with `ContentFormField` takes part. The rest of the live UI comes from `@vitnode/core/content/admin-form`:
+A plugin that replaces the edit form with [its own layout](/docs/content-engine/admincp) still gets locks and outlines on every field it renders with `ContentFormField`. The rest of the live UI comes from `@vitnode/core/content/admin-form`:
 
 ```tsx title="plugins/example/src/views/admin/article-layout.tsx"
 import {

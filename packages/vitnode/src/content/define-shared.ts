@@ -14,10 +14,6 @@ export const SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
   "textarea",
 ]);
 
-/**
- * Kinds a list search may name explicitly. Rich text is matched against the
- * text of its document, never its markup - see `buildSearchCondition`.
- */
 export const EXPLICIT_SEARCHABLE_KINDS = new Set<
   ContentFieldDescriptor["kind"]
 >([...SEARCHABLE_KINDS, "richText", "slug"]);

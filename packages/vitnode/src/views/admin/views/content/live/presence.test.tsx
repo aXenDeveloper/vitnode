@@ -124,7 +124,6 @@ describe("ContentLivePresence", () => {
         .getAllByRole("img")
         .map(image => image.getAttribute("alt")),
     ).toEqual(["Anna", "Ben", "Cleo"]);
-    // Anna is in a localized field, Ben in a shared one, Cleo in none.
     expect(
       within(group).getByText("core.content.live.presence.editing_field"),
     ).toBeTruthy();
@@ -143,7 +142,6 @@ describe("ContentLivePresence", () => {
       members: [
         anna,
         { ...anna, clientId: "anna-second-tab", field: "title" },
-        // The editor's own second tab is still the editor.
         { ...ME, clientId: "my-other-tab" },
       ],
     });

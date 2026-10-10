@@ -53,7 +53,6 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   // to-many file field *is* writable, for the same reason a to-many relation is:
   // the empty set is its default, and it has no column to default at all.
   if (fieldValue.kind === "file") return fieldValue.multiple;
-  // No default: an empty document is what `nullable` or `required` decide.
   if (fieldValue.kind === "richText") return false;
 
   return fieldValue.defaultValue !== undefined;

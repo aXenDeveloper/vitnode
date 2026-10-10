@@ -25,8 +25,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const locks = core_content_field_locks;
 const drafts = core_content_drafts;
 
-/** The `language` column value for a lock or draft in `locale`. */
-export const contentLiveLanguage = (locale: null | string): string =>
+const contentLiveLanguage = (locale: null | string): string =>
   locale ?? CONTENT_LIVE_SHARED_LOCALE;
 
 const localeOf = (language: string): null | string =>
@@ -70,7 +69,6 @@ const toLock = (row: {
   user: { id: row.userId, name: row.userName ?? "" },
 });
 
-/** Every unexpired lock of one record. */
 export const listContentFieldLocks = async (
   db: ContentDatabase,
   room: ContentLiveRoomRef,
@@ -86,7 +84,6 @@ export const listContentFieldLocks = async (
   return rows.map(toLock);
 };
 
-/** The unexpired lock on one field, whoever holds it. */
 export const findContentFieldLock = async (
   db: ContentDatabase,
   key: ContentFieldLockKey,
@@ -102,11 +99,6 @@ export const findContentFieldLock = async (
   return row ? toLock(row) : null;
 };
 
-/**
- * Takes the lock when it is free, expired, or already the caller's - one
- * atomic upsert, so two editors racing for the same field cannot both win.
- * `false` when someone else holds an unexpired lease.
- */
 export const acquireContentFieldLock = async (
   db: ContentDatabase,
   key: ContentFieldLockKey,
@@ -129,7 +121,6 @@ export const acquireContentFieldLock = async (
     .onConflictDoUpdate({
       set: { acquiredAt: now, expiresAt, userId },
       target: [locks.contentTypeId, locks.itemId, locks.field, locks.language],
-      // The existing row: its lease ran out, or it is already the caller's.
       where: or(lt(locks.expiresAt, now), eq(locks.userId, userId)),
     })
     .returning({ id: locks.id });
@@ -137,7 +128,6 @@ export const acquireContentFieldLock = async (
   return rows.length > 0;
 };
 
-/** Extends the caller's own lease. `false` when the lock is not theirs. */
 export const renewContentFieldLock = async (
   db: ContentDatabase,
   key: ContentFieldLockKey,
@@ -153,7 +143,6 @@ export const renewContentFieldLock = async (
   return rows.length > 0;
 };
 
-/** Drops the caller's own lock. Idempotent; `false` when nothing was held. */
 export const releaseContentFieldLock = async (
   db: ContentDatabase,
   key: ContentFieldLockKey,
@@ -167,7 +156,6 @@ export const releaseContentFieldLock = async (
   return rows.length > 0;
 };
 
-/** The fields of `names` the caller holds an unexpired lock on in `locale`. */
 export const heldContentFieldLocks = async (
   db: ContentDatabase,
   {
@@ -201,7 +189,6 @@ export const heldContentFieldLocks = async (
   return new Set(rows.map(row => row.field));
 };
 
-/** Tells the room who holds what now. */
 export const broadcastContentFieldLocks = async (
   db: ContentDatabase,
   room: ContentLiveRoomRef,
@@ -212,7 +199,6 @@ export const broadcastContentFieldLocks = async (
   return list;
 };
 
-/** One record's drafts: the shared one, and one per language. */
 export const readContentDrafts = async (
   db: ContentDatabase,
   room: ContentLiveRoomRef,
@@ -250,12 +236,6 @@ export const readContentDrafts = async (
   return result;
 };
 
-/**
- * Merges `values` into one language's draft, creating it on the first write.
- *
- * The merge happens in the database (`values || $new`), so two editors saving
- * different fields of the same draft at the same moment both land.
- */
 export const writeContentDraft = async (
   db: ContentDatabase,
   {
@@ -329,8 +309,7 @@ export const commitContentDrafts = async (
   }
 };
 
-/** Throws a record's working state away: every draft and every lock. */
-export const deleteContentLiveState = async (
+const deleteContentLiveState = async (
   db: ContentDatabase,
   room: ContentLiveRoomRef,
 ): Promise<void> => {
@@ -338,8 +317,7 @@ export const deleteContentLiveState = async (
   await db.delete(locks).where(inRoom(locks, room));
 };
 
-/** Drops every lock one person holds in one record. */
-export const deleteUserContentFieldLocks = async (
+const deleteUserContentFieldLocks = async (
   db: ContentDatabase,
   room: ContentLiveRoomRef,
   userId: number,
@@ -352,12 +330,6 @@ export const deleteUserContentFieldLocks = async (
   return rows.length;
 };
 
-/**
- * The cron's sweep: every expired lock, and every draft untouched for
- * `CONTENT_LIVE_STALE_DAYS` that is behind its record - the record moved on,
- * was deleted, or its content type is gone. A stale draft that is still level
- * with its record is kept: it is somebody's unsaved work.
- */
 export const cleanupStaleContentDrafts = async (
   c: Context,
   now = new Date(),
@@ -403,7 +375,7 @@ export const cleanupStaleContentDrafts = async (
     }
 
     if (locale === null) {
-      const version = (record as Record<string, unknown>).version;
+      const version: unknown = Reflect.get(record, "version");
       if (typeof version === "number" && version > draft.baseVersion) {
         doomed.push(draft.id);
       }
@@ -429,8 +401,6 @@ export const cleanupStaleContentDrafts = async (
   return { drafts: doomed.length, locks: expired.length };
 };
 
-// The socket side tells the HTTP side when someone left or a record was reset,
-// without either importing the other.
 onContentLiveUserLeft(async ({ c, room, userId }) => {
   const db: ContentDatabase = c.get("db");
   const removed = await deleteUserContentFieldLocks(db, room, userId);

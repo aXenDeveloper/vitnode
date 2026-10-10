@@ -49,7 +49,6 @@ export interface ContentFormTransport {
     expectedVersion?: number,
   ) => Promise<ContentMutationResult>;
 
-  /** Live editing: every unexpired field lock of one record. */
   listLocks: (
     contentTypeId: string,
     itemId: number,
@@ -66,10 +65,6 @@ export interface ContentFormTransport {
     search: string,
     ids?: number[],
   ) => Promise<ContentOption[]>;
-  /**
-   * Live editing: takes, extends or gives back the caller's lease on one field
-   * in one language (`null` for a shared field).
-   */
   lock: (
     contentTypeId: string,
     itemId: number,
@@ -86,7 +81,6 @@ export interface ContentFormTransport {
     itemId: number,
   ) => Promise<ContentMutationResult>;
 
-  /** Live editing: the record's shared draft and one draft per language. */
   readDraft: (
     contentTypeId: string,
     itemId: number,
@@ -97,10 +91,6 @@ export interface ContentFormTransport {
     itemId: number,
   ) => Promise<ContentRowResult>;
 
-  /**
-   * Live editing: merges the fields the caller holds a lock on into the
-   * draft of `locale` (`null` for the shared fields).
-   */
   saveDraft: (
     contentTypeId: string,
     itemId: number,

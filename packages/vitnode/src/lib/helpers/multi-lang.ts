@@ -9,7 +9,6 @@ export interface MultiLangValueItem<TValue = string> {
   value: TValue;
 }
 
-/** One value per language. Text by default; a rich text field holds documents. */
 export type MultiLangValue<TValue = string> = MultiLangValueItem<TValue>[];
 
 export const multiLangValueSchema = ({
@@ -50,7 +49,6 @@ export const getLangValue = (
   );
 };
 
-/** The value stored for one language, whatever its type, or `undefined`. */
 export const findLangValue = <TValue>(
   value: MultiLangValue<TValue> | undefined,
   languageCode: string,
@@ -59,12 +57,8 @@ export const findLangValue = <TValue>(
     item => item.languageCode === languageCode,
   )?.value;
 
-const hasText = (text: string): boolean => text.trim() !== "";
+export const hasText = (text: string): boolean => text.trim() !== "";
 
-/**
- * The language a multi-language field opens on: the reader's own when it is
- * filled, then the default language, then the first filled one.
- */
 export const pickLangCodeWhere = ({
   defaultLanguage,
   isFilledIn,

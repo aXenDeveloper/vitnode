@@ -19,7 +19,6 @@ import { useVitNodeWebSocket } from "@/ws/use-websocket";
 
 import { useContentFormTransport } from "../form/transport";
 
-/** A change to the shared draft: from the socket, or found by polling. */
 export interface ContentLiveDraftEvent {
   by: null | { id: number; name: string };
   locale: null | string;
@@ -30,28 +29,19 @@ export interface ContentLiveDraftEvent {
 export type { ContentLiveResetReason } from "@/content/live/protocol";
 
 export interface ContentLiveSession {
-  /** This tab. One browser shares a socket across tabs, so every message names it. */
   clientId: string;
-  /** Tells the room which field (and language) this tab is in. */
   focus: (field: null | string, locale: null | string) => void;
-  /** Whether the socket is open and the server accepted this tab into the room. */
   live: boolean;
   locks: ContentFieldLock[];
   members: ContentLiveMember[];
   onCommitted: (listener: () => void) => () => void;
   onDraft: (listener: (event: ContentLiveDraftEvent) => void) => () => void;
   onReset: (listener: (reason: ContentLiveResetReason) => void) => () => void;
-  /**
-   * Reads every draft of the record, and from then on reports only what moved
-   * after it - the form's starting point, and after a reset its new one.
-   */
   readDrafts: () => Promise<ContentDrafts | null>;
   readyState: number;
   refreshLocks: () => Promise<void>;
-  /** Learns who this person is, from a lock the API granted them. */
   rememberSelf: (userId: number) => void;
   resetLocally: (reason: ContentLiveResetReason) => void;
-  /** The signed-in person's id, once known: their locks are never "someone else's". */
   self: null | number;
 }
 
@@ -62,7 +52,6 @@ const newClientId = (): string =>
 
 const draftKey = (locale: null | string): string => locale ?? "";
 
-/** Every draft of a record as the events a socket would have delivered. */
 const draftEvents = (drafts: ContentDrafts): ContentLiveDraftEvent[] => [
   ...(drafts.shared
     ? [
@@ -82,15 +71,6 @@ const draftEvents = (drafts: ContentDrafts): ContentLiveDraftEvent[] => [
   })),
 ];
 
-/**
- * One tab's seat in a record's live editing room.
- *
- * Joins over the shared socket whenever it is open - again after every
- * reconnect, since the server forgets a dropped tab - and keeps the seat with
- * heartbeats. Without a socket (a serverless host, or one that refused the
- * join) it falls back to polling the locks and the draft over HTTP, so field
- * locks and autosave still work, just less instantly.
- */
 export const useContentLiveSession = ({
   contentTypeId,
   itemId,
@@ -120,9 +100,7 @@ export const useContentLiveSession = ({
     field: null | string;
     locale: null | string;
   }>(null);
-  /** The language this tab works in: the last one a field was focused in. */
   const languageRef = React.useRef(locale);
-  /** A join is on its way and its reply has not arrived. */
   const joiningRef = React.useRef(false);
   const joinedRef = React.useRef(false);
 
@@ -156,7 +134,6 @@ export const useContentLiveSession = ({
     return drafts;
   }, [contentTypeId, itemId, transport]);
 
-  /** What the draft gained since this tab last looked, as events. */
   const pollDrafts = React.useCallback(async () => {
     const { drafts } = await transport.readDraft(contentTypeId, itemId);
     if (!drafts) return;
@@ -192,9 +169,6 @@ export const useContentLiveSession = ({
         if (message.room && !sameContentLiveRoom(message.room, room)) return;
 
         if (message.code === "NOT_JOINED") {
-          // The server lost this tab's seat (a missed heartbeat, an instance
-          // restart) or a document it had open: take the seat again. Its
-          // `joined` reply reopens the documents.
           if (!joiningRef.current && readyStateRef.current === 1) {
             joiningRef.current = true;
             send({ clientId, locale: languageRef.current, room, type: "join" });
@@ -202,13 +176,9 @@ export const useContentLiveSession = ({
 
           return;
         }
-        // A rich text document that is not one is the document's problem, and
-        // a malformed message is a bug: neither costs the seat.
         if (message.code === "INVALID_MESSAGE") return;
         if (message.code === "NOT_FOUND" && joinedRef.current) return;
 
-        // Refused or not there: stay on HTTP polling, which re-checks the
-        // permission on every request anyway.
         joiningRef.current = false;
         setJoined(false);
 
@@ -246,7 +216,6 @@ export const useContentLiveSession = ({
 
         return;
       default:
-        // Rich text documents are not this hook's business.
         return;
     }
   };
@@ -259,7 +228,6 @@ export const useContentLiveSession = ({
     readyStateRef.current = readyState;
   }, [readyState]);
 
-  // Join whenever the socket (re)opens: a reconnect is a new seat.
   React.useEffect(() => {
     if (readyState !== 1) return;
 
@@ -272,7 +240,6 @@ export const useContentLiveSession = ({
     };
   }, [clientId, readyState, room, send]);
 
-  // Leave on unmount, on a room change, and when the page goes away.
   React.useEffect(() => {
     const leave = () => {
       send({ clientId, room, type: "leave" });
@@ -290,8 +257,6 @@ export const useContentLiveSession = ({
     joinedRef.current = live;
   }, [live]);
 
-  // Every (re)join: whatever moved while this tab was not in the room was
-  // never delivered, and the room has forgotten where this tab was.
   React.useEffect(() => {
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- `joined` arrives over the socket; this resyncs once per seat
     if (!live) return;
@@ -317,14 +282,12 @@ export const useContentLiveSession = ({
     };
   }, [clientId, live, room, send]);
 
-  // The first look at the locks, whatever the socket is doing.
   React.useEffect(() => {
     void loadLocks().then(next => {
       if (next) setLocks(next);
     });
   }, [loadLocks]);
 
-  // No socket: HTTP is the only way to hear about other people.
   React.useEffect(() => {
     if (live) return;
 
@@ -342,8 +305,6 @@ export const useContentLiveSession = ({
 
   const focus = React.useCallback(
     (field: null | string, fieldLocale: null | string) => {
-      // A shared field (or no field) keeps the language the person is in, so
-      // the language switcher still shows them there.
       if (fieldLocale !== null) languageRef.current = fieldLocale;
       const next = { field, locale: languageRef.current };
       focusedRef.current = next;

@@ -6,11 +6,6 @@ import type { VitNodeWSChannel, VitNodeWSMessage } from "./types";
 
 const connections = new Map<WSContext, null | number>();
 
-/**
- * Room name -> socket -> the members (one per browser tab) that joined through
- * that socket. A browser shares one socket across its tabs, so a socket stays
- * in a room while at least one of its tabs is.
- */
 const rooms = new Map<string, Map<WSContext, Set<string>>>();
 
 type ConnectionCloseListener = (
@@ -46,10 +41,6 @@ export const wsRegistry = {
   broadcast: (id: string, data: unknown): void => {
     connections.forEach((_userId, ws) => sendTo(ws, id, data));
   },
-  /**
-   * Add one member (a browser tab) of `ws` to `room`. Idempotent. Returns `true`
-   * when the member was not in the room yet.
-   */
   join: (ws: WSContext, room: string, memberId: string): boolean => {
     const sockets = rooms.get(room) ?? new Map<WSContext, Set<string>>();
     rooms.set(room, sockets);
@@ -61,9 +52,6 @@ export const wsRegistry = {
 
     return true;
   },
-  /**
-   * Remove one member of `ws` from `room`. Returns `true` when it was there.
-   */
   leave: (ws: WSContext, room: string, memberId: string): boolean => {
     const sockets = rooms.get(room);
     const members = sockets?.get(ws);
@@ -74,12 +62,10 @@ export const wsRegistry = {
 
     return true;
   },
-  /** Every member of `room` on this instance, with the socket it uses. */
   membersOf: (room: string): { memberId: string; ws: WSContext }[] =>
     [...(rooms.get(room) ?? new Map<WSContext, Set<string>>())].flatMap(
       ([ws, members]) => [...members].map(memberId => ({ memberId, ws })),
     ),
-  /** Run `listener` whenever a socket closes, with the rooms it was in. */
   onConnectionClose: (listener: ConnectionCloseListener): (() => void) => {
     closeListeners.add(listener);
 
@@ -111,13 +97,8 @@ export const wsRegistry = {
       }
     });
   },
-  /** Every room `ws` has at least one member in. */
   roomsOf: (ws: WSContext): string[] =>
     [...rooms].filter(([, sockets]) => sockets.has(ws)).map(([room]) => room),
-  /**
-   * Send `{ id, data }` once to every socket with a member in `room`. Tabs that
-   * share the socket filter the payload themselves.
-   */
   toRoom: (room: string, id: string, data: unknown): void => {
     rooms.get(room)?.forEach((_members, ws) => sendTo(ws, id, data));
   },
@@ -171,11 +152,6 @@ const roomListeners = new Set<
   (room: string, id: string, data: unknown) => void
 >();
 
-/**
- * Observe room messages published by other instances, before they are
- * delivered to local members. Features that keep per-room state in memory (a
- * collaborative document) use it to stay in step with the other instances.
- */
 export const onRemoteRoomMessage = (
   listener: (room: string, id: string, data: unknown) => void,
 ): (() => void) => {
@@ -188,18 +164,12 @@ export const onRemoteRoomMessage = (
 
 type InstanceMessageListener = (message: {
   data: unknown;
-  /** The id of the instance that published it. */
   origin: string;
   topic: string;
 }) => void;
 
 const instanceListeners = new Set<InstanceMessageListener>();
 
-/**
- * Observe what other instances published with {@link publishToInstances}.
- * Those messages never reach a socket: they carry state an instance keeps in
- * memory about its own sockets (who is in a room) for the other instances.
- */
 export const onInstanceMessage = (
   listener: InstanceMessageListener,
 ): (() => void) => {
@@ -210,7 +180,6 @@ export const onInstanceMessage = (
   };
 };
 
-/** This process' id, as the other instances see it in `onInstanceMessage`. */
 export const getRealtimeInstanceId = (): string => instanceId;
 
 const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
@@ -273,11 +242,6 @@ export const initRealtimePubSub = (client: CacheClient | null): void => {
     });
 };
 
-/**
- * Tell the other instances something about this one, under `topic`. Nothing is
- * delivered to a socket, and without Redis nothing happens at all: a single
- * instance has nobody to tell.
- */
 export const publishToInstances = (topic: string, data: unknown): void => {
   publish({ data, id: topic, type: "instance" });
 };
@@ -296,10 +260,6 @@ export interface VitNodeRealtime {
     channel: VitNodeWSChannel<unknown, Receive>,
     data: Receive,
   ) => void;
-  /**
-   * Push a payload to every member of a room, on every instance. Members join
-   * with `wsRegistry.join`; a room is any string a feature chooses.
-   */
   toRoom: <Receive>(
     room: string,
     channel: VitNodeWSChannel<unknown, Receive>,
