@@ -1,0 +1,314 @@
+---
+title: Fields
+description: Reference for every Content Engine field helper, such as field.text, field.relation and field.blocks, with its options, defaults, Postgres column and AdminCP form control.
+icon: LayoutGrid
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import formBasic from "./fields-article-form-basic.webp";
+import formReferences from "./fields-article-form-references.webp";
+
+A field is one property of a content type, such as a title or a view count. You build each one with a helper from `field`, exported by `@vitnode/core/content`. The helper decides three things at once: the Postgres column, the validation of every write and the control in the AdminCP form.
+
+```ts title="plugins/example/src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+    featured: field.boolean({ defaultValue: false }),
+    author: field.user(),
+  },
+});
+```
+
+The example plugin's article form shows most controls. The first half holds the plain values:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={formBasic}
+  alt="Create Article dialog with inputs for Title, Slug and Reference code, an Excerpt textarea with an AI button, a Views number input with minus and plus buttons, and switches for Featured and No index"
+/>
+
+The second half holds the references: a user picker, two file dropzones and a relation picker.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={formReferences}
+  alt="Lower half of the Create Article dialog: an Author select, an Animation dropzone that accepts one GIF up to 10 MB, a Gallery dropzone for up to 8 images and a Category search picker"
+/>
+
+## Field helpers
+
+| Helper               | Postgres column                              | AdminCP control                          | Can be `localized` |
+| -------------------- | -------------------------------------------- | ---------------------------------------- | ------------------ |
+| `field.text()`       | `varchar(maxLength)`, 255 by default         | Text input                               | Yes                |
+| `field.textarea()`   | `text`                                       | Textarea                                 | Yes                |
+| `field.richText()`   | `jsonb`                                      | Rich text editor                         | Yes                |
+| `field.number()`     | `integer` or `double precision`              | Number input with steppers               | No                 |
+| `field.boolean()`    | `boolean`                                    | Switch                                   | No                 |
+| `field.enum()`       | `varchar(length)`, 64 by default             | Select or radio buttons                  | No                 |
+| `field.dateTime()`   | `timestamp`                                  | Date and time picker                     | No                 |
+| `field.slug()`       | `varchar(maxLength)`, 160 by default, unique | Text input                               | Yes                |
+| `field.user()`       | `integer` referencing `core_users.id`        | User picker                              | No                 |
+| `field.file()`       | `integer` referencing `core_files.id`        | File dropzone                            | No                 |
+| `field.relation()`   | `integer` referencing the target table       | Search picker                            | No                 |
+| `field.group()`      | One column per leaf                          | A fieldset with the leaf controls        | Yes, as a whole    |
+| `field.repeatable()` | A child table                                | A list of rows you can add, move, remove | No                 |
+| `field.blocks()`     | `jsonb`, `NOT NULL DEFAULT '[]'`             | Not in the form; edited as widgets       | Yes                |
+
+`user`, `file` and `relation` with `multiple: true` store their values in a junction table instead of a column. Localized fields live in the translation table. See [Translations](/docs/content-engine/localization).
+
+## Shared options
+
+Every helper except `slug`, `repeatable` and `blocks` accepts these:
+
+| Name          | Type      | Required | Default | Description                                                |
+| ------------- | --------- | -------- | ------- | ---------------------------------------------------------- |
+| `required`    | `boolean` | No       | `false` | A create request must include the field                    |
+| `nullable`    | `boolean` | No       | `false` | The column accepts `NULL`, and so does validation          |
+| `description` | `string`  | No       |         | Text or an i18n key shown under the control in the AdminCP |
+
+A field that is neither required nor nullable needs a fallback, or `defineContentType` throws `Field "x" is neither required nor nullable, so it needs a default value`. A `defaultValue`, `defaultNow: true` on a date and `source` on a slug all count as a fallback. On update every field is optional.
+
+`required: true` on a text field still accepts an empty string. Add `minLength: 1` when you need actual text.
+
+## Text and textarea
+
+```ts
+code: field.text({ required: true, maxLength: 100, unique: true }),
+excerpt: field.textarea({ maxLength: 500, nullable: true }),
+```
+
+| Name           | Type      | Required | Default              | Description                                                              |
+| -------------- | --------- | -------- | -------------------- | ------------------------------------------------------------------------ |
+| `minLength`    | `number`  | No       |                      | Shortest accepted value, in characters                                   |
+| `maxLength`    | `number`  | No       | 255 column on `text` | Longest accepted value. On `text` it is also the `varchar` length        |
+| `defaultValue` | `string`  | No       |                      | Written when a create leaves the field out. Becomes the column `DEFAULT` |
+| `unique`       | `boolean` | No       | `false`              | `text` only. Adds a unique index. Has no effect on a localized field     |
+| `localized`    | `boolean` | No       | `false`              | One value per language                                                   |
+| `ai`           | object    | No       |                      | Adds an AI suggestion button, see [AI suggestions](#ai-suggestions)      |
+
+Set `maxLength` on every `text` field. Without it, validation accepts any length, and Postgres rejects anything over 255 characters with a database error instead of a validation message. A `defaultValue` must satisfy the field's own `minLength` and `maxLength`.
+
+## Rich text
+
+```ts
+content: field.richText({ localized: true, required: true }),
+```
+
+| Name        | Type      | Required | Default | Description                                             |
+| ----------- | --------- | -------- | ------- | ------------------------------------------------------- |
+| `maxBytes`  | `number`  | No       | 1 MB    | Largest document, measured as UTF-8 JSON. At most 16 MB |
+| `localized` | `boolean` | No       | `false` | One document per language                               |
+
+The value is a ProseMirror JSON document. A rich text field has no `defaultValue`, so set `required` or `nullable`. With `required: true` a document without any text or media is refused. Documents nested deeper than 64 levels are refused too. [Rich text](/docs/content-engine/rich-text) covers rendering and the plain text and HTML helpers.
+
+## Number
+
+```ts
+views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+```
+
+| Name           | Type      | Required | Default | Description                                                               |
+| -------------- | --------- | -------- | ------- | ------------------------------------------------------------------------- |
+| `integer`      | `boolean` | Yes      |         | `true` makes an `integer` column, `false` a `double precision` one        |
+| `min`, `max`   | `number`  | No       |         | Accepted range. With `integer: true` a whole number must fit between them |
+| `defaultValue` | `number`  | No       |         | Must sit inside the range, and be whole when `integer: true`              |
+
+## Boolean
+
+```ts
+featured: field.boolean({ defaultValue: false }),
+```
+
+The only option besides the shared ones is `defaultValue`. A nullable boolean, such as `noIndex: field.boolean({ nullable: true })`, can hold `true`, `false` or `null`.
+
+## Enum
+
+```ts
+difficulty: field.enum({ values: ["easy", "medium", "hard"], defaultValue: "easy", display: "radio" }),
+```
+
+| Name           | Type                    | Required | Default    | Description                            |
+| -------------- | ----------------------- | -------- | ---------- | -------------------------------------- |
+| `values`       | `string[]`              | Yes      |            | Non-empty, without duplicates          |
+| `defaultValue` | one of `values`         | No       |            |                                        |
+| `display`      | `"select"` \| `"radio"` | No       | `"select"` | AdminCP control                        |
+| `length`       | `number`                | No       | `64`       | `varchar` length. Every value must fit |
+
+The column is a plain `varchar`, not a Postgres enum, so adding a value later needs no type migration. The AdminCP translates each value from `{pluginId}.content.{entity}.enums.{field}.{value}` when that key exists.
+
+## Date and time
+
+```ts
+eventDate: field.dateTime({ defaultNow: true }),
+```
+
+| Name         | Type      | Required | Default | Description                                      |
+| ------------ | --------- | -------- | ------- | ------------------------------------------------ |
+| `defaultNow` | `boolean` | No       | `false` | Fills the column with the current time on insert |
+
+There is no `defaultValue`. Send dates as ISO 8601 strings.
+
+## Slug
+
+```ts
+slug: field.slug({ source: "title" }),
+```
+
+| Name          | Type                 | Required | Default | Description                                                |
+| ------------- | -------------------- | -------- | ------- | ---------------------------------------------------------- |
+| `source`      | name of a text field | No       |         | Fills the slug from that field when a create sends no slug |
+| `maxLength`   | `number`             | No       | `160`   | `varchar` length and the point where long slugs are cut    |
+| `localized`   | `boolean`            | No       | `false` | One slug per language                                      |
+| `description` | `string`             | No       |         | Shown under the input                                      |
+
+A slug has no `required` or `nullable` option. It is required when there is no `source`, and it is never empty. Every value is normalized, so `"Weekend Pancakes!"` becomes `weekend-pancakes`. Slugs are unique across the table, or within each language when localized. The slug is derived only on create, so renaming the title later keeps the old URL. `source` must name a `field.text()`, and a localized slug needs a localized source.
+
+## User
+
+```ts
+author: field.user(),
+authorId: field.user({ multiple: true, ordered: true, min: 1 }),
+```
+
+| Name       | Type                                        | Required | Default   | Description                                |
+| ---------- | ------------------------------------------- | -------- | --------- | ------------------------------------------ |
+| `multiple` | `boolean`                                   | No       | `false`   | Several people, stored in a junction table |
+| `ordered`  | `boolean`                                   | No       | `false`   | Keeps the order editors arrange            |
+| `min`      | `number`                                    | No       |           | Fewest people. Needs `multiple`            |
+| `onDelete` | `"cascade"` \| `"restrict"` \| `"set null"` | No       | see below | What deleting the user does                |
+
+A single user field is nullable unless you set `required: true`. `onDelete` defaults to `"set null"` for a nullable single user, `"restrict"` for a required one and `"cascade"` for `multiple`. User fields cannot be listed in `publicApi.fields`.
+
+## File
+
+```ts
+animation: field.file({
+  maxBytes: 10 * 1024 * 1024,
+  allowedExtensions: [".gif"],
+  allowedMimeTypes: ["image/gif"],
+}),
+gallery: field.file({ multiple: true, min: 1, max: 8, maxBytes: 5 * 1024 * 1024 }),
+```
+
+| Name                | Type       | Required | Default            | Description                                |
+| ------------------- | ---------- | -------- | ------------------ | ------------------------------------------ |
+| `maxBytes`          | `number`   | Yes      |                    | Largest accepted file, in bytes            |
+| `allowedExtensions` | `string[]` | No       | any                | Lowercased, with a leading dot added       |
+| `allowedMimeTypes`  | `string[]` | No       | any                | Lowercased                                 |
+| `multiple`          | `boolean`  | No       | `false`            | Several files in a junction table          |
+| `min`               | `number`   | No       |                    | Fewest files, at least 1. Needs `multiple` |
+| `max`               | `number`   | No       | `20`               | Most files, up to 200. Needs `multiple`    |
+| `ordered`           | `boolean`  | No       | same as `multiple` | Keeps the order editors arrange            |
+
+A single file field is nullable unless you set `required: true`, and it cannot have a default or be localized. Translate a caption or alt text in a separate localized text field instead. Uploads go through the [storage](/docs/dev/storage) adapter and land in `core_files`. A file in use cannot be deleted, because the reference is `ON DELETE RESTRICT`.
+
+The public API returns a file as `{ id, name, url, mimeType, size, width, height }`, never as a raw id. A write may only point at a file uploaded for this content type, uploaded by the signed-in user, or already on the record. The API refuses anything else with `CONTENT_FILE_NOT_FOUND`.
+
+## Relation
+
+```ts
+category: field.relation({ required: true, onDelete: "restrict", target: () => categoryContentType }),
+```
+
+| Name       | Type                                        | Required           | Default      | Description                                                                  |
+| ---------- | ------------------------------------------- | ------------------ | ------------ | ---------------------------------------------------------------------------- |
+| `target`   | `() => ContentTypeDefinition`               | Yes, unless `self` |              | The linked content type                                                      |
+| `self`     | `true`                                      | No                 | `false`      | Links to the same content type. Do not combine with `target`                 |
+| `multiple` | `boolean`                                   | No                 | `false`      | Uses a junction table, up to 500 targets per record                          |
+| `ordered`  | `boolean`                                   | No                 | `false`      | Keeps the editor's order. Needs `multiple`                                   |
+| `min`      | `number`                                    | No                 |              | Fewest targets, 1 to 500. Needs `multiple`                                   |
+| `onDelete` | `"restrict"` \| `"cascade"` \| `"set null"` | No                 | `"restrict"` | What deleting the target does. `"set null"` needs a nullable single relation |
+
+A single relation must be `required` or `nullable`. A to-many relation can be neither. [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
+
+## Group
+
+```ts
+syndication: field.group({
+  fields: {
+    noIndex: field.boolean({ defaultValue: false }),
+    priority: field.number({ integer: true, min: 0, max: 10, defaultValue: 5 }),
+  },
+}),
+```
+
+| Name        | Type                  | Required | Default | Description                                                          |
+| ----------- | --------------------- | -------- | ------- | -------------------------------------------------------------------- |
+| `fields`    | object of leaf fields | Yes      |         | `text`, `textarea`, `number`, `boolean`, `enum` or `dateTime` leaves |
+| `localized` | `boolean`             | No       | `false` | Moves every leaf to the translation table together                   |
+
+Each leaf becomes a column named `<group><Leaf>`, such as `syndicationPriority`. Leaves cannot set `localized` themselves. An optional group needs leaves that are nullable or have a default. A nullable group needs nullable leaves.
+
+## Repeatable
+
+```ts
+faq: field.repeatable({
+  max: 20,
+  fields: {
+    question: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    answer: field.textarea({ required: true }),
+  },
+}),
+```
+
+| Name          | Type                  | Required | Default | Description                |
+| ------------- | --------------------- | -------- | ------- | -------------------------- |
+| `fields`      | object of leaf fields | Yes      |         | Same leaf kinds as a group |
+| `min`         | `number`              | No       | `0`     | Fewest rows                |
+| `max`         | `number`              | No       | `100`   | Most rows, up to 1000      |
+| `description` | `string`              | No       |         | Shown in the AdminCP form  |
+
+Rows live in a child table. A repeatable is always shared between languages.
+
+## Blocks
+
+```ts
+content: field.blocks({ allowed: ["core:*", "example:callout", "example:features"], max: 50 }),
+```
+
+| Name          | Type                | Required | Default | Description                                    |
+| ------------- | ------------------- | -------- | ------- | ---------------------------------------------- |
+| `allowed`     | `"*"` or `string[]` | No       | `"*"`   | Which blocks may be placed, such as `"core:*"` |
+| `min`         | `number`            | No       |         | Fewest block instances                         |
+| `max`         | `number`            | No       | `200`   | Most block instances, up to 1000               |
+| `localized`   | `boolean`           | No       | `false` | Each language gets its own blocks              |
+| `description` | `string`            | No       |         |                                                |
+
+`field.widgets()` is the same helper under another name. A blocks field is never required or nullable. No blocks means an empty list. It does not appear in the AdminCP form. Editors place widgets on the page itself, as described in [The blocks() field](/docs/dev/widgets/blocks-field).
+
+## AI suggestions
+
+`text` and `textarea` fields accept an `ai` option. The form then shows an **AI** button next to the label, like the excerpt in the screenshot above.
+
+```ts
+excerpt: field.textarea({
+  ai: {
+    action: "@vitnode/example:article.excerpt",
+    mode: "suggestion",
+    sourceFields: ["title", "code"],
+  },
+  maxLength: 500,
+  nullable: true,
+}),
+```
+
+| Name           | Type                      | Required | Default | Description                                                            |
+| -------------- | ------------------------- | -------- | ------- | ---------------------------------------------------------------------- |
+| `action`       | `"<pluginId>:<actionId>"` | Yes      |         | A registered AI action                                                 |
+| `mode`         | `"suggestion"`            | Yes      |         | The only supported mode. The editor reviews the text before it is used |
+| `sourceFields` | `string[]`                | Yes      |         | Other fields of this content type sent to the action as input          |
+
+[AI in fields and the editor](/docs/dev/ai/fields-and-editor) shows how to write the action.
+
+## Searching and sorting
+
+Fields have no `searchable` or `sortable` option. Each surface picks its own fields: `admin.list.searchableFields` and `orderableFields` for the AdminCP list, `publicApi.searchableFields`, `orderableFields` and `filterableFields` for the public API, and `search.contentFields` for site search. The [content type reference](/docs/content-engine/reference) lists which field kinds each one accepts.

@@ -24,7 +24,7 @@ import { buildContentRoutes } from "./routes";
 const localizedFileContentType = defineContentType({
   id: "test.localized-file",
   tableName: "test_localized_files",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  localization: { defaultLocale: "en", fallback: "default" },
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),

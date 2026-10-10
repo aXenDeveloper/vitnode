@@ -132,10 +132,9 @@ export const pageContentType = defineContentType({
     }),
   },
 
-  publication: { enabled: true },
+  publication: true,
 
   publicApi: {
-    enabled: true,
     path: 'pages',
     fields: ['title', 'slug', 'content', 'publishedAt'],
   },

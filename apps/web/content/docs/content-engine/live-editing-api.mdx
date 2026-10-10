@@ -1,0 +1,156 @@
+---
+title: Live editing API
+description: Reference for Content Engine live editing, covering deployment requirements, the field lock and draft HTTP routes, the WebSocket channel, timings, database tables and the components for custom AdminCP form layouts.
+icon: Cable
+---
+
+The AdminCP drives [live editing](/docs/content-engine/live-editing) for you. This page is for the cases where you need the details: deploying it, calling its routes from your own code, or building a form layout that shows who is editing. Examples use `example.article`, whose staff API lives at `/api/@vitnode/example/admin/content/article`.
+
+## Deployment requirements
+
+Live editing runs on two channels. Field locks and the shared draft are plain HTTP routes, so they work everywhere. Presence and rich text co-editing travel over the [WebSocket](/docs/dev/websocket) at `/api/ws`, which only a long-lived Node API server provides, such as `apps/api` or a [self-hosted](/docs/dev/deployments/self-hosted) install.
+
+| Deployment                                                         | Field locks and autosave     | Presence | Rich text                                       |
+| ------------------------------------------------------------------ | ---------------------------- | -------- | ----------------------------------------------- |
+| Long-lived Node API server with the WebSocket                      | Live, pushed over the socket | Yes      | Co-edited                                       |
+| No WebSocket, such as [Vercel](/docs/dev/deployments/cloud/vercel) | Polled over HTTP every 10 s  | No       | One editor at a time, locked like a plain field |
+
+A form without a socket polls `GET /{id}/locks` and `GET /{id}/draft` every 10 seconds, on top of lock renewals. Every request counts against the [rate limiter](/docs/dev/advanced/rate-limiter), which is keyed by IP address. A newsroom behind one office IP can reach the default of 80 requests a minute. A refused lock request leaves the field without autosave, so raise `rateLimiter.points` if that is you.
+
+With more than one API instance, set `REDIS_URL`. Instances share presence and document updates over Redis pub/sub. Without it, editors connected to different instances do not see each other.
+
+## HTTP routes
+
+The routes live under the content type's staff API module. Every route needs an AdminCP session and the type's `can_edit` permission, and answers `404` for a record that does not exist.
+
+| Method and path            | Body                        | Success                                                                  | Errors                                                                                         |
+| -------------------------- | --------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `GET /{id}/locks`          |                             | `{ locks }`, the unexpired locks                                         |                                                                                                |
+| `POST /{id}/locks`         | `{ field, locale, action }` | `{ lock }`, or `{ lock: null }` on release                               | `409` `CONTENT_FIELD_LOCKED`, `400` for an unknown field or wrong locale                       |
+| `GET /{id}/draft`          |                             | `{ shared, translations }`                                               |                                                                                                |
+| `PUT /{id}/draft`          | `{ locale, values }`        | `{ updatedAt }`                                                          | `409` `CONTENT_FIELD_NOT_LOCKED`, `400` `CONTENT_DRAFT_WRONG_SCOPE` or `CONTENT_DRAFT_INVALID` |
+| `POST /{id}/draft/discard` | `{}`                        | `{ discarded: true }`, and a `reset` with reason `discarded` to the room |                                                                                                |
+
+- `action` is `acquire`, `renew` or `release`.
+- `locale` is `null` for a field that is not localized and an enabled language code for a localized one. A shared field and a localized field never share a draft write.
+- A draft write accepts only fields you currently hold a lock on, and validates each value with the field's own rules. It never touches the record; **Save** does that.
+
+Taking a lock on the excerpt:
+
+```http title="Request"
+POST /api/@vitnode/example/admin/content/article/2/locks
+Content-Type: application/json
+
+{ "field": "excerpt", "locale": null, "action": "acquire" }
+```
+
+```json title="200"
+{
+  "lock": {
+    "expiresAt": "2026-10-10T11:12:14.701Z",
+    "field": "excerpt",
+    "locale": null,
+    "user": { "id": 16, "name": "Anna Kowalska" }
+  }
+}
+```
+
+When someone else asks for the same field, the `409` names the holder:
+
+```json title="409"
+{
+  "code": "CONTENT_FIELD_LOCKED",
+  "lock": {
+    "expiresAt": "2026-10-10T11:12:14.701Z",
+    "field": "excerpt",
+    "locale": null,
+    "user": { "id": 16, "name": "Anna Kowalska" }
+  }
+}
+```
+
+Reading the draft returns the shared fields and one draft per language:
+
+```json title="GET /api/@vitnode/example/admin/content/article/2/draft"
+{
+  "shared": {
+    "baseVersion": 3,
+    "updatedAt": "2026-10-10T10:57:20.381Z",
+    "updatedBy": { "id": 16, "name": "Anna Kowalska" },
+    "values": { "title": "Spring menu launches Monday at noon" }
+  },
+  "translations": {}
+}
+```
+
+`baseVersion` is the record or translation version the draft was written on.
+
+## WebSocket channel
+
+The socket side is one channel, `@vitnode/core_content_live`, on the shared `/api/ws` connection. Joining a record's room checks the same AdminCP session and `can_edit` as the HTTP routes. Every message carries the record as `{ contentTypeId, itemId }`, and every client message carries the `clientId` of the tab that sent it.
+
+| Direction | Messages                                                                                                                    |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Client    | `join`, `focus`, `heartbeat`, `leave`, and `doc:open`, `doc:update`, `doc:awareness`, `doc:close` for rich text             |
+| Server    | `joined`, `presence`, `locks`, `draft`, `reset`, `error`, and `doc:seed`, `doc:state-vector`, `doc:update`, `doc:awareness` |
+
+Rich text documents are [Yjs](https://yjs.dev) documents, one per record, field and language. Updates travel as base64. The protocol types live in `@vitnode/core/content/live/protocol` if you need them, but the AdminCP is the only client you should need.
+
+## Timings
+
+| What                                            | Value      |
+| ----------------------------------------------- | ---------- |
+| Lock lifetime without renewal                   | 60 s       |
+| Lock renewal while the field has focus          | every 20 s |
+| Autosave after the last keystroke               | 1.5 s      |
+| Presence heartbeat                              | every 15 s |
+| Member dropped after missed heartbeats          | 45 s       |
+| Rich text document stored after the last change | 2 s        |
+| Polling without a socket                        | every 10 s |
+| Untouched drafts and documents removed after    | 30 days    |
+
+## Where the data lives
+
+| Table                      | Holds                                                             |
+| -------------------------- | ----------------------------------------------------------------- |
+| `core_content_drafts`      | The shared draft of plain fields, one row per record and language |
+| `core_content_field_locks` | Active field locks with their holder and expiry                   |
+| `core_content_documents`   | The Yjs state of each rich text field, per record and language    |
+
+The daily `content-editorial-cleanup` [cron job](/docs/dev/cron) removes expired locks, documents untouched for 30 days, and drafts untouched for 30 days whose record has moved on since. A stale draft whose record has not changed is kept, because it is somebody's unsaved work. When an editor's last tab leaves a record, their locks go too.
+
+## Use live state in a custom form layout
+
+A plugin that replaces the edit form with [its own layout](/docs/content-engine/admincp) still gets locks and outlines on every field it renders with `ContentFormField`. The rest of the live UI comes from `@vitnode/core/content/admin-form`:
+
+```tsx title="plugins/example/src/views/admin/article-layout.tsx"
+import {
+  ContentFormField,
+  ContentLivePresence,
+  ContentLiveStatus,
+} from "@vitnode/core/content/admin-form";
+
+export const ArticleFormLayout = () => (
+  <div className="flex flex-col gap-6">
+    <header className="flex items-center justify-between gap-4">
+      <ContentLiveStatus />
+      <ContentLivePresence max={3} />
+    </header>
+    <ContentFormField name="title" />
+    <ContentFormField name="excerpt" />
+  </div>
+);
+```
+
+Register it with `forms: { layout: ArticleFormLayout }` in the type's `contentTypeAdmin(...)` entry, the way the blog plugin registers `BlogArticleFormLayout`.
+
+| Export                        | What it gives you                                                                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ContentLivePresence`         | Avatars of everyone else in the record. `max` sets how many show before **+N**, 5 by default                                                                                     |
+| `ContentLiveFieldPresence`    | Avatars of the people in one `field` and `locale`                                                                                                                                |
+| `ContentLiveLanguagePresence` | Who is working in one `locale`                                                                                                                                                   |
+| `ContentLiveStatus`           | The autosave state: **Saving…**, **Draft saved at…**, **Draft not saved**, **Unsaved changes**                                                                                   |
+| `useContentLive()`            | The session: `session.members`, `session.locks`, `status` (`saving`, `savedAt`, `failed`, `dirty`) and `coEditing`                                                               |
+| `useContentRichTextReplace()` | `(field, locale, document) => void` that replaces a rich text field through the shared editor, so everyone sees it and it can be undone. `null` while rich text is not co-edited |
+
+All of them render nothing, or return `null`, outside a live form, so the same layout works for the create form.

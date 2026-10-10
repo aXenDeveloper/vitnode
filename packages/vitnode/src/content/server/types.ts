@@ -1,9 +1,11 @@
+import type { $Type } from "drizzle-orm";
 import type {
   AnyPgColumnBuilder,
   PgBooleanBuilder,
   PgBuildColumns,
   PgDoublePrecisionBuilder,
   PgIntegerBuilder,
+  PgJsonbBuilder,
   PgSerialBuilder,
   PgTableWithColumns,
   PgTextBuilder,
@@ -13,6 +15,7 @@ import type {
   SetNotNull,
 } from "drizzle-orm/pg-core";
 
+import type { RichTextDocument } from "../rich-text/document";
 import type {
   ContentEditorialField,
   ContentFieldsOf,
@@ -46,7 +49,9 @@ type BaseBuilderFor<TField> = TField extends { kind: "boolean" }
           ? PgIntegerBuilder
           : TField extends { kind: "textarea" }
             ? PgTextBuilder
-            : PgVarcharBuilder;
+            : TField extends { kind: "richText" }
+              ? $Type<PgJsonbBuilder, RichTextDocument>
+              : PgVarcharBuilder;
 
 type ApplyDefault<TBuilder extends AnyPgColumnBuilder, TField> =
   HasColumnDefault<TField> extends true ? SetHasDefault<TBuilder> : TBuilder;

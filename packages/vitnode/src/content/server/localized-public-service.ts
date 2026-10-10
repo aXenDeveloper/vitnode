@@ -107,7 +107,7 @@ export const createContentLocalizedPublicService = <
 
   if (!publicApi.enabled || !localization.enabled) {
     throw new ContentEngineError(
-      "The localized public service needs both `publicApi: { enabled: true, path, fields }` and `localization: { enabled: true, defaultLocale }`.",
+      "The localized public service needs both `publicApi: { path, fields }` and `localization: { defaultLocale }`.",
       { contentTypeId },
     );
   }

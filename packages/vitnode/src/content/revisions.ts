@@ -3,6 +3,7 @@ import type {
   CONTENT_REVISION_OPERATIONS,
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "./const";
+import type { RichTextDocument } from "./rich-text/document";
 
 export type ContentRevisionOperation =
   (typeof CONTENT_REVISION_OPERATIONS)[number];
@@ -23,7 +24,8 @@ export type ContentSnapshotValue =
   | ContentSnapshotScalar
   | number[]
   | Record<string, ContentSnapshotScalar>
-  | Record<string, ContentSnapshotScalar>[];
+  | Record<string, ContentSnapshotScalar>[]
+  | RichTextDocument;
 
 export interface ContentRevisionSnapshot {
   contentTypeId: string;

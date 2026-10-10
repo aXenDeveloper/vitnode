@@ -31,7 +31,7 @@ const articles = defineContentType({
   admin: {
     list: { orderableFields: ["title"], searchableFields: ["title"] },
   },
-  publication: { enabled: true },
+  publication: true,
 }) as AnyContentTypeDefinition;
 
 /** No searchable fields, no publication - the narrowest possible contract. */

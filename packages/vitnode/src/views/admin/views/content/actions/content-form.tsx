@@ -25,6 +25,7 @@ import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
 import type { ContentFormSkeletonOverrides } from "../form/skeleton";
 import type { ContentOptionsLoader } from "../lib/field-component";
+import type { ContentLiveFormState } from "../live/root";
 import type { ContentConflictState } from "./conflict-notice";
 
 import { ContentFormProvider } from "../form/context";
@@ -45,6 +46,12 @@ import { useContentFormTransport } from "../form/transport";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
+import { useContentLive } from "../live/context";
+import { ContentLiveField } from "../live/field";
+import { ContentLivePresence } from "../live/presence";
+import { ContentLiveRoot } from "../live/root";
+import { ContentLiveStatus } from "../live/status";
+import { overlayContentDrafts } from "../live/values";
 import { ConflictNotice } from "./conflict-notice";
 
 export interface ContentFormProps {
@@ -122,19 +129,40 @@ export const ContentForm = ({
     };
   }, [contentTypeId, data, pendingRow, transport]);
 
-  if (loaded === null || pendingRow) {
+  const skeleton = (
+    <ContentFormSkeleton
+      contentTypeId={spec.contentTypeId}
+      header={props.presentation === "page" ? props.header : undefined}
+      layout={props.layout}
+      mode={data ? "edit" : "create"}
+      pluginId={spec.pluginId}
+      publication={props.publication}
+      shape={contentSpecSkeletonShape(spec, fieldSkeletons)}
+      singular={props.singular}
+      title={props.title}
+    />
+  );
+
+  if (loaded === null || pendingRow) return skeleton;
+
+  if (row && spec.liveEditing) {
     return (
-      <ContentFormSkeleton
-        contentTypeId={spec.contentTypeId}
-        header={props.presentation === "page" ? props.header : undefined}
-        layout={props.layout}
-        mode={data ? "edit" : "create"}
-        pluginId={spec.pluginId}
-        publication={props.publication}
-        shape={contentSpecSkeletonShape(spec, fieldSkeletons)}
-        singular={props.singular}
-        title={props.title}
-      />
+      <ContentLiveRoot
+        data={row}
+        fallback={skeleton}
+        spec={spec}
+        translations={loaded}
+      >
+        {live => (
+          <ContentFormFields
+            data={live.row}
+            live={live}
+            spec={spec}
+            translations={live.translations}
+            {...props}
+          />
+        )}
+      </ContentLiveRoot>
     );
   }
 
@@ -153,6 +181,7 @@ const ContentFormFields = ({
   fieldOverrides = {},
   header,
   layout,
+  live,
   onCreated,
   presentation = "dialog",
   publication = false,
@@ -160,7 +189,9 @@ const ContentFormFields = ({
   spec,
   title,
   translations = [],
-}: ContentFormProps) => {
+}: ContentFormProps & {
+  live?: ContentLiveFormState;
+}) => {
   const t = useTranslations("core.content");
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
@@ -169,6 +200,7 @@ const ContentFormFields = ({
   const transport = useContentFormTransport();
   const locale = useLocale();
   const invalidateOptions = useInvalidateContentOptions();
+  const liveSession = useContentLive();
   const canPublish = useAdminStaffPermission({
     module: spec.permissionModule,
     permission: CONTENT_PERMISSIONS.publish,
@@ -203,10 +235,15 @@ const ContentFormFields = ({
 
   const [opened, setOpened] = React.useState(() => translations);
 
-  const values = React.useMemo(
-    () => contentFormInitialValues(spec, data, opened),
-    [spec, data, opened],
-  );
+  const drafts = live?.drafts ?? null;
+  const draftLabels = live?.labels;
+  const values = React.useMemo(() => {
+    if (!data || !drafts) return contentFormInitialValues(spec, data, opened);
+
+    const overlaid = overlayContentDrafts(data, opened, drafts, draftLabels);
+
+    return contentFormInitialValues(spec, overlaid.data, overlaid.translations);
+  }, [spec, data, opened, drafts, draftLabels]);
 
   const formSchema = React.useMemo(
     () => buildFormSchemaFromSpec(spec, values),
@@ -354,6 +391,7 @@ const ContentFormFields = ({
     if (mutation.version !== undefined) setExpectedVersion(mutation.version);
 
     invalidateOptions(spec.contentTypeId);
+    await liveSession?.reloadDrafts();
 
     const toastTitle =
       contentTitleFromValues(spec, submitted, locale) ??
@@ -425,22 +463,23 @@ const ContentFormFields = ({
       // suspends on promise children, so the dialog spins forever.
       component: props => {
         const Override = fieldOverrides[fieldSpec.name];
-        if (Override) {
-          return (
-            <Override {...props} multiLang={fieldSpec.localized === true} />
-          );
-        }
 
         return (
-          <ContentField
-            files={files}
-            loadOptions={loadOptions}
-            spec={fieldSpec}
-            uploadFile={async ({ field, file }) =>
-              await uploadContentFile({ field, file, spec })
-            }
-            {...props}
-          />
+          <ContentLiveField field={props.field} fieldSpec={fieldSpec}>
+            {Override ? (
+              <Override {...props} multiLang={fieldSpec.localized === true} />
+            ) : (
+              <ContentField
+                files={files}
+                loadOptions={loadOptions}
+                spec={fieldSpec}
+                uploadFile={async ({ field, file }) =>
+                  await uploadContentFile({ field, file, spec })
+                }
+                {...props}
+              />
+            )}
+          </ContentLiveField>
         );
       },
     }),
@@ -506,6 +545,12 @@ const ContentFormFields = ({
               ) : (
                 <>
                   <ContentFormHeader />
+                  {presentation === "page" || !live ? null : (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <ContentLivePresence />
+                      <ContentLiveStatus />
+                    </div>
+                  )}
 
                   {publication && data ? (
                     <ContentFormPublication

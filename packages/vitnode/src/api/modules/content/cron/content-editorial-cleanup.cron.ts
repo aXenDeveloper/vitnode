@@ -3,6 +3,8 @@ import {
   CONTENT_REVISION_MAX_RETENTION,
   CONTENT_SCHEDULE_RETENTION_DAYS,
 } from "@/content/const";
+import { cleanupStaleContentDrafts } from "@/content/server/live-store";
+import { cleanupStaleContentDocuments } from "@/content/server/live/document-store";
 import { pruneContentRevisions } from "@/content/server/revisions-model";
 import { pruneContentSchedules } from "@/content/server/schedules-model";
 
@@ -11,7 +13,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const contentEditorialCleanupCron = buildCron({
   name: "content-editorial-cleanup",
   description:
-    "Remove revisions and schedules for content types that are no longer registered, and settled schedules past their retention window.",
+    "Remove revisions and schedules for content types that are no longer registered, settled schedules past their retention window, expired field locks, and live-editing drafts and documents nobody touched for 30 days.",
   // 03:20 daily, off the hour so it does not pile onto every other daily job.
   schedule: "20 3 * * *",
   handler: async c => {
@@ -32,6 +34,17 @@ export const contentEditorialCleanupCron = buildCron({
       db: c.get("db"),
       knownContentTypeIds: known,
     });
+
+    const live = await cleanupStaleContentDrafts(c);
+    const documents = await cleanupStaleContentDocuments(c);
+
+    if (live.drafts + live.locks + documents > 0) {
+      await c
+        .get("log")
+        .debug(
+          `[content-editorial-cleanup] removed ${live.locks} expired field locks, ${live.drafts} stale drafts and ${documents} stale documents.`,
+        );
+    }
 
     if (schedules.orphaned + revisions.orphaned === 0) return;
 

@@ -1,0 +1,256 @@
+---
+title: Public API
+description: Add drafts and publishing to a VitNode Content Engine content type, expose published records through typed read-only public API routes, and read them with the fetcher.
+icon: Globe
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { ImgDocs } from "@/components/fumadocs/img";
+import publishRow from "./public-api-publish-row.webp";
+import publishConfirm from "./public-api-publish-confirm.webp";
+
+A content type is private until you opt in. This guide follows `example.article` from the example plugin. It gets a draft and a published state, and its published records become readable by anyone at `/api/@vitnode/example/content/articles`. You list exactly which fields leave the server.
+
+You need a content type with an AdminCP screen, like the one built in [Create a content type](/docs/content-engine/create-a-content-type).
+
+<Steps>
+
+<Step>
+
+### Turn on publication and the public API
+
+Add `publication` and `publicApi` to the definition. This excerpt leaves out the article fields this guide does not use:
+
+```ts title="plugins/example/src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+    author: field.user(),
+    category: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => categoryContentType,
+    }),
+  },
+  publication: true, // [!code ++]
+  // [!code ++:9]
+  publicApi: {
+    path: "articles",
+    fields: ["title", "slug", "excerpt", "featured", "category", "publishedAt"],
+    searchableFields: ["title", "excerpt"],
+    orderableFields: ["publishedAt", "title"],
+    filterableFields: ["category", "featured"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
+});
+```
+
+- `publication` adds a `status` column (`draft` or `published`, default `draft`), a `publishedAt` timestamp, a `can_publish` staff permission and **Publish** / **Unpublish** actions in the AdminCP.
+- `publicApi.fields` is an allowlist with no wildcard. It needs exactly one slug field, because the detail route finds records by slug. `status` and `field.user()` fields can never be listed, which is why `author` stays private.
+- Searchable, filterable and orderable fields must also be in `fields`. `publishedAt` is always orderable and is the default sort.
+- `path` is one lowercase URL segment and cannot be `admin`.
+
+`publicApi` without `publication` throws when the definition loads, so drafts cannot leak by accident.
+
+</Step>
+
+<Step>
+
+### Register the public module
+
+Add `buildContentPublicModule` to the plugin's API config. The example plugin passes all five content models; one without `publicApi` is skipped:
+
+```ts title="plugins/example/src/config.api.ts"
+import { buildContentPublicModule } from "@vitnode/core/content/server"; // [!code ++]
+
+import { articleContent } from "@/database/articles"; // [!code ++]
+
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [
+      adminModule,
+      // [!code ++:4]
+      buildContentPublicModule({
+        pluginId: CONFIG_PLUGIN.pluginId,
+        contentTypes: [articleContent],
+      }),
+    ],
+  });
+```
+
+</Step>
+
+<Step>
+
+### Label the publish permission
+
+Give the new permission a name next to the other article permissions. The `Status` and `Published at` columns need no strings, because the AdminCP derives them from the column names.
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example:article:can_publish": "Publish and unpublish articles"
+}
+```
+
+</Step>
+
+<Step>
+
+### Build, migrate and restart
+
+Run this from the workspace root, then restart `pnpm dev` so the API registers the new routes:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+The migration adds `status`, `publishedAt` and an `example_articles_status_published_at_idx` index. Existing rows become drafts. [Database](/docs/content-engine/database) covers migrations in detail.
+
+</Step>
+
+<Step>
+
+### Publish an article
+
+Open **AdminCP → Example → Articles**. New articles show a **Draft** badge. Click the paper plane **Publish** button at the end of a row:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={publishRow}
+  alt="Articles list with Hello Content Engine marked Draft and the Publish tooltip over the paper plane button in its row"
+/>
+
+Confirm with **Yes, publish it**. The badge turns into **Published** and the article appears in the public API.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={publishConfirm}
+  alt="Publish Article dialog asking to publish Hello Content Engine, with Cancel and Yes, publish it buttons"
+/>
+
+The **Create Article** dialog also gets **Save as draft** and **Publish** buttons, and you can publish many rows at once with [bulk actions](/docs/content-engine/admincp#bulk-actions).
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Request the list. Filters are query parameters named after the field, and `orderBy` accepts the orderable fields:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/articles?featured=false&orderBy=title&order=asc&first=1"
+```
+
+```json
+{
+  "edges": [
+    {
+      "title": "Hello Content Engine",
+      "slug": "hello-content-engine",
+      "excerpt": "A first article from the example plugin, served by the public API and rendered on its own page.",
+      "featured": false,
+      "category": { "id": 5 },
+      "publishedAt": "2026-10-10T10:55:34.335Z"
+    }
+  ],
+  "pageInfo": {
+    "totalCount": 1,
+    "totalPages": 1,
+    "currentPage": null,
+    "pageSize": 1,
+    "count": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false,
+    "startCursor": "eyJjb2x1bW4iOiJ0aXRsZSIsImlkIjozLCJ2YWx1ZSI6IkhlbGxvIENvbnRlbnQgRW5naW5lIn0",
+    "endCursor": "eyJjb2x1bW4iOiJ0aXRsZSIsImlkIjozLCJ2YWx1ZSI6IkhlbGxvIENvbnRlbnQgRW5naW5lIn0"
+  }
+}
+```
+
+A relation comes back as `{ "id": 5 }`. A file field, such as the example's `gallery`, comes back as `{ id, name, url, mimeType, size, width, height }`, never as the raw file ID.
+
+Unpublish the article and request it by slug. A draft, a record scheduled for later and a slug that never existed all get the same `404`, so the API never confirms that a draft exists:
+
+```bash
+curl -i http://localhost:3000/api/@vitnode/example/content/articles/hello-content-engine
+```
+
+```text
+HTTP/1.1 404
+Article not found.
+```
+
+## Read the API from your plugin
+
+The [fetcher](/docs/dev/fetcher) types the routes from the plugin's API registry. The module is `content/` followed by `publicApi.path`. Put a helper like this anywhere in your plugin:
+
+```ts title="featured-articles.ts"
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { z } from "zod";
+
+const zodArticleCard = z.object({
+  excerpt: z.string().nullable(),
+  publishedAt: z.string().nullable(),
+  slug: z.string(),
+  title: z.string(),
+});
+
+export const fetchFeaturedArticles = async () => {
+  const response = await fetcher({
+    plugin: "@vitnode/example",
+    method: "get",
+    module: "content/articles",
+    path: "/",
+    args: { query: { featured: true, first: 5 } },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`Loading articles answered ${response.status}.`);
+  }
+
+  const { edges } = await response.json();
+
+  return z.array(zodArticleCard).parse(edges);
+};
+```
+
+The path, the query and `pageInfo` are typed. Each record is a `Record<string, unknown>`, so parse the fields you use with Zod, as the example's article page does. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
+
+## Public API routes
+
+All routes are `GET` and live under `/api/{pluginId}/content/{publicApi.path}`.
+
+| Route                      | Returns                                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `/`                        | Published records with `edges` and `pageInfo`                                                             |
+| `/{slug}`                  | One published record, or `404`                                                                            |
+| `/preview/{token}`         | A draft behind a signed link, only with [preview links](/docs/content-engine/editorial#preview-links)     |
+| `/delivery/resolve/{slug}` | Whether a URL is a record, a redirect or nothing, only with [delivery](/docs/content-engine/public-pages) |
+| `/delivery/item/{id}`      | Canonical URL and SEO metadata for one record, only with delivery                                         |
+| `/delivery/sitemap`        | Sitemap entries, only with `delivery.sitemap`                                                             |
+
+The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A record is public only when its `status` is `published` and its `publishedAt` is set and not later than the database clock. Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
+
+Next, give each article a web page with [Public pages](/docs/content-engine/public-pages), or see how these reads are cached in [Caching](/docs/content-engine/caching).

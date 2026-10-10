@@ -4,12 +4,12 @@ import type { InputParams } from "./auto-form";
 
 import { getNestedParam } from "./auto-form";
 
-export interface MultiLangValueItem {
+export interface MultiLangValueItem<TValue = string> {
   languageCode: string;
-  value: string;
+  value: TValue;
 }
 
-export type MultiLangValue = MultiLangValueItem[];
+export type MultiLangValue<TValue = string> = MultiLangValueItem<TValue>[];
 
 export const multiLangValueSchema = ({
   maxLength,
@@ -49,7 +49,40 @@ export const getLangValue = (
   );
 };
 
-const hasText = (text: string): boolean => text.trim() !== "";
+export const findLangValue = <TValue>(
+  value: MultiLangValue<TValue> | undefined,
+  languageCode: string,
+): TValue | undefined =>
+  (Array.isArray(value) ? value : []).find(
+    item => item.languageCode === languageCode,
+  )?.value;
+
+export const hasText = (text: string): boolean => text.trim() !== "";
+
+export const pickLangCodeWhere = ({
+  defaultLanguage,
+  isFilledIn,
+  languageCodes,
+  locale,
+}: {
+  defaultLanguage?: null | string;
+  isFilledIn: (languageCode: string) => boolean;
+  languageCodes: readonly string[];
+  locale: string;
+}): string => {
+  const current = languageCodes.includes(locale)
+    ? locale
+    : (languageCodes[0] ?? locale);
+
+  return (
+    [current, defaultLanguage, ...languageCodes]
+      .filter(
+        (code): code is string =>
+          typeof code === "string" && languageCodes.includes(code),
+      )
+      .find(isFilledIn) ?? current
+  );
+};
 
 export const pickLangCode = ({
   defaultLanguage,
@@ -63,20 +96,13 @@ export const pickLangCode = ({
   languageCodes: readonly string[];
   locale: string;
   value: MultiLangValue | string | undefined;
-}): string => {
-  const current = languageCodes.includes(locale)
-    ? locale
-    : (languageCodes[0] ?? locale);
-
-  return (
-    [current, defaultLanguage, ...languageCodes]
-      .filter(
-        (code): code is string =>
-          typeof code === "string" && languageCodes.includes(code),
-      )
-      .find(code => isFilled(getLangValue(value, code))) ?? current
-  );
-};
+}): string =>
+  pickLangCodeWhere({
+    defaultLanguage,
+    isFilledIn: code => isFilled(getLangValue(value, code)),
+    languageCodes,
+    locale,
+  });
 
 export const resolveLangValue = (
   value: MultiLangValue | string | undefined,
@@ -98,11 +124,11 @@ export const resolveLangValue = (
     }),
   );
 
-export const upsertLangValue = (
-  value: MultiLangValue | undefined,
+export const upsertLangValue = <TValue = string>(
+  value: MultiLangValue<TValue> | undefined,
   languageCode: string,
-  newValue: string,
-): MultiLangValue => {
+  newValue: TValue,
+): MultiLangValue<TValue> => {
   const current = Array.isArray(value) ? value : [];
 
   if (current.some(item => item.languageCode === languageCode)) {

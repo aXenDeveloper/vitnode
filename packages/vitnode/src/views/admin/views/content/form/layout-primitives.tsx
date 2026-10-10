@@ -3,6 +3,9 @@ import React from "react";
 
 import { PageTitle } from "@/components/ui/page-title";
 
+import { useContentLive } from "../live/context";
+import { ContentLivePresence } from "../live/presence";
+import { ContentLiveStatus } from "../live/status";
 import { useContentForm } from "./context";
 
 export const ContentFormHeader = ({
@@ -13,6 +16,7 @@ export const ContentFormHeader = ({
   className?: string;
 }) => {
   const { header, markHeaderRendered } = useContentForm();
+  const live = useContentLive();
 
   markHeaderRendered?.();
 
@@ -22,7 +26,19 @@ export const ContentFormHeader = ({
     <PageTitle
       back={header.back}
       className={className}
-      desc={header.desc}
+      desc={
+        live ? (
+          <div className="flex flex-col gap-1">
+            {header.desc}
+            <div className="flex flex-wrap items-center gap-3">
+              <ContentLivePresence />
+              <ContentLiveStatus />
+            </div>
+          </div>
+        ) : (
+          header.desc
+        )
+      }
       h1={header.title}
     >
       {children}

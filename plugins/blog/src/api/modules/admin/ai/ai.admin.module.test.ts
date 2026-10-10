@@ -64,6 +64,11 @@ const grant = async (cache: CacheModel, canEdit: boolean) => {
   );
 };
 
+const bodyDocument = {
+  content: [{ content: [{ text: "Body", type: "text" }], type: "paragraph" }],
+  type: "doc",
+};
+
 const modelAnswering = (text: string) =>
   new MockLanguageModelV4({
     doGenerate: {
@@ -157,20 +162,49 @@ describe("blog AI admin routes", () => {
     expect(promptOf(model.doGenerateCalls[0])).toContain("Hello, world");
   });
 
-  it("keeps HTML intact when translating content", async () => {
+  it("translates a rich text document as HTML, keeping its markup", async () => {
     const { app, model } = await createApp({
-      model: modelAnswering("<p>Cześć</p>\n"),
+      model: modelAnswering("<p><strong>Cześć</strong></p>\n"),
     });
 
     const response = await post(app, "/translate", {
-      format: "html",
+      document: {
+        content: [
+          {
+            content: [
+              { marks: [{ type: "bold" }], text: "Hello", type: "text" },
+            ],
+            type: "paragraph",
+          },
+        ],
+        type: "doc",
+      },
+      format: "richText",
       from: "en",
-      text: "<p>Hello</p>",
       to: "pl",
     });
 
-    expect(await response.json()).toEqual({ text: "<p>Cześć</p>" });
+    expect(await response.json()).toEqual({
+      text: "<p><strong>Cześć</strong></p>",
+    });
     expect(promptOf(model.doGenerateCalls[0])).toContain("Keep every tag");
+    expect(promptOf(model.doGenerateCalls[0])).toContain(
+      "<p><strong>Hello</strong></p>",
+    );
+  });
+
+  it("refuses an empty document before asking the model", async () => {
+    const { app, model } = await createApp();
+
+    const response = await post(app, "/translate", {
+      document: { content: [{ type: "paragraph" }], type: "doc" },
+      format: "richText",
+      from: "en",
+      to: "pl",
+    });
+
+    expect(response.status).toBe(400);
+    expect(model.doGenerateCalls).toHaveLength(0);
   });
 
   it("writes an excerpt from the article text", async () => {
@@ -181,7 +215,20 @@ describe("blog AI admin routes", () => {
     });
 
     const response = await post(app, "/excerpt", {
-      content: "<h2>Why</h2><p>We rebuilt the AdminCP.</p>",
+      content: {
+        content: [
+          {
+            attrs: { level: 2 },
+            content: [{ text: "Why", type: "text" }],
+            type: "heading",
+          },
+          {
+            content: [{ text: "We rebuilt the AdminCP.", type: "text" }],
+            type: "paragraph",
+          },
+        ],
+        type: "doc",
+      },
       locale: "en",
       title: "VitNode 2.0",
     });
@@ -193,7 +240,7 @@ describe("blog AI admin routes", () => {
     expect(promptOf(model.doGenerateCalls[0])).toContain(
       "We rebuilt the AdminCP.",
     );
-    expect(promptOf(model.doGenerateCalls[0])).not.toContain("<p>");
+    expect(promptOf(model.doGenerateCalls[0])).not.toContain("paragraph");
   });
 
   it("refuses staff who cannot edit articles", async () => {
@@ -214,7 +261,12 @@ describe("blog AI admin routes", () => {
     const { app, model } = await createApp({ configured: false });
 
     const response = await post(app, "/excerpt", {
-      content: "<p>Body</p>",
+      content: {
+        content: [
+          { content: [{ text: "Body", type: "text" }], type: "paragraph" },
+        ],
+        type: "doc",
+      },
       locale: "en",
       title: "Title",
     });
@@ -250,9 +302,26 @@ describe("blog AI admin routes", () => {
     });
 
     const response = await post(app, "/translate", {
-      format: "html",
+      document: {
+        content: [
+          {
+            content: [
+              { text: "Hello ", type: "text" },
+              {
+                marks: [
+                  { attrs: { href: "https://vitnode.com" }, type: "link" },
+                ],
+                text: "link",
+                type: "text",
+              },
+            ],
+            type: "paragraph",
+          },
+        ],
+        type: "doc",
+      },
+      format: "richText",
       from: "en",
-      text: '<p>Hello <a href="https://vitnode.com">link</a></p>',
       to: "pl",
     });
 
@@ -268,7 +337,7 @@ describe("blog AI admin routes", () => {
     });
 
     const response = await post(app, "/excerpt", {
-      content: "<p>Body</p>",
+      content: bodyDocument,
       locale: "en",
       title: "Title",
     });
@@ -283,7 +352,21 @@ describe("blog AI admin routes", () => {
   it("returns a structured, validated review and never claims to check facts", async () => {
     const review = {
       suggestions: [
-        { area: "clarity", message: "Define RLS first.", priority: "high" },
+        {
+          area: "clarity",
+          fix: {
+            quote: "RLS",
+            replacement: "row level security (RLS)",
+          },
+          message: "Define RLS first.",
+          priority: "high",
+        },
+        {
+          area: "structure",
+          fix: null,
+          message: "Add a conclusion.",
+          priority: "low",
+        },
       ],
       summary: "Clear overall.",
     };
@@ -322,7 +405,7 @@ describe("blog AI admin routes", () => {
     app.post("/review", async c => {
       const result = await c.get("ai").run({
         action: ARTICLE_REVIEW_AI_ACTION,
-        input: { content: "<p>Body</p>", locale: "en", title: "Title" },
+        input: { content: bodyDocument, locale: "en", title: "Title" },
       });
 
       return c.json(result.output);
@@ -334,6 +417,9 @@ describe("blog AI admin routes", () => {
 
     expect(await response.json()).toEqual(review);
     expect(promptOf(model.doGenerateCalls[0])).toContain("cannot verify them");
+    expect(promptOf(model.doGenerateCalls[0])).toContain(
+      "copied character for character",
+    );
   });
 
   it("refuses the review on a model without structured output", async () => {
@@ -341,7 +427,7 @@ describe("blog AI admin routes", () => {
     app.post("/review", async c => {
       await c.get("ai").run({
         action: ARTICLE_REVIEW_AI_ACTION,
-        input: { content: "<p>Body</p>", locale: "en", title: "Title" },
+        input: { content: bodyDocument, locale: "en", title: "Title" },
       });
 
       return c.json({});

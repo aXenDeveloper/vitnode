@@ -15,21 +15,19 @@ const PLUGIN = "@vitnode/test";
 
 const articleType = defineContentType({
   id: "delivery.article",
-  editorial: { enabled: true },
+  editorial: true,
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: { descriptionField: "excerpt", titleField: "title" },
-    sitemap: { enabled: true, priority: 0.7 },
+    sitemap: { priority: 0.7 },
   },
   fields: {
     excerpt: field.textarea({ nullable: true }),
     slug: field.slug({ source: "title" }),
     title: field.text({ required: true }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug", "excerpt"],
     path: "articles",
   },
@@ -38,14 +36,13 @@ const articleType = defineContentType({
 
 const withoutRedirects = defineContentType({
   id: "delivery.no-redirects",
-  delivery: { enabled: true, sitemap: { enabled: true } },
+  delivery: { sitemap: true },
   fields: {
     slug: field.slug({ source: "title" }),
     title: field.text({ required: true }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug"],
     path: "articles",
   },
@@ -54,13 +51,12 @@ const withoutRedirects = defineContentType({
 
 const localizedType = defineContentType({
   id: "delivery.localized",
-  editorial: { enabled: true },
+  editorial: true,
   delivery: {
-    enabled: true,
     hreflang: { xDefault: "defaultLocale" },
-    redirects: { enabled: true },
+    redirects: true,
     seo: { fallbackTitleField: "title", titleField: "seo.title" },
-    sitemap: { enabled: true },
+    sitemap: true,
   },
   fields: {
     seo: field.group({
@@ -71,10 +67,9 @@ const localizedType = defineContentType({
     slug: field.slug({ localized: true, source: "title" }),
     title: field.text({ localized: true, required: true }),
   },
-  localization: { defaultLocale: "en", enabled: true, fallback: "default" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug", "seo.title"],
     path: "articles",
   },
@@ -83,15 +78,14 @@ const localizedType = defineContentType({
 
 const strictLocalizedType = defineContentType({
   id: "delivery.strict-localized",
-  delivery: { enabled: true },
+  delivery: true,
   fields: {
     slug: field.slug({ localized: true, source: "title" }),
     title: field.text({ localized: true, required: true }),
   },
-  localization: { defaultLocale: "en", enabled: true, fallback: "none" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "none" },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug"],
     path: "strict-articles",
   },
@@ -264,8 +258,8 @@ describe("createContentDeliveryService", () => {
         slug: field.slug({ source: "title" }),
         title: field.text({ required: true }),
       },
-      publication: { enabled: true },
-      publicApi: { enabled: true, fields: ["title", "slug"], path: "p" },
+      publication: true,
+      publicApi: { fields: ["title", "slug"], path: "p" },
       tableName: "delivery_none",
     });
 
@@ -659,13 +653,13 @@ describe("sitemap", () => {
   it("is an empty page for a content type that lists nothing", async () => {
     const noSitemap = defineContentType({
       id: "delivery.no-sitemap",
-      delivery: { enabled: true },
+      delivery: true,
       fields: {
         slug: field.slug({ source: "title" }),
         title: field.text({ required: true }),
       },
-      publication: { enabled: true },
-      publicApi: { enabled: true, fields: ["id", "title", "slug"], path: "a" },
+      publication: true,
+      publicApi: { fields: ["id", "title", "slug"], path: "a" },
       tableName: "delivery_no_sitemap",
     });
 

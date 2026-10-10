@@ -1,0 +1,258 @@
+---
+title: Public pages
+description: Give every published VitNode Content Engine record its own URL with delivery, a plugin page, slug redirects and localized URLs.
+icon: Compass
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import articlePage from "./public-pages-article.webp";
+
+Delivery turns a published record into a web page at a stable URL, such as `/articles/hello-content-engine`. The Content Engine resolves the URL, answers `404` for drafts, redirects retired slugs and builds the page's SEO metadata from fields you choose. Your plugin owns the page component, so the content type, its API and its URL stay in one plugin.
+
+The content type needs [publication and a public API](/docs/content-engine/public-api). This guide continues with `example.article`.
+
+<Steps>
+
+<Step>
+
+### Turn on delivery
+
+Add a `delivery` block to the definition:
+
+```ts title="plugins/example/src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  // [!code ++:10]
+  delivery: {
+    redirects: true,
+    seo: {
+      titleField: "title",
+      descriptionField: "excerpt",
+      noIndexField: "noIndex",
+      openGraph: { titleField: "title", descriptionField: "excerpt" },
+    },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
+  },
+});
+```
+
+- Every SEO field must also be in `publicApi.fields`, because the page renders it publicly. That is why the example lists `noIndex` there.
+- `noIndexField` names a boolean. When it is `true`, the page gets `noindex, nofollow` and the record leaves the sitemap.
+- `redirects` needs `editorial: true`, which the example article already has. `sitemap` needs `publication`.
+- The page URL defaults to `/{publicApi.path}/:slug`, so articles live at `/articles/:slug`. Set `delivery.path` to use another URL. It needs exactly one `:slug` and cannot start with `/admin` or `/api`.
+
+</Step>
+
+<Step>
+
+### Export the plugin's content types
+
+Export every content type with public URLs from `src/content.ts`:
+
+```ts title="plugins/example/src/content.ts"
+import { advancedArticleContentType } from "@/content/advanced-article";
+import { articleContentType } from "@/content/article";
+import { categoryContentType } from "@/content/category";
+import { localizedArticleContentType } from "@/content/localized-article";
+import { pageContentType } from "@/content/page";
+
+export const contentTypes = [
+  articleContentType,
+  advancedArticleContentType,
+  localizedArticleContentType,
+  categoryContentType,
+  pageContentType,
+];
+```
+
+The build compares these URLs with your plugin's routes. A content type whose URL no page serves stops `dev` and `build` with a `content-url-without-page` error, so a broken canonical link never ships. [Plugin files](/docs/content-engine/plugin-files) explains how the build finds this module.
+
+</Step>
+
+<Step>
+
+### Claim the URL
+
+Add a page for the same path to the plugin's routes:
+
+```ts title="plugins/example/src/routes.ts"
+export const routes = definePluginRoutes([
+  // [!code ++:4]
+  page("/articles/:slug", {
+    component: lazy(() => import("./pages/article-page")),
+    messages: ["@vitnode/example.articles"],
+  }),
+]);
+```
+
+</Step>
+
+<Step>
+
+### Write the page
+
+The loader calls two public routes in parallel. `/delivery/resolve/{slug}` says whether the URL is a record, an old slug to redirect, or nothing. `/{slug}` returns the record's public fields.
+
+```tsx title="plugins/example/src/pages/article-page.tsx"
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from "@vitnode/core/routing";
+import {
+  contentDeliveryPage,
+  contentDeliveryPageHead,
+} from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import { ContentArticle } from "./content-article";
+
+const zodArticle = z.object({
+  excerpt: z.string().nullable(),
+  publishedAt: z.string().nullable(),
+  title: z.string(),
+});
+
+const loadArticle = async (slug: string) => {
+  const [resolution, detail] = await Promise.all([
+    fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "get",
+      module: "content/articles",
+      path: "/delivery/resolve/{slug}",
+      args: { params: { slug: encodeURIComponent(slug) } },
+    }),
+    fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "get",
+      module: "content/articles",
+      path: "/{slug}",
+      args: { params: { slug: encodeURIComponent(slug) } },
+    }),
+  ]);
+
+  if (resolution.status !== 200) {
+    throw new Error(
+      `Resolving the article "${slug}" answered ${resolution.status}.`,
+    );
+  }
+
+  return contentDeliveryPage({
+    item: detail.status === 200 ? zodArticle.parse(await detail.json()) : null,
+    resolution: await resolution.json(),
+  });
+};
+
+type ArticlePageData = Awaited<ReturnType<typeof loadArticle>>;
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await loadArticle(params.slug),
+
+  head: ({ loaderData }) =>
+    contentDeliveryPageHead(loaderData?.metadata, {
+      title: loaderData?.item.title,
+    }),
+});
+
+const ArticlePage = ({
+  loaderData: { item },
+}: PluginRoutePageProps<ArticlePageData>) => (
+  <ContentArticle
+    lead={item.excerpt}
+    publishedAt={item.publishedAt}
+    title={item.title}
+  />
+);
+
+export default ArticlePage;
+```
+
+- `contentDeliveryPage` returns `{ item, metadata }`. It throws a not-found for an unknown slug or a draft, and a `308` redirect for a retired slug.
+- `contentDeliveryPageHead` sets the title, the meta description (HTML stripped, cut at 160 characters), `robots` for a no-index record and `hreflang` alternates for localized content.
+- `load` comes before `head`, so TypeScript can infer `loaderData`. `ContentArticle` is the plugin's own layout component.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Run `pnpm build:plugins`, restart `pnpm dev` and open `http://localhost:3000/articles/hello-content-engine`. Delivery adds no columns, so there is nothing to migrate.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={articlePage}
+  alt="Public article page with Published Oct 10, the title Hello Content Engine and its excerpt as the lead"
+/>
+
+The page head carries the article's title and excerpt:
+
+```bash
+curl -s http://localhost:3000/articles/hello-content-engine | grep -oE '<title>[^<]*</title>|<meta content="[^"]*" name="description"/>'
+```
+
+```html
+<title>Hello Content Engine - VitNode</title>
+<meta
+  content="A first article from the example plugin, served by the public API and rendered on its own page."
+  name="description"
+/>
+```
+
+The resolve route shows what the loader received. `openGraph`, `canonicalPath` and `hreflang` are there too if you want to render more tags yourself:
+
+```bash
+curl http://localhost:3000/api/@vitnode/example/content/articles/delivery/resolve/hello-content-engine
+```
+
+```json
+{
+  "type": "content",
+  "canonicalPath": "/articles/hello-content-engine",
+  "canonicalInternalPath": "/articles/hello-content-engine",
+  "seo": {
+    "title": "Hello Content Engine",
+    "description": "A first article from the example plugin, served by the public API and rendered on its own page."
+  },
+  "openGraph": {
+    "title": "Hello Content Engine",
+    "description": "A first article from the example plugin, served by the public API and rendered on its own page."
+  },
+  "robots": { "follow": true, "index": true },
+  "alternates": [],
+  "hreflang": { "languages": {} },
+  "isFallback": false,
+  "itemId": null,
+  "locale": null,
+  "requestedLocale": null
+}
+```
+
+`itemId` is `null` because `id` is not in the article's `publicApi.fields`. Unpublish the article and the same URL shows the app's not-found page.
+
+## Keep old URLs working
+
+Renaming a slug breaks links people already shared. With `delivery.redirects`, the old slug is stored in `core_content_slug_history` when an editor changes it, and the resolve route answers `{ "type": "redirect", "status": 308, "location": "/articles/new-slug" }`. `contentDeliveryPage` turns that into a `308` redirect.
+
+## Sitemap entries
+
+`delivery.sitemap` lists every published URL for crawlers. [SEO](/docs/content-engine/seo#sitemap) covers the route, paging and turning the entries into XML.
+
+## Localized URLs
+
+Every URL delivery builds follows the app's [localized URL rules](/docs/dev/i18n/localized-urls): language prefixes, per-language domains and translated route segments. The blog plugin's posts are a working example. They are [localized](/docs/content-engine/localization) and live at `/blog/:slug`, and the web app translates that route for Polish:
+
+```ts title="apps/web/src/vitnode.config.ts"
+i18n: {
+  routePaths: {
+    pl: {
+      '/blog/:slug': '/wpisy/:slug',
+    },
+  },
+},
+```
+
+The blog's sitemap then lists `/blog/english-title` for English and `/pl/wpisy/polish-title` for Polish, and only published translations become `hreflang` alternates. Every `delivery` option is in the [content type reference](/docs/content-engine/reference#delivery).

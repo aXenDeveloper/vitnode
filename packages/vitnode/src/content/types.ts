@@ -18,6 +18,7 @@ import type {
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
 } from "./const";
 import type { ContentFileDescriptor } from "./files";
+import type { RichTextDocument } from "./rich-text/document";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -117,6 +118,16 @@ export interface ContentTextareaField<
   localized: TLocalized;
   maxLength?: number;
   minLength?: number;
+}
+
+export interface ContentRichTextField<
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+  TLocalized extends boolean = boolean,
+> extends ContentFieldShared<TRequired, TNullable> {
+  kind: "richText";
+  localized: TLocalized;
+  maxBytes?: number;
 }
 
 export interface ContentNumberField<
@@ -276,6 +287,7 @@ export type ContentFieldDescriptor =
   | ContentNumberField
   | ContentRelationField
   | ContentRepeatableField
+  | ContentRichTextField
   | ContentSlugField
   | ContentTextareaField
   | ContentTextField
@@ -328,7 +340,9 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
       ? TValue
       : TField extends { kind: "file" | "number" | "relation" | "user" }
         ? number
-        : string;
+        : TField extends { kind: "richText" }
+          ? RichTextDocument
+          : string;
 
 /** The scalar half of {@link ContentFieldInput}. `dateTime` crosses as ISO. */
 type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
@@ -339,7 +353,9 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
       ? TValue
       : TField extends { kind: "file" | "number" | "relation" | "user" }
         ? number
-        : string;
+        : TField extends { kind: "richText" }
+          ? RichTextDocument
+          : string;
 
 /** Every leaf of a group, as it comes back. Nested, never flattened. */
 type ContentGroupValue<TFields> = Prettify<{
@@ -745,7 +761,7 @@ export interface ContentAdminConfig<
     sections?: ContentAdminFormSection<TFields>[];
   };
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
-  navigation?: { enabled?: boolean };
+  navigation?: boolean;
   /**
    * Where the generated screens live under `/admin/content/`. Defaults to the id
    * with its dots as slashes: `blog.post` -> `blog/post`.
@@ -895,17 +911,6 @@ export interface ResolvedContentIndex {
 // Publication
 // ---------------------------------------------------------------------------
 
-/**
- * Opts a content type into the draft/published lifecycle.
- *
- * `enabled` is literal `true` rather than `boolean` so the flag survives
- * inference: every conditional in this file keys off `{ enabled: true }`, and a
- * widened `boolean` would silently resolve to the disabled branch.
- */
-export interface ContentPublicationConfig {
-  enabled: true;
-}
-
 export interface ResolvedContentPublicationConfig<
   TEnabled extends boolean = boolean,
 > {
@@ -965,13 +970,9 @@ type ExposableFlatFieldKeys<TFields> = Exclude<
 /**
  * Opts a content type into a generated, read-only public API.
  *
- * Requires `publication: { enabled: true }` and exactly one exposed slug field,
- * both checked at definition time. Enabling publication on its own never makes
- * anything public - this block is the only thing that does.
- *
- * `enabled` is literal `true` for the same reason publication's is: every
- * conditional keys off it, and a widened `boolean` would silently resolve to
- * "no public API".
+ * Requires `publication: true` and exactly one exposed slug field, both checked
+ * at definition time. Enabling publication on its own never makes anything
+ * public - this block is the only thing that does, by being present.
  */
 export interface ContentPublicApiConfig<
   TField extends string = string,
@@ -980,7 +981,6 @@ export interface ContentPublicApiConfig<
   defaultOrder?: "asc" | "desc";
   /** Defaults to `publishedAt`. Must be orderable. */
   defaultOrderBy?: "publishedAt" | TField;
-  enabled: true;
   /** The allowlist. There is no wildcard - a new field is private until listed. */
   fields: readonly [TField, ...TField[]];
   /** Equality filters the list route accepts. Defaults to none. */
@@ -1167,9 +1167,6 @@ export type ContentSearchTextField<
  * private value would otherwise leak through a result snippet, a highlighted
  * match, ranking, or the mere fact that a record matched an exact-match probe.
  *
- * `enabled` is literal `true` for the same reason publication's and publicApi's
- * are: a widened `boolean` would silently resolve to "no search".
- *
  * Generic over the three field-name *unions* rather than over the field map, so
  * `defineContentType` can infer each one from the literal it was given and then
  * check it against `ContentSearchTitleField` and friends. Spelling those out
@@ -1188,22 +1185,16 @@ export interface ContentSearchConfig<
   contentFields: readonly [TText, ...TText[]];
   /** Prepended to the indexed body so it shows up in result excerpts. */
   descriptionField?: TDescription;
-  enabled: true;
   pathTemplate: string;
   /** The result heading. Weighted above the body by the index. */
   titleField: TTitle;
 }
 
-/**
- * Whether a `search` argument opted in.
- *
- * `defineContentType` infers the whole `search` object as one type parameter -
- * an intersection member like `{ enabled: TEnabled }` is not an inference site,
- * so reading the literal back off the argument is the only way to keep it.
- */
-export type ContentSearchEnabled<TSearch> = TSearch extends { enabled: true }
+export type ContentOptionEnabled<TOption> = [TOption] extends [object | true]
   ? true
   : false;
+
+export type ContentSearchEnabled<TSearch> = ContentOptionEnabled<TSearch>;
 
 /**
  * `search` after `defineContentType` has filled in every default.
@@ -1328,23 +1319,9 @@ export interface ContentDeliverySeoConfig<
   titleField?: TTitle;
 }
 
-/**
- * Automatic redirects from a record's historical public URLs.
- *
- * Needs a slug field, which `publicApi` already guarantees. What it adds is
- * persistence: every slug that was ever *publicly addressable* is written to
- * `core_content_slug_history`, which is what makes an old URL resolvable after
- * the row has moved on - and what reserves it, so unrelated content cannot
- * quietly inherit somebody else's incoming links.
- */
-export interface ContentDeliveryRedirectsConfig {
-  enabled: true;
-}
-
 export interface ContentDeliverySitemapConfig {
   /** One of the seven `changefreq` values the protocol defines. */
   changeFrequency?: ContentSitemapChangeFrequency;
-  enabled: true;
   /** `0` to `1` inclusive. */
   priority?: number;
 }
@@ -1367,43 +1344,48 @@ export interface ContentDeliveryHreflangConfig {
  * Opts a content type into the delivery layer: canonical URLs, slug history,
  * redirects, localized alternates, SEO projection and sitemap entries.
  *
- * Requires `publicApi: { enabled: true }`, checked at compile time through
- * `TPublicEnabled` and again at definition time - a content type with no public
- * API has no public URL, so there is nothing for delivery to be about.
+ * `redirects: true` writes every slug that was ever publicly addressable to
+ * `core_content_slug_history`, so an old URL keeps resolving after the row has
+ * moved on, and unrelated content cannot inherit somebody else's incoming links.
+ * It needs `editorial`, checked at compile time through `TEditorialEnabled`.
  *
- * `enabled` is literal `true` for the same reason every other opt-in's is: every
- * conditional keys off `{ enabled: true }`, and a widened `boolean` would
- * silently resolve to "no delivery".
+ * Delivery itself requires a public API, checked at compile time by
+ * `ContentDeliveryInput` and again at definition time - a content type with no
+ * public API has no public URL, so there is nothing for delivery to be about.
  */
 export interface ContentDeliveryConfig<
-  // Both flags default to `true` rather than `boolean`, which is what keeps the bare
-  // `ContentDeliveryConfig` usable as a widened parameter type: `boolean extends
-  // true` is false, so a `boolean` default would resolve `enabled` to `never` and
-  // make the erased form describe a config nobody can write.
-  TPublicEnabled extends boolean = true,
   TEditorialEnabled extends boolean = true,
   TTitle extends string = string,
   TDescription extends string = string,
   TNoIndex extends string = string,
 > {
-  enabled: TPublicEnabled extends true ? true : never;
   hreflang?: ContentDeliveryHreflangConfig;
   path?: string;
-
-  redirects?: TPublicEnabled extends true
-    ? TEditorialEnabled extends true
-      ? ContentDeliveryRedirectsConfig | { enabled: false }
-      : { enabled: false }
-    : { enabled: false };
+  redirects?: TEditorialEnabled extends true ? boolean : false;
   seo?: ContentDeliverySeoConfig<TTitle, TDescription, TNoIndex>;
-  sitemap?: ContentDeliverySitemapConfig | { enabled: false };
+  sitemap?: boolean | ContentDeliverySitemapConfig;
 }
 
-export type ContentDeliveryEnabled<TDelivery> = TDelivery extends {
-  enabled: true;
-}
-  ? true
-  : false;
+export type ContentDeliveryInput<
+  TPublicEnabled extends boolean = true,
+  TEditorialEnabled extends boolean = true,
+  TTitle extends string = string,
+  TDescription extends string = string,
+  TNoIndex extends string = string,
+> =
+  | false
+  | (TPublicEnabled extends true
+      ?
+          | ContentDeliveryConfig<
+              TEditorialEnabled,
+              TTitle,
+              TDescription,
+              TNoIndex
+            >
+          | true
+      : never);
+
+export type ContentDeliveryEnabled<TDelivery> = ContentOptionEnabled<TDelivery>;
 
 /** `delivery.seo` after `defineContentType` has filled in every default. */
 export interface ResolvedContentDeliverySeoConfig {
@@ -1446,47 +1428,39 @@ export interface ContentEditorialRevisionsConfig {
 }
 
 export interface ContentEditorialPreviewConfig {
-  enabled: true;
   /** How long a link stays valid. 1-1440 minutes, defaults to 15. */
   expiresInMinutes?: number;
 
   pathTemplate?: string;
 }
 
-export interface ContentEditorialSchedulingConfig {
-  enabled: true;
-}
-
 export interface ContentEditorialConfig<
   TPublicEnabled extends boolean = boolean,
   TPublication extends boolean = boolean,
 > {
-  enabled: true;
   preview?: TPublicEnabled extends true
-    ? ContentEditorialPreviewConfig | { enabled: false }
-    : { enabled: false };
+    ? boolean | ContentEditorialPreviewConfig
+    : false;
   revisions?: ContentEditorialRevisionsConfig;
-  scheduling?: TPublication extends true
-    ? ContentEditorialSchedulingConfig | { enabled: false }
-    : { enabled: false };
+  scheduling?: TPublication extends true ? boolean : false;
 }
 
-export type ContentEditorialEnabled<TEditorial> = TEditorial extends {
-  enabled: true;
-}
-  ? true
-  : false;
+export type ContentEditorialInput<
+  TPublicEnabled extends boolean = boolean,
+  TPublication extends boolean = boolean,
+> = boolean | ContentEditorialConfig<TPublicEnabled, TPublication>;
+
+export type ContentEditorialEnabled<TEditorial> =
+  ContentOptionEnabled<TEditorial>;
 
 export type ContentPreviewEnabled<TEditorial> = TEditorial extends {
-  enabled: true;
-  preview: { enabled: true };
+  preview: infer TPreview;
 }
-  ? true
+  ? ContentOptionEnabled<TPreview>
   : false;
 
 export type ContentSchedulingEnabled<TEditorial> = TEditorial extends {
-  enabled: true;
-  scheduling: { enabled: true };
+  scheduling: true;
 }
   ? true
   : false;
@@ -1522,7 +1496,6 @@ export type ContentLocalizationFallback =
 
 export interface ContentLocalizationConfig {
   defaultLocale: string;
-  enabled: true;
 
   fallback?: ContentLocalizationFallback;
 }
@@ -1539,11 +1512,8 @@ export interface ResolvedContentLocalizationConfig<
   translationTableName: string;
 }
 
-export type ContentLocalizationEnabled<TLocalization> = TLocalization extends {
-  enabled: true;
-}
-  ? true
-  : false;
+export type ContentLocalizationEnabled<TLocalization> =
+  ContentOptionEnabled<TLocalization>;
 
 /** Field names whose value lives in the translation table. */
 export type ContentLocalizedFieldName<TDefinition> = LocalizedFieldKeys<
@@ -1698,6 +1668,7 @@ export interface ContentTypeDefinition<
   id: TId;
   /** Declared indexes plus the automatic ones, deduplicated and named. */
   indexes: ResolvedContentIndex[];
+  liveEditing: { enabled: boolean };
   /**
    * Per-language content, or the disabled default when `localization` is
    * omitted.

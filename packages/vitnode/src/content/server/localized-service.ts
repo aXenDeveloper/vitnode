@@ -65,7 +65,7 @@ export const createContentLocalizedService = <
 
   if (!definition.localization.enabled) {
     throw new ContentEngineError(
-      "The localized service needs `localization: { enabled: true, defaultLocale }` on the content type.",
+      "The localized service needs `localization: { defaultLocale }` on the content type.",
       { contentTypeId },
     );
   }

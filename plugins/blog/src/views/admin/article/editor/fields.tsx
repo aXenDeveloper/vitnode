@@ -3,6 +3,7 @@ import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/a
 import { AutoFormLabel } from "@vitnode/core/components/form/common/label";
 import {
   type MultiLangFieldProps,
+  MultiLangLabel,
   useMultiLangField,
 } from "@vitnode/core/components/form/fields/multi-lang";
 import { FormControl, FormMessage } from "@vitnode/core/components/ui/form";
@@ -54,7 +55,7 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
       </AutoFormLabel>
       <FormControl>
         <textarea
-          className="placeholder:text-muted-foreground/60 aria-invalid:text-destructive field-sizing-content w-full resize-none bg-transparent text-3xl leading-tight font-bold tracking-tight text-balance outline-none sm:text-4xl"
+          className="placeholder:text-muted-foreground/60 aria-invalid:text-destructive field-sizing-content w-full resize-none bg-transparent text-3xl leading-tight font-bold tracking-tight text-balance transition-opacity duration-200 ease-out outline-none disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none sm:text-4xl"
           lang={selected}
           name={field.name}
           onBlur={field.onBlur}
@@ -66,7 +67,7 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
           value={currentValue}
         />
       </FormControl>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
         <CharacterCount field="title" value={currentValue} />
       </div>
       <FormMessage />
@@ -89,7 +90,7 @@ export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
         </span>
         <FormControl>
           <input
-            className="hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring/50 text-foreground min-w-0 flex-1 truncate rounded-sm bg-transparent px-1 py-0.5 text-base outline-none focus-visible:ring-3 md:text-sm"
+            className="hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring/50 text-foreground min-w-0 flex-1 truncate rounded-sm bg-transparent px-1 py-0.5 text-base outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
             name={field.name}
             onBlur={field.onBlur}
             onChange={event => {
@@ -149,9 +150,14 @@ export const ArticleExcerptField = ({ field }: ItemAutoFormComponentProps) => {
 export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog");
   const labelRight = useArticleFieldAction("coverImageAlt");
-  const { currentValue, selected, setValue } = useMultiLangField(
-    field as MultiLangFieldProps["field"],
-  );
+  const {
+    canSelect,
+    currentValue,
+    languages,
+    selected,
+    setSelected,
+    setValue,
+  } = useMultiLangField(field as MultiLangFieldProps["field"]);
   const { files } = useContentForm();
   const cover = files?.coverImage;
   const fileAlt =
@@ -159,9 +165,15 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
 
   return (
     <>
-      <AutoFormLabel isOptional labelRight={labelRight}>
-        {t("content.post.fields.coverImageAlt")}
-      </AutoFormLabel>
+      <MultiLangLabel
+        canSelect={canSelect}
+        isOptional
+        label={t("content.post.fields.coverImageAlt")}
+        labelRight={labelRight}
+        languages={languages}
+        onSelect={setSelected}
+        selected={selected}
+      />
       <FormControl>
         <input
           className={cn(fieldClassName, "h-9")}

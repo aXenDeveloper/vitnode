@@ -13,15 +13,14 @@ import {
 
 const articleType = defineContentType({
   id: "effects.article",
-  editorial: { enabled: true },
-  delivery: { enabled: true, redirects: { enabled: true } },
+  editorial: true,
+  delivery: { redirects: true },
   fields: {
     slug: field.slug({ source: "title" }),
     title: field.text({ required: true }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug"],
     path: "articles",
   },
@@ -34,9 +33,8 @@ const plainType = defineContentType({
     slug: field.slug({ source: "title" }),
     title: field.text({ required: true }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug"],
     path: "articles",
   },

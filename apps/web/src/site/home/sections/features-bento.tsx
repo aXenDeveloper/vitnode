@@ -33,7 +33,7 @@ const FEATURES: Feature[] = [
   {
     className: 'md:col-span-2 lg:row-span-2',
     heading: 'Describe it once. Ship the whole thing.',
-    docs: 'dev/content-engine',
+    docs: 'content-engine',
     Icon: Boxes,
     linkLabel: 'Explore the Content Engine',
     text: 'Describe a content type in one file and get the database table, a typed API, admin screens, search indexing and translations. Articles, listings, docs, events: anything with a shape.',

@@ -19,21 +19,20 @@ import { createContentModel } from "./model";
 
 const postType = defineContentType({
   id: "deliveryurls.post",
-  editorial: { enabled: true },
+  editorial: true,
   delivery: {
-    enabled: true,
     hreflang: { xDefault: "defaultLocale" },
     path: "/blog/:slug",
-    redirects: { enabled: true },
-    sitemap: { enabled: true },
+    redirects: true,
+    sitemap: true,
   },
   fields: {
     slug: field.slug({ localized: true, source: "title" }),
     title: field.text({ localized: true, required: true }),
   },
-  localization: { defaultLocale: "en", enabled: true, fallback: "default" },
-  publication: { enabled: true },
-  publicApi: { enabled: true, fields: ["id", "title", "slug"], path: "posts" },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  publicApi: { fields: ["id", "title", "slug"], path: "posts" },
   tableName: "delivery_urls_posts",
 });
 

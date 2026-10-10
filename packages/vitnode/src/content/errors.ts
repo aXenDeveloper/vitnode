@@ -342,7 +342,7 @@ export class ContentDeliverySlugReserved extends ContentEngineError {
 export class ContentDeliveryNotEnabled extends ContentEngineError {
   constructor({ contentTypeId }: { contentTypeId: string }) {
     super(
-      "This content type has no `delivery` block, so it has no canonical URL, no slug history and no sitemap. Add `delivery: { enabled: true }` to generate them.",
+      "This content type has no `delivery` block, so it has no canonical URL, no slug history and no sitemap. Add `delivery: true` to generate them.",
       { contentTypeId },
     );
 

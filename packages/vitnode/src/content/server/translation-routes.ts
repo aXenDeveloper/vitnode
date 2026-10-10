@@ -25,6 +25,8 @@ import {
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "../const";
 import { resolveContentActor } from "./actor";
+import { commitContentDrafts } from "./live-store";
+import { resetContentLiveRecord } from "./live/hooks";
 import { contentLocaleRouting } from "./locale-routing";
 import {
   assertContentPreviewIsServable,
@@ -267,6 +269,7 @@ export const buildContentTranslationRoutes = <
       },
     },
     handler: async c => {
+      const savedFrom = new Date();
       const id = identifier(c);
       const target = locale(c);
       const { expectedVersion, values } = await readJson(
@@ -304,6 +307,14 @@ export const buildContentTranslationRoutes = <
       }
 
       await announce(c, outcome);
+
+      if (definition.liveEditing.enabled) {
+        await commitContentDrafts(
+          c,
+          { contentTypeId: definition.id, itemId: id },
+          { locales: [target], savedFrom },
+        );
+      }
 
       return c.json({ changed: outcome.changed, row: outcome.row }, 200);
     },
@@ -629,6 +640,11 @@ export const buildContentTranslationRoutes = <
       }
 
       await announce(c, outcome);
+      await resetContentLiveRecord(
+        c,
+        { contentTypeId: definition.id, itemId: id },
+        "restored",
+      );
 
       return c.json({ changed: outcome.changed, row: outcome.row }, 200);
     },

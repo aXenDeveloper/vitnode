@@ -26,7 +26,8 @@ export const translateAiAdminRoute = buildRoute({
         content: {
           "application/json": { schema: z.object({ text: z.string() }) },
         },
-        description: "The translated text",
+        description:
+          "The translated text, or HTML when a rich text document was sent",
       },
       400: { description: "No AI model is configured or the input is invalid" },
       403: { description: "No access to posts or to this AI feature" },

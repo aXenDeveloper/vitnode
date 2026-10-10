@@ -34,7 +34,7 @@ const articles = defineContentType({
       searchableFields: ["title"],
     },
   },
-  publication: { enabled: true },
+  publication: true,
 }) as AnyContentTypeDefinition;
 
 const notes = defineContentType({
@@ -50,7 +50,7 @@ const notes = defineContentType({
 const localized = defineContentType({
   id: "blog.page",
   tableName: "blog_page",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  localization: { defaultLocale: "en", fallback: "default" },
   fields: { heading: field.text({ localized: true, required: true }) },
   admin: { titleField: "heading", list: { columns: ["heading"] } },
 }) as AnyContentTypeDefinition;

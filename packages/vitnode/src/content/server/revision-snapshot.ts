@@ -13,6 +13,7 @@ import {
   isContentReferenceCollection,
   readContentLeaf,
 } from "../paths";
+import { isRichTextDocument } from "../rich-text/document";
 
 const toIso = (value: unknown): string => {
   if (value instanceof Date) return value.toISOString();
@@ -69,6 +70,12 @@ const toFieldSnapshot = (
     return Array.isArray(value)
       ? value.map(id => Number(id)).filter(id => Number.isInteger(id))
       : [];
+  }
+
+  if (fieldValue.kind === "richText") {
+    const value = values[name];
+
+    return isRichTextDocument(value) ? value : null;
   }
 
   if (fieldValue.kind === "repeatable") {
@@ -173,7 +180,10 @@ const projectSnapshotFields = (
 
       if (fieldValue.kind === "group") {
         projected[name] =
-          value === null || typeof value !== "object" || Array.isArray(value)
+          value === null ||
+          typeof value !== "object" ||
+          Array.isArray(value) ||
+          isRichTextDocument(value)
             ? null
             : pickLeaves(value, leaves);
         continue;

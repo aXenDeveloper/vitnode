@@ -153,7 +153,7 @@ describe("content URLs served by page routes", () => {
     );
     expect(error.message).toContain('Add a page route at "/blog/:slug"');
     expect(error.message).toContain("point delivery.path at a path");
-    expect(error.message).toContain("`delivery: { enabled: false }`");
+    expect(error.message).toContain("`delivery: false`");
     expect(error.message).toContain('Declared in "@vitnode/blog/content".');
   });
 

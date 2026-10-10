@@ -1,5 +1,6 @@
 import type {
   ContentEditorialConfig,
+  ContentEditorialPreviewConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentPublicApiConfig,
 } from "./types";
@@ -15,6 +16,7 @@ import {
   CONTENT_REVISION_MIN_RETENTION,
   CONTENT_SEARCH_ITEM_TYPE_MAX_LENGTH,
 } from "./const";
+import { contentOptionConfig } from "./define-shared";
 import { ContentEngineError } from "./errors";
 
 const disabledEditorial: ResolvedContentEditorialConfig = {
@@ -100,11 +102,12 @@ const assertInRange = ({
  */
 export const resolveEditorial = (
   id: string,
-  editorial: ContentEditorialConfig | undefined,
+  editorialOption: boolean | ContentEditorialConfig | undefined,
   publicApi: ResolvedContentPublicApiConfig,
   publication: boolean,
 ): ResolvedContentEditorialConfig => {
-  if (!editorial?.enabled) return disabledEditorial;
+  const editorial = contentOptionConfig(editorialOption);
+  if (!editorial) return disabledEditorial;
 
   const retention =
     editorial.revisions?.retention ?? CONTENT_REVISION_DEFAULT_RETENTION;
@@ -126,11 +129,12 @@ export const resolveEditorial = (
     );
   }
 
-  const preview =
-    editorial.preview?.enabled === true ? editorial.preview : null;
+  const preview = contentOptionConfig<ContentEditorialPreviewConfig>(
+    editorial.preview,
+  );
   if (preview && !publicApi.enabled) {
     throw new ContentEngineError(
-      "editorial.preview needs `publicApi: { enabled: true, path, fields }`. A preview returns the public projection of a draft, so without a public allowlist there is nothing it could safely show.",
+      "editorial.preview needs `publicApi: { path, fields }`. A preview returns the public projection of a draft, so without a public allowlist there is nothing it could safely show.",
       { contentTypeId: id },
     );
   }
@@ -151,10 +155,10 @@ export const resolveEditorial = (
     }
   }
 
-  const scheduling = editorial.scheduling?.enabled === true;
+  const scheduling = editorial.scheduling === true;
   if (scheduling && !publication) {
     throw new ContentEngineError(
-      "editorial.scheduling needs `publication: { enabled: true }`. A schedule moves `status`, and without the lifecycle there is no status to move.",
+      "editorial.scheduling needs `publication: true`. A schedule moves `status`, and without the lifecycle there is no status to move.",
       { contentTypeId: id },
     );
   }

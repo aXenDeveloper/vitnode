@@ -19,6 +19,8 @@ import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { UserFormat } from "@/components/user-format";
 import { isContentPublished } from "@/content/publication";
+import { isRichTextDocument } from "@/content/rich-text/document";
+import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
@@ -235,6 +237,13 @@ const ContentCellValue = ({
         </Badge>
       );
     }
+
+    case "richText":
+      return (
+        <span className="line-clamp-2 max-w-sm whitespace-normal">
+          {isRichTextDocument(value) ? richTextToPlainText(value) : ""}
+        </span>
+      );
 
     case "system":
       return spec.name === "id" ? (

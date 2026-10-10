@@ -240,7 +240,7 @@ describe("storage", () => {
     const localizedPage = defineContentType({
       id: "test.localized-page",
       tableName: "test_blocks_localized",
-      localization: { defaultLocale: "en", enabled: true },
+      localization: { defaultLocale: "en" },
       fields: {
         content: field.blocks({ localized: true }),
         title: field.text({ required: true }),

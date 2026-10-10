@@ -18,6 +18,13 @@ import {
   readContentRowInBrowser,
   setContentPublishedInBrowser,
 } from "@/views/admin/views/content/form/mutations-api";
+import {
+  changeContentLockInBrowser,
+  discardContentDraftInBrowser,
+  listContentLocksInBrowser,
+  readContentDraftInBrowser,
+  saveContentDraftInBrowser,
+} from "@/views/admin/views/content/live/api";
 
 import { contentApiTarget, invalidateContentAfterWrite } from "../query";
 
@@ -104,8 +111,18 @@ export const contentFormTransport = (
       return result;
     },
 
+    listLocks: async (contentTypeId, itemId) =>
+      await listContentLocksInBrowser(targetFor(contentTypeId), itemId),
+
     listTranslations: async (contentTypeId, itemId) =>
       await listContentTranslationsInBrowser(targetFor(contentTypeId), itemId),
+
+    lock: async (contentTypeId, itemId, request) =>
+      await changeContentLockInBrowser(
+        targetFor(contentTypeId),
+        itemId,
+        request,
+      ),
 
     loadOptions: async (contentTypeId, field, search, ids) =>
       await loadContentOptionsInBrowser(
@@ -127,8 +144,17 @@ export const contentFormTransport = (
       return result;
     },
 
+    discardDraft: async (contentTypeId, itemId) =>
+      await discardContentDraftInBrowser(targetFor(contentTypeId), itemId),
+
+    readDraft: async (contentTypeId, itemId) =>
+      await readContentDraftInBrowser(targetFor(contentTypeId), itemId),
+
     reloadRow: async (contentTypeId, itemId) =>
       await readContentRowInBrowser(targetFor(contentTypeId), itemId),
+
+    saveDraft: async (contentTypeId, itemId, draft) =>
+      await saveContentDraftInBrowser(targetFor(contentTypeId), itemId, draft),
 
     unpublish: async (contentTypeId, itemId) => {
       const result = await setContentPublishedInBrowser(

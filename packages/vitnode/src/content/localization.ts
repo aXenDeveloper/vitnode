@@ -197,17 +197,17 @@ export const resolveContentLocalization = ({
 }: {
   fields: ContentFieldMap;
   id: string;
-  localization: ContentLocalizationConfig | undefined;
+  localization: ContentLocalizationConfig | false | undefined;
   publication: boolean;
   tableName: string;
 }): ResolvedContentLocalizationConfig => {
   const { localizedFields } = partitionContentFields(fields);
 
-  if (!localization?.enabled) {
+  if (!localization) {
     const stray = Object.keys(localizedFields)[0];
     if (stray !== undefined) {
       throw new ContentEngineError(
-        `Field "${stray}" is \`localized: true\` but the content type has no \`localization: { enabled: true, defaultLocale }\` block, so there is no translation table for it to live in.`,
+        `Field "${stray}" is \`localized: true\` but the content type has no \`localization: { defaultLocale }\` block, so there is no translation table for it to live in.`,
         { contentTypeId: id },
       );
     }

@@ -12,6 +12,11 @@ import type {
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { contentRevisionDiff } from "@/content/revisions";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@/content/rich-text/document";
+import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
 const TEXTAREA_PREVIEW_LINES = 8;
 
@@ -25,6 +30,7 @@ const TOKEN_KINDS = new Set([
 
 const isBlank = (value: ContentSnapshotValue | undefined): boolean => {
   if (value === null || value === undefined || value === "") return true;
+  if (isRichTextDocument(value)) return isRichTextEmpty(value);
   if (Array.isArray(value)) return value.length === 0;
 
   if (typeof value === "object") {
@@ -42,6 +48,21 @@ const Empty = ({ label }: { label: string }) => (
   </span>
 );
 
+const TextPreview = ({ text }: { text: string }) => {
+  const lines = text.split("\n");
+
+  return lines.length > TEXTAREA_PREVIEW_LINES ? (
+    <details>
+      <summary className="cursor-pointer">
+        {lines.slice(0, TEXTAREA_PREVIEW_LINES).join("\n")}
+      </summary>
+      <span className="whitespace-pre-wrap">{text}</span>
+    </details>
+  ) : (
+    <span className="whitespace-pre-wrap">{text}</span>
+  );
+};
+
 const Value = ({
   emptyLabel,
   kind,
@@ -56,6 +77,10 @@ const Value = ({
   value: ContentSnapshotValue | undefined;
 }) => {
   if (isBlank(value)) return <Empty label={emptyLabel} />;
+
+  if (isRichTextDocument(value)) {
+    return <TextPreview text={richTextToPlainText(value)} />;
+  }
 
   if (Array.isArray(value)) {
     if (typeof value[0] === "number") {
@@ -107,21 +132,8 @@ const Value = ({
     case "user":
       return <span>{labels[String(value)] ?? `#${String(value)}`}</span>;
 
-    case "textarea": {
-      const text = String(value);
-      const lines = text.split("\n");
-
-      return lines.length > TEXTAREA_PREVIEW_LINES ? (
-        <details>
-          <summary className="cursor-pointer">
-            {lines.slice(0, TEXTAREA_PREVIEW_LINES).join("\n")}
-          </summary>
-          <span className="whitespace-pre-wrap">{text}</span>
-        </details>
-      ) : (
-        <span className="whitespace-pre-wrap">{text}</span>
-      );
-    }
+    case "textarea":
+      return <TextPreview text={String(value)} />;
 
     default:
       return <span className="wrap-break-word">{String(value)}</span>;

@@ -92,7 +92,7 @@ describe("publicationMethods", () => {
       ContentEngineError,
     );
     expect(() => publicationMethods(testCategoryContentType, service)).toThrow(
-      /publication: \{ enabled: true \}/,
+      /publication: true/,
     );
   });
 });

@@ -619,7 +619,7 @@ export const pageLayoutCacheListener = buildEventListener({
 ## Content Engine events
 
 Every content type declared with the
-[Content Engine](/docs/dev/content-engine) gets its own event names, built from
+[Content Engine](/docs/content-engine) gets its own event names, built from
 its id: `content.<id>.<action>`. For the example plugin's `example.article`
 that means `content.example.article.created`, and for the blog's `blog.post` it
 means `content.blog.post.created`.
@@ -799,7 +799,7 @@ bookings collide, or pre-warm a render shortly before `scheduledFor`.
 
 ### Translation events
 
-A content type with [`localization`](/docs/dev/content-engine/localization)
+A content type with [`localization`](/docs/content-engine/localization)
 emits one event per translation mutation, in addition to the record events
 above. Every one of them carries `locale` and `languageId`, so a listener never
 has to go and ask which language moved.
@@ -879,7 +879,7 @@ translation event names localized fields only, and never a shared one.
 ### Delivery events
 
 A content type with
-[`delivery`](/docs/dev/content-engine/content-delivery-and-seo) emits two more
+[`delivery`](/docs/content-engine/public-pages) emits two more
 when its public URL moves. Both arrive **alongside** the lifecycle event that
 moved it - `updated`, `restored`, a publication transition or a
 `translation_*` - never instead of one: a field moving and a URL moving are
@@ -1033,13 +1033,13 @@ inspects `failures` and retries the whole delivery when it is non-empty.
   no-op publish and a restore that changed nothing all emit nothing. Calling
   `service.publish()` - or any other content service method - directly changes
   the database and emits **nothing**; that code owns its own follow-up. See
-  [Services and API](/docs/dev/content-engine/services-and-api).
+  [Services and API](/docs/content-engine/services).
 </Callout>
 
 ## Blog events (`@vitnode/blog`)
 
 <Callout type="warn" title="These six names are compatibility adapters">
-  The blog runs on the [Content Engine](/docs/dev/content-engine), so the events
+  The blog runs on the [Content Engine](/docs/content-engine), so the events
   that describe what actually happened are `content.blog.post.*` and
   `content.blog.category.*` - they carry changed fields, revision ids,
   publication transitions, per-locale translation events and slug history. The
@@ -1150,7 +1150,7 @@ deleted in the first place.
   so `content.example.localized-article.created` really is emitted and still
   cannot be given a type-checked listener. If your event name does not
   autocomplete, that declaration is what is missing - see
-  [Plugin registration](/docs/dev/content-engine/plugin-registration).
+  [Plugin registration](/docs/content-engine/plugin-files).
 </Callout>
 
 <Callout type="warn" title="Editorial payloads carry more than they declare">
@@ -1176,6 +1176,13 @@ issue or PR - adding an event is a one-line `emit` plus an entry in the
 `VitNodeEvents` map. (`user.deleted` is the special case: it is already on the
 map, and waits on core growing a user-deletion flow.)
 
+Live editing is quiet on the bus too. Taking or giving back a field lock,
+autosaving the shared draft and every keystroke in a co-edited rich text field
+happen many times a minute and change nothing anyone outside the form relies
+on, so none of them is an event. What does reach the bus is the commit: when
+someone presses **Save**, the record emits its usual `updated` (and its
+translations theirs), exactly as it would without live editing.
+
 ## Next
 
 <Cards>
@@ -1191,7 +1198,7 @@ map, and waits on core growing a user-deletion flow.)
   />
   <Card
     title="Content Engine"
-    href="/docs/dev/content-engine"
+    href="/docs/content-engine"
     description="Declare a content type and its whole event set is generated for you."
   />
   <Card

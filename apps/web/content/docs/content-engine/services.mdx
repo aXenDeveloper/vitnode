@@ -1,0 +1,368 @@
+---
+title: Services
+description: Read and write Content Engine records from your own Hono routes, cron jobs and queue tasks with the typed service, the public service and the editorial service, and reuse the generated Zod schemas.
+icon: Server
+---
+
+The Content Engine already generates routes for creating, reading, updating, deleting and publishing records. A **service** is what you use when you need something those routes don't do, such as "the three newest articles in one category" or "create an article from a cron job". It is a typed object with methods like `findMany`, `create` and `publish`, and you get it from the model `createContentModel` returns.
+
+Every example on this page uses the example plugin's article model:
+
+```ts title="plugins/example/src/database/articles.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { articleContentType } from "@/content/article";
+
+import { example_categories } from "./categories";
+
+export const articleContent = createContentModel(articleContentType, {
+  references: { category: () => example_categories.id },
+});
+```
+
+## The short version
+
+Inside any Hono handler, call a service with the request context `c`:
+
+```ts
+const article = await articleContent.service(c).findById(1);
+```
+
+`article` is fully typed: `article.title` is a `string`, `article.featured` is a `boolean`, and a typo is a compile error. There are three services, and the only question is which one fits your task:
+
+| You want to                                                  | Use                                        |
+| ------------------------------------------------------------ | ------------------------------------------ |
+| Show content to visitors: published records, public fields   | `articleContent.publicService(c)`          |
+| Read or write anything, in a staff route, cron job or script | `articleContent.service(c)`                |
+| Save a change the way the AdminCP does, with history         | `articleContent.editorialService(c, opts)` |
+
+The three sections below build one real example for each.
+
+## Example 1: the newest articles in a category
+
+**Goal:** a public endpoint, `GET /api/@vitnode/example/articles/by-category/1`, that returns the three newest published articles in category `1`. Drafts must never appear, and neither may private fields.
+
+`publicService` guarantees exactly that. It returns what the [public API](/docs/content-engine/public-api) would, so you cannot leak a draft by accident.
+
+<Steps>
+<Step>
+
+### Write the route
+
+```ts title="plugins/example/src/api/modules/articles/by-category.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { articleContent } from "@/database/articles";
+
+export const articlesByCategoryRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    path: "/by-category/{categoryId}",
+    description: "Published articles in one category, newest first",
+    request: {
+      params: z.object({ categoryId: z.coerce.number().int().positive() }),
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.array(
+              z.object({
+                publishedAt: z.date().nullable(),
+                slug: z.string(),
+                title: z.string(),
+              }),
+            ),
+          },
+        },
+        description: "Up to three articles",
+      },
+    },
+  },
+  handler: async c => {
+    const { publicService } = articleContent;
+    if (!publicService) throw new Error("Articles have no public API.");
+
+    const { categoryId } = c.req.valid("param");
+    const { edges } = await publicService(c).findMany({
+      filters: { category: categoryId },
+      orderBy: { column: "publishedAt", order: "desc" },
+      query: { first: "3" },
+    });
+
+    return c.json(
+      edges.map(({ publishedAt, slug, title }) => ({
+        publishedAt,
+        slug,
+        title,
+      })),
+      200,
+    );
+  },
+});
+```
+
+The handler does three things:
+
+1. **Gets the service.** `publicService` is `undefined` for a content type without `publicApi`, so the `if` makes that explicit once.
+2. **Asks for records.** `filters` keeps only category `1`, `orderBy` puts the newest first and `query.first` limits it to three. `query` takes the same strings as the URL of a list route, which is why `first` is `"3"` and not `3`.
+3. **Shapes the answer.** `edges` is the list of records. The route picks three fields so the response stays small.
+
+`filters` only accepts fields listed in `publicApi.filterableFields`, and `orderBy.column` only fields in `publicApi.orderableFields`. Asking for anything else is a type error.
+
+</Step>
+<Step>
+
+### Register it
+
+Put the route in a module and add the module to your API plugin:
+
+```ts title="plugins/example/src/api/modules/articles/articles.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import { articlesByCategoryRoute } from "./by-category.route";
+
+export const articlesModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "articles",
+  routes: [articlesByCategoryRoute],
+});
+```
+
+```ts title="plugins/example/src/config.api.ts"
+modules: [adminModule, articlesModule],
+```
+
+</Step>
+<Step>
+
+### Call it
+
+```bash
+curl http://localhost:8000/api/@vitnode/example/articles/by-category/1
+```
+
+```json
+[
+  {
+    "publishedAt": "2026-08-03T08:47:00.000Z",
+    "slug": "jbbjk-1",
+    "title": "old article, example"
+  }
+]
+```
+
+A category with no published articles answers `[]`. A draft in category `1` is not in the list, even though it exists.
+
+</Step>
+</Steps>
+
+Need one record instead of a list? `publicService(c).findBySlug("jbbjk-1")` and `findById(1)` return one published record, or `null`.
+
+## Example 2: create and publish an article from a job
+
+**Goal:** a [cron job](/docs/dev/cron) that publishes a "Weekly digest" article every Monday at 8:00.
+
+There is no visitor and no staff member here, so you want the plain `service`. It sees every record and every field, including drafts, and it checks no permissions. That makes it the right tool for jobs and scripts, and the wrong one for a public route.
+
+```ts title="plugins/example/src/api/cron/weekly-digest.cron.ts"
+import { buildCron } from "@vitnode/core/api/lib/cron";
+
+import { articleContent } from "@/database/articles";
+
+export const weeklyDigestCron = buildCron({
+  name: "weekly-digest",
+  description: "Publish the weekly digest article",
+  schedule: "0 8 * * 1",
+  handler: async c => {
+    const service = articleContent.service(c);
+
+    const article = await service.create({
+      title: "Weekly digest",
+      code: `digest-${Date.now()}`,
+      category: 1,
+      gallery: [21],
+    });
+
+    await service.publish(article.id);
+  },
+});
+```
+
+Add it to a module's `cronJobs`, for example `cronJobs: [weeklyDigestCron]` in the `articles` module from Example 1.
+
+`create` checks the values against the same rules as the AdminCP form: `title` is required and at least 3 characters, `gallery` needs at least one image, and so on. Values that break a rule throw a `ZodError` before anything is written. `slug` is filled from the title automatically.
+
+To make several writes succeed or fail together, run them in one transaction by passing `{ tx }` as the last argument:
+
+```ts
+await c.get("db").transaction(async tx => {
+  const article = await service.create(
+    { title: "Weekly digest", code: "digest-41", category: 1, gallery: [21] },
+    { tx },
+  );
+  await service.publish(article.id, { tx });
+});
+```
+
+<Callout type="warn">
+  The plain service is quiet. It emits no [events](/docs/content-engine/events),
+  writes no revisions and does not update the search index. If a listener or
+  the site search should notice the change, use the editorial service from
+  Example 3.
+</Callout>
+
+## Example 3: a "Feature this article" button
+
+**Goal:** a staff endpoint, `POST /articles/1/feature`, that marks an article as featured, exactly as if someone had ticked **Featured** in the AdminCP and pressed **Save**. That means a revision in the history, the `updated` event, a search index update and protection against overwriting someone else's save.
+
+That is the `editorialService` (available with [`editorial`](/docs/content-engine/editorial)). It needs one extra input, `expectedVersion`: the version of the article the button's page loaded. If somebody saved the article in the meantime, the versions differ and the request fails with `409` instead of silently overwriting their work.
+
+```ts title="plugins/example/src/api/modules/admin/routes/feature.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import {
+  contentEditorialEffects,
+  resolveContentActor,
+  withHttpErrors,
+} from "@vitnode/core/content/server";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { articleContent } from "@/database/articles";
+
+export const featureArticleRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "article", permission: "can_edit" },
+  route: {
+    method: "post",
+    path: "/articles/{id}/feature",
+    description: "Mark an article as featured",
+    request: {
+      params: z.object({ id: z.coerce.number().int().positive() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({ expectedVersion: z.number().int().positive() }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": { schema: articleContent.schemas.select },
+        },
+        description: "The featured article",
+      },
+      404: { description: "Article not found" },
+      409: { description: "Someone saved the article first" },
+    },
+  },
+  handler: async c => {
+    const { editorialService } = articleContent;
+    if (!editorialService) throw new Error("Articles have no editorial.");
+
+    const { id } = c.req.valid("param");
+    const { expectedVersion } = c.req.valid("json");
+    const pluginId = CONFIG_PLUGIN.pluginId;
+
+    const outcome = await withHttpErrors(
+      "update",
+      async () =>
+        await editorialService(c, { pluginId }).update(
+          id,
+          { featured: true },
+          { actor: resolveContentActor(c), expectedVersion },
+        ),
+      {
+        contentTypeId: articleContent.definition.id,
+        itemId: id,
+        structured: true,
+      },
+    );
+    if (!outcome) throw new HTTPException(404);
+
+    await contentEditorialEffects(c, articleContent.definition, outcome, {
+      model: articleContent,
+      pluginId,
+    });
+
+    return c.json(outcome.row, 200);
+  },
+});
+```
+
+Reading the handler top to bottom:
+
+1. **`adminStaffPermission`** lets in only staff who may edit articles, the same check as the AdminCP's own edit route. Put the route in your plugin's `admin` module.
+2. **`editorialService(...).update`** saves `featured: true` and writes a revision. `resolveContentActor(c)` puts the signed-in staff member's name on that revision.
+3. **`withHttpErrors`** turns a version mismatch into a `409` response the AdminCP understands, instead of a crash.
+4. **`contentEditorialEffects`** does everything that should happen after a save: it emits `content.example.article.updated`, updates the search index and handles URL changes. Skip it and the save is still stored, but nothing else hears about it.
+
+The route lives in the `admin` module, so it answers at `POST /api/@vitnode/example/admin/articles/1/feature` and only to a signed-in AdminCP session. The body carries the version the page loaded:
+
+```json
+{ "expectedVersion": 3 }
+```
+
+If someone saved the article after version 3 was loaded, the answer is a `409`:
+
+```json
+{
+  "code": "CONTENT_VERSION_CONFLICT",
+  "contentTypeId": "example.article",
+  "currentVersion": 4,
+  "expectedVersion": 3,
+  "itemId": 1
+}
+```
+
+Load the article again, take the new version, and retry. A job without a signed-in user passes `CONTENT_SYSTEM_ACTOR` instead of `resolveContentActor(c)`.
+
+## Reference
+
+### Service methods
+
+`publicService` only reads: `findMany({ filters, orderBy, query })`, `findById(id)` and `findBySlug(slug)`, each limited to published records and public fields. `editorialService` only writes: `create`, `update`, `delete`, `publish`, `unpublish`, `restore`, plus `relations` and `repeatable`. `service` has everything below:
+
+| Method                                         | Returns                                                                          |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `findMany({ filters, orderBy, query, where })` | `{ edges, pageInfo }`, drafts included. `where` takes a Drizzle `SQL` condition  |
+| `findById(id)`                                 | The row, or `null`                                                               |
+| `findRowById(id)`                              | The row with display labels for relations and users, or `null`                   |
+| `findDetail(id)`                               | The row with relation, repeatable and file values, or `null`                     |
+| `create(values)`                               | The new row                                                                      |
+| `update(id, values)`                           | `{ row, changedFields }`, or `null` when the id does not exist                   |
+| `delete(id)`                                   | The deleted row, or `null`                                                       |
+| `publish(id)`, `unpublish(id)`                 | `{ changed, publishedAt, row }`, or `null`. Only with `publication`              |
+| `advanced(id)`, `advancedFields(id, fields)`   | Values of to-many relations, repeatables and galleries                           |
+| `options(field, search?, ids?)`                | `{ value, label, color? }[]` for a relation or user picker                       |
+| `relations.<field>`                            | `add`, `remove`, `set`, `reorder`, `get` for a to-many relation                  |
+| `repeatable.<field>`                           | `create`, `update`, `delete`, `reorder`, `set`, `list` for a repeatable          |
+
+On `service`, every write and every single-record read accepts `{ tx }` as its last argument. On `editorialService`, every write takes an options object with `actor`; `update`, `delete` and `restore` also take `expectedVersion`, which `publish` and `unpublish` treat as optional. A [localized](/docs/content-engine/localization) content type also has `localizedService` for writing translations.
+
+### Schemas
+
+`articleContent.schemas` holds the Zod schemas the generated routes validate with. Reuse them so a custom route accepts and returns exactly what the built-in ones do, as Example 3 does with `select`:
+
+| Schema                               | Validates                                                      |
+| ------------------------------------ | -------------------------------------------------------------- |
+| `create`                             | A create payload, with required fields and defaults            |
+| `update`                             | A partial update payload, never empty                          |
+| `updateEnvelope`                     | `{ expectedVersion, values }` for an editorial update          |
+| `select`, `selectObject`             | A full row (`selectObject` stays a `ZodObject` you can extend) |
+| `publicSelect`, `publicSelectObject` | A row as the public API returns it                             |
+| `filters`, `publicFilters`           | Staff and public list filters                                  |
+| `order`, `publicOrder`               | The `orderBy` allowlist plus direction                         |
+| `params`, `publicParams`             | `{ id }` and `{ slug }` path parameters                        |
+| `form`                               | The AdminCP form values                                        |
+
+To react to writes instead of making them, see [Events](/docs/content-engine/events).

@@ -1,0 +1,195 @@
+---
+title: Translations
+description: Translate Content Engine fields with localization and localized fields, edit each language per field in the AdminCP, and pick the language in the public API.
+icon: Languages
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { ImgDocs } from "@/components/fumadocs/img";
+import languageSelector from "./localization-language-selector.webp";
+import publicPagePl from "./localization-public-page-pl.webp";
+
+Localization stores chosen fields once per language, while every other field stays shared. An article's title and body get a Polish version, but whether it is featured stays one value. Translated values live in a second table, `{tableName}_translations`, with one row per record and language. This guide uses `example.localized-article` from the example plugin.
+
+## Before you begin
+
+The languages come from your app's `i18n.locales` in `vitnode.config.ts` (see [Languages & Localization](/docs/dev/i18n)) and from the languages created at install. `defaultLocale` must be one of them. A language turned off in the config stays readable in the AdminCP, but nobody can write to it and the public API does not serve it.
+
+<Steps>
+
+<Step>
+
+### Mark the translatable fields
+
+Add a `localization` block and set `localized: true` on each field that changes per language:
+
+```ts title="plugins/example/src/content/localized-article.ts"
+export const localizedArticleContentType = defineContentType({
+  id: "example.localized-article",
+  tableName: "example_localized_articles",
+  // [!code ++:4]
+  localization: {
+    defaultLocale: "en",
+    fallback: "default",
+  },
+  publication: true,
+  fields: {
+    // [!code highlight:8]
+    title: field.text({
+      localized: true,
+      required: true,
+      minLength: 3,
+      maxLength: 200,
+    }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, required: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+});
+```
+
+`text`, `textarea`, `richText`, `slug`, `blocks` and whole `group` fields can be localized. Numbers, booleans, enums, dates, files, users, relations and repeatables are always shared. A slug and its `source` must both be localized or both shared, otherwise every language would get the same URL. `localized: true` without a `localization` block throws, and so does a `localization` block without a localized field.
+
+</Step>
+
+<Step>
+
+### Export the translations table
+
+```ts title="plugins/example/src/database/localized-articles.ts"
+export const localizedArticleContent = createContentModel(
+  localizedArticleContentType,
+);
+
+export const example_localized_articles = localizedArticleContent.table;
+export const example_localized_articles_translations = // [!code ++:2]
+  localizedArticleContent.translationTable;
+```
+
+Drizzle Kit only sees exported tables, so without this line the migration has no translations table.
+
+</Step>
+
+<Step>
+
+### Build and migrate
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+The localized columns move to `example_localized_articles_translations`, keyed by `(itemId, languageId)`. That table has its own `version`, `createdAt` and `updatedAt`, plus `status` and `publishedAt` when the type has publication.
+
+<Callout type="warn">
+  The migration does not copy existing values into the translations table. If
+  the table already holds records, review the SQL before you apply it and add a
+  step that copies them.
+</Callout>
+
+</Step>
+
+</Steps>
+
+## Edit languages in the AdminCP
+
+There are no language tabs. Each localized field carries its own language selector, so an editor can fix the Polish title without leaving the form. The field first shows your AdminCP language if it has text, then the default language, then any language that has text. Shared fields have no selector.
+
+This is the blog plugin's category dialog, where `name` is `field.text({ localized: true })`:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={languageSelector}
+  alt="Create Category dialog: the Name input holds Breakfast and its language selector is open with English checked and Polski below"
+/>
+
+Saving the form sends the shared fields and every language you typed into in one request: `POST /localized` for a new record, `PUT /{id}/localized` for an existing one. The server writes them in one transaction. A new record must include its default language. A Polish-only edit does not touch the shared row, so it does not bump the record's version or expire the English cache.
+
+With publication, each language has its own status. Publishing the record publishes its languages too, and you can then unpublish one language alone. A translation is public only when both the record and that translation are published. With `editorial`, each language also keeps its own revisions and preview links.
+
+<Callout>
+  The example plugin registers `example.localized-article` on the API only, so
+  it has no AdminCP screen. Add it to the plugin's `adminContent` and `adminNav`
+  content types to get the generated form shown above.
+</Callout>
+
+## Read a language from the public API
+
+The public API serves one language per request, chosen in this order:
+
+1. The `?locale=` query parameter. A locale that the site does not serve returns `404`.
+2. Otherwise the `Accept-Language` header. The response then carries `Vary: Accept-Language`.
+3. Otherwise `defaultLocale`.
+
+```bash
+curl -i "http://localhost:3000/api/@vitnode/example/content/localized-articles/witaj-content-engine?locale=pl"
+```
+
+```http
+HTTP/1.1 200
+content-language: pl
+
+{"title":"Witaj Content Engine","slug":"witaj-content-engine","body":"Jeden rekord, dwa języki.","featured":false,"publishedAt":"2026-10-10T10:57:12.452Z","locale":"pl"}
+```
+
+The `locale` property says which language the body is in. When the requested translation is missing or unpublished, `fallback: "default"` serves the default language instead, so `"locale"` becomes `"en"`. With `fallback: "none"` (the default), the API returns `404`.
+
+In a page loader, pass the route's locale through. This is the example plugin's localized article page:
+
+```ts title="plugins/example/src/pages/localized-article-page.tsx"
+const detail = await fetcher({
+  plugin: CONFIG_PLUGIN.pluginId,
+  method: "get",
+  module: "content/localized-articles",
+  path: "/{slug}",
+  args: {
+    params: { slug: encodeURIComponent(slug) },
+    query: { locale },
+  },
+});
+```
+
+Opening `/pl/localized-articles/witaj-content-engine` renders the Polish translation:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={publicPagePl}
+  alt="Public article page titled Witaj Content Engine with the body Jeden rekord, dwa języki"
+/>
+
+Each translation can have its own slug and URL; [Public pages](/docs/content-engine/public-pages) covers localized URLs and `hreflang`.
+
+## Translation routes
+
+`buildContentAdminModule` adds staff routes for each language under the content type's admin path. They use the same staff permissions as the record:
+
+| Route                                                       | Does                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------ |
+| `GET /{id}/translations`                                    | Lists the record's translations                              |
+| `GET`, `POST`, `PUT`, `DELETE /{id}/translations/{locale}`  | Reads, creates, updates or deletes one language              |
+| `POST /{id}/translations/{locale}/publish` and `/unpublish` | Changes one language's status. Needs publication             |
+| `GET /{id}/translations/{locale}/revisions`                 | One language's history. Needs editorial                      |
+| `POST /{id}/translations/{locale}/preview`                  | A preview link for one language. Needs editorial preview     |
+| `POST /localized`, `PUT /{id}/localized`                    | Saves shared fields and several languages in one transaction |
+
+Each translation write emits an event such as `content.example.localized-article.translation_created` or `translation_published`; see [Events](/docs/content-engine/events).
+
+## Options
+
+| Name            | Type                    | Required | Default  | Description                                                            |
+| --------------- | ----------------------- | -------- | -------- | ---------------------------------------------------------------------- |
+| `defaultLocale` | `string`                | Yes      |          | A language code such as `"en"` or `"pt-BR"`. Every record starts in it |
+| `fallback`      | `"none"` \| `"default"` | No       | `"none"` | What the public API serves when the requested language is missing      |

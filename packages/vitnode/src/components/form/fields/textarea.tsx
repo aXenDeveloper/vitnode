@@ -11,10 +11,9 @@ import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 import {
   type MultiLangFieldProps,
-  MultiLangSelect,
+  MultiLangLabel,
   useMultiLangField,
 } from "./multi-lang";
-import { MultiLangSelectedContext } from "./multi-lang-language";
 
 type AutoFormTextareaProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Textarea>, "value"> & {
@@ -50,29 +49,15 @@ const MultiLangTextarea = ({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2">
-        {!!label && (
-          <AutoFormLabel
-            isOptional={isOptional}
-            labelRight={
-              labelRight ? (
-                <MultiLangSelectedContext value={selected}>
-                  {labelRight}
-                </MultiLangSelectedContext>
-              ) : undefined
-            }
-          >
-            {label}
-          </AutoFormLabel>
-        )}
-        {canSelect && (
-          <MultiLangSelect
-            languages={languages}
-            onSelect={setSelected}
-            selected={selected}
-          />
-        )}
-      </div>
+      <MultiLangLabel
+        canSelect={canSelect}
+        isOptional={isOptional}
+        label={label}
+        labelRight={labelRight}
+        languages={languages}
+        onSelect={setSelected}
+        selected={selected}
+      />
 
       <FormControl>
         <Textarea

@@ -450,7 +450,7 @@ describe("content service", () => {
         defineContentType({
           id: "test.searchable-note",
           tableName: "test_searchable_notes",
-          localization: { enabled: true, defaultLocale: "en" },
+          localization: { defaultLocale: "en" },
           fields: {
             title: field.text({ localized: true, required: true }),
             code: field.text({ nullable: true }),

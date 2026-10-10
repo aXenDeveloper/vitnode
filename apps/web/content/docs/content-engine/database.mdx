@@ -1,0 +1,140 @@
+---
+title: Database
+description: The Postgres tables, columns and indexes the VitNode Content Engine generates for a content type, and how to generate, apply and evolve their migrations.
+icon: Database
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+Every content type becomes ordinary Postgres tables managed by Drizzle. `createContentModel` from `@vitnode/core/content/server` builds them from the definition, and the usual VitNode migration workflow creates them. Values are stored in typed columns. Only `field.blocks()` and `field.richText()` keep a JSON document, in a `jsonb` column.
+
+## Generate and apply a migration
+
+After you add or change a content type, run this from the workspace root:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+1. `build:plugins` compiles each plugin to `dist/`. `db:migrate` reads that output and does not build, so skipping this step migrates the old schema.
+2. `db:migrate` compares the exported tables of every plugin in your API config with the last snapshot and writes a new folder to `apps/api/migrations/`.
+3. It applies pending migrations, then makes sure the initial data exists.
+
+Commit the generated migration together with the content type. Production never migrates on startup, so run migrations as a deploy step. [Database CLI](/docs/dev/cli/database) covers `vitnode db generate --name <name>` for a named migration, `vitnode db status` and the rest.
+
+## Export every table
+
+Drizzle Kit finds tables by reading the exports of `node_modules/<pluginId>/dist/src/database/*.js` for each plugin. A table without an export is left out of the migration, without a warning. A content type with relations, translations and repeatable rows has several tables:
+
+```ts title="plugins/example/src/database/advanced-articles.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { advancedArticleContentType } from "@/content/advanced-article";
+
+import { example_categories } from "./categories";
+
+export const advancedArticleContent = createContentModel(
+  advancedArticleContentType,
+  {
+    references: {
+      categories: () => example_categories.id,
+    },
+  },
+);
+
+export const example_advanced_articles = advancedArticleContent.table;
+export const example_advanced_articles_translations =
+  advancedArticleContent.translationTable;
+export const example_advanced_articles_categories =
+  advancedArticleContent.advancedTables.junctions.categories;
+export const example_advanced_articles_related_articles =
+  advancedArticleContent.advancedTables.junctions.relatedArticles;
+export const example_advanced_articles_faq =
+  advancedArticleContent.advancedTables.repeatables.faq;
+```
+
+| Model member                         | Exists when                                               |
+| ------------------------------------ | --------------------------------------------------------- |
+| `table`                              | Always                                                    |
+| `translationTable`                   | `localization` is enabled; otherwise `null`               |
+| `advancedTables.junctions.<field>`   | A `relation`, `user` or `file` field has `multiple: true` |
+| `advancedTables.repeatables.<field>` | The content type has a `field.repeatable()`               |
+
+`references` maps each `relation` field to the column it points at. `user` and `file` fields need no entry, because the engine knows `core_users` and `core_files`. See [Relations](/docs/content-engine/relations).
+
+## Generated columns
+
+You never declare these. A field with the same name throws an error.
+
+| Column        | Type                                                        | Added when    |
+| ------------- | ----------------------------------------------------------- | ------------- |
+| `id`          | `serial` primary key                                        | Always        |
+| `createdAt`   | `timestamp`, defaults to `now()`                            | Always        |
+| `updatedAt`   | `timestamp`, defaults to `now()`, refreshed by every update | Always        |
+| `status`      | `varchar(32)`, `draft` or `published`, defaults to `draft`  | `publication` |
+| `publishedAt` | `timestamp`, nullable                                       | `publication` |
+| `version`     | `integer`, defaults to `1`                                  | `editorial`   |
+
+Column names are camelCase in SQL, exactly as in TypeScript. Every generated table has row-level security enabled. A field group adds one column per leaf to the main table, so the `syndication` group's `indexable` field becomes `syndicationIndexable`. Column types per field are listed in [Fields](/docs/content-engine/fields).
+
+### Translations table
+
+With `localization`, `{tableName}_translations` holds the localized fields:
+
+| Column                   | Notes                                                                     |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `itemId`                 | References the main table. Deleting the record deletes its translations   |
+| `languageId`             | References `core_languages.id`. A language with content cannot be deleted |
+| `version`                | Per-language version, always present                                      |
+| `createdAt`, `updatedAt` | Same as the main table                                                    |
+| `status`, `publishedAt`  | With `publication`. Each language is published on its own                 |
+
+The primary key is `(itemId, languageId)`, so a record has at most one translation per language.
+
+### Junction and child tables
+
+Field names become snake_case in table names, so `relatedArticles` on `example_advanced_articles` becomes `example_advanced_articles_related_articles`.
+
+- A **to-many field** gets `{tableName}_{field}` with `itemId`, `relatedItemId`, `position` and `createdAt`. The primary key is `(itemId, relatedItemId)`, so a record links to each target once.
+- A **repeatable field** gets `{tableName}_{field}` with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per subfield.
+
+Deleting a record deletes its junction and repeatable rows. Both kinds keep `position` unique per record. That column holds the order an editor picks in the AdminCP.
+
+## Generated indexes
+
+The engine creates these indexes without being asked:
+
+- A unique index on every slug, and on every `field.text({ unique: true })`.
+- An index on every single `relation`, `user` and `file` column.
+- Indexes on `createdAt` and `updatedAt`.
+- `(status, publishedAt)` with `publication`.
+- On a translations table: `(languageId, status)` with `publication` or `(languageId)` without it, plus a unique `(languageId, slug)` for each localized slug.
+- On a junction table: `relatedItemId`, and a unique `(itemId, position)`. On a repeatable table: a unique `(itemId, position)`.
+
+Generated names follow `{table}_{columns}_idx`, or `_key` for unique ones, such as `example_categories_created_at_idx`. Add your own with the [`indexes`](/docs/content-engine/reference) option. An index on the same columns as a generated one replaces it instead of adding a second one:
+
+```ts title="plugins/example/src/content/article.ts"
+indexes: [{ on: ["status", "createdAt"] }],
+```
+
+## Change a content type later
+
+Changing a definition is a schema change like any other. Build, migrate and read the generated SQL before you commit it.
+
+- **Adding a nullable field, or one with a `defaultValue`,** is safe on a table that already has rows.
+- **Adding a required field without a default** fails on a table with rows. Add it as nullable, fill it, then make it required in a second migration.
+- **Renaming a field** renames its column. Check that the generated SQL says `RENAME COLUMN`, not a drop followed by an add, or the old values are lost.
+- **Turning on `localization`** moves localized fields to a new translations table. The generated SQL does not copy existing values, so add the data move to the migration yourself.
+- **Never edit or regenerate a migration that has already been applied.** Write a new one instead.

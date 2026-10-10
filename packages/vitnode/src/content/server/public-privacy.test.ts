@@ -13,9 +13,9 @@ import {
 const contentType = defineContentType({
   id: "test.privacy",
   tableName: "test_privacy",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
-  editorial: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -53,7 +53,6 @@ const contentType = defineContentType({
     hiddenLinks: field.relation({ multiple: true, self: true }),
   },
   publicApi: {
-    enabled: true,
     path: "privacy",
     fields: [
       "title",

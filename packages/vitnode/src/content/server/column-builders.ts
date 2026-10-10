@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type { AnyBlockInstance } from "../../blocks/types";
+import type { RichTextDocument } from "../rich-text/document";
 import type { ContentFieldDescriptor } from "../types";
 
 import {
@@ -204,6 +205,11 @@ export const buildContentColumn = ({
         // keeps children pointing at the right row either way.
         onUpdate: "cascade",
       });
+
+      return nullable ? column : column.notNull();
+    }
+    case "richText": {
+      const column = jsonb().$type<RichTextDocument>();
 
       return nullable ? column : column.notNull();
     }

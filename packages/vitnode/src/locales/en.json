@@ -1627,6 +1627,52 @@
         "errors": {
           "version_conflict": "Someone else saved this language while you were editing."
         }
+      },
+      "live": {
+        "is_editing": "is editing",
+        "locked_desc": "Read-only while they edit. Their changes show up here as they type.",
+        "presence": {
+          "label": "{count, plural, one {# other person is} other {# other people are}} in this record",
+          "more": "and {count, plural, one {# more person} other {# more people}}: {names}",
+          "viewing": "looking around",
+          "in_language": "working in {language}",
+          "editing_field": "editing {field} ({language})",
+          "editing_shared": "editing {field}",
+          "field": "Also in this field: {names}",
+          "language": "{count, plural, one {{names} is working in this language} other {{names} are working in this language}}"
+        },
+        "status": {
+          "saving": "Saving…",
+          "saved": "Draft saved {time}",
+          "saved_just_now": "Draft saved just now",
+          "saved_at": "Draft saved at {time}",
+          "unsaved": "Unsaved changes",
+          "failed": "Draft not saved",
+          "discard": "Discard",
+          "discard_label": "Discard unsaved changes",
+          "discard_title": "Discard unsaved changes?",
+          "discard_desc": "The record goes back to how it was last saved. Unsaved changes from everyone editing it are discarded too.",
+          "discard_confirm": "Discard changes",
+          "discard_failed": "The changes could not be discarded. Try again."
+        },
+        "reset": {
+          "restored": {
+            "title": "This record was restored",
+            "desc": "Someone restored an earlier version, so the form now shows it. Unsaved drafts were cleared."
+          },
+          "deleted": {
+            "title": "This record was deleted",
+            "desc": "Someone deleted it while you were editing. Nothing here can be saved anymore."
+          },
+          "discarded": {
+            "title": "Unsaved changes were discarded",
+            "desc": "Someone editing this record went back to the saved version."
+          },
+          "discarded_own": {
+            "title": "Changes discarded",
+            "desc": "The form is back to the saved version."
+          }
+        }
       }
     },
     "editor": {

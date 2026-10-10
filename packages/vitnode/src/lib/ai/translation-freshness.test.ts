@@ -66,4 +66,44 @@ describe("translationFreshness", () => {
       }),
     ).toEqual({ title: "untracked" });
   });
+
+  it("reads rich text documents, telling an empty one from a translated one", () => {
+    const paragraph = (text: string) => ({
+      content: [{ content: [{ text, type: "text" }], type: "paragraph" }],
+      type: "doc",
+    });
+    const richValues = {
+      body: [
+        { languageCode: "en", value: paragraph("New body") },
+        { languageCode: "pl", value: paragraph("Stara treść") },
+      ],
+      summary: [
+        { languageCode: "en", value: paragraph("Short") },
+        {
+          languageCode: "pl",
+          value: { content: [{ type: "paragraph" }], type: "doc" },
+        },
+      ],
+    };
+
+    expect(
+      translationFreshness({
+        fields: ["body", "summary"],
+        locale: "pl",
+        records: [
+          {
+            field: "body",
+            locale: "pl",
+            sourceFingerprint: fieldFingerprint(
+              [{ languageCode: "en", value: paragraph("Old body") }],
+              "en",
+            ),
+            targetFingerprint: fieldFingerprint(richValues.body, "pl"),
+          },
+        ],
+        sourceLocale: "en",
+        values: richValues,
+      }),
+    ).toEqual({ body: "outdated", summary: "missing" });
+  });
 });

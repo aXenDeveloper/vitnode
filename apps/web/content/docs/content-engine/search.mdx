@@ -1,0 +1,146 @@
+---
+title: Search
+description: Add a Content Engine content type to the VitNode site search, keep the search index in sync with published records, and rebuild it from the AdminCP.
+icon: Search
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import searchAdmincpCollection from "./search-admincp-collection.webp";
+import searchResults from "./search-results.webp";
+
+Add a `search` block to a content type and its published records show up on the site search page at `/search`. VitNode writes a search document after every save, publish and delete, so you never call the search engine yourself. This guide turns search on for `example.article` from the example plugin.
+
+## Before you begin
+
+The content type needs [publication and a public API](/docs/content-engine/public-api), because a search result is a link to a public page and its text has to be public already. Without them, the definition throws when it loads: ``search needs `publication: true`.`` or ``search needs `publicApi: { path, fields }`.``
+
+It also needs a page that serves the result URL. [Public pages](/docs/content-engine/public-pages) shows how to add one.
+
+<Steps>
+
+<Step>
+
+### Add the search block
+
+Add `search` to the definition. This excerpt leaves out the fields and blocks search does not read:
+
+```ts title="plugins/example/src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    author: field.user(),
+  },
+  publication: true,
+  publicApi: {
+    path: "articles",
+    fields: ["title", "slug", "excerpt", "publishedAt"],
+  },
+  // [!code ++:7]
+  search: {
+    titleField: "title",
+    descriptionField: "excerpt",
+    contentFields: ["title", "excerpt"],
+    pathTemplate: "/articles/{slug}",
+    authorField: "author",
+  },
+});
+```
+
+- `titleField` is the result heading. It must be a `field.text()` that is not nullable.
+- `descriptionField` is optional and leads the result excerpt. Text, textarea or rich text.
+- `contentFields` is the searchable body. It takes at least one field and no duplicates. Text, textarea, rich text or slug fields, plus repeatable leaves such as `"faq.answer"`. Rich text is indexed as its words, never as JSON. The title always ranks higher than the body, so listing it here as well only repeats it in the excerpt.
+- `pathTemplate` is the result URL. It starts with `/` and contains `{slug}` exactly once. Leave the language out, because your i18n settings add it (see [Localized content types](#localized-content-types)).
+- `authorField` is optional and credits a top-level `field.user()` on [member timelines](/docs/dev/search#member-timelines).
+
+Every field except `authorField` must be in `publicApi.fields`. Otherwise a result snippet would leak a private value, so the definition throws instead: `search.titleField names "x", which is not in publicApi.fields.` `authorField` may stay private, which is why `author` is not in the public list above. All options are in the [reference](/docs/content-engine/reference#search).
+
+</Step>
+
+<Step>
+
+### Index the records you already have
+
+New writes are indexed from now on, but records saved before the `search` block existed are not. Open **AdminCP → Advanced → Search** (`/admin/core/advanced/search`), type `example.article` into **Search collections…**, and click **Reindex** on that row. **Rebuild index** at the top rebuilds every collection.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={searchAdmincpCollection}
+  alt="The AdminCP Search screen filtered to example.article, showing one indexed collection with 3 of 3 items, 100% coverage and a Reindex button"
+/>
+
+Both buttons need the **Rebuild and clear the search index** staff permission (`system` → `can_manage_search`). A rebuild clears the collection and refills it in pages of 200 records. It is a queued job, so it only runs while [cron](/docs/dev/cron) is running.
+
+**Items** compares indexed documents with records in the table, drafts included. Content Engine collections are all labelled **Content** for now, so filter by the content type id to find yours.
+
+</Step>
+
+</Steps>
+
+## What gets indexed and when
+
+Every record is in the index, but only public ones show up on `/search`. A draft is stored as a private document without a URL. With `authorField`, it appears on its author's own timeline and on the AdminCP user page, but never in public results.
+
+| Write                                                                    | Search index                  |
+| ------------------------------------------------------------------------ | ----------------------------- |
+| Create, edit, publish, unpublish, restore or delete in the AdminCP       | Updated right after the write |
+| A scheduled publish or unpublish                                         | Updated when the job runs     |
+| Your own route using the editorial service and `contentEditorialEffects` | Updated                       |
+| The plain `service` from `model.service(c)`                              | Not updated                   |
+
+An edit rewrites the document only when an indexed field changed: the title, description, content fields, slug or author. Unpublishing keeps the document but makes it private, so the record drops out of `/search` at once. Deleting the record removes its document.
+
+The plain service writes rows and nothing else. To change records from your own code and keep search in sync, follow [a "Feature this article" button](/docs/content-engine/services#example-3-a-feature-this-article-button).
+
+If the search engine fails, the save still succeeds. The failure is logged with a `[content-search]` prefix and listed under **Recent sync failures** on the AdminCP Search screen. Reindex the collection to repair it.
+
+## Localized content types
+
+A [localized](/docs/content-engine/localization) content type such as `example.localized-article` gets one document per translation, with the language stored on it. A translation is public only when both the record and that translation are published. Deleting a translation removes only that language's document. Deleting the record removes all of them.
+
+`/search` shows documents in the visitor's language. Documents of content types that are not localized match every language. With `localization.fallback: "default"`, a visitor whose language has no published translation sees the default language's document instead.
+
+Each document gets the URL of its own language. `pathTemplate` stays the English route, and VitNode adds the prefix, domain and translated segments from your [localized URL settings](/docs/dev/i18n/localized-urls). The table in [Result URLs for Content Engine types](/docs/dev/search#result-urls-for-content-engine-types) shows what each setting produces. URLs are stored at indexing time, so reindex after changing `pathTemplate` or those settings.
+
+## Check the result
+
+1. Publish an article in **AdminCP → Example → Articles**.
+2. Open `/search` and type a whole word or two from its title or excerpt. The result links to `/articles/{slug}`.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={searchResults}
+  alt="The site search page with the query hello first and one result, Hello Content Engine, with the article excerpt below the title"
+/>
+
+The same results come from the public search API. `types` limits them to one content type:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/core/search?search=hello&types=example.article"
+```
+
+```json
+{
+  "edges": [
+    {
+      "pluginId": "@vitnode/example",
+      "itemType": "example.article",
+      "itemId": 3,
+      "languageCode": "",
+      "title": "Hello Content Engine",
+      "content": "Hello Content Engine A first article from the example plugin, served by the public API and rendered on its own page.",
+      "url": "/articles/hello-content-engine",
+      "isPublic": true
+    }
+  ]
+}
+```
+
+Unpublish the article and run the request again. This time `edges` is empty. If a record you published before adding `search` is missing, reindex the collection.
+
+The index runs on Postgres full-text search by default. To switch engines, or to index data that is not a content type, see [Search & Discovery](/docs/dev/search) and [Elasticsearch](/docs/dev/search-elasticsearch).

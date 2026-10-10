@@ -25,14 +25,14 @@ import { buildContentRoutes } from "./routes";
 const kitchenSink = defineContentType({
   id: "test.everything",
   tableName: "test_everything",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
   editorial: {
-    enabled: true,
     revisions: { retention: 10 },
-    preview: { enabled: true, expiresInMinutes: 30 },
-    scheduling: { enabled: true },
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
   },
+  liveEditing: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -49,7 +49,6 @@ const kitchenSink = defineContentType({
     }),
   },
   publicApi: {
-    enabled: true,
     path: "everything",
     // `id` is exposed because delivery resolves alternates by identifier off the
     // public projection, and a localized delivery content type is refused without
@@ -61,10 +60,9 @@ const kitchenSink = defineContentType({
   // needs `editorial` and a localized slug, and this fixture has both - which is
   // the whole reason it is the maximal one rather than a second fixture.
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: { titleField: "title" },
-    sitemap: { enabled: true },
+    sitemap: true,
   },
   admin: {
     list: { columns: ["featured", "status"] },
@@ -244,6 +242,11 @@ describe("the generated permission matrix", () => {
     // because one Save button writes one record.
     "PUT /{id}/localized": "can_edit",
     "PUT /{id}/translations/{locale}": "can_edit",
+    "GET /{id}/draft": "can_edit",
+    "GET /{id}/locks": "can_edit",
+    "POST /{id}/draft/discard": "can_edit",
+    "POST /{id}/locks": "can_edit",
+    "PUT /{id}/draft": "can_edit",
   };
 
   it("gates every route on a staff permission", async () => {

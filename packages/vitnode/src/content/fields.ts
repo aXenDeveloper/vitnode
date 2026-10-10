@@ -12,6 +12,7 @@ import type {
   ContentOnDelete,
   ContentRelationField,
   ContentRepeatableField,
+  ContentRichTextField,
   ContentSlugField,
   ContentSlugRequired,
   ContentTextareaField,
@@ -90,6 +91,22 @@ const textarea = <
   ...shared(args),
   defaultValue: args.defaultValue as TDefault,
   kind: "textarea",
+  localized: localizedOf(args),
+});
+
+const richText = <
+  TRequired extends boolean = false,
+  TNullable extends boolean = false,
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & {
+      maxBytes?: number;
+    } = {},
+): ContentRichTextField<TRequired, TNullable, TLocalized> => ({
+  ...args,
+  ...shared(args),
+  kind: "richText",
   localized: localizedOf(args),
 });
 
@@ -360,6 +377,7 @@ export const field = {
   number,
   relation,
   repeatable,
+  richText,
   slug,
   text,
   textarea,

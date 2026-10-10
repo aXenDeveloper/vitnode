@@ -183,23 +183,23 @@ const resolveSearchPathTemplate = (
 export const resolveSearch = (
   id: string,
   fields: ContentFieldMap,
-  search: ContentSearchConfig | undefined,
+  search: ContentSearchConfig | false | undefined,
   publicApi: ResolvedContentPublicApiConfig,
   publication: boolean,
   localized: boolean,
 ): ResolvedContentSearchConfig => {
-  if (!search?.enabled) return disabledSearch;
+  if (!search) return disabledSearch;
 
   if (!publication) {
     throw new ContentEngineError(
-      "search needs `publication: { enabled: true }`. Only published records are indexed, and the publication lifecycle is what drives synchronization.",
+      "search needs `publication: true`. Only published records are indexed, and the publication lifecycle is what drives synchronization.",
       { contentTypeId: id },
     );
   }
 
   if (!publicApi.enabled) {
     throw new ContentEngineError(
-      "search needs `publicApi: { enabled: true, path, fields }`. A search hit links to a public URL, and every indexed field has to be published already.",
+      "search needs `publicApi: { path, fields }`. A search hit links to a public URL, and every indexed field has to be published already.",
       { contentTypeId: id },
     );
   }

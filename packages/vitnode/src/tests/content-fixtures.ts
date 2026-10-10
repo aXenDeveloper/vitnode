@@ -24,7 +24,7 @@ export const testCategoryContentType = defineContentType({
 export const testLocalizedCategoryContentType = defineContentType({
   id: "test.localized-category",
   tableName: "test_localized_categories",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  localization: { defaultLocale: "en", fallback: "default" },
   fields: {
     color: field.text({ maxLength: 50, nullable: true }),
     name: field.text({
@@ -113,11 +113,10 @@ export const testPostContentType = defineContentType({
       target: () => testCategoryContentType,
     }),
   },
-  publication: { enabled: true },
+  publication: true,
   // `views` and `author` are deliberately absent from `fields`: they are the
   // "a private field never leaves Postgres" assertion in the public tests.
   publicApi: {
-    enabled: true,
     path: "posts",
     fields: ["title", "slug", "excerpt", "category", "publishedAt"],
     searchableFields: ["title", "excerpt"],
@@ -145,22 +144,19 @@ export const testEditorialPostContentType = defineContentType({
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     path: "editorial",
     fields: ["title", "slug", "excerpt", "publishedAt"],
     defaultOrderBy: "publishedAt",
   },
   editorial: {
-    enabled: true,
     revisions: { retention: 10 },
     preview: {
-      enabled: true,
       expiresInMinutes: 30,
       pathTemplate: "/editorial/preview/{token}",
     },
-    scheduling: { enabled: true },
+    scheduling: true,
   },
   admin: {
     titleField: "title",
@@ -178,7 +174,8 @@ export const testEditorialNoteContentType = defineContentType({
     title: field.text({ required: true, maxLength: 200 }),
     body: field.textarea({ nullable: true }),
   },
-  editorial: { enabled: true },
+  editorial: true,
+  liveEditing: true,
 });
 
 export const testSearchablePostContentType = defineContentType({
@@ -193,15 +190,13 @@ export const testSearchablePostContentType = defineContentType({
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
     author: field.user(),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     path: "searchable",
     fields: ["title", "slug", "excerpt", "body", "publishedAt"],
     defaultOrderBy: "publishedAt",
   },
   search: {
-    enabled: true,
     titleField: "title",
     descriptionField: "excerpt",
     contentFields: ["excerpt", "body"],
@@ -217,7 +212,6 @@ export const testLocalizedArticleContentType = defineContentType({
   id: "test.localized",
   tableName: "test_localized_articles",
   localization: {
-    enabled: true,
     defaultLocale: "en",
     fallback: "none",
   },
@@ -243,7 +237,7 @@ export const testLocalizedArticleContentType = defineContentType({
 export const testLocalizedNoteContentType = defineContentType({
   id: "test.localized-note",
   tableName: "test_localized_notes",
-  localization: { enabled: true, defaultLocale: "EN" },
+  localization: { defaultLocale: "EN" },
   fields: {
     heading: field.text({ localized: true, required: true }),
     slug: field.slug({ localized: true }),
@@ -254,9 +248,10 @@ export const testLocalizedNoteContentType = defineContentType({
 export const testLocalizedGuideContentType = defineContentType({
   id: "test.localized-guide",
   tableName: "test_localized_guides",
-  editorial: { enabled: true, revisions: { retention: 5 } },
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
+  editorial: { revisions: { retention: 5 } },
+  liveEditing: true,
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -273,12 +268,11 @@ export const testLocalizedPageContentType = defineContentType({
   id: "test.localized-page",
   tableName: "test_localized_pages",
   editorial: {
-    enabled: true,
-    preview: { enabled: true, expiresInMinutes: 30 },
+    preview: { expiresInMinutes: 30 },
     revisions: { retention: 5 },
   },
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -286,7 +280,6 @@ export const testLocalizedPageContentType = defineContentType({
     featured: field.boolean({ defaultValue: false }),
   },
   publicApi: {
-    enabled: true,
     path: "localized-pages",
     fields: ["title", "slug", "body", "featured", "publishedAt"],
     searchableFields: ["title", "body"],
@@ -306,15 +299,14 @@ export const testLocalizedPageContentType = defineContentType({
 export const testStrictLocalizedPageContentType = defineContentType({
   id: "test.strict-localized-page",
   tableName: "test_strict_localized_pages",
-  localization: { enabled: true, defaultLocale: "en", fallback: "none" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "none" },
+  publication: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
     featured: field.boolean({ defaultValue: false }),
   },
   publicApi: {
-    enabled: true,
     path: "strict-localized-pages",
     fields: ["title", "slug", "featured", "publishedAt"],
     searchableFields: ["title"],
@@ -329,8 +321,8 @@ export const testStrictLocalizedPageContentType = defineContentType({
 export const testLocalizedSearchPageContentType = defineContentType({
   id: "test.localized-search-page",
   tableName: "test_localized_search_pages",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -338,7 +330,6 @@ export const testLocalizedSearchPageContentType = defineContentType({
     featured: field.boolean({ defaultValue: false }),
   },
   publicApi: {
-    enabled: true,
     path: "pages",
     fields: ["title", "slug", "body", "featured", "publishedAt"],
     searchableFields: ["title", "body"],
@@ -346,7 +337,6 @@ export const testLocalizedSearchPageContentType = defineContentType({
     filterableFields: ["featured"],
   },
   search: {
-    enabled: true,
     titleField: "title",
     contentFields: ["title", "body"],
     pathTemplate: "/{locale}/pages/{slug}",
@@ -359,19 +349,17 @@ export const testLocalizedSearchPageContentType = defineContentType({
 export const testStrictLocalizedSearchPageContentType = defineContentType({
   id: "test.strict-localized-search-page",
   tableName: "test_strict_localized_search_pages",
-  localization: { enabled: true, defaultLocale: "en", fallback: "none" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "none" },
+  publication: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
   },
   publicApi: {
-    enabled: true,
     path: "strict-pages",
     fields: ["title", "slug", "publishedAt"],
   },
   search: {
-    enabled: true,
     titleField: "title",
     contentFields: ["title"],
     pathTemplate: "/strict-pages/{slug}",
@@ -381,9 +369,9 @@ export const testStrictLocalizedSearchPageContentType = defineContentType({
 export const testAdvancedLocalizedContentType = defineContentType({
   id: "test.advanced-localized",
   tableName: "test_advanced_localized",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
-  editorial: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -408,7 +396,6 @@ export const testAdvancedLocalizedContentType = defineContentType({
     }),
   },
   publicApi: {
-    enabled: true,
     path: "advanced-localized",
     fields: [
       "title",
@@ -424,7 +411,6 @@ export const testAdvancedLocalizedContentType = defineContentType({
     orderableFields: ["publishedAt"],
   },
   search: {
-    enabled: true,
     titleField: "title",
     descriptionField: "seo.description",
     contentFields: ["title", "seo.description", "faq.question", "faq.answer"],
@@ -444,33 +430,31 @@ export const testDeliveredPostContentType = defineContentType({
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
     hidden: field.boolean({ defaultValue: false }),
   },
-  publication: { enabled: true },
-  editorial: { enabled: true },
+  publication: true,
+  editorial: true,
   publicApi: {
-    enabled: true,
     path: "delivered-posts",
     fields: ["id", "title", "slug", "excerpt", "hidden", "publishedAt"],
     defaultOrderBy: "publishedAt",
   },
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: {
       titleField: "title",
       descriptionField: "excerpt",
       noIndexField: "hidden",
       openGraph: { titleField: "title", descriptionField: "excerpt" },
     },
-    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
   },
 });
 
 export const testDeliveredLocalizedContentType = defineContentType({
   id: "test.delivered-localized",
   tableName: "test_delivered_localized",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
-  editorial: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -484,7 +468,6 @@ export const testDeliveredLocalizedContentType = defineContentType({
     }),
   },
   publicApi: {
-    enabled: true,
     path: "delivered-localized",
     fields: [
       "id",
@@ -497,15 +480,14 @@ export const testDeliveredLocalizedContentType = defineContentType({
     defaultOrderBy: "publishedAt",
   },
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     hreflang: { xDefault: "defaultLocale" },
     seo: {
       titleField: "seo.title",
       fallbackTitleField: "title",
       descriptionField: "seo.description",
     },
-    sitemap: { enabled: true, changeFrequency: "daily", priority: 0.5 },
+    sitemap: { changeFrequency: "daily", priority: 0.5 },
   },
   admin: {
     list: { columns: ["status", "updatedAt"] },
@@ -515,26 +497,23 @@ export const testDeliveredLocalizedContentType = defineContentType({
 export const testDeliveredPreviewableContentType = defineContentType({
   id: "test.delivered-previewable",
   tableName: "test_delivered_previewable",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
   editorial: {
-    enabled: true,
-    preview: { enabled: true, expiresInMinutes: 30 },
+    preview: { expiresInMinutes: 30 },
   },
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
   },
   publicApi: {
-    enabled: true,
     path: "delivered-previewable",
     fields: ["id", "title", "slug", "publishedAt"],
     defaultOrderBy: "publishedAt",
   },
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
-    sitemap: { enabled: true },
+    redirects: true,
+    sitemap: true,
   },
   admin: {
     list: { columns: ["status", "updatedAt"] },
@@ -584,9 +563,8 @@ export const testFilePostContentType = defineContentType({
       allowedMimeTypes: ["application/pdf"],
     }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     path: "file-posts",
     fields: ["title", "slug", "cover", "publishedAt"],
   },
@@ -627,10 +605,9 @@ export const testFileGalleryContentType = defineContentType({
       allowedMimeTypes: ["application/pdf"],
     }),
   },
-  publication: { enabled: true },
-  editorial: { enabled: true, revisions: { retention: 5 } },
+  publication: true,
+  editorial: { revisions: { retention: 5 } },
   publicApi: {
-    enabled: true,
     path: "file-galleries",
     fields: ["title", "slug", "cover", "gallery", "publishedAt"],
   },

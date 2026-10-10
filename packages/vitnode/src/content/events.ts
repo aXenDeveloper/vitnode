@@ -180,7 +180,7 @@ export interface ContentTranslationRestoredPayload<
 /**
  * The six events a localized content type adds.
  *
- * Gated on `localization: { enabled: true }` exactly like the publication and
+ * Gated on `localization` exactly like the publication and
  * editorial pairs, so a content type without it gains no key at all and a
  * listener for one cannot be registered. That is what keeps every non-localized
  * payload byte-identical to what it was before Stage 5B.
@@ -273,7 +273,7 @@ export interface ContentDeliveryRedirectCreatedPayload {
 /**
  * The two events the delivery layer adds.
  *
- * Gated on `delivery: { enabled: true }` exactly like the publication, editorial
+ * Gated on `delivery: true` exactly like the publication, editorial
  * and localization groups, so a content type without it gains no key at all and a
  * listener for one cannot be registered - which is what keeps every Stage 1-7
  * event map byte-identical.

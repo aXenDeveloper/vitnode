@@ -40,17 +40,19 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
 function SheetContent({
   className,
   children,
+  keepMounted,
   side = "right",
   showCloseButton = true,
   ...props
 }: SheetPrimitive.Popup.Props & {
+  keepMounted?: boolean;
   showCloseButton?: boolean;
   side?: "bottom" | "left" | "right" | "top";
 }) {
   const t = useTranslations("core.global");
 
   return (
-    <SheetPortal>
+    <SheetPortal keepMounted={keepMounted}>
       <SheetOverlay />
       <SheetPrimitive.Popup
         className={cn(

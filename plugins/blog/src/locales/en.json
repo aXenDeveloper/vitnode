@@ -99,7 +99,6 @@
             "not_configured": "No AI model is configured for this site."
           },
           "publish": {
-            "open": "Ready to publish: {done} of {total} checks done",
             "title": "Ready to publish",
             "checks": {
               "title": "Title fits search results",
@@ -116,23 +115,12 @@
               "outdated_detail": "{languages} changed less recently than {source}.",
               "open": "Open {language}",
               "write": "Write with AI"
-            },
-            "previews": {
-              "title": "Previews",
-              "language": "Preview language",
-              "search": "Search result",
-              "social": "Social card",
-              "fallback": "{language} readers see the {source} text for missing fields.",
-              "no_cover": "Add a cover image to see the social card."
-            },
-            "details": "Details",
-            "cover": "Cover image"
+            }
           },
           "review": {
-            "title": "AI review (optional)",
+            "title": "AI review",
             "run": "Review with AI",
             "again": "Review again",
-            "disclaimer": "Suggestions about clarity and completeness. It does not check facts and never blocks publishing.",
             "nothing": "No suggestions - nice work.",
             "high": "Worth fixing",
             "areas": {
@@ -140,7 +128,41 @@
               "completeness": "Completeness",
               "structure": "Structure",
               "tone": "Tone"
+            },
+            "open": "AI review",
+            "intro": "AI reads the article, says what to change and drafts fixes for the wording. It does not check facts, and nothing changes until you press Apply.",
+            "verdict": "{high} worth fixing, {low} nice to have",
+            "fix": {
+              "show": "Show fix",
+              "apply": "Apply",
+              "dismiss": "Dismiss",
+              "undo": "Undo",
+              "applied": "Applied",
+              "dismissed": "Dismissed",
+              "before": "Current text",
+              "after": "Suggested text",
+              "removes": "The passage is removed.",
+              "stale": "This passage changed after the review, so the fix can't be applied. Run the review again."
             }
+          },
+          "seo": {
+            "open": "SEO",
+            "open_issues": "SEO: {count, plural, one {# thing to fix} other {# things to fix}}",
+            "title": "SEO",
+            "desc": "How this article looks in search results and when it is shared.",
+            "left": "Left: {items}",
+            "done": "Done",
+            "needs_work": "Needs work",
+            "rows": {
+              "title": "Title",
+              "excerpt": "Excerpt",
+              "url": "URL",
+              "cover": "Social image",
+              "alt": "Image alt text"
+            },
+            "url_missing": "No URL in this language yet.",
+            "cover_cropped": "The cover, cropped to fit social cards.",
+            "alt_edit": "Edit under the cover"
           }
         }
       },

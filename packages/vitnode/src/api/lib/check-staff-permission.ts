@@ -226,16 +226,24 @@ export const getStaffFlags = async (
   };
 };
 
-export const checkStaffPermission = async (
+export const checkStaffPermissionOfUser = async (
   c: Context,
+  user: StaffUser,
   { type, ...args }: PermissionsStaffArgs & { type: PermissionStaffType },
 ): Promise<boolean> => {
-  const user = type === "admin" ? c.get("admin")?.user : c.get("user");
-  if (!user) return false;
-
   const set = await resolveStaffPermissions(c, { type, user });
 
   return hasStaffPermission(set, args);
+};
+
+export const checkStaffPermission = async (
+  c: Context,
+  args: PermissionsStaffArgs & { type: PermissionStaffType },
+): Promise<boolean> => {
+  const user = args.type === "admin" ? c.get("admin")?.user : c.get("user");
+  if (!user) return false;
+
+  return await checkStaffPermissionOfUser(c, user, args);
 };
 
 export const assertStaffPermission = async (

@@ -216,3 +216,87 @@ describe("content type inference", () => {
     });
   });
 });
+
+describe("content type options", () => {
+  const fields = {
+    title: field.text({ required: true }),
+    slug: field.slug({ source: "title" }),
+  };
+
+  it("resolves `true` and options objects to enabled literals", () => {
+    const definition = defineContentType({
+      id: "test.options",
+      tableName: "test_options",
+      fields,
+      publication: true,
+      publicApi: { path: "options", fields: ["title", "slug"] },
+      editorial: { preview: true },
+      delivery: true,
+    });
+
+    expectTypeOf(definition.publication.enabled).toEqualTypeOf<true>();
+    expectTypeOf(definition.publicApi.enabled).toEqualTypeOf<true>();
+    expectTypeOf(definition.editorial.enabled).toEqualTypeOf<true>();
+    expectTypeOf(definition.editorial.preview.enabled).toEqualTypeOf<true>();
+    expectTypeOf(
+      definition.editorial.scheduling.enabled,
+    ).toEqualTypeOf<false>();
+    expectTypeOf(definition.delivery.enabled).toEqualTypeOf<true>();
+  });
+
+  it("resolves omitted blocks to disabled literals", () => {
+    const definition = defineContentType({
+      id: "test.bare",
+      tableName: "test_bare",
+      fields,
+    });
+
+    expectTypeOf(definition.publication.enabled).toEqualTypeOf<false>();
+    expectTypeOf(definition.publicApi.enabled).toEqualTypeOf<false>();
+    expectTypeOf(definition.editorial.enabled).toEqualTypeOf<false>();
+    expectTypeOf(definition.delivery.enabled).toEqualTypeOf<false>();
+  });
+
+  it("accepts `liveEditing` only alongside `editorial`", () => {
+    assertType(
+      defineContentType({
+        id: "test.live",
+        tableName: "test_live",
+        fields,
+        editorial: true,
+        liveEditing: true,
+      }),
+    );
+    assertType(
+      defineContentType({
+        id: "test.live",
+        tableName: "test_live",
+        fields,
+        // @ts-expect-error - live editing needs `editorial`
+        liveEditing: true,
+      }),
+    );
+  });
+
+  it("rejects the removed `enabled` key", () => {
+    assertType(
+      defineContentType({
+        id: "test.legacy",
+        tableName: "test_legacy",
+        fields,
+        // @ts-expect-error - `publication` is `true` or `false`
+        publication: { enabled: true },
+      }),
+    );
+    assertType(
+      defineContentType({
+        id: "test.legacy",
+        tableName: "test_legacy",
+        fields,
+        publication: true,
+        // @ts-expect-error - a block is on when present, there is no `enabled`
+        publicApi: { enabled: true, path: "legacy", fields: ["slug"] },
+      }),
+    );
+  });
+});

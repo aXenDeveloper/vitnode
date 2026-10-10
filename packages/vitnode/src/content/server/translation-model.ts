@@ -198,7 +198,7 @@ export const createContentTranslationModel = <
 
   if (!definition.localization.enabled) {
     throw new ContentEngineError(
-      "The translation service needs `localization: { enabled: true, defaultLocale }` on the content type.",
+      "The translation service needs `localization: { defaultLocale }` on the content type.",
       { contentTypeId },
     );
   }
@@ -318,7 +318,7 @@ export const createContentTranslationModel = <
   const statusColumn = (): PgColumn => {
     if (!publication) {
       throw new ContentEngineError(
-        "Translations can only be published on a content type with `publication: { enabled: true }` - without it there is no status column for a translation status to be subordinate to.",
+        "Translations can only be published on a content type with `publication: true` - without it there is no status column for a translation status to be subordinate to.",
         { contentTypeId },
       );
     }

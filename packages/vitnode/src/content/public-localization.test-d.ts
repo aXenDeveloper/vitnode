@@ -46,15 +46,14 @@ describe("definition-time rules", () => {
     defineContentType({
       id: "test.locale-clash",
       tableName: "test_locale_clash",
-      localization: { defaultLocale: "en", enabled: true },
-      publication: { enabled: true },
+      localization: { defaultLocale: "en" },
+      publication: true,
       fields: {
         title: field.text({ localized: true, required: true }),
         slug: field.slug({ localized: true, source: "title" }),
         locale: field.text({ nullable: true }),
       },
       publicApi: {
-        enabled: true,
         // The runtime refuses this; the type cannot, because `locale` is a
         // declared field like any other. The message is what makes it fixable.
         fields: ["title", "slug", "locale"],

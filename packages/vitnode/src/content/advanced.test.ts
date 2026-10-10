@@ -338,7 +338,7 @@ describe("relations", () => {
             target: () => target,
           } as never),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
       }),
     ).toThrow(/per-locale references are out of scope/);
   });
@@ -384,7 +384,7 @@ describe("groups", () => {
         name: field.text({ required: true }),
         seo: field.group({ fields: seo, localized: true }),
       },
-      localization: { defaultLocale: "en", enabled: true },
+      localization: { defaultLocale: "en" },
     });
 
     expect(definition.advanced.leaves.every(leaf => leaf.localized)).toBe(true);
@@ -400,7 +400,7 @@ describe("groups", () => {
             fields: { title: field.text({ localized: true, nullable: true }) },
           }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
       }),
     ).toThrow(/Localization is a property of the whole group/);
   });
@@ -536,7 +536,7 @@ describe("groups", () => {
           }),
           name: field.text({ required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
       }),
     ).toThrow(/the translation table generates for itself/);
   });
@@ -574,7 +574,7 @@ describe("repeatables", () => {
           faq: field.repeatable({ fields: faq, localized: true } as never),
           name: field.text({ required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
       }),
     ).toThrow(/Repeatable fields are shared/);
   });
@@ -591,7 +591,7 @@ describe("repeatables", () => {
           }),
           name: field.text({ required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
       }),
     ).toThrow(/repeatable fields are shared/);
   });

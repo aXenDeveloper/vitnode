@@ -93,11 +93,11 @@ const assertPublicLeafPath = (
 export const resolvePublicApi = <TField extends string>(
   id: string,
   fields: ContentFieldMap,
-  publicApi: ContentPublicApiConfig<TField> | undefined,
+  publicApi: ContentPublicApiConfig<TField> | false | undefined,
   publication: boolean,
   localizedFields: ContentFieldMap,
 ): ResolvedContentPublicApiConfig => {
-  if (!publicApi?.enabled) {
+  if (!publicApi) {
     return {
       defaultOrder: "desc",
       defaultOrderBy: CONTENT_PUBLIC_ALWAYS_ORDERABLE,
@@ -113,7 +113,7 @@ export const resolvePublicApi = <TField extends string>(
 
   if (!publication) {
     throw new ContentEngineError(
-      "publicApi needs `publication: { enabled: true }`. A public API without a draft state would put every row on the internet the moment it is created.",
+      "publicApi needs `publication: true`. A public API without a draft state would put every row on the internet the moment it is created.",
       { contentTypeId: id },
     );
   }

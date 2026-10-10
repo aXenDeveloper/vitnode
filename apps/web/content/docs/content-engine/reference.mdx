@@ -1,0 +1,338 @@
+---
+title: Options
+description: Every defineContentType option in the VitNode Content Engine, with its type, default, validation rules and the options it depends on.
+icon: BookOpen
+---
+
+`defineContentType` from `@vitnode/core/content` takes one object that describes a content type and returns the resolved definition, with every default filled in. Use this page to look up an option. For a guided first build, follow [Create your first content type](/docs/content-engine/create-a-content-type).
+
+## Minimal example
+
+This is `example.article` from the example plugin, trimmed to the options most content types start with:
+
+```ts title="plugins/example/src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  publication: true,
+  publicApi: {
+    path: "articles",
+    fields: ["title", "slug", "excerpt", "publishedAt"],
+  },
+  admin: {
+    path: "example/articles",
+    titleField: "title",
+  },
+});
+```
+
+## When options are checked
+
+Validation happens in two places, and both stop the app from starting:
+
+- **`defineContentType`** checks one content type when its module is imported. Anything wrong in that object throws a `ContentEngineError`.
+- **Plugin registration** checks every installed content type together, for things only the whole set can show: two types sharing a table or an AdminCP path. See [Unique across content types](#unique-across-content-types).
+
+Every message starts with `[Content Engine] <id>:` and names the option at fault:
+
+```txt
+[Content Engine] example.article: publicApi needs `publication: true`. A public API without a draft state would put every row on the internet the moment it is created.
+```
+
+Many of these rules are type errors too, so your editor often complains before the app does.
+
+## Top-level options
+
+| Name           | Type                                | Required | Default | Description                                                                     |
+| -------------- | ----------------------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
+| `id`           | `string`                            | Yes      |         | `plugin.entity`, such as `example.article`. See [Names](#names)                 |
+| `tableName`    | `string`                            | Yes      |         | Postgres table name, such as `example_articles`                                 |
+| `fields`       | `Record<string, field>`             | Yes      |         | At least one field built with a [`field.*` helper](/docs/content-engine/fields) |
+| `admin`        | [`admin`](#admin)                   | No       | `{}`    | AdminCP path, list, form and title                                              |
+| `publication`  | `boolean`                           | No       | off     | Draft and published states                                                      |
+| `publicApi`    | [`publicApi`](#publicapi)           | No       | off     | Read-only public routes                                                         |
+| `delivery`     | `true` \| [`delivery`](#delivery)   | No       | off     | Public page URLs, SEO metadata, redirects and sitemap                           |
+| `editorial`    | `true` \| [`editorial`](#editorial) | No       | off     | Revisions, preview links and scheduling                                         |
+| `liveEditing`  | `boolean`                       | No       | `false` | [Live editing](#liveediting) in the AdminCP. Needs `editorial`                  |
+| `localization` | [`localization`](#localization)     | No       | off     | A translation table for `localized: true` fields                                |
+| `search`       | [`search`](#search)                 | No       | off     | Site search indexing                                                            |
+| `indexes`      | [`indexes`](#indexes)               | No       | `[]`    | Extra database indexes                                                          |
+
+A feature block is on when it is present. `publicApi`, `localization` and `search` take an options object. `publication` and `liveEditing` are `true`, and `editorial` and `delivery` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
+
+### Names
+
+| Name                        | Rule                                                                                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                        | Matches `/^[a-z0-9]+(?:\.[a-z0-9-]+)+$/`: lowercase, at least two dot-separated segments, dashes allowed after the first. At most 100 characters with `editorial` or `search` |
+| `tableName`                 | snake_case, starts with a letter, at most 63 characters                                                                                                                       |
+| Field names                 | camelCase, start with a lowercase letter                                                                                                                                      |
+| Reserved fields             | `id`, `createdAt` and `updatedAt` always. `status` and `publishedAt` with `publication`. `version` with `editorial`                                                           |
+| Reserved for the list route | `cursor`, `first`, `last`, `order`, `orderBy` and `search`, because they are query parameters of the generated list route. Checked at plugin registration                     |
+| Localized fields            | Cannot be named `itemId`, `languageId`, `version`, `createdAt` or `updatedAt` (translation table columns). A localized type cannot expose a public field called `locale`      |
+
+Two names are derived from the id:
+
+- The **entity key** is the id without its first segment, with further dots turned into `_`. `example.article` becomes `article`. Strings live under `{pluginId}.content.{entityKey}`, for example `@vitnode/example.content.article`.
+- The **permission module** is the entity key with anything outside `a-z0-9` turned into `_`, so `example.localized-article` becomes `localized_article`. Permissions are named `@vitnode/example:article:can_view`. Override it with `admin.permissionModule`.
+
+Every content type gets `can_view`, `can_create`, `can_edit` and `can_delete`. `publication` adds `can_publish` and `editorial` adds `can_restore`.
+
+## `admin`
+
+Controls the generated AdminCP screens. Guide: [Customize the AdminCP](/docs/content-engine/admincp).
+
+| Name                    | Type                                   | Default                                                                    | Description                                                                                                                                                                |
+| ----------------------- | -------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                  | `string`                               | The id with dots as slashes (`example/article`)                            | Screen URL under `/admin/content/`. Lowercase segments of letters, digits and dashes, starting with a letter, joined by `/`. The last segment cannot be `create` or `edit` |
+| `permissionModule`      | `string`                               | Derived from the id, see [Names](#names)                                   | Middle part of the permission names. snake_case                                                                                                                            |
+| `titleField`            | field name \| `null`                   | First shared text or textarea field, then first localized one              | Names a record in headings, pickers and toasts. A localized field is shown in the reader's language. `null` means no title                                                 |
+| `colorField`            | field name \| `null`                   | `null`                                                                     | A shared field holding a color, shown as a swatch beside the title                                                                                                         |
+| `create.mode`           | `"dialog"` \| `"page"`                 | `"dialog"`                                                                 | Open the create form in a dialog or on its own page                                                                                                                        |
+| `edit.mode`             | `"dialog"` \| `"page"`                 | `"dialog"`                                                                 | Same, for the edit form                                                                                                                                                    |
+| `navigation`            | `boolean`                              | `true`                                                                     | `false` hides the AdminCP sidebar entry                                                                                                                                    |
+| `list.columns`          | field names                            | `status` (with publication), every shared single-column field, `updatedAt` | Table columns, in order. Accepts localized fields, system columns and to-many relation or user fields                                                                      |
+| `list.searchableFields` | field names                            | Shared text and textarea fields                                            | Fields the search box matches: text, textarea, richText or slug                                                                                                            |
+| `list.orderableFields`  | field names                            | `[]`                                                                       | Sortable shared fields. System columns are always sortable and need no entry. No localized or file fields                                                                  |
+| `list.defaultOrderBy`   | column name                            | `"updatedAt"`                                                              | A system column or one of `list.orderableFields`                                                                                                                           |
+| `list.defaultOrder`     | `"asc"` \| `"desc"`                    | `"desc"`                                                                   |                                                                                                                                                                            |
+| `list.thumbnailField`   | field name                             |                                                                            | A shared single `field.file()` drawn in the title cell. `titleField` must be one of `list.columns`                                                                         |
+| `form.fields`           | field names                            | Every field except `field.blocks()`, in declaration order                  | Fields in the generated form                                                                                                                                               |
+| `form.sections`         | `{ name: string; fields: string[] }[]` | `[]`                                                                       | Groups the form into titled sections. Cannot be combined with `form.fields`                                                                                                |
+
+A section `name` is lowercase `a-z0-9_` and starts with a letter, because it is the key its heading is read from. Each field goes in one section only, and no section can be empty.
+
+```ts title="plugins/blog/src/content/post.ts"
+admin: {
+  permissionModule: "posts",
+  path: "blog/articles",
+  titleField: "title",
+  create: { mode: "page" },
+  edit: { mode: "page" },
+  list: {
+    columns: ["title", "authorId", "status", "publishedAt", "updatedAt"],
+    searchableFields: ["title"],
+    thumbnailField: "coverImage",
+  },
+},
+```
+
+## `publication`
+
+`publication: true` adds the `status` (`"draft"` or `"published"`) and `publishedAt` columns, and the `can_publish` permission. It has no other options.
+
+Publication on its own never makes anything public. Only [`publicApi`](#publicapi) does. Guide: [Publish content with a public API](/docs/content-engine/public-api).
+
+```ts title="plugins/example/src/content/article.ts"
+publication: true,
+```
+
+## `publicApi`
+
+Generates read-only routes at `/api/{pluginId}/content/{path}` that return published records only. Guide: [Publish content with a public API](/docs/content-engine/public-api).
+
+| Name               | Type                | Required | Default         | Description                                                                                      |
+| ------------------ | ------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `path`             | `string`            | Yes      |                 | One URL segment matching `/^[a-z][a-z0-9-]*$/`, at most 64 characters, not `admin`               |
+| `fields`           | field names         | Yes      |                 | The allowlist, with no wildcard. Must contain exactly one top-level slug field. No duplicates    |
+| `searchableFields` | field names         | No       | `[]`            | Matched by `?search=`. Text, textarea, richText or slug fields. Rich text matches its words only |
+| `filterableFields` | field names         | No       | `[]`            | Each becomes an equality query parameter. Boolean, enum, number, relation, slug or text fields   |
+| `orderableFields`  | field names         | No       | `[]`            | Accepted by `?orderBy=`. `publishedAt` is always added                                           |
+| `defaultOrderBy`   | field name          | No       | `"publishedAt"` | Must be orderable                                                                                |
+| `defaultOrder`     | `"asc"` \| `"desc"` | No       | `"desc"`        |                                                                                                  |
+
+What `fields` accepts:
+
+- Fields of kind text, textarea, richText, slug, number, boolean, enum, dateTime, file, relation and blocks. A file is returned as its public descriptor, never as the file id.
+- The columns `id`, `createdAt`, `updatedAt` and `publishedAt`.
+- Group and repeatable leaves one at a time, as `"seo.title"`. Naming the whole group throws, so a leaf added later stays private.
+- Not `status` (every public row is published), and not `field.user()`, so an author is never published by accident.
+
+`searchableFields`, `filterableFields` and `orderableFields` must all be in `fields`. Repeatable leaves fit none of them. `orderableFields` also refuses file fields, to-many relations and localized fields.
+
+```ts title="plugins/example/src/content/article.ts"
+publicApi: {
+  path: "articles",
+  fields: ["title", "slug", "excerpt", "featured", "category", "noIndex", "publishedAt"],
+  searchableFields: ["title", "excerpt"],
+  orderableFields: ["publishedAt", "title"],
+  filterableFields: ["category", "featured"],
+},
+```
+
+## `delivery`
+
+Gives each published record a public page: canonical URL, SEO metadata, redirects from old slugs and a sitemap. Guides: [Public pages](/docs/content-engine/public-pages) and [SEO](/docs/content-engine/seo).
+
+| Name                             | Type                                                                                          | Default                   | Description                                                                                                           |
+| -------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `path`                           | `string`                                                                                      | `/{publicApi.path}/:slug` | The page route. Exactly one `:slug`, no other parameters or `*`, not under `/admin` or `/api`, at most 512 characters |
+| `redirects`                      | `boolean`                                                                                     | off                       | Old slugs answer `308` with the current URL                                                                           |
+| `seo.titleField`                 | text field                                                                                    |                           | Page title                                                                                                            |
+| `seo.fallbackTitleField`         | text field                                                                                    |                           | Used when `titleField` is empty. Needs `titleField`                                                                   |
+| `seo.descriptionField`           | text, textarea or richText field                                                              |                           | Meta description. Rich text becomes plain text, and the page trims it to 160 characters                               |
+| `seo.fallbackDescriptionField`   | text, textarea or richText field                                                              |                           | Used when `descriptionField` is empty. Needs `descriptionField`                                                       |
+| `seo.noIndexField`               | shared boolean field                                                                          |                           | `true` marks the page `noindex` and leaves it out of the sitemap                                                      |
+| `seo.openGraph.titleField`       | text field                                                                                    |                           | `og:title`                                                                                                            |
+| `seo.openGraph.descriptionField` | text, textarea or richText field                                                              |                           | `og:description`                                                                                                      |
+| `sitemap`                        | `true` \| `{ changeFrequency, priority }`                                                     | off                       | Lists published URLs                                                                                                  |
+| `sitemap.changeFrequency`        | `"always"` \| `"hourly"` \| `"daily"` \| `"weekly"` \| `"monthly"` \| `"yearly"` \| `"never"` |                           |                                                                                                                       |
+| `sitemap.priority`               | `number`                                                                                      |                           | From 0 to 1 inclusive                                                                                                 |
+| `hreflang.xDefault`              | `"defaultLocale"`                                                                             |                           | Adds an `x-default` alternate pointing at the default language                                                        |
+
+Every SEO field must be in `publicApi.fields`, may be a group leaf such as `"seo.title"`, and cannot be a repeatable leaf. `noIndexField` must be shared, not localized.
+
+```ts title="plugins/example/src/content/article.ts"
+delivery: {
+  redirects: true,
+  seo: {
+    titleField: "title",
+    descriptionField: "excerpt",
+    noIndexField: "noIndex",
+    openGraph: { titleField: "title", descriptionField: "excerpt" },
+  },
+  sitemap: { changeFrequency: "weekly", priority: 0.7 },
+},
+```
+
+## `editorial`
+
+Adds a `version` column, revision history and the `can_restore` permission. [`liveEditing`](#liveediting) builds on it. Guide: [Revisions, previews and scheduling](/docs/content-engine/editorial).
+
+| Name                       | Type                                           | Default | Description                                                                                                             |
+| -------------------------- | ---------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `revisions.retention`      | `number`                                       | `50`    | Newest revisions kept per record. A whole number from 1 to 500                                                          |
+| `preview`                  | `true` \| `{ expiresInMinutes, pathTemplate }` | off     | Signed [preview links](/docs/content-engine/editorial#preview-links) for drafts                                         |
+| `preview.expiresInMinutes` | `number`                                       | `15`    | Link lifetime. A whole number from 1 to 1440                                                                            |
+| `preview.pathTemplate`     | `string`                                       |         | Your own preview URL. Starts with `/`, contains `{token}` exactly once and no other placeholder, at most 512 characters |
+| `scheduling`               | `boolean`                                      | off     | Publish or unpublish at a chosen time                                                                                   |
+
+```ts title="plugins/example/src/content/article.ts"
+editorial: {
+  revisions: { retention: 20 },
+  preview: { expiresInMinutes: 30 },
+  scheduling: true,
+},
+```
+
+## `localization`
+
+Creates a `{tableName}_translations` table for fields marked `localized: true`. Guide: [Translate content](/docs/content-engine/localization).
+
+| Name            | Type                    | Default  | Description                                                                                           |
+| --------------- | ----------------------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `defaultLocale` | `string`                |          | Required. The language every record is created in, such as `"en"` or `"pt-BR"`. At most 32 characters |
+| `fallback`      | `"none"` \| `"default"` | `"none"` | `"default"` serves the default language when a translation is missing                                 |
+
+Only text, textarea, richText, slug, blocks and group fields can be localized. A localized slug needs a localized source field, and a shared slug needs a shared one.
+
+```ts title="plugins/example/src/content/localized-article.ts"
+localization: {
+  defaultLocale: "en",
+  fallback: "default",
+},
+```
+
+## `search`
+
+Keeps published records in the [site search index](/docs/dev/search). Drafts never show up in public results. Guide: [Search](/docs/content-engine/search).
+
+| Name               | Type        | Required | Description                                                                                                                           |
+| ------------------ | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `titleField`       | field name  | Yes      | The result heading. A text field that is not nullable                                                                                 |
+| `contentFields`    | field names | Yes      | The indexed body, at least one, no duplicates. Text, textarea, richText or slug. Repeatable leaves such as `"faq.answer"` are allowed |
+| `pathTemplate`     | `string`    | Yes      | The result URL. Starts with `/`, contains `{slug}` exactly once, at most 512 characters                                               |
+| `descriptionField` | field name  | No       | Shown in result excerpts. Text, textarea or richText                                                                                  |
+| `authorField`      | field name  | No       | A top-level `field.user()` credited in the index. It does not have to be public                                                       |
+
+Every field except `authorField` must be in `publicApi.fields`, or a result snippet would leak a private value. Leave the language out of `pathTemplate`, because your [i18n settings](/docs/dev/i18n) add the locale prefix.
+
+```ts title="plugins/example/src/content/article.ts"
+search: {
+  titleField: "title",
+  descriptionField: "excerpt",
+  contentFields: ["title", "excerpt"],
+  pathTemplate: "/articles/{slug}",
+  authorField: "author",
+},
+```
+
+## `indexes`
+
+Extra database indexes on the base table. The engine already indexes slugs, `unique: true` text fields, foreign keys, `createdAt`, `updatedAt` and `(status, publishedAt)`. A declared index on the same columns replaces the generated one instead of adding a second. Guide: [Database and migrations](/docs/content-engine/database).
+
+| Name     | Type       | Required | Default                                            | Description                       |
+| -------- | ---------- | -------- | -------------------------------------------------- | --------------------------------- |
+| `on`     | `string[]` | Yes      |                                                    | At least one column, no repeats   |
+| `unique` | `boolean`  | No       | `false`                                            |                                   |
+| `name`   | `string`   | No       | `{tableName}_{columns}_idx`, or `_key` when unique | snake_case, at most 63 characters |
+
+`on` accepts shared fields, group leaves such as `"syndication.priority"`, and system columns (`id`, `createdAt`, `updatedAt`, plus `status`, `publishedAt` and `version` when their feature is on). It refuses localized fields, `field.blocks()`, repeatable leaves, to-many relations and file collections, and whole groups. Two indexes on the same columns throw.
+
+```ts title="plugins/example/src/content/advanced-article.ts"
+indexes: [{ on: ["syndication.priority"] }],
+```
+
+## `liveEditing`
+
+`liveEditing: true` lets several editors work on one record at once in the AdminCP edit form: field locks, an autosaved shared draft, presence and rich text co-editing. It needs `editorial`, because locks and drafts are measured against the record version. It adds the `/{id}/locks` and `/{id}/draft` staff routes. Guide: [Live editing](/docs/content-engine/live-editing).
+
+```ts title="plugins/example/src/content/article.ts"
+editorial: { revisions: { retention: 20 } },
+liveEditing: true,
+```
+
+AI suggestions are not a `defineContentType` option. They are set per field with the `ai` option of `field.text()` and `field.textarea()`. See [Fields](/docs/content-engine/fields) and [AI actions](/docs/dev/ai/actions).
+
+## Which options need which
+
+Each row is a rule `defineContentType` enforces, with the start of the message it throws (after the `[Content Engine] <id>:` prefix).
+
+| Option                                                              | Needs                                                    | Error                                                                                                      |
+| ------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `publicApi`                                                         | `publication`                                            | ``publicApi needs `publication: true`.``                                                                   |
+| `publicApi.fields`                                                  | Exactly one top-level slug field                         | `publicApi.fields must expose exactly one slug field`                                                      |
+| `search`                                                            | `publication`                                            | ``search needs `publication: true`.``                                                                      |
+| `search`                                                            | `publicApi`                                              | ``search needs `publicApi: { path, fields }`.``                                                            |
+| `search.*Field`, `search.contentFields`                             | The field in `publicApi.fields`                          | `search.titleField names "x", which is not in publicApi.fields.`                                           |
+| `delivery`                                                          | `publicApi`                                              | ``delivery needs `publicApi: { path, fields }`.``                                                          |
+| `delivery` on a localized type                                      | `"id"` in `publicApi.fields`                             | `delivery on a localized content type needs "id" in publicApi.fields.`                                     |
+| `liveEditing`                                                       | `editorial`                                              | ``liveEditing needs `editorial`.``                                                                         |
+| `delivery.redirects`                                                | `editorial`                                              | ``delivery.redirects needs `editorial`.``                                                                  |
+| `delivery.redirects` on a localized type                            | A localized slug field                                   | `delivery.redirects needs a localized slug field on a localized content type, but "slug" is shared.`       |
+| `delivery.hreflang`                                                 | `localization`                                           | ``delivery.hreflang needs `localization: { defaultLocale }`.``                                             |
+| `delivery.seo.*`                                                    | The field in `publicApi.fields`                          | `delivery.seo.titleField names "x", which is not in publicApi.fields.`                                     |
+| `delivery.seo.fallbackTitleField`                                   | `delivery.seo.titleField`                                | ``delivery.seo.fallbackTitleField is set without `titleField`.``                                           |
+| `delivery.seo.fallbackDescriptionField`                             | `delivery.seo.descriptionField`                          | ``delivery.seo.fallbackDescriptionField is set without `descriptionField`.``                               |
+| `editorial.preview`                                                 | `publicApi`                                              | ``editorial.preview needs `publicApi: { path, fields }`.``                                                 |
+| `editorial.scheduling`                                              | `publication`                                            | ``editorial.scheduling needs `publication: true`.``                                                        |
+| A `localized: true` field                                           | `localization`                                           | ``Field "title" is `localized: true` but the content type has no `localization: { defaultLocale }` block`` |
+| `localization`                                                      | At least one `localized: true` field                     | ``localization is enabled but no field is marked `localized: true`,``                                      |
+| Any block with an `enabled` key                                     | Nothing: a block is on when present                      | `publicApi.enabled is not an option.`                                                                      |
+| `publication` or `liveEditing` as an object                         | `true` or `false`                                        | ``publication is `true` or `false`.``                                                                      |
+| `admin.list.thumbnailField`                                         | `admin.titleField` in `admin.list.columns`               | `admin.list.thumbnailField is drawn in the title column, but admin.titleField`                             |
+| `admin.form.sections`                                               | No `admin.form.fields`                                   | ``admin.form declares both `fields` and `sections`.``                                                      |
+| `admin.list.defaultOrderBy`                                         | A system column or an `admin.list.orderableFields` entry | `admin.list.defaultOrderBy is "x", which is not in admin.list.orderableFields.`                            |
+| `publicApi.defaultOrderBy`                                          | An orderable field                                       | `publicApi.defaultOrderBy is "x", which is not in publicApi.orderableFields.`                              |
+| `publicApi.searchableFields`, `filterableFields`, `orderableFields` | The field in `publicApi.fields`                          | `publicApi.searchableFields includes "x", which is not in publicApi.fields.`                               |
+
+### Unique across content types
+
+Plugin registration checks these across every installed content type:
+
+| Value                                 | Unique within                 | Error starts with                          |
+| ------------------------------------- | ----------------------------- | ------------------------------------------ |
+| `id`                                  | The app                       | `Duplicate content type id`                |
+| Table names, including generated ones | The database                  | `Table "x" is claimed by both`             |
+| Index names, including generated ones | The database                  | `Index name "x" is used by both`           |
+| `admin.path`                          | The app                       | `AdminCP path "x" is claimed by both`      |
+| `permissionModule`                    | The plugin                    | `Permission module "x" is derived by both` |
+| `publicApi.path`                      | The plugin                    | `Public path "x" is claimed by both`       |
+| `publicApi.path` with `delivery`      | The app, among delivery types | `Delivery path "x" is claimed by both`     |

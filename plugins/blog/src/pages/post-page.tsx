@@ -1,6 +1,9 @@
 import { DateFormat } from "@vitnode/core/components/date-format";
-import { EditorContent } from "@vitnode/core/components/ui/editor-content";
-import { zodContentFileDescriptor } from "@vitnode/core/content";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import {
+  zodContentFileDescriptor,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import {
   definePluginRoute,
@@ -18,7 +21,7 @@ import { z } from "zod";
 import { CONFIG_PLUGIN } from "@/const";
 
 const zodBlogPost = z.object({
-  content: z.string(),
+  content: zodRichTextDocument,
   coverImage: zodContentFileDescriptor.nullable(),
   coverImageAlt: z.string().nullable(),
   publishedAt: z.string().nullable(),
@@ -122,9 +125,10 @@ const BlogPostPage = ({
         />
       ) : null}
 
-      <div className="text-foreground leading-relaxed text-pretty">
-        <EditorContent content={item.content} />
-      </div>
+      <RichTextContent
+        className="text-foreground leading-relaxed text-pretty"
+        content={item.content}
+      />
     </article>
   );
 };

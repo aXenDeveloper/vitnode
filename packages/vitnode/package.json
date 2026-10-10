@@ -114,6 +114,16 @@
       "types": "./dist/src/content/server/index.d.ts",
       "default": "./dist/src/content/server/index.js"
     },
+    "./content/rich-text": {
+      "import": "./dist/src/content/rich-text/index.js",
+      "types": "./dist/src/content/rich-text/index.d.ts",
+      "default": "./dist/src/content/rich-text/index.js"
+    },
+    "./components/rich-text": {
+      "import": "./dist/src/components/rich-text/index.js",
+      "types": "./dist/src/components/rich-text/index.d.ts",
+      "default": "./dist/src/components/rich-text/index.js"
+    },
     "./content/editor": {
       "import": "./dist/src/content/editor/index.js",
       "types": "./dist/src/content/editor/index.d.ts",
@@ -233,6 +243,8 @@
     "@simplewebauthn/server": "^14.0.3",
     "@tanstack/charts": "^1.0.0",
     "@tiptap/extension-audio": "^3.31.4",
+    "@tiptap/extension-collaboration": "^3.31.4",
+    "@tiptap/extension-collaboration-caret": "^3.31.4",
     "@tiptap/extension-drag-handle": "^3.31.4",
     "@tiptap/extension-drag-handle-react": "^3.31.4",
     "@tiptap/extension-emoji": "^3.31.4",
@@ -246,6 +258,7 @@
     "@tiptap/react": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/suggestion": "^3.31.4",
+    "@tiptap/y-tiptap": "^3.0.9",
     "ai": "^7.0.134",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
@@ -271,7 +284,9 @@
     "shadcn": "^4.21.4",
     "sharp": "^0.35.5",
     "use-debounce": "^10.1.1",
-    "use-intl": "^4.14.9"
+    "use-intl": "^4.14.9",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.33"
   },
   "peerDependenciesMeta": {
     "@tanstack/react-query": {

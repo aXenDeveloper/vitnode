@@ -1,3 +1,4 @@
+import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
@@ -20,6 +21,7 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 
+import { ContentFormFieldSkeleton } from "../form/skeleton";
 import { ContentGroupField } from "./group-field";
 import { ContentOptionSwatch } from "./option-swatch";
 import { contentOptionsQueryKey } from "./options-query";
@@ -70,6 +72,12 @@ const fileList = (
 
   return Array.isArray(value) ? value : [];
 };
+
+const AutoFormEditor = React.lazy(async () =>
+  import("@/components/form/fields/editor").then(module => ({
+    default: module.AutoFormEditor,
+  })),
+);
 
 type ContentKindFieldProps = ItemAutoFormComponentProps & {
   spec: ContentFormFieldSpec;
@@ -253,6 +261,20 @@ export const ContentField = ({
           spec={spec}
           {...props}
         />
+      );
+
+    case "richText":
+      return (
+        <React.Suspense
+          fallback={<ContentFormFieldSkeleton control="editor" />}
+        >
+          <AutoFormEditor
+            format="json"
+            label={spec.label}
+            multiLang={multiLang}
+            {...props}
+          />
+        </React.Suspense>
       );
 
     case "textarea":

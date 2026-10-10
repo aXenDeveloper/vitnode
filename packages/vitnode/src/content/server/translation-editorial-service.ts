@@ -163,14 +163,14 @@ export const createContentTranslationEditorialService = <
 
   if (!definition.localization.enabled) {
     throw new ContentEngineError(
-      "The translation editorial service needs `localization: { enabled: true, defaultLocale }` on the content type.",
+      "The translation editorial service needs `localization: { defaultLocale }` on the content type.",
       { contentTypeId },
     );
   }
 
   if (!definition.editorial.enabled) {
     throw new ContentEngineError(
-      "The translation editorial service needs `editorial: { enabled: true }` on the content type - without it there is no revision history for a translation to write to.",
+      "The translation editorial service needs `editorial: true` on the content type - without it there is no revision history for a translation to write to.",
       { contentTypeId },
     );
   }

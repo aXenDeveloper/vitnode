@@ -15,6 +15,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { isRichTextDocument } from "@/content/rich-text/document";
+import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
 export interface ContentConflictState {
   currentVersion: number;
@@ -24,6 +26,7 @@ export interface ContentConflictState {
 const asText = (value: unknown): string => {
   if (value === null || value === undefined || value === "") return "—";
   if (value instanceof Date) return value.toISOString();
+  if (isRichTextDocument(value)) return richTextToPlainText(value) || "—";
 
   // A row arrives as JSON, so a value is a primitive or it is something the
   // comparison has no opinion about - stringifying an object would compare

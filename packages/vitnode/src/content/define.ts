@@ -4,10 +4,11 @@ import type {
   ContentDeliveryConfig,
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
+  ContentDeliveryInput,
   ContentDeliveryNoIndexField,
   ContentDeliveryTitleField,
-  ContentEditorialConfig,
   ContentEditorialEnabled,
+  ContentEditorialInput,
   ContentFieldMap,
   ContentFieldsConstraint,
   ContentIndexInput,
@@ -15,7 +16,6 @@ import type {
   ContentLocalizationEnabled,
   ContentPreviewEnabled,
   ContentPublicApiConfig,
-  ContentPublicationConfig,
   ContentPublicExposableField,
   ContentSchedulingEnabled,
   ContentSearchAuthorField,
@@ -55,6 +55,7 @@ import {
 import { resolvePublicApi } from "./define-public-api";
 import { resolveSearch } from "./define-search";
 import {
+  assertContentOptionShapes,
   assertKnownColumns,
   editorialFields,
   publicationFields,
@@ -141,7 +142,9 @@ export const defineContentType = <
   >,
   TPublication extends boolean = false,
   TPublicField extends ContentPublicExposableField<TFields> = never,
-  TPublicEnabled extends boolean = false,
+  TPublicEnabled extends boolean = [TPublicField] extends [never]
+    ? false
+    : true,
   // Inferred from the `search` literal and checked against the public allowlist.
   // The constraint is verified once every other parameter is resolved, which is
   // what makes "an indexed field is a public field" a compile error.
@@ -160,38 +163,35 @@ export const defineContentType = <
         ContentSearchTextField<TFields, TPublicField>,
         ContentSearchAuthorField<TFields>
       >
-    | { enabled: false } = { enabled: false },
+    | false
+    | undefined = undefined,
   // The whole `editorial` argument, inferred as one type, for the same two
   // reasons `TSearch` is: its constraint is checked once `TPublicEnabled` and
   // `TPublication` are resolved - which is what makes "preview needs a public
   // API" and "scheduling needs publication" compile errors - and an
   // intersection member is not an inference site, so inferring the object is
   // the only way the three `enabled` literals survive.
-  TEditorial extends
-    | ContentEditorialConfig<TPublicEnabled, TPublication>
-    | { enabled: false } = { enabled: false },
+  TEditorial extends ContentEditorialInput<TPublicEnabled, TPublication> =
+    false,
   // The whole `localization` argument, inferred as one type, for the same reason
   // `TSearch` and `TEditorial` are: an intersection member is not an inference
   // site, so this is the only way the `enabled` literal survives - and every
   // conditional that decides whether a translation table, translation schemas
   // and a translation service exist reads that literal.
-  TLocalization extends ContentLocalizationConfig | { enabled: false } = {
-    enabled: false;
-  },
+  TLocalization extends ContentLocalizationConfig | false | undefined =
+    undefined,
   // The whole `delivery` argument, inferred as one type, for the same two reasons
   // `TSearch` and `TEditorial` are. Its *constraint* is what enforces the field
   // rules - a constraint is checked once `TPublicField` and `TPublicEnabled` are
   // resolved, which is what makes "delivery needs a public API" and "an SEO field
   // has to be public" compile errors rather than boot-time ones.
-  TDelivery extends
-    | ContentDeliveryConfig<
-        TPublicEnabled,
-        ContentEditorialEnabled<TEditorial>,
-        ContentDeliveryTitleField<TFields, TPublicField>,
-        ContentDeliveryDescriptionField<TFields, TPublicField>,
-        ContentDeliveryNoIndexField<TFields, TPublicField>
-      >
-    | { enabled: false } = { enabled: false },
+  TDelivery extends ContentDeliveryInput<
+    TPublicEnabled,
+    ContentEditorialEnabled<TEditorial>,
+    ContentDeliveryTitleField<TFields, TPublicField>,
+    ContentDeliveryDescriptionField<TFields, TPublicField>,
+    ContentDeliveryNoIndexField<TFields, TPublicField>
+  > = false,
   TPublicPath extends string = string,
 >({
   admin = {},
@@ -200,6 +200,7 @@ export const defineContentType = <
   fields,
   id,
   indexes = [],
+  liveEditing,
   localization,
   publicApi,
   publication,
@@ -223,16 +224,17 @@ export const defineContentType = <
     ContentEditorialEnabled<TEditorial>
   >[];
 
+  liveEditing?: ContentEditorialEnabled<TEditorial> extends true
+    ? boolean
+    : false;
   localization?: TLocalization;
   /**
    * Opts into a generated read-only public API. Needs `publication` and exactly
    * one exposed slug field. Omit it and nothing public is generated.
    */
-  publicApi?:
-    | ContentPublicApiConfig<TPublicField, TPublicPath>
-    | { enabled: TPublicEnabled };
+  publicApi?: ContentPublicApiConfig<TPublicField, TPublicPath> | false;
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
-  publication?: ContentPublicationConfig | { enabled: TPublication };
+  publication?: TPublication;
 
   search?: TSearch;
   tableName: string;
@@ -293,8 +295,39 @@ export const defineContentType = <
     });
   }
 
-  const publicationEnabled = publication?.enabled === true;
-  const editorialEnabled = editorial?.enabled === true;
+  assertContentOptionShapes(id, {
+    admin,
+    delivery,
+    editorial,
+    localization,
+    publicApi,
+    publication,
+    search,
+  });
+
+  if (publication !== undefined && typeof publication !== "boolean") {
+    throw new ContentEngineError(
+      "publication is `true` or `false`. It has no options of its own.",
+      { contentTypeId: id },
+    );
+  }
+
+  if (liveEditing !== undefined && typeof liveEditing !== "boolean") {
+    throw new ContentEngineError(
+      "liveEditing is `true` or `false`. It has no options of its own.",
+      { contentTypeId: id },
+    );
+  }
+
+  const publicationEnabled = publication === true;
+  const editorialEnabled = editorial !== undefined && editorial !== false;
+
+  if (liveEditing === true && !editorialEnabled) {
+    throw new ContentEngineError(
+      "liveEditing needs `editorial`. Field locks and the shared draft are measured against the record version, which only editorial adds.",
+      { contentTypeId: id },
+    );
+  }
 
   for (const name of fieldNames) {
     assertFieldName(id, name, publicationEnabled, editorialEnabled);
@@ -383,10 +416,7 @@ export const defineContentType = <
   const resolvedPublicApi = resolvePublicApi(
     id,
     fieldMap,
-    // The `{ enabled: TPublicEnabled }` arm of the parameter exists only so an
-    // `enabled: false` literal still typechecks; `resolvePublicApi` returns the
-    // disabled config for anything that is not `enabled: true`.
-    publicApi as ContentPublicApiConfig<TPublicField> | undefined,
+    publicApi,
     publicationEnabled,
     localizedFields,
   );
@@ -394,9 +424,7 @@ export const defineContentType = <
   const resolvedSearch = resolveSearch(
     id,
     fieldMap,
-    // Same shape of widening as `publicApi` above: the `{ enabled: false }` arm
-    // exists only so an explicit literal typechecks.
-    search as ContentSearchConfig | undefined,
+    search,
     resolvedPublicApi,
     publicationEnabled,
     Object.keys(localizedFields).length > 0,
@@ -404,9 +432,7 @@ export const defineContentType = <
 
   const resolvedEditorial = resolveEditorial(
     id,
-    // The `{ enabled: false }` arm of the parameter exists only so an explicit
-    // literal typechecks - the same widening `publicApi` and `search` do.
-    editorial as ContentEditorialConfig | undefined,
+    editorial,
     resolvedPublicApi,
     publicationEnabled,
   );
@@ -417,9 +443,7 @@ export const defineContentType = <
   const resolvedLocalization = resolveContentLocalization({
     fields: fieldMap,
     id,
-    // The `{ enabled: false }` arm exists only so an explicit literal
-    // typechecks - the same widening `publicApi`, `search` and `editorial` do.
-    localization: localization as ContentLocalizationConfig | undefined,
+    localization,
     publication: publicationEnabled,
     tableName,
   });
@@ -428,9 +452,7 @@ export const defineContentType = <
   // off the field partition, and after `publicApi`, because every canonical path
   // and every SEO field is stated in terms of the resolved public allowlist.
   const resolvedDelivery = resolveContentDelivery({
-    // The `{ enabled: false }` arm exists only so an explicit literal typechecks -
-    // the same widening `publicApi`, `search`, `editorial` and `localization` do.
-    delivery: delivery as ContentDeliveryConfig | undefined,
+    delivery: delivery as boolean | ContentDeliveryConfig | undefined,
     // Read off the *resolved* editorial config rather than the argument, so the
     // redirect check sees exactly what `resolveEditorial` decided.
     editorial: resolvedEditorial.enabled,
@@ -473,6 +495,7 @@ export const defineContentType = <
     fields: fieldMap as unknown as TFields,
     id,
     indexes: resolvedIndexes,
+    liveEditing: { enabled: liveEditing === true },
     localization: resolvedLocalization as ResolvedContentLocalizationConfig<
       ContentLocalizationEnabled<TLocalization>
     >,

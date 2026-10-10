@@ -17,6 +17,7 @@ export const invalidateContentList = async (
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentListQueryRoot(contentTypeId),
+    refetchType: "all",
   });
 };
 
@@ -27,6 +28,7 @@ export const invalidateContentItem = async (
 ): Promise<void> => {
   await queryClient.invalidateQueries({
     queryKey: contentItemQueryRoot(contentTypeId, itemId),
+    refetchType: "all",
   });
 };
 

@@ -578,15 +578,12 @@ describe("configuration guards", () => {
         c: {} as never,
         definition: {
           ...testLocalizedGuideContentType,
-          editorial: {
-            ...testLocalizedGuideContentType.editorial,
-            enabled: false,
-          },
+          editorial: false,
         } as never,
         pluginId: PLUGIN_ID,
         schemas,
         translations: translations(),
       }),
-    ).toThrow(/needs `editorial: \{ enabled: true \}`/);
+    ).toThrow(/needs `editorial: true`/);
   });
 });

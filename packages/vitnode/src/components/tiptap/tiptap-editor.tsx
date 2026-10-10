@@ -1,23 +1,47 @@
-import { EditorContent, useEditor } from "@tiptap/react";
+import {
+  type Editor,
+  EditorContent,
+  type Extensions,
+  useEditor,
+} from "@tiptap/react";
 import { cn } from "cn";
+import React from "react";
 import { useTranslations } from "use-intl";
+
+import type { RichTextDocument } from "@/content/rich-text/document";
 
 import { useEditorConfig } from "@/components/editor-provider";
 
 import { TipTapDragHandle } from "./drag-handle";
 import { EditorSkeleton } from "./editor-skeleton";
 import { createTipTapExtensions } from "./extension";
+import { editorEmojiItems, toRichTextDocument } from "./rich-text-json";
 import { TipTapToolbar } from "./toolbar/tiptap-toolbar";
 
-export type TipTapEditorProps = Omit<
+export type TipTapEditorBaseProps = Omit<
   React.ComponentProps<"div">,
-  "onChange"
+  "defaultValue" | "onChange"
 > & {
   disableScroll?: boolean;
-  onChange?: (value: string) => void;
+  extensions?: Extensions;
+  onEditor?: (editor: Editor | null) => void;
   placeholder?: string;
+  undoRedo?: boolean;
+};
+
+export type TipTapEditorHtmlProps = TipTapEditorBaseProps & {
+  format?: "html";
+  onChange?: (value: string) => void;
   value?: string;
 };
+
+export type TipTapEditorJsonProps = TipTapEditorBaseProps & {
+  format: "json";
+  onChange?: (value: RichTextDocument) => void;
+  value?: null | RichTextDocument;
+};
+
+export type TipTapEditorProps = TipTapEditorHtmlProps | TipTapEditorJsonProps;
 
 const textboxAttributesOf = ({
   describedBy,
@@ -33,43 +57,74 @@ const textboxAttributesOf = ({
   ...(invalid === true || invalid === "true" ? { "aria-invalid": "true" } : {}),
 });
 
-export const TipTapEditor = ({
-  "aria-describedby": describedBy,
-  "aria-labelledby": labelledBy,
-  className,
-  disableScroll,
-  placeholder,
-  value = "",
-  onChange,
-  onBlur,
-  ...props
-}: TipTapEditorProps) => {
+export const TipTapEditor = (props: TipTapEditorProps) => {
+  const {
+    "aria-describedby": describedBy,
+    "aria-labelledby": labelledBy,
+    className,
+    disableScroll,
+    extensions,
+    format: _format,
+    placeholder,
+    undoRedo,
+    value: _value,
+    onChange: _onChange,
+    onBlur,
+    onEditor,
+    ...rest
+  } = props;
   const t = useTranslations("core.global.editor");
   const { emojis } = useEditorConfig();
+  const emojiItems = React.useMemo(() => editorEmojiItems(emojis), [emojis]);
   const editor = useEditor({
-    extensions: createTipTapExtensions({
-      customEmojis: emojis,
-      placeholder: placeholder ?? t("placeholder"),
-    }),
+    extensions: [
+      ...createTipTapExtensions({
+        customEmojis: emojis,
+        placeholder: placeholder ?? t("placeholder"),
+        undoRedo,
+      }),
+      ...(extensions ?? []),
+    ],
     editorProps: {
       attributes: {
         class:
-          "max-w-full min-h-40 py-4 ps-10 pe-4 text-base focus:outline-none md:text-sm",
+          "max-w-full min-h-40 py-4 ps-5 pe-4 text-base focus:outline-none md:text-sm",
         role: "textbox",
         "aria-multiline": "true",
         ...textboxAttributesOf({
           describedBy,
-          invalid: props["aria-invalid"],
+          invalid: rest["aria-invalid"],
           labelledBy,
         }),
       },
     },
-    content: value,
+    content:
+      props.format === "json" ? (props.value ?? null) : (props.value ?? ""),
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
-      onChange?.(currentEditor.getHTML());
+      if (props.format === "json") {
+        props.onChange?.(
+          toRichTextDocument(currentEditor.getJSON(), emojiItems),
+        );
+
+        return;
+      }
+
+      props.onChange?.(currentEditor.getHTML());
     },
   });
+
+  const announceEditor = React.useEffectEvent((next: Editor | null) => {
+    onEditor?.(next);
+  });
+  React.useEffect(() => {
+    if (!editor) return;
+    announceEditor(editor);
+
+    return () => {
+      announceEditor(null);
+    };
+  }, [editor]);
 
   if (!editor) return <EditorSkeleton className={className} />;
 
@@ -81,7 +136,7 @@ export const TipTapEditor = ({
         className,
       )}
       onBlur={onBlur}
-      {...props}
+      {...rest}
     >
       <TipTapToolbar editor={editor} />
       <TipTapDragHandle editor={editor} />

@@ -49,10 +49,9 @@ export const articleContentType = defineContentType({
     }),
   },
 
-  publication: { enabled: true },
+  publication: true,
 
   publicApi: {
-    enabled: true,
     path: "articles",
     fields: [
       "title",
@@ -82,7 +81,6 @@ export const articleContentType = defineContentType({
   },
 
   search: {
-    enabled: true,
     titleField: "title",
     descriptionField: "excerpt",
     contentFields: ["title", "excerpt"],
@@ -91,8 +89,7 @@ export const articleContentType = defineContentType({
   },
 
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: {
       titleField: "title",
       descriptionField: "excerpt",
@@ -106,15 +103,15 @@ export const articleContentType = defineContentType({
       // so in two lines rather than four.
       openGraph: { titleField: "title", descriptionField: "excerpt" },
     },
-    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
   },
 
   editorial: {
-    enabled: true,
     revisions: { retention: 20 },
-    preview: { enabled: true, expiresInMinutes: 30 },
-    scheduling: { enabled: true },
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
   },
+  liveEditing: true,
 
   indexes: [{ on: ["status", "createdAt"] }],
 

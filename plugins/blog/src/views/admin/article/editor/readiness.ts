@@ -1,7 +1,11 @@
+import type { RichTextDocument } from "@vitnode/core/content/rich-text";
 import type { MultiLangValue } from "@vitnode/core/lib/helpers/multi-lang";
 
-import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
-import { stripHtml } from "@vitnode/core/lib/strip-html";
+import { richTextToPlainText } from "@vitnode/core/content/rich-text";
+import {
+  findLangValue,
+  getLangValue,
+} from "@vitnode/core/lib/helpers/multi-lang";
 
 export const TRANSLATED_FIELDS = [
   "title",
@@ -25,19 +29,28 @@ export const RECOMMENDED_LENGTH = {
   title: 60,
 } as const;
 
-export type ArticleValues = Partial<Record<TranslatedField, MultiLangValue>> & {
+export type ArticleTextField = Exclude<TranslatedField, "content">;
+
+export type ArticleValues = Partial<
+  Record<ArticleTextField, MultiLangValue>
+> & {
+  content?: MultiLangValue<null | RichTextDocument>;
   coverImage?: unknown;
 };
+
+export const articleContent = (
+  values: ArticleValues,
+  locale: string,
+): null | RichTextDocument => findLangValue(values.content, locale) ?? null;
 
 export const fieldText = (
   values: ArticleValues,
   field: TranslatedField,
   locale: string,
-): string => {
-  const value = getLangValue(values[field], locale);
-
-  return field === "content" ? stripHtml(value).trim() : value.trim();
-};
+): string =>
+  field === "content"
+    ? richTextToPlainText(articleContent(values, locale))
+    : getLangValue(values[field], locale).trim();
 
 export const hasFieldText = (
   values: ArticleValues,

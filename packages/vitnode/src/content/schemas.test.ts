@@ -146,7 +146,7 @@ describe("generated schemas", () => {
       id: "test.schema-version",
       tableName: "test_schema_version",
       fields: { title: field.text({ required: true }) },
-      editorial: { enabled: true },
+      editorial: true,
     });
 
     const row = {

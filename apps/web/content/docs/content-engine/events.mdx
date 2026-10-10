@@ -1,0 +1,123 @@
+---
+title: Events
+description: Every event a Content Engine content type emits, its payload and the feature that enables it, and how to subscribe with a typed event listener.
+icon: Radio
+---
+
+Each content type emits events named `content.<id>.<action>` after a change, such as `content.example.article.published`. Subscribe to them to send a newsletter, sync an external index or purge a CDN, without touching the code that made the change.
+
+Events come from the generated routes, scheduled publishing and [`contentEditorialEffects`](/docs/content-engine/services#example-3-a-feature-this-article-button). The plain `service(c)` emits nothing. A save that changes nothing emits nothing either.
+
+## Event reference
+
+Which events exist depends on what the definition enables. `example.category` declares only fields and emits three; `example.article` has publication, editorial with scheduling and delivery, and emits ten.
+
+| Action                      | Payload                                                                                         | Needs                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
+| `created`                   | `{ contentId }`                                                                                 | always                         |
+| `updated`                   | `{ contentId, changedFields }`                                                                  | always                         |
+| `deleted`                   | `{ contentId }`                                                                                 | always                         |
+| `published`                 | `{ contentId, publishedAt, scheduledBy?, scheduleId? }`                                         | `publication`                  |
+| `unpublished`               | `{ contentId, scheduledBy?, scheduleId? }`                                                      | `publication`                  |
+| `restored`                  | `{ contentId, changedFields, version, revisionId, restoredFromRevisionId }`                     | `editorial`                    |
+| `scheduled`                 | `{ contentId, action, actorUserId, scheduledFor, scheduleId }`                                  | `editorial.scheduling`         |
+| `schedule_cancelled`        | `{ contentId, action, actorUserId, scheduleId }`                                                | `editorial.scheduling`         |
+| `translation_created`       | `{ contentId, locale, languageId, version, revisionId? }`                                       | `localization`                 |
+| `translation_updated`       | `{ contentId, locale, languageId, version, changedFields, revisionId? }`                        | `localization`                 |
+| `translation_deleted`       | `{ contentId, locale, languageId, version, revisionId? }`                                       | `localization`                 |
+| `translation_published`     | `{ contentId, locale, languageId, version, publishedAt, revisionId? }`                          | `localization` + `publication` |
+| `translation_unpublished`   | `{ contentId, locale, languageId, version, revisionId? }`                                       | `localization` + `publication` |
+| `translation_restored`      | `{ contentId, locale, languageId, version, changedFields, revisionId, restoredFromRevisionId }` | `localization` + `editorial`   |
+| `delivery_slug_changed`     | `{ contentId, slug, previousSlug, previousPath, canonicalPath, locale }`                        | `delivery`                     |
+| `delivery_redirect_created` | `{ contentId, previousSlug, previousPath, canonicalPath, locale }`                              | `delivery`                     |
+
+A few payload details that change what a listener does:
+
+- `changedFields` lists only the fields whose value actually moved, typed as the content type's own field names. On translation events it names localized fields only.
+- `restored` replaces `updated` for a rollback, so a listener that cares about field changes should handle both.
+- `publishedAt` is when the record first went live. It is never rewritten, and it can be missing, so guard for `undefined`.
+- `scheduledBy` and `scheduleId` are set only when a schedule fired the change. `actorUserId` on `scheduled` is the same person as `scheduledBy` later.
+- The delivery events arrive alongside `updated`, `restored` or a publication event, never instead of them. `locale` is `null` for a shared slug.
+
+The listener also receives an envelope with the actor, the time and `pluginId`. `pluginId` is always the plugin that owns the content type, even when a core queue task ran the change. Field-by-field descriptions are in [Built-in events](/docs/dev/events/built-in-events#content-engine-events).
+
+## Subscribe to an event
+
+<Steps>
+<Step>
+
+### Register the event types
+
+Add the content type to the global event map once per plugin. The listener's event name and payload are then type-checked, and an event the definition does not enable, such as `content.example.category.published`, does not compile.
+
+```ts title="plugins/example/src/api/lib/events.ts"
+import type { ContentEventsFor } from "@vitnode/core/content";
+
+import type { articleContentType } from "@/content/article";
+import type { categoryContentType } from "@/content/category";
+
+declare module "@vitnode/core/api/models/events" {
+  interface VitNodeEvents
+    extends
+      ContentEventsFor<typeof articleContentType>,
+      ContentEventsFor<typeof categoryContentType> {}
+}
+```
+
+The example plugin imports this file from `config.api.ts` with `import "@/api/lib/events";`, so the declaration travels with the API build.
+
+</Step>
+<Step>
+
+### Write the listener
+
+`contentEventName(id, action)` builds the name from the definition, so a renamed content type cannot leave a stale string behind:
+
+```ts title="plugins/example/src/api/lib/listeners.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
+import { contentEventName } from "@vitnode/core/content";
+
+import { articleContentType } from "@/content/article";
+
+export const announceArticleListener = buildEventListener({
+  event: contentEventName(articleContentType.id, "published"),
+  name: "announce-published-article",
+  description: "Logs every article that goes live",
+  handler: async (c, payload) => {
+    await c.get("log").debug(`Article ${payload.contentId} was published`);
+  },
+});
+```
+
+</Step>
+<Step>
+
+### Add it to a top-level module
+
+VitNode collects listeners only from the `events` array of a module passed directly to `buildApiPlugin`. A listener on a nested module is silently ignored.
+
+```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
+export const adminModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "admin",
+  routes: [],
+  modules: [
+    buildContentAdminModule({
+      pluginId: CONFIG_PLUGIN.pluginId,
+      contentTypes: [articleContent],
+    }),
+  ],
+  events: [announceArticleListener], // [!code ++]
+});
+```
+
+The blog plugin does the same with its `blogLegacyEventListeners`, which turn `content.blog.post.created` into the older `blog.post.created` event.
+
+</Step>
+</Steps>
+
+## Check the result
+
+Restart `pnpm dev`, publish an article in **AdminCP → Example → Articles** and look for the debug line in the API terminal. A failing listener does not undo the change. The write has already committed, and the engine logs the failure.
+
+Events from a scheduled publish run in a queue task that retries on failure, so the same `published` event can arrive twice. Make work that must happen once idempotent, for example keyed on `scheduleId`. See [A scheduled event may arrive twice](/docs/dev/events/built-in-events#a-scheduled-event-may-arrive-twice).

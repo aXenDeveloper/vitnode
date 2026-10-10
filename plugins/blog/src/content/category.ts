@@ -5,7 +5,6 @@ export const blogCategoryContentType = defineContentType({
   tableName: "blog_categories",
 
   localization: {
-    enabled: true,
     // The language every category is first written in. `en` is the locale
     // VitNode installs seed, and the boot guard says so loudly if an install
     // does not have it rather than failing on the first write.

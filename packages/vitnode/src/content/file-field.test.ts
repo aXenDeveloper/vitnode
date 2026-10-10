@@ -102,7 +102,7 @@ describe("what a file field may not be", () => {
             localized: true,
           } as unknown as typeof coverImage,
         },
-        { localization: { enabled: true, defaultLocale: "en" } },
+        { localization: { defaultLocale: "en" } },
       ),
     ).toThrow(/`localized: true`, which is not supported/);
   });
@@ -162,7 +162,6 @@ describe("what a file field may not be", () => {
 
   it("rejects it as a public filter or sort", () => {
     const publicApi = {
-      enabled: true as const,
       path: "articles",
       fields: ["slug", "coverImage", "publishedAt"] as never,
     };
@@ -175,7 +174,7 @@ describe("what a file field may not be", () => {
           coverImage,
         },
         {
-          publication: { enabled: true },
+          publication: true,
           publicApi: { ...publicApi, orderableFields: ["coverImage"] as never },
         },
       ),
@@ -189,7 +188,7 @@ describe("what a file field may not be", () => {
           coverImage,
         },
         {
-          publication: { enabled: true },
+          publication: true,
           publicApi: {
             ...publicApi,
             filterableFields: ["coverImage"] as never,
@@ -270,9 +269,8 @@ describe("the public projection", () => {
       slug: field.slug({ source: "title" }),
       coverImage,
     },
-    publication: { enabled: true },
+    publication: true,
     publicApi: {
-      enabled: true,
       path: "public-file-articles",
       fields: ["slug", "coverImage", "publishedAt"],
     },

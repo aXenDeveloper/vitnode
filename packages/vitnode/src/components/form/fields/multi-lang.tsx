@@ -14,13 +14,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  findLangValue,
   getLangValue,
-  pickLangCode,
+  hasText,
+  pickLangCodeWhere,
   upsertLangValue,
 } from "@/lib/helpers/multi-lang";
 
+import { AutoFormLabel } from "../common/label";
 import { useMultiLangDefaultLanguage } from "./multi-lang-default-language";
-import { useMultiLangLanguage } from "./multi-lang-language";
+import {
+  MultiLangSelectedContext,
+  useMultiLangLanguage,
+} from "./multi-lang-language";
+import {
+  MultiLangPresenceContext,
+  MultiLangShownLanguageContext,
+} from "./multi-lang-presence";
 
 export { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 export type {
@@ -32,37 +42,78 @@ export interface MultiLangFieldProps {
   field: FormFieldApi<MultiLangValue | undefined>;
 }
 
-export const useMultiLangField = (
-  field: MultiLangFieldProps["field"],
-  { isFilled }: { isFilled?: (text: string) => boolean } = {},
+const useMultiLangSelection = (
+  isFilledIn: (languageCode: string) => boolean,
 ) => {
   const languages = useLanguages();
   const locale = useLocale();
   const defaultLanguage = useMultiLangDefaultLanguage();
   const lockedLanguage = useMultiLangLanguage();
-  const { value } = field;
   const [selected, setSelected] = React.useState(() =>
-    pickLangCode({
+    pickLangCodeWhere({
       defaultLanguage,
-      isFilled,
+      isFilledIn,
       languageCodes: languages.map(language => language.code),
       locale,
-      value,
     }),
   );
 
   const language = lockedLanguage ?? selected;
+  const reportShown = React.use(MultiLangShownLanguageContext);
+  React.useEffect(() => {
+    reportShown?.(language);
+  }, [language, reportShown]);
+
+  return {
+    canSelect: lockedLanguage === null && languages.length > 1,
+    language,
+    languages,
+    setSelected,
+  };
+};
+
+export const useMultiLangField = (
+  field: MultiLangFieldProps["field"],
+  { isFilled = hasText }: { isFilled?: (text: string) => boolean } = {},
+) => {
+  const { value } = field;
+  const { canSelect, language, languages, setSelected } = useMultiLangSelection(
+    code => isFilled(getLangValue(value, code)),
+  );
 
   const setValue = (newValue: string) => {
     field.onChange(upsertLangValue(value, language, newValue));
   };
 
   return {
-    canSelect: lockedLanguage === null && languages.length > 1,
+    canSelect,
     languages,
     selected: language,
     setSelected,
     currentValue: getLangValue(value, language),
+    setValue,
+  };
+};
+
+export const useMultiLangValueField = <TValue,>(
+  field: FormFieldApi<MultiLangValue<TValue> | undefined>,
+  { isFilled }: { isFilled: (value: TValue | undefined) => boolean },
+) => {
+  const { value } = field;
+  const { canSelect, language, languages, setSelected } = useMultiLangSelection(
+    code => isFilled(findLangValue(value, code)),
+  );
+
+  const setValue = (newValue: TValue) => {
+    field.onChange(upsertLangValue(value, language, newValue));
+  };
+
+  return {
+    canSelect,
+    languages,
+    selected: language,
+    setSelected,
+    currentValue: findLangValue(value, language),
     setValue,
   };
 };
@@ -77,6 +128,12 @@ export const MultiLangSelect = ({
   selected: string;
 }) => {
   const t = useTranslations("core.global");
+  const presence = React.use(MultiLangPresenceContext);
+  const elsewhere =
+    presence !== null &&
+    languages.some(
+      language => language.code !== selected && presence.busy(language.code),
+    );
 
   return (
     <Select
@@ -93,14 +150,64 @@ export const MultiLangSelect = ({
         size="sm"
       >
         <SelectValue />
+        {elsewhere ? (
+          <span aria-hidden className="bg-primary size-1.5 rounded-full" />
+        ) : null}
       </SelectTrigger>
       <SelectContent align="end">
         {languages.map(language => (
           <SelectItem key={language.code} value={language.code}>
             {language.name}
+            {presence?.marker(language.code)}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
+  );
+};
+
+export const MultiLangLabel = ({
+  canSelect,
+  isOptional,
+  label,
+  labelRight,
+  languages,
+  onSelect,
+  selected,
+}: React.ComponentProps<typeof MultiLangSelect> & {
+  canSelect: boolean;
+  isOptional?: boolean;
+  label?: React.ReactNode;
+  labelRight?: React.ReactNode;
+}) => {
+  if (!label && !canSelect) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {!!label && (
+        <AutoFormLabel
+          className="flex-1"
+          isOptional={isOptional}
+          labelRight={
+            labelRight ? (
+              <MultiLangSelectedContext value={selected}>
+                {labelRight}
+              </MultiLangSelectedContext>
+            ) : undefined
+          }
+        >
+          {label}
+        </AutoFormLabel>
+      )}
+      {canSelect && (
+        <div className="-my-1.5 ms-auto shrink-0">
+          <MultiLangSelect
+            languages={languages}
+            onSelect={onSelect}
+            selected={selected}
+          />
+        </div>
+      )}
+    </div>
   );
 };

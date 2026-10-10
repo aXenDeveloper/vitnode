@@ -1,14 +1,30 @@
+import type { RichTextDocument } from "@vitnode/core/content/rich-text";
+
 import { Link } from "@tanstack/react-router";
+import { useEditorConfig } from "@vitnode/core/components/editor-provider";
+import { AutoFormFileDisplayContext } from "@vitnode/core/components/form/fields/file-display";
 import { MultiLangLanguageContext } from "@vitnode/core/components/form/fields/multi-lang-language";
 import { useLanguages } from "@vitnode/core/components/languages-provider";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import { Badge } from "@vitnode/core/components/ui/badge";
 import { Button } from "@vitnode/core/components/ui/button";
-import { EditorContent } from "@vitnode/core/components/ui/editor-content";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@vitnode/core/components/ui/sheet";
 import {
   ContentFormActions,
   ContentFormField,
   ContentFormStatusSwitch,
+  ContentLivePresence,
+  ContentLiveStatus,
   useContentForm,
   useContentFormValues,
+  useContentLive,
+  useContentRichTextReplace,
   useSetContentFormValue,
   useTranslationFreshness,
 } from "@vitnode/core/content/admin-form";
@@ -18,25 +34,34 @@ import {
   upsertLangValue,
 } from "@vitnode/core/lib/helpers/multi-lang";
 import { cn } from "cn";
-import { ArrowLeftIcon, ListChecksIcon } from "lucide-react";
+import { ArrowLeftIcon, SearchIcon, SparklesIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { translateArticleText, writeArticleExcerpt } from "./ai";
-import { ArticleAiReview } from "./ai-review";
+import type { CheckAction } from "./readiness-actions";
+
+import {
+  translateArticleContent,
+  translateArticleText,
+  writeArticleExcerpt,
+} from "./ai";
+import { ArticleAiReview, useArticleReviewAvailable } from "./ai-review";
 import {
   type ArticleFieldActions,
   ArticleFieldActionsContext,
 } from "./field-actions";
-import { type CheckAction, Previews, ReadinessList } from "./publish-panel";
 import {
   type ArticleCheck,
   articleChecks,
+  articleContent,
+  type ArticleTextField,
   type ArticleValues,
+  fieldText,
   REQUIRED_TRANSLATED_FIELDS,
   type TranslatedField,
   translatedFieldStatus,
 } from "./readiness";
+import { SeoAudit } from "./seo-audit";
 import {
   ActiveTranslation,
   AiButton,
@@ -71,11 +96,15 @@ export const ArticleEditor = ({
     valuesRef.current = values;
   });
   const setFormValue = useSetContentFormValue();
+  const live = useContentLive();
+  const replaceRichText = useContentRichTextReplace();
+  const { emojis } = useEditorConfig();
   const ai = useArticleAi();
   const [target, setTarget] = React.useState<null | string>(null);
   const [contentRevision, setContentRevision] = React.useState(0);
   const [dismissed, setDismissed] = React.useState<string[]>([]);
-  const panelRef = React.useRef<HTMLElement>(null);
+  const [sheet, setSheet] = React.useState<"review" | "seo" | null>(null);
+  const reviewAvailable = useArticleReviewAvailable();
 
   markHeaderRendered?.();
 
@@ -96,7 +125,7 @@ export const ArticleEditor = ({
   const ready = checks.filter(check => check.ok).length;
 
   const setLangValue = (
-    field: TranslatedField,
+    field: ArticleTextField,
     locale: string,
     text: string,
   ) => {
@@ -104,7 +133,23 @@ export const ArticleEditor = ({
       field,
       upsertLangValue(valuesRef.current[field], locale, text),
     );
-    if (field === "content") setContentRevision(revision => revision + 1);
+  };
+
+  const setContent = (locale: string, document: RichTextDocument) => {
+    setFormValue(
+      "content",
+      upsertLangValue<null | RichTextDocument>(
+        valuesRef.current.content,
+        locale,
+        document,
+      ),
+    );
+    if (replaceRichText) {
+      replaceRichText("content", locale, document);
+
+      return;
+    }
+    setContentRevision(revision => revision + 1);
   };
 
   const statusOf = (field: TranslatedField, locale: string) =>
@@ -123,11 +168,27 @@ export const ArticleEditor = ({
     await ai.run(
       `${field}:${to}`,
       async () => {
+        if (field === "content") {
+          const document = articleContent(valuesRef.current, source);
+          if (!document) return;
+
+          setContent(
+            to,
+            await translateArticleContent({
+              customEmojis: emojis,
+              document,
+              from: source,
+              to,
+            }),
+          );
+
+          return;
+        }
+
         setLangValue(
           field,
           to,
           await translateArticleText({
-            format: field === "content" ? "html" : "text",
             from: source,
             text: getLangValue(valuesRef.current[field], source),
             to,
@@ -175,9 +236,9 @@ export const ArticleEditor = ({
           "excerpt",
           locale,
           await writeArticleExcerpt({
-            content:
-              getLangValue(current.content, locale) ||
-              getLangValue(current.content, source),
+            content: (fieldText(current, "content", locale)
+              ? articleContent(current, locale)
+              : articleContent(current, source)) ?? { type: "doc" },
             locale,
             title:
               getLangValue(current.title, locale) ||
@@ -190,6 +251,7 @@ export const ArticleEditor = ({
   };
 
   const openLanguage = (code: string) => {
+    setSheet(null);
     setTarget(code);
     window.scrollTo({ top: 0 });
   };
@@ -217,6 +279,7 @@ export const ArticleEditor = ({
                 ai: true,
                 label: t("publish.checks.write"),
                 run: () => {
+                  setSheet("seo");
                   for (const code of check.missing) void writeExcerpt(code);
                 },
               },
@@ -242,6 +305,26 @@ export const ArticleEditor = ({
   };
 
   const fieldLocale = target ?? source;
+  const unready =
+    checks.length -
+    ready +
+    (getLangValue(values.friendlyUrl, fieldLocale).trim() ? 0 : 1);
+
+  const editAlt = () => {
+    setSheet(null);
+    window.setTimeout(() => {
+      const input = document.querySelector<HTMLInputElement>(
+        'input[name="coverImageAlt"]',
+      );
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+      input?.focus({ preventScroll: true });
+    }, 350);
+  };
+
+  const focusLanguage = live?.session.focus;
+  React.useEffect(() => {
+    focusLanguage?.(null, fieldLocale);
+  }, [fieldLocale, focusLanguage]);
   const excerptPending = ai.isPending(`excerpt:${fieldLocale}`);
   const fieldActions: ArticleFieldActions = ai.available
     ? {
@@ -259,20 +342,6 @@ export const ArticleEditor = ({
             pendingLabel={t("ai.writing")}
           />
         ),
-        ...(target && getLangValue(values.coverImageAlt, source).trim()
-          ? {
-              coverImageAlt: (
-                <AiButton
-                  label={t("translate.field")}
-                  onClick={() => {
-                    void translateField("coverImageAlt", target);
-                  }}
-                  pending={ai.isPending(`coverImageAlt:${target}`)}
-                  pendingLabel={t("ai.translating")}
-                />
-              ),
-            }
-          : {}),
       }
     : {};
 
@@ -344,56 +413,83 @@ export const ArticleEditor = ({
           ) : null}
           <h1 className="sr-only">{header?.title ?? t("heading")}</h1>
           <div className="flex-1" />
-          {translationLanguages.length > 0 ? (
-            target ? (
-              <ActiveTranslation
-                onExit={() => {
-                  setTarget(null);
+          <ContentLiveStatus />
+          <ContentLivePresence />
+          <div className="flex items-center gap-2 max-sm:order-last max-sm:-mx-4 max-sm:grow max-sm:basis-full max-sm:border-t max-sm:px-4 max-sm:pt-2">
+            {translationLanguages.length > 0 ? (
+              target ? (
+                <ActiveTranslation
+                  onExit={() => {
+                    setTarget(null);
+                  }}
+                  sourceName={sourceName}
+                  targetName={languageName(target)}
+                />
+              ) : (
+                <TranslateMenu
+                  languages={translationLanguages}
+                  onPick={openLanguage}
+                  sourceName={sourceName}
+                />
+              )
+            ) : null}
+            <Button
+              aria-label={
+                unready > 0
+                  ? t("seo.open_issues", { count: unready })
+                  : t("seo.open")
+              }
+              onClick={() => {
+                setSheet("seo");
+              }}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <SearchIcon aria-hidden />
+              <span className="hidden sm:inline">{t("seo.open")}</span>
+              {unready > 0 ? <Badge variant="warning">{unready}</Badge> : null}
+            </Button>
+            {reviewAvailable ? (
+              <Button
+                aria-label={t("review.open")}
+                onClick={() => {
+                  setSheet("review");
                 }}
-                sourceName={sourceName}
-                targetName={languageName(target)}
-              />
-            ) : (
-              <TranslateMenu
-                languages={translationLanguages}
-                onPick={openLanguage}
-                sourceName={sourceName}
-              />
-            )
-          ) : null}
-          <Button
-            aria-label={t("publish.open", {
-              done: ready,
-              total: checks.length,
-            })}
-            onClick={() => {
-              panelRef.current?.scrollIntoView({ block: "start" });
-              panelRef.current?.focus({ preventScroll: true });
-            }}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            <ListChecksIcon aria-hidden />
-            <span className="tabular-nums">
-              {ready}/{checks.length}
-            </span>
-          </Button>
-          <ContentFormStatusSwitch />
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <SparklesIcon aria-hidden />
+                <span className="hidden sm:inline">{t("review.open")}</span>
+              </Button>
+            ) : null}
+            <ContentFormStatusSwitch className="max-sm:ms-auto" />
+          </div>
           <ContentFormActions withPublicationToggle={false} />
         </header>
 
-        <div
-          className={cn(
-            "grid grid-cols-1 items-start gap-8 px-4 py-8 sm:px-6 xl:grid-cols-[minmax(0,1fr)_22rem]",
-          )}
-        >
+        <div className="px-4 py-8 sm:px-6">
           <div
             className={cn(
               "mx-auto flex w-full min-w-0 flex-col gap-6",
               !target && "max-w-3xl",
             )}
           >
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <AutoFormFileDisplayContext value="cover">
+                  <ContentFormField name="coverImage" />
+                </AutoFormFileDisplayContext>
+              </div>
+              {target ? null : (
+                <MultiLangLanguageContext value={source}>
+                  <div className="flex flex-col gap-2">
+                    <ContentFormField name="coverImageAlt" />
+                  </div>
+                </MultiLangLanguageContext>
+              )}
+            </div>
             {target ? (
               <>
                 {outdated.includes(target) && !dismissed.includes(target) ? (
@@ -459,6 +555,20 @@ export const ArticleEditor = ({
 
                 <MultiLangLanguageContext value={target}>
                   <PairRow
+                    action={fieldAction("coverImageAlt", target)}
+                    source={
+                      <p className="pt-7 text-sm leading-relaxed" lang={source}>
+                        {getLangValue(values.coverImageAlt, source) ||
+                          t("translate.empty_source", { language: sourceName })}
+                      </p>
+                    }
+                    sourceName={sourceName}
+                    status={statusOf("coverImageAlt", target)}
+                    targetName={languageName(target)}
+                  >
+                    <ContentFormField name="coverImageAlt" />
+                  </PairRow>
+                  <PairRow
                     action={fieldAction("title", target)}
                     source={
                       <p
@@ -497,8 +607,8 @@ export const ArticleEditor = ({
                     action={fieldAction("content", target)}
                     source={
                       <div className="pt-16" lang={source}>
-                        <EditorContent
-                          content={getLangValue(values.content, source)}
+                        <RichTextContent
+                          content={articleContent(values, source)}
                         />
                       </div>
                     }
@@ -521,69 +631,72 @@ export const ArticleEditor = ({
               </MultiLangLanguageContext>
             )}
           </div>
-
-          <aside
-            aria-labelledby="article-ready"
-            className="flex scroll-mt-20 flex-col gap-8 outline-none xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto xl:pe-1"
-            ref={panelRef}
-            tabIndex={-1}
-          >
-            <ReadinessList
-              actionsFor={actionsFor}
-              checks={checks}
-              languageName={languageName}
-              sourceName={sourceName}
-            />
-            <ArticleAiReview
-              content={getLangValue(values.content, fieldLocale)}
-              excerpt={getLangValue(values.excerpt, fieldLocale)}
-              locale={fieldLocale}
-              title={getLangValue(values.title, fieldLocale)}
-            />
-            <Previews
-              cover={files?.coverImage}
-              languages={languages}
-              source={source}
-              values={values}
-            />
-            <section
-              aria-labelledby="article-details"
-              className="flex flex-col gap-5"
-            >
-              <h2 className="text-sm font-semibold" id="article-details">
-                {t("publish.details")}
-              </h2>
-              <MultiLangLanguageContext value={fieldLocale}>
-                <div className="flex flex-col gap-2">
-                  {target && getLangValue(values.excerpt, source).trim() ? (
-                    <p
-                      className="bg-muted text-muted-foreground rounded-md px-2.5 py-2 text-sm leading-relaxed"
-                      lang={source}
-                    >
-                      {getLangValue(values.excerpt, source)}
-                    </p>
-                  ) : null}
-                  <ContentFormField name="excerpt" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <ContentFormField name="coverImage" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  {target &&
-                  getLangValue(values.coverImageAlt, source).trim() ? (
-                    <p
-                      className="bg-muted text-muted-foreground rounded-md px-2.5 py-2 text-sm leading-relaxed"
-                      lang={source}
-                    >
-                      {getLangValue(values.coverImageAlt, source)}
-                    </p>
-                  ) : null}
-                  <ContentFormField name="coverImageAlt" />
-                </div>
-              </MultiLangLanguageContext>
-            </section>
-          </aside>
         </div>
+
+        <Sheet
+          onOpenChange={open => {
+            if (!open) setSheet(null);
+          }}
+          open={sheet === "seo"}
+        >
+          <SheetContent className="w-full sm:max-w-md" keepMounted>
+            <SheetHeader>
+              <SheetTitle>{t("seo.title")}</SheetTitle>
+              <SheetDescription>{t("seo.desc")}</SheetDescription>
+            </SheetHeader>
+            <div className="overflow-y-auto px-4 pb-6">
+              <SeoAudit
+                actionsFor={actionsFor}
+                checks={checks}
+                cover={files?.coverImage}
+                excerptField={
+                  <MultiLangLanguageContext value={fieldLocale}>
+                    {target && getLangValue(values.excerpt, source).trim() ? (
+                      <p
+                        className="bg-muted text-muted-foreground rounded-md px-2.5 py-2 text-sm leading-relaxed"
+                        lang={source}
+                      >
+                        {getLangValue(values.excerpt, source)}
+                      </p>
+                    ) : null}
+                    <ContentFormField name="excerpt" />
+                  </MultiLangLanguageContext>
+                }
+                languageName={languageName}
+                locale={fieldLocale}
+                onEditAlt={editAlt}
+                sourceName={sourceName}
+                values={values}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {reviewAvailable ? (
+          <Sheet
+            onOpenChange={open => {
+              if (!open) setSheet(null);
+            }}
+            open={sheet === "review"}
+          >
+            <SheetContent className="w-full sm:max-w-md" keepMounted>
+              <SheetHeader>
+                <SheetTitle>{t("review.title")}</SheetTitle>
+              </SheetHeader>
+              <div className="overflow-y-auto px-4 pb-6">
+                <ArticleAiReview
+                  content={articleContent(values, fieldLocale)}
+                  excerpt={getLangValue(values.excerpt, fieldLocale)}
+                  locale={fieldLocale}
+                  onContentChange={next => {
+                    setContent(fieldLocale, next);
+                  }}
+                  title={getLangValue(values.title, fieldLocale)}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : null}
       </div>
     </ArticleFieldActionsContext>
   );
