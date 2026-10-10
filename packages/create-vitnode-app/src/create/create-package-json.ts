@@ -6,10 +6,13 @@ import type { CreateCliReturn } from "../questions.js";
 
 import { getAvailablePackageManagers } from "../helpers/get-available-package-managers.js";
 import { getVitnodePackageVersion } from "../helpers/get-vitnode-package-version.js";
+import { supportedNodeRange } from "../helpers/node-version.js";
 import { withIf } from "../helpers/with-If.js";
 import { versionsPackageJson } from "./package-versions.js";
 
 type Mode = CreateCliReturn["mode"];
+
+const engines = { node: supportedNodeRange };
 
 const writeJson = async (path: string, data: unknown) =>
   writeFile(path, JSON.stringify(data, null, 2));
@@ -330,6 +333,7 @@ export const createPackageJSON = async ({
     const rootPkg: PackageJSON = {
       name: appName,
       private: true,
+      engines,
       scripts: rootScripts(
         oxlint,
         !!docker,
@@ -354,6 +358,7 @@ export const createPackageJSON = async ({
     version: "0.1.0",
     private: true,
     type: "module",
+    engines,
     scripts: apiScripts(
       packageManager,
       oxlint,
@@ -380,6 +385,7 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
+      engines,
       scripts: singleAppScripts(oxlint, !!docker, appName),
       dependencies: {
         ...singleAppDeps,
@@ -404,6 +410,7 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
+      engines,
       scripts: webScripts(oxlint),
       dependencies: {
         ...webDeps,

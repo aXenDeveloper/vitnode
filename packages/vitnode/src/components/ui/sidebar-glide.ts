@@ -22,6 +22,19 @@ const findActiveItem = (area: HTMLElement) => {
 const itemOf = (target: EventTarget | null) =>
   target instanceof Element ? target.closest(ITEM_SELECTOR) : null;
 
+const contains = (rect: DOMRect, x: number, y: number) =>
+  x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+const itemAt = (area: HTMLElement, x: number, y: number) => {
+  if (!contains(area.getBoundingClientRect(), x, y)) return null;
+
+  return (
+    [...area.querySelectorAll(ITEM_SELECTOR)].find(
+      item => isShown(item) && contains(item.getBoundingClientRect(), x, y),
+    ) ?? null
+  );
+};
+
 const createIndicator = (area: HTMLElement, indicator: HTMLElement) => {
   let current: Element | null = null;
 
@@ -54,11 +67,16 @@ const createIndicator = (area: HTMLElement, indicator: HTMLElement) => {
     indicator.style.width === box.width &&
     indicator.style.height === box.height;
 
+  const setVisible = (isVisible: boolean) => {
+    indicator.style.opacity = isVisible ? "1" : "0";
+    indicator.toggleAttribute("data-hidden", !isVisible);
+  };
+
   const show = (item: Element | null, isVisible = true) => {
     if (!item) {
-      if (current) indicator.style.transitionProperty = "opacity";
+      if (current) indicator.style.transitionProperty = "opacity, scale";
       current = null;
-      indicator.style.opacity = "0";
+      setVisible(false);
 
       return;
     }
@@ -66,21 +84,31 @@ const createIndicator = (area: HTMLElement, indicator: HTMLElement) => {
     const box = measure(item);
     if (item === current) {
       if (!isPlacedAt(box)) {
-        indicator.style.transitionProperty = "none";
+        indicator.style.transitionProperty = "scale";
         place(box);
       }
     } else {
-      indicator.style.transitionProperty = current ? "" : "opacity";
+      indicator.style.transitionProperty = current ? "" : "opacity, scale";
       current = item;
       place(box);
     }
-    indicator.style.opacity = isVisible ? "1" : "0";
+    setVisible(isVisible);
+  };
+
+  const press = (item: Element | null) => {
+    indicator.toggleAttribute(
+      "data-pressed",
+      item !== null &&
+        item === current &&
+        !indicator.hasAttribute("data-hidden"),
+    );
   };
 
   return {
     get current() {
       return current;
     },
+    press,
     show,
   };
 };
@@ -103,7 +131,13 @@ export const glideSidebarIndicators = (area: HTMLElement) => {
   const active = createIndicator(area, activeElement);
   let hoveredItem: Element | null = null;
 
+  const press = (item: Element | null) => {
+    hover.press(item);
+    active.press(item);
+  };
+
   const showHover = (item: Element | null) => {
+    if (item !== hoveredItem) press(null);
     hoveredItem = item;
     hover.show(item, item !== active.current);
   };
@@ -149,6 +183,34 @@ export const glideSidebarIndicators = (area: HTMLElement) => {
     event => {
       const item = itemOf(event.target);
       if (item && event.pointerType === "mouse") showHover(item);
+    },
+    { signal },
+  );
+  area.addEventListener(
+    "pointerdown",
+    event => {
+      if (event.button === 0) press(itemOf(event.target));
+    },
+    { signal },
+  );
+  for (const type of ["pointerup", "pointercancel"] as const) {
+    area.addEventListener(
+      type,
+      () => {
+        press(null);
+      },
+      { signal },
+    );
+  }
+  document.addEventListener(
+    "pointermove",
+    event => {
+      if (
+        event.target === document.documentElement &&
+        event.pointerType === "mouse"
+      ) {
+        showHover(itemAt(area, event.clientX, event.clientY));
+      }
     },
     { signal },
   );

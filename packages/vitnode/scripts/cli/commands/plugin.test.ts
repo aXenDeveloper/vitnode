@@ -1,15 +1,11 @@
 // @vitest-environment node
-import { transformFile } from "@swc/core";
 import { createJiti } from "jiti";
 import {
   cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
-  readFileSync,
   rmSync,
-  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -21,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { UserError, ValidationError } from "../errors";
 import { validatePlugin } from "../plugins/validate";
 import { createTestContext } from "../testing";
+import { runBuildCommand } from "./build";
 import { runPluginListCommand } from "./plugin-list";
 import { runPluginValidateCommand } from "./plugin-validate";
 
@@ -79,28 +76,30 @@ afterEach(() => {
 /**
  * The contract between `create-vitnode-app --plugin` and this CLI, checked
  * end to end: scaffold a plugin exactly as `create-vitnode-app` writes it,
- * compile it with the `.swcrc` it ships - the same compiler step
- * `vitnode build` runs - and hand the output to the validator
- * `vitnode plugin validate` uses, which loads it through VitNode's real
- * plugin, route and API loaders.
+ * build it with `vitnode build` - tsdown, through the configuration every
+ * package gets - and hand the output to the validator `vitnode plugin
+ * validate` uses, which loads it through VitNode's real plugin, route and API
+ * loaders.
  */
 describe("a generated plugin", () => {
-  let loadRoot: string;
+  let source: string;
 
   beforeEach(() => {
-    // Loaded from inside the package, so the compiled plugin resolves `hono`
-    // and friends from core's own node_modules. Compiled elsewhere, because
-    // swc leaves path aliases alone in files under node_modules.
-    const cache = join(packageRoot, "node_modules", ".cache");
-    mkdirSync(cache, { recursive: true });
-    loadRoot = mkdtempSync(join(cache, "vitnode-generated-plugin-"));
+    // Outside any node_modules folder, as a plugin in a workspace is; its own
+    // node_modules is core's, where hono, React and tsdown are installed.
+    source = mkdtempSync(join(tmpdir(), "vitnode-generated-plugin-"));
+    symlinkSync(
+      join(packageRoot, "node_modules"),
+      join(source, "node_modules"),
+      "junction",
+    );
   });
 
   afterEach(() => {
-    rmSync(loadRoot, { force: true, recursive: true });
+    rmSync(source, { force: true, recursive: true });
   });
 
-  it("compiles and passes validation through the real plugin loaders", async () => {
+  it("builds and passes validation through the real plugin loaders", async () => {
     const creator = join(packageRoot, "..", "create-vitnode-app");
     const { pluginPackageExports, pluginRouteScaffold } = (await import(
       pathToFileURL(
@@ -110,55 +109,43 @@ describe("a generated plugin", () => {
       pluginPackageExports: () => Record<string, unknown>;
       pluginRouteScaffold: (name: string) => Record<string, string>;
     };
-    const source = join(root, "plugins", "blog");
     cpSync(join(creator, "copy-of-vitnode-plugin", "root"), source, {
       recursive: true,
     });
     for (const [file, content] of Object.entries(
       pluginRouteScaffold("@acme/blog"),
     )) {
-      write(join("plugins", "blog", file), content);
+      mkdirSync(dirname(join(source, file)), { recursive: true });
+      writeFileSync(join(source, file), content);
     }
-    write("plugins/blog/package.json", {
-      exports: pluginPackageExports(),
-      name: "@acme/blog",
-      type: "module",
-      version: "0.1.0",
-    });
-    const plugin = join(loadRoot, "blog");
-    const swcrc = JSON.parse(
-      readFileSync(join(source, ".swcrc"), "utf8"),
-    ) as Record<string, unknown> & {
-      jsc: Record<string, unknown>;
-    };
+    writeFileSync(
+      join(source, "package.json"),
+      JSON.stringify({
+        exports: pluginPackageExports(),
+        name: "@acme/blog",
+        type: "module",
+        version: "0.1.0",
+      }),
+    );
 
-    const compile = async (dir: string) => {
-      for (const entry of readdirSync(join(source, dir))) {
-        const file = join(source, dir, entry);
-        const target = join(source, "dist", dir, entry);
-        if (statSync(file).isDirectory()) {
-          await compile(join(dir, entry));
-          continue;
-        }
-        mkdirSync(dirname(target), { recursive: true });
-        if (entry.endsWith(".json")) {
-          cpSync(file, target);
-          continue;
-        }
-        if (entry.includes(".test.")) continue;
-        const { code } = await transformFile(file, {
-          ...swcrc,
-          $schema: undefined,
-          exclude: undefined,
-          filename: file,
-          jsc: { ...swcrc.jsc, baseUrl: source },
-          swcrc: false,
-        } as Parameters<typeof transformFile>[1]);
-        writeFileSync(target.replace(/\.tsx?$/, ".js"), code);
-      }
-    };
-    await compile("src");
-    cpSync(source, plugin, { recursive: true });
+    const { context } = createTestContext({ cwd: source });
+    // The type check needs `@vitnode/core`'s own build output to resolve its
+    // types, which a unit run does not have - so it is the one step left out.
+    // A failing type check failing the build is covered in package-build.test.
+    expect(
+      await runBuildCommand(
+        context,
+        {},
+        { runStep: async () => await Promise.resolve({ code: 0, output: "" }) },
+      ),
+    ).toBe(0);
+    expect(existsSync(join(source, "dist/src/config.js"))).toBe(true);
+    expect(existsSync(join(source, "dist/src/locales/en.json"))).toBe(true);
+    expect(
+      existsSync(
+        join(source, "dist/src/api/modules/hello/hello.module.test.js"),
+      ),
+    ).toBe(false);
 
     const jiti = createJiti(import.meta.url, {
       alias: { "@/": `${coreSrc}/`, "@vitnode/core/": `${coreSrc}/` },
@@ -166,7 +153,7 @@ describe("a generated plugin", () => {
       moduleCache: false,
     });
 
-    const result = await validatePlugin(plugin, {
+    const result = await validatePlugin(source, {
       importModule: async file => jiti.import(file),
     });
 

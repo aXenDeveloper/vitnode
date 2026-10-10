@@ -5,6 +5,15 @@
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+::view-transition-group(.vitnode-sidebar),
+::view-transition-new(.vitnode-sidebar) {
+  animation: none;
+}
+
+::view-transition-old(.vitnode-sidebar) {
+  display: none;
+}
+
 ::view-transition-group(vitnode-logo),
 ::view-transition-old(vitnode-logo),
 ::view-transition-new(vitnode-logo) {

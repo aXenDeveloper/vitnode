@@ -74,7 +74,7 @@ export const DevelopersSection = () => (
           ))}
         </ul>
         <p className="text-muted-foreground font-book leading-relaxed text-pretty">
-          Node.js 22+, Postgres or Docker, and whichever package manager you
+          Node.js 22.18+, Postgres or Docker, and whichever package manager you
           already argue about. bun, pnpm and npm are all welcome.
         </p>
       </div>

@@ -49,11 +49,11 @@ Run `vitnode` alone (or `vitnode --help`) for a short overview, `vitnode <comman
 
 `dev`, `build` and `start` act on the project in the current folder. The CLI walks up to the nearest `package.json` and checks, in this order:
 
-| The folder has                         | It is a        |
-| -------------------------------------- | -------------- |
-| `vite.config.ts` (or `.mts`, `.js`...) | App            |
-| `src/vitnode.api.config.ts`            | API app        |
-| `tsconfig.build.json` and `.swcrc`     | Plugin package |
+| The folder has                                                         | It is a        |
+| ---------------------------------------------------------------------- | -------------- |
+| `vite.config.ts` (or `.mts`, `.js`...)                                 | App            |
+| `src/vitnode.api.config.ts`                                            | API app        |
+| `tsconfig.build.json` and `package.json` `exports` into `./dist/src/` | Plugin package |
 
 Run it at a monorepo root and the CLI stops with a hint to `cd` into your app, such as `apps/web`, instead of guessing which project you meant.
 

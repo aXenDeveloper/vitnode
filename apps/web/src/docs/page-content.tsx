@@ -1,3 +1,4 @@
+import { usePathname } from 'fumadocs-core/framework'
 import { DocsBody, DocsPage } from 'fumadocs-ui/layouts/spacious/page'
 import { use } from 'react'
 
@@ -13,6 +14,7 @@ export const DocsPageContent = ({
   markdownUrl,
   path,
 }: DocsPageData) => {
+  const pathname = usePathname()
   const page = docs.getPage(path)
 
   if (!page) throw new Error(`Unknown docs page: ${path}`)
@@ -23,6 +25,7 @@ export const DocsPageContent = ({
   return (
     <DocsPage
       breadcrumb={{ enabled: false }}
+      key={pathname}
       slots={{ footer: DocsPageFooter }}
       tableOfContent={{ single: false, style: 'clerk' }}
       toc={toc}

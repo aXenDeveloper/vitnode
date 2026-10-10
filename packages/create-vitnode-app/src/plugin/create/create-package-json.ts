@@ -4,6 +4,7 @@ import type { PackageJSON } from "../../helpers/packages-json.js";
 
 import { versionsPackageJson } from "../../create/package-versions.js";
 import { getVitnodePackageVersion } from "../../helpers/get-vitnode-package-version.js";
+import { supportedNodeRange } from "../../helpers/node-version.js";
 import { withIf } from "../../helpers/with-If.js";
 import { pluginPackageExports } from "./route-templates.js";
 
@@ -37,6 +38,7 @@ export const createPluginPackageJSON = async ({
     version: "0.1.0",
     private: true,
     type: "module",
+    engines: { node: supportedNodeRange },
     scripts: pluginScripts(oxlint),
     exports: pluginPackageExports(),
     dependencies: {
@@ -56,8 +58,6 @@ export const createPluginPackageJSON = async ({
     },
     devDependencies: {
       "@react-email/ui": versionsPackageJson.reactEmailUi,
-      "@swc/cli": versionsPackageJson.swcCli,
-      "@swc/core": versionsPackageJson.swcCore,
       "@types/react": versionsPackageJson.typesReact,
       "@types/react-dom": versionsPackageJson.typesReactDom,
       "@vitnode/config": vitnodeVersionRange,
@@ -66,7 +66,7 @@ export const createPluginPackageJSON = async ({
         oxlint: versionsPackageJson.oxlint,
         "oxlint-tsgolint": versionsPackageJson.oxlintTsgolint,
       }),
-      "tsc-alias": versionsPackageJson.tscAlias,
+      tsdown: versionsPackageJson.tsdown,
       typescript: versionsPackageJson.typescript,
       vitest: versionsPackageJson.vitest,
     },

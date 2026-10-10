@@ -2,14 +2,21 @@ import { readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import type { Project } from "../project/project";
-import type { Ui } from "../ui/ui";
+import type { TaskHandle, Ui } from "../ui/ui";
 import type { MeasuredFile } from "./output-files";
+import type { TsdownApi } from "./package-build";
 
 import { writePluginApiRegistry } from "../../write-plugin-api-registry";
-import { RuntimeError } from "../errors";
-import { resolveBin } from "../project/packages";
+import { errorMessage, RuntimeError } from "../errors";
+import { importFromProject, resolveBin } from "../project/packages";
 import { runProcess } from "../project/processes";
-import { toDisplayPath } from "../ui/format";
+import { captureProcessOutput } from "../ui/capture-output";
+import { formatDuration, toDisplayPath } from "../ui/format";
+import {
+  createPackageLogger,
+  PACKAGE_TSCONFIG,
+  packageTsdownConfig,
+} from "./package-build";
 
 export interface CompilerStep {
   args: string[];
@@ -19,29 +26,22 @@ export interface CompilerStep {
 }
 
 /**
- * A plugin package's build: the three compilers it has always used, in order.
+ * A plugin package's type check: the full `tsc` program, without output.
  *
- * Types first (`tsc` emits declarations only), then the JavaScript (`swc`,
- * which also copies locale JSON into `dist`), then `tsc-alias` rewriting the
- * `@/` imports both of them left behind.
+ * tsdown writes the JavaScript and the declarations, but its declaration step
+ * emits each file without reporting type errors - so this is what still fails
+ * the build on one, as `tsc` always did.
  */
-export const packageBuildSteps = (): CompilerStep[] => [
-  {
-    args: ["-p", "tsconfig.build.json"],
-    bin: { name: "tsc", package: "typescript" },
-    label: "Emitting type declarations",
-  },
-  {
-    args: ["src", "-d", "dist", "--config-file", ".swcrc", "--copy-files"],
-    bin: { name: "swc", package: "@swc/cli" },
-    label: "Compiling sources",
-  },
-  {
-    args: ["-p", "tsconfig.build.json"],
-    bin: { name: "tsc-alias", package: "tsc-alias" },
-    label: "Rewriting path aliases",
-  },
-];
+export const typeCheckStep = (watch = false): CompilerStep => ({
+  args: [
+    "--noEmit",
+    "-p",
+    PACKAGE_TSCONFIG,
+    ...(watch ? ["-w", "--preserveWatchOutput"] : []),
+  ],
+  bin: { name: "tsc", package: "typescript" },
+  label: "Checking types",
+});
 
 /** A standalone API app's build: `tsc`, then `tsc-alias`. */
 export const apiBuildSteps = (): CompilerStep[] => [
@@ -73,6 +73,28 @@ export const runStepWithNode: StepRunner = async (step, project) =>
     cwd: project.root,
   });
 
+/** Ends a step's task, failing the build with the tool's output when it failed. */
+const finishStep = (
+  ui: Ui,
+  task: TaskHandle,
+  step: CompilerStep,
+  { code, output }: { code: number; output: string },
+  detail?: string,
+) => {
+  if (ui.verbose && output.trim() !== "") ui.line(output.trimEnd());
+
+  if (code !== 0) {
+    task.fail();
+    throw new RuntimeError(
+      `Build failed: ${step.bin.name} exited with code ${String(code)}`,
+      {
+        output: ui.verbose ? undefined : output,
+      },
+    );
+  }
+  task.succeed(undefined, detail);
+};
+
 export const runCompilerSteps = async ({
   project,
   runStep = runStepWithNode,
@@ -86,24 +108,91 @@ export const runCompilerSteps = async ({
 }): Promise<void> => {
   for (const step of steps) {
     const task = ui.task(step.label);
-    const { code, output } = await runStep(step, project);
-
-    if (ui.verbose && output.trim() !== "") ui.line(output.trimEnd());
-
-    if (code !== 0) {
-      task.fail();
-      throw new RuntimeError(
-        `Build failed: ${step.bin.name} exited with code ${String(code)}`,
-        {
-          output: ui.verbose ? undefined : output,
-        },
-      );
-    }
-    task.succeed();
+    finishStep(ui, task, step, await runStep(step, project));
   }
 };
 
-/** Writes `types/api-registry.gen.d.ts` before `tsc` needs it. */
+export type LoadTsdown = (root: string) => Promise<TsdownApi>;
+
+export const loadProjectTsdown: LoadTsdown = async root =>
+  importFromProject<TsdownApi>(root, "tsdown");
+
+/**
+ * A plugin package's build: tsdown compiles `src` into `dist/src` - the
+ * JavaScript and its declarations - while `tsc` checks the types alongside it.
+ *
+ * Both have to pass. They run at the same time because each is a full
+ * TypeScript program over the same files, and neither needs the other's
+ * output; the type check is awaited even when compiling fails, so no `tsc` is
+ * ever left running.
+ */
+export const runPackageBuild = async ({
+  loadTsdown = loadProjectTsdown,
+  project,
+  runStep = runStepWithNode,
+  ui,
+}: {
+  loadTsdown?: LoadTsdown;
+  project: Project;
+  runStep?: StepRunner;
+  ui: Ui;
+}): Promise<void> => {
+  const tsdown = await loadTsdown(project.root);
+  const check = typeCheckStep();
+  const startedAt = Date.now();
+  const typeCheck = runStep(check, project).then(result => ({
+    ...result,
+    duration: Date.now() - startedAt,
+  }));
+  const warnings: string[] = [];
+  const logger = createPackageLogger((type, message) => {
+    if (type !== "info") warnings.push(message);
+  });
+
+  const compile = ui.task("Compiling sources");
+  // Anything tsdown or a plugin prints straight to the console is held back,
+  // and shown with the error if the build fails.
+  const capture = ui.verbose ? null : captureProcessOutput();
+  try {
+    await tsdown.build(
+      packageTsdownConfig({ logger, mode: "build", root: project.root }),
+    );
+  } catch (error) {
+    const captured = capture?.restore() ?? "";
+    compile.fail();
+    await typeCheck.catch(() => undefined);
+    throw new RuntimeError(
+      "Build failed: tsdown could not compile the package",
+      {
+        cause: error,
+        output: [captured.trimEnd(), ...warnings, errorMessage(error)]
+          .filter(text => text !== "")
+          .join("\n"),
+      },
+    );
+  }
+  const captured = capture?.restore() ?? "";
+  compile.succeed();
+
+  const checked = await typeCheck;
+  finishStep(
+    ui,
+    ui.task(check.label),
+    check,
+    checked,
+    formatDuration(checked.duration),
+  );
+
+  if (warnings.length > 0) {
+    ui.line();
+    warnings.forEach(warning => {
+      ui.warning(warning);
+    });
+  }
+  if (ui.verbose && captured.trim() !== "") ui.line(captured.trimEnd());
+};
+
+/** Writes `types/api-registry.gen.d.ts` before tsdown and `tsc` need it. */
 export const prepareRegistryStep = (project: Project, ui: Ui) => {
   if (writePluginApiRegistry(project.root)) {
     ui.success("API registry generated");

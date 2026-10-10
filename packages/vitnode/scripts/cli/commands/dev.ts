@@ -17,6 +17,7 @@ import {
   toProcess,
 } from "../dev/watchers";
 import { loadConfiguredPluginIds } from "../plugins/discover";
+import { resolveFromProject } from "../project/packages";
 import { detectProject } from "../project/project";
 import { detectRuntime } from "../project/runtime";
 import { plural } from "../ui/format";
@@ -47,8 +48,8 @@ const ownsDatabase = (project: Project) =>
  *
  * - An app: database bootstrap (when it owns the schema), then Vite.
  * - An API: database bootstrap, then `tsx watch`.
- * - A plugin package: its compilers in watch mode, so the apps importing its
- *   `dist` reload as it changes - what `vitnode dev` has always done there.
+ * - A plugin package: tsdown and `tsc` in watch mode, so the apps importing
+ *   its `dist` reload as it changes - what `vitnode dev` has always done there.
  */
 export const runDevCommand = async (
   context: CommandContext,
@@ -60,6 +61,9 @@ export const runDevCommand = async (
 
   if (project.kind === "package") {
     ui.header(`Plugin development - ${project.name}`);
+    // The runner loads tsdown from the package; a missing install is a
+    // configuration error here, not a watcher crashing a moment later.
+    resolveFromProject(project.root, "tsdown");
     if (writePluginApiRegistry(project.root))
       ui.success("API registry generated");
     ui.info(

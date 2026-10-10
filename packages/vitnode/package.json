@@ -29,8 +29,6 @@
   ],
   "peerDependencies": {
     "@hono/zod-openapi": "^1.0.x",
-    "@swc/cli": "^0.7.0 || ^0.8.0",
-    "@swc/core": "^1.15.0",
     "@tanstack/react-form": "^1.33.x",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-router": "^1.170.x",
@@ -43,6 +41,7 @@
     "motion": "^14.x.x",
     "react": "^19.2.x",
     "react-dom": "^19.2.x",
+    "tsdown": "^0.23.0",
     "typescript": "^6.x.x",
     "vite": "^8.x",
     "zod": "^4.x.x"
@@ -51,8 +50,6 @@
     "@hono/zod-openapi": "^1.6.3",
     "@hono/zod-validator": "^0.9.1",
     "@react-email/ui": "^6.11.1",
-    "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.16.13",
     "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-router": "^1.170.41",
@@ -72,7 +69,7 @@
     "hono": "^4.13.13",
     "jiti": "^2.7.0",
     "jsdom": "^30.1.2",
-    "lucide-react": "^1.52.0",
+    "lucide-react": "^1.53.0",
     "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2003",
     "react": "^19.3.0",
@@ -80,12 +77,11 @@
     "react-email": "^6.11.1",
     "sonner": "^2.0.8",
     "tailwindcss": "^4.3.3",
-    "tsc-alias": "^1.9.7",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.23.0",
     "tsx": "^4.23.15",
     "tw-animate-css": "^1.4.0",
     "typescript": "^6.0.3",
-    "vite": "^8.3.3",
+    "vite": "^8.3.4",
     "vitest": "^5.0.3",
     "zod": "^4.6.5"
   },
@@ -208,9 +204,9 @@
     "./styles/view-transitions.css": "./src/view-transitions.css"
   },
   "scripts": {
-    "build:scripts": "tsup",
+    "build:scripts": "tsdown",
     "start:scripts": "node dist/scripts/scripts.js db:prepare",
-    "build:plugins": "tsc -p tsconfig.build.json && swc src -d dist --config-file .swcrc --copy-files && tsc-alias -p tsconfig.build.json",
+    "build:plugins": "node dist/scripts/scripts.js build",
     "dev": "node dist/scripts/scripts.js dev",
     "dev:email": "email dev --dir src/emails",
     "test": "vitest run",
@@ -221,6 +217,9 @@
     "lint:fix": "oxlint --type-aware --fix"
   },
   "type": "module",
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
+  },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@dnd-kit/core": "^6.3.1",
@@ -247,7 +246,7 @@
     "@tiptap/react": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/suggestion": "^3.31.4",
-    "ai": "^7.0.131",
+    "ai": "^7.0.134",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.4.0",
@@ -265,7 +264,7 @@
     "rate-limiter-flexible": "^11.2.1",
     "react-colorful": "^5.8.1",
     "react-day-picker": "^10.0.2",
-    "react-resizable-panels": "^4.14.2",
+    "react-resizable-panels": "^4.14.3",
     "react-scan": "^0.5.7",
     "redis": "^6.3.0",
     "sanitize-html": "^2.18.0",
@@ -282,6 +281,9 @@
       "optional": true
     },
     "@tanstack/react-start": {
+      "optional": true
+    },
+    "tsdown": {
       "optional": true
     },
     "vite": {

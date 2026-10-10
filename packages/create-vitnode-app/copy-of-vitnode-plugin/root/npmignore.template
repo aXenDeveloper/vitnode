@@ -7,12 +7,12 @@
 /node_modules
 /.turbo
 /tsconfig.json
-/.swcrc
 /components.json
 /global.d.ts
 /types
-/tsup.config.ts
+/tsdown.config.ts
 /vitest.config.ts
 /tsconfig.json
 /scripts
 /config
+/dist/*.tsbuildinfo

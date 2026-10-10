@@ -18,7 +18,7 @@ export const versionsPackageJson = {
   react: "^19.3",
   reactDom: "^19.3",
   useIntl: "^4.14.9",
-  lucide: "^1.52",
+  lucide: "^1.53",
   sonner: "^2.0.8",
   dotenv: "^18.0",
 
@@ -47,8 +47,7 @@ export const versionsPackageJson = {
   tailwindVite: "^4.2",
   nitro: "3.0.260903-beta",
   tslib: "^2.8.1",
-  swcCli: "^0.8.1",
-  swcCore: "^1.16",
+  tsdown: "^0.23.0",
   vitest: "^5.0",
   shadcn: "^4.21",
 };

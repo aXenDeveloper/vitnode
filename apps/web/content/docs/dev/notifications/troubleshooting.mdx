@@ -40,13 +40,3 @@ Every inbox change updates the count in the same transaction, so a wrong count i
 ## Items say "This notification is no longer available"
 
 The item is a placeholder. The content was deleted, the member lost access, the plugin was uninstalled, or the stored data no longer matches the type's schema and `migrate` could not upgrade it. Members can still read or archive the item. Plugins can tidy these up with [`remove()`](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
-
-## Run the notification integration tests
-
-The notification integration tests need a real PostgreSQL database for row locks and concurrent transactions. They run when `VITNODE_TEST_POSTGRES_URL` is set and are skipped otherwise:
-
-```bash
-VITNODE_TEST_POSTGRES_URL=postgresql://root:root@localhost:5432/postgres pnpm --filter @vitnode/core test
-```
-
-Each test file creates its own temporary database and drops it afterwards.

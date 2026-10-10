@@ -112,6 +112,7 @@ npm i x
 - Do not test database models or schema definitions (Drizzle tables, column types, indexes, foreign keys).
 - Do not test static config, constants, color presets, or plugin configuration (`config.api`, content type definitions).
 - Do not test third-party libraries or trivial helper/wrapper code.
+- Always run "pnpm lint:fix" to fix formatting and linting issues before committing. Never commit a file with lint errors.
 
 ### Mocking
 
