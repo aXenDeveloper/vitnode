@@ -313,6 +313,7 @@ describe("field locks", () => {
     ],
     ["GET", "/7/draft", undefined],
     ["PUT", "/7/draft", { locale: null, values: { featured: true } }],
+    ["POST", "/7/draft/discard", {}],
   ])("refuses %s %s without can_edit", async (method, path, body) => {
     const { send } = await harness();
 
@@ -451,6 +452,31 @@ describe("lifecycle", () => {
     expect(broadcasts("reset")).toEqual([
       { reason: "restored", room: ROOM, type: "reset" },
     ]);
+  });
+
+  it("discards the shared draft on request and tells the room", async () => {
+    const { lock, memory, send } = await harness();
+    await lock("acquire");
+    await send("PUT", "/7/draft", {
+      body: { locale: "pl", values: { title: "Cześć" } },
+    });
+
+    const response = await send("POST", "/7/draft/discard", { body: {} });
+
+    expect(response.status).toBe(200);
+    expect(memory.rows(core_content_drafts)).toEqual([]);
+    expect(broadcasts("reset")).toEqual([
+      { reason: "discarded", room: ROOM, type: "reset" },
+    ]);
+  });
+
+  it("does not discard the draft of a record that does not exist", async () => {
+    const { send } = await harness();
+
+    const response = await send("POST", "/404/draft/discard", { body: {} });
+
+    expect(response.status).toBe(404);
+    expect(broadcasts("reset")).toEqual([]);
   });
 
   it("drops the drafts a save committed and tells the room", async () => {

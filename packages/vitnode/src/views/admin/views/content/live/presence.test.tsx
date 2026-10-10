@@ -78,6 +78,7 @@ const renderLive = (
   const value: ContentLiveContextValue = {
     autosave: { flush: vi.fn(), queue: vi.fn() },
     coEditing: live,
+    discard: vi.fn(),
     itemId: 7,
     locale: "en",
     reloadDrafts: vi.fn(),
@@ -95,6 +96,7 @@ const renderLive = (
       readyState: live ? 1 : 3,
       refreshLocks: vi.fn(),
       rememberSelf: vi.fn(),
+      resetLocally: vi.fn(),
       self: ME.userId,
     },
     spec,

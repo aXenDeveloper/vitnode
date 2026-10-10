@@ -104,20 +104,24 @@ boringly reliable.
 
 ## Write and translate articles
 
-The article editor keeps the text in the middle and everything readers see
-around it in a **Ready to publish** panel on the right.
+The article editor reads top to bottom like the published article: the cover
+image and its alt text, then the title, slug and content. The checks before
+publishing live in the **SEO** sheet, so the text gets the whole width.
 
-{/* Image prompt: VitNode AdminCP blog article editor. Large article title, slug under it, a TipTap editor, and a right panel with a "Ready to publish" checklist, a Google-style search preview and a social card. Header with Translate, a Draft/Published switch and Save changes. Light theme, 1440x900. */}
+{/* Image prompt: VitNode AdminCP blog article editor at full width. A wide cover image with Replace file and Remove buttons in its corner, alt text field under it, a large article title and slug, then a TipTap editor. Header with Translate, SEO with a small amber badge "2", AI review, a Draft/Published switch and Save changes. Light theme, 1440x900. */}
 
 ### Check the article before you publish
 
-The checklist counts what a published article usually needs:
+Press **SEO** in the header to open the **Ready to publish** sheet. The badge on
+the button counts what is still left, so you know when it needs a look. The
+sheet checks what a published article usually needs:
 
 | Check                            | Passes when                                                 |
 | -------------------------------- | ----------------------------------------------------------- |
 | Title fits search results        | Every started language has a title of 60 characters or less |
 | Excerpt in every language        | Every started language has an excerpt                       |
 | Cover image                      | A cover image is set                                        |
+| URL                              | The language you edit has a friendly URL                    |
 | Cover alt text in every language | Every started language describes the cover                  |
 | Translations complete            | Every language has a title, friendly URL and content        |
 | Translations up to date          | No translation is older than the default language           |
@@ -126,8 +130,10 @@ The title, excerpt and alt text fields show a live counter against the
 recommended length: 60, 160 and 125 characters. They are recommendations, not
 limits, so you can still save a longer title.
 
-The search result and social card previews switch between languages. A missing
-field falls back to the default language, the same way the public site does.
+Each row is green when it is done and says what is missing when it is not, and
+the bar on top counts how many are ready. You can fix most rows right there:
+write the excerpt in its row, press **Edit under the cover** to jump to the alt
+text, or **Open** a language that is missing a translation.
 
 ### Publish or unpublish
 
@@ -150,6 +156,11 @@ With AI configured, the editor adds:
 - **Translate** on each field, and **Translate missing fields** for a whole
   language. Content keeps its formatting.
 - **Write with AI** on the excerpt, which writes it from the title and content.
+- **AI review** in the header, which opens a sheet with suggestions about
+  clarity, completeness, structure and tone. When a suggestion is about the
+  wording, **Show fix** shows the current text next to a rewrite, and **Apply**
+  puts the rewrite into the article. **Dismiss** hides a suggestion you do not
+  agree with. The review never blocks publishing.
 
 <Callout type="info" title="When the AI buttons appear">
   The buttons appear only when the API has at least one model in `ai.models`.

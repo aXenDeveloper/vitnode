@@ -170,6 +170,7 @@ const setup = ({
       await Promise.resolve();
     }),
     rememberSelf: vi.fn(),
+    resetLocally: vi.fn(),
     self: ME,
   };
   const live: ContentLiveContextValue = {
@@ -180,6 +181,7 @@ const setup = ({
       queue: vi.fn(),
     },
     coEditing,
+    discard: vi.fn(),
     itemId: 7,
     locale: target.localized === true ? "en" : null,
     reloadDrafts: vi.fn(async () => {

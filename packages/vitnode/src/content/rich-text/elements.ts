@@ -23,7 +23,9 @@ export interface RichTextElement {
 }
 
 export type RichTextElementChild =
-  RichTextElement | string | typeof RICH_TEXT_SLOT;
+  | RichTextElement
+  | string
+  | typeof RICH_TEXT_SLOT;
 
 /** Tags that can never have children. */
 export const RICH_TEXT_VOID_TAGS: ReadonlySet<string> = new Set([

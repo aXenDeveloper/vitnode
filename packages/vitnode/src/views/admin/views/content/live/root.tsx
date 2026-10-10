@@ -47,6 +47,8 @@ interface PendingValue {
   value: unknown;
 }
 
+const OWN_DISCARD_ECHO_MS = 5_000;
+
 const IDLE: ContentLiveAutosaveStatus = {
   dirty: false,
   failed: false,
@@ -251,43 +253,77 @@ export const ContentLiveRoot = ({
     [flush],
   );
 
-  const reset = React.useEffectEvent(async (reason: ContentLiveResetReason) => {
+  const ownDiscardRef = React.useRef<"handled" | "idle" | "pending">("idle");
+
+  const reset = React.useEffectEvent(
+    async (reason: ContentLiveResetReason, own: boolean) => {
+      pendingRef.current.clear();
+      clearTimeout(timerRef.current);
+
+      if (reason === "deleted") {
+        toast.warning(t("reset.deleted.title"), {
+          description: t("reset.deleted.desc"),
+        });
+        refresh();
+
+        return;
+      }
+
+      const [fresh, list] = await Promise.all([
+        transport.reloadRow(contentTypeId, itemId),
+        spec.defaultLocale === null
+          ? Promise.resolve({ edges: [...rows] })
+          : transport.listTranslations(contentTypeId, itemId),
+      ]);
+      const next = fresh.row ? { ...data, ...fresh.row } : row;
+      const { labels, read } = await load(next);
+
+      setReloaded({ for: data, row: next, translations: list.edges });
+      setOpening({ drafts: read, labels });
+      setDrafts(read);
+      setStatus(IDLE);
+      setGeneration(current => current + 1);
+      if (own) {
+        toast.success(t("reset.discarded_own.title"), {
+          description: t("reset.discarded_own.desc"),
+        });
+      } else {
+        toast.info(t(`reset.${reason}.title`), {
+          description: t(`reset.${reason}.desc`),
+        });
+      }
+      refresh();
+    },
+  );
+
+  const discard = async (): Promise<boolean> => {
     pendingRef.current.clear();
     clearTimeout(timerRef.current);
+    ownDiscardRef.current = "pending";
 
-    if (reason === "deleted") {
-      toast.warning(t("reset.deleted.title"), {
-        description: t("reset.deleted.desc"),
-      });
-      refresh();
+    const result = await transport.discardDraft(contentTypeId, itemId);
+    if (result.error !== undefined) {
+      ownDiscardRef.current = "idle";
+      toast.error(t("status.discard_failed"));
 
-      return;
+      return false;
     }
 
-    const [fresh, list] = await Promise.all([
-      transport.reloadRow(contentTypeId, itemId),
-      spec.defaultLocale === null
-        ? Promise.resolve({ edges: [...rows] })
-        : transport.listTranslations(contentTypeId, itemId),
-    ]);
-    const next = fresh.row ? { ...data, ...fresh.row } : row;
-    const { labels, read } = await load(next);
+    if (ownDiscardRef.current === "pending") session.resetLocally("discarded");
+    window.setTimeout(() => {
+      ownDiscardRef.current = "idle";
+    }, OWN_DISCARD_ECHO_MS);
 
-    setReloaded({ for: data, row: next, translations: list.edges });
-    setOpening({ drafts: read, labels });
-    setDrafts(read);
-    setStatus(IDLE);
-    setGeneration(current => current + 1);
-    toast.info(t("reset.restored.title"), {
-      description: t("reset.restored.desc"),
-    });
-    refresh();
-  });
+    return true;
+  };
 
   React.useEffect(
     () =>
       onReset(reason => {
-        void reset(reason);
+        const own = reason === "discarded" && ownDiscardRef.current !== "idle";
+        if (own && ownDiscardRef.current === "handled") return;
+        if (own) ownDiscardRef.current = "handled";
+        void reset(reason, own);
       }),
     [onReset],
   );
@@ -297,6 +333,7 @@ export const ContentLiveRoot = ({
   const value: ContentLiveContextValue = {
     autosave: { flush, queue },
     coEditing,
+    discard,
     itemId,
     locale: spec.defaultLocale,
     reloadDrafts,

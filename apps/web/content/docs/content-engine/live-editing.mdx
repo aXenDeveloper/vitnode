@@ -5,8 +5,8 @@ icon: Users
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
-import coEditing from "./live-editing-co-editing.png";
-import fieldLock from "./live-editing-field-lock.png";
+import coEditing from "./live-editing-co-editing.webp";
+import fieldLock from "./live-editing-field-lock.webp";
 
 Live editing lets a team work on the same record at the same time without stepping on each other's toes. Changes autosave to a shared draft, everyone sees who is in which field, plain fields are edited by one person at a time, and [rich text](/docs/content-engine/rich-text) fields are typed in together.
 
@@ -59,6 +59,8 @@ A lock lasts 60 seconds and renews every 20 seconds while the editor stays in th
 ### Autosave and the shared draft
 
 About 1.5 seconds after you stop typing in a field you hold, the value is saved to the record's draft. The header shows **Saving…** and then **Draft saved at 14:32**, or **Draft not saved** when the write failed. Next to it, **Unsaved changes** stays until someone saves the draft into the record.
+
+Changed your mind? **Discard** next to **Unsaved changes** throws the draft away after you confirm, and the form goes back to the last saved version. It is a team draft, so everyone editing the record goes back too, and they get a short note saying so.
 
 There is one draft per record and language, shared by the whole team. When you open the record, you see the draft, not only what was last saved. **Save** commits it through the usual [version check](/docs/content-engine/editorial#safe-concurrent-edits) and creates one revision. Autosave itself never creates revisions, emits no events and leaves search and caches alone. [Preview links](/docs/content-engine/editorial#preview-links) also ignore the draft until someone saves.
 

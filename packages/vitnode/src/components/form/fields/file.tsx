@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { cn } from "cn";
 import { RotateCcwIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -19,15 +20,19 @@ import type { FileUploadOptions } from "./file-upload-queue";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
+import { AutoFormFileDisplayContext } from "./file-display";
 import {
   FileCard,
   FileConstraintsLine,
   FileDropzone,
   FileError,
+  isImageFile,
   resolveFormFiles,
   useUploadFailureMessage,
 } from "./file-shared";
 
+export type { AutoFormFileDisplay } from "./file-display";
+export { AutoFormFileDisplayContext } from "./file-display";
 export type { AutoFormFileValue } from "./file-shared";
 export type { FileUploadOptions } from "./file-upload-queue";
 
@@ -183,6 +188,7 @@ export const AutoFormFile = ({
   itemParams,
 }: AutoFormFileProps) => {
   const t = useTranslations("core.global.file");
+  const display = React.use(AutoFormFileDisplayContext);
   const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
   const [resolved] = resolveFormFiles(field.value, [initialFile, ...uploaded]);
   const file = resolved?.file ?? null;
@@ -218,23 +224,47 @@ export const AutoFormFile = ({
     isPending: upload.isPending,
   });
 
+  const cover =
+    display === "cover" && file && isImageFile(file) && !upload.isPending
+      ? file
+      : null;
+
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          className={cn(cover && "sr-only")}
+          isOptional={isOptional}
+          labelRight={labelRight}
+        >
           {label}
         </AutoFormLabel>
       )}
 
-      <FileConstraintsLine
-        allowedExtensions={allowedExtensions}
-        allowedMimeTypes={allowedMimeTypes}
-        maxBytes={maxBytes}
-      />
+      {cover ? null : (
+        <FileConstraintsLine
+          allowedExtensions={allowedExtensions}
+          allowedMimeTypes={allowedMimeTypes}
+          maxBytes={maxBytes}
+        />
+      )}
 
       <FormControl>
         <div className="flex flex-col gap-2">
-          {resolved && !upload.isPending ? (
+          {cover ? (
+            <FileCover file={cover}>
+              <ReplaceAction accept={accept} onPick={pick} withLabel />
+              <AttachmentAction
+                aria-label={t("remove")}
+                className={coverActionClassName}
+                onClick={remove}
+                type="button"
+                variant="outline"
+              >
+                <XIcon />
+              </AttachmentAction>
+            </FileCover>
+          ) : resolved && !upload.isPending ? (
             <FileCard
               file={
                 file ?? { id: resolved.id, name: t("stored"), size: 0, url: "" }
@@ -290,12 +320,39 @@ export const AutoFormFile = ({
   );
 };
 
+const coverActionClassName = "bg-background/90 backdrop-blur";
+
+const FileCover = ({
+  children,
+  file,
+}: {
+  children: React.ReactNode;
+  file: AutoFormFileValue;
+}) => (
+  <div
+    className="bg-muted relative overflow-hidden rounded-xl ring-1 ring-black/8 dark:ring-white/10"
+    data-slot="file-cover"
+  >
+    <img
+      alt=""
+      className="aspect-2/1 w-full object-cover"
+      decoding="async"
+      height={file.height}
+      src={file.url}
+      width={file.width}
+    />
+    <div className="absolute end-3 top-3 flex gap-1.5">{children}</div>
+  </div>
+);
+
 const ReplaceAction = ({
   accept,
   onPick,
+  withLabel = false,
 }: {
   accept?: string;
   onPick: (file: File | undefined) => void;
+  withLabel?: boolean;
 }) => {
   const t = useTranslations("core.global.file");
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -313,13 +370,26 @@ const ReplaceAction = ({
         tabIndex={-1}
         type="file"
       />
-      <AttachmentAction
-        aria-label={t("replace")}
-        onClick={() => inputRef.current?.click()}
-        type="button"
-      >
-        <RotateCcwIcon />
-      </AttachmentAction>
+      {withLabel ? (
+        <Button
+          className={coverActionClassName}
+          onClick={() => inputRef.current?.click()}
+          size="xs"
+          type="button"
+          variant="outline"
+        >
+          <RotateCcwIcon aria-hidden />
+          {t("replace")}
+        </Button>
+      ) : (
+        <AttachmentAction
+          aria-label={t("replace")}
+          onClick={() => inputRef.current?.click()}
+          type="button"
+        >
+          <RotateCcwIcon />
+        </AttachmentAction>
+      )}
     </>
   );
 };

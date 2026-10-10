@@ -29,6 +29,11 @@ export interface ContentFormTransport {
     translations: ContentTranslationInput[],
   ) => Promise<ContentMutationResult>;
 
+  discardDraft: (
+    contentTypeId: string,
+    itemId: number,
+  ) => Promise<{ error?: string; status: number }>;
+
   edit: (
     contentTypeId: string,
     itemId: number,
@@ -61,7 +66,6 @@ export interface ContentFormTransport {
     search: string,
     ids?: number[],
   ) => Promise<ContentOption[]>;
-
   /**
    * Live editing: takes, extends or gives back the caller's lease on one field
    * in one language (`null` for a shared field).
@@ -75,6 +79,7 @@ export interface ContentFormTransport {
       locale: null | string;
     },
   ) => Promise<ContentFieldLockResult>;
+
   /** Moves a record to `published`. Idempotent: a no-op is a success. */
   publish: (
     contentTypeId: string,

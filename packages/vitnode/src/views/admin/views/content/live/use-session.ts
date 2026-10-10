@@ -4,6 +4,7 @@ import type { ContentDrafts } from "@/content/live/http";
 import type {
   ContentFieldLock,
   ContentLiveMember,
+  ContentLiveResetReason,
   ContentLiveRoomRef,
   ContentLiveServerMessage,
 } from "@/content/live/protocol";
@@ -26,7 +27,7 @@ export interface ContentLiveDraftEvent {
   values: Record<string, unknown>;
 }
 
-export type ContentLiveResetReason = "deleted" | "restored";
+export type { ContentLiveResetReason } from "@/content/live/protocol";
 
 export interface ContentLiveSession {
   /** This tab. One browser shares a socket across tabs, so every message names it. */
@@ -49,6 +50,7 @@ export interface ContentLiveSession {
   refreshLocks: () => Promise<void>;
   /** Learns who this person is, from a lock the API granted them. */
   rememberSelf: (userId: number) => void;
+  resetLocally: (reason: ContentLiveResetReason) => void;
   /** The signed-in person's id, once known: their locks are never "someone else's". */
   self: null | number;
 }
@@ -382,6 +384,10 @@ export const useContentLiveSession = ({
     [],
   );
 
+  const resetLocally = React.useCallback((reason: ContentLiveResetReason) => {
+    for (const listener of resetListenersRef.current) listener(reason);
+  }, []);
+
   return {
     clientId,
     focus,
@@ -395,6 +401,7 @@ export const useContentLiveSession = ({
     readyState,
     refreshLocks,
     rememberSelf: setSelf,
+    resetLocally,
     self,
   };
 };

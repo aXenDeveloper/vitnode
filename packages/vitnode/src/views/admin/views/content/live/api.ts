@@ -98,6 +98,22 @@ export const readContentDraftInBrowser = async (
   return result.data ? { drafts: result.data } : { error: result.error ?? "" };
 };
 
+export const discardContentDraftInBrowser = async (
+  target: ContentApiTarget,
+  id: number,
+): Promise<{ error?: string; status: number }> => {
+  const result = await send({
+    body: {},
+    method: "post",
+    path: `/${id}/draft/discard`,
+    target,
+  });
+
+  return result.data
+    ? { status: result.status }
+    : { error: result.error ?? "", status: result.status };
+};
+
 export const saveContentDraftInBrowser = async (
   target: ContentApiTarget,
   id: number,

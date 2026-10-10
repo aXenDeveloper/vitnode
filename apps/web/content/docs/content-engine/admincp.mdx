@@ -5,9 +5,9 @@ icon: LayoutDashboard
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
-import articleList from "./admincp-article-list.png";
-import bulkActions from "./admincp-bulk-actions.png";
-import createDialog from "./admincp-create-dialog.png";
+import articleList from "./admincp-article-list.webp";
+import bulkActions from "./admincp-bulk-actions.webp";
+import createDialog from "./admincp-create-dialog.webp";
 
 Every content type registered in the plugin's `src/admin/content.tsx` gets an AdminCP list and a create and edit form without any UI code. Most changes are options in the definition's `admin` block. For anything the options cannot express, you swap one cell, one field or the whole form layout for your own component.
 
@@ -265,6 +265,117 @@ contentTypeAdmin({
 ```
 
 `forms.create.layout` and `forms.edit.layout` override the shared one per action. `ContentFormRemainingFields` renders every form field you did not place yourself. In development, the browser console warns about fields the layout never rendered and about a missing `ContentFormHeader`, which holds the title and the back link.
+
+## Show a matching skeleton
+
+A loading screen that looks nothing like the form is the visual version of a
+jump scare. The Content Engine avoids it by rendering your layout twice: first in
+**skeleton mode** while the record loads, then for real. In skeleton mode,
+`useContentForm().skeleton` is `true` and every `<ContentFormField name="..." />`
+draws a placeholder instead of the field.
+
+So a layout built only from `ContentFormField`, `ContentFormRemainingFields` and
+the other `ContentForm*` pieces already has a matching skeleton. You only need
+two extra steps when your form draws more than fields.
+
+### Size a field's placeholder
+
+Each placeholder is sized from the field's kind. When your field component is
+bigger than its kind suggests, set `skeleton` next to `component`, as described
+in [Replace a field or a cell](#replace-a-field-or-a-cell):
+
+```tsx title="plugins/blog/src/admin/content.tsx"
+fields: {
+  content: { component: BlogArticleEditorField, skeleton: "editor" },
+  excerpt: { component: ArticleExcerptField, skeleton: "textarea" },
+},
+```
+
+### Draw a skeleton for a custom layout
+
+A layout with its own header, a large title or a cover image should draw a
+skeleton with the same wrappers, gaps and widths. Return it while `skeleton` is
+`true`, and use the same component as the `Suspense` fallback when the real
+editor is lazy-loaded. Then the reload goes skeleton → form with nothing in
+between.
+
+```tsx title="plugins/blog/src/views/admin/article/form-layout.tsx"
+import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
+
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
+import { useContentForm } from "@vitnode/core/content/admin-form";
+import React from "react";
+
+const loadArticleEditor = async () => await import("./editor/article-editor");
+
+const ArticleEditor = React.lazy(async () =>
+  loadArticleEditor().then(module => ({ default: module.ArticleEditor })),
+);
+
+const ArticleEditorSkeleton = () => {
+  const { fieldNames, markHeaderRendered, markRendered, mode, skeleton } =
+    useContentForm();
+
+  markHeaderRendered?.();
+  if (!skeleton) for (const name of fieldNames) markRendered?.(name);
+
+  React.useEffect(() => {
+    void loadArticleEditor();
+  }, []);
+
+  return (
+    <div aria-busy="true" className="flex flex-col">
+      <div className="flex min-h-14 items-center gap-2 border-b px-4 py-2">
+        <Skeleton className="h-8 w-36" />
+        <div className="flex-1" />
+        <Skeleton className="h-9 w-36" />
+      </div>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
+        {mode === "edit" ? (
+          <Skeleton className="aspect-2/1 w-full rounded-xl" />
+        ) : (
+          <Skeleton className="h-36 w-full rounded-xl" />
+        )}
+        <Skeleton className="h-10 w-3/4" />
+        <Skeleton className="h-96 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+};
+
+export const BlogArticleFormLayout = ({
+  contentTypeId,
+  itemId,
+}: ContentFormLayoutProps) => {
+  const { skeleton } = useContentForm();
+
+  if (skeleton) return <ArticleEditorSkeleton />;
+
+  return (
+    <React.Suspense fallback={<ArticleEditorSkeleton />}>
+      <ArticleEditor contentTypeId={contentTypeId} itemId={itemId} />
+    </React.Suspense>
+  );
+};
+```
+
+A few things that keep it smooth:
+
+- **Copy the real wrappers.** Same outer `div`, same padding, same `max-w-*`,
+  same breakpoints. A skeleton that is 20 pixels shorter still makes the page
+  jump.
+- **Branch on `mode`.** The create form often looks different, for example an
+  empty upload area instead of a cover image and other buttons in the header.
+- **Call `markHeaderRendered()`** when the skeleton draws its own header, so the
+  development warning about a missing `ContentFormHeader` stays quiet.
+- **Mark the fields as rendered in the fallback.** While the lazy editor loads,
+  the real form is up, so the skeleton tells it that the layout will place every
+  field. Without it, the console warns about missing fields for a moment.
+- **Start loading the editor from the skeleton.** The `useEffect` above fetches
+  the editor's code while the record is still loading, so the fallback is rarely
+  seen at all.
+- **Use `Skeleton` from `@vitnode/core/components/ui/skeleton`** and the
+  Tailwind spacing scale, so placeholders match the theme in light and dark mode.
 
 ## Check the result
 

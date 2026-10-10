@@ -246,6 +246,7 @@ describe("the generated permission matrix", () => {
     // viewer can neither hold one nor read the team's unsaved working copy.
     "GET /{id}/draft": "can_edit",
     "GET /{id}/locks": "can_edit",
+    "POST /{id}/draft/discard": "can_edit",
     "POST /{id}/locks": "can_edit",
     "PUT /{id}/draft": "can_edit",
   };

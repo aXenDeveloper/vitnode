@@ -37,6 +37,7 @@ import {
   writeContentDraft,
 } from "./live-store";
 import { broadcastContentLive } from "./live/broadcast";
+import { resetContentLiveRecord } from "./live/hooks";
 import { identifier, jsonBody, jsonResponse, readJson } from "./route-helpers";
 
 /**
@@ -359,5 +360,31 @@ export const buildContentLiveRoutes = <
     },
   });
 
-  return [listLocks, changeLock, readDraft, writeDraft];
+  const discardDraft = buildRoute({
+    pluginId,
+    adminStaffPermission: permission,
+    route: {
+      method: "post",
+      path: "/{id}/draft/discard",
+      description: `Throw away the shared draft of one ${name}, so everyone editing it goes back to the saved version`,
+      request: { params, body: jsonBody(z.object({})) },
+      responses: {
+        200: jsonResponse(
+          z.object({ discarded: z.literal(true) }),
+          "Draft discarded",
+        ),
+        400: { description: "Invalid identifier" },
+        404: notFound,
+      },
+    },
+    handler: async c => {
+      const id = identifier(c);
+      await findRecord(c, id);
+      await resetContentLiveRecord(c, roomOf(id), "discarded");
+
+      return c.json({ discarded: true as const }, 200);
+    },
+  });
+
+  return [listLocks, changeLock, readDraft, writeDraft, discardDraft];
 };

@@ -192,7 +192,10 @@ Capture screenshots when documenting AdminCP, forms, settings, editors, or other
 6. Capture the relevant panel or region with enough navigation context to orient the reader. Add a second screenshot only if a distinct state needs explanation.
 7. Inspect each saved image. Retake it if labels are unreadable, content is clipped, or the page shows loading/error states unrelated to the guide.
 8. Avoid exposing personal data, tokens, cookies, private URLs, or real user records. Prefer preparing clean demo data before capture.
-9. Save assets in the repository's existing documentation image location. Use descriptive kebab-case names and stable repository paths. Use PNG or WebP according to existing support; keep text sharp and file sizes reasonable.
+9. Save assets in the repository's existing documentation image location. Use descriptive kebab-case names and stable repository paths. Save every new or re-captured screenshot as WebP; keep text sharp and file sizes reasonable.
+   - Capture at a 2x device scale factor. If the tool only writes PNG, capture to PNG, then convert it to WebP and delete the intermediate PNG. Never commit PNG screenshots.
+   - Convert with high quality to keep UI text sharp, for example Pillow lossy `quality=90` with `method=6`. Use lossless WebP when small text blurs. Inspect the WebP after conversion.
+   - When replacing an existing PNG screenshot, change the MDX import from `./name.png` to `./name.webp` and delete the old PNG. Leave no reference to the removed file.
 10. Place the image beside the step it illustrates. Add useful alt text and a short caption when the state needs explanation. Keep the action and result in text as well.
 
 Never generate, draw, or fabricate an application screenshot. Do not substitute a mockup or claim a screenshot was captured when it was not. If the app, credentials, or capture tools are unavailable, finish the text and report the missing capture and its precise prerequisite. Do not commit broken image references or placeholders as completed screenshots.

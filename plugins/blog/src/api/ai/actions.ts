@@ -131,6 +131,12 @@ const zodArticleReview = z.object({
     .array(
       z.object({
         area: z.enum(ARTICLE_REVIEW_AREAS),
+        fix: z
+          .object({
+            quote: z.string().min(1).max(1_000),
+            replacement: z.string().max(1_500),
+          })
+          .nullable(),
         message: z.string().min(1).max(400),
         priority: z.enum(["high", "low"]),
       }),
@@ -148,13 +154,14 @@ const articleReviewAiAction = defineAiAction({
       "Focus on clarity, completeness (missing context, undefined terms, an unclear conclusion), structure and tone.",
       "Do not judge whether facts are true: you cannot verify them. Never claim something is accurate or inaccurate.",
       "Give at most 8 specific suggestions, most useful first. Mark a suggestion high priority only when it clearly hurts readers.",
+      "When a suggestion is about specific wording, add a fix: quote is a passage copied character for character from the article, at most one paragraph long, and replacement is the rewritten passage as plain text on one line, or an empty string to delete it. Otherwise set fix to null.",
       `Write the summary and suggestions in the article's language (${input.locale}).`,
       ...(instructions ? [instructions] : []),
     ].join("\n"),
   }),
   defaults: {
     maxInputCharacters: 31_000,
-    maxOutputTokens: 1_500,
+    maxOutputTokens: 4_000,
     timeoutMs: 90_000,
   },
   description: "ai_actions.@vitnode/blog.article_review.description",
@@ -174,7 +181,7 @@ const articleReviewAiAction = defineAiAction({
   output: "object",
   outputSchema: zodArticleReview,
   permission: { defaultGranted: true, key: "review" },
-  promptVersion: 1,
+  promptVersion: 2,
   requiredCapabilities: ["text", "structured-output"],
 });
 

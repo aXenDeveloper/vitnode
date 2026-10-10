@@ -5,7 +5,7 @@ icon: SearchCheck
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
-import blogPreviews from "./seo-blog-previews.png";
+import blogSeoSheet from "./seo-blog-sheet.webp";
 
 Once a content type has [public pages](/docs/content-engine/public-pages), `delivery.seo` decides which fields fill each page's `<title>`, meta description and `robots` tag, and `delivery.sitemap` lists the pages for crawlers. You name fields; the Content Engine reads them from every published record, so editors never fill in a separate SEO form unless you give them one.
 
@@ -65,13 +65,13 @@ delivery: {
 
 `content` is rich text. The Content Engine turns it into plain text, and the page cuts it to 160 characters at a word boundary and adds `…`. No markup ever lands in a meta tag.
 
-The blog plugin's own article editor previews that rule in its **Previews** panel. The panel belongs to the blog plugin, not to every Content Engine form, but it shows exactly what a search result will say: here the post has no excerpt, so the description comes from the content.
+The blog plugin's own article editor checks the fields this rule reads in its **SEO** sheet. The sheet belongs to the blog plugin, not to every Content Engine form. Here the post has no excerpt, so the **Excerpt** row is marked as missing: search results would fall back to the content.
 
 <ImgDocs
   withoutBackground
   className="p-4 *:max-w-sm"
-  src={blogPreviews}
-  alt="Blog plugin article editor Previews panel with a search result showing the post title and the first lines of its content, and an empty social card asking for a cover image"
+  src={blogSeoSheet}
+  alt="Blog plugin SEO sheet with a Ready to publish bar at 4 of 7, a Title row with a length bar at 37 of 60, a missing Excerpt with a Write with AI button, a URL row and a Social image row"
 />
 
 ## What reaches the page head

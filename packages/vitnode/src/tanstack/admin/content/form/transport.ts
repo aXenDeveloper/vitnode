@@ -20,6 +20,7 @@ import {
 } from "@/views/admin/views/content/form/mutations-api";
 import {
   changeContentLockInBrowser,
+  discardContentDraftInBrowser,
   listContentLocksInBrowser,
   readContentDraftInBrowser,
   saveContentDraftInBrowser,
@@ -143,6 +144,9 @@ export const contentFormTransport = (
 
       return result;
     },
+
+    discardDraft: async (contentTypeId, itemId) =>
+      await discardContentDraftInBrowser(targetFor(contentTypeId), itemId),
 
     readDraft: async (contentTypeId, itemId) =>
       await readContentDraftInBrowser(targetFor(contentTypeId), itemId),

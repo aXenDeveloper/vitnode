@@ -1,6 +1,9 @@
 import type { Context } from "hono";
 
-import type { ContentLiveRoomRef } from "@/content/live/protocol";
+import type {
+  ContentLiveResetReason,
+  ContentLiveRoomRef,
+} from "@/content/live/protocol";
 
 import { broadcastContentLive } from "./broadcast";
 
@@ -17,7 +20,7 @@ type UserLeftListener = (args: {
 
 type ResetListener = (args: {
   c: Context;
-  reason: "deleted" | "restored";
+  reason: ContentLiveResetReason;
   room: ContentLiveRoomRef;
 }) => Promise<void> | void;
 
@@ -75,7 +78,7 @@ export const contentLiveUserLeft = async (
 export const resetContentLiveRecord = async (
   c: Context,
   room: ContentLiveRoomRef,
-  reason: "deleted" | "restored",
+  reason: ContentLiveResetReason,
 ): Promise<void> => {
   await runAll(resetListeners, { c, reason, room });
   broadcastContentLive(room, { reason, room, type: "reset" });

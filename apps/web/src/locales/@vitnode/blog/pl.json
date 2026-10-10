@@ -57,7 +57,6 @@
             "not_configured": "Ta strona nie ma skonfigurowanego modelu AI."
           },
           "publish": {
-            "open": "Gotowość do publikacji: {done} z {total}",
             "title": "Gotowe do publikacji",
             "checks": {
               "title": "Tytuł mieści się w wynikach wyszukiwania",
@@ -74,17 +73,54 @@
               "outdated_detail": "{languages} zmieniano dawniej niż wersję {source}.",
               "open": "Otwórz: {language}",
               "write": "Napisz z AI"
+            }
+          },
+          "review": {
+            "title": "Recenzja AI",
+            "run": "Sprawdź z AI",
+            "again": "Sprawdź ponownie",
+            "nothing": "Brak sugestii - dobra robota.",
+            "high": "Warto poprawić",
+            "areas": {
+              "clarity": "Przejrzystość",
+              "completeness": "Kompletność",
+              "structure": "Struktura",
+              "tone": "Ton"
             },
-            "previews": {
-              "title": "Podgląd",
-              "language": "Język podglądu",
-              "search": "Wynik wyszukiwania",
-              "social": "Karta społecznościowa",
-              "fallback": "Czytelnicy w języku {language} zobaczą tekst w wersji {source} w brakujących polach.",
-              "no_cover": "Dodaj obraz wyróżniający, aby zobaczyć kartę społecznościową."
+            "open": "Recenzja AI",
+            "intro": "AI czyta artykuł, wskazuje, co zmienić, i przygotowuje poprawki sformułowań. Nie sprawdza faktów i nic się nie zmieni, dopóki nie klikniesz Zastosuj.",
+            "verdict": "Warto poprawić: {high}, opcjonalnie: {low}",
+            "fix": {
+              "show": "Pokaż poprawkę",
+              "apply": "Zastosuj",
+              "dismiss": "Odrzuć",
+              "undo": "Cofnij",
+              "applied": "Zastosowano",
+              "dismissed": "Odrzucono",
+              "before": "Obecny tekst",
+              "after": "Proponowany tekst",
+              "removes": "Ten fragment zostanie usunięty.",
+              "stale": "Ten fragment zmienił się po recenzji, więc poprawki nie da się zastosować. Uruchom recenzję ponownie."
+            }
+          },
+          "seo": {
+            "open": "SEO",
+            "open_issues": "SEO: {count, plural, one {# rzecz do poprawy} few {# rzeczy do poprawy} many {# rzeczy do poprawy} other {# rzeczy do poprawy}}",
+            "title": "SEO",
+            "desc": "Jak ten artykuł wygląda w wynikach wyszukiwania i po udostępnieniu.",
+            "left": "Zostało: {items}",
+            "done": "Gotowe",
+            "needs_work": "Do poprawy",
+            "rows": {
+              "title": "Tytuł",
+              "excerpt": "Zajawka",
+              "url": "URL",
+              "cover": "Obraz do udostępniania",
+              "alt": "Tekst alternatywny obrazu"
             },
-            "details": "Szczegóły",
-            "cover": "Obraz wyróżniający"
+            "url_missing": "Brak adresu URL w tym języku.",
+            "cover_cropped": "Obraz wyróżniający przycięty do kart społecznościowych.",
+            "alt_edit": "Edytuj pod obrazem"
           }
         }
       },

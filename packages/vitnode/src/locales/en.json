@@ -1647,7 +1647,13 @@
           "saved_just_now": "Draft saved just now",
           "saved_at": "Draft saved at {time}",
           "unsaved": "Unsaved changes",
-          "failed": "Draft not saved"
+          "failed": "Draft not saved",
+          "discard": "Discard",
+          "discard_label": "Discard unsaved changes",
+          "discard_title": "Discard unsaved changes?",
+          "discard_desc": "The record goes back to how it was last saved. Unsaved changes from everyone editing it are discarded too.",
+          "discard_confirm": "Discard changes",
+          "discard_failed": "The changes could not be discarded. Try again."
         },
         "reset": {
           "restored": {
@@ -1657,6 +1663,14 @@
           "deleted": {
             "title": "This record was deleted",
             "desc": "Someone deleted it while you were editing. Nothing here can be saved anymore."
+          },
+          "discarded": {
+            "title": "Unsaved changes were discarded",
+            "desc": "Someone editing this record went back to the saved version."
+          },
+          "discarded_own": {
+            "title": "Changes discarded",
+            "desc": "The form is back to the saved version."
           }
         }
       }

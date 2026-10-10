@@ -3,6 +3,7 @@ import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/a
 import { AutoFormLabel } from "@vitnode/core/components/form/common/label";
 import {
   type MultiLangFieldProps,
+  MultiLangLabel,
   useMultiLangField,
 } from "@vitnode/core/components/form/fields/multi-lang";
 import { FormControl, FormMessage } from "@vitnode/core/components/ui/form";
@@ -149,9 +150,14 @@ export const ArticleExcerptField = ({ field }: ItemAutoFormComponentProps) => {
 export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog");
   const labelRight = useArticleFieldAction("coverImageAlt");
-  const { currentValue, selected, setValue } = useMultiLangField(
-    field as MultiLangFieldProps["field"],
-  );
+  const {
+    canSelect,
+    currentValue,
+    languages,
+    selected,
+    setSelected,
+    setValue,
+  } = useMultiLangField(field as MultiLangFieldProps["field"]);
   const { files } = useContentForm();
   const cover = files?.coverImage;
   const fileAlt =
@@ -159,9 +165,15 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
 
   return (
     <>
-      <AutoFormLabel isOptional labelRight={labelRight}>
-        {t("content.post.fields.coverImageAlt")}
-      </AutoFormLabel>
+      <MultiLangLabel
+        canSelect={canSelect}
+        isOptional
+        label={t("content.post.fields.coverImageAlt")}
+        labelRight={labelRight}
+        languages={languages}
+        onSelect={setSelected}
+        selected={selected}
+      />
       <FormControl>
         <input
           className={cn(fieldClassName, "h-9")}

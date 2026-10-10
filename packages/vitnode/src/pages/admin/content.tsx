@@ -1,5 +1,3 @@
-import { use } from "react";
-
 import type { ContentFrontendRegistry } from "@/content/admin/registry";
 import type { PluginRoutePageProps } from "@/routing";
 import type { ContentListRouteSearch } from "@/tanstack/admin/content/route-search";
@@ -24,19 +22,9 @@ import {
  *
  * Deliberately *not* loader data: it carries every content type's editor fields
  * and form layouts, so returning it would serialise the whole thing into the
- * SSR payload. A promise the component `use()`s is the same thing the hand-built
- * route did by resolving it beside the screen's own chunk.
+ * SSR payload.
  */
-let registryPromise: Promise<ContentFrontendRegistry> | undefined;
-
-// Not `async`: `use()` suspends on promise *identity*, and an async wrapper
-// would hand it a new promise on every render.
-// oxlint-disable-next-line typescript/promise-function-async
-const contentRegistry = (): Promise<ContentFrontendRegistry> => {
-  registryPromise ??= getContentRegistryLoader()();
-
-  return registryPromise;
-};
+const registry: ContentFrontendRegistry = await getContentRegistryLoader()();
 
 type ContentPageData = Awaited<ReturnType<typeof loadContentPage>>;
 
@@ -49,7 +37,6 @@ const loadContentPage = async ({
   params: Readonly<Record<string, string>>;
   search: ContentListRouteSearch;
 }) => {
-  const registry = await contentRegistry();
   const resolved = await loadContentAdminRoute({
     ...context,
     registry,
@@ -71,7 +58,7 @@ const ContentAdminPage = ({
   <ContentAdminScreenContent
     {...loaderData}
     navigate={navigate}
-    registry={use(contentRegistry())}
+    registry={registry}
     search={search}
   />
 );

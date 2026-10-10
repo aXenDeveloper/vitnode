@@ -88,6 +88,8 @@ export type ContentLiveErrorCode =
   | "NOT_FOUND"
   | "NOT_JOINED";
 
+export type ContentLiveResetReason = "deleted" | "discarded" | "restored";
+
 export type ContentLiveServerMessage =
   | {
       /** The person whose write changed the draft. */
@@ -105,12 +107,8 @@ export type ContentLiveServerMessage =
       type: "doc:seed";
     }
   | {
-      room: ContentLiveRoomRef;
-      type: "committed";
-    }
-  | {
       /** Why every member must reload the record, its draft and documents. */
-      reason: "deleted" | "restored";
+      reason: ContentLiveResetReason;
       room: ContentLiveRoomRef;
       type: "reset";
     }
@@ -151,6 +149,10 @@ export type ContentLiveServerMessage =
       members: ContentLiveMember[];
       room: ContentLiveRoomRef;
       type: "presence";
+    }
+  | {
+      room: ContentLiveRoomRef;
+      type: "committed";
     };
 
 export const contentLiveChannel = createWebSocketChannel<

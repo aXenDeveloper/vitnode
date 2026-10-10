@@ -87,6 +87,7 @@ const paragraphDoc = (text: string): RichTextDocument => ({
 const liveValue = (): ContentLiveContextValue => ({
   autosave: { flush: vi.fn(), queue: vi.fn() },
   coEditing: true,
+  discard: vi.fn(),
   itemId: doc.itemId,
   locale: "en",
   reloadDrafts: vi.fn(),
@@ -104,6 +105,7 @@ const liveValue = (): ContentLiveContextValue => ({
     readyState: 1,
     refreshLocks: vi.fn(),
     rememberSelf: vi.fn(),
+    resetLocally: vi.fn(),
     self: ME.userId,
   },
   spec: {

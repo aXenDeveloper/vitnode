@@ -23,12 +23,13 @@ With more than one API instance, set `REDIS_URL`. Instances share presence and d
 
 Mounted under the content type's staff API module. Every route needs an AdminCP session and the type's `can_edit` permission, and answers `404` for a record that does not exist.
 
-| Method and path    | Body                        | Success                                    | Errors                                                                                         |
-| ------------------ | --------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `GET /{id}/locks`  |                             | `{ locks }`, the unexpired locks           |                                                                                                |
-| `POST /{id}/locks` | `{ field, locale, action }` | `{ lock }`, or `{ lock: null }` on release | `409` `CONTENT_FIELD_LOCKED`, `400` for an unknown field or wrong locale                       |
-| `GET /{id}/draft`  |                             | `{ shared, translations }`                 |                                                                                                |
-| `PUT /{id}/draft`  | `{ locale, values }`        | `{ updatedAt }`                            | `409` `CONTENT_FIELD_NOT_LOCKED`, `400` `CONTENT_DRAFT_WRONG_SCOPE` or `CONTENT_DRAFT_INVALID` |
+| Method and path            | Body                        | Success                                                                  | Errors                                                                                         |
+| -------------------------- | --------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `GET /{id}/locks`          |                             | `{ locks }`, the unexpired locks                                         |                                                                                                |
+| `POST /{id}/locks`         | `{ field, locale, action }` | `{ lock }`, or `{ lock: null }` on release                               | `409` `CONTENT_FIELD_LOCKED`, `400` for an unknown field or wrong locale                       |
+| `GET /{id}/draft`          |                             | `{ shared, translations }`                                               |                                                                                                |
+| `PUT /{id}/draft`          | `{ locale, values }`        | `{ updatedAt }`                                                          | `409` `CONTENT_FIELD_NOT_LOCKED`, `400` `CONTENT_DRAFT_WRONG_SCOPE` or `CONTENT_DRAFT_INVALID` |
+| `POST /{id}/draft/discard` | `{}`                        | `{ discarded: true }`, and a `reset` with reason `discarded` to the room |                                                                                                |
 
 - `action` is `acquire`, `renew` or `release`.
 - `locale` is `null` for a field that is not localized and an enabled language code for a localized one. A shared field and a localized field never share a draft write.

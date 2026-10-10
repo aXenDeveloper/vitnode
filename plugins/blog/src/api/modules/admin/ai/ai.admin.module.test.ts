@@ -352,7 +352,21 @@ describe("blog AI admin routes", () => {
   it("returns a structured, validated review and never claims to check facts", async () => {
     const review = {
       suggestions: [
-        { area: "clarity", message: "Define RLS first.", priority: "high" },
+        {
+          area: "clarity",
+          fix: {
+            quote: "RLS",
+            replacement: "row level security (RLS)",
+          },
+          message: "Define RLS first.",
+          priority: "high",
+        },
+        {
+          area: "structure",
+          fix: null,
+          message: "Add a conclusion.",
+          priority: "low",
+        },
       ],
       summary: "Clear overall.",
     };
@@ -403,6 +417,9 @@ describe("blog AI admin routes", () => {
 
     expect(await response.json()).toEqual(review);
     expect(promptOf(model.doGenerateCalls[0])).toContain("cannot verify them");
+    expect(promptOf(model.doGenerateCalls[0])).toContain(
+      "copied character for character",
+    );
   });
 
   it("refuses the review on a model without structured output", async () => {

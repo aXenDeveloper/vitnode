@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { act, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,12 +19,16 @@ import { ContentLiveStatus } from "./status";
 
 const NOW = new Date("2026-10-10T12:00:00.000Z");
 
-const renderStatus = (status: Partial<ContentLiveAutosaveStatus>) =>
+const renderStatus = (
+  status: Partial<ContentLiveAutosaveStatus>,
+  discard: () => Promise<boolean> = async () => await Promise.resolve(true),
+) =>
   render(
     <IntlProvider locale="en" messages={{}} timeZone="UTC">
       <ContentLiveContext
         value={
           {
+            discard,
             status: {
               dirty: false,
               failed: false,
@@ -109,5 +119,43 @@ describe("ContentLiveStatus", () => {
 
     expect(screen.getByText("core.content.live.status.failed")).toBeTruthy();
     expect(screen.getByText("core.content.live.status.unsaved")).toBeTruthy();
+  });
+
+  it("discards unsaved changes once the person confirms", async () => {
+    vi.useRealTimers();
+    const discard = vi.fn(async () => await Promise.resolve(true));
+    renderStatus({ dirty: true }, discard);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "core.content.live.status.discard_label",
+      }),
+    );
+    expect(discard).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "core.content.live.status.discard_confirm",
+      }),
+    );
+    await waitFor(() => {
+      expect(discard).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("offers no discard while nothing is unsaved", () => {
+    renderStatus({ savedAt: NOW.toISOString() });
+
+    expect(
+      screen.queryByRole("button", {
+        name: "core.content.live.status.discard_label",
+      }),
+    ).toBeNull();
+  });
+
+  it("renders nothing before the first change", () => {
+    const { container } = renderStatus({});
+
+    expect(container.textContent).toBe("");
   });
 });

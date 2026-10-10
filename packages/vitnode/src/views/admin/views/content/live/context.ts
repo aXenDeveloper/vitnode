@@ -29,6 +29,7 @@ export interface ContentLiveContextValue {
    * Without a socket at all, rich text falls back to a locked field.
    */
   coEditing: boolean;
+  discard: () => Promise<boolean>;
   /** The record the session is for. */
   itemId: number;
   /** The language a localized field locks in when the layout pins none. */
