@@ -1,5 +1,10 @@
 import { fingerprint } from "@/content/hash";
-import { getLangValue } from "@/lib/helpers/multi-lang";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@/content/rich-text/document";
+import { richTextToHtml } from "@/content/rich-text/html";
+import { findLangValue } from "@/lib/helpers/multi-lang";
 
 export type TranslationFreshness =
   | "edited"
@@ -15,15 +20,18 @@ export interface TranslationSourceRecord {
   targetFingerprint: string;
 }
 
-type FieldValue =
-  | string
-  | undefined
-  | { languageCode: string; value: string }[];
+const localeValue = (value: unknown, locale: string): unknown =>
+  Array.isArray(value) ? findLangValue(value, locale) : value;
 
-const textOf = (value: unknown, locale: string): string =>
-  typeof value === "string" || Array.isArray(value)
-    ? getLangValue(value as FieldValue, locale)
-    : "";
+const textOf = (value: unknown, locale: string): string => {
+  const localized = localeValue(value, locale);
+  if (typeof localized === "string") return localized;
+  if (isRichTextDocument(localized) && !isRichTextEmpty(localized)) {
+    return richTextToHtml(localized);
+  }
+
+  return "";
+};
 
 export const fieldFingerprint = (value: unknown, locale: string): string =>
   fingerprint(textOf(value, locale));
