@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "fe5da61d-7cd8-4945-ac5d-34cc948e5bdc",
+  "id": "f56f3fa4-bc19-468a-9bb0-04e398dfc3d4",
   "prevIds": [
-    "5fef0d7f-7907-4111-9e85-790f416a05ff",
-    "bb799038-c9f7-4c6a-83ac-68898c684511"
+    "4ca32b27-ee74-4516-a0e6-303456070af3"
   ],
   "ddl": [
     {
@@ -16,6 +15,72 @@
     {
       "isRlsEnabled": true,
       "name": "core_admin_sessions",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_action_settings",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_budget_periods",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_calls",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_cost_adjustments",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_reservations",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_role_permissions",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_role_policies",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_runs",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_settings",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_translation_sources",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_ai_user_overrides",
       "entityType": "tables",
       "schema": "public"
     },
@@ -76,6 +141,24 @@
     {
       "isRlsEnabled": true,
       "name": "core_files",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_files_alt",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_files_alt_analysis",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_files_alt_state",
       "entityType": "tables",
       "schema": "public"
     },
@@ -537,6 +620,1774 @@
       "entityType": "columns",
       "schema": "public",
       "table": "core_admin_sessions"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "actionKey",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "enabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "modelId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fallbackModelId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "maxInputCharacters",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "maxOutputTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "timeoutMs",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "maxRetries",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "maxSteps",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dailyLimit",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "instructions",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_action_settings"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "scopeKey",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "unit",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "periodStart",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "periodEnd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "limitAmount",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "spentAmount",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "reservedAmount",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "unknownCount",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "runId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "attempt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "modelId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "provider",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerModelId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerRequestId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "errorCode",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "inputTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outputTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cacheReadTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cacheWriteTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reasoningTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "images",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "costUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "costSource",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "costReason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "pricingVersion",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "pricingSnapshot",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "startedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "finishedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reconciledAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "callId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "runId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "previousCostUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "previousSource",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "newCostUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "newSource",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deltaUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "runId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "budgetPeriodId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "amount",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'active'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "settledAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "roleId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_permissions"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "permission",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_permissions"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "granted",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_permissions"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dailyLimit",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_permissions"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "roleId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_policies"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "monthlyPoints",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_policies"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "unlimited",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_policies"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_role_policies"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "actionKey",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "pluginId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "actorType",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "userId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "idempotencyKey",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "resourceType",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "resourceId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "errorCode",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "promptVersion",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "pointsConversionVersion",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "modelId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "provider",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerModelId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "inputTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outputTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cacheReadTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cacheWriteTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reasoningTokens",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "costUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "costSource",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "chargedUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "chargedPoints",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "reservedUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "reservedPoints",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'pending'",
+      "generated": null,
+      "identity": null,
+      "name": "settlement",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "leaseExpiresAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "accepted",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "acceptedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sourceFingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "startedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "finishedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "settledAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "enabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "monthlyBudgetUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "systemMonthlyBudgetUsd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "name": "defaultMonthlyPoints",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "pointsConversionVersion",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "10",
+      "generated": null,
+      "identity": null,
+      "name": "userRequestsPerMinute",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "2",
+      "generated": null,
+      "identity": null,
+      "name": "userConcurrency",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "2",
+      "generated": null,
+      "identity": null,
+      "name": "systemConcurrency",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "365",
+      "generated": null,
+      "identity": null,
+      "name": "historyRetentionDays",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "altEnabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "10",
+      "generated": null,
+      "identity": null,
+      "name": "altBatchSize",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "altScanCursor",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "altScanStartedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_settings"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "contentTypeId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "itemId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "locale",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "field",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sourceLocale",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sourceFingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "targetFingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "origin",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updatedById",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "userId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_user_overrides"
+    },
+    {
+      "type": "numeric(24,12)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "monthlyPoints",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_user_overrides"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "unlimited",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_user_overrides"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "blocked",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_user_overrides"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_ai_user_overrides"
     },
     {
       "type": "serial",
@@ -1683,6 +3534,32 @@
       "table": "core_files"
     },
     {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files"
+    },
+    {
+      "type": "varchar(16)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'automatic'",
+      "generated": null,
+      "identity": null,
+      "name": "altPolicy",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files"
+    },
+    {
       "type": "timestamp",
       "typeSchema": null,
       "notNull": true,
@@ -1694,6 +3571,253 @@
       "entityType": "columns",
       "schema": "public",
       "table": "core_files"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fileId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "varchar(32)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "languageCode",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "text",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "varchar(10)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "origin",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fileFingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "runId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updatedById",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fileId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fileFingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "description",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "runId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fileId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_state"
+    },
+    {
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_state"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lastError",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_state"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_files_alt_state"
     },
     {
       "type": "serial",
@@ -3732,6 +5856,19 @@
       "generated": null,
       "identity": null,
       "name": "completedAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_queue"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dedupeKey",
       "entityType": "columns",
       "schema": "public",
       "table": "core_queue"
@@ -6845,6 +8982,342 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "scopeKey",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "periodStart",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_budget_periods_scope_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_budget_periods"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "runId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_calls_run_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "costSource",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "reconciledAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_calls_reconcile_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "callId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_cost_adjustments_call_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "runId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "budgetPeriodId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_reservations_run_period_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_reservations_status_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "userId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "createdAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_runs_user_created_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "createdAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_runs_created_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "actionKey",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "createdAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_runs_action_created_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "leaseExpiresAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_runs_status_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "actorType",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "userId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "idempotencyKey",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"idempotencyKey\" IS NOT NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_runs_idempotency_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "contentTypeId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "itemId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "locale",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "field",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_ai_translation_sources_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "contentTypeId",
           "isExpression": false,
           "asc": true,
@@ -7645,6 +10118,83 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "core_files"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "fileId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "languageCode",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_files_alt_file_language_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "fileId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "fileFingerprint",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_files_alt_analysis_file_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "status <> 'completed'",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_files_alt_state_status_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_files_alt_state"
     },
     {
       "nameExplicit": true,
@@ -8496,6 +11046,34 @@
       "method": "btree",
       "concurrently": false,
       "name": "core_queue_created_at_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_queue"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "pluginId",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "dedupeKey",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"dedupeKey\" IS NOT NULL AND status IN ('pending', 'processing')",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_queue_dedupe_active_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "core_queue"
@@ -10069,6 +12647,176 @@
     {
       "nameExplicit": false,
       "columns": [
+        "runId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_runs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_calls_runId_core_ai_runs_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_calls"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "callId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_calls",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_cost_adjustments_callId_core_ai_calls_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "runId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_runs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_cost_adjustments_runId_core_ai_runs_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "runId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_runs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_reservations_runId_core_ai_runs_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "budgetPeriodId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_budget_periods",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_reservations_FClYpPXZwvsm_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_reservations"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "roleId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_roles",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_role_permissions_roleId_core_roles_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_role_permissions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "roleId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_roles",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_role_policies_roleId_core_roles_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_role_policies"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "userId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "core_ai_runs_userId_core_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_runs"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "updatedById"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "core_ai_translation_sources_updatedById_core_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_translation_sources"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "userId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_ai_user_overrides_userId_core_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_ai_user_overrides"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "updatedBy"
       ],
       "schemaTo": "public",
@@ -10218,6 +12966,125 @@
       "entityType": "fks",
       "schema": "public",
       "table": "core_files"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "fileId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_files",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_files_alt_fileId_core_files_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "languageCode"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_languages",
+      "columnsTo": [
+        "code"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_files_alt_languageCode_core_languages_code_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "runId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_runs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "core_files_alt_runId_core_ai_runs_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "updatedById"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "core_files_alt_updatedById_core_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "fileId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_files",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_files_alt_analysis_fileId_core_files_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "runId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_ai_runs",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "core_files_alt_analysis_runId_core_ai_runs_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt_analysis"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "fileId"
+      ],
+      "schemaTo": "public",
+      "tableTo": "core_files",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "core_files_alt_state_fileId_core_files_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "core_files_alt_state"
     },
     {
       "nameExplicit": false,
@@ -11141,6 +14008,17 @@
     },
     {
       "columns": [
+        "roleId",
+        "permission"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_role_permissions_pkey",
+      "entityType": "pks",
+      "schema": "public",
+      "table": "core_ai_role_permissions"
+    },
+    {
+      "columns": [
         "eventId",
         "userId"
       ],
@@ -11293,6 +14171,106 @@
     },
     {
       "columns": [
+        "actionKey"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_action_settings_pkey",
+      "schema": "public",
+      "table": "core_ai_action_settings",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_budget_periods_pkey",
+      "schema": "public",
+      "table": "core_ai_budget_periods",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_calls_pkey",
+      "schema": "public",
+      "table": "core_ai_calls",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_cost_adjustments_pkey",
+      "schema": "public",
+      "table": "core_ai_cost_adjustments",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_reservations_pkey",
+      "schema": "public",
+      "table": "core_ai_reservations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "roleId"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_role_policies_pkey",
+      "schema": "public",
+      "table": "core_ai_role_policies",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_runs_pkey",
+      "schema": "public",
+      "table": "core_ai_runs",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_settings_pkey",
+      "schema": "public",
+      "table": "core_ai_settings",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_translation_sources_pkey",
+      "schema": "public",
+      "table": "core_ai_translation_sources",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "userId"
+      ],
+      "nameExplicit": false,
+      "name": "core_ai_user_overrides_pkey",
+      "schema": "public",
+      "table": "core_ai_user_overrides",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         "id"
       ],
       "nameExplicit": false,
@@ -11389,6 +14367,36 @@
       "name": "core_files_pkey",
       "schema": "public",
       "table": "core_files",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_files_alt_pkey",
+      "schema": "public",
+      "table": "core_files_alt",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_files_alt_analysis_pkey",
+      "schema": "public",
+      "table": "core_files_alt_analysis",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "fileId"
+      ],
+      "nameExplicit": false,
+      "name": "core_files_alt_state_pkey",
+      "schema": "public",
+      "table": "core_files_alt_state",
       "entityType": "pks"
     },
     {
