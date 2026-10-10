@@ -5,8 +5,6 @@ import type { AnyFormFieldApi } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
 import type { ContentFieldLock } from "@/content/live/protocol";
 
-import { Avatar } from "@/components/avatar";
-import { AutoFormLabelAddonContext } from "@/components/form/common/label-addon";
 import { useMultiLangLanguage } from "@/components/form/fields/multi-lang-language";
 import {
   type MultiLangPresence,
@@ -24,11 +22,8 @@ import type { ContentLiveContextValue } from "./context";
 
 import { useContentFormTransport } from "../form/transport";
 import { useContentLive } from "./context";
-import {
-  ContentLiveFieldPresence,
-  ContentLiveLanguagePresence,
-  useContentLiveNames,
-} from "./presence";
+import { ContentLiveFieldOutline } from "./outline";
+import { ContentLiveLanguagePresence, useContentLiveNames } from "./presence";
 import {
   contentLiveFieldEditors,
   contentLiveLanguageEditors,
@@ -53,47 +48,23 @@ const isExpired = (lock: ContentFieldLock): boolean =>
 const same = (a: unknown, b: unknown): boolean =>
   JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-/** Who holds a field, as the badge shows them. */
-export const ContentFieldLockBadge = ({
+const LockNotice = ({
   id,
   lock,
-  live,
 }: {
   id: string;
-  live: ContentLiveContextValue;
   lock: ContentFieldLock | null;
 }) => {
   const t = useTranslations("core.content.live");
-  const member = lock
-    ? live.session.members.find(entry => entry.userId === lock.user.id)
-    : undefined;
 
   return (
-    <div aria-live="polite" id={id}>
+    <p aria-live="polite" className="sr-only" id={id}>
       {lock ? (
-        <p className="bg-muted text-muted-foreground mt-2 inline-flex max-w-full rounded-full py-1 pr-3 pl-1 text-sm leading-relaxed">
-          <span className="flex min-w-0 items-center gap-2">
-            <Avatar
-              alt=""
-              className="shrink-0"
-              size={20}
-              user={{
-                avatarColor: member?.avatarColor ?? "71717a",
-                name: lock.user.name,
-                nameCode: member?.nameCode ?? lock.user.name,
-              }}
-            />
-            <span className="truncate">
-              <span className="text-foreground font-medium">
-                {lock.user.name}
-              </span>{" "}
-              {t("is_editing")}
-            </span>
-          </span>
-          <span className="sr-only">{t("locked_desc")}</span>
-        </p>
+        <>
+          {lock.user.name} {t("is_editing")}. {t("locked_desc")}
+        </>
       ) : null}
-    </div>
+    </p>
   );
 };
 
@@ -324,6 +295,22 @@ const LiveField = ({
   const editors = session.live
     ? contentLiveFieldEditors(session.members, session, { field: name, locale })
     : [];
+  const holder =
+    lockedByOther && lock
+      ? {
+          avatarColor:
+            session.members.find(member => member.userId === lock.user.id)
+              ?.avatarColor ?? null,
+          name: lock.user.name,
+          userId: lock.user.id,
+        }
+      : null;
+  const outlined = coEdited
+    ? []
+    : [
+        ...(holder ? [holder] : []),
+        ...editors.filter(member => member.userId !== holder?.userId),
+      ];
   const describedBy =
     [lockedByOther ? badgeId : null, editors.length > 0 ? presenceId : null]
       .filter(Boolean)
@@ -363,28 +350,17 @@ const LiveField = ({
     <div className="flex min-w-0 flex-col">
       <fieldset
         aria-describedby={describedBy}
-        className="min-w-0"
+        className="relative min-w-0"
         disabled={lockedByOther}
         onBlurCapture={onBlurCapture}
         onFocusCapture={onFocusCapture}
       >
         <MultiLangShownLanguageContext value={setShown}>
           <MultiLangPresenceContext value={languagePresence}>
-            <AutoFormLabelAddonContext
-              value={
-                editors.length > 0 ? (
-                  <ContentLiveFieldPresence
-                    decorative
-                    field={name}
-                    locale={locale}
-                  />
-                ) : null
-              }
-            >
-              {content}
-            </AutoFormLabelAddonContext>
+            {content}
           </MultiLangPresenceContext>
         </MultiLangShownLanguageContext>
+        <ContentLiveFieldOutline members={outlined} />
       </fieldset>
       {editors.length > 0 ? (
         <span className="sr-only" id={presenceId}>
@@ -394,11 +370,7 @@ const LiveField = ({
           })}
         </span>
       ) : null}
-      <ContentFieldLockBadge
-        id={badgeId}
-        live={live}
-        lock={lockedByOther ? lock : null}
-      />
+      <LockNotice id={badgeId} lock={lockedByOther ? lock : null} />
     </div>
   );
 };

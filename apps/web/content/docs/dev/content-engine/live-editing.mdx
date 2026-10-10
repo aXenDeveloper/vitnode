@@ -11,7 +11,7 @@ import fieldLock from './live-editing-field-lock.png'
 Live editing lets a whole team work on the same record at the same time without stepping on each other. Every editorial content type gets it automatically in the AdminCP:
 
 - **Autosave.** Changes are saved to a shared draft a moment after you stop typing. Nothing reaches the published record until someone presses **Save** or **Publish**.
-- **Presence.** Avatars show who has the record open, which field they are in and which language they are editing.
+- **Presence.** Avatars show who has the record open. A colored outline with a name tag marks the field each person is in, and follows them when they move on.
 - **Field locks.** A plain field, such as a title, slug or category, is edited by one person at a time. Everyone else sees it read-only, with the editor's name, and gets the new value live.
 - **Co-editing.** A [rich text](/docs/dev/content-engine/rich-text) field is the exception: several people type in it at once and see each other's cursors.
 
@@ -39,7 +39,9 @@ Everyone in the session needs the content type's `can_edit` permission. Viewing 
 
 ### Presence
 
-The form header shows the avatars of everyone else in the record, up to five and then **+N**. Hover or focus an avatar to see where that person is, for example "Anna, editing Title (PL)". A small avatar next to a field's label shows who is in that field, in the language you are looking at. The language switcher marks each language someone is working in.
+The form header shows the avatars of everyone else in the record, up to five and then **+N**. Hover or focus an avatar to see where that person is, for example "Anna, editing Title (PL)". An avatar with a ring in that person's color means they are in a field right now.
+
+The field itself gets an outline in their avatar color with their name on a tag, in the language you are looking at. When they click into another field, the outline and the tag glide over there, so you never lose track of who went where. Nothing on the page moves to make room for it. The language switcher marks each language someone is working in.
 
 One person with several tabs counts once, and you never see yourself.
 
@@ -53,26 +55,26 @@ There is one draft per record and language, shared by the whole team. It is the 
 
 Clicking into a plain field takes a lock on that field, in that language. The lock lasts 60 seconds and is renewed every 20 seconds while you stay in the field. Leaving the field gives it back.
 
-While Anna holds the title, everyone else sees the title read-only with **Anna is editing**, and the value updates live as she types. When she moves on, the field becomes editable again.
+While Anna holds the title, everyone else sees it dimmed and read-only inside Anna's outline, and the value updates live as she types. Screen readers announce **Anna is editing** with the field. When she moves on, the outline fades and the field becomes editable again.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={fieldLock}
-  alt="Blog article form seen by Anna: the title is read-only and shows Test is editing, with Test's avatar in the header"
+  alt="Blog article form while Anna Kowalska edits the title: the dimmed title has a red outline with an Anna Kowalska name tag, and her avatar in the header has a red ring"
 />
 
 A lock that is not renewed, because a laptop went to sleep or a tab crashed, expires on its own after 60 seconds.
 
 ### Co-editing rich text
 
-Rich text fields are not locked. Everyone in the same field and language types into one shared document, and each person's cursor and selection show with their name in their avatar color. Undo only undoes your own changes.
+Rich text fields are not locked and get no outline. Everyone in the same field and language types into one shared document, and you see exactly what each person is doing: their cursor with a name tag, and a soft tint over the text they select, both in their avatar color. Undo only undoes your own changes.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={coEditing}
-  alt="Blog article editor seen by Anna while Test types: Test's caret with a name label in the text, and Test's avatar next to the Content label"
+  alt="Blog article editor seen by Anna while Test types: Test's caret with a name tag in the text"
 />
 
 Each language has its own shared document, and switching the language swaps the editor. The first time anyone opens a field, one tab fills the shared document from the record. If the connection drops, the editor keeps what you type and sends it when the connection is back.
@@ -119,7 +121,7 @@ The AdminCP calls these routes for you. They are mounted under the content type'
 
 ## Use live state in a custom form layout
 
-A plugin that replaces the edit form [with its own layout](/docs/dev/content-engine/admincp) gets the same presence UI from `@vitnode/core/content/admin-form`:
+A plugin that replaces the edit form [with its own layout](/docs/dev/content-engine/admincp) keeps the field outlines for free: every field rendered with `ContentFormField` takes locks and draws who is in it. The rest of the presence UI comes from `@vitnode/core/content/admin-form`:
 
 ```tsx title="plugins/blog/src/views/admin/article/editor/header.tsx"
 import {

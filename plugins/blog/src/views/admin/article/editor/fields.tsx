@@ -6,10 +6,7 @@ import {
   useMultiLangField,
 } from "@vitnode/core/components/form/fields/multi-lang";
 import { FormControl, FormMessage } from "@vitnode/core/components/ui/form";
-import {
-  ContentLiveFieldPresence,
-  useContentForm,
-} from "@vitnode/core/content/admin-form";
+import { useContentForm } from "@vitnode/core/content/admin-form";
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
@@ -57,7 +54,7 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
       </AutoFormLabel>
       <FormControl>
         <textarea
-          className="placeholder:text-muted-foreground/60 aria-invalid:text-destructive field-sizing-content w-full resize-none bg-transparent text-3xl leading-tight font-bold tracking-tight text-balance outline-none sm:text-4xl"
+          className="placeholder:text-muted-foreground/60 aria-invalid:text-destructive field-sizing-content w-full resize-none bg-transparent text-3xl leading-tight font-bold tracking-tight text-balance transition-opacity duration-200 ease-out outline-none disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none sm:text-4xl"
           lang={selected}
           name={field.name}
           onBlur={field.onBlur}
@@ -70,13 +67,6 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
         />
       </FormControl>
       <div className="flex items-center justify-end gap-2">
-        {/* The field announces its editors; these are the faces. */}
-        <ContentLiveFieldPresence
-          className="me-auto"
-          decorative
-          field={field.name}
-          locale={selected}
-        />
         <CharacterCount field="title" value={currentValue} />
       </div>
       <FormMessage />
@@ -86,7 +76,7 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
 
 export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog.content.post.fields");
-  const { currentValue, selected, setValue } = useMultiLangField(
+  const { currentValue, setValue } = useMultiLangField(
     field as MultiLangFieldProps["field"],
   );
 
@@ -99,7 +89,7 @@ export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
         </span>
         <FormControl>
           <input
-            className="hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring/50 text-foreground min-w-0 flex-1 truncate rounded-sm bg-transparent px-1 py-0.5 text-base outline-none focus-visible:ring-3 md:text-sm"
+            className="hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring/50 text-foreground min-w-0 flex-1 truncate rounded-sm bg-transparent px-1 py-0.5 text-base outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
             name={field.name}
             onBlur={field.onBlur}
             onChange={event => {
@@ -109,11 +99,6 @@ export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
             value={currentValue}
           />
         </FormControl>
-        <ContentLiveFieldPresence
-          decorative
-          field={field.name}
-          locale={selected}
-        />
       </div>
       <FormMessage />
     </>

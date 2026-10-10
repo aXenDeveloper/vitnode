@@ -1,4 +1,6 @@
 import { cn } from "cn";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
@@ -75,6 +77,7 @@ export const ContentLivePresence = ({
   const live = useContentLive();
   const names = useContentLiveNames();
   const activity = useActivity();
+  const reduced = useReducedMotion();
   if (!live?.session.live) return null;
 
   const others = contentLiveOthers(live.session.members, live.session);
@@ -101,12 +104,35 @@ export const ContentLivePresence = ({
               </span>
             }
           >
-            <Avatar
-              alt={member.name}
-              className="ring-background ring-2"
-              size={28}
-              user={avatarUser(member)}
-            />
+            <m.span
+              animate={{ opacity: 1, scale: 1 }}
+              className="block rounded-full"
+              initial={{ opacity: 0, scale: 0.9 }}
+              transition={
+                reduced
+                  ? { duration: 0 }
+                  : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
+              }
+            >
+              <Avatar
+                alt={member.name}
+                className={cn(
+                  "ring-background ring-2",
+                  member.field !== null && "outline-2 outline-offset-2",
+                )}
+                size={28}
+                style={
+                  member.field === null
+                    ? undefined
+                    : {
+                        outlineColor: contentLiveMemberColor(
+                          member.avatarColor,
+                        ),
+                      }
+                }
+                user={avatarUser(member)}
+              />
+            </m.span>
             <span className="sr-only">{where}</span>
           </AvatarGroupItem>
         );

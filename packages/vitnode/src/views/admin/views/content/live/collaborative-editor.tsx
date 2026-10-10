@@ -58,6 +58,13 @@ const renderCaret = (user: Record<string, unknown>): HTMLElement => {
   return caret;
 };
 
+const renderSelection = (user: Record<string, unknown>) => ({
+  class: "collaboration-carets__selection",
+  style: `background-color: ${contentLiveMemberColor(
+    typeof user.color === "string" ? user.color : null,
+  )}33`,
+});
+
 /** The live channel of the shared socket, with the session's seat. */
 const useDocTransport = (live: boolean): ContentDocTransport => {
   const { send, subscribe } = useVitNodeWebSocketContext();
@@ -193,6 +200,7 @@ export const ContentLiveRichTextEditor = ({
             CollaborationCaret.configure({
               provider: binding.provider,
               render: renderCaret,
+              selectionRender: renderSelection,
               user: binding.user,
             }),
           ]

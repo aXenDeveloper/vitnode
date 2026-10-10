@@ -200,5 +200,25 @@
 }
 
 .collaboration-carets__label {
-  @apply absolute start-0 -top-5 rounded-sm rounded-es-none px-1.5 py-0.5 text-xs leading-none font-semibold whitespace-nowrap select-none;
+  @apply absolute start-0 -top-5 rounded-md rounded-es-none px-1.5 py-0.5 text-xs leading-none font-semibold whitespace-nowrap select-none;
+  transform-origin: bottom left;
+  animation: collaboration-caret-label-in 200ms cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
+}
+
+.collaboration-carets__label:dir(rtl) {
+  transform-origin: bottom right;
+}
+
+@keyframes collaboration-caret-label-in {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collaboration-carets__label {
+    animation: none;
+  }
 }

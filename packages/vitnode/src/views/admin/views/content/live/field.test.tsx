@@ -1,5 +1,12 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +20,6 @@ import type {
   ContentLiveMember,
 } from "@/content/live/protocol";
 
-import { AutoFormLabelAddonContext } from "@/components/form/common/label-addon";
 import { useMultiLangField } from "@/components/form/fields/multi-lang";
 import { MultiLangPresenceContext } from "@/components/form/fields/multi-lang-presence";
 import { LanguagesProvider } from "@/components/languages-provider";
@@ -97,12 +103,10 @@ const SwitchableTitle = () => {
       { languageCode: "pl", value: "Cześć" },
     ],
   });
-  const addon = React.use(AutoFormLabelAddonContext);
   const presence = React.use(MultiLangPresenceContext);
 
   return (
     <>
-      <span data-testid="label-addon">{addon}</span>
       {languages.map(language => (
         <button
           aria-pressed={selected === language.code}
@@ -213,6 +217,11 @@ const setup = ({
   return { draftListeners, field, live, lock, view };
 };
 
+const outlineTags = () =>
+  [...document.querySelectorAll('[data-slot="content-live-tag"]')].map(
+    tag => tag.textContent,
+  );
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -229,8 +238,7 @@ describe("ContentLiveField", () => {
     expect(
       screen.getByRole("textbox", { name: "Title" }).matches(":disabled"),
     ).toBe(true);
-    expect(screen.getByText("Anna")).toBeTruthy();
-    expect(screen.getByText("core.content.live.is_editing")).toBeTruthy();
+    expect(outlineTags()).toEqual(["Anna"]);
   });
 
   it("stays editable when nobody holds it", () => {
@@ -239,7 +247,7 @@ describe("ContentLiveField", () => {
     expect(
       screen.getByRole("textbox", { name: "Title" }).matches(":disabled"),
     ).toBe(false);
-    expect(screen.queryByText("core.content.live.is_editing")).toBeNull();
+    expect(outlineTags()).toEqual([]);
   });
 
   it("stays editable when the lock is the editor's own", () => {
@@ -374,7 +382,7 @@ describe("ContentLiveField", () => {
     });
   });
 
-  it("shows who else is in the field, in the language shown", () => {
+  it("outlines the field with who else is in it, in the language shown", async () => {
     setup({
       children: <SwitchableTitle />,
       coEditing: true,
@@ -385,9 +393,7 @@ describe("ContentLiveField", () => {
       target: localizedTitle,
     });
 
-    const addon = screen.getByTestId("label-addon");
-    expect(within(addon).getByTitle("Ben")).toBeTruthy();
-    expect(within(addon).queryByTitle("Anna")).toBeNull();
+    expect(outlineTags()).toEqual(["Ben"]);
     expect(
       screen.getByRole("group", {
         description: "core.content.live.presence.field",
@@ -396,8 +402,22 @@ describe("ContentLiveField", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Polski/ }));
 
-    expect(within(addon).getByTitle("Anna")).toBeTruthy();
-    expect(within(addon).queryByTitle("Ben")).toBeNull();
+    await waitFor(() => {
+      expect(outlineTags()).toEqual(["Anna"]);
+    });
+  });
+
+  it("draws no outline around co-edited rich text", () => {
+    setup({
+      children: <EditorProbe />,
+      coEditing: true,
+      members: [memberOf(ANNA, "Anna", { field: "content", locale: "en" })],
+      target: content,
+      value: [{ languageCode: "en", value: { type: "doc" } }],
+    });
+
+    expect(screen.getByText("shared editor")).toBeTruthy();
+    expect(outlineTags()).toEqual([]);
   });
 
   it("marks the languages someone else is editing on the switcher", () => {
