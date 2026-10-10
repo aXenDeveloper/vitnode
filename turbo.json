@@ -3,8 +3,7 @@
   "ui": "tui",
   "tasks": {
     "test": {
-      "cache": false,
-      "passThroughEnv": ["VITNODE_TEST_POSTGRES_URL"]
+      "cache": false
     },
     "test:types": {
       "dependsOn": ["^test:types"],

@@ -158,6 +158,7 @@ function Sidebar({
   className,
   children,
   dir,
+  style,
   ...props
 }: React.ComponentProps<"div"> & {
   collapsible?: "icon" | "none" | "offcanvas";
@@ -165,6 +166,8 @@ function Sidebar({
   variant?: "floating" | "inset" | "sidebar";
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const viewTransitionId = React.useId();
+  const viewTransitionName = `vitnode-sidebar-${viewTransitionId.replace(/[^\w-]/g, "")}`;
 
   if (collapsible === "none") {
     return (
@@ -174,6 +177,7 @@ function Sidebar({
           className,
         )}
         data-slot="sidebar"
+        style={style}
         {...props}
       >
         {children}
@@ -218,7 +222,7 @@ function Sidebar({
     >
       <div
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
+          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-in-out",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -229,7 +233,7 @@ function Sidebar({
       />
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-in-out [view-transition-class:vitnode-sidebar] data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-e group-data-[side=right]:border-s",
@@ -237,6 +241,7 @@ function Sidebar({
         )}
         data-side={side}
         data-slot="sidebar-container"
+        style={{ viewTransitionName, ...style }}
         {...props}
       >
         <div
@@ -290,7 +295,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     <button
       aria-label={t("toggle_sidebar")}
       className={cn(
-        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
+        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-[translate,background-color] ease-in-out group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize rtl:in-data-[side=left]:cursor-e-resize rtl:in-data-[side=right]:cursor-w-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize rtl:[[data-side=left][data-state=collapsed]_&]:cursor-w-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize rtl:[[data-side=right][data-state=collapsed]_&]:cursor-e-resize",
         "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:start-full rtl:group-data-[collapsible=offcanvas]:-translate-x-0",
@@ -397,12 +402,12 @@ function SidebarContent({
     >
       <span
         aria-hidden
-        className="bg-sidebar-accent/70 ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 transition-[translate,width,height,opacity] duration-200 motion-reduce:transition-opacity"
+        className="bg-sidebar-accent/70 ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 transition-[translate,width,height,opacity,scale] duration-200 data-hidden:duration-150 data-pressed:scale-98 motion-reduce:transition-opacity"
         data-sidebar="hover-indicator"
       />
       <span
         aria-hidden
-        className="bg-sidebar-accent inset-ring-sidebar-border ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 shadow-xs inset-ring transition-[translate,width,height,opacity] duration-300 motion-reduce:transition-opacity"
+        className="bg-sidebar-accent inset-ring-sidebar-border ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 shadow-xs inset-ring transition-[translate,width,height,opacity,scale] duration-300 data-hidden:duration-200 data-pressed:scale-98 motion-reduce:transition-opacity"
         data-sidebar="active-indicator"
       />
       {children}
@@ -431,7 +436,7 @@ function SidebarGroupLabel({
     props: mergeProps<"div">(
       {
         className: cn(
-          "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+          "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opacity] duration-200 ease-in-out group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
           className,
         ),
       },

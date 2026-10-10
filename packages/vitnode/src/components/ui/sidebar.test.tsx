@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  Sidebar,
   SidebarContent,
   SidebarMenu,
   SidebarMenuButton,
@@ -87,6 +88,10 @@ describe("SidebarContent gliding indicators", () => {
     );
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
       function (this: Element) {
+        if (this.matches('[data-sidebar="content"]')) {
+          return new DOMRect(0, 0, 200, 400);
+        }
+
         return rectOf(ITEM_TOPS[this.textContent] ?? 0);
       },
     );
@@ -153,5 +158,102 @@ describe("SidebarContent gliding indicators", () => {
     fireEvent.pointerOver(screen.getByText("Users"), { pointerType: "touch" });
 
     expect(indicator("hover").style.opacity).not.toBe("1");
+  });
+
+  it("shrinks the indicator under a pressed item and restores it on release", () => {
+    render(<Nav activeItem="Dashboard" />);
+    const users = screen.getByText("Users");
+
+    fireEvent.pointerOver(users, { pointerType: "mouse" });
+    fireEvent.pointerDown(users, { button: 0 });
+
+    expect(indicator("hover").hasAttribute("data-pressed")).toBe(true);
+    expect(indicator("active").hasAttribute("data-pressed")).toBe(false);
+
+    fireEvent.pointerUp(users);
+
+    expect(indicator("hover").hasAttribute("data-pressed")).toBe(false);
+  });
+
+  it("presses the active indicator when the active item is pressed", () => {
+    render(<Nav activeItem="Dashboard" />);
+    const dashboard = screen.getByText("Dashboard");
+
+    fireEvent.pointerOver(dashboard, { pointerType: "mouse" });
+    fireEvent.pointerDown(dashboard, { button: 0 });
+
+    expect(indicator("active").hasAttribute("data-pressed")).toBe(true);
+    expect(indicator("hover").hasAttribute("data-pressed")).toBe(false);
+  });
+
+  it("keeps following the mouse while a view transition covers the page", () => {
+    render(<Nav activeItem="Dashboard" />);
+
+    fireEvent.pointerMove(document.documentElement, {
+      clientX: 20,
+      clientY: 40,
+      pointerType: "mouse",
+    });
+
+    expect(indicator("hover").style.opacity).toBe("1");
+    expect(indicator("hover").style.translate).toBe("0px 36px");
+
+    fireEvent.pointerMove(document.documentElement, {
+      clientX: 20,
+      clientY: 500,
+      pointerType: "mouse",
+    });
+
+    expect(indicator("hover").style.opacity).toBe("0");
+  });
+
+  it("marks the hover indicator hidden once the pointer leaves", () => {
+    render(<Nav activeItem="Dashboard" />);
+
+    fireEvent.pointerOver(screen.getByText("Users"), { pointerType: "mouse" });
+
+    expect(indicator("hover").hasAttribute("data-hidden")).toBe(false);
+
+    fireEvent.pointerLeave(sidebarPart("content"));
+
+    expect(indicator("hover").hasAttribute("data-hidden")).toBe(true);
+  });
+});
+
+describe("Sidebar view transitions", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        addEventListener: vi.fn(),
+        matches: false,
+        removeEventListener: vi.fn(),
+      })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("gives every sidebar its own view transition name", () => {
+    render(
+      <SidebarProvider>
+        <Sidebar>Navigation</Sidebar>
+        <Sidebar side="right">Widgets</Sidebar>
+      </SidebarProvider>,
+    );
+
+    const names = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-slot="sidebar-container"]',
+      ),
+    ].map(container => container.style.viewTransitionName);
+
+    expect(names).toHaveLength(2);
+    expect(new Set(names).size).toBe(2);
+    expect(names.every(name => /^vitnode-sidebar-[\w-]+$/.test(name))).toBe(
+      true,
+    );
   });
 });
