@@ -121,7 +121,7 @@ export const acquireContentFieldLock = async (
     .onConflictDoUpdate({
       set: { acquiredAt: now, expiresAt, userId },
       target: [locks.contentTypeId, locks.itemId, locks.field, locks.language],
-      where: or(lt(locks.expiresAt, now), eq(locks.userId, userId)),
+      setWhere: or(lt(locks.expiresAt, now), eq(locks.userId, userId)),
     })
     .returning({ id: locks.id });
 
