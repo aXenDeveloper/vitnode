@@ -37,7 +37,7 @@ export const createContentTranslationTable = <
 
   if (!localization.enabled) {
     throw new ContentEngineError(
-      "createContentTranslationTable needs `localization: { enabled: true, defaultLocale }` on the content type.",
+      "createContentTranslationTable needs `localization: { defaultLocale }` on the content type.",
       { contentTypeId },
     );
   }

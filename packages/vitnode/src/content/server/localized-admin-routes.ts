@@ -37,6 +37,7 @@ import {
   readJson,
 } from "./route-helpers";
 import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
+import { commitContentDrafts } from "./live-store";
 import { contentTranslationEffects } from "./translation-effects";
 import { withTranslationHttpErrors } from "./translation-http-errors";
 
@@ -381,6 +382,7 @@ export const buildContentLocalizedAdminRoutes = <
       },
     },
     handler: async c => {
+      const savedFrom = new Date();
       const id = identifier(c);
       const body = await readJson(c, updateBody);
       const entries = body.translations as TranslationEntry[];
@@ -467,6 +469,20 @@ export const buildContentLocalizedAdminRoutes = <
           model,
           pluginId,
         });
+      }
+
+      if (definition.liveEditing.enabled) {
+        await commitContentDrafts(
+          c,
+          { contentTypeId: definition.id, itemId: id },
+          {
+            locales: [
+              ...(shared === undefined ? [] : [null]),
+              ...entries.map(entry => entry.locale),
+            ],
+            savedFrom,
+          },
+        );
       }
 
       return c.json(result.row, 200);

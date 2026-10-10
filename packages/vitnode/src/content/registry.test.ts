@@ -30,12 +30,30 @@ import {
 // erases the inferred field map down to the bare constraint. Real call sites
 // keep their concrete map, so this widening only exists for the test helper.
 const entry = (
-  definition: RegisteredContentType["definition"] | ReturnType<typeof widget>,
+  definition:
+    | RegisteredContentType["definition"]
+    | ReturnType<typeof related>
+    | ReturnType<typeof widget>,
   pluginId = "@vitnode/example",
 ): RegisteredContentType => ({
   definition: definition as RegisteredContentType["definition"],
   pluginId,
 });
+
+const related = (
+  id: string,
+  tableName: string,
+  fields: Parameters<typeof defineContentType>[0]["fields"],
+) =>
+  defineContentType({
+    id,
+    tableName,
+    fields,
+    admin: {
+      permissionModule: tableName,
+      form: { fields: Object.keys(fields) },
+    },
+  });
 
 const widget = (
   overrides: Partial<Parameters<typeof defineContentType>[0]> = {},
@@ -389,8 +407,8 @@ describe("public paths", () => {
         title: field.text({ required: true }),
         slug: field.slug({ source: "title" }),
       },
-      publication: { enabled: true },
-      publicApi: { enabled: true, path, fields: ["title", "slug"] },
+      publication: true,
+      publicApi: { path, fields: ["title", "slug"] },
       admin: {
         // Distinct, so the permission-module check does not fire first and mask
         // the one this block is about.
@@ -464,21 +482,6 @@ describe("public paths", () => {
  * to the `UNIQUE (itemId, position)` constraint each of them carries.
  */
 describe("generated database identifiers", () => {
-  const related = (
-    id: string,
-    tableName: string,
-    fields: Parameters<typeof defineContentType>[0]["fields"],
-  ) =>
-    defineContentType({
-      id,
-      tableName,
-      fields,
-      admin: {
-        permissionModule: tableName,
-        form: { fields: Object.keys(fields) },
-      },
-    });
-
   const withRelation = (id: string, tableName: string, field_: string) =>
     related(id, tableName, {
       title: field.text({ required: true }),
@@ -674,13 +677,12 @@ describe("delivery paths", () => {
         title: field.text({ required: true }),
         slug: field.slug({ source: "title" }),
       },
-      publication: { enabled: true },
+      publication: true,
       publicApi: {
-        enabled: true,
         path,
         fields: ["id", "title", "slug"],
       },
-      ...(delivery ? { delivery: { enabled: true } } : {}),
+      ...(delivery ? { delivery: true } : {}),
       admin: {
         // Distinct, so the permission-module check does not fire first and mask the
         // one this block is about.

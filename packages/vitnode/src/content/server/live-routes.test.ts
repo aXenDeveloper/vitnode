@@ -17,6 +17,7 @@ import { createTestCache } from "@/tests/cache";
 import {
   testCategoryContentType,
   testEditorialNoteContentType,
+  testEditorialPostContentType,
   testLocalizedGuideContentType,
 } from "@/tests/content-fixtures";
 import { createMemoryDb } from "@/tests/memory-db";
@@ -28,7 +29,7 @@ import { realtime } from "@/ws/registry";
 
 import { CONTENT_PERMISSIONS } from "../const";
 import { CONTENT_FIELD_LOCK_LEASE_MS } from "../live/protocol";
-import { cleanupStaleContentDrafts } from "./live-store";
+import { cleanupStaleContentDrafts, commitContentDrafts } from "./live-store";
 import { contentLiveUserLeft, resetContentLiveRecord } from "./live/hooks";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
@@ -452,6 +453,48 @@ describe("lifecycle", () => {
     ]);
   });
 
+  it("drops the drafts a save committed and tells the room", async () => {
+    const { context, lock, memory, send } = await harness();
+    await lock("acquire");
+    await send("PUT", "/7/draft", {
+      body: { locale: "pl", values: { title: "Cześć" } },
+    });
+
+    await commitContentDrafts(context, ROOM, {
+      locales: ["pl"],
+      savedFrom: new Date(),
+    });
+
+    expect(memory.rows(core_content_drafts)).toEqual([]);
+    expect(broadcasts("committed")).toEqual([
+      { room: ROOM, type: "committed" },
+    ]);
+  });
+
+  it("keeps other languages and drafts written after the save began", async () => {
+    const { context, lock, memory, send } = await harness();
+    await lock("acquire");
+    await lock("acquire", { field: "featured", locale: null });
+    await send("PUT", "/7/draft", {
+      body: { locale: "pl", values: { title: "Cześć" } },
+    });
+    await send("PUT", "/7/draft", {
+      body: { locale: null, values: { featured: true } },
+    });
+
+    await commitContentDrafts(context, ROOM, {
+      locales: ["pl"],
+      savedFrom: new Date(Date.now() - 1000),
+    });
+    await commitContentDrafts(context, ROOM, {
+      locales: ["en"],
+      savedFrom: new Date(),
+    });
+
+    expect(memory.rows(core_content_drafts)).toHaveLength(2);
+    expect(broadcasts("committed")).toEqual([]);
+  });
+
   it("releases the locks of someone who left, and only theirs", async () => {
     const { context, lock, send } = await harness();
     await lock("acquire", { field: "title" });
@@ -517,5 +560,28 @@ describe("route registration", () => {
         "put /{id}/draft",
       ]),
     );
+  });
+});
+
+describe("mounting", () => {
+  const livePaths = (routes: { route: { method: string; path: string } }[]) =>
+    routes
+      .map(({ route }) => `${route.method.toUpperCase()} ${route.path}`)
+      .filter(path => /\/(locks|draft)/.test(path));
+
+  it("leaves an editorial content type without `liveEditing` alone", () => {
+    expect(
+      livePaths(
+        buildContentRoutes(createContentModel(testEditorialPostContentType), {
+          pluginId: PLUGIN_ID,
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("adds the lock and draft routes once `liveEditing` is on", () => {
+    expect(
+      livePaths(buildContentRoutes(notes, { pluginId: PLUGIN_ID })),
+    ).toEqual(expect.arrayContaining(["GET /{id}/locks", "PUT /{id}/draft"]));
   });
 });

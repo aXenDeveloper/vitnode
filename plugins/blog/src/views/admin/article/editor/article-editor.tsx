@@ -11,6 +11,7 @@ import {
   ContentFormField,
   ContentFormStatusSwitch,
   ContentLivePresence,
+  ContentLiveStatus,
   useContentForm,
   useContentFormValues,
   useContentLive,
@@ -403,6 +404,7 @@ export const ArticleEditor = ({
           ) : null}
           <h1 className="sr-only">{header?.title ?? t("heading")}</h1>
           <div className="flex-1" />
+          <ContentLiveStatus className="hidden md:flex" />
           <ContentLivePresence />
           {translationLanguages.length > 0 ? (
             target ? (

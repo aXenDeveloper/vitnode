@@ -425,7 +425,7 @@ export const resolveAdmin = <TFields>(
       searchableFields,
       thumbnailField,
     },
-    navigation: { enabled: admin.navigation?.enabled ?? true },
+    navigation: { enabled: admin.navigation ?? true },
     path: resolveAdminPath(id, admin.path),
     titleField,
   };

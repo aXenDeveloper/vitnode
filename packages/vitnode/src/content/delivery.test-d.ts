@@ -34,9 +34,8 @@ const fields = {
 
 const shared = {
   fields,
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug", "excerpt", "seo.title", "seo.description"],
     path: "articles",
   },
@@ -45,10 +44,9 @@ const shared = {
 const deliveredType = defineContentType({
   ...shared,
   id: "typed.delivered",
-  editorial: { enabled: true },
+  editorial: true,
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: {
       descriptionField: "seo.description",
       fallbackDescriptionField: "excerpt",
@@ -56,7 +54,7 @@ const deliveredType = defineContentType({
       openGraph: { descriptionField: "excerpt", titleField: "title" },
       titleField: "seo.title",
     },
-    sitemap: { changeFrequency: "weekly", enabled: true, priority: 0.7 },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
   },
   tableName: "typed_delivered",
 });
@@ -111,11 +109,11 @@ describe("delivery requires a public API", () => {
   it("refuses `enabled: true` without one", () => {
     defineContentType({
       id: "typed.no-public",
-      // @ts-expect-error - delivery needs `publicApi: { enabled: true }`: without a
+      // @ts-expect-error - delivery needs `publicApi`: without a
       // public allowlist there is no canonical URL for delivery to be about.
-      delivery: { enabled: true },
+      delivery: true,
       fields,
-      publication: { enabled: true },
+      publication: true,
       tableName: "typed_no_public",
     });
   });
@@ -123,9 +121,9 @@ describe("delivery requires a public API", () => {
   it("still accepts an explicit `enabled: false`", () => {
     const off = defineContentType({
       id: "typed.off",
-      delivery: { enabled: false },
+      delivery: false,
       fields,
-      publication: { enabled: true },
+      publication: true,
       tableName: "typed_off",
     });
 
@@ -134,26 +132,25 @@ describe("delivery requires a public API", () => {
 });
 
 describe("redirects require editorial", () => {
-  it("refuses `redirects: { enabled: true }` without editorial", () => {
+  it("refuses `redirects: true` without editorial", () => {
     defineContentType({
       ...shared,
       id: "typed.no-editorial",
       delivery: {
-        enabled: true,
         // @ts-expect-error - slug history has to be written in the same transaction
         // as the slug mutation and its revision, and only the editorial mutation
         // paths own one. Without `editorial` this would record nothing.
-        redirects: { enabled: true },
+        redirects: true,
       },
       tableName: "typed_no_editorial",
     });
   });
 
-  it("still accepts an explicit `redirects: { enabled: false }`", () => {
+  it("still accepts an explicit `redirects: false`", () => {
     const off = defineContentType({
       ...shared,
       id: "typed.redirects-off",
-      delivery: { enabled: true, redirects: { enabled: false } },
+      delivery: { redirects: false },
       tableName: "typed_redirects_off",
     });
 
@@ -164,8 +161,8 @@ describe("redirects require editorial", () => {
     const on = defineContentType({
       ...shared,
       id: "typed.redirects-on",
-      editorial: { enabled: true },
-      delivery: { enabled: true, redirects: { enabled: true } },
+      editorial: true,
+      delivery: { redirects: true },
       tableName: "typed_redirects_on",
     });
 
@@ -178,9 +175,8 @@ describe("redirects require editorial", () => {
       ...shared,
       id: "typed.reads-only",
       delivery: {
-        enabled: true,
         seo: { descriptionField: "excerpt", titleField: "title" },
-        sitemap: { changeFrequency: "daily", enabled: true, priority: 0.5 },
+        sitemap: { changeFrequency: "daily", priority: 0.5 },
       },
       tableName: "typed_reads_only",
     });
@@ -196,7 +192,6 @@ describe("SEO field references", () => {
       ...shared,
       id: "typed.private-seo",
       delivery: {
-        enabled: true,
         // @ts-expect-error - `internalCode` is a text field, but it is not in
         // `publicApi.fields`, and a `<title>` is rendered into a public page.
         seo: { titleField: "internalCode" },
@@ -210,7 +205,6 @@ describe("SEO field references", () => {
       ...shared,
       id: "typed.prose-title",
       delivery: {
-        enabled: true,
         // @ts-expect-error - `excerpt` is a textarea. A `<title>` is one line, and a
         // paragraph in a browser tab is not a heading.
         seo: { titleField: "excerpt" },
@@ -224,7 +218,6 @@ describe("SEO field references", () => {
       ...shared,
       id: "typed-bad.description",
       delivery: {
-        enabled: true,
         // @ts-expect-error - `views` is a number, and it is private besides.
         seo: { descriptionField: "views" },
       },
@@ -237,7 +230,6 @@ describe("SEO field references", () => {
       ...shared,
       id: "typed.bad-path",
       delivery: {
-        enabled: true,
         // @ts-expect-error - `seo.heading` is not a leaf of the `seo` group.
         seo: { titleField: "seo.heading" },
       },
@@ -250,7 +242,6 @@ describe("SEO field references", () => {
       ...shared,
       id: "typed.nested",
       delivery: {
-        enabled: true,
         seo: { descriptionField: "seo.description", titleField: "seo.title" },
       },
       tableName: "typed_nested",
@@ -264,9 +255,8 @@ describe("SEO field references", () => {
       ...shared,
       id: "typed.bad-freq",
       delivery: {
-        enabled: true,
         // @ts-expect-error - not one of the seven values the protocol defines.
-        sitemap: { changeFrequency: "fortnightly", enabled: true },
+        sitemap: { changeFrequency: "fortnightly" },
       },
       tableName: "typed_bad_freq",
     });
@@ -309,7 +299,7 @@ describe("delivery events", () => {
   });
 
   it("adds neither for a content type without delivery", () => {
-    // The keys are gated on `delivery: { enabled: true }`, so a listener for one
+    // The keys are gated on `delivery: true`, so a listener for one
     // cannot even be registered - which is what keeps every Stage 1-7 event map
     // byte-identical.
     expectTypeOf<ContentEventsFor<typeof plainType>>().not.toHaveProperty(

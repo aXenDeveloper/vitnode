@@ -37,9 +37,9 @@ const EMPTY: RichTextDocument = {
 const noteType = defineContentType({
   id: "test.richtext",
   tableName: "test_rich_text_notes",
-  publication: { enabled: true },
-  editorial: { enabled: true },
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  localization: { defaultLocale: "en", fallback: "default" },
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -47,20 +47,17 @@ const noteType = defineContentType({
     summary: field.richText({ maxBytes: 300, nullable: true }),
   },
   publicApi: {
-    enabled: true,
     path: "notes",
     fields: ["id", "title", "slug", "body", "summary", "publishedAt"],
     searchableFields: ["title", "body"],
     defaultOrderBy: "publishedAt",
   },
   search: {
-    enabled: true,
     titleField: "title",
     contentFields: ["body"],
     pathTemplate: "/notes/{slug}",
   },
   delivery: {
-    enabled: true,
     seo: {
       descriptionField: "summary",
       fallbackDescriptionField: "body",

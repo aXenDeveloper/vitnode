@@ -168,14 +168,14 @@ in it, and a colored outline with a name tag shows who is editing which field. T
 slug, excerpt and other plain fields are edited by one person at a time; the
 article body is shared, with everyone's cursor visible. Your changes are
 autosaved to a draft until someone presses **Save changes**. See
-[Live editing and autosave](/docs/dev/content-engine/live-editing) for how it
+[Live editing and autosave](/docs/content-engine/live-editing) for how it
 works and what it needs on your server.
 
 ### Upgrade an existing blog
 
 Articles have a localized **Excerpt** field. Search results use it as the
 description and fall back to the article content when it is empty. The article
-content is now stored as [rich text](/docs/dev/content-engine/rich-text) JSON
+content is now stored as [rich text](/docs/content-engine/rich-text) JSON
 instead of HTML; the migration keeps the words of existing articles as one
 paragraph, so re-check their formatting. Run your migrations after you upgrade
 `@vitnode/blog`:
@@ -213,7 +213,7 @@ together.
     icon={<CompassIcon />}
     title="Content delivery and SEO"
     description="Add plugin routes, redirects, canonical metadata, and sitemaps."
-    href="/docs/dev/content-engine/content-delivery-and-seo"
+    href="/docs/content-engine/public-pages"
   />
   <Card
     icon={<LayoutDashboardIcon />}

@@ -20,7 +20,7 @@ import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 import {
   type MultiLangFieldProps,
-  MultiLangSelect,
+  MultiLangLabel,
   useMultiLangField,
   useMultiLangValueField,
 } from "./multi-lang";
@@ -73,25 +73,20 @@ const MultiLangEditorLayout = ({
   isOptional?: boolean;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
-  languages: React.ComponentProps<typeof MultiLangSelect>["languages"];
+  languages: React.ComponentProps<typeof MultiLangLabel>["languages"];
   onSelect: (code: string) => void;
   selected: string;
 }) => (
   <>
-    <div className="flex items-center justify-between gap-2">
-      {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
-          {label}
-        </AutoFormLabel>
-      )}
-      {canSelect && (
-        <MultiLangSelect
-          languages={languages}
-          onSelect={onSelect}
-          selected={selected}
-        />
-      )}
-    </div>
+    <MultiLangLabel
+      canSelect={canSelect}
+      isOptional={isOptional}
+      label={label}
+      labelRight={labelRight}
+      languages={languages}
+      onSelect={onSelect}
+      selected={selected}
+    />
 
     <FormControl>
       <MultiLangSelectedContext value={selected}>

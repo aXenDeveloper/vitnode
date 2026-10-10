@@ -27,9 +27,8 @@ const define = ({
     id: "test.widget",
     tableName: "test_widgets",
     fields: fields as typeof baseFields,
-    ...(publication ? { publication: { enabled: true as const } } : {}),
+    ...(publication ? { publication: true as const } : {}),
     publicApi: {
-      enabled: true,
       path: "widgets",
       fields: ["title", "slug"],
       ...publicApi,
@@ -346,8 +345,8 @@ describe("publicApi on a localized content type", () => {
     defineContentType({
       id: "test.public-localized",
       tableName: "test_public_localized",
-      localization: { defaultLocale: "en", enabled: true },
-      publication: { enabled: true },
+      localization: { defaultLocale: "en" },
+      publication: true,
       fields: {
         title: field.text({ localized: true, required: true }),
         slug: field.slug({ localized: true, source: "title" }),
@@ -358,7 +357,6 @@ describe("publicApi on a localized content type", () => {
 
   it("exposes a localized field alongside a shared one", () => {
     const definition = localized({
-      enabled: true,
       fields: ["title", "slug", "featured"],
       path: "localized",
     });
@@ -375,7 +373,6 @@ describe("publicApi on a localized content type", () => {
     // cursor would mean two positions across a fallback set.
     expect(() =>
       localized({
-        enabled: true,
         fields: ["title", "slug"],
         orderableFields: ["title"],
         path: "localized",
@@ -385,7 +382,6 @@ describe("publicApi on a localized content type", () => {
 
   it("allows a localized field in `filterableFields`", () => {
     const definition = localized({
-      enabled: true,
       fields: ["title", "slug"],
       filterableFields: ["slug"],
       path: "localized",
@@ -399,7 +395,6 @@ describe("publicApi on a localized content type", () => {
   it("allows a localized field in `searchableFields`", () => {
     expect(
       localized({
-        enabled: true,
         fields: ["title", "slug"],
         path: "localized",
         searchableFields: ["title"],
@@ -412,15 +407,14 @@ describe("publicApi on a localized content type", () => {
       defineContentType({
         id: "test.public-locale-clash",
         tableName: "test_public_locale_clash",
-        localization: { defaultLocale: "en", enabled: true },
-        publication: { enabled: true },
+        localization: { defaultLocale: "en" },
+        publication: true,
         fields: {
           title: field.text({ localized: true, required: true }),
           slug: field.slug({ localized: true, source: "title" }),
           locale: field.text({ nullable: true }),
         },
         publicApi: {
-          enabled: true,
           fields: ["title", "slug", "locale"],
           path: "clash",
         },
@@ -435,13 +429,12 @@ describe("publicApi on a localized content type", () => {
         defineContentType({
           id: "test.public-locale-plain",
           tableName: "test_public_locale_plain",
-          publication: { enabled: true },
+          publication: true,
           fields: {
             slug: field.slug({}),
             locale: field.text({ nullable: true }),
           },
           publicApi: {
-            enabled: true,
             fields: ["slug", "locale"],
             path: "plain",
           },

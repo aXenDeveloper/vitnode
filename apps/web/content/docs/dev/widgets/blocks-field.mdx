@@ -23,7 +23,7 @@ export const pageContentType = defineContentType({
     }),
   },
 
-  publication: { enabled: true },
+  publication: true,
 })
 ```
 
@@ -169,7 +169,6 @@ For a zone that is not a column on a record at all - a settings screen, a forum 
 
 ```ts
 publicApi: {
-  enabled: true,
   path: "pages",
   fields: ["title", "slug", "content", "publishedAt"],
 }

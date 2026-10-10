@@ -83,7 +83,10 @@ export type ContentLiveClientMessage =
     };
 
 export type ContentLiveErrorCode =
-  "FORBIDDEN" | "INVALID_MESSAGE" | "NOT_FOUND" | "NOT_JOINED";
+  | "FORBIDDEN"
+  | "INVALID_MESSAGE"
+  | "NOT_FOUND"
+  | "NOT_JOINED";
 
 export type ContentLiveServerMessage =
   | {
@@ -100,6 +103,10 @@ export type ContentLiveServerMessage =
       clientId: string;
       doc: ContentLiveDocRef;
       type: "doc:seed";
+    }
+  | {
+      room: ContentLiveRoomRef;
+      type: "committed";
     }
   | {
       /** Why every member must reload the record, its draft and documents. */

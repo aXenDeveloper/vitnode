@@ -270,7 +270,7 @@ describe("a content type without localization", () => {
       createContentTranslationTable(testPostContentType, {
         table: posts.table,
       }),
-    ).toThrow(/needs `localization: \{ enabled: true, defaultLocale \}`/);
+    ).toThrow(/needs `localization: \{ defaultLocale \}`/);
   });
 });
 

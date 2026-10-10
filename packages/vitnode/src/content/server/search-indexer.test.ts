@@ -86,14 +86,12 @@ const coauthoredContentType = defineContentType({
     body: field.textarea({ nullable: true }),
     authors: field.user({ multiple: true, ordered: true }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     path: "multi-authors",
     fields: ["title", "slug", "body", "publishedAt"],
   },
   search: {
-    enabled: true,
     titleField: "title",
     contentFields: ["body"],
     pathTemplate: "/multi-authors/{slug}",

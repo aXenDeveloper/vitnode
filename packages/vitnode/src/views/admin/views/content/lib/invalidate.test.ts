@@ -227,3 +227,31 @@ describe("the narrow helpers stay narrow", () => {
     }
   });
 });
+
+describe("inactive content queries", () => {
+  it("refetches a list nobody is watching, so the next loader read is fresh", async () => {
+    const queryClient = new QueryClient();
+    const key = contentListQueryKey(TYPE, { first: 25 });
+    let version = 0;
+    const queryFn = async () => await Promise.resolve({ version: ++version });
+
+    await queryClient.query({ queryFn, queryKey: key });
+    await invalidateContentList(queryClient, TYPE);
+
+    await expect(
+      queryClient.query({ queryFn, queryKey: key, staleTime: "static" }),
+    ).resolves.toEqual({ version: 2 });
+  });
+
+  it("refetches a record nobody is watching", async () => {
+    const queryClient = new QueryClient();
+    const key = contentItemQueryKey(TYPE, ITEM);
+    let version = 0;
+    const queryFn = async () => await Promise.resolve({ version: ++version });
+
+    await queryClient.query({ queryFn, queryKey: key });
+    await invalidateContentItem(queryClient, TYPE, ITEM);
+
+    expect(queryClient.getQueryData(key)).toEqual({ version: 2 });
+  });
+});

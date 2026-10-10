@@ -81,7 +81,7 @@ describe("createContentTable", () => {
         id: "test.versioned",
         tableName: "test_versioned",
         fields: { title: field.text({ required: true }) },
-        editorial: { enabled: true },
+        editorial: true,
       }),
     );
     const versionColumn = getTableConfig(editorialTable).columns.find(

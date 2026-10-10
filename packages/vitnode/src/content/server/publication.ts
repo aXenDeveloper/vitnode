@@ -21,7 +21,7 @@ export const publicationColumns = (
 
   if (!definition.publication.enabled || !publishedAt || !status) {
     throw new ContentEngineError(
-      "The published predicate needs `publication: { enabled: true }` on the content type.",
+      "The published predicate needs `publication: true` on the content type.",
       { contentTypeId: definition.id },
     );
   }
@@ -51,7 +51,7 @@ export const contentTranslationPublicationColumns = (
     !status
   ) {
     throw new ContentEngineError(
-      "The translation published predicate needs both `localization: { enabled: true }` and `publication: { enabled: true }` on the content type.",
+      "The translation published predicate needs both `localization: { defaultLocale }` and `publication: true` on the content type.",
       { contentTypeId: definition.id },
     );
   }
@@ -75,7 +75,7 @@ export const publicationMethods = <
 ): ContentPublicationMethods<TDefinition> => {
   if (!definition.publication.enabled) {
     throw new ContentEngineError(
-      "publish/unpublish need `publication: { enabled: true }` on the content type.",
+      "publish/unpublish need `publication: true` on the content type.",
       { contentTypeId: definition.id },
     );
   }

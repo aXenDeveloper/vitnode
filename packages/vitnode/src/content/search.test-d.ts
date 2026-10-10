@@ -31,7 +31,6 @@ const fields = {
 };
 
 const publicApi = {
-  enabled: true,
   fields: [
     "title",
     "slug",
@@ -55,11 +54,10 @@ describe("search configuration types", () => {
       fields,
       id: "test.valid",
       publicApi,
-      publication: { enabled: true },
+      publication: true,
       search: {
         contentFields: ["excerpt", "body"],
         descriptionField: "excerpt",
-        enabled: true,
         pathTemplate: "/articles/{slug}",
         titleField: "title",
       },
@@ -85,8 +83,8 @@ describe("search configuration types", () => {
       fields,
       id: "test.off",
       publicApi,
-      publication: { enabled: true },
-      search: { enabled: false },
+      publication: true,
+      search: false,
       tableName: "test_off",
     });
 
@@ -100,7 +98,7 @@ describe("search configuration types", () => {
       fields,
       id: "test.absent",
       publicApi,
-      publication: { enabled: true },
+      publication: true,
       tableName: "test_absent",
     });
 
@@ -115,10 +113,9 @@ describe("search configuration types", () => {
         fields,
         id: "test.nullable.title",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           contentFields: ["excerpt"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           // @ts-expect-error - a nullable field can never be a result heading.
           titleField: "subtitle",
@@ -137,7 +134,7 @@ describe("search configuration types", () => {
         fields,
         id: "test.widened",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         // @ts-expect-error - `enabled` must stay a literal, or every conditional
         // in the engine silently resolves to the disabled branch.
         search: { enabled },
@@ -153,10 +150,9 @@ describe("search configuration types", () => {
         fields,
         id: "test.title.kind",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           contentFields: ["excerpt"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           // @ts-expect-error - `views` is a number field.
           titleField: "views",
@@ -173,10 +169,9 @@ describe("search configuration types", () => {
         fields,
         id: "test.title.textarea",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           contentFields: ["excerpt"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           // @ts-expect-error - prose does not belong in the title slot.
           titleField: "excerpt",
@@ -193,12 +188,11 @@ describe("search configuration types", () => {
         fields,
         id: "test.desc.kind",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           contentFields: ["excerpt"],
           // @ts-expect-error - `featured` is a boolean field.
           descriptionField: "featured",
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           titleField: "title",
         },
@@ -214,12 +208,11 @@ describe("search configuration types", () => {
         fields,
         id: "test.private",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           // @ts-expect-error - `code` is a text field, but it is not in
           // `publicApi.fields`, so indexing it would leak it.
           contentFields: ["code"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           titleField: "title",
         },
@@ -235,12 +228,11 @@ describe("search configuration types", () => {
         fields,
         id: "test.user",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           // @ts-expect-error - a user field can never be public, so it can never
           // be indexed either.
           contentFields: ["author"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           titleField: "title",
         },
@@ -256,11 +248,10 @@ describe("search configuration types", () => {
         fields,
         id: "test.author",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           authorField: "author",
           contentFields: ["body"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           titleField: "title",
         },
@@ -276,12 +267,11 @@ describe("search configuration types", () => {
         fields,
         id: "test.author_title",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           // @ts-expect-error - only a user field credits a person.
           authorField: "title",
           contentFields: ["body"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           titleField: "title",
         },
@@ -296,12 +286,11 @@ describe("search configuration types", () => {
         admin,
         fields,
         id: "test.nopublic",
-        publication: { enabled: true },
+        publication: true,
         search: {
           // @ts-expect-error - with no `publicApi` there is no allowlist, so no
           // field name is indexable.
           contentFields: ["excerpt"],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           // @ts-expect-error - same reason.
           titleField: "title",
@@ -318,11 +307,10 @@ describe("search configuration types", () => {
         fields,
         id: "test.empty",
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: {
           // @ts-expect-error - the tuple type requires at least one entry.
           contentFields: [],
-          enabled: true,
           pathTemplate: "/articles/{slug}",
           titleField: "title",
         },

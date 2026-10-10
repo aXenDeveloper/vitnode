@@ -1,0 +1,249 @@
+---
+title: Relations
+description: Link Content Engine records with field.relation, group related fields with field.group and store repeatable rows with field.repeatable, all in real Postgres tables.
+icon: Network
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { ImgDocs } from "@/components/fumadocs/img";
+import categoryPicker from "./relations-category-picker.png";
+import manyPicker from "./relations-many-picker.png";
+import advancedPage from "./relations-advanced-article-page.png";
+
+Relations connect one record to others, and two related helpers shape a record's own data. Everything lands in real tables, not a JSON blob: a relation is a foreign key, a to-many relation is a junction table, a group is a set of columns and a repeatable field is a child table. This guide walks through `example.advanced-article` from the example plugin, which uses all four.
+
+## Before you begin
+
+You need a working content type to link to, such as `example.category` from [Create a content type](/docs/content-engine/create-a-content-type).
+
+<Steps>
+
+<Step>
+
+### Link to one record
+
+Point an article at a category with `field.relation`. `target` is a function, so two content types can refer to each other without an import cycle:
+
+```ts title="plugins/example/src/content/article.ts"
+import { categoryContentType } from "./category";
+
+fields: {
+  category: field.relation({ // [!code ++:5]
+    required: true,
+    onDelete: "restrict",
+    target: () => categoryContentType,
+  }),
+},
+```
+
+Then tell `createContentModel` which column the foreign key references:
+
+```ts title="plugins/example/src/database/articles.ts"
+import { example_categories } from "./categories";
+
+export const articleContent = createContentModel(articleContentType, {
+  references: { category: () => example_categories.id }, // [!code ++]
+});
+```
+
+`references` needs one entry per relation field. A missing or extra key is a type error. `field.user()`, `field.file()` and `self: true` relations find their table on their own and need no entry.
+
+</Step>
+
+<Step>
+
+### Link to many records
+
+Add `multiple: true`. The advanced article has two to-many relations: a set of categories and an ordered "read next" list that points back at articles:
+
+```ts title="plugins/example/src/content/advanced-article.ts"
+fields: {
+  categories: field.relation({
+    multiple: true,
+    onDelete: "restrict",
+    target: () => categoryContentType,
+  }),
+  relatedArticles: field.relation({
+    multiple: true,
+    onDelete: "cascade",
+    ordered: true,
+    self: true,
+  }),
+},
+```
+
+`ordered: true` keeps the order editors arrange. Without it, the set is stored in ascending id order. `onDelete: "cascade"` on a to-many relation drops the link when the target is deleted, and `"restrict"` refuses the delete. A to-many relation cannot be `required` or `nullable`; use `min: 1` to demand at least one target.
+
+Each to-many field gets a junction table with `itemId`, `relatedItemId`, `position` and `createdAt`. Give `categories` its reference and export both junction tables, or Drizzle Kit leaves them out of the migration:
+
+```ts title="plugins/example/src/database/advanced-articles.ts"
+export const advancedArticleContent = createContentModel(
+  advancedArticleContentType,
+  { references: { categories: () => example_categories.id } },
+);
+
+export const example_advanced_articles = advancedArticleContent.table;
+export const example_advanced_articles_categories = // [!code ++:4]
+  advancedArticleContent.advancedTables.junctions.categories;
+export const example_advanced_articles_related_articles =
+  advancedArticleContent.advancedTables.junctions.relatedArticles;
+```
+
+</Step>
+
+<Step>
+
+### Group related fields
+
+`field.group` keeps fields that belong together under one key:
+
+```ts title="plugins/example/src/content/advanced-article.ts"
+syndication: field.group({
+  fields: {
+    indexable: field.boolean({ defaultValue: true }),
+    noIndex: field.boolean({ defaultValue: false }),
+    priority: field.number({ integer: true, min: 0, max: 10, defaultValue: 5 }),
+  },
+}),
+```
+
+A group adds one column per leaf to the main table: `syndicationIndexable`, `syndicationNoIndex` and `syndicationPriority`. The API reads and writes it as `{ syndication: { indexable, noIndex, priority } }`, and other options refer to a leaf by path, such as `indexes: [{ on: ["syndication.priority"] }]`. Leaves can be `text`, `textarea`, `number`, `boolean`, `enum` or `dateTime` fields. An optional group needs leaves that are nullable or have a default.
+
+</Step>
+
+<Step>
+
+### Add repeatable rows
+
+`field.repeatable` stores an ordered list of small rows, such as FAQ entries:
+
+```ts title="plugins/example/src/content/advanced-article.ts"
+faq: field.repeatable({
+  max: 20,
+  fields: {
+    question: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    answer: field.textarea({ required: true }),
+  },
+}),
+```
+
+The rows go to a child table, `example_advanced_articles_faq`, with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per leaf. Deleting the article deletes its rows. Export the child table too:
+
+```ts title="plugins/example/src/database/advanced-articles.ts"
+export const example_advanced_articles_faq =
+  advancedArticleContent.advancedTables.repeatables.faq;
+```
+
+</Step>
+
+<Step>
+
+### Build and migrate
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+The generated migration creates one table per junction and repeatable field.
+
+</Step>
+
+</Steps>
+
+## Write related values
+
+A relation takes ids. A to-many relation and a repeatable take the whole list, which replaces what the record had:
+
+```json
+{
+  "categories": [2, 4],
+  "syndication": { "priority": 7 },
+  "faq": [
+    {
+      "id": 1,
+      "question": "Can I freeze the batter?",
+      "answer": "Yes, for up to a month."
+    },
+    { "question": "Do I need buttermilk?", "answer": "No, regular milk works." }
+  ]
+}
+```
+
+A repeatable row with an `id` updates that row, a row without one is created, and rows you leave out are deleted. An `id` that belongs to another record is refused with `CONTENT_REPEATABLE_UNKNOWN_CHILD`. To change one link or one row without sending the list, use the [content service](/docs/content-engine/services): `relations.categories.add()`, `.remove()`, `.set()`, `.reorder()` and `.get()`, or `repeatable.faq.create()`, `.update()`, `.delete()`, `.reorder()`, `.set()` and `.list()`.
+
+## Check the result
+
+In the AdminCP form, a single relation is a search picker. This is the article's **Category** field:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={categoryPicker}
+  alt="Category search picker open in the Create Article dialog, listing the categories Breakfast, Desserts, Guides, Seasonal menus and Weeknight dinners above the search input"
+/>
+
+A to-many relation shows each target as a chip you can remove. Here is the blog plugin's **Categories** field, a `field.relation({ multiple: true })`:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={manyPicker}
+  alt="Categories field with two chips, Kitchen notes and green, each with a remove button"
+/>
+
+A group renders as a fieldset with its leaf controls, and a repeatable as a list of rows with move up, move down and remove buttons plus an **Add** button. The example plugin gives the advanced article API routes but no AdminCP screen, so test it through the API. Its public API returns the related values like this:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/advanced-articles/weekend-pancakes?locale=en"
+```
+
+```json
+{
+  "id": 1,
+  "title": "Weekend pancakes",
+  "slug": "weekend-pancakes",
+  "categories": [2, 4],
+  "seo": {
+    "title": "Fluffy weekend pancakes",
+    "description": "Ready in 20 minutes."
+  },
+  "syndication": { "priority": 7, "noIndex": false },
+  "faq": [
+    {
+      "id": 1,
+      "question": "Can I freeze the batter?",
+      "answer": "Yes, for up to a month."
+    },
+    {
+      "id": 2,
+      "question": "Do I need buttermilk?",
+      "answer": "No, regular milk works."
+    }
+  ],
+  "publishedAt": "2026-10-10T10:57:42.767Z",
+  "locale": "en"
+}
+```
+
+A to-many relation comes back as a list of ids, and a single relation as `{ "id": 2 }`. Only the leaves listed in `publicApi.fields`, such as `"faq.question"`, are public. The example plugin's page at `/advanced-articles/weekend-pancakes` renders the FAQ rows:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={advancedPage}
+  alt="Public Weekend pancakes article page with a Frequently asked questions section listing two questions and their answers"
+/>
+
+Every option of these helpers is in the [Fields](/docs/content-engine/fields#relation) reference.

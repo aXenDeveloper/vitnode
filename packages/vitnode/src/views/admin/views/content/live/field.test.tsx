@@ -155,6 +155,7 @@ const setup = ({
     live: coEditing,
     locks,
     members,
+    onCommitted: () => () => {},
     onDraft: listener => {
       draftListeners.add(listener);
 
@@ -181,6 +182,9 @@ const setup = ({
     coEditing,
     itemId: 7,
     locale: target.localized === true ? "en" : null,
+    reloadDrafts: vi.fn(async () => {
+      await Promise.resolve();
+    }),
     richText: createContentRichTextRegistry(),
     session,
     spec,

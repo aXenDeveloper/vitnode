@@ -46,6 +46,7 @@ import { useContentFormTransport } from "../form/transport";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
+import { useContentLive } from "../live/context";
 import { ContentLiveField } from "../live/field";
 import { ContentLivePresence } from "../live/presence";
 import { ContentLiveRoot } from "../live/root";
@@ -144,9 +145,7 @@ export const ContentForm = ({
 
   if (loaded === null || pendingRow) return skeleton;
 
-  // Live editing (locks, the shared draft, autosave) needs a record version,
-  // so it is an existing record of an editorial content type or nothing.
-  if (row && spec.editorial === true) {
+  if (row && spec.liveEditing === true) {
     return (
       <ContentLiveRoot
         data={row}
@@ -202,6 +201,7 @@ const ContentFormFields = ({
   const transport = useContentFormTransport();
   const locale = useLocale();
   const invalidateOptions = useInvalidateContentOptions();
+  const liveSession = useContentLive();
   const canPublish = useAdminStaffPermission({
     module: spec.permissionModule,
     permission: CONTENT_PERMISSIONS.publish,
@@ -394,6 +394,7 @@ const ContentFormFields = ({
     if (mutation.version !== undefined) setExpectedVersion(mutation.version);
 
     invalidateOptions(spec.contentTypeId);
+    await liveSession?.reloadDrafts();
 
     const toastTitle =
       contentTitleFromValues(spec, submitted, locale) ??

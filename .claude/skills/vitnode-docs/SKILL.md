@@ -65,6 +65,7 @@ Keep the final verification in “Check the result” instead of repeating verif
 #### Code and reference schema
 
 - Give every code block a language and, for file edits, a supported file title.
+- Keep title short.
 - Show a complete minimal file when creating one; show a labeled excerpt when changing an existing file. State where an excerpt belongs and link to required setup.
 - Exclude unrelated styling, route metadata, schemas, and error handling from focused excerpts. Preserve code required to reproduce the task safely and correctly.
 - Explain a new concept once, next to its first use. Do not narrate obvious code line by line.

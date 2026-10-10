@@ -7,18 +7,17 @@ export const advancedArticleContentType = defineContentType({
   tableName: "example_advanced_articles",
 
   localization: {
-    enabled: true,
     defaultLocale: "en",
     fallback: "default",
   },
 
-  publication: { enabled: true },
+  publication: true,
 
   editorial: {
-    enabled: true,
     revisions: { retention: 20 },
-    preview: { enabled: true, expiresInMinutes: 30 },
+    preview: { expiresInMinutes: 30 },
   },
+  liveEditing: true,
 
   fields: {
     title: field.text({
@@ -88,7 +87,6 @@ export const advancedArticleContentType = defineContentType({
   },
 
   publicApi: {
-    enabled: true,
     path: "advanced-articles",
     fields: [
       // Exposed because Stage 8 needs it: alternates and `hreflang` are resolved by
@@ -117,7 +115,6 @@ export const advancedArticleContentType = defineContentType({
   },
 
   search: {
-    enabled: true,
     titleField: "title",
     descriptionField: "seo.description",
     contentFields: ["title", "seo.description", "faq.question", "faq.answer"],
@@ -125,8 +122,7 @@ export const advancedArticleContentType = defineContentType({
   },
 
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     hreflang: { xDefault: "defaultLocale" },
     seo: {
       titleField: "seo.title",
@@ -138,7 +134,7 @@ export const advancedArticleContentType = defineContentType({
         descriptionField: "seo.description",
       },
     },
-    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
   },
 
   // Leaf paths, materialised against the generated columns: this compiles to an

@@ -91,6 +91,7 @@ export interface ContentFormSpec {
    */
   editorial?: true;
   fields: ContentFormFieldSpec[];
+  liveEditing?: true;
 
   permissionModule: string;
   pluginId: string;
@@ -294,6 +295,7 @@ export const buildContentFormSpec = ({
       ? definition.localization.defaultLocale
       : null,
     ...(definition.editorial.enabled ? { editorial: true as const } : {}),
+    ...(definition.liveEditing.enabled ? { liveEditing: true as const } : {}),
     permissionModule: definition.permissionModule,
     pluginId,
     titleField: definition.admin.titleField,
@@ -783,7 +785,8 @@ export const buildFormSchemaFromSpec = (
               fieldSpec,
               spec.defaultLocale,
               (values?.[fieldSpec.name] as
-                MultiLangValue<unknown> | undefined) ?? [],
+                | MultiLangValue<unknown>
+                | undefined) ?? [],
             ),
           ];
         }

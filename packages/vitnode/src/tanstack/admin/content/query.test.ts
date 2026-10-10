@@ -34,7 +34,7 @@ const articles = defineContentType({
 const pages = defineContentType({
   id: "blog.page",
   tableName: "blog_page",
-  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  localization: { defaultLocale: "en", fallback: "default" },
   fields: { heading: field.text({ localized: true, required: true }) },
 }) as AnyContentTypeDefinition;
 

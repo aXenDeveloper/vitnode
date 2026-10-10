@@ -1643,7 +1643,9 @@
         },
         "status": {
           "saving": "Saving…",
-          "saved": "Draft saved at {time}",
+          "saved": "Draft saved {time}",
+          "saved_just_now": "Draft saved just now",
+          "saved_at": "Draft saved at {time}",
           "unsaved": "Unsaved changes",
           "failed": "Draft not saved"
         },

@@ -63,6 +63,7 @@ import {
   zodContentReferenceListItem,
 } from "./list-references";
 import { buildContentLiveRoutes } from "./live-routes";
+import { commitContentDrafts } from "./live-store";
 import { resetContentLiveRecord } from "./live/hooks";
 import { contentLocaleRouting } from "./locale-routing";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
@@ -907,6 +908,7 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
+      const savedFrom = new Date();
       const id = identifier(c);
       const { expectedVersion, values } = await readJson(
         c,
@@ -928,6 +930,14 @@ export const buildContentRoutes = <
       // and which search operation an outcome deserves is a rule, and it is
       // stated once, in `contentEditorialEffects`.
       await contentEditorialEffects(c, definition, result, { model, pluginId });
+
+      if (definition.liveEditing.enabled) {
+        await commitContentDrafts(
+          c,
+          { contentTypeId: definition.id, itemId: id },
+          { locales: [null], savedFrom },
+        );
+      }
 
       return c.json(result.row, 200);
     },
@@ -1755,8 +1765,9 @@ export const buildContentRoutes = <
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
       : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
-    // Field locks and the shared draft: live editing needs a record version.
-    ...(editorial ? buildContentLiveRoutes(model, { pluginId }) : []),
+    ...(editorial && definition.liveEditing.enabled
+      ? buildContentLiveRoutes(model, { pluginId })
+      : []),
     // Mounted only for a content type that declares a file field, so nothing
     // else gains a binary endpoint it has no use for.
     ...(hasFileFields ? [upload] : []),

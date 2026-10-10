@@ -368,7 +368,7 @@ describe("what a file collection may not be", () => {
             localized: true,
           } as unknown as typeof gallery,
         },
-        { localization: { enabled: true, defaultLocale: "en" } },
+        { localization: { defaultLocale: "en" } },
       ),
     ).toThrow(/localized: true/);
   });
@@ -394,9 +394,8 @@ describe("what a file collection may not be", () => {
       galleryWith(
         { gallery, title: field.text({ required: true }) },
         {
-          publication: { enabled: true },
+          publication: true,
           publicApi: {
-            enabled: true,
             path: "gallery-articles",
             fields: ["title", "gallery"],
             orderableFields: ["gallery"],

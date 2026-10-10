@@ -40,7 +40,7 @@ export interface AssertContentUrlsHavePagesOptions {
 }
 
 const disableHint: Record<ContentUrlSetting, string> = {
-  "delivery.path": "turn delivery off (`delivery: { enabled: false }`)",
+  "delivery.path": "turn delivery off (`delivery: false`)",
   "search.pathTemplate": "turn search off for this content type",
 };
 

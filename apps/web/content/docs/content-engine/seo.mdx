@@ -1,0 +1,250 @@
+---
+title: SEO
+description: Set the page title, meta description, noindex, hreflang alternates and sitemap entries of VitNode Content Engine record pages with delivery.seo and delivery.sitemap.
+icon: SearchCheck
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import blogPreviews from "./seo-blog-previews.png";
+
+Once a content type has [public pages](/docs/content-engine/public-pages), `delivery.seo` decides which fields fill each page's `<title>`, meta description and `robots` tag, and `delivery.sitemap` lists the pages for crawlers. You name fields; the Content Engine reads them from every published record, so editors never fill in a separate SEO form unless you give them one.
+
+The examples use `example.article` from the example plugin and `blog.post` from the blog plugin, which is localized.
+
+## Pick the SEO fields
+
+`example.article` uses its title and excerpt, plus a boolean that hides a record from search engines:
+
+```ts title="plugins/example/src/content/article.ts"
+fields: {
+  title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+  excerpt: field.textarea({ maxLength: 500, nullable: true }),
+  noIndex: field.boolean({ nullable: true }),
+},
+
+publicApi: {
+  path: "articles",
+  fields: ["title", "slug", "excerpt", "noIndex", "publishedAt"],
+},
+
+delivery: {
+  redirects: true,
+  seo: {
+    titleField: "title",
+    descriptionField: "excerpt",
+    noIndexField: "noIndex",
+    openGraph: { titleField: "title", descriptionField: "excerpt" },
+  },
+  sitemap: { changeFrequency: "weekly", priority: 0.7 },
+},
+```
+
+| Option                           | Field kinds              | Used for                                                     |
+| -------------------------------- | ------------------------ | ------------------------------------------------------------ |
+| `titleField`                     | text                     | Page title                                                   |
+| `fallbackTitleField`             | text                     | Page title when `titleField` is empty. Needs `titleField`    |
+| `descriptionField`               | text, textarea, richText | Meta description                                             |
+| `fallbackDescriptionField`       | text, textarea, richText | Description when `descriptionField` is empty                 |
+| `noIndexField`                   | boolean, not localized   | `robots` tag and sitemap, see [noindex](#hide-a-record-from-search-engines) |
+| `openGraph.titleField`           | text                     | Open Graph title, falls back to the page title               |
+| `openGraph.descriptionField`     | text, textarea, richText | Open Graph description, falls back to the page description   |
+
+Every field you name must also be in `publicApi.fields`, because the page shows it to anyone. Leave one out and the definition throws at startup with `... which is not in publicApi.fields`. A field inside a group works (`"seo.title"`), a field inside a repeatable does not, since a page has one title, not a list of them.
+
+Values are trimmed, and an empty one counts as missing, so the fallback kicks in. The blog uses that to describe posts that have no excerpt:
+
+```ts title="plugins/blog/src/content/post.ts"
+delivery: {
+  seo: {
+    titleField: "title",
+    descriptionField: "excerpt",
+    fallbackDescriptionField: "content",
+  },
+},
+```
+
+`content` is rich text. The Content Engine turns it into plain text, and the page cuts it to 160 characters at a word boundary and adds `…`. No markup ever lands in a meta tag.
+
+The blog plugin's own article editor previews that rule in its **Previews** panel. The panel belongs to the blog plugin, not to every Content Engine form, but it shows exactly what a search result will say: here the post has no excerpt, so the description comes from the content.
+
+<ImgDocs
+  withoutBackground
+  className="p-4 *:max-w-sm"
+  src={blogPreviews}
+  alt="Blog plugin article editor Previews panel with a search result showing the post title and the first lines of its content, and an empty social card asking for a cover image"
+/>
+
+## What reaches the page head
+
+The page's `head` calls `contentDeliveryPageHead` with the resolve route's answer, as shown in [Write the page](/docs/content-engine/public-pages#write-the-page). This is what the HTML gets today:
+
+| Tag                                         | Rendered                                    |
+| ------------------------------------------- | ------------------------------------------- |
+| `<title>`                                   | Yes, followed by the site title (`- VitNode`) |
+| `<meta name="description">`                 | Yes, at most 160 characters                 |
+| `<meta name="robots">`                      | Only for a no-index record                  |
+| `<link rel="canonical">` and `hreflang` links | Only for a localized content type         |
+| `og:title`, `og:description`                | No                                          |
+
+<Callout type="warn">
+  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `example.article` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either: its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
+</Callout>
+
+## Hide a record from search engines
+
+`noIndexField` names one boolean that drives two things together:
+
+- the page gets `<meta content="noindex, nofollow" name="robots"/>`;
+- the record leaves the [sitemap](#sitemap).
+
+Only `true` hides a record. `null` and `false` both mean "index it", which is why `example.article` can make the field nullable without emptying its sitemap. The resolve route reports the decision as `"robots": { "follow": true, "index": false }`.
+
+The field must be shared, not localized. A record has one indexing decision, and a per-language value would let the Polish page say `noindex` while the sitemap lists the English one. The definition refuses a localized `noIndexField` for that reason.
+
+## Localized alternates and hreflang
+
+For a [localized](/docs/content-engine/localization) content type, the page head links every published translation of the record. The blog post `english-title` is published in English and Polish, so `/blog/english-title` gets:
+
+```html
+<link href="http://localhost:3000/blog/english-title" rel="canonical"/>
+<link href="http://localhost:3000/blog/english-title" hrefLang="en" rel="alternate"/>
+<link href="http://localhost:3000/pl/wpisy/polish-title" hrefLang="pl" rel="alternate"/>
+<link href="http://localhost:3000/blog/english-title" hrefLang="x-default" rel="alternate"/>
+```
+
+- The canonical link is the page's own language.
+- Each URL follows the app's [localized URL rules](/docs/dev/i18n/localized-urls), which is how the Polish post ends up at `/pl/wpisy/...`.
+- Links are absolute, built from `VITNODE_WEB_URL` (`http://localhost:3000` when unset) unless a language has its own domain.
+- A translation that is not published is not an alternate.
+- Delivery on a localized type needs `"id"` in `publicApi.fields`, because alternates are looked up by record id. The definition throws without it.
+
+`hreflang: { xDefault: "defaultLocale" }` adds `hreflang.xDefault` to the resolve route's answer, pointing at the record's default-language URL when that translation is published. It needs `localization`. The page head does not read this option: it adds its `x-default` link whenever the app's default language is among the alternates, with or without it. So the option matters when you read the resolve route yourself.
+
+```ts title="plugins/blog/src/content/post.ts"
+delivery: {
+  hreflang: { xDefault: "defaultLocale" },
+},
+```
+
+## Sitemap
+
+`delivery.sitemap` adds a public route that lists every published URL of the content type, oldest record first. Pass `true` or `{ changeFrequency, priority }`. It needs `publication: true`, since a sitemap lists only what readers can reach.
+
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/articles/delivery/sitemap?cursor=1&limit=1"
+```
+
+```json
+{
+  "entries": [
+    {
+      "changeFrequency": "weekly",
+      "itemId": 3,
+      "lastModified": "2026-10-10T11:06:30.518Z",
+      "locale": null,
+      "path": "/articles/hello-content-engine",
+      "priority": 0.7
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+- A page holds 1,000 entries by default and up to 50,000 with `?limit=`. `cursor` is the `itemId` to continue after, so pass `nextCursor` back as `?cursor=` until it is `null`.
+- `lastModified` is the record's `updatedAt`, or the translation's when that is newer.
+- Records whose `noIndexField` is `true` are left out.
+- A localized type returns one language per request. Ask for another with `?locale=`:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/blog/content/blog/delivery/sitemap?locale=pl&limit=1"
+```
+
+```json
+{
+  "entries": [
+    {
+      "changeFrequency": "weekly",
+      "itemId": 4,
+      "lastModified": "2026-08-12T18:00:43.308Z",
+      "locale": "pl",
+      "path": "/pl/wpisy/polish-title",
+      "priority": 0.7
+    }
+  ],
+  "nextCursor": 4
+}
+```
+
+The app's `/sitemap.xml` does not read these routes for you, so add the entries where you build it. `contentSitemapXml` from `@vitnode/core/content` writes the XML:
+
+```ts
+import {
+  contentSitemapXml,
+  isContentSitemapChangeFrequency,
+} from "@vitnode/core/content";
+
+const response = await fetch(
+  "http://localhost:3000/api/@vitnode/example/content/articles/delivery/sitemap",
+);
+const { entries } = await response.json();
+
+const xml = contentSitemapXml({
+  origin: "https://example.com",
+  entries: entries.map(entry => ({
+    ...entry,
+    changeFrequency: isContentSitemapChangeFrequency(entry.changeFrequency)
+      ? entry.changeFrequency
+      : null,
+    lastModified: new Date(entry.lastModified),
+  })),
+});
+```
+
+With the example plugin's two published articles, `xml` is:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/articles/jbbjk-1</loc>
+    <lastmod>2026-08-30T09:18:25.398Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://example.com/articles/hello-content-engine</loc>
+    <lastmod>2026-10-10T11:06:30.518Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
+```
+
+`contentSitemapIndexXml` writes a `<sitemapindex>` once one file is not enough, for example one file per content type and language.
+
+## Retired slugs
+
+With `delivery.redirects`, an old slug answers a permanent `308` redirect to the record's current URL, so links and search results that still use the old address land on the new page. See [Keep old URLs working](/docs/content-engine/public-pages#keep-old-urls-working).
+
+## Check the result
+
+Print the SEO tags of an article and of a localized blog post:
+
+```bash
+curl -s http://localhost:3000/articles/hello-content-engine | grep -oE '<title>[^<]*</title>|<meta [^>]*name="(description|robots)"[^>]*>|<link [^>]*rel="(canonical|alternate)"[^>]*>'
+```
+
+```html
+<title>Hello Content Engine - VitNode</title>
+<meta content="A first article from the example plugin, served by the public API and rendered on its own page." name="description"/>
+```
+
+Run the same command for `http://localhost:3000/blog/english-title` and you get its title, description and the four links from [Localized alternates](#localized-alternates-and-hreflang). The SVG logo's `<title>Logo VitNode</title>` may show up too; it is not page metadata.
+
+Then ask the resolve route what the page was given, `openGraph` and `robots` included:
+
+```bash
+curl http://localhost:3000/api/@vitnode/example/content/articles/delivery/resolve/hello-content-engine
+```
+
+Set `noIndex` on a test article, publish it, and run both commands again: the page gains the `robots` tag and the [sitemap](#sitemap) route stops listing it.

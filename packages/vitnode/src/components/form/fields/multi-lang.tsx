@@ -20,8 +20,12 @@ import {
   upsertLangValue,
 } from "@/lib/helpers/multi-lang";
 
+import { AutoFormLabel } from "../common/label";
 import { useMultiLangDefaultLanguage } from "./multi-lang-default-language";
-import { useMultiLangLanguage } from "./multi-lang-language";
+import {
+  MultiLangSelectedContext,
+  useMultiLangLanguage,
+} from "./multi-lang-language";
 import {
   MultiLangPresenceContext,
   MultiLangShownLanguageContext,
@@ -164,5 +168,51 @@ export const MultiLangSelect = ({
         ))}
       </SelectContent>
     </Select>
+  );
+};
+
+export const MultiLangLabel = ({
+  canSelect,
+  isOptional,
+  label,
+  labelRight,
+  languages,
+  onSelect,
+  selected,
+}: React.ComponentProps<typeof MultiLangSelect> & {
+  canSelect: boolean;
+  isOptional?: boolean;
+  label?: React.ReactNode;
+  labelRight?: React.ReactNode;
+}) => {
+  if (!label && !canSelect) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {!!label && (
+        <AutoFormLabel
+          className="flex-1"
+          isOptional={isOptional}
+          labelRight={
+            labelRight ? (
+              <MultiLangSelectedContext value={selected}>
+                {labelRight}
+              </MultiLangSelectedContext>
+            ) : undefined
+          }
+        >
+          {label}
+        </AutoFormLabel>
+      )}
+      {canSelect && (
+        <div className="-my-1.5 ms-auto shrink-0">
+          <MultiLangSelect
+            languages={languages}
+            onSelect={onSelect}
+            selected={selected}
+          />
+        </div>
+      )}
+    </div>
   );
 };

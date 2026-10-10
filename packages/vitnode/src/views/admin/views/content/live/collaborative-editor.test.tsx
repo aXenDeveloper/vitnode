@@ -89,6 +89,7 @@ const liveValue = (): ContentLiveContextValue => ({
   coEditing: true,
   itemId: doc.itemId,
   locale: "en",
+  reloadDrafts: vi.fn(),
   richText: createContentRichTextRegistry(),
   session: {
     clientId: ME.clientId,
@@ -96,6 +97,7 @@ const liveValue = (): ContentLiveContextValue => ({
     live: true,
     locks: [],
     members: [ME],
+    onCommitted: () => () => {},
     onDraft: () => () => {},
     onReset: () => () => {},
     readDrafts: async () => await Promise.resolve(null),

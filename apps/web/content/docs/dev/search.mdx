@@ -137,7 +137,6 @@ export const blogPostContentType = defineContentType({
     // ...
   },
   search: {
-    enabled: true,
     titleField: 'title',
     contentFields: ['title', 'content'],
     pathTemplate: '/blog/{slug}',
@@ -157,7 +156,7 @@ The timelines come from two routes:
 
 ## Result URLs for Content Engine types
 
-`search.pathTemplate` is the English route of a result's page, with one `{slug}` placeholder. Leave the language out: VitNode adds the prefix, the domain and any translated segments from your app's [localized URL](/docs/dev/i18n/localized-urls) settings.
+`search.pathTemplate` is the English route of a result's page, with one `{slug}` placeholder. To turn search on for a content type, see [Content Engine search](/docs/content-engine/search). Leave the language out: VitNode adds the prefix, the domain and any translated segments from your app's [localized URL](/docs/dev/i18n/localized-urls) settings.
 
 | `pathTemplate`           | English result          | Polish result (`as-needed`) | Polish result (with `domains`)       |
 | :----------------------- | :---------------------- | :-------------------------- | :----------------------------------- |
@@ -256,8 +255,8 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
     href="/docs/dev/search-elasticsearch"
   />
   <Card
-    title="Content Engine Delivery"
+    title="Content Engine search"
     description="Automatic search indexing with Content Engine"
-    href="/docs/dev/content-engine/content-delivery-and-seo"
+    href="/docs/content-engine/search"
   />
 </Cards>

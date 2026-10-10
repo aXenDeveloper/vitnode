@@ -19,12 +19,11 @@ import {
 import { field } from "./fields";
 
 const base = {
-  publication: { enabled: true } as const,
+  publication: true as const,
   tableName: "delivery_articles",
 } as const;
 
 const publicApi = {
-  enabled: true,
   fields: ["id", "title", "slug", "excerpt", "publishedAt"],
   path: "articles",
 } as const;
@@ -44,12 +43,11 @@ const articleType = defineContentType({
   id: "delivery.article",
   // `redirects` needs `editorial`: slug history has to be written in the same
   // transaction as the slug mutation and its revision.
-  editorial: { enabled: true },
+  editorial: true,
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: { descriptionField: "excerpt", titleField: "title" },
-    sitemap: { changeFrequency: "weekly", enabled: true, priority: 0.7 },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
   },
   fields,
   publicApi,
@@ -90,7 +88,7 @@ describe("delivery definition validation", () => {
         id: "delivery.private",
         // Refused by the types too - see `delivery.test-d.ts`. Cast here because
         // this asserts the *runtime* guard, which a JavaScript caller still reaches.
-        delivery: { enabled: true as never },
+        delivery: true as never,
         fields,
         tableName: "delivery_private",
       }),
@@ -106,7 +104,6 @@ describe("delivery definition validation", () => {
         // `publicApi.fields`, so a `<title>` built from it would publish something
         // the public API deliberately withholds.
         delivery: {
-          enabled: true,
           seo: { titleField: "internalCode" as never },
         },
         fields,
@@ -122,7 +119,7 @@ describe("delivery definition validation", () => {
         ...base,
         id: "delivery.bad-kind",
         // `excerpt` is a textarea, which is a description and never a title.
-        delivery: { enabled: true, seo: { titleField: "excerpt" as never } },
+        delivery: { seo: { titleField: "excerpt" as never } },
         fields,
         publicApi,
         tableName: "delivery_bad_kind",
@@ -135,7 +132,7 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.unknown-seo",
-        delivery: { enabled: true, seo: { titleField: "nope" as never } },
+        delivery: { seo: { titleField: "nope" as never } },
         fields,
         publicApi,
         tableName: "delivery_unknown_seo",
@@ -149,7 +146,6 @@ describe("delivery definition validation", () => {
         ...base,
         id: "delivery.repeatable-seo",
         delivery: {
-          enabled: true,
           seo: { titleField: "faq.question" as never },
         },
         fields: {
@@ -172,7 +168,6 @@ describe("delivery definition validation", () => {
       ...base,
       id: "delivery.group-seo",
       delivery: {
-        enabled: true,
         seo: {
           descriptionField: "seo.description",
           fallbackTitleField: "title",
@@ -209,7 +204,6 @@ describe("delivery definition validation", () => {
         ...base,
         id: "delivery.orphan-fallback",
         delivery: {
-          enabled: true,
           seo: { fallbackTitleField: "title" as never },
         },
         fields,
@@ -224,7 +218,7 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.bad-priority",
-        delivery: { enabled: true, sitemap: { enabled: true, priority: 7 } },
+        delivery: { sitemap: { priority: 7 } },
         fields,
         publicApi,
         tableName: "delivery_bad_priority",
@@ -238,12 +232,10 @@ describe("delivery definition validation", () => {
         ...base,
         id: "delivery.bad-freq",
         delivery: {
-          enabled: true,
           sitemap: {
             // A crawler ignores an unknown value silently, so a typo has to be
             // caught here or it is a hint nobody ever receives.
             changeFrequency: "fortnightly" as never,
-            enabled: true,
           },
         },
         fields,
@@ -258,7 +250,7 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.bad-noindex",
-        delivery: { enabled: true, seo: { noIndexField: "title" as never } },
+        delivery: { seo: { noIndexField: "title" as never } },
         fields,
         publicApi,
         tableName: "delivery_bad_noindex",
@@ -271,7 +263,7 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.bad-xdefault",
-        delivery: { enabled: true, hreflang: { xDefault: "defaultLocale" } },
+        delivery: { hreflang: { xDefault: "defaultLocale" } },
         fields,
         publicApi,
         tableName: "delivery_bad_xdefault",
@@ -289,16 +281,15 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.shared-slug",
-        editorial: { enabled: true },
-        delivery: { enabled: true, redirects: { enabled: true } },
+        editorial: true,
+        delivery: { redirects: true },
         fields: {
           body: field.textarea({ localized: true, required: true }),
           slug: field.slug({ source: "title" }),
           title: field.text({ required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
         publicApi: {
-          enabled: true,
           fields: ["title", "slug", "body"],
           path: "articles",
         },
@@ -316,8 +307,7 @@ describe("delivery definition validation", () => {
         // has no version to guard and no history to write. Accepting this would be
         // accepting a redirect feature that silently records nothing.
         delivery: {
-          enabled: true,
-          redirects: { enabled: true as never },
+          redirects: true as never,
         },
         fields,
         publicApi,
@@ -332,16 +322,14 @@ describe("delivery definition validation", () => {
         ...base,
         id: "delivery.localized-no-editorial",
         delivery: {
-          enabled: true,
-          redirects: { enabled: true as never },
+          redirects: true as never,
         },
         fields: {
           slug: field.slug({ localized: true, source: "title" }),
           title: field.text({ localized: true, required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
         publicApi: {
-          enabled: true,
           fields: ["id", "title", "slug"],
           path: "articles",
         },
@@ -354,8 +342,8 @@ describe("delivery definition validation", () => {
     const withEditorial = defineContentType({
       ...base,
       id: "delivery.with-editorial",
-      editorial: { enabled: true },
-      delivery: { enabled: true, redirects: { enabled: true } },
+      editorial: true,
+      delivery: { redirects: true },
       fields,
       publicApi,
       tableName: "delivery_with_editorial",
@@ -371,9 +359,8 @@ describe("delivery definition validation", () => {
       ...base,
       id: "delivery.reads-only",
       delivery: {
-        enabled: true,
         seo: { descriptionField: "excerpt", titleField: "title" },
-        sitemap: { changeFrequency: "weekly", enabled: true, priority: 0.7 },
+        sitemap: { changeFrequency: "weekly", priority: 0.7 },
       },
       fields,
       publicApi,
@@ -395,10 +382,9 @@ describe("delivery definition validation", () => {
       ...base,
       id: "delivery.localized-reads",
       delivery: {
-        enabled: true,
         hreflang: { xDefault: "defaultLocale" },
         seo: { fallbackTitleField: "title", titleField: "seo.title" },
-        sitemap: { enabled: true },
+        sitemap: true,
       },
       fields: {
         seo: field.group({
@@ -409,9 +395,8 @@ describe("delivery definition validation", () => {
         slug: field.slug({ localized: true, source: "title" }),
         title: field.text({ localized: true, required: true }),
       },
-      localization: { defaultLocale: "en", enabled: true, fallback: "default" },
+      localization: { defaultLocale: "en", fallback: "default" },
       publicApi: {
-        enabled: true,
         fields: ["id", "title", "slug", "seo.title"],
         path: "articles",
       },
@@ -438,14 +423,13 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.no-id",
-        delivery: { enabled: true },
+        delivery: true,
         fields: {
           slug: field.slug({ localized: true, source: "title" }),
           title: field.text({ localized: true, required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
         publicApi: {
-          enabled: true,
           // No `id`, so alternates and `hreflang` could not be resolved - and an
           // empty `hreflang` looks exactly like a record with one translation.
           fields: ["title", "slug"],
@@ -462,9 +446,9 @@ describe("delivery definition validation", () => {
     const withoutId = defineContentType({
       ...base,
       id: "delivery.no-id-flat",
-      delivery: { enabled: true },
+      delivery: true,
       fields,
-      publicApi: { enabled: true, fields: ["title", "slug"], path: "articles" },
+      publicApi: { fields: ["title", "slug"], path: "articles" },
       tableName: "delivery_no_id_flat",
     });
 
@@ -478,7 +462,6 @@ describe("delivery definition validation", () => {
         ...base,
         id: "delivery.localized-noindex",
         delivery: {
-          enabled: true,
           seo: { noIndexField: "flags.noIndex" as never },
         },
         fields: {
@@ -491,9 +474,8 @@ describe("delivery definition validation", () => {
           slug: field.slug({ localized: true, source: "title" }),
           title: field.text({ localized: true, required: true }),
         },
-        localization: { defaultLocale: "en", enabled: true },
+        localization: { defaultLocale: "en" },
         publicApi: {
-          enabled: true,
           // `id` because a localized delivery content type has to expose it - see
           // "refuses a localized content type that withholds id" below.
           fields: ["id", "title", "slug", "flags.noIndex"],
@@ -508,17 +490,16 @@ describe("delivery definition validation", () => {
 const localizedType = defineContentType({
   ...base,
   id: "delivery.localized",
-  editorial: { enabled: true },
+  editorial: true,
   delivery: {
-    enabled: true,
     hreflang: { xDefault: "defaultLocale" },
-    redirects: { enabled: true },
+    redirects: true,
     seo: {
       descriptionField: "seo.description",
       fallbackTitleField: "title",
       titleField: "seo.title",
     },
-    sitemap: { changeFrequency: "daily", enabled: true, priority: 0.5 },
+    sitemap: { changeFrequency: "daily", priority: 0.5 },
   },
   fields: {
     seo: field.group({
@@ -532,9 +513,8 @@ const localizedType = defineContentType({
     slug: field.slug({ localized: true, source: "title" }),
     title: field.text({ localized: true, required: true }),
   },
-  localization: { defaultLocale: "en", enabled: true, fallback: "default" },
+  localization: { defaultLocale: "en", fallback: "default" },
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug", "seo.title", "seo.description"],
     path: "articles",
   },
@@ -547,7 +527,6 @@ const blogType = defineContentType({
   ...base,
   id: "delivery.blog",
   delivery: {
-    enabled: true,
     hreflang: { xDefault: "defaultLocale" },
     path: "/blog/:slug",
   },
@@ -555,8 +534,8 @@ const blogType = defineContentType({
     slug: field.slug({ localized: true, source: "title" }),
     title: field.text({ localized: true, required: true }),
   },
-  localization: { defaultLocale: "en", enabled: true },
-  publicApi: { enabled: true, fields: ["id", "title", "slug"], path: "posts" },
+  localization: { defaultLocale: "en" },
+  publicApi: { fields: ["id", "title", "slug"], path: "posts" },
   tableName: "delivery_blog",
 });
 
@@ -577,7 +556,7 @@ describe("delivery.path", () => {
     defineContentType({
       ...base,
       id: "delivery.routed",
-      delivery: { enabled: true, path },
+      delivery: { path },
       fields,
       publicApi,
       tableName: "delivery_routed",
@@ -903,7 +882,6 @@ describe("Open Graph projection", () => {
       ...base,
       id: "delivery.og",
       delivery: {
-        enabled: true,
         seo: { openGraph: {}, titleField: "title" },
       },
       fields,
@@ -926,7 +904,7 @@ describe("robots projection", () => {
     const withNoIndex = defineContentType({
       ...base,
       id: "delivery.noindex",
-      delivery: { enabled: true, seo: { noIndexField: "hidden" } },
+      delivery: { seo: { noIndexField: "hidden" } },
       fields,
       publicApi: { ...publicApi, fields: [...publicApi.fields, "hidden"] },
       tableName: "delivery_noindex",

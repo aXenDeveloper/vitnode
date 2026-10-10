@@ -248,7 +248,7 @@ export const createContentEditorialService = <
 }): ContentEditorialService<TDefinition> => {
   if (!definition.editorial.enabled) {
     throw new ContentEngineError(
-      "The editorial service needs `editorial: { enabled: true }` on the content type.",
+      "The editorial service needs `editorial: true` on the content type.",
       { contentTypeId: definition.id },
     );
   }

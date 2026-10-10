@@ -300,7 +300,7 @@ export const deleteNote = async (id: string) => {
 
 ## Content Engine routes
 
-Public routes created via [Content Engine](/docs/dev/content-engine) (`publicApi`) are automatically typed under `module: "content/<path>"`:
+Public routes created via [Content Engine](/docs/content-engine) (`publicApi`) are automatically typed under `module: "content/<path>"`:
 
 ```ts
 const response = await fetcher({
@@ -312,14 +312,14 @@ const response = await fetcher({
 })
 ```
 
-For generated AdminCP content modules where schemas are dynamic, use `rawFetcher` from `@vitnode/core/tanstack/fetcher` instead. See [Content Engine](/docs/dev/content-engine) for defining content types, schema modeling, and generating CRUD APIs.
+For generated AdminCP content modules where schemas are dynamic, use `rawFetcher` from `@vitnode/core/tanstack/fetcher` instead. See [Content Engine](/docs/content-engine) for defining content types, schema modeling, and generating CRUD APIs.
 
 <Cards>
   <Card
     icon={<BoxesIcon />}
     title="Content Engine"
     description="Define content types, schemas, and typed public endpoints."
-    href="/docs/dev/content-engine"
+    href="/docs/content-engine"
   />
   <Card
     icon={<MapIcon />}

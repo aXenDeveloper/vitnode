@@ -1,14 +1,27 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { pageHead } from '@vitnode/core/tanstack/metadata'
 import { Suspense } from 'react'
 
 import { DocsError, DocsNotFound } from '@/docs/error-views'
 import { DocsPageContent } from '@/docs/page-content'
 import { DocsPagePendingSkeleton } from '@/docs/pending'
+import { movedDocsPath } from '@/docs/redirects'
 import { DOCS_STALE_TIME } from '@/docs/shared'
 import { getDocsPage } from '@/docs/transport'
 
 export const Route = createFileRoute('/_docs/docs/$')({
+  beforeLoad: ({ params }) => {
+    const moved = movedDocsPath(params._splat ?? '')
+
+    if (moved) {
+      // oxlint-disable-next-line typescript/only-throw-error
+      throw redirect({
+        params: { _splat: moved },
+        statusCode: 301,
+        to: '/docs/$',
+      })
+    }
+  },
   loader: async ({ params }) => {
     const page = await getDocsPage({ data: params._splat ?? '' })
     const { docs } = await import('@/docs/source')

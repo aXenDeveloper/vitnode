@@ -1,0 +1,115 @@
+---
+title: Production
+description: A pre-launch checklist for VitNode Content Engine content types, covering public field allowlists, staff permissions, migrations, scheduled publishing, preview links and content health checks.
+icon: ShieldCheck
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import searchHealth from "./production-search-health.png";
+
+A content type that works on your machine needs a few more checks before real editors and visitors use it. Go through this list for every content type you ship.
+
+## Expose only what you mean to
+
+- [ ] **Review `publicApi.fields`.** It is the allowlist for everything public: the public API, page metadata from `delivery` and the search index. A field not listed there never leaves the server. Keep internal notes, moderation flags and anything personal out of it.
+- [ ] **Keep `publication` on.** `publicApi` and `search` both refuse to load without it, and new records start as drafts, so nothing is public until someone publishes it.
+- [ ] **Treat search as public.** `search.titleField`, `descriptionField` and `contentFields` must be public fields, and `search.authorField` shows who wrote a record in search results.
+
+The example article lists eight of its own fields plus `publishedAt`. `code`, `views` and `author` stay private, because they are not in the list:
+
+```ts title="plugins/example/src/content/article.ts"
+publicApi: {
+  path: "articles",
+  fields: [
+    "title",
+    "slug",
+    "excerpt",
+    "featured",
+    "category",
+    "animation",
+    "gallery",
+    "noIndex",
+    "publishedAt",
+  ],
+},
+```
+
+## Grant the right permissions
+
+- [ ] **Give staff only what they need** in **AdminCP → Staff**. Each content type gets `can_view`, `can_create`, `can_edit` and `can_delete`, plus `can_publish` with `publication` and `can_restore` with `editorial`.
+- [ ] **Guard your own admin routes.** Generated routes check their permissions themselves. A custom route next to them needs its own `adminStaffPermission`, as shown in [Services](/docs/content-engine/services#write-the-way-the-admincp-does).
+
+## Ship the migration
+
+- [ ] Commit the migration that `pnpm build:plugins && pnpm db:migrate` generated together with the content type.
+- [ ] Run `db:migrate` as a deploy step. Production never migrates on startup.
+- [ ] Read the generated SQL when you change an existing content type. See [Database](/docs/content-engine/database).
+
+## Configure what editorial features rely on
+
+- [ ] **Scheduled publishing** is a queue task, and the `process-queue` [cron job](/docs/dev/cron) drains the queue every minute. Make sure something calls your cron endpoint in production.
+- [ ] **Set `CRON_SECRET`** to your own random value. The built-in default is rejected outside development, which stops cron runs and front-end revalidation calls.
+- [ ] **Preview links** are built from `VITNODE_WEB_URL` and `VITNODE_API_URL`, which default to localhost. Set both to your public URLs. If either is not a valid absolute URL, the API logs a warning at startup and previews stay off.
+- [ ] **Integrations send the version they read.** With `editorial`, a save with an outdated `expectedVersion` fails with `409 CONTENT_VERSION_CONFLICT` instead of overwriting someone else's work.
+- [ ] **A separate front end that caches public reads** is listed in `content.revalidateOrigins` with an `https` URL. See [Caching](/docs/content-engine/caching).
+- [ ] **Live editing** has its own deployment requirements, listed in the [Live editing API](/docs/content-engine/live-editing-api).
+
+## Check content health
+
+**AdminCP → Advanced → Search** shows how much of each content type is in the search index. Use **Reindex** on a collection, or **Rebuild index**, after a bulk import or a failed sync.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={searchHealth}
+  alt="The AdminCP Search screen with status, engine, indexed items and last indexed cards above a table of indexed collections with coverage bars"
+/>
+
+For a monitoring probe, core has a staff-only route that reports every content type, its search drift per language and failed scheduled effects. It needs the `can_view` permission of the `system` module:
+
+```bash
+curl -b "vitnode_auth_admin=<session>" \
+  http://localhost:8000/api/@vitnode/core/admin/debug/content/status
+```
+
+```json
+{
+  "healthy": false,
+  "searchHealthy": false,
+  "effectsHealthy": true,
+  "contentTypes": [
+    {
+      "contentTypeId": "example.article",
+      "pluginId": "@vitnode/example",
+      "features": {
+        "editorial": true,
+        "localization": false,
+        "publicApi": true,
+        "publication": true,
+        "scheduling": true,
+        "search": true
+      },
+      "search": {
+        "healthy": false,
+        "expectedTotal": 1,
+        "canonicalIndexedTotal": 2,
+        "provider": {
+          "name": "postgres",
+          "healthy": false,
+          "indexedTotal": 2,
+          "verified": true
+        }
+      },
+      "schedules": { "pending": 0, "withErrors": 0, "failedEffects": 0 }
+    }
+  ]
+}
+```
+
+This excerpt shows two indexed documents for one published article, so search is not healthy until the collection is reindexed. `failedEffects` counts scheduled publishes that committed but whose event or search update failed. In your own code, `contentEngineDiagnostics(c)` from `@vitnode/core/content/server` returns the same object.
+
+## Know the limits
+
+- Content types are defined in code and shipped with migrations. There is no AdminCP screen for creating them at runtime.
+- A relation points at one content type. To link to several unrelated types, use one relation field per type.
+- `field.blocks()` is not in the generated form by default. Editors change it through [widgets](/docs/dev/widgets) or a custom field component.

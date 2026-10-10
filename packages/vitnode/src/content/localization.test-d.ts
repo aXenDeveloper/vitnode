@@ -70,7 +70,7 @@ describe("localization", () => {
       const explicit = defineContentType({
         id: "test.explicit",
         tableName: "test_explicits",
-        localization: { enabled: false },
+        localization: false,
         fields: { title: field.text({ required: true }) },
       });
 
@@ -262,7 +262,7 @@ describe("localization", () => {
       defineContentType({
         id: "test.localizedcolumn",
         tableName: "test_localized_columns",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),
@@ -277,7 +277,7 @@ describe("localization", () => {
       defineContentType({
         id: "test.localizedtitle",
         tableName: "test_localized_titles",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),
@@ -292,7 +292,7 @@ describe("localization", () => {
       defineContentType({
         id: "test.badorder",
         tableName: "test_bad_orders",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),
@@ -308,7 +308,7 @@ describe("localization", () => {
       defineContentType({
         id: "test.localizedsearch",
         tableName: "test_localized_searches",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),
@@ -323,7 +323,7 @@ describe("localization", () => {
       defineContentType({
         id: "test.badindex",
         tableName: "test_bad_indexes",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),

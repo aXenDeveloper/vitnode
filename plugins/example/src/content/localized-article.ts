@@ -5,7 +5,6 @@ export const localizedArticleContentType = defineContentType({
   tableName: "example_localized_articles",
 
   localization: {
-    enabled: true,
     // `en` has to exist in `core_languages`, which the boot guard checks once per
     // process. The Postgres suite inserts it (and `pl`) itself - nothing seeds
     // languages, they are created by the installer.
@@ -19,10 +18,9 @@ export const localizedArticleContentType = defineContentType({
 
   // The global lifecycle every translation's own status is subordinate to:
   // publishing the English copy of a draft article puts nothing on the internet.
-  publication: { enabled: true },
+  publication: true,
 
   publicApi: {
-    enabled: true,
     path: "localized-articles",
     fields: ["title", "slug", "body", "featured", "publishedAt"],
     searchableFields: ["title", "body"],
@@ -33,7 +31,6 @@ export const localizedArticleContentType = defineContentType({
   },
 
   search: {
-    enabled: true,
     titleField: "title",
     contentFields: ["title", "body"],
     pathTemplate: "/localized-articles/{slug}",
@@ -44,10 +41,10 @@ export const localizedArticleContentType = defineContentType({
   // `preview` mints a link per language, freezing the shared revision and that
   // locale's translation revision together.
   editorial: {
-    enabled: true,
-    preview: { enabled: true, expiresInMinutes: 30 },
+    preview: { expiresInMinutes: 30 },
     revisions: { retention: 20 },
   },
+  liveEditing: true,
 
   fields: {
     title: field.text({

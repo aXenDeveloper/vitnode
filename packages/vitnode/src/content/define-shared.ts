@@ -77,3 +77,58 @@ export const resolveFieldTarget = (
     ? { container: container.kind, descriptor: leafValue }
     : null;
 };
+
+export const contentOptionConfig = <TConfig extends object>(
+  option: boolean | TConfig | undefined,
+): null | Partial<TConfig> => {
+  if (typeof option === "object") return option;
+
+  return option === true ? {} : null;
+};
+
+const CONTENT_OPTION_PATHS: readonly (readonly string[])[] = [
+  ["admin", "navigation"],
+  ["delivery"],
+  ["delivery", "redirects"],
+  ["delivery", "sitemap"],
+  ["editorial"],
+  ["editorial", "preview"],
+  ["editorial", "scheduling"],
+  ["localization"],
+  ["publicApi"],
+  ["publication"],
+  ["search"],
+];
+
+const CONTENT_OPTIONS_WITH_REQUIRED_KEYS = new Set([
+  "localization",
+  "publicApi",
+  "search",
+]);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+export const assertContentOptionShapes = (
+  id: string,
+  options: Record<string, unknown>,
+): void => {
+  for (const path of CONTENT_OPTION_PATHS) {
+    const value = path.reduce<unknown>(
+      (parent, key) => (isPlainObject(parent) ? parent[key] : undefined),
+      options,
+    );
+
+    if (isPlainObject(value) && Object.hasOwn(value, "enabled")) {
+      const name = path.join(".");
+      const turnOn = CONTENT_OPTIONS_WITH_REQUIRED_KEYS.has(name)
+        ? "pass its options object"
+        : `write \`${name}: true\` or pass its options object`;
+
+      throw new ContentEngineError(
+        `${name}.enabled is not an option. A block is on when it is present: ${turnOn}, and omit it or set it to \`false\` to turn it off.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+};

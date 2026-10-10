@@ -2,6 +2,7 @@ import type { ContentLocaleRouting, ContentPublicUrl } from "./public-url";
 import type {
   AnyContentTypeDefinition,
   ContentDeliveryConfig,
+  ContentDeliverySitemapConfig,
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentSitemapChangeFrequency,
@@ -18,6 +19,7 @@ import {
   CONTENT_DELIVERY_TITLE_KINDS,
   isContentSitemapChangeFrequency,
 } from "./const";
+import { contentOptionConfig } from "./define-shared";
 import { ContentEngineError } from "./errors";
 import { normalizeContentLocale } from "./locale";
 import { readContentPath, splitContentFieldPath } from "./paths";
@@ -211,7 +213,7 @@ const resolveContentDeliveryPath = ({
 };
 
 export const resolveContentDelivery = ({
-  delivery,
+  delivery: deliveryOption,
   editorial,
   fields,
   id,
@@ -220,7 +222,7 @@ export const resolveContentDelivery = ({
   publicApi,
   publication,
 }: {
-  delivery: ContentDeliveryConfig | undefined;
+  delivery: boolean | ContentDeliveryConfig | undefined;
   /** Whether the content type opted into the editorial workflow. */
   editorial: boolean;
   fields: ContentFieldMap;
@@ -230,11 +232,12 @@ export const resolveContentDelivery = ({
   publicApi: ResolvedContentPublicApiConfig;
   publication: boolean;
 }): ResolvedContentDeliveryConfig => {
-  if (!delivery?.enabled) return contentDeliveryDisabled;
+  const delivery = contentOptionConfig(deliveryOption);
+  if (!delivery) return contentDeliveryDisabled;
 
   if (!publicApi.enabled) {
     throw new ContentEngineError(
-      "delivery needs `publicApi: { enabled: true, path, fields }`. A content type with no public API has no public URL, so there is no canonical path, no redirect and no sitemap entry for delivery to produce.",
+      "delivery needs `publicApi: { path, fields }`. A content type with no public API has no public URL, so there is no canonical path, no redirect and no sitemap entry for delivery to produce.",
       { contentTypeId: id },
     );
   }
@@ -247,9 +250,10 @@ export const resolveContentDelivery = ({
     );
   }
 
-  const redirects = delivery.redirects?.enabled === true;
-  const sitemapConfig =
-    delivery.sitemap?.enabled === true ? delivery.sitemap : null;
+  const redirects = delivery.redirects === true;
+  const sitemapConfig = contentOptionConfig<ContentDeliverySitemapConfig>(
+    delivery.sitemap,
+  );
   const slugScope =
     localizedFields[slugField] === undefined ? "shared" : "localized";
 
@@ -260,12 +264,12 @@ export const resolveContentDelivery = ({
   // a version to guard nor a history to write, so accepting this would be accepting a
   // feature that records nothing.
   //
-  // Refused rather than downgraded to `redirects: { enabled: false }`: an author who
+  // Refused rather than downgraded to `redirects: false`: an author who
   // asked for redirects and silently got none would find out from a broken link
   // months later. The type system refuses it too - see `ContentDeliveryConfig`.
   if (redirects && !editorial) {
     throw new ContentEngineError(
-      "delivery.redirects needs `editorial: { enabled: true }`. Redirect history has to be written atomically with the slug mutation and its version and revision, and only the editorial mutation paths own that transaction. Delivery without `redirects` - canonical URLs, SEO, alternates and the sitemap - works without editorial.",
+      "delivery.redirects needs `editorial`. Redirect history has to be written atomically with the slug mutation and its version and revision, and only the editorial mutation paths own that transaction. Delivery without `redirects` - canonical URLs, SEO, alternates and the sitemap - works without editorial.",
       { contentTypeId: id },
     );
   }
@@ -290,7 +294,7 @@ export const resolveContentDelivery = ({
   // the moment it was created.
   if (sitemapConfig && !publication) {
     throw new ContentEngineError(
-      "delivery.sitemap needs `publication: { enabled: true }`. A sitemap lists what is publicly reachable, and without the lifecycle every row would be listed the moment it was created.",
+      "delivery.sitemap needs `publication: true`. A sitemap lists what is publicly reachable, and without the lifecycle every row would be listed the moment it was created.",
       { contentTypeId: id },
     );
   }
@@ -325,7 +329,7 @@ export const resolveContentDelivery = ({
 
     if (!localization.enabled) {
       throw new ContentEngineError(
-        "delivery.hreflang needs `localization: { enabled: true, defaultLocale }`. A content type with one language has no alternates, so there is nothing for an x-default to be the default of.",
+        "delivery.hreflang needs `localization: { defaultLocale }`. A content type with one language has no alternates, so there is nothing for an x-default to be the default of.",
         { contentTypeId: id },
       );
     }

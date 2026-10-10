@@ -80,6 +80,7 @@ const renderLive = (
     coEditing: live,
     itemId: 7,
     locale: "en",
+    reloadDrafts: vi.fn(),
     richText: createContentRichTextRegistry(),
     session: {
       clientId: ME.clientId,
@@ -87,6 +88,7 @@ const renderLive = (
       live,
       locks: [],
       members: [ME, ...members],
+      onCommitted: () => () => {},
       onDraft: () => () => {},
       onReset: () => () => {},
       readDrafts: async () => await Promise.resolve(null),

@@ -39,7 +39,7 @@ export type ContentLiveAuthorization =
       version: null | number;
     };
 
-/** An editorial content type registered on this install, or `undefined`. */
+/** A live-edited content type registered on this install, or `undefined`. */
 export const findLiveContentType = (
   c: Context,
   contentTypeId: string,
@@ -49,7 +49,7 @@ export const findLiveContentType = (
     .contentTypes.find(
       entry =>
         entry.definition.id === contentTypeId &&
-        entry.definition.editorial.enabled,
+        entry.definition.liveEditing.enabled,
     );
 
 const versionOf = (row: object): null | number => {

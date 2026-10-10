@@ -37,6 +37,7 @@ export interface ContentLiveSession {
   live: boolean;
   locks: ContentFieldLock[];
   members: ContentLiveMember[];
+  onCommitted: (listener: () => void) => () => void;
   onDraft: (listener: (event: ContentLiveDraftEvent) => void) => () => void;
   onReset: (listener: (reason: ContentLiveResetReason) => void) => () => void;
   /**
@@ -111,6 +112,7 @@ export const useContentLiveSession = ({
   const resetListenersRef = React.useRef(
     new Set<(reason: ContentLiveResetReason) => void>(),
   );
+  const committedListenersRef = React.useRef(new Set<() => void>());
   const seenDraftsRef = React.useRef(new Map<string, string>());
   const focusedRef = React.useRef<null | {
     field: null | string;
@@ -168,6 +170,11 @@ export const useContentLiveSession = ({
 
   const onMessage = (message: ContentLiveServerMessage) => {
     switch (message.type) {
+      case "committed":
+        if (!sameContentLiveRoom(message.room, room)) return;
+        for (const listener of committedListenersRef.current) listener();
+
+        return;
       case "draft":
         if (!sameContentLiveRoom(message.room, room)) return;
         emitDraft({
@@ -356,6 +363,14 @@ export const useContentLiveSession = ({
     [],
   );
 
+  const onCommitted = React.useCallback((listener: () => void) => {
+    committedListenersRef.current.add(listener);
+
+    return () => {
+      committedListenersRef.current.delete(listener);
+    };
+  }, []);
+
   const onReset = React.useCallback(
     (listener: (reason: ContentLiveResetReason) => void) => {
       resetListenersRef.current.add(listener);
@@ -373,6 +388,7 @@ export const useContentLiveSession = ({
     live,
     locks,
     members,
+    onCommitted,
     onDraft,
     onReset,
     readDrafts,

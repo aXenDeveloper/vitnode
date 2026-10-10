@@ -350,7 +350,7 @@ const LiveField = ({
     <div className="flex min-w-0 flex-col">
       <fieldset
         aria-describedby={describedBy}
-        className="relative min-w-0"
+        className="relative flex min-w-0 flex-col gap-3"
         disabled={lockedByOther}
         onBlurCapture={onBlurCapture}
         onFocusCapture={onFocusCapture}

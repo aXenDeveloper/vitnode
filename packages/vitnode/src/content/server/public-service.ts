@@ -255,7 +255,7 @@ export const createContentPublicService = <
 
   if (!publicApi.enabled) {
     throw new ContentEngineError(
-      "This content type has no public API. Add `publicApi: { enabled: true, path, fields }` to generate one.",
+      "This content type has no public API. Add `publicApi: { path, fields }` to generate one.",
       { contentTypeId },
     );
   }

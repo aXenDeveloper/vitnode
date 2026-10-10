@@ -30,7 +30,6 @@ const admin = {
 } as const;
 
 const publicApi = {
-  enabled: true,
   fields: ["title", "slug", "excerpt", "body", "featured", "publishedAt"],
   path: "articles",
 } as const;
@@ -38,7 +37,6 @@ const publicApi = {
 const validSearch = {
   contentFields: ["excerpt", "body"],
   descriptionField: "excerpt",
-  enabled: true,
   pathTemplate: "/articles/{slug}",
   titleField: "title",
 } as const;
@@ -57,7 +55,7 @@ const define = ({
     fields,
     id: "test.article",
     ...(withPublicApi ? { publicApi } : {}),
-    ...(publication ? { publication: { enabled: true as const } } : {}),
+    ...(publication ? { publication: true as const } : {}),
     // `never` because the point of every case below is a value the types reject:
     // a widened TypeScript value or a plain-JavaScript caller. The compile-time
     // rules are asserted in `search.test-d.ts`.
@@ -90,8 +88,8 @@ describe("search configuration", () => {
     });
   });
 
-  it("stays disabled for an explicit `enabled: false`", () => {
-    expect(define({ search: { enabled: false } }).search.enabled).toBe(false);
+  it("stays disabled for an explicit `search: false`", () => {
+    expect(define({ search: false }).search.enabled).toBe(false);
   });
 
   it("leaves every Stage 2 content type untouched", () => {
@@ -285,7 +283,7 @@ describe("search configuration", () => {
         fields,
         id: `test.${"a".repeat(100)}`,
         publicApi,
-        publication: { enabled: true },
+        publication: true,
         search: validSearch,
         tableName: "test_long_id",
       }),

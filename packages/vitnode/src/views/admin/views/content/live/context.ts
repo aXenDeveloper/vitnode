@@ -33,6 +33,7 @@ export interface ContentLiveContextValue {
   itemId: number;
   /** The language a localized field locks in when the layout pins none. */
   locale: null | string;
+  reloadDrafts: () => Promise<void>;
   /** The open co-edited editors, for code that writes through them. */
   richText: ContentRichTextRegistry;
   session: ContentLiveSession;

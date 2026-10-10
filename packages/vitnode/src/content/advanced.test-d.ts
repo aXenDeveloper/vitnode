@@ -37,7 +37,7 @@ const articleContentType = defineContentType({
     list: { columns: ["title"] },
     titleField: "title",
   },
-  editorial: { enabled: true },
+  editorial: true,
   fields: {
     categories: field.relation({
       multiple: true,
@@ -59,11 +59,10 @@ const articleContentType = defineContentType({
   },
   id: "test.d-article",
   publicApi: {
-    enabled: true,
     fields: ["title", "slug", "categories", "seo.title", "faq.question"],
     path: "d-articles",
   },
-  publication: { enabled: true },
+  publication: true,
   tableName: "test_d_articles",
 });
 

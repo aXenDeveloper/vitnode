@@ -86,7 +86,7 @@ export const ContentLiveRoot = ({
     itemId,
     locale: spec.defaultLocale,
   });
-  const { onDraft, onReset, readDrafts } = session;
+  const { onCommitted, onDraft, onReset, readDrafts } = session;
 
   // Once co-edited, always co-edited for this form: switching editors when the
   // socket blinks would drop what the shared document holds.
@@ -153,6 +153,18 @@ export const ContentLiveRoot = ({
         setDrafts(current => mergeContentDraft(current, event));
       }),
     [onDraft],
+  );
+
+  const reloadDrafts = React.useCallback(async () => {
+    setDrafts(await readDrafts());
+  }, [readDrafts]);
+
+  React.useEffect(
+    () =>
+      onCommitted(() => {
+        void reloadDrafts();
+      }),
+    [onCommitted, reloadDrafts],
   );
 
   const pendingRef = React.useRef(new Map<string, PendingValue>());
@@ -287,6 +299,7 @@ export const ContentLiveRoot = ({
     coEditing,
     itemId,
     locale: spec.defaultLocale,
+    reloadDrafts,
     richText,
     session,
     spec,

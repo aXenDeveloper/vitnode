@@ -16,15 +16,14 @@ import { applyContentDeliveryWrite } from "./delivery-writes";
 
 const articleType = defineContentType({
   id: "writes.article",
-  editorial: { enabled: true },
-  delivery: { enabled: true, redirects: { enabled: true } },
+  editorial: true,
+  delivery: { redirects: true },
   fields: {
     slug: field.slug({ source: "title" }),
     title: field.text({ required: true }),
   },
-  publication: { enabled: true },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug"],
     path: "articles",
   },
@@ -33,16 +32,15 @@ const articleType = defineContentType({
 
 const localizedType = defineContentType({
   id: "writes.localized",
-  editorial: { enabled: true },
-  delivery: { enabled: true, redirects: { enabled: true } },
+  editorial: true,
+  delivery: { redirects: true },
   fields: {
     slug: field.slug({ localized: true, source: "title" }),
     title: field.text({ localized: true, required: true }),
   },
-  localization: { defaultLocale: "en", enabled: true },
-  publication: { enabled: true },
+  localization: { defaultLocale: "en" },
+  publication: true,
   publicApi: {
-    enabled: true,
     fields: ["id", "title", "slug"],
     path: "articles",
   },
@@ -679,13 +677,13 @@ describe("delivery without redirects", () => {
   it("reports the paths and writes no history at all", async () => {
     const withoutRedirects = defineContentType({
       id: "writes.no-redirects",
-      delivery: { enabled: true, sitemap: { enabled: true } },
+      delivery: { sitemap: true },
       fields: {
         slug: field.slug({ source: "title" }),
         title: field.text({ required: true }),
       },
-      publication: { enabled: true },
-      publicApi: { enabled: true, fields: ["id", "title", "slug"], path: "a" },
+      publication: true,
+      publicApi: { fields: ["id", "title", "slug"], path: "a" },
       tableName: "writes_no_redirects",
     });
 

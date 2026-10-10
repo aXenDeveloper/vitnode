@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, lte, or, sql } from "drizzle-orm";
 
 import type { ContentDraft, ContentDrafts } from "../live/http";
 import type { ContentFieldLock, ContentLiveRoomRef } from "../live/protocol";
@@ -295,6 +295,38 @@ export const writeContentDraft = async (
     });
 
   return now;
+};
+
+export const commitContentDrafts = async (
+  c: Context,
+  room: ContentLiveRoomRef,
+  {
+    locales,
+    savedFrom,
+  }: { locales: readonly (null | string)[]; savedFrom: Date },
+): Promise<void> => {
+  if (locales.length === 0) return;
+
+  const db: ContentDatabase = c.get("db");
+  try {
+    const committed = await db
+      .delete(drafts)
+      .where(
+        and(
+          inRoom(drafts, room),
+          inArray(drafts.language, locales.map(contentLiveLanguage)),
+          lte(drafts.updatedAt, savedFrom),
+        ),
+      )
+      .returning({ id: drafts.id });
+
+    if (committed.length > 0) {
+      broadcastContentLive(room, { room, type: "committed" });
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Content draft commit failed:", error);
+  }
 };
 
 /** Throws a record's working state away: every draft and every lock. */

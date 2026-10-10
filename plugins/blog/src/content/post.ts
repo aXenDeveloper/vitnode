@@ -7,20 +7,19 @@ export const blogPostContentType = defineContentType({
   tableName: "blog_posts",
 
   localization: {
-    enabled: true,
     defaultLocale: "en",
     // A locale with no translation of its own is served the default language's.
     fallback: "default",
   },
 
-  publication: { enabled: true },
+  publication: true,
 
   editorial: {
-    enabled: true,
     revisions: { retention: 20 },
-    preview: { enabled: true, expiresInMinutes: 30 },
-    scheduling: { enabled: true },
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
   },
+  liveEditing: true,
 
   fields: {
     categoryId: field.relation({
@@ -78,7 +77,6 @@ export const blogPostContentType = defineContentType({
   },
 
   publicApi: {
-    enabled: true,
     path: "blog",
     fields: [
       // Delivery resolves localized alternates by identifier, so a localized
@@ -109,7 +107,6 @@ export const blogPostContentType = defineContentType({
   },
 
   search: {
-    enabled: true,
     titleField: "title",
     contentFields: ["title", "content"],
     pathTemplate: "/blog/{slug}",
@@ -117,14 +114,13 @@ export const blogPostContentType = defineContentType({
   },
 
   delivery: {
-    enabled: true,
-    redirects: { enabled: true },
+    redirects: true,
     seo: {
       titleField: "title",
       descriptionField: "excerpt",
       fallbackDescriptionField: "content",
     },
-    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },
   },
 

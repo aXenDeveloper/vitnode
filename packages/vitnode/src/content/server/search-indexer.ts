@@ -134,7 +134,7 @@ const assertPublicationColumns = (
 ): void => {
   if (!definition.publication.enabled || !columns.status) {
     throw new ContentEngineError(
-      "The search indexer needs `publication: { enabled: true }` on the content type.",
+      "The search indexer needs `publication: true` on the content type.",
       { contentTypeId: definition.id },
     );
   }
@@ -248,7 +248,7 @@ export const createContentLocalizedSearchIndexer = <
 
   if (!translationTable || !translationColumns) {
     throw new ContentEngineError(
-      "The localized search indexer needs `localization: { enabled: true, defaultLocale }` on the content type.",
+      "The localized search indexer needs `localization: { defaultLocale }` on the content type.",
       { contentTypeId: definition.id },
     );
   }

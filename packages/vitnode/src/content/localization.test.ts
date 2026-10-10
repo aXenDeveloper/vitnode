@@ -25,7 +25,7 @@ const localized = (
   defineContentType({
     id: "test.subject",
     tableName: "test_subjects",
-    localization: { enabled: true, defaultLocale: "en" },
+    localization: { defaultLocale: "en" },
     fields: {
       title: field.text({ localized: true, required: true }),
     },
@@ -173,7 +173,7 @@ describe("localization validation", () => {
         tableName: "test_strays",
         fields: { title: field.text({ localized: true, required: true }) },
       }),
-    ).toThrow(/no `localization: \{ enabled: true, defaultLocale \}` block/);
+    ).toThrow(/no `localization: \{ defaultLocale \}` block/);
   });
 
   it("rejects localization with no localized field", () => {
@@ -181,7 +181,7 @@ describe("localization validation", () => {
       defineContentType({
         id: "test.empty",
         tableName: "test_empties",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: { featured: field.boolean({ defaultValue: false }) },
       }),
     ).toThrow(/no field is marked `localized: true`/);
@@ -192,35 +192,35 @@ describe("localization validation", () => {
     ["empty", ""],
     ["whitespace only", "   "],
   ])("rejects a %s default locale", (_label, defaultLocale) => {
-    expect(() =>
-      localized({ localization: { defaultLocale, enabled: true } }),
-    ).toThrow(/localization.defaultLocale is required/);
+    expect(() => localized({ localization: { defaultLocale } })).toThrow(
+      /localization.defaultLocale is required/,
+    );
   });
 
   it("rejects a padded default locale rather than trimming it", () => {
     expect(() =>
-      localized({ localization: { defaultLocale: " en ", enabled: true } }),
+      localized({ localization: { defaultLocale: " en " } }),
     ).toThrow(/leading or trailing whitespace/);
   });
 
   it("rejects a default locale that is not shaped like one", () => {
     expect(() =>
-      localized({ localization: { defaultLocale: "en_US!", enabled: true } }),
+      localized({ localization: { defaultLocale: "en_US!" } }),
     ).toThrow(/does not look like a locale code/);
   });
 
   it("rejects a default locale wider than core_languages.code", () => {
     expect(() =>
       localized({
-        localization: { defaultLocale: "en-".repeat(20), enabled: true },
+        localization: { defaultLocale: "en-".repeat(20) },
       }),
     ).toThrow(/longer than 32 characters/);
   });
 
   it.each(["pt-BR", "zh-Hans", "en"])("accepts the locale %s", locale => {
     expect(
-      localized({ localization: { defaultLocale: locale, enabled: true } })
-        .localization.defaultLocale,
+      localized({ localization: { defaultLocale: locale } }).localization
+        .defaultLocale,
     ).toBe(locale);
   });
 
@@ -237,7 +237,7 @@ describe("localization validation", () => {
       defineContentType({
         id: "test.badkind",
         tableName: "test_bad_kinds",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           other: { ...fieldValue, localized: true } as never,
@@ -253,7 +253,7 @@ describe("localization validation", () => {
       defineContentType({
         id: "test.collide",
         tableName: "test_collides",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           itemId: field.text({ localized: true, required: true }),
         },
@@ -266,7 +266,7 @@ describe("localization validation", () => {
       defineContentType({
         id: "test.sharedsource",
         tableName: "test_shared_sources",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           name: field.text({ required: true }),
           heading: field.text({ localized: true, required: true }),
@@ -281,7 +281,7 @@ describe("localization validation", () => {
       defineContentType({
         id: "test.localizedsource",
         tableName: "test_localized_sources",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           slug: field.slug({ source: "title" }),
@@ -296,7 +296,7 @@ describe("localization validation", () => {
       defineContentType({
         id: "test.nosource",
         tableName: "test_no_sources",
-        localization: { enabled: true, defaultLocale: "en" },
+        localization: { defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           slug: field.slug({ localized: true, source: "headline" }),
@@ -352,7 +352,7 @@ describe("capability combinations", () => {
     defineContentType({
       id: "test.boundary",
       tableName: "test_boundaries",
-      localization: { enabled: true, defaultLocale: "en" },
+      localization: { defaultLocale: "en" },
       fields: {
         title: field.text({ localized: true, required: true }),
         slug: field.slug({ localized: true, source: "title" }),
@@ -361,7 +361,7 @@ describe("capability combinations", () => {
     } as never);
 
   it("allows localization plus publication from Stage 5B", () => {
-    const definition = withCapability({ publication: { enabled: true } });
+    const definition = withCapability({ publication: true });
 
     expect(definition.publication.enabled).toBe(true);
     // The translation table gains the pair the base table has, so a translation
@@ -372,7 +372,7 @@ describe("capability combinations", () => {
   });
 
   it("allows localization plus editorial from Stage 5B", () => {
-    const definition = withCapability({ editorial: { enabled: true } });
+    const definition = withCapability({ editorial: true });
 
     expect(definition.editorial.enabled).toBe(true);
     expect(definition.localization.enabled).toBe(true);
@@ -380,8 +380,8 @@ describe("capability combinations", () => {
 
   it("allows localization plus publicApi from Stage 5C", () => {
     const definition = withCapability({
-      publication: { enabled: true },
-      publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
+      publication: true,
+      publicApi: { fields: ["slug"], path: "boundaries" },
     });
 
     expect(definition.publicApi.enabled).toBe(true);
@@ -395,15 +395,13 @@ describe("capability combinations", () => {
 
   it("allows localization plus search from Stage 5D", () => {
     const definition = withCapability({
-      publication: { enabled: true },
+      publication: true,
       publicApi: {
-        enabled: true,
         fields: ["title", "slug"],
         path: "boundaries",
       },
       search: {
         contentFields: ["title"],
-        enabled: true,
         pathTemplate: "/{locale}/boundaries/{slug}",
         titleField: "title",
       },
@@ -415,15 +413,13 @@ describe("capability combinations", () => {
 
   const withSearchTemplate = (pathTemplate: string) =>
     withCapability({
-      publication: { enabled: true },
+      publication: true,
       publicApi: {
-        enabled: true,
         fields: ["title", "slug"],
         path: "boundaries",
       },
       search: {
         contentFields: ["title"],
-        enabled: true,
         pathTemplate,
         titleField: "title",
       },
