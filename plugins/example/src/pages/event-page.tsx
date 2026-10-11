@@ -1,4 +1,5 @@
-import { EditorContent } from "@vitnode/core/components/ui/editor-content";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import { zodRichTextDocument } from "@vitnode/core/content";
 import {
   definePluginRoute,
   type PluginRoutePageProps,
@@ -15,7 +16,7 @@ import { ContentArticle } from "./content-article";
 // `id` is a decimal string: `example.event` uses the `bigint` id strategy, and
 // an identifier above 2^53 would not survive a round trip through a number.
 const zodEvent = z.object({
-  body: z.string(),
+  body: zodRichTextDocument.nullable(),
   id: z.string(),
   publishedAt: z.string().nullable(),
   sessions: z.array(
@@ -70,9 +71,12 @@ const EventPage = ({
       publishedAt={item.publishedAt}
       title={item.title}
     >
-      <div className="leading-relaxed">
-        <EditorContent content={item.body} />
-      </div>
+      {item.body ? (
+        <RichTextContent
+          className="text-foreground leading-relaxed text-pretty"
+          content={item.body}
+        />
+      ) : null}
 
       {item.sessions.length > 0 ? (
         <section

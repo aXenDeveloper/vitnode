@@ -1,3 +1,4 @@
+import type { ContentId } from "@vitnode/core/content";
 import type { RichTextDocument } from "@vitnode/core/content/rich-text";
 
 import { Link } from "@tanstack/react-router";
@@ -84,7 +85,7 @@ export const ArticleEditor = ({
   itemId,
 }: {
   contentTypeId: string;
-  itemId: number | undefined;
+  itemId: ContentId | undefined;
 }) => {
   const t = useTranslations("@vitnode/blog.admin.article.editor");
   const { defaultLocale, files, header, markHeaderRendered } = useContentForm();
