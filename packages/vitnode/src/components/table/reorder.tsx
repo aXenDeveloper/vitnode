@@ -33,7 +33,6 @@ import type { DataTableRowId, DataTableTMin } from "./data-table-content";
 import { Button } from "../ui/button";
 import { moveRowId, type ReorderDetailsDataTable } from "./reorder-state";
 
-/** The id type of one row - `number` for a table of numeric rows. */
 type RowIdOf<T> = T extends { id: infer TId } ? TId : DataTableRowId;
 
 export interface ReorderableDataTable<T> {
@@ -80,7 +79,6 @@ export const useRowOrderDataTable = <T extends DataTableTMin>({
 
     const persist = async () => {
       try {
-        // The ids are the rows' own, so they carry the rows' id type.
         await onReorder(move.ids as RowIdOf<T>[], {
           activeId: move.activeId,
           from: move.from,
@@ -178,7 +176,6 @@ export function ReorderProviderDataTable({
       id={contextId}
       modifiers={[restrictToVerticalAxis, restrictToParentElement]}
       onDragEnd={({ active, over }) => {
-        // dnd-kit hands back the very ids `SortableContext` was given.
         if (over) onMove(active.id, over.id);
       }}
       sensors={sensors}

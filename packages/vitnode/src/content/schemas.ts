@@ -65,14 +65,9 @@ const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
   slugField: "",
 };
 
-/**
- * The `{id}` path parameter's schema. A `serial` content type keeps exactly the
- * coerced number it always had, so its OpenAPI document does not move; a
- * `uuid` or `bigint` one validates the canonical string.
- */
-export type ContentIdParamSchemaOf<TDefinition> = [
-  ContentIdOf<TDefinition>,
-] extends [number]
+type ContentIdParamSchemaOf<TDefinition> = [ContentIdOf<TDefinition>] extends [
+  number,
+]
   ? z.ZodCoercedNumber
   : z.ZodType<ContentIdOf<TDefinition>>;
 
@@ -183,29 +178,14 @@ const numberSchema = (fieldValue: {
   return schema;
 };
 
-/**
- * A `core_users.id`, a `core_files.id`, a repeatable child's own id, or a serial
- * content record's id: a positive integer.
- */
 const referenceSchema = (): z.ZodNumber => z.number().int().positive();
 
-/** One record identifier under `strategy`, as it crosses JSON. */
 const recordIdSchema = (strategy: ContentIdStrategy): z.ZodType =>
-  // `serial` keeps the exact schema it always had, so a serial content type's
-  // generated forms and OpenAPI document are unchanged.
   strategy === "serial" ? referenceSchema() : contentIdSchema(strategy);
 
-/** One record identifier under `strategy`, as a response carries it. */
 const recordIdOutputSchema = (strategy: ContentIdStrategy): z.ZodType =>
   strategy === "serial" ? z.number() : z.string();
 
-/**
- * The id strategy a relation's values follow, if it can be known while the
- * schemas are being built: the owner's for a self-relation, the target's when
- * the target module has already loaded. `null` means "not yet" - a target in a
- * module that imports this one - and the caller defers the decision to the
- * first parse with `z.lazy`.
- */
 const relationStrategyNow = (
   fieldValue: ContentFieldDescriptor,
   owner: ContentIdStrategy,
@@ -219,7 +199,6 @@ const relationStrategyNow = (
         ?.idStrategy ?? null
     );
   } catch {
-    // A target still in its temporal dead zone - a circular import.
     return null;
   }
 };
@@ -229,7 +208,6 @@ const relationStrategyLater = (
 ): ContentIdStrategy =>
   fieldValue.kind === "relation" ? fieldValue.target().idStrategy : "serial";
 
-/** {@link recordIdSchema} for a relation's target, resolved now or on first use. */
 const relationIdSchema = (
   fieldValue: ContentFieldDescriptor,
   owner: ContentIdStrategy,
@@ -380,7 +358,7 @@ const applyPresence = (
 
 const relationSetSchema = (
   fieldValue: ContentFieldDescriptor,
-  owner: ContentIdStrategy = "serial",
+  owner: ContentIdStrategy,
 ): z.ZodType => {
   const min = (fieldValue as { min?: number }).min;
   // A file collection carries its own ceiling and defaults to a much lower one:
@@ -547,11 +525,6 @@ export const contentFieldUpdateSchema = (
     ? undefined
     : (updateShape(fields, [name])[name] as z.ZodType);
 
-/**
- * A relation filter's identifier, read from a query string. A serial target
- * keeps the coerced number it always had; the others parse the canonical
- * string, and a target not loaded yet is parsed on first use.
- */
 const relationFilterIdSchema = (
   fieldValue: ContentFieldDescriptor,
   owner: ContentIdStrategy,
@@ -576,7 +549,7 @@ const relationFilterIdSchema = (
 
 const filterShape = (
   fields: ContentFieldMap,
-  owner: ContentIdStrategy = "serial",
+  owner: ContentIdStrategy,
 ): z.ZodRawShape =>
   Object.fromEntries(
     Object.entries(fields)
@@ -669,7 +642,7 @@ const publicSelectShape = (
   fields: ContentFieldMap,
   publicApi: ResolvedContentPublicApiConfig,
   localization: ResolvedContentLocalizationConfig,
-  owner: ContentIdStrategy = "serial",
+  owner: ContentIdStrategy,
 ): z.ZodRawShape => ({
   // The language actually served, which with a fallback is not always the one
   // that was asked for. `defineContentType` reserves the name on a localized
@@ -737,7 +710,6 @@ const publicSelectShape = (
   ),
 });
 
-/** The `{id}` path parameter of `strategy`. See {@link ContentIdParamSchemaOf}. */
 const idParamSchema = (strategy: ContentIdStrategy): z.ZodType =>
   strategy === "serial" ? z.coerce.number() : contentIdSchema(strategy);
 
@@ -855,12 +827,10 @@ export const buildContentSchemas = <TDefinition>({
   editorial?: boolean;
   /** Every declared field. Partitioned here, so no caller has to. */
   fields: ContentFieldMap;
-  /** The content type's own id strategy: `id`, `{id}` and self-relations follow it. */
   idStrategy?: ContentIdStrategy;
   localization?: ResolvedContentLocalizationConfig;
   publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
-  /** Whether `hiddenAt` / `hiddenBy` exist on the base row. */
   visibility?: boolean;
 }): ContentSchemas<TDefinition> => {
   // Everything below this line is about the base table, so it reads the shared
@@ -892,8 +862,6 @@ export const buildContentSchemas = <TDefinition>({
     ? { version: z.number().int().positive() }
     : {};
 
-  // Read-only as well: `hide` and `unhide` are the only writers. Returned so the
-  // AdminCP can badge a hidden row and say who hid it.
   const visibilitySelectShape: z.ZodRawShape = visibility
     ? {
         hiddenAt: z.date().nullable(),

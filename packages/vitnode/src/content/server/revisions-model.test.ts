@@ -91,8 +91,6 @@ const cursorOf = (condition: unknown): null | number => {
     .map(chunk => (chunk as null | { value?: unknown })?.value)
     .filter((value): value is number => typeof value === "number");
 
-  // The scope predicate binds the item id as its storage key - a string - so
-  // the only numeric parameter is the version cursor, when there is one.
   return params.at(-1) ?? null;
 };
 

@@ -28,7 +28,6 @@ export const ContentFormSubmit = ({
 }: {
   label?: React.ReactNode;
   withPublicationToggle?: boolean;
-  /** The Hide / Unhide button, for a content type with visibility enabled. */
   withVisibilityToggle?: boolean;
 }) => {
   const tContent = useTranslations("core.content");

@@ -1,5 +1,6 @@
 import type { PermissionsStaffArgs } from "../api/lib/permission-staff";
 import type { ItemAutoFormComponentProps } from "../components/form/auto-form";
+import type { ContentId } from "../content/ids";
 import type {
   AnyContentTypeDefinition,
   ContentSelect,
@@ -67,11 +68,7 @@ export interface ContentCellProps<
 
 export interface ContentFormLayoutProps {
   contentTypeId: string;
-  /**
-   * `undefined` while creating - the record does not exist yet. A number for a
-   * `serial` content type, the canonical string for a `uuid` or `bigint` one.
-   */
-  itemId?: number | string;
+  itemId?: ContentId;
   mode: "create" | "edit";
   pluginId: string;
   /** Whether the content type has the draft/published lifecycle. */

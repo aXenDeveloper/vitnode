@@ -411,7 +411,6 @@ export type {
   ContentAdminFormMode,
   ContentAdminFormSection,
   ContentAdminListConfig,
-  ContentBindSelfRelations,
   ContentBlocksField,
   ContentBooleanField,
   ContentCreateInput,
@@ -522,11 +521,7 @@ export type {
   SchedulableContentTypeDefinition,
   SearchableContentTypeDefinition,
 } from "./types";
-export {
-  contentVisibilityTransition,
-  hasContentVisibility,
-  isContentHidden,
-} from "./visibility";
+export { contentVisibilityTransition, isContentHidden } from "./visibility";
 export type {
   ContentVisibilityAction,
   ContentVisibilityTransition,

@@ -99,10 +99,6 @@ export interface ContentTranslationModel<TDefinition> {
     options?: ContentTranslationOptions,
   ) => Promise<boolean>;
 
-  /**
-   * The base row's publication state - and its `hiddenAt` when the content type
-   * has `visibility`, because a hidden record is public in no language.
-   */
   findBasePublication: (
     itemId: ContentIdOf<TDefinition>,
     options?: ContentTranslationOptions,

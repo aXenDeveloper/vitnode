@@ -27,7 +27,6 @@ export const adminModule = buildModule({
         advancedArticleContent,
         articleContent,
         categoryContent,
-        // Keyed by `bigint` and `uuid`: their routes take `{id}` as a string.
         eventContent,
         localizedArticleContent,
         pageContent,

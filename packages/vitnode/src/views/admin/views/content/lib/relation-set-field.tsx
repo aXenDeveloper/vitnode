@@ -16,7 +16,6 @@ import { ContentReferenceChipSkeleton } from "./reference-chip-skeleton";
 import { useReferenceOptions } from "./reference-options";
 
 export interface ContentRelationSetFieldProps extends ItemAutoFormComponentProps {
-  /** Labels the row already resolved, keyed by `contentIdKey(id)`. */
   labels?: Record<string, string>;
   loadOptions: ContentOptionsLoader;
   spec: ContentFormFieldSpec;
@@ -31,7 +30,6 @@ export const ContentRelationSetField = ({
 }: ContentRelationSetFieldProps) => {
   const t = useTranslations("core.content.form");
   const locale = useLocale();
-  // A number per serial target, a canonical string per `uuid` or `bigint` one.
   const selected = Array.isArray(field.value)
     ? (field.value as ContentId[])
     : [];

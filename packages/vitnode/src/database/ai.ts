@@ -298,7 +298,6 @@ export const core_ai_translation_sources = camelCase.table.withRLS(
   t => ({
     id: t.serial().primaryKey(),
     contentTypeId: t.varchar({ length: 255 }).notNull(),
-    /** `contentIdKey(id)`: the digits of a serial or bigint id, or a uuid. */
     itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     locale: t.varchar({ length: 32 }).notNull(),
     field: t.varchar({ length: 255 }).notNull(),

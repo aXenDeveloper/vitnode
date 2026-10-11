@@ -73,7 +73,6 @@ export interface ContentFormProps {
   spec: ContentFormSpec;
   title?: string;
   translations?: readonly TranslationRow[];
-  /** `definition.visibility.enabled` - the Hidden badge and Hide / Unhide. */
   visibility?: boolean;
 }
 
@@ -221,9 +220,6 @@ const ContentFormFields = ({
     null,
   );
 
-  // What the server last said, and what this screen knows since: a hide or an
-  // unhide answers before the record is re-read, and a dialog-mode form is
-  // never re-read at all.
   const serverHiddenAt: unknown = data?.hiddenAt ?? null;
   const [hidden, setHidden] = React.useState<{
     server: unknown;
@@ -349,7 +345,7 @@ const ContentFormFields = ({
     [],
   );
   const visibilityTransition = async (action: ContentVisibilityAction) => {
-    if (!data || !transport.setHidden) return false;
+    if (!data) return false;
 
     const mutation = await transport.setHidden(
       spec.contentTypeId,
@@ -359,9 +355,6 @@ const ContentFormFields = ({
     );
 
     if (mutation.error !== undefined) {
-      // The same banner a save gets: somebody saved first, and the editor
-      // decides with both versions in front of them. The dialog closes, because
-      // the banner is where the next step is.
       if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
         setConflict({ currentVersion: mutation.conflict.currentVersion });
 
@@ -601,10 +594,7 @@ const ContentFormFields = ({
                   canHide,
                   enabled: visibility,
                   hiddenAt: hidden.value,
-                  transition:
-                    data && transport.setHidden
-                      ? visibilityTransition
-                      : undefined,
+                  transition: data ? visibilityTransition : undefined,
                 },
               }}
             >

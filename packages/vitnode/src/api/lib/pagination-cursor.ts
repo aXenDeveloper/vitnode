@@ -39,12 +39,6 @@ const baseDataTypeOf = (column: PgColumn): string =>
 const isUuidColumn = (column: PgColumn): boolean =>
   column.getSQLType().toLowerCase() === "uuid";
 
-/**
- * A Postgres `bigint` read in Drizzle's `string` mode - how a content type with
- * `idStrategy: "bigint"` keys its rows. Its data type says `string`, but it
- * orders and compares as the 64-bit integer it is, so it is a `bigint` cursor
- * kind whose JavaScript values are decimal strings.
- */
 const isStringInt64Column = (column: PgColumn): boolean =>
   column.dataType === "string int64";
 
@@ -236,7 +230,6 @@ export const cursorValueOf = (
     case "bigint": {
       if (typeof value === "bigint") return value.toString();
       if (typeof value === "number") return String(value);
-      // A string-mode bigint already is the decimal string the cursor carries.
       if (typeof value === "string" && DECIMAL_INTEGER.test(value)) {
         return value;
       }
@@ -312,7 +305,6 @@ export const cursorValueForColumn = (
       const parsed = postgresBigint(value);
       if (parsed === undefined) throw badRequest(INVALID_CURSOR);
 
-      // Bound as the column reads it: a string-mode column maps strings.
       return isStringInt64Column(column) ? parsed.toString() : parsed;
     }
     case "boolean": {
@@ -393,7 +385,6 @@ export const cursorIdentifierOf = (
   switch (identifierKindOf(column)) {
     case "bigint":
       if (typeof value === "bigint" && value > 0n) return value.toString();
-      // A string-mode bigint: already canonical, never through `Number`.
       if (
         typeof value === "string" &&
         POSITIVE_DECIMAL_INTEGER.test(value) &&

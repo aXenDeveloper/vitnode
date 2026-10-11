@@ -9,7 +9,7 @@ import hideDialog from "./content-visibility-hide-dialog.webp";
 import hiddenFilter from "./content-visibility-filter.webp";
 import hiddenEditor from "./content-visibility-editor.webp";
 
-Hiding takes a record off the public site at once while it stays published. Use it for moderation, a legal hold or a quick fix: the record disappears from the public API, its page, search and the sitemap, and unhiding brings it back with its original URL and publish date. This guide follows the blog plugin, whose articles can be hidden.
+Hiding takes a record off the public site right away while it stays published. It disappears from the public API, its page, search and the sitemap, and unhiding brings it back with its original URL and publish date. Reach for it when a post has to go now and the questions can wait. This guide follows the blog plugin, whose articles can be hidden.
 
 | You want to                                                            | Use                                                             |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -129,19 +129,19 @@ Hidden doesn't mean gone for the people working on it. Signed in, a record's **a
 - **Authors** are the users in the content type's [`search.authorField`](/docs/content-engine/search), such as the blog's **Author** field.
 - **Editors** are staff with `can_edit` on the content type, such as `posts:can_edit` for the blog.
 
-For them:
+The route tells whose record it is by its `id`, so `id` must be in `publicApi.fields`. For authors and editors:
 
-- The page opens with an eye-off icon before the title and a **This article is hidden** note, so nobody mistakes it for a live page. It is never indexed: the response says `noindex` and `Cache-Control: private, no-store`.
+- The page opens with an eye-off icon before the title and a **This article is hidden** note, so nobody mistakes it for a live page. The response sends `noindex` and `Cache-Control: private, no-store`, so search engines and caches never keep it.
 - The detail route answers `200`, and `GET .../delivery/resolve/{slug}` returns `hidden: true`.
 - [Site search](/docs/content-engine/search) and the member timeline list it with the eye-off icon before its title and a tooltip like **Article hidden**.
 
-Everyone else, signed in or not, still gets a `404`. Old slugs never redirect to a hidden record, and the list, sitemap and `hreflang` alternates leave it out for everybody. This needs `id` in `publicApi.fields`, so the route can tell whose record it is.
+Everyone else, signed in or not, still gets a `404`. Old slugs never redirect to a hidden record, and the list, sitemap and `hreflang` alternates leave it out for everybody.
 
 <Callout type="info">
 Search learns that a record is hidden when it is hidden or unhidden. Records hidden before you updated VitNode show up for their authors and editors only after a reindex: **AdminCP → Advanced → Search**, then **Reindex** on the collection, such as `blog.post`. See [Search](/docs/content-engine/search).
 </Callout>
 
-Hiding changes nothing else. `status` and `publishedAt` stay as they are, so unhiding a published record puts it back with its original date. Publishing, unpublishing or a scheduled publish never change visibility: publishing a hidden record keeps it off the site until someone unhides it. Restoring a revision never changes visibility either.
+Hiding changes nothing else. `status` and `publishedAt` stay as they are, so unhiding a published record puts it back with its original date. Publishing, unpublishing and scheduled publishes never change visibility, so publishing a hidden record keeps it off the site until someone unhides it. Restoring a revision never changes visibility either.
 
 With [`editorial`](/docs/content-engine/editorial), hiding and unhiding raise the record's `version` and store a revision, shown as **Hidden** or **Unhidden** in the history. Hiding a record that is already hidden changes nothing: no write, no revision and no event.
 
@@ -155,7 +155,7 @@ The admin module has `POST /{id}/hide` and `POST /{id}/unhide`, such as `POST /a
 { "expectedVersion": 4 }
 ```
 
-With `expectedVersion`, the call fails with `409` and `CONTENT_VERSION_CONFLICT` when someone saved the record meanwhile, like any [editorial write](/docs/content-engine/editorial#safe-concurrent-edits). Both routes answer `200` with `{ changed, row }`, where `changed` is `false` when the record already was in that state. A malformed id is `400` and a missing record is `404`. With `delivery.redirects`, unhiding can also fail with `409` when another record took the URL while this one was hidden.
+With `expectedVersion`, the call fails with `409` and `CONTENT_VERSION_CONFLICT` when someone saved the record meanwhile, like any [editorial write](/docs/content-engine/editorial#safe-concurrent-edits). Both routes answer `200` with `{ changed, row }`, where `changed` is `false` when the record was already in that state. A malformed id is `400` and a missing record is `404`. With `delivery.redirects`, unhiding can also fail with `409` when another record took the URL while this one was hidden.
 
 The admin list route accepts `?visibility=hidden` or `?visibility=visible`, and it combines with `?status=`.
 

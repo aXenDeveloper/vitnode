@@ -13,8 +13,6 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import { ContentArticle } from "./content-article";
 
-// `id` is a decimal string: `example.event` uses the `bigint` id strategy, and
-// an identifier above 2^53 would not survive a round trip through a number.
 const zodEvent = z.object({
   body: zodRichTextDocument.nullable(),
   id: z.string(),

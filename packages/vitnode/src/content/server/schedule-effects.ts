@@ -52,10 +52,6 @@ const scheduledLocales = async (
 export const contentScheduleEffectsPayloadSchema = z.object({
   changedFields: z.array(z.string()),
   contentTypeId: z.string().min(1),
-  /**
-   * A number for a `serial` record, the canonical string for a `uuid` or
-   * `bigint` one - re-read under the content type's strategy before use.
-   */
   itemId: z.union([
     z.number().int().positive(),
     z.string().min(1).max(CONTENT_ID_KEY_LENGTH),
@@ -135,9 +131,6 @@ export const runContentScheduleEffects = async (
   const definition = contentDefinitionOf(entry.model);
   const row = reviveDates(definition, payload.row);
 
-  // Written by the executor under the same definition, so a miss means the
-  // content type's `idStrategy` changed between the two runs: nothing this run
-  // could announce would name the right record.
   const itemId = parseContentId(definition.idStrategy, payload.itemId);
   if (itemId === null) {
     await recordContentScheduleEffectsError(
@@ -189,10 +182,6 @@ export const runContentScheduleEffects = async (
 
   const revalidation = await dispatchContentRevalidation(c, {
     contentTypeId: definition.id,
-    // A scheduled transition flips public reachability - unless the record is
-    // hidden, in which case it was off the site before and stays off it after, and
-    // neither the sitemap file nor its index moved. Absent for a content type
-    // without `delivery`, which keeps its tag list byte-identical.
     ...(definition.delivery.enabled
       ? {
           delivery: {

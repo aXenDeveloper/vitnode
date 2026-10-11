@@ -111,12 +111,15 @@ export const createContentPublicProjector = <
   const exposesId = exposed.includes("id");
   const flat = exposed.filter(name => splitContentFieldPath(name) === null);
   // A `user` field is never exposable, so this is only ever relations.
-  const exposedToOne = new Set(
-    flat.filter(
-      name =>
-        definition.fields[name]?.kind === "relation" &&
-        !isContentReferenceCollection(definition.fields[name]),
-    ),
+  const exposedToOne = new Map(
+    flat.flatMap(name => {
+      const fieldValue = definition.fields[name];
+
+      return fieldValue?.kind === "relation" &&
+        !isContentReferenceCollection(fieldValue)
+        ? [[name, contentRelationStrategy(definition, fieldValue)] as const]
+        : [];
+    }),
   );
   const exposedToMany = new Set(
     flat.filter(
@@ -124,20 +127,6 @@ export const createContentPublicProjector = <
         definition.fields[name] !== undefined &&
         isContentReferenceCollection(definition.fields[name]),
     ),
-  );
-  // The strategy each to-one target is keyed by, so a `uuid` or `bigint`
-  // reference projects as `{ id }` rather than vanishing as a non-number.
-  const toOneStrategies = new Map(
-    [...exposedToOne].map(name => {
-      const fieldValue = definition.fields[name];
-
-      return [
-        name,
-        fieldValue.kind === "relation"
-          ? contentRelationStrategy(definition, fieldValue)
-          : "serial",
-      ] as const;
-    }),
   );
   // Leaf-level privacy, resolved once: `seo` carries only the leaves the
   // allowlist named, whatever else the group declares.
@@ -159,15 +148,13 @@ export const createContentPublicProjector = <
         continue;
       }
 
-      if (!exposedToOne.has(name)) {
+      const strategy = exposedToOne.get(name);
+      if (strategy === undefined) {
         projected[name] = row[name];
         continue;
       }
 
-      const id = parseContentId(
-        toOneStrategies.get(name) ?? "serial",
-        row[name],
-      );
+      const id = parseContentId(strategy, row[name]);
       projected[name] = id === null ? null : { id };
     }
 

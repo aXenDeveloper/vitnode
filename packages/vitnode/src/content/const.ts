@@ -4,32 +4,16 @@ export const CONTENT_PUBLICATION_FIELDS = ["status", "publishedAt"] as const;
 
 export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
-/** The two system columns `visibility: { enabled: true }` adds to the base table. */
 export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
 
-/** The two record-level visibility mutations, and their route segments. */
 export const CONTENT_VISIBILITY_ACTIONS = ["hide", "unhide"] as const;
 
-/**
- * The admin list's `visibility` filter. `hidden` is `hiddenAt IS NOT NULL`,
- * `visible` is `hiddenAt IS NULL` - whatever the publication status says.
- */
 export const CONTENT_VISIBILITY_FILTERS = ["hidden", "visible"] as const;
 
-/**
- * How a content type's primary key is generated. `serial` is the default and the
- * only strategy a content type had before; see `ids.ts`.
- */
 export const CONTENT_ID_STRATEGIES = ["serial", "uuid", "bigint"] as const;
 
 export const CONTENT_DEFAULT_ID_STRATEGY = "serial";
 
-/**
- * `varchar` length of an `itemId` in the tables shared by every content type -
- * revisions, schedules, slug history and the search index. They hold
- * `contentIdKey(id)`: the digits of a `serial` or `bigint` (at most 19) or a
- * canonical UUID (36), with room to spare.
- */
 export const CONTENT_ID_KEY_LENGTH = 64;
 
 export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
@@ -435,26 +419,18 @@ export const CONTENT_UNPROCESSABLE_CODES = {
   notRestorable: "CONTENT_REVISION_NOT_RESTORABLE",
 } as const;
 
-/** Machine-readable reasons a duplicate was refused. */
 export const CONTENT_DUPLICATE_CODES = {
-  /** Every slug candidate was taken, or kept being taken by concurrent writers. 409. */
   slugConflict: "CONTENT_DUPLICATE_SLUG_CONFLICT",
-  /** A unique field would collide with the source and no override was given. 422. */
   uniqueRequired: "CONTENT_DUPLICATE_UNIQUE_REQUIRED",
 } as const;
 
-/** How many slug candidates a duplicate considers: `hello-copy`, `hello-copy-2`, ... */
 export const CONTENT_DUPLICATE_SLUG_CANDIDATES = 20;
 
-/** How many writes a duplicate attempts when concurrent writers keep taking its slug. */
 export const CONTENT_DUPLICATE_SLUG_ATTEMPTS = 3;
 
-/** Appended to a copied slug that has no source field to derive a fresh one from. */
 export const CONTENT_DUPLICATE_SLUG_SUFFIX = "copy";
 
-/** The title suffix when no translated message is available. */
 export const CONTENT_DUPLICATE_TITLE_SUFFIX = "(Copy)";
 
-/** The server message holding the localized title suffix. */
 export const CONTENT_DUPLICATE_TITLE_SUFFIX_KEY =
   "core.content.duplicate.title_suffix";

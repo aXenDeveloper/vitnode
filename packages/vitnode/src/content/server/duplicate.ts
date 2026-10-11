@@ -51,24 +51,13 @@ import { slugify } from "../slug";
 import { contentSlugHistoryFor } from "./delivery-writes";
 
 export interface ContentDuplicateOptions<TDefinition> {
-  /**
-   * Shared values the copy takes instead of the source's. A group is merged leaf
-   * by leaf; any other field replaces the copied value. Validated with the rest
-   * of the copy, exactly like a create.
-   */
   overrides?: ContentUpdateInput<TDefinition>;
-  /**
-   * Localized values per copied locale, merged the same way. A locale the source
-   * has no translation in is refused.
-   */
   translations?: Partial<
     Record<string, ContentLocalizedUpdateValues<TDefinition>>
   >;
-  /** Join an existing transaction instead of opening one. */
   tx?: ContentDatabase;
 }
 
-/** The two halves of a duplicate request body: shared and per-locale overrides. */
 export type ContentDuplicateOverrides<TDefinition> = Pick<
   ContentDuplicateOptions<TDefinition>,
   "overrides" | "translations"
@@ -81,12 +70,9 @@ export interface ContentEditorialDuplicateOptions<
 }
 
 export interface ContentDuplicateResult<TDefinition> {
-  /** The copy: a new draft. */
   row: ContentSelect<TDefinition>;
-  /** Source locales the install has switched off, so the copy does not carry them. */
   skippedLocales: string[];
   sourceId: ContentIdOf<TDefinition>;
-  /** The copied translations, default locale first. Empty when not localized. */
   translations: ContentTranslationRow<TDefinition>[];
 }
 
@@ -96,17 +82,10 @@ export interface ContentEditorialDuplicateOutcome<
   duplicatedFromId: ContentIdOf<TDefinition>;
   skippedLocales: string[];
   sourceId: ContentIdOf<TDefinition>;
-  /** One `create` outcome per copied translation, default locale first. */
   translations: ContentTranslationEditorialOutcome<TDefinition>[];
 }
 
-/** `duplicate`, present on a content type with `duplication: { enabled: true }`. */
 export interface ContentDuplicationMethods<TDefinition> {
-  /**
-   * Copies one record as a new draft, with its collections and every translation.
-   * One transaction; `null` when the source does not exist. Emits nothing - the
-   * caller runs `contentDuplicateEffects` after the commit.
-   */
   duplicate: (
     sourceId: ContentIdOf<TDefinition>,
     options?: ContentDuplicateOptions<TDefinition>,
@@ -114,18 +93,12 @@ export interface ContentDuplicationMethods<TDefinition> {
 }
 
 export interface ContentEditorialDuplicationMethods<TDefinition> {
-  /** The editorial twin: the copy and each translation get their `create` revision. */
   duplicate: (
     sourceId: ContentIdOf<TDefinition>,
     options: ContentEditorialDuplicateOptions<TDefinition>,
   ) => Promise<ContentEditorialDuplicateOutcome<TDefinition> | null>;
 }
 
-/** The part of the translation model a duplicate reads through. */
-/**
- * The part of the translation model a duplicate reads through, erased over the
- * id strategy: the duplicate hands it back the source's own canonical id.
- */
 export interface ContentDuplicateTranslationSource {
   findManyRowsForItem: (
     itemId: ContentId,
@@ -142,7 +115,6 @@ export interface ContentDuplicateDependencies {
   c: Context;
   columns: Record<string, PgColumn>;
   definition: AnyContentTypeDefinition;
-  /** Only names the slug history model; a duplicate never writes history itself. */
   pluginId?: string;
   table: PgTable;
   translation?: {
@@ -152,10 +124,6 @@ export interface ContentDuplicateDependencies {
   };
 }
 
-/**
- * The write half of a duplicate - the ordinary create pipeline, plain or
- * editorial - always called with the duplicate's own transaction.
- */
 export interface ContentDuplicateWriter<TBase, TTranslation> {
   base: (
     values: Record<string, unknown>,
@@ -173,7 +141,6 @@ export interface ContentDuplicateWriter<TBase, TTranslation> {
 interface SlugPlan {
   base: string;
   field: string;
-  /** Whether this slug is the delivery address, and so checked against history. */
   history: boolean;
   maxLength: number;
 }
@@ -195,11 +162,6 @@ const pickLeaves = (inner: ContentFieldMap, value: Values): Values =>
       .map(([leaf, leafValue]) => [leaf, toInput(leafValue, value[leaf])]),
   );
 
-/**
- * One stored value in the shape a create accepts: a timestamp as ISO text, a
- * group by its declared leaves, a repeatable child **without** its id - a copy
- * owns new children, and an id would point at the source's.
- */
 const toInput = (
   fieldValue: ContentFieldDescriptor,
   value: unknown,
@@ -226,7 +188,6 @@ const toInput = (
   }
 };
 
-/** Built from the declared writable fields only, so nothing generated is copied. */
 const copyValues = (fields: ContentFieldMap, values: Values): Values =>
   Object.fromEntries(
     Object.entries(fields)
@@ -251,7 +212,6 @@ const applyOverrides = (
       continue;
     }
 
-    // A child id in an override would name one of the source's children.
     if (fieldValue?.kind === "repeatable" && Array.isArray(value)) {
       next[name] = value.map(row =>
         isRecord(row)
@@ -263,17 +223,12 @@ const applyOverrides = (
       continue;
     }
 
-    // Unknown keys are kept, so the strict create schema refuses them.
     next[name] = value;
   }
 
   return next;
 };
 
-/**
- * Appends the suffix, trimming the title so the whole fits `maxLength`. Measured
- * in UTF-16 units like the schema, and never splitting a surrogate pair.
- */
 export const appendContentTitleSuffix = (
   title: string,
   suffix: string,
@@ -296,10 +251,6 @@ export const appendContentTitleSuffix = (
   return `${kept.trimEnd()}${tail}`;
 };
 
-/**
- * The n-th slug candidate: `hello-copy`, `hello-copy-2`, ... - trimmed so the
- * numeric tail always survives `maxLength`.
- */
 export const contentSlugCandidate = (
   base: string,
   position: number,
@@ -326,7 +277,6 @@ const sameValue = (left: unknown, right: unknown): boolean => {
   return left === right;
 };
 
-/** The orchestration both services share. Writes happen through `writer` only. */
 export const runContentDuplicate = async <TBase, TTranslation>(
   {
     advanced,
@@ -366,8 +316,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     );
   }
 
-  // Canonicalised once, so `"7"` and `7` - or a bigint and its own digits - read
-  // the same row. Unparseable cannot name a record, which is a miss, not a 500.
   const id = parseContentId(definition.idStrategy, sourceId);
   if (id === null) return null;
   const { localizedFields, sharedFields, collectionFields } =
@@ -467,7 +415,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
         };
       });
 
-  /** The first candidate no live row holds and no other record's history owns. */
   const chooseSlug = async (
     tx: ContentDatabase,
     plan: SlugPlan,
@@ -524,7 +471,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     });
   };
 
-  /** The slug field a unique violation is about, or `undefined` when it is not one we chose. */
   const collidedSlug = (
     error: unknown,
     plans: readonly SlugPlan[],
@@ -533,8 +479,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     if (pgErrorCode(error) !== PG_ERROR_CODES.uniqueViolation) return undefined;
 
     const constraint = pgConstraintName(error);
-    // A driver that does not name the constraint: assume the slug, which is the
-    // only value this write invented. The attempt limit still bounds it.
     if (constraint === undefined) return plans[0]?.field;
 
     const indexes =
@@ -552,11 +496,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     )?.field;
   };
 
-  /**
-   * One write with fresh slugs, retried in a savepoint when a concurrent copy
-   * commits the same slug first. The savepoint is what keeps the transaction
-   * usable after the `23505`; the attempt limit is what keeps it finite.
-   */
   const writeWithSlugs = async <TResult>(
     tx: ContentDatabase,
     plans: readonly SlugPlan[],
@@ -602,11 +541,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     }
   };
 
-  /**
-   * Every unique index the copy would collide on: all of its columns hold a
-   * value, and the copy would write the same values again. A slug is never
-   * among them - it is regenerated.
-   */
   const missingUniqueOverrides = (raw: Values, copy: Values): string[] => {
     const regenerated = new Set(
       Object.entries(sharedFields)
@@ -645,9 +579,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
       : await c.get("db").transaction(async tx => await body(tx));
 
   return await transact(async tx => {
-    // Locked `FOR SHARE` and read in the same statement: concurrent copies of one
-    // source run side by side, while an edit of it waits until this commits - so
-    // the base row, its collections and its translations are one state.
     const [raw] = await tx
       .select({
         id: columns.id,
@@ -661,7 +592,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
       .for("share");
     if (!raw) return null;
 
-    // A translation edit never touches the base row, so its rows are locked too.
     if (translation) {
       await tx
         .select({ itemId: translation.columns.itemId })
@@ -678,7 +608,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
       ? await translation.model().findManyRowsForItem(id, { tx })
       : [];
 
-    // Refused before anything is written, like the unique check below.
     const sourceLocales = new Set(
       sourceTranslations.map(row => row.locale.toLowerCase()),
     );
@@ -719,8 +648,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
     );
     const itemId = writer.idOf(base);
 
-    // The default language first, as the composite create writes it: the copy is
-    // never a record without it, even inside this transaction.
     const isDefault = (locale: string): boolean =>
       locale.toLowerCase() ===
       definition.localization.defaultLocale.toLowerCase();
@@ -735,8 +662,6 @@ export const runContentDuplicate = async <TBase, TTranslation>(
       const language = await translation?.model().resolveLanguage(row.locale, {
         tx,
       });
-      // A language switched off accepts no new content, so the copy cannot carry
-      // it. Reported rather than failing the whole copy over one locale.
       if (language?.isEnabled === false) {
         skippedLocales.push(row.locale);
         continue;
@@ -776,44 +701,22 @@ export const runContentDuplicate = async <TBase, TTranslation>(
   });
 };
 
-/**
- * The localized " (Copy)" a copied title ends with, from the server messages
- * (`core.content.duplicate.title_suffix`), falling back to the install's default
- * locale and then to English when no translator is available.
- */
 export const resolveContentTitleSuffix = async (
   c: Context,
   locale: string | undefined,
 ): Promise<string> => {
-  const i18n = c.get("i18n") as
-    | undefined
-    | {
-        getTranslator: (
-          locale?: string,
-        ) => Promise<
-          ((key: string) => string) & { has?: (key: string) => boolean }
-        >;
-        resolveSupportedLocale: (preferred?: string) => string;
-      };
-  if (!i18n) return CONTENT_DUPLICATE_TITLE_SUFFIX;
-
-  try {
-    const t = await i18n.getTranslator(i18n.resolveSupportedLocale(locale));
-    if (t.has && !t.has(CONTENT_DUPLICATE_TITLE_SUFFIX_KEY)) {
-      return CONTENT_DUPLICATE_TITLE_SUFFIX;
-    }
-
-    const value = t(CONTENT_DUPLICATE_TITLE_SUFFIX_KEY).trim();
-
-    return value === "" || value === CONTENT_DUPLICATE_TITLE_SUFFIX_KEY
-      ? CONTENT_DUPLICATE_TITLE_SUFFIX
-      : value;
-  } catch {
+  const i18n = c.get("i18n");
+  const t = await i18n.getTranslator(i18n.resolveSupportedLocale(locale));
+  if (!t.has(CONTENT_DUPLICATE_TITLE_SUFFIX_KEY)) {
     return CONTENT_DUPLICATE_TITLE_SUFFIX;
   }
+
+  return (
+    t(CONTENT_DUPLICATE_TITLE_SUFFIX_KEY).trim() ||
+    CONTENT_DUPLICATE_TITLE_SUFFIX
+  );
 };
 
-/** Narrows a service to its duplicate method, refusing a content type without it. */
 export const duplicationMethods = <TMethods>(
   definition: AnyContentTypeDefinition,
   service: object,

@@ -34,10 +34,6 @@ export type ContentSearchOperation =
   | "unpublish"
   | "update";
 
-/**
- * The mutations that move public reachability without moving a field: the
- * document is rewritten - public or private - exactly when the row moved.
- */
 const isReachabilityOperation = (operation: ContentSearchOperation): boolean =>
   operation === "publish" ||
   operation === "unpublish" ||
@@ -76,8 +72,7 @@ const decide = (
   if (operation === "delete") return "delete";
 
   // An idempotent transition is a no-op for the same reason it emits no event:
-  // the document is already there and would be rewritten byte for byte. A hide
-  // and an unhide are transitions too: the document stays, as a private one.
+  // the document is already there and would be rewritten byte for byte.
   if (isReachabilityOperation(operation)) {
     return changed === true ? "upsert" : "skip";
   }
@@ -102,8 +97,6 @@ export const syncContentSearch = async (
   input: ContentSearchSyncInput,
 ): Promise<ContentSearchSyncOutcome> => {
   const values = input.row as Record<string, unknown>;
-  // Read under the content type's strategy: a `uuid` or `bigint` row's id is a
-  // string, and treating it as "no id" would silently never index it.
   const itemId = parseContentId(definition.idStrategy, values.id);
   const documentId = contentSearchDocumentId(definition, itemId ?? 0);
 

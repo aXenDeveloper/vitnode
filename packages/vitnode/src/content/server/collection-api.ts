@@ -45,8 +45,6 @@ export const assertContentPermutation = ({
   next: readonly ContentId[];
   noun: string;
 }): void => {
-  // Compared by storage key, so a `bigint` target is never rounded and a
-  // number and its own digits are the same identifier.
   const before = current.map(contentIdKey).sort();
   const nextKeys = next.map(contentIdKey);
   const after = [...new Set(nextKeys)].sort();
@@ -62,15 +60,9 @@ export const assertContentPermutation = ({
   );
 };
 
-/** A repeatable child's own id - always `serial`, whatever the owner's strategy. */
 const asChildIds = (current: readonly unknown[]): number[] =>
   current.map(value => Number(value)).filter(value => Number.isInteger(value));
 
-/**
- * A caller's identifier in the target's canonical representation, so `"7"` and
- * `7` - or a bigint and its digits - name the same entry. Refused outright when
- * it cannot name a record of the target at all.
- */
 const asTargetId = (
   strategy: ContentIdStrategy,
   value: ContentId,
@@ -101,13 +93,12 @@ export const buildContentRelationOperations = <TResult, TOptions>({
   api,
   contentTypeId,
   field,
-  strategy = "serial",
+  strategy,
 }: {
   api: ContentCollectionApi<TResult, TOptions>;
   contentTypeId: string;
   field: string;
-  /** The target's id strategy: a relation's target's, `serial` for users and files. */
-  strategy?: ContentIdStrategy;
+  strategy: ContentIdStrategy;
 }) => {
   const asIds = (current: readonly unknown[]): ContentId[] =>
     contentIdsOf(strategy, current);

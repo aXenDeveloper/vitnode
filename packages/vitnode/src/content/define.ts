@@ -204,10 +204,6 @@ export const defineContentType = <
     ContentDeliveryNoIndexField<TFields, TPublicField>
   > = false,
   TPublicPath extends string = string,
-  // Inferred as whole objects for the same reason `TSearch` and `TEditorial`
-  // are: an intersection member is not an inference site, and every conditional
-  // that decides whether `hiddenAt`, `hide()` or `duplicate()` exist reads the
-  // `enabled` literal.
   TVisibility extends boolean = false,
   TDuplication extends ContentDuplicationInput = false,
   TIdStrategy extends ContentIdStrategy = "serial",
@@ -236,17 +232,11 @@ export const defineContentType = <
 
   delivery?: TDelivery;
 
-  /** Opts into "Duplicate": a draft copy of one record. Omit to keep it off. */
   duplication?: TDuplication;
 
   editorial?: TEditorial;
   fields: TFields;
   id: TId;
-  /**
-   * How the primary key is generated: `serial` (the default, a number), `uuid`
-   * or `bigint` (both strings in every JSON-facing API). Changing it on an
-   * existing content type is a data migration, not a config change.
-   */
   idStrategy?: TIdStrategy;
   indexes?: ContentIndexInput<
     TFields,
@@ -268,7 +258,6 @@ export const defineContentType = <
 
   search?: TSearch;
   tableName: string;
-  /** Opts into record-level hiding. Needs `publication`. */
   visibility?: TVisibility;
 }): ContentTypeDefinition<
   TId,
@@ -521,7 +510,6 @@ export const defineContentType = <
 
   const resolvedDuplication = resolveDuplication(
     id,
-    // The `{ enabled: false }` arm exists only so an explicit literal typechecks.
     duplication,
     fieldMap,
     resolvedAdmin,

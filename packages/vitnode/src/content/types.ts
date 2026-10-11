@@ -38,7 +38,6 @@ export type ContentEditorialField = (typeof CONTENT_EDITORIAL_FIELDS)[number];
 
 export type ContentVisibilityField = (typeof CONTENT_VISIBILITY_FIELDS)[number];
 
-/** The admin list's `visibility` filter value. */
 export type ContentVisibilityFilter =
   (typeof CONTENT_VISIBILITY_FILTERS)[number];
 
@@ -236,13 +235,6 @@ interface ContentReferenceCollection {
   multiple: true;
 }
 
-/**
- * What a relation thunk resolves to: any content type, narrowed to the id
- * strategy its records are keyed by. The strategy is the only thing about the
- * target a relation's *value* depends on - it decides whether the foreign key is
- * an `integer`, a `uuid` or a `bigint`, and whether the API carries a number or
- * a string.
- */
 export type ContentRelationTarget<
   TStrategy extends ContentIdStrategy = ContentIdStrategy,
 > = AnyContentTypeDefinition & { idStrategy: TStrategy };
@@ -265,10 +257,6 @@ export interface ContentRelationField<
   ordered: TOrdered;
 
   self: TSelf;
-  /**
-   * Thunk so two content types can refer to each other. Its return type carries
-   * the target's id strategy, which is what the relation's values are typed by.
-   */
   target: () => ContentRelationTarget<TTargetStrategy>;
 }
 
@@ -360,21 +348,12 @@ type ApplyNullable<TValue, TField> = TField extends { nullable: true }
   ? null | TValue
   : TValue;
 
-/**
- * The identifier type a relation field holds: its target's, read off the
- * target thunk. A field whose target is erased holds either, which is what
- * generic engine code handles.
- */
 export type ContentRelationIdOf<TField> = TField extends {
   target: () => { idStrategy: infer TStrategy };
 }
   ? ContentIdOfStrategy<TStrategy>
   : number;
 
-/**
- * The identifier one reference field holds: a relation's target id, or the
- * `core_users.id` / `core_files.id` a user or file field holds.
- */
 export type ContentReferenceIdOf<TField> = TField extends { kind: "relation" }
   ? ContentRelationIdOf<TField>
   : number;
@@ -982,37 +961,19 @@ type ContentPublicationColumns<TDefinition> = TDefinition extends {
   ? { publishedAt: Date | null; status: ContentPublicationStatus }
   : Record<never, never>;
 
-// ---------------------------------------------------------------------------
-// Visibility
-// ---------------------------------------------------------------------------
-
 export interface ResolvedContentVisibilityConfig<
   TEnabled extends boolean = boolean,
 > {
   enabled: TEnabled;
 }
 
-/**
- * The two generated columns, present only when visibility is enabled. A record
- * is hidden exactly when `hiddenAt` is set; there is no separate flag to drift.
- */
 type ContentVisibilityColumns<TDefinition> = TDefinition extends {
   visibility: { enabled: true };
 }
   ? { hiddenAt: Date | null; hiddenBy: null | number }
   : Record<never, never>;
 
-// ---------------------------------------------------------------------------
-// Duplication
-// ---------------------------------------------------------------------------
-
-/** The options of `duplication` - `true` is the same as `{}`. */
 export interface ContentDuplicationConfig {
-  /**
-   * Appends a localized "(Copy)" suffix to the copy's `admin.titleField`, in
-   * every copied language, trimmed to the field's `maxLength`. Defaults to
-   * `true`; it applies only when the title field is a `text` field.
-   */
   titleSuffix?: boolean;
 }
 
@@ -1020,11 +981,9 @@ export interface ResolvedContentDuplicationConfig<
   TEnabled extends boolean = boolean,
 > {
   enabled: TEnabled;
-  /** The `text` field the copy suffix is appended to, or `null` for none. */
   titleSuffixField: null | string;
 }
 
-/** `duplication`: `true`, an options object, or `false` / omitted for off. */
 export type ContentDuplicationInput = boolean | ContentDuplicationConfig;
 
 export type ContentDuplicationEnabled<TDuplication> =
@@ -1718,13 +1677,11 @@ export type LocalizedContentTypeDefinition = AnyContentTypeDefinition & {
   localization: { enabled: true };
 };
 
-/** A content type whose records can be hidden from the public site. */
 export type HideableContentTypeDefinition = AnyContentTypeDefinition & {
   publication: { enabled: true };
   visibility: { enabled: true };
 };
 
-/** A content type whose records can be duplicated as drafts. */
 export type DuplicableContentTypeDefinition = AnyContentTypeDefinition & {
   duplication: { enabled: true };
 };
@@ -1774,7 +1731,6 @@ export interface ContentTypeDefinition<
   advanced: ResolvedContentAdvancedConfig;
 
   delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
-  /** Draft copies of a record, or the disabled default when omitted. */
   duplication: ResolvedContentDuplicationConfig<TDuplicationEnabled>;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
   editorial: ResolvedContentEditorialConfig<
@@ -1784,7 +1740,6 @@ export interface ContentTypeDefinition<
   >;
   fields: TFields;
   id: TId;
-  /** How the primary key is generated. `serial` unless the definition says otherwise. */
   idStrategy: TIdStrategy;
   /** Declared indexes plus the automatic ones, deduplicated and named. */
   indexes: ResolvedContentIndex[];
@@ -1825,21 +1780,12 @@ export interface ContentTypeDefinition<
   /** Search synchronization, or the disabled default when `search` is omitted. */
   search: ResolvedContentSearchConfig<TSearchEnabled>;
   tableName: string;
-  /** Record-level hiding, or the disabled default when `visibility` is omitted. */
   visibility: ResolvedContentVisibilityConfig<TVisibilityEnabled>;
 }
 
 /** Use in constraints where the concrete field map does not matter. */
 export type AnyContentTypeDefinition = ContentTypeDefinition;
 
-/**
- * A definition's field map, with every `self: true` relation re-pointed at the
- * definition's own id strategy. `field.relation({ self: true })` is written
- * before the content type exists, so its descriptor cannot know which strategy
- * it will be keyed by; this is the one place that fills it in. A `serial`
- * content type - every content type written before strategies existed - and an
- * erased field map are returned untouched.
- */
 export type ContentFieldsOf<TDefinition> = TDefinition extends {
   fields: infer TFields;
 }
@@ -1854,11 +1800,7 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
     : TFields
   : never;
 
-/** {@link ContentFieldsOf}'s rebinding of self relations, for one field map. */
-export type ContentBindSelfRelations<
-  TFields,
-  TStrategy extends ContentIdStrategy,
-> = {
+type ContentBindSelfRelations<TFields, TStrategy extends ContentIdStrategy> = {
   [K in keyof TFields]: TFields[K] extends ContentRelationField<
     infer TRequired,
     infer TNullable,
@@ -1942,12 +1884,10 @@ export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
   FilterableContentFieldKind
 >;
 
-/** A to-many filter by membership: rows whose collection holds `contains`. */
 export interface ContentRelationFilter<TId = ContentId> {
   contains: TId;
 }
 
-/** One {@link ContentRelationFilter} per to-many reference, typed by its target. */
 type ContentCollectionFilters<TDefinition, TName extends PropertyKey> = {
   [K in keyof ContentFieldsOf<TDefinition> & TName]: ContentRelationFilter<
     ContentReferenceIdOf<ContentFieldsOf<TDefinition>[K]>
@@ -1991,7 +1931,6 @@ export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
 // Public projection
 // ---------------------------------------------------------------------------
 
-/** A to-one relation as the public API returns it. */
 export interface ContentPublicRelation<TId = number> {
   id: TId;
 }

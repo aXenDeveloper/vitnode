@@ -5,7 +5,6 @@ import { createWebSocketChannel } from "@/ws/types";
 
 export interface ContentLiveRoomRef {
   contentTypeId: string;
-  /** A number for a `serial` content type, the key string for `uuid` / `bigint`. */
   itemId: ContentId;
 }
 

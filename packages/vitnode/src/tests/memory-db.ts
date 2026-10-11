@@ -648,12 +648,10 @@ const isSerial = (column: Column) =>
   column.columnType.includes("Serial") ||
   column.generatedIdentity !== undefined;
 
-/** A string-mode `bigint` identity hands its values out as decimal strings. */
 const isStringIdentity = (column: Column) =>
   column.generatedIdentity !== undefined &&
   column.columnType === "PgBigIntString";
 
-/** `uuid().defaultRandom()` - the one SQL default the memory database fakes. */
 const isRandomUuid = (column: Column) =>
   column.columnType === "PgUUID" &&
   is(column.default, SQL) &&

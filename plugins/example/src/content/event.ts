@@ -5,16 +5,6 @@ import { defineContentType, field } from "@vitnode/core/content";
 import { categoryContentType } from "./category";
 import { tagContentType } from "./tag";
 
-/**
- * An event keyed by `bigint`: a Postgres identity column read in Drizzle's
- * `string` mode, so an id beyond `Number.MAX_SAFE_INTEGER` crosses every API as
- * its exact decimal string rather than a rounded number.
- *
- * Its relations cover every combination a mixed install has: a `bigint` record
- * pointing at a `uuid` one (`primaryTag`, `tags`), at a `serial` one
- * (`category`) and at itself (`relatedEvents`, a bigint self-relation). The
- * repeatable's children keep `serial` ids of their own whatever the owner uses.
- */
 export const eventContentType = defineContentType({
   id: "example.event",
   tableName: "example_events",
@@ -40,9 +30,6 @@ export const eventContentType = defineContentType({
     slug: field.slug({ localized: true, source: "title" }),
     body: field.richText({ localized: true, nullable: true }),
 
-    // The annotation keeps the target's strategy in the type even if the two
-    // modules ever import each other: a mutual relation needs one, exactly as a
-    // circular `const` does.
     primaryTag: field.relation({
       nullable: true,
       onDelete: "set null",

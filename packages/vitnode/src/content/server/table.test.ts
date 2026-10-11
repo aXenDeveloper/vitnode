@@ -123,7 +123,6 @@ describe("createContentTable", () => {
     });
 
     describe("across id strategies", () => {
-      // The same table name with a `uuid` key, so only the key type can differ.
       const uuidCategory = defineContentType({
         fields: { title: field.text({ required: true }) },
         id: "test.uuid-category",
@@ -140,9 +139,6 @@ describe("createContentTable", () => {
         });
 
       it("names the field when the referenced key has another type", () => {
-        // The descriptor says the target is keyed by `uuid`, while the table
-        // handed to `references` is the serial one: a column built as `uuid`
-        // would point at an `integer`.
         const table = createContentTable(
           pointing(() => uuidCategory) as typeof testArticleContentType,
           { references: { category: () => categories.id } },

@@ -26,10 +26,8 @@ const zodReferenceListItemOf = <TValue extends z.ZodType>(value: TValue) =>
     value,
   });
 
-/** One label in a list cell. `value` is the target's id - a number for a user or a serial target. */
 export const zodContentReferenceListItem = zodReferenceListItemOf(z.number());
 
-/** {@link zodContentReferenceListItem} for a list whose targets include a `uuid` or `bigint` content type. */
 export const zodContentReferenceListItemAnyId = zodReferenceListItemOf(
   z.union([z.number(), z.string()]),
 );
@@ -51,10 +49,6 @@ export const contentReferenceListColumns = (
     );
   });
 
-/**
- * Whether every column `contentReferenceListColumns` names points at numeric
- * ids - users and serial targets - so the list response keeps its old schema.
- */
 export const contentReferenceListIdsAreNumeric = (
   definition: AnyContentTypeDefinition,
 ): boolean =>
@@ -67,7 +61,6 @@ export const contentReferenceListIdsAreNumeric = (
     );
   });
 
-/** The loaded ids of one collection, as the store returned them. */
 const idsOf = (value: unknown): ContentId[] =>
   Array.isArray(value)
     ? value.filter(

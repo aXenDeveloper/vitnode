@@ -154,7 +154,6 @@ export const setContentPublication = async (
   return result;
 };
 
-/** Copies a row as a draft, then refreshes the list it will appear in. */
 export const duplicateContentRow = async (
   queryClient: QueryClient,
   {
@@ -173,13 +172,6 @@ export const duplicateContentRow = async (
   return result;
 };
 
-/**
- * Hides or unhides a row, then refreshes everything that showed it.
- *
- * `expectedVersion` is the version the row was rendered at; an editorial
- * content type answers a stale one with a `409` instead of acting on a record
- * somebody else just changed.
- */
 export const setContentVisibility = async (
   queryClient: QueryClient,
   {
@@ -189,7 +181,6 @@ export const setContentVisibility = async (
     id,
     target,
   }: ContentRowWriteArgs & {
-    /** The transition to perform, from `contentVisibilityTransition`. */
     action: ContentVisibilityAction;
     expectedVersion?: number;
   },
@@ -211,17 +202,6 @@ export const setContentVisibility = async (
   return result;
 };
 
-/**
- * The copy a duplicate just made, read the way its edit screen reads it.
- *
- * Through the same query definitions the edit page's loader uses, so the
- * navigation that follows paints from the cache - and so a localized title,
- * which is not on the duplicate's base row, comes from the copy's own
- * translation rather than from a guess about the suffix the server added.
- * Falls back to the duplicate's own row when the read fails: the copy exists
- * either way, and the toast and the hand-off must not depend on a second
- * request.
- */
 export const readDuplicatedContent = async (
   queryClient: QueryClient,
   {
@@ -232,35 +212,32 @@ export const readDuplicatedContent = async (
     pluginId,
   }: {
     definition: AnyContentTypeDefinition;
-    /** The `row` the duplicate answered with. */
     fallback: Record<string, unknown>;
     id: ContentId;
-    /** The language the administrator reads the AdminCP in. */
     locale: string;
     pluginId: string;
   },
 ): Promise<{ row: ContentItem; title: string }> => {
   const request = {
     contentTypeId: definition.id,
-    // The AdminCP's query keys are still number-typed; a serial id is one.
-    itemId: id as number,
+    itemId: id,
     target: contentApiTarget(definition, pluginId),
   };
-  const base: ContentItem = { ...fallback, id: request.itemId };
+  const base: ContentItem = { ...fallback, id };
 
   try {
     const [row, translations] = await Promise.all([
-      queryClient.query({
-        ...contentItemQueryOptions({ fetchItem: fetchContentItem, request }),
-      }),
+      queryClient.query(
+        contentItemQueryOptions({ fetchItem: fetchContentItem, request }),
+      ),
       definition.localization.enabled
-        ? queryClient.query({
-            ...contentTranslationsQueryOptions({
+        ? queryClient.query(
+            contentTranslationsQueryOptions({
               fetchTranslations: fetchContentTranslations,
               request,
             }),
-          })
-        : Promise.resolve([]),
+          )
+        : [],
     ]);
 
     return {

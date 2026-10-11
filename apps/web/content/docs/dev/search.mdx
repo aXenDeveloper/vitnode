@@ -126,7 +126,7 @@ Who sees what depends on who's looking:
 | The member, on their own profile | Yes | Yes, with an eye-off icon | Yes, marked **Draft** |
 | Staff, on the AdminCP user page | Yes | Yes, with an eye-off icon | Yes, marked **Draft** |
 
-Hidden comes from [Hide content](/docs/content-engine/content-visibility#who-can-still-see-it): an editor is staff with `can_edit` on the content type.
+The **Hidden** column follows [Who can still see it](/docs/content-engine/content-visibility#who-can-still-see-it). An editor is staff with `can_edit` on the content type.
 
 A draft has no public page yet, so its title isn't a link. Nobody gets sent to a 404.
 
@@ -147,7 +147,7 @@ export const blogPostContentType = defineContentType({
 })
 ```
 
-Every author is shown on the result, in the field's order, on `/search`, `/discover` and timelines alike: overlapping avatars, then the names, such as **admin, devloop_tester and aXen**. Past three authors the list shortens to **admin, devloop_tester and 2 others**. Each hit in the API carries `authorIds` and `authors` (id, name, `nameCode`, avatar) in that order, and `author` stays the first one for code that only needs a single name. After turning `authorField` on for content that already exists, rebuild the index so older records get their authors.
+Every author is shown on the result, in the field's order, on `/search`, `/discover` and timelines alike. It shows overlapping avatars, then the names, such as **admin, devloop_tester and aXen**. Past three authors the list shortens to **admin, devloop_tester and 2 others**. Each hit in the API carries `authorIds` and `authors` (id, name, `nameCode`, avatar) in that order, and `author` stays the first one for code that only needs a single name. After turning `authorField` on for content that already exists, rebuild the index so older records get their authors.
 
 The timelines come from two routes:
 
@@ -248,7 +248,7 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
     },
     isHidden: {
       description:
-        'A published record that was hidden. Set it together with `isPublic: false` and keep `url`: its authors and editors still find it in search and on timelines, marked with an eye-off icon.',
+        'A published record that was hidden. Set it together with `isPublic: false` and keep `url`. Its authors and editors still find it in search and on timelines, marked with an eye-off icon.',
       type: 'boolean',
       default: 'false',
     },

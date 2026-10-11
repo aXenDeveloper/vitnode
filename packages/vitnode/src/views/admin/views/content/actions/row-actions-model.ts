@@ -12,10 +12,6 @@ export const CONTENT_ROW_ACTION_IDS = [
 
 export type ContentRowActionId = (typeof CONTENT_ROW_ACTION_IDS)[number];
 
-/**
- * The actions the list implements itself, each behind its own confirmation -
- * everything else is an editorial panel a host registers.
- */
 export const CONTENT_LIST_ACTION_IDS = [
   "duplicate",
   "visibility",
@@ -41,16 +37,13 @@ export const isDestructiveContentRowAction = (
 ): boolean => id === "delete";
 
 export interface ContentRowActionInput {
-  /** `can_create` - a copy is a new record. */
   canCreate?: boolean;
   canDelete: boolean;
-  /** `can_hide` - hiding and unhiding, and nothing else. */
   canHide?: boolean;
   canPublish: boolean;
   canView: boolean;
   /** `definition.delivery.enabled` - the canonical path and URL history. */
   delivery: boolean;
-  /** `definition.duplication.enabled` - draft copies. */
   duplication?: boolean;
   /** `definition.editorial.enabled` - revisions, and therefore history. */
   editorial: boolean;
@@ -60,7 +53,6 @@ export interface ContentRowActionInput {
   renderable?: readonly ContentRowActionId[];
   /** `definition.editorial.scheduling.enabled` - publish/unpublish later. */
   scheduling: boolean;
-  /** `definition.visibility.enabled` - hiding a record without unpublishing it. */
   visibility?: boolean;
 }
 
@@ -77,8 +69,6 @@ const gateOf = (
   switch (id) {
     case "delete":
       return canDelete;
-    // The route checks both: creating is what it does, reading the source is
-    // what it needs.
     case "duplicate":
       return canCreate && canView;
     case "schedule":

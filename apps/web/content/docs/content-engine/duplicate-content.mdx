@@ -27,7 +27,7 @@ export const blogPostContentType = defineContentType({
 });
 ```
 
-Duplication adds no column, so there is nothing to migrate, and no new permission. Duplicating needs `can_create` and `can_view`, because it creates a record by reading another: for the blog, **Create articles** and **View articles list**. Run `pnpm build:plugins` and restart `pnpm dev`.
+Duplication adds no column, so there is nothing to migrate, and no new permission. Duplicating needs `can_create` and `can_view`, because it creates a record by reading another. For the blog those are **Create articles** and **View articles list**. Run `pnpm build:plugins` and restart `pnpm dev`.
 
 </Step>
 
@@ -68,7 +68,7 @@ The copy has the same categories and the same authors in the same order, and eac
 | Relation, user and file references, in their order. Files are reused, not uploaded again | Published state and `publishedAt`: the copy is a draft                            |
 | Every translation, each as a draft with its own first revision                           | Hidden state: the copy is never [hidden](/docs/content-engine/content-visibility) |
 
-The copy gets a new id, new timestamps and `version` 1. Everything happens in one database transaction, so a failure leaves nothing behind. The source is only read: its history gets no new revision.
+The copy gets a new id, new timestamps and `version` 1. Everything happens in one database transaction, so a failure leaves nothing behind. The source is only read, so its history gets no new revision.
 
 ### Titles and slugs
 
@@ -149,4 +149,4 @@ The effects emit `content.blog.post.created` with `duplicatedFromId`, one `trans
 
 ## Check the result
 
-Duplicate "Hello world" and go back to the list. "Hello world (Copy)" is a **Draft**, and `/blog/hello-world-copy` answers `404` until you publish it. Open the original's **History**: it has no new revision.
+Duplicate "Hello world" and go back to the list. "Hello world (Copy)" is a **Draft**, and `/blog/hello-world-copy` answers `404` until you publish it. Open the original's **History** and you'll find no new revision. As far as the original knows, nothing happened.

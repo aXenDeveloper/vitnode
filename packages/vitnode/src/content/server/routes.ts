@@ -11,6 +11,7 @@ import type {
   ContentOrderableFieldName,
   ContentReferenceFieldName,
 } from "../types";
+import type { ContentVisibilityAction } from "../visibility";
 import type {
   ContentDuplicateOverrides,
   ContentDuplicationMethods,
@@ -19,7 +20,6 @@ import type {
 import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPreviewTarget } from "./preview-target";
-import type { ContentVisibilityAction } from "./visibility";
 
 import { checkStaffPermission } from "../../api/lib/check-staff-permission";
 import { buildRoute } from "../../api/lib/route";
@@ -112,20 +112,11 @@ import { contentVisibilityEffects } from "./visibility-effects";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
 
-/**
- * The picker options response. `value` is a number for every target a
- * `serial` content type can point at today; a content type with a `uuid` or
- * `bigint` target answers strings for those, so its schema says either.
- */
 const zodOptionsOf = (value: z.ZodType) =>
   z.object({
     items: z.array(
       z.object({
         avatarColor: z.string().optional(),
-        /**
-         * Present when the target declares `admin.colorField` - a blog category
-         * is a colour as much as it is a word, and the picker draws it.
-         */
         color: z.string().optional(),
         label: z.string(),
         nameCode: z.string().optional(),
@@ -137,35 +128,15 @@ const zodOptionsOf = (value: z.ZodType) =>
 const zodOptions = zodOptionsOf(z.number());
 const zodOptionsAnyId = zodOptionsOf(z.union([z.number(), z.string()]));
 
-/**
- * The id strategy one reference field's values follow: its target's for a
- * relation, `serial` for a user.
- */
 const referenceStrategy = (
   definition: AnyContentTypeDefinition,
   field: string,
 ): ContentIdStrategy => {
   const fieldValue = definition.fields[field];
 
-  return fieldValue?.kind === "relation"
+  return fieldValue.kind === "relation"
     ? contentRelationStrategy(definition, fieldValue)
     : "serial";
-};
-
-/**
- * One `?ids=` entry, read under the target's strategy. A serial target keeps
- * reading it the way `Number` always has; the others accept only the canonical
- * spelling.
- */
-const parseOptionId = (
-  strategy: ContentIdStrategy,
-  value: string,
-): ContentId | null => {
-  if (strategy !== "serial") return parseContentId(strategy, value);
-
-  const number = Number(value);
-
-  return Number.isInteger(number) ? number : null;
 };
 
 const notFound = (definition: AnyContentTypeDefinition): HTTPException =>
@@ -552,7 +523,6 @@ export const buildContentRoutes = <
     const rows = await translations.findManyRowsForItems(
       data.edges.map(row => row.id as ContentIdOf<TDefinition>),
     );
-    // Keyed by storage key, so a number and a string spelling of one id meet.
     const byItem = new Map<string, (typeof rows)[number][]>();
     for (const row of rows) {
       const itemKey = contentIdKey(row.itemId);
@@ -649,16 +619,13 @@ export const buildContentRoutes = <
       }
 
       const raw = c.req.query("ids");
-      // Anything that is not an identifier of the target is dropped rather than
-      // refused: the list is a lookup key, and one malformed entry should cost
-      // that entry rather than the whole form's labels.
       const strategy = referenceStrategy(definition, field);
       const ids =
         raw === undefined
           ? undefined
           : raw
               .split(",")
-              .map(value => parseOptionId(strategy, value.trim()))
+              .map(value => parseContentId(strategy, value.trim()))
               .filter((value): value is ContentId => value !== null);
 
       const items = await model
@@ -965,22 +932,14 @@ export const buildContentRoutes = <
     },
   });
 
-  /**
-   * The patch shape of `schemas.update` without its "at least one field" rule, so
-   * an empty `overrides` means "copy as is" rather than a 400. Read off the
-   * object Zod keeps behind the refinement; never a default, so an omitted field
-   * keeps the source's value instead of the field's default.
-   */
   const patchObject = (schema: z.ZodType): z.ZodObject =>
-    z.strictObject((schema as unknown as z.ZodObject).shape);
+    z.strictObject((schema as z.ZodObject).shape);
 
   const translationSchemas = model.translationSchemas;
   const duplicateBody = z.strictObject({
-    /** Shared values for the copy. A group merges leaf by leaf. */
     overrides: patchObject(schemas.update).optional(),
     ...(translationSchemas
       ? {
-          /** Localized values per copied locale, merged the same way. */
           translations: z
             .record(
               z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
@@ -992,22 +951,13 @@ export const buildContentRoutes = <
   });
 
   const duplicateResponse = z.object({
-    /** The copy's identifier - where the AdminCP navigates next. */
     id: contentIdSchema(definition.idStrategy),
-    /** The copied translations' locales, default locale first. */
     locales: z.array(z.string()),
     row: schemas.selectObject,
-    /** Source locales switched off in this install, which the copy does not carry. */
     skippedLocales: z.array(z.string()),
     sourceId: contentIdSchema(definition.idStrategy),
   });
 
-  /**
-   * `POST /{id}/duplicate` - a draft copy of one record, its collections and every
-   * translation, in one transaction. Creating is what it does, so `can_create`
-   * gates it; reading the source is what it needs, so `can_view` is checked too.
-   * Mounted only for a content type with `duplication: { enabled: true }`.
-   */
   const duplicate = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
@@ -1049,13 +999,10 @@ export const buildContentRoutes = <
       }
 
       const id = contentIdentifier(c, definition);
-      const body = c.req.header("content-type")?.includes("json")
-        ? await readJson(c, duplicateBody)
-        : {};
-      // Validated by `duplicateBody`, which is built from these very schemas -
-      // the types are re-attached here, as `buildContentSchemas` does for its own.
-      const { overrides, translations } =
-        body as ContentDuplicateOverrides<TDefinition>;
+      const { overrides, translations } = (await readOptionalJson(
+        c,
+        duplicateBody,
+      )) as ContentDuplicateOverrides<TDefinition>;
       const actor = resolveContentActor(c);
 
       if (editorial) {
@@ -1076,7 +1023,7 @@ export const buildContentRoutes = <
         await contentDuplicateEffects(
           c,
           model,
-          { kind: "editorial", outcome: outcome },
+          { kind: "editorial", outcome },
           { actorUserId: actor.userId, pluginId },
         );
 
@@ -1110,7 +1057,7 @@ export const buildContentRoutes = <
       await contentDuplicateEffects(
         c,
         model,
-        { kind: "plain", result: result },
+        { kind: "plain", result },
         { actorUserId: actor.userId, pluginId },
       );
 
@@ -1325,25 +1272,10 @@ export const buildContentRoutes = <
       },
     });
 
-  /**
-   * `{ expectedVersion? }`, and the whole body optional: hiding overwrites no
-   * field value, so - like publishing - it is guarded on the state it changes,
-   * and the version is checked only when the client chose to send one. A content
-   * type without `editorial` has no version, and ignores it.
-   */
   const visibilityBody = z.strictObject({
     expectedVersion: z.number().int().positive().optional(),
   });
 
-  /**
-   * `POST /{id}/hide` and `POST /{id}/unhide`.
-   *
-   * Their own permission, `can_hide`, rather than `can_publish`: taking a record
-   * off the site without unpublishing it is a moderation decision, and a site may
-   * want moderators who can do that without being able to publish anything.
-   * Idempotent like publishing - hiding a hidden record is a 200 that changed
-   * nothing, wrote no revision and announced nothing.
-   */
   const visibilityRoute = (action: ContentVisibilityAction) =>
     buildRoute({
       pluginId,
@@ -1382,7 +1314,6 @@ export const buildContentRoutes = <
       },
       handler: async c => {
         const id = contentIdentifier(c, definition);
-        const contentId = id;
         const { expectedVersion } = await readOptionalJson(c, visibilityBody);
         const actor = resolveContentActor(c);
 
@@ -1394,7 +1325,7 @@ export const buildContentRoutes = <
             async () =>
               await editorialVisibilityMethods(definition, editorialService(c))[
                 action
-              ](contentId, { actor, expectedVersion }),
+              ](id, { actor, expectedVersion }),
             { contentTypeId: definition.id, itemId: id, structured: true },
           );
           if (!result) throw notFound(definition);
@@ -1405,15 +1336,12 @@ export const buildContentRoutes = <
             "update",
             async () =>
               await visibilityMethods(definition, model.service(c))[action](
-                contentId,
+                id,
                 { actorUserId: actor.userId },
               ),
           );
           if (!result) throw notFound(definition);
 
-          // The editorial outcome's shape with no history behind it - the same
-          // thing the scheduled path builds - so both services share one set of
-          // effects, and a listener cannot tell which one hid the record.
           outcome = {
             changed: result.changed,
             changedFields: [],
@@ -1427,9 +1355,6 @@ export const buildContentRoutes = <
           };
         }
 
-        // After the commit: the event, the search document turning private or
-        // public, the delivery events, and the front ends' caches. A no-op
-        // touches none of them.
         await contentVisibilityEffects(c, model, outcome, { pluginId });
 
         return c.json({ changed: outcome.changed, row: outcome.row }, 200);
@@ -2131,11 +2056,7 @@ export const buildContentRoutes = <
     ...(definition.publication.enabled
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
       : []),
-    // Mounted only when the content type opts in, so no other content type gains
-    // an endpoint - or a permission row in the matrix - it does not use.
     ...(definition.duplication.enabled ? [duplicate] : []),
-    // Mounted only with `visibility`, so every other content type's route list -
-    // and its permission matrix - is unchanged.
     ...(definition.visibility.enabled
       ? [visibilityRoute("hide"), visibilityRoute("unhide")]
       : []),

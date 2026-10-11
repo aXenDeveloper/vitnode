@@ -665,7 +665,7 @@ the map and a listener for it does not compile.
 | `restored`           | `{ contentId, changedFields, version, revisionId, restoredFromRevisionId }` | A record is rolled back to an earlier revision - emitted **instead of** `updated` |
 | `scheduled`          | `{ contentId, action, actorUserId, scheduledFor, scheduleId }`              | A publish or unpublish is booked for later                                        |
 | `schedule_cancelled` | `{ contentId, action, actorUserId, scheduleId }`                            | A pending booking is called off                                                   |
-| `duplicated`         | `{ actorUserId, contentId, contentTypeId, sourceId }`                       | A record was copied into a new draft - after the copy's own `created`             |
+| `duplicated`         | `{ actorUserId, contentId, contentTypeId, sourceId }`                       | A record was copied into a new draft, right after the copy's own `created`        |
 | `hidden`             | `{ actorUserId, contentId, hiddenAt }`                                      | A visible record is taken off the public site without being unpublished           |
 | `unhidden`           | `{ actorUserId, contentId }`                                                | A hidden record is made visible again                                             |
 
@@ -685,7 +685,7 @@ the map and a listener for it does not compile.
     },
     duplicatedFromId: {
       description:
-        'Created only, on a content type with `duplication` - the record this one was copied from. Absent for an ordinary create, so a listener can tell copies apart without waiting for `duplicated`.',
+        'Set on the `created` of a duplicate, with the id of the record it was copied from. Absent for an ordinary create, so a listener can tell copies apart without waiting for `duplicated`.',
       type: 'ContentIdOf<TDefinition>',
     },
   }}
@@ -862,7 +862,7 @@ already hidden emits nothing.
       type: 'ContentIdOf<TDefinition>',
     },
     hiddenAt: {
-      description: 'Hidden only - when the record was hidden.',
+      description: 'When the record was hidden. Sent with `hidden` only.',
       type: 'Date',
     },
   }}

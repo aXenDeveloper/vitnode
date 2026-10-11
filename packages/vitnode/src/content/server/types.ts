@@ -43,23 +43,20 @@ type EnumValuesOf<TField> = TField extends {
   ? [THead, ...TRest]
   : [string, ...string[]];
 
-/** The primary key column of a content table, per id strategy. */
-export type ContentIdPkBuilder<TStrategy extends ContentIdStrategy> =
+type ContentIdPkBuilder<TStrategy extends ContentIdStrategy> =
   TStrategy extends "uuid"
     ? SetIsPrimaryKey<SetHasDefault<PgUUIDBuilder>>
     : TStrategy extends "bigint"
       ? HasIdentity<SetIsPrimaryKey<PgBigIntStringBuilder>, "byDefault">
       : PgSerialBuilder;
 
-/** A foreign key column pointing at a content table with `TStrategy` ids. */
-export type ContentIdFkBuilder<TStrategy extends ContentIdStrategy> =
+type ContentIdFkBuilder<TStrategy extends ContentIdStrategy> =
   TStrategy extends "uuid"
     ? PgUUIDBuilder
     : TStrategy extends "bigint"
       ? PgBigIntStringBuilder
       : PgIntegerBuilder;
 
-/** The strategy a relation descriptor's target thunk carries. */
 type RelationTargetStrategy<TField> = TField extends {
   target: () => { idStrategy: infer TStrategy extends ContentIdStrategy };
 }
@@ -131,7 +128,6 @@ type EditorialColumnBuilders<TEditorial extends boolean> =
     ? ContentEditorialColumnBuilders
     : Record<never, never>;
 
-/** `hiddenAt` and `hiddenBy` - added only when visibility is enabled. */
 export interface ContentVisibilityColumnBuilders {
   hiddenAt: PgTimestampBuilder;
   hiddenBy: PgIntegerBuilder;
@@ -208,8 +204,7 @@ export type ContentTranslationTableFor<TDefinition> = TDefinition extends {
     >
   : never;
 
-/** A definition's id strategy, or `serial` for a shape that predates it. */
-export type ContentIdStrategyOf<TDefinition> = TDefinition extends {
+type ContentIdStrategyOf<TDefinition> = TDefinition extends {
   idStrategy: infer TStrategy extends ContentIdStrategy;
 }
   ? TStrategy
@@ -317,9 +312,6 @@ export type ContentTableFor<TDefinition> = TDefinition extends {
       ContentStorageFields<SharedFieldsOf<TDefinition>>,
       TPublication,
       TEditorial,
-      // Read on its own rather than inferred beside the other two: a definition
-      // written before `visibility` existed has no such key, and it must keep
-      // resolving to the table it always had.
       TDefinition extends { visibility: { enabled: true } } ? true : false,
       ContentIdStrategyOf<TDefinition>
     >
@@ -401,11 +393,6 @@ export type ContentJunctionTable<
   schema: undefined;
 }>;
 
-/**
- * The generated child table for one repeatable field. A child row's own `id`
- * stays `serial` whatever the owner's strategy: it is an implementation detail
- * of the collection, never addressed from outside the record.
- */
 export type ContentRepeatableChildTable<
   TFields,
   TOwner extends ContentIdStrategy = "serial",
@@ -427,11 +414,6 @@ export type ContentRepeatableChildTable<
   schema: undefined;
 }>;
 
-/**
- * Every generated collection table of one content type, by field name. Erased
- * over the strategies: the store reads them by name and converts identifiers
- * itself, per the owner's and each target's strategy.
- */
 export interface ContentAdvancedTables {
   junctions: Record<
     string,
@@ -444,12 +426,9 @@ export interface ContentAdvancedTables {
 }
 
 // Loosest shape a foreign key target can take; the FK itself is validated by
-// Postgres, by the strategy check in `createContentTable`, and by
-// `getTableConfig` in the table tests.
-type AnyIdColumn = ReferenceTargetOf<PgBigIntStringBuilder>;
-
-type ReferenceTargetOf<
-  TBuilder extends { references: (...args: never[]) => unknown },
-> = Parameters<TBuilder["references"]>[0] extends () => infer TColumn
+// Postgres, and by `getTableConfig` in the table tests.
+type AnyIdColumn = Parameters<
+  PgBigIntStringBuilder["references"]
+>[0] extends () => infer TColumn
   ? TColumn
   : never;

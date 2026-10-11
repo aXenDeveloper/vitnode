@@ -27,7 +27,6 @@ export const zodSearchHitSchema = z.object({
   id: z.number(),
   pluginId: z.string(),
   itemType: z.string(),
-  // A number for every serial item, a string for a uuid or bigint content record.
   itemId: z.union([z.number().int(), z.string().max(64)]),
   languageCode: z.string(),
   authorId: z.number().nullable(),

@@ -8,6 +8,7 @@ import {
   CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "./const";
+import { contentAnyIdSchema } from "./ids";
 
 export type ContentDeliveryCode =
   (typeof CONTENT_DELIVERY_CODES)[keyof typeof CONTENT_DELIVERY_CODES];
@@ -21,27 +22,18 @@ export type ContentTranslationConflictCode =
 export type ContentUnprocessableCode =
   (typeof CONTENT_UNPROCESSABLE_CODES)[keyof typeof CONTENT_UNPROCESSABLE_CODES];
 
-/**
- * A record identifier in an error body: a number for a `serial` record, the
- * canonical string for a `uuid` or `bigint` one.
- */
-export const zodContentItemId = z.union([
-  z.number().int(),
-  z.string().min(1).max(64),
-]);
-
 export const zodContentConflict = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_CONFLICT_CODES.version),
     contentTypeId: z.string(),
     currentVersion: z.number().int(),
     expectedVersion: z.number().int(),
-    itemId: zodContentItemId,
+    itemId: contentAnyIdSchema,
   }),
   z.object({
     code: z.literal(CONTENT_CONFLICT_CODES.unique),
     contentTypeId: z.string(),
-    itemId: zodContentItemId.nullable(),
+    itemId: contentAnyIdSchema.nullable(),
   }),
 ]);
 
@@ -53,19 +45,19 @@ export const zodContentTranslationConflict = z.discriminatedUnion("code", [
     contentTypeId: z.string(),
     currentVersion: z.number().int(),
     expectedVersion: z.number().int(),
-    itemId: zodContentItemId,
+    itemId: contentAnyIdSchema,
     locale: z.string(),
   }),
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.defaultRequired),
     contentTypeId: z.string(),
-    itemId: zodContentItemId,
+    itemId: contentAnyIdSchema,
     locale: z.string(),
   }),
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.exists),
     contentTypeId: z.string(),
-    itemId: zodContentItemId,
+    itemId: contentAnyIdSchema,
     locale: z.string(),
   }),
   z.object({
@@ -76,7 +68,7 @@ export const zodContentTranslationConflict = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.unique),
     contentTypeId: z.string(),
-    itemId: zodContentItemId.nullable(),
+    itemId: contentAnyIdSchema.nullable(),
     locale: z.string(),
   }),
 ]);
@@ -193,11 +185,6 @@ export const parseContentUnprocessable = (
   }
 };
 
-/**
- * Why a duplicate was refused, when it was refused for a reason a form can act
- * on: a slug with no free candidate (409, names the field and the locale) or a
- * unique field that needs an override (422, names every such field).
- */
 export const zodContentDuplicateRejection = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_DUPLICATE_CODES.slugConflict),
@@ -217,7 +204,6 @@ export type ContentDuplicateRejection = z.infer<
   typeof zodContentDuplicateRejection
 >;
 
-/** Reads a duplicate rejection out of a response body, or `null`. */
 export const parseContentDuplicateRejection = (
   body: string | undefined,
 ): ContentDuplicateRejection | null => {

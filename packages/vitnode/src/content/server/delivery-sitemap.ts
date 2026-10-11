@@ -29,12 +29,6 @@ import {
 
 export interface ContentDeliverySitemapPage {
   entries: ContentSitemapEntry[];
-  /**
-   * Pass back as `cursor`. `null` when this was the last page. The last listed
-   * record's id: pages are keyed on the primary key, which orders numerically for
-   * `serial` and `bigint` and lexically for `uuid` - a uuid sitemap is complete
-   * and stable, just not in creation order.
-   */
   nextCursor: ContentId | null;
 }
 
@@ -101,9 +95,6 @@ export const readContentDeliverySitemapPage = async <
 
   const conditions: (SQL | undefined)[] = [
     publishedCondition(base),
-    // Re-read under the strategy rather than trusted: a cursor the strategy
-    // cannot hold is treated as "from the start" by the route's schema already,
-    // and never reaches Postgres as a cast error.
     cursor === null ? undefined : gt(columns.id, cursor),
     // `IS DISTINCT FROM TRUE`, which is the only spelling that agrees with the
     // metadata. `contentDeliveryRobots` reads `value !== true`, so a `noIndex` of

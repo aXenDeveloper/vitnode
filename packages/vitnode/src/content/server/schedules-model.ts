@@ -24,11 +24,6 @@ export interface ClaimedContentSchedule {
   contentTypeId: string;
   createdBy: null | number;
   id: number;
-  /**
-   * The record's storage key (`contentIdKey`), exactly as the shared table holds
-   * it. Decode it with `contentIdFromKey(definition.idStrategy, itemId)` once the
-   * content type is known.
-   */
   itemId: string;
   pluginId: string;
 }

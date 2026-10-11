@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import { HiddenIcon } from "@/components/hidden-icon";
 import { Button } from "@/components/ui/button";
 import {
   contentVisibilityTransition,
@@ -10,10 +11,8 @@ import {
   CONTENT_VISIBILITY_ICONS,
   ContentVisibilityDialog,
 } from "../actions/visibility-dialog";
-import { ContentHiddenIcon } from "../lib/hidden-badge";
 import { useContentForm } from "./context";
 
-/** Whether the record this form edits is hidden right now. */
 export const useContentFormHidden = (): boolean => {
   const { mode, visibility } = useContentForm();
 
@@ -30,24 +29,19 @@ export const ContentFormHiddenIcon = ({
   className?: string;
 }) => {
   const t = useTranslations("core.content.visibility");
-  const { singular, visibility } = useContentForm();
+  const { singular } = useContentForm();
   const hidden = useContentFormHidden();
 
   if (!hidden) return null;
 
   return (
-    <ContentHiddenIcon
+    <HiddenIcon
       className={className}
       label={t("hidden_record", { name: singular })}
-      row={{ hiddenAt: visibility?.hiddenAt }}
     />
   );
 };
 
-/**
- * What hiding means, in words, wherever the editor sees a hidden record's
- * status: off the public site, and publishing alone does not bring it back.
- */
 export const ContentFormHiddenNotice = () => {
   const t = useTranslations("core.content.visibility");
   const hidden = useContentFormHidden();
@@ -61,11 +55,6 @@ export const ContentFormHiddenNotice = () => {
   );
 };
 
-/**
- * Hide or unhide the record being edited, behind the same confirmation the list
- * uses. Gated by `can_hide`; absent while creating, and for a content type
- * without visibility.
- */
 export const ContentFormVisibilityToggle = () => {
   const tActions = useTranslations("core.content.actions");
   const { mode, singular, title, visibility } = useContentForm();

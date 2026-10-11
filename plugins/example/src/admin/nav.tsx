@@ -33,13 +33,11 @@ export const examplePageNav = {
   icon: <LayoutTemplateIcon />,
 };
 
-/** Tags are keyed by `uuid`: their edit URLs carry a lowercase uuid. */
 export const exampleTagNav = {
   definition: tagContentType,
   icon: <TagIcon />,
 };
 
-/** Events are keyed by `bigint`: their ids stay exact decimal strings. */
 export const exampleEventNav = {
   definition: eventContentType,
   icon: <CalendarDaysIcon />,

@@ -40,8 +40,6 @@ export const buildContentDeliveryRoutes = <
     return build(c, { pluginId });
   };
 
-  // A `serial` content type keeps exactly the schemas it always had, so its
-  // OpenAPI document does not move; `uuid` and `bigint` carry canonical strings.
   const serial = definition.idStrategy === "serial";
   const itemIdSchema = serial
     ? z.number().int()

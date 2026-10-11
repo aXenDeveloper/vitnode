@@ -46,27 +46,25 @@ export const createContentJunctionTable = ({
   contentTypeId,
   field,
   itemReference,
-  itemStrategy = "serial",
+  itemStrategy,
   onDelete,
   positionIndexName,
   primaryKeyName,
   relatedIndexName,
   relatedReference,
-  relatedStrategy = "serial",
+  relatedStrategy,
   tableName,
 }: {
   contentTypeId: string;
   field: string;
   itemReference: ColumnReferenceThunk;
-  /** The owner's id strategy, which `itemId` follows. */
-  itemStrategy?: ContentIdStrategy;
+  itemStrategy: ContentIdStrategy;
   onDelete: ContentOnDelete;
   positionIndexName: string;
   primaryKeyName: string;
   relatedIndexName: string;
   relatedReference: ColumnReferenceThunk;
-  /** The target's id strategy, which `relatedItemId` follows. Users and files are `serial`. */
-  relatedStrategy?: ContentIdStrategy;
+  relatedStrategy: ContentIdStrategy;
   tableName: string;
 }): ContentJunctionTable<ContentIdStrategy, ContentIdStrategy> => {
   if (onDelete === "set null") {
@@ -114,15 +112,14 @@ export const createContentRepeatableTable = ({
   contentTypeId,
   fields,
   itemReference,
-  itemStrategy = "serial",
+  itemStrategy,
   positionIndexName,
   tableName,
 }: {
   contentTypeId: string;
   fields: ContentFieldMap;
   itemReference: ColumnReferenceThunk;
-  /** The owner's id strategy, which `itemId` follows. The child's own `id` stays serial. */
-  itemStrategy?: ContentIdStrategy;
+  itemStrategy: ContentIdStrategy;
   positionIndexName: string;
   tableName: string;
 }): ContentRepeatableChildTable<unknown, ContentIdStrategy> => {

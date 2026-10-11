@@ -38,8 +38,6 @@ export const advancedArticleContentType = defineContentType({
       target: () => categoryContentType,
     }),
 
-    // A serial record pointing at `uuid` ones: the junction's `relatedItemId`
-    // is a `uuid` column, and the values are uuid strings in every API.
     tags: field.relation({
       multiple: true,
       ordered: true,

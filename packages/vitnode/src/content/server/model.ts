@@ -181,10 +181,6 @@ export const createContentModel = <
       ? { columns: translationColumns, table: translationTable }
       : undefined;
 
-  /**
-   * The translation half `duplicate` copies through, per request. `undefined`
-   * for a content type without localization, which has nothing to copy there.
-   */
   const duplicateTranslations = (c: Context) =>
     translationSearch && translationSchemas
       ? { ...translationSearch, model: () => buildTranslations(c) }
@@ -253,8 +249,6 @@ export const createContentModel = <
 
                     // Read in the caller's transaction, so a language created a
                     // moment ago in the same transaction is moved too.
-                    // Handed over as the content type's own id by the
-                    // editorial service, which read it off the base row.
                     const recordId = itemId as ContentIdOf<TDefinition>;
                     const rows = await translations.findManyForItem(recordId, {
                       tx,
@@ -294,23 +288,21 @@ export const createContentModel = <
             pluginId,
             schemas,
             table,
-            translations: (() => {
-              const half = duplicateTranslations(c);
-
-              return half && translationSchemas
+            translations:
+              translationSearch && translationSchemas
                 ? {
-                    ...half,
+                    ...translationSearch,
                     editorial: () =>
                       createContentTranslationEditorialService({
                         c,
                         definition,
                         pluginId,
                         schemas: translationSchemas,
-                        translations: half.model(),
+                        translations: buildTranslations(c),
                       }),
+                    model: () => buildTranslations(c),
                   }
-                : undefined;
-            })(),
+                : undefined,
           })
       : undefined,
     localization: definition.localization,

@@ -4,6 +4,8 @@ import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import type { ContentId } from "@/content/ids";
+
 import { checkStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
@@ -14,15 +16,10 @@ import {
 } from "@/content/ids";
 import { core_ai_translation_sources } from "@/database/ai";
 
-/**
- * Checks `can_edit` on the content type and returns the item's storage key: the
- * id is read under the content type's own strategy, so a malformed one is a 400
- * rather than a database error, and a serial `7` and `"7"` are the same record.
- */
 const assertCanEditContentItem = async (
   c: Context,
   contentTypeId: string,
-  rawItemId: unknown,
+  requestedItemId: ContentId,
 ): Promise<string> => {
   const registered = c
     .get("core")
@@ -38,7 +35,10 @@ const assertCanEditContentItem = async (
   });
   if (!allowed) throw new HTTPException(403);
 
-  const itemId = parseContentId(registered.definition.idStrategy, rawItemId);
+  const itemId = parseContentId(
+    registered.definition.idStrategy,
+    requestedItemId,
+  );
   if (itemId === null) {
     throw new HTTPException(400, { message: "Invalid identifier." });
   }
@@ -81,12 +81,11 @@ export const getTranslationSourcesAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const query = c.req.valid("query");
-    const { contentTypeId } = query;
+    const { contentTypeId, itemId: requestedItemId } = c.req.valid("query");
     const itemId = await assertCanEditContentItem(
       c,
       contentTypeId,
-      query.itemId,
+      requestedItemId,
     );
 
     const records = await c
@@ -155,12 +154,17 @@ export const saveTranslationSourcesAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const body = c.req.valid("json");
-    const { contentTypeId, fields, locale, sourceLocale } = body;
+    const {
+      contentTypeId,
+      fields,
+      itemId: requestedItemId,
+      locale,
+      sourceLocale,
+    } = c.req.valid("json");
     const itemId = await assertCanEditContentItem(
       c,
       contentTypeId,
-      body.itemId,
+      requestedItemId,
     );
 
     const updatedById = c.get("admin")?.user.id ?? null;

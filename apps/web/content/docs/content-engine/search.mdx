@@ -120,7 +120,7 @@ export const blogPostContentType = defineContentType({
 ```
 
 - **Authors.** With `multiple: true`, every user in the field is credited, and `ordered: true` keeps the order you pick in the editor. A result shows up to three overlapping avatars and the names in that order, such as **admin, devloop_tester and aXen**. Past three it says **admin, devloop_tester and 2 others**. Every co-author gets the record on their own timeline.
-- **Image.** `imageField` names one shared `field.file()`, not a list and not a localized field, and it must be in `publicApi.fields`, because everybody who finds the result sees it. It shows as a small 16:9 thumbnail on the right of the result, and full width above the text on phones. Records without an image simply show none, and a file that is not an image is skipped.
+- **Image.** `imageField` names one shared `field.file()`, not a list and not a localized field, and it must be in `publicApi.fields`, because everybody who finds the result sees it. It shows as a small 16:9 thumbnail on the right of the result, and full width above the text on phones. Records without an image show none, and a file that is not an image is skipped.
 
 The definition throws when either one points at the wrong kind of field, for example `search.imageField names "gallery", which is not a shared single field.file() on the record itself.`
 

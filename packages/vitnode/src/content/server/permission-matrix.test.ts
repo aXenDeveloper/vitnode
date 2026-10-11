@@ -27,7 +27,6 @@ const kitchenSink = defineContentType({
   tableName: "test_everything",
   localization: { defaultLocale: "en", fallback: "default" },
   publication: true,
-  // So `hide` and `unhide` are audited with everything else.
   visibility: true,
   editorial: {
     revisions: { retention: 10 },
@@ -232,8 +231,6 @@ describe("the generated permission matrix", () => {
     // like the plain one - it writes the same base row, plus the default
     // translation the engine has always required alongside it.
     "POST /localized": "can_create",
-    // Its own permission rather than `can_publish`: taking a record off the
-    // site is a moderation decision a site may grant on its own.
     "POST /{id}/hide": "can_hide",
     "POST /{id}/preview": "can_view",
     "POST /{id}/publish": "can_publish",

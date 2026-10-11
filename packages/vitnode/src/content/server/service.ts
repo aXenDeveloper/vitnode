@@ -33,6 +33,7 @@ import type {
   ContentUpdateInput,
   ContentValuesOf,
 } from "../types";
+import type { ContentVisibilityAction } from "../visibility";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type {
   ContentDuplicateTranslationSource,
@@ -41,7 +42,6 @@ import type {
 import type { ContentPickerTarget } from "./references";
 import type { ContentTranslationModel } from "./translation-model";
 import type {
-  ContentVisibilityAction,
   ContentVisibilityMembers,
   ContentVisibilityMethods,
   ContentVisibilityOptions,
@@ -145,11 +145,6 @@ export interface ContentUpdateResult<TDefinition> {
   row: ContentSelect<TDefinition>;
 }
 
-/**
- * The collection API of one to-many reference. `itemId` is the owner's id;
- * `TRelatedId` is the target's - a relation target's own strategy, or a number
- * for users and files.
- */
 export interface ContentRelationMethods<TDefinition, TRelatedId = ContentId> {
   /** Adds one target. A target already present is a no-op. */
   add: (
@@ -302,11 +297,6 @@ export interface ContentServiceBase<TDefinition> {
     options?: ContentServiceOptions,
   ) => Promise<ContentListRow<TDefinition> | null>;
 
-  /**
-   * Picker options for one reference field. `value` is the target's identifier:
-   * a number for a user or a serial target, a string for a `uuid` or `bigint`
-   * one.
-   */
   options: (
     field: ContentReferenceFieldName<TDefinition>,
     search?: string,
@@ -356,7 +346,6 @@ export const createContentService = <
   table: PgTableWithColumns<TableConfig>;
   translation?: {
     columns: Record<string, PgColumn>;
-    /** The translation model, which `duplicate` copies every language through. */
     model?: () => ContentTranslationModel<TDefinition>;
     table: PgTable;
   };
@@ -374,8 +363,6 @@ export const createContentService = <
   const filterableFields = { ...fields, ...collectionFields };
   const store = advanced;
   const contentTypeId = definition.id;
-  // `serial`, `uuid` or a string-mode `bigint` - all three are cursor kinds
-  // `withPagination` understands.
   const primaryCursor = columns.id as PaginationCursorColumn;
   const orderable = orderableColumns(definition);
   const publication = definition.publication.enabled;
@@ -677,14 +664,6 @@ export const createContentService = <
       ),
   };
 
-  /**
-   * Hides or unhides one record.
-   *
-   * Read under `FOR UPDATE` first, so the before-state the effects need - was it
-   * public a moment ago? - is the row as it really was rather than a guess, and
-   * two concurrent hides cannot both stamp `hiddenAt`. `status` and `publishedAt`
-   * are never in the `SET`: hiding is a separate axis from publication.
-   */
   const visibilityTransition = async (
     id: ContentId,
     action: ContentVisibilityAction,
@@ -700,11 +679,9 @@ export const createContentService = <
       if (!current) return null;
 
       if (isInVisibilityState(action, current)) {
-        const state = visibilityStateOf(current);
-
         return {
           changed: false,
-          ...state,
+          ...visibilityStateOf(current),
           row: toRow(current),
           visibility: visibilityChange({
             actorUserId: options?.actorUserId,
@@ -1061,8 +1038,6 @@ export const createContentService = <
         .limit(ids ? ids.length : CONTENT_OPTIONS_LIMIT);
 
       return rows.map(row => {
-        // A user and a serial target read back as numbers; a `uuid` and a
-        // string-mode `bigint` as strings - which is what they stay.
         const value: ContentId =
           typeof row.value === "number" ? row.value : String(row.value);
         const entry = row as Record<string, unknown>;
@@ -1086,8 +1061,6 @@ export const createContentService = <
       });
     },
 
-    // Keyed by the same runtime field list the conditional type is computed
-    // from; each entry's target ids follow that field's own strategy.
     relations:
       mutableRelations as unknown as ContentServiceBase<TDefinition>["relations"],
 
@@ -1255,8 +1228,6 @@ export const createContentService = <
     }) as unknown as ContentRepeatableMethods<TDefinition, never>;
   }
 
-  // One transaction, through `service.create` and the translation model's own
-  // `create` - the same pipeline every other write takes.
   const duplicationMethods: ContentDuplicationMethods<TDefinition> = {
     duplicate: async (sourceId, options = {}) => {
       const translationModel = translation?.model;
@@ -1271,8 +1242,6 @@ export const createContentService = <
             translation && translationModel
               ? {
                   columns: translation.columns,
-                  // Erased to `ContentId`: the duplicate only ever hands
-                  // back the canonical id it read off this content type's row.
                   model:
                     translationModel as unknown as () => ContentDuplicateTranslationSource,
                   table: translation.table,

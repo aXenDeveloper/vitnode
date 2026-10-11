@@ -61,8 +61,6 @@ export const readDeliveryAlternatesMany = async <
   model: ContentModel<TDefinition>;
 }): Promise<Map<string, ContentDeliveryAlternate[]>> => {
   const { columns, definition, translationColumns, translationTable } = model;
-  // Keyed by `contentIdKey`, so a caller's id and the driver's meet whatever the
-  // strategy - and a bigint is never rounded on the way.
   const grouped = new Map<string, ContentDeliveryAlternate[]>();
 
   if (

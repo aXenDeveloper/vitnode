@@ -32,15 +32,9 @@ export interface FilterDataTable {
   label: string;
   onSearch?: (search: string) => Promise<FilterOption[]>;
   options?: FilterOption[];
-  /**
-   * One value at a time, for a filter the API reads as a single equality - a
-   * status, a visibility. Picking an option replaces the selection, and
-   * `allLabel` names the first option, which clears it.
-   */
   single?: { allLabel: string };
 }
 
-/** What picking `value` leaves selected. */
 export const nextFilterSelection = (
   selected: readonly string[],
   value: string,

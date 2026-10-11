@@ -98,13 +98,7 @@ export interface ContentFormTransport {
     itemId: ContentId,
     draft: { locale: null | string; values: Record<string, unknown> },
   ) => Promise<ContentDraftSaveResult>;
-  /**
-   * Hides or unhides a record, for a content type with visibility enabled.
-   * `expectedVersion` is the form's own precondition, so a record somebody
-   * saved meanwhile answers `409` rather than changing under the editor.
-   * Optional: a transport without it renders no Hide / Unhide control.
-   */
-  setHidden?: (
+  setHidden: (
     contentTypeId: string,
     itemId: ContentId,
     action: ContentVisibilityAction,

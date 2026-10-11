@@ -125,17 +125,11 @@ const ContentListTable = ({
     [definition, navigate, search],
   );
 
-  /**
-   * A fresh copy opens where this content type edits: its own page, or the
-   * edit dialog. Held here rather than in the row, because the refreshed list
-   * may no longer contain the row the copy was made from.
-   */
   const onDuplicated = React.useCallback(
     (copy: ContentDuplicatedRecord) => {
       if (definition.admin.edit.mode === "page") {
         void routerNavigate({
-          // The AdminCP's hrefs are still number-typed; a serial id is one.
-          to: contentEditHref(definition, copy.id as number),
+          to: contentEditHref(definition, copy.id),
         });
 
         return;
@@ -297,17 +291,13 @@ export const ContentListScreen = ({
 }: ContentListScreenProps) => {
   const entry = registry.byId(contentTypeId);
   const t = useTranslations() as unknown as ContentLabelTranslator;
-  // Memoised so the row actions' `labelField` keeps its identity, and the
-  // table's columns are not rebuilt on every render of this screen.
-  const labels = React.useMemo(
-    () => (entry ? contentLabelsFrom(entry, t) : null),
-    [entry, t],
-  );
 
   // The loader already answered `notFound()` for an unresolvable path, so this
   // is unreachable in a mounted route - and it is what lets everything below
   // read a resolved entry rather than an optional one.
-  if (!entry || !labels) return null;
+  if (!entry) return null;
+
+  const labels = contentLabelsFrom(entry, t);
 
   /**
    * The loader's parameters, or the same arithmetic run again.

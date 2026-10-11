@@ -56,7 +56,7 @@ const toTimestamp = (value: unknown): Date | null | string | undefined => {
   return value === null ? null : undefined;
 };
 
-export const isContentRowHidden = (row: object): boolean => {
+const isContentRowHidden = (row: object): boolean => {
   const values = row as Record<string, unknown>;
 
   return (
@@ -74,7 +74,7 @@ export const isContentRowPublic = (row: object): boolean => {
   });
 };
 
-const toAuthorIds = (value: unknown): number[] => [
+export const toAuthorIds = (value: unknown): number[] => [
   ...new Set(
     (Array.isArray(value) ? value : [value]).filter(
       (id): id is number => Number.isSafeInteger(id) && (id as number) > 0,
@@ -82,10 +82,10 @@ const toAuthorIds = (value: unknown): number[] => [
   ),
 ];
 
-const toFileId = (value: unknown): number | undefined =>
+const toFileId = (value: unknown): null | number =>
   typeof value === "number" && Number.isSafeInteger(value) && value > 0
     ? value
-    : undefined;
+    : null;
 
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
@@ -109,8 +109,6 @@ export const contentSearchDocument = (
 
   const values = row as Record<string, unknown>;
 
-  // Exactly the representation the content type's strategy reads back: a
-  // `uuid` or `bigint` id is a string, a `serial` one a number.
   const itemId = values.id;
   if (!isContentId(definition.idStrategy, itemId)) return null;
 
@@ -159,7 +157,7 @@ export const contentSearchDocument = (
     createdAt,
     ...(search.imageField === null
       ? {}
-      : { imageId: toFileId(values[search.imageField]) ?? null }),
+      : { imageId: toFileId(values[search.imageField]) }),
     isHidden: !isPublic && isHidden && url !== null,
     isPublic,
     itemId,

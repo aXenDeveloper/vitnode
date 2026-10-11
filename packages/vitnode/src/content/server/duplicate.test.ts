@@ -22,7 +22,6 @@ describe("appendContentTitleSuffix", () => {
   });
 
   it("trims the title, never the suffix, and never half a character", () => {
-    // 🎉 is two UTF-16 units: cutting between them would store a broken glyph.
     expect(appendContentTitleSuffix("Party 🎉🎉 time", "(Copy)", 15)).toBe(
       "Party 🎉 (Copy)",
     );

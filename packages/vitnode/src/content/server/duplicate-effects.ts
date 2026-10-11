@@ -12,6 +12,7 @@ import { requireContentId } from "../ids";
 import { contentEditorialEffects } from "./editorial-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
+import { contentDefinitionOf } from "./model";
 import { plainOutcome } from "./route-helpers";
 import {
   contentSearchAdvancedValues,
@@ -31,28 +32,17 @@ export type ContentDuplicateEffectsInput =
     };
 
 export interface ContentDuplicateEffectsOptions {
-  /** Who asked for the copy; `null` for the system or an API key. */
   actorUserId: null | number;
-  /** The plugin that owns the content type, and therefore the events. */
   pluginId: string;
 }
 
-/**
- * Everything a committed duplicate owes the rest of the system, once.
- *
- * The copy's ordinary `created` (carrying `duplicatedFromId`) with its search
- * document, one `translation_created` per copied language, then `duplicated`.
- * Search runs exactly once per document: a localized record's base effects
- * already index every language, so the translation effects are run without the
- * model and only announce.
- */
 export const contentDuplicateEffects = async (
   c: Context,
   model: AnyContentModel,
   input: ContentDuplicateEffectsInput,
   { actorUserId, pluginId }: ContentDuplicateEffectsOptions,
 ): Promise<{ duplicated: EventEmitResult }> => {
-  const definition = model.definition as AnyContentTypeDefinition;
+  const definition = contentDefinitionOf(model);
   const row = input.kind === "editorial" ? input.outcome.row : input.result.row;
   const sourceId =
     input.kind === "editorial" ? input.outcome.sourceId : input.result.sourceId;

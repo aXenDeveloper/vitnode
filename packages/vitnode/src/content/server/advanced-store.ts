@@ -25,6 +25,7 @@ import { ContentAdvancedInputError, ContentEngineError } from "../errors";
 import {
   compareContentIds,
   contentIdKey,
+  contentIdsOf,
   contentRelationStrategy,
   parseContentId,
   requireContentId,
@@ -39,16 +40,6 @@ import { toColumnValues } from "./query";
 /** One repeatable child, as it is written back. */
 type ChildValues = Record<string, unknown>;
 
-/**
- * The collection half of every content record: junction rows and repeatable
- * children.
- *
- * Owner ids are the content type's own (`ContentId` in its canonical form - a
- * number for `serial`, a string for `uuid` and `bigint`); a relation's target
- * ids follow the *target's* strategy; a user or file id is a number; and a
- * repeatable child's own id is always a `serial` number. `loadMany` keys its
- * map by the canonical owner id, exactly as the base row's `id` reads.
- */
 export interface ContentAdvancedStore {
   diff: (
     tx: ContentDatabase,
@@ -111,10 +102,6 @@ const sameJunction = (
       contentIdKey(row.relatedItemId) === contentIdKey(desired[index]),
   );
 
-/**
- * An unordered collection is stored in the order Postgres sorts its key in:
- * numerically for `serial` and `bigint`, lexically for `uuid`.
- */
 const normalizeTargets = (
   ids: readonly ContentId[],
   ordered: boolean,
@@ -162,11 +149,9 @@ export const createContentAdvancedStore = <
   );
   const baseColumns = table as unknown as Record<string, PgColumn>;
 
-  /** An owner id in its canonical form - what the base row's `id` reads as. */
   const ownerId = (value: unknown): ContentId =>
     requireContentId(definition.idStrategy, value, contentTypeId);
 
-  /** The id strategy a collection's targets follow. Users and files are serial. */
   const targetStrategies = new Map<string, ContentIdStrategy>();
   const targetStrategy = (field: string): ContentIdStrategy => {
     const cached = targetStrategies.get(field);
@@ -182,23 +167,11 @@ export const createContentAdvancedStore = <
     return strategy;
   };
 
-  /** A target id read back from a junction, in the target's canonical form. */
   const targetId = (field: string, value: unknown): ContentId =>
     requireContentId(targetStrategy(field), value, contentTypeId);
 
-  /** The canonical ids of a caller's list; anything unparseable is dropped. */
-  const targetIds = (
-    field: string,
-    values: readonly unknown[],
-  ): ContentId[] => {
-    const ids: ContentId[] = [];
-    for (const value of values) {
-      const parsed = parseContentId(targetStrategy(field), value);
-      if (parsed !== null) ids.push(parsed);
-    }
-
-    return ids;
-  };
+  const targetIds = (field: string, values: readonly unknown[]): ContentId[] =>
+    contentIdsOf(targetStrategy(field), values);
 
   const junctionOf = (
     field: string,
@@ -293,10 +266,6 @@ export const createContentAdvancedStore = <
     });
   };
 
-  /**
-   * Junction rows per owner, keyed by storage key so a caller's `7` and the
-   * driver's `7` - or a bigint and its digits - always meet.
-   */
   const readJunction = async (
     field: string,
     itemIds: readonly ContentId[],
@@ -354,7 +323,6 @@ export const createContentAdvancedStore = <
       const itemKey = contentIdKey(ownerId(values.itemId));
       const list = result.get(itemKey) ?? [];
       list.push({
-        // A child's own id is serial whatever the owner's strategy.
         id: Number(values.id),
         ...Object.fromEntries(leaves.map(leaf => [leaf, values[leaf]])),
       });
@@ -642,7 +610,6 @@ export const createContentAdvancedStore = <
 
     loadMany: async (itemIds, database, only) => {
       const wanted = selected(only);
-      // Keyed by the caller's own (canonical) ids, read through storage keys.
       const result = new Map<ContentId, Record<string, unknown>>();
       const byKey = new Map<string, Record<string, unknown>>();
       for (const itemId of itemIds) {
@@ -732,8 +699,6 @@ export const createContentAdvancedStore = <
         );
       }
 
-      // A value that cannot name a target matches nothing - and never reaches
-      // Postgres as a cast error.
       const contains = parseContentId(targetStrategy(field), filter.contains);
       if (contains === null) return sql`false`;
 

@@ -43,11 +43,6 @@ const REQUIRED_COLUMNS = [
   "publishedAt",
 ] as const;
 
-/**
- * {@link REQUIRED_COLUMNS}, plus `hiddenAt` for a content type with `visibility`:
- * a rebuild has to index a hidden record as private, exactly as the live hide
- * did, or every rebuild would put it back into public results.
- */
 const requiredColumns = (definition: AnyContentTypeDefinition): string[] => [
   ...REQUIRED_COLUMNS,
   ...(definition.visibility.enabled ? ["hiddenAt"] : []),
@@ -121,10 +116,6 @@ const resolveSearchSources = (
   return sources;
 };
 
-/**
- * The indexed collections of one page, keyed by storage key so a row reads its
- * own back whatever its strategy.
- */
 const loadSearchCollections = async ({
   advanced,
   c,
@@ -158,7 +149,6 @@ const loadSearchCollections = async ({
   );
 };
 
-/** The storage key of a row's own id, for reading a collection map. */
 const rowKey = (row: Record<string, unknown>): string =>
   typeof row.id === "number" || typeof row.id === "string"
     ? contentIdKey(row.id)
@@ -206,9 +196,6 @@ export const createContentSearchIndexer = <
     ].map(name => [name, columns[name]]),
   );
 
-  // The id strategy's own representation: a number for `serial`, a string for
-  // `uuid` and string-mode `bigint` - never `Number(...)`, which would round a
-  // bigint above 2^53 and lose the page boundary.
   const cursors = new WeakMap<Context, ContentId>();
 
   return {

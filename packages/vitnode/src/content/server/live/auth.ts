@@ -69,8 +69,6 @@ export const authorizeContentLive = async (
   });
   if (!allowed) return { code: "FORBIDDEN", ok: false };
 
-  // The socket accepts any strategy's id; this content type's own strategy
-  // decides whether it is one, so a malformed id never reaches Postgres.
   const itemId = parseContentId(entry.definition.idStrategy, room.itemId);
   if (itemId === null) return { code: "NOT_FOUND", ok: false };
 

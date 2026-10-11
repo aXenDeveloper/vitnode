@@ -5,42 +5,26 @@ import type { CONTENT_ID_STRATEGIES } from "./const";
 import { CONTENT_ID_KEY_LENGTH } from "./const";
 import { ContentEngineError } from "./errors";
 
-/** How a content type's primary key is generated. Defaults to `serial`. */
 export type ContentIdStrategy = (typeof CONTENT_ID_STRATEGIES)[number];
 
-/**
- * The identifier of one record under a strategy, as every JSON-facing surface
- * carries it: a `serial` is a JavaScript number, and a `uuid` or a `bigint` is a
- * string. A `bigint` stays a canonical decimal string end to end - it never
- * passes through `Number`, which would round anything above 2^53.
- */
 export type ContentIdOfStrategy<TStrategy> = TStrategy extends "serial"
   ? number
   : string;
 
-/**
- * The identifier type of one content type. Concrete definitions resolve to
- * exactly one of `number` or `string`; the erased `AnyContentTypeDefinition`
- * resolves to the union, which is what generic engine code handles.
- */
 export type ContentIdOf<TDefinition> = TDefinition extends {
   idStrategy: infer TStrategy;
 }
   ? ContentIdOfStrategy<TStrategy>
   : number;
 
-/** Any record identifier, under any strategy. */
 export type ContentId = number | string;
 
-/** The largest value a Postgres `integer` (and so a `serial`) can hold. */
 export const CONTENT_SERIAL_MAX = 2_147_483_647;
 
-/** The largest value a Postgres `bigint` can hold, as a decimal string. */
 export const CONTENT_BIGINT_MAX = "9223372036854775807";
 
 const SERIAL_PATTERN = /^[1-9][0-9]{0,9}$/;
 const BIGINT_PATTERN = /^[1-9][0-9]{0,18}$/;
-/** Canonical form only: lowercase, hyphenated, 8-4-4-4-12. */
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -48,19 +32,6 @@ const withinBigint = (value: string): boolean =>
   value.length < CONTENT_BIGINT_MAX.length ||
   (value.length === CONTENT_BIGINT_MAX.length && value <= CONTENT_BIGINT_MAX);
 
-/**
- * Reads an identifier from untrusted input - a path segment, a query value, a
- * JSON body - and returns it in its strategy's canonical representation, or
- * `null` when it is malformed, out of range or not canonical.
- *
- * - `serial`: a positive integer up to 2147483647, as a number or as decimal
- *   digits without a sign, leading zeros or whitespace.
- * - `bigint`: a positive integer up to 9223372036854775807, as decimal digits
- *   without a sign, leading zeros or whitespace. A JavaScript number is accepted
- *   only while it is a safe integer, since a larger one has already been rounded.
- * - `uuid`: lowercase hyphenated 8-4-4-4-12 hex. Uppercase and braces are refused
- *   rather than folded, so one record has exactly one spelling in URLs and caches.
- */
 export const parseContentId = (
   strategy: ContentIdStrategy,
   value: unknown,
@@ -100,7 +71,6 @@ export const parseContentId = (
   return null;
 };
 
-/** {@link parseContentId} for one definition, narrowed to its own id type. */
 export const parseContentIdOf = <
   TDefinition extends { idStrategy: ContentIdStrategy },
 >(
@@ -112,22 +82,13 @@ export const parseContentIdOf = <
     value,
   ) as ContentIdOf<TDefinition> | null;
 
-/**
- * The storage key of an identifier in the shared tables that reference records
- * of any content type (revisions, schedules, slug history, the search index),
- * in cache tags and in search document ids. Decimal digits for `serial` and
- * `bigint`, the canonical spelling for `uuid` - so an existing serial record's
- * key is exactly the digits it always had.
- */
 export const contentIdKey = (id: ContentId): string => String(id);
 
-/** The inverse of {@link contentIdKey}: a stored key back to the API representation. */
 export const contentIdFromKey = (
   strategy: ContentIdStrategy,
   key: string,
 ): ContentId | null => parseContentId(strategy, key);
 
-/** Whether a value is already a valid identifier under `strategy`. */
 export const isContentId = (
   strategy: ContentIdStrategy,
   value: unknown,
@@ -137,10 +98,6 @@ export const isContentId = (
   return parsed !== null && parsed === value;
 };
 
-/**
- * The Zod schema of one identifier as it crosses JSON: a positive integer for
- * `serial`, a decimal string for `bigint`, a canonical UUID for `uuid`.
- */
 export const contentIdSchema = (
   strategy: ContentIdStrategy,
 ): z.ZodType<ContentId> =>
@@ -153,21 +110,11 @@ export const contentIdSchema = (
           .refine(withinBigint, "Out of range for a bigint identifier.")
       : z.string().regex(UUID_PATTERN, "Expected a lowercase UUID.");
 
-/**
- * One record identifier under any strategy, for code that reads rows of content
- * types it does not know statically - the generic AdminCP. A positive integer
- * (`serial`) or a canonical key string (`uuid`, `bigint`); never a number for a
- * string strategy, so a bigint above 2^53 is never rounded on the way in.
- */
 export const contentAnyIdSchema: z.ZodType<ContentId> = z.union([
   z.number().int().positive().max(CONTENT_SERIAL_MAX),
   z.string().min(1).max(CONTENT_ID_KEY_LENGTH),
 ]);
 
-/**
- * The Zod schema of one identifier read from a path segment or a query string,
- * where every value arrives as text. A `serial` is coerced to a number.
- */
 export const contentIdParamSchema = (
   strategy: ContentIdStrategy,
 ): z.ZodType<ContentId> =>
@@ -188,11 +135,6 @@ export const contentIdParamSchema = (
     return parsed;
   });
 
-/**
- * Orders two identifiers of the same strategy the way Postgres orders the
- * column: numerically for `serial` and `bigint` (by length, then digits, since
- * both are canonical), lexically for `uuid`.
- */
 export const compareContentIds = (
   strategy: ContentIdStrategy,
   a: ContentId,
@@ -209,12 +151,6 @@ export const compareContentIds = (
   return left < right ? -1 : left > right ? 1 : 0;
 };
 
-/**
- * {@link parseContentId} for a value the engine itself produced - a row it just
- * read, a key it wrote - where a miss is a bug rather than bad input. Throws
- * instead of returning a sentinel, so a uuid or bigint record is never skipped
- * because somebody once assumed every id was a number.
- */
 export const requireContentId = (
   strategy: ContentIdStrategy,
   value: unknown,
@@ -231,11 +167,6 @@ export const requireContentId = (
   return parsed;
 };
 
-/**
- * Every value of a list that is a valid identifier under `strategy`, in its
- * canonical representation. Anything else is dropped - for lists read back from
- * the engine's own storage, where an unparseable entry cannot name a record.
- */
 export const contentIdsOf = (
   strategy: ContentIdStrategy,
   values: readonly unknown[],
@@ -249,18 +180,11 @@ export const contentIdsOf = (
   return ids;
 };
 
-/** The Postgres type of a primary key, and of every foreign key that points at one. */
 export const contentIdSqlType = (
   strategy: ContentIdStrategy,
 ): "bigint" | "integer" | "uuid" =>
   strategy === "serial" ? "integer" : strategy;
 
-/**
- * The id strategy a relation field's values follow: the owner's for a
- * self-relation, the target's otherwise. Reads the target thunk, so call it at
- * request time, once every content type module has loaded - never while a
- * table is being built (see `contentRelationBuildStrategy`).
- */
 export const contentRelationStrategy = (
   owner: { id: string; idStrategy: ContentIdStrategy },
   fieldValue: {

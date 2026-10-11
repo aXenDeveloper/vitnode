@@ -41,7 +41,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { humanizeFieldName } from "@/content/admin/labels";
 import {
   CONTENT_PERMISSIONS,
   contentEditHref,
@@ -80,25 +79,17 @@ import {
 import { ContentFormDialogSlot, ContentRowPanelSlot } from "./slot-render";
 import { contentAdminSlots, registeredContentRowPanels } from "./slots";
 
-/** The copy a duplicate made, read back so the list can open it. */
 export interface ContentDuplicatedRecord {
   id: ContentId;
-  /** The copy as its edit screen reads it - from the cache that read warmed. */
   row: ContentItem;
-  /** The copy's resolved title, suffix included. */
   title: string;
 }
 
 export interface ContentRowActionsProps {
   entry: RegisteredFrontendContentType;
-  /** A field's label, for an error that names one. Humanised when absent. */
-  labelField?: (name: string) => string;
+  labelField: (name: string) => string;
   /** The language the list is being read in. */
   locale: string;
-  /**
-   * Hands a fresh copy to the list, which opens it - its edit page, or the edit
-   * dialog. Absent, the copy simply appears in the refreshed list.
-   */
   onDuplicated?: (copy: ContentDuplicatedRecord) => void;
   row: ContentRowData;
   /** The content type's noun, as this administrator reads it. */
@@ -316,16 +307,13 @@ const ACTION_ICONS: Record<
 
 const ContentRowActionsMenu = ({
   entry,
-  labelField = humanizeFieldName,
+  labelField,
   locale,
   onDuplicated,
   row,
   singular,
   title,
-}: Omit<ContentRowActionsProps, "row"> & {
-  row: ContentRowData;
-  title: string;
-}) => {
+}: ContentRowActionsProps & { title: string }) => {
   const { definition, pluginId } = entry;
   const t = useTranslations("core.content");
   const tDelete = useTranslations("core.content.delete");
@@ -420,7 +408,7 @@ const ContentRowActionsMenu = ({
       target,
     });
 
-    if (result.error !== undefined || !result.duplicated) {
+    if (!result.duplicated) {
       const message = contentDuplicateErrorMessage(result.duplicate, {
         labelField,
         list: names => format.list(names),
@@ -476,8 +464,6 @@ const ContentRowActionsMenu = ({
 
     if (result.error !== undefined) {
       if (result.conflict?.code === "CONTENT_VERSION_CONFLICT") {
-        // The row is stale. Re-read the list, so the next press carries the
-        // version somebody else just saved rather than conflicting again.
         await invalidateContentList(queryClient, definition.id);
         toast.error(tVisibility("conflict.title"), {
           description: tVisibility("conflict.desc"),

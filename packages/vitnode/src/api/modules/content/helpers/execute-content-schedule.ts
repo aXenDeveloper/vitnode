@@ -54,12 +54,9 @@ const slugOf = (
  * `wasPublic` is derived rather than read back: the transition guards on the
  * state it is leaving (`status <> 'published'` to publish, `= 'published'` to
  * unpublish), so a *changed* publish came from a draft and a changed unpublish
- * from a published row - and everything else on the row, `hiddenAt` included, is
- * exactly what it was, because a transition writes nothing but `status`. So the
- * before-state is the returned row with its status flipped back, and a hidden
- * record reports "not public" on both sides. That removes the extra `SELECT` the
- * old code did outside the lock, and removes with it the window where the answer
- * could have been someone else's write.
+ * from a published row. That removes the extra `SELECT` the old code did
+ * outside the lock, and removes with it the window where the answer could have
+ * been someone else's write.
  */
 const effectsPayload = ({
   claimed,
@@ -71,7 +68,6 @@ const effectsPayload = ({
     action: "publish" | "unpublish";
     createdBy: null | number;
     id: number;
-    /** Decoded from the schedule row's key under the content type's strategy. */
     itemId: ContentId;
   };
   definition: AnyContentTypeDefinition;
@@ -169,10 +165,6 @@ export const executeContentSchedule = async (
       const { model, pluginId } = entry;
       const definition = contentDefinitionOf(model);
 
-      // The row stores a storage key; read it back under the content type's
-      // own strategy. A key that strategy cannot read names no record - a
-      // content type whose `idStrategy` changed under existing schedules - so
-      // it is cancelled like any other schedule that can never run.
       const itemId = contentIdFromKey(definition.idStrategy, claimed.itemId);
       if (itemId === null) {
         await settleContentSchedule(tx, claimed.id, {

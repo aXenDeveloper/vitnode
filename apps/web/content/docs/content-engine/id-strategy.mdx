@@ -1,10 +1,10 @@
 ---
 title: Record ID strategies
-description: Choose how a VitNode Content Engine content type keys its records - serial integers, UUIDs or bigint - and how those ids look in Postgres, JSON, URLs, relations and your own code.
+description: Key VitNode Content Engine records by serial integers, UUIDs or bigint, and see how those ids look in Postgres, JSON, URLs, relations and your own code.
 icon: KeyRound
 ---
 
-`idStrategy` decides the type of a content type's primary key. The default, `"serial"`, is an auto-incrementing integer. `"uuid"` gives random ids that reveal nothing about how many records exist. `"bigint"` gives integers that will not run out. Pick it when you create the content type, because changing it later is a [hand-written data migration](#change-the-strategy-later).
+`idStrategy` decides the type of a content type's primary key. The default, `"serial"`, is an auto-incrementing integer. `"uuid"` gives random ids that reveal nothing about how many records exist. `"bigint"` gives integers that will not run out. Pick it when you create the content type, because changing it later means a [hand-written data migration](#change-the-strategy-later), and nobody enjoys those.
 
 The example plugin keys its tags by UUID:
 
@@ -105,7 +105,7 @@ Import these from `@vitnode/core/content` when your own code handles ids:
 
 ## Change the strategy later
 
-The strategy is part of the table's schema, and the engine does not convert existing data. Do not change `idStrategy` on a content type that has records and run `db:migrate`: the generated SQL cannot turn integer keys into UUIDs.
+The strategy is part of the table's schema, and the engine does not convert existing data. Don't change `idStrategy` on a content type that has records and then run `db:migrate`. The generated SQL cannot turn integer keys into UUIDs.
 
 To switch a live content type, write the data migration yourself:
 

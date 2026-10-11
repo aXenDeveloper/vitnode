@@ -26,7 +26,6 @@ import type {
   SearchQueryParams,
   SearchResult,
 } from "@/api/models/search";
-import type { RegisteredContentType } from "@/content/registry";
 
 import { parseSearchOffset } from "@/api/lib/search-offset";
 import { storageUrlOf } from "@/api/lib/storage-url";
@@ -267,8 +266,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     const hasNextPage = rows.length > size;
     const sliced = rows.slice(0, size);
 
-    const contentTypes: RegisteredContentType[] | undefined =
-      c.get("core").contentTypes;
+    const { contentTypes } = c.get("core");
     const edges: SearchHit[] = sliced.map(row => ({
       id: row.id,
       pluginId: row.pluginId,

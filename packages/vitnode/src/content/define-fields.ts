@@ -64,7 +64,7 @@ export const assertFieldName = (
   name: string,
   publication: boolean,
   editorial: boolean,
-  visibility = false,
+  visibility: boolean,
 ): void => {
   if (systemFields.includes(name)) {
     throw new ContentEngineError(
@@ -94,8 +94,6 @@ export const assertFieldName = (
     );
   }
 
-  // Not a column, but the admin list's filter key: `?visibility=hidden` has to
-  // mean one thing, and a field of that name would make it mean two.
   if (visibility && name === "visibility") {
     throw new ContentEngineError(
       `"visibility" is the admin list's hidden/visible filter once \`visibility\` is enabled, so it cannot also be a field name. Rename the field.`,

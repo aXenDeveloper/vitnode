@@ -14,10 +14,6 @@ export interface ContentAdminRoute {
   action: ContentAdminAction;
   /** The content type id the slug resolved to. */
   contentTypeId: string;
-  /**
-   * The record being edited. Only ever set for `edit`: a number for a `serial`
-   * content type, the canonical string for a `uuid` or `bigint` one.
-   */
   itemId?: ContentId;
 }
 
@@ -25,25 +21,11 @@ export type ContentTypeLookup = (
   adminPath: string,
 ) => AnyContentTypeDefinition | undefined;
 
-/**
- * The record id in an edit URL, under the content type's own strategy.
- *
- * A `serial` id is a positive integer - `01`, `1.5` and `-1` are not. A `uuid`
- * is its canonical lowercase spelling and a `bigint` its decimal digits, so one
- * record has exactly one edit URL.
- */
 const parseItemId = (
   strategy: ContentIdStrategy,
   segment: string | undefined,
-): ContentId | null => {
-  if (segment === undefined) return null;
-  if (strategy !== "serial") return parseContentId(strategy, segment);
-  if (!/^[1-9][0-9]*$/.test(segment)) return null;
-
-  const id = Number(segment);
-
-  return Number.isSafeInteger(id) ? id : null;
-};
+): ContentId | null =>
+  segment === undefined ? null : parseContentId(strategy, segment);
 
 export const resolveContentAdminRoute = (
   slug: readonly string[],
@@ -64,7 +46,6 @@ export const resolveContentAdminRoute = (
   }
 
   if (last === CONTENT_ADMIN_EDIT_SEGMENT) {
-    // The definition first: which spelling is an id depends on its strategy.
     const definition = lookup(slug.slice(0, -2).join("/"));
     if (definition?.admin.edit.mode !== "page") return undefined;
 

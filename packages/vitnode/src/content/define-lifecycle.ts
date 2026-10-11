@@ -39,8 +39,6 @@ export const resolveVisibility = (
   }
   if (visibility !== true) return { enabled: false };
 
-  // Hiding is "unavailable publicly regardless of publication status". Without
-  // publication there is no public side to take a record off.
   if (!publication) {
     throw new ContentEngineError(
       "visibility needs `publication: true`. Hiding takes a record off the public site, and a content type without publication has none.",

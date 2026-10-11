@@ -12,7 +12,6 @@ export const ContentFormPublication = ({
   publishedAt,
   status,
 }: {
-  /** The record's `hiddenAt`, for a content type with visibility enabled. */
   hiddenAt?: unknown;
   publishedAt: unknown;
   status: unknown;

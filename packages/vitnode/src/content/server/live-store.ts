@@ -373,7 +373,6 @@ export const cleanupStaleContentDrafts = async (
     }
 
     const locale = localeOf(draft.language);
-    // Stored as its key; read back under the content type's own strategy.
     const itemId = contentIdFromKey(
       contentDefinitionOf(entry.model).idStrategy,
       draft.itemId,

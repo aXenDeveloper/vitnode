@@ -6,13 +6,6 @@ import { contentIdKey } from "@/content/ids";
 
 import type { ContentOption, ContentOptionsLoader } from "./field-component";
 
-/**
- * Labels for the identifiers a to-many picker holds, fetched once per id.
- *
- * Keyed by `contentIdKey` - the option's own string `value` - so a `serial`
- * target's `7` and a `uuid` or `bigint` target's string ids are looked up the
- * same way, and a bigint is never rounded through `Number`.
- */
 export const useReferenceOptions = ({
   field,
   ids,
@@ -29,7 +22,7 @@ export const useReferenceOptions = ({
   );
   // The ids are a fresh array on every render; the *set* of them is what a
   // lookup depends on, so the effect keys off the joined key rather than the
-  // identity of the array. Commas cannot occur in any strategy's id.
+  // identity of the array.
   const missing = ids
     .map(contentIdKey)
     .filter(key => known[key] === undefined && !asked.has(key));
@@ -42,8 +35,6 @@ export const useReferenceOptions = ({
 
     const requested = missingKey.split(",");
 
-    // Sent as their keys: the options route reads each one under the target's
-    // own strategy, so `"7"` and `7` name the same serial record.
     void load({
       field,
       ids: requested,

@@ -12,13 +12,9 @@ import type { ContentModel } from "./model";
 import { checkStaffPermissionOfUser } from "../../api/lib/check-staff-permission";
 import { CONTENT_PERMISSIONS } from "../const";
 import { parseContentId } from "../ids";
+import { toAuthorIds } from "./search-document";
 
-const toUserIds = (value: unknown): number[] =>
-  (Array.isArray(value) ? value : [value]).filter(
-    (id): id is number => Number.isSafeInteger(id) && (id as number) > 0,
-  );
-
-export const canEditContentType = async (
+const canEditContentType = async (
   c: Context,
   {
     definition,
@@ -47,26 +43,25 @@ const contentAuthorIds = async <TDefinition extends AnyContentTypeDefinition>(
   if (model.advanced.fields.includes(field)) {
     const values = await model.advanced.load(itemId, c.get("db"), [field]);
 
-    return toUserIds(values[field]);
+    return toAuthorIds(values[field]);
   }
 
   const columns = model.columns as Record<string, PgColumn>;
   const table: PgTable = model.table;
   const column = columns[field];
-  const id = columns.id;
-  if (!column || !id) return [];
+  if (!column) return [];
 
   const [row] = await c
     .get("db")
     .select({ value: column })
     .from(table)
-    .where(eq(id, itemId))
+    .where(eq(columns.id, itemId))
     .limit(1);
 
-  return toUserIds(row?.value);
+  return toAuthorIds(row?.value);
 };
 
-export const canViewHiddenContent = async <
+const canViewHiddenContent = async <
   TDefinition extends AnyContentTypeDefinition,
 >(
   c: Context,

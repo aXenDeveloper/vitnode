@@ -39,8 +39,6 @@ const zodOptions = z.object({
       color: z.string().optional(),
       label: z.string(),
       nameCode: z.string().optional(),
-      // A number for a `serial` target or a person, the canonical key string
-      // for a `uuid` or `bigint` one.
       value: contentAnyIdSchema,
     }),
   ),
@@ -206,16 +204,6 @@ export const setContentPublishedInBrowser = async (
   return { version: versionOf(result.data?.row) };
 };
 
-/**
- * Hides or unhides the record the form is editing.
- *
- * Returns the version the record holds afterwards: on an editorial content type
- * a hide is a new version with its own revision, and the form's next save needs
- * that precondition rather than the one it opened with. A `409` carries
- * `CONTENT_VERSION_CONFLICT` when `expectedVersion` was sent and somebody saved
- * first, or `CONTENT_DELIVERY_SLUG_RESERVED` when an unhide finds its address
- * taken by another record.
- */
 export const setContentHiddenInBrowser = async (
   target: ContentApiTarget,
   id: ContentId,

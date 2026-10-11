@@ -74,9 +74,6 @@ export const createContentPublicRowHydrator =
     const nested = rows.map(nestContentPublicRow);
     if (nested.length === 0) return nested;
 
-    // Read under the content type's own strategy: a `uuid` or `bigint` row's
-    // id is a string, and skipping it would serve the record without its
-    // collections.
     const ids = nested
       .map(row => row.id)
       .filter((id): id is ContentId => isContentId(definition.idStrategy, id));

@@ -73,8 +73,6 @@ const toFieldSnapshot = (
   if (isContentReferenceCollection(fieldValue)) {
     const value = values[name];
 
-    // Under the target's strategy: a `uuid` or `bigint` target's ids are
-    // strings, and dropping them would make a restore empty the collection.
     return Array.isArray(value)
       ? contentIdsOf(
           fieldValue.kind === "relation"

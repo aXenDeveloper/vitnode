@@ -286,11 +286,6 @@ export const contentLocaleInvalidationMode = (
   return unchanged ? "stale-while-revalidate" : "immediate";
 };
 
-/**
- * The JavaScript twin of `publishedCondition`. `hiddenAt` is optional so a row
- * from a content type without `visibility` - or a translation row, which never
- * carries one - is judged exactly as before; any set value means hidden.
- */
 export const isContentPubliclyVisible = ({
   hiddenAt,
   publishedAt,
@@ -315,7 +310,6 @@ export const isContentTranslationPubliclyVisible = ({
   translation,
 }: {
   base: {
-    /** Record-level hiding lives on the base row only. */
     hiddenAt?: Date | null | string;
     publishedAt: Date | null | string | undefined;
     status: string | undefined;

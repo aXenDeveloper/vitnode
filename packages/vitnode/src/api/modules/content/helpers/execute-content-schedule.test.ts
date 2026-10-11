@@ -332,8 +332,6 @@ describe("executeContentSchedule", () => {
     });
 
     it("says a hidden record was never public before an unpublish", async () => {
-      // The transition writes `status` only, so the hidden row it returns was
-      // hidden a moment ago too - and a hidden record is public nowhere.
       const { c, dispatch } = harness({
         editorial: {
           unpublish: vi.fn().mockResolvedValue({

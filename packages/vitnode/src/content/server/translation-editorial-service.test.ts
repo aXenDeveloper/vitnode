@@ -105,7 +105,6 @@ describe("create", () => {
     expect(outcome.locale).toBe("pl");
     expect(revisions.written).toHaveLength(1);
     expect(revisions.written[0]).toMatchObject({
-      // The shared revisions table stores the record's key, `contentIdKey(7)`.
       itemId: "7",
       languageId: 2,
       operation: "create",

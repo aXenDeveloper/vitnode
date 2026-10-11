@@ -20,7 +20,6 @@ export const core_content_documents = camelCase.table.withRLS(
   t => ({
     id: t.serial().primaryKey(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    /** `contentIdKey(id)`: the digits of a serial or bigint id, or a uuid. */
     itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     field: t.varchar({ length: 100 }).notNull(),
     language: t.varchar({ length: 35 }).notNull().default(""),

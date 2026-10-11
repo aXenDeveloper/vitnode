@@ -21,7 +21,6 @@ const boundValue = (condition: SQL | undefined, column: string): unknown => {
 
 export interface RevisionWrite {
   changedFields: string[];
-  /** `contentIdKey(id)`: the shared table stores every strategy's key as text. */
   itemId: string;
   languageId: null | number;
   operation: string;
@@ -42,8 +41,6 @@ const inScope = (row: RevisionRow, condition: SQL | undefined): boolean => {
   const id = boundValue(condition, "id");
 
   return (
-    // Compared as the stored key, so a seed written as `7` matches a scope
-    // bound as `"7"` exactly as the varchar column would.
     String(row.itemId) === String(boundValue(condition, "itemId")) &&
     row.languageId === boundValue(condition, "languageId") &&
     (id === undefined || row.id === id)

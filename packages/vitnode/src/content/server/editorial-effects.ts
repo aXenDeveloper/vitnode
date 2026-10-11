@@ -9,7 +9,7 @@ import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 
-import { parseContentId } from "../ids";
+import { requireContentId } from "../ids";
 import { contentDeliveryEffects } from "./delivery-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
@@ -56,14 +56,9 @@ const payloadFor = (
 
   switch (outcome.operation) {
     case "create":
-      // Absent rather than `undefined` for an ordinary create, so
-      // `"duplicatedFromId" in payload` is how a listener tells a copy apart.
       return outcome.duplicatedFromId === undefined
         ? base
         : { ...base, duplicatedFromId: outcome.duplicatedFromId };
-    // `ContentHiddenPayload` / `ContentUnhiddenPayload`. The revision and version
-    // ride along only when there is one - a content type without `editorial`
-    // has neither, and its payload is exactly the documented shape.
     case "hide":
     case "unhide": {
       const row = outcome.row as { hiddenAt?: unknown; id?: unknown };
@@ -153,7 +148,7 @@ export const contentEditorialEffects = async (
     action: EVENT_ACTION[outcome.operation],
     contentTypeId: definition.id,
     event,
-    itemId: idOf(definition, outcome.row) ?? 0,
+    itemId: idOf(definition, outcome.row),
   });
 
   // After the ordinary event, never instead of it: a URL moving and a field moving
@@ -178,7 +173,11 @@ export const contentEditorialEffects = async (
             // A shared field moved, so **every** locale's document is rewritten
             // - and each rewrite has to carry the shared collections too, or a
             // title edit would drop the FAQ out of every language at once.
-            advanced: await searchAdvancedOf(c, model, definition, outcome.row),
+            advanced: await contentSearchAdvancedValues(
+              c,
+              model,
+              idOf(definition, outcome.row),
+            ),
             // The base row not moving is not the same as nothing moving. A
             // record whose languages were still drafts publishes them without
             // touching a base column, and those documents are exactly the ones
@@ -201,7 +200,11 @@ export const contentEditorialEffects = async (
       // and only the collections it names. A content type that indexes none -
       // which is every Stage 1-5 one - pays for nothing here.
       advanced: model
-        ? await searchAdvancedOf(c, model, definition, outcome.row)
+        ? await contentSearchAdvancedValues(
+            c,
+            model,
+            idOf(definition, outcome.row),
+          )
         : undefined,
       changed: outcome.changed,
       changedFields: outcome.changedFields,
@@ -212,30 +215,12 @@ export const contentEditorialEffects = async (
   };
 };
 
-/**
- * The record's own identifier, off a row whose type is still open - read under
- * the content type's strategy, so a `uuid` or `bigint` record is never mistaken
- * for one without an id. `null` only for a row that carries none at all.
- */
-const idOf = (
-  definition: AnyContentTypeDefinition,
-  row: object,
-): ContentId | null =>
-  parseContentId(definition.idStrategy, (row as { id?: unknown }).id);
-
-/** {@link idOf} for the collections a search document needs, or nothing. */
-const searchAdvancedOf = async (
-  c: Context,
-  model: AnyContentModel,
-  definition: AnyContentTypeDefinition,
-  row: object,
-): Promise<Record<string, unknown> | undefined> => {
-  const id = idOf(definition, row);
-
-  return id === null
-    ? undefined
-    : await contentSearchAdvancedValues(c, model, id);
-};
+const idOf = (definition: AnyContentTypeDefinition, row: object): ContentId =>
+  requireContentId(
+    definition.idStrategy,
+    (row as { id?: unknown }).id,
+    definition.id,
+  );
 
 const warnMissingModel = async (
   c: Context,

@@ -15,10 +15,6 @@ import { contentIdFromKey, contentIdKey } from "../ids";
 
 export interface ContentSlugHistoryEntry {
   createdAt: Date;
-  /**
-   * The owning record, read back under the content type's strategy. The table
-   * stores `contentIdKey(id)`.
-   */
   itemId: ContentId;
   /** `null` for a shared slug - see `core_content_slug_history`. */
   languageId: null | number;
@@ -93,8 +89,6 @@ const toEntry = (
   },
 ): ContentSlugHistoryEntry => ({
   createdAt: row.createdAt,
-  // A key the strategy cannot read stays the key: an owner that no live record
-  // can match, which is what a reservation by a vanished id should be.
   itemId: contentIdFromKey(strategy, row.itemId) ?? row.itemId,
   languageId: row.languageId,
   path: row.path,
@@ -282,7 +276,6 @@ export const createContentSlugHistoryModel = ({
   };
 };
 
-/** The live historical path per record, keyed by `contentIdKey(itemId)`. */
 export const contentSlugHistoryCurrentPaths = async (
   database: ContentDatabase,
   {

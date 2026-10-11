@@ -158,7 +158,7 @@ const ItemHiddenIcon = ({
 const MAX_SHOWN_AUTHORS = 3;
 
 const authorsOf = (item: SearchResultItem): SearchResultAuthor[] =>
-  item.authors?.length ? item.authors : item.author ? [item.author] : [];
+  item.authors.length > 0 ? item.authors : item.author ? [item.author] : [];
 
 const AuthorNames = ({ authors }: { authors: SearchResultAuthor[] }) => {
   const t = useTranslations("core.search");
@@ -179,40 +179,25 @@ const AuthorNames = ({ authors }: { authors: SearchResultAuthor[] }) => {
   );
 };
 
-const AuthorAvatars = ({
-  authors,
-  size,
-}: {
-  authors: SearchResultAuthor[];
-  size: number;
-}) => (
+const AuthorAvatars = ({ authors }: { authors: SearchResultAuthor[] }) => (
   <span aria-hidden className="flex shrink-0 items-center">
     {authors.slice(0, MAX_SHOWN_AUTHORS).map((author, index) => (
       <Avatar
         alt=""
         className={cn("ring-background ring-2", index > 0 && "-ms-1.5")}
         key={author.id}
-        size={size}
+        size={20}
         user={author}
       />
     ))}
   </span>
 );
 
-const ResultImage = ({
-  className,
-  image,
-}: {
-  className?: string;
-  image: SearchResultItem["image"];
-}) =>
+const ResultImage = ({ image }: { image: SearchResultItem["image"] }) =>
   image ? (
     <img
       alt=""
-      className={cn(
-        "bg-muted aspect-video w-full shrink-0 rounded-md object-cover sm:w-40",
-        className,
-      )}
+      className="bg-muted aspect-video w-full shrink-0 rounded-md object-cover sm:w-40"
       decoding="async"
       height={image.height}
       loading="lazy"
@@ -247,7 +232,7 @@ const TimelineItem = ({
           {authors.length > 0 && (
             <>
               <span className="flex min-w-0 items-center gap-2 max-sm:basis-full">
-                <AuthorAvatars authors={authors} size={20} />
+                <AuthorAvatars authors={authors} />
                 <AuthorNames authors={authors} />
               </span>
               <span aria-hidden className="max-sm:hidden">

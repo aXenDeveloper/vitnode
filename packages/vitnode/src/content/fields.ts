@@ -294,10 +294,6 @@ const relation = <
   TMultiple extends boolean = false,
   TOrdered extends boolean = false,
   TSelf extends boolean = false,
-  // Inferred from the thunk, so a relation's values are typed by its target's id
-  // strategy. Defaults to `serial` - what every target written before
-  // strategies existed is - and a `self` relation keeps that placeholder until
-  // `ContentFieldsOf` rebinds it to the owner's strategy.
   TTarget extends ContentRelationTarget = ContentRelationTarget<"serial">,
 >(
   args: SharedArgs<TRequired, TNullable> & {
@@ -327,8 +323,6 @@ const relation = <
   onDelete: args.onDelete ?? "restrict",
   ordered: (args.ordered ?? false) as TOrdered,
   self: (args.self ?? false) as TSelf,
-  // The descriptor's own strategy is the type-level contract; at runtime the
-  // thunk returns whichever definition it names.
   target: (args.target ?? unboundSelfTarget) as () => ContentRelationTarget<
     TSelf extends true ? "serial" : TTarget["idStrategy"]
   >,

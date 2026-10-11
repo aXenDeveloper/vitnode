@@ -524,7 +524,7 @@ describe("item ids under every strategy", () => {
 
   it("keeps a numeric key a number for an item type that is not a content type", () => {
     expect(searchItemIdFromKey(types, "forum.topic", "7")).toBe(7);
-    expect(searchItemIdFromKey(undefined, "forum.topic", "7")).toBe(7);
+    expect(searchItemIdFromKey([], "forum.topic", "7")).toBe(7);
     expect(searchItemIdFromKey(types, "forum.topic", "abc")).toBe("abc");
   });
 });

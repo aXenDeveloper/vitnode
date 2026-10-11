@@ -41,7 +41,6 @@ export interface ContentOption {
 
 export type ContentOptionsLoader = (args: {
   field: string;
-  /** The target's ids: numbers for users and serial targets, strings otherwise. */
   ids?: ContentId[];
   search: string;
 }) => Promise<ContentOption[]>;

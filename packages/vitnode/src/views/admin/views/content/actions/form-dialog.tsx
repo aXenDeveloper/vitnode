@@ -18,7 +18,6 @@ export const ContentFormDialog = ({
   skeleton,
   title,
 }: {
-  /** The control that opens the dialog. Absent when `open` drives it. */
   children?: React.ReactElement;
   description: React.ReactNode;
   /** The form itself. Not rendered until the dialog opens. */

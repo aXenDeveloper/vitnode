@@ -8,17 +8,9 @@ import { CONTENT_EDITORIAL_ACTION_IDS } from "@/views/admin/views/content/action
 /** Everything a form dialog is told about what it is editing. */
 export interface ContentFormDialogProps {
   action: "create" | "edit";
-  /**
-   * The trigger the list renders - a button, already labelled and tooltipped.
-   * `null` when the list opens the dialog itself, through `open`.
-   */
   children: React.ReactNode;
   /** The content type, with its definition and its component overrides. */
   entry: RegisteredFrontendContentType;
-  /**
-   * Set by the list to open the dialog without a trigger - the hand-off from a
-   * duplicate to the copy's edit form. Absent, the trigger opens it.
-   */
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
   /** The row being edited. Absent for `create`. */

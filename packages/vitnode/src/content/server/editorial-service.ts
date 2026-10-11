@@ -28,10 +28,11 @@ import type {
   ContentUpdateInput,
   ContentValuesOf,
 } from "../types";
+import type { ContentVisibilityAction } from "../visibility";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentDeliveryOutcome } from "./delivery-writes";
 import type {
-  ContentDuplicateTranslationSource,
+  ContentDuplicateDependencies,
   ContentEditorialDuplicationMethods,
 } from "./duplicate";
 import type { ContentRevisionsModel } from "./revisions-model";
@@ -42,7 +43,6 @@ import type { ContentTranslationModel } from "./translation-model";
 import type {
   ContentEditorialVisibilityMethods,
   ContentEditorialVisibilityOptions,
-  ContentVisibilityAction,
   ContentVisibilityChange,
   ContentVisibilityMembers,
 } from "./visibility";
@@ -104,7 +104,6 @@ export interface ContentEditorialOutcome<TDefinition> {
   changedFields: ContentChangedPath<TDefinition>[];
 
   delivery?: ContentDeliveryOutcome;
-  /** Set by `duplicate` on the copy's `create`: the record it was copied from. */
   duplicatedFromId?: ContentId;
 
   movedTranslations?: number;
@@ -117,10 +116,6 @@ export interface ContentEditorialOutcome<TDefinition> {
   revisionId: null | number;
   row: ContentSelect<TDefinition>;
   version: number;
-  /**
-   * Set only by `hide` and `unhide`: who asked, the visibility columns before
-   * the write, and the public reachability on both sides of it.
-   */
   visibility?: ContentVisibilityChange;
 }
 
@@ -202,7 +197,6 @@ export interface ContentEditorialServiceBase<TDefinition> {
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
 
-/** The editorial collection API of one to-many reference. See `ContentRelationMethods`. */
 export interface ContentEditorialRelationMethods<
   TDefinition,
   TRelatedId = ContentId,
@@ -302,10 +296,6 @@ export const createContentEditorialService = <
   pluginId: string;
   schemas: ContentSchemas<TDefinition>;
   table: PgTableWithColumns<TableConfig>;
-  /**
-   * The translation half, for a localized content type: `duplicate` copies every
-   * language through its editorial create, in the copy's transaction.
-   */
   translations?: {
     columns: Record<string, PgColumn>;
     editorial: () => ContentTranslationEditorialService<TDefinition>;
@@ -355,9 +345,6 @@ export const createContentEditorialService = <
     ...CONTENT_SYSTEM_FIELDS,
     ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
     ...CONTENT_EDITORIAL_FIELDS,
-    // Selected on every read and returned by every write, so each "was it
-    // public?" this service asks - delivery, the transition's before-state -
-    // sees `hiddenAt` without a second query.
     ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
   ];
   const ownColumnNames = [
@@ -393,10 +380,6 @@ export const createContentEditorialService = <
     definition.delivery.enabled && definition.delivery.slugScope === "shared";
   const slugHistory = contentSlugHistoryFor({ c, definition, pluginId });
 
-  /**
-   * Whether a base row is publicly reachable right now - published, live and not
-   * hidden. `false` without publication.
-   */
   const publiclyVisible = (row: null | Record<string, unknown>): boolean => {
     if (row === null || !publication) return false;
 
@@ -410,11 +393,6 @@ export const createContentEditorialService = <
    * guarded on the state it changes, so a `publish` that returned a row can only
    * have found it unpublished, and an `unpublish` can only have found it published.
    * A second `SELECT` would race with the writer that just won.
-   *
-   * Everything else is the returned row, unchanged - `hiddenAt` above all. A
-   * transition never writes it, so a hidden record was hidden before its publish
-   * and is hidden after it, and both sides report "not public": publishing a
-   * hidden record reserves no address and adds no sitemap line.
    */
   const invert = (
     operation: "publish" | "unpublish",
@@ -769,19 +747,6 @@ export const createContentEditorialService = <
       };
     });
 
-  /**
-   * Hide and unhide: a version bump, a revision and - for a shared slug - the
-   * same delivery bookkeeping an unpublish and a publish do, all in one
-   * transaction.
-   *
-   * The row is locked and read first, so the before-state is the real one: the
-   * effects need to know whether the record was public a moment ago, and a hidden
-   * draft never was. The publication columns are not in the `SET` and never will
-   * be, so hiding cannot publish and unhiding cannot unpublish.
-   *
-   * Like a transition, it is guarded on the state it changes - which is what makes
-   * a repeat a harmless no-op - with `expectedVersion` checked on top when given.
-   */
   const visibilityTransition = async (
     id: ContentId,
     options: ContentEditorialVisibilityOptions,
@@ -838,10 +803,6 @@ export const createContentEditorialService = <
         version,
       });
 
-      // A hide is an unpublish as far as the address is concerned - the history
-      // keeps the slug, so unhiding brings its redirects back - and an unhide is a
-      // publish: the slug is reserved again, and refused if another record took it
-      // in the meantime.
       const delivery = await applyDelivery(tx, {
         after: row,
         before: current,
@@ -1141,10 +1102,7 @@ export const createContentEditorialService = <
 
         // Currently declared fields only. A field the content type has since
         // dropped is ignored; one added since is absent, so the record keeps
-        // what it has. The snapshot's `publication` and `visibility` blocks are
-        // never read here: restoring version 3 of a record that is hidden today
-        // brings back version 3's words and leaves it hidden, and the same for
-        // its publication status.
+        // what it has.
         const projected = projectRevisionSnapshot(
           definition,
           revision.snapshot,
@@ -1395,8 +1353,6 @@ export const createContentEditorialService = <
       }),
   };
 
-  // The copy goes through `editorial.create` and each language through its own
-  // editorial create, so every one of them starts with its `create` revision.
   const duplication: ContentEditorialDuplicationMethods<TDefinition> = {
     duplicate: async (sourceId, options) => {
       const result = await runContentDuplicate(
@@ -1407,15 +1363,8 @@ export const createContentEditorialService = <
           definition,
           pluginId,
           table,
-          // Erased to `ContentId`: the duplicate only ever hands back the
-          // canonical id it read off this content type's row.
-          translation: translations as
-            | undefined
-            | {
-                columns: Record<string, PgColumn>;
-                model: () => ContentDuplicateTranslationSource;
-                table: PgTable;
-              },
+          translation:
+            translations as ContentDuplicateDependencies["translation"],
         },
         sourceId,
         options,
@@ -1463,8 +1412,6 @@ export const createContentEditorialService = <
     },
   };
 
-  // The duplication half is resolved from `TDefinition["duplication"]`, still a
-  // type parameter here; the runtime flag reads the same field.
   return {
     ...editorial,
     ...(definition.duplication.enabled ? duplication : {}),

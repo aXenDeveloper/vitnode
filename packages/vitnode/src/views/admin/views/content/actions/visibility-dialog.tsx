@@ -5,7 +5,6 @@ import type { ContentVisibilityAction } from "@/content/visibility";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 
-/** The icon each visibility action wears - in the row, the menu and the editor. */
 export const CONTENT_VISIBILITY_ICONS: Record<
   ContentVisibilityAction,
   React.ReactNode
@@ -14,18 +13,6 @@ export const CONTENT_VISIBILITY_ICONS: Record<
   unhide: <ViewIcon />,
 };
 
-/**
- * "Hide this record?" / "Unhide this record?", with what each one does and
- * does not do to the public site.
- *
- * Hiding is the destructive-looking one: it takes a record off the public site
- * on the spot, although it unpublishes nothing. Unhiding says that it restores
- * public access only to a record that is published.
- *
- * `onConfirm` performs the write and reports back - `true` closes the dialog,
- * `false` keeps it open for another try. The toasts are the caller's, which knows
- * whether it is a list row or an open editor.
- */
 export const ContentVisibilityDialog = ({
   action,
   children,
@@ -37,7 +24,6 @@ export const ContentVisibilityDialog = ({
   title,
 }: {
   action: ContentVisibilityAction;
-  /** The trigger, when the dialog opens itself. */
   children?: React.ReactElement;
   finalFocus?: React.RefObject<HTMLElement | null>;
   onConfirm: () => Promise<boolean>;

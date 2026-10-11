@@ -133,7 +133,6 @@ export const ContentFormPageBody = ({
 }: {
   action: Exclude<ContentAdminAction, "list">;
   entry: RegisteredFrontendContentType;
-  /** Present exactly when `action` is `edit` - the route resolver guarantees it. */
   itemId?: ContentId;
   title: string;
 }) =>

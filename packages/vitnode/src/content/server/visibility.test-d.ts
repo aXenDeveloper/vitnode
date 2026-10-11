@@ -17,7 +17,6 @@ const hideablePosts = createContentModel(testHideablePostContentType);
 const hideableNotes = createContentModel(testHideableNoteContentType);
 const editorialPosts = createContentModel(testEditorialPostContentType);
 
-// Never executed - the type checker is the whole point.
 const c = {} as Context;
 
 describe("hide and unhide on the services", () => {

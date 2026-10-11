@@ -29,16 +29,6 @@ import { ContentEngineError } from "../errors";
 
 export type ColumnReferenceThunk = () => AnyPgColumn;
 
-/**
- * A content table's primary key, per id strategy.
- *
- * - `serial`: exactly the column every content type has always had.
- * - `uuid`: `gen_random_uuid()`, so an insert that names no id still gets one.
- * - `bigint`: an identity column in Drizzle's `string` mode - `bigserial` has no
- *   string mode, and a JavaScript number would round anything above 2^53.
- *   `BY DEFAULT` rather than `ALWAYS`, so an import can keep its own ids and a
- *   sequence can be moved with `setval`.
- */
 export const buildIdPrimaryKey = (
   strategy: ContentIdStrategy,
 ): AnyPgColumnBuilder => {
@@ -52,13 +42,6 @@ export const buildIdPrimaryKey = (
   return serial().primaryKey();
 };
 
-/**
- * A foreign key column of the type a `strategy` primary key has, nullable until
- * the caller says otherwise.
- * Every column that points at a content row - a to-one relation, a junction's
- * two sides, a translation's or a child row's owner - is built here, so the
- * types cannot disagree with the key they reference.
- */
 export const buildIdForeignKey = (strategy: ContentIdStrategy) =>
   strategy === "uuid"
     ? uuid()
@@ -90,13 +73,6 @@ export const buildPublicationColumns = (): Record<
     .default("draft"),
 });
 
-/**
- * `hiddenAt` and `hiddenBy` - added only when visibility is enabled.
- *
- * `hiddenAt` is the whole state: a record is hidden exactly when it is set, so
- * there is no second flag that could disagree with it. `hiddenBy` is who did it,
- * and goes back to `NULL` with the account rather than blocking its deletion.
- */
 export const buildVisibilityColumns = (
   userReference: ColumnReferenceThunk,
 ): Record<string, AnyPgColumnBuilder> => ({
@@ -121,7 +97,6 @@ export const buildTranslationSystemColumns = ({
   onItemDelete = "cascade",
 }: {
   itemReference: ColumnReferenceThunk;
-  /** The owning content type's id strategy, which `itemId` follows. */
   itemStrategy?: ContentIdStrategy;
   languageReference: ColumnReferenceThunk;
   onItemDelete?: "cascade";
@@ -181,7 +156,6 @@ export const buildContentColumn = ({
   fieldValue: ContentFieldDescriptor;
   name: string;
   reference?: ColumnReferenceThunk;
-  /** For a to-one `relation`: the target's id strategy, which the column follows. */
   referenceStrategy?: ContentIdStrategy;
 }): AnyPgColumnBuilder => {
   const { nullable } = fieldValue;
@@ -264,16 +238,12 @@ export const buildContentColumn = ({
         );
       }
 
-      // The column has the type of the key it points at: `integer` for a user
-      // or a serial target, `uuid` or `bigint` for the other strategies.
       const column = (
         fieldValue.kind === "relation"
           ? buildIdForeignKey(referenceStrategy)
           : integer()
       ).references(reference, {
         onDelete: fieldValue.onDelete,
-        // Identifiers are generated and never rewritten, so an update is only
-        // ever a repair; cascade keeps children pointing at the right row.
         onUpdate: "cascade",
       });
 

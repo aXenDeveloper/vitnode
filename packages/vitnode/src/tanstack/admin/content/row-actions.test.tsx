@@ -115,11 +115,6 @@ const mount = ({
 
 const API_ORIGIN = "http://api.test";
 
-/**
- * The universal fetcher runs its server half under vitest, which reads the
- * request it is rendering inside - so each test runs inside one, the way
- * `mutations-api.test.ts` does.
- */
 aroundEach(async runTest => {
   await requestHandler(async () => {
     await runTest();

@@ -53,7 +53,6 @@ export const contentUnprocessable = (
   body: ContentUnprocessable,
 ): HTTPException => jsonError(422, body);
 
-/** A duplicate refused for a reason a form can act on: 409 slug, 422 unique. */
 export const contentDuplicateRejected = (
   body: ContentDuplicateRejection,
 ): HTTPException =>

@@ -376,13 +376,6 @@ export class ContentScheduleError extends ContentEngineError {
   readonly code: ContentScheduleCode;
 }
 
-/**
- * A duplicate could not find a free slug: every candidate is taken, or
- * concurrent copies kept taking the one it picked.
- *
- * Per-request and structured, so the AdminCP can point at the slug field and
- * ask for an override rather than show a bare 409.
- */
 export class ContentDuplicateSlugConflict extends ContentEngineError {
   constructor({
     contentTypeId,
@@ -413,10 +406,6 @@ export class ContentDuplicateSlugConflict extends ContentEngineError {
   readonly slug: string;
 }
 
-/**
- * A duplicate would copy a unique value onto a second record. Thrown before
- * anything is written; `fields` are canonical paths (`code`, `seo.handle`).
- */
 export class ContentDuplicateUniqueRequired extends ContentEngineError {
   constructor({
     contentTypeId,

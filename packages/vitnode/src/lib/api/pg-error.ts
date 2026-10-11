@@ -18,7 +18,6 @@ export const pgErrorCode = (error: unknown, depth = 0): string | undefined => {
   return pgErrorCode(cause, depth + 1);
 };
 
-/** The constraint a Postgres error names (`constraint_name`), through driver wrappers. */
 export const pgConstraintName = (
   error: unknown,
   depth = 0,

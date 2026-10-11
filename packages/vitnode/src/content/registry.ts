@@ -395,8 +395,6 @@ export const contentPermissionEntries = (
         },
       ]
     : []),
-  // Hiding takes a record off the public site without unpublishing it, so it
-  // is gated like publishing: on its own, and for both directions.
   ...(definition?.visibility.enabled
     ? [
         {
@@ -496,7 +494,6 @@ export const contentFilterableFields = (
       .filter(([, field]) => isFilterableFieldKind(field.kind))
       .map(([name]) => name),
     ...(definition.publication.enabled ? ["status"] : []),
-    // The hidden/visible filter, carried through the list URL like `status`.
     ...(definition.visibility.enabled ? ["visibility"] : []),
   ].sort((a, b) => a.localeCompare(b));
 };

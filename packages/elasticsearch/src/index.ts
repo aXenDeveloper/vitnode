@@ -51,12 +51,7 @@ interface EsSource {
   imageId?: null | number;
   isHidden?: boolean;
   isPublic: boolean;
-  /**
-   * The numeric id, only for a numeric item - the original `integer` mapping
-   * cannot hold a `uuid` or a `bigint` key, so those carry `itemKey` alone.
-   */
   itemId?: number;
-  /** `contentIdKey(itemId)` - every item has one, whatever its id strategy. */
   itemKey?: string;
   itemType: string;
   languageCode: string;
@@ -66,13 +61,8 @@ interface EsSource {
   url: null | string;
 }
 
-/** The storage key of any item id - exactly what `core_search_index` holds. */
 const itemKeyOf = (itemId: ContentId): string => String(itemId);
 
-/**
- * The document id. A serial item's is exactly what it always was
- * (`blog.post:42:en`), so an existing index keeps its documents.
- */
 const docId = (
   itemType: string,
   itemId: ContentId,
@@ -256,8 +246,6 @@ const mapHit = (hit: estypes.SearchHit<EsSource>): null | SearchHit => {
   const source = hit._source;
   if (!source) return null;
 
-  // A document indexed before `itemKey` existed has only the number; a `uuid`
-  // or `bigint` one has only the key. Numeric ids stay numbers either way.
   const itemId: ContentId | undefined = source.itemId ?? source.itemKey;
   if (itemId === undefined) return null;
 
@@ -317,10 +305,6 @@ export const ElasticsearchSearchAdapter = (
   const createIndexIfMissing = async (): Promise<void> => {
     const es = getClient();
     if (await es.indices.exists({ index })) {
-      // An index created before `itemKey` existed gains the field. Adding a
-      // keyword property is a compatible mapping change, so this is safe to
-      // repeat; documents written before it carry only `itemId`, which every
-      // read and delete below still honours. Rebuild the index to backfill.
       await es.indices.putMapping({
         index,
         properties: {
@@ -463,8 +447,6 @@ export const ElasticsearchSearchAdapter = (
                   ? []
                   : [{ term: { languageCode } }]),
               ],
-              // By key, which every document written since carries - or by the
-              // number, which is all a document indexed before it has.
               minimum_should_match: 1,
               should: [
                 { term: { itemKey: itemKeyOf(itemId) } },

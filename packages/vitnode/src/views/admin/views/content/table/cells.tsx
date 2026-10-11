@@ -271,7 +271,7 @@ const ContentCellValue = ({
 };
 
 const ContentCellTitle = (props: ContentCellProps) =>
-  props.spec.title === true && props.hiddenLabel !== undefined ? (
+  props.spec.title && props.hiddenLabel !== undefined ? (
     <span className="flex min-w-0 items-center gap-2">
       <ContentHiddenIcon
         className="size-4"

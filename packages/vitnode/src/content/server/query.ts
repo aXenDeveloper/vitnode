@@ -108,11 +108,6 @@ export const buildFilterCondition = ({
   ) => SQL | undefined;
   /** Whether `status` is a generated column and therefore filterable. */
   publication?: boolean;
-  /**
-   * Whether `visibility` is a filter: `hidden` or `visible`, against the
-   * generated `hiddenAt`. Never passed by the public services - a public reader
-   * cannot ask for hidden records, and their allowlist refuses the key anyway.
-   */
   visibility?: boolean;
 }): SQL | undefined => {
   const conditions: SQL[] = [];
@@ -144,9 +139,6 @@ export const buildFilterCondition = ({
       continue;
     }
 
-    // Composes with `status` like any other equality: "published but hidden" is
-    // `status=published&visibility=hidden`, and is exactly the set of records a
-    // reader cannot reach although the AdminCP calls them published.
     if (visibility && name === "visibility" && columns.hiddenAt) {
       if (raw !== "hidden" && raw !== "visible") {
         throw new ContentEngineError(
@@ -170,8 +162,6 @@ export const buildFilterCondition = ({
     // table rather than an equality against something that does not exist.
     if (fieldValue && isContentReferenceCollection(fieldValue)) {
       const filter = raw as ContentRelationFilter;
-      // A number or a string: which one is right is the target's strategy, and
-      // the membership condition checks it against that.
       if (
         typeof filter?.contains !== "number" &&
         typeof filter?.contains !== "string"

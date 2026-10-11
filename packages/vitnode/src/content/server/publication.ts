@@ -9,11 +9,6 @@ import type { ContentPublicationMethods, ContentService } from "./service";
 import { ContentEngineError } from "../errors";
 
 export interface PublicationColumns {
-  /**
-   * The base row's `hiddenAt`, present only when the content type has
-   * `visibility` enabled. A translation table has none: hiding is record-level,
-   * so it is always the *base* predicate that carries it.
-   */
   hiddenAt?: PgColumn;
   publishedAt: PgColumn;
   status: PgColumn;
@@ -34,8 +29,6 @@ export const publicationColumns = (
 
   if (!definition.visibility.enabled) return { publishedAt, status };
 
-  // Thrown rather than skipped: a visibility-enabled content type read without
-  // its `hiddenAt` column would quietly serve every hidden record.
   if (!hiddenAt) {
     throw new ContentEngineError(
       "`visibility` is enabled, but the column map has no `hiddenAt`. Build the columns with `contentTableColumns`.",
@@ -46,11 +39,6 @@ export const publicationColumns = (
   return { hiddenAt, publishedAt, status };
 };
 
-/**
- * The one SQL statement of "publicly reachable": published, already live, and -
- * for a content type with `visibility` - not hidden. Every public read builds
- * its `WHERE` from this, so a hidden record disappears everywhere at once.
- */
 export const publishedCondition = (
   columns: PublicationColumns,
 ): SQL | undefined =>
@@ -61,7 +49,7 @@ export const publishedCondition = (
     columns.hiddenAt === undefined ? undefined : isNull(columns.hiddenAt),
   );
 
-export const hiddenPublishedCondition = (
+const hiddenPublishedCondition = (
   columns: PublicationColumns,
 ): SQL | undefined =>
   columns.hiddenAt === undefined
