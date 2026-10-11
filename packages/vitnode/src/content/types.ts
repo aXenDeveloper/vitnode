@@ -392,7 +392,7 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
           ? number
           : TField extends { kind: "richText" }
             ? RichTextDocument
-          : string;
+            : string;
 
 /** The scalar half of {@link ContentFieldInput}. `dateTime` crosses as ISO. */
 type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
@@ -407,7 +407,7 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
           ? number
           : TField extends { kind: "richText" }
             ? RichTextDocument
-          : string;
+            : string;
 
 /** Every leaf of a group, as it comes back. Nested, never flattened. */
 type ContentGroupValue<TFields> = Prettify<{
