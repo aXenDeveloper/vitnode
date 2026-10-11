@@ -81,6 +81,7 @@ describe("middlewareConfigQueryOptions", () => {
           navigation: [],
           passkeys: false,
           password: true,
+          payments: false,
           sso: [],
         }),
       ),

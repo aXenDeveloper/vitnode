@@ -112,6 +112,8 @@ export const webhookRoute = buildRoute({
     }
 
     // Best effort, after acceptance: the queue worker is what guarantees it.
+    if (accepted.queueId === null) return c.json({ received: true });
+
     void processQueueTasksByIds(c, [accepted.queueId]).catch(
       async (error: unknown) => {
         await c

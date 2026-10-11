@@ -48,6 +48,7 @@ const KNOWN_CONFIG = knownMiddlewareConfig({
   navigation: [],
   passkeys: false,
   password: true,
+  payments: false,
   sso: [],
 });
 

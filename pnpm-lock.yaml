@@ -525,9 +525,12 @@ importers:
       '@vitnode/core':
         specifier: workspace:*
         version: link:../vitnode
-      eslint:
-        specifier: ^10.11.0
-        version: 10.11.0(jiti@2.7.0)
+      oxlint:
+        specifier: ^1.87.0
+        version: 1.87.0(oxlint-tsgolint@7.0.2003)
+      oxlint-tsgolint:
+        specifier: ^7.0.2003
+        version: 7.0.2003
       tsc-alias:
         specifier: ^1.9.7
         version: 1.9.7

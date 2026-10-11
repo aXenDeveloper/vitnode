@@ -23,7 +23,8 @@ export type PaymentsTransaction = Omit<
 export type OfferPrices = Readonly<Record<string, number>>;
 
 export type PaymentOfferEligibility =
-  { eligible: false; reason: string } | { eligible: true };
+  | { eligible: false; reason: string }
+  | { eligible: true };
 
 export interface PaymentOfferEligibilityArgs {
   c: Context<EnvVitNode>;

@@ -26,7 +26,7 @@ import {
 export const PROCESS_EVENT_TASK = "payments-process-event";
 
 export type WebhookAcceptance =
-  | { eventId: number; queueId: number; status: "accepted" }
+  | { eventId: number; queueId: null | number; status: "accepted" }
   | { status: "duplicate" };
 
 /**

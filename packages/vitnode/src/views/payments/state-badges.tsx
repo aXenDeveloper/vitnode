@@ -8,7 +8,11 @@ import type {
 import { Badge } from "@/components/ui/badge";
 
 type BadgeVariant =
-  "destructive" | "outline" | "secondary" | "success" | "warning";
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "success"
+  | "warning";
 
 const PURCHASE_VARIANTS: Record<PurchaseDisplayState, BadgeVariant> = {
   awaiting_payment: "outline",
