@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { beforeEach, describe, expect, it } from "vitest";

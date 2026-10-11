@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { DrizzleQueryError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 

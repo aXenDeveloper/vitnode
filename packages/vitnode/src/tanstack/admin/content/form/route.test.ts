@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { isNotFound } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 

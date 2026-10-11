@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { InlineConfig, Plugin } from "vite";
 
 import {

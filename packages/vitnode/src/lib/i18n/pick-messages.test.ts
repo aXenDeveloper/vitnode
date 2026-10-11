@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { afterEach, describe, expect, it } from "vitest";
 
 import { isUnsafeMessagePath, pickMessages } from "./pick-messages";

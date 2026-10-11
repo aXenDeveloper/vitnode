@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { CONTENT_PUBLICATION_STATUSES } from "./const";

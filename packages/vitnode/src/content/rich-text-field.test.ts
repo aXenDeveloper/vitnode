@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";

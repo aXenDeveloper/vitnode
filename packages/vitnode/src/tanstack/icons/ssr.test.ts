@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { AnyRouter } from "@tanstack/react-router";
 
 import { describe, expect, test, vi } from "vitest";

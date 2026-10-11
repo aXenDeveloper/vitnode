@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { findAdminRoutesWithoutStaffPermission } from "@vitnode/core/api/lib/route";
 import { describe, expect, it } from "vitest";
 

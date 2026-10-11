@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { defineContentType } from "../content/define";

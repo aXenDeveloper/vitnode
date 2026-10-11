@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import type { LocaleRoutePaths } from "../../lib/i18n/types.js";

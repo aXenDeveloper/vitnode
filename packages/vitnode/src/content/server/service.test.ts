@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 

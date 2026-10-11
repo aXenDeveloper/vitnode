@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { ChildProcess } from "node:child_process";
 
 import {

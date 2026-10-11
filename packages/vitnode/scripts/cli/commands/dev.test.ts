@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { ViteDevServer } from "vite";
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: "jsdom",
+    environment: "node",
     exclude: ["**/node_modules/**", "**/dist/**"],
     passWithNoTests: true,
     typecheck: {

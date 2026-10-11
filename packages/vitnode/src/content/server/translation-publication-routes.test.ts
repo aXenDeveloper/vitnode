@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";

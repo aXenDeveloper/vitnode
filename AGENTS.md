@@ -113,6 +113,15 @@ npm i x
 - Do not test static config, constants, color presets, or plugin configuration (`config.api`, content type definitions).
 - Do not test third-party libraries or trivial helper/wrapper code.
 - Always run "pnpm lint:fix" to fix formatting and linting issues before committing. Never commit a file with lint errors.
+- Do not assert on source text (`readFileSync` + `toContain` on a module) - test behaviour. Import-graph checks that keep server or editor code out of a bundle are fine.
+
+### Speed
+
+- The file name picks the environment: `*.test.tsx` runs in happy-dom (project `dom`), `*.test.ts` runs in node (project `unit`). Never add a `// @vitest-environment` pragma.
+- `unit` shares one module graph per worker (`isolate: false`). A test that asserts process-wide state ("nothing registered yet") goes in `ISOLATED` in `packages/vitnode/vitest.config.ts`.
+- Real builds, watchers and child processes go in `INTEGRATION` there. `pnpm test` runs everything; `pnpm test:unit` skips them.
+- Never wait out a real delay - use `vi.useFakeTimers()` and advance the clock.
+- Build a Hono app or a fixture once per file when the tests only read from it.
 
 ### Mocking
 

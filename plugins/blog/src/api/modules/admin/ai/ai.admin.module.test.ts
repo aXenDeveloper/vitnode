@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { CacheClient } from "@vitnode/core/api/lib/cache";
 import type { Context } from "hono";
 

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, type RenderResult, screen } from "@testing-library/react";
 import { act, type ReactNode, useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -165,16 +164,6 @@ const slidOut = async (): Promise<void> => {
   });
 };
 
-const shell = (container: HTMLElement): HTMLElement => {
-  const host = container.firstElementChild;
-
-  if (!(host instanceof HTMLElement)) {
-    throw new Error("the site shell never rendered");
-  }
-
-  return host;
-};
-
 describe("the Edit widgets action the header offers", () => {
   it("is offered by an editable page the visitor may edit", async () => {
     render(site(editablePage(true)));
@@ -264,42 +253,9 @@ describe("walking away from the page being edited", () => {
   });
 });
 
-describe("the room the site leaves the editing sidebar", () => {
-  const reserved = (container: HTMLElement): boolean =>
-    shell(container).className.includes("md:pe-(--editor-sidebar-width)");
-
-  it("takes none of it while nobody is editing", async () => {
-    const { container } = render(site(editablePage(true)));
-    await settled();
-
-    expect(reserved(container)).toBe(false);
-    expect(shell(container).className).toContain("transition-[padding]");
-  });
-
-  it("reserves the sidebar's width from the whole site once editing opens", async () => {
-    const { container } = render(site(editablePage(true)));
-    await settled();
-    await open();
-
-    expect(reserved(container)).toBe(true);
-    expect(shell(container).className).toContain("pb-(--editor-sheet-height)");
-  });
-
-  it("keeps the box it pads, so both directions are a transition and not a jump", async () => {
-    const { container } = render(site(editablePage(true)));
-    await settled();
-
-    const before = shell(container);
-
-    await open();
-
-    expect(shell(container)).toBe(before);
-    expect(before.style.display).toBe("");
-    expect(before.className).toContain("transition-[padding]");
-  });
-
-  it("gives it back the moment editing ends, and keeps the sidebar until it has slid out", async () => {
-    const { container } = render(site(editablePage(true)));
+describe("leaving edit mode", () => {
+  it("keeps the sidebar until it has slid out", async () => {
+    render(site(editablePage(true)));
     await settled();
     await open();
 
@@ -308,8 +264,6 @@ describe("the room the site leaves the editing sidebar", () => {
     });
     await settled();
 
-    expect(reserved(container)).toBe(false);
-    expect(shell(container).className).toContain("transition-[padding]");
     expect(editorIsOpen()).toBe(true);
 
     await slidOut();

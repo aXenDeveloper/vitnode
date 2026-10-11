@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -103,7 +102,7 @@ describe("RichTextContent", () => {
     );
 
     const styled = screen.getByText("red");
-    expect(styled.style.color).toBe("rgb(255, 0, 0)");
+    expect(styled.style.color).toBe("#ff0000");
     expect(styled.style.fontSize).toBe("18px");
     expect(screen.getByText("evil", { exact: false }).tagName).toBe("P");
     expect(container.querySelectorAll("span")).toHaveLength(1);

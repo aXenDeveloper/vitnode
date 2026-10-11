@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { act, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -270,8 +269,13 @@ describe("useContentLiveSession", () => {
       act(() => sockets[0]?.open());
       const clientId = joinsOn(sockets[0])[0]?.clientId;
 
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
       act(() => sockets[0]?.drop());
-      await waitFor(() => expect(sockets).toHaveLength(2), { timeout: 4_000 });
+      act(() => {
+        vi.advanceTimersByTime(2_000);
+      });
+      vi.useRealTimers();
+      expect(sockets).toHaveLength(2);
       act(() => sockets[1]?.open());
 
       expect(joinsOn(sockets[1])).toEqual([

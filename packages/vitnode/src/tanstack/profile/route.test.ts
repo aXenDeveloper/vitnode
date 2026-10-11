@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { QueryClient } from "@tanstack/react-query";
 
 import { isNotFound } from "@tanstack/react-router";

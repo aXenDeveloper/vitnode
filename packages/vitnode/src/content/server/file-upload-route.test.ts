@@ -1,7 +1,6 @@
 // Node, not jsdom: a real `FormData` with a real `File` in it only survives the
 // trip through `app.request` under Node's own multipart implementation - jsdom's
 // globals produce "Malformed FormData".
-// @vitest-environment node
 import type { Context, MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";

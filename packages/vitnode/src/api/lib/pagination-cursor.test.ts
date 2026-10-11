@@ -7,7 +7,6 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-// @vitest-environment node
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
 

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import {
   act,
   fireEvent,
@@ -235,13 +234,12 @@ describe("ContentLiveField", () => {
   it("is read-only and names the holder while someone else edits it", () => {
     setup({ locks: [lockOf(ANNA, "Anna")] });
 
-    expect(screen.getByRole("group", { description: /Anna/ })).toHaveProperty(
-      "disabled",
+    const group = screen.getByRole("group", { description: /Anna/ });
+
+    expect(group).toHaveProperty("disabled", true);
+    expect(group.contains(screen.getByRole("textbox", { name: "Title" }))).toBe(
       true,
     );
-    expect(
-      screen.getByRole("textbox", { name: "Title" }).matches(":disabled"),
-    ).toBe(true);
     expect(outlineTags()).toEqual(["Anna"]);
   });
 

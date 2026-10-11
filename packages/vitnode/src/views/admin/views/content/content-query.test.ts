@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { ADMIN_QUERY_ROOT } from "@/views/admin/table/query";

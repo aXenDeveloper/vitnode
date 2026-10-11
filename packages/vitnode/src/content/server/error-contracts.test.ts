@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";

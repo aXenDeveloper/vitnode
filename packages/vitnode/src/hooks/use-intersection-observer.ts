@@ -23,7 +23,8 @@ export function useIntersectionObserver(
     : String(threshold);
 
   React.useEffect(() => {
-    if (!target || isFrozen || !("IntersectionObserver" in window)) return;
+    if (!target || isFrozen || typeof IntersectionObserver === "undefined")
+      return;
 
     const observer = new IntersectionObserver(
       ([nextEntry]) => {

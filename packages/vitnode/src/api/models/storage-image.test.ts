@@ -1,4 +1,3 @@
-// @vitest-environment node
 // Runs in the Node environment so sharp and real image buffers behave as they do
 // on the server.
 import type { Context } from "hono";

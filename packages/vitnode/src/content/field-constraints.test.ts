@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { CONTENT_ENUM_DEFAULT_LENGTH } from "./const";

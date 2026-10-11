@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -126,11 +125,10 @@ describe("useIntersectionObserver", () => {
   });
 
   it("does nothing when the browser has no IntersectionObserver", () => {
-    vi.unstubAllGlobals();
+    vi.stubGlobal("IntersectionObserver", undefined);
 
     const { result } = renderHook(() => useIntersectionObserver(element));
 
-    expect("IntersectionObserver" in window).toBe(false);
     expect(result.current).toBeUndefined();
   });
 });

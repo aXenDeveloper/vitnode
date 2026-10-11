@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
