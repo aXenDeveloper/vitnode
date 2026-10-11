@@ -1038,6 +1038,7 @@ export const createMemoryDb = (seed: [Table, readonly object[]][] = []) => {
           },
           onConflictDoUpdate: (config: {
             set: MemoryRow;
+            setWhere?: SQL;
             target: Column | Column[];
             targetWhere?: SQL;
             where?: SQL;
@@ -1048,7 +1049,7 @@ export const createMemoryDb = (seed: [Table, readonly object[]][] = []) => {
               action: "update",
               set: config.set,
               target: [config.target].flat(),
-              where: config.where,
+              where: config.setWhere ?? config.where,
             };
 
             return query;
