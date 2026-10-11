@@ -83,14 +83,14 @@ Both buttons need the **Rebuild and clear the search index** staff permission (`
 
 ## What gets indexed and when
 
-Every record is in the index, but only public ones show up on `/search`. A draft is stored as a private document without a URL. With `authorField`, it appears on its author's own timeline and on the AdminCP user page, but never in public results.
+Every record is in the index, but only public ones show up on `/search`. A draft is stored as a private document without a URL. A [hidden](/docs/content-engine/content-visibility) record's document turns private the moment it is hidden, and public again when it is unhidden. With `authorField`, it appears on its author's own timeline and on the AdminCP user page, but never in public results.
 
-| Write                                                                    | Search index                  |
-| ------------------------------------------------------------------------ | ----------------------------- |
-| Create, edit, publish, unpublish, restore or delete in the AdminCP       | Updated right after the write |
-| A scheduled publish or unpublish                                         | Updated when the job runs     |
-| Your own route using the editorial service and `contentEditorialEffects` | Updated                       |
-| The plain `service` from `model.service(c)`                              | Not updated                   |
+| Write                                                                                       | Search index                  |
+| ------------------------------------------------------------------------------------------- | ----------------------------- |
+| Create, edit, publish, unpublish, restore, hide, unhide, duplicate or delete in the AdminCP | Updated right after the write |
+| A scheduled publish or unpublish                                                            | Updated when the job runs     |
+| Your own route using the editorial service and `contentEditorialEffects`                    | Updated                       |
+| The plain `service` from `model.service(c)`                                                 | Not updated                   |
 
 An edit rewrites the document only when an indexed field changed: the title, description, content fields, slug or author. Unpublishing keeps the document but makes it private, so the record drops out of `/search` at once. Deleting the record removes its document.
 

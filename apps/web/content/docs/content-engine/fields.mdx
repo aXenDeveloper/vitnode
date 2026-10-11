@@ -58,7 +58,7 @@ The second half holds the references: a user picker, two file dropzones and a re
 | `field.slug()`       | `varchar(maxLength)`, 160 by default, unique | Text input                               | Yes                |
 | `field.user()`       | `integer` referencing `core_users.id`        | User picker                              | No                 |
 | `field.file()`       | `integer` referencing `core_files.id`        | File dropzone                            | No                 |
-| `field.relation()`   | `integer` referencing the target table       | Search picker                            | No                 |
+| `field.relation()`   | The target's key type, referencing its table | Search picker                            | No                 |
 | `field.group()`      | One column per leaf                          | A fieldset with the leaf controls        | Yes, as a whole    |
 | `field.repeatable()` | A child table                                | A list of rows you can add, move, remove | No                 |
 | `field.blocks()`     | `jsonb`, `NOT NULL DEFAULT '[]'`             | Not in the form; edited as widgets       | Yes                |
@@ -228,7 +228,7 @@ category: field.relation({ required: true, onDelete: "restrict", target: () => c
 | `min`      | `number`                                    | No                 |              | Fewest targets, 1 to 500. Needs `multiple`                                   |
 | `onDelete` | `"restrict"` \| `"cascade"` \| `"set null"` | No                 | `"restrict"` | What deleting the target does. `"set null"` needs a nullable single relation |
 
-A single relation must be `required` or `nullable`. A to-many relation can be neither. [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
+A single relation must be `required` or `nullable`. A to-many relation can be neither. The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
 
 ## Group
 

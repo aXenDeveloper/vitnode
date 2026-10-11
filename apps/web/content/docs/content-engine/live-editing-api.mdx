@@ -117,6 +117,8 @@ Rich text documents are [Yjs](https://yjs.dev) documents, one per record, field 
 | `core_content_field_locks` | Active field locks with their holder and expiry                   |
 | `core_content_documents`   | The Yjs state of each rich text field, per record and language    |
 
+Each table keys the record by its id as text in a `varchar(64)` `itemId`, so live editing works with every [id strategy](/docs/content-engine/id-strategy). The socket accepts a uuid or bigint id and checks it against the content type's strategy, refusing a malformed one.
+
 The daily `content-editorial-cleanup` [cron job](/docs/dev/cron) removes expired locks, documents untouched for 30 days, and drafts untouched for 30 days whose record has moved on since. A stale draft whose record has not changed is kept, because it is somebody's unsaved work. When an editor's last tab leaves a record, their locks go too.
 
 ## Use live state in a custom form layout

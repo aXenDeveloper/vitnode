@@ -14,7 +14,7 @@ Which events exist depends on what the definition enables. `example.category` de
 
 | Action                      | Payload                                                                                         | Needs                          |
 | --------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
-| `created`                   | `{ contentId }`                                                                                 | always                         |
+| `created`                   | `{ contentId, duplicatedFromId? }`                                                              | always                         |
 | `updated`                   | `{ contentId, changedFields }`                                                                  | always                         |
 | `deleted`                   | `{ contentId }`                                                                                 | always                         |
 | `published`                 | `{ contentId, publishedAt, scheduledBy?, scheduleId? }`                                         | `publication`                  |
@@ -30,9 +30,15 @@ Which events exist depends on what the definition enables. `example.category` de
 | `translation_restored`      | `{ contentId, locale, languageId, version, changedFields, revisionId, restoredFromRevisionId }` | `localization` + `editorial`   |
 | `delivery_slug_changed`     | `{ contentId, slug, previousSlug, previousPath, canonicalPath, locale }`                        | `delivery`                     |
 | `delivery_redirect_created` | `{ contentId, previousSlug, previousPath, canonicalPath, locale }`                              | `delivery`                     |
+| `duplicated`                | `{ actorUserId, contentId, contentTypeId, sourceId }`                                           | `duplication`                  |
+| `hidden`                    | `{ actorUserId, contentId, hiddenAt }`                                                          | `visibility`                   |
+| `unhidden`                  | `{ actorUserId, contentId }`                                                                    | `visibility`                   |
 
 A few payload details that change what a listener does:
 
+- `contentId` has the type of the content type's [id strategy](/docs/content-engine/id-strategy): a `number` for `serial`, a `string` for `uuid` and `bigint`. A bigint id arrives as its exact decimal string.
+- A [duplicate](/docs/content-engine/duplicate-content) emits the copy's `created` with `duplicatedFromId`, one `translation_created` per copied language, then `duplicated`. `duplicatedFromId` is absent on an ordinary create.
+- `hidden` and `unhidden` never replace `published` or `unpublished`, because [hiding](/docs/content-engine/content-visibility) does not change the status.
 - `changedFields` lists only the fields whose value actually moved, typed as the content type's own field names. On translation events it names localized fields only.
 - `restored` replaces `updated` for a rollback, so a listener that cares about field changes should handle both.
 - `publishedAt` is when the record first went live. It is never rewritten, and it can be missing, so guard for `undefined`.

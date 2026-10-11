@@ -8,6 +8,7 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import articleList from "./admincp-article-list.webp";
 import bulkActions from "./admincp-bulk-actions.webp";
 import createDialog from "./admincp-create-dialog.webp";
+import rowActions from "./admincp-row-actions.webp";
 
 Every content type registered in the plugin's `src/admin/content.tsx` gets an AdminCP list and a create and edit form without any UI code. Most changes are options in the definition's `admin` block. For anything the options cannot express, you swap one cell, one field or the whole form layout for your own component.
 
@@ -83,6 +84,22 @@ Ticking rows opens a floating bar with **Publish**, **Unpublish** and **Delete**
 />
 
 Each action asks for confirmation and then sends one request per record to the same route the row buttons use, so events, search indexing and revisions behave as if you clicked every row. When some records fail, for example because someone else saved them meanwhile, the rest still go through. A toast says how many were skipped, and those rows stay ticked.
+
+## Duplicate and hide records
+
+The **More actions** menu of each row collects the less frequent actions. Two of them come from options in the definition:
+
+- **Duplicate** appears with [`duplication`](/docs/content-engine/duplicate-content), for staff with `can_create` and `can_view`. It makes a draft copy and opens it.
+- **Hide** or **Unhide** appears with [`visibility`](/docs/content-engine/content-visibility), for staff with `can_hide`. A hidden record gets a **Hidden** badge next to its status, and the toolbar gets a **Visibility** filter with **All**, **Visible** and **Hidden**.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={rowActions}
+  alt="Blog Articles list with Status and Visibility filters and the More actions menu of Hello world open, listing Preview, Schedule, History, Delivery, Duplicate, Hide and Delete"
+/>
+
+Each action asks for confirmation, refreshes the list and shows a toast. On the edit page, `ContentFormActions` adds a **Hide** or **Unhide** button next to **Save changes**, and `ContentFormStatus` shows the same **Hidden** badge with a short explanation.
 
 ## Group form fields into sections
 
@@ -264,7 +281,7 @@ contentTypeAdmin({
 }),
 ```
 
-`forms.create.layout` and `forms.edit.layout` override the shared one per action. `ContentFormRemainingFields` renders every form field you did not place yourself. In development, the browser console warns about fields the layout never rendered and about a missing `ContentFormHeader`, which holds the title and the back link.
+`forms.create.layout` and `forms.edit.layout` override the shared one per action. For a content type with [`visibility`](/docs/content-engine/content-visibility), `ContentFormHiddenBadge`, `ContentFormHiddenNotice` and `ContentFormVisibilityToggle` from the same import place the badge, the explanation and the button yourself. The blog's editor puts `ContentFormHiddenNotice` under its header. `ContentFormRemainingFields` renders every form field you did not place yourself. In development, the browser console warns about fields the layout never rendered and about a missing `ContentFormHeader`, which holds the title and the back link.
 
 ## Show a matching skeleton
 

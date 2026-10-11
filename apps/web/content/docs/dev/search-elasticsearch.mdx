@@ -86,6 +86,14 @@ collection) needs the **Rebuild and clear the search index** permission
   mapping.
 </Callout>
 
+<Callout type="info" title="Indexes created before uuid and bigint ids">
+  Documents now carry an `itemKey` keyword with the record id as text, so
+  [uuid and bigint](/docs/content-engine/id-strategy) records can be found.
+  VitNode adds the field to an existing index the first time it uses it. Older
+  documents get a value on the next **Rebuild index**; until then, results fall
+  back to the numeric `itemId`, which works for serial ids only.
+</Callout>
+
 <Callout type="warn" title="Keep Postgres">
   Do not delete `core_search_index`. It remains VitNode's source of truth and
   lets you switch providers without losing your map back home.

@@ -7,7 +7,7 @@ icon: Boxes
 import { ImgDocs } from "@/components/fumadocs/img";
 import articlesList from "./index-articles-list.webp";
 
-The Content Engine turns one TypeScript definition into structured content for your plugin. You describe the fields of an article or a category, and VitNode generates the database table, Zod validation, staff-only API routes, staff permissions and AdminCP screens. Optional blocks add drafts, a public API, pages with SEO metadata, revisions, scheduling, live editing, translations and search.
+The Content Engine turns one TypeScript definition into structured content for your plugin. You describe the fields of an article or a category, and VitNode generates the database table, Zod validation, staff-only API routes, staff permissions and AdminCP screens. Optional blocks add drafts, a public API, pages with SEO metadata, revisions, scheduling, live editing, translations, search, hiding and duplication.
 
 This is the whole definition behind the example plugin's **Categories** screen:
 
@@ -53,6 +53,8 @@ Its sibling `example.article` turns on more blocks. Same engine, more fields, a 
 | `liveEditing`       | Field locks, an autosaved shared draft and presence in the AdminCP edit form           |
 | `localization`      | A translations table and per-language fields and publishing                            |
 | `search`            | Records in the site [search](/docs/content-engine/search) index                        |
+| `visibility`        | **Hide** and **Unhide** actions and a `can_hide` permission                            |
+| `duplication`       | A **Duplicate** action that copies a record into a new draft                           |
 
 Content types live in code and in your migrations, not in the database. There is no screen for creating a content type at runtime.
 
@@ -71,6 +73,9 @@ Content types live in code and in your migrations, not in the database. There is
 | Store and render formatted text                          | [Rich text](/docs/content-engine/rich-text)                      |
 | Keep revisions, share previews or schedule publishing    | [Editorial](/docs/content-engine/editorial)                      |
 | Let several editors work on one record at the same time  | [Live editing](/docs/content-engine/live-editing)                |
+| Take a record off the public site without unpublishing   | [Hide content](/docs/content-engine/content-visibility)          |
+| Let editors copy a record as a new draft                 | [Duplicate content](/docs/content-engine/duplicate-content)      |
+| Key records by UUID or bigint instead of serial integers | [Record ID strategies](/docs/content-engine/id-strategy)         |
 | Change list columns, form sections or field components   | [AdminCP](/docs/content-engine/admincp)                          |
 | Read and write content from your own API routes          | [Services](/docs/content-engine/services)                        |
 | React to created, updated or published records           | [Events](/docs/content-engine/events)                            |

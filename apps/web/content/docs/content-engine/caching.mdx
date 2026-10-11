@@ -90,7 +90,7 @@ When a front end caches public reads under tags, it needs to know which tags a w
 | `contentDeliveryRedirectTag(typeId, slug, locale?)` | `content:example.article:redirect:hello-content-engine` |
 | `contentDeliverySitemapTag(typeId, locale?)`        | `content:example.article:sitemap`                       |
 
-A locale goes after the kind, so a localized type's Polish list is `content:example.localized-article:list:pl`.
+A locale goes after the kind, so a localized type's Polish list is `content:example.localized-article:list:pl`. An id goes in as text, so a [uuid or bigint](/docs/content-engine/id-strategy) record's item tag carries its exact UUID or decimal string.
 
 `contentInvalidationTags` turns a description of one write into the exact tags to expire. Publishing article `3` returns all six tags above:
 
@@ -121,13 +121,21 @@ export const vitNodeApiConfig = buildApiConfig({
 });
 ```
 
-VitNode then sends a `POST` to `{origin}/api/vitnode/content/revalidate` when a [scheduled](/docs/content-engine/editorial#schedule-publishing) publish or unpublish runs. Publishing by hand in the AdminCP sends nothing today, so a front end that caches must also expire entries on its own timer.
+VitNode then sends a `POST` to `{origin}/api/vitnode/content/revalidate` in these cases:
+
+| Change                                                                                      | Notifies origins                               |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| A [scheduled](/docs/content-engine/editorial#schedule-publishing) publish or unpublish runs | Yes                                            |
+| A record is [hidden or unhidden](/docs/content-engine/content-visibility)                   | Yes, when that changes what the public can see |
+| A publish, unpublish, edit or delete from the AdminCP or the API                            | No                                             |
+
+Hiding a draft notifies nobody, because nothing public changed. For the changes that send nothing, a front end that caches must expire entries on its own timer, or from a listener for the [content events](/docs/content-engine/events).
 
 The request carries:
 
 - `Authorization: Bearer <CRON_SECRET>`, the same secret that runs cron jobs.
 - `x-vitnode-timestamp`, the send time in milliseconds.
-- A JSON body with the `contentInvalidationTags` input plus `mode`, which is always `"immediate"` for a scheduled run.
+- A JSON body with the `contentInvalidationTags` input plus `mode`, which is always `"immediate"` for a scheduled run, a hide and an unhide.
 
 The secret travels with the request, so outside development each origin must use `https`. Plain `http` is allowed only for `localhost` and `127.0.0.1`. VitNode sends nothing while `CRON_SECRET` is unset or still the default. It tries each origin twice and does not retry a `403`, which it reads as a wrong secret.
 

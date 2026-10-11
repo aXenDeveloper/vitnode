@@ -36,7 +36,7 @@ publicApi: {
 
 ## Grant the right permissions
 
-- [ ] **Give staff only what they need** in **AdminCP → Staff**. Each content type gets `can_view`, `can_create`, `can_edit` and `can_delete`, plus `can_publish` with `publication` and `can_restore` with `editorial`.
+- [ ] **Give staff only what they need** in **AdminCP → Staff**. Each content type gets `can_view`, `can_create`, `can_edit` and `can_delete`, plus `can_publish` with `publication`, `can_restore` with `editorial` and `can_hide` with [`visibility`](/docs/content-engine/content-visibility).
 - [ ] **Guard your own admin routes.** Generated routes check their permissions themselves. A custom route next to them needs its own `adminStaffPermission`, as shown in [Services](/docs/content-engine/services#example-3-a-feature-this-article-button).
 
 ## Ship the migration

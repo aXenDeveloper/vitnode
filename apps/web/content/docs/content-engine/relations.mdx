@@ -162,6 +162,41 @@ The generated migration creates one table per junction and repeatable field.
 
 </Steps>
 
+## Relations across id strategies
+
+A relation can point at a content type with a different [`idStrategy`](/docs/content-engine/id-strategy). The foreign key always takes the type of the key it references. The example plugin's `example.event` uses `bigint` and links to `uuid` tags and `serial` categories:
+
+```ts title="plugins/example/src/content/event.ts"
+import type { ContentRelationTarget } from "@vitnode/core/content";
+
+import { categoryContentType } from "./category";
+import { tagContentType } from "./tag";
+
+fields: {
+  primaryTag: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: (): ContentRelationTarget<"uuid"> => tagContentType,
+  }),
+  category: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: () => categoryContentType,
+  }),
+  tags: field.relation({ multiple: true, ordered: true, target: () => tagContentType }),
+  relatedEvents: field.relation({ multiple: true, onDelete: "cascade", self: true }),
+},
+```
+
+| Field           | Column or junction table                                            |
+| --------------- | ------------------------------------------------------------------- |
+| `primaryTag`    | `uuid` column referencing `example_tags.id`                         |
+| `category`      | `integer` column referencing `example_categories.id`                |
+| `tags`          | `example_events_tags` with `itemId bigint` and `relatedItemId uuid` |
+| `relatedEvents` | `example_events_related_events` with both columns `bigint`          |
+
+`field.relation()` reads the target's strategy from `target`, so the API takes and returns tag ids as strings and category ids as numbers. When two content type modules import each other, TypeScript cannot infer a type through the cycle and falls back to serial. Annotate the thunk with `ContentRelationTarget<"uuid">` or `ContentRelationTarget<"bigint">`, as `primaryTag` does. At runtime, a `references` entry whose column type disagrees with the target's strategy throws and names the field.
+
 ## Write related values
 
 A relation takes ids. A to-many relation and a repeatable take the whole list, which replaces what the record had:

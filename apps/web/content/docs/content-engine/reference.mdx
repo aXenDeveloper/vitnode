@@ -50,40 +50,43 @@ Many of these rules are type errors too, so your editor often complains before t
 
 ## Top-level options
 
-| Name           | Type                                | Required | Default | Description                                                                     |
-| -------------- | ----------------------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
-| `id`           | `string`                            | Yes      |         | `plugin.entity`, such as `example.article`. See [Names](#names)                 |
-| `tableName`    | `string`                            | Yes      |         | Postgres table name, such as `example_articles`                                 |
-| `fields`       | `Record<string, field>`             | Yes      |         | At least one field built with a [`field.*` helper](/docs/content-engine/fields) |
-| `admin`        | [`admin`](#admin)                   | No       | `{}`    | AdminCP path, list, form and title                                              |
-| `publication`  | `boolean`                           | No       | off     | Draft and published states                                                      |
-| `publicApi`    | [`publicApi`](#publicapi)           | No       | off     | Read-only public routes                                                         |
-| `delivery`     | `true` \| [`delivery`](#delivery)   | No       | off     | Public page URLs, SEO metadata, redirects and sitemap                           |
-| `editorial`    | `true` \| [`editorial`](#editorial) | No       | off     | Revisions, preview links and scheduling                                         |
-| `liveEditing`  | `boolean`                       | No       | `false` | [Live editing](#liveediting) in the AdminCP. Needs `editorial`                  |
-| `localization` | [`localization`](#localization)     | No       | off     | A translation table for `localized: true` fields                                |
-| `search`       | [`search`](#search)                 | No       | off     | Site search indexing                                                            |
-| `indexes`      | [`indexes`](#indexes)               | No       | `[]`    | Extra database indexes                                                          |
+| Name           | Type                                    | Required | Default    | Description                                                                     |
+| -------------- | --------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------- |
+| `id`           | `string`                                | Yes      |            | `plugin.entity`, such as `example.article`. See [Names](#names)                 |
+| `tableName`    | `string`                                | Yes      |            | Postgres table name, such as `example_articles`                                 |
+| `fields`       | `Record<string, field>`                 | Yes      |            | At least one field built with a [`field.*` helper](/docs/content-engine/fields) |
+| `idStrategy`   | `"serial"` \| `"uuid"` \| `"bigint"`    | No       | `"serial"` | Type of the primary key. See [`idStrategy`](#idstrategy)                        |
+| `admin`        | [`admin`](#admin)                       | No       | `{}`       | AdminCP path, list, form and title                                              |
+| `publication`  | `boolean`                               | No       | off        | Draft and published states                                                      |
+| `publicApi`    | [`publicApi`](#publicapi)               | No       | off        | Read-only public routes                                                         |
+| `delivery`     | `true` \| [`delivery`](#delivery)       | No       | off        | Public page URLs, SEO metadata, redirects and sitemap                           |
+| `editorial`    | `true` \| [`editorial`](#editorial)     | No       | off        | Revisions, preview links and scheduling                                         |
+| `liveEditing`  | `boolean`                               | No       | `false`    | [Live editing](#liveediting) in the AdminCP. Needs `editorial`                  |
+| `localization` | [`localization`](#localization)         | No       | off        | A translation table for `localized: true` fields                                |
+| `search`       | [`search`](#search)                     | No       | off        | Site search indexing                                                            |
+| `visibility`   | `boolean`                               | No       | off        | [Hide and unhide](#visibility) records. Needs `publication`                     |
+| `duplication`  | `true` \| [`duplication`](#duplication) | No       | off        | A [Duplicate](#duplication) action that copies a record into a new draft        |
+| `indexes`      | [`indexes`](#indexes)                   | No       | `[]`       | Extra database indexes                                                          |
 
-A feature block is on when it is present. `publicApi`, `localization` and `search` take an options object. `publication` and `liveEditing` are `true`, and `editorial` and `delivery` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
+A feature block is on when it is present. `publicApi`, `localization` and `search` take an options object. `publication`, `liveEditing` and `visibility` are `true`, and `editorial`, `delivery` and `duplication` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
 
 ### Names
 
-| Name                        | Rule                                                                                                                                                                          |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                        | Matches `/^[a-z0-9]+(?:\.[a-z0-9-]+)+$/`: lowercase, at least two dot-separated segments, dashes allowed after the first. At most 100 characters with `editorial` or `search` |
-| `tableName`                 | snake_case, starts with a letter, at most 63 characters                                                                                                                       |
-| Field names                 | camelCase, start with a lowercase letter                                                                                                                                      |
-| Reserved fields             | `id`, `createdAt` and `updatedAt` always. `status` and `publishedAt` with `publication`. `version` with `editorial`                                                           |
-| Reserved for the list route | `cursor`, `first`, `last`, `order`, `orderBy` and `search`, because they are query parameters of the generated list route. Checked at plugin registration                     |
-| Localized fields            | Cannot be named `itemId`, `languageId`, `version`, `createdAt` or `updatedAt` (translation table columns). A localized type cannot expose a public field called `locale`      |
+| Name                        | Rule                                                                                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                        | Matches `/^[a-z0-9]+(?:\.[a-z0-9-]+)+$/`: lowercase, at least two dot-separated segments, dashes allowed after the first. At most 100 characters with `editorial` or `search`  |
+| `tableName`                 | snake_case, starts with a letter, at most 63 characters                                                                                                                        |
+| Field names                 | camelCase, start with a lowercase letter                                                                                                                                       |
+| Reserved fields             | `id`, `createdAt` and `updatedAt` always. `status` and `publishedAt` with `publication`. `version` with `editorial`. `hiddenAt`, `hiddenBy` and `visibility` with `visibility` |
+| Reserved for the list route | `cursor`, `first`, `last`, `order`, `orderBy` and `search`, because they are query parameters of the generated list route. Checked at plugin registration                      |
+| Localized fields            | Cannot be named `itemId`, `languageId`, `version`, `createdAt` or `updatedAt` (translation table columns). A localized type cannot expose a public field called `locale`       |
 
 Two names are derived from the id:
 
 - The **entity key** is the id without its first segment, with further dots turned into `_`. `example.article` becomes `article`. Strings live under `{pluginId}.content.{entityKey}`, for example `@vitnode/example.content.article`.
 - The **permission module** is the entity key with anything outside `a-z0-9` turned into `_`, so `example.localized-article` becomes `localized_article`. Permissions are named `@vitnode/example:article:can_view`. Override it with `admin.permissionModule`.
 
-Every content type gets `can_view`, `can_create`, `can_edit` and `can_delete`. `publication` adds `can_publish` and `editorial` adds `can_restore`.
+Every content type gets `can_view`, `can_create`, `can_edit` and `can_delete`. `publication` adds `can_publish`, `editorial` adds `can_restore` and `visibility` adds `can_hide`. Duplicating needs `can_create` and `can_view`, so `duplication` adds no permission.
 
 ## `admin`
 
@@ -264,6 +267,43 @@ search: {
 },
 ```
 
+## `visibility`
+
+`visibility: true` adds the nullable `hiddenAt` and `hiddenBy` columns, the `can_hide` permission, the `POST /{id}/hide` and `POST /{id}/unhide` staff routes and a **Visibility** filter in the AdminCP list. A hidden record is left out of every public read while it keeps its `status` and `publishedAt`. It has no other options. Guide: [Hide content](/docs/content-engine/content-visibility).
+
+```ts title="plugins/blog/src/content/post.ts"
+publication: true,
+visibility: true,
+```
+
+## `duplication`
+
+Adds a **Duplicate** action and the `POST /{id}/duplicate` staff route, which copy a record and its translations into a new draft. Pass `true`, or an object to change the title suffix. Guide: [Duplicate content](/docs/content-engine/duplicate-content).
+
+| Name          | Type      | Default                                        | Description                                                                             |
+| ------------- | --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `titleSuffix` | `boolean` | On when `admin.titleField` is a `field.text()` | Adds a localized "(Copy)" to the copy's title. `true` with any other title field throws |
+
+```ts title="plugins/blog/src/content/post.ts"
+duplication: true,
+```
+
+## `idStrategy`
+
+The type of the primary key. Every foreign key, junction column and translation `itemId` that points at the record takes the same type. Guide: [Record ID strategies](/docs/content-engine/id-strategy).
+
+| Value                | Postgres key                              | In JSON            |
+| -------------------- | ----------------------------------------- | ------------------ |
+| `"serial"` (default) | `serial`                                  | A number           |
+| `"uuid"`             | `uuid`, `DEFAULT gen_random_uuid()`       | A lowercase string |
+| `"bigint"`           | `bigint GENERATED BY DEFAULT AS IDENTITY` | A decimal string   |
+
+Any other value throws. Changing the strategy of a content type that already has records needs a [hand-written data migration](/docs/content-engine/id-strategy#change-the-strategy-later).
+
+```ts title="plugins/example/src/content/event.ts"
+idStrategy: "bigint",
+```
+
 ## `indexes`
 
 Extra database indexes on the base table. The engine already indexes slugs, `unique: true` text fields, foreign keys, `createdAt`, `updatedAt` and `(status, publishedAt)`. A declared index on the same columns replaces the generated one instead of adding a second. Guide: [Database and migrations](/docs/content-engine/database).
@@ -313,10 +353,13 @@ Each row is a rule `defineContentType` enforces, with the start of the message i
 | `delivery.seo.fallbackDescriptionField`                             | `delivery.seo.descriptionField`                          | ``delivery.seo.fallbackDescriptionField is set without `descriptionField`.``                               |
 | `editorial.preview`                                                 | `publicApi`                                              | ``editorial.preview needs `publicApi: { path, fields }`.``                                                 |
 | `editorial.scheduling`                                              | `publication`                                            | ``editorial.scheduling needs `publication: true`.``                                                        |
+| `visibility`                                                        | `publication`                                            | ``visibility needs `publication: true`.``                                                                  |
+| `duplication.titleSuffix: true`                                     | `admin.titleField` pointing at a `field.text()`          | ``duplication.titleSuffix needs `admin.titleField` to be a text field``                                    |
 | A `localized: true` field                                           | `localization`                                           | ``Field "title" is `localized: true` but the content type has no `localization: { defaultLocale }` block`` |
 | `localization`                                                      | At least one `localized: true` field                     | ``localization is enabled but no field is marked `localized: true`,``                                      |
 | Any block with an `enabled` key                                     | Nothing: a block is on when present                      | `publicApi.enabled is not an option.`                                                                      |
 | `publication` or `liveEditing` as an object                         | `true` or `false`                                        | ``publication is `true` or `false`.``                                                                      |
+| `visibility` as an object                                           | `true` or `false`                                        | ``visibility is `true` or `false`.``                                                                       |
 | `admin.list.thumbnailField`                                         | `admin.titleField` in `admin.list.columns`               | `admin.list.thumbnailField is drawn in the title column, but admin.titleField`                             |
 | `admin.form.sections`                                               | No `admin.form.fields`                                   | ``admin.form declares both `fields` and `sections`.``                                                      |
 | `admin.list.defaultOrderBy`                                         | A system column or an `admin.list.orderableFields` entry | `admin.list.defaultOrderBy is "x", which is not in admin.list.orderableFields.`                            |
