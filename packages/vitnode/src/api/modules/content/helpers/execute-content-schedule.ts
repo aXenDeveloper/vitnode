@@ -1,16 +1,19 @@
 import type { Context } from "hono";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentEditorialOutcome } from "@/content/server/editorial-service";
 import type { ContentScheduleEffectsPayload } from "@/content/server/schedule-effects";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import { CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS } from "@/content/const";
+import { contentIdFromKey } from "@/content/ids";
 import { CONTENT_SYSTEM_ACTOR } from "@/content/server/actor";
-import { findContentModel } from "@/content/server/model";
+import { contentDefinitionOf, findContentModel } from "@/content/server/model";
 import {
   claimContentSchedule,
   settleContentSchedule,
 } from "@/content/server/schedules-model";
+import { isContentBaseRowPublic } from "@/content/server/visibility";
 
 /** What the run decided, so the task logs something worth reading. */
 export interface ContentScheduleOutcome {
@@ -50,8 +53,8 @@ const slugOf = (
  *
  * `wasPublic` is derived rather than read back: the transition guards on the
  * state it is leaving (`status <> 'published'` to publish, `= 'published'` to
- * unpublish), so a *changed* publish came from a non-public row and a changed
- * unpublish from a public one. That removes the extra `SELECT` the old code did
+ * unpublish), so a *changed* publish came from a draft and a changed unpublish
+ * from a published row. That removes the extra `SELECT` the old code did
  * outside the lock, and removes with it the window where the answer could have
  * been someone else's write.
  */
@@ -65,7 +68,7 @@ const effectsPayload = ({
     action: "publish" | "unpublish";
     createdBy: null | number;
     id: number;
-    itemId: number;
+    itemId: ContentId;
   };
   definition: AnyContentTypeDefinition;
   outcome: ContentEditorialOutcome<AnyContentTypeDefinition>;
@@ -89,7 +92,10 @@ const effectsPayload = ({
     scheduleId: claimed.id,
     scheduledBy: claimed.createdBy,
     version: outcome.version,
-    wasPublic: claimed.action === "unpublish",
+    wasPublic: isContentBaseRowPublic({
+      ...row,
+      status: claimed.action === "unpublish" ? "published" : "draft",
+    }),
   };
 };
 
@@ -157,9 +163,21 @@ export const executeContentSchedule = async (
       }
 
       const { model, pluginId } = entry;
+      const definition = contentDefinitionOf(model);
+
+      const itemId = contentIdFromKey(definition.idStrategy, claimed.itemId);
+      if (itemId === null) {
+        await settleContentSchedule(tx, claimed.id, {
+          expectedStatus: "pending",
+          lastError: `Schedule ${claimed.id} names "${claimed.itemId}", which is not a ${definition.idStrategy} identifier of "${claimed.contentTypeId}".`,
+          status: "cancelled",
+        });
+
+        return { kind: "skipped", reason: "not an identifier of this type" };
+      }
 
       const outcome = await editorialService(c, { pluginId })[claimed.action](
-        claimed.itemId,
+        itemId,
         {
           // No fake user id anywhere. Who *asked* for this is on the schedule
           // row and travels in the event as `scheduledBy`.
@@ -189,8 +207,8 @@ export const executeContentSchedule = async (
       }
 
       const effects = effectsPayload({
-        claimed,
-        definition: model.definition,
+        claimed: { ...claimed, itemId },
+        definition,
         outcome,
         pluginId,
       });

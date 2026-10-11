@@ -39,6 +39,9 @@ const baseDataTypeOf = (column: PgColumn): string =>
 const isUuidColumn = (column: PgColumn): boolean =>
   column.getSQLType().toLowerCase() === "uuid";
 
+const isStringInt64Column = (column: PgColumn): boolean =>
+  column.dataType === "string int64";
+
 const isArrayColumn = (column: PgColumn): boolean => column.dimensions > 0;
 
 const badRequest = (message: string): HTTPException =>
@@ -71,6 +74,7 @@ export const isCursorSortableColumn = (column: PgColumn): boolean =>
 const kindOf = (column: PgColumn): CursorKind => {
   if (!isArrayColumn(column) && temporalTypeOf(column)) return "temporal";
   if (!isArrayColumn(column) && isUuidColumn(column)) return "uuid";
+  if (!isArrayColumn(column) && isStringInt64Column(column)) return "bigint";
 
   const kind = isArrayColumn(column)
     ? undefined
@@ -226,6 +230,9 @@ export const cursorValueOf = (
     case "bigint": {
       if (typeof value === "bigint") return value.toString();
       if (typeof value === "number") return String(value);
+      if (typeof value === "string" && DECIMAL_INTEGER.test(value)) {
+        return value;
+      }
       break;
     }
     case "boolean": {
@@ -298,7 +305,7 @@ export const cursorValueForColumn = (
       const parsed = postgresBigint(value);
       if (parsed === undefined) throw badRequest(INVALID_CURSOR);
 
-      return parsed;
+      return isStringInt64Column(column) ? parsed.toString() : parsed;
     }
     case "boolean": {
       if (typeof value !== "boolean") throw badRequest(INVALID_CURSOR);
@@ -358,6 +365,7 @@ type IdentifierKind = "bigint" | "number" | "uuid";
 const identifierKindOf = (column: PgColumn): IdentifierKind | undefined => {
   if (isArrayColumn(column)) return undefined;
   if (isUuidColumn(column)) return "uuid";
+  if (isStringInt64Column(column)) return "bigint";
 
   const baseDataType = baseDataTypeOf(column);
   if (baseDataType === "bigint" || baseDataType === "number") {
@@ -377,6 +385,13 @@ export const cursorIdentifierOf = (
   switch (identifierKindOf(column)) {
     case "bigint":
       if (typeof value === "bigint" && value > 0n) return value.toString();
+      if (
+        typeof value === "string" &&
+        POSITIVE_DECIMAL_INTEGER.test(value) &&
+        postgresBigint(value) !== undefined
+      ) {
+        return value;
+      }
       break;
     case "number":
       if (
@@ -405,7 +420,9 @@ export const cursorIdentifierForColumn = (
     case "bigint":
       if (typeof value === "string" && POSITIVE_DECIMAL_INTEGER.test(value)) {
         const parsed = postgresBigint(value);
-        if (parsed !== undefined) return parsed;
+        if (parsed !== undefined) {
+          return isStringInt64Column(column) ? parsed.toString() : parsed;
+        }
       }
       break;
     case "number":

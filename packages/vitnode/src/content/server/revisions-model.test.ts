@@ -91,8 +91,7 @@ const cursorOf = (condition: unknown): null | number => {
     .map(chunk => (chunk as null | { value?: unknown })?.value)
     .filter((value): value is number => typeof value === "number");
 
-  // The scope predicate contributes the item id; the cursor is the last one.
-  return params.length > 1 ? (params.at(-1) ?? null) : null;
+  return params.at(-1) ?? null;
 };
 
 describe("revision pagination", () => {

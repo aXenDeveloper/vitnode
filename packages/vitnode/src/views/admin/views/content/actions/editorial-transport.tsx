@@ -1,5 +1,6 @@
 import React from "react";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentRevisionDetail } from "@/content/revisions";
 import type { ContentScheduleAction } from "@/content/schedules";
 
@@ -15,7 +16,7 @@ export type ContentEditorialWriteScope = "record" | "schedules";
 
 export interface ContentEditorialSettled {
   contentTypeId: string;
-  itemId: number;
+  itemId: ContentId;
   scope: ContentEditorialWriteScope;
 }
 
@@ -23,48 +24,48 @@ export interface ContentEditorialTransport {
   /** Cancels one pending schedule. Already-run schedules cannot be cancelled. */
   cancelSchedule: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     scheduleId: number,
   ) => Promise<ContentMutationResult>;
 
   createPreview: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentPreviewResult>;
   /** One revision's snapshot, read when a row is expanded and not before. */
   getRevision: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     revisionId: number,
   ) => Promise<{ error?: string; revision?: ContentRevisionDetail }>;
 
   listRevisions: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     cursor?: number,
   ) => Promise<ContentRevisionPageResult>;
   /** Every schedule on one record, and whether anything will run them. */
   listSchedules: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentScheduleListResult>;
 
   readDelivery: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     locale?: string,
   ) => Promise<ContentDeliveryPanelResult>;
 
   restoreRevision: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     revisionId: number,
     expectedVersion: number,
   ) => Promise<ContentMutationResult>;
   /** Books a publication or an unpublication for a moment in the future. */
   schedule: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     action: ContentScheduleAction,
     scheduledFor: string,
   ) => Promise<ContentMutationResult>;

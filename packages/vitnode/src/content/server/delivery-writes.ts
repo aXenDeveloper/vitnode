@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import type { ContentSitemapChange } from "../cache";
+import type { ContentId } from "../ids";
 import type { ContentLocaleRouting } from "../public-url";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
@@ -12,7 +13,7 @@ import { createContentSlugHistoryModel } from "./slug-history-model";
 export interface ContentDeliveryOutcome {
   /** The path the record answers to after this mutation. */
   canonicalPath: null | string;
-  itemId: number;
+  itemId: ContentId;
   /** `null` when the slug is shared - see `core_content_slug_history`. */
   locale: null | string;
   /** The path it answered to before, when the mutation moved it. */
@@ -31,7 +32,7 @@ export interface ContentDeliveryOutcome {
 export interface ContentDeliveryTransition {
   /** Whether the record is publicly reachable *after* the mutation. */
   isPublic: boolean;
-  itemId: number;
+  itemId: ContentId;
   /** `null` when the slug is shared. */
   languageId: null | number;
   /** The canonical locale code, or `null` when the slug is shared. */

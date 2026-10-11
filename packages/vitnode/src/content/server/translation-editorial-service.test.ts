@@ -105,7 +105,7 @@ describe("create", () => {
     expect(outcome.locale).toBe("pl");
     expect(revisions.written).toHaveLength(1);
     expect(revisions.written[0]).toMatchObject({
-      itemId: 7,
+      itemId: "7",
       languageId: 2,
       operation: "create",
       version: 1,

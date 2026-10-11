@@ -55,7 +55,10 @@ export const MyFilesBulkActions = ({
         if (!open) setHeldByRevisions([]);
       }}
       onSubmit={async ({ onClose }) => {
-        const result = await onDeleteFiles({ force: isForcing, ids });
+        const result = await onDeleteFiles({
+          force: isForcing,
+          ids: ids.filter((id): id is number => typeof id === "number"),
+        });
         report(result);
 
         if (!isForcing && result.heldByRevisions.length > 0) {

@@ -1,14 +1,26 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
 import type { AnyContentTypeDefinition } from "@/content/types";
+import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
+import type { ContentItem } from "@/views/admin/views/content/form/item-query";
 import type {
+  ContentDuplicateInput,
+  ContentDuplicateMutationResult,
   ContentRowMutationArgs,
   ContentRowMutationResult,
 } from "@/views/admin/views/content/table/list-mutations";
 import type { ContentListRequest } from "@/views/admin/views/content/table/list-query";
 
+import {
+  contentItemQueryOptions,
+  contentItemTitle,
+  contentTranslationsQueryOptions,
+  fetchContentItem,
+  fetchContentTranslations,
+} from "@/views/admin/views/content/form/item-query";
 import {
   invalidateContentItem,
   invalidateContentList,
@@ -17,7 +29,9 @@ import {
 } from "@/views/admin/views/content/lib/invalidate";
 import {
   deleteContentInBrowser,
+  duplicateContentInBrowser,
   setContentPublicationInBrowser,
+  setContentVisibilityInBrowser,
 } from "@/views/admin/views/content/table/list-mutations";
 import {
   contentListQueryOptions,
@@ -71,7 +85,7 @@ export const invalidateContentAfterWrite = async (
     contentTypeId,
     itemId,
     removed = false,
-  }: { contentTypeId: string; itemId?: number; removed?: boolean },
+  }: { contentTypeId: string; itemId?: ContentId; removed?: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 
@@ -92,7 +106,7 @@ export const invalidateContentAfterBulkWrite = async (
     contentTypeId,
     itemIds,
     removed,
-  }: { contentTypeId: string; itemIds: readonly number[]; removed: boolean },
+  }: { contentTypeId: string; itemIds: readonly ContentId[]; removed: boolean },
 ): Promise<void> => {
   removeContentOptions(queryClient, contentTypeId);
 
@@ -138,6 +152,109 @@ export const setContentPublication = async (
   }
 
   return result;
+};
+
+export const duplicateContentRow = async (
+  queryClient: QueryClient,
+  {
+    contentTypeId,
+    id,
+    input,
+    target,
+  }: ContentRowWriteArgs & { input?: ContentDuplicateInput },
+): Promise<ContentDuplicateMutationResult> => {
+  const result = await duplicateContentInBrowser({ id, input, target });
+
+  if (result.error === undefined) {
+    await invalidateContentAfterWrite(queryClient, { contentTypeId });
+  }
+
+  return result;
+};
+
+export const setContentVisibility = async (
+  queryClient: QueryClient,
+  {
+    action,
+    contentTypeId,
+    expectedVersion,
+    id,
+    target,
+  }: ContentRowWriteArgs & {
+    action: ContentVisibilityAction;
+    expectedVersion?: number;
+  },
+): Promise<ContentRowMutationResult> => {
+  const result = await setContentVisibilityInBrowser({
+    action,
+    expectedVersion,
+    id,
+    target,
+  });
+
+  if (result.error === undefined) {
+    await invalidateContentAfterWrite(queryClient, {
+      contentTypeId,
+      itemId: id,
+    });
+  }
+
+  return result;
+};
+
+export const readDuplicatedContent = async (
+  queryClient: QueryClient,
+  {
+    definition,
+    fallback,
+    id,
+    locale,
+    pluginId,
+  }: {
+    definition: AnyContentTypeDefinition;
+    fallback: Record<string, unknown>;
+    id: ContentId;
+    locale: string;
+    pluginId: string;
+  },
+): Promise<{ row: ContentItem; title: string }> => {
+  const request = {
+    contentTypeId: definition.id,
+    itemId: id,
+    target: contentApiTarget(definition, pluginId),
+  };
+  const base: ContentItem = { ...fallback, id };
+
+  try {
+    const [row, translations] = await Promise.all([
+      queryClient.query(
+        contentItemQueryOptions({ fetchItem: fetchContentItem, request }),
+      ),
+      definition.localization.enabled
+        ? queryClient.query(
+            contentTranslationsQueryOptions({
+              fetchTranslations: fetchContentTranslations,
+              request,
+            }),
+          )
+        : [],
+    ]);
+
+    return {
+      row,
+      title: contentItemTitle({ definition, locale, row, translations }),
+    };
+  } catch {
+    return {
+      row: base,
+      title: contentItemTitle({
+        definition,
+        locale,
+        row: base,
+        translations: [],
+      }),
+    };
+  }
 };
 
 /** Deletes a row, then drops everything that was about it. */

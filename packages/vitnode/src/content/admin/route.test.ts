@@ -108,6 +108,40 @@ describe("resolveContentAdminRoute", () => {
       ).toBeUndefined();
     });
 
+    describe("under another id strategy", () => {
+      const strategyOf = (idStrategy: "bigint" | "uuid") =>
+        defineContentType({
+          admin: { edit: { mode: "page" } },
+          fields: { title: field.text({ required: true }) },
+          id: `test.${idStrategy}`,
+          idStrategy,
+          tableName: `test_${idStrategy}`,
+        }) as AnyContentTypeDefinition;
+      const uuidType = strategyOf("uuid");
+      const bigintType = strategyOf("bigint");
+      const UUID = "0198f6f7-d4a2-7ce1-a2ee-4f5f1f2f3a4b";
+
+      it.each([
+        ["a uuid", uuidType, "uuid", UUID],
+        [
+          "a bigint beyond Number.MAX_SAFE_INTEGER",
+          bigintType,
+          "bigint",
+          "9007199254740993",
+        ],
+      ])(
+        "reads %s record's edit URL as its exact string id",
+        (_name, definition, segment, itemId) => {
+          expect(
+            resolveContentAdminRoute(
+              ["test", segment, itemId, "edit"],
+              lookupOf(definition),
+            ),
+          ).toEqual({ action: "edit", contentTypeId: definition.id, itemId });
+        },
+      );
+    });
+
     it("prefers an exact content type path over a create page", () => {
       // `blog/post/create` is a legal address, so the content type that really
       // lives there keeps its own list screen.

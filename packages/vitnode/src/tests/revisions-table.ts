@@ -21,7 +21,7 @@ const boundValue = (condition: SQL | undefined, column: string): unknown => {
 
 export interface RevisionWrite {
   changedFields: string[];
-  itemId: number;
+  itemId: string;
   languageId: null | number;
   operation: string;
   restoredFromRevisionId: null | number;
@@ -32,7 +32,7 @@ export interface RevisionWrite {
 interface RevisionRow {
   [column: string]: unknown;
   id: number;
-  itemId: number;
+  itemId: number | string;
   languageId: null | number;
   version: number;
 }
@@ -41,7 +41,7 @@ const inScope = (row: RevisionRow, condition: SQL | undefined): boolean => {
   const id = boundValue(condition, "id");
 
   return (
-    row.itemId === boundValue(condition, "itemId") &&
+    String(row.itemId) === String(boundValue(condition, "itemId")) &&
     row.languageId === boundValue(condition, "languageId") &&
     (id === undefined || row.id === id)
   );

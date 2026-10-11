@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import type {
   ContentFieldDescriptor,
@@ -13,6 +13,7 @@ import { containsLikePattern } from "../../lib/api/like-pattern";
 import {
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_VISIBILITY_FILTERS,
   isContentPublicationStatus,
   isFilterableFieldKind,
 } from "../const";
@@ -81,6 +82,7 @@ export const buildFilterCondition = ({
   filters,
   membership,
   publication = false,
+  visibility = false,
 }: {
   /**
    * Narrows the filterable set further, for a caller with its own allowlist -
@@ -106,6 +108,7 @@ export const buildFilterCondition = ({
   ) => SQL | undefined;
   /** Whether `status` is a generated column and therefore filterable. */
   publication?: boolean;
+  visibility?: boolean;
 }): SQL | undefined => {
   const conditions: SQL[] = [];
 
@@ -136,6 +139,22 @@ export const buildFilterCondition = ({
       continue;
     }
 
+    if (visibility && name === "visibility" && columns.hiddenAt) {
+      if (raw !== "hidden" && raw !== "visible") {
+        throw new ContentEngineError(
+          `Invalid visibility filter ${JSON.stringify(raw)}. Allowed values: ${CONTENT_VISIBILITY_FILTERS.join(", ")}.`,
+          { contentTypeId },
+        );
+      }
+
+      conditions.push(
+        raw === "hidden"
+          ? isNotNull(columns.hiddenAt)
+          : isNull(columns.hiddenAt),
+      );
+      continue;
+    }
+
     const fieldValue = fields[name];
 
     // A to-many relation has no column, so it is answered before the column
@@ -143,7 +162,10 @@ export const buildFilterCondition = ({
     // table rather than an equality against something that does not exist.
     if (fieldValue && isContentReferenceCollection(fieldValue)) {
       const filter = raw as ContentRelationFilter;
-      if (typeof filter?.contains !== "number") {
+      if (
+        typeof filter?.contains !== "number" &&
+        typeof filter?.contains !== "string"
+      ) {
         throw new ContentEngineError(
           `Filter "${name}" is a to-many relation, which takes \`{ contains: <id> }\` rather than a value.`,
           { contentTypeId },

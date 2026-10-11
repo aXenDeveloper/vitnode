@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import type { ContentLiveClientMessage } from "@/content/live/protocol";
 
+import { contentAnyIdSchema } from "@/content/ids";
+
 export const CONTENT_LIVE_MAX_UPDATE_BYTES = 2 * 1024 * 1024;
 
 const MAX_BASE64_LENGTH = Math.ceil(CONTENT_LIVE_MAX_UPDATE_BYTES / 3) * 4;
@@ -15,13 +17,13 @@ const base64 = z
 
 const room = z.strictObject({
   contentTypeId: z.string().min(1).max(100),
-  itemId: z.number().int().positive(),
+  itemId: contentAnyIdSchema,
 });
 
 const doc = z.strictObject({
   contentTypeId: z.string().min(1).max(100),
   field: z.string().min(1).max(100),
-  itemId: z.number().int().positive(),
+  itemId: contentAnyIdSchema,
   locale,
 });
 

@@ -72,6 +72,7 @@ describe("search configuration", () => {
       contentFields: ["excerpt", "body"],
       descriptionField: "excerpt",
       enabled: true,
+      imageField: null,
       pathTemplate: "/articles/{slug}",
       titleField: "title",
     });
@@ -83,6 +84,7 @@ describe("search configuration", () => {
       contentFields: [],
       descriptionField: null,
       enabled: false,
+      imageField: null,
       pathTemplate: "",
       titleField: "",
     });

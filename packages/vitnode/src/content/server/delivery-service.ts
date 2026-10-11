@@ -6,6 +6,7 @@ import type {
   ContentDeliveryRobots,
   ContentDeliverySeo,
 } from "../delivery";
+import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentSitemapEntry } from "../sitemap";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliverySitemapPage } from "./delivery-sitemap";
@@ -24,10 +25,12 @@ import {
   parseContentDeliveryPath,
 } from "../delivery";
 import { ContentDeliveryNotEnabled } from "../errors";
+import { parseContentId } from "../ids";
 import { contentLocalesMatch, normalizeContentLocale } from "../locale";
 import { contentPublicHref } from "../public-url";
 import { readDeliveryAlternates } from "./delivery-alternates";
 import { readContentDeliverySitemapPage } from "./delivery-sitemap";
+import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
 import { createContentSlugHistoryModel } from "./slug-history-model";
@@ -39,12 +42,13 @@ export interface ContentDeliveryMetadata {
   canonicalInternalPath: null | string;
   canonicalPath: null | string;
   canonicalUrl?: null | string;
+  hidden: boolean;
   /** Framework-neutral `hreflang`, ready for an adapter to translate. */
   hreflang: ContentDeliveryHreflang;
+
   /** Whether `locale` differs from `requestedLocale`. */
   isFallback: boolean;
-
-  itemId: null | number;
+  itemId: ContentId | null;
   /** The language this response is actually in. */
   locale: null | string;
   /** `null` unless `delivery.seo.openGraph` is configured. */
@@ -71,7 +75,7 @@ export interface ContentDeliveryReadOptions {
 
 export interface ContentDeliverySitemapArgs {
   /** The last `itemId` of the previous page. Keyset, never an offset. */
-  cursor?: number;
+  cursor?: ContentId;
   /** Defaults to `CONTENT_SITEMAP_DEFAULT_PAGE_SIZE`, capped at the protocol's. */
   limit?: number;
   /** Required for a localized content type; each language is its own sitemap. */
@@ -79,15 +83,15 @@ export interface ContentDeliverySitemapArgs {
 }
 
 export interface ContentDeliveryService {
-  alternates: (itemId: number) => Promise<ContentDeliveryAlternate[]>;
+  alternates: (itemId: ContentId) => Promise<ContentDeliveryAlternate[]>;
   /** Delivery metadata by identifier, honouring the content type's fallback. */
   findById: (
-    itemId: number,
+    itemId: ContentId,
     options?: ContentDeliveryReadOptions,
   ) => Promise<ContentDeliveryMetadata | null>;
 
   history: (
-    itemId: number,
+    itemId: ContentId,
     options?: { locale?: string },
   ) => Promise<ContentSlugHistoryEntry[]>;
 
@@ -170,11 +174,13 @@ export const createContentDeliveryService = <
   const metadataFor = async (
     row: Record<string, unknown>,
     {
+      hidden = false,
       itemId,
       origin,
       requestedLocale,
     }: {
-      itemId: null | number;
+      hidden?: boolean;
+      itemId: ContentId | null;
       origin?: string;
       requestedLocale: null | string;
     },
@@ -215,24 +221,30 @@ export const createContentDeliveryService = <
       locale,
       openGraph: contentDeliveryOpenGraph(definition, row),
       requestedLocale,
-      robots: contentDeliveryRobots(definition, row),
+      hidden,
+      robots: hidden
+        ? { follow: false, index: false }
+        : contentDeliveryRobots(definition, row),
       seo: contentDeliverySeo(definition, row),
     };
   };
 
   const readAlternates = async (
-    itemId: number,
+    itemId: ContentId,
   ): Promise<ContentDeliveryAlternate[]> =>
     localized ? await readDeliveryAlternates({ c, itemId, model }) : [];
 
   const strictCanonical = async (
-    itemId: number,
+    itemId: ContentId,
     locale: null | string,
     host: null | string | undefined,
   ): Promise<null | { location: string; slug: string }> => {
-    const row = await buildPublic(c).findById(itemId, {
-      locale: locale ?? undefined,
-    });
+    const row = await buildPublic(c).findById(
+      itemId as ContentIdOf<TDefinition>,
+      {
+        locale: locale ?? undefined,
+      },
+    );
     if (!row) return null;
 
     const values = row as Record<string, unknown>;
@@ -279,7 +291,7 @@ export const createContentDeliveryService = <
     });
     if (row) {
       const values = row as Record<string, unknown>;
-      const itemId = typeof values.id === "number" ? values.id : null;
+      const itemId = parseContentId(definition.idStrategy, values.id);
 
       if (itemId !== null && slugOf(definition, values) !== slug) {
         const destination = await strictCanonical(
@@ -301,6 +313,24 @@ export const createContentDeliveryService = <
           // Only what the public projection actually carries - see
           // `ContentDeliveryMetadata.itemId`.
           itemId,
+          origin,
+          requestedLocale,
+        })),
+        type: "content",
+      };
+    }
+
+    const hidden = await findViewableHiddenBySlug(c, {
+      locale,
+      model,
+      pluginId,
+      slug,
+    });
+    if (hidden && slugOf(definition, hidden) === slug) {
+      return {
+        ...(await metadataFor(hidden, {
+          hidden: true,
+          itemId: parseContentId(definition.idStrategy, hidden.id),
           origin,
           requestedLocale,
         })),
@@ -372,7 +402,10 @@ export const createContentDeliveryService = <
     alternates: async itemId => await readAlternates(itemId),
 
     findById: async (itemId, { locale, origin } = {}) => {
-      const row = await buildPublic(c).findById(itemId, { locale });
+      const row = await buildPublic(c).findById(
+        itemId as ContentIdOf<TDefinition>,
+        { locale },
+      );
       if (!row) return null;
 
       return await metadataFor(row, {

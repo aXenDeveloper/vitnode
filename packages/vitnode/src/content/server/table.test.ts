@@ -122,6 +122,52 @@ describe("createContentTable", () => {
       ).not.toThrow();
     });
 
+    describe("across id strategies", () => {
+      const uuidCategory = defineContentType({
+        fields: { title: field.text({ required: true }) },
+        id: "test.uuid-category",
+        idStrategy: "uuid",
+        tableName: "test_categories",
+      });
+      const pointing = (
+        target: () => AnyContentTypeDefinition,
+      ): AnyContentTypeDefinition =>
+        defineContentType({
+          fields: { category: field.relation({ required: true, target }) },
+          id: "test.pointing",
+          tableName: "test_pointing",
+        });
+
+      it("names the field when the referenced key has another type", () => {
+        const table = createContentTable(
+          pointing(() => uuidCategory) as typeof testArticleContentType,
+          { references: { category: () => categories.id } },
+        );
+
+        expect(() => assertContentReferences(table)).toThrow(
+          /"category".*idStrategy: "uuid".*`serial`/s,
+        );
+      });
+
+      it("falls back to serial for a target it cannot read yet, and says so when that was wrong", () => {
+        const uuidCategories = createContentTable(uuidCategory);
+        let loaded = false;
+        const table = createContentTable(
+          pointing(() => {
+            if (!loaded) throw new Error("still loading");
+
+            return uuidCategory;
+          }) as typeof testArticleContentType,
+          { references: { category: () => uuidCategories.id } },
+        );
+        loaded = true;
+
+        expect(() => assertContentReferences(table)).toThrow(
+          /"category".*idStrategy: "serial".*`uuid`/s,
+        );
+      });
+    });
+
     it("rejects a reference for a field that is not a relation", () => {
       // A content type with no relations has an empty `references` type, which
       // does not trip excess-property checking, so the runtime guard is the

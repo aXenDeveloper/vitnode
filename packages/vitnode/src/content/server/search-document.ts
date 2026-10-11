@@ -6,11 +6,13 @@ import {
   isContentPubliclyVisible,
   isContentTranslationPubliclyVisible,
 } from "../cache";
+import { isContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { readContentPath, splitContentFieldPath } from "../paths";
 import { isRichTextDocument } from "../rich-text/document";
 import { richTextToPlainText } from "../rich-text/plain-text";
 import { contentSearchUrl } from "../search";
+import { isContentHidden } from "../visibility";
 
 /** Collapses whitespace so a multi-line value cannot break a result heading. */
 const normalize = (value: unknown): string => {
@@ -54,16 +56,25 @@ const toTimestamp = (value: unknown): Date | null | string | undefined => {
   return value === null ? null : undefined;
 };
 
+const isContentRowHidden = (row: object): boolean => {
+  const values = row as Record<string, unknown>;
+
+  return (
+    isContentHidden(values) && isContentRowPublic({ ...values, hiddenAt: null })
+  );
+};
+
 export const isContentRowPublic = (row: object): boolean => {
   const values = row as Record<string, unknown>;
 
   return isContentPubliclyVisible({
+    hiddenAt: toTimestamp(values.hiddenAt),
     publishedAt: toTimestamp(values.publishedAt),
     status: normalize(values.status) || undefined,
   });
 };
 
-const toAuthorIds = (value: unknown): number[] => [
+export const toAuthorIds = (value: unknown): number[] => [
   ...new Set(
     (Array.isArray(value) ? value : [value]).filter(
       (id): id is number => Number.isSafeInteger(id) && (id as number) > 0,
@@ -71,15 +82,22 @@ const toAuthorIds = (value: unknown): number[] => [
   ),
 ];
 
+const toFileId = (value: unknown): null | number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : null;
+
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
   row: object,
   {
+    isHidden = isContentRowHidden(row),
     isPublic = isContentRowPublic(row),
     locale,
     pluginId,
     routing,
   }: {
+    isHidden?: boolean;
     isPublic?: boolean;
     locale?: string;
     pluginId?: string;
@@ -92,19 +110,20 @@ export const contentSearchDocument = (
   const values = row as Record<string, unknown>;
 
   const itemId = values.id;
-  if (typeof itemId !== "number") return null;
+  if (!isContentId(definition.idStrategy, itemId)) return null;
 
   const title = normalize(readSearchValue(values, search.titleField));
   if (title === "") return null;
 
-  const url = isPublic
-    ? contentSearchUrl({
-        definition,
-        locale,
-        routing,
-        slug: normalize(values[publicApi.slugField]),
-      })
-    : null;
+  const url =
+    isPublic || isHidden
+      ? contentSearchUrl({
+          definition,
+          locale,
+          routing,
+          slug: normalize(values[publicApi.slugField]),
+        })
+      : null;
   if (isPublic && url === null) return null;
 
   // A published row always carries `publishedAt`, so this resolves to the
@@ -136,6 +155,10 @@ export const contentSearchDocument = (
       .filter(value => value !== "")
       .join("\n\n"),
     createdAt,
+    ...(search.imageField === null
+      ? {}
+      : { imageId: toFileId(values[search.imageField]) }),
+    isHidden: !isPublic && isHidden && url !== null,
     isPublic,
     itemId,
     // Content type ids are globally unique and already namespaced as
@@ -173,16 +196,21 @@ export const contentTranslationSearchDocument = (
   const baseValues = base as Record<string, unknown>;
   const translationValues = translation as Record<string, unknown>;
 
-  const isPublic = isContentTranslationPubliclyVisible({
-    base: {
-      publishedAt: toTimestamp(baseValues.publishedAt),
-      status: normalize(baseValues.status) || undefined,
-    },
-    translation: {
-      publishedAt: toTimestamp(translationValues.publishedAt),
-      status: normalize(translationValues.status) || undefined,
-    },
-  });
+  const translationVisible = (hiddenAt: Date | null | string | undefined) =>
+    isContentTranslationPubliclyVisible({
+      base: {
+        hiddenAt,
+        publishedAt: toTimestamp(baseValues.publishedAt),
+        status: normalize(baseValues.status) || undefined,
+      },
+      translation: {
+        publishedAt: toTimestamp(translationValues.publishedAt),
+        status: normalize(translationValues.status) || undefined,
+      },
+    });
+  const isPublic = translationVisible(toTimestamp(baseValues.hiddenAt));
+  const isHidden =
+    !isPublic && isContentHidden(baseValues) && translationVisible(null);
 
   const { localizedFields } = partitionContentFields(definition.fields);
   // The localized half wins, and only for declared localized fields: a
@@ -200,6 +228,7 @@ export const contentTranslationSearchDocument = (
   merged.updatedAt = translationValues.updatedAt ?? baseValues.updatedAt;
 
   return contentSearchDocument(definition, merged, {
+    isHidden,
     isPublic,
     locale,
     pluginId,

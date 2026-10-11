@@ -192,12 +192,14 @@ export const resolveContentIndexes = ({
   fields,
   publication = false,
   tableName,
+  visibility = false,
 }: {
   contentTypeId: string;
   declared: readonly ContentIndexConfig[];
   fields: ContentFieldMap;
   publication?: boolean;
   tableName: string;
+  visibility?: boolean;
 }): ResolvedContentIndex[] => {
   const seenNames = new Map<string, string[]>();
   const seenSignatures = new Set<string>();
@@ -252,6 +254,7 @@ export const resolveContentIndexes = ({
     ...(publication
       ? [named(tableName, { on: ["status", "publishedAt"] })]
       : []),
+    ...(visibility ? [named(tableName, { on: ["hiddenBy"] })] : []),
   ];
 
   const bySignature = new Map<string, ResolvedContentIndex>();

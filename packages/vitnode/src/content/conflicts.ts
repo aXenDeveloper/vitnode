@@ -3,10 +3,12 @@ import { z } from "zod";
 import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
+  CONTENT_DUPLICATE_CODES,
   CONTENT_SCHEDULE_CODES,
   CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "./const";
+import { contentAnyIdSchema } from "./ids";
 
 export type ContentDeliveryCode =
   (typeof CONTENT_DELIVERY_CODES)[keyof typeof CONTENT_DELIVERY_CODES];
@@ -26,12 +28,12 @@ export const zodContentConflict = z.discriminatedUnion("code", [
     contentTypeId: z.string(),
     currentVersion: z.number().int(),
     expectedVersion: z.number().int(),
-    itemId: z.number().int(),
+    itemId: contentAnyIdSchema,
   }),
   z.object({
     code: z.literal(CONTENT_CONFLICT_CODES.unique),
     contentTypeId: z.string(),
-    itemId: z.number().int().nullable(),
+    itemId: contentAnyIdSchema.nullable(),
   }),
 ]);
 
@@ -43,19 +45,19 @@ export const zodContentTranslationConflict = z.discriminatedUnion("code", [
     contentTypeId: z.string(),
     currentVersion: z.number().int(),
     expectedVersion: z.number().int(),
-    itemId: z.number().int(),
+    itemId: contentAnyIdSchema,
     locale: z.string(),
   }),
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.defaultRequired),
     contentTypeId: z.string(),
-    itemId: z.number().int(),
+    itemId: contentAnyIdSchema,
     locale: z.string(),
   }),
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.exists),
     contentTypeId: z.string(),
-    itemId: z.number().int(),
+    itemId: contentAnyIdSchema,
     locale: z.string(),
   }),
   z.object({
@@ -66,7 +68,7 @@ export const zodContentTranslationConflict = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.unique),
     contentTypeId: z.string(),
-    itemId: z.number().int().nullable(),
+    itemId: contentAnyIdSchema.nullable(),
     locale: z.string(),
   }),
 ]);
@@ -176,6 +178,39 @@ export const parseContentUnprocessable = (
 
   try {
     const parsed = zodContentUnprocessable.safeParse(JSON.parse(body));
+
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
+
+export const zodContentDuplicateRejection = z.discriminatedUnion("code", [
+  z.object({
+    code: z.literal(CONTENT_DUPLICATE_CODES.slugConflict),
+    contentTypeId: z.string(),
+    field: z.string(),
+    locale: z.string().nullable(),
+    slug: z.string(),
+  }),
+  z.object({
+    code: z.literal(CONTENT_DUPLICATE_CODES.uniqueRequired),
+    contentTypeId: z.string(),
+    fields: z.array(z.string()),
+  }),
+]);
+
+export type ContentDuplicateRejection = z.infer<
+  typeof zodContentDuplicateRejection
+>;
+
+export const parseContentDuplicateRejection = (
+  body: string | undefined,
+): ContentDuplicateRejection | null => {
+  if (body === undefined || body === "") return null;
+
+  try {
+    const parsed = zodContentDuplicateRejection.safeParse(JSON.parse(body));
 
     return parsed.success ? parsed.data : null;
   } catch {

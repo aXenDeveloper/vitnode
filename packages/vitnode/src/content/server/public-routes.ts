@@ -10,6 +10,7 @@ import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFilterInput,
@@ -40,6 +41,7 @@ import {
 import { publicOrderableColumns } from "../registry";
 import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { resolveContentPublicRowFiles } from "./files";
+import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
@@ -240,7 +242,7 @@ export const buildContentPublicRoutes = <
       if (!build) return null;
 
       const revision = await build(c, { pluginId }).findRevision(
-        payload.i,
+        payload.i as ContentIdOf<TDefinition>,
         language.locale,
         payload.tr,
       );
@@ -484,13 +486,32 @@ export const buildContentPublicRoutes = <
       // that is not published in this language and a typo are all the same 404.
       // A 403 would confirm the record exists, which is the one thing a draft
       // URL must not do - and so would a 404 that only some of them produced.
-      const row = await service(c).findBySlug(c.req.param("slug"), {
+      const slug = c.req.param("slug");
+      const row = await service(c).findBySlug(slug, {
         fallback: true,
         locale: resolved.locale,
       });
-      if (!row) throw notFound();
+      if (row) {
+        return c.json(
+          row,
+          200,
+          localeHeaders(resolved.locale, resolved.source),
+        );
+      }
 
-      return c.json(row, 200, localeHeaders(resolved.locale, resolved.source));
+      const hidden = await findViewableHiddenBySlug(c, {
+        locale: resolved.locale,
+        model,
+        pluginId,
+        slug,
+      });
+      if (!hidden) throw notFound();
+
+      return c.json(hidden, 200, {
+        "Cache-Control": "private, no-store",
+        "X-Robots-Tag": "noindex, nofollow",
+        ...localeHeaders(resolved.locale, resolved.source),
+      });
     },
   });
 

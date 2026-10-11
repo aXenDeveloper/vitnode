@@ -1,9 +1,11 @@
+import type { ContentId, ContentIdStrategy } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { ContentEngineError } from "../errors";
+import { contentIdKey, contentIdsOf, parseContentId } from "../ids";
 
 export type ContentCollectionRunner<TResult, TOptions> = (
-  itemId: number,
+  itemId: ContentId,
   field: string,
   compute: (current: unknown[]) => unknown[],
   options: TOptions | undefined,
@@ -11,14 +13,14 @@ export type ContentCollectionRunner<TResult, TOptions> = (
 
 /** Reads one collection without locking. Used only by `get` and `list`. */
 export type ContentCollectionReader = (
-  itemId: number,
+  itemId: ContentId,
   field: string,
   options: unknown,
 ) => Promise<unknown[]>;
 
 /** Replaces a whole collection. `set` needs no lock-then-read. */
 export type ContentCollectionWriter<TResult, TOptions> = (
-  itemId: number,
+  itemId: ContentId,
   field: string,
   next: readonly unknown[],
   options: TOptions | undefined,
@@ -38,18 +40,19 @@ export const assertContentPermutation = ({
   noun,
 }: {
   contentTypeId: string;
-  current: readonly number[];
+  current: readonly ContentId[];
   field: string;
-  next: readonly number[];
+  next: readonly ContentId[];
   noun: string;
 }): void => {
-  const before = [...current].sort((a, b) => a - b);
-  const after = [...new Set(next)].sort((a, b) => a - b);
+  const before = current.map(contentIdKey).sort();
+  const nextKeys = next.map(contentIdKey);
+  const after = [...new Set(nextKeys)].sort();
 
   const same =
     before.length === after.length &&
     before.every((id, index) => id === after[index]);
-  if (same && next.length === new Set(next).size) return;
+  if (same && nextKeys.length === new Set(nextKeys).size) return;
 
   throw new ContentEngineError(
     `Reorder of "${field}" must list exactly the ${noun} ids it already has, once each. Use \`set\` to add or remove.`,
@@ -57,8 +60,28 @@ export const assertContentPermutation = ({
   );
 };
 
-const asNumbers = (current: readonly unknown[]): number[] =>
+const asChildIds = (current: readonly unknown[]): number[] =>
   current.map(value => Number(value)).filter(value => Number.isInteger(value));
+
+const asTargetId = (
+  strategy: ContentIdStrategy,
+  value: ContentId,
+  contentTypeId: string,
+  field: string,
+): ContentId => {
+  const parsed = parseContentId(strategy, value);
+  if (parsed === null) {
+    throw new ContentEngineError(
+      `${JSON.stringify(value)} is not a valid identifier for "${field}".`,
+      { contentTypeId },
+    );
+  }
+
+  return parsed;
+};
+
+const sameId = (left: ContentId, right: ContentId): boolean =>
+  contentIdKey(left) === contentIdKey(right);
 
 const asRows = (current: readonly unknown[]): Record<string, unknown>[] =>
   current.filter(
@@ -70,71 +93,89 @@ export const buildContentRelationOperations = <TResult, TOptions>({
   api,
   contentTypeId,
   field,
+  strategy,
 }: {
   api: ContentCollectionApi<TResult, TOptions>;
   contentTypeId: string;
   field: string;
-}) => ({
-  add: async (
-    itemId: number,
-    relatedItemId: number,
-    options?: TOptions,
-  ): Promise<null | TResult> =>
-    await api.run(
-      itemId,
-      field,
-      current => {
-        const ids = asNumbers(current);
+  strategy: ContentIdStrategy;
+}) => {
+  const asIds = (current: readonly unknown[]): ContentId[] =>
+    contentIdsOf(strategy, current);
+  const target = (value: ContentId): ContentId =>
+    asTargetId(strategy, value, contentTypeId, field);
 
-        return ids.includes(relatedItemId) ? ids : [...ids, relatedItemId];
-      },
-      options,
-    ),
+  return {
+    add: async (
+      itemId: ContentId,
+      relatedItemId: ContentId,
+      options?: TOptions,
+    ): Promise<null | TResult> => {
+      const related = target(relatedItemId);
 
-  get: async (itemId: number, options?: unknown): Promise<number[]> =>
-    asNumbers(await api.read(itemId, field, options)),
+      return await api.run(
+        itemId,
+        field,
+        current => {
+          const ids = asIds(current);
 
-  remove: async (
-    itemId: number,
-    relatedItemId: number,
-    options?: TOptions,
-  ): Promise<null | TResult> =>
-    await api.run(
-      itemId,
-      field,
-      current => asNumbers(current).filter(id => id !== relatedItemId),
-      options,
-    ),
+          return ids.some(id => sameId(id, related)) ? ids : [...ids, related];
+        },
+        options,
+      );
+    },
 
-  reorder: async (
-    itemId: number,
-    relatedItemIds: readonly number[],
-    options?: TOptions,
-  ): Promise<null | TResult> =>
-    await api.run(
-      itemId,
-      field,
-      current => {
-        assertContentPermutation({
-          contentTypeId,
-          current: asNumbers(current),
-          field,
-          next: relatedItemIds,
-          noun: "target",
-        });
+    get: async (itemId: ContentId, options?: unknown): Promise<ContentId[]> =>
+      asIds(await api.read(itemId, field, options)),
 
-        return [...relatedItemIds];
-      },
-      options,
-    ),
+    remove: async (
+      itemId: ContentId,
+      relatedItemId: ContentId,
+      options?: TOptions,
+    ): Promise<null | TResult> => {
+      const related = target(relatedItemId);
 
-  set: async (
-    itemId: number,
-    relatedItemIds: readonly number[],
-    options?: TOptions,
-  ): Promise<null | TResult> =>
-    await api.write(itemId, field, relatedItemIds, options),
-});
+      return await api.run(
+        itemId,
+        field,
+        current => asIds(current).filter(id => !sameId(id, related)),
+        options,
+      );
+    },
+
+    reorder: async (
+      itemId: ContentId,
+      relatedItemIds: readonly ContentId[],
+      options?: TOptions,
+    ): Promise<null | TResult> => {
+      const next = relatedItemIds.map(target);
+
+      return await api.run(
+        itemId,
+        field,
+        current => {
+          assertContentPermutation({
+            contentTypeId,
+            current: asIds(current),
+            field,
+            next,
+            noun: "target",
+          });
+
+          return next;
+        },
+        options,
+      );
+    },
+
+    set: async (
+      itemId: ContentId,
+      relatedItemIds: readonly ContentId[],
+      options?: TOptions,
+    ): Promise<null | TResult> =>
+      await api.write(itemId, field, relatedItemIds, options),
+  };
+};
 
 /** The six repeatable operations, for one field. Same locking, same no-op rule. */
 export const buildContentRepeatableOperations = <TResult, TOptions>({
@@ -147,7 +188,7 @@ export const buildContentRepeatableOperations = <TResult, TOptions>({
   field: string;
 }) => ({
   create: async (
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown>,
     options?: TOptions,
   ): Promise<null | TResult> =>
@@ -159,7 +200,7 @@ export const buildContentRepeatableOperations = <TResult, TOptions>({
     ),
 
   delete: async (
-    itemId: number,
+    itemId: ContentId,
     childId: number,
     options?: TOptions,
   ): Promise<null | TResult> =>
@@ -171,13 +212,13 @@ export const buildContentRepeatableOperations = <TResult, TOptions>({
     ),
 
   list: async (
-    itemId: number,
+    itemId: ContentId,
     options?: unknown,
   ): Promise<Record<string, unknown>[]> =>
     asRows(await api.read(itemId, field, options)),
 
   reorder: async (
-    itemId: number,
+    itemId: ContentId,
     childIds: readonly number[],
     options?: TOptions,
   ): Promise<null | TResult> =>
@@ -188,7 +229,7 @@ export const buildContentRepeatableOperations = <TResult, TOptions>({
         const rows = asRows(current);
         assertContentPermutation({
           contentTypeId,
-          current: rows.map(row => Number(row.id)),
+          current: asChildIds(rows.map(row => row.id)),
           field,
           next: childIds,
           noun: "entry",
@@ -202,13 +243,13 @@ export const buildContentRepeatableOperations = <TResult, TOptions>({
     ),
 
   set: async (
-    itemId: number,
+    itemId: ContentId,
     rows: readonly Record<string, unknown>[],
     options?: TOptions,
   ): Promise<null | TResult> => await api.write(itemId, field, rows, options),
 
   update: async (
-    itemId: number,
+    itemId: ContentId,
     childId: number,
     values: Record<string, unknown>,
     options?: TOptions,

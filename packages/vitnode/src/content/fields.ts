@@ -11,6 +11,7 @@ import type {
   ContentNumberField,
   ContentOnDelete,
   ContentRelationField,
+  ContentRelationTarget,
   ContentRepeatableField,
   ContentRichTextField,
   ContentSlugField,
@@ -293,6 +294,7 @@ const relation = <
   TMultiple extends boolean = false,
   TOrdered extends boolean = false,
   TSelf extends boolean = false,
+  TTarget extends ContentRelationTarget = ContentRelationTarget<"serial">,
 >(
   args: SharedArgs<TRequired, TNullable> & {
     min?: number;
@@ -301,9 +303,16 @@ const relation = <
     ordered?: TOrdered;
     /** The target is this content type. Mutually exclusive with `target`. */
     self?: TSelf;
-    target?: () => AnyContentTypeDefinition;
+    target?: () => TTarget;
   },
-): ContentRelationField<TRequired, TNullable, TMultiple, TOrdered, TSelf> => ({
+): ContentRelationField<
+  TRequired,
+  TNullable,
+  TMultiple,
+  TOrdered,
+  TSelf,
+  TSelf extends true ? "serial" : TTarget["idStrategy"]
+> => ({
   ...args,
   ...shared(args),
   kind: "relation",
@@ -314,7 +323,9 @@ const relation = <
   onDelete: args.onDelete ?? "restrict",
   ordered: (args.ordered ?? false) as TOrdered,
   self: (args.self ?? false) as TSelf,
-  target: args.target ?? unboundSelfTarget,
+  target: (args.target ?? unboundSelfTarget) as () => ContentRelationTarget<
+    TSelf extends true ? "serial" : TTarget["idStrategy"]
+  >,
 });
 
 const group = <

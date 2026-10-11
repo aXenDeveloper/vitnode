@@ -1,19 +1,25 @@
 import { z } from "zod";
 
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { signPayload, verifySignedPayload } from "../../lib/api/signed-token";
 import {
+  CONTENT_ID_KEY_LENGTH,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_PREVIEW_TOKEN_VERSION,
 } from "../const";
+import { parseContentId } from "../ids";
 
 export const zodContentPreviewTokenPayload = z.object({
   /** Rejects a token minted for anything else that ever shares this secret. */
   aud: z.literal("content-preview"),
   /** Epoch **seconds**, not milliseconds. */
   exp: z.number().int().positive(),
-  i: z.number().int().positive(),
+  i: z.union([
+    z.number().int().positive(),
+    z.string().min(1).max(CONTENT_ID_KEY_LENGTH),
+  ]),
 
   l: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH).optional(),
   /** `core_languages.id`, so the reader needs no second lookup. */
@@ -49,7 +55,7 @@ export const createContentPreviewToken = ({
   version,
 }: {
   definition: AnyContentTypeDefinition;
-  itemId: number;
+  itemId: ContentId;
   /** Required with `locale`: `core_languages.id` for that locale. */
   languageId?: number;
 
@@ -121,5 +127,8 @@ export const verifyContentPreviewToken = ({
   const minted = payload.l?.trim().toLowerCase();
   if (wanted !== minted) return null;
 
-  return payload;
+  const itemId = parseContentId(definition.idStrategy, payload.i);
+  if (itemId === null) return null;
+
+  return { ...payload, i: itemId };
 };

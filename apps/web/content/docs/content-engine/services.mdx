@@ -326,22 +326,109 @@ If someone saved the article after version 3 was loaded, the answer is a `409`:
 
 Load the article again, take the new version, and retry. A job without a signed-in user passes `CONTENT_SYSTEM_ACTOR` instead of `resolveContentActor(c)`.
 
+## Hide, duplicate and content IDs
+
+A content type with [`visibility`](/docs/content-engine/content-visibility) or [`duplication`](/docs/content-engine/duplicate-content) adds methods to `service` and `editorialService`. They exist in the types only when the option is on, so calling `hide` on a content type without visibility is a compile error.
+
+| Method                                     | `service` options                    | `editorialService` options                  |
+| ------------------------------------------ | ------------------------------------ | ------------------------------------------- |
+| `hide(id, options)`, `unhide(id, options)` | `{ actorUserId?, tx? }`              | `{ actor, expectedVersion?, tx? }`          |
+| `duplicate(sourceId, options)`             | `{ overrides?, translations?, tx? }` | `{ actor, overrides?, translations?, tx? }` |
+
+Hiding a record that is already hidden returns `changed: false` and writes nothing. The editorial `hide` and `unhide` raise the version and store a revision, and the editorial `duplicate` stores a first revision for the copy and for each copied translation. All of them return `null` when the record does not exist.
+
+Like the other service methods, these emit no events. Run the effects after the transaction commits, as the generated routes do:
+
+```ts
+import { contentVisibilityEffects, resolveContentActor } from "@vitnode/core/content/server";
+
+const { editorialService } = postContent;
+if (!editorialService) throw new Error("Articles have no editorial.");
+
+const pluginId = CONFIG_PLUGIN.pluginId;
+const outcome = await editorialService(c, { pluginId }).hide(703, {
+  actor: resolveContentActor(c),
+});
+
+if (outcome) {
+  await contentVisibilityEffects(c, postContent, outcome, { pluginId });
+}
+```
+
+`contentVisibilityEffects` emits `hidden` or `unhidden`, updates the search index and the delivery data, and [notifies front ends](/docs/content-engine/caching#notify-a-separate-front-end). It does nothing for an outcome with `changed: false`. For a copy, call `contentDuplicateEffects`, shown in [Duplicate content](/docs/content-engine/duplicate-content#duplicate-from-your-own-code).
+
+### Content IDs
+
+Service methods take and return ids typed by the content type's [`idStrategy`](/docs/content-engine/id-strategy): `ContentIdOf<typeof articleContentType>` is `number` for a serial type and `string` for a uuid or bigint one. Never pass an id through `Number()` in code that may meet a bigint type.
+
+A custom route reads an id from the URL as text. Parse it with the content type's strategy before calling a service, so a malformed id answers `400` instead of reaching the database. The example plugin's events use bigint ids:
+
+```ts title="plugins/example/src/api/modules/events/title.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { parseContentIdOf } from "@vitnode/core/content";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { eventContentType } from "@/content/event";
+import { eventContent } from "@/database/events";
+
+export const eventTitleRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "get",
+    path: "/{id}/title",
+    description: "The title of one published event",
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ id: z.string(), title: z.string() }),
+          },
+        },
+        description: "The event title",
+      },
+      400: { description: "Invalid event id" },
+      404: { description: "Event not found" },
+    },
+  },
+  handler: async c => {
+    const id = parseContentIdOf(eventContentType, c.req.param("id"));
+    if (id === null) {
+      throw new HTTPException(400, { message: "Invalid event id." });
+    }
+
+    const { publicService } = eventContent;
+    if (!publicService) throw new Error("Events have no public API.");
+
+    const event = await publicService(c).findById(id);
+    if (!event) throw new HTTPException(404, { message: "Event not found." });
+
+    return c.json({ id, title: event.title }, 200);
+  },
+});
+```
+
+`id` is a `string` here, because `example.event` uses bigint. For a route that validates its parameters with Zod, `contentIdParamSchema(eventContentType.idStrategy)` accepts exactly what `parseContentIdOf` accepts. Code that handles content types it does not know statically uses `ContentId` (`number | string`) and `contentAnyIdSchema`. Every helper is listed in [Record ID strategies](/docs/content-engine/id-strategy#helpers).
+
 ## Reference
 
 ### Service methods
 
-`publicService` only reads: `findMany({ filters, orderBy, query })`, `findById(id)` and `findBySlug(slug)`, each limited to published records and public fields. `editorialService` only writes: `create`, `update`, `delete`, `publish`, `unpublish`, `restore`, plus `relations` and `repeatable`. `service` has everything below:
+`publicService` only reads: `findMany({ filters, orderBy, query })`, `findById(id)` and `findBySlug(slug)`, each limited to published records and public fields. `editorialService` only writes: `create`, `update`, `delete`, `publish`, `unpublish`, `restore`, plus `relations` and `repeatable`, and `hide`, `unhide` and `duplicate` when their option is on. `service` has everything below:
 
-| Method                                         | Returns                                                                          |
-| ---------------------------------------------- | -------------------------------------------------------------------------------- |
-| `findMany({ filters, orderBy, query, where })` | `{ edges, pageInfo }`, drafts included. `where` takes a Drizzle `SQL` condition  |
-| `findById(id)`                                 | The row, or `null`                                                               |
-| `findRowById(id)`                              | The row with display labels for relations and users, or `null`                   |
-| `findDetail(id)`                               | The row with relation, repeatable and file values, or `null`                     |
-| `create(values)`                               | The new row                                                                      |
-| `update(id, values)`                           | `{ row, changedFields }`, or `null` when the id does not exist                   |
-| `delete(id)`                                   | The deleted row, or `null`                                                       |
-| `publish(id)`, `unpublish(id)`                 | `{ changed, publishedAt, row }`, or `null`. Only with `publication`              |
+| Method                                         | Returns                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `findMany({ filters, orderBy, query, where })` | `{ edges, pageInfo }`, drafts included. `where` takes a Drizzle `SQL` condition       |
+| `findById(id)`                                 | The row, or `null`                                                                    |
+| `findRowById(id)`                              | The row with display labels for relations and users, or `null`                        |
+| `findDetail(id)`                               | The row with relation, repeatable and file values, or `null`                          |
+| `create(values)`                               | The new row                                                                           |
+| `update(id, values)`                           | `{ row, changedFields }`, or `null` when the id does not exist                        |
+| `delete(id)`                                   | The deleted row, or `null`                                                            |
+| `publish(id)`, `unpublish(id)`                 | `{ changed, publishedAt, row }`, or `null`. Only with `publication`                   |
+| `hide(id)`, `unhide(id)`                       | `{ changed, hiddenAt, hiddenBy, row }`, or `null`. Only with `visibility`             |
+| `duplicate(sourceId)`                          | `{ row, sourceId, translations, skippedLocales }`, or `null`. Only with `duplication` |
 | `advanced(id)`, `advancedFields(id, fields)`   | Values of to-many relations, repeatables and galleries                           |
 | `options(field, search?, ids?)`                | `{ value, label, color? }[]` for a relation or user picker                       |
 | `relations.<field>`                            | `add`, `remove`, `set`, `reorder`, `get` for a to-many relation                  |

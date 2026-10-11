@@ -1,3 +1,4 @@
+import type { ContentId } from "./ids";
 import type { ContentSitemapChangeFrequency } from "./types";
 
 import {
@@ -9,7 +10,7 @@ import {
 export interface ContentSitemapEntry {
   /** One of the seven `changefreq` values, or `null` to omit the element. */
   changeFrequency: ContentSitemapChangeFrequency | null;
-  itemId: number;
+  itemId: ContentId;
 
   lastModified: Date;
   /** The language this URL is in, or `null` for a nonlocalized content type. */
@@ -48,7 +49,7 @@ export const contentSitemapXml = ({
    * element is emitted at all, which is a valid sitemap and the right default.
    */
   alternates?: ReadonlyMap<
-    number,
+    ContentId,
     readonly { locale: string; origin?: string; path: string }[]
   >;
   entries: readonly ContentSitemapEntry[];

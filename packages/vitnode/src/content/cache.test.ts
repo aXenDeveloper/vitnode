@@ -6,6 +6,7 @@ import {
   contentPublicListTag,
   contentPublicSlugTag,
   isContentPubliclyVisible,
+  isContentTranslationPubliclyVisible,
 } from "./cache";
 import { CONTENT_CACHE_TAG_MAX_LENGTH } from "./const";
 
@@ -103,6 +104,33 @@ describe("isContentPubliclyVisible", () => {
       isContentPubliclyVisible({
         publishedAt: "not a date",
         status: "published",
+      }),
+    ).toBe(false);
+  });
+
+  it.each([
+    ["refuses a hidden published row", past, false],
+    [
+      "refuses a hidden row as a schedule payload carries it",
+      past.toISOString(),
+      false,
+    ],
+    ["shows a published row that is not hidden", null, true],
+  ])("%s", (_name, hiddenAt, visible) => {
+    expect(
+      isContentPubliclyVisible({
+        hiddenAt,
+        publishedAt: past,
+        status: "published",
+      }),
+    ).toBe(visible);
+  });
+
+  it("takes every language down with a hidden base row", () => {
+    expect(
+      isContentTranslationPubliclyVisible({
+        base: { hiddenAt: past, publishedAt: past, status: "published" },
+        translation: { publishedAt: past, status: "published" },
       }),
     ).toBe(false);
   });

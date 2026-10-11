@@ -13,11 +13,13 @@ import type {
   SearchIndexer,
   SearchIndexerPage,
 } from "../../api/models/search";
+import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition, ContentFieldMap } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentModel } from "./model";
 
 import { ContentEngineError } from "../errors";
+import { contentIdKey, parseContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import {
   contentColumnsToValues,
@@ -40,6 +42,11 @@ const REQUIRED_COLUMNS = [
   "status",
   "publishedAt",
 ] as const;
+
+const requiredColumns = (definition: AnyContentTypeDefinition): string[] => [
+  ...REQUIRED_COLUMNS,
+  ...(definition.visibility.enabled ? ["hiddenAt"] : []),
+];
 
 interface ContentSearchSources {
   /** Collection fields to batch-load for the page's parent ids. */
@@ -112,21 +119,40 @@ const resolveSearchSources = (
 const loadSearchCollections = async ({
   advanced,
   c,
+  definition,
   itemIds,
   wanted,
 }: {
   advanced: ContentAdvancedStore;
   c: Context;
-  itemIds: readonly number[];
+  definition: AnyContentTypeDefinition;
+  itemIds: readonly unknown[];
   wanted: readonly string[];
-}): Promise<Map<number, Record<string, unknown>>> => {
+}): Promise<Map<string, Record<string, unknown>>> => {
   if (wanted.length === 0) return new Map();
 
-  const unique = [...new Set(itemIds.filter(id => Number.isInteger(id)))];
-  if (unique.length === 0) return new Map();
+  const unique = new Map<string, ContentId>();
+  for (const value of itemIds) {
+    const id = parseContentId(definition.idStrategy, value);
+    if (id !== null) unique.set(contentIdKey(id), id);
+  }
+  if (unique.size === 0) return new Map();
 
-  return await advanced.loadMany(unique, c.get("db"), wanted);
+  const loaded = await advanced.loadMany(
+    [...unique.values()],
+    c.get("db"),
+    wanted,
+  );
+
+  return new Map(
+    [...loaded].map(([id, values]) => [contentIdKey(id), values] as const),
+  );
 };
+
+const rowKey = (row: Record<string, unknown>): string =>
+  typeof row.id === "number" || typeof row.id === "string"
+    ? contentIdKey(row.id)
+    : "";
 
 const assertPublicationColumns = (
   definition: AnyContentTypeDefinition,
@@ -165,13 +191,12 @@ export const createContentSearchIndexer = <
   const sources = resolveSearchSources(definition);
   const advanced = model.advanced;
   const selection: Record<string, PgColumn> = Object.fromEntries(
-    [...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns])].map(name => [
-      name,
-      columns[name],
-    ]),
+    [
+      ...new Set([...requiredColumns(definition), ...sources.sharedColumns]),
+    ].map(name => [name, columns[name]]),
   );
 
-  const cursors = new WeakMap<Context, number>();
+  const cursors = new WeakMap<Context, ContentId>();
 
   return {
     itemType: definition.id,
@@ -199,14 +224,18 @@ export const createContentSearchIndexer = <
         .limit(limit);
 
       const last = rows.at(-1);
-      if (last && typeof last.id === "number") cursors.set(c, last.id);
+      const lastId = last
+        ? parseContentId(definition.idStrategy, last.id)
+        : null;
+      if (lastId !== null) cursors.set(c, lastId);
 
       // One batch for the whole page, and only the collections the search
       // configuration names - never one query per document.
       const collections = await loadSearchCollections({
         advanced,
         c,
-        itemIds: rows.map(row => Number((row as Record<string, unknown>).id)),
+        definition,
+        itemIds: rows.map(row => (row as Record<string, unknown>).id),
         wanted: sources.collections,
       });
 
@@ -220,7 +249,7 @@ export const createContentSearchIndexer = <
             // reads: it is handed `seo.description`, and a flat `seoDescription`
             // column would resolve to nothing.
             ...contentColumnsToValues(sources.sharedGroups, values),
-            ...collections.get(Number(values.id)),
+            ...collections.get(rowKey(values)),
           },
           { pluginId, routing: contentLocaleRouting(c) },
         );
@@ -259,13 +288,13 @@ export const createContentLocalizedSearchIndexer = <
   const sources = resolveSearchSources(definition);
   const advanced = model.advanced;
   const sharedSelection = [
-    ...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns]),
+    ...new Set([...requiredColumns(definition), ...sources.sharedColumns]),
   ];
   const localizedSelection = [...new Set(sources.localizedColumns)];
 
   const cursors = new WeakMap<
     Context,
-    { itemId: number; languageId: number }
+    { itemId: ContentId; languageId: number }
   >();
 
   return {
@@ -321,9 +350,12 @@ export const createContentLocalizedSearchIndexer = <
         .limit(limit);
 
       const last = page.at(-1) as Record<string, unknown> | undefined;
-      if (last) {
+      const lastId = last
+        ? parseContentId(definition.idStrategy, last.id)
+        : null;
+      if (last && lastId !== null) {
         cursors.set(c, {
-          itemId: last.id as number,
+          itemId: lastId,
           languageId: last._languageId as number,
         });
       }
@@ -339,7 +371,8 @@ export const createContentLocalizedSearchIndexer = <
       const collections = await loadSearchCollections({
         advanced,
         c,
-        itemIds: page.map(row => Number((row as Record<string, unknown>).id)),
+        definition,
+        itemIds: page.map(row => (row as Record<string, unknown>).id),
         wanted: sources.collections,
       });
 
@@ -361,7 +394,7 @@ export const createContentLocalizedSearchIndexer = <
             base: {
               ...values,
               ...contentColumnsToValues(sources.sharedGroups, values),
-              ...collections.get(Number(values.id)),
+              ...collections.get(rowKey(values)),
             },
             locale,
             translation: {

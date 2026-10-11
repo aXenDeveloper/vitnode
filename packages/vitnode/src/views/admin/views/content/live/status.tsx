@@ -5,6 +5,7 @@ import { useFormatter, useNow, useTranslations } from "use-intl";
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useContentLive } from "./context";
 
@@ -73,6 +74,24 @@ const DiscardChanges = ({
   );
 };
 
+const AutosavedDraft = ({ savedAt }: { savedAt: null | string }) => {
+  const t = useTranslations("core.content.live.status");
+
+  return (
+    <TooltipWithContent text={t("autosaved_hint")}>
+      <span
+        className="text-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-sm font-medium outline-none focus-visible:ring-3"
+        tabIndex={0}
+      >
+        <span aria-hidden className="bg-warn size-2 shrink-0 rounded-full" />
+        <span className="max-sm:sr-only">
+          {savedAt ? <SavedAt savedAt={savedAt} /> : t("autosaved")}
+        </span>
+      </span>
+    </TooltipWithContent>
+  );
+};
+
 export const ContentLiveStatus = ({ className }: { className?: string }) => {
   const t = useTranslations("core.content.live.status");
   const live = useContentLive();
@@ -94,18 +113,11 @@ export const ContentLiveStatus = ({ className }: { className?: string }) => {
           </span>
         ) : failed ? (
           <span className="text-destructive">{t("failed")}</span>
+        ) : dirty ? (
+          <AutosavedDraft savedAt={savedAt} />
         ) : savedAt ? (
-          <span className={dirty ? "sr-only" : "max-lg:sr-only"}>
+          <span className="max-lg:sr-only">
             <SavedAt savedAt={savedAt} />
-          </span>
-        ) : null}
-        {dirty ? (
-          <span className="text-foreground flex items-center gap-1.5 font-medium">
-            <span
-              aria-hidden
-              className="bg-warn size-2 shrink-0 rounded-full"
-            />
-            <span className="max-sm:sr-only">{t("unsaved")}</span>
           </span>
         ) : null}
       </p>

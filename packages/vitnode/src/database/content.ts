@@ -11,6 +11,7 @@ import type {
 import {
   CONTENT_ACTOR_TYPES,
   CONTENT_DELIVERY_PATH_MAX_LENGTH,
+  CONTENT_ID_KEY_LENGTH,
   CONTENT_REVISION_OPERATIONS,
   CONTENT_SCHEDULE_ACTIONS,
   CONTENT_SCHEDULE_STATUSES,
@@ -25,7 +26,7 @@ export const core_content_revisions = camelCase.table.withRLS(
     id: t.serial().primaryKey(),
     pluginId: t.varchar({ length: 255 }).notNull(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
 
     languageId: t.integer(),
     /** The version the record holds *after* this mutation. */
@@ -137,7 +138,7 @@ export const core_content_schedules = camelCase.table.withRLS(
     id: t.serial().primaryKey(),
     pluginId: t.varchar({ length: 255 }).notNull(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     action: t.varchar({ enum: CONTENT_SCHEDULE_ACTIONS, length: 16 }).notNull(),
     scheduledFor: t.timestamp().notNull(),
 
@@ -187,7 +188,7 @@ export const core_content_slug_history = camelCase.table.withRLS(
     id: t.serial().primaryKey(),
     pluginId: t.varchar({ length: 255 }).notNull(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     /** `NULL` for a shared slug. See the table comment. */
     languageId: t.integer(),
     slug: t.varchar({ length: CONTENT_SLUG_DEFAULT_LENGTH }).notNull(),

@@ -5,6 +5,8 @@ import { useLocale, useTranslations } from "use-intl";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFileFieldValue } from "@/content/files";
+import type { ContentId } from "@/content/ids";
+import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -43,6 +45,7 @@ import {
   contentSpecSkeletonShape,
 } from "../form/skeleton";
 import { useContentFormTransport } from "../form/transport";
+import { ContentFormHiddenNotice } from "../form/visibility";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
@@ -55,7 +58,7 @@ import { overlayContentDrafts } from "../live/values";
 import { ConflictNotice } from "./conflict-notice";
 
 export interface ContentFormProps {
-  data?: Record<string, unknown> & { id: number };
+  data?: Record<string, unknown> & { id: ContentId };
   fieldOverrides?: Record<
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
@@ -63,13 +66,14 @@ export interface ContentFormProps {
   fieldSkeletons?: ContentFormSkeletonOverrides;
   header?: ContentFormHeaderValue;
   layout?: ContentFormLayout;
-  onCreated?: (id: number) => void;
+  onCreated?: (id: ContentId) => void;
   presentation?: "dialog" | "page";
   publication?: boolean;
   singular: string;
   spec: ContentFormSpec;
   title?: string;
   translations?: readonly TranslationRow[];
+  visibility?: boolean;
 }
 
 export const ContentForm = ({
@@ -189,6 +193,7 @@ const ContentFormFields = ({
   spec,
   title,
   translations = [],
+  visibility = false,
 }: ContentFormProps & {
   live?: ContentLiveFormState;
 }) => {
@@ -206,9 +211,23 @@ const ContentFormFields = ({
     permission: CONTENT_PERMISSIONS.publish,
     plugin: spec.pluginId,
   });
+  const canHide = useAdminStaffPermission({
+    module: spec.permissionModule,
+    permission: CONTENT_PERMISSIONS.hide,
+    plugin: spec.pluginId,
+  });
   const [conflict, setConflict] = React.useState<ContentConflictState | null>(
     null,
   );
+
+  const serverHiddenAt: unknown = data?.hiddenAt ?? null;
+  const [hidden, setHidden] = React.useState<{
+    server: unknown;
+    value: unknown;
+  }>(() => ({ server: serverHiddenAt, value: serverHiddenAt }));
+  if (hidden.server !== serverHiddenAt) {
+    setHidden({ server: serverHiddenAt, value: serverHiddenAt });
+  }
 
   const files = data?.files as
     | Record<string, ContentFileFieldValue>
@@ -313,10 +332,10 @@ const ContentFormFields = ({
   };
 
   const savedListenersRef = React.useRef(
-    new Set<(saved: { itemId: number }) => Promise<void> | void>(),
+    new Set<(saved: { itemId: ContentId }) => Promise<void> | void>(),
   );
   const onSaved = React.useCallback(
-    (listener: (saved: { itemId: number }) => Promise<void> | void) => {
+    (listener: (saved: { itemId: ContentId }) => Promise<void> | void) => {
       savedListenersRef.current.add(listener);
 
       return () => {
@@ -325,6 +344,47 @@ const ContentFormFields = ({
     },
     [],
   );
+  const visibilityTransition = async (action: ContentVisibilityAction) => {
+    if (!data) return false;
+
+    const mutation = await transport.setHidden(
+      spec.contentTypeId,
+      data.id,
+      action,
+      expectedVersion,
+    );
+
+    if (mutation.error !== undefined) {
+      if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
+        setConflict({ currentVersion: mutation.conflict.currentVersion });
+
+        return true;
+      }
+
+      const errorKey = contentErrorKey(mutation.status, mutation);
+
+      toast.error(tErrors("title"), {
+        description: errorKey
+          ? tContentErrors(errorKey)
+          : tErrors("internal_server_error"),
+      });
+
+      return false;
+    }
+
+    if (mutation.version !== undefined) setExpectedVersion(mutation.version);
+    setHidden(current => ({
+      ...current,
+      value: action === "hide" ? new Date().toISOString() : null,
+    }));
+
+    toast.success(t(`${action}.success`, { name: singular }), {
+      description: title,
+    });
+    refresh();
+
+    return true;
+  };
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
     submitted,
@@ -530,6 +590,12 @@ const ContentFormFields = ({
                   status: row.status,
                   updatedAt: row.updatedAt,
                 })),
+                visibility: {
+                  canHide,
+                  enabled: visibility,
+                  hiddenAt: hidden.value,
+                  transition: data ? visibilityTransition : undefined,
+                },
               }}
             >
               {Layout ? (
@@ -553,10 +619,14 @@ const ContentFormFields = ({
                   )}
 
                   {publication && data ? (
-                    <ContentFormPublication
-                      publishedAt={data.publishedAt}
-                      status={data.status}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <ContentFormPublication
+                        hiddenAt={visibility ? hidden.value : undefined}
+                        publishedAt={data.publishedAt}
+                        status={data.status}
+                      />
+                      <ContentFormHiddenNotice />
+                    </div>
                   ) : null}
 
                   <ContentFormSections sections={sections} />

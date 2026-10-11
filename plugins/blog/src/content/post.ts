@@ -14,6 +14,10 @@ export const blogPostContentType = defineContentType({
 
   publication: true,
 
+  duplication: true,
+
+  visibility: true,
+
   editorial: {
     revisions: { retention: 20 },
     preview: { expiresInMinutes: 30 },
@@ -109,6 +113,7 @@ export const blogPostContentType = defineContentType({
     contentFields: ["title", "content"],
     pathTemplate: "/blog/{slug}",
     authorField: "authorId",
+    imageField: "coverImage",
   },
 
   delivery: {

@@ -3,20 +3,40 @@ import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentIdOf, ContentIdStrategy } from "../ids";
 import type {
   ContentLocalizedFieldName,
   ContentTranslationRow,
 } from "../types";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
-/** The positive `{id}` in the path, or a 400 before any handler runs. */
+import { CONTENT_SERIAL_MAX, parseContentId } from "../ids";
+
 export const identifier = (c: Context): number => {
   const value = Number(c.req.param("id"));
-  if (!Number.isInteger(value) || value <= 0) {
+  if (!Number.isInteger(value) || value <= 0 || value > CONTENT_SERIAL_MAX) {
     throw new HTTPException(400, { message: "Invalid identifier." });
   }
 
   return value;
+};
+
+export const contentIdentifier = <
+  TDefinition extends { idStrategy: ContentIdStrategy },
+>(
+  c: Context,
+  definition: TDefinition,
+): ContentIdOf<TDefinition> => {
+  if (definition.idStrategy === "serial") {
+    return identifier(c) as ContentIdOf<TDefinition>;
+  }
+
+  const value = parseContentId(definition.idStrategy, c.req.param("id"));
+  if (value === null) {
+    throw new HTTPException(400, { message: "Invalid identifier." });
+  }
+
+  return value as ContentIdOf<TDefinition>;
 };
 
 /**
@@ -30,6 +50,18 @@ export const readJson = async <TValue>(
   c: Context,
   schema: z.ZodType<TValue>,
 ): Promise<TValue> => schema.parse(await c.req.json());
+
+export const readOptionalJson = async <TValue>(
+  c: Context,
+  schema: z.ZodType<TValue>,
+): Promise<TValue> => {
+  const contentType = c.req.header("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("json")) return schema.parse({});
+
+  const text = await c.req.text();
+
+  return schema.parse(text.trim() === "" ? {} : JSON.parse(text));
+};
 
 export const jsonBody = (schema: z.ZodType) => ({
   content: { "application/json": { schema } },

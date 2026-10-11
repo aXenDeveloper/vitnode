@@ -2,10 +2,11 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import React from "react";
-import { useTranslations } from "use-intl";
+import { useFormatter, useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
+import { HiddenIcon } from "@/components/hidden-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +14,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import type { SearchFeedQueryOptions } from "./search-feed-query";
-import type { SearchFeedPage, SearchResultItem } from "./types";
+import type {
+  SearchFeedPage,
+  SearchResultAuthor,
+  SearchResultItem,
+} from "./types";
 
 import { getSearchTypeRenderer } from "./registry";
 
@@ -127,6 +132,80 @@ const ItemTitle = ({ item }: { item: SearchResultItem }) =>
     <>{item.title}</>
   );
 
+const ItemHiddenIcon = ({
+  className,
+  focusable,
+  item,
+}: {
+  className?: string;
+  focusable?: boolean;
+  item: SearchResultItem;
+}) => {
+  const t = useTranslations("core.search");
+  if (!item.isHidden) return null;
+
+  return (
+    <HiddenIcon
+      className={className}
+      focusable={focusable}
+      label={t("hidden", {
+        type: t(getSearchTypeRenderer(item.itemType).labelKey),
+      })}
+    />
+  );
+};
+
+const MAX_SHOWN_AUTHORS = 3;
+
+const authorsOf = (item: SearchResultItem): SearchResultAuthor[] =>
+  item.authors.length > 0 ? item.authors : item.author ? [item.author] : [];
+
+const AuthorNames = ({ authors }: { authors: SearchResultAuthor[] }) => {
+  const t = useTranslations("core.search");
+  const format = useFormatter();
+  const shown =
+    authors.length > MAX_SHOWN_AUTHORS
+      ? authors.slice(0, MAX_SHOWN_AUTHORS - 1)
+      : authors;
+  const rest = authors.length - shown.length;
+
+  return (
+    <span className="text-foreground font-medium">
+      {format.list([
+        ...shown.map(author => author.name),
+        ...(rest > 0 ? [t("more_authors", { count: rest })] : []),
+      ])}
+    </span>
+  );
+};
+
+const AuthorAvatars = ({ authors }: { authors: SearchResultAuthor[] }) => (
+  <span aria-hidden className="flex shrink-0 items-center">
+    {authors.slice(0, MAX_SHOWN_AUTHORS).map((author, index) => (
+      <Avatar
+        alt=""
+        className={cn("ring-background ring-2", index > 0 && "-ms-1.5")}
+        key={author.id}
+        size={20}
+        user={author}
+      />
+    ))}
+  </span>
+);
+
+const ResultImage = ({ image }: { image: SearchResultItem["image"] }) =>
+  image ? (
+    <img
+      alt=""
+      className="bg-muted aspect-video w-full shrink-0 rounded-md object-cover sm:w-40"
+      decoding="async"
+      height={image.height}
+      loading="lazy"
+      src={image.url}
+      width={image.width}
+    />
+  ) : null;
+
 const DraftBadge = () => {
   const t = useTranslations("core.search");
 
@@ -144,24 +223,37 @@ const TimelineItem = ({
   const renderer = getSearchTypeRenderer(item.itemType);
   const Icon = renderer.icon;
   const snippet = getSnippet(item.content);
+  const authors = authorsOf(item);
 
   const content = (
     <>
-      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-        {item.author && (
-          <>
-            <Avatar size={20} user={item.author} />
-            <span className="text-foreground font-medium">
-              {item.author.name}
-            </span>
-            <span aria-hidden>·</span>
-          </>
-        )}
-        <DateFormat date={item.createdAt} />
-        {!item.isPublic && <DraftBadge />}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          {authors.length > 0 && (
+            <>
+              <span className="flex min-w-0 items-center gap-2 max-sm:basis-full">
+                <AuthorAvatars authors={authors} />
+                <AuthorNames authors={authors} />
+              </span>
+              <span aria-hidden className="max-sm:hidden">
+                ·
+              </span>
+            </>
+          )}
+          <DateFormat date={item.createdAt} />
+          {!item.isPublic && !item.isHidden && <DraftBadge />}
+        </div>
+        <h3 className="flex items-center gap-2 text-xl leading-tight font-bold">
+          <ItemHiddenIcon
+            className="size-5"
+            focusable={!item.url}
+            item={item}
+          />
+          {item.title}
+        </h3>
+        {snippet && <p className="text-muted-foreground">{snippet}</p>}
       </div>
-      <h3 className="text-xl leading-tight font-bold">{item.title}</h3>
-      {snippet && <p className="text-muted-foreground">{snippet}</p>}
+      <ResultImage image={item.image} />
     </>
   );
 
@@ -179,13 +271,13 @@ const TimelineItem = ({
       <div className={cn("min-w-0 flex-1", !isLast && "pb-8")}>
         {item.url ? (
           <ResultLink
-            className="hover:bg-muted/50 flex flex-col gap-1 rounded-lg border p-4 transition-colors"
+            className="hover:bg-muted/50 flex flex-col-reverse gap-3 rounded-lg border p-4 transition-colors sm:flex-row sm:items-start"
             href={item.url}
           >
             {content}
           </ResultLink>
         ) : (
-          <div className="flex flex-col gap-1 rounded-lg border p-4">
+          <div className="flex flex-col-reverse gap-3 rounded-lg border p-4 sm:flex-row sm:items-start">
             {content}
           </div>
         )}
@@ -199,43 +291,46 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
   const renderer = getSearchTypeRenderer(item.itemType);
   const Icon = renderer.icon;
   const snippet = getSnippet(item.content);
+  const authors = authorsOf(item);
 
   return (
     <Card>
-      <CardContent className="flex gap-3">
-        {item.author ? (
-          <Avatar size={40} user={item.author} />
-        ) : (
-          <span className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-full">
-            <Icon className="size-5" />
-          </span>
-        )}
-
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
-            <span className="bg-muted inline-flex items-center gap-1 rounded px-1.5 py-0.5">
-              <Icon className="size-3.5" />
-              {t(renderer.labelKey)}
+      <CardContent className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 gap-3">
+          {item.author ? (
+            <Avatar size={40} user={item.author} />
+          ) : (
+            <span className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-full">
+              <Icon className="size-5" />
             </span>
-            {item.author && (
-              <span className="text-foreground font-medium">
-                {item.author.name}
-              </span>
-            )}
-            <DateFormat date={item.createdAt} />
-            {!item.isPublic && <DraftBadge />}
-          </div>
-
-          <h3 className="text-foreground truncate text-lg font-semibold">
-            <ItemTitle item={item} />
-          </h3>
-
-          {snippet && (
-            <p className="text-muted-foreground line-clamp-2 text-sm">
-              {snippet}
-            </p>
           )}
+
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
+              <span className="bg-muted inline-flex items-center gap-1 rounded px-1.5 py-0.5">
+                <Icon className="size-3.5" />
+                {t(renderer.labelKey)}
+              </span>
+              {authors.length > 0 && <AuthorNames authors={authors} />}
+              <DateFormat date={item.createdAt} />
+              {!item.isPublic && !item.isHidden && <DraftBadge />}
+            </div>
+
+            <h3 className="text-foreground flex min-w-0 items-center gap-2 text-lg font-semibold">
+              <ItemHiddenIcon className="size-4" item={item} />
+              <span className="truncate">
+                <ItemTitle item={item} />
+              </span>
+            </h3>
+
+            {snippet && (
+              <p className="text-muted-foreground line-clamp-2 text-sm">
+                {snippet}
+              </p>
+            )}
+          </div>
         </div>
+        <ResultImage image={item.image} />
       </CardContent>
     </Card>
   );

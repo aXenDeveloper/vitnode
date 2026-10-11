@@ -152,7 +152,8 @@ curl "http://localhost:3000/api/@vitnode/example/content/articles/delivery/sitem
 
 - A page holds 1,000 entries by default and up to 50,000 with `?limit=`. `cursor` is the `itemId` to continue after, so pass `nextCursor` back as `?cursor=` until it is `null`.
 - `lastModified` is the record's `updatedAt`, or the translation's when that is newer.
-- Records whose `noIndexField` is `true` are left out.
+- Records whose `noIndexField` is `true` are left out, and so are [hidden](/docs/content-engine/content-visibility) records.
+- Entries come in id order. For a [uuid](/docs/content-engine/id-strategy) content type that order is lexical, not creation order, and every record still appears once.
 - A localized type returns one language per request. Ask for another with `?locale=`:
 
 ```bash

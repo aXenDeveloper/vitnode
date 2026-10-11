@@ -1,8 +1,11 @@
 import { z } from "zod";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
+import { contentAnyIdSchema } from "@/content/ids";
 
 import type {
   ContentMutationResult,
@@ -21,7 +24,7 @@ import {
 } from "../lib/api-result";
 
 /** Anything the generated routes return: an identifier plus the row's fields. */
-const zodRow = z.object({ id: z.number() }).loose();
+const zodRow = z.object({ id: contentAnyIdSchema }).loose();
 
 const zodPublicationResult = z.object({ changed: z.boolean(), row: zodRow });
 
@@ -36,14 +39,14 @@ const zodOptions = z.object({
       color: z.string().optional(),
       label: z.string(),
       nameCode: z.string().optional(),
-      value: z.number(),
+      value: contentAnyIdSchema,
     }),
   ),
 });
 
 const readTranslations = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<TranslationRow[]> => {
   const result = await send(
     { method: "get", path: `/${id}/translations`, target },
@@ -75,7 +78,7 @@ export const editContentInBrowser = async (
     /** Whether this content type's `PUT` takes a precondition at all. */
     editorial: boolean;
     expectedVersion?: number;
-    id: number;
+    id: ContentId;
     values: Record<string, unknown>;
   },
 ): Promise<ContentMutationResult> => {
@@ -145,7 +148,7 @@ export const editLocalizedContentInBrowser = async (
     values,
   }: {
     expectedVersion?: number;
-    id: number;
+    id: ContentId;
     translations: ContentTranslationInput[];
     values: Record<string, unknown> | undefined;
   },
@@ -188,7 +191,7 @@ export const editLocalizedContentInBrowser = async (
  */
 export const setContentPublishedInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   action: ContentPublicationAction,
 ): Promise<ContentMutationResult> => {
   const result = await send(
@@ -201,10 +204,31 @@ export const setContentPublishedInBrowser = async (
   return { version: versionOf(result.data?.row) };
 };
 
+export const setContentHiddenInBrowser = async (
+  target: ContentApiTarget,
+  id: ContentId,
+  action: ContentVisibilityAction,
+  expectedVersion?: number,
+): Promise<ContentMutationResult> => {
+  const result = await send(
+    {
+      ...(expectedVersion === undefined ? {} : { body: { expectedVersion } }),
+      method: "post",
+      path: `/${id}/${action}`,
+      target,
+    },
+    zodPublicationResult,
+  );
+
+  if (!succeeded(result, 200)) return failure(result);
+
+  return { version: versionOf(result.data?.row) };
+};
+
 /** Re-reads one record - for the conflict banner and for missing collections. */
 export const readContentRowInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<ContentRowResult> => {
   const result = await send({ method: "get", path: `/${id}`, target }, zodRow);
 
@@ -216,7 +240,7 @@ export const readContentRowInBrowser = async (
 /** Every language one record exists in, values included, in one request. */
 export const listContentTranslationsInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<{ edges: TranslationRow[]; error?: string }> => {
   const result = await send(
     { method: "get", path: `/${id}/translations`, target },
@@ -242,7 +266,7 @@ export const loadContentOptionsInBrowser = async (
   target: ContentApiTarget,
   field: string,
   search: string,
-  ids?: number[],
+  ids?: ContentId[],
 ): Promise<ContentOption[]> => {
   const result = await send(
     {

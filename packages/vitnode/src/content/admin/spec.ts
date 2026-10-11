@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ContentId, ContentIdStrategy } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentFieldAiAssist,
@@ -20,6 +21,7 @@ import {
   contentRepeatableMax,
   contentRepeatableMin,
 } from "../advanced";
+import { contentIdFromKey, contentIdKey, contentIdSchema } from "../ids";
 import {
   contentFieldPath,
   contentInnerFields,
@@ -71,6 +73,7 @@ export interface ContentFormFieldSpec {
   required: boolean;
 
   targetContentTypeId?: string;
+  targetIdStrategy?: ContentIdStrategy;
 }
 
 export interface ContentFormSectionSpec {
@@ -107,6 +110,7 @@ export interface ContentColumnSpec {
   /** Enum value -> translated label, for badge cells. */
   options?: Record<string, string>;
   thumbnail?: string;
+  title?: boolean;
 }
 
 export type ContentFieldLabeller = (
@@ -235,7 +239,10 @@ export const projectFormField = (
         // `resolveReferenceTargets` already does per request, so a circular
         // reference is as safe here as it is there.
         ...(fieldValue.kind === "relation"
-          ? { targetContentTypeId: fieldValue.target().id }
+          ? {
+              targetContentTypeId: fieldValue.target().id,
+              targetIdStrategy: fieldValue.target().idStrategy,
+            }
           : {}),
       };
     case "slug":
@@ -352,6 +359,7 @@ export const buildContentColumnSpec = ({
       ...(fieldValue && isContentReferenceCollection(fieldValue)
         ? { multiple: true }
         : {}),
+      ...(name === definition.admin.titleField ? { title: true } : {}),
       ...(name === definition.admin.titleField &&
       definition.admin.list.thumbnailField !== null
         ? { thumbnail: definition.admin.list.thumbnailField }
@@ -425,10 +433,31 @@ const richTextFormSchema = (spec: ContentFormFieldSpec): z.ZodType => {
     : doc;
 };
 
+const stringIdStrategy = (
+  spec: ContentFormFieldSpec,
+): ContentIdStrategy | undefined =>
+  spec.kind === "relation" && spec.targetIdStrategy !== "serial"
+    ? spec.targetIdStrategy
+    : undefined;
+
 const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
-  const schema = z.array(z.number());
+  const strategy = stringIdStrategy(spec);
+  const schema = z.array(
+    strategy === undefined ? z.number() : contentIdSchema(strategy),
+  );
 
   return spec.minItems === undefined ? schema : schema.min(spec.minItems);
+};
+
+export const contentOptionValueToId = (
+  spec: ContentFormFieldSpec,
+  value: string,
+): ContentId | null => {
+  const strategy = stringIdStrategy(spec);
+
+  return strategy === undefined
+    ? Number(value)
+    : contentIdFromKey(strategy, value);
 };
 
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
@@ -532,7 +561,10 @@ const toInitialValue = (
   if (fieldSpec.multiple === true) return current;
   if (current === null || current === undefined) return undefined;
 
-  const id = typeof current === "number" ? current.toString() : "";
+  const id =
+    typeof current === "number" || typeof current === "string"
+      ? contentIdKey(current)
+      : "";
 
   return { label: labels[fieldSpec.name] ?? id, value: id };
 };
@@ -579,7 +611,7 @@ export const contentFormValuesToPayload = (
         const option = value as ContentReferenceOption | null | undefined;
         if (!option?.value) return [name, null];
 
-        return [name, Number(option.value)];
+        return [name, contentOptionValueToId(fieldSpec, option.value)];
       }),
   );
 

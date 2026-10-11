@@ -16,8 +16,10 @@ import {
   CONTENT_SITEMAP_MAX_URLS,
 } from "../const";
 import { ContentDeliveryNotEnabled } from "../errors";
+import { contentIdParamSchema, contentIdSchema } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
 import { listContentLanguages } from "./language-resolver";
+import { contentIdentifier } from "./route-helpers";
 
 export const buildContentDeliveryRoutes = <
   TDefinition extends AnyContentTypeDefinition,
@@ -37,6 +39,11 @@ export const buildContentDeliveryRoutes = <
 
     return build(c, { pluginId });
   };
+
+  const serial = definition.idStrategy === "serial";
+  const itemIdSchema = serial
+    ? z.number().int()
+    : contentIdSchema(definition.idStrategy);
 
   const localeQuery = localized
     ? {
@@ -86,10 +93,11 @@ export const buildContentDeliveryRoutes = <
     isFallback: z.boolean(),
     // Nullable: delivery metadata is read off the public projection, so a content
     // type whose allowlist withholds `id` reports none rather than inventing one.
-    itemId: z.number().int().nullable(),
+    itemId: itemIdSchema.nullable(),
     locale: z.string().nullable(),
     openGraph: zodSeo.nullable(),
     requestedLocale: z.string().nullable(),
+    hidden: z.boolean(),
     robots: z.object({ follow: z.boolean(), index: z.boolean() }).nullable(),
     seo: zodSeo,
   });
@@ -106,7 +114,7 @@ export const buildContentDeliveryRoutes = <
 
   const zodSitemapEntry = z.object({
     changeFrequency: z.string().nullable(),
-    itemId: z.number().int(),
+    itemId: itemIdSchema,
     lastModified: z.string(),
     locale: z.string().nullable(),
     origin: z.string().optional(),
@@ -116,7 +124,9 @@ export const buildContentDeliveryRoutes = <
 
   const sitemapQuery = z.object({
     ...localeQuery,
-    cursor: z.coerce.number().int().positive().optional(),
+    cursor: serial
+      ? z.coerce.number().int().positive().optional()
+      : contentIdParamSchema(definition.idStrategy).optional(),
     limit: z.coerce
       .number()
       .int()
@@ -154,7 +164,12 @@ export const buildContentDeliveryRoutes = <
         locale: resolved.locale,
       });
 
-      return c.json(resolution, 200);
+      return resolution.type === "content" && resolution.hidden
+        ? c.json(resolution, 200, {
+            "Cache-Control": "private, no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+          })
+        : c.json(resolution, 200);
     },
   });
 
@@ -165,7 +180,11 @@ export const buildContentDeliveryRoutes = <
       path: "/delivery/item/{id}",
       description: `Delivery metadata for one published ${name}`,
       request: {
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        params: z.object({
+          id: serial
+            ? z.coerce.number().int().positive()
+            : contentIdSchema(definition.idStrategy),
+        }),
         ...(localized ? { query: z.object(localeQuery) } : {}),
       },
       responses: {
@@ -180,7 +199,7 @@ export const buildContentDeliveryRoutes = <
       const resolved = await localeFor(c);
       if (!resolved) throw notFound(name);
 
-      const id = Number(c.req.param("id"));
+      const id = contentIdentifier(c, definition);
       const metadata = await service(c).findById(id, {
         locale: resolved.locale,
       });
@@ -203,7 +222,7 @@ export const buildContentDeliveryRoutes = <
             "application/json": {
               schema: z.object({
                 entries: z.array(zodSitemapEntry),
-                nextCursor: z.number().int().nullable(),
+                nextCursor: itemIdSchema.nullable(),
               }),
             },
           },

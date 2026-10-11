@@ -53,7 +53,7 @@ export const ContentFormScreen = ({
         <ContentFormPageBody
           action={route.action}
           entry={entry}
-          itemId={route.itemId ?? 0}
+          itemId={route.itemId}
           title={route.formTitle ?? ""}
         />
       </React.Suspense>

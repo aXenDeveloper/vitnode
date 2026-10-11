@@ -52,6 +52,7 @@ export const createContentTranslationTable = <
   const columns: Record<string, AnyPgColumnBuilder> = {
     ...buildTranslationSystemColumns({
       itemReference: () => baseColumns.id,
+      itemStrategy: definition.idStrategy,
       languageReference: () => core_languages.id,
     }),
     // Only with publication, matching the base table exactly. Without a global

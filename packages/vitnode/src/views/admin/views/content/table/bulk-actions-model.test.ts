@@ -7,22 +7,26 @@ import {
 } from "./bulk-actions-model";
 
 describe("contentBulkActions", () => {
-  it("offers publish, unpublish and delete to an administrator who may do all three", () => {
+  it("offers every action to an administrator who may do them all", () => {
     expect(
       contentBulkActions({
         canDelete: true,
+        canHide: true,
         canPublish: true,
         publication: true,
+        visibility: true,
       }),
-    ).toEqual(["publish", "unpublish", "delete"]);
+    ).toEqual(["publish", "unpublish", "hide", "unhide", "delete"]);
   });
 
   it("drops publication actions for a content type without publication", () => {
     expect(
       contentBulkActions({
         canDelete: true,
+        canHide: false,
         canPublish: true,
         publication: false,
+        visibility: false,
       }),
     ).toEqual(["delete"]);
   });
@@ -31,15 +35,19 @@ describe("contentBulkActions", () => {
     expect(
       contentBulkActions({
         canDelete: false,
+        canHide: false,
         canPublish: true,
         publication: true,
+        visibility: true,
       }),
     ).toEqual(["publish", "unpublish"]);
     expect(
       contentBulkActions({
         canDelete: false,
+        canHide: false,
         canPublish: false,
         publication: true,
+        visibility: true,
       }),
     ).toEqual([]);
   });

@@ -74,6 +74,8 @@
       "loadMore": "Load more",
       "loading": "Loading…",
       "draft": "Draft",
+      "hidden": "{type} hidden",
+      "more_authors": "{count, plural, one {# other} other {# others}}",
       "sortBy": "Sort by",
       "sort": {
         "relevance": "Relevance",
@@ -81,7 +83,7 @@
         "oldest": "Oldest"
       },
       "types": {
-        "blog_post": "Post",
+        "blog_post": "Article",
         "unknown": "Content"
       },
       "userTab": {
@@ -1392,6 +1394,9 @@
         "published_at": "Published",
         "more_actions": "More actions"
       },
+      "filters": {
+        "all": "All"
+      },
       "actions": {
         "edit": "Edit",
         "publish": "Publish",
@@ -1400,7 +1405,10 @@
         "schedule": "Schedule",
         "history": "History",
         "delivery": "Delivery",
-        "delete": "Delete"
+        "delete": "Delete",
+        "duplicate": "Duplicate",
+        "hide": "Hide",
+        "unhide": "Unhide"
       },
       "create": {
         "title": "Create {name}",
@@ -1432,6 +1440,18 @@
           "desc": "Someone saved it after this page loaded, so it was not deleted. Refresh the list, check what changed, and delete it again if you still want to."
         }
       },
+      "duplicate": {
+        "title": "Duplicate {name}",
+        "desc": "Make a draft copy of <title></title>? Every field and translation is copied, and nothing about the copy is public until you publish it.",
+        "confirm": "Yes, duplicate it",
+        "success": "{name} duplicated as a draft.",
+        "skipped_title": "Some languages were left out",
+        "skipped": "Not copied: {locales}. Those languages are switched off on this site.",
+        "errors": {
+          "slug_conflict": "The copy needs its own {field}, and every address based on \"{slug}\" is taken. Change the original's {field}, then duplicate it again.",
+          "unique_required": "{count, plural, one {{fields} has to be unique} other {{fields} have to be unique}}, so the copy can't reuse the original's value. Create a new record instead, or change the value on the original first."
+        }
+      },
       "bulk": {
         "publish": {
           "title": "Publish {count} {name}",
@@ -1445,6 +1465,18 @@
           "confirm": "Yes, unpublish",
           "success": "{count} {name} unpublished."
         },
+        "hide": {
+          "title": "Hide {count} {name}",
+          "desc": "{count, plural, one {It disappears} other {They disappear}} from the public site, search and the sitemap right away. Nothing is unpublished - unhide whenever you like.",
+          "confirm": "Yes, hide",
+          "success": "{count} {name} hidden."
+        },
+        "unhide": {
+          "title": "Unhide {count} {name}",
+          "desc": "Readers can reach {count, plural, one {it} other {them}} again - drafts stay private until you publish them.",
+          "confirm": "Yes, unhide",
+          "success": "{count} {name} visible again."
+        },
         "delete": {
           "title": "Delete {count} {name}",
           "desc": "{count, plural, one {It is} other {They are}} gone for good. This action cannot be undone.",
@@ -1453,7 +1485,8 @@
         },
         "conflict": "{count, plural, one {# was skipped: someone changed it, or other content still needs it.} other {# were skipped: someone changed them, or other content still needs them.}}",
         "failed": "{count} could not be updated. Try again.",
-        "more": "+{count} more"
+        "more": "+{count} more",
+        "applies": "{count} of {total}"
       },
       "publish": {
         "title": "Publish {name}",
@@ -1468,6 +1501,31 @@
         "confirm": "Yes, unpublish it",
         "success": "{name} has been unpublished.",
         "action": "Unpublish"
+      },
+      "hide": {
+        "title": "Hide {name}",
+        "desc": "Hide <title></title>? It disappears from the public site, search and the sitemap right away. It is not unpublished - unhide it whenever you like.",
+        "confirm": "Yes, hide it",
+        "success": "{name} is now hidden."
+      },
+      "unhide": {
+        "title": "Unhide {name}",
+        "desc": "Unhide <title></title>? Readers can reach it again only if it is published - a draft stays private.",
+        "confirm": "Yes, unhide it",
+        "success": "{name} is visible again."
+      },
+      "visibility": {
+        "label": "Visibility",
+        "hidden": "Hidden",
+        "visible": "Visible",
+        "hidden_since": "Hidden since {date}",
+        "hidden_record": "{name} hidden",
+        "hidden_desc": "Hidden from the public site, search and the sitemap. Publishing a hidden record does not make it public.",
+        "publish_note": "Publishing a hidden record does not make it public.",
+        "conflict": {
+          "title": "This record changed",
+          "desc": "Someone saved it after this page loaded, so its visibility was not changed. The list has been refreshed - check what changed and try again."
+        }
       },
       "status": {
         "label": "Status",
@@ -1527,7 +1585,9 @@
           "publish": "Published",
           "unpublish": "Unpublished",
           "restore": "Restored",
-          "delete": "Deleted"
+          "delete": "Deleted",
+          "hide": "Hidden",
+          "unhide": "Unhidden"
         },
         "restore": {
           "action": "Restore",
@@ -1608,6 +1668,7 @@
         "can_edit": "Edit",
         "can_delete": "Delete",
         "can_publish": "Publish and unpublish",
+        "can_hide": "Hide and unhide",
         "can_restore": "Restore an earlier version"
       },
       "errors": {
@@ -1643,15 +1704,16 @@
         },
         "status": {
           "saving": "Saving…",
-          "saved": "Draft saved {time}",
-          "saved_just_now": "Draft saved just now",
-          "saved_at": "Draft saved at {time}",
-          "unsaved": "Unsaved changes",
-          "failed": "Draft not saved",
+          "saved": "Autosaved {time}",
+          "saved_just_now": "Autosaved just now",
+          "saved_at": "Autosaved at {time}",
+          "autosaved": "Autosaved",
+          "autosaved_hint": "Your edits are saved automatically, but readers see them only after you save changes.",
+          "failed": "Autosave failed",
           "discard": "Discard",
-          "discard_label": "Discard unsaved changes",
-          "discard_title": "Discard unsaved changes?",
-          "discard_desc": "The record goes back to how it was last saved. Unsaved changes from everyone editing it are discarded too.",
+          "discard_label": "Discard autosaved changes",
+          "discard_title": "Discard autosaved changes?",
+          "discard_desc": "The record goes back to how it was last saved. Autosaved changes from everyone editing it are discarded too.",
           "discard_confirm": "Discard changes",
           "discard_failed": "The changes could not be discarded. Try again."
         },

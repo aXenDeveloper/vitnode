@@ -1,6 +1,7 @@
 import React from "react";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentId } from "@/content/ids";
 
 import type { ContentRichTextRegistry } from "./rich-text";
 import type { ContentLiveSession } from "./use-session";
@@ -19,7 +20,7 @@ export interface ContentLiveContextValue {
   };
   coEditing: boolean;
   discard: () => Promise<boolean>;
-  itemId: number;
+  itemId: ContentId;
   locale: null | string;
   reloadDrafts: () => Promise<void>;
   richText: ContentRichTextRegistry;

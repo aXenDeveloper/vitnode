@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentIdOf } from "../ids";
 import type { ContentLiveRoomRef } from "../live/protocol";
 import type { AnyContentTypeDefinition, ContentFieldMap } from "../types";
 import type { ContentModel } from "./model";
@@ -38,7 +39,12 @@ import {
 } from "./live-store";
 import { broadcastContentLive } from "./live/broadcast";
 import { resetContentLiveRecord } from "./live/hooks";
-import { identifier, jsonBody, jsonResponse, readJson } from "./route-helpers";
+import {
+  contentIdentifier,
+  jsonBody,
+  jsonResponse,
+  readJson,
+} from "./route-helpers";
 
 export const buildContentLiveRoutes = <
   TDefinition extends AnyContentTypeDefinition,
@@ -60,19 +66,19 @@ export const buildContentLiveRoutes = <
   };
   const localized = definition.localization.enabled;
 
-  const params = z.object({ id: z.coerce.number() });
+  const params = definition.schemas.params;
   const notFound = { description: `${name} not found` };
 
   const db = (c: Context): ContentDatabase => c.get("db");
 
-  const roomOf = (id: number): ContentLiveRoomRef => ({
+  const roomOf = (id: ContentIdOf<TDefinition>): ContentLiveRoomRef => ({
     contentTypeId: definition.id,
     itemId: id,
   });
 
   const findRecord = async (
     c: Context,
-    id: number,
+    id: ContentIdOf<TDefinition>,
   ): Promise<Record<string, unknown>> => {
     const row = await model.service(c).findRowById(id);
     if (!row) {
@@ -142,7 +148,7 @@ export const buildContentLiveRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       await findRecord(c, id);
 
       return c.json(
@@ -171,7 +177,7 @@ export const buildContentLiveRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const body = await readJson(c, zodContentFieldLockRequest);
       const user = editor(c);
       const locale = await scopeOf(c, body.field, body.locale);
@@ -222,7 +228,7 @@ export const buildContentLiveRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       await findRecord(c, id);
 
       return c.json(await readContentDrafts(db(c), roomOf(id)), 200);
@@ -251,7 +257,7 @@ export const buildContentLiveRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       const body = await readJson(c, zodContentDraftWrite);
       const user = editor(c);
       const names = Object.keys(body.values);
@@ -350,7 +356,7 @@ export const buildContentLiveRoutes = <
       },
     },
     handler: async c => {
-      const id = identifier(c);
+      const id = contentIdentifier(c, definition);
       await findRecord(c, id);
       await resetContentLiveRecord(c, roomOf(id), "discarded");
 

@@ -38,7 +38,9 @@ export {
   ContentFormRemainingFields,
   ContentFormStatus,
 } from "./primitives";
+export { ContentFormPublicationLabel } from "./publication-label";
 export { ContentFormPublication } from "./publication-status";
+export { ContentFormSaveMenu } from "./save-menu";
 export {
   ContentFormFieldSkeleton,
   type ContentFormSkeletonControl,
@@ -46,3 +48,9 @@ export {
 export { ContentFormStatusSwitch } from "./status-switch";
 export { useTranslationFreshness } from "./translation-freshness";
 export { useContentFormValues, useSetContentFormValue } from "./values";
+export {
+  ContentFormHiddenIcon,
+  ContentFormHiddenNotice,
+  ContentFormVisibilityToggle,
+  useContentFormHidden,
+} from "./visibility";

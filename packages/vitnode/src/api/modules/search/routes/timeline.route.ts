@@ -2,7 +2,10 @@ import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
 
+import type { SearchHiddenAccess } from "@/api/models/search";
+
 import { CONFIG_PLUGIN } from "@/config";
+import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
 import { buildRoute } from "../../../lib/route";
 import { zodPaginationQuery } from "../../../lib/with-pagination";
@@ -21,10 +24,12 @@ export const searchTimeline = async (
   c: Context,
   {
     authorId,
+    hiddenAccess,
     includePrivate,
     query,
   }: {
     authorId: number;
+    hiddenAccess?: SearchHiddenAccess;
     includePrivate: boolean;
     query: z.infer<typeof zodSearchTimelineQuery>;
   },
@@ -33,6 +38,7 @@ export const searchTimeline = async (
     authorId,
     cursor: query.cursor,
     first: positiveIntOrUndefined(query.first),
+    hiddenAccess,
     includePrivate,
     languageCode: query.lang,
     sort: "newest",
@@ -63,9 +69,13 @@ export const timelineRoute = buildRoute({
   handler: async c => {
     const authorId = Number(c.req.valid("param").userId);
 
+    const includePrivate = c.get("user")?.id === authorId;
     const result = await searchTimeline(c, {
       authorId,
-      includePrivate: c.get("user")?.id === authorId,
+      hiddenAccess: includePrivate
+        ? undefined
+        : await contentSearchHiddenAccess(c),
+      includePrivate,
       query: c.req.valid("query"),
     });
 

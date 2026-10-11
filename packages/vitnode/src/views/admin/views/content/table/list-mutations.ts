@@ -1,4 +1,6 @@
+import type { ContentId } from "@/content/ids";
 import type { ContentPublicationAction } from "@/content/publication";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
@@ -39,7 +41,7 @@ const readResult = async (
 };
 
 export interface ContentRowMutationArgs {
-  id: number;
+  id: ContentId;
   target: ContentApiTarget;
 }
 
@@ -54,6 +56,77 @@ export const setContentPublicationInBrowser = async ({
   await readResult(
     async () =>
       await contentApiFetch({
+        method: "post",
+        path: `/${id}/${action}`,
+        target,
+      }),
+  );
+
+export interface ContentDuplicateInput {
+  overrides?: Record<string, unknown>;
+  translations?: Record<string, Record<string, unknown>>;
+}
+
+export interface ContentDuplicatePayload {
+  id: ContentId;
+  locales: string[];
+  row: Record<string, unknown>;
+  skippedLocales: string[];
+  sourceId: ContentId;
+}
+
+export type ContentDuplicateMutationResult = ContentRowMutationResult & {
+  duplicated?: ContentDuplicatePayload;
+};
+
+export const duplicateContentInBrowser = async ({
+  id,
+  input = {},
+  target,
+}: ContentRowMutationArgs & {
+  input?: ContentDuplicateInput;
+}): Promise<ContentDuplicateMutationResult> => {
+  let response: Response;
+
+  try {
+    response = await contentApiFetch({
+      body: input,
+      method: "post",
+      path: `/${id}/duplicate`,
+      target,
+    });
+  } catch {
+    return UNREACHABLE;
+  }
+
+  if (!response.ok) {
+    return {
+      ...contentFailureResult({
+        error: await response.text(),
+        status: response.status,
+      }),
+      status: response.status,
+    };
+  }
+
+  const duplicated = (await response.json()) as ContentDuplicatePayload;
+
+  return { duplicated, id: duplicated.id, status: response.status };
+};
+
+export const setContentVisibilityInBrowser = async ({
+  action,
+  expectedVersion,
+  id,
+  target,
+}: ContentRowMutationArgs & {
+  action: ContentVisibilityAction;
+  expectedVersion?: number;
+}): Promise<ContentRowMutationResult> =>
+  await readResult(
+    async () =>
+      await contentApiFetch({
+        ...(expectedVersion === undefined ? {} : { body: { expectedVersion } }),
         method: "post",
         path: `/${id}/${action}`,
         target,

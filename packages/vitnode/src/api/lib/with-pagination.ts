@@ -217,6 +217,7 @@ async function fetchTotalCount(
 type PaginationIdentifierDataType =
   | "bigint"
   | "number"
+  | "string int64"
   | "string uuid"
   | `bigint ${ColumnDataBigIntConstraint}`
   | `number ${ColumnDataNumberConstraint}`;

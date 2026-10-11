@@ -1,6 +1,8 @@
 import type { $Type } from "drizzle-orm";
 import type {
   AnyPgColumnBuilder,
+  HasIdentity,
+  PgBigIntStringBuilder,
   PgBooleanBuilder,
   PgBuildColumns,
   PgDoublePrecisionBuilder,
@@ -10,11 +12,14 @@ import type {
   PgTableWithColumns,
   PgTextBuilder,
   PgTimestampBuilder,
+  PgUUIDBuilder,
   PgVarcharBuilder,
   SetHasDefault,
+  SetIsPrimaryKey,
   SetNotNull,
 } from "drizzle-orm/pg-core";
 
+import type { ContentIdStrategy } from "../ids";
 import type { RichTextDocument } from "../rich-text/document";
 import type {
   ContentEditorialField,
@@ -25,6 +30,7 @@ import type {
   ContentSharedFieldName,
   ContentSystemField,
   ContentTranslationSystemField,
+  ContentVisibilityField,
   HasColumnDefault,
 } from "../types";
 
@@ -37,21 +43,43 @@ type EnumValuesOf<TField> = TField extends {
   ? [THead, ...TRest]
   : [string, ...string[]];
 
-type BaseBuilderFor<TField> = TField extends { kind: "boolean" }
-  ? PgBooleanBuilder
-  : TField extends { kind: "dateTime" }
-    ? PgTimestampBuilder
-    : TField extends { kind: "enum" }
-      ? PgVarcharBuilder<EnumValuesOf<TField>>
-      : TField extends { integer: false; kind: "number" }
-        ? PgDoublePrecisionBuilder
-        : TField extends { kind: "number" | "relation" | "user" }
-          ? PgIntegerBuilder
-          : TField extends { kind: "textarea" }
-            ? PgTextBuilder
-            : TField extends { kind: "richText" }
-              ? $Type<PgJsonbBuilder, RichTextDocument>
-              : PgVarcharBuilder;
+type ContentIdPkBuilder<TStrategy extends ContentIdStrategy> =
+  TStrategy extends "uuid"
+    ? SetIsPrimaryKey<SetHasDefault<PgUUIDBuilder>>
+    : TStrategy extends "bigint"
+      ? HasIdentity<SetIsPrimaryKey<PgBigIntStringBuilder>, "byDefault">
+      : PgSerialBuilder;
+
+type ContentIdFkBuilder<TStrategy extends ContentIdStrategy> =
+  TStrategy extends "uuid"
+    ? PgUUIDBuilder
+    : TStrategy extends "bigint"
+      ? PgBigIntStringBuilder
+      : PgIntegerBuilder;
+
+type RelationTargetStrategy<TField> = TField extends {
+  target: () => { idStrategy: infer TStrategy extends ContentIdStrategy };
+}
+  ? TStrategy
+  : "serial";
+
+type BaseBuilderFor<TField> = TField extends { kind: "relation" }
+  ? ContentIdFkBuilder<RelationTargetStrategy<TField>>
+  : TField extends { kind: "boolean" }
+    ? PgBooleanBuilder
+    : TField extends { kind: "dateTime" }
+      ? PgTimestampBuilder
+      : TField extends { kind: "enum" }
+        ? PgVarcharBuilder<EnumValuesOf<TField>>
+        : TField extends { integer: false; kind: "number" }
+          ? PgDoublePrecisionBuilder
+          : TField extends { kind: "number" | "user" }
+            ? PgIntegerBuilder
+            : TField extends { kind: "textarea" }
+              ? PgTextBuilder
+              : TField extends { kind: "richText" }
+                ? $Type<PgJsonbBuilder, RichTextDocument>
+                : PgVarcharBuilder;
 
 type ApplyDefault<TBuilder extends AnyPgColumnBuilder, TField> =
   HasColumnDefault<TField> extends true ? SetHasDefault<TBuilder> : TBuilder;
@@ -71,9 +99,11 @@ export type ContentColumnBuilder<TField> =
     : never;
 
 /** `id`, `createdAt` and `updatedAt` - added to every content table. */
-export interface ContentSystemColumnBuilders {
+export interface ContentSystemColumnBuilders<
+  TStrategy extends ContentIdStrategy = "serial",
+> {
   createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
-  id: PgSerialBuilder;
+  id: ContentIdPkBuilder<TStrategy>;
   updatedAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
 }
 
@@ -98,20 +128,35 @@ type EditorialColumnBuilders<TEditorial extends boolean> =
     ? ContentEditorialColumnBuilders
     : Record<never, never>;
 
+export interface ContentVisibilityColumnBuilders {
+  hiddenAt: PgTimestampBuilder;
+  hiddenBy: PgIntegerBuilder;
+}
+
+type VisibilityColumnBuilders<TVisibility extends boolean> =
+  TVisibility extends true
+    ? ContentVisibilityColumnBuilders
+    : Record<never, never>;
+
 export type ContentColumnBuilders<
   TFields,
   TPublication extends boolean = false,
   TEditorial extends boolean = false,
-> = ContentSystemColumnBuilders &
+  TVisibility extends boolean = false,
+  TStrategy extends ContentIdStrategy = "serial",
+> = ContentSystemColumnBuilders<TStrategy> &
   EditorialColumnBuilders<TEditorial> &
-  PublicationColumnBuilders<TPublication> & {
+  PublicationColumnBuilders<TPublication> &
+  VisibilityColumnBuilders<TVisibility> & {
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
 
 /** `itemId`, `languageId`, `version` and the timestamps. */
-export interface ContentTranslationSystemColumnBuilders {
+export interface ContentTranslationSystemColumnBuilders<
+  TStrategy extends ContentIdStrategy = "serial",
+> {
   createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
-  itemId: SetNotNull<PgIntegerBuilder>;
+  itemId: SetNotNull<ContentIdFkBuilder<TStrategy>>;
   languageId: SetNotNull<PgIntegerBuilder>;
   updatedAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
   version: SetNotNull<SetHasDefault<PgIntegerBuilder>>;
@@ -120,7 +165,8 @@ export interface ContentTranslationSystemColumnBuilders {
 export type ContentTranslationColumnBuilders<
   TFields,
   TPublication extends boolean = false,
-> = ContentTranslationSystemColumnBuilders &
+  TStrategy extends ContentIdStrategy = "serial",
+> = ContentTranslationSystemColumnBuilders<TStrategy> &
   PublicationColumnBuilders<TPublication> & {
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
@@ -129,10 +175,11 @@ export type ContentTranslationTable<
   TName extends string,
   TFields,
   TPublication extends boolean = false,
+  TStrategy extends ContentIdStrategy = "serial",
 > = PgTableWithColumns<{
   columns: PgBuildColumns<
     TName,
-    ContentTranslationColumnBuilders<TFields, TPublication>
+    ContentTranslationColumnBuilders<TFields, TPublication, TStrategy>
   >;
   dialect: "pg";
   name: TName;
@@ -152,9 +199,16 @@ export type ContentTranslationTableFor<TDefinition> = TDefinition extends {
   ? ContentTranslationTable<
       string,
       LocalizedFieldsOf<TDefinition>,
-      TPublication
+      TPublication,
+      ContentIdStrategyOf<TDefinition>
     >
   : never;
+
+type ContentIdStrategyOf<TDefinition> = TDefinition extends {
+  idStrategy: infer TStrategy extends ContentIdStrategy;
+}
+  ? TStrategy
+  : "serial";
 
 export type ContentTranslationColumnName<TDefinition> =
   | ContentLocalizedFieldName<TDefinition>
@@ -168,10 +222,18 @@ export type ContentTable<
   TFields,
   TPublication extends boolean = false,
   TEditorial extends boolean = false,
+  TVisibility extends boolean = false,
+  TStrategy extends ContentIdStrategy = "serial",
 > = PgTableWithColumns<{
   columns: PgBuildColumns<
     TName,
-    ContentColumnBuilders<TFields, TPublication, TEditorial>
+    ContentColumnBuilders<
+      TFields,
+      TPublication,
+      TEditorial,
+      TVisibility,
+      TStrategy
+    >
   >;
   dialect: "pg";
   name: TName;
@@ -249,7 +311,9 @@ export type ContentTableFor<TDefinition> = TDefinition extends {
       TName,
       ContentStorageFields<SharedFieldsOf<TDefinition>>,
       TPublication,
-      TEditorial
+      TEditorial,
+      TDefinition extends { visibility: { enabled: true } } ? true : false,
+      ContentIdStrategyOf<TDefinition>
     >
   : never;
 
@@ -273,6 +337,9 @@ export type ContentColumnName<TDefinition> =
       : never)
   | (TDefinition extends { publication: { enabled: true } }
       ? ContentPublicationField
+      : never)
+  | (TDefinition extends { visibility: { enabled: true } }
+      ? ContentVisibilityField
       : never);
 
 /**
@@ -308,14 +375,17 @@ export type ContentReferences<TFields> = {
  * and clamped with a fingerprint, and re-deriving that clamp in the type system
  * would be a second implementation of it.
  */
-export type ContentJunctionTable = PgTableWithColumns<{
+export type ContentJunctionTable<
+  TOwner extends ContentIdStrategy = "serial",
+  TRelated extends ContentIdStrategy = "serial",
+> = PgTableWithColumns<{
   columns: PgBuildColumns<
     string,
     {
       createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
-      itemId: SetNotNull<PgIntegerBuilder>;
+      itemId: SetNotNull<ContentIdFkBuilder<TOwner>>;
       position: SetNotNull<PgIntegerBuilder>;
-      relatedItemId: SetNotNull<PgIntegerBuilder>;
+      relatedItemId: SetNotNull<ContentIdFkBuilder<TRelated>>;
     }
   >;
   dialect: "pg";
@@ -323,8 +393,10 @@ export type ContentJunctionTable = PgTableWithColumns<{
   schema: undefined;
 }>;
 
-/** The generated child table for one repeatable field. */
-export type ContentRepeatableChildTable<TFields> = PgTableWithColumns<{
+export type ContentRepeatableChildTable<
+  TFields,
+  TOwner extends ContentIdStrategy = "serial",
+> = PgTableWithColumns<{
   columns: PgBuildColumns<
     string,
     {
@@ -332,7 +404,7 @@ export type ContentRepeatableChildTable<TFields> = PgTableWithColumns<{
     } & {
       createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
       id: PgSerialBuilder;
-      itemId: SetNotNull<PgIntegerBuilder>;
+      itemId: SetNotNull<ContentIdFkBuilder<TOwner>>;
       position: SetNotNull<PgIntegerBuilder>;
       updatedAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
     }
@@ -342,16 +414,21 @@ export type ContentRepeatableChildTable<TFields> = PgTableWithColumns<{
   schema: undefined;
 }>;
 
-/** Every generated collection table of one content type, by field name. */
 export interface ContentAdvancedTables {
-  junctions: Record<string, ContentJunctionTable>;
-  repeatables: Record<string, ContentRepeatableChildTable<unknown>>;
+  junctions: Record<
+    string,
+    ContentJunctionTable<ContentIdStrategy, ContentIdStrategy>
+  >;
+  repeatables: Record<
+    string,
+    ContentRepeatableChildTable<unknown, ContentIdStrategy>
+  >;
 }
 
 // Loosest shape a foreign key target can take; the FK itself is validated by
 // Postgres, and by `getTableConfig` in the table tests.
 type AnyIdColumn = Parameters<
-  PgIntegerBuilder["references"]
+  PgBigIntStringBuilder["references"]
 >[0] extends () => infer TColumn
   ? TColumn
   : never;

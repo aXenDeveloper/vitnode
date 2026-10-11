@@ -35,7 +35,14 @@ const itemAt = (area: HTMLElement, x: number, y: number) => {
   );
 };
 
-const createIndicator = (area: HTMLElement, indicator: HTMLElement) => {
+const createIndicator = (
+  area: HTMLElement,
+  indicator: HTMLElement,
+  { isGliding }: { isGliding: boolean },
+) => {
+  const setTransition = (property: string) => {
+    if (isGliding) indicator.style.transitionProperty = property;
+  };
   let current: Element | null = null;
 
   const measure = (item: Element) => {
@@ -74,7 +81,7 @@ const createIndicator = (area: HTMLElement, indicator: HTMLElement) => {
 
   const show = (item: Element | null, isVisible = true) => {
     if (!item) {
-      if (current) indicator.style.transitionProperty = "opacity, scale";
+      if (current) setTransition("opacity, scale");
       current = null;
       setVisible(false);
 
@@ -84,11 +91,11 @@ const createIndicator = (area: HTMLElement, indicator: HTMLElement) => {
     const box = measure(item);
     if (item === current) {
       if (!isPlacedAt(box)) {
-        indicator.style.transitionProperty = "scale";
+        setTransition("scale");
         place(box);
       }
     } else {
-      indicator.style.transitionProperty = current ? "" : "opacity, scale";
+      setTransition(current ? "" : "opacity, scale");
       current = item;
       place(box);
     }
@@ -127,8 +134,8 @@ export const glideSidebarIndicators = (area: HTMLElement) => {
     return () => undefined;
   }
 
-  const hover = createIndicator(area, hoverElement);
-  const active = createIndicator(area, activeElement);
+  const hover = createIndicator(area, hoverElement, { isGliding: true });
+  const active = createIndicator(area, activeElement, { isGliding: false });
   let hoveredItem: Element | null = null;
 
   const press = (item: Element | null) => {

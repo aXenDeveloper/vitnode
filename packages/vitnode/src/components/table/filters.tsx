@@ -32,7 +32,20 @@ export interface FilterDataTable {
   label: string;
   onSearch?: (search: string) => Promise<FilterOption[]>;
   options?: FilterOption[];
+  single?: { allLabel: string };
 }
+
+export const nextFilterSelection = (
+  selected: readonly string[],
+  value: string,
+  single = false,
+): string[] => {
+  if (single) return selected.includes(value) ? [] : [value];
+
+  return selected.includes(value)
+    ? selected.filter(item => item !== value)
+    : [...selected, value];
+};
 
 function FilterItem({ filter }: { filter: FilterDataTable }) {
   const t = useTranslations("core.global");
@@ -72,13 +85,9 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
   };
 
   const toggle = (value: string) => {
-    const next = new Set(selectedSet);
-    if (next.has(value)) {
-      next.delete(value);
-    } else {
-      next.add(value);
-    }
-    applySelection([...next]);
+    applySelection(
+      nextFilterSelection(selected, value, Boolean(filter.single)),
+    );
   };
 
   const selectedStaticOptions = isAsync
@@ -134,23 +143,35 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
               <>
                 <CommandEmpty>{t("results_not_found")}</CommandEmpty>
                 <CommandGroup>
+                  {filter.single ? (
+                    <CommandItem
+                      data-checked={selected.length === 0}
+                      onSelect={() => applySelection([])}
+                      value={filter.single.allLabel}
+                    >
+                      <span>{filter.single.allLabel}</span>
+                    </CommandItem>
+                  ) : null}
                   {options.map(option => {
                     const isSelected = selectedSet.has(option.value);
 
                     return (
                       <CommandItem
+                        data-checked={filter.single ? isSelected : undefined}
                         key={option.value}
                         keywords={option.keywords}
                         onSelect={() => toggle(option.value)}
                         value={option.value}
                       >
-                        <Checkbox
-                          aria-hidden
-                          checked={isSelected}
-                          className="pointer-events-none"
-                          readOnly
-                          tabIndex={-1}
-                        />
+                        {filter.single ? null : (
+                          <Checkbox
+                            aria-hidden
+                            checked={isSelected}
+                            className="pointer-events-none"
+                            readOnly
+                            tabIndex={-1}
+                          />
+                        )}
                         <span>{option.label}</span>
                       </CommandItem>
                     );
@@ -158,7 +179,7 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
                 </CommandGroup>
               </>
             )}
-            {selected.length > 0 && (
+            {selected.length > 0 && !filter.single && (
               <>
                 <CommandSeparator />
                 <CommandGroup>

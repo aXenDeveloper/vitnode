@@ -4,6 +4,18 @@ export const CONTENT_PUBLICATION_FIELDS = ["status", "publishedAt"] as const;
 
 export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
+export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
+
+export const CONTENT_VISIBILITY_ACTIONS = ["hide", "unhide"] as const;
+
+export const CONTENT_VISIBILITY_FILTERS = ["hidden", "visible"] as const;
+
+export const CONTENT_ID_STRATEGIES = ["serial", "uuid", "bigint"] as const;
+
+export const CONTENT_DEFAULT_ID_STRATEGY = "serial";
+
+export const CONTENT_ID_KEY_LENGTH = 64;
+
 export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
   "itemId",
   "languageId",
@@ -252,8 +264,10 @@ export const CONTENT_SEARCH_PATH_MAX_LENGTH = 512;
 export const CONTENT_REVISION_OPERATIONS = [
   "create",
   "delete",
+  "hide",
   "publish",
   "restore",
+  "unhide",
   "unpublish",
   "update",
 ] as const;
@@ -382,6 +396,7 @@ export const CONTENT_PERMISSIONS = {
   create: "can_create",
   delete: "can_delete",
   edit: "can_edit",
+  hide: "can_hide",
   publish: "can_publish",
   restore: "can_restore",
   view: "can_view",
@@ -403,3 +418,19 @@ export const CONTENT_TRANSLATION_CONFLICT_CODES = {
 export const CONTENT_UNPROCESSABLE_CODES = {
   notRestorable: "CONTENT_REVISION_NOT_RESTORABLE",
 } as const;
+
+export const CONTENT_DUPLICATE_CODES = {
+  slugConflict: "CONTENT_DUPLICATE_SLUG_CONFLICT",
+  uniqueRequired: "CONTENT_DUPLICATE_UNIQUE_REQUIRED",
+} as const;
+
+export const CONTENT_DUPLICATE_SLUG_CANDIDATES = 20;
+
+export const CONTENT_DUPLICATE_SLUG_ATTEMPTS = 3;
+
+export const CONTENT_DUPLICATE_SLUG_SUFFIX = "copy";
+
+export const CONTENT_DUPLICATE_TITLE_SUFFIX = "(Copy)";
+
+export const CONTENT_DUPLICATE_TITLE_SUFFIX_KEY =
+  "core.content.duplicate.title_suffix";

@@ -1,6 +1,7 @@
 import type { AnyPgColumn, AnyPgColumnBuilder } from "drizzle-orm/pg-core";
 
 import {
+  bigint,
   boolean,
   doublePrecision,
   integer,
@@ -8,10 +9,12 @@ import {
   serial,
   text,
   timestamp,
+  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
 import type { AnyBlockInstance } from "../../blocks/types";
+import type { ContentIdStrategy } from "../ids";
 import type { RichTextDocument } from "../rich-text/document";
 import type { ContentFieldDescriptor } from "../types";
 
@@ -26,8 +29,30 @@ import { ContentEngineError } from "../errors";
 
 export type ColumnReferenceThunk = () => AnyPgColumn;
 
-export const buildSystemColumns = (): Record<string, AnyPgColumnBuilder> => ({
-  id: serial().primaryKey(),
+export const buildIdPrimaryKey = (
+  strategy: ContentIdStrategy,
+): AnyPgColumnBuilder => {
+  if (strategy === "uuid") return uuid().primaryKey().defaultRandom();
+  if (strategy === "bigint") {
+    return bigint({ mode: "string" })
+      .primaryKey()
+      .generatedByDefaultAsIdentity();
+  }
+
+  return serial().primaryKey();
+};
+
+export const buildIdForeignKey = (strategy: ContentIdStrategy) =>
+  strategy === "uuid"
+    ? uuid()
+    : strategy === "bigint"
+      ? bigint({ mode: "string" })
+      : integer();
+
+export const buildSystemColumns = (
+  strategy: ContentIdStrategy = "serial",
+): Record<string, AnyPgColumnBuilder> => ({
+  id: buildIdPrimaryKey(strategy),
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp()
     .notNull()
@@ -48,6 +73,16 @@ export const buildPublicationColumns = (): Record<
     .default("draft"),
 });
 
+export const buildVisibilityColumns = (
+  userReference: ColumnReferenceThunk,
+): Record<string, AnyPgColumnBuilder> => ({
+  hiddenAt: timestamp(),
+  hiddenBy: integer().references(userReference, {
+    onDelete: "set null",
+    onUpdate: "cascade",
+  }),
+});
+
 export const buildEditorialColumns = (): Record<
   string,
   AnyPgColumnBuilder
@@ -57,14 +92,16 @@ export const buildEditorialColumns = (): Record<
 
 export const buildTranslationSystemColumns = ({
   itemReference,
+  itemStrategy = "serial",
   languageReference,
   onItemDelete = "cascade",
 }: {
   itemReference: ColumnReferenceThunk;
+  itemStrategy?: ContentIdStrategy;
   languageReference: ColumnReferenceThunk;
   onItemDelete?: "cascade";
 }): Record<string, AnyPgColumnBuilder> => ({
-  itemId: integer()
+  itemId: buildIdForeignKey(itemStrategy)
     .notNull()
     // Cascade: a record's translations are part of the record, so removing it
     // takes them with it in one statement - there is no loop over locales
@@ -113,11 +150,13 @@ export const buildContentColumn = ({
   fieldValue,
   name,
   reference,
+  referenceStrategy = "serial",
 }: {
   contentTypeId: string;
   fieldValue: ContentFieldDescriptor;
   name: string;
   reference?: ColumnReferenceThunk;
+  referenceStrategy?: ContentIdStrategy;
 }): AnyPgColumnBuilder => {
   const { nullable } = fieldValue;
 
@@ -199,10 +238,12 @@ export const buildContentColumn = ({
         );
       }
 
-      const column = integer().references(reference, {
+      const column = (
+        fieldValue.kind === "relation"
+          ? buildIdForeignKey(referenceStrategy)
+          : integer()
+      ).references(reference, {
         onDelete: fieldValue.onDelete,
-        // Identifiers are `serial`, so an update is only ever a repair; cascade
-        // keeps children pointing at the right row either way.
         onUpdate: "cascade",
       });
 

@@ -130,6 +130,60 @@ describe("contentRowActionIds", () => {
   });
 });
 
+describe("duplicate and visibility", () => {
+  const widest: ContentRowActionInput = {
+    ...everything,
+    canCreate: true,
+    canHide: true,
+    duplication: true,
+    visibility: true,
+  };
+
+  it("offers both before delete when the content type enables them", () => {
+    expect(contentRowActionIds(widest)).toEqual([
+      "preview",
+      "schedule",
+      "history",
+      "delivery",
+      "duplicate",
+      "visibility",
+      "delete",
+    ]);
+  });
+
+  it("offers neither for a content type that enabled neither", () => {
+    expect(
+      contentRowActionIds({ ...widest, duplication: false, visibility: false }),
+    ).toEqual(contentRowActionIds(everything));
+  });
+
+  it("needs can_create and can_view to duplicate, like the route", () => {
+    expect(contentRowActionIds({ ...widest, canCreate: false })).not.toContain(
+      "duplicate",
+    );
+    expect(contentRowActionIds({ ...widest, canView: false })).not.toContain(
+      "duplicate",
+    );
+    expect(
+      contentRowActionIds({
+        ...nothing,
+        canCreate: true,
+        canView: true,
+        duplication: true,
+      }),
+    ).toEqual(["duplicate"]);
+  });
+
+  it("gates hiding on can_hide alone - not on can_publish", () => {
+    expect(contentRowActionIds({ ...widest, canHide: false })).not.toContain(
+      "visibility",
+    );
+    expect(
+      contentRowActionIds({ ...nothing, canHide: true, visibility: true }),
+    ).toEqual(["visibility"]);
+  });
+});
+
 describe("contentRowActionsAreInline", () => {
   it("renders up to the limit as buttons", () => {
     expect(contentRowActionsAreInline(1)).toBe(true);

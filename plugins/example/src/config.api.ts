@@ -10,8 +10,10 @@ import { settingsPage } from "@/content/settings-page";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
+import { eventContent } from "@/database/events";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
+import { tagContent } from "@/database/tags";
 
 import { widgets } from "./widgets";
 import "@/api/lib/events";
@@ -36,8 +38,10 @@ export const exampleApiPlugin = () =>
           advancedArticleContent,
           articleContent,
           categoryContent,
+          eventContent,
           localizedArticleContent,
           pageContent,
+          tagContent,
         ],
       }),
     ],

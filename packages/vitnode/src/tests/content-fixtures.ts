@@ -618,3 +618,255 @@ export const testFileGalleryContentType = defineContentType({
     list: { columns: ["cover", "title", "status", "updatedAt"] },
   },
 });
+
+export const testDuplicableArticleContentType = defineContentType({
+  id: "test.duplicable-article",
+  tableName: "test_duplicable_articles",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  duplication: true,
+  fields: {
+    title: field.text({
+      localized: true,
+      required: true,
+      minLength: 1,
+      maxLength: 20,
+    }),
+    slug: field.slug({ localized: true, source: "title" }),
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        description: field.textarea({ nullable: true, maxLength: 200 }),
+      },
+    }),
+    code: field.text({ unique: true, nullable: true, maxLength: 40 }),
+    featured: field.boolean({ defaultValue: false }),
+    startsAt: field.dateTime({ nullable: true }),
+    author: field.user(),
+    reviewers: field.user({ multiple: true, ordered: true }),
+    categories: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => testCategoryContentType,
+    }),
+    cover: field.file({ maxBytes: 5 * 1024 * 1024 }),
+    gallery: field.file({ multiple: true, maxBytes: 5 * 1024 * 1024 }),
+    faq: field.repeatable({
+      fields: {
+        question: field.text({ required: true, maxLength: 200 }),
+        answer: field.textarea({ required: true }),
+      },
+    }),
+  },
+  publicApi: {
+    path: "duplicable-articles",
+    fields: ["id", "title", "slug", "faq.question", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title", "faq.question"],
+    pathTemplate: "/{locale}/duplicable-articles/{slug}",
+  },
+  delivery: { redirects: true },
+  admin: {
+    titleField: "title",
+    list: { columns: ["status", "updatedAt"] },
+  },
+});
+
+export const testDuplicableNoteContentType = defineContentType({
+  id: "test.duplicable-note",
+  tableName: "test_duplicable_notes",
+  publication: true,
+  duplication: true,
+  fields: {
+    title: field.text({ required: true, minLength: 1, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    code: field.text({ required: true, unique: true, maxLength: 40 }),
+  },
+  admin: {
+    titleField: "title",
+    list: { columns: ["title", "status", "updatedAt"] },
+  },
+});
+
+export const testHideablePostContentType = defineContentType({
+  id: "test.hideable-post",
+  tableName: "test_hideable_posts",
+  publication: true,
+  visibility: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
+  },
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  publicApi: {
+    path: "hideable-posts",
+    fields: ["id", "title", "slug", "excerpt", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["excerpt"],
+    pathTemplate: "/hideable-posts/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+  admin: { titleField: "title" },
+});
+
+export const testHideableNoteContentType = defineContentType({
+  id: "test.hideable-note",
+  tableName: "test_hideable_notes",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+  },
+  publicApi: {
+    path: "hideable-notes",
+    fields: ["id", "title", "slug", "publishedAt"],
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/hideable-notes/{slug}",
+  },
+});
+
+export const testUuidTagContentType = defineContentType({
+  id: "test.uuid-tag",
+  tableName: "test_uuid_tags",
+  idStrategy: "uuid",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  visibility: true,
+  duplication: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+  },
+  fields: {
+    name: field.text({ localized: true, required: true, maxLength: 100 }),
+    slug: field.slug({ localized: true, source: "name" }),
+    category: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testCategoryContentType,
+    }),
+    relatedTags: field.relation({ multiple: true, ordered: true, self: true }),
+  },
+  publicApi: {
+    path: "uuid-tags",
+    fields: ["id", "name", "slug", "category", "relatedTags", "publishedAt"],
+    filterableFields: ["relatedTags"],
+    defaultOrderBy: "publishedAt",
+  },
+  admin: { titleField: "name" },
+});
+
+export const testBigintEventContentType = defineContentType({
+  id: "test.bigint-event",
+  tableName: "test_bigint_events",
+  idStrategy: "bigint",
+  publication: true,
+  visibility: true,
+  duplication: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
+  },
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ nullable: true }),
+    primaryTag: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testUuidTagContentType,
+    }),
+    category: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testCategoryContentType,
+    }),
+    tags: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => testUuidTagContentType,
+    }),
+    relatedEvents: field.relation({ multiple: true, self: true }),
+    sessions: field.repeatable({
+      fields: {
+        title: field.text({ required: true, maxLength: 100 }),
+        startsAt: field.dateTime({ nullable: true }),
+      },
+    }),
+  },
+  publicApi: {
+    path: "bigint-events",
+    fields: [
+      "id",
+      "title",
+      "slug",
+      "primaryTag",
+      "category",
+      "tags",
+      "relatedEvents",
+      "sessions.title",
+      "publishedAt",
+    ],
+    filterableFields: ["tags"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title", "sessions.title"],
+    pathTemplate: "/bigint-events/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+  admin: { titleField: "title", list: { columns: ["title", "tags"] } },
+});
+
+export const testBigintPageContentType = defineContentType({
+  id: "test.bigint-page",
+  tableName: "test_bigint_pages",
+  idStrategy: "bigint",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    path: "bigint-pages",
+    fields: ["id", "title", "slug", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/{locale}/bigint-pages/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    hreflang: { xDefault: "defaultLocale" },
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+});

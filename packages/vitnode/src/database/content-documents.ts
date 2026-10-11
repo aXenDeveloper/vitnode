@@ -1,5 +1,6 @@
 import { camelCase, customType, index, uniqueIndex } from "drizzle-orm/pg-core";
 
+import { CONTENT_ID_KEY_LENGTH } from "../content/const";
 import { core_users } from "./users";
 
 const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
@@ -19,7 +20,7 @@ export const core_content_documents = camelCase.table.withRLS(
   t => ({
     id: t.serial().primaryKey(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     field: t.varchar({ length: 100 }).notNull(),
     language: t.varchar({ length: 35 }).notNull().default(""),
     state: bytea().notNull(),

@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
+import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFilterInput,
@@ -25,11 +26,16 @@ import {
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import { contentRelationStrategy, parseContentId } from "../ids";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
 import { createContentPublicRowHydrator } from "./public-row-hydration";
-import { publicationColumns, publishedCondition } from "./publication";
+import {
+  contentPublicReadCondition,
+  publicationColumns,
+  publishedCondition,
+} from "./publication";
 import {
   buildFilterCondition,
   buildOrderColumn,
@@ -43,7 +49,11 @@ export interface ContentPublicReadOptions {
   locale?: string;
 }
 
-export interface ContentPublicSlugReadOptions extends ContentPublicReadOptions {
+export interface ContentPublicItemReadOptions extends ContentPublicReadOptions {
+  hidden?: boolean;
+}
+
+export interface ContentPublicSlugReadOptions extends ContentPublicItemReadOptions {
   fallback?: boolean;
 }
 
@@ -69,8 +79,8 @@ export interface ContentPublicFindManyArgs<
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
   findById: (
-    id: number,
-    options?: ContentPublicReadOptions,
+    id: ContentIdOf<TDefinition>,
+    options?: ContentPublicItemReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
 
   findBySlug: (
@@ -101,12 +111,15 @@ export const createContentPublicProjector = <
   const exposesId = exposed.includes("id");
   const flat = exposed.filter(name => splitContentFieldPath(name) === null);
   // A `user` field is never exposable, so this is only ever relations.
-  const exposedToOne = new Set(
-    flat.filter(
-      name =>
-        definition.fields[name]?.kind === "relation" &&
-        !isContentReferenceCollection(definition.fields[name]),
-    ),
+  const exposedToOne = new Map(
+    flat.flatMap(name => {
+      const fieldValue = definition.fields[name];
+
+      return fieldValue?.kind === "relation" &&
+        !isContentReferenceCollection(fieldValue)
+        ? [[name, contentRelationStrategy(definition, fieldValue)] as const]
+        : [];
+    }),
   );
   const exposedToMany = new Set(
     flat.filter(
@@ -135,13 +148,14 @@ export const createContentPublicProjector = <
         continue;
       }
 
-      if (!exposedToOne.has(name)) {
+      const strategy = exposedToOne.get(name);
+      if (strategy === undefined) {
         projected[name] = row[name];
         continue;
       }
 
-      const id = row[name];
-      projected[name] = typeof id === "number" ? { id } : null;
+      const id = parseContentId(strategy, row[name]);
+      projected[name] = id === null ? null : { id };
     }
 
     for (const { leaves, owner, repeatable } of containers) {
@@ -286,12 +300,13 @@ export const createContentPublicService = <
 
   const readOne = async (
     condition: SQL,
+    options: ContentPublicItemReadOptions = {},
   ): Promise<ContentPublicSelect<TDefinition> | null> => {
     const [row] = await c
       .get("db")
       .select(selection())
       .from(table)
-      .where(and(publishedCondition(published), condition))
+      .where(and(contentPublicReadCondition(published, options), condition))
       .limit(1);
 
     if (!row) return null;
@@ -302,10 +317,11 @@ export const createContentPublicService = <
   };
 
   return {
-    findById: async id => await readOne(eq(primaryCursor, id)),
+    findById: async (id, options) =>
+      await readOne(eq(primaryCursor, id), options),
 
-    findBySlug: async slug =>
-      await readOne(eq(columns[publicApi.slugField], slug)),
+    findBySlug: async (slug, options) =>
+      await readOne(eq(columns[publicApi.slugField], slug), options),
 
     findMany: async ({ filters = {}, orderBy, query = {} } = {}) => {
       const conditions = [

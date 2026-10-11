@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
+import type { ContentId } from "@/content/ids";
 import type { TranslationSourceRecord } from "@/lib/ai/translation-freshness";
 
 import {
@@ -18,7 +19,7 @@ interface PendingRecord<Field extends string> {
   sourceFingerprint: string;
 }
 
-const recordsKey = (contentTypeId: string, itemId: number) => [
+const recordsKey = (contentTypeId: string, itemId: ContentId) => [
   "ai",
   "translation-sources",
   contentTypeId,
@@ -34,7 +35,7 @@ export const useTranslationFreshness = <Field extends string>({
 }: {
   contentTypeId: string;
   fields: readonly Field[];
-  itemId: number | undefined;
+  itemId: ContentId | undefined;
   source: string;
   values: Partial<Record<Field, unknown>>;
 }) => {

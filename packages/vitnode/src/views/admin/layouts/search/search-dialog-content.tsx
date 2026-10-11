@@ -8,7 +8,6 @@ import { Avatar } from "@/components/avatar";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import {
   Command,
-  CommandDialog,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -78,7 +77,6 @@ const NavCommandItem = ({
 export interface SearchAdminDialogContentProps {
   items: AdminSearchNavItem[];
   onNavigate: (href: string) => void;
-  onOpenChange: (open: boolean) => void;
   open: boolean;
 
   searchUsers?: AdminUserSearch;
@@ -87,7 +85,6 @@ export interface SearchAdminDialogContentProps {
 export const SearchAdminDialogContent = ({
   items,
   onNavigate,
-  onOpenChange,
   open,
   searchUsers,
 }: SearchAdminDialogContentProps) => {
@@ -96,14 +93,11 @@ export const SearchAdminDialogContent = ({
 
   const [query, setQuery] = React.useState("");
   const [usersQuery, setUsersQuery] = React.useState("");
-  const isOpen = React.useDeferredValue(open, false);
 
   const debounceUsersQuery = useDebouncedCallback(
     setUsersQuery,
     USERS_DEBOUNCE_MS,
   );
-
-  const pendingHrefRef = React.useRef<null | string>(null);
 
   const canViewUsers = useAdminStaffPermission({
     plugin: CONFIG_PLUGIN.pluginId,
@@ -114,9 +108,7 @@ export const SearchAdminDialogContent = ({
   const hasUserSearch = canViewUsers && searchUsers !== undefined;
   const trimmedUsersQuery = usersQuery.trim();
   const canSearchUsers =
-    isOpen &&
-    hasUserSearch &&
-    trimmedUsersQuery.length >= MIN_USERS_QUERY_LENGTH;
+    open && hasUserSearch && trimmedUsersQuery.length >= MIN_USERS_QUERY_LENGTH;
 
   const { data: users, isFetching: isFetchingUsers } = useQuery({
     queryKey: adminSearchUsersQueryKey(trimmedUsersQuery),
@@ -163,8 +155,7 @@ export const SearchAdminDialogContent = ({
 
   const navigateOnClose = (href: string) => {
     debounceUsersQuery.cancel();
-    pendingHrefRef.current = href;
-    onOpenChange(false);
+    onNavigate(href);
   };
 
   const trimmedQuery = query.trim();
@@ -177,90 +168,70 @@ export const SearchAdminDialogContent = ({
     !pagesCount && !visibleUsers.length && !showUsersHint && !showUsersSkeleton;
 
   return (
-    <CommandDialog
-      description={t("search.desc")}
-      onOpenChange={onOpenChange}
-      onOpenChangeComplete={isOpen => {
-        if (isOpen) return;
+    <Command label={t("search.title")} shouldFilter={false}>
+      <CommandInput
+        autoFocus
+        onValueChange={handleChangeQuery}
+        placeholder={t("search.placeholder")}
+        value={query}
+      />
 
-        const href = pendingHrefRef.current;
-        pendingHrefRef.current = null;
-        setQuery("");
-        setUsersQuery("");
+      <CommandList className="max-h-[60vh]">
+        {isEmpty && (
+          <div className="text-muted-foreground py-6 text-center text-sm">
+            {tCore("results_not_found")}
+          </div>
+        )}
 
-        if (href) {
-          onNavigate(href);
-        }
-      }}
-      open={isOpen}
-      title={t("search.title")}
-    >
-      <Command label={t("search.title")} shouldFilter={false}>
-        <CommandInput
-          onValueChange={handleChangeQuery}
-          placeholder={t("search.placeholder")}
-          value={query}
-        />
+        {groupedPages.map(([groupTitle, groupItems]) => (
+          <CommandGroup heading={groupTitle} key={groupTitle}>
+            {groupItems.map(item => (
+              <NavCommandItem
+                item={item}
+                key={item.href}
+                onNavigate={navigateOnClose}
+              />
+            ))}
+          </CommandGroup>
+        ))}
 
-        <CommandList className="max-h-[60vh]">
-          {isEmpty && (
-            <div className="text-muted-foreground py-6 text-center text-sm">
-              {tCore("results_not_found")}
-            </div>
+        {!!pagesCount &&
+          (!!visibleUsers.length || showUsersSkeleton || showUsersHint) && (
+            <CommandSeparator />
           )}
 
-          {groupedPages.map(([groupTitle, groupItems]) => (
-            <CommandGroup heading={groupTitle} key={groupTitle}>
-              {groupItems.map(item => (
-                <NavCommandItem
-                  item={item}
-                  key={item.href}
-                  onNavigate={navigateOnClose}
-                />
-              ))}
-            </CommandGroup>
-          ))}
+        {showUsersHint && (
+          <div className="text-muted-foreground py-4 text-center text-xs">
+            {t("search.hint", { count: MIN_USERS_QUERY_LENGTH })}
+          </div>
+        )}
 
-          {!!pagesCount &&
-            (!!visibleUsers.length || showUsersSkeleton || showUsersHint) && (
-              <CommandSeparator />
-            )}
+        {showUsersSkeleton && (
+          <div className="space-y-1 p-1">
+            {["a", "b", "c"].map(id => (
+              <Skeleton className="h-8 w-full rounded-lg" key={id} />
+            ))}
+          </div>
+        )}
 
-          {showUsersHint && (
-            <div className="text-muted-foreground py-4 text-center text-xs">
-              {t("search.hint", { count: MIN_USERS_QUERY_LENGTH })}
-            </div>
-          )}
-
-          {showUsersSkeleton && (
-            <div className="space-y-1 p-1">
-              {["a", "b", "c"].map(id => (
-                <Skeleton className="h-8 w-full rounded-lg" key={id} />
-              ))}
-            </div>
-          )}
-
-          {!!visibleUsers.length && (
-            <CommandGroup heading={t("nav.users.title")}>
-              {visibleUsers.map(user => (
-                <CommandItem
-                  key={user.id}
-                  onSelect={() =>
-                    navigateOnClose(`/admin/core/users/${user.id}`)
-                  }
-                  value={`user-${user.id}`}
-                >
-                  <Avatar size={20} user={user} />
-                  <span className="truncate">{user.name}</span>
-                  <CommandShortcut className="truncate tracking-normal">
-                    @{user.nameCode}
-                  </CommandShortcut>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </CommandList>
-      </Command>
-    </CommandDialog>
+        {!!visibleUsers.length && (
+          <CommandGroup heading={t("nav.users.title")}>
+            {visibleUsers.map(user => (
+              <CommandItem
+                key={user.id}
+                onSelect={() => navigateOnClose(`/admin/core/users/${user.id}`)}
+                value={`user-${user.id}`}
+              >
+                <Avatar size={20} user={user} />
+                <span className="truncate">{user.name}</span>
+                <CommandShortcut className="truncate tracking-normal">
+                  @{user.nameCode}
+                </CommandShortcut>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+      </CommandList>
+    </Command>
   );
 };

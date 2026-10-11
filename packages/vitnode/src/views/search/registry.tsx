@@ -11,7 +11,7 @@ export interface SearchTypeRenderer {
 // A type without an entry falls back to the generic renderer, so a plugin that
 // indexes a new type never breaks the feed.
 const renderers: Record<string, SearchTypeRenderer> = {
-  blog_post: { icon: FileTextIcon, labelKey: "types.blog_post" },
+  "blog.post": { icon: FileTextIcon, labelKey: "types.blog_post" },
 };
 
 const fallback: SearchTypeRenderer = {

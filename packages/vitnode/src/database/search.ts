@@ -3,6 +3,9 @@ import type { SQL } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { camelCase, customType, index, unique } from "drizzle-orm/pg-core";
 
+import { CONTENT_ID_KEY_LENGTH } from "../content/const";
+import { core_files } from "./files";
+
 // Drizzle ships no native `tsvector` type, so we declare it once and reuse it
 // for the generated full-text-search column below. The column and its GIN index
 // live in the schema (not a hand-written migration) so `drizzle-kit generate`
@@ -68,7 +71,7 @@ export const core_search_index = camelCase.table.withRLS(
     id: t.serial().primaryKey(),
     pluginId: t.varchar({ length: 255 }).notNull(),
     itemType: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     languageCode: t.varchar({ length: 32 }).notNull().default(""),
     authorIds: t
       .integer()
@@ -90,6 +93,10 @@ export const core_search_index = camelCase.table.withRLS(
     containerId: t.integer(),
     url: t.text(),
     isPublic: t.boolean().notNull().default(true),
+    isHidden: t.boolean().notNull().default(false),
+    imageId: t
+      .integer()
+      .references(() => core_files.id, { onDelete: "set null" }),
     metadata: t.jsonb().$type<Record<string, unknown>>().notNull().default({}),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t.timestamp(),
@@ -107,5 +114,6 @@ export const core_search_index = camelCase.table.withRLS(
     index("core_search_index_item_type_idx").on(t.itemType),
     index("core_search_index_language_code_idx").on(t.languageCode),
     index("core_search_index_is_public_idx").on(t.isPublic),
+    index("core_search_index_image_id_idx").on(t.imageId),
   ],
 );

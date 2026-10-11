@@ -235,7 +235,7 @@ curl http://localhost:3000/api/@vitnode/example/content/articles/delivery/resolv
 
 ## Keep old URLs working
 
-Renaming a slug breaks links people already shared. With `delivery.redirects`, the old slug is stored in `core_content_slug_history` when an editor changes it, and the resolve route answers `{ "type": "redirect", "status": 308, "location": "/articles/new-slug" }`. `contentDeliveryPage` turns that into a `308` redirect.
+Renaming a slug breaks links people already shared. With `delivery.redirects`, the old slug is stored in `core_content_slug_history` when an editor changes it, and the resolve route answers `{ "type": "redirect", "status": 308, "location": "/articles/new-slug" }`. `contentDeliveryPage` turns that into a `308` redirect. While a record is [hidden](/docs/content-engine/content-visibility), its page and its old slugs answer `404` instead.
 
 ## Sitemap entries
 

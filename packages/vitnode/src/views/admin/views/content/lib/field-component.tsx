@@ -7,6 +7,7 @@ import type {
   ContentFileDescriptor,
   ContentFileFieldValue,
 } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 
 import { AiFieldAssist } from "@/components/ai/ai-field-assist";
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
@@ -40,7 +41,7 @@ export interface ContentOption {
 
 export type ContentOptionsLoader = (args: {
   field: string;
-  ids?: number[];
+  ids?: ContentId[];
   search: string;
 }) => Promise<ContentOption[]>;
 

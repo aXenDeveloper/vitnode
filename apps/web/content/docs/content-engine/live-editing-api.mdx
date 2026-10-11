@@ -117,6 +117,8 @@ Rich text documents are [Yjs](https://yjs.dev) documents, one per record, field 
 | `core_content_field_locks` | Active field locks with their holder and expiry                   |
 | `core_content_documents`   | The Yjs state of each rich text field, per record and language    |
 
+Each table keys the record by its id as text in a `varchar(64)` `itemId`, so live editing works with every [id strategy](/docs/content-engine/id-strategy). The socket accepts a uuid or bigint id and checks it against the content type's strategy, refusing a malformed one.
+
 The daily `content-editorial-cleanup` [cron job](/docs/dev/cron) removes expired locks, documents untouched for 30 days, and drafts untouched for 30 days whose record has moved on since. A stale draft whose record has not changed is kept, because it is somebody's unsaved work. When an editor's last tab leaves a record, their locks go too.
 
 ## Use live state in a custom form layout
@@ -149,7 +151,7 @@ Register it with `forms: { layout: ArticleFormLayout }` in the type's `contentTy
 | `ContentLivePresence`         | Avatars of everyone else in the record. `max` sets how many show before **+N**, 5 by default                                                                                     |
 | `ContentLiveFieldPresence`    | Avatars of the people in one `field` and `locale`                                                                                                                                |
 | `ContentLiveLanguagePresence` | Who is working in one `locale`                                                                                                                                                   |
-| `ContentLiveStatus`           | The autosave state: **Saving…**, **Draft saved at…**, **Draft not saved**, **Unsaved changes**                                                                                   |
+| `ContentLiveStatus`           | The autosave state: **Saving…**, **Autosaved 5 minutes ago** (with an amber dot while the draft is not saved into the record), **Autosave failed**                               |
 | `useContentLive()`            | The session: `session.members`, `session.locks`, `status` (`saving`, `savedAt`, `failed`, `dirty`) and `coEditing`                                                               |
 | `useContentRichTextReplace()` | `(field, locale, document) => void` that replaces a rich text field through the shared editor, so everyone sees it and it can be undone. `null` while rich text is not co-edited |
 

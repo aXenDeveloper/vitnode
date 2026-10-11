@@ -1,8 +1,11 @@
+import type { ContentId } from "@/content/ids";
+
+import { contentIdKey } from "@/content/ids";
 import { createWebSocketChannel } from "@/ws/types";
 
 export interface ContentLiveRoomRef {
   contentTypeId: string;
-  itemId: number;
+  itemId: ContentId;
 }
 
 export interface ContentLiveDocRef extends ContentLiveRoomRef {
@@ -138,7 +141,8 @@ export const contentLiveChannel = createWebSocketChannel<
 export const contentLiveRoom = ({
   contentTypeId,
   itemId,
-}: ContentLiveRoomRef): string => `content:${contentTypeId}:${itemId}`;
+}: ContentLiveRoomRef): string =>
+  `content:${contentTypeId}:${contentIdKey(itemId)}`;
 
 export const contentLiveDocRoom = ({
   contentTypeId,
@@ -146,12 +150,14 @@ export const contentLiveDocRoom = ({
   itemId,
   locale,
 }: ContentLiveDocRef): string =>
-  `content-doc:${contentTypeId}:${itemId}:${field}:${locale ?? "_"}`;
+  `content-doc:${contentTypeId}:${contentIdKey(itemId)}:${field}:${locale ?? "_"}`;
 
 export const sameContentLiveRoom = (
   a: ContentLiveRoomRef,
   b: ContentLiveRoomRef,
-): boolean => a.contentTypeId === b.contentTypeId && a.itemId === b.itemId;
+): boolean =>
+  a.contentTypeId === b.contentTypeId &&
+  contentIdKey(a.itemId) === contentIdKey(b.itemId);
 
 export const sameContentLiveDoc = (
   a: ContentLiveDocRef,

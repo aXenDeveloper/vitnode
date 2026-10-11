@@ -3,13 +3,16 @@ import type { Context } from "hono";
 import { and, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import type { ContentId } from "@/content/ids";
 import type { RegisteredContentType } from "@/content/registry";
 
 import { storageUrlOf } from "@/api/lib/storage-url";
+import { contentIdFromKey, contentIdKey } from "@/content/ids";
 import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
 import { core_search_index } from "@/database/search";
 import { core_users } from "@/database/users";
+import { parseImageDimensions } from "@/lib/api/upload";
 import { stripHtml } from "@/lib/strip-html";
 
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
@@ -20,8 +23,10 @@ export interface SearchDocument {
   containerType?: string;
   content: string;
   createdAt: Date;
+  imageId?: null | number;
+  isHidden?: boolean;
   isPublic?: boolean;
-  itemId: number;
+  itemId: ContentId;
   itemType: string;
   // Locale of this projection. Multi-language content emits one document per
   // language; single-language content may leave it empty.
@@ -44,6 +49,7 @@ export interface SearchQueryParams {
   dateFrom?: Date;
   dateTo?: Date;
   first?: number;
+  hiddenAccess?: SearchHiddenAccess;
   includePrivate?: boolean;
   itemTypes?: string[];
   // Restrict results to one locale (the viewer's). Rows with an empty
@@ -52,6 +58,11 @@ export interface SearchQueryParams {
   languageFallbacks?: SearchLanguageFallback[];
   sort?: "newest" | "oldest" | "relevance";
   term?: string;
+}
+
+export interface SearchHiddenAccess {
+  authorId?: number;
+  itemTypes: readonly string[];
 }
 
 export interface SearchLanguageFallback {
@@ -72,6 +83,23 @@ export const searchLanguageFallbacks = (
       : [],
   );
 
+const NUMERIC_KEY = /^[1-9][0-9]{0,14}$/;
+
+export const searchItemIdFromKey = (
+  contentTypes: readonly RegisteredContentType[],
+  itemType: string,
+  key: string,
+): ContentId => {
+  const contentType = contentTypes.find(
+    entry => entry.definition.id === itemType,
+  );
+  if (contentType) {
+    return contentIdFromKey(contentType.definition.idStrategy, key) ?? key;
+  }
+
+  return NUMERIC_KEY.test(key) ? Number(key) : key;
+};
+
 export interface SearchHitAuthor {
   avatarColor: string;
   avatarUrl: null | string;
@@ -80,16 +108,27 @@ export interface SearchHitAuthor {
   nameCode: string;
 }
 
+export interface SearchHitImage {
+  height?: number;
+  url: string;
+  width?: number;
+}
+
 export interface SearchHit {
   author: null | SearchHitAuthor;
   authorId: null | number;
+  authorIds: number[];
+  authors: SearchHitAuthor[];
   containerId: null | number;
   containerType: null | string;
   content: string;
   createdAt: Date;
   id: number;
+  image: null | SearchHitImage;
+  imageId: null | number;
+  isHidden: boolean;
   isPublic: boolean;
-  itemId: number;
+  itemId: ContentId;
   itemType: string;
   languageCode: string;
   metadata: Record<string, unknown>;
@@ -257,12 +296,13 @@ export interface SearchProviderApiPlugin {
    * that does not with a localized searchable content type refuses to boot. See
    * {@link assertSearchProviderCapabilities}.
    */
-  delete: (
+  // eslint-disable-next-line @typescript-eslint/method-signature-style
+  delete(
     c: Context,
     itemType: string,
-    itemId: number,
+    itemId: ContentId,
     languageCode?: string,
-  ) => Promise<void>;
+  ): Promise<void>;
   index: (c: Context, doc: SearchDocument) => Promise<void>;
   name: string;
   ping?: (c: Context) => Promise<boolean>;
@@ -272,7 +312,7 @@ export interface SearchProviderApiPlugin {
 const toRow = (doc: SearchDocument) => ({
   pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
-  itemId: doc.itemId,
+  itemId: contentIdKey(doc.itemId),
   languageCode: doc.languageCode ?? "",
   authorIds: [...new Set(doc.authorIds ?? [])],
   title: doc.title,
@@ -281,6 +321,8 @@ const toRow = (doc: SearchDocument) => ({
   containerId: doc.containerId ?? null,
   url: doc.url ?? null,
   isPublic: doc.isPublic ?? true,
+  isHidden: doc.isHidden ?? false,
+  imageId: doc.imageId ?? null,
   metadata: doc.metadata ?? {},
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt ?? null,
@@ -294,17 +336,17 @@ export class SearchModel {
 
   protected readonly c: Context;
 
-  // Providers that don't join the users table (e.g. Elasticsearch) return hits
-  // with `authorId` but `author: null`; fill in the display fields here.
   private async hydrateAuthors(edges: SearchHit[]): Promise<SearchHit[]> {
-    const missing = [
-      ...new Set(
-        edges.flatMap(edge =>
-          !edge.author && edge.authorId ? [edge.authorId] : [],
-        ),
-      ),
-    ];
-    if (missing.length === 0) return edges;
+    const idsOf = (edge: SearchHit): number[] =>
+      edge.authorIds.length > 0
+        ? edge.authorIds
+        : edge.authorId
+          ? [edge.authorId]
+          : [];
+    const wanted = [...new Set(edges.flatMap(idsOf))];
+    if (wanted.length === 0) {
+      return edges.map(edge => ({ ...edge, authorIds: [], authors: [] }));
+    }
 
     const rows = await this.c
       .get("db")
@@ -317,7 +359,7 @@ export class SearchModel {
       })
       .from(core_users)
       .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
-      .where(inArray(core_users.id, missing));
+      .where(inArray(core_users.id, wanted));
 
     const byId = new Map(
       rows.map(({ avatarKey, ...row }) => [
@@ -326,11 +368,70 @@ export class SearchModel {
       ]),
     );
 
-    return edges.map(edge =>
-      edge.author || !edge.authorId
-        ? edge
-        : { ...edge, author: byId.get(edge.authorId) ?? null },
+    return edges.map(edge => {
+      const authorIds = idsOf(edge);
+      const authors = authorIds.flatMap(id => {
+        const author = byId.get(id);
+
+        return author ? [author] : [];
+      });
+
+      return {
+        ...edge,
+        author: edge.author ?? authors[0] ?? null,
+        authorIds,
+        authors,
+      };
+    });
+  }
+
+  private async hydrateImages(edges: SearchHit[]): Promise<SearchHit[]> {
+    const wanted = [
+      ...new Set(
+        edges.flatMap(edge => (edge.imageId === null ? [] : [edge.imageId])),
+      ),
+    ];
+    if (wanted.length === 0) {
+      return edges.map(edge => ({ ...edge, image: null }));
+    }
+
+    const rows = await this.c
+      .get("db")
+      .select({
+        id: core_files.id,
+        key: core_files.key,
+        metadata: core_files.metadata,
+        mimeType: core_files.mimeType,
+      })
+      .from(core_files)
+      .where(inArray(core_files.id, wanted));
+
+    const byId = new Map(
+      rows.flatMap(row => {
+        const url = row.mimeType?.startsWith("image/")
+          ? storageUrlOf(this.c, row.key)
+          : null;
+        if (!url) return [];
+        const dimensions = parseImageDimensions(row.metadata);
+
+        return [
+          [
+            row.id,
+            {
+              url,
+              ...(dimensions
+                ? { height: dimensions.height, width: dimensions.width }
+                : {}),
+            },
+          ] as const,
+        ];
+      }),
     );
+
+    return edges.map(edge => ({
+      ...edge,
+      image: edge.imageId === null ? null : (byId.get(edge.imageId) ?? null),
+    }));
   }
 
   private provider(): SearchProviderApiPlugin {
@@ -379,6 +480,8 @@ export class SearchModel {
           containerId: row.containerId,
           url: row.url,
           isPublic: row.isPublic,
+          isHidden: row.isHidden,
+          imageId: row.imageId,
           metadata: row.metadata,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -435,7 +538,7 @@ export class SearchModel {
    */
   async delete(
     itemType: string,
-    itemId: number,
+    itemId: ContentId,
     languageCode?: string,
   ): Promise<void> {
     await this.c
@@ -444,7 +547,7 @@ export class SearchModel {
       .where(
         and(
           eq(core_search_index.itemType, itemType),
-          eq(core_search_index.itemId, itemId),
+          eq(core_search_index.itemId, contentIdKey(itemId)),
           languageCode === undefined
             ? undefined
             : eq(core_search_index.languageCode, languageCode),
@@ -497,6 +600,9 @@ export class SearchModel {
       languageFallbacks.length > 0 ? { ...params, languageFallbacks } : params,
     );
 
-    return { ...result, edges: await this.hydrateAuthors(result.edges) };
+    return {
+      ...result,
+      edges: await this.hydrateImages(await this.hydrateAuthors(result.edges)),
+    };
   }
 }

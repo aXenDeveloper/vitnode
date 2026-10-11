@@ -94,7 +94,9 @@ export const rawApiFetch = async ({
   const url = buildApiUrl(urlArgs);
 
   const headers = new Headers({
-    ...(formData ? {} : { "Content-Type": "application/json" }),
+    ...(formData || body === undefined
+      ? {}
+      : { "Content-Type": "application/json" }),
     ...additionalHeaders,
   });
 

@@ -1,9 +1,11 @@
+import type { ContentId, ContentIdStrategy } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
 } from "../const";
+import { parseContentId } from "../ids";
 
 /** What `/admin/content/[...slug]` was actually asked for. */
 export type ContentAdminAction = "create" | "edit" | "list";
@@ -12,22 +14,18 @@ export interface ContentAdminRoute {
   action: ContentAdminAction;
   /** The content type id the slug resolved to. */
   contentTypeId: string;
-  /** The record being edited. Only ever set for `edit`. */
-  itemId?: number;
+  itemId?: ContentId;
 }
 
 export type ContentTypeLookup = (
   adminPath: string,
 ) => AnyContentTypeDefinition | undefined;
 
-/** Only a positive integer is a record id - `01`, `1.5` and `-1` are not. */
-const parseItemId = (segment: string | undefined): null | number => {
-  if (segment === undefined || !/^[1-9][0-9]*$/.test(segment)) return null;
-
-  const id = Number(segment);
-
-  return Number.isSafeInteger(id) ? id : null;
-};
+const parseItemId = (
+  strategy: ContentIdStrategy,
+  segment: string | undefined,
+): ContentId | null =>
+  segment === undefined ? null : parseContentId(strategy, segment);
 
 export const resolveContentAdminRoute = (
   slug: readonly string[],
@@ -48,11 +46,11 @@ export const resolveContentAdminRoute = (
   }
 
   if (last === CONTENT_ADMIN_EDIT_SEGMENT) {
-    const itemId = parseItemId(slug[slug.length - 2]);
-    if (itemId === null) return undefined;
-
     const definition = lookup(slug.slice(0, -2).join("/"));
     if (definition?.admin.edit.mode !== "page") return undefined;
+
+    const itemId = parseItemId(definition.idStrategy, slug[slug.length - 2]);
+    if (itemId === null) return undefined;
 
     return { action: "edit", contentTypeId: definition.id, itemId };
   }

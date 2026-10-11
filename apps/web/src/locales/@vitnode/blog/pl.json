@@ -164,7 +164,12 @@
     },
     "title": "Blog",
     "post": {
-      "published": "Opublikowano"
+      "published": "Opublikowano",
+      "hidden": {
+        "label": "Artykuł ukryty",
+        "title": "Ten artykuł jest ukryty",
+        "desc": "Widzą go tylko jego autorzy i redaktorzy. Pozostali zobaczą stronę „nie znaleziono”, a artykuł nie pojawia się w wyszukiwarce ani w mapie strony."
+      }
     }
   },
   "@vitnode/blog:categories": "Kategorie",

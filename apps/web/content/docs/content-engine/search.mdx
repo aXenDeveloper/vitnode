@@ -55,6 +55,7 @@ export const articleContentType = defineContentType({
 - `contentFields` is the searchable body. It takes at least one field and no duplicates. Text, textarea, rich text or slug fields, plus repeatable leaves such as `"faq.answer"`. Rich text is indexed as its words, never as JSON. The title always ranks higher than the body, so listing it here as well only repeats it in the excerpt.
 - `pathTemplate` is the result URL. It starts with `/` and contains `{slug}` exactly once. Leave the language out, because your i18n settings add it (see [Localized content types](#localized-content-types)).
 - `authorField` is optional and credits a top-level `field.user()` on [member timelines](/docs/dev/search#member-timelines).
+- `imageField` is optional and shows a `field.file()` image next to each result. See [Credit several authors and add an image](#credit-several-authors-and-add-an-image).
 
 Every field except `authorField` must be in `publicApi.fields`. Otherwise a result snippet would leak a private value, so the definition throws instead: `search.titleField names "x", which is not in publicApi.fields.` `authorField` may stay private, which is why `author` is not in the public list above. All options are in the [reference](/docs/content-engine/reference#search).
 
@@ -81,16 +82,62 @@ Both buttons need the **Rebuild and clear the search index** staff permission (`
 
 </Steps>
 
+## Credit several authors and add an image
+
+A result can show everyone who wrote the record and a picture of it, on `/search`, `/discover` and member timelines. The blog does both: an article lists all its authors and its cover image.
+
+{/* Image prompt: A VitNode search result card in light theme. Top left, three small overlapping round avatars followed by "admin, devloop_tester and aXen · Aug 15, 4:14 PM". Below, a bold title "Hello Content Engine" and two lines of grey excerpt. On the right, a rounded 16:9 cover photo thumbnail. 1200x400. */}
+
+Make the author field hold several users, add a single image field, and point `search` at both:
+
+```ts title="plugins/blog/src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  fields: {
+    title: field.text({ required: true }),
+    friendlyUrl: field.slug({ source: "title" }),
+    content: field.richText(),
+    // [!code ++:6]
+    authorId: field.user({ min: 1, multiple: true, ordered: true }),
+    coverImage: field.file({
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+  },
+  publication: true,
+  publicApi: {
+    path: "blog",
+    fields: ["id", "title", "friendlyUrl", "content", "coverImage"], // [!code highlight]
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title", "content"],
+    pathTemplate: "/blog/{slug}",
+    // [!code ++:2]
+    authorField: "authorId",
+    imageField: "coverImage",
+  },
+});
+```
+
+- **Authors.** With `multiple: true`, every user in the field is credited, and `ordered: true` keeps the order you pick in the editor. A result shows up to three overlapping avatars and the names in that order, such as **admin, devloop_tester and aXen**. Past three it says **admin, devloop_tester and 2 others**. Every co-author gets the record on their own timeline.
+- **Image.** `imageField` names one shared `field.file()`, not a list and not a localized field, and it must be in `publicApi.fields`, because everybody who finds the result sees it. It shows as a small 16:9 thumbnail on the right of the result, and full width above the text on phones. Records without an image show none, and a file that is not an image is skipped.
+
+The definition throws when either one points at the wrong kind of field, for example `search.imageField names "gallery", which is not a shared single field.file() on the record itself.`
+
+Adding `authorField` or `imageField` to content that already exists needs a **Reindex** of the collection, so older records pick them up. After that, changing the authors or the image re-indexes the record on save.
+
+In the API, each result carries `authors` (id, name, `nameCode`, avatar) in order, `authorIds`, and `image` with `url`, `width` and `height`, or `null`.
+
 ## What gets indexed and when
 
-Every record is in the index, but only public ones show up on `/search`. A draft is stored as a private document without a URL. With `authorField`, it appears on its author's own timeline and on the AdminCP user page, but never in public results.
+Every record is in the index, but only public ones show up on `/search`. A draft is stored as a private document without a URL. A [hidden](/docs/content-engine/content-visibility) record's document turns private the moment it is hidden, and public again when it is unhidden. With `authorField`, it appears on its author's own timeline and on the AdminCP user page, but never in public results.
 
-| Write                                                                    | Search index                  |
-| ------------------------------------------------------------------------ | ----------------------------- |
-| Create, edit, publish, unpublish, restore or delete in the AdminCP       | Updated right after the write |
-| A scheduled publish or unpublish                                         | Updated when the job runs     |
-| Your own route using the editorial service and `contentEditorialEffects` | Updated                       |
-| The plain `service` from `model.service(c)`                              | Not updated                   |
+| Write                                                                                       | Search index                  |
+| ------------------------------------------------------------------------------------------- | ----------------------------- |
+| Create, edit, publish, unpublish, restore, hide, unhide, duplicate or delete in the AdminCP | Updated right after the write |
+| A scheduled publish or unpublish                                                            | Updated when the job runs     |
+| Your own route using the editorial service and `contentEditorialEffects`                    | Updated                       |
+| The plain `service` from `model.service(c)`                                                 | Not updated                   |
 
 An edit rewrites the document only when an indexed field changed: the title, description, content fields, slug or author. Unpublishing keeps the document but makes it private, so the record drops out of `/search` at once. Deleting the record removes its document.
 

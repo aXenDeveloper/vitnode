@@ -18,8 +18,10 @@ import {
   TableRow,
 } from "../ui/table";
 
+export type DataTableRowId = number | string;
+
 export interface DataTableTMin {
-  id: number;
+  id: DataTableRowId;
 }
 
 export interface SearchParamsDataTable<T = unknown> {

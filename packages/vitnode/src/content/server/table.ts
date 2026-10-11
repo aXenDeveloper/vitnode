@@ -12,6 +12,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { ContentIdStrategy } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentFieldMap,
@@ -26,8 +27,13 @@ import type {
 
 import { core_files } from "../../database/files";
 import { core_users } from "../../database/users";
-import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
+import {
+  CONTENT_EDITORIAL_FIELDS,
+  CONTENT_PUBLICATION_FIELDS,
+  CONTENT_VISIBILITY_FIELDS,
+} from "../const";
 import { ContentEngineError } from "../errors";
+import { contentIdSqlType } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentStorageColumns } from "../paths";
 import {
@@ -35,13 +41,57 @@ import {
   buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
+  buildVisibilityColumns,
 } from "./column-builders";
+
+const ACCEPTED_KEY_TYPES: Record<ContentIdStrategy, readonly string[]> = {
+  bigint: ["bigint", "bigserial"],
+  serial: ["serial", "integer"],
+  uuid: ["uuid"],
+};
+
+export const assertContentReferenceType = ({
+  column,
+  contentTypeId,
+  name,
+  strategy,
+}: {
+  column: { getSQLType: () => string };
+  contentTypeId: string;
+  name: string;
+  strategy: ContentIdStrategy;
+}): void => {
+  const actual = column.getSQLType();
+  if (ACCEPTED_KEY_TYPES[strategy].includes(actual)) return;
+
+  throw new ContentEngineError(
+    `Relation field "${name}" targets a content type with \`idStrategy: "${strategy}"\`, so its foreign key is a \`${contentIdSqlType(strategy)}\` - but the referenced column is a \`${actual}\`. Make the target's \`idStrategy\` and its table agree.`,
+    { contentTypeId },
+  );
+};
+
+export const contentRelationBuildStrategy = (
+  owner: { idStrategy: ContentIdStrategy },
+  fieldValue: {
+    self: boolean;
+    target: () => undefined | { idStrategy: ContentIdStrategy };
+  },
+): ContentIdStrategy => {
+  if (fieldValue.self) return owner.idStrategy;
+
+  try {
+    return fieldValue.target()?.idStrategy ?? "serial";
+  } catch {
+    return "serial";
+  }
+};
 
 const checkedReference = (
   contentTypeId: string,
   name: string,
   expectedTableName: () => string,
   thunk: ColumnReferenceThunk,
+  strategy?: () => ContentIdStrategy,
 ): ColumnReferenceThunk => {
   return () => {
     const column = thunk();
@@ -62,6 +112,15 @@ const checkedReference = (
       );
     }
 
+    if (strategy) {
+      assertContentReferenceType({
+        column,
+        contentTypeId,
+        name,
+        strategy: strategy(),
+      });
+    }
+
     return column;
   };
 };
@@ -71,6 +130,7 @@ const resolveReference = (
   name: string,
   fields: ContentFieldMap,
   references: Record<string, ColumnReferenceThunk>,
+  builtStrategy?: ContentIdStrategy,
 ): ColumnReferenceThunk | undefined => {
   const fieldValue = fields[name];
 
@@ -110,6 +170,7 @@ const resolveReference = (
     name,
     () => fieldValue.target().tableName,
     thunk,
+    builtStrategy === undefined ? undefined : () => builtStrategy,
   );
 };
 
@@ -145,17 +206,32 @@ export const createContentTable = <
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
 
   const columns: Record<string, AnyPgColumnBuilder> = {
-    ...buildSystemColumns(),
+    ...buildSystemColumns(definition.idStrategy),
     ...(definition.publication.enabled ? buildPublicationColumns() : {}),
     ...(definition.editorial.enabled ? buildEditorialColumns() : {}),
+    ...(definition.visibility.enabled
+      ? buildVisibilityColumns(() => core_users.id)
+      : {}),
   };
 
   for (const name of Object.keys(fields)) {
+    const fieldValue = fields[name];
+    const referenceStrategy =
+      fieldValue.kind === "relation"
+        ? contentRelationBuildStrategy(definition, fieldValue)
+        : undefined;
     columns[name] = buildContentColumn({
       contentTypeId,
-      fieldValue: fields[name],
+      fieldValue,
       name,
-      reference: resolveReference(contentTypeId, name, fields, referenceThunks),
+      reference: resolveReference(
+        contentTypeId,
+        name,
+        fields,
+        referenceThunks,
+        referenceStrategy,
+      ),
+      referenceStrategy,
     });
   }
 
@@ -216,6 +292,7 @@ export const contentTableColumns = <
     "updatedAt",
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
+    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
     ...Object.keys(contentStorageColumns(sharedFields)),
   ];
 

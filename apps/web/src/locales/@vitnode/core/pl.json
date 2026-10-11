@@ -2736,6 +2736,8 @@
       "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
       "discoverTitle": "Odkrywaj",
       "draft": "Szkic",
+      "hidden": "{type} (ukryte)",
+      "more_authors": "{count, plural, one {# inna osoba} few {# inne osoby} many {# innych osób} other {# innej osoby}}",
       "empty": "Nic tu jeszcze nie ma.",
       "loadMore": "Wczytaj więcej",
       "loading": "Wczytywanie…",

@@ -6,6 +6,7 @@ import type {
   SearchQueryParams,
   SearchResult,
 } from "@vitnode/core/api/models/search";
+import type { ContentId } from "@vitnode/core/content";
 
 import { Client, errors } from "@elastic/elasticsearch";
 
@@ -47,8 +48,11 @@ interface EsSource {
   containerType: null | string;
   content: string;
   createdAt: string;
+  imageId?: null | number;
+  isHidden?: boolean;
   isPublic: boolean;
-  itemId: number;
+  itemId?: number;
+  itemKey?: string;
   itemType: string;
   languageCode: string;
   metadata: Record<string, unknown>;
@@ -57,11 +61,13 @@ interface EsSource {
   url: null | string;
 }
 
+const itemKeyOf = (itemId: ContentId): string => String(itemId);
+
 const docId = (
   itemType: string,
-  itemId: number,
+  itemId: ContentId,
   languageCode: string,
-): string => `${itemType}:${itemId}:${languageCode}`;
+): string => `${itemType}:${itemKeyOf(itemId)}:${languageCode}`;
 
 interface EsErrorBody {
   error?: { type?: string };
@@ -78,7 +84,8 @@ const toSource = (doc: SearchDocument): EsSource => ({
   // reason a mirrored document disagrees with the canonical row.
   pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
-  itemId: doc.itemId,
+  ...(typeof doc.itemId === "number" ? { itemId: doc.itemId } : {}),
+  itemKey: itemKeyOf(doc.itemId),
   languageCode: doc.languageCode ?? "",
   authorIds: [...new Set(doc.authorIds ?? [])],
   title: doc.title,
@@ -87,12 +94,46 @@ const toSource = (doc: SearchDocument): EsSource => ({
   containerId: doc.containerId ?? null,
   url: doc.url ?? null,
   isPublic: doc.isPublic ?? true,
+  isHidden: doc.isHidden ?? false,
+  imageId: doc.imageId ?? null,
   metadata: doc.metadata ?? {},
   createdAt: (doc.createdAt instanceof Date
     ? doc.createdAt
     : new Date(doc.createdAt)
   ).toISOString(),
 });
+
+const visibleFilter = (
+  params: SearchQueryParams,
+): estypes.QueryDslQueryContainer => {
+  const access = params.hiddenAccess;
+  const viewer: estypes.QueryDslQueryContainer[] = [
+    ...(access?.authorId === undefined
+      ? []
+      : [{ term: { authorIds: access.authorId } }]),
+    ...(access?.itemTypes.length
+      ? [{ terms: { itemType: [...access.itemTypes] } }]
+      : []),
+  ];
+  if (viewer.length === 0) return { term: { isPublic: true } };
+
+  return {
+    bool: {
+      minimum_should_match: 1,
+      should: [
+        { term: { isPublic: true } },
+        {
+          bool: {
+            filter: [
+              { term: { isHidden: true } },
+              { bool: { minimum_should_match: 1, should: viewer } },
+            ],
+          },
+        },
+      ],
+    },
+  };
+};
 
 const buildFilters = (
   params: SearchQueryParams,
@@ -123,7 +164,7 @@ const buildFilters = (
     });
   }
   if (!params.includePrivate) {
-    filter.push({ term: { isPublic: true } });
+    filter.push(visibleFilter(params));
   }
 
   return filter;
@@ -205,18 +246,26 @@ const mapHit = (hit: estypes.SearchHit<EsSource>): null | SearchHit => {
   const source = hit._source;
   if (!source) return null;
 
+  const itemId: ContentId | undefined = source.itemId ?? source.itemKey;
+  if (itemId === undefined) return null;
+
   return {
-    id: source.itemId,
+    id: typeof itemId === "number" ? itemId : 0,
     pluginId: source.pluginId,
     itemType: source.itemType,
-    itemId: source.itemId,
+    itemId,
     languageCode: source.languageCode,
     authorId: source.authorIds?.[0] ?? null,
+    authorIds: source.authorIds ?? [],
+    authors: [],
     title: source.title,
     content: source.content,
     containerType: source.containerType,
     containerId: source.containerId,
     url: source.url,
+    isHidden: source.isHidden ?? false,
+    image: null,
+    imageId: source.imageId ?? null,
     isPublic: source.isPublic,
     metadata: source.metadata,
     createdAt: new Date(source.createdAt),
@@ -255,7 +304,18 @@ export const ElasticsearchSearchAdapter = (
 
   const createIndexIfMissing = async (): Promise<void> => {
     const es = getClient();
-    if (await es.indices.exists({ index })) return;
+    if (await es.indices.exists({ index })) {
+      await es.indices.putMapping({
+        index,
+        properties: {
+          imageId: { type: "integer" },
+          isHidden: { type: "boolean" },
+          itemKey: { type: "keyword" },
+        },
+      });
+
+      return;
+    }
 
     try {
       await es.indices.create({
@@ -265,6 +325,7 @@ export const ElasticsearchSearchAdapter = (
             pluginId: { type: "keyword" },
             itemType: { type: "keyword" },
             itemId: { type: "integer" },
+            itemKey: { type: "keyword" },
             languageCode: { type: "keyword" },
             authorIds: { type: "integer" },
             title: { type: "text" },
@@ -273,6 +334,8 @@ export const ElasticsearchSearchAdapter = (
             containerId: { type: "integer" },
             url: { type: "keyword" },
             isPublic: { type: "boolean" },
+            isHidden: { type: "boolean" },
+            imageId: { type: "integer" },
             createdAt: { type: "date" },
             metadata: { type: "object", enabled: false },
           },
@@ -372,6 +435,7 @@ export const ElasticsearchSearchAdapter = (
     // named one, which is how a single translation is taken down without
     // touching the others.
     delete: async (_c, itemType, itemId, languageCode) => {
+      await ensureIndex();
       await getClient().deleteByQuery(
         {
           index,
@@ -379,10 +443,14 @@ export const ElasticsearchSearchAdapter = (
             bool: {
               filter: [
                 { term: { itemType } },
-                { term: { itemId } },
                 ...(languageCode === undefined
                   ? []
                   : [{ term: { languageCode } }]),
+              ],
+              minimum_should_match: 1,
+              should: [
+                { term: { itemKey: itemKeyOf(itemId) } },
+                ...(typeof itemId === "number" ? [{ term: { itemId } }] : []),
               ],
             },
           },

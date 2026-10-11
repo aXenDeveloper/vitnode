@@ -7,6 +7,7 @@ export {
   buildSystemColumns,
   buildTranslationPublicationColumns,
   buildTranslationSystemColumns,
+  buildVisibilityColumns,
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
 export {
@@ -49,6 +50,29 @@ export type {
   ContentSearchDriftLocale,
   ContentTypeDiagnostic,
 } from "./diagnostics";
+export {
+  appendContentTitleSuffix,
+  contentSlugCandidate,
+  duplicationMethods,
+  resolveContentTitleSuffix,
+  runContentDuplicate,
+} from "./duplicate";
+export type {
+  ContentDuplicateDependencies,
+  ContentDuplicateOptions,
+  ContentDuplicateResult,
+  ContentDuplicateTranslationSource,
+  ContentDuplicateWriter,
+  ContentDuplicationMethods,
+  ContentEditorialDuplicateOptions,
+  ContentEditorialDuplicateOutcome,
+  ContentEditorialDuplicationMethods,
+} from "./duplicate";
+export { contentDuplicateEffects } from "./duplicate-effects";
+export type {
+  ContentDuplicateEffectsInput,
+  ContentDuplicateEffectsOptions,
+} from "./duplicate-effects";
 export { contentEditorialEffects } from "./editorial-effects";
 export type {
   ContentEditorialEffectsOptions,
@@ -60,6 +84,7 @@ export type {
   ContentEditorialOutcome,
   ContentEditorialPublicationOptions,
   ContentEditorialService,
+  ContentEditorialServiceBase,
   ContentEditorialWriteOptions,
 } from "./editorial-service";
 export {
@@ -154,6 +179,7 @@ export {
 } from "./public-service";
 export type {
   ContentPublicFindManyArgs,
+  ContentPublicItemReadOptions,
   ContentPublicReadOptions,
   ContentPublicService,
   ContentPublicSlugReadOptions,
@@ -307,4 +333,24 @@ export type {
   ContentTranslationSystemColumnBuilders,
   ContentTranslationTable,
   ContentTranslationTableFor,
+  ContentVisibilityColumnBuilders,
 } from "./types";
+export {
+  editorialVisibilityMethods,
+  isContentBaseRowPublic,
+  visibilityMethods,
+} from "./visibility";
+export type {
+  ContentEditorialVisibilityMethods,
+  ContentEditorialVisibilityOptions,
+  ContentVisibilityChange,
+  ContentVisibilityMethods,
+  ContentVisibilityOptions,
+  ContentVisibilityResult,
+  ContentVisibilityState,
+} from "./visibility";
+export {
+  contentVisibilityEffects,
+  contentVisibilityRevalidation,
+} from "./visibility-effects";
+export type { ContentVisibilityEffectsResult } from "./visibility-effects";

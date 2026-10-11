@@ -22,6 +22,8 @@ export const ContentAdminFormDialog = ({
   action,
   children,
   entry,
+  onOpenChange,
+  open,
   row,
   singular,
   title,
@@ -43,6 +45,8 @@ export const ContentAdminFormDialog = ({
           />
         </ContentFormHost>
       }
+      onOpenChange={onOpenChange}
+      open={open}
       skeleton={
         <ContentFormHost>
           <ContentFormSkeleton
@@ -63,7 +67,7 @@ export const ContentAdminFormDialog = ({
       }
       title={t("title", { name: singular })}
     >
-      {children as React.ReactElement}
+      {React.isValidElement(children) ? children : undefined}
     </ContentFormDialog>
   );
 };

@@ -13,19 +13,22 @@ export const ContentFormDialog = ({
   children,
   description,
   form,
+  onOpenChange,
+  open,
   skeleton,
   title,
 }: {
-  /** The control that opens the dialog. */
-  children: React.ReactElement;
+  children?: React.ReactElement;
   description: React.ReactNode;
   /** The form itself. Not rendered until the dialog opens. */
   form: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
   skeleton: React.ReactNode;
   title: React.ReactNode;
 }) => (
-  <Dialog>
-    <DialogTrigger render={children} />
+  <Dialog onOpenChange={onOpenChange} open={open}>
+    {children ? <DialogTrigger render={children} /> : null}
 
     <DialogContent>
       <DialogHeader>

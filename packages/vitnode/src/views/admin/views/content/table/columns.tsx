@@ -5,7 +5,7 @@ import type { ContentTypeFrontendRegistration } from "@/lib/plugin";
 
 import { orderableColumns } from "@/content/registry";
 
-import type { ContentRowData } from "./cells";
+import type { ContentRowData, ContentStatusLabels } from "./cells";
 
 import { ContentCell } from "./cells";
 
@@ -66,8 +66,9 @@ export const contentRowTitle = (
 export interface ContentCellLabels {
   /** `core.content.table.empty_value` - a column this row has no value for. */
   empty: string;
+  hidden?: string;
   /** `core.content.status.*`, for the publication badge. */
-  status: { draft: string; published: string };
+  status: ContentStatusLabels;
 }
 
 export interface ContentTableColumnsArgs {
@@ -112,6 +113,7 @@ export const buildContentTableColumns = ({
         ) : (
           <ContentCell
             emptyLabel={labels.empty}
+            hiddenLabel={labels.hidden}
             row={row}
             spec={spec}
             statusLabels={labels.status}

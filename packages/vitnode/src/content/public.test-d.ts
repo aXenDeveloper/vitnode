@@ -8,7 +8,7 @@ import type {
 import { testPostContentType } from "@/tests/content-fixtures";
 
 import type {
-  ContentPublicReadOptions,
+  ContentPublicItemReadOptions,
   ContentPublicService,
   ContentPublicSlugReadOptions,
 } from "./server/public-service";
@@ -180,7 +180,7 @@ describe("publicApi types", () => {
       // names a *language*, which chooses which translation the predicate runs
       // against and can never relax it.
       expectTypeOf<Service["findById"]>().parameters.toEqualTypeOf<
-        [number, ContentPublicReadOptions?]
+        [number, ContentPublicItemReadOptions?]
       >();
       expectTypeOf<Service["findBySlug"]>().parameters.toEqualTypeOf<
         [string, ContentPublicSlugReadOptions?]

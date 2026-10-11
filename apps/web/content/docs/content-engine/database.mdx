@@ -78,14 +78,16 @@ export const example_advanced_articles_faq =
 
 You never declare these. A field with the same name throws an error.
 
-| Column        | Type                                                        | Added when    |
-| ------------- | ----------------------------------------------------------- | ------------- |
-| `id`          | `serial` primary key                                        | Always        |
-| `createdAt`   | `timestamp`, defaults to `now()`                            | Always        |
-| `updatedAt`   | `timestamp`, defaults to `now()`, refreshed by every update | Always        |
-| `status`      | `varchar(32)`, `draft` or `published`, defaults to `draft`  | `publication` |
-| `publishedAt` | `timestamp`, nullable                                       | `publication` |
-| `version`     | `integer`, defaults to `1`                                  | `editorial`   |
+| Column        | Type                                                                      | Added when    |
+| ------------- | ------------------------------------------------------------------------- | ------------- |
+| `id`          | Primary key, typed by [`idStrategy`](#ids-and-shared-tables)              | Always        |
+| `createdAt`   | `timestamp`, defaults to `now()`                                          | Always        |
+| `updatedAt`   | `timestamp`, defaults to `now()`, refreshed by every update               | Always        |
+| `status`      | `varchar(32)`, `draft` or `published`, defaults to `draft`                | `publication` |
+| `publishedAt` | `timestamp`, nullable                                                     | `publication` |
+| `version`     | `integer`, defaults to `1`                                                | `editorial`   |
+| `hiddenAt`    | `timestamp`, nullable                                                     | `visibility`  |
+| `hiddenBy`    | `integer`, nullable, references `core_users.id` with `ON DELETE SET NULL` | `visibility`  |
 
 Column names are camelCase in SQL, exactly as in TypeScript. Every generated table has row-level security enabled. A field group adds one column per leaf to the main table, so the `syndication` group's `indexable` field becomes `syndicationIndexable`. Column types per field are listed in [Fields](/docs/content-engine/fields).
 
@@ -93,13 +95,13 @@ Column names are camelCase in SQL, exactly as in TypeScript. Every generated tab
 
 With `localization`, `{tableName}_translations` holds the localized fields:
 
-| Column                   | Notes                                                                     |
-| ------------------------ | ------------------------------------------------------------------------- |
-| `itemId`                 | References the main table. Deleting the record deletes its translations   |
-| `languageId`             | References `core_languages.id`. A language with content cannot be deleted |
-| `version`                | Per-language version, always present                                      |
-| `createdAt`, `updatedAt` | Same as the main table                                                    |
-| `status`, `publishedAt`  | With `publication`. Each language is published on its own                 |
+| Column                   | Notes                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `itemId`                 | References the main table, with the same type as its `id`. Deleting the record deletes its translations |
+| `languageId`             | References `core_languages.id`. A language with content cannot be deleted                               |
+| `version`                | Per-language version, always present                                                                    |
+| `createdAt`, `updatedAt` | Same as the main table                                                                                  |
+| `status`, `publishedAt`  | With `publication`. Each language is published on its own                                               |
 
 The primary key is `(itemId, languageId)`, so a record has at most one translation per language.
 
@@ -112,12 +114,32 @@ Field names become snake_case in table names, so `relatedArticles` on `example_a
 
 Deleting a record deletes its junction and repeatable rows. Both kinds keep `position` unique per record. That column holds the order an editor picks in the AdminCP.
 
+Every column that points at a record has the type of that record's key. In a junction table, `itemId` follows the owner's `idStrategy` and `relatedItemId` follows the target's. A repeatable's own `id` is always `serial`, while its `itemId` follows the owner. User and file references are always `integer`.
+
+## IDs and shared tables
+
+The [id strategy](/docs/content-engine/id-strategy) sets the key column:
+
+| `idStrategy`         | `id` column                                           |
+| -------------------- | ----------------------------------------------------- |
+| `"serial"` (default) | `serial PRIMARY KEY`                                  |
+| `"uuid"`             | `uuid PRIMARY KEY DEFAULT gen_random_uuid()`          |
+| `"bigint"`           | `bigint PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY` |
+
+Core tables that hold records of every content type store the id as text: `core_content_revisions`, `core_content_schedules`, `core_content_slug_history`, `core_search_index`, the [live editing](/docs/content-engine/live-editing-api#where-the-data-lives) tables `core_content_drafts`, `core_content_field_locks` and `core_content_documents`, and `core_ai_translation_sources`. Their `itemId` is a `varchar(64)` holding `contentIdKey(id)`: the digits of a serial or bigint id, or the UUID. Migration `20261011093549_content_visibility_id_strategies` converted them in place from `integer`, so existing serial keys keep their digits:
+
+```sql title="apps/api/migrations/20261011093549_content_visibility_id_strategies/migration.sql (excerpt)"
+ALTER TABLE "core_content_revisions" ALTER COLUMN "itemId" SET DATA TYPE varchar(64) USING "itemId"::varchar(64);
+```
+
+Custom SQL that joins these tables to a content table needs a cast, such as `"core_content_revisions"."itemId" = "example_articles"."id"::text`.
+
 ## Generated indexes
 
 The engine creates these indexes without being asked:
 
 - A unique index on every slug, and on every `field.text({ unique: true })`.
-- An index on every single `relation`, `user` and `file` column.
+- An index on every single `relation`, `user` and `file` column, and on `hiddenBy` with `visibility`.
 - Indexes on `createdAt` and `updatedAt`.
 - `(status, publishedAt)` with `publication`.
 - On a translations table: `(languageId, status)` with `publication` or `(languageId)` without it, plus a unique `(languageId, slug)` for each localized slug.
@@ -137,4 +159,6 @@ Changing a definition is a schema change like any other. Build, migrate and read
 - **Adding a required field without a default** fails on a table with rows. Add it as nullable, fill it, then make it required in a second migration.
 - **Renaming a field** renames its column. Check that the generated SQL says `RENAME COLUMN`, not a drop followed by an add, or the old values are lost.
 - **Turning on `localization`** moves localized fields to a new translations table. The generated SQL does not copy existing values, so add the data move to the migration yourself.
+- **Turning on `visibility`** adds two nullable columns, so existing records stay visible.
+- **Changing `idStrategy`** on a table with data is not something the generated SQL can do. It needs a hand-written data migration that converts the key, every column that references it and the keys in the shared tables. See [Change the strategy later](/docs/content-engine/id-strategy#change-the-strategy-later).
 - **Never edit or regenerate a migration that has already been applied.** Write a new one instead.

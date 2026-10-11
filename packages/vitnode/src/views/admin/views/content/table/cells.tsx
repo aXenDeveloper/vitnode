@@ -12,6 +12,7 @@ import type {
   ContentFileDescriptor,
   ContentFileFieldValue,
 } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 import type { ContentReferenceListItem } from "@/content/server/list-references";
 import type { ContentLabels } from "@/content/server/service";
 
@@ -22,9 +23,11 @@ import { isContentPublished } from "@/content/publication";
 import { isRichTextDocument } from "@/content/rich-text/document";
 import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
+import { ContentHiddenIcon } from "../lib/hidden-badge";
+
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
-  id: number;
+  id: ContentId;
   labels: ContentLabels;
   localizedValues?: Record<string, unknown>;
   references?: Record<string, ContentReferenceListItem[]>;
@@ -149,11 +152,17 @@ const ContentReferenceList = ({
   );
 };
 
+export interface ContentStatusLabels {
+  draft: string;
+  published: string;
+}
+
 interface ContentCellProps {
   emptyLabel: string;
+  hiddenLabel?: string;
   row: ContentRowData;
   spec: ContentColumnSpec;
-  statusLabels: { draft: string; published: string };
+  statusLabels: ContentStatusLabels;
 }
 
 const ContentCellValue = ({
@@ -261,14 +270,28 @@ const ContentCellValue = ({
   }
 };
 
+const ContentCellTitle = (props: ContentCellProps) =>
+  props.spec.title && props.hiddenLabel !== undefined ? (
+    <span className="flex min-w-0 items-center gap-2">
+      <ContentHiddenIcon
+        className="size-4"
+        label={props.hiddenLabel}
+        row={{ hiddenAt: props.row.hiddenAt }}
+      />
+      <ContentCellValue {...props} />
+    </span>
+  ) : (
+    <ContentCellValue {...props} />
+  );
+
 export const ContentCell = (props: ContentCellProps) =>
   props.spec.thumbnail === undefined ? (
-    <ContentCellValue {...props} />
+    <ContentCellTitle {...props} />
   ) : (
     <span className="flex min-w-0 items-center gap-3">
       <ContentFileThumbnail
         file={singleFileOf(props.row, props.spec.thumbnail)}
       />
-      <ContentCellValue {...props} />
+      <ContentCellTitle {...props} />
     </span>
   );

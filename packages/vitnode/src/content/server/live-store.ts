@@ -11,6 +11,7 @@ import {
   core_content_field_locks,
 } from "../../database/content-drafts";
 import { core_users } from "../../database/users";
+import { contentIdFromKey, contentIdKey } from "../ids";
 import {
   CONTENT_FIELD_LOCK_LEASE_MS,
   CONTENT_LIVE_SHARED_LOCALE,
@@ -18,7 +19,7 @@ import {
 } from "../live/protocol";
 import { broadcastContentLive } from "./live/broadcast";
 import { onContentLiveReset, onContentLiveUserLeft } from "./live/hooks";
-import { findContentModel } from "./model";
+import { contentDefinitionOf, findContentModel } from "./model";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,7 +35,11 @@ const localeOf = (language: string): null | string =>
 const inRoom = (
   table: typeof core_content_drafts | typeof core_content_field_locks,
   { contentTypeId, itemId }: ContentLiveRoomRef,
-) => and(eq(table.contentTypeId, contentTypeId), eq(table.itemId, itemId));
+) =>
+  and(
+    eq(table.contentTypeId, contentTypeId),
+    eq(table.itemId, contentIdKey(itemId)),
+  );
 
 export interface ContentFieldLockKey extends ContentLiveRoomRef {
   field: string;
@@ -114,7 +119,7 @@ export const acquireContentFieldLock = async (
       contentTypeId: key.contentTypeId,
       expiresAt,
       field: key.field,
-      itemId: key.itemId,
+      itemId: contentIdKey(key.itemId),
       language: contentLiveLanguage(key.locale),
       userId,
     })
@@ -258,7 +263,7 @@ export const writeContentDraft = async (
     .values({
       baseVersion,
       contentTypeId: room.contentTypeId,
-      itemId: room.itemId,
+      itemId: contentIdKey(room.itemId),
       language: contentLiveLanguage(locale),
       updatedAt: now,
       updatedBy: userId,
@@ -368,7 +373,15 @@ export const cleanupStaleContentDrafts = async (
     }
 
     const locale = localeOf(draft.language);
-    const record = await entry.model.service(c).findRowById(draft.itemId);
+    const itemId = contentIdFromKey(
+      contentDefinitionOf(entry.model).idStrategy,
+      draft.itemId,
+    );
+    if (itemId === null) {
+      doomed.push(draft.id);
+      continue;
+    }
+    const record = await entry.model.service(c).findRowById(itemId);
     if (!record) {
       doomed.push(draft.id);
       continue;
@@ -384,7 +397,7 @@ export const cleanupStaleContentDrafts = async (
 
     const translation = await entry.model
       .translationService?.(c)
-      .findByLocale(draft.itemId, locale);
+      .findByLocale(itemId, locale);
     if (
       translation
         ? translation.version > draft.baseVersion

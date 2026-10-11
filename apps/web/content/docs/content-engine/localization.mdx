@@ -117,7 +117,7 @@ This is the blog plugin's category dialog, where `name` is `field.text({ localiz
 
 Saving the form sends the shared fields and every language you typed into in one request: `POST /localized` for a new record, `PUT /{id}/localized` for an existing one. The server writes them in one transaction. A new record must include its default language. A Polish-only edit does not touch the shared row, so it does not bump the record's version or expire the English cache.
 
-With publication, each language has its own status. Publishing the record publishes its languages too, and you can then unpublish one language alone. A translation is public only when both the record and that translation are published. With `editorial`, each language also keeps its own revisions and preview links.
+With publication, each language has its own status. Publishing the record publishes its languages too, and you can then unpublish one language alone. A translation is public only when both the record and that translation are published, and the record is not [hidden](/docs/content-engine/content-visibility). With `editorial`, each language also keeps its own revisions and preview links.
 
 <Callout>
   The example plugin registers `example.localized-article` on the API only, so

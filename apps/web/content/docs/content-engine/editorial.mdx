@@ -64,7 +64,7 @@ The migration adds a `version` column to `example_articles`. Revisions, schedule
 
 ## Revisions
 
-Every create, update, publish, unpublish and restore stores a snapshot in `core_content_revisions`. `revisions.retention` keeps the newest snapshots per record, 50 by default and at most 500.
+Every create, update, publish, unpublish and restore stores a snapshot in `core_content_revisions`, and so does every hide and unhide with [`visibility`](/docs/content-engine/content-visibility). `revisions.retention` keeps the newest snapshots per record, 50 by default and at most 500.
 
 To see them, open the row's **More actions** menu in the AdminCP list and choose **History**. Each version shows who saved it and when, and **Show changes** lists the fields it changed:
 
@@ -75,7 +75,7 @@ To see them, open the row's **More actions** menu in the AdminCP list and choose
   alt="History of this Article dialog: v3 by Tom Becker expanded to show the title change from Spring menu launch to Spring menu launches Monday and Featured switched on, with Restore buttons on v2 and v1"
 />
 
-**Restore** puts that version's field values back as a new version, so nothing in between is lost and the publication status stays as it is. It needs `can_restore` and emits `content.example.article.restored`. Anyone with the record open in [live editing](/docs/content-engine/live-editing) gets a notice and a reloaded form.
+**Restore** puts that version's field values back as a new version, so nothing in between is lost. The publication status and the [hidden](/docs/content-engine/content-visibility) state stay as they are. It needs `can_restore` and emits `content.example.article.restored`. Anyone with the record open in [live editing](/docs/content-engine/live-editing) gets a notice and a reloaded form.
 
 ## Safe concurrent edits
 
@@ -146,5 +146,6 @@ A few rules keep schedules sane:
 - A time up to two minutes in the past is accepted. Anything older fails with `CONTENT_SCHEDULE_IN_PAST`.
 - An unpublish cannot come before a pending publish (`CONTENT_SCHEDULE_ORDER`).
 - Booking emits `content.example.article.scheduled` and cancelling emits `schedule_cancelled`. When the time comes, the usual `published` or `unpublished` event carries the `scheduleId`.
+- A scheduled publish of a [hidden](/docs/content-engine/content-visibility) record leaves it hidden, so it stays off the public site until someone unhides it.
 
 If a separate front end caches pages, [Notify a separate front end](/docs/content-engine/caching#notify-a-separate-front-end) tells it about the change.

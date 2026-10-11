@@ -1,3 +1,4 @@
+import type { ContentId } from "@/content/ids";
 import type {
   ContentDraftRejection,
   ContentDrafts,
@@ -46,7 +47,7 @@ const parseJson = (text: string | undefined): unknown => {
 
 export const listContentLocksInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<{ error?: string; locks: ContentFieldLock[] }> => {
   const result = await send(
     { method: "get", path: `/${id}/locks`, target },
@@ -60,7 +61,7 @@ export const listContentLocksInBrowser = async (
 
 export const changeContentLockInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   body: {
     action: ContentFieldLockAction;
     field: string;
@@ -85,7 +86,7 @@ export const changeContentLockInBrowser = async (
 
 export const readContentDraftInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<{ drafts?: ContentDrafts; error?: string }> => {
   const result = await send(
     { method: "get", path: `/${id}/draft`, target },
@@ -97,7 +98,7 @@ export const readContentDraftInBrowser = async (
 
 export const discardContentDraftInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
 ): Promise<{ error?: string; status: number }> => {
   const result = await send({
     body: {},
@@ -113,7 +114,7 @@ export const discardContentDraftInBrowser = async (
 
 export const saveContentDraftInBrowser = async (
   target: ContentApiTarget,
-  id: number,
+  id: ContentId,
   body: { locale: null | string; values: Record<string, unknown> },
 ): Promise<ContentDraftSaveResult> => {
   const result = await send(

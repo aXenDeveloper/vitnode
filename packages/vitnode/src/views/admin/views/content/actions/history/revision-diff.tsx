@@ -83,10 +83,10 @@ const Value = ({
   }
 
   if (Array.isArray(value)) {
-    if (typeof value[0] === "number") {
+    if (typeof value[0] === "number" || typeof value[0] === "string") {
       return (
         <span>
-          {(value as number[])
+          {(value as (number | string)[])
             .map(id => labels[String(id)] ?? `#${id}`)
             .join(", ")}
         </span>

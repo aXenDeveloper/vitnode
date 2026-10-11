@@ -30,6 +30,7 @@ const disabledSearch: ResolvedContentSearchConfig = {
   contentFields: [],
   descriptionField: null,
   enabled: false,
+  imageField: null,
   pathTemplate: "",
   titleField: "",
 };
@@ -100,6 +101,41 @@ const assertSearchAuthorField = (
   if (target.container !== "row" || target.descriptor.kind !== "user") {
     throw new ContentEngineError(
       `search.authorField names "${name}", which is not a top-level \`field.user()\`. The index credits people, so the author has to be a user field on the record itself.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+const assertSearchImageField = (
+  id: string,
+  fields: ContentFieldMap,
+  exposed: ReadonlySet<string>,
+  name: string,
+): void => {
+  const target = resolveFieldTarget(fields, name);
+  if (!target) {
+    throw new ContentEngineError(
+      `search.imageField references unknown field "${name}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  const { descriptor } = target;
+  if (
+    target.container !== "row" ||
+    descriptor.kind !== "file" ||
+    descriptor.multiple ||
+    descriptor.localized === true
+  ) {
+    throw new ContentEngineError(
+      `search.imageField names "${name}", which is not a shared single \`field.file()\` on the record itself. A result shows one image.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!exposed.has(name)) {
+    throw new ContentEngineError(
+      `search.imageField names "${name}", which is not in publicApi.fields. A result shows the image to everyone who can find it, so it has to be public already.`,
       { contentTypeId: id },
     );
   }
@@ -294,11 +330,17 @@ export const resolveSearch = (
   const authorField = search.authorField ?? null;
   if (authorField !== null) assertSearchAuthorField(id, fields, authorField);
 
+  const imageField = search.imageField ?? null;
+  if (imageField !== null) {
+    assertSearchImageField(id, fields, exposed, imageField);
+  }
+
   return {
     authorField,
     contentFields,
     descriptionField,
     enabled: true,
+    imageField,
     pathTemplate,
     titleField,
   };

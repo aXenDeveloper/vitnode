@@ -3,6 +3,7 @@ import type {
   CONTENT_REVISION_OPERATIONS,
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "./const";
+import type { ContentId } from "./ids";
 import type { RichTextDocument } from "./rich-text/document";
 
 export type ContentRevisionOperation =
@@ -21,8 +22,8 @@ export interface ContentActor {
 export type ContentSnapshotScalar = boolean | null | number | string;
 
 export type ContentSnapshotValue =
+  | ContentId[]
   | ContentSnapshotScalar
-  | number[]
   | Record<string, ContentSnapshotScalar>
   | Record<string, ContentSnapshotScalar>[]
   | RichTextDocument;
@@ -32,12 +33,13 @@ export interface ContentRevisionSnapshot {
   createdAt: string;
   /** Every declared field, by name. */
   fields: Record<string, ContentSnapshotValue>;
-  id: number;
+  id: ContentId;
   /** Present only for a content type with the publication lifecycle. */
   publication?: { publishedAt: null | string; status: string };
   schemaVersion: number;
   updatedAt: string;
   version: number;
+  visibility?: { hiddenAt: null | string; hiddenBy: null | number };
 }
 
 export interface ContentTranslationRevisionSnapshot {
@@ -45,7 +47,7 @@ export interface ContentTranslationRevisionSnapshot {
   createdAt: string;
   /** Every *localized* field, by name. */
   fields: Record<string, ContentSnapshotValue>;
-  itemId: number;
+  itemId: ContentId;
   languageId: number;
   /** The canonical `core_languages.code` at the time of the mutation. */
   locale: string;

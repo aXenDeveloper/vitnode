@@ -1,3 +1,4 @@
+import type { ContentIdStrategy } from "./ids";
 import type {
   AnyContentTypeDefinition,
   ContentAdminConfig,
@@ -7,6 +8,8 @@ import type {
   ContentDeliveryInput,
   ContentDeliveryNoIndexField,
   ContentDeliveryTitleField,
+  ContentDuplicationEnabled,
+  ContentDuplicationInput,
   ContentEditorialEnabled,
   ContentEditorialInput,
   ContentFieldMap,
@@ -26,10 +29,12 @@ import type {
   ContentSearchTitleField,
   ContentTypeDefinition,
   ResolvedContentDeliveryConfig,
+  ResolvedContentDuplicationConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
   ResolvedContentSearchConfig,
+  ResolvedContentVisibilityConfig,
 } from "./types";
 
 import { contentEntityKey } from "./admin/labels";
@@ -52,6 +57,11 @@ import {
   assertSlugSources,
   bindSelfRelations,
 } from "./define-fields";
+import {
+  resolveDuplication,
+  resolveIdStrategy,
+  resolveVisibility,
+} from "./define-lifecycle";
 import { resolvePublicApi } from "./define-public-api";
 import { resolveSearch } from "./define-search";
 import {
@@ -60,6 +70,7 @@ import {
   editorialFields,
   publicationFields,
   systemFields,
+  visibilityFields,
 } from "./define-shared";
 import { resolveContentDelivery } from "./delivery";
 import { ContentEngineError } from "./errors";
@@ -193,12 +204,17 @@ export const defineContentType = <
     ContentDeliveryNoIndexField<TFields, TPublicField>
   > = false,
   TPublicPath extends string = string,
+  TVisibility extends boolean = false,
+  TDuplication extends ContentDuplicationInput = false,
+  TIdStrategy extends ContentIdStrategy = "serial",
 >({
   admin = {},
   delivery,
+  duplication,
   editorial,
   fields,
   id,
+  idStrategy,
   indexes = [],
   liveEditing,
   localization,
@@ -206,6 +222,7 @@ export const defineContentType = <
   publication,
   search,
   tableName,
+  visibility,
 }: {
   admin?: ContentAdminConfig<
     TFields,
@@ -215,9 +232,12 @@ export const defineContentType = <
 
   delivery?: TDelivery;
 
+  duplication?: TDuplication;
+
   editorial?: TEditorial;
   fields: TFields;
   id: TId;
+  idStrategy?: TIdStrategy;
   indexes?: ContentIndexInput<
     TFields,
     TPublication,
@@ -238,6 +258,7 @@ export const defineContentType = <
 
   search?: TSearch;
   tableName: string;
+  visibility?: TVisibility;
 }): ContentTypeDefinition<
   TId,
   TFields,
@@ -250,7 +271,10 @@ export const defineContentType = <
   ContentSchedulingEnabled<TEditorial>,
   ContentLocalizationEnabled<TLocalization>,
   ContentDeliveryEnabled<TDelivery>,
-  TPublicPath
+  TPublicPath,
+  TVisibility,
+  ContentDuplicationEnabled<TDuplication>,
+  TIdStrategy
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -298,11 +322,13 @@ export const defineContentType = <
   assertContentOptionShapes(id, {
     admin,
     delivery,
+    duplication,
     editorial,
     localization,
     publicApi,
     publication,
     search,
+    visibility,
   });
 
   if (publication !== undefined && typeof publication !== "boolean") {
@@ -328,9 +354,22 @@ export const defineContentType = <
       { contentTypeId: id },
     );
   }
+  const resolvedIdStrategy = resolveIdStrategy(id, idStrategy);
+  const resolvedVisibility = resolveVisibility(
+    id,
+    visibility,
+    publicationEnabled,
+  );
+  const visibilityEnabled = resolvedVisibility.enabled;
 
   for (const name of fieldNames) {
-    assertFieldName(id, name, publicationEnabled, editorialEnabled);
+    assertFieldName(
+      id,
+      name,
+      publicationEnabled,
+      editorialEnabled,
+      visibilityEnabled,
+    );
     assertFieldKind(id, name, fieldMap[name]);
     assertField(id, name, fieldMap[name]);
   }
@@ -368,6 +407,7 @@ export const defineContentType = <
     ...systemFields,
     ...(publicationEnabled ? publicationFields : []),
     ...(editorialEnabled ? editorialFields : []),
+    ...(visibilityEnabled ? visibilityFields : []),
   ]);
   const resolvedIndexes = resolveContentIndexes({
     contentTypeId: id,
@@ -389,6 +429,7 @@ export const defineContentType = <
     fields: sharedColumns,
     publication: publicationEnabled,
     tableName,
+    visibility: visibilityEnabled,
   });
 
   // Every declared field, in declaration order: the AdminCP renders one form,
@@ -467,6 +508,13 @@ export const defineContentType = <
     publication: publicationEnabled,
   });
 
+  const resolvedDuplication = resolveDuplication(
+    id,
+    duplication,
+    fieldMap,
+    resolvedAdmin,
+  );
+
   const definition: ContentTypeDefinition<
     TId,
     TFields,
@@ -479,12 +527,18 @@ export const defineContentType = <
     ContentSchedulingEnabled<TEditorial>,
     ContentLocalizationEnabled<TLocalization>,
     ContentDeliveryEnabled<TDelivery>,
-    TPublicPath
+    TPublicPath,
+    TVisibility,
+    ContentDuplicationEnabled<TDuplication>,
+    TIdStrategy
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
     delivery: resolvedDelivery as ResolvedContentDeliveryConfig<
       ContentDeliveryEnabled<TDelivery>
+    >,
+    duplication: resolvedDuplication as ResolvedContentDuplicationConfig<
+      ContentDuplicationEnabled<TDuplication>
     >,
     editorial: resolvedEditorial as ResolvedContentEditorialConfig<
       ContentEditorialEnabled<TEditorial>,
@@ -494,6 +548,7 @@ export const defineContentType = <
     // The rebound copy, so a self-relation resolves rather than throwing.
     fields: fieldMap as unknown as TFields,
     id,
+    idStrategy: resolvedIdStrategy as TIdStrategy,
     indexes: resolvedIndexes,
     liveEditing: { enabled: liveEditing === true },
     localization: resolvedLocalization as ResolvedContentLocalizationConfig<
@@ -521,21 +576,28 @@ export const defineContentType = <
         ContentSchedulingEnabled<TEditorial>,
         ContentLocalizationEnabled<TLocalization>,
         ContentDeliveryEnabled<TDelivery>,
-        TPublicPath
+        TPublicPath,
+        TVisibility,
+        ContentDuplicationEnabled<TDuplication>,
+        TIdStrategy
       >
     >({
       admin: resolvedAdmin,
       advanced: resolvedAdvanced,
       editorial: editorialEnabled,
       fields: fieldMap,
+      idStrategy: resolvedIdStrategy,
       localization: resolvedLocalization,
       publicApi: resolvedPublicApi,
       publication: publicationEnabled,
+      visibility: visibilityEnabled,
     }),
     search: resolvedSearch as ResolvedContentSearchConfig<
       ContentSearchEnabled<TSearch>
     >,
     tableName,
+    visibility:
+      resolvedVisibility as ResolvedContentVisibilityConfig<TVisibility>,
   };
 
   return definition;

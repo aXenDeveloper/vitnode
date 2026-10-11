@@ -1,7 +1,9 @@
 import React from "react";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentDrafts } from "@/content/live/http";
 import type { ContentFieldLock } from "@/content/live/protocol";
+import type { ContentVisibilityAction } from "@/content/visibility";
 
 import type {
   ContentMutationResult,
@@ -31,19 +33,19 @@ export interface ContentFormTransport {
 
   discardDraft: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ error?: string; status: number }>;
 
   edit: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown>,
     expectedVersion?: number,
   ) => Promise<ContentMutationResult>;
 
   editLocalized: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     values: Record<string, unknown> | undefined,
     translations: ContentTranslationInput[],
     expectedVersion?: number,
@@ -51,23 +53,23 @@ export interface ContentFormTransport {
 
   listLocks: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ error?: string; locks: ContentFieldLock[] }>;
 
   listTranslations: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ edges: TranslationRow[]; error?: string }>;
 
   loadOptions: (
     contentTypeId: string,
     field: string,
     search: string,
-    ids?: number[],
+    ids?: ContentId[],
   ) => Promise<ContentOption[]>;
   lock: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     request: {
       action: ContentFieldLockAction;
       field: string;
@@ -78,28 +80,34 @@ export interface ContentFormTransport {
   /** Moves a record to `published`. Idempotent: a no-op is a success. */
   publish: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentMutationResult>;
 
   readDraft: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ drafts?: ContentDrafts; error?: string }>;
 
   reloadRow: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentRowResult>;
 
   saveDraft: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     draft: { locale: null | string; values: Record<string, unknown> },
   ) => Promise<ContentDraftSaveResult>;
+  setHidden: (
+    contentTypeId: string,
+    itemId: ContentId,
+    action: ContentVisibilityAction,
+    expectedVersion?: number,
+  ) => Promise<ContentMutationResult>;
   /** Moves a record back to `draft`. Idempotent, like {@link publish}. */
   unpublish: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<ContentMutationResult>;
 }
 

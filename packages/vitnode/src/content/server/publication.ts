@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, isNotNull, lte, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentPublicationMethods, ContentService } from "./service";
@@ -9,6 +9,7 @@ import type { ContentPublicationMethods, ContentService } from "./service";
 import { ContentEngineError } from "../errors";
 
 export interface PublicationColumns {
+  hiddenAt?: PgColumn;
   publishedAt: PgColumn;
   status: PgColumn;
 }
@@ -17,7 +18,7 @@ export const publicationColumns = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
 ): PublicationColumns => {
-  const { publishedAt, status } = columns;
+  const { hiddenAt, publishedAt, status } = columns;
 
   if (!definition.publication.enabled || !publishedAt || !status) {
     throw new ContentEngineError(
@@ -26,7 +27,16 @@ export const publicationColumns = (
     );
   }
 
-  return { publishedAt, status };
+  if (!definition.visibility.enabled) return { publishedAt, status };
+
+  if (!hiddenAt) {
+    throw new ContentEngineError(
+      "`visibility` is enabled, but the column map has no `hiddenAt`. Build the columns with `contentTableColumns`.",
+      { contentTypeId: definition.id },
+    );
+  }
+
+  return { hiddenAt, publishedAt, status };
 };
 
 export const publishedCondition = (
@@ -36,7 +46,24 @@ export const publishedCondition = (
     eq(columns.status, "published"),
     isNotNull(columns.publishedAt),
     lte(columns.publishedAt, sql`now()`),
+    columns.hiddenAt === undefined ? undefined : isNull(columns.hiddenAt),
   );
+
+const hiddenPublishedCondition = (
+  columns: PublicationColumns,
+): SQL | undefined =>
+  columns.hiddenAt === undefined
+    ? sql`false`
+    : and(
+        publishedCondition({ ...columns, hiddenAt: undefined }),
+        isNotNull(columns.hiddenAt),
+      );
+
+export const contentPublicReadCondition = (
+  columns: PublicationColumns,
+  { hidden = false }: { hidden?: boolean } = {},
+): SQL | undefined =>
+  hidden ? hiddenPublishedCondition(columns) : publishedCondition(columns);
 
 export const contentTranslationPublicationColumns = (
   definition: AnyContentTypeDefinition,
