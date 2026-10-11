@@ -122,7 +122,16 @@ const transportOf = () => {
   };
 };
 
-const mount = (
+/** Lets the locks and drafts read over HTTP land inside act. */
+const settle = async () => {
+  await act(async () => {
+    await new Promise(resolve => {
+      setTimeout(resolve, 0);
+    });
+  });
+};
+
+const mount = async (
   onDraft?: (event: ContentLiveDraftEvent) => void,
   onSession?: (session: ContentLiveSession) => void,
 ) => {
@@ -135,6 +144,7 @@ const mount = (
       </VitNodeWebSocketProvider>
     </ContentFormTransportProvider>,
   );
+  await settle();
 
   return { ...fake, view };
 };
@@ -170,8 +180,8 @@ describe("useContentLiveSession", () => {
       vi.unstubAllGlobals();
     });
 
-    it("joins the record's room once the socket opens", () => {
-      mount();
+    it("joins the record's room once the socket opens", async () => {
+      await mount();
 
       expect(joinsOn(sockets[0])).toEqual([]);
       act(() => sockets[0]?.open());
@@ -186,8 +196,8 @@ describe("useContentLiveSession", () => {
       ]);
     });
 
-    it("goes live on its own joined reply, not another tab's", () => {
-      mount();
+    it("goes live on its own joined reply, not another tab's", async () => {
+      await mount();
       act(() => sockets[0]?.open());
       const clientId = joinsOn(sockets[0])[0]?.clientId ?? "";
 
@@ -199,6 +209,7 @@ describe("useContentLiveSession", () => {
           type: "joined",
         }),
       );
+      await settle();
       expect(screen.getByTestId("live").textContent).toBe("false");
 
       act(() =>
@@ -209,13 +220,14 @@ describe("useContentLiveSession", () => {
           type: "joined",
         }),
       );
+      await settle();
       expect(screen.getByTestId("live").textContent).toBe("true");
       expect(screen.getByTestId("members").textContent).toBe("Anna");
     });
 
-    it("keeps only its own room's locks, presence and drafts", () => {
+    it("keeps only its own room's locks, presence and drafts", async () => {
       const onDraft = vi.fn();
-      mount(onDraft);
+      await mount(onDraft);
       act(() => sockets[0]?.open());
       const other = { contentTypeId: "test.note", itemId: 8 };
 
@@ -265,7 +277,7 @@ describe("useContentLiveSession", () => {
     });
 
     it("joins again after a reconnect, since the server forgot the tab", async () => {
-      mount();
+      await mount();
       act(() => sockets[0]?.open());
       const clientId = joinsOn(sockets[0])[0]?.clientId;
 
@@ -283,8 +295,8 @@ describe("useContentLiveSession", () => {
       ]);
     });
 
-    it("leaves the room when the form goes away", () => {
-      const { transport, view } = mount();
+    it("leaves the room when the form goes away", async () => {
+      const { transport, view } = await mount();
       act(() => sockets[0]?.open());
 
       view.rerender(
@@ -299,8 +311,8 @@ describe("useContentLiveSession", () => {
       });
     });
 
-    it("takes its seat again when the server says it lost it", () => {
-      mount();
+    it("takes its seat again when the server says it lost it", async () => {
+      await mount();
       act(() => sockets[0]?.open());
       const clientId = joinsOn(sockets[0])[0]?.clientId ?? "";
       act(() =>
@@ -311,6 +323,7 @@ describe("useContentLiveSession", () => {
           type: "joined",
         }),
       );
+      await settle();
 
       act(() => {
         sockets[0]?.push({
@@ -331,8 +344,8 @@ describe("useContentLiveSession", () => {
       expect(screen.getByTestId("live").textContent).toBe("true");
     });
 
-    it("keeps its seat over a document's error, and loses it when refused", () => {
-      mount();
+    it("keeps its seat over a document's error, and loses it when refused", async () => {
+      await mount();
       act(() => sockets[0]?.open());
       const clientId = joinsOn(sockets[0])[0]?.clientId ?? "";
       act(() =>
@@ -343,6 +356,7 @@ describe("useContentLiveSession", () => {
           type: "joined",
         }),
       );
+      await settle();
 
       act(() => {
         sockets[0]?.push({
@@ -370,9 +384,9 @@ describe("useContentLiveSession", () => {
       expect(screen.getByTestId("live").textContent).toBe("false");
     });
 
-    it("stays in its language while it moves to a shared field", () => {
+    it("stays in its language while it moves to a shared field", async () => {
       let session: ContentLiveSession | undefined;
-      mount(undefined, current => {
+      await mount(undefined, current => {
         session = current;
       });
       act(() => sockets[0]?.open());
@@ -404,7 +418,7 @@ describe("useContentLiveSession", () => {
 
     it("polls the locks and the draft over HTTP", async () => {
       const onDraft = vi.fn();
-      const { listLocks, readDraft } = mount(onDraft);
+      const { listLocks, readDraft } = await mount(onDraft);
       await waitFor(() => expect(listLocks).toHaveBeenCalledTimes(1));
 
       readDraft.mockResolvedValueOnce({

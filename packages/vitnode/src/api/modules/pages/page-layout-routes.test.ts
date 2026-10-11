@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { AnyEditablePageDefinition } from "@/content/editor/types";
@@ -279,8 +279,13 @@ describe("GET /layout", () => {
 
   it("fails rather than answering defaults when the read fails", async () => {
     const { app } = await harness({ readFails: true });
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
 
     expect((await read(app, "example:settings")).status).toBe(500);
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 
   it("answers the saved layout on the next read after a save", async () => {

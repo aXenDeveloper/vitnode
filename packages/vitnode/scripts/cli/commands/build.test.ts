@@ -428,6 +428,7 @@ describe("a failed build", () => {
       fakeVite(appBuild({ admin: 1000, index: 1000 }), {
         fail: new Error("Something odd"),
       }),
+      { captureOutput: captureProcessOutput },
     ).catch((thrown: unknown) => thrown)) as RuntimeError;
 
     expect(failure.details).toEqual(["Something odd"]);

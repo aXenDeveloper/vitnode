@@ -1,5 +1,11 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { ConfirmActionAlertDialog } from "./confirm-action-alert-dialog";
 
@@ -30,16 +36,16 @@ describe("ConfirmActionAlertDialog", () => {
       }),
     );
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(cancel.hasAttribute("disabled")).toBe(true);
     });
     fireEvent.click(cancel);
     expect(screen.getByRole("alertdialog")).toBeTruthy();
 
-    act(() => {
+    await act(async () => {
       finishSubmit();
     });
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(cancel.hasAttribute("disabled")).toBe(false);
     });
   });

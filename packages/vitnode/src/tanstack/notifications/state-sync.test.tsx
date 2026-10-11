@@ -150,7 +150,7 @@ describe("NotificationStateSync", () => {
     expect(fetchState).toHaveBeenCalledTimes(2);
   });
 
-  it("polls the count every minute when there is no socket to listen on", () => {
+  it("polls the count every minute when there is no socket to listen on", async () => {
     vi.stubEnv("VITNODE_API_URL", SAME_ORIGIN_API_URL);
     vi.useFakeTimers();
     const fetchState = vi.fn(
@@ -159,8 +159,8 @@ describe("NotificationStateSync", () => {
     mount(fetchState);
 
     expect(sockets).toHaveLength(0);
-    act(() => {
-      vi.advanceTimersByTime(60_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(fetchState).toHaveBeenCalledTimes(1);
     vi.useRealTimers();

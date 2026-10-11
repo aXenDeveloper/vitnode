@@ -19,9 +19,12 @@ const emit = vi.fn<
   }
 >(() => ({ failures: [], listeners: 1 }));
 
+const log = { error: vi.fn(async () => await Promise.resolve()) };
+
 const context = () =>
   ({
-    get: (key: string) => (key === "events" ? { emit } : undefined),
+    get: (key: string) =>
+      key === "events" ? { emit } : key === "log" ? log : undefined,
   }) as unknown as Context;
 
 const outcome = (
@@ -171,5 +174,6 @@ describe("failure reporting", () => {
     // `emit` never throws, so `failures` is the only place a dead listener is
     // visible - and the mutation has already committed either way.
     expect(result.event?.failures).toHaveLength(1);
+    expect(log.error).toHaveBeenCalledWith(expect.stringContaining("boom"));
   });
 });

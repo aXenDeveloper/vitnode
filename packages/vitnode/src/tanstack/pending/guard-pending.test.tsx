@@ -125,7 +125,9 @@ describe("a shell whose guard blocks the navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/users" });
+    act(() => {
+      void router.navigate({ to: "/users" });
+    });
     await tick(2_000);
 
     expect(showsTableShape()).toBe(false);
@@ -145,7 +147,9 @@ describe("a shell whose guard blocks the navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/users" });
+    act(() => {
+      void router.navigate({ to: "/users" });
+    });
     await tick(2_000);
 
     expect(showsTableShape()).toBe(true);
@@ -166,7 +170,9 @@ describe("a shell whose guard blocks the navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/users" });
+    act(() => {
+      void router.navigate({ to: "/users" });
+    });
     await tick(PENDING_MS - 50);
 
     expect(showsTableShape()).toBe(false);
@@ -187,7 +193,9 @@ describe("a shell whose guard blocks the navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/users" });
+    act(() => {
+      void router.navigate({ to: "/users" });
+    });
     await tick(PENDING_MS + 50);
 
     expect(screen.queryByText("Loading the section")).not.toBeNull();
@@ -209,7 +217,9 @@ describe("a shell whose guard blocks the navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/users" });
+    act(() => {
+      void router.navigate({ to: "/users" });
+    });
     await tick(PENDING_MS + 50);
 
     expect(showsTableShape()).toBe(true);

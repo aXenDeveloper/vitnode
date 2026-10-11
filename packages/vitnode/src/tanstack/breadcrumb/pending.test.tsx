@@ -100,7 +100,9 @@ describe("the breadcrumb area during a navigation", () => {
 
     expect(screen.queryByText("Here")).not.toBeNull();
 
-    void router.navigate({ to: "/there" });
+    act(() => {
+      void router.navigate({ to: "/there" });
+    });
     await tick(PENDING_MS + 50);
 
     expect(showsShape()).toBe(true);
@@ -121,7 +123,9 @@ describe("the breadcrumb area during a navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/there" });
+    act(() => {
+      void router.navigate({ to: "/there" });
+    });
     await tick(PENDING_MS - 50);
 
     expect(showsShape()).toBe(false);
@@ -135,7 +139,9 @@ describe("the breadcrumb area during a navigation", () => {
     });
     await mount(router);
 
-    void router.navigate({ to: "/there" });
+    act(() => {
+      void router.navigate({ to: "/there" });
+    });
     await tick(PENDING_MS + 50);
 
     expect(showsShape()).toBe(false);

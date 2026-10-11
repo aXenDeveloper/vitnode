@@ -127,7 +127,7 @@ describe("start options", () => {
 const serverScript = `
 import { createServer } from "node:http";
 const server = createServer((_, res) => res.end("ok"));
-server.listen(Number(process.env.PORT), () => console.log("listening " + process.env.NODE_ENV));
+server.listen(Number(process.env.PORT));
 `;
 
 describe("vitnode start", () => {

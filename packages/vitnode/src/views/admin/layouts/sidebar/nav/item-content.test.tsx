@@ -6,7 +6,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SidebarMenu, SidebarProvider } from "@/components/ui/sidebar";
@@ -85,7 +85,7 @@ describe("ItemNavAdminContent", () => {
     fireEvent.click(trigger);
     fireEvent.click(await screen.findByRole("menuitem", { name: "Roles" }));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(router.state.location.pathname).toBe("/admin/core/users/roles");
     });
   });

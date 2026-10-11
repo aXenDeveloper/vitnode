@@ -37,8 +37,9 @@ export const waitForShutdownSignal = async (
 export interface RunProcessOptions {
   args: readonly string[];
   /**
-   * `true` collects stdout and stderr into `output` instead of printing them,
-   * for steps whose output only matters when they fail.
+   * `true` keeps stdout and stderr off the terminal: `runProcess` collects them
+   * into `output`, for steps whose output only matters when they fail, and a
+   * `ProcessGroup` discards them.
    */
   capture?: boolean;
   command: string;
@@ -129,7 +130,11 @@ export class ProcessGroup {
   }
 
   spawn(options: RunProcessOptions): ChildProcess {
-    const child = spawnChild(options, "inherit");
+    const child = spawnChild(options, options.capture ? "pipe" : "inherit");
+    // Nothing reads a long-running child's output, so drain it - a full pipe
+    // would stall the child.
+    child.stdout?.resume();
+    child.stderr?.resume();
     this.children.add(child);
     this.exits.push(
       new Promise(resolve => {
