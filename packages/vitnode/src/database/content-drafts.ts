@@ -1,6 +1,9 @@
 import { camelCase, index, uniqueIndex } from "drizzle-orm/pg-core";
 
-import { CONTENT_LOCALE_MAX_LENGTH } from "../content/const";
+import {
+  CONTENT_ID_KEY_LENGTH,
+  CONTENT_LOCALE_MAX_LENGTH,
+} from "../content/const";
 import { core_users } from "./users";
 
 export const core_content_field_locks = camelCase.table.withRLS(
@@ -8,7 +11,8 @@ export const core_content_field_locks = camelCase.table.withRLS(
   t => ({
     id: t.serial().primaryKey(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    /** `contentIdKey(id)`: the digits of a serial or bigint id, or a uuid. */
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     field: t.varchar({ length: 100 }).notNull(),
     language: t
       .varchar({ length: CONTENT_LOCALE_MAX_LENGTH })
@@ -43,7 +47,8 @@ export const core_content_drafts = camelCase.table.withRLS(
   t => ({
     id: t.serial().primaryKey(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
-    itemId: t.integer().notNull(),
+    /** `contentIdKey(id)`: the digits of a serial or bigint id, or a uuid. */
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     language: t
       .varchar({ length: CONTENT_LOCALE_MAX_LENGTH })
       .notNull()

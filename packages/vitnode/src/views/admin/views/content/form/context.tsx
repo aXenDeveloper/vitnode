@@ -2,6 +2,7 @@ import React from "react";
 
 import type { PageTitleBack } from "@/components/ui/page-title";
 import type { ContentFileFieldValue } from "@/content/files";
+import type { ContentId } from "@/content/ids";
 import type { ContentVisibilityAction } from "@/content/visibility";
 
 export interface ContentFormHeaderValue {
@@ -27,7 +28,7 @@ export interface ContentFormContextValue {
   markRendered?: (name: string) => void;
   mode: "create" | "edit";
   onSaved?: (
-    listener: (saved: { itemId: number }) => Promise<void> | void,
+    listener: (saved: { itemId: ContentId }) => Promise<void> | void,
   ) => () => void;
   publication: {
     canPublish: boolean;

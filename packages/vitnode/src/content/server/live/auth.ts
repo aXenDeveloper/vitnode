@@ -9,6 +9,7 @@ import type { RegisteredContentType } from "@/content/registry";
 import { checkStaffPermissionOfUser } from "@/api/lib/check-staff-permission";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONTENT_PERMISSIONS } from "@/content/const";
+import { parseContentId } from "@/content/ids";
 import { contentLiveRoom } from "@/content/live/protocol";
 import { findContentLanguage } from "@/content/server/language-resolver";
 import { findContentModel } from "@/content/server/model";
@@ -68,13 +69,16 @@ export const authorizeContentLive = async (
   });
   if (!allowed) return { code: "FORBIDDEN", ok: false };
 
+  // The socket accepts any strategy's id; this content type's own strategy
+  // decides whether it is one, so a malformed id never reaches Postgres.
+  const itemId = parseContentId(entry.definition.idStrategy, room.itemId);
+  if (itemId === null) return { code: "NOT_FOUND", ok: false };
+
   const model = findContentModel(
     c.get("core").contentModels,
     room.contentTypeId,
   );
-  const row = model
-    ? await model.model.service(c).findById(room.itemId)
-    : undefined;
+  const row = model ? await model.model.service(c).findById(itemId) : undefined;
   if (!row) return { code: "NOT_FOUND", ok: false };
 
   const { avatarColor, id, name, nameCode } = session.user;

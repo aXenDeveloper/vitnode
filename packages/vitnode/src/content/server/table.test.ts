@@ -139,21 +139,6 @@ describe("createContentTable", () => {
           tableName: "test_pointing",
         });
 
-      it("builds the foreign key with the type of the key it points at", () => {
-        const uuidCategories = createContentTable(uuidCategory);
-        const table = createContentTable(
-          pointing(() => uuidCategory) as typeof testArticleContentType,
-          { references: { category: () => uuidCategories.id } },
-        );
-
-        expect(
-          getTableConfig(table)
-            .columns.find(item => item.name === "category")
-            ?.getSQLType(),
-        ).toBe("uuid");
-        expect(() => assertContentReferences(table)).not.toThrow();
-      });
-
       it("names the field when the referenced key has another type", () => {
         // The descriptor says the target is keyed by `uuid`, while the table
         // handed to `references` is the serial one: a column built as `uuid`

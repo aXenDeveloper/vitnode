@@ -14,8 +14,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type { AnyBlockInstance } from "../../blocks/types";
-import type { RichTextDocument } from "../rich-text/document";
 import type { ContentIdStrategy } from "../ids";
+import type { RichTextDocument } from "../rich-text/document";
 import type { ContentFieldDescriptor } from "../types";
 
 import {

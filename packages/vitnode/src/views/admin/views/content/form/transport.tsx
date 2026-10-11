@@ -1,9 +1,9 @@
 import React from "react";
 
+import type { ContentId } from "@/content/ids";
 import type { ContentDrafts } from "@/content/live/http";
 import type { ContentFieldLock } from "@/content/live/protocol";
 import type { ContentVisibilityAction } from "@/content/visibility";
-import type { ContentId } from "@/content/ids";
 
 import type {
   ContentMutationResult,
@@ -33,7 +33,7 @@ export interface ContentFormTransport {
 
   discardDraft: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ error?: string; status: number }>;
 
   edit: (
@@ -53,7 +53,7 @@ export interface ContentFormTransport {
 
   listLocks: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ error?: string; locks: ContentFieldLock[] }>;
 
   listTranslations: (
@@ -69,7 +69,7 @@ export interface ContentFormTransport {
   ) => Promise<ContentOption[]>;
   lock: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     request: {
       action: ContentFieldLockAction;
       field: string;
@@ -85,7 +85,7 @@ export interface ContentFormTransport {
 
   readDraft: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
   ) => Promise<{ drafts?: ContentDrafts; error?: string }>;
 
   reloadRow: (
@@ -95,7 +95,7 @@ export interface ContentFormTransport {
 
   saveDraft: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     draft: { locale: null | string; values: Record<string, unknown> },
   ) => Promise<ContentDraftSaveResult>;
   /**
@@ -106,7 +106,7 @@ export interface ContentFormTransport {
    */
   setHidden?: (
     contentTypeId: string,
-    itemId: number,
+    itemId: ContentId,
     action: ContentVisibilityAction,
     expectedVersion?: number,
   ) => Promise<ContentMutationResult>;

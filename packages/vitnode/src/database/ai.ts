@@ -3,6 +3,7 @@ import { camelCase, index, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type { AiPricing } from "@/api/lib/ai/pricing";
 
+import { CONTENT_ID_KEY_LENGTH } from "../content/const";
 import { core_roles } from "./roles";
 import { core_users } from "./users";
 
@@ -297,7 +298,8 @@ export const core_ai_translation_sources = camelCase.table.withRLS(
   t => ({
     id: t.serial().primaryKey(),
     contentTypeId: t.varchar({ length: 255 }).notNull(),
-    itemId: t.integer().notNull(),
+    /** `contentIdKey(id)`: the digits of a serial or bigint id, or a uuid. */
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
     locale: t.varchar({ length: 32 }).notNull(),
     field: t.varchar({ length: 255 }).notNull(),
     sourceLocale: t.varchar({ length: 32 }).notNull(),

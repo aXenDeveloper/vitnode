@@ -4,6 +4,7 @@ import { and, eq, lt, sql } from "drizzle-orm";
 
 import type { ContentLiveDocRef } from "@/content/live/protocol";
 
+import { contentIdKey } from "@/content/ids";
 import {
   CONTENT_LIVE_SHARED_LOCALE,
   CONTENT_LIVE_STALE_DAYS,
@@ -22,7 +23,7 @@ const languageOf = (doc: ContentLiveDocRef): string =>
 const whereDoc = (doc: ContentLiveDocRef) =>
   and(
     eq(table.contentTypeId, doc.contentTypeId),
-    eq(table.itemId, doc.itemId),
+    eq(table.itemId, contentIdKey(doc.itemId)),
     eq(table.field, doc.field),
     eq(table.language, languageOf(doc)),
   );
@@ -32,7 +33,7 @@ const isUnseeded = sql`octet_length(${table.state}) = 0`;
 const keyOf = (doc: ContentLiveDocRef) => ({
   contentTypeId: doc.contentTypeId,
   field: doc.field,
-  itemId: doc.itemId,
+  itemId: contentIdKey(doc.itemId),
   language: languageOf(doc),
 });
 
@@ -74,7 +75,7 @@ export const createContentDocumentStore = (
       .where(
         and(
           eq(table.contentTypeId, room.contentTypeId),
-          eq(table.itemId, room.itemId),
+          eq(table.itemId, contentIdKey(room.itemId)),
         ),
       );
   },

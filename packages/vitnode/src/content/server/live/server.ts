@@ -10,6 +10,7 @@ import type {
   ContentLiveServerMessage,
 } from "@/content/live/protocol";
 
+import { contentAnyIdSchema } from "@/content/ids";
 import {
   CONTENT_LIVE_HEARTBEAT_MS,
   contentLiveChannel,
@@ -58,11 +59,17 @@ const snapshotSchema = z.object({
       userId: z.number(),
     }),
   ),
-  room: z.object({ contentTypeId: z.string(), itemId: z.number() }),
+  room: z.object({
+    contentTypeId: z.string(),
+    itemId: contentAnyIdSchema,
+  }),
 }) satisfies z.ZodType<ContentLivePresenceSnapshot>;
 
 const resetSchema = z.object({
-  room: z.object({ contentTypeId: z.string(), itemId: z.number() }),
+  room: z.object({
+    contentTypeId: z.string(),
+    itemId: contentAnyIdSchema,
+  }),
   type: z.literal("reset"),
 });
 

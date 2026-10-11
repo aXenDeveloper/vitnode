@@ -19,8 +19,8 @@ import type {
   SetNotNull,
 } from "drizzle-orm/pg-core";
 
-import type { RichTextDocument } from "../rich-text/document";
 import type { ContentIdStrategy } from "../ids";
+import type { RichTextDocument } from "../rich-text/document";
 import type {
   ContentEditorialField,
   ContentFieldsOf,
@@ -82,7 +82,7 @@ type BaseBuilderFor<TField> = TField extends { kind: "relation" }
               ? PgTextBuilder
               : TField extends { kind: "richText" }
                 ? $Type<PgJsonbBuilder, RichTextDocument>
-              : PgVarcharBuilder;
+                : PgVarcharBuilder;
 
 type ApplyDefault<TBuilder extends AnyPgColumnBuilder, TField> =
   HasColumnDefault<TField> extends true ? SetHasDefault<TBuilder> : TBuilder;

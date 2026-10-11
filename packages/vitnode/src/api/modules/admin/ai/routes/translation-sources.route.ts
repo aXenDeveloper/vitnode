@@ -7,9 +7,23 @@ import { z } from "zod";
 import { checkStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
+import {
+  contentAnyIdSchema,
+  contentIdKey,
+  parseContentId,
+} from "@/content/ids";
 import { core_ai_translation_sources } from "@/database/ai";
 
-const assertCanEditContent = async (c: Context, contentTypeId: string) => {
+/**
+ * Checks `can_edit` on the content type and returns the item's storage key: the
+ * id is read under the content type's own strategy, so a malformed one is a 400
+ * rather than a database error, and a serial `7` and `"7"` are the same record.
+ */
+const assertCanEditContentItem = async (
+  c: Context,
+  contentTypeId: string,
+  rawItemId: unknown,
+): Promise<string> => {
   const registered = c
     .get("core")
     .contentTypes.find(entry => entry.definition.id === contentTypeId);
@@ -23,6 +37,13 @@ const assertCanEditContent = async (c: Context, contentTypeId: string) => {
     type: "admin",
   });
   if (!allowed) throw new HTTPException(403);
+
+  const itemId = parseContentId(registered.definition.idStrategy, rawItemId);
+  if (itemId === null) {
+    throw new HTTPException(400, { message: "Invalid identifier." });
+  }
+
+  return contentIdKey(itemId);
 };
 
 const zodTranslationSourceRecord = z.object({
@@ -45,7 +66,7 @@ export const getTranslationSourcesAdminRoute = buildRoute({
     request: {
       query: z.object({
         contentTypeId: z.string().min(1).max(255),
-        itemId: z.coerce.number().int().positive(),
+        itemId: contentAnyIdSchema,
       }),
     },
     responses: {
@@ -60,8 +81,13 @@ export const getTranslationSourcesAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { contentTypeId, itemId } = c.req.valid("query");
-    await assertCanEditContent(c, contentTypeId);
+    const query = c.req.valid("query");
+    const { contentTypeId } = query;
+    const itemId = await assertCanEditContentItem(
+      c,
+      contentTypeId,
+      query.itemId,
+    );
 
     const records = await c
       .get("db")
@@ -111,7 +137,7 @@ export const saveTranslationSourcesAdminRoute = buildRoute({
                 )
                 .min(1)
                 .max(100),
-              itemId: z.number().int().positive(),
+              itemId: contentAnyIdSchema,
               locale: z.string().min(2).max(32),
               sourceLocale: z.string().min(2).max(32),
             }),
@@ -129,9 +155,13 @@ export const saveTranslationSourcesAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { contentTypeId, fields, itemId, locale, sourceLocale } =
-      c.req.valid("json");
-    await assertCanEditContent(c, contentTypeId);
+    const body = c.req.valid("json");
+    const { contentTypeId, fields, locale, sourceLocale } = body;
+    const itemId = await assertCanEditContentItem(
+      c,
+      contentTypeId,
+      body.itemId,
+    );
 
     const updatedById = c.get("admin")?.user.id ?? null;
     for (const entry of fields) {

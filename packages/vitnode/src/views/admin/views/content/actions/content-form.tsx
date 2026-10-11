@@ -5,8 +5,8 @@ import { useLocale, useTranslations } from "use-intl";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFileFieldValue } from "@/content/files";
-import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentId } from "@/content/ids";
+import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -336,10 +336,10 @@ const ContentFormFields = ({
   };
 
   const savedListenersRef = React.useRef(
-    new Set<(saved: { itemId: number }) => Promise<void> | void>(),
+    new Set<(saved: { itemId: ContentId }) => Promise<void> | void>(),
   );
   const onSaved = React.useCallback(
-    (listener: (saved: { itemId: number }) => Promise<void> | void) => {
+    (listener: (saved: { itemId: ContentId }) => Promise<void> | void) => {
       savedListenersRef.current.add(listener);
 
       return () => {
