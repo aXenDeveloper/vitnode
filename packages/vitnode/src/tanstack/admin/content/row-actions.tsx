@@ -5,7 +5,7 @@ import {
   CopyPlusIcon,
   EllipsisIcon,
   EyeIcon,
-  EyeOffIcon,
+  FileClockIcon,
   HistoryIcon,
   LinkIcon,
   PencilIcon,
@@ -18,6 +18,7 @@ import { useFormatter, useTranslations } from "use-intl";
 
 import type { ContentId } from "@/content/ids";
 import type { RegisteredFrontendContentType } from "@/content/index";
+import type { ContentVisibilityAction } from "@/content/visibility";
 import type {
   ContentEditorialActionId,
   ContentRowActionId,
@@ -157,7 +158,7 @@ const PublishRowAction = ({
   );
   const t = published ? tUnpublish : tPublish;
   const label = tActions(action);
-  const Icon = published ? EyeOffIcon : SendIcon;
+  const Icon = published ? FileClockIcon : SendIcon;
   const description = t.rich("desc", {
     title: () => <span className="text-foreground font-bold">{title}</span>,
   });
@@ -305,6 +306,160 @@ const ACTION_ICONS: Record<
   schedule: <CalendarClockIcon />,
 };
 
+interface ContentRowPanelProps {
+  finalFocus: React.RefObject<HTMLButtonElement | null>;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  title: string;
+}
+
+const DuplicateRowPanel = ({
+  entry,
+  finalFocus,
+  labelField,
+  locale,
+  onDuplicated,
+  onOpenChange,
+  open,
+  row,
+  singular,
+  title,
+}: ContentRowActionsProps & ContentRowPanelProps) => {
+  const { definition, pluginId } = entry;
+  const tDuplicate = useTranslations("core.content.duplicate");
+  const tErrors = useTranslations("core.global.errors");
+  const format = useFormatter();
+  const queryClient = useQueryClient();
+  const showError = useMutationToast();
+  const target = contentApiTarget(definition, pluginId);
+
+  const duplicate = async (): Promise<boolean> => {
+    const result = await duplicateContentRow(queryClient, {
+      contentTypeId: definition.id,
+      id: row.id,
+      target,
+    });
+
+    if (!result.duplicated) {
+      const message = contentDuplicateErrorMessage(result.duplicate, {
+        labelField,
+        list: names => format.list(names),
+      });
+
+      if (message) {
+        toast.error(tErrors("title"), {
+          description: tDuplicate(`errors.${message.key}`, message.values),
+        });
+      } else {
+        showError(result);
+      }
+
+      return false;
+    }
+
+    const { id, row: fallback, skippedLocales } = result.duplicated;
+    const copy = await readDuplicatedContent(queryClient, {
+      definition,
+      fallback,
+      id,
+      locale,
+      pluginId,
+    });
+
+    toast.success(tDuplicate("success", { name: singular }), {
+      description: copy.title,
+    });
+    if (skippedLocales.length > 0) {
+      toast.info(tDuplicate("skipped_title"), {
+        description: tDuplicate("skipped", {
+          locales: format.list(skippedLocales),
+        }),
+      });
+    }
+
+    onDuplicated?.({ id, row: copy.row, title: copy.title });
+
+    return true;
+  };
+
+  return (
+    <ContentDuplicateDialog
+      finalFocus={finalFocus}
+      onConfirm={duplicate}
+      onOpenChange={onOpenChange}
+      open={open}
+      singular={singular}
+      title={title}
+    />
+  );
+};
+
+const VisibilityRowPanel = ({
+  action,
+  entry,
+  finalFocus,
+  onOpenChange,
+  open,
+  row,
+  singular,
+  title,
+}: ContentRowPanelProps &
+  Pick<ContentRowActionsProps, "entry" | "row" | "singular"> & {
+    action: ContentVisibilityAction;
+  }) => {
+  const { definition, pluginId } = entry;
+  const t = useTranslations("core.content");
+  const tVisibility = useTranslations("core.content.visibility");
+  const queryClient = useQueryClient();
+  const showError = useMutationToast();
+  const target = contentApiTarget(definition, pluginId);
+
+  const toggleVisibility = async (): Promise<boolean> => {
+    const result = await setContentVisibility(queryClient, {
+      action,
+      contentTypeId: definition.id,
+      expectedVersion: definition.editorial.enabled
+        ? versionOf(row)
+        : undefined,
+      id: row.id,
+      target,
+    });
+
+    if (result.error !== undefined) {
+      if (result.conflict?.code === "CONTENT_VERSION_CONFLICT") {
+        await invalidateContentList(queryClient, definition.id);
+        toast.error(tVisibility("conflict.title"), {
+          description: tVisibility("conflict.desc"),
+        });
+
+        return false;
+      }
+
+      showError(result);
+
+      return false;
+    }
+
+    toast.success(t(`${action}.success`, { name: singular }), {
+      description: title,
+    });
+
+    return true;
+  };
+
+  return (
+    <ContentVisibilityDialog
+      action={action}
+      finalFocus={finalFocus}
+      onConfirm={toggleVisibility}
+      onOpenChange={onOpenChange}
+      open={open}
+      singular={singular}
+      title={title}
+    />
+  );
+};
+
 const ContentRowActionsMenu = ({
   entry,
   labelField,
@@ -317,10 +472,6 @@ const ContentRowActionsMenu = ({
   const { definition, pluginId } = entry;
   const t = useTranslations("core.content");
   const tDelete = useTranslations("core.content.delete");
-  const tDuplicate = useTranslations("core.content.duplicate");
-  const tVisibility = useTranslations("core.content.visibility");
-  const tErrors = useTranslations("core.global.errors");
-  const format = useFormatter();
   const queryClient = useQueryClient();
   const showError = useMutationToast();
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -401,89 +552,6 @@ const ContentRowActionsMenu = ({
       setPanel({ id, open: true });
     };
 
-  const duplicate = async (): Promise<boolean> => {
-    const result = await duplicateContentRow(queryClient, {
-      contentTypeId: definition.id,
-      id: row.id,
-      target,
-    });
-
-    if (!result.duplicated) {
-      const message = contentDuplicateErrorMessage(result.duplicate, {
-        labelField,
-        list: names => format.list(names),
-      });
-
-      if (message) {
-        toast.error(tErrors("title"), {
-          description: tDuplicate(`errors.${message.key}`, message.values),
-        });
-      } else {
-        showError(result);
-      }
-
-      return false;
-    }
-
-    const { id, row: fallback, skippedLocales } = result.duplicated;
-    const copy = await readDuplicatedContent(queryClient, {
-      definition,
-      fallback,
-      id,
-      locale,
-      pluginId,
-    });
-
-    toast.success(tDuplicate("success", { name: singular }), {
-      description: copy.title,
-    });
-    if (skippedLocales.length > 0) {
-      toast.info(tDuplicate("skipped_title"), {
-        description: tDuplicate("skipped", {
-          locales: format.list(skippedLocales),
-        }),
-      });
-    }
-
-    onDuplicated?.({ id, row: copy.row, title: copy.title });
-
-    return true;
-  };
-
-  const toggleVisibility = async (): Promise<boolean> => {
-    const { action } = visibility;
-    const result = await setContentVisibility(queryClient, {
-      action,
-      contentTypeId: definition.id,
-      expectedVersion: definition.editorial.enabled
-        ? versionOf(row)
-        : undefined,
-      id: row.id,
-      target,
-    });
-
-    if (result.error !== undefined) {
-      if (result.conflict?.code === "CONTENT_VERSION_CONFLICT") {
-        await invalidateContentList(queryClient, definition.id);
-        toast.error(tVisibility("conflict.title"), {
-          description: tVisibility("conflict.desc"),
-        });
-
-        return false;
-      }
-
-      showError(result);
-
-      return false;
-    }
-
-    toast.success(t(`${action}.success`, { name: singular }), {
-      description: title,
-    });
-
-    return true;
-  };
-
   const rowPanel =
     panel && isEditorialAction(panel.id)
       ? slots.rowPanels?.[panel.id]
@@ -550,23 +618,28 @@ const ContentRowActionsMenu = ({
       )}
 
       {panel?.id === "duplicate" ? (
-        <ContentDuplicateDialog
+        <DuplicateRowPanel
+          entry={entry}
           finalFocus={triggerRef}
-          onConfirm={duplicate}
+          labelField={labelField}
+          locale={locale}
+          onDuplicated={onDuplicated}
           onOpenChange={closePanel}
           open={panel.open}
+          row={row}
           singular={singular}
           title={title}
         />
       ) : null}
 
       {panel?.id === "visibility" ? (
-        <ContentVisibilityDialog
+        <VisibilityRowPanel
           action={visibility.action}
+          entry={entry}
           finalFocus={triggerRef}
-          onConfirm={toggleVisibility}
           onOpenChange={closePanel}
           open={panel.open}
+          row={row}
           singular={singular}
           title={title}
         />

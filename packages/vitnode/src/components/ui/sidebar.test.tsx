@@ -111,7 +111,7 @@ describe("SidebarContent gliding indicators", () => {
     expect(indicator("active").style.width).toBe("200px");
   });
 
-  it("glides the active indicator to the newly active item", async () => {
+  it("moves the active indicator to the newly active item without gliding", async () => {
     const { rerender } = render(<Nav activeItem="Dashboard" />);
 
     rerender(<Nav activeItem="Users" />);

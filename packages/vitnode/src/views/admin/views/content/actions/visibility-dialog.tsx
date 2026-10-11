@@ -1,4 +1,4 @@
-import { EyeOffIcon, ViewIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { ContentVisibilityAction } from "@/content/visibility";
@@ -10,7 +10,7 @@ export const CONTENT_VISIBILITY_ICONS: Record<
   React.ReactNode
 > = {
   hide: <EyeOffIcon />,
-  unhide: <ViewIcon />,
+  unhide: <EyeIcon />,
 };
 
 export const ContentVisibilityDialog = ({

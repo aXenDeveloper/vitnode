@@ -74,13 +74,15 @@ Every mistake here, such as an unknown field or a gallery in `columns`, throws a
 
 ## Bulk actions
 
-Ticking rows opens a floating bar with **Publish**, **Unpublish** and **Delete**. There is nothing to configure. Publish and Unpublish appear with `publication` and the `can_publish` permission, Delete with `can_delete`. Without any of them, the table has no checkboxes.
+Ticking rows opens a floating bar with two menus and a **Delete** button. **Status** holds Publish and Unpublish, **Visibility** holds Hide and Unhide. Each option says how many of the ticked rows it applies to, such as **2 of 3**, and only those rows change: hiding two visible articles and one already hidden sends two requests, not three. An option that fits none of them is greyed out.
+
+There is nothing to configure. **Status** appears with `publication` and the `can_publish` permission, **Visibility** with [`visibility`](/docs/content-engine/content-visibility) and `can_hide`, **Delete** with `can_delete`. Without any of them, the table has no checkboxes. On a phone the bar shrinks to icons.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={bulkActions}
-  alt="Articles list with one row ticked and a floating bar showing 1 selected, Publish, Unpublish and Delete"
+  alt="Blog articles list with three rows ticked and the floating bar's Visibility menu open, showing Hide 2 of 3 and Unhide 1 of 3 above 3 selected, Status, Visibility and Delete"
 />
 
 Each action asks for confirmation and then sends one request per record to the same route the row buttons use, so events, search indexing and revisions behave as if you clicked every row. When some records fail, for example because someone else saved them meanwhile, the rest still go through. A toast says how many were skipped, and those rows stay ticked.

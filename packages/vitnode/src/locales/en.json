@@ -1465,6 +1465,18 @@
           "confirm": "Yes, unpublish",
           "success": "{count} {name} unpublished."
         },
+        "hide": {
+          "title": "Hide {count} {name}",
+          "desc": "{count, plural, one {It disappears} other {They disappear}} from the public site, search and the sitemap right away. Nothing is unpublished - unhide whenever you like.",
+          "confirm": "Yes, hide",
+          "success": "{count} {name} hidden."
+        },
+        "unhide": {
+          "title": "Unhide {count} {name}",
+          "desc": "Readers can reach {count, plural, one {it} other {them}} again - drafts stay private until you publish them.",
+          "confirm": "Yes, unhide",
+          "success": "{count} {name} visible again."
+        },
         "delete": {
           "title": "Delete {count} {name}",
           "desc": "{count, plural, one {It is} other {They are}} gone for good. This action cannot be undone.",
@@ -1473,7 +1485,8 @@
         },
         "conflict": "{count, plural, one {# was skipped: someone changed it, or other content still needs it.} other {# were skipped: someone changed them, or other content still needs them.}}",
         "failed": "{count} could not be updated. Try again.",
-        "more": "+{count} more"
+        "more": "+{count} more",
+        "applies": "{count} of {total}"
       },
       "publish": {
         "title": "Publish {name}",

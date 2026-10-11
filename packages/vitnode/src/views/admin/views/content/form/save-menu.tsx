@@ -32,12 +32,13 @@ import { ContentFormSubmit } from "./primitives";
 import { ContentFormButtonSkeleton } from "./skeleton";
 import { useContentFormHidden } from "./visibility";
 
-const PUBLICATION_ICONS: Record<ContentPublicationAction, React.ReactNode> = {
+type ContentFormMenuAction = ContentPublicationAction | ContentVisibilityAction;
+
+const MENU_ICONS: Record<ContentFormMenuAction, React.ReactNode> = {
+  ...CONTENT_VISIBILITY_ICONS,
   publish: <SendIcon />,
   unpublish: <FileClockIcon />,
 };
-
-type ContentFormMenuAction = ContentPublicationAction | ContentVisibilityAction;
 
 const PublicationDialog = ({
   action,
@@ -71,7 +72,7 @@ const PublicationDialog = ({
         )
       }
       finalFocus={triggerRef}
-      icon={PUBLICATION_ICONS[action]}
+      icon={MENU_ICONS[action]}
       onOpenChange={onOpenChange}
       onSubmit={async ({ onClose }) => {
         if (await publication.transition?.(action)) onClose();
@@ -111,6 +112,9 @@ export const ContentFormSaveMenu = () => {
     visibility?.enabled && visibility.canHide && visibility.transition
       ? contentVisibilityTransition({ hiddenAt: visibility.hiddenAt }).action
       : null;
+  const menuActions = [publicationAction, visibilityAction].filter(
+    action => action !== null,
+  );
   const visibilityTransition = visibility?.transition;
 
   return (
@@ -120,7 +124,7 @@ export const ContentFormSaveMenu = () => {
           <SaveIcon />
           <span className="max-sm:sr-only">{t("edit.submit")}</span>
         </AutoFormSubmitButton>
-        {publicationAction || visibilityAction ? (
+        {menuActions.length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               ref={triggerRef}
@@ -135,26 +139,17 @@ export const ContentFormSaveMenu = () => {
               <ChevronDownIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {publicationAction ? (
+              {menuActions.map(action => (
                 <DropdownMenuItem
+                  key={action}
                   onClick={() => {
-                    choose(publicationAction);
+                    choose(action);
                   }}
                 >
-                  {PUBLICATION_ICONS[publicationAction]}
-                  {t(`actions.${publicationAction}`)}
+                  {MENU_ICONS[action]}
+                  {t(`actions.${action}`)}
                 </DropdownMenuItem>
-              ) : null}
-              {visibilityAction ? (
-                <DropdownMenuItem
-                  onClick={() => {
-                    choose(visibilityAction);
-                  }}
-                >
-                  {CONTENT_VISIBILITY_ICONS[visibilityAction]}
-                  {t(`actions.${visibilityAction}`)}
-                </DropdownMenuItem>
-              ) : null}
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}

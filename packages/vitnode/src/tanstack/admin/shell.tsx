@@ -8,10 +8,11 @@ import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { NavSidebarAdminContent } from "@/views/admin/layouts/sidebar/nav/nav-content";
 import { SidebarAdminContent } from "@/views/admin/layouts/sidebar/sidebar-content";
+import { AdminSidebarToggle } from "@/views/admin/layouts/sidebar/sidebar-toggle";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { RouteGuardPending } from "../pending/guard-pending";
@@ -80,17 +81,9 @@ const AdminShellFrame = ({
       </SidebarAdminContent>
 
       <SidebarInset className="transition-[margin] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] [--admin-aside-width:clamp(18rem,26vw,24rem)] motion-reduce:transition-none md:has-data-[admin-aside=open]:me-[calc(var(--admin-aside-width)+1rem)]">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1 shrink-0" />
-          {breadcrumb != null && (
-            <>
-              <Separator
-                className="mr-1 data-[orientation=vertical]:h-4"
-                orientation="vertical"
-              />
-              <div className="min-w-0 flex-1">{breadcrumb}</div>
-            </>
-          )}
+        <header className="flex h-16 shrink-0 items-center border-b px-4">
+          <TopbarSidebarToggle withSeparator={breadcrumb != null} />
+          <div className="min-w-0 flex-1">{breadcrumb}</div>
 
           <div className="ml-auto flex shrink-0 items-center justify-center gap-2 px-2">
             <AdminSearch onNavigate={onNavigate} searchUsers={searchUsers} />
@@ -100,5 +93,26 @@ const AdminShellFrame = ({
         {children}
       </SidebarInset>
     </SidebarProvider>
+  );
+};
+
+const TopbarSidebarToggle = ({ withSeparator }: { withSeparator: boolean }) => {
+  const { state } = useSidebar();
+
+  return (
+    <div
+      className="group/topbar-toggle flex w-12 shrink-0 transition-[width] duration-200 ease-in-out motion-reduce:transition-none md:data-[state=expanded]:w-0"
+      data-state={state}
+    >
+      <div className="ease-fluid flex shrink-0 items-center gap-2 transition-[opacity,visibility] delay-100 duration-150 motion-reduce:transition-none md:group-data-[state=expanded]/topbar-toggle:invisible md:group-data-[state=expanded]/topbar-toggle:opacity-0 md:group-data-[state=expanded]/topbar-toggle:delay-0 md:group-data-[state=expanded]/topbar-toggle:duration-100">
+        <AdminSidebarToggle placement="topbar" />
+        {withSeparator && (
+          <Separator
+            className="data-[orientation=vertical]:h-4"
+            orientation="vertical"
+          />
+        )}
+      </div>
+    </div>
   );
 };

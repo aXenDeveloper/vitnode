@@ -100,6 +100,11 @@ const ContentListTable = ({
     permission: CONTENT_PERMISSIONS.publish,
     plugin: pluginId,
   });
+  const canHide = useAdminPermission({
+    module: definition.permissionModule,
+    permission: CONTENT_PERMISSIONS.hide,
+    plugin: pluginId,
+  });
   const routerNavigate = useNavigate();
   const [duplicated, setDuplicated] =
     React.useState<ContentDuplicatedRecord | null>(null);
@@ -108,8 +113,10 @@ const ContentListTable = ({
     Boolean(params.search) || Object.keys(params.filters).length > 0;
   const bulkActions = contentBulkActions({
     canDelete,
+    canHide,
     canPublish,
     publication: definition.publication.enabled,
+    visibility: definition.visibility.enabled,
   });
 
   const navigation = React.useMemo<DataTableNavigation>(

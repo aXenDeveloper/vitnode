@@ -407,7 +407,7 @@ function SidebarContent({
       />
       <span
         aria-hidden
-        className="bg-sidebar-accent inset-ring-sidebar-border ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 shadow-xs inset-ring transition-[translate,width,height,opacity,scale] duration-300 data-hidden:duration-200 data-pressed:scale-98 motion-reduce:transition-opacity"
+        className="bg-sidebar-accent inset-ring-sidebar-border ease-fluid pointer-events-none absolute top-0 left-0 rounded-md opacity-0 shadow-xs inset-ring transition-[scale] duration-200 data-pressed:scale-98 motion-reduce:transition-none"
         data-sidebar="active-indicator"
       />
       {children}

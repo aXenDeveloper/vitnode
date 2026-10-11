@@ -3,12 +3,19 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import type { AdminSearchNavItem } from "./flatten-nav";
 import type { SearchAdminDialogContentProps } from "./search-dialog-content";
-import type { AdminUserSearch } from "./search-users";
 
 const importSearchAdminDialog = async () =>
   await import("./search-dialog-content");
@@ -19,6 +26,36 @@ const SearchAdminDialogContent = React.lazy(async () =>
   })),
 );
 
+const SKELETON_ROWS = ["a", "b", "c", "d", "e"];
+
+const SearchAdminDialogSkeleton = () => {
+  const t = useTranslations("admin.global");
+
+  return (
+    <div
+      aria-busy
+      className="bg-popover flex flex-col overflow-hidden rounded-xl p-1"
+    >
+      <div className="p-1 pb-0">
+        <InputGroup className="border-input/30 bg-input/30 h-8 rounded-lg shadow-none">
+          <span className="text-muted-foreground flex-1 truncate ps-1.5 text-sm">
+            {t("search.placeholder")}
+          </span>
+          <InputGroupAddon>
+            <SearchIcon className="size-4 shrink-0 opacity-50" />
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+      <div className="flex flex-col gap-1 p-2">
+        <Skeleton className="my-1.5 h-3 w-20 rounded-sm" />
+        {SKELETON_ROWS.map(id => (
+          <Skeleton className="h-8 w-full rounded-md" key={id} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const SearchAdminContent = ({
   items,
   onNavigate,
@@ -27,13 +64,13 @@ export const SearchAdminContent = ({
   items: AdminSearchNavItem[];
   onNavigate: (href: string) => void;
   /** See {@link SearchAdminDialogContentProps.searchUsers}. */
-  searchUsers?: AdminUserSearch;
+  searchUsers?: SearchAdminDialogContentProps["searchUsers"];
 }) => {
   const t = useTranslations("admin.global");
   const tCore = useTranslations("core.global");
 
   const [open, setOpen] = React.useState(false);
-  const [isMounted, setIsMounted] = React.useState(false);
+  const pendingHrefRef = React.useRef<null | string>(null);
   const [isApple, setIsApple] = React.useState<boolean | undefined>(undefined);
 
   React.useEffect(() => {
@@ -47,7 +84,6 @@ export const SearchAdminContent = ({
       if (event.altKey || event.shiftKey || event.defaultPrevented) return;
 
       event.preventDefault();
-      setIsMounted(true);
       setOpen(prev => !prev);
     };
 
@@ -57,7 +93,6 @@ export const SearchAdminContent = ({
   }, []);
 
   const handleOpen = () => {
-    setIsMounted(true);
     setOpen(true);
   };
 
@@ -65,11 +100,20 @@ export const SearchAdminContent = ({
     void importSearchAdminDialog();
   };
 
-  const dialogProps: Omit<SearchAdminDialogContentProps, "onOpenChange"> = {
-    items,
-    onNavigate,
-    open,
-    searchUsers,
+  const navigateOnClose = (href: string) => {
+    pendingHrefRef.current = href;
+    setOpen(false);
+  };
+
+  const handleOpenChangeComplete = (isOpen: boolean) => {
+    if (isOpen) return;
+
+    const href = pendingHrefRef.current;
+    pendingHrefRef.current = null;
+
+    if (href) {
+      onNavigate(href);
+    }
   };
 
   return (
@@ -116,11 +160,29 @@ export const SearchAdminContent = ({
         )}
       </InputGroup>
 
-      {isMounted && (
-        <React.Suspense fallback={null}>
-          <SearchAdminDialogContent {...dialogProps} onOpenChange={setOpen} />
-        </React.Suspense>
-      )}
+      <Dialog
+        onOpenChange={setOpen}
+        onOpenChangeComplete={handleOpenChangeComplete}
+        open={open}
+      >
+        <DialogContent
+          className="top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 outline-none sm:max-h-[calc(66.667vh-5rem)]"
+          showCloseButton={false}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t("search.title")}</DialogTitle>
+            <DialogDescription>{t("search.desc")}</DialogDescription>
+          </DialogHeader>
+          <React.Suspense fallback={<SearchAdminDialogSkeleton />}>
+            <SearchAdminDialogContent
+              items={items}
+              onNavigate={navigateOnClose}
+              open={open}
+              searchUsers={searchUsers}
+            />
+          </React.Suspense>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
