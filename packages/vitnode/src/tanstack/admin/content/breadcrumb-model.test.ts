@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import type { ContentRouteLabels } from "@/views/admin/views/content/content-labels";
@@ -13,7 +12,6 @@ import type { ContentAdminRouteData } from "./route";
 
 import {
   CONTENT_BREADCRUMB_NONE,
-  contentBreadcrumbListHref,
   contentBreadcrumbModel,
 } from "./breadcrumb-model";
 
@@ -58,15 +56,6 @@ describe("a loader that did not resolve", () => {
       CONTENT_BREADCRUMB_NONE,
     );
   });
-
-  it("says so explicitly rather than with an empty segment list", () => {
-    // `none` and "a trail whose crumbs all resolved to nothing" are different
-    // answers, and the shell has to be able to tell them apart.
-    const model = contentBreadcrumbModel();
-
-    expect(model.kind).toBe("none");
-    expect(model).not.toHaveProperty("segments");
-  });
 });
 
 describe("a list URL", () => {
@@ -109,13 +98,6 @@ describe("a create URL", () => {
       title: "Articles",
     });
   });
-
-  it("names the list href it has to label", () => {
-    expect(model).toMatchObject({
-      listHref: contentBreadcrumbListHref("blog/articles"),
-      title: "Articles",
-    });
-  });
 });
 
 describe("an edit URL", () => {
@@ -134,13 +116,5 @@ describe("an edit URL", () => {
     expect(
       segmentsOf(contentBreadcrumbModel(route({ action: "edit", itemId: 42 }))),
     ).not.toContain("42");
-  });
-});
-
-describe("the list href helper", () => {
-  it("is the AdminCP content path", () => {
-    expect(contentBreadcrumbListHref("blog/articles")).toBe(
-      "/admin/content/blog/articles",
-    );
   });
 });

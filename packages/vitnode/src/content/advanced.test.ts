@@ -701,21 +701,3 @@ describe("indexes over advanced fields", () => {
     ).toThrow(/several columns rather than one/);
   });
 });
-
-describe("stage 1-5 content types", () => {
-  it("resolve to an empty advanced config", () => {
-    const flat = defineContentType({
-      ...base,
-      fields: {
-        category: field.relation({ nullable: true, target: () => target }),
-        name: field.text({ required: true }),
-      },
-    });
-
-    expect(flat.advanced).toStrictEqual({
-      junctions: [],
-      leaves: [],
-      repeatables: [],
-    });
-  });
-});

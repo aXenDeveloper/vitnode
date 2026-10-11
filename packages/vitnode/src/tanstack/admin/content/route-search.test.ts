@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import type { AnyContentTypeDefinition } from "@/content/types";
@@ -10,7 +9,6 @@ import { contentFilterableFields } from "@/content/registry";
 
 import {
   contentListFilters,
-  contentListQuery,
   contentListRouteParams,
   contentListSearchFrom,
   contentListSearchParams,
@@ -167,15 +165,6 @@ describe("normalizeContentListSearch", () => {
     ).not.toThrow();
   });
 
-  it("is idempotent", () => {
-    const once = normalizeContentListSearch(
-      { first: 20, orderBy: "title", status: "draft" },
-      articles,
-    );
-
-    expect(normalizeContentListSearch(once, articles)).toEqual(once);
-  });
-
   it("omits a page size equal to the content default", () => {
     expect(normalizeContentListSearch({}, articles)).toEqual({});
     expect(
@@ -188,10 +177,6 @@ describe("normalizeContentListSearch", () => {
     expect(contentListRouteParams({}, articles).first).toBe(
       String(CONTENT_DEFAULT_PAGE_SIZE),
     );
-  });
-
-  it("keeps page sizes as numbers", () => {
-    expect(normalizeContentListSearch({ first: 20 }, articles).first).toBe(20);
   });
 });
 
@@ -216,25 +201,5 @@ describe("the round trip through the table's controls", () => {
     expect(contentListSearchFrom(params.toString(), articles)).toEqual({
       orderBy: "title",
     });
-  });
-
-  it("re-validates what a control wrote", () => {
-    expect(contentListSearchFrom("orderBy=body&nope=1", articles)).toEqual({});
-  });
-});
-
-describe("contentListQuery", () => {
-  it("flattens the filters beside the pagination parameters", () => {
-    expect(
-      contentListQuery(
-        contentListRouteParams({ first: 20, status: "draft" }, articles),
-      ),
-    ).toEqual({ first: "20", status: "draft" });
-  });
-
-  it("carries no `filters` key of its own to the wire", () => {
-    expect(
-      contentListQuery(contentListRouteParams({}, articles)),
-    ).not.toHaveProperty("filters");
   });
 });

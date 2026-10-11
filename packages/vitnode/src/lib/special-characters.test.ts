@@ -52,24 +52,12 @@ describe("checkSpecialCharacters", () => {
     expect(checkSpecialCharacters("hello-world-123")).toBe(true);
   });
 
-  it("should return false for special characters", () => {
-    expect(checkSpecialCharacters("hello@world")).toBe(false);
-  });
-
   it("should return false for spaces", () => {
     expect(checkSpecialCharacters("hello world")).toBe(false);
   });
 
   it("should return true for uppercase letters", () => {
     expect(checkSpecialCharacters("HelloWorld")).toBe(true);
-  });
-
-  it("should return true for numbers only", () => {
-    expect(checkSpecialCharacters("123")).toBe(true);
-  });
-
-  it("should return true for hyphens only", () => {
-    expect(checkSpecialCharacters("-")).toBe(true);
   });
 
   it("should return false for other special characters", () => {

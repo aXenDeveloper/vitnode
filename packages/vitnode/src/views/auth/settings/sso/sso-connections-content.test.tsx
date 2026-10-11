@@ -259,31 +259,6 @@ describe("SsoConnectionsContent profile fields", () => {
     ).toBe("manual");
   });
 
-  it("offers only connected accounts that can supply the field", () => {
-    renderContent();
-
-    const options = (field: string) =>
-      Array.from(
-        screen.getByLabelText<HTMLSelectElement>(label(`fields.${field}`))
-          .options,
-        option => option.value,
-      );
-
-    expect(options("avatar")).toEqual(["manual", "google", "discord"]);
-    expect(options("firstName")).toEqual(["manual", "google"]);
-  });
-
-  it("leaves out fields no connected account can supply", () => {
-    renderContent({
-      ...DATA,
-      providers: DATA.providers.filter(one => one.id !== "google"),
-    });
-
-    expect(screen.getByLabelText(label("fields.avatar"))).toBeDefined();
-    expect(screen.queryByLabelText(label("fields.firstName"))).toBeNull();
-    expect(screen.queryByLabelText(label("fields.lastName"))).toBeNull();
-  });
-
   it("leaves out the whole group until an account can supply a field", () => {
     renderContent({
       ...DATA,

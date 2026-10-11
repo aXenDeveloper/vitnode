@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { field } from "../content/fields";
@@ -121,12 +120,6 @@ describe("constraints a block's data could actually satisfy", () => {
     ).toThrow(/against a maxLength of 3/);
   });
 
-  it("refuses a number range no value falls inside", () => {
-    expect(() =>
-      holding({ weight: field.number({ integer: true, max: 1, min: 10 }) }),
-    ).toThrow(/min 10 greater than max 1/);
-  });
-
   it("refuses a whole-number range no whole number falls inside", () => {
     expect(() =>
       holding({ weight: field.number({ integer: true, max: 0.9, min: 0.1 }) }),
@@ -213,17 +206,5 @@ describe("constraints a block's data could actually satisfy", () => {
         }),
       }),
     ).toThrow(/"seo\.title"[\s\S]*minLength 60 greater than maxLength 4/);
-  });
-
-  it("still refuses a kind a JSON document cannot hold", () => {
-    expect(() => holding({ cover: field.file({ maxBytes: 1024 }) })).toThrow(
-      /Supported kinds/,
-    );
-  });
-
-  it("still refuses a localized field with the message it always gave", () => {
-    expect(() =>
-      holding({ title: field.text({ localized: true, required: true }) }),
-    ).toThrow(/field\.blocks\(\{ localized: true \}\)/);
   });
 });

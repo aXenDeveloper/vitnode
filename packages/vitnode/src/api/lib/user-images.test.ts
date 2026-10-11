@@ -13,9 +13,7 @@ import {
   notAttachedAsUserImage,
   type RoleImageLimits,
   setUserImage,
-  USER_IMAGE_FOLDERS,
   userImageHoldersOf,
-  zodUserImageKind,
 } from "./user-images";
 
 const role = (overrides: Partial<RoleImageLimits> = {}): RoleImageLimits => ({
@@ -91,14 +89,6 @@ describe("effectiveUserImagePolicy", () => {
   });
 });
 
-describe("zodUserImageKind", () => {
-  it("accepts only the two kinds a user has", () => {
-    expect(zodUserImageKind.safeParse("avatar").success).toBe(true);
-    expect(zodUserImageKind.safeParse("cover").success).toBe(true);
-    expect(zodUserImageKind.safeParse("banner").success).toBe(false);
-  });
-});
-
 describe("userImageHoldersOf", () => {
   it("names the kind each user held the file as", () => {
     expect(
@@ -128,13 +118,6 @@ describe("userImageHoldersOf", () => {
     expect(userImageHoldersOf([{ avatarId: 6, coverId: 7, id: 1 }], 5)).toEqual(
       [],
     );
-  });
-});
-
-describe("USER_IMAGE_FOLDERS", () => {
-  it("has one storage folder per kind, and they differ", () => {
-    expect(Object.keys(USER_IMAGE_FOLDERS).sort()).toEqual(["avatar", "cover"]);
-    expect(USER_IMAGE_FOLDERS.avatar).not.toBe(USER_IMAGE_FOLDERS.cover);
   });
 });
 

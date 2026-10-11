@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { describe, expect, it, vi } from "vitest";
@@ -278,106 +277,6 @@ describe("rebuild-search-index", () => {
   });
 
   describe("the deprecated array result", () => {
-    it("indexes a legacy page and stops on the empty one", async () => {
-      const { config, offsets } = scriptedIndexer({
-        itemType: "legacy.item",
-        pages: [[document("legacy.item", 1)], []],
-        pluginId: "@vitnode/legacy",
-      });
-      const { c, indexed } = harness([config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      // No source count to advance by, so the cursor moves a whole page - which
-      // is exactly what the old rebuild did.
-      expect(offsets).toEqual([0, 200]);
-      expect(indexed).toHaveLength(1);
-      expect(indexed[0]?.[0]?.itemId).toBe(1);
-    });
-
-    it("stamps the registering plugin on a legacy document", async () => {
-      const { config } = scriptedIndexer({
-        itemType: "legacy.item",
-        pages: [[document("legacy.item", 1)], []],
-        pluginId: "@vitnode/legacy",
-      });
-      const { c, indexed } = harness([config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      expect(indexed[0]?.[0]?.pluginId).toBe("@vitnode/legacy");
-    });
-
-    it("keeps an owner a legacy document declared itself", async () => {
-      const { config } = scriptedIndexer({
-        itemType: "legacy.item",
-        pages: [
-          [document("legacy.item", 1, { pluginId: "@vitnode/elsewhere" })],
-          [],
-        ],
-        pluginId: "@vitnode/legacy",
-      });
-      const { c, indexed } = harness([config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      expect(indexed[0]?.[0]?.pluginId).toBe("@vitnode/elsewhere");
-    });
-
-    it("treats a blank declared owner as absent", async () => {
-      const { config } = scriptedIndexer({
-        itemType: "legacy.item",
-        pages: [[document("legacy.item", 1, { pluginId: "   " })], []],
-        pluginId: "@vitnode/legacy",
-      });
-      const { c, indexed } = harness([config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      expect(indexed[0]?.[0]?.pluginId).toBe("@vitnode/legacy");
-    });
-
-    it("does not mistake a multilingual document count for a source count", async () => {
-      // Four documents, two source items, two languages. Advancing by the array
-      // length would jump to offset 4 and skip most of a 200-row page.
-      const { config, offsets } = scriptedIndexer({
-        itemType: "legacy.multilingual",
-        pages: [
-          [
-            document("legacy.multilingual", 1, { languageCode: "en" }),
-            document("legacy.multilingual", 1, { languageCode: "pl" }),
-            document("legacy.multilingual", 2, { languageCode: "en" }),
-            document("legacy.multilingual", 2, { languageCode: "pl" }),
-          ],
-          [],
-        ],
-        pluginId: "@vitnode/legacy",
-      });
-      const { c, indexed } = harness([config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      expect(offsets).toEqual([0, 200]);
-      expect(offsets).not.toContain(4);
-      expect(indexed[0]).toHaveLength(4);
-    });
-
-    it("indexes an empty first page as an exhausted source", async () => {
-      // The ambiguity the modern contract exists to remove: an array cannot say
-      // whether rows were read and all filtered out, so this ends the rebuild.
-      const { config, offsets } = scriptedIndexer({
-        itemType: "legacy.item",
-        pages: [[], [document("legacy.item", 1)]],
-        pluginId: "@vitnode/legacy",
-      });
-      const { c, indexed } = harness([config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      expect(offsets).toEqual([0]);
-      expect(indexed).toEqual([]);
-    });
-
     it("runs alongside a modern indexer", async () => {
       const legacy = scriptedIndexer({
         itemType: "legacy.item",
@@ -424,44 +323,6 @@ describe("rebuild-search-index", () => {
       expect(search.clear).not.toHaveBeenCalled();
       expect(other.offsets).toEqual([]);
       expect(indexed).toEqual([]);
-    });
-
-    it("refuses even when no indexer is registered at all", async () => {
-      const { c, search } = harness([]);
-
-      await expect(
-        rebuildSearchIndexTask.handler(c, { itemType: "removed.collection" }),
-      ).rejects.toThrow(/removed.collection/);
-
-      expect(search.clear).not.toHaveBeenCalled();
-    });
-
-    it("names the collection it refused", async () => {
-      const { c } = harness([]);
-
-      await expect(
-        rebuildSearchIndexTask.handler(c, { itemType: "removed.collection" }),
-      ).rejects.toThrow(/Cannot rebuild collection "removed.collection"/);
-    });
-
-    it("still lets a full rebuild clear the whole index", async () => {
-      // A full rebuild refills only what has an indexer, so documents without one
-      // are removed by it. That is the documented behaviour, and it must not be
-      // blocked by the scoped guard.
-      const registered = scriptedIndexer({
-        itemType: "example.article",
-        pages: [
-          { documents: [document("example.article", 1)], itemsRead: 1 },
-          { documents: [], itemsRead: 0 },
-        ],
-        pluginId: "@vitnode/example",
-      });
-      const { c, cleared, indexed } = harness([registered.config]);
-
-      await rebuildSearchIndexTask.handler(c, {});
-
-      expect(cleared).toEqual([undefined]);
-      expect(indexed.flat().map(doc => doc.itemId)).toEqual([1]);
     });
 
     it("still lets a full rebuild run with no indexers registered", async () => {

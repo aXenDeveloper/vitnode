@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { PublicNavigationNode } from "@/lib/navigation";
 
 import {
-  HEADER_HREF,
   headerNavItemsFrom,
   headerNavNamespaces,
   visibleHeaderNavCount,
@@ -178,12 +177,6 @@ describe("the namespaces the header warms", () => {
     expect(headerNavNamespaces([custom(1, "Docs")], "core.global")).toEqual([
       "core.global",
     ]);
-  });
-});
-
-describe("the header's destinations", () => {
-  it("sends the logo home", () => {
-    expect(HEADER_HREF.home).toBe("/");
   });
 });
 

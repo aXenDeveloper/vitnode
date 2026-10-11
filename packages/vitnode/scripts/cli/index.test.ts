@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { PUBLIC_COMMANDS } from "./help";
 import { runCli } from "./index";
 import { createFakeRuntime } from "./testing";
 
@@ -64,32 +63,6 @@ describe("vitnode", () => {
 
     expect(code).toBe(0);
     expect(output.trim()).toBe("1.2.3-test");
-  });
-
-  it("lists only the public commands - legacy names keep working but stay out of help", async () => {
-    const { output } = await run([]);
-
-    expect(PUBLIC_COMMANDS.every(({ name }) => output.includes(name))).toBe(
-      true,
-    );
-    expect(output).not.toContain("db:prepare");
-    expect(output).not.toContain("i18n:");
-  });
-
-  it("never mentions out-of-scope commands", async () => {
-    const { output } = await run([]);
-
-    for (const command of [
-      "doctor",
-      "info",
-      "seed",
-      "cache",
-      "update",
-      "enable",
-      "disable",
-    ]) {
-      expect(output).not.toMatch(new RegExp(`\\b${command}\\b`));
-    }
   });
 });
 

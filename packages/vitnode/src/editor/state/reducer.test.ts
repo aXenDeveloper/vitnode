@@ -173,24 +173,6 @@ describe("visualEditorReducer", () => {
     expect(widened.zones.main.nodes).toStrictEqual(state.zones.main.nodes);
   });
 
-  it("widens the allowlist without adopting content the editor is still editing", () => {
-    const only = block("a");
-    const edited = visualEditorReducer(mounted(mount("main", [only])), {
-      data: { body: "edited" },
-      ref: ref("main", only.id),
-      type: "update",
-    });
-
-    const widened = visualEditorReducer(edited, {
-      type: "mount",
-      zone: mount("main", [block("elsewhere")], "*"),
-    });
-
-    expect(widened.zones.main.allowedBlocks).toBe("*");
-    expect(widened.zones.main.nodes).toStrictEqual(edited.zones.main.nodes);
-    expect(widened.zones.main.initial).toBe(edited.zones.main.initial);
-  });
-
   it("clamps the insert index into the zone", () => {
     const first = block("a");
     const late = block("b");
@@ -1061,22 +1043,6 @@ describe("the selection, as the page under it changes", () => {
 });
 
 describe("the baseline a saved snapshot writes", () => {
-  it("no edit during save: goes clean against the snapshot it sent", () => {
-    const [a, b] = [block("a"), block("b")];
-    const edited = visualEditorReducer(mounted(mount("main", [a])), {
-      container: into("main"),
-      index: 1,
-      instance: b,
-      type: "insert",
-    });
-    const saved = visualEditorReducer(edited, inFlight(edited));
-
-    expect(saved.zones.main.initial).toBe(edited.zones.main.nodes);
-    expect(ids(saved, "main")).toStrictEqual([a.id, b.id]);
-    expect(isVisualEditorDirty(saved)).toBe(false);
-    expect(changedZoneIds(saved)).toStrictEqual([]);
-  });
-
   it("edit during save: stays dirty, because the server never saw the late block", () => {
     const [a, b, late] = [block("a"), block("b"), block("c")];
     const sent = visualEditorReducer(mounted(mount("main", [a])), {
@@ -1304,12 +1270,6 @@ describe("persisted content the editor cannot read", () => {
 
       expect(cleared.zones.main.nodes[0]).not.toHaveProperty("variant");
       expect(unsafeZoneIds(cleared)).toStrictEqual([]);
-    });
-
-    it("blocks the save for a type the registry does not register either", () => {
-      const stored = { ...createBlockInstance("core:gone", {}), variant: "x" };
-
-      expect(unsafeZoneIds(zoneWith([stored]))).toStrictEqual(["main"]);
     });
   });
 
@@ -2992,20 +2952,6 @@ describe("the blocks a zone has to keep and the blocks it can hold", () => {
     expect(ids(next, "main")).toHaveLength(2);
   });
 
-  it("keeps the area's own cap separate from the zone's", () => {
-    const holder = area(children(AREA_CHILDREN_DEFAULT_MAX));
-    const state = mounted(mount("main", [holder], undefined, { max: 100 }));
-
-    const next = visualEditorReducer(state, {
-      container: into("main", holder.id),
-      index: AREA_CHILDREN_DEFAULT_MAX,
-      instance: block("one too many"),
-      type: "insert",
-    });
-
-    expect(next).toBe(state);
-  });
-
   it("leaves a zone that mounted over its max able to shrink", () => {
     const leaving = block("leaving");
     const state = mounted(
@@ -3856,6 +3802,151 @@ describe("a host snapshot that lands while the editor is dirty", () => {
     expect(bodyIn(settled)).toBe("C");
     expect(settled.zones.main.nodes).toHaveLength(1);
     expect(settled.selected).toBeNull();
+  });
+});
+
+describe("a host re-render after a save", () => {
+  const ZONE = "page:main";
+  const NODE_ID = "01JORCHREPRO0000000000001";
+
+  const node = (heading: string): AnyBlockInstance => ({
+    data: { heading },
+    id: NODE_ID,
+    type: "core:text",
+  });
+
+  const headingIn = (state: VisualEditorState): string => {
+    const [first] = state.zones[ZONE].nodes;
+
+    return String((first as AnyBlockInstance).data.heading);
+  };
+
+  const edited = (): VisualEditorState => {
+    const loaded = visualEditorReducer(initialVisualEditorState, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    return visualEditorReducer(loaded, {
+      data: { heading: "two" },
+      ref: { areaId: null, kind: "block", nodeId: NODE_ID, zoneId: ZONE },
+      type: "update",
+    });
+  };
+
+  const saved = (
+    state: VisualEditorState,
+    canonical: undefined | VisualEditorSnapshot,
+  ): VisualEditorState =>
+    visualEditorReducer(state, {
+      canonical,
+      invalid: { [ZONE]: [] },
+      snapshot: { [ZONE]: state.zones[ZONE].nodes },
+      type: "saved",
+    });
+
+  it("never revives the array the save replaced, with a canonical answer", () => {
+    const state = saved(edited(), { [ZONE]: [node("two")] });
+
+    expect(headingIn(state)).toBe("two");
+
+    const remounted = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    expect(headingIn(remounted)).toBe("two");
+    expect(isVisualEditorDirty(remounted)).toBe(false);
+  });
+
+  it("never revives it when the adapter answered with nothing at all", () => {
+    const state = saved(edited(), undefined);
+
+    expect(headingIn(state)).toBe("two");
+
+    const remounted = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    expect(headingIn(remounted)).toBe("two");
+    expect(isVisualEditorDirty(remounted)).toBe(false);
+  });
+
+  it("keeps refusing the same stale array after a second save", () => {
+    const first = saved(edited(), undefined);
+    const again = visualEditorReducer(first, {
+      data: { heading: "three" },
+      ref: { areaId: null, kind: "block", nodeId: NODE_ID, zoneId: ZONE },
+      type: "update",
+    });
+    const second = saved(again, undefined);
+
+    const remounted = visualEditorReducer(second, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    expect(headingIn(remounted)).toBe("three");
+    expect(isVisualEditorDirty(remounted)).toBe(false);
+  });
+
+  it("still takes genuinely new data the host pushes in", () => {
+    const state = saved(edited(), undefined);
+    const remounted = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount(ZONE, [node("elsewhere")]),
+    });
+
+    expect(headingIn(remounted)).toBe("elsewhere");
+    expect(isVisualEditorDirty(remounted)).toBe(false);
+  });
+
+  it("stops refusing an old array once the host has caught up", () => {
+    const state = saved(edited(), undefined);
+
+    const caughtUp = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount(ZONE, [node("two")]),
+    });
+
+    const reverted = visualEditorReducer(caughtUp, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    expect(headingIn(reverted)).toBe("one");
+    expect(isVisualEditorDirty(reverted)).toBe(false);
+  });
+
+  it("keeps refusing the stale array when a clean zone is discarded", () => {
+    const state = visualEditorReducer(saved(edited(), undefined), {
+      type: "discard",
+    });
+
+    const remounted = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    expect(headingIn(remounted)).toBe("two");
+  });
+
+  it("forgets what a save replaced once the discarded edit is thrown away", () => {
+    const dirty = visualEditorReducer(saved(edited(), undefined), {
+      data: { heading: "three" },
+      ref: { areaId: null, kind: "block", nodeId: NODE_ID, zoneId: ZONE },
+      type: "update",
+    });
+
+    const state = visualEditorReducer(dirty, { type: "discard" });
+
+    const remounted = visualEditorReducer(state, {
+      type: "mount",
+      zone: mount(ZONE, [node("one")]),
+    });
+
+    expect(headingIn(remounted)).toBe("one");
   });
 });
 

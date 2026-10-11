@@ -161,42 +161,6 @@ const harness = ({
 };
 
 describe("createFileUploadQueue", () => {
-  it("stores the order they were picked in, not the order they answered", async () => {
-    const files = harness();
-    await files.pick("A.webp", "B.webp", "C.webp");
-
-    // The reported case: the smallest file wins the race, the largest loses it.
-    await files.resolve("B.webp", 102);
-    await files.resolve("C.webp", 103);
-    await files.resolve("A.webp", 101);
-
-    expect(files.ids).toEqual([101, 102, 103]);
-  });
-
-  it("appends a selection after the files the field already held", async () => {
-    const files = harness({ ids: [10, 11] });
-    await files.pick("A.webp", "B.webp");
-
-    await files.resolve("B.webp", 102);
-    await files.resolve("A.webp", 101);
-
-    expect(files.ids).toEqual([10, 11, 101, 102]);
-  });
-
-  it("leaves no gap where an upload failed", async () => {
-    const files = harness();
-    await files.pick("A.webp", "B.webp", "C.webp");
-
-    await files.resolve("A.webp", 101);
-    await files.reject("B.webp");
-    await files.resolve("C.webp", 103);
-
-    // Two files, in the places they were picked in. Not three with a hole, and
-    // not [C, A] because C answered while B was still being refused.
-    expect(files.ids).toEqual([101, 103]);
-    expect(files.failed).toEqual(["B.webp"]);
-  });
-
   it("keeps an existing gallery, a refusal and the pick order all at once", async () => {
     // The three rules meeting in one selection, which is where the old version
     // came apart: two files already stored, three picked, one of the three

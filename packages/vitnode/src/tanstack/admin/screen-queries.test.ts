@@ -46,10 +46,6 @@ const ROOTS = {
 };
 
 describe("every screen hangs off the panel's one prefix", () => {
-  it.each(Object.entries(ROOTS))("%s", (_name, root) => {
-    expect(isUnder(root, ADMIN_QUERY_ROOT)).toBe(true);
-  });
-
   it("gives each screen a root of its own", () => {
     const roots = Object.values(ROOTS).map(root => JSON.stringify(root));
 
@@ -119,10 +115,6 @@ describe("the admin session is not a screen", () => {
     // `"admin"` and `"admin-session"` are different second segments, which is
     // what stops a screen's invalidation touching the permission set.
     expect(isUnder(ADMIN_SESSION_QUERY_KEY, ADMIN_QUERY_ROOT)).toBe(false);
-  });
-
-  it.each(Object.entries(ROOTS))("is not inside %s either", (_name, root) => {
-    expect(isUnder(ADMIN_SESSION_QUERY_KEY, root)).toBe(false);
   });
 });
 

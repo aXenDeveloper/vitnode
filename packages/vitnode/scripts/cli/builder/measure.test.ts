@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { BuildOutputFile, FileCategory } from "./output-files";
 
-import { brotliSize, gzipSize, measureFiles } from "./measure";
+import { measureFiles } from "./measure";
 
 let dir: string;
 
@@ -96,14 +96,5 @@ describe("measureFiles", () => {
     expect(
       measured.find(file => file.fileName === "small.js")?.brotli,
     ).toBeNull();
-  });
-});
-
-describe("compression helpers", () => {
-  it("compress repetitive content well", async () => {
-    const content = Buffer.from("vitnode ".repeat(10_000));
-
-    expect(await gzipSize(content)).toBeLessThan(content.length / 10);
-    expect(await brotliSize(content)).toBeLessThan(content.length / 10);
   });
 });

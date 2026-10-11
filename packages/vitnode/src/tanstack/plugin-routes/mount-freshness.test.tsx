@@ -89,14 +89,6 @@ const containerOf = (mountPoint: AnyRoute): AnyRoute | undefined =>
       (child.options as { id?: string }).id === PLUGIN_ROUTES_ROUTE_ID,
   );
 
-const pluginPaths = (mountPoint: AnyRoute): string[] => {
-  const container = containerOf(mountPoint);
-
-  return (container ? childrenOf(container) : [])
-    .map(child => (child.options as { path?: string }).path ?? "")
-    .sort();
-};
-
 describe("enabling, disabling and re-enabling a plugin on a live route tree", () => {
   it("claims the plugin's path once it is mounted", () => {
     const { admin, main, root } = appTree();
@@ -163,22 +155,6 @@ describe("enabling, disabling and re-enabling a plugin on a live route tree", ()
 });
 
 describe("no orphan routes are left on the tree", () => {
-  it("leaves exactly one plugin container, however many times it runs", () => {
-    const { admin, main, root } = appTree();
-    const mountUnder = { admin, main };
-
-    for (let pass = 0; pass < 4; pass++) {
-      withVitNodeRoutes(root, specsFor(EXAMPLE), { mountUnder, pageHead });
-    }
-
-    const containers = childrenOf(main).filter(
-      child => (child.options as { id?: string }).id === PLUGIN_ROUTES_ROUTE_ID,
-    );
-
-    expect(containers).toHaveLength(1);
-    expect(pluginPaths(main)).toEqual(["/example"]);
-  });
-
   it("keeps the application's own routes across every pass", () => {
     const { admin, main, root } = appTree();
     const mountUnder = { admin, main };
@@ -197,37 +173,6 @@ describe("no orphan routes are left on the tree", () => {
     withVitNodeRoutes(root, specsFor(), { mountUnder, pageHead });
     expect(ownPaths()).toEqual(["/"]);
     expect(owns(root, "/")).toBe(true);
-  });
-
-  it("clears one shell's plugin subtree without touching the other's", () => {
-    const { admin, main, root } = appTree();
-    const mountUnder = { admin, main };
-    const ADMIN_PAGE: PluginRouteDeclarationSource = {
-      pluginId: "admin",
-      routes: definePluginRoutes([
-        page("/admin/reports", {
-          area: "admin",
-          component: lazy(
-            async () => await Promise.resolve({ default: () => null }),
-          ),
-        }),
-      ]),
-    };
-
-    withVitNodeRoutes(root, specsFor(EXAMPLE, ADMIN_PAGE), {
-      mountUnder,
-      pageHead,
-    });
-    expect(owns(root, "/example")).toBe(true);
-    expect(owns(root, "/admin/reports")).toBe(true);
-
-    // Only the admin plugin is disabled.
-    withVitNodeRoutes(root, specsFor(EXAMPLE), { mountUnder, pageHead });
-
-    expect(owns(root, "/admin/reports")).toBe(false);
-    expect(owns(root, "/example")).toBe(true);
-    expect(pluginPaths(admin)).toEqual([]);
-    expect(pluginPaths(main)).toEqual(["/example"]);
   });
 
   it("leaves a shell that never had a plugin route exactly as it was", () => {

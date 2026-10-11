@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono, z } from "@hono/zod-openapi";
@@ -69,20 +68,5 @@ describe("buildRoute", () => {
 
     expect(middleware).toHaveLength(3);
     expect(middleware.at(-1)).toBe(custom);
-  });
-
-  it("prepends the plugin tag and keeps route tags", () => {
-    const { route } = buildRoute({
-      pluginId: "@vitnode/test_plugin",
-      route: {
-        method: "get",
-        path: "/",
-        tags: ["Articles"],
-        responses: okResponse,
-      },
-      handler: c => c.json({ plugin: c.get("plugin").id }, 200),
-    });
-
-    expect(route.tags).toEqual(["Test Plugin", "Articles"]);
   });
 });

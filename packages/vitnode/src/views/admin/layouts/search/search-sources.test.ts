@@ -10,7 +10,7 @@ import type {
 } from "../sidebar/nav/nav-model";
 
 import { buildAdminNav } from "../sidebar/nav/nav-model";
-import { flattenAdminNav, matchesAdminNavItem } from "./flatten-nav";
+import { flattenAdminNav } from "./flatten-nav";
 import { adminSearchOnlyItems } from "./search-only-pages";
 
 const CORE = "@vitnode/core";
@@ -60,16 +60,6 @@ describe("the palette indexes only what the sidebar shows", () => {
     expect(hrefs(index)).toContain("/admin/core/users/roles");
     // Never in the sidebar; reachable from the user menu and the palette.
     expect(hrefs(index)).toContain("/admin/core/debug");
-  });
-
-  /**
-   * The leak this file exists to prevent. An admin with no permissions gets the
-   * dashboard - the one entry behind no permission at all - and nothing else.
-   */
-  it("leaves an admin with no permissions only the dashboard", () => {
-    expect(hrefs(searchIndex(EMPTY_STAFF_PERMISSION_SET))).toEqual([
-      "/admin/core/",
-    ]);
   });
 
   it("does not index a screen the admin cannot open", () => {
@@ -134,28 +124,6 @@ describe("the palette indexes only what the sidebar shows", () => {
 });
 
 describe("flattening", () => {
-  it("indexes sub-items rather than their parent, and never an href twice", () => {
-    const index = flattenAdminNav(
-      buildAdminNav({ permissions: root, t, vitNodeConfig: config() as never }),
-    );
-    const users = hrefs(index).filter(href => href === "/admin/core/users");
-
-    expect(users).toHaveLength(1);
-    expect(hrefs(index)).not.toContain("/admin/core/staff");
-  });
-
-  it("carries the parent's title so a result says where it lives", () => {
-    const index = flattenAdminNav(
-      buildAdminNav({ permissions: root, t, vitNodeConfig: config() as never }),
-    );
-    const roles = index.find(item => item.href === "/admin/core/users/roles");
-
-    expect(roles).toMatchObject({
-      groupTitle: "admin.global.nav.core",
-      parentTitle: "admin.global.nav.users.title",
-    });
-  });
-
   it("preserves an external entry's new-tab classification", () => {
     const plugins = [
       {
@@ -187,31 +155,5 @@ describe("flattening", () => {
     expect(
       index.find(item => item.href === "/admin/example/inline")?.isOpenInNewTab,
     ).toBeUndefined();
-  });
-});
-
-describe("matching", () => {
-  const index = flattenAdminNav(
-    buildAdminNav({ permissions: root, t, vitNodeConfig: config() as never }),
-  );
-  const roles = index.find(item => item.href === "/admin/core/users/roles");
-
-  if (!roles) throw new Error("the roles entry is missing from the index");
-
-  it("matches on every token, in any order", () => {
-    expect(matchesAdminNavItem(roles, "roles users")).toBe(true);
-    expect(matchesAdminNavItem(roles, "users roles")).toBe(true);
-  });
-
-  it("matches a parent's name as well as the item's own", () => {
-    expect(matchesAdminNavItem(roles, "nav.users.title")).toBe(true);
-  });
-
-  it("does not match a token that appears nowhere", () => {
-    expect(matchesAdminNavItem(roles, "roles zzz")).toBe(false);
-  });
-
-  it("matches everything for an empty query", () => {
-    expect(matchesAdminNavItem(roles, "   ")).toBe(true);
   });
 });

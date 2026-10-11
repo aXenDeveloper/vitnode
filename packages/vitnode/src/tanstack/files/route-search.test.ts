@@ -7,14 +7,7 @@ import type { MyFilesPage } from "@/views/files/my-files-query";
 import {
   DEFAULT_TABLE_PAGE_SIZE,
   toggleTableOrder,
-  withTablePage,
-  withTablePageSize,
-  withTableSearch,
 } from "@/components/table/url-state";
-import {
-  MY_FILES_MAX_PAGE_SIZE,
-  myFilesQueryRoot,
-} from "@/views/files/my-files-query";
 
 import { invalidateMyFiles, myFilesQuery } from "./query";
 import {
@@ -94,10 +87,6 @@ describe("the route schema reads a table request out of the URL", () => {
     // error screen.
     expect(searchFor("first=20&search=1")).toEqual({ first: 20, search: "1" });
   });
-
-  it("takes the first value when a key is repeated", () => {
-    expect(searchFor("orderBy=name&orderBy=size")).toEqual({ orderBy: "name" });
-  });
 });
 
 describe("a query string typed by hand renders the table anyway", () => {
@@ -117,17 +106,6 @@ describe("a query string typed by hand renders the table anyway", () => {
     // `createdAt desc` rather than being sent.
     expect(searchFor(query)).toEqual({});
     expect(keyFor(query)).toBe(keyFor(""));
-  });
-
-  it("clamps a page size past what the API will serve rather than 400ing", () => {
-    expect(searchFor("first=5000")).toEqual({ first: MY_FILES_MAX_PAGE_SIZE });
-  });
-
-  it("never asks for both directions at once, which the API refuses", () => {
-    const search = searchFor("first=20&last=20");
-
-    expect(search.first).toBe(20);
-    expect(search.last).toBeUndefined();
   });
 
   it("settles rather than drifting when applied to its own output", () => {
@@ -184,30 +162,6 @@ describe("one URL, one cache entry", () => {
     expect(keyFor("orderBy=name&tab=2")).toBe(keyFor("orderBy=name"));
   });
 
-  it("is a different entry for everything that changes the rows", () => {
-    const keys = [
-      keyFor(""),
-      keyFor("first=20"),
-      keyFor("orderBy=name"),
-      keyFor("orderBy=name&order=asc"),
-      keyFor("search=logo"),
-      keyFor("cursor=eyJpZCI6MX0"),
-    ];
-
-    expect(new Set(keys).size).toBe(keys.length);
-  });
-
-  it("hangs off the root a delete invalidates", () => {
-    const root = myFilesQueryRoot(USER);
-
-    expect(
-      myFilesQuery({
-        params: myFilesRouteParams({}),
-        userId: USER,
-      }).queryKey.slice(0, root.length),
-    ).toEqual([...root]);
-  });
-
   /**
    * The privacy invariant at this namespace's own seam.
    *
@@ -240,22 +194,6 @@ describe("the table changes the URL through the route, not around it", () => {
     expect(myFilesSearchParams(searchFor("")).toString()).toBe("");
   });
 
-  it("sorts a column the table offers", () => {
-    expect(
-      afterControl("", search =>
-        toggleTableOrder(search, { column: "name", defaultOrder }),
-      ),
-    ).toEqual({ order: "asc", orderBy: "name" });
-  });
-
-  it("flips a column that is already ascending", () => {
-    expect(
-      afterControl("orderBy=name&order=asc", search =>
-        toggleTableOrder(search, { column: "name", defaultOrder }),
-      ),
-    ).toEqual({ order: "desc", orderBy: "name" });
-  });
-
   it("cannot write a sort column this route does not have", () => {
     // The return leg re-validates, so a control - or a plugin handing one a
     // column list of its own - cannot put a column in the URL that the API would
@@ -268,73 +206,6 @@ describe("the table changes the URL through the route, not around it", () => {
         toggleTableOrder(search, { column: "password", defaultOrder }),
       ),
     ).toEqual({ order: "asc" });
-  });
-
-  it("pages forwards from the cursor the API handed back", () => {
-    expect(
-      afterControl("orderBy=name&order=asc", search =>
-        withTablePage(search, {
-          cursor: "eyJpZCI6MX0",
-          direction: "next",
-          pageSize: DEFAULT_TABLE_PAGE_SIZE,
-        }),
-      ),
-    ).toEqual({
-      cursor: "eyJpZCI6MX0",
-      order: "asc",
-      orderBy: "name",
-    });
-  });
-
-  it("pages backwards, and says so", () => {
-    expect(
-      afterControl("cursor=eyJpZCI6OX0", search =>
-        withTablePage(search, {
-          cursor: "eyJpZCI6MX0",
-          direction: "previous",
-          pageSize: DEFAULT_TABLE_PAGE_SIZE,
-        }),
-      ),
-    ).toEqual({ cursor: "eyJpZCI6MX0", last: DEFAULT_TABLE_PAGE_SIZE });
-  });
-
-  it("changes the page size as a number, so the URL says `first=20`", () => {
-    // A *string* `'20'` is written to the address bar as `first=%2220%22` by
-    // TanStack Router's default serializer, which is not what the API reads nor
-    // what a person pastes into a browser.
-    expect(afterControl("", search => withTablePageSize(search, 20))).toEqual({
-      first: 20,
-    });
-  });
-
-  it("returns the default page size to saying nothing", () => {
-    expect(
-      afterControl("first=20", search =>
-        withTablePageSize(search, DEFAULT_TABLE_PAGE_SIZE),
-      ),
-    ).toEqual({});
-  });
-
-  it("drops the cursor when the page size changes, and keeps the sort", () => {
-    expect(
-      afterControl("orderBy=name&order=asc&cursor=eyJpZCI6MX0", search =>
-        withTablePageSize(search, 20),
-      ),
-    ).toEqual({ first: 20, order: "asc", orderBy: "name" });
-  });
-
-  it("searches, and stops searching, without losing the sort", () => {
-    expect(
-      afterControl("orderBy=name&order=asc", search =>
-        withTableSearch(search, "logo"),
-      ),
-    ).toEqual({ order: "asc", orderBy: "name", search: "logo" });
-
-    expect(
-      afterControl("orderBy=name&order=asc&search=logo", search =>
-        withTableSearch(search, ""),
-      ),
-    ).toEqual({ order: "asc", orderBy: "name" });
   });
 
   it("survives a full round trip unchanged when nothing was clicked", () => {

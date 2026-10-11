@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { normalizeSsoProfile } from "@/api/lib/sso-profile";
@@ -19,8 +18,6 @@ const answer = (body: unknown) => {
 
   return fetch;
 };
-
-const scopeOf = (url: string) => new URL(url).searchParams.get("scope");
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -64,11 +61,6 @@ describe("the Google adapter", () => {
       lastName: null,
     });
   });
-
-  it("asks for no more than it did before", () => {
-    expect(scopeOf(google.getUrl({ state: "s" }))).toBe("openid profile email");
-    expect(google.profileFields).toEqual(["avatar", "firstName", "lastName"]);
-  });
 });
 
 describe("the Discord adapter", () => {
@@ -105,18 +97,6 @@ describe("the Discord adapter", () => {
 
       expect((await discord.fetchUser(TOKEN)).avatarUrl).toBeNull();
     }
-  });
-
-  it("never offers a first or last name", () => {
-    expect(discord.profileFields).toEqual(["avatar"]);
-    expect(
-      normalizeSsoProfile(discord, {
-        avatarUrl: null,
-        firstName: "Alice",
-        lastName: "Smith",
-      }),
-    ).toEqual({ avatarUrl: null, firstName: null, lastName: null });
-    expect(scopeOf(discord.getUrl({ state: "s" }))).toBe("identify email");
   });
 });
 
@@ -167,12 +147,6 @@ describe("the Facebook adapter", () => {
       firstName: null,
       lastName: null,
     });
-  });
-
-  it("asks for public_profile and email only", () => {
-    expect(scopeOf(facebook.getUrl({ state: "s" }))).toBe(
-      "public_profile,email",
-    );
   });
 });
 

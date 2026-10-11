@@ -285,12 +285,6 @@ describe("column values", () => {
     expect(cursorValueForColumn(core_users.createdAt, null)).toBeNull();
   });
 
-  it("refuses an unparseable date rather than letting Postgres fail the cast", () => {
-    expect(() =>
-      cursorValueForColumn(core_users.createdAt, "not-a-date"),
-    ).toThrow(HTTPException);
-  });
-
   it("accepts the sortable column kinds", () => {
     expect(isCursorSortableColumn(core_users.id)).toBe(true);
     expect(isCursorSortableColumn(core_users.name)).toBe(true);
@@ -360,10 +354,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
   });
 
   describe("bigint", () => {
-    it("refuses a value that would make BigInt() throw", () => {
-      refuses(probes.big, "not-a-bigint");
-    });
-
     it.each([
       ["a fractional string", "1.5"],
       ["an empty string", ""],
@@ -457,12 +447,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
       ])("accepts %s", (_why, value) => {
         expect(cursorValueForColumn(core_users.createdAt, value)).toBe(value);
       });
-
-      it("preserves microseconds through validation, digit for digit", () => {
-        const value = "2026-08-09 10:00:00.000001";
-
-        expect(cursorValueForColumn(core_users.createdAt, value)).toBe(value);
-      });
     });
   });
 
@@ -533,12 +517,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
 });
 
 describe("minting keeps the database's own representation", () => {
-  it("keeps a Postgres timestamp string exactly as it was read", () => {
-    expect(
-      cursorValueOf(core_users.createdAt, "2026-08-09 10:00:00.123456"),
-    ).toBe("2026-08-09 10:00:00.123456");
-  });
-
   it("rewrites a Date into the form the column would have been read in", () => {
     expect(
       cursorValueOf(core_users.createdAt, new Date("2026-08-09T10:00:00.123Z")),

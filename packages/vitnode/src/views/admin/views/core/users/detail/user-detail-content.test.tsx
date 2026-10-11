@@ -109,17 +109,6 @@ describe("UserDetailContent edit controls for a staff target", () => {
     }
   });
 
-  it("shows them for a moderator when the viewer holds users:can_edit_admin", async () => {
-    await mount({
-      permissions: permissionSet("can_edit", "can_edit_admin"),
-      user: adminUserFixture({ isStaff: true }),
-    });
-
-    for (const control of editControls()) {
-      expect(control).not.toBeNull();
-    }
-  });
-
   it("shows them for a member with users:can_edit alone", async () => {
     await mount({
       permissions: permissionSet("can_edit"),

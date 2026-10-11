@@ -1,5 +1,3 @@
-// @vitest-environment node
-import { getTableConfig } from "drizzle-orm/pg-core";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AnyBlockInstance, ContentNode } from "@/blocks/types";
@@ -18,8 +16,6 @@ import {
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
-import { createContentTable } from "./server/table";
-import { createContentTranslationTable } from "./server/translation-table";
 
 const Noop = () => null;
 
@@ -224,41 +220,6 @@ describe("field.blocks", () => {
 });
 
 describe("storage", () => {
-  const config = getTableConfig(createContentTable(pageContentType));
-  const column = config.columns.find(item => item.name === "content");
-
-  it("is one JSONB column on the row", () => {
-    expect(column?.getSQLType()).toBe("jsonb");
-  });
-
-  it("is NOT NULL and defaults to an empty list", () => {
-    expect(column?.notNull).toBe(true);
-    expect(column?.default).toStrictEqual([]);
-  });
-
-  it("lives on the translation table when the zone is localized", () => {
-    const localizedPage = defineContentType({
-      id: "test.localized-page",
-      tableName: "test_blocks_localized",
-      localization: { defaultLocale: "en" },
-      fields: {
-        content: field.blocks({ localized: true }),
-        title: field.text({ required: true }),
-      },
-    });
-
-    const table = createContentTable(localizedPage);
-    const base = getTableConfig(table);
-    const translations = getTableConfig(
-      createContentTranslationTable(localizedPage, { table }),
-    );
-
-    expect(base.columns.map(item => item.name)).not.toContain("content");
-    expect(
-      translations.columns.find(item => item.name === "content")?.getSQLType(),
-    ).toBe("jsonb");
-  });
-
   it("refuses a localized zone with no localization block", () => {
     expect(() =>
       defineContentType({

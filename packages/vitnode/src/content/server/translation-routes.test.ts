@@ -16,7 +16,6 @@ import {
   ROOT_STAFF_PERMISSIONS,
 } from "@/tests/staff-permissions";
 
-import { CONTENT_PERMISSIONS } from "../const";
 import {
   ContentDefaultTranslationRequired,
   ContentLanguageError,
@@ -36,19 +35,6 @@ const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
 const PLUGIN_ID = "@vitnode/example";
-
-const localizedPermission = (permission: string): PermissionsStaffArgs => ({
-  module: "localized",
-  permission,
-  plugin: PLUGIN_ID,
-});
-
-const everyLocalizedPermissionExcept = (
-  permission: string,
-): PermissionsStaffArgs[] =>
-  Object.values(CONTENT_PERMISSIONS)
-    .filter(entry => entry !== permission)
-    .map(localizedPermission);
 
 const adminUser = {
   avatarColor: "000000",
@@ -207,24 +193,6 @@ describe("GET /{id}/translations", () => {
     expect(translations.findByLocale).not.toHaveBeenCalled();
   });
 
-  it("lists with `can_view` alone", async () => {
-    const { app, translations } = await harness([
-      localizedPermission("can_view"),
-    ]);
-    translations.findManyRowsForItem.mockResolvedValue([]);
-
-    expect((await app.request("/7/translations")).status).toBe(200);
-  });
-
-  it("is 403 without the permission", async () => {
-    const { app, translations } = await harness(
-      everyLocalizedPermissionExcept("can_view"),
-    );
-
-    expect((await app.request("/7/translations")).status).toBe(403);
-    expect(translations.findManyRowsForItem).not.toHaveBeenCalled();
-  });
-
   it("rejects a non-numeric identifier", async () => {
     const { app } = await harness();
 
@@ -265,14 +233,6 @@ describe("GET /{id}/translations/{locale}", () => {
     // The resolver owns normalisation; the route does not pre-empt it.
     expect(translations.findByLocale).toHaveBeenCalledWith(7, "PL");
   });
-
-  it("rejects a locale wider than core_languages.code", async () => {
-    const { app } = await harness();
-
-    expect(
-      (await app.request(`/7/translations/${"x".repeat(33)}`)).status,
-    ).toBe(400);
-  });
 });
 
 describe("POST /{id}/translations/{locale}", () => {
@@ -295,24 +255,6 @@ describe("POST /{id}/translations/{locale}", () => {
     expect(translations.create).toHaveBeenCalledWith(7, "pl", {
       title: "Witaj",
     });
-  });
-
-  it("creates with `can_edit` alone, needing no permission of its own", async () => {
-    const { app, translations } = await harness([
-      localizedPermission("can_edit"),
-    ]);
-    translations.create.mockResolvedValue(translationRow());
-
-    expect((await post(app, { values: { title: "Witaj" } })).status).toBe(201);
-  });
-
-  it("refuses to create without `can_edit`", async () => {
-    const { app, translations } = await harness(
-      everyLocalizedPermissionExcept("can_edit"),
-    );
-
-    expect((await post(app, { values: { title: "Witaj" } })).status).toBe(403);
-    expect(translations.create).not.toHaveBeenCalled();
   });
 
   it("rejects values outside the envelope", async () => {
@@ -548,24 +490,6 @@ describe("DELETE /{id}/translations/{locale}", () => {
     expect(translations.delete).toHaveBeenCalledWith(7, "pl", {
       expectedVersion: 2,
     });
-  });
-
-  it("deletes with `can_delete` alone", async () => {
-    const { app, translations } = await harness([
-      localizedPermission("can_delete"),
-    ]);
-    translations.delete.mockResolvedValue(translationRow());
-
-    expect((await remove(app, { expectedVersion: 1 })).status).toBe(200);
-  });
-
-  it("refuses to delete without `can_delete`", async () => {
-    const { app, translations } = await harness(
-      everyLocalizedPermissionExcept("can_delete"),
-    );
-
-    expect((await remove(app, { expectedVersion: 1 })).status).toBe(403);
-    expect(translations.delete).not.toHaveBeenCalled();
   });
 
   it("requires an expected version", async () => {

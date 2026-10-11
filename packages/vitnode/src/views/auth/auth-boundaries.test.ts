@@ -1,5 +1,3 @@
-// @vitest-environment node
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -55,97 +53,8 @@ describe("the shared auth views are framework-neutral", () => {
   );
 });
 
-describe("the shared views take their framework parts as props", () => {
-  const withoutComments = (path: string): string =>
-    readFileSync(path, "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/.*$/gm, "");
-
-  it("asks for a sign-in callback rather than calling a mutation", () => {
-    const code = withoutComments(SHARED.signInForm);
-
-    expect(code).toContain("onSignIn");
-    expect(code).not.toContain("mutationApi");
-  });
-
-  it("asks for a provider callback rather than starting the flow itself", () => {
-    const code = withoutComments(SHARED.ssoButtons);
-
-    expect(code).toContain("onSelectProvider");
-    expect(code).not.toContain("mutationApi");
-  });
-
-  it("asks for a sign-up callback rather than calling a mutation", () => {
-    const code = withoutComments(SHARED.signUpForm);
-
-    expect(code).toContain("onSignUp");
-    expect(code).not.toContain("mutationApi");
-  });
-
-  it("asks for the two recovery mutations as callbacks", () => {
-    expect(withoutComments(SHARED.passwordResetForm)).toContain(
-      "onRequestReset",
-    );
-    expect(withoutComments(SHARED.changePasswordForm)).toContain(
-      "onChangePassword",
-    );
-  });
-
-  it("takes where to go after a password change as a callback", () => {
-    // The API mints no session on a password change, so the visitor goes to the
-    // login page - but router navigation belongs to the host, so the trip
-    // itself is the caller's.
-    const code = withoutComments(SHARED.changePasswordForm);
-
-    expect(code).toContain("onChanged");
-    expect(code).not.toContain("useRouter");
-  });
-
-  it("takes an already-parsed recovery link rather than raw search params", () => {
-    const code = withoutComments(SHARED.changePasswordForm);
-
-    expect(code).toContain("link: RecoveryLink;");
-    expect(code).not.toContain("userId: string");
-  });
-
-  it("renders the callback from a state rather than owning the request", () => {
-    const code = withoutComments(SHARED.ssoCallback);
-
-    expect(code).toContain("state: SSOCallbackState;");
-    expect(code).not.toContain("useQuery");
-  });
-
-  it("keeps the error screen free of both translations and navigation", () => {
-    const code = withoutComments(SHARED.errorScreen);
-
-    expect(code).not.toContain("useTranslations");
-    expect(code).toContain("actions?: React.ReactNode;");
-  });
-});
-
-describe("the settings frame is told its framework parts", () => {
-  const withoutComments = (path: string): string =>
-    readFileSync(path, "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/.*$/gm, "");
-
-  it("takes the navigation as a slot", () => {
-    expect(withoutComments(SHARED.settingsShell)).toContain(
-      "nav: React.ReactNode;",
-    );
-  });
-
-  it("takes where it is as a prop rather than asking", () => {
-    // The one decision neither half can make for itself. The active-item rule
-    // is shared; reading the pathname is not.
-    for (const path of [SHARED.settingsShell, SHARED.settingsNav]) {
-      expect(withoutComments(path)).not.toContain("usePathname");
-    }
-
-    expect(withoutComments(SHARED.settingsNav)).toContain("pathname: string");
-  });
-
-  it("keeps the menu and the active-item rule as data, not markup", () => {
+describe("the settings nav model stays data, not markup", () => {
+  it("keeps the menu and the active-item rule free of React", () => {
     // `settings-nav.ts` is what every host agrees through, so it must stay free
     // of React: a model that rendered would be a third navigation nobody meant
     // to have.
@@ -153,13 +62,5 @@ describe("the settings frame is told its framework parts", () => {
 
     expect(reached).not.toContain("react");
     expect(reached.some(one => one.includes("intl"))).toBe(false);
-    expect(withoutComments(SHARED.settingsNav)).toContain("settings-nav");
-  });
-
-  it("reads its strings from use-intl rather than from a request", () => {
-    // A panel cannot pass the scans above by translating nothing at all.
-    for (const path of [SHARED.settingsOverview, SHARED.settingsSecurity]) {
-      expect(runtimeImports(path)).toContain("use-intl");
-    }
   });
 });

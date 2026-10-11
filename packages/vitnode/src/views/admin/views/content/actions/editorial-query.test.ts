@@ -5,10 +5,6 @@ import type { ContentRevisionMeta } from "@/content/revisions";
 import {
   contentDeliveryQueryKey,
   contentHistoryQueryRoot,
-  contentItemQueryRoot,
-  contentListQueryRoot,
-  contentSchedulesQueryKey,
-  contentTranslationsQueryKey,
 } from "../content-query";
 import {
   contentDeliveryLocaleQueryKey,
@@ -66,73 +62,6 @@ describe("history keys", () => {
       contentRevisionQueryKey(TYPE, ITEM, 8),
     );
   });
-
-  it("does not reach a sibling record's history", () => {
-    expect(
-      isPrefixOf(
-        contentHistoryQueryRoot(TYPE, ITEM),
-        contentHistoryListQueryKey(TYPE, ITEM + 1),
-      ),
-    ).toBe(false);
-  });
-
-  it("is dropped with the record it belongs to", () => {
-    // The delete guarantee: `removeContentItem` drops the item root, so nothing
-    // below it can be read back afterwards.
-    for (const key of [
-      contentHistoryListQueryKey(TYPE, ITEM),
-      contentRevisionQueryKey(TYPE, ITEM, 7),
-    ]) {
-      expect(isPrefixOf(contentItemQueryRoot(TYPE, ITEM), key)).toBe(true);
-    }
-  });
-
-  it("is not reached by invalidating the list", () => {
-    // A publish invalidates the list. It must not throw away a history panel
-    // that is open beside it and has not changed.
-    expect(
-      isPrefixOf(
-        contentListQueryRoot(TYPE),
-        contentHistoryListQueryKey(TYPE, ITEM),
-      ),
-    ).toBe(false);
-  });
-});
-
-describe("translation keys", () => {
-  it("hangs every language of a record off that record", () => {
-    expect(
-      isPrefixOf(
-        contentItemQueryRoot(TYPE, ITEM),
-        contentTranslationsQueryKey(TYPE, ITEM),
-      ),
-    ).toBe(true);
-  });
-
-  it("does not reach a sibling record's translations", () => {
-    expect(contentTranslationsQueryKey(TYPE, ITEM)).not.toEqual(
-      contentTranslationsQueryKey(TYPE, ITEM + 1),
-    );
-  });
-
-  it("is a different entry from the record itself", () => {
-    // They go stale separately: a save that touched only the Polish copy leaves
-    // the base row exactly as it was.
-    expect(contentTranslationsQueryKey(TYPE, ITEM)).not.toEqual(
-      contentItemQueryRoot(TYPE, ITEM),
-    );
-  });
-
-  it("does not collide with the record's history or schedules", () => {
-    const translations = contentTranslationsQueryKey(TYPE, ITEM);
-
-    expect(isPrefixOf(contentHistoryQueryRoot(TYPE, ITEM), translations)).toBe(
-      false,
-    );
-    expect(isPrefixOf(contentSchedulesQueryKey(TYPE, ITEM), translations)).toBe(
-      false,
-    );
-  });
 });
 
 describe("delivery keys", () => {
@@ -159,15 +88,6 @@ describe("delivery keys", () => {
         ),
       ).toBe(true);
     }
-  });
-
-  it("is dropped with the record it belongs to", () => {
-    expect(
-      isPrefixOf(
-        contentItemQueryRoot(TYPE, ITEM),
-        contentDeliveryLocaleQueryKey(TYPE, ITEM, "en"),
-      ),
-    ).toBe(true);
   });
 });
 

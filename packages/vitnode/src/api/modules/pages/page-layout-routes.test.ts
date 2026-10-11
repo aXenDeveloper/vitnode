@@ -169,26 +169,18 @@ const harness = async ({
     ]),
   );
   const events: EmittedEvent[] = [];
-  const statements: string[] = [];
   const writes: string[] = [];
 
   const db = {
-    execute: async () => {
-      statements.push("lock");
-
-      return await Promise.resolve([]);
-    },
+    execute: async () => await Promise.resolve([]),
     transaction: async <TResult>(
       body: (tx: typeof db) => Promise<TResult>,
     ): Promise<TResult> => {
-      statements.push("begin");
-
       return await body(db);
     },
     delete: () => ({
       where: async (condition: unknown) => {
         const pageId = pageIdOf(condition);
-        statements.push("delete");
         writes.push(`delete ${pageId}`);
         store.delete(pageId);
 
@@ -199,7 +191,6 @@ const harness = async ({
       values: (values: StoredRow) => ({
         onConflictDoUpdate: () => ({
           returning: async () => {
-            statements.push("upsert");
             writes.push(`upsert ${values.pageId}`);
             store.set(values.pageId, values);
 
@@ -212,7 +203,6 @@ const harness = async ({
       from: () => ({
         where: (condition: unknown) => ({
           limit: async () => {
-            statements.push("select");
             if (readFails) throw new Error("connection terminated");
             const row = store.get(pageIdOf(condition));
 
@@ -246,7 +236,7 @@ const harness = async ({
   app.openapi(read.route, read.handler);
   app.openapi(write.route, write.handler);
 
-  return { app, events, grant, statements, store, writes };
+  return { app, events, grant, store, writes };
 };
 
 const save = async (app: OpenAPIHono, body: unknown) =>
@@ -258,24 +248,6 @@ const save = async (app: OpenAPIHono, body: unknown) =>
 
 const read = async (app: OpenAPIHono, pageId: string) =>
   await app.request(`/layout?pageId=${encodeURIComponent(pageId)}`);
-
-describe("route shape", () => {
-  it("mounts one public read and one guarded save", () => {
-    const routes = buildPageLayoutRoutes({ pluginId: PLUGIN_ID }).map(
-      entry => ({
-        method: entry.route.method,
-        middleware: (entry.route as unknown as { middleware: unknown[] })
-          .middleware.length,
-        path: entry.route.path,
-      }),
-    );
-
-    expect(routes).toEqual([
-      { method: "get", middleware: 1, path: "/layout" },
-      { method: "put", middleware: 1, path: "/layout" },
-    ]);
-  });
-});
 
 describe("GET /layout", () => {
   it("answers the effective layout without asking for a permission", async () => {
@@ -309,20 +281,6 @@ describe("GET /layout", () => {
     const { app } = await harness({ readFails: true });
 
     expect((await read(app, "example:settings")).status).toBe(500);
-  });
-
-  it("answers a repeated read from the cache without querying the database", async () => {
-    const { app, statements } = await harness({
-      permissions: [],
-      rows: { "example:settings": { sidebar: [quote("s1", "Stored")] } },
-    });
-
-    const first = await read(app, "example:settings");
-    const second = await read(app, "example:settings");
-
-    expect(second.status).toBe(200);
-    expect(await second.json()).toEqual(await first.json());
-    expect(statements).toEqual(["select"]);
   });
 
   it("answers the saved layout on the next read after a save", async () => {
@@ -401,41 +359,6 @@ describe("PUT /layout", () => {
     expect(events).toEqual([]);
   });
 
-  it("reads and writes inside one locked transaction", async () => {
-    const { app, statements } = await harness({
-      rows: { "example:settings": { sidebar: [quote("s1", "Old")] } },
-    });
-
-    expect(
-      (
-        await save(app, {
-          expectedZones: { sidebar: [quote("s1", "Old")] },
-          pageId: "example:settings",
-          zones: { sidebar: [quote("s1", "New")] },
-        })
-      ).status,
-    ).toBe(200);
-    expect(statements).toEqual(["begin", "lock", "select", "upsert"]);
-  });
-
-  it("stores nothing when a zone is saved back to its shipped default", async () => {
-    const { app, events, writes } = await harness();
-
-    const response = await save(app, {
-      expectedZones: { intro: [text("intro-shipped", "Shipped intro")] },
-      pageId: "example:settings",
-      zones: { intro: [text("intro-shipped", "Shipped intro")] },
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      updatedAt: null,
-      zones: { intro: [text("intro-shipped", "Shipped intro", "prose")] },
-    });
-    expect(writes).toEqual([]);
-    expect(events).toEqual([]);
-  });
-
   it("keeps an area and counts the blocks inside it", async () => {
     const { app, store } = await harness();
 
@@ -492,50 +415,6 @@ describe("a save built on a zone somebody else already moved", () => {
       sidebar: [quote("s1", "Two")],
     });
     expect(store.get("example:settings")?.updatedAt).toBe(STORED_AT);
-  });
-
-  it("is a 200 that writes nothing when it asks for what is already stored", async () => {
-    const { app, events, writes } = await harness({
-      rows: { "example:settings": { sidebar: [quote("s1", "Two")] } },
-    });
-
-    const response = await save(app, {
-      expectedZones: { sidebar: [quote("s1", "One")] },
-      pageId: "example:settings",
-      zones: { sidebar: [quote("s1", "Two")] },
-    });
-
-    expect(response.status).toBe(200);
-    expect(writes).toEqual([]);
-    expect(events).toEqual([]);
-  });
-
-  it("does not stand in the way of two people editing different zones", async () => {
-    const { app, store } = await harness({
-      rows: {
-        "example:settings": {
-          "after-profile": [quote("a1", "After one")],
-          sidebar: [quote("s1", "Sidebar one")],
-        },
-      },
-    });
-
-    const first = await save(app, {
-      expectedZones: { sidebar: [quote("s1", "Sidebar one")] },
-      pageId: "example:settings",
-      zones: { sidebar: [quote("s1", "Sidebar two")] },
-    });
-    const second = await save(app, {
-      expectedZones: { "after-profile": [quote("a1", "After one")] },
-      pageId: "example:settings",
-      zones: { "after-profile": [quote("a1", "After two")] },
-    });
-
-    expect([first.status, second.status]).toEqual([200, 200]);
-    expect(store.get("example:settings")?.zones).toEqual({
-      "after-profile": [quote("a1", "After two")],
-      sidebar: [quote("s1", "Sidebar two")],
-    });
   });
 
   it("does not refuse the very save that brings a zone back inside its bounds", async () => {

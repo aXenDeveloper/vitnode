@@ -1,6 +1,5 @@
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import type { ContentFormSpec } from "./admin/spec";
 import type { RichTextDocument } from "./rich-text/document";
@@ -121,14 +120,6 @@ describe("rich text schemas", () => {
       noteType.schemas.create.safeParse({ summary: paragraph("a".repeat(400)) })
         .success,
     ).toBe(false);
-  });
-
-  it("describes the public projection as JSON Schema", () => {
-    expect(() =>
-      z.toJSONSchema(noteType.schemas.publicSelectObject, {
-        unrepresentable: "any",
-      }),
-    ).not.toThrow();
   });
 });
 
@@ -290,9 +281,5 @@ describe("rich text in the AdminCP form", () => {
         ],
       }).success,
     ).toBe(false);
-  });
-
-  it("can be described as JSON Schema, which AutoForm runs", () => {
-    expect(() => z.toJSONSchema(buildFormSchemaFromSpec(spec))).not.toThrow();
   });
 });

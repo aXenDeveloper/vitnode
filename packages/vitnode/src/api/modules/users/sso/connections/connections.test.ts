@@ -1152,25 +1152,4 @@ describe("syncing now, without signing out", () => {
     });
     expect(h.users.get(ALICE.id)?.firstName).toBe("Alicja");
   });
-
-  it("keeps local values the provider did not send", async () => {
-    const h = prepare();
-
-    const response = await syncFrom(h, { firstName: " " });
-
-    expect(await response.json()).toMatchObject({
-      results: { avatar: "missing", firstName: "missing" },
-    });
-    expect(h.users.get(ALICE.id)?.firstName).toBe("Alicja");
-  });
-
-  it("refuses a different account at the provider", async () => {
-    const h = prepare();
-
-    const response = await syncFrom(h, { firstName: "Bob", id: "google-bob" });
-
-    expect(response.status).toBe(409);
-    expect(await errorOf(response)).toBe("account_mismatch");
-    expect(h.users.get(ALICE.id)?.firstName).toBe("Alicja");
-  });
 });

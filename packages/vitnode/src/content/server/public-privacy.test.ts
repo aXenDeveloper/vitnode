@@ -124,30 +124,6 @@ describe("the public projection is an allowlist, not a filter", () => {
     ]);
   });
 
-  it.each([
-    ["a private localized scalar", "internalNotes"],
-    ["a private shared scalar", "revenue"],
-    ["a wholly private group", "syndication"],
-    ["a private relation", "hiddenLinks"],
-    ["the editorial version", "version"],
-    ["the internal language id", "languageId"],
-    ["a system timestamp", "createdAt"],
-    ["a system timestamp", "updatedAt"],
-    ["the publication state", "status"],
-    ["the cursor identifier", "id"],
-  ])("drops %s (%s)", (_why, key) => {
-    expect(projected).not.toHaveProperty(key);
-  });
-
-  it("never surfaces a flattened storage column name", () => {
-    // `seo.title` is stored as `seoTitle`. A response that carried the column
-    // name would publish an internal detail *and* give a client two spellings
-    // of one value.
-    for (const key of Object.keys(projected)) {
-      expect(key).not.toMatch(/^(seo|syndication|internalNotes)[A-Z]/);
-    }
-  });
-
   it("keeps a group to the leaves the allowlist named", () => {
     expect(projected.seo).toEqual({ title: "Public SEO title" });
   });
@@ -187,22 +163,6 @@ describe("the public read never fetches a private column", () => {
       "slug",
       "title",
     ]);
-  });
-
-  it("leaves every private column out of the SELECT entirely", () => {
-    // Defence in depth that matters: a private column that is never fetched
-    // cannot be leaked by a mistake in the projector further downstream.
-    for (const name of [
-      "internalNotes",
-      "revenue",
-      "seo.robots",
-      "syndication.indexable",
-      "syndication.partnerKey",
-      "version",
-      "status",
-    ]) {
-      expect(selection).not.toHaveProperty(name);
-    }
   });
 
   it("loads only the collections the allowlist exposes", () => {

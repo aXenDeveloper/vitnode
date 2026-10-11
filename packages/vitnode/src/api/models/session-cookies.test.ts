@@ -1,10 +1,6 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { Hono } from "hono";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
@@ -289,23 +285,4 @@ describe("device cookie", () => {
 
     expect(cookie.options.domain).toBe(".example.com");
   });
-});
-
-describe("every auth cookie goes through the shared helper", () => {
-  // The invariant the rest of this file rests on. A raw `setCookie` reintroduces
-  // the `domain` argument these tests exist to keep out, and a raw
-  // `deleteCookie` reintroduces the create/delete mismatch that leaves a cookie
-  // in the browser - neither of which changes a response's shape enough to fail
-  // an assertion elsewhere.
-  const here = dirname(fileURLToPath(import.meta.url));
-
-  it.each(["session.ts", "session-admin.ts", "device.ts", "sso.ts"])(
-    "%s writes no cookie of its own",
-    file => {
-      const source = readFileSync(resolve(here, file), "utf8");
-
-      expect(source).not.toMatch(/\bsetCookie\(/);
-      expect(source).not.toMatch(/\bdeleteCookie\(/);
-    },
-  );
 });

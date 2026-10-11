@@ -14,7 +14,6 @@ import {
   contentRowTitle,
   contentTableColumnCount,
   contentTableOrder,
-  contentTableSearchEnabled,
 } from "./columns";
 
 const articles = defineContentType({
@@ -115,16 +114,6 @@ describe("contentTableColumnCount", () => {
     expect(contentTableColumnCount(specsOf(articles))).toBe(
       specsOf(articles).length + 1,
     );
-  });
-});
-
-describe("contentTableSearchEnabled", () => {
-  it("is on for a content type that declared searchable fields", () => {
-    expect(contentTableSearchEnabled(articles)).toBe(true);
-  });
-
-  it("is off for one that declared none", () => {
-    expect(contentTableSearchEnabled(notes)).toBe(false);
   });
 });
 

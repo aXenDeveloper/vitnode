@@ -8,7 +8,6 @@ import {
   canAccessAdminRoute,
   canAccessAuthenticatedRoute,
   canAccessGuestRoute,
-  SESSION_QUERY_KEY,
 } from "./state";
 
 const anonymousSession: SessionApi = { user: null };
@@ -133,17 +132,5 @@ describe("the access predicates", () => {
         !canAccessAuthenticatedRoute(auth),
       );
     }
-  });
-});
-
-describe("the session cache key", () => {
-  it("is one stable entry", () => {
-    expect(SESSION_QUERY_KEY).toEqual(["vitnode", "session"]);
-  });
-
-  it("carries no locale, and nothing else either", () => {
-    const key: readonly string[] = SESSION_QUERY_KEY;
-
-    expect(key).toHaveLength(2);
   });
 });

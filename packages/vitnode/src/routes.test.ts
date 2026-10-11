@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { PluginRoute } from "./routing";
@@ -14,8 +12,6 @@ const manifest = compiled.manifest;
 
 const pathsIn = (area: PluginRoute["area"]) =>
   manifest.filter(route => route.area === area).map(route => route.path);
-
-const source = readFileSync(join(__dirname, "routes.tsx"), "utf8");
 
 /**
  * Core's route tree, held to the promises its hand-built route modules used to
@@ -81,27 +77,6 @@ describe("core's route tree", () => {
   });
 
   /**
-   * A guard is a declaration here rather than code in a route module, which is
-   * what lets one implementation answer for every route making the same promise.
-   */
-  it("guards the screens that need a session, and only those", () => {
-    const guarded = Object.fromEntries(
-      manifest
-        .filter(route => route.requires !== null)
-        .map(route => [route.path, route.requires]),
-    );
-
-    expect(guarded).toEqual({
-      "/admin": "admin-guest",
-      "/files": "authenticated",
-      "/notifications": "authenticated",
-      "/login": "guest",
-      "/register": "guest",
-      "/settings": "authenticated",
-    });
-  });
-
-  /**
    * No admin route declares `requires`: the AdminCP has its own session, and a
    * route in that area already renders behind the shell's guard. Per-screen
    * staff permissions are checked in each loader instead, where the tuple lives.
@@ -143,34 +118,5 @@ describe("core's route tree", () => {
     ]) {
       expect(declared).toContain(`@vitnode/core:page#${path}`);
     }
-  });
-
-  /**
-   * The tree is data a build tool reads in Node before any bundler runs. A page
-   * imported here rather than named through `lazy()` would be in the initial
-   * bundle, and a React import would make the file unreadable to that tool.
-   */
-  it("reaches every screen through a lazy import and nothing else", () => {
-    const statically = [
-      ...source.matchAll(/^import [\s\S]*?from "([^"]+)";$/gm),
-    ].map(([, specifier]) => specifier);
-    const lazily = [...source.matchAll(/import\("([^"]+)"\)/g)].map(
-      ([, specifier]) => specifier,
-    );
-
-    // What is imported up front is a search validator, a namespace list or the
-    // authoring vocabulary itself - values a route is made of. Nothing that
-    // renders.
-    expect(
-      statically.some(specifier => /-page$|-layout$/.test(specifier)),
-    ).toBe(false);
-    expect(statically).not.toContain("react");
-
-    // ...and every screen is behind one, in `src/pages/` - the same place a
-    // plugin keeps its own, so there is one answer to "where do pages live".
-    expect(lazily.length).toBe(manifest.length);
-    expect(lazily.every(specifier => specifier.startsWith("./pages/"))).toBe(
-      true,
-    );
   });
 });

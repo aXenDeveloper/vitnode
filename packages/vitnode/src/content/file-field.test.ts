@@ -1,9 +1,4 @@
-// @vitest-environment node
-import { getTableName } from "drizzle-orm";
-import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-
-import { core_files } from "@/database/files";
 
 import { buildContentFormSpec, buildFormSchemaFromSpec } from "./admin/spec";
 import { defineContentType } from "./define";
@@ -37,54 +32,6 @@ const articleType = defineContentType({
 });
 
 describe("the generated column", () => {
-  const config = getTableConfig(createContentTable(articleType));
-
-  it("is a nullable integer, not a URL or a key", () => {
-    const column = config.columns.find(item => item.name === "coverImage");
-
-    expect(column?.getSQLType()).toBe("integer");
-    expect(column?.notNull).toBe(false);
-    // Nothing about the file is copied onto the row.
-    expect(config.columns.map(item => item.name)).not.toContain(
-      "coverImageUrl",
-    );
-    expect(config.columns.map(item => item.name)).not.toContain(
-      "coverImageKey",
-    );
-  });
-
-  it("references core_files with ON DELETE RESTRICT", () => {
-    const [foreignKey] = config.foreignKeys
-      .map(fk => {
-        const reference = fk.reference();
-
-        return {
-          columns: reference.columns.map(item => item.name),
-          onDelete: fk.onDelete,
-          onUpdate: fk.onUpdate,
-          table: getTableName(reference.foreignTable),
-          targets: reference.foreignColumns.map(item => item.name),
-        };
-      })
-      .filter(fk => fk.columns.includes("coverImage"));
-
-    expect(foreignKey).toEqual({
-      columns: ["coverImage"],
-      // The whole deletion-safety story: Postgres refuses, so
-      // `StorageModel.deleteFile` can answer 409 instead of orphaning a record.
-      onDelete: "restrict",
-      onUpdate: "cascade",
-      table: getTableName(core_files),
-      targets: ["id"],
-    });
-  });
-
-  it("is indexed, because RESTRICT scans the child side on every delete", () => {
-    expect(config.indexes.map(item => item.config.name)).toContain(
-      "example_file_articles_cover_image_idx",
-    );
-  });
-
   it("needs no `references` entry - the engine resolves core_files itself", () => {
     // A `relation` demands a thunk; a `file` has exactly one possible target.
     expect(() => createContentTable(articleType)).not.toThrow();

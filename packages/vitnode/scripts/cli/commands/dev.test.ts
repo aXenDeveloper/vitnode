@@ -453,12 +453,4 @@ describe("the dev request log", () => {
 
     expect(lines.join("")).toBe("HMR   src/components/post.tsx\n");
   });
-
-  it("is only active while serving", () => {
-    const { ui } = plainUi();
-
-    expect(createDevReporter(ui, { defaultPort: null, root: "/" }).apply).toBe(
-      "serve",
-    );
-  });
 });

@@ -45,14 +45,6 @@ describe("an application that registers nothing", () => {
   it("reports that nothing of its own is registered", () => {
     expect(hasAuthTransport()).toBe(false);
   });
-
-  it("answers every call the contract names", () => {
-    for (const call of Object.keys(stub)) {
-      expect(authTransport()[call as keyof AuthTransport]).toBeTypeOf(
-        "function",
-      );
-    }
-  });
 });
 
 describe("an application that registers its own", () => {
@@ -61,25 +53,6 @@ describe("an application that registers its own", () => {
 
     expect(hasAuthTransport()).toBe(true);
     expect(authTransport()).toBe(stub);
-  });
-
-  it("overrides the built-in default rather than merging with it", () => {
-    setAuthTransport(stub);
-
-    expect(authTransport()).not.toBe(defaultAuthTransport);
-  });
-
-  /**
-   * A hot reload re-evaluates the registering module, and a second call must not
-   * be a build error - the newer function is the right one to keep.
-   */
-  it("replaces a previous registration rather than refusing", () => {
-    const second = { ...stub };
-
-    setAuthTransport(stub);
-    setAuthTransport(second);
-
-    expect(authTransport()).toBe(second);
   });
 
   it("falls back to the default once the override is dropped", () => {

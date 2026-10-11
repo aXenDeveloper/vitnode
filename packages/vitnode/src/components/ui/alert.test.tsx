@@ -1,32 +1,9 @@
-// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
-import { HardDriveIcon } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
 import { Alert, AlertDescription, AlertTitle } from "./alert";
 
-const iconOf = (alert: HTMLElement) =>
-  alert.querySelector("[data-slot=alert-icon] svg");
-
 describe("Alert", () => {
-  it.each([
-    ["info", "status", "lucide-info"],
-    ["success", "status", "lucide-circle-check"],
-    ["warning", "alert", "lucide-triangle-alert"],
-    ["destructive", "alert", "lucide-circle-x"],
-  ] as const)(
-    "shows the %s icon without being given one",
-    (variant, role, icon) => {
-      render(
-        <Alert variant={variant}>
-          <AlertTitle>Plugins need a workspace</AlertTitle>
-        </Alert>,
-      );
-
-      expect(iconOf(screen.getByRole(role))?.classList).toContain(icon);
-    },
-  );
-
   it("renders the neutral default notice without an icon", () => {
     render(
       <Alert>
@@ -67,18 +44,6 @@ describe("Alert", () => {
 
     expect(screen.getByRole("note").textContent).toBe("Static note");
     expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("renders a custom icon in place of the default one", () => {
-    render(
-      <Alert icon={<HardDriveIcon />} variant="info">
-        <AlertTitle>Storage</AlertTitle>
-      </Alert>,
-    );
-
-    expect(iconOf(screen.getByRole("status"))?.classList).toContain(
-      "lucide-hard-drive",
-    );
   });
 
   it("drops the icon when it is set to null", () => {

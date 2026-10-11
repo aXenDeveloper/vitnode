@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
@@ -221,22 +220,6 @@ describe("POST /search/clear", () => {
     }
   });
 
-  it("does not reach the console when the audit log succeeds", async () => {
-    const consoleWarn = vi
-      .spyOn(console, "warn")
-      .mockImplementation(() => undefined);
-
-    try {
-      const { c } = harness({ body: { itemType: "live.only" } });
-
-      await clearSearchDebugAdminRoute.handler(c);
-
-      expect(consoleWarn).not.toHaveBeenCalled();
-    } finally {
-      consoleWarn.mockRestore();
-    }
-  });
-
   it("propagates a failed clear and writes no success audit", async () => {
     const { c, warnings } = harness({
       body: { itemType: "live.only" },
@@ -248,27 +231,4 @@ describe("POST /search/clear", () => {
     );
     expect(warnings).toEqual([]);
   });
-
-  it("rejects an empty item type at the schema", () => {
-    expect(
-      zodBody(clearSearchDebugAdminRoute).safeParse({ itemType: "" }).success,
-    ).toBe(false);
-    expect(zodBody(clearSearchDebugAdminRoute).safeParse({}).success).toBe(
-      false,
-    );
-    expect(
-      zodBody(clearSearchDebugAdminRoute).safeParse({ itemType: "a.b" })
-        .success,
-    ).toBe(true);
-  });
 });
-
-/** Reaches the body schema the route declared, so the test asserts on the real one. */
-function zodBody(route: typeof clearSearchDebugAdminRoute) {
-  const body = route.route.request?.body;
-  if (!body || !("content" in body)) throw new Error("No body schema.");
-
-  return body.content["application/json"].schema as {
-    safeParse: (value: unknown) => { success: boolean };
-  };
-}

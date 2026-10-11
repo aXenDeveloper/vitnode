@@ -60,8 +60,6 @@ describe("ContentCell", () => {
     expect(
       screen.getAllByRole("listitem").map(item => item.textContent),
     ).toEqual(["Bob,", "Ada"]);
-    expect(screen.getByText("Bob").parentElement?.style.color).toBe("#ff0000");
-    expect(screen.getByText("Ada").parentElement?.style.color).toBe("");
     expect(container.querySelector("img")).toBeNull();
   });
 

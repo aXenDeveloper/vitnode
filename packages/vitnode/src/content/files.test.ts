@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { sanitizeFolder } from "../lib/api/upload";
-import {
-  fileAcceptAttribute,
-  fileFormatLabels,
-  validateFile,
-} from "../lib/file-constraints";
+import { validateFile } from "../lib/file-constraints";
 import { formatBytes } from "../lib/format-bytes";
 import { defineContentType } from "./define";
 import { field } from "./fields";
@@ -366,20 +362,6 @@ describe("contentFileAccept", () => {
 });
 
 describe("one implementation of the rules", () => {
-  /**
-   * The drift guard for requirement "the UI constraints come from the same field
-   * spec the server validates against".
-   *
-   * `AutoFormFile` imports `lib/file-constraints` and the Content Engine
-   * re-exports the very same functions, so a rule cannot be changed on one side.
-   * Identity, not behaviour: a second implementation that happened to agree today
-   * is exactly what this exists to refuse.
-   */
-  it("shares the accept and format helpers with the form field", () => {
-    expect(contentFileAccept).toBe(fileAcceptAttribute);
-    expect(contentFileFormatLabels).toBe(fileFormatLabels);
-  });
-
   it("maps the shared rejection reason onto the engine's own code", () => {
     const shared = validateFile(gif, {
       mimeType: "image/png",

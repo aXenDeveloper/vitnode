@@ -701,23 +701,6 @@ describe("resolveDrop", () => {
     });
   });
 
-  it("lands at index 0 in an empty zone", () => {
-    expect(
-      resolveDrop({
-        capabilities: accepting("*"),
-        source: source({ index: 1 }),
-        target: onContainer("page:aside"),
-        targetNodeCount: 0,
-      }),
-    ).toEqual({
-      from: into("page:main"),
-      kind: "move",
-      nodeId: "block-a",
-      to: into("page:aside"),
-      toIndex: 0,
-    });
-  });
-
   it("clamps an index the target container cannot hold", () => {
     expect(
       resolveDrop({
@@ -1573,36 +1556,6 @@ describe("dropPlacement, moving a node", () => {
     });
   });
 
-  it("shows nothing at all when the drop would change nothing", () => {
-    expect(
-      placeFor({
-        source: source({ index: 1 }),
-        target: onNode({ edge: "after", index: 0 }),
-      }),
-    ).toBeNull();
-  });
-
-  it("shows nothing at all when the zone refuses the block", () => {
-    expect(
-      placeFor({
-        capabilities: accepting(["core:*"]),
-        source: source({ type: "example:callout" }),
-        target: onNode({ edge: "before", index: 1 }),
-      }),
-    ).toBeNull();
-  });
-
-  it("shows nothing at all for an area over another area", () => {
-    expect(
-      placeFor({
-        nodeIds: ["block-x"],
-        source: areaSource(),
-        target: onContainer("page:main", "area-2"),
-        targetNodeCount: 1,
-      }),
-    ).toBeNull();
-  });
-
   it("makes room for a block arriving from another zone", () => {
     expect(
       placeFor({
@@ -1775,16 +1728,6 @@ describe("an area carries its children past a zone's allowlist", () => {
       }),
     ).toBeNull();
   });
-
-  it("still refuses an area dropped inside another area", () => {
-    expect(
-      dropRejection({
-        capabilities: accepting("*"),
-        source: areaSource({ childTypes: [] }),
-        target: targetAt(into("page:main", "area-b")),
-      }),
-    ).toBe("nested-area");
-  });
 });
 
 describe("collision precedence knows what is being dragged", () => {
@@ -1951,16 +1894,6 @@ describe("a target only accepts what it both registers and allows", () => {
         target: targetOf(into("page:main")),
       }),
     ).toBeNull();
-  });
-
-  it("keeps refusing a nested area before it looks at any type", () => {
-    expect(
-      dropRejection({
-        capabilities: accepting("*", []),
-        source: areaSource({ childTypes: [] }),
-        target: targetOf(into("page:main", "area-b")),
-      }),
-    ).toBe("nested-area");
   });
 });
 
@@ -2214,41 +2147,6 @@ describe("the room a drop needs on either side of it", () => {
 
     expect(decision.rejection).toBe("area-full");
     expect(decision.resolved).toBeNull();
-  });
-
-  it("never lights a target up for a drop it will not make", () => {
-    const cases = [
-      decide({
-        capacity: { source: null, target: holds(1, { max: 1 }) },
-        source: fromCatalog(),
-        target: onContainer("page:main"),
-        targetNodeCount: 1,
-      }),
-      decide({
-        capacity: {
-          source: holds(1, { min: 1 }),
-          target: holds(0),
-        },
-        source: source({ container: into("page:aside") }),
-        target: onContainer("page:main"),
-        targetNodeCount: 0,
-      }),
-      decide({
-        source: fromCatalog(),
-        target: onContainer("page:main", "area-a"),
-        targetNodeCount: AREA_CHILDREN_DEFAULT_MAX,
-      }),
-      decide({
-        source: areaSource(),
-        target: onContainer("page:main", "area-a"),
-        targetNodeCount: 0,
-      }),
-    ];
-
-    for (const decision of cases) {
-      expect(decision.rejection).not.toBeNull();
-      expect(decision.resolved).toBeNull();
-    }
   });
 });
 

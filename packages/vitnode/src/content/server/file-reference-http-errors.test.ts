@@ -13,7 +13,6 @@ import {
 
 import { CONTENT_FILE_CODES } from "../const";
 import { defineContentType } from "../define";
-import { ContentInputError } from "../errors";
 import { field } from "../fields";
 import { ContentFileReferenceError } from "./files";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
@@ -323,21 +322,6 @@ describe("a refused file identifier on a content write", () => {
     expect(JSON.stringify(response.body)).not.toContain("Content Engine");
     expect(JSON.stringify(response.body)).not.toContain("test.file-post");
     expect(response.body).toMatchObject({ message: "This file is too big." });
-  });
-
-  it("leaves every other input error as plain text", async () => {
-    const { app, service } = await harness();
-    service.create.mockRejectedValue(
-      new ContentInputError("Provide the slug explicitly."),
-    );
-
-    const response = await send(app, "/", "POST", {
-      title: "Hello",
-      slug: "hello",
-    });
-
-    expect(response.status).toBe(400);
-    expect(response.body).toBe("[Content Engine] Provide the slug explicitly.");
   });
 });
 

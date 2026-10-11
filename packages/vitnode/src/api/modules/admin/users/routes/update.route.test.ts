@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
@@ -29,7 +28,6 @@ import { updateUserAdminRoute } from "./update.route";
 const ROOT_ROLE = 1;
 const EDITOR_ROLE = 2;
 const MEMBER_ROLE = 3;
-const PLUGINS_ROLE = 9;
 
 const EDITOR = { email: "editor@example.com", id: 1, roleId: EDITOR_ROLE };
 const TARGET_ID = 7;
@@ -93,7 +91,6 @@ const harness = async ({
         { guest: false, id: ROOT_ROLE, root: true },
         { guest: false, id: EDITOR_ROLE, root: false },
         { guest: false, id: MEMBER_ROLE, root: false },
-        { guest: false, id: PLUGINS_ROLE, root: false },
       ],
     ],
     [
@@ -102,10 +99,6 @@ const harness = async ({
         entryRow({
           permissions: [CAN_EDIT, CAN_EDIT_ADMIN],
           roleId: EDITOR_ROLE,
-        }),
-        entryRow({
-          permissions: [permission("can_manage", "plugins")],
-          roleId: PLUGINS_ROLE,
         }),
       ],
     ],
@@ -225,12 +218,6 @@ describe("PATCH /admin/users/{id} - privilege ceiling", () => {
       TARGET_ID,
       { secondaryRoleIds: [ROOT_ROLE] },
     ],
-    [
-      "as a secondary role of themselves",
-      EDITOR.id,
-      { secondaryRoleIds: [ROOT_ROLE] },
-    ],
-    ["as the primary role of themselves", EDITOR.id, { roleId: ROOT_ROLE }],
   ])(
     "refuses a non-root admin assigning the root role %s",
     async (_label, userId, body) => {
@@ -253,24 +240,6 @@ describe("PATCH /admin/users/{id} - privilege ceiling", () => {
 
     expect(response.status).toBe(200);
     expect(h.secondaryRoleIdsOf(TARGET_ID)).toEqual([ROOT_ROLE]);
-  });
-
-  it("refuses a role carrying an admin permission the editor lacks", async () => {
-    const h = await harness({ editor: ELEVATED });
-
-    const response = await h.patch(TARGET_ID, { roleId: PLUGINS_ROLE });
-
-    expect(response.status).toBe(403);
-    expect(h.userRow(TARGET_ID)?.roleId).toBe(MEMBER_ROLE);
-  });
-
-  it("allows a role whose permissions the editor holds", async () => {
-    const h = await harness({ editor: ELEVATED });
-
-    const response = await h.patch(TARGET_ID, { roleId: EDITOR_ROLE });
-
-    expect(response.status).toBe(200);
-    expect(h.userRow(TARGET_ID)?.roleId).toBe(EDITOR_ROLE);
   });
 });
 

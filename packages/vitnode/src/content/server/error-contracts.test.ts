@@ -6,6 +6,7 @@ import {
   ContentAdvancedInputError,
   ContentDefaultTranslationRequired,
   ContentDeliverySlugReserved,
+  ContentEngineError,
   ContentInputError,
   ContentLanguageError,
   ContentRevisionNotRestorable,
@@ -151,6 +152,29 @@ describe("expected database failures map onto stable contracts", () => {
         contentTypeId: CONTENT_TYPE_ID,
       }),
     ).rejects.toBe(unknown);
+  });
+
+  it("passes a successful result through", async () => {
+    await expect(
+      withHttpErrors("create", async () => await Promise.resolve("ok")),
+    ).resolves.toBe("ok");
+  });
+
+  it("still sends a plain configuration error to the 500 handler", async () => {
+    // `ContentEngineError` is a misconfigured plugin, not a bad request.
+    const misconfigured = new ContentEngineError('Unknown filter "nope".');
+
+    await expect(
+      withHttpErrors("create", throwing(misconfigured)),
+    ).rejects.toBe(misconfigured);
+  });
+
+  it("passes an HTTPException through untouched", async () => {
+    const notFound = new HTTPException(404);
+
+    await expect(withHttpErrors("update", throwing(notFound))).rejects.toBe(
+      notFound,
+    );
   });
 });
 

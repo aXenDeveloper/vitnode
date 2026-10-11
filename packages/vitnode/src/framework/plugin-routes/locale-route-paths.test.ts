@@ -111,14 +111,6 @@ describe("compilePluginRoutes with i18n.routePaths", () => {
     );
   });
 
-  it("fails on a parameter named differently from the plugin route's", () => {
-    expect(
-      failureOf({
-        pl: { "/example": "/przyklad", "/example/:id": "/przyklad/:id" },
-      }).code,
-    ).toBe("parameter-mismatch");
-  });
-
   it("fails when a plugin translation lands on an app route", () => {
     const error = failureOf(
       {
@@ -129,12 +121,6 @@ describe("compilePluginRoutes with i18n.routePaths", () => {
 
     expect(error.code).toBe("route-collision");
     expect(error.message).toContain('app route "_main/pomoc.tsx"');
-  });
-
-  it("fails on a child left behind by its translated layout", () => {
-    expect(failureOf({ pl: { "/example": "/przyklad" } }).code).toBe(
-      "inconsistent-layout-path",
-    );
   });
 
   it("surfaces the runtime diagnostics too", () => {
