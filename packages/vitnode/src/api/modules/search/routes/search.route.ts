@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { CONFIG_PLUGIN } from "@/config";
+import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
 import { buildRoute } from "../../../lib/route";
 import { zodPaginationQuery } from "../../../lib/with-pagination";
@@ -12,6 +13,14 @@ const zodSearchPageInfo = z.object({
   hasPreviousPage: z.boolean(),
   startCursor: z.number().nullable(),
   endCursor: z.number().nullable(),
+});
+
+const zodSearchHitAuthor = z.object({
+  id: z.number(),
+  name: z.string(),
+  nameCode: z.string(),
+  avatarColor: z.string(),
+  avatarUrl: z.string().nullable(),
 });
 
 export const zodSearchHitSchema = z.object({
@@ -28,18 +37,21 @@ export const zodSearchHitSchema = z.object({
   containerId: z.number().nullable(),
   url: z.string().nullable(),
   isPublic: z.boolean(),
+  isHidden: z.boolean(),
+  image: z
+    .object({
+      url: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+    })
+    .nullable(),
+  imageId: z.number().nullable(),
   metadata: z.record(z.string(), z.unknown()),
   createdAt: z.date(),
   score: z.number().nullable(),
-  author: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      nameCode: z.string(),
-      avatarColor: z.string(),
-      avatarUrl: z.string().nullable(),
-    })
-    .nullable(),
+  author: zodSearchHitAuthor.nullable(),
+  authorIds: z.array(z.number()),
+  authors: z.array(zodSearchHitAuthor),
 });
 
 /**
@@ -125,6 +137,7 @@ export const searchRoute = buildRoute({
       first: positiveIntOrUndefined(query.first),
       cursor: query.cursor,
       languageCode: query.lang,
+      hiddenAccess: await contentSearchHiddenAccess(c),
       includePrivate: false,
     });
 

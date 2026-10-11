@@ -36,6 +36,7 @@ import {
   createContentPublicProjector,
 } from "./public-service";
 import {
+  contentPublicReadCondition,
   contentTranslationPublicationColumns,
   publicationColumns,
   publishedCondition,
@@ -358,7 +359,10 @@ export const createContentLocalizedPublicService = <
   const readOne = async (
     resolved: ResolvedLocale,
     condition: SQL | undefined,
-    { strict = false }: { strict?: boolean } = {},
+    {
+      hidden = false,
+      strict = false,
+    }: { hidden?: boolean; strict?: boolean } = {},
   ): Promise<ContentPublicSelect<TDefinition> | null> => {
     // A strict read must not fall back - `findBySlug`. Dropping the fallback
     // language makes the join inner and the visibility test single-armed, so
@@ -370,7 +374,7 @@ export const createContentLocalizedPublicService = <
     const [row] = await read(
       scope,
       conditions(
-        publishedCondition(basePublication),
+        contentPublicReadCondition(basePublication, { hidden }),
         visibleIn(scope),
         condition,
       ),
@@ -389,7 +393,9 @@ export const createContentLocalizedPublicService = <
       const resolved = await resolveLocale(options?.locale);
       if (!resolved) return null;
 
-      return await readOne(resolved, eq(columns.id, id));
+      return await readOne(resolved, eq(columns.id, id), {
+        hidden: options?.hidden,
+      });
     },
 
     findBySlug: async (slug, options) => {
@@ -409,11 +415,14 @@ export const createContentLocalizedPublicService = <
           : eq(columns[slugField], slug);
 
       const row = await readOne(resolved, slugIn(resolved.requested.id), {
+        hidden: options?.hidden,
         strict: true,
       });
       if (row || !options?.fallback || !resolved.fallbackTo) return row;
 
-      return await readOne(resolved, slugIn(resolved.fallbackTo.id));
+      return await readOne(resolved, slugIn(resolved.fallbackTo.id), {
+        hidden: options?.hidden,
+      });
     },
 
     findMany: async ({ filters = {}, locale, orderBy, query = {} } = {}) => {

@@ -115,6 +115,7 @@ export interface ContentColumnSpec {
   /** Enum value -> translated label, for badge cells. */
   options?: Record<string, string>;
   thumbnail?: string;
+  title?: boolean;
 }
 
 export type ContentFieldLabeller = (
@@ -365,6 +366,7 @@ export const buildContentColumnSpec = ({
       ...(fieldValue && isContentReferenceCollection(fieldValue)
         ? { multiple: true }
         : {}),
+      ...(name === definition.admin.titleField ? { title: true } : {}),
       ...(name === definition.admin.titleField &&
       definition.admin.list.thumbnailField !== null
         ? { thumbnail: definition.admin.list.thumbnailField }

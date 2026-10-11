@@ -1,4 +1,5 @@
 import type { SQL } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import {
@@ -46,6 +47,27 @@ const requestedTranslation = alias(
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
+const visibleCondition = (
+  table: Record<"authorIds" | "isHidden" | "isPublic" | "itemType", PgColumn>,
+  params: SearchQueryParams,
+): SQL | undefined => {
+  if (params.includePrivate) return undefined;
+
+  const access = params.hiddenAccess;
+  const viewer = or(
+    access?.authorId === undefined
+      ? undefined
+      : arrayContains(table.authorIds, [access.authorId]),
+    access?.itemTypes.length
+      ? inArray(table.itemType, [...access.itemTypes])
+      : undefined,
+  );
+
+  return viewer
+    ? or(eq(table.isPublic, true), and(eq(table.isHidden, true), viewer))
+    : eq(table.isPublic, true);
+};
+
 const fallbackLanguageConditions = (
   c: Context,
   params: SearchQueryParams,
@@ -65,9 +87,7 @@ const fallbackLanguageConditions = (
               eq(requestedTranslation.itemType, core_search_index.itemType),
               eq(requestedTranslation.itemId, core_search_index.itemId),
               eq(requestedTranslation.languageCode, languageCode),
-              params.includePrivate
-                ? undefined
-                : eq(requestedTranslation.isPublic, true),
+              visibleCondition(requestedTranslation, params),
             ),
           ),
       ),
@@ -119,9 +139,8 @@ const buildFilters = (
   if (params.dateTo) {
     conditions.push(lte(core_search_index.createdAt, params.dateTo));
   }
-  if (!params.includePrivate) {
-    conditions.push(eq(core_search_index.isPublic, true));
-  }
+  const visible = visibleCondition(core_search_index, params);
+  if (visible) conditions.push(visible);
 
   return conditions.length ? and(...conditions) : undefined;
 };
@@ -217,12 +236,15 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         itemId: core_search_index.itemId,
         languageCode: core_search_index.languageCode,
         authorId: leadAuthorId,
+        authorIds: core_search_index.authorIds,
         title: core_search_index.title,
         content: core_search_index.content,
         containerType: core_search_index.containerType,
         containerId: core_search_index.containerId,
         url: core_search_index.url,
         isPublic: core_search_index.isPublic,
+        isHidden: core_search_index.isHidden,
+        imageId: core_search_index.imageId,
         metadata: core_search_index.metadata,
         createdAt: core_search_index.createdAt,
         score: rankExpr,
@@ -254,12 +276,17 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
       itemId: searchItemIdFromKey(contentTypes, row.itemType, row.itemId),
       languageCode: row.languageCode,
       authorId: row.authorId,
+      authorIds: row.authorIds,
+      authors: [],
       title: row.title,
       content: row.content,
       containerType: row.containerType,
       containerId: row.containerId,
       url: row.url,
       isPublic: row.isPublic,
+      isHidden: row.isHidden,
+      image: null,
+      imageId: row.imageId,
       metadata: row.metadata,
       createdAt: row.createdAt,
       score: row.score,

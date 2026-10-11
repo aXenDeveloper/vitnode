@@ -1,5 +1,11 @@
 import { DateFormat } from "@vitnode/core/components/date-format";
+import { HiddenIcon } from "@vitnode/core/components/hidden-icon";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@vitnode/core/components/ui/alert";
 import {
   zodContentFileDescriptor,
   zodRichTextDocument,
@@ -15,6 +21,7 @@ import {
 } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
+import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -102,10 +109,23 @@ const BlogPostPage = ({
           </p>
         ) : null}
 
-        <h1 className="text-foreground text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+        <h1 className="text-foreground flex items-start gap-3 text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+          {metadata.hidden ? (
+            <HiddenIcon
+              className="mt-1 size-7 md:mt-1.5 md:size-8"
+              label={t("hidden.label")}
+            />
+          ) : null}
           {item.title}
         </h1>
       </header>
+
+      {metadata.hidden ? (
+        <Alert icon={<EyeOffIcon />} variant="warning">
+          <AlertTitle>{t("hidden.title")}</AlertTitle>
+          <AlertDescription>{t("hidden.desc")}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {item.coverImage ? (
         <img

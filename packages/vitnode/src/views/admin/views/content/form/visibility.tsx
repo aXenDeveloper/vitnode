@@ -1,7 +1,6 @@
-import { useFormatter, useTranslations } from "use-intl";
+import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import { TooltipWithContent } from "@/components/ui/tooltip";
 import {
   contentVisibilityTransition,
   isContentHidden,
@@ -11,7 +10,7 @@ import {
   CONTENT_VISIBILITY_ICONS,
   ContentVisibilityDialog,
 } from "../actions/visibility-dialog";
-import { ContentHiddenBadge } from "../lib/hidden-badge";
+import { ContentHiddenIcon } from "../lib/hidden-badge";
 import { useContentForm } from "./context";
 
 /** Whether the record this form edits is hidden right now. */
@@ -25,42 +24,23 @@ export const useContentFormHidden = (): boolean => {
   );
 };
 
-/**
- * "Hidden", beside the status - with since when, for anyone who hovers it.
- * Nothing for a visible record, a create, or a content type without visibility.
- */
-export const ContentFormHiddenBadge = () => {
+export const ContentFormHiddenIcon = ({
+  className,
+}: {
+  className?: string;
+}) => {
   const t = useTranslations("core.content.visibility");
-  const format = useFormatter();
-  const { visibility } = useContentForm();
+  const { singular, visibility } = useContentForm();
   const hidden = useContentFormHidden();
 
   if (!hidden) return null;
 
-  const since =
-    typeof visibility?.hiddenAt === "string"
-      ? new Date(visibility.hiddenAt)
-      : null;
-  const badge = (
-    <ContentHiddenBadge
-      label={t("hidden")}
+  return (
+    <ContentHiddenIcon
+      className={className}
+      label={t("hidden_record", { name: singular })}
       row={{ hiddenAt: visibility?.hiddenAt }}
     />
-  );
-
-  if (!since || Number.isNaN(since.getTime())) return badge;
-
-  return (
-    <TooltipWithContent
-      text={t("hidden_since", {
-        date: format.dateTime(since, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }),
-      })}
-    >
-      <span className="inline-flex">{badge}</span>
-    </TooltipWithContent>
   );
 };
 

@@ -5,6 +5,7 @@ import { useFormatter, useNow, useTranslations } from "use-intl";
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { useContentLive } from "./context";
 
@@ -94,18 +95,24 @@ export const ContentLiveStatus = ({ className }: { className?: string }) => {
           </span>
         ) : failed ? (
           <span className="text-destructive">{t("failed")}</span>
-        ) : savedAt ? (
-          <span className={dirty ? "sr-only" : "max-lg:sr-only"}>
-            <SavedAt savedAt={savedAt} />
-          </span>
-        ) : null}
-        {dirty ? (
-          <span className="text-foreground flex items-center gap-1.5 font-medium">
+        ) : dirty ? (
+          <TooltipWithContent text={t("autosaved_hint")}>
             <span
-              aria-hidden
-              className="bg-warn size-2 shrink-0 rounded-full"
-            />
-            <span className="max-sm:sr-only">{t("unsaved")}</span>
+              className="text-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-sm font-medium outline-none focus-visible:ring-3"
+              tabIndex={0}
+            >
+              <span
+                aria-hidden
+                className="bg-warn size-2 shrink-0 rounded-full"
+              />
+              <span className="max-sm:sr-only">
+                {savedAt ? <SavedAt savedAt={savedAt} /> : t("autosaved")}
+              </span>
+            </span>
+          </TooltipWithContent>
+        ) : savedAt ? (
+          <span className="max-lg:sr-only">
+            <SavedAt savedAt={savedAt} />
           </span>
         ) : null}
       </p>

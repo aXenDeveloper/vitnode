@@ -22,7 +22,9 @@ import { useContentLiveSession } from "./use-session";
 import {
   contentDraftDiffers,
   contentDraftMovedReferences,
+  contentDraftUpdatedAt,
   contentDraftValue,
+  laterContentTime,
   mergeContentDraft,
 } from "./values";
 
@@ -320,7 +322,11 @@ export const ContentLiveRoot = ({
     richText,
     session,
     spec,
-    status: { ...status, dirty: contentDraftDiffers(row, rows, drafts) },
+    status: {
+      ...status,
+      dirty: contentDraftDiffers(row, rows, drafts),
+      savedAt: laterContentTime(status.savedAt, contentDraftUpdatedAt(drafts)),
+    },
   };
 
   return (

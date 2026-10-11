@@ -114,7 +114,6 @@ describe("ContentLiveStatus", () => {
     );
 
     expect(screen.getByText("core.content.live.status.failed")).toBeTruthy();
-    expect(screen.getByText("core.content.live.status.unsaved")).toBeTruthy();
   });
 
   it("discards unsaved changes once the person confirms", async () => {

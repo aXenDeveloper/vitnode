@@ -91,6 +91,28 @@ export const mergeContentDraft = (
       };
 };
 
+export const laterContentTime = (
+  a: null | string,
+  b: null | string,
+): null | string => {
+  if (a === null) return b;
+  if (b === null) return a;
+
+  return Date.parse(b) > Date.parse(a) ? b : a;
+};
+
+export const contentDraftUpdatedAt = (
+  drafts: ContentDrafts | null,
+): null | string =>
+  drafts
+    ? [drafts.shared, ...Object.values(drafts.translations)].reduce<
+        null | string
+      >(
+        (latest, draft) => laterContentTime(latest, draft?.updatedAt ?? null),
+        null,
+      )
+    : null;
+
 export const contentDraftDiffers = (
   data: Record<string, unknown>,
   translations: readonly TranslationValues[],

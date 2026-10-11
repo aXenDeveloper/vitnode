@@ -16,11 +16,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@vitnode/core/components/ui/sheet";
+import { TooltipWithContent } from "@vitnode/core/components/ui/tooltip";
 import {
-  ContentFormActions,
   ContentFormField,
   ContentFormHiddenNotice,
-  ContentFormStatusSwitch,
+  ContentFormPublicationLabel,
+  ContentFormSaveMenu,
   ContentLivePresence,
   ContentLiveStatus,
   useContentForm,
@@ -400,75 +401,76 @@ export const ArticleEditor = ({
   return (
     <ArticleFieldActionsContext value={fieldActions}>
       <div className="-m-6 flex min-h-full flex-col">
-        <header className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky top-0 z-30 flex min-h-14 flex-wrap items-center gap-2 border-b px-4 py-2 backdrop-blur sm:px-6">
+        <header className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky top-0 z-30 flex min-h-14 flex-wrap items-center gap-1 border-b px-2 py-2 backdrop-blur sm:px-4">
           {header ? (
-            <Button
-              nativeButton={false}
-              render={<Link to={header.back.href} />}
-              size="sm"
-              variant="ghost"
-            >
-              <ArrowLeftIcon aria-hidden />
-              <span className="hidden sm:inline">{header.back.label}</span>
-              <span className="sr-only sm:hidden">{header.back.label}</span>
-            </Button>
+            <TooltipWithContent text={header.back.label}>
+              <Button
+                className="w-8 px-0"
+                nativeButton={false}
+                render={<Link to={header.back.href} />}
+                size="sm"
+                variant="ghost"
+              >
+                <ArrowLeftIcon aria-hidden />
+                <span className="sr-only">{header.back.label}</span>
+              </Button>
+            </TooltipWithContent>
           ) : null}
           <h1 className="sr-only">{header?.title ?? t("heading")}</h1>
-          <div className="flex-1" />
-          <ContentLiveStatus />
-          <ContentLivePresence />
-          <div className="flex items-center gap-2 max-sm:order-last max-sm:-mx-4 max-sm:grow max-sm:basis-full max-sm:border-t max-sm:px-4 max-sm:pt-2">
-            {translationLanguages.length > 0 ? (
-              target ? (
-                <ActiveTranslation
-                  onExit={() => {
-                    setTarget(null);
-                  }}
-                  sourceName={sourceName}
-                  targetName={languageName(target)}
-                />
-              ) : (
-                <TranslateMenu
-                  languages={translationLanguages}
-                  onPick={openLanguage}
-                  sourceName={sourceName}
-                />
-              )
-            ) : null}
+          {translationLanguages.length > 0 ? (
+            target ? (
+              <ActiveTranslation
+                onExit={() => {
+                  setTarget(null);
+                }}
+                sourceName={sourceName}
+                targetName={languageName(target)}
+              />
+            ) : (
+              <TranslateMenu
+                languages={translationLanguages}
+                onPick={openLanguage}
+                sourceName={sourceName}
+              />
+            )
+          ) : null}
+          <Button
+            aria-label={
+              unready > 0
+                ? t("seo.open_issues", { count: unready })
+                : t("seo.open")
+            }
+            onClick={() => {
+              setSheet("seo");
+            }}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <SearchIcon aria-hidden />
+            <span className="max-sm:sr-only">{t("seo.open")}</span>
+            {unready > 0 ? <Badge variant="warning">{unready}</Badge> : null}
+          </Button>
+          {reviewAvailable ? (
             <Button
-              aria-label={
-                unready > 0
-                  ? t("seo.open_issues", { count: unready })
-                  : t("seo.open")
-              }
+              aria-label={t("review.open")}
               onClick={() => {
-                setSheet("seo");
+                setSheet("review");
               }}
               size="sm"
               type="button"
               variant="ghost"
             >
-              <SearchIcon aria-hidden />
-              <span className="hidden sm:inline">{t("seo.open")}</span>
-              {unready > 0 ? <Badge variant="warning">{unready}</Badge> : null}
+              <SparklesIcon aria-hidden />
+              <span className="max-sm:sr-only">{t("review.open")}</span>
             </Button>
-            {reviewAvailable ? (
-              <Button
-                aria-label={t("review.open")}
-                onClick={() => {
-                  setSheet("review");
-                }}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                <SparklesIcon aria-hidden />
-                <span className="hidden sm:inline">{t("review.open")}</span>
-              </Button>
-            ) : null}
-            <ContentFormStatusSwitch className="max-sm:ms-auto" />
+          ) : null}
+          <div className="ms-auto flex items-center gap-2">
+            <ContentFormPublicationLabel className="me-2" />
+            <ContentLiveStatus />
+            <ContentLivePresence className="max-lg:hidden" max={3} />
+            <ContentFormSaveMenu />
           </div>
-          <ContentFormActions withPublicationToggle={false} />
         </header>
 
         <div className="px-4 py-8 sm:px-6">

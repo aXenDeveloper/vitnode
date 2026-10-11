@@ -254,6 +254,7 @@ Keeps published records in the [site search index](/docs/dev/search). Drafts nev
 | `pathTemplate`     | `string`    | Yes      | The result URL. Starts with `/`, contains `{slug}` exactly once, at most 512 characters                                               |
 | `descriptionField` | field name  | No       | Shown in result excerpts. Text, textarea or richText                                                                                  |
 | `authorField`      | field name  | No       | A top-level `field.user()` credited in the index. It does not have to be public                                                       |
+| `imageField`       | field name  | No       | A shared single `field.file()` shown as the result image. Must be in `publicApi.fields`                                               |
 
 Every field except `authorField` must be in `publicApi.fields`, or a result snippet would leak a private value. Leave the language out of `pathTemplate`, because your [i18n settings](/docs/dev/i18n) add the locale prefix.
 

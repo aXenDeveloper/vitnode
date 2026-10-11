@@ -9,7 +9,7 @@ import { isContentPublished } from "@/content/publication";
 
 import { useContentForm } from "./context";
 import { ContentFormButtonSkeleton } from "./skeleton";
-import { ContentFormHiddenBadge, useContentFormHidden } from "./visibility";
+import { useContentFormHidden } from "./visibility";
 
 type StatusOption = "draft" | "published";
 
@@ -116,8 +116,6 @@ export const ContentFormStatusSwitch = ({
           })}
         </div>
       </TooltipWithContent>
-
-      <ContentFormHiddenBadge />
 
       <ConfirmActionAlertDialog
         description={

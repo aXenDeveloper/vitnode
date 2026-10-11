@@ -58,9 +58,9 @@ A lock lasts 60 seconds and renews every 20 seconds while the editor stays in th
 
 ### Autosave and the shared draft
 
-About 1.5 seconds after you stop typing in a field you hold, the value is saved to the record's draft. The header shows **Saving…** and then **Draft saved at 14:32**, or **Draft not saved** when the write failed. Next to it, **Unsaved changes** stays until someone saves the draft into the record.
+About 1.5 seconds after you stop typing in a field you hold, the value is saved to the record's draft. You never lose work, but readers don't see it yet. The header shows **Saving…** and then **Autosaved just now**, later **Autosaved 5 minutes ago**, or **Autosave failed** when the write failed. An amber dot in front means the draft holds changes the record doesn't have yet, and it stays until someone clicks **Save changes**. Hover it for a reminder.
 
-Changed your mind? **Discard** next to **Unsaved changes** throws the draft away after you confirm, and the form goes back to the last saved version. It is a team draft, so everyone editing the record goes back too, and they get a short note saying so.
+Changed your mind? **Discard** next to the autosave time throws the draft away after you confirm, and the form goes back to the last saved version. It is a team draft, so everyone editing the record goes back too, and they get a short note saying so.
 
 There is one draft per record and language, shared by the whole team. When you open the record, you see the draft, not only what was last saved. **Save** commits it through the usual [version check](/docs/content-engine/editorial#safe-concurrent-edits) and creates one revision. Autosave itself never creates revisions, emits no events and leaves search and caches alone. [Preview links](/docs/content-engine/editorial#preview-links) also ignore the draft until someone saves.
 
@@ -86,6 +86,6 @@ Restoring a revision or deleting the record throws away its drafts, locks and sh
 1. Sign in at `/admin` as two staff members with `can_edit`, for example in two browser profiles.
 2. Open the same record's edit form in both.
 3. Click into **Title** in one window. The other window shows the outline and name tag, and the field turns read-only there.
-4. Type a few words and wait two seconds. The other window shows the new value, and the header of the first says **Draft saved at…**.
+4. Type a few words and wait two seconds. The other window shows the new value, and the header of the first says **Autosaved just now**.
 
 Building your own form layout, or calling the lock and draft routes yourself? See the [live editing API](/docs/content-engine/live-editing-api).

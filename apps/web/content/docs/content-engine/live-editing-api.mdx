@@ -151,7 +151,7 @@ Register it with `forms: { layout: ArticleFormLayout }` in the type's `contentTy
 | `ContentLivePresence`         | Avatars of everyone else in the record. `max` sets how many show before **+N**, 5 by default                                                                                     |
 | `ContentLiveFieldPresence`    | Avatars of the people in one `field` and `locale`                                                                                                                                |
 | `ContentLiveLanguagePresence` | Who is working in one `locale`                                                                                                                                                   |
-| `ContentLiveStatus`           | The autosave state: **Saving…**, **Draft saved at…**, **Draft not saved**, **Unsaved changes**                                                                                   |
+| `ContentLiveStatus`           | The autosave state: **Saving…**, **Autosaved 5 minutes ago** (with an amber dot while the draft is not saved into the record), **Autosave failed**                               |
 | `useContentLive()`            | The session: `session.members`, `session.locks`, `status` (`saving`, `savedAt`, `failed`, `dirty`) and `coEditing`                                                               |
 | `useContentRichTextReplace()` | `(field, locale, document) => void` that replaces a rich text field through the shared editor, so everyone sees it and it can be undone. `null` while rich text is not co-edited |
 

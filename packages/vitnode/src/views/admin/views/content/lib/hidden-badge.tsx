@@ -1,5 +1,6 @@
-import { EyeClosedIcon } from "lucide-react";
+import { EyeOffIcon } from "lucide-react";
 
+import { HiddenIcon } from "@/components/hidden-icon";
 import { Badge } from "@/components/ui/badge";
 import { isContentHidden } from "@/content/visibility";
 
@@ -22,8 +23,21 @@ export const ContentHiddenBadge = ({
 
   return (
     <Badge variant="warning">
-      <EyeClosedIcon aria-hidden />
+      <EyeOffIcon aria-hidden />
       {label}
     </Badge>
   );
 };
+
+export const ContentHiddenIcon = ({
+  className,
+  label,
+  row,
+}: {
+  className?: string;
+  label: string;
+  row: { hiddenAt?: unknown };
+}) =>
+  isContentHidden(row) ? (
+    <HiddenIcon className={className} label={label} />
+  ) : null;

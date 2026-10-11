@@ -30,6 +30,7 @@ import { contentLocalesMatch, normalizeContentLocale } from "../locale";
 import { contentPublicHref } from "../public-url";
 import { readDeliveryAlternates } from "./delivery-alternates";
 import { readContentDeliverySitemapPage } from "./delivery-sitemap";
+import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
 import { createContentSlugHistoryModel } from "./slug-history-model";
@@ -41,11 +42,12 @@ export interface ContentDeliveryMetadata {
   canonicalInternalPath: null | string;
   canonicalPath: null | string;
   canonicalUrl?: null | string;
+  hidden: boolean;
   /** Framework-neutral `hreflang`, ready for an adapter to translate. */
   hreflang: ContentDeliveryHreflang;
+
   /** Whether `locale` differs from `requestedLocale`. */
   isFallback: boolean;
-
   itemId: ContentId | null;
   /** The language this response is actually in. */
   locale: null | string;
@@ -172,10 +174,12 @@ export const createContentDeliveryService = <
   const metadataFor = async (
     row: Record<string, unknown>,
     {
+      hidden = false,
       itemId,
       origin,
       requestedLocale,
     }: {
+      hidden?: boolean;
       itemId: ContentId | null;
       origin?: string;
       requestedLocale: null | string;
@@ -217,7 +221,10 @@ export const createContentDeliveryService = <
       locale,
       openGraph: contentDeliveryOpenGraph(definition, row),
       requestedLocale,
-      robots: contentDeliveryRobots(definition, row),
+      hidden,
+      robots: hidden
+        ? { follow: false, index: false }
+        : contentDeliveryRobots(definition, row),
       seo: contentDeliverySeo(definition, row),
     };
   };
@@ -306,6 +313,24 @@ export const createContentDeliveryService = <
           // Only what the public projection actually carries - see
           // `ContentDeliveryMetadata.itemId`.
           itemId,
+          origin,
+          requestedLocale,
+        })),
+        type: "content",
+      };
+    }
+
+    const hidden = await findViewableHiddenBySlug(c, {
+      locale,
+      model,
+      pluginId,
+      slug,
+    });
+    if (hidden && slugOf(definition, hidden) === slug) {
+      return {
+        ...(await metadataFor(hidden, {
+          hidden: true,
+          itemId: parseContentId(definition.idStrategy, hidden.id),
           origin,
           requestedLocale,
         })),

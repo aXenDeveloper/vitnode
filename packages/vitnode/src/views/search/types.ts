@@ -1,17 +1,22 @@
+export interface SearchResultAuthor {
+  avatarColor: string;
+  avatarUrl: null | string;
+  id: number;
+  name: string;
+  nameCode: string;
+}
+
 export interface SearchResultItem {
-  author: null | {
-    avatarColor: string;
-    avatarUrl: null | string;
-    id: number;
-    name: string;
-    nameCode: string;
-  };
+  author: null | SearchResultAuthor;
   authorId: null | number;
+  authors?: SearchResultAuthor[];
   containerId: null | number;
   containerType: null | string;
   content: string;
   createdAt: Date | string;
   id: number;
+  image?: null | { height?: number; url: string; width?: number };
+  isHidden?: boolean;
   isPublic: boolean;
   itemId: number | string;
   itemType: string;

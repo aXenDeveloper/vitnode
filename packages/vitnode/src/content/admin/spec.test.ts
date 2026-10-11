@@ -290,7 +290,13 @@ describe("buildContentColumnSpec", () => {
     expect(
       buildContentColumnSpec({ definition: listed, labelEnum, labelField }),
     ).toEqual([
-      { kind: "text", label: "Title", name: "title", thumbnail: "cover" },
+      {
+        kind: "text",
+        label: "Title",
+        name: "title",
+        thumbnail: "cover",
+        title: true,
+      },
       { kind: "user", label: "Authors", multiple: true, name: "authors" },
     ]);
   });

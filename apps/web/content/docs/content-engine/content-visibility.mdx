@@ -89,7 +89,7 @@ Open **AdminCP → Blog → Articles**, open the **More actions** menu of a publ
   alt="Hide Article dialog explaining that Second post disappears from the public site, search and the sitemap right away and is not unpublished, with Cancel and Yes, hide it buttons"
 />
 
-A toast says the article is now hidden. The row keeps its **Published** badge and gets a **Hidden** badge next to it, whose tooltip shows when it was hidden. The **Visibility** filter in the list toolbar shows only hidden or only visible records, and it combines with the **Status** filter:
+A toast says the article is now hidden. The row keeps its **Published** badge, and its title gets an eye-off icon in front with an **Article hidden** tooltip. The **Visibility** filter in the list toolbar shows only hidden or only visible records, and it combines with the **Status** filter:
 
 <ImgDocs
   withoutBackground
@@ -98,7 +98,7 @@ A toast says the article is now hidden. The row keeps its **Published** badge an
   alt="Articles list filtered by Visibility: Hidden, showing Second post with Published and Hidden badges"
 />
 
-The edit page shows the same badge, an **Unhide** button and a note that publishing a hidden record does not make it public:
+The edit page shows the same icon before the title, an **Unhide** action (in the blog's editor, it lives in the ▾ menu next to **Save changes**) and a note that publishing a hidden record does not make it public:
 
 <ImgDocs
   withoutBackground
@@ -121,6 +121,25 @@ A record is public only when it is published, its `publishedAt` is not in the fu
 - Its [page](/docs/content-engine/public-pages) answers `404`, and so do its old slugs instead of redirecting.
 - The [sitemap](/docs/content-engine/seo#sitemap) and `hreflang` alternates leave it out, and [site search](/docs/content-engine/search) marks its document private.
 - Signed [preview links](/docs/content-engine/editorial#preview-links) still work, and the AdminCP still shows it.
+
+## Who can still see it
+
+Hidden doesn't mean gone for the people working on it. Signed in, a record's **authors** and its **editors** still reach it:
+
+- **Authors** are the users in the content type's [`search.authorField`](/docs/content-engine/search), such as the blog's **Author** field.
+- **Editors** are staff with `can_edit` on the content type, such as `posts:can_edit` for the blog.
+
+For them:
+
+- The page opens with an eye-off icon before the title and a **This article is hidden** note, so nobody mistakes it for a live page. It is never indexed: the response says `noindex` and `Cache-Control: private, no-store`.
+- The detail route answers `200`, and `GET .../delivery/resolve/{slug}` returns `hidden: true`.
+- [Site search](/docs/content-engine/search) and the member timeline list it with the eye-off icon before its title and a tooltip like **Article hidden**.
+
+Everyone else, signed in or not, still gets a `404`. Old slugs never redirect to a hidden record, and the list, sitemap and `hreflang` alternates leave it out for everybody. This needs `id` in `publicApi.fields`, so the route can tell whose record it is.
+
+<Callout type="info">
+Search learns that a record is hidden when it is hidden or unhidden. Records hidden before you updated VitNode show up for their authors and editors only after a reindex: **AdminCP → Advanced → Search**, then **Reindex** on the collection, such as `blog.post`. See [Search](/docs/content-engine/search).
+</Callout>
 
 Hiding changes nothing else. `status` and `publishedAt` stay as they are, so unhiding a published record puts it back with its original date. Publishing, unpublishing or a scheduled publish never change visibility: publishing a hidden record keeps it off the site until someone unhides it. Restoring a revision never changes visibility either.
 
@@ -157,4 +176,4 @@ curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/blog/second-post"
 curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/api/@vitnode/blog/content/blog/second-post"
 ```
 
-Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`.
+Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`. Open the page while signed in as one of its authors, and it loads with the hidden note instead.

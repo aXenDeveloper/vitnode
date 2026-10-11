@@ -48,6 +48,7 @@ describe("content search document", () => {
       authorIds: [],
       content: "A short excerpt.\n\nThe body of the post.",
       createdAt: PUBLISHED_AT,
+      isHidden: false,
       isPublic: true,
       itemId: 7,
       itemType: "test.searchable",

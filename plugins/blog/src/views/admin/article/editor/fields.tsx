@@ -7,7 +7,10 @@ import {
   useMultiLangField,
 } from "@vitnode/core/components/form/fields/multi-lang";
 import { FormControl, FormMessage } from "@vitnode/core/components/ui/form";
-import { useContentForm } from "@vitnode/core/content/admin-form";
+import {
+  ContentFormHiddenIcon,
+  useContentForm,
+} from "@vitnode/core/content/admin-form";
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
@@ -53,20 +56,23 @@ export const ArticleTitleField = ({ field }: ItemAutoFormComponentProps) => {
       <AutoFormLabel className="sr-only">
         {t("content.post.fields.title")}
       </AutoFormLabel>
-      <FormControl>
-        <textarea
-          className="placeholder:text-muted-foreground/60 aria-invalid:text-destructive field-sizing-content w-full resize-none bg-transparent text-3xl leading-tight font-bold tracking-tight text-balance transition-opacity duration-200 ease-out outline-none disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none sm:text-4xl"
-          lang={selected}
-          name={field.name}
-          onBlur={field.onBlur}
-          onChange={event => {
-            setValue(event.target.value.replace(/\n/g, " "));
-          }}
-          placeholder={t("admin.article.editor.title.placeholder")}
-          rows={1}
-          value={currentValue}
-        />
-      </FormControl>
+      <div className="flex items-start gap-3">
+        <ContentFormHiddenIcon className="mt-1.5 size-6 sm:mt-2.5" />
+        <FormControl>
+          <textarea
+            className="placeholder:text-muted-foreground/60 aria-invalid:text-destructive field-sizing-content w-full min-w-0 resize-none bg-transparent text-3xl leading-tight font-bold tracking-tight text-balance transition-opacity duration-200 ease-out outline-none disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none sm:text-4xl"
+            lang={selected}
+            name={field.name}
+            onBlur={field.onBlur}
+            onChange={event => {
+              setValue(event.target.value.replace(/\n/g, " "));
+            }}
+            placeholder={t("admin.article.editor.title.placeholder")}
+            rows={1}
+            value={currentValue}
+          />
+        </FormControl>
+      </div>
       <div className="flex items-center justify-end gap-2">
         <CharacterCount field="title" value={currentValue} />
       </div>

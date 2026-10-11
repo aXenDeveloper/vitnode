@@ -48,6 +48,8 @@ interface EsSource {
   containerType: null | string;
   content: string;
   createdAt: string;
+  imageId?: null | number;
+  isHidden?: boolean;
   isPublic: boolean;
   /**
    * The numeric id, only for a numeric item - the original `integer` mapping
@@ -102,12 +104,46 @@ const toSource = (doc: SearchDocument): EsSource => ({
   containerId: doc.containerId ?? null,
   url: doc.url ?? null,
   isPublic: doc.isPublic ?? true,
+  isHidden: doc.isHidden ?? false,
+  imageId: doc.imageId ?? null,
   metadata: doc.metadata ?? {},
   createdAt: (doc.createdAt instanceof Date
     ? doc.createdAt
     : new Date(doc.createdAt)
   ).toISOString(),
 });
+
+const visibleFilter = (
+  params: SearchQueryParams,
+): estypes.QueryDslQueryContainer => {
+  const access = params.hiddenAccess;
+  const viewer: estypes.QueryDslQueryContainer[] = [
+    ...(access?.authorId === undefined
+      ? []
+      : [{ term: { authorIds: access.authorId } }]),
+    ...(access?.itemTypes.length
+      ? [{ terms: { itemType: [...access.itemTypes] } }]
+      : []),
+  ];
+  if (viewer.length === 0) return { term: { isPublic: true } };
+
+  return {
+    bool: {
+      minimum_should_match: 1,
+      should: [
+        { term: { isPublic: true } },
+        {
+          bool: {
+            filter: [
+              { term: { isHidden: true } },
+              { bool: { minimum_should_match: 1, should: viewer } },
+            ],
+          },
+        },
+      ],
+    },
+  };
+};
 
 const buildFilters = (
   params: SearchQueryParams,
@@ -138,7 +174,7 @@ const buildFilters = (
     });
   }
   if (!params.includePrivate) {
-    filter.push({ term: { isPublic: true } });
+    filter.push(visibleFilter(params));
   }
 
   return filter;
@@ -232,11 +268,16 @@ const mapHit = (hit: estypes.SearchHit<EsSource>): null | SearchHit => {
     itemId,
     languageCode: source.languageCode,
     authorId: source.authorIds?.[0] ?? null,
+    authorIds: source.authorIds ?? [],
+    authors: [],
     title: source.title,
     content: source.content,
     containerType: source.containerType,
     containerId: source.containerId,
     url: source.url,
+    isHidden: source.isHidden ?? false,
+    image: null,
+    imageId: source.imageId ?? null,
     isPublic: source.isPublic,
     metadata: source.metadata,
     createdAt: new Date(source.createdAt),
@@ -282,7 +323,11 @@ export const ElasticsearchSearchAdapter = (
       // read and delete below still honours. Rebuild the index to backfill.
       await es.indices.putMapping({
         index,
-        properties: { itemKey: { type: "keyword" } },
+        properties: {
+          imageId: { type: "integer" },
+          isHidden: { type: "boolean" },
+          itemKey: { type: "keyword" },
+        },
       });
 
       return;
@@ -305,6 +350,8 @@ export const ElasticsearchSearchAdapter = (
             containerId: { type: "integer" },
             url: { type: "keyword" },
             isPublic: { type: "boolean" },
+            isHidden: { type: "boolean" },
+            imageId: { type: "integer" },
             createdAt: { type: "date" },
             metadata: { type: "object", enabled: false },
           },

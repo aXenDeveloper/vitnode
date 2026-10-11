@@ -61,6 +61,22 @@ export const publishedCondition = (
     columns.hiddenAt === undefined ? undefined : isNull(columns.hiddenAt),
   );
 
+export const hiddenPublishedCondition = (
+  columns: PublicationColumns,
+): SQL | undefined =>
+  columns.hiddenAt === undefined
+    ? sql`false`
+    : and(
+        publishedCondition({ ...columns, hiddenAt: undefined }),
+        isNotNull(columns.hiddenAt),
+      );
+
+export const contentPublicReadCondition = (
+  columns: PublicationColumns,
+  { hidden = false }: { hidden?: boolean } = {},
+): SQL | undefined =>
+  hidden ? hiddenPublishedCondition(columns) : publishedCondition(columns);
+
 export const contentTranslationPublicationColumns = (
   definition: AnyContentTypeDefinition,
   translationColumns: Record<string, PgColumn>,

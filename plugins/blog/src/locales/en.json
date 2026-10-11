@@ -175,7 +175,12 @@
       }
     },
     "post": {
-      "published": "Published"
+      "published": "Published",
+      "hidden": {
+        "label": "Article hidden",
+        "title": "This article is hidden",
+        "desc": "Only its authors and editors can see it. Everyone else gets a page not found, and it stays out of search and the sitemap."
+      }
     }
   },
   "@vitnode/blog:posts": "Articles",

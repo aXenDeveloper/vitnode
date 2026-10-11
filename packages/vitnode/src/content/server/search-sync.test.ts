@@ -529,7 +529,7 @@ describe("hide and unhide", () => {
     version: 3,
   };
 
-  it("rewrites a hidden record's document as private, with no URL", async () => {
+  it("rewrites a hidden record's document as private and hidden, keeping its URL for authors and editors", async () => {
     const { c, search } = searchOf();
 
     const outcome = await syncContentSearch(c, testHideablePostContentType, {
@@ -540,9 +540,13 @@ describe("hide and unhide", () => {
 
     expect(outcome.action).toBe("upsert");
     expect(search.index).toHaveBeenCalledWith(
-      expect.objectContaining({ isPublic: false, itemId: 9 }),
+      expect.objectContaining({
+        isHidden: true,
+        isPublic: false,
+        itemId: 9,
+        url: "/hideable-posts/hidden-world",
+      }),
     );
-    expect(search.index.mock.calls[0][0]).not.toHaveProperty("url");
   });
 
   it("makes it public again on unhide", async () => {

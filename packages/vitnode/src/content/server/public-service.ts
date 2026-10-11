@@ -31,7 +31,11 @@ import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
 import { createContentPublicRowHydrator } from "./public-row-hydration";
-import { publicationColumns, publishedCondition } from "./publication";
+import {
+  contentPublicReadCondition,
+  publicationColumns,
+  publishedCondition,
+} from "./publication";
 import {
   buildFilterCondition,
   buildOrderColumn,
@@ -45,7 +49,11 @@ export interface ContentPublicReadOptions {
   locale?: string;
 }
 
-export interface ContentPublicSlugReadOptions extends ContentPublicReadOptions {
+export interface ContentPublicItemReadOptions extends ContentPublicReadOptions {
+  hidden?: boolean;
+}
+
+export interface ContentPublicSlugReadOptions extends ContentPublicItemReadOptions {
   fallback?: boolean;
 }
 
@@ -72,7 +80,7 @@ export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
   findById: (
     id: ContentIdOf<TDefinition>,
-    options?: ContentPublicReadOptions,
+    options?: ContentPublicItemReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
 
   findBySlug: (
@@ -305,12 +313,13 @@ export const createContentPublicService = <
 
   const readOne = async (
     condition: SQL,
+    options: ContentPublicItemReadOptions = {},
   ): Promise<ContentPublicSelect<TDefinition> | null> => {
     const [row] = await c
       .get("db")
       .select(selection())
       .from(table)
-      .where(and(publishedCondition(published), condition))
+      .where(and(contentPublicReadCondition(published, options), condition))
       .limit(1);
 
     if (!row) return null;
@@ -321,10 +330,11 @@ export const createContentPublicService = <
   };
 
   return {
-    findById: async id => await readOne(eq(primaryCursor, id)),
+    findById: async (id, options) =>
+      await readOne(eq(primaryCursor, id), options),
 
-    findBySlug: async slug =>
-      await readOne(eq(columns[publicApi.slugField], slug)),
+    findBySlug: async (slug, options) =>
+      await readOne(eq(columns[publicApi.slugField], slug), options),
 
     findMany: async ({ filters = {}, orderBy, query = {} } = {}) => {
       const conditions = [

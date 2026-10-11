@@ -74,6 +74,8 @@
       "loadMore": "Load more",
       "loading": "Loading…",
       "draft": "Draft",
+      "hidden": "{type} hidden",
+      "more_authors": "{count, plural, one {# other} other {# others}}",
       "sortBy": "Sort by",
       "sort": {
         "relevance": "Relevance",
@@ -81,7 +83,7 @@
         "oldest": "Oldest"
       },
       "types": {
-        "blog_post": "Post",
+        "blog_post": "Article",
         "unknown": "Content"
       },
       "userTab": {
@@ -1504,6 +1506,7 @@
         "hidden": "Hidden",
         "visible": "Visible",
         "hidden_since": "Hidden since {date}",
+        "hidden_record": "{name} hidden",
         "hidden_desc": "Hidden from the public site, search and the sitemap. Publishing a hidden record does not make it public.",
         "publish_note": "Publishing a hidden record does not make it public.",
         "conflict": {
@@ -1688,15 +1691,16 @@
         },
         "status": {
           "saving": "Saving…",
-          "saved": "Draft saved {time}",
-          "saved_just_now": "Draft saved just now",
-          "saved_at": "Draft saved at {time}",
-          "unsaved": "Unsaved changes",
-          "failed": "Draft not saved",
+          "saved": "Autosaved {time}",
+          "saved_just_now": "Autosaved just now",
+          "saved_at": "Autosaved at {time}",
+          "autosaved": "Autosaved",
+          "autosaved_hint": "Your edits are saved automatically, but readers see them only after you save changes.",
+          "failed": "Autosave failed",
           "discard": "Discard",
-          "discard_label": "Discard unsaved changes",
-          "discard_title": "Discard unsaved changes?",
-          "discard_desc": "The record goes back to how it was last saved. Unsaved changes from everyone editing it are discarded too.",
+          "discard_label": "Discard autosaved changes",
+          "discard_title": "Discard autosaved changes?",
+          "discard_desc": "The record goes back to how it was last saved. Autosaved changes from everyone editing it are discarded too.",
           "discard_confirm": "Discard changes",
           "discard_failed": "The changes could not be discarded. Try again."
         },

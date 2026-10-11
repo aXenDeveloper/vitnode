@@ -1,0 +1,1 @@
+ALTER TABLE "core_search_index" ADD COLUMN "isHidden" boolean DEFAULT false NOT NULL;

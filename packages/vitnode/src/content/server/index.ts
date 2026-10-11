@@ -179,6 +179,7 @@ export {
 } from "./public-service";
 export type {
   ContentPublicFindManyArgs,
+  ContentPublicItemReadOptions,
   ContentPublicReadOptions,
   ContentPublicService,
   ContentPublicSlugReadOptions,

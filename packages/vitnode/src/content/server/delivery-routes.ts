@@ -99,6 +99,7 @@ export const buildContentDeliveryRoutes = <
     locale: z.string().nullable(),
     openGraph: zodSeo.nullable(),
     requestedLocale: z.string().nullable(),
+    hidden: z.boolean(),
     robots: z.object({ follow: z.boolean(), index: z.boolean() }).nullable(),
     seo: zodSeo,
   });
@@ -165,7 +166,12 @@ export const buildContentDeliveryRoutes = <
         locale: resolved.locale,
       });
 
-      return c.json(resolution, 200);
+      return resolution.type === "content" && resolution.hidden
+        ? c.json(resolution, 200, {
+            "Cache-Control": "private, no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+          })
+        : c.json(resolution, 200);
     },
   });
 

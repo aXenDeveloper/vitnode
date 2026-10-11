@@ -139,54 +139,46 @@ describe("ContentCell", () => {
     expect(screen.getByText(COVER.name)).toBeTruthy();
   });
 
-  describe("status with visibility", () => {
-    const STATUS: ContentColumnSpec = {
-      kind: "publication",
-      label: "Status",
-      name: "status",
+  describe("title with visibility", () => {
+    const TITLE: ContentColumnSpec = {
+      kind: "text",
+      label: "Title",
+      name: "title",
+      title: true,
     };
-    const labels = { draft: "Draft", hidden: "Hidden", published: "Published" };
+    const HIDDEN_AT = "2026-10-01T09:00:00.000Z";
 
-    it("says Hidden in words beside a published record readers cannot reach", () => {
+    it("prefixes a hidden record's title with an icon named for it", () => {
       render(
         <ContentCell
           emptyLabel="—"
-          row={rowWith({
-            hiddenAt: "2026-10-01T09:00:00.000Z",
-            status: "published",
-          })}
-          spec={STATUS}
-          statusLabels={labels}
+          hiddenLabel="Article hidden"
+          row={rowWith({ hiddenAt: HIDDEN_AT, status: "published" })}
+          spec={TITLE}
+          statusLabels={{ draft: "Draft", published: "Published" }}
         />,
       );
 
-      expect(screen.getByText("Published")).toBeTruthy();
-      expect(screen.getByText("Hidden")).toBeTruthy();
+      expect(screen.getByText("Hello world")).toBeTruthy();
+      expect(screen.getByRole("img", { name: "Article hidden" })).toBeTruthy();
     });
 
     it.each([
-      [
-        "a visible record",
-        { hiddenAt: null, status: "published" as const },
-        labels,
-      ],
-      [
-        "a content type without visibility",
-        { hiddenAt: "2026-10-01T09:00:00.000Z", status: "published" as const },
-        { draft: "Draft", published: "Published" },
-      ],
-    ])("shows no badge for %s", (_name, overrides, statusLabels) => {
+      ["a visible record", { hiddenAt: null }, "Article hidden"],
+      ["a content type without visibility", { hiddenAt: HIDDEN_AT }, undefined],
+    ])("shows no icon for %s", (_name, overrides, hiddenLabel) => {
       render(
         <ContentCell
           emptyLabel="—"
+          hiddenLabel={hiddenLabel}
           row={rowWith(overrides)}
-          spec={STATUS}
-          statusLabels={statusLabels}
+          spec={TITLE}
+          statusLabels={{ draft: "Draft", published: "Published" }}
         />,
       );
 
-      expect(screen.getByText("Published")).toBeTruthy();
-      expect(screen.queryByText("Hidden")).toBeNull();
+      expect(screen.getByText("Hello world")).toBeTruthy();
+      expect(screen.queryByRole("img", { name: "Article hidden" })).toBeNull();
     });
   });
 });

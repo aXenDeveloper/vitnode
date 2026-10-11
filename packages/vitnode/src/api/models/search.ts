@@ -12,6 +12,7 @@ import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
 import { core_search_index } from "@/database/search";
 import { core_users } from "@/database/users";
+import { parseImageDimensions } from "@/lib/api/upload";
 import { stripHtml } from "@/lib/strip-html";
 
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
@@ -22,6 +23,8 @@ export interface SearchDocument {
   containerType?: string;
   content: string;
   createdAt: Date;
+  imageId?: null | number;
+  isHidden?: boolean;
   isPublic?: boolean;
   /**
    * The item's own id: a number for every non-content indexer and every
@@ -51,6 +54,7 @@ export interface SearchQueryParams {
   dateFrom?: Date;
   dateTo?: Date;
   first?: number;
+  hiddenAccess?: SearchHiddenAccess;
   includePrivate?: boolean;
   itemTypes?: string[];
   // Restrict results to one locale (the viewer's). Rows with an empty
@@ -59,6 +63,11 @@ export interface SearchQueryParams {
   languageFallbacks?: SearchLanguageFallback[];
   sort?: "newest" | "oldest" | "relevance";
   term?: string;
+}
+
+export interface SearchHiddenAccess {
+  authorId?: number;
+  itemTypes: readonly string[];
 }
 
 export interface SearchLanguageFallback {
@@ -114,14 +123,25 @@ export interface SearchHitAuthor {
   nameCode: string;
 }
 
+export interface SearchHitImage {
+  height?: number;
+  url: string;
+  width?: number;
+}
+
 export interface SearchHit {
   author: null | SearchHitAuthor;
   authorId: null | number;
+  authorIds: number[];
+  authors: SearchHitAuthor[];
   containerId: null | number;
   containerType: null | string;
   content: string;
   createdAt: Date;
   id: number;
+  image: null | SearchHitImage;
+  imageId: null | number;
+  isHidden: boolean;
   isPublic: boolean;
   /** As on {@link SearchDocument}: read back with {@link searchItemIdFromKey}. */
   itemId: ContentId;
@@ -319,6 +339,8 @@ const toRow = (doc: SearchDocument) => ({
   containerId: doc.containerId ?? null,
   url: doc.url ?? null,
   isPublic: doc.isPublic ?? true,
+  isHidden: doc.isHidden ?? false,
+  imageId: doc.imageId ?? null,
   metadata: doc.metadata ?? {},
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt ?? null,
@@ -332,17 +354,17 @@ export class SearchModel {
 
   protected readonly c: Context;
 
-  // Providers that don't join the users table (e.g. Elasticsearch) return hits
-  // with `authorId` but `author: null`; fill in the display fields here.
   private async hydrateAuthors(edges: SearchHit[]): Promise<SearchHit[]> {
-    const missing = [
-      ...new Set(
-        edges.flatMap(edge =>
-          !edge.author && edge.authorId ? [edge.authorId] : [],
-        ),
-      ),
-    ];
-    if (missing.length === 0) return edges;
+    const idsOf = (edge: SearchHit): number[] =>
+      edge.authorIds.length > 0
+        ? edge.authorIds
+        : edge.authorId
+          ? [edge.authorId]
+          : [];
+    const wanted = [...new Set(edges.flatMap(idsOf))];
+    if (wanted.length === 0) {
+      return edges.map(edge => ({ ...edge, authorIds: [], authors: [] }));
+    }
 
     const rows = await this.c
       .get("db")
@@ -355,7 +377,7 @@ export class SearchModel {
       })
       .from(core_users)
       .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
-      .where(inArray(core_users.id, missing));
+      .where(inArray(core_users.id, wanted));
 
     const byId = new Map(
       rows.map(({ avatarKey, ...row }) => [
@@ -364,11 +386,70 @@ export class SearchModel {
       ]),
     );
 
-    return edges.map(edge =>
-      edge.author || !edge.authorId
-        ? edge
-        : { ...edge, author: byId.get(edge.authorId) ?? null },
+    return edges.map(edge => {
+      const authorIds = idsOf(edge);
+      const authors = authorIds.flatMap(id => {
+        const author = byId.get(id);
+
+        return author ? [author] : [];
+      });
+
+      return {
+        ...edge,
+        author: edge.author ?? authors[0] ?? null,
+        authorIds,
+        authors,
+      };
+    });
+  }
+
+  private async hydrateImages(edges: SearchHit[]): Promise<SearchHit[]> {
+    const wanted = [
+      ...new Set(
+        edges.flatMap(edge => (edge.imageId === null ? [] : [edge.imageId])),
+      ),
+    ];
+    if (wanted.length === 0) {
+      return edges.map(edge => ({ ...edge, image: null }));
+    }
+
+    const rows = await this.c
+      .get("db")
+      .select({
+        id: core_files.id,
+        key: core_files.key,
+        metadata: core_files.metadata,
+        mimeType: core_files.mimeType,
+      })
+      .from(core_files)
+      .where(inArray(core_files.id, wanted));
+
+    const byId = new Map(
+      rows.flatMap(row => {
+        const url = row.mimeType?.startsWith("image/")
+          ? storageUrlOf(this.c, row.key)
+          : null;
+        if (!url) return [];
+        const dimensions = parseImageDimensions(row.metadata);
+
+        return [
+          [
+            row.id,
+            {
+              url,
+              ...(dimensions
+                ? { height: dimensions.height, width: dimensions.width }
+                : {}),
+            },
+          ] as const,
+        ];
+      }),
     );
+
+    return edges.map(edge => ({
+      ...edge,
+      image: edge.imageId === null ? null : (byId.get(edge.imageId) ?? null),
+    }));
   }
 
   private provider(): SearchProviderApiPlugin {
@@ -417,6 +498,8 @@ export class SearchModel {
           containerId: row.containerId,
           url: row.url,
           isPublic: row.isPublic,
+          isHidden: row.isHidden,
+          imageId: row.imageId,
           metadata: row.metadata,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -535,6 +618,9 @@ export class SearchModel {
       languageFallbacks.length > 0 ? { ...params, languageFallbacks } : params,
     );
 
-    return { ...result, edges: await this.hydrateAuthors(result.edges) };
+    return {
+      ...result,
+      edges: await this.hydrateImages(await this.hydrateAuthors(result.edges)),
+    };
   }
 }

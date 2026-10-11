@@ -125,13 +125,11 @@ describe("the editor's status", () => {
     ).toBeNull();
   });
 
-  it("shows the badge beside the status switch, and warns before publishing", async () => {
+  it("warns before publishing a hidden record from the status switch", async () => {
     const { publish } = renderForm(<ContentFormStatusSwitch />, {
       publication: { status: "draft" },
       visibility: { hiddenAt: HIDDEN_AT },
     });
-
-    expect(screen.getByText("core.content.visibility.hidden")).toBeTruthy();
 
     fireEvent.click(
       screen.getByRole("radio", { name: "core.content.status.published" }),

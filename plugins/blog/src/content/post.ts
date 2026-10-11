@@ -117,6 +117,7 @@ export const blogPostContentType = defineContentType({
     contentFields: ["title", "content"],
     pathTemplate: "/blog/{slug}",
     authorField: "authorId",
+    imageField: "coverImage",
   },
 
   delivery: {

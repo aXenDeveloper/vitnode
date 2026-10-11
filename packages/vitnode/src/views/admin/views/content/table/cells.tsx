@@ -23,7 +23,7 @@ import { isContentPublished } from "@/content/publication";
 import { isRichTextDocument } from "@/content/rich-text/document";
 import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
-import { ContentHiddenBadge } from "../lib/hidden-badge";
+import { ContentHiddenIcon } from "../lib/hidden-badge";
 
 export interface ContentRowData extends Record<string, unknown> {
   files?: Record<string, ContentFileFieldValue>;
@@ -152,16 +152,14 @@ const ContentReferenceList = ({
   );
 };
 
-/** The publication badge's words, and the visibility badge's beside it. */
 export interface ContentStatusLabels {
   draft: string;
-  /** `core.content.visibility.hidden`. Absent, a hidden row shows no badge. */
-  hidden?: string;
   published: string;
 }
 
 interface ContentCellProps {
   emptyLabel: string;
+  hiddenLabel?: string;
   row: ContentRowData;
   spec: ContentColumnSpec;
   statusLabels: ContentStatusLabels;
@@ -236,7 +234,8 @@ const ContentCellValue = ({
 
     case "publication": {
       const published = isContentPublished(value);
-      const badge = (
+
+      return (
         <Badge variant={published ? "default" : "secondary"}>
           {published ? (
             <CircleCheckIcon aria-hidden />
@@ -245,19 +244,6 @@ const ContentCellValue = ({
           )}
           {published ? statusLabels.published : statusLabels.draft}
         </Badge>
-      );
-
-      // "Published" alone would be a lie for a hidden record: readers get a 404.
-      return statusLabels.hidden === undefined ? (
-        badge
-      ) : (
-        <span className="flex flex-wrap items-center gap-1">
-          {badge}
-          <ContentHiddenBadge
-            label={statusLabels.hidden}
-            row={{ hiddenAt: row.hiddenAt }}
-          />
-        </span>
       );
     }
 
@@ -284,14 +270,28 @@ const ContentCellValue = ({
   }
 };
 
+const ContentCellTitle = (props: ContentCellProps) =>
+  props.spec.title === true && props.hiddenLabel !== undefined ? (
+    <span className="flex min-w-0 items-center gap-2">
+      <ContentHiddenIcon
+        className="size-4"
+        label={props.hiddenLabel}
+        row={{ hiddenAt: props.row.hiddenAt }}
+      />
+      <ContentCellValue {...props} />
+    </span>
+  ) : (
+    <ContentCellValue {...props} />
+  );
+
 export const ContentCell = (props: ContentCellProps) =>
   props.spec.thumbnail === undefined ? (
-    <ContentCellValue {...props} />
+    <ContentCellTitle {...props} />
   ) : (
     <span className="flex min-w-0 items-center gap-3">
       <ContentFileThumbnail
         file={singleFileOf(props.row, props.spec.thumbnail)}
       />
-      <ContentCellValue {...props} />
+      <ContentCellTitle {...props} />
     </span>
   );

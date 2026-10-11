@@ -70,6 +70,7 @@ export const contentSearchIndexedFieldNames = (
         ...search.contentFields,
         publicApi.slugField,
         search.authorField,
+        search.imageField,
       ].filter((name): name is string => Boolean(name)),
     ),
   ];

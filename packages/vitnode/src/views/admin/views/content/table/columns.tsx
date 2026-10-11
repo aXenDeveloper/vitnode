@@ -66,7 +66,8 @@ export const contentRowTitle = (
 export interface ContentCellLabels {
   /** `core.content.table.empty_value` - a column this row has no value for. */
   empty: string;
-  /** `core.content.status.*`, for the publication badge - and "Hidden" beside it. */
+  hidden?: string;
+  /** `core.content.status.*`, for the publication badge. */
   status: ContentStatusLabels;
 }
 
@@ -112,6 +113,7 @@ export const buildContentTableColumns = ({
         ) : (
           <ContentCell
             emptyLabel={labels.empty}
+            hiddenLabel={labels.hidden}
             row={row}
             spec={spec}
             statusLabels={labels.status}

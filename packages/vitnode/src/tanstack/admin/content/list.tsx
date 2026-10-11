@@ -170,11 +170,15 @@ const ContentListTable = ({
         columnSpecs,
         labels: {
           empty: t("table.empty_value"),
+          ...(definition.visibility.enabled
+            ? {
+                hidden: t("visibility.hidden_record", {
+                  name: labels.singular,
+                }),
+              }
+            : {}),
           status: {
             draft: t("status.draft"),
-            ...(definition.visibility.enabled
-              ? { hidden: t("visibility.hidden") }
-              : {}),
             published: t("status.published"),
           },
         },

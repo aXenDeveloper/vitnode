@@ -1285,6 +1285,7 @@ export interface ContentSearchConfig<
   contentFields: readonly [TText, ...TText[]];
   /** Prepended to the indexed body so it shows up in result excerpts. */
   descriptionField?: TDescription;
+  imageField?: string;
   pathTemplate: string;
   /** The result heading. Weighted above the body by the index. */
   titleField: TTitle;
@@ -1310,6 +1311,7 @@ export interface ResolvedContentSearchConfig<
   contentFields: string[];
   descriptionField: null | string;
   enabled: TEnabled;
+  imageField: null | string;
   pathTemplate: string;
   titleField: string;
 }

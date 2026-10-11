@@ -90,7 +90,7 @@ Each action asks for confirmation and then sends one request per record to the s
 The **More actions** menu of each row collects the less frequent actions. Two of them come from options in the definition:
 
 - **Duplicate** appears with [`duplication`](/docs/content-engine/duplicate-content), for staff with `can_create` and `can_view`. It makes a draft copy and opens it.
-- **Hide** or **Unhide** appears with [`visibility`](/docs/content-engine/content-visibility), for staff with `can_hide`. A hidden record gets a **Hidden** badge next to its status, and the toolbar gets a **Visibility** filter with **All**, **Visible** and **Hidden**.
+- **Hide** or **Unhide** appears with [`visibility`](/docs/content-engine/content-visibility), for staff with `can_hide`. A hidden record gets an eye-off icon before its title, with a tooltip such as **Article hidden**, and the toolbar gets a **Visibility** filter with **All**, **Visible** and **Hidden**.
 
 <ImgDocs
   withoutBackground
@@ -281,7 +281,7 @@ contentTypeAdmin({
 }),
 ```
 
-`forms.create.layout` and `forms.edit.layout` override the shared one per action. For a content type with [`visibility`](/docs/content-engine/content-visibility), `ContentFormHiddenBadge`, `ContentFormHiddenNotice` and `ContentFormVisibilityToggle` from the same import place the badge, the explanation and the button yourself. The blog's editor puts `ContentFormHiddenNotice` under its header. `ContentFormRemainingFields` renders every form field you did not place yourself. In development, the browser console warns about fields the layout never rendered and about a missing `ContentFormHeader`, which holds the title and the back link.
+`forms.create.layout` and `forms.edit.layout` override the shared one per action. For a content type with [`visibility`](/docs/content-engine/content-visibility), `ContentFormHiddenIcon`, `ContentFormHiddenNotice` and `ContentFormVisibilityToggle` from the same import place the icon, the explanation and the button yourself. The blog's editor puts `ContentFormHiddenIcon` before the title and `ContentFormHiddenNotice` under its header. For a one-row header, `ContentFormPublicationLabel` shows **Draft** or **Published** as plain text (hover it for the publish date), and `ContentFormSaveMenu` is **Save changes** with a ▾ menu holding **Publish** or **Unpublish** and **Hide** or **Unhide**, each behind the usual confirmation. `ContentFormRemainingFields` renders every form field you did not place yourself. In development, the browser console warns about fields the layout never rendered and about a missing `ContentFormHeader`, which holds the title and the back link.
 
 ## Show a matching skeleton
 
