@@ -164,27 +164,28 @@ describe("ContentCell", () => {
       expect(screen.getByText("Hidden")).toBeTruthy();
     });
 
-    it("shows no badge for a visible record", () => {
+    it.each([
+      [
+        "a visible record",
+        { hiddenAt: null, status: "published" as const },
+        labels,
+      ],
+      [
+        "a content type without visibility",
+        { hiddenAt: "2026-10-01T09:00:00.000Z", status: "published" as const },
+        { draft: "Draft", published: "Published" },
+      ],
+    ])("shows no badge for %s", (_name, overrides, statusLabels) => {
       render(
         <ContentCell
           emptyLabel="—"
-          row={rowWith({ hiddenAt: null, status: "published" })}
+          row={rowWith(overrides)}
           spec={STATUS}
-          statusLabels={labels}
+          statusLabels={statusLabels}
         />,
       );
 
       expect(screen.getByText("Published")).toBeTruthy();
-      expect(screen.queryByText("Hidden")).toBeNull();
-    });
-
-    it("shows no badge for a content type without visibility", () => {
-      cell(
-        STATUS,
-        rowWith({ hiddenAt: "2026-10-01T09:00:00.000Z", status: "draft" }),
-      );
-
-      expect(screen.getByText("Draft")).toBeTruthy();
       expect(screen.queryByText("Hidden")).toBeNull();
     });
   });

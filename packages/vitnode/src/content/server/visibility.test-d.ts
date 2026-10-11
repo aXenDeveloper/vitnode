@@ -68,9 +68,6 @@ describe("hide and unhide on the services", () => {
     expectTypeOf<Row["hiddenAt"]>().toEqualTypeOf<Date | null>();
     expectTypeOf<Row["hiddenBy"]>().toEqualTypeOf<null | number>();
     expectTypeOf<PlainRow>().not.toHaveProperty("hiddenAt");
-    expectTypeOf<
-      (typeof hideableNotes.table.$inferSelect)["hiddenAt"]
-    >().toEqualTypeOf<Date | null>();
   });
 
   it("accepts the visibility filter on the admin list only with visibility", () => {

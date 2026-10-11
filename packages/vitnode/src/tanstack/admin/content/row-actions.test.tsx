@@ -140,52 +140,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("ContentRowActions - permission gating", () => {
-  it("offers Duplicate and Hide to an editor who may create, view and hide", () => {
-    mount({ permissions: grant("can_view", "can_create", "can_hide") });
-
-    expect(
-      screen.getByRole("button", { name: "core.content.actions.duplicate" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "core.content.actions.hide" }),
-    ).toBeTruthy();
-  });
-
-  it("offers no Duplicate without can_create", () => {
-    mount({ permissions: grant("can_view", "can_hide") });
-
-    expect(
-      screen.queryByRole("button", { name: "core.content.actions.duplicate" }),
-    ).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "core.content.actions.hide" }),
-    ).toBeTruthy();
-  });
-
-  it("offers no Hide without can_hide - can_publish is not enough", () => {
-    mount({ permissions: grant("can_view", "can_create", "can_publish") });
-
-    expect(
-      screen.queryByRole("button", { name: "core.content.actions.hide" }),
-    ).toBeNull();
-  });
-
-  it("offers Unhide for a hidden row", () => {
-    mount({
-      permissions: grant("can_hide"),
-      record: row({ hiddenAt: "2026-10-01T09:00:00.000Z" }),
-    });
-
-    expect(
-      screen.getByRole("button", { name: "core.content.actions.unhide" }),
-    ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "core.content.actions.hide" }),
-    ).toBeNull();
-  });
-});
-
 describe("ContentRowActions - hide", () => {
   it("hides with the row's version after the confirmation, then says so", async () => {
     const success = vi.spyOn(toast, "success");

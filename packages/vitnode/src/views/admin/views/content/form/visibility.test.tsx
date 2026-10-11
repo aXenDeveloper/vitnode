@@ -65,41 +65,27 @@ const renderForm = (
 };
 
 describe("ContentFormVisibilityToggle", () => {
-  it("hides a visible record after the confirmation", async () => {
-    const { transition } = renderForm(<ContentFormVisibilityToggle />);
+  it.each([
+    ["hide", null],
+    ["unhide", HIDDEN_AT],
+  ] as const)("asks before it calls %s", async (action, hiddenAt) => {
+    const { transition } = renderForm(<ContentFormVisibilityToggle />, {
+      visibility: { hiddenAt },
+    });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "core.content.actions.hide" }),
+      screen.getByRole("button", { name: `core.content.actions.${action}` }),
     );
 
-    expect(await screen.findByText("core.content.hide.desc")).toBeTruthy();
+    expect(await screen.findByText(`core.content.${action}.desc`)).toBeTruthy();
     expect(transition).not.toHaveBeenCalled();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "core.content.hide.confirm" }),
+      screen.getByRole("button", { name: `core.content.${action}.confirm` }),
     );
 
     await waitFor(() => {
-      expect(transition).toHaveBeenCalledWith("hide");
-    });
-  });
-
-  it("offers to unhide a hidden record", async () => {
-    const { transition } = renderForm(<ContentFormVisibilityToggle />, {
-      visibility: { hiddenAt: HIDDEN_AT },
-    });
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "core.content.actions.unhide" }),
-    );
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "core.content.unhide.confirm",
-      }),
-    );
-
-    await waitFor(() => {
-      expect(transition).toHaveBeenCalledWith("unhide");
+      expect(transition).toHaveBeenCalledWith(action);
     });
   });
 

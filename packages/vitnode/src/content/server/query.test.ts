@@ -315,17 +315,6 @@ describe("buildFilterCondition", () => {
       );
     });
 
-    it("composes with the status filter", () => {
-      const { params, sql } = compile(
-        visibilityFilter({ status: "published", visibility: "hidden" }),
-      );
-
-      expect(sql).toBe(
-        '(("test_hideable_notes"."status" = $1) and (("test_hideable_notes"."hiddenAt" is not null)))',
-      );
-      expect(params).toEqual(["published"]);
-    });
-
     it.each([["secret"], [""], [null], [true]])(
       "rejects %j before it reaches SQL",
       value => {

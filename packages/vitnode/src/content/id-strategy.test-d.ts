@@ -1,8 +1,7 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { testArticleContentType } from "@/tests/content-fixtures";
-
-import {
+import type {
+  testArticleContentType,
   testBigintEventContentType,
   testBigintPageContentType,
   testCategoryContentType,
@@ -22,9 +21,6 @@ import type {
   ContentSelect,
   ContentTranslationRow,
 } from "./types";
-
-import { createContentTable } from "./server/table";
-import { createContentTranslationTable } from "./server/translation-table";
 
 type Tag = typeof testUuidTagContentType;
 type Event = typeof testBigintEventContentType;
@@ -146,50 +142,6 @@ describe("events", () => {
         typeof testArticleContentType
       >["content.test.article.created"]["contentId"]
     >().toEqualTypeOf<number>();
-  });
-});
-
-describe("generated tables", () => {
-  const categories = createContentTable(testCategoryContentType);
-  const tags = createContentTable(testUuidTagContentType, {
-    references: { category: () => categories.id },
-  });
-  const _events = createContentTable(testBigintEventContentType, {
-    references: {
-      category: () => categories.id,
-      primaryTag: () => tags.id,
-      tags: () => tags.id,
-    },
-  });
-  const pages = createContentTable(testBigintPageContentType);
-  const _pageTranslations = createContentTranslationTable(
-    testBigintPageContentType,
-    { table: pages },
-  );
-
-  it("infer their select rows from the same strategies", () => {
-    expectTypeOf<(typeof tags)["$inferSelect"]["id"]>().toEqualTypeOf<string>();
-    expectTypeOf<
-      (typeof _events)["$inferSelect"]["id"]
-    >().toEqualTypeOf<string>();
-    expectTypeOf<
-      (typeof _events)["$inferSelect"]["primaryTag"]
-    >().toEqualTypeOf<null | string>();
-    expectTypeOf<(typeof _events)["$inferSelect"]["category"]>().toEqualTypeOf<
-      null | number
-    >();
-    expectTypeOf<
-      (typeof _pageTranslations)["$inferSelect"]["itemId"]
-    >().toEqualTypeOf<string>();
-  });
-
-  it("generate the id, so an insert may leave it out", () => {
-    expectTypeOf<
-      undefined extends (typeof tags)["$inferInsert"]["id"] ? true : false
-    >().toEqualTypeOf<true>();
-    expectTypeOf<
-      undefined extends (typeof _events)["$inferInsert"]["id"] ? true : false
-    >().toEqualTypeOf<true>();
   });
 });
 

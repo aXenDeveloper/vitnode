@@ -108,32 +108,22 @@ describe("isContentPubliclyVisible", () => {
     ).toBe(false);
   });
 
-  it("refuses a hidden row whatever its publication says", () => {
+  it.each([
+    ["refuses a hidden published row", past, false],
+    [
+      "refuses a hidden row as a schedule payload carries it",
+      past.toISOString(),
+      false,
+    ],
+    ["shows a published row that is not hidden", null, true],
+  ])("%s", (_name, hiddenAt, visible) => {
     expect(
       isContentPubliclyVisible({
-        hiddenAt: past,
+        hiddenAt,
         publishedAt: past,
         status: "published",
       }),
-    ).toBe(false);
-    // The JSON form a schedule payload carries.
-    expect(
-      isContentPubliclyVisible({
-        hiddenAt: past.toISOString(),
-        publishedAt: past,
-        status: "published",
-      }),
-    ).toBe(false);
-  });
-
-  it("judges a row without visibility - or not hidden - exactly as before", () => {
-    expect(
-      isContentPubliclyVisible({
-        hiddenAt: null,
-        publishedAt: past,
-        status: "published",
-      }),
-    ).toBe(true);
+    ).toBe(visible);
   });
 
   it("takes every language down with a hidden base row", () => {

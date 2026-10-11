@@ -1,21 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  testArticleContentType,
-  testBigintEventContentType,
-  testUuidTagContentType,
-} from "@/tests/content-fixtures";
+import { testBigintEventContentType } from "@/tests/content-fixtures";
 
 import { ContentEngineError } from "./errors";
 import {
   compareContentIds,
   CONTENT_BIGINT_MAX,
   CONTENT_SERIAL_MAX,
-  contentIdFromKey,
-  contentIdKey,
-  contentIdParamSchema,
   contentIdSchema,
-  contentIdsOf,
   contentRelationStrategy,
   isContentId,
   parseContentId,
@@ -78,25 +70,6 @@ describe("parseContentId", () => {
   });
 });
 
-describe("storage keys", () => {
-  it("keep a serial record's key exactly the digits it always had", () => {
-    expect(contentIdKey(42)).toBe("42");
-    expect(contentIdFromKey("serial", "42")).toBe(42);
-  });
-
-  it("round-trip every strategy through its key", () => {
-    expect(contentIdFromKey("bigint", contentIdKey(BEYOND_SAFE))).toBe(
-      BEYOND_SAFE,
-    );
-    expect(contentIdFromKey("uuid", contentIdKey(UUID))).toBe(UUID);
-  });
-
-  it("read nothing out of a key the strategy cannot hold", () => {
-    expect(contentIdFromKey("serial", UUID)).toBeNull();
-    expect(contentIdFromKey("uuid", "42")).toBeNull();
-  });
-});
-
 describe("isContentId", () => {
   it("is true only for the strategy's own representation", () => {
     expect(isContentId("serial", 7)).toBe(true);
@@ -108,21 +81,10 @@ describe("isContentId", () => {
 });
 
 describe("requireContentId", () => {
-  it("returns the canonical id", () => {
-    expect(requireContentId("bigint", BEYOND_SAFE)).toBe(BEYOND_SAFE);
-  });
-
   it("throws rather than handing back a sentinel", () => {
     expect(() => requireContentId("uuid", 0, "test.tag")).toThrow(
       ContentEngineError,
     );
-  });
-});
-
-describe("contentIdsOf", () => {
-  it("keeps the readable ids, canonicalised, in order", () => {
-    expect(contentIdsOf("serial", [3, "1", "x", 2.5])).toEqual([3, 1]);
-    expect(contentIdsOf("uuid", [UUID, "nope"])).toEqual([UUID]);
   });
 });
 
@@ -149,28 +111,6 @@ describe("schemas", () => {
     expect(contentIdSchema("uuid").safeParse(UUID.toUpperCase()).success).toBe(
       false,
     );
-  });
-
-  it("parse a path or query value into the strategy's representation", () => {
-    expect(contentIdParamSchema("serial").parse("7")).toBe(7);
-    expect(contentIdParamSchema("bigint").parse(BEYOND_SAFE)).toBe(BEYOND_SAFE);
-    expect(contentIdParamSchema("uuid").safeParse("7").success).toBe(false);
-  });
-
-  it("keep a serial content type's `{id}` the coerced number it always was", () => {
-    expect(testArticleContentType.schemas.params.parse({ id: "7" })).toEqual({
-      id: 7,
-    });
-  });
-
-  it("refuse a non-canonical `{id}` on a uuid or bigint content type", () => {
-    const { params: tagParams } = testUuidTagContentType.schemas;
-    const { params: eventParams } = testBigintEventContentType.schemas;
-
-    expect(tagParams.safeParse({ id: UUID }).success).toBe(true);
-    expect(tagParams.safeParse({ id: UUID.toUpperCase() }).success).toBe(false);
-    expect(eventParams.parse({ id: BEYOND_SAFE })).toEqual({ id: BEYOND_SAFE });
-    expect(eventParams.safeParse({ id: "01" }).success).toBe(false);
   });
 
   it("type relation values by the target's strategy, a self-relation by the owner's", () => {

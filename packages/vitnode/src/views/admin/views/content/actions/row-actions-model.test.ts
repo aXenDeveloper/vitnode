@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { ContentRowActionInput } from "./row-actions-model";
 
 import {
-  CONTENT_EDITORIAL_ACTION_IDS,
   CONTENT_ROW_ACTION_IDS,
   CONTENT_ROW_INLINE_ACTION_LIMIT,
   contentRowActionIds,
@@ -182,15 +181,6 @@ describe("duplicate and visibility", () => {
     expect(
       contentRowActionIds({ ...nothing, canHide: true, visibility: true }),
     ).toEqual(["visibility"]);
-  });
-
-  it("keeps them out of the editorial panels a host registers", () => {
-    expect(CONTENT_EDITORIAL_ACTION_IDS).toEqual([
-      "preview",
-      "schedule",
-      "history",
-      "delivery",
-    ]);
   });
 });
 

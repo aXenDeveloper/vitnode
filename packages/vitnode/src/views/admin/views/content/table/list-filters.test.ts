@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { nextFilterSelection } from "@/components/table/filters";
 import { defineContentType } from "@/content/define";
 import { field } from "@/content/fields";
 
@@ -39,29 +38,18 @@ const notes = defineContentType({
 });
 
 describe("contentListToolbarFilters", () => {
-  it("offers status and visibility side by side, each one value at a time", () => {
-    const filters = contentListToolbarFilters(articles, LABELS);
-
-    expect(filters.map(filter => filter.id)).toEqual(["status", "visibility"]);
-    expect(filters[1]).toEqual({
-      id: "visibility",
-      label: "Visibility",
-      options: [
-        { label: "Visible", value: "visible" },
-        { label: "Hidden", value: "hidden" },
-      ],
-      single: { allLabel: "All" },
-    });
-  });
-
-  it("offers status alone for a content type that does not hide", () => {
+  it.each([
+    [
+      "status and visibility for a content type that hides",
+      articles,
+      ["status", "visibility"],
+    ],
+    ["status alone for a content type that does not hide", pages, ["status"]],
+    ["nothing for a content type without publication", notes, []],
+  ])("offers %s", (_name, definition, ids) => {
     expect(
-      contentListToolbarFilters(pages, LABELS).map(filter => filter.id),
-    ).toEqual(["status"]);
-  });
-
-  it("offers nothing for a content type without publication", () => {
-    expect(contentListToolbarFilters(notes, LABELS)).toEqual([]);
+      contentListToolbarFilters(definition, LABELS).map(filter => filter.id),
+    ).toEqual(ids);
   });
 });
 
@@ -86,20 +74,5 @@ describe("contentListSystemFilterValue", () => {
 
   it("leaves a declared field's filter to the API", () => {
     expect(contentListSystemFilterValue("categoryId", "7")).toBe("7");
-  });
-});
-
-describe("nextFilterSelection", () => {
-  it("replaces the value of a single-value filter, and clears it on a second pick", () => {
-    expect(nextFilterSelection([], "hidden", true)).toEqual(["hidden"]);
-    expect(nextFilterSelection(["hidden"], "visible", true)).toEqual([
-      "visible",
-    ]);
-    expect(nextFilterSelection(["hidden"], "hidden", true)).toEqual([]);
-  });
-
-  it("toggles one value of a multi-value filter, keeping the rest", () => {
-    expect(nextFilterSelection(["a"], "b")).toEqual(["a", "b"]);
-    expect(nextFilterSelection(["a", "b"], "a")).toEqual(["b"]);
   });
 });

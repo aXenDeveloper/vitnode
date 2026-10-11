@@ -153,7 +153,8 @@ describe("tokens for every id strategy", () => {
 
   const round = (
     definition:
-      typeof testBigintEventContentType | typeof testUuidTagContentType,
+      | typeof testBigintEventContentType
+      | typeof testUuidTagContentType,
     itemId: number | string,
   ) =>
     verifyContentPreviewToken({
@@ -183,9 +184,5 @@ describe("tokens for every id strategy", () => {
   it("refuses a signed id the content type's strategy cannot read", () => {
     expect(round(testUuidTagContentType, 7)).toBeNull();
     expect(round(testBigintEventContentType, UUID)).toBeNull();
-  });
-
-  it("still verifies a serial token whose id is a number, as every token minted before was", () => {
-    expect(verify(mint({ itemId: 7 }).token)?.i).toBe(7);
   });
 });

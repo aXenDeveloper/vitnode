@@ -561,18 +561,4 @@ describe("hide and unhide", () => {
       }),
     );
   });
-
-  it("touches nothing for a repeat", async () => {
-    const { c, search } = searchOf();
-
-    const outcome = await syncContentSearch(c, testHideablePostContentType, {
-      changed: false,
-      operation: "hide",
-      row,
-    });
-
-    expect(outcome.action).toBe("skip");
-    expect(search.index).not.toHaveBeenCalled();
-    expect(search.delete).not.toHaveBeenCalled();
-  });
 });

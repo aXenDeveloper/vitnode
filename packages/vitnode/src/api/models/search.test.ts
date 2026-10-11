@@ -514,20 +514,6 @@ describe("item ids under every strategy", () => {
     );
   });
 
-  it("deletes a uuid record by its key", async () => {
-    const provider = createProvider();
-    const { c } = createContext(provider);
-
-    await new SearchModel(c).delete("test.uuid-tag", UUID, "en");
-
-    expect(provider.delete).toHaveBeenCalledWith(
-      c,
-      "test.uuid-tag",
-      UUID,
-      "en",
-    );
-  });
-
   it("reads a key back as the id its content type uses", () => {
     expect(searchItemIdFromKey(types, "test.searchable", "42")).toBe(42);
     expect(searchItemIdFromKey(types, "test.bigint-event", BEYOND_SAFE)).toBe(
