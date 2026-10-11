@@ -15,6 +15,19 @@ describe("visibleSettingsNavItems", () => {
     ).toEqual(["overview", "notifications", "devices"]);
   });
 
+  it("shows Billing only while Payments is enabled", () => {
+    expect(
+      visibleSettingsNavItems({ passkeys: false, payments: true }).map(
+        item => item.key,
+      ),
+    ).toEqual(["overview", "notifications", "devices", "billing"]);
+    expect(
+      visibleSettingsNavItems({ passkeys: false, payments: false }).map(
+        item => item.key,
+      ),
+    ).toEqual(["overview", "notifications", "devices"]);
+  });
+
   it("shows Connected accounts only while an SSO provider is configured", () => {
     expect(
       visibleSettingsNavItems({

@@ -1,4 +1,5 @@
 import {
+  CreditCardIcon,
   FileTextIcon,
   LayoutDashboardIcon,
   ServerIcon,
@@ -63,8 +64,16 @@ export interface AdminNavSubItemDeclaration {
   title: AdminNavTitle;
 }
 
+/** Optional features an install may leave unconfigured. */
+export type AdminNavFeature = "payments";
+
+/** Which optional features this install has configured. */
+export type AdminNavFeatures = Partial<Record<AdminNavFeature, boolean>>;
+
 /** A top-level declaration, which may carry an icon and sub-items. */
 export interface AdminNavItemDeclaration extends AdminNavSubItemDeclaration {
+  /** Shown only while this feature is configured. */
+  feature?: AdminNavFeature;
   icon?: React.ReactNode;
   items?: AdminNavSubItemDeclaration[];
 }
@@ -96,10 +105,12 @@ export const filterNavItems = (
   items: AdminNavItemDeclaration[],
   set: StaffPermissionSet,
   t: AdminNavTranslator,
+  features: AdminNavFeatures = {},
 ): AdminNavItem[] => {
   const result: AdminNavItem[] = [];
 
   for (const item of items) {
+    if (item.feature && !features[item.feature]) continue;
     if (!isAllowed(item.permission, set)) continue;
 
     if (item.items && item.items.length > 0) {
@@ -238,6 +249,29 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.ai.history"),
           href: "/admin/core/ai/history",
           permission: core("ai"),
+        },
+      ],
+    },
+    {
+      href: "/admin/core/payments",
+      title: key("admin.global.nav.payments.title"),
+      icon: <CreditCardIcon />,
+      feature: "payments",
+      items: [
+        {
+          title: key("admin.global.nav.payments.overview"),
+          href: "/admin/core/payments",
+          permission: core("payments"),
+        },
+        {
+          title: key("admin.global.nav.payments.subscriptions"),
+          href: "/admin/core/payments/subscriptions",
+          permission: core("payments"),
+        },
+        {
+          title: key("admin.global.nav.payments.events"),
+          href: "/admin/core/payments/events",
+          permission: core("payments"),
         },
       ],
     },
@@ -439,17 +473,19 @@ export const adminNavBundle = (
  */
 export const resolveAdminNav = ({
   declarations,
+  features,
   permissions,
   t,
 }: {
   declarations: AdminNavGroupDeclaration[];
+  features?: AdminNavFeatures;
   permissions: StaffPermissionSet;
   t: AdminNavTranslator;
 }): NavAdminParent[] =>
   declarations
     .map(group => ({
       id: group.id,
-      items: filterNavItems(group.items, permissions, t),
+      items: filterNavItems(group.items, permissions, t, features),
       title: resolveTitle(group.title, t),
     }))
     .filter(group => group.items.length > 0);
@@ -463,16 +499,19 @@ export const resolveAdminNav = ({
  * separately instead.
  */
 export const buildAdminNav = ({
+  features,
   permissions,
   t,
   vitNodeConfig,
 }: {
+  features?: AdminNavFeatures;
   permissions: StaffPermissionSet;
   t: AdminNavTranslator;
   vitNodeConfig: VitNodeConfig;
 }): NavAdminParent[] =>
   resolveAdminNav({
     declarations: adminNavDeclarations(vitNodeConfig),
+    features,
     permissions,
     t,
   });

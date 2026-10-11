@@ -111,6 +111,7 @@ const isSharedCacheable = (value: string): boolean => {
 };
 
 const DECLARED = {
+  "api/modules/payments/private-response.ts": ["private, no-store"],
   "content/server/delivery-routes.ts": ["private, no-store"],
   "content/server/public-routes.ts": ["private, no-store"],
   "tanstack/start/document-headers.ts": ["private, no-store"],

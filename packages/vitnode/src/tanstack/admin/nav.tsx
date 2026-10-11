@@ -15,6 +15,7 @@ import {
   resolveAdminNav,
 } from "@/views/admin/layouts/sidebar/nav/nav-model";
 
+import { useMiddlewareConfigQuery } from "../auth/middleware-config";
 import { useAdminPermissions } from "./permissions";
 
 interface AdminNavValue {
@@ -37,11 +38,18 @@ export const AdminNavProvider = ({
   declarations?: AdminNavGroupDeclaration[];
 }) => {
   const permissions = useAdminPermissions();
+  const { data: config } = useMiddlewareConfigQuery();
+  const payments = config.payments;
 
   const t = useTranslations() as unknown as AdminNavTranslator;
 
   const value = React.useMemo<AdminNavValue>(() => {
-    const nav = resolveAdminNav({ declarations, permissions, t });
+    const nav = resolveAdminNav({
+      declarations,
+      features: { payments },
+      permissions,
+      t,
+    });
 
     return {
       nav,
@@ -51,7 +59,7 @@ export const AdminNavProvider = ({
         ...adminSearchOnlyItems({ permissions, t }),
       ],
     };
-  }, [declarations, permissions, t]);
+  }, [declarations, payments, permissions, t]);
 
   return <AdminNavContext value={value}>{children}</AdminNavContext>;
 };

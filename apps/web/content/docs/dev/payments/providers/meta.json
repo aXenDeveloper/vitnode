@@ -1,0 +1,6 @@
+{
+  "title": "Providers",
+  "description": "Payment services VitNode Payments can charge through",
+  "icon": "Blocks",
+  "pages": ["index", "stripe"]
+}
