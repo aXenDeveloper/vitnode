@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { ChildProcess } from "node:child_process";
 
 import {
@@ -82,7 +81,7 @@ class RecordingGroup extends ProcessGroup {
   readonly pids: (number | undefined)[] = [];
 
   override spawn(options: RunProcessOptions): ChildProcess {
-    const child = super.spawn(options);
+    const child = super.spawn({ ...options, capture: true });
     this.pids.push(child.pid);
 
     return child;

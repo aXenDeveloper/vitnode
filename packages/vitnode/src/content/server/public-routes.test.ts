@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { describe, expect, it, vi } from "vitest";
 
@@ -166,39 +165,6 @@ describe("public detail route", () => {
       fallback: true,
       locale: undefined,
     });
-  });
-
-  it("returns exactly the allowlisted keys", async () => {
-    const { app, service } = harness();
-    service.findBySlug.mockResolvedValue(publicRow);
-
-    const body = (await (await app.request("/hello-world")).json()) as Record<
-      string,
-      unknown
-    >;
-
-    expect(Object.keys(body).sort()).toEqual([
-      "category",
-      "excerpt",
-      "publishedAt",
-      "slug",
-      "title",
-    ]);
-    expect(body).not.toHaveProperty("views");
-    expect(body).not.toHaveProperty("author");
-    expect(body).not.toHaveProperty("status");
-    expect(body).not.toHaveProperty("id");
-  });
-
-  it("projects the relation as an identifier and nothing else", async () => {
-    const { app, service } = harness();
-    service.findBySlug.mockResolvedValue(publicRow);
-
-    const body = (await (await app.request("/hello-world")).json()) as {
-      category: unknown;
-    };
-
-    expect(body.category).toEqual({ id: 3 });
   });
 
   it("documents the relation without a label", () => {

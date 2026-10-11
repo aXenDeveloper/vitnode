@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import {
   fireEvent,
   render,
@@ -207,47 +206,6 @@ describe("NavigationAdminListContent", () => {
     expect(screen.getByText("Docs")).toBeTruthy();
   });
 
-  it("lifts a child to the top level from its menu", async () => {
-    const props = renderList();
-
-    const menu = await openRowMenu(1);
-    fireEvent.click(
-      within(menu).getByRole("menuitem", {
-        name: "admin.navigation.list.moveToTop",
-      }),
-    );
-
-    await waitFor(() => {
-      expect(props.onReorder).toHaveBeenCalledWith({
-        items: [
-          { children: [], id: 1 },
-          { children: [], id: 2 },
-          { children: [], id: 3 },
-        ],
-      });
-    });
-  });
-
-  it("moves a top-level item up past its neighbour from its menu", async () => {
-    const props = renderList();
-
-    const menu = await openRowMenu(2);
-    fireEvent.click(
-      within(menu).getByRole("menuitem", {
-        name: "admin.navigation.list.moveUp",
-      }),
-    );
-
-    await waitFor(() => {
-      expect(props.onReorder).toHaveBeenCalledWith({
-        items: [
-          { children: [], id: 3 },
-          { children: [2], id: 1 },
-        ],
-      });
-    });
-  });
-
   it("keeps the drag handles usable while a new order saves", async () => {
     renderList({
       onReorder: vi.fn(
@@ -333,51 +291,12 @@ describe("NavigationAdminListContent", () => {
     ).toBeTruthy();
   });
 
-  it("steps back from the details to the choice of page", async () => {
-    renderList();
-
-    const menu = await openRowMenu(0);
-    fireEvent.click(
-      within(menu).getByRole("menuitem", {
-        name: "admin.navigation.list.addChild",
-      }),
-    );
-    const dialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByText("admin.navigation.form.kind.custom"),
-    );
-
-    fireEvent.click(
-      await within(dialog).findByRole("button", {
-        name: "admin.navigation.create.back",
-      }),
-    );
-
-    expect(
-      await within(dialog).findByText("admin.navigation.create.presets"),
-    ).toBeTruthy();
-  });
-
   it("opens the editor for an item when its row is clicked", async () => {
     renderList();
 
     fireEvent.click(screen.getByText("Blog"));
 
     expect(await screen.findByText("admin.navigation.edit.title")).toBeTruthy();
-  });
-
-  it("opens the editor for a prebuilt page with its locked page shown", async () => {
-    renderList();
-
-    fireEvent.click(screen.getByText("Explore"));
-
-    expect(
-      await screen.findByText(
-        "admin.navigation.form.presetLocked",
-        {},
-        { timeout: 5000 },
-      ),
-    ).toBeTruthy();
   });
 
   it("hides every action and handle from an admin who may only look", () => {

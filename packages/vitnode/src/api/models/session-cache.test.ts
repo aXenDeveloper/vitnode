@@ -1,7 +1,3 @@
-// @vitest-environment node
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { SessionUser } from "./session-cache";
@@ -14,8 +10,6 @@ import {
   sessionCacheKey,
   sessionCacheTtl,
 } from "./session-cache";
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 const TOKEN_A = "a".repeat(64);
 const TOKEN_B = "b".repeat(64);
@@ -103,16 +97,6 @@ describe("a cached user never outlives the session", () => {
     expect(sessionCacheTtl(inSeconds(-1))).toBeLessThanOrEqual(0);
     expect(sessionCacheTtl(new Date(Date.now() - 60_000))).toBeLessThanOrEqual(
       0,
-    );
-  });
-});
-
-describe("both session models refuse to write a non-positive TTL", () => {
-  it.each(["session.ts", "session-admin.ts"])("%s guards the write", file => {
-    const source = readFileSync(join(here, file), "utf8");
-
-    expect(source).toMatch(
-      /const ttl = sessionCacheTtl\([^)]*\);\s*if \(ttl > 0\) await cache\.setSystem\(/,
     );
   });
 });

@@ -1,10 +1,8 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { ADMIN_QUERY_ROOT } from "@/views/admin/table/query";
 
 import {
-  CONTENT_USER_TARGET,
   contentDeliveryQueryKey,
   contentHistoryQueryKey,
   contentHistoryQueryRoot,
@@ -102,42 +100,5 @@ describe("one record's root", () => {
   it("is not reached by the list family, nor reaches it", () => {
     expect(isPrefixOf(contentListQueryRoot(TYPE), root)).toBe(false);
     expect(isPrefixOf(root, contentListQueryRoot(TYPE))).toBe(false);
-  });
-});
-
-describe("reference picker options", () => {
-  it("is reached by invalidating the content type it offers", () => {
-    const picker = contentOptionsQueryKey("blog.category", "categoryId", "en");
-
-    expect(isPrefixOf(contentTypeQueryRoot("blog.category"), picker)).toBe(
-      true,
-    );
-    // And not by the type the *form* belongs to.
-    expect(isPrefixOf(contentTypeQueryRoot("blog.post"), picker)).toBe(false);
-  });
-
-  it("keeps two fields onto one target independently searchable", () => {
-    expect(
-      contentOptionsQueryKey("blog.category", "primary", "en"),
-    ).not.toEqual(contentOptionsQueryKey("blog.category", "secondary", "en"));
-  });
-
-  it("keys each AdminCP language separately", () => {
-    expect(contentOptionsQueryKey(TYPE, "f", "en")).not.toEqual(
-      contentOptionsQueryKey(TYPE, "f", "pl"),
-    );
-  });
-
-  it("is a prefix of what the combobox actually caches under", () => {
-    const key = contentOptionsQueryKey(TYPE, "f", "en");
-
-    expect(isPrefixOf(key, [...key, { search: "ab" }])).toBe(true);
-  });
-
-  it("puts the user picker somewhere no content type can name", () => {
-    expect(CONTENT_USER_TARGET).toContain(":");
-    expect(/^[a-z0-9]+(?:\.[a-z0-9-]+)+$/.test(CONTENT_USER_TARGET)).toBe(
-      false,
-    );
   });
 });

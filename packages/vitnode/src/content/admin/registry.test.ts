@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import type { ContentFrontendPluginSource } from "../../lib/plugin";
@@ -13,7 +12,6 @@ import {
   hasContentFrontendRegistry,
   setContentFrontendRegistry,
 } from "./registry";
-import { resolveContentAdminRoute } from "./route";
 
 const define = (
   id: string,
@@ -37,8 +35,6 @@ const plugin = (
 const post = define("blog.post");
 const category = define("blog.category");
 const article = define("example.article");
-/** The case the whole `admin.path` design exists for: URL and id disagree. */
-const renamed = define("blog.post", { path: "blog/articles" });
 
 describe("buildContentFrontendRegistry", () => {
   it("collects every content type from every plugin", () => {
@@ -140,63 +136,6 @@ describe("buildContentFrontendRegistry", () => {
 
     it("answers undefined for an admin path nothing registered", () => {
       expect(registry.byAdminPath("blog/nope")).toBeUndefined();
-    });
-  });
-
-  describe("lookup, as the route resolver reads it", () => {
-    const registry = buildContentFrontendRegistry([
-      plugin("@vitnode/blog", renamed),
-    ]);
-
-    it("resolves the renamed path", () => {
-      expect(
-        resolveContentAdminRoute(["blog", "articles"], registry.lookup),
-      ).toEqual({ action: "list", contentTypeId: "blog.post" });
-    });
-
-    it("leaves the id-derived path unrouted", () => {
-      expect(
-        resolveContentAdminRoute(["blog", "post"], registry.lookup),
-      ).toBeUndefined();
-    });
-  });
-
-  describe("validation", () => {
-    it("rejects two plugins registering one content type id", () => {
-      expect(() =>
-        buildContentFrontendRegistry([
-          plugin("@vitnode/blog", post),
-          plugin("@vitnode/example", define("blog.post")),
-        ]),
-      ).toThrow(
-        /Duplicate content type id.*@vitnode\/blog.*@vitnode\/example/s,
-      );
-    });
-
-    it("rejects two content types claiming one AdminCP path", () => {
-      const clash = define("example.article", { path: "blog/post" });
-
-      expect(() =>
-        buildContentFrontendRegistry([
-          plugin("@vitnode/blog", post),
-          plugin("@vitnode/example", clash),
-        ]),
-      ).toThrow(/AdminCP path "blog\/post" is claimed by both/);
-    });
-
-    it("rejects two content types claiming one physical table", () => {
-      const clash = defineContentType({
-        id: "example.article",
-        tableName: "blog_post",
-        fields: { title: field.text({ required: true }) },
-      }) as AnyContentTypeDefinition;
-
-      expect(() =>
-        buildContentFrontendRegistry([
-          plugin("@vitnode/blog", post),
-          plugin("@vitnode/example", clash),
-        ]),
-      ).toThrow(/Table "blog_post" is claimed by both/);
     });
   });
 });

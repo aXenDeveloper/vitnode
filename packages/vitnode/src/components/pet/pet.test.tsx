@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -37,12 +36,11 @@ describe("Pet", () => {
 });
 
 describe("getPetSvgMarkup", () => {
-  it("exports a standalone animated SVG with room for tails and props", () => {
+  it("exports a standalone animated SVG", () => {
     const { container } = render(<Pet state="celebrate" />);
     const markup = getPetSvgMarkup(petOf(container));
 
     expect(markup).toContain('xmlns="http://www.w3.org/2000/svg"');
-    expect(markup).toContain('viewBox="-48 -24 496 488"');
     expect(markup).toContain("@keyframes vn-pet-confetti");
     expect(markup).not.toContain("aria-hidden");
   });

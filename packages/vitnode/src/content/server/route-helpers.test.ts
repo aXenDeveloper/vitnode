@@ -1,31 +1,14 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { testLocalizedArticleContentType } from "@/tests/content-fixtures";
 
-import { runtimeImports } from "@/tests/import-graph";
-
 import type { ContentTranslationRow } from "../types";
 
-import {
-  identifier,
-  jsonBody,
-  jsonResponse,
-  plainOutcome,
-  readJson,
-} from "./route-helpers";
-
-const here = dirname(fileURLToPath(import.meta.url));
-
-const readSource = (file: string): string =>
-  readFileSync(join(here, file), "utf8");
+import { identifier, plainOutcome, readJson } from "./route-helpers";
 
 const contextWith = ({
   body,
@@ -97,34 +80,9 @@ describe("readJson", () => {
   });
 });
 
-describe("the OpenAPI fragments", () => {
-  const schema = z.object({ id: z.number() });
-
-  it("describes a request body exactly as before", () => {
-    expect(jsonBody(schema)).toEqual({
-      content: { "application/json": { schema } },
-    });
-  });
-
-  it("describes a response exactly as before", () => {
-    expect(jsonResponse(schema, "One record")).toEqual({
-      content: { "application/json": { schema } },
-      description: "One record",
-    });
-  });
-
-  it("carries the caller's own schema instance, not a copy", () => {
-    expect(jsonBody(schema).content["application/json"].schema).toBe(schema);
-    expect(
-      jsonResponse(schema, "One record").content["application/json"].schema,
-    ).toBe(schema);
-  });
-});
-
 /** A real localized content type, so the outcome's generics are exercised. */
 type Article = typeof testLocalizedArticleContentType;
 type ArticleTranslation = ContentTranslationRow<Article>;
-type ArticleOperation = Parameters<typeof plainOutcome<Article>>[0];
 
 describe("plainOutcome", () => {
   const row: ArticleTranslation = {
@@ -168,47 +126,5 @@ describe("plainOutcome", () => {
       changed: false,
       changedFields: [],
     });
-  });
-
-  it.each(["create", "update", "delete", "publish", "unpublish", "restore"])(
-    "passes %s through as the operation",
-    operation => {
-      expect(
-        plainOutcome<Article>(operation as ArticleOperation, row).operation,
-      ).toBe(operation);
-    },
-  );
-});
-
-describe("the three route builders", () => {
-  it.each(["routes.ts", "translation-routes.ts", "localized-admin-routes.ts"])(
-    "reads its small helpers out of the shared module - %s",
-    file => {
-      expect(runtimeImports(join(here, file))).toContain("./route-helpers");
-    },
-  );
-
-  it("declares none of them again of its own", () => {
-    // The duplication this module removed: five helpers, three files, one
-    // definition each. A re-declaration is what this guards against.
-    const declarations = [
-      /const identifier = \(/,
-      /const readJson = async </,
-      /const jsonBody = \(/,
-      /const jsonResponse = \(/,
-      /const plainOutcome = \(/,
-    ];
-
-    for (const file of [
-      "routes.ts",
-      "translation-routes.ts",
-      "localized-admin-routes.ts",
-    ]) {
-      const source = readSource(file);
-
-      for (const declaration of declarations) {
-        expect(source).not.toMatch(declaration);
-      }
-    }
   });
 });

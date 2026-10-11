@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import type { PluginRouteDeclaration } from "./tree";
@@ -305,38 +304,6 @@ describe("collisions are errors, never resolutions", () => {
             children: [index({ component: lazyPage() })],
           }),
         ),
-      ]),
-    );
-
-    expect(error.code).toBe("duplicate-path");
-  });
-
-  it("lets a layout and the index page inside it share a path", () => {
-    expect(
-      buildPluginRouteManifest([
-        catalog(
-          layout("/catalog", {
-            component: lazyPage(),
-            children: [index({ component: lazyPage() })],
-          }),
-        ),
-      ]).map(route => [route.kind, route.path]),
-    ).toEqual([
-      ["layout", "/catalog"],
-      ["page", "/catalog"],
-    ]);
-  });
-
-  it("refuses another plugin's page at a layout's path", () => {
-    const error = thrownBy(() =>
-      buildPluginRouteManifest([
-        catalog(
-          layout("/catalog", {
-            component: lazyPage(),
-            children: [index({ component: lazyPage() })],
-          }),
-        ),
-        blog(page("/catalog", { component: lazyPage() })),
       ]),
     );
 

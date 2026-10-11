@@ -1,7 +1,4 @@
 import { QueryClient } from "@tanstack/react-query";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -215,81 +212,5 @@ describe("removeUserIdentityQueries", () => {
     expect(held(queryClient, PUBLIC_FEED)).toBe(true);
     expect(held(queryClient, ADMIN_SCREEN)).toBe(true);
     expect(held(queryClient, PLUGIN)).toBe(true);
-  });
-});
-
-/**
- * Which flows call it, as a source scan.
- *
- * The same technique, and the same justification, as the admin side's: what is
- * being pinned is that a *call exists at all*, in a specific place, before
- * another one. Reaching these lines by rendering would need a router, a server
- * function and a real sign-in, and would still not be able to say the cleanup
- * happened before the navigation - which is the half that decides whether the
- * next visitor sees a frame of somebody else's data.
- */
-const here = dirname(fileURLToPath(import.meta.url));
-
-const withoutComments = (code: string): string =>
-  code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-
-const actionsSource = (): string =>
-  withoutComments(readFileSync(join(here, "actions.ts"), "utf8"));
-
-const CLEANUP = "removeUserIdentityQueries(queryClient)";
-
-describe("every public identity boundary drops the private cache", () => {
-  it("still sees the call under the comments", () => {
-    // The control: a comment stripper that blanked the file would satisfy every
-    // assertion below by finding nothing at all.
-    expect(actionsSource()).toContain(CLEANUP);
-  });
-
-  /**
-   * Six call sites, one per flow that can change who is at the keyboard: a
-   * sign-in, a passkey sign-in, a finished SSO exchange, an SSO identity linked with a password
-   * (which mints a session too), a sign-out and a *verified* sign-up.
-   *
-   * An unverified sign-up is deliberately not one - no session was minted, so
-   * nothing about who this browser holds data for has changed - and neither is a
-   * password-reset request, which mints nothing and leaves the visitor exactly
-   * who they were.
-   */
-  it("runs on all six, and only those six", () => {
-    expect(actionsSource().split(CLEANUP).length - 1).toBe(6);
-  });
-
-  /**
-   * Beside the admin cleanup, not instead of it. The two lists are separate
-   * because they answer to different owners, and a boundary needs both.
-   */
-  it("runs alongside the AdminCP cleanup at every one of them", () => {
-    const code = actionsSource();
-
-    expect(
-      code.split("removeAdminIdentityQueries(queryClient)").length - 1,
-    ).toBe(6);
-  });
-
-  it("clears before it navigates", () => {
-    const code = actionsSource();
-
-    expect(code.indexOf(CLEANUP)).toBeLessThan(
-      code.indexOf("await router.navigate(internalDestination(destination()))"),
-    );
-  });
-
-  /**
-   * And never reaches for the blunt instrument. `clear()` would take the
-   * session, the message catalogues and every plugin's entries with it - a
-   * sign-in that re-fetches the whole application.
-   */
-  it("never clears the whole cache", () => {
-    for (const file of ["queries.ts", "actions.ts"]) {
-      expect(
-        withoutComments(readFileSync(join(here, file), "utf8")),
-        file,
-      ).not.toContain("queryClient.clear(");
-    }
   });
 });

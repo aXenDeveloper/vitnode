@@ -1,7 +1,5 @@
-// @vitest-environment node
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readdirSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,7 +9,6 @@ import {
   SRC_ROOT,
 } from "@/tests/import-graph";
 
-const here = dirname(fileURLToPath(import.meta.url));
 const blocks = join(SRC_ROOT, "blocks");
 
 const EAGERLY = { dynamic: false } as const;
@@ -75,13 +72,6 @@ describe("the public content zone, now that an editor exists", () => {
   it("reaches no database or server code", () => {
     expect(offenders(entry, SERVER_PACKAGES, SRC_ROOT)).toStrictEqual([]);
   });
-
-  it("asks for the edit runtime through a component-free module", () => {
-    const source = readFileSync(entry, "utf8");
-
-    expect(source).toContain('from "./edit-context"');
-    expect(source).not.toContain("../editor/");
-  });
 });
 
 describe("the edit seam a page opts into", () => {
@@ -102,20 +92,6 @@ describe("the edit seam a page opts into", () => {
   it("does reach the editor once dynamic imports are followed", () => {
     expect(reachedSpecifiers(entry, SRC_ROOT)).toContain("@dnd-kit/core");
   });
-
-  it("reaches the editor by a dynamic import and by nothing else", () => {
-    const source = readFileSync(entry, "utf8");
-
-    expect(source).toContain("lazy(");
-    expect(source).toContain('import("../editor/root")');
-    expect(source).not.toContain('from "../editor/root"');
-  });
-
-  it("names the adapter type without importing its module", () => {
-    expect(readFileSync(entry, "utf8")).toContain(
-      'import type { VisualEditorAdapter } from "../editor/adapter/types"',
-    );
-  });
 });
 
 describe("the block metadata surface", () => {
@@ -127,12 +103,6 @@ describe("the block metadata surface", () => {
 
   it("still reaches nothing an editor needs", () => {
     expect(offenders(entry, EDITOR_PACKAGES, SRC_ROOT)).toStrictEqual([]);
-  });
-
-  it("does not re-export the edit seam", () => {
-    const source = readFileSync(entry, "utf8");
-
-    expect(source).not.toContain("./edit");
   });
 });
 
@@ -170,10 +140,6 @@ describe("where the editor's weight actually sits", () => {
       "editor/sidebar/sidebar.tsx",
     );
   });
-
-  it("is a default export, because React.lazy takes nothing else", () => {
-    expect(readFileSync(entry, "utf8")).toContain("export default EditorRoot");
-  });
 });
 
 describe("which way the dependency arrow points", () => {
@@ -204,23 +170,9 @@ describe("which way the dependency arrow points", () => {
 
     expect(found).toStrictEqual([]);
   });
-
-  it("is the only place this test file lives, next to what it guards", () => {
-    expect(here).toBe(join(SRC_ROOT, "editor"));
-  });
 });
 
 describe("what the sidebar replaced", () => {
-  it("left no fixed bottom toolbar behind", () => {
-    expect(existsSync(join(SRC_ROOT, "editor", "toolbar"))).toBe(false);
-  });
-
-  it("left no modal block picker behind", () => {
-    expect(
-      existsSync(join(SRC_ROOT, "editor", "block-picker", "dialog.tsx")),
-    ).toBe(false);
-  });
-
   it("put the footer actions and the catalog in the same aside", () => {
     const reached = reachedFiles(
       join(SRC_ROOT, "editor", "sidebar", "sidebar.tsx"),
@@ -236,54 +188,17 @@ describe("what the sidebar replaced", () => {
   });
 });
 
-describe("the editor's published entry points", () => {
-  const exportMap = (): Record<string, unknown> => {
-    const manifest: unknown = JSON.parse(
-      readFileSync(join(SRC_ROOT, "..", "package.json"), "utf8"),
-    );
-
-    return manifest instanceof Object && "exports" in manifest
-      ? (manifest.exports as Record<string, unknown>)
-      : {};
-  };
-
-  it("is reachable as `@vitnode/core/editor`", () => {
-    expect(exportMap()["./editor"]).toStrictEqual({
-      default: "./dist/src/editor/index.js",
-      import: "./dist/src/editor/index.js",
-      types: "./dist/src/editor/index.d.ts",
-    });
-  });
-
-  it("publishes the adapter on its own, for a host that only saves", () => {
-    expect(exportMap()["./editor/adapter"]).toStrictEqual({
-      default: "./dist/src/editor/adapter/index.js",
-      import: "./dist/src/editor/adapter/index.js",
-      types: "./dist/src/editor/adapter/index.d.ts",
-    });
-  });
-});
-
 describe("what decides whether a target accepts a block", () => {
-  const capabilities = join(SRC_ROOT, "editor", "state", "capabilities.ts");
   const reducer = join(SRC_ROOT, "editor", "state", "reducer.ts");
   const pureDrop = join(SRC_ROOT, "editor", "dnd", "resolve-drop.ts");
 
   it("keeps the drop resolver pure, with no registry to consult on its own", () => {
-    const source = readFileSync(pureDrop, "utf8");
-
     expect(reachedSpecifiers(pureDrop, SRC_ROOT)).toStrictEqual([]);
-    expect(source).not.toContain("blocks/registry");
-    expect(source).not.toContain("isBlockAllowed");
-    expect(source).toContain("TargetCapabilities");
   });
 
   it("answers the question in one module both layers can reach", () => {
     expect(reachedFiles(reducer, { srcRoot: SRC_ROOT })).toContain(
       "editor/state/capabilities.ts",
-    );
-    expect(readFileSync(capabilities, "utf8")).toContain(
-      'from "../../blocks/registry"',
     );
   });
 

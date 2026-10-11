@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

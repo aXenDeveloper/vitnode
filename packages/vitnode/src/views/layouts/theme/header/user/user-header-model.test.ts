@@ -23,23 +23,6 @@ const keysOf = (groups: ReturnType<typeof userHeaderMenu>): string[] =>
   groups.flat().map(item => item.key);
 
 describe("the menu a signed-in visitor gets", () => {
-  it("is the three account links, in order", () => {
-    expect(keysOf(userHeaderMenu(user()))).toEqual([
-      "my_profile",
-      "files",
-      "settings",
-    ]);
-  });
-
-  it("points each one at the path that owns it", () => {
-    const items = userHeaderMenu(user({ nameCode: "ada" })).flat();
-    const href = (key: string) => items.find(item => item.key === key)?.href;
-
-    expect(href("my_profile")).toBe("/users/ada");
-    expect(href("files")).toBe(USER_HEADER_HREF.files);
-    expect(href("settings")).toBe(USER_HEADER_HREF.settings);
-  });
-
   it("never returns an empty group, so a separator always has items above it", () => {
     for (const isAdmin of [false, true]) {
       for (const group of userHeaderMenu(user({ isAdmin }))) {
@@ -52,14 +35,6 @@ describe("the menu a signed-in visitor gets", () => {
     const keys = keysOf(userHeaderMenu(user({ isAdmin: true })));
 
     expect(new Set(keys).size).toBe(keys.length);
-  });
-
-  // The moderator item pointed at `/mod_cp`, which no application serves, behind
-  // a flag the session route hardcodes to `false`. It is not carried over.
-  it("has no moderator item", () => {
-    expect(keysOf(userHeaderMenu(user({ isAdmin: true })))).not.toContain(
-      "mod_cp",
-    );
   });
 });
 

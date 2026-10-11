@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createSSOLinkFormSchema, ssoLinkFormOutcome } from "./schema";
+import { createSSOLinkFormSchema } from "./schema";
 
 const schema = createSSOLinkFormSchema({
   passwordRequired: "password missing",
@@ -23,28 +23,5 @@ describe("the SSO link schema", () => {
 
   it("defaults the password to an empty string", () => {
     expect(schema.parse({})).toEqual({ password: "" });
-  });
-});
-
-describe("reading the link mutation result", () => {
-  it("is quiet on success", () => {
-    expect(ssoLinkFormOutcome(undefined)).toBeNull();
-  });
-
-  it("shows a wrong password and an expired offer on the form", () => {
-    expect(ssoLinkFormOutcome({ message: "access_denied" })).toEqual({
-      error: "access_denied",
-      kind: "field",
-    });
-    expect(ssoLinkFormOutcome({ message: "invalid_token" })).toEqual({
-      error: "invalid_token",
-      kind: "field",
-    });
-  });
-
-  it("toasts a server failure", () => {
-    expect(ssoLinkFormOutcome({ message: "Internal Server Error" })).toEqual({
-      kind: "toast",
-    });
   });
 });

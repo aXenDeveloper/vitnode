@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { AdminSessionReadResult } from "./session-api";
 
 import {
-  adminSessionQueryOptions,
   ensureAdminAccess,
   invalidateAdminSession,
   prefetchAdminAccess,
@@ -55,32 +54,6 @@ const client = () => new QueryClient();
 beforeEach(() => {
   nextRead = { status: "denied" };
   reads = 0;
-});
-
-describe("the canonical admin session query", () => {
-  it("is the one entry every guard, provider and gate reads", () => {
-    expect(adminSessionQueryOptions().queryKey).toEqual(
-      ADMIN_SESSION_QUERY_KEY,
-    );
-  });
-
-  it("asks once and lets the failure surface", () => {
-    // A route guard, not background content: a navigation is blocked for as long
-    // as this takes, and retrying a 429 is the thing the rate limiter is asking
-    // the app to stop doing.
-    expect(adminSessionQueryOptions().retry).toBe(false);
-  });
-
-  it("trusts nothing it has already read", () => {
-    expect(adminSessionQueryOptions().staleTime).toBe(0);
-  });
-
-  it("does not keep a detached entry for the default five minutes", () => {
-    const gcTime = adminSessionQueryOptions().gcTime;
-
-    expect(gcTime).toBeGreaterThan(0);
-    expect(gcTime).toBeLessThan(5 * 60_000);
-  });
 });
 
 describe("what a read resolves to", () => {

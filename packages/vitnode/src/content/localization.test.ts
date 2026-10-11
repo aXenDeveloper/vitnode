@@ -1,11 +1,9 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import {
   testArticleContentType,
   testLocalizedArticleContentType,
   testLocalizedNoteContentType,
-  testPostContentType,
 } from "@/tests/content-fixtures";
 
 import { defineContentType } from "./define";
@@ -371,46 +369,6 @@ describe("capability combinations", () => {
     ).toContainEqual(["languageId", "status"]);
   });
 
-  it("allows localization plus editorial from Stage 5B", () => {
-    const definition = withCapability({ editorial: true });
-
-    expect(definition.editorial.enabled).toBe(true);
-    expect(definition.localization.enabled).toBe(true);
-  });
-
-  it("allows localization plus publicApi from Stage 5C", () => {
-    const definition = withCapability({
-      publication: true,
-      publicApi: { fields: ["slug"], path: "boundaries" },
-    });
-
-    expect(definition.publicApi.enabled).toBe(true);
-    expect(definition.localization.enabled).toBe(true);
-    // The public response carries the language it resolved to, so a reader can
-    // tell a translation from a fallback.
-    expect(definition.schemas.publicSelectObject.shape).toHaveProperty(
-      "locale",
-    );
-  });
-
-  it("allows localization plus search from Stage 5D", () => {
-    const definition = withCapability({
-      publication: true,
-      publicApi: {
-        fields: ["title", "slug"],
-        path: "boundaries",
-      },
-      search: {
-        contentFields: ["title"],
-        pathTemplate: "/{locale}/boundaries/{slug}",
-        titleField: "title",
-      },
-    });
-
-    expect(definition.search.enabled).toBe(true);
-    expect(definition.localization.enabled).toBe(true);
-  });
-
   const withSearchTemplate = (pathTemplate: string) =>
     withCapability({
       publication: true,
@@ -448,20 +406,6 @@ describe("capability combinations", () => {
 });
 
 describe("backward compatibility", () => {
-  it("leaves a Stage 1 content type's generated shape untouched", () => {
-    expect(testArticleContentType.localization.enabled).toBe(false);
-    expect(testArticleContentType.schemas.translation).toBeNull();
-    expect(Object.keys(testArticleContentType.fields)).toContain("title");
-  });
-
-  it("leaves a Stage 2 content type's admin defaults untouched", () => {
-    expect(testPostContentType.admin.list.searchableFields).toEqual([
-      "title",
-      "excerpt",
-    ]);
-    expect(testPostContentType.admin.titleField).toBe("title");
-  });
-
   it("keeps every declared field in `definition.fields`", () => {
     // The partition is derived, never destructive: the definition still
     // describes the whole content type, which is what the AdminCP, the docs and

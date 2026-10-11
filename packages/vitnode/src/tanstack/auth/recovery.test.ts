@@ -12,7 +12,6 @@ import {
   normalizePasswordResetSearch,
   passwordRecoveryAvailability,
   passwordResetMode,
-  passwordResetNamespaces,
 } from "./recovery";
 
 /** What the API actually puts in a recovery email: 32 random bytes, base64url. */
@@ -128,37 +127,6 @@ describe("which recovery screen a URL asks for", () => {
     ["an unbounded token", { token: "a".repeat(513), userId: 1 }],
   ])("falls back to the request screen for %s", (_case, search) => {
     expect(passwordResetMode(search)).toEqual({ mode: "request" });
-  });
-});
-
-describe("the namespaces each recovery screen needs", () => {
-  it.each(["change", "request"] as const)(
-    "always includes the root-provider set and the title namespace in %s mode",
-    mode => {
-      // `RouteMessages` replaces the root's provider, so `core.global` has to be
-      // in every set or the error toasts render their keys. The title comes from
-      // `core.auth.reset_password` in *both* modes, which is what the route's
-      // own metadata is built from.
-      const namespaces = passwordResetNamespaces(mode);
-
-      expect(namespaces).toContain("core.global");
-      expect(namespaces).toContain("core.auth.reset_password");
-      expect(namespaces).toContain("core.auth.sign_up");
-    },
-  );
-
-  it("adds the change-password copy only in change mode", () => {
-    expect(passwordResetNamespaces("change")).toContain(
-      "core.auth.change_password",
-    );
-    expect(passwordResetNamespaces("request")).not.toContain(
-      "core.auth.change_password",
-    );
-  });
-
-  it("warms no more than the two screens render", () => {
-    expect(passwordResetNamespaces("request")).toHaveLength(3);
-    expect(passwordResetNamespaces("change")).toHaveLength(4);
   });
 });
 

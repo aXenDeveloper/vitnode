@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { createJiti } from "jiti";
 import {
   cpSync,

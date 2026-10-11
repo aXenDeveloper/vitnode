@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ContentLiveMember } from "@/content/live/protocol";

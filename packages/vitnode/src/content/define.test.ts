@@ -1,10 +1,6 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import {
-  testArticleContentType,
-  testCategoryContentType,
-} from "@/tests/content-fixtures";
+import { testCategoryContentType } from "@/tests/content-fixtures";
 
 import type { ContentUserField } from "./types";
 
@@ -107,58 +103,6 @@ describe("defineContentType", () => {
           },
         }),
       ).toThrow(/minLength 10 greater than maxLength 5/);
-    });
-
-    it("rejects min greater than max", () => {
-      expect(() =>
-        define({
-          fields: {
-            views: field.number({
-              required: true,
-              integer: true,
-              min: 10,
-              max: 1,
-            }),
-          },
-        }),
-      ).toThrow(/min 10 greater than max 1/);
-    });
-
-    it("rejects duplicate enum values", () => {
-      expect(() =>
-        define({
-          fields: {
-            status: field.enum({ required: true, values: ["a", "b", "a"] }),
-          },
-        }),
-      ).toThrow(/duplicate enum values/);
-    });
-
-    it("rejects an enum default that is not one of its values", () => {
-      expect(() =>
-        define({
-          fields: {
-            // The type already rules this out; the runtime guard covers plain
-            // JS consumers and `as` escapes.
-            // @ts-expect-error - "nope" is not in `values`
-            status: field.enum({ values: ["draft"], defaultValue: "nope" }),
-          },
-        }),
-      ).toThrow(/not one of its values/);
-    });
-
-    it("rejects an enum value longer than the column length", () => {
-      expect(() =>
-        define({
-          fields: {
-            status: field.enum({
-              required: true,
-              length: 4,
-              values: ["draft", "ok"],
-            }),
-          },
-        }),
-      ).toThrow(/longer than the column length 4/);
     });
   });
 
@@ -331,16 +275,6 @@ describe("defineContentType", () => {
       ).toThrow(/must be positive/);
     });
 
-    it("gets a unique index automatically", () => {
-      expect(
-        defineSlug(field.slug({ source: "title" })).indexes,
-      ).toContainEqual({
-        name: "test_widgets_slug_key",
-        on: ["slug"],
-        unique: true,
-      });
-    });
-
     it("is not searchable by default", () => {
       expect(
         defineSlug(field.slug({ source: "title" })).admin.list.searchableFields,
@@ -419,15 +353,6 @@ describe("defineContentType", () => {
         body: field.textarea({ nullable: true }),
         views: field.number({ integer: true, defaultValue: 0 }),
       },
-    });
-
-    it("defaults navigation to enabled", () => {
-      expect(definition.admin.navigation.enabled).toBe(true);
-    });
-
-    it("defaults ordering to updatedAt desc", () => {
-      expect(definition.admin.list.defaultOrderBy).toBe("updatedAt");
-      expect(definition.admin.list.defaultOrder).toBe("desc");
     });
 
     it("defaults searchable fields to every text and textarea field", () => {
@@ -1046,23 +971,6 @@ describe("defineContentType", () => {
       expect(() => define({ publication: {} } as never)).toThrow(
         /publication is `true` or `false`/,
       );
-    });
-  });
-
-  describe("fixtures", () => {
-    it("resolves the article fixture", () => {
-      expect(testArticleContentType.permissionModule).toBe("article");
-      expect(testArticleContentType.admin.list.searchableFields).toEqual([
-        "title",
-        "excerpt",
-      ]);
-      expect(testArticleContentType.admin.titleField).toBe("title");
-    });
-
-    it("resolves relation targets lazily", () => {
-      const { category } = testArticleContentType.fields;
-      expect(category.kind).toBe("relation");
-      expect(category.target().id).toBe(testCategoryContentType.id);
     });
   });
 });

@@ -8,7 +8,6 @@ import {
   invalidateSession,
   sessionQueryOptions,
 } from "./session-query";
-import { SESSION_QUERY_KEY } from "./state";
 import { setAuthTransport } from "./transport";
 
 let nextSession: SessionApi = { user: null };
@@ -52,16 +51,6 @@ beforeEach(() => {
   nextSession = anonymous;
   nextFailure = null;
   reads = 0;
-});
-
-describe("the canonical session query", () => {
-  it("asks once and lets the failure surface", () => {
-    expect(sessionQueryOptions().retry).toBe(false);
-  });
-
-  it("is the one entry every guard and component reads", () => {
-    expect(sessionQueryOptions().queryKey).toEqual(SESSION_QUERY_KEY);
-  });
 });
 
 describe("a guard reads the session again once it has been invalidated", () => {

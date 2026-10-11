@@ -2,11 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyTranslations,
-  chunk,
   collectUntranslated,
   isTranslatable,
   mapPool,
-  uniqueSources,
 } from "./i18n-update-ai";
 
 const delay = async (ms: number) =>
@@ -106,38 +104,6 @@ describe("applyTranslations", () => {
     expect(applyTranslations(tree, [{ path: [], value: "y" }])).toEqual({
       a: "x",
     });
-  });
-});
-
-describe("chunk", () => {
-  it("splits into consecutive slices of at most `size`", () => {
-    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
-  });
-
-  it("returns an empty array for no items", () => {
-    expect(chunk([], 3)).toEqual([]);
-  });
-
-  it("keeps a single slice when everything fits", () => {
-    expect(chunk([1, 2], 10)).toEqual([[1, 2]]);
-  });
-});
-
-describe("uniqueSources", () => {
-  it("dedups sources, keeping first-seen order", () => {
-    const leaves = [
-      { path: ["a"], source: "Save" },
-      { path: ["b"], source: "Cancel" },
-      { path: ["c"], source: "Save" },
-      { path: ["d", "e"], source: "Cancel" },
-      { path: ["f"], source: "Name" },
-    ];
-
-    expect(uniqueSources(leaves)).toEqual(["Save", "Cancel", "Name"]);
-  });
-
-  it("returns an empty array for no leaves", () => {
-    expect(uniqueSources([])).toEqual([]);
   });
 });
 

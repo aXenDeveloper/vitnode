@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Table } from "drizzle-orm";
 
 import { Hono } from "hono";

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { CacheClient } from "@vitnode/core/api/lib/cache";
 import type { Context } from "hono";
 
@@ -36,14 +35,14 @@ const createCache = () => {
     },
   } as unknown as CacheClient;
 
-  return new CacheModel(client, { get: () => undefined } as unknown as Context);
+  return new CacheModel(client, { get: () => undefined });
 };
 
 const grant = async (cache: CacheModel, canEdit: boolean) => {
   await writeStaffPermissions(
     {
       get: (key: string) => (key === "cache" ? cache : undefined),
-    } as unknown as Context,
+    },
     { type: "admin", userId: EDITOR_ID },
     {
       permissions: [

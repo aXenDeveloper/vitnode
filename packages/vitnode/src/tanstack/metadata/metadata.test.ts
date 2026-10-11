@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { buildConfig } from "@/vitnode.config";
@@ -129,48 +128,6 @@ describe("routeHead openGraph", () => {
         },
       }),
     ).toEqual([]);
-  });
-
-  it("never infers Open Graph from the page title or description", () => {
-    // Deliberate: `og:title` is not the document title, so defaulting one to
-    // the other would publish the wrong string to every site that unfurls a
-    // link. A route says what it means.
-    const meta = head({ description: "A page", title: "Routes" });
-
-    expect(byProperty(meta, "og:title")).toBeUndefined();
-    expect(byProperty(meta, "og:description")).toBeUndefined();
-    expect(byProperty(meta, "og:type")).toBeUndefined();
-  });
-
-  it("adds no image, canonical URL or Twitter card", () => {
-    const emitted = head(FULL).flatMap(tag =>
-      "property" in tag ? [tag.property] : "name" in tag ? [tag.name] : [],
-    );
-
-    expect(emitted.filter(one => one?.startsWith("twitter:"))).toEqual([]);
-    expect(emitted).not.toContain("og:image");
-    expect(emitted).not.toContain("og:url");
-    expect(emitted).not.toContain("og:site_name");
-  });
-
-  it("keeps the whole head in one array, robots first and og last", () => {
-    // The order is not load-bearing for correctness - TanStack keys tags by
-    // `name ?? property` - but a stable shape is what makes the assertions
-    // above readable, and a reordering is worth noticing.
-    expect(head(FULL)).toEqual([
-      { content: "index, follow", name: "robots" },
-      { title: "Routes - Plugins - VitNode" },
-      {
-        content: "Adding routes to the Hono API from a plugin",
-        name: "description",
-      },
-      { content: "Routes - Plugins", property: "og:title" },
-      {
-        content: "Adding routes to the Hono API from a plugin",
-        property: "og:description",
-      },
-      { content: "article", property: "og:type" },
-    ]);
   });
 });
 

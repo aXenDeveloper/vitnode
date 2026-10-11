@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { execFileSync } from "node:child_process";
 import {
   cpSync,
@@ -14,7 +13,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import { runBuildCommand } from "../commands/build";
 import { RuntimeError } from "../errors";
@@ -117,7 +124,7 @@ const fixture = () => {
   write("src/__fixtures__/sample.json", "{}\n");
 };
 
-beforeEach(() => {
+const createPackage = () => {
   root = mkdtempSync(join(tmpdir(), "vitnode-package-build-"));
   // The package's own node_modules, as an install would leave it: tsdown,
   // TypeScript and React's types resolve from there. The sources themselves
@@ -129,11 +136,11 @@ beforeEach(() => {
     "junction",
   );
   fixture();
-});
+};
 
-afterEach(() => {
+const removePackage = () => {
   rmSync(root, { force: true, recursive: true });
-});
+};
 
 const build = async () => {
   const { context, runtime } = createTestContext({ cwd: root });
@@ -173,8 +180,18 @@ const importWithNode = (expression: string) =>
   ).trim();
 
 describe("vitnode build in a plugin package", () => {
-  it("compiles every module under src into dist/src with tsdown and checks types", async () => {
-    const { code, output } = await build();
+  // One build serves every assertion that only reads its output.
+  let result: Awaited<ReturnType<typeof build>>;
+
+  beforeAll(async () => {
+    createPackage();
+    result = await build();
+  });
+
+  afterAll(removePackage);
+
+  it("compiles every module under src into dist/src with tsdown and checks types", () => {
+    const { code, output } = result;
 
     expect(code).toBe(0);
     expect(output).toContain("✓ Compiling sources");
@@ -193,11 +210,9 @@ describe("vitnode build in a plugin package", () => {
     // Every relative import - JavaScript and declarations - names a file
     // that was written, as Node's ESM resolution requires.
     expect(unresolvedRelativeImports(join(root, "dist", "src"))).toEqual([]);
-  }, 60_000);
+  });
 
-  it("emits ESM that Node runs, with aliases, JSX, dynamic imports and side effects intact", async () => {
-    await build();
-
+  it("emits ESM that Node runs, with aliases, JSX, dynamic imports and side effects intact", () => {
     expect(read("dist/src/components/greeting.js")).toContain(
       "react/jsx-runtime",
     );
@@ -221,11 +236,9 @@ describe("vitnode build in a plugin package", () => {
         'const { quadruple } = await import("./dist/src/uses-alias.js"); const { loadPage } = await import("./dist/src/lazy.js"); await import("./dist/src/register.js"); const { helloModule } = await import("./dist/src/api/hello.module.js"); console.log(quadruple(2), (await loadPage()).default, globalThis.fixtureLoaded, helloModule.routes[0]);',
       ),
     ).toBe("8 page true /hello");
-  }, 60_000);
+  });
 
-  it("copies JSON next to the module that imports it, with the import attribute kept", async () => {
-    await build();
-
+  it("copies JSON next to the module that imports it, with the import attribute kept", () => {
     expect(read("dist/src/locales/en.json")).toBe(read("src/locales/en.json"));
     expect(read("dist/src/locales/index.js")).toMatch(
       /import\(\s*["'`]\.\/en\.json["'`]\s*,\s*\{\s*with:\s*\{\s*type:\s*["'`]json["'`]/,
@@ -235,11 +248,9 @@ describe("vitnode build in a plugin package", () => {
         'const { default: messages } = await import("./dist/src/locales/index.js"); console.log((await messages.en()).default.fixture.hello);',
       ),
     ).toBe("Hi");
-  }, 60_000);
+  });
 
-  it("writes declarations with relative imports, declaration maps and the ambient types the package declares", async () => {
-    await build();
-
+  it("writes declarations with relative imports, declaration maps and the ambient types the package declares", () => {
     const declaration = read("dist/src/uses-alias.d.ts");
     expect(declaration).toMatch(/from\s*["']\.\/lib\/math\.js["']/);
     expect(declaration).not.toContain("@/");
@@ -255,14 +266,18 @@ describe("vitnode build in a plugin package", () => {
     expect(read("dist/src/registry.d.ts")).toMatch(
       /readGreeting: \(\) => "hello"/,
     );
-  }, 60_000);
+  });
 
-  it("ships no JavaScript source maps from a production build", async () => {
-    await build();
-
+  it("ships no JavaScript source maps from a production build", () => {
     expect(exists("dist/src/standalone.js.map")).toBe(false);
     expect(read("dist/src/standalone.js")).not.toContain("sourceMappingURL");
-  }, 60_000);
+  });
+});
+
+describe("vitnode build on a package that changes", () => {
+  beforeEach(createPackage);
+
+  afterEach(removePackage);
 
   it("fails on a type error, as tsc always made it", async () => {
     write("src/broken.ts", 'export const value: number = "text";\n');

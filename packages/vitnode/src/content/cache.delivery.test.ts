@@ -35,17 +35,6 @@ describe("delivery tag builders", () => {
       "content:example.article:sitemap:pl",
     );
   });
-
-  it("normalizes the locale, so PL and pl expire together", () => {
-    for (const locale of ["PL", "pl", " pl "]) {
-      expect(contentDeliveryTag(ID, 1, locale)).toBe(
-        "content:example.article:delivery:pl:1",
-      );
-      expect(contentDeliverySitemapTag(ID, locale)).toBe(
-        "content:example.article:sitemap:pl",
-      );
-    }
-  });
 });
 
 describe("contentInvalidationTags without delivery", () => {

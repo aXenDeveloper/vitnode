@@ -116,14 +116,6 @@ describe("the generated route tree", () => {
   it("declares no route id, which VitNode derives", () => {
     expect(pluginRoutesTemplate("blog")).not.toMatch(/^\s*id:/m);
   });
-
-  it("never writes a framework's path spelling", () => {
-    const routes = pluginRoutesTemplate("blog");
-    const declared = /page\("([^"]+)"/.exec(routes)?.[1];
-
-    expect(declared).toBe("/blog");
-    expect(declared).not.toMatch(/[[\]$]/);
-  });
 });
 
 describe("the generated route module", () => {
@@ -470,10 +462,6 @@ describe("the scaffold as a whole", () => {
     // build - and outside `include` it is inert, which fails the plugin's own
     // `vitnode build` on the page the scaffold just wrote.
     expect(templateTsconfigInclude()).toContain("types");
-  });
-
-  it("is a pure function of the plugin name", () => {
-    expect(pluginRouteScaffold("blog")).toEqual(pluginRouteScaffold("blog"));
   });
 
   it("writes the same files whatever the name", () => {

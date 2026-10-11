@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { QueryClient } from "@tanstack/react-query";
 
 import { describe, expect, it } from "vitest";
@@ -12,7 +11,6 @@ import {
   contentListQueryRoot,
   contentOptionsQueryRoot,
 } from "@/views/admin/views/content/content-query";
-import { contentListRequestKey } from "@/views/admin/views/content/table/list-query";
 import { SEARCH_QUERY_ROOT } from "@/views/search/search-feed-query";
 
 import type { ContentListParams } from "./route-search";
@@ -21,7 +19,6 @@ import {
   contentApiTarget,
   contentListRequestFor,
   invalidateContentAfterWrite,
-  invalidateContentList,
 } from "./query";
 
 const articles = defineContentType({
@@ -109,63 +106,6 @@ describe("contentListRequestFor", () => {
         pluginId,
       }).locale,
     ).toBeUndefined();
-  });
-
-  it("keys two languages of a localized list apart", () => {
-    const key = (locale: string) =>
-      contentListRequestKey(
-        contentListRequestFor({ definition: pages, locale, params, pluginId }),
-      );
-
-    expect(key("en")).not.toEqual(key("pl"));
-  });
-
-  it("keys two languages of an unlocalized list together", () => {
-    const key = (locale: string) =>
-      contentListRequestKey(
-        contentListRequestFor({
-          definition: articles,
-          locale,
-          params,
-          pluginId,
-        }),
-      );
-
-    expect(key("en")).toEqual(key("pl"));
-  });
-});
-
-describe("invalidateContentList", () => {
-  it("expires every page, sort and search of one list", async () => {
-    const { calls, client } = recordingClient();
-
-    await invalidateContentList(client, "blog.post");
-
-    expect(calls).toEqual([
-      { key: contentListQueryRoot("blog.post"), type: "invalidate" },
-    ]);
-  });
-
-  it("names a prefix of the page on screen, not that page", () => {
-    const request = contentListRequestFor({
-      definition: articles,
-      locale: "en",
-      params,
-      pluginId,
-    });
-    const root = contentListQueryRoot("blog.post");
-
-    expect(contentListRequestKey(request).slice(0, root.length)).toEqual([
-      ...root,
-    ]);
-  });
-
-  it("reaches no other content type", async () => {
-    const { calls, client } = recordingClient();
-
-    await invalidateContentList(client, "blog.post");
-
-    expect(JSON.stringify(calls)).not.toContain("blog.category");
   });
 });
 

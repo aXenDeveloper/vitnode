@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { LanguageModelUsage } from "ai";
 
 import { describe, expect, it } from "vitest";

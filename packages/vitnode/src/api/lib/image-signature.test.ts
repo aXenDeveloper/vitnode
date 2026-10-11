@@ -1,4 +1,3 @@
-// @vitest-environment node
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 

@@ -19,16 +19,4 @@ describe("socketUserIdFromSession", () => {
     // read it is the first value of every page load.
     expect(socketUserIdFromSession(undefined)).toBeUndefined();
   });
-
-  it("keeps the three answers distinguishable", () => {
-    // The property the two tests above exist for, stated once: none of the
-    // three inputs may collapse into another.
-    const answers = [
-      socketUserIdFromSession(undefined),
-      socketUserIdFromSession({ user: null }),
-      socketUserIdFromSession({ user: { id: 1 } }),
-    ];
-
-    expect(new Set(answers).size).toBe(3);
-  });
 });

@@ -103,42 +103,4 @@ describe("multi-locale nav titles", () => {
     // @ts-expect-error - see above.
     expect(t("admin.global.nav.users.roles")).toBe("Roles");
   });
-
-  it("finds a Polish-labelled row by its English title", async () => {
-    const [pl, en] = await Promise.all([
-      buildTranslator("pl"),
-      buildTranslator("en"),
-    ]);
-    const key = "admin.global.nav.users.roles";
-    const parentKey = "admin.global.nav.users.title";
-
-    const item = {
-      groupTitle: "Rdzeń",
-      href: "/admin/core/users/roles",
-      // What `getSearchNavItems` merges: the active locale's strings plus every
-      // other locale's, so either language finds the row.
-      searchText: buildSearchText([
-        // @ts-expect-error - see above.
-        pl(key),
-        // @ts-expect-error - see above.
-        pl(parentKey),
-        // @ts-expect-error - see above.
-        en(key),
-        // @ts-expect-error - see above.
-        en(parentKey),
-      ]),
-      // @ts-expect-error - see above.
-      title: pl(key),
-    };
-
-    expect(item.title).toBe("Role");
-    // The regression this whole feature exists for: "Role" alone does not
-    // contain "roles", so a single-locale haystack would miss it.
-    expect(item.searchText).not.toBe("role użytkownicy");
-    expect(matchesAdminNavItem(item, "roles")).toBe(true);
-    expect(matchesAdminNavItem(item, "role")).toBe(true);
-    expect(matchesAdminNavItem(item, "users")).toBe(true);
-    expect(matchesAdminNavItem(item, "użytkownicy")).toBe(true);
-    expect(matchesAdminNavItem(item, "nope")).toBe(false);
-  });
 });

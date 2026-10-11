@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { InlineConfig, Plugin } from "vite";
 
 import {
@@ -295,33 +294,6 @@ describe("vitnode build for an app", () => {
     expect(runtime.output()).not.toContain("Warnings");
   });
 
-  it("prints stable [OK] lines without color in plain mode", async () => {
-    const { runtime } = await build(
-      fakeVite(appBuild({ admin: 612_400, index: 1000 })),
-      {
-        interactive: true,
-        plain: true,
-      },
-    );
-
-    expect(runtime.output()).toContain("[OK] Building client");
-    expect(runtime.output()).toContain("[WARN] admin-AAAAAAA1.js is larger");
-    expect(runtime.raw()).not.toContain("\x1b[");
-    expect(runtime.raw()).not.toContain("\r");
-  });
-
-  it("never animates in CI, even on a TTY", async () => {
-    const { runtime } = await build(
-      fakeVite(appBuild({ admin: 1000, index: 1000 })),
-      {
-        env: { CI: "true" },
-        interactive: true,
-      },
-    );
-
-    expect(runtime.raw()).not.toContain("\r");
-  });
-
   it("passes the bundler's own log level through in verbose mode", async () => {
     const vite = fakeVite(appBuild({ admin: 1000, index: 1000 }));
     await build(vite, { verbose: true });
@@ -456,6 +428,7 @@ describe("a failed build", () => {
       fakeVite(appBuild({ admin: 1000, index: 1000 }), {
         fail: new Error("Something odd"),
       }),
+      { captureOutput: captureProcessOutput },
     ).catch((thrown: unknown) => thrown)) as RuntimeError;
 
     expect(failure.details).toEqual(["Something odd"]);

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "use-intl";
@@ -191,7 +190,9 @@ describe("UserDevicesCard", () => {
     if (!first) throw new Error("No sign-out button");
     fireEvent.click(first);
     fireEvent.click(
-      await screen.findByText("admin.user.show.devices.signOutSubmit"),
+      await screen.findByRole("button", {
+        name: "admin.user.show.devices.signOutSubmit",
+      }),
     );
 
     await waitFor(() => {
@@ -253,7 +254,9 @@ describe("UserConnectedAccountsCard", () => {
     expect(button.hasAttribute("disabled")).toBe(false);
     fireEvent.click(button);
     fireEvent.click(
-      await screen.findByText("admin.user.show.sso.disconnectSubmit"),
+      await screen.findByRole("button", {
+        name: "admin.user.show.sso.disconnectSubmit",
+      }),
     );
 
     await waitFor(() => {

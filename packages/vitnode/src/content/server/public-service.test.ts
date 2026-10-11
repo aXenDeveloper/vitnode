@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { PgDialect } from "drizzle-orm/pg-core";

@@ -1,11 +1,10 @@
-// @vitest-environment jsdom
 import {
   createMemoryHistory,
   createRootRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -87,7 +86,7 @@ describe("the confirmation screen", () => {
     const button = await mount(onConfirm);
     fireEvent.click(button);
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(toastError).toHaveBeenCalledWith("core.global.errors.title", {
         description: "core.global.errors.internal_server_error",
       });

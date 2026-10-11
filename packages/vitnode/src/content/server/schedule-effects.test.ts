@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 

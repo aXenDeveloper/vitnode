@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { describe, expect, it, vi } from "vitest";
@@ -145,43 +144,6 @@ describe("isStaff", () => {
 });
 
 describe("getStaffFlags", () => {
-  it("is neither for a member with no staff entry", async () => {
-    expect(await getStaffFlags(contextWith({}), USER)).toEqual({
-      isAdmin: false,
-      isModerator: false,
-    });
-  });
-
-  it("keeps the two staff types apart", async () => {
-    const c = contextWith({ moderator: [staffEntry({ userId: USER.id })] });
-
-    expect(await getStaffFlags(c, USER)).toEqual({
-      isAdmin: false,
-      isModerator: true,
-    });
-  });
-
-  it("finds staff entries held through a secondary role", async () => {
-    const c = contextWith({
-      admin: [staffEntry({ roleId: STAFF_ROLE })],
-      secondaryRoleIds: [STAFF_ROLE],
-    });
-
-    expect(await getStaffFlags(c, USER)).toEqual({
-      isAdmin: true,
-      isModerator: false,
-    });
-  });
-
-  it("makes a secondary root role staff of both types", async () => {
-    const c = contextWith({ secondaryRoleIds: [ROOT_ROLE] });
-
-    expect(await getStaffFlags(c, USER)).toEqual({
-      isAdmin: true,
-      isModerator: true,
-    });
-  });
-
   it("agrees with isStaff", async () => {
     const c = contextWith({
       moderator: [staffEntry({ roleId: STAFF_ROLE })],

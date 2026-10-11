@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
@@ -163,6 +162,10 @@ const harness = async (
       ),
     } as never);
     c.set("db", {
+      // Committing the live drafts after a save; there are none to commit.
+      delete: () => ({
+        where: () => ({ returning: async () => await Promise.resolve([]) }),
+      }),
       transaction: async (run: (handle: unknown) => Promise<unknown>) => {
         txLog.entered = true;
         const result = await run(tx);

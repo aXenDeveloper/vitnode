@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 import type { MockInstance } from "vitest";
 
@@ -601,11 +600,5 @@ describe("mounting", () => {
         }),
       ),
     ).toEqual([]);
-  });
-
-  it("adds the lock and draft routes once `liveEditing` is on", () => {
-    expect(
-      livePaths(buildContentRoutes(notes, { pluginId: PLUGIN_ID })),
-    ).toEqual(expect.arrayContaining(["GET /{id}/locks", "PUT /{id}/draft"]));
   });
 });

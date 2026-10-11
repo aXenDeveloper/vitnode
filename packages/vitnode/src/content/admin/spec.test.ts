@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -13,7 +12,7 @@ import type { ContentSectionLabeller } from "./spec";
 
 import { defineContentType } from "../define";
 import { field } from "../fields";
-import { contentTypeName, humanizeFieldName } from "./labels";
+import { humanizeFieldName } from "./labels";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,
@@ -307,10 +306,6 @@ describe("buildContentColumnSpec", () => {
 describe("buildFormSchemaFromSpec", () => {
   const schema = buildFormSchemaFromSpec(formSpec);
 
-  it("survives z.toJSONSchema, which AutoForm runs on every schema", () => {
-    expect(() => z.toJSONSchema(schema)).not.toThrow();
-  });
-
   it("prefills AutoForm from the declared defaults", () => {
     const json = z.toJSONSchema(schema);
 
@@ -449,35 +444,6 @@ describe("buildFormSchemaFromSpec", () => {
     expect(schema.safeParse({ category: REF, title: null }).success).toBe(
       false,
     );
-  });
-});
-
-describe("humanizeFieldName", () => {
-  it.each([
-    ["publishedAt", "Published at"],
-    ["title", "Title"],
-    ["author_id", "Author id"],
-    ["viewsCount", "Views count"],
-  ])("turns %s into %s", (input, expected) => {
-    expect(humanizeFieldName(input)).toBe(expected);
-  });
-});
-
-describe("contentTypeName", () => {
-  // What an OpenAPI description, an API error and an untranslated AdminCP all
-  // read now that no definition carries a display name.
-  it.each([
-    ["blog.post", "Post"],
-    ["example.kb.article", "Kb article"],
-    ["example.stock-item", "Stock item"],
-  ])("names %s %s", (id, expected) => {
-    expect(contentTypeName(id)).toBe(expected);
-  });
-
-  it("drops the plugin segment rather than reading it back", () => {
-    // The plugin already names itself everywhere this appears - in the route
-    // path, in the message namespace and in the AdminCP's own navigation.
-    expect(contentTypeName("blog.post")).not.toContain("blog");
   });
 });
 

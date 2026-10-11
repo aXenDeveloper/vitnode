@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -61,10 +60,6 @@ describe("ContentCell", () => {
     expect(
       screen.getAllByRole("listitem").map(item => item.textContent),
     ).toEqual(["Bob,", "Ada"]);
-    expect(screen.getByText("Bob").parentElement?.style.color).toBe(
-      "rgb(255, 0, 0)",
-    );
-    expect(screen.getByText("Ada").parentElement?.style.color).toBe("");
     expect(container.querySelector("img")).toBeNull();
   });
 

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { act, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -12,7 +11,7 @@ import type { BlockComponentProps, BlockData, ContentNode } from "./types";
 import { EditablePageSaveRefused } from "../content/editor/adapter";
 import { defineEditablePage } from "../content/editor/define";
 import { field } from "../content/fields";
-import { isSaveConflict, saveRefusalOf } from "../editor/adapter/refusal";
+import { isSaveConflict } from "../editor/adapter/refusal";
 import { defineBlock } from "./define";
 import { EditablePage } from "./page";
 import { createBlockRegistry } from "./registry";
@@ -112,13 +111,12 @@ describe("a save the server refused", () => {
     expect(screen.queryByText("Edited")).toBeNull();
   });
 
-  it("reaches the editor as words it can put in front of a person", () => {
+  it("reads a refusal the server marked as a conflict", () => {
     const refused = new EditablePageSaveRefused(CONFLICT, {
       conflict: true,
       pageId: page.id,
     });
 
-    expect(saveRefusalOf(refused)).toBe(CONFLICT);
     expect(isSaveConflict(refused)).toBe(true);
   });
 
@@ -127,7 +125,6 @@ describe("a save the server refused", () => {
       pageId: page.id,
     });
 
-    expect(saveRefusalOf(refused)).toBe("That zone is full.");
     expect(isSaveConflict(refused)).toBe(false);
     expect(isSaveConflict(new Error("fetch failed"))).toBe(false);
     expect(isSaveConflict({ conflict: true })).toBe(false);

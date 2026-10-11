@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import {
   act,
   fireEvent,
@@ -82,9 +81,6 @@ describe("ContentLiveStatus", () => {
 
     expect(visible.getAttribute("aria-hidden")).toBe("true");
     expect(visible.getAttribute("dateTime")).toBe(NOW.toISOString());
-    expect(
-      screen.getByText("core.content.live.status.saved_at").className,
-    ).toContain("sr-only");
   });
 
   it("shows saving and failure instead of the saved time", () => {

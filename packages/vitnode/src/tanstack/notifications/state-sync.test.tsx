@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -136,8 +135,13 @@ describe("NotificationStateSync", () => {
     act(() => sockets[0]?.open());
     await waitFor(() => expect(fetchState).toHaveBeenCalledTimes(1));
 
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     act(() => sockets[0]?.drop());
-    await waitFor(() => expect(sockets).toHaveLength(2), { timeout: 4_000 });
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
+    vi.useRealTimers();
+    expect(sockets).toHaveLength(2);
     act(() => sockets[1]?.open());
 
     await waitFor(() =>
@@ -146,7 +150,7 @@ describe("NotificationStateSync", () => {
     expect(fetchState).toHaveBeenCalledTimes(2);
   });
 
-  it("polls the count every minute when there is no socket to listen on", () => {
+  it("polls the count every minute when there is no socket to listen on", async () => {
     vi.stubEnv("VITNODE_API_URL", SAME_ORIGIN_API_URL);
     vi.useFakeTimers();
     const fetchState = vi.fn(
@@ -155,8 +159,8 @@ describe("NotificationStateSync", () => {
     mount(fetchState);
 
     expect(sockets).toHaveLength(0);
-    act(() => {
-      vi.advanceTimersByTime(60_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(fetchState).toHaveBeenCalledTimes(1);
     vi.useRealTimers();

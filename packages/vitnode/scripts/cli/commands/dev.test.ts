@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { ViteDevServer } from "vite";
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -453,13 +452,5 @@ describe("the dev request log", () => {
     );
 
     expect(lines.join("")).toBe("HMR   src/components/post.tsx\n");
-  });
-
-  it("is only active while serving", () => {
-    const { ui } = plainUi();
-
-    expect(createDevReporter(ui, { defaultPort: null, root: "/" }).apply).toBe(
-      "serve",
-    );
   });
 });

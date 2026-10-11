@@ -1,11 +1,24 @@
-// @vitest-environment node
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { PLUGIN_API_REGISTRY_PATH } from "../src/framework/api-registry/generate.js";
 import { writePluginApiRegistry } from "./write-plugin-api-registry.js";
+
+const roots: string[] = [];
+
+afterEach(() => {
+  for (const root of roots.splice(0)) {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
 
 const pluginAt = ({
   name,
@@ -15,6 +28,7 @@ const pluginAt = ({
   withApi?: boolean;
 }): string => {
   const root = mkdtempSync(join(tmpdir(), "vitnode-plugin-"));
+  roots.push(root);
 
   if (name !== undefined) {
     writeFileSync(join(root, "package.json"), JSON.stringify({ name }));
@@ -37,12 +51,6 @@ describe("writePluginApiRegistry", () => {
 
     expect(writePluginApiRegistry(root)).toBe(true);
     expect(generated(root)).toContain("'@acme/blog': VitNodeApiPlugin");
-  });
-
-  it("writes a declaration file, which the plugin's build never emits", () => {
-    // A `.ts` here would compile into `dist` and register the plugin in the
-    // registry of every project that installed it, configured or not.
-    expect(PLUGIN_API_REGISTRY_PATH.endsWith(".d.ts")).toBe(true);
   });
 
   it("skips a package that serves no API", () => {

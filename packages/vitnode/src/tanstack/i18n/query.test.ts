@@ -124,11 +124,6 @@ describe("the query key names the language", () => {
       { locale: "pl", namespaces: ["core.global", "core.search"] },
     ]);
   });
-
-  it("never refetches on its own", () => {
-    // A locale's messages change when the app is redeployed, not while it runs.
-    expect(intlQueryOptions({ locale: "en" }).staleTime).toBe(Infinity);
-  });
 });
 
 describe("what the server function will accept", () => {

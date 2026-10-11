@@ -1,48 +1,15 @@
-// @vitest-environment jsdom
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { Trash2Icon } from "lucide-react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { ConfirmActionAlertDialog } from "./confirm-action-alert-dialog";
 
-const dialogMedia = () =>
-  screen
-    .getByRole("alertdialog")
-    .querySelector("[data-slot=alert-dialog-media]");
-
 describe("ConfirmActionAlertDialog", () => {
-  it("shows the icon above the title in the compact layout", async () => {
-    render(
-      <ConfirmActionAlertDialog
-        icon={<Trash2Icon />}
-        onSubmit={() => {}}
-        title="Delete chat?"
-      >
-        <button type="button">Delete</button>
-      </ConfirmActionAlertDialog>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-
-    expect(await screen.findByText("Delete chat?")).toBeTruthy();
-    expect(dialogMedia()?.querySelector("svg")?.classList).toContain(
-      "lucide-trash-2",
-    );
-    expect(screen.getByRole("alertdialog").dataset.size).toBe("sm");
-  });
-
-  it("keeps the default layout without an icon", async () => {
-    render(
-      <ConfirmActionAlertDialog onSubmit={() => {}} title="Delete chat?">
-        <button type="button">Delete</button>
-      </ConfirmActionAlertDialog>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-
-    expect(await screen.findByText("Delete chat?")).toBeTruthy();
-    expect(dialogMedia()).toBeNull();
-    expect(screen.getByRole("alertdialog").dataset.size).toBe("default");
-  });
-
   it("locks cancel while the confirmation is still submitting", async () => {
     let finishSubmit = () => {};
     render(
@@ -69,16 +36,16 @@ describe("ConfirmActionAlertDialog", () => {
       }),
     );
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(cancel.hasAttribute("disabled")).toBe(true);
     });
     fireEvent.click(cancel);
     expect(screen.getByRole("alertdialog")).toBeTruthy();
 
-    act(() => {
+    await act(async () => {
       finishSubmit();
     });
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(cancel.hasAttribute("disabled")).toBe(false);
     });
   });

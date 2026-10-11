@@ -1,26 +1,9 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { stripComments } from "@/tests/import-graph";
 import { ADMIN_TABLE_MAX_PAGE_SIZE } from "@/views/admin/table/params";
 import { MY_FILES_MAX_PAGE_SIZE } from "@/views/files/my-files-query";
 
 import { asSearchValue, readFirstValue, readPageSize } from "./table-params";
-
-const here = dirname(fileURLToPath(import.meta.url));
-
-const sourceOf = (path: string): string =>
-  readFileSync(join(here, path), "utf8");
-
-/** The four modules that read a table's URL parameters. */
-const READERS = [
-  "../views/files/my-files-query.ts",
-  "../views/admin/table/params.ts",
-  "../tanstack/files/route-search.ts",
-  "../tanstack/admin/table-search.ts",
-];
 
 describe("readFirstValue", () => {
   it("takes the first of a repeated parameter", () => {
@@ -114,43 +97,5 @@ describe("readPageSize", () => {
     expect(readPageSize("500", ADMIN_TABLE_MAX_PAGE_SIZE)).toBe(
       String(ADMIN_TABLE_MAX_PAGE_SIZE),
     );
-  });
-});
-
-describe("the four parameter readers", () => {
-  it.each(READERS)("declares none of the primitives itself - %s", path => {
-    const source = sourceOf(path);
-
-    expect(source).not.toMatch(/const readOne = \(/);
-    expect(source).not.toMatch(/const readParam = \(/);
-    expect(source).not.toMatch(/const readPageSize = \(/);
-  });
-
-  it.each(READERS)("reads them out of the shared module - %s", path => {
-    expect(sourceOf(path)).toContain('from "@/lib/table-params"');
-  });
-});
-
-describe("what the shared module is not", () => {
-  it("holds no table's own policy", () => {
-    // Comments stripped: the module's own doc names these as the things it
-    // deliberately does not own, and that prose is not the code under test.
-    const source = stripComments(sourceOf("table-params.ts"));
-
-    // Allowed sort columns, the status filter, the default page size and the
-    // search behaviour each belong to one table and stay with it.
-    for (const policy of [
-      "orderBy",
-      "status",
-      "DEFAULT_TABLE_PAGE_SIZE",
-      "contract",
-      "MAX_PAGE_SIZE",
-    ]) {
-      expect(source).not.toContain(policy);
-    }
-  });
-
-  it("imports nothing, so neither table's contract can leak into it", () => {
-    expect(sourceOf("table-params.ts")).not.toMatch(/^import /m);
   });
 });

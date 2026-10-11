@@ -66,55 +66,6 @@ const key = ({
   permission: string;
 }): string => `${module}:${permission}`;
 
-describe("the scan is reading real declarations", () => {
-  it("finds the twenty users routes that declare one", () => {
-    expect([...declarationsIn("users").keys()].sort()).toEqual([
-      "create.route.ts",
-      "devices.route.ts",
-      "image-delete.route.ts",
-      "image-upload.route.ts",
-      "list.route.ts",
-      "notification-preferences-update.route.ts",
-      "notification-preferences.route.ts",
-      "passkey-delete.route.ts",
-      "passkey-rename.route.ts",
-      "passkeys.route.ts",
-      "password.route.ts",
-      "revoke-device.route.ts",
-      "revoke-devices.route.ts",
-      "show.route.ts",
-      "sso-disconnect.route.ts",
-      "sso-preferences.route.ts",
-      "sso.route.ts",
-      "timeline.route.ts",
-      "update.route.ts",
-      "verify-email.route.ts",
-    ]);
-  });
-
-  it("finds the four roles routes that declare one", () => {
-    expect([...declarationsIn("roles").keys()]).toEqual([
-      "create.route.ts",
-      "delete.route.ts",
-      "show.route.ts",
-      "update.route.ts",
-    ]);
-  });
-
-  it("finds the two staff lists, and the four in-handler checks", () => {
-    expect([...declarationsIn("staff").keys()]).toEqual([
-      "admins.route.ts",
-      "moderators.route.ts",
-    ]);
-    expect([...assertionsIn("staff").keys()]).toEqual([
-      "create.route.ts",
-      "delete.route.ts",
-      "show-permissions.route.ts",
-      "update-permissions.route.ts",
-    ]);
-  });
-});
-
 describe("the users screens name the API's own permissions", () => {
   const declared = declarationsIn("users");
 

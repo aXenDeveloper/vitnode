@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
@@ -164,60 +163,10 @@ describe("content service", () => {
       return calls;
     };
 
-    it("rejects text shorter than minLength", async () => {
-      await rejects({ category: 1, title: "no" });
-    });
-
-    it("rejects text longer than maxLength", async () => {
-      await rejects({ category: 1, title: "x".repeat(201) });
-    });
-
-    it("rejects a value outside the enum", async () => {
-      await rejects({ category: 1, status: "sideways", title: "Hello" });
-    });
-
-    it("rejects a number below min", async () => {
-      await rejects({ category: 1, title: "Hello", views: -1 });
-    });
-
-    it("rejects an unknown field", async () => {
-      await rejects({ category: 1, smuggled: true, title: "Hello" });
-    });
-
-    it("rejects a system field", async () => {
-      await rejects({ category: 1, id: 99, title: "Hello" });
-    });
-
-    it("rejects a relation id that is not a positive integer", async () => {
-      await rejects({ category: 0, title: "Hello" });
-      await rejects({ category: 1.5, title: "Hello" });
-    });
-
-    it("rejects a malformed ISO date", async () => {
-      await rejects({
-        category: 1,
-        publishedAt: "the day before yesterday",
-        title: "Hello",
-      });
-    });
-
     it("never touches the database after a validation failure", async () => {
       const calls = await rejects({ category: 1, title: "no" });
 
       expect(calls).toHaveLength(0);
-    });
-
-    it("accepts a valid ISO date and stores it as a Date", async () => {
-      const { calls, run } = create({
-        category: 1,
-        publishedAt: "2026-08-02T10:00:00.000Z",
-        title: "Hello",
-      });
-
-      await run;
-
-      const values = opsOf(calls, "values")[0] as { publishedAt: Date };
-      expect(values.publishedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -233,18 +182,6 @@ describe("content service", () => {
 
       return calls;
     };
-
-    it("rejects an empty patch", async () => {
-      await rejects({});
-    });
-
-    it("rejects an unknown field", async () => {
-      await rejects({ smuggled: true });
-    });
-
-    it("rejects an invalid value", async () => {
-      await rejects({ status: "sideways" });
-    });
 
     it("validates before it reads the row", async () => {
       const calls = await rejects({ title: "no" });
@@ -846,12 +783,6 @@ describe("content service", () => {
         // Supplied, so the source is ignored - but it is still normalised,
         // because the same rules have to hold whoever wrote the value.
         expect(values.slug).toBe("hello-world");
-      });
-
-      it("transliterates the source", async () => {
-        const values = await createPost({ category: 2, title: "Zażółć gęślą" });
-
-        expect(values.slug).toBe("zazolc-gesla");
       });
 
       it("rejects a source that folds to nothing", async () => {

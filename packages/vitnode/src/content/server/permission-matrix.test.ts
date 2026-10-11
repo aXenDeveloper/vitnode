@@ -1,7 +1,7 @@
-// @vitest-environment node
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
@@ -158,6 +158,13 @@ const app = (() => {
   };
   instance.use("*", context);
   for (const { handler, route } of routes) instance.openapi(route, handler);
+  // A request the permission check lets through reaches a handler with no
+  // database. Only "403 or not" matters here, so that failure stays quiet.
+  instance.onError((error, c) =>
+    error instanceof HTTPException
+      ? error.getResponse()
+      : c.json({ error: "handler" }, 500),
+  );
 
   return instance;
 })();

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import type { ChartPoint } from "@tanstack/charts";
 
 import { render, screen, within } from "@testing-library/react";

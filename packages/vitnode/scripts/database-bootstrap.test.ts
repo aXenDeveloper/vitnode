@@ -1,11 +1,4 @@
-// @vitest-environment node
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -22,18 +15,6 @@ import {
   runWithMigrationLock,
   withConfigFlag,
 } from "./prepare-database.js";
-
-const scriptsRoot = import.meta.dirname;
-
-/** A script's code, with comments removed - prose may name what code may not do. */
-const codeOf = (file: string): string =>
-  readFileSync(join(scriptsRoot, file), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/.*$/gm, "");
-
-const cli = codeOf("cli/commands/legacy.ts");
-const program = codeOf("cli/program.ts");
-const bootstrap = codeOf("prepare-database.ts");
 
 describe("the steps of a database bootstrap", () => {
   it("generates, then applies, then seeds", () => {
@@ -84,26 +65,6 @@ describe("the steps of a database bootstrap", () => {
 });
 
 describe("the `db:prepare` command", () => {
-  it("exists", () => {
-    expect(program).toContain('"db:prepare"');
-  });
-
-  /**
-   * A `dev` script chains on this with `&&`, so a failed bootstrap has to be a
-   * non-zero exit. The command awaits the bootstrap and does not catch: the
-   * CLI's error boundary turns the throw into exit code 1.
-   */
-  it("awaits the bootstrap and lets a failure reach the error boundary", () => {
-    const branch = cli.slice(
-      cli.indexOf("runDbPrepareCommand"),
-      cli.indexOf("runMigrateCommand"),
-    );
-
-    expect(branch).toMatch(/await databaseBootstrap\(/);
-    expect(branch).not.toMatch(/catch/);
-    expect(branch).not.toMatch(/\bvoid\s+databaseBootstrap/);
-  });
-
   it("exits non-zero when the bootstrap cannot run", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "vitnode-db-prepare-"));
     const runtime = createFakeRuntime({ cwd });
@@ -117,37 +78,9 @@ describe("the `db:prepare` command", () => {
       rmSync(cwd, { force: true, recursive: true });
     }
   });
-
-  it("shares one implementation with `migrate`", () => {
-    const branch = cli.slice(
-      cli.indexOf("runMigrateCommand"),
-      cli.indexOf("runI18nCheckCommand"),
-    );
-
-    expect(branch).toMatch(/await databaseBootstrap\(/);
-    // The one thing `migrate --generate` does that the bootstrap does not.
-    expect(branch).toMatch(/await generateDatabaseMigrations\(\)/);
-    expect(cli.match(/await runMigrations\(\)/g)).toBeNull();
-    expect(cli.match(/await initialDataForDatabase\(\)/g)).toBeNull();
-  });
-
-  it("no longer offers `init` or a `--web` no-op", () => {
-    expect(program).not.toContain('"init"');
-    expect(cli).not.toContain("prepareDatabase");
-    expect(bootstrap).not.toContain('"--web"');
-    expect(bootstrap).not.toContain("prepareDatabase");
-  });
 });
 
 describe("what decides whether work is pending", () => {
-  it("keeps no first-run marker of its own", () => {
-    for (const source of [cli, bootstrap]) {
-      expect(source).not.toMatch(/\.init-created|\.migrations-done|\.migrated/);
-      expect(source).not.toMatch(/VITNODE_(?:INITIALIZED|MIGRATED|DB_READY)/);
-      expect(source).not.toMatch(/writeFile[^)]*(?:marker|sentinel|stamp)/i);
-    }
-  });
-
   it("reads the migrations folder - and journal table - from drizzle.config.ts", async () => {
     const root = mkdtempSync(join(tmpdir(), "vitnode-drizzle-config-"));
 
@@ -174,10 +107,6 @@ describe("what decides whether work is pending", () => {
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
-
-    expect(bootstrap).toMatch(
-      /migrate\(config\.dbProvider, \{\s+migrationsFolder,\s+migrationsSchema,\s+migrationsTable,/,
-    );
   });
 
   it("reads whichever drizzle.config extension the project uses, and names it to drizzle-kit", async () => {
@@ -208,57 +137,9 @@ describe("what decides whether work is pending", () => {
       rmSync(root, { force: true, recursive: true });
     }
   });
-
-  it("ensures text-search configs before applying migrations", () => {
-    const applyStep = bootstrap.slice(
-      bootstrap.indexOf("export const runMigrations"),
-    );
-
-    expect(applyStep.indexOf("ensureSearchTextConfigs")).toBeGreaterThan(-1);
-    expect(applyStep.indexOf("ensureSearchTextConfigs")).toBeLessThan(
-      applyStep.indexOf("await migrate("),
-    );
-    expect(bootstrap).toContain("COPY = simple");
-  });
-
-  /** A fresh database needs more than tables. */
-  it.each([
-    ["languages", "core_languages"],
-    ["roles", "core_roles"],
-    ["role names", "core_languages_words"],
-    ["moderator permissions", "core_moderators_permissions"],
-    ["admin permissions", "core_admin_permissions"],
-  ])("seeds %s", (_label, table) => {
-    const seed = bootstrap.slice(
-      bootstrap.indexOf("export const initialDataForDatabase"),
-      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
-    );
-
-    expect(seed).toContain(table);
-  });
-
-  /** Idempotent, which is what makes running it every time safe. */
-  it("seeds idempotently", () => {
-    expect(bootstrap).toContain("onConflictDoNothing");
-    expect(bootstrap).toMatch(/roleCount\.count === 0/);
-  });
 });
 
 describe("the languages a fresh database is seeded with", () => {
-  it("reads no frontend config", () => {
-    const seed = bootstrap.slice(
-      bootstrap.indexOf("export const initialDataForDatabase"),
-      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
-    );
-
-    expect(seed).not.toContain('type: "config"');
-    expect(seed).not.toContain("webConfig");
-    expect(seed).toContain("languagesFromApiConfig(config.i18n)");
-    // And nothing anywhere reaches for a sibling application.
-    expect(bootstrap).not.toMatch(/\.\.\/(?:web|api)\b/);
-    expect(bootstrap).not.toContain("vitnode.config.ts");
-  });
-
   it("falls back to English when the API declares no locales", () => {
     for (const i18n of [undefined, {}, { locales: [] }]) {
       expect(languagesFromApiConfig(i18n)).toEqual([
@@ -401,90 +282,6 @@ describe("the languages a fresh database is seeded with", () => {
     });
 
     expect(after.slice(0, 1)).toEqual(before);
-    expect(bootstrap).toMatch(
-      /onConflictDoNothing\(\{ target: core_languages\.code \}\)/,
-    );
-  });
-
-  it("seeds role names under the default language, not under `en`", () => {
-    const seed = bootstrap.slice(
-      bootstrap.indexOf("export const initialDataForDatabase"),
-      bootstrap.indexOf("export interface DatabaseBootstrapStep"),
-    );
-
-    expect(seed).toContain("languageCode: defaultLanguageCode");
-    expect(seed).not.toMatch(/languageCode: "en"/);
-    for (const role of ["Guest", "Member", "Moderator", "Administrator"]) {
-      expect(seed).toContain(`value: "${role}"`);
-    }
-  });
-});
-
-describe("concurrent bootstraps are serialised", () => {
-  it("takes a Postgres advisory lock around the whole bootstrap", () => {
-    expect(bootstrap).toContain("withMigrationLock");
-    expect(bootstrap).toContain("pg_try_advisory_lock");
-    expect(bootstrap).toContain("pg_advisory_unlock");
-    expect(bootstrap).toMatch(/MIGRATION_LOCK_KEY = [\d_]+;/);
-  });
-
-  it("wraps every step, not just the apply", () => {
-    const fn = bootstrap.slice(
-      bootstrap.indexOf("export const databaseBootstrap"),
-    );
-    const lock = fn.indexOf("withMigrationLock(");
-    const action = fn.indexOf("step.action()");
-
-    // Both must be *found*. `indexOf` returns -1 for absent, and -1 is less than
-    // any real offset - so a bare `toBeLessThan` passes when the lock has been
-    // deleted outright, which is the mutation this test exists to catch.
-    expect(
-      lock,
-      "databaseBootstrap does not call withMigrationLock",
-    ).toBeGreaterThanOrEqual(0);
-    expect(action).toBeGreaterThanOrEqual(0);
-    expect(lock).toBeLessThan(action);
-  });
-
-  it("opens a dedicated connection for the lock", () => {
-    const open = bootstrap.slice(
-      bootstrap.indexOf("const openMigrationLock"),
-      bootstrap.indexOf("export const runWithMigrationLock"),
-    );
-
-    expect(open).toContain("postgres({");
-    expect(open).toContain("max: 1");
-    expect(open).toContain("client.end(");
-  });
-
-  /**
-   * And never out of the application's. `reserve()` pins a pooled connection,
-   * which is exactly the connection the migration then needs.
-   */
-  it("reserves nothing from the application pool", () => {
-    expect(bootstrap).not.toContain(".reserve(");
-    expect(bootstrap).not.toContain("session.release()");
-  });
-
-  it("waits with a deadline and says what it is waiting for", () => {
-    expect(bootstrap).not.toContain("pg_advisory_lock(");
-    expect(bootstrap).toMatch(/MIGRATION_LOCK_WAIT_MS = [\d_]+;/);
-    expect(bootstrap).toMatch(/Timed out after/);
-    expect(bootstrap).toMatch(/waiting for it to finish/);
-  });
-
-  it("degrades to unlocked rather than failing on an unknown driver", () => {
-    expect(bootstrap).toMatch(/!\("shared" in options\)/);
-    expect(bootstrap).toMatch(/if \(lock === null\) \{\s*await run\(\)/);
-  });
-
-  it("tolerates both spellings of “already created”, down the cause chain", () => {
-    expect(bootstrap).toContain("isAlreadyCreatedError");
-    expect(bootstrap).toContain('"23505"');
-    expect(bootstrap).toContain('"42710"');
-    expect(bootstrap).toMatch(
-      /current = \(current as \{ cause\?: unknown \}\)\.cause/,
-    );
   });
 });
 
@@ -651,27 +448,5 @@ describe("holding the lock costs the application pool nothing", () => {
     });
 
     expect(ran).toEqual(["migrated"]);
-  });
-});
-
-describe("the bootstrap and the plugin runtime are separate", () => {
-  it("prepares no plugin and writes no route file", () => {
-    for (const source of [cli, bootstrap]) {
-      expect(source).not.toContain("preparePluginsFiles");
-      expect(source).not.toContain("prepare-plugins");
-      expect(source).not.toContain("copyDirectoryRecursive");
-      expect(source).not.toMatch(/src\/routes|src\/app|\[locale\]|@breadcrumb/);
-      expect(source).not.toMatch(/\.gen\.tsx?\b/);
-    }
-  });
-
-  it("has no route-copying module left beside it", () => {
-    for (const deleted of [
-      "prepare-plugins-files.ts",
-      "plugin.ts",
-      "legacy-route-overlap.ts",
-    ]) {
-      expect(existsSync(join(scriptsRoot, deleted))).toBe(false);
-    }
   });
 });

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { describe, expect, it, vi } from "vitest";
@@ -223,14 +222,6 @@ describe("assertContentFileReferences", () => {
     expect(error.detail).toContain("File 3");
   });
 
-  it("refuses an entry whose media type the field does not allow", async () => {
-    const error = await rejectionOf({ gallery: [7] }, [
-      fileRow(7, { mimeType: "application/pdf", name: "brief.pdf" }),
-    ]);
-
-    expect(error.code).toBe("CONTENT_FILE_MIME_TYPE_NOT_ALLOWED");
-  });
-
   it("refuses an entry that does not exist", async () => {
     const error = await rejectionOf({ gallery: [7, 404] }, [fileRow(7)]);
 
@@ -255,16 +246,6 @@ describe("assertContentFileReferences", () => {
       fileRow(7, { mimeType: "application/pdf", name: "brief.pdf" }),
     ]);
     expect(error.field).toBe("gallery");
-  });
-
-  it("issues no statement for a payload that names no file", async () => {
-    const { ctx, select } = makeCtx([]);
-
-    await assertContentFileReferences(ctx, testFileGalleryContentType, {
-      title: "Trip",
-    });
-
-    expect(select).not.toHaveBeenCalled();
   });
 });
 

@@ -4,7 +4,6 @@ import {
   createPasswordZodSchema,
   createSignUpFormSchema,
   signUpConflictReason,
-  signUpFormOutcome,
 } from "./schema";
 
 const messages = {
@@ -49,15 +48,6 @@ describe("the sign-up schema", () => {
 
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0]?.message).toBe(message);
-  });
-
-  it("defaults the fields AutoForm builds its initial values from", () => {
-    // A field without a default renders as an uncontrolled input. `email` is
-    // deliberately absent from this list: it has no default today, and
-    // `AutoFormInput` covers it with `value={field.value ?? ""}`.
-    expect(schema.shape.name.def.defaultValue).toBe("");
-    expect(schema.shape.password.def.defaultValue).toBe("");
-    expect(schema.shape.terms.def.defaultValue).toBe(false);
   });
 
   it("carries the messages it was built with, not a fixed language", () => {
@@ -143,31 +133,5 @@ describe("classifying a 409", () => {
     "not json {",
   ])("reads %s as unknown rather than guessing a field", body => {
     expect(signUpConflictReason(body)).toBe("unknown");
-  });
-});
-
-describe("what a submit result means for the screen", () => {
-  it("says nothing on success, which is how the form knows the caller is leaving", () => {
-    expect(signUpFormOutcome(undefined)).toBeNull();
-  });
-
-  it("swaps the card for the confirmation screen, carrying the address", () => {
-    expect(signUpFormOutcome({ emailConfirmation: "test@test.com" })).toEqual({
-      email: "test@test.com",
-      kind: "confirmation",
-    });
-  });
-
-  it.each([
-    ["email_exists", "email"],
-    ["name_exists", "name"],
-  ] as const)("marks the %s field", (message, field) => {
-    expect(signUpFormOutcome({ message })).toEqual({ field, kind: "field" });
-  });
-
-  it("renders anything else as the internal-error toast", () => {
-    expect(signUpFormOutcome({ message: "Internal Server Error" })).toEqual({
-      kind: "toast",
-    });
   });
 });

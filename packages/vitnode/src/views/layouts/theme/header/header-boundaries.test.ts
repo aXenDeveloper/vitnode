@@ -1,5 +1,3 @@
-// @vitest-environment node
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -16,10 +14,6 @@ const sharedEntries = Object.entries(SHARED).map(([name, path]) => ({
   name,
   path,
 }));
-const withoutComments = (path: string): string =>
-  readFileSync(path, "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/.*$/gm, "");
 
 describe("the shared header is framework-neutral", () => {
   it.each(sharedEntries)(
@@ -36,30 +30,4 @@ describe("the shared header is framework-neutral", () => {
       );
     },
   );
-});
-
-describe("the shared header takes its framework parts as props", () => {
-  const code = withoutComments(SHARED.header);
-
-  it.each(["logo", "navigation", "user"])(
-    "asks for %s rather than resolving it",
-    slot => {
-      expect(code).toContain(slot);
-    },
-  );
-
-  it("translates nothing itself", () => {
-    // The nav labels arrive as data, resolved from the message cache. A
-    // `useTranslations` here would force `core.search` into every page's
-    // client provider for two words.
-    expect(code).not.toContain("useTranslations");
-    expect(code).not.toContain("getTranslations");
-  });
-
-  it("carries no preference controls of its own", () => {
-    // Theme and language moved into the user menu, which is the `user` slot.
-    // A switcher back in the bar would be a second copy of both controls.
-    expect(code).not.toContain("ThemeSwitcher");
-    expect(code).not.toContain("languageSwitcher");
-  });
 });

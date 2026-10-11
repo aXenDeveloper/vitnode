@@ -1,4 +1,3 @@
-// @vitest-environment node
 import {
   existsSync,
   mkdirSync,
@@ -83,6 +82,38 @@ describe("vitnode i18n check", () => {
     expect(code).toBe(1);
     expect(output).toContain("site · pl: 1 key(s) missing");
     expect(errors).toMatch(/✖ \d+ issue\(s\), 1 untranslated key\(s\)\./);
+  });
+
+  it("only warns about missing keys without --ci", async () => {
+    const { code, output } = await run(["i18n", "check"]);
+
+    expect(code).toBe(0);
+    expect(output).toContain("site.cta");
+    expect(output).toMatch(/! \d+ issue\(s\), 1 untranslated key\(s\)\./);
+  });
+
+  it("reports a complete translation", async () => {
+    write(
+      "src/locales/site/pl.json",
+      JSON.stringify({ site: { cta: "Odkryj", title: "Tytuł" } }),
+    );
+
+    const { code, output } = await run(["i18n", "check"]);
+
+    expect(code).toBe(0);
+    expect(output).toContain("site · pl: complete");
+    expect(output).not.toContain("never loaded");
+  });
+
+  it("errors when the namespace has no default-locale file", async () => {
+    rmSync(join(root, "src/locales/site/en.json"));
+
+    const { code, output } = await run(["i18n", "check"]);
+
+    expect(code).toBe(1);
+    expect(output).toContain(
+      'site: no "en" messages - create src/locales/site/en.json',
+    );
   });
 
   it("keeps working under its older name", async () => {

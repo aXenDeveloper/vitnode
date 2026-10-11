@@ -1,10 +1,6 @@
-// @vitest-environment node
-import { getTableName } from "drizzle-orm";
-import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { core_files } from "@/database/files";
 import { testFileGalleryContentType } from "@/tests/content-fixtures";
 
 import {
@@ -12,11 +8,8 @@ import {
   buildFormSchemaFromSpec,
   isCollectionFieldSpec,
 } from "./admin/spec";
-import { findContentJunction } from "./advanced";
 import { defineContentType } from "./define";
 import { field } from "./fields";
-import { createContentAdvancedTables } from "./server/advanced-tables";
-import { createContentTable } from "./server/table";
 
 const gallery = field.file({
   multiple: true,
@@ -36,15 +29,6 @@ const galleryWith = (
     fields,
     ...extra,
   });
-
-const galleryType = defineContentType({
-  id: "example.gallery-article",
-  tableName: "example_gallery_articles",
-  fields: {
-    title: field.text({ required: true }),
-    gallery,
-  },
-});
 
 describe("the descriptor", () => {
   it("defaults ordered to true, because a gallery's order is the point", () => {
@@ -72,82 +56,6 @@ describe("the descriptor", () => {
 
     expect(strict.allowedExtensions).toEqual([".gif"]);
     expect(strict.allowedMimeTypes).toEqual(["image/gif"]);
-  });
-});
-
-describe("the generated storage", () => {
-  it("puts no column on the base table", () => {
-    const config = getTableConfig(createContentTable(galleryType));
-
-    expect(config.columns.map(item => item.name)).toEqual([
-      "id",
-      "createdAt",
-      "updatedAt",
-      "title",
-    ]);
-  });
-
-  it("names a junction table after the table and the field", () => {
-    expect(findContentJunction(galleryType.advanced, "gallery")).toMatchObject({
-      field: "gallery",
-      tableName: "example_gallery_articles_gallery",
-    });
-  });
-
-  it("declares no index on a column that does not exist", () => {
-    // A single file field gets one - Postgres does not index the child side of a
-    // foreign key by itself. A collection's foreign keys are on the junction,
-    // which brings its own primary key and reverse index.
-    expect(
-      galleryType.indexes.some(entry => entry.on.includes("gallery")),
-    ).toBe(false);
-  });
-
-  it("points the far side at core_files with ON DELETE RESTRICT", () => {
-    const table = createContentTable(galleryType);
-    const tables = createContentAdvancedTables(galleryType, { table });
-    const config = getTableConfig(tables.junctions.gallery);
-
-    const keys = config.foreignKeys.map(foreignKey => {
-      const reference = foreignKey.reference();
-
-      return {
-        columns: reference.columns.map(item => item.name),
-        onDelete: foreignKey.onDelete,
-        table: getTableName(reference.foreignTable),
-      };
-    });
-
-    expect(keys).toEqual(
-      expect.arrayContaining([
-        // The record owns its references, so deleting it takes them.
-        {
-          columns: ["itemId"],
-          onDelete: "cascade",
-          table: "example_gallery_articles",
-        },
-        // And Postgres - not service code - is what refuses to delete a file the
-        // gallery still shows.
-        {
-          columns: ["relatedItemId"],
-          onDelete: "restrict",
-          table: getTableName(core_files),
-        },
-      ]),
-    );
-  });
-
-  it("carries a position, so the editor's order is storable", () => {
-    const table = createContentTable(galleryType);
-    const tables = createContentAdvancedTables(galleryType, { table });
-    const config = getTableConfig(tables.junctions.gallery);
-
-    expect(config.columns.map(item => item.name)).toEqual([
-      "itemId",
-      "relatedItemId",
-      "position",
-      "createdAt",
-    ]);
   });
 });
 
@@ -357,20 +265,6 @@ describe("what a file collection may not be", () => {
         galleryWith({ cover: field.file({ maxBytes: 1, ...extra }) }),
       ).toThrow(/is not `multiple: true`/);
     }
-  });
-
-  it("refuses localized, exactly as a single file does", () => {
-    expect(() =>
-      galleryWith(
-        {
-          gallery: {
-            ...field.file({ maxBytes: 1, multiple: true }),
-            localized: true,
-          } as unknown as typeof gallery,
-        },
-        { localization: { defaultLocale: "en" } },
-      ),
-    ).toThrow(/localized: true/);
   });
 
   it("is not a list column, an orderBy, a title or a colour", () => {

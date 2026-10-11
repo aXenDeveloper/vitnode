@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -88,12 +87,14 @@ describe("isAdminSessionStillInUse", () => {
   });
 
   it("does not sign anyone out when storage is blocked", async () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("blocked");
+    vi.stubGlobal("localStorage", {
+      getItem: () => {
+        throw new Error("blocked");
+      },
     });
 
     await expect(isAdminSessionStillInUse()).resolves.toBe(true);
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 });
 

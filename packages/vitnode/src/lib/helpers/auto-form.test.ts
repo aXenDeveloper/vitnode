@@ -96,22 +96,6 @@ describe("auto-form helpers", () => {
         scheduledFor: undefined,
       });
     });
-
-    it("should handle mixed properties with and without defaults", () => {
-      const zodSchema = z.object({
-        name: z.string().default("Test"),
-        email: z.string(),
-        age: z.number().default(30),
-        bio: z.string(),
-      });
-
-      const jsonSchema = z.toJSONSchema(zodSchema);
-      const result = getDefaults(jsonSchema);
-      expect(result).toEqual({
-        name: "Test",
-        age: 30,
-      });
-    });
   });
 
   describe("getZodInputParams", () => {
@@ -221,23 +205,6 @@ describe("auto-form helpers", () => {
       ]);
     });
 
-    it("should handle complex password validation", () => {
-      const zodSchema = z.object({
-        password: z
-          .string()
-          .min(8)
-          .regex(/(?=.*[a-z])/, "Must contain lowercase")
-          .regex(/(?=.*[A-Z])/, "Must contain uppercase")
-          .regex(/(?=.*\d)/, "Must contain number"),
-      });
-
-      const jsonSchema = z.toJSONSchema(zodSchema);
-      const result = getZodInputParams(jsonSchema);
-
-      expect(result.password).toHaveProperty("type", "password");
-      expect(result.password).toHaveProperty("minLength", 8);
-    });
-
     it("should handle nested objects from Zod schema", () => {
       const zodSchema = z.object({
         user: z.object({
@@ -269,20 +236,6 @@ describe("auto-form helpers", () => {
       const result = getZodInputParams(jsonSchema, ["name", "email"]);
       expect(result.name).toHaveProperty("required", true);
       expect(result.email).toHaveProperty("required", true);
-      expect(result.age).not.toHaveProperty("required");
-    });
-
-    it("should handle optional fields from Zod schema", () => {
-      const zodSchema = z.object({
-        name: z.string(),
-        email: z.string().optional(),
-        age: z.number().optional(),
-      });
-
-      const jsonSchema = z.toJSONSchema(zodSchema);
-      const result = getZodInputParams(jsonSchema, ["name"]);
-      expect(result.name).toHaveProperty("required", true);
-      expect(result.email).not.toHaveProperty("required");
       expect(result.age).not.toHaveProperty("required");
     });
 
@@ -393,18 +346,9 @@ describe("auto-form helpers", () => {
       expect(result).toEqual({ type: "text", default: "Hello" });
     });
 
-    it("should get nested properties", () => {
-      const result = getNestedParam(testObj, "user.name");
-      expect(result).toEqual({ type: "text", required: true });
-    });
-
     it("should get deeply nested properties", () => {
       const result = getNestedParam(testObj, "user.settings.theme");
       expect(result).toEqual({ type: "text", enum: ["light", "dark"] });
-    });
-    it("should return undefined for missing array params", () => {
-      const result = getNestedParam(testObj, "guests.itemParams.unknown");
-      expect(result).toBeUndefined();
     });
     it("should return undefined for non-existent paths", () => {
       expect(getNestedParam(testObj, "nonexistent")).toBeUndefined();

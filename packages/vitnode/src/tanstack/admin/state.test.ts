@@ -7,9 +7,6 @@ import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
 import type { AdminAccess } from "./state";
 
 import {
-  ADMIN_ENTRY_PATH,
-  ADMIN_HOME_PATH,
-  ADMIN_SESSION_QUERY_KEY,
   adminPermissionsOf,
   adminSessionFailureFromError,
   adminSessionFailureFromStatus,
@@ -235,32 +232,5 @@ describe("checking one permission", () => {
     expect(hasAdminPermission(denied, { module: "m", permission: "p" })).toBe(
       false,
     );
-  });
-});
-
-describe("the cache key", () => {
-  it("is two segments and names no user", () => {
-    // The browser does not know who the admin cookie belongs to until the query
-    // answers, so a user id in the key could only come from the *public*
-    // session - a different cookie, which can name a different person or nobody.
-    // Isolation is bought by lifetime instead; see `removeAdminSession`.
-    expect(ADMIN_SESSION_QUERY_KEY).toEqual(["vitnode", "admin-session"]);
-  });
-
-  it("is not the public session's key", () => {
-    expect(ADMIN_SESSION_QUERY_KEY).not.toContain("session");
-  });
-});
-
-describe("the AdminCP's paths", () => {
-  it("carry no locale prefix", () => {
-    expect(ADMIN_ENTRY_PATH).toBe("/admin");
-    expect(ADMIN_HOME_PATH).toBe("/admin/core");
-  });
-
-  it("put the home page under the entry, not beside it", () => {
-    // What makes the `_admin` guard's redirect to `/admin` incapable of looping:
-    // the home page is a descendant, so it is guarded, and the entry is not.
-    expect(ADMIN_HOME_PATH.startsWith(`${ADMIN_ENTRY_PATH}/`)).toBe(true);
   });
 });

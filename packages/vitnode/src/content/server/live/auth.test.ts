@@ -1,4 +1,3 @@
-// @vitest-environment node
 import type { Context, Next } from "hono";
 
 import { describe, expect, it } from "vitest";

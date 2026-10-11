@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { RichTextDocument } from "@vitnode/core/content/rich-text";
 
 import { fireEvent, render, screen } from "@testing-library/react";

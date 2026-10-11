@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { requestHandler } from "@tanstack/react-start/server";
 import {
   afterEach,

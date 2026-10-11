@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -192,6 +191,7 @@ describe("ContentRenderer", () => {
     });
 
     it("accepts a fallback of the application's own", () => {
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
       render(
         <ContentRenderer
           blocks={withDisabledPlugin}
@@ -741,6 +741,7 @@ describe("which presentation a block renders", () => {
   });
 
   it("hands the fallback the reason, so an application can render its own", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     render(
       <ContentRenderer
         blocks={[card("hero")]}

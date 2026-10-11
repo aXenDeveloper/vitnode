@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { matchEmojis } from "./emoji/match-emojis";
-import { createTipTapExtensions, SUPPORTED_HEADINGS_LEVELS } from "./extension";
 
 const emojis = [
   {
@@ -126,56 +125,5 @@ describe("matchEmojis", () => {
       "smile",
       "sob",
     ]);
-  });
-});
-
-describe("createTipTapExtensions", () => {
-  const names = createTipTapExtensions().map(extension => extension.name);
-
-  it("registers every extension the toolbar drives", () => {
-    expect(names).toEqual(
-      expect.arrayContaining([
-        "audio",
-        "color",
-        "emoji",
-        "fontSize",
-        "panel",
-        "placeholder",
-        "slashCommand",
-        "starterKit",
-        "submitFormShortcut",
-        "tableKit",
-        "taskItem",
-        "taskList",
-        "textAlign",
-        "textStyle",
-        "typography",
-      ]),
-    );
-  });
-
-  it("keeps dropcursor and trailingNode inside the starter kit", () => {
-    const starterKit = createTipTapExtensions().find(
-      extension => extension.name === "starterKit",
-    );
-
-    expect(starterKit?.options.dropcursor).toMatchObject({
-      class: "tiptap-dropcursor",
-      width: 2,
-    });
-    expect(starterKit?.options.trailingNode).toMatchObject({
-      node: "paragraph",
-    });
-    expect(starterKit?.options.heading.levels).toEqual([
-      ...SUPPORTED_HEADINGS_LEVELS,
-    ]);
-  });
-
-  it("passes the placeholder through to the placeholder extension", () => {
-    const placeholder = createTipTapExtensions({
-      placeholder: "Write something",
-    }).find(extension => extension.name === "placeholder");
-
-    expect(placeholder?.options.placeholder).toBe("Write something");
   });
 });

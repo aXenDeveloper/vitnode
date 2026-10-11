@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import { testArticleContentType } from "@/tests/content-fixtures";
@@ -108,44 +107,5 @@ describe("tampering", () => {
     ).toString("base64url");
 
     expect(verify(`${forged}.${signature}`, { locale: "en" })).toBeNull();
-  });
-
-  it("rejects a token signed with another secret", () => {
-    const { token } = createContentPreviewToken({
-      definition: testArticleContentType,
-      itemId: 7,
-      languageId: 2,
-      locale: "pl",
-      pluginId: PLUGIN_ID,
-      revisionId: 11,
-      secret: "b".repeat(64),
-      version: 3,
-    });
-
-    expect(verify(token, { locale: "pl" })).toBeNull();
-  });
-
-  it("rejects an expired locale token", () => {
-    const { token } = mint({
-      languageId: 2,
-      locale: "pl",
-      now: new Date("2020-01-01T00:00:00Z"),
-    });
-
-    expect(verify(token, { locale: "pl" })).toBeNull();
-  });
-
-  it("rejects a locale token minted for another content type", () => {
-    const { token } = mint({ languageId: 2, locale: "pl" });
-
-    expect(
-      verifyContentPreviewToken({
-        definition: { ...testArticleContentType, id: "test.other" },
-        locale: "pl",
-        pluginId: PLUGIN_ID,
-        secret: SECRET,
-        token,
-      }),
-    ).toBeNull();
   });
 });

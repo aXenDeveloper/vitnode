@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -128,7 +127,7 @@ describe("start options", () => {
 const serverScript = `
 import { createServer } from "node:http";
 const server = createServer((_, res) => res.end("ok"));
-server.listen(Number(process.env.PORT), () => console.log("listening " + process.env.NODE_ENV));
+server.listen(Number(process.env.PORT));
 `;
 
 describe("vitnode start", () => {

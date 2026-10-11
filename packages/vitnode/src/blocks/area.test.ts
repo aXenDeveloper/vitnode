@@ -206,34 +206,6 @@ describe("walking a content list", () => {
 });
 
 describe("the layout class table", () => {
-  it("names a class for every token and no token it does not define", () => {
-    expect(
-      Object.keys(AREA_COLUMN_CLASSES)
-        .map(Number)
-        .sort((a, b) => a - b),
-    ).toStrictEqual([...AREA_COLUMNS]);
-    expect(Object.keys(AREA_ALIGN_CLASSES).sort()).toStrictEqual(
-      [...AREA_ALIGNS].sort(),
-    );
-    expect(Object.keys(AREA_JUSTIFY_CLASSES).sort()).toStrictEqual(
-      [...AREA_JUSTIFIES].sort(),
-    );
-  });
-
-  it("stays on one column until the medium breakpoint", () => {
-    expect(AREA_COLUMN_CLASSES[1]).toBe("grid-cols-1");
-    expect(AREA_COLUMN_CLASSES[2]).toBe("grid-cols-1 md:grid-cols-2");
-    expect(AREA_COLUMN_CLASSES[3]).toBe("grid-cols-1 md:grid-cols-3");
-    expect(AREA_COLUMN_CLASSES[4]).toBe("grid-cols-1 md:grid-cols-4");
-  });
-
-  it("leaves the gap out, because it is pixels rather than a token", () => {
-    const classes = areaLayoutClassNames({ columns: 2, gap: 24 });
-
-    expect(classes).not.toContain("gap-");
-    expect(classes).not.toContain("[");
-  });
-
   it("is total over every combination of tokens", () => {
     const seen = new Set<string>();
 
@@ -260,12 +232,6 @@ describe("the layout class table", () => {
   it("falls back to the default layout when a token cannot be read", () => {
     expect(areaLayoutClassNames(storedLayout({ columns: 7 }))).toBe(
       areaLayoutClassNames(DEFAULT_AREA_LAYOUT),
-    );
-  });
-
-  it("uses only the tokens it was given, with the defaults filled in", () => {
-    expect(areaLayoutClassNames({ columns: 2 })).toBe(
-      "grid grid-cols-1 md:grid-cols-2 items-stretch justify-items-stretch",
     );
   });
 });

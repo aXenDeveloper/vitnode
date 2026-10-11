@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import {

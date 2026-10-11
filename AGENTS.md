@@ -107,12 +107,35 @@ npm i x
 # Testing
 
 - Never write unit tests in the same session. Spawn a new session, and write the test after the feature is working. Tests are for regression, not for development.
-- UI component tests (`*.test.tsx`) should test DOM output, click events, and dialogs. Never test CSS classes or form UI (`AutoForm`, form fields).
-- Do not test an existing feature applied somewhere new. Building the widgets system earns tests; adding widget zones or widgets to another page or plugin does not, because the mechanism is already covered and only the wiring is new.
-- Do not test database models or schema definitions (Drizzle tables, column types, indexes, foreign keys).
-- Do not test static config, constants, color presets, or plugin configuration (`config.api`, content type definitions).
-- Do not test third-party libraries or trivial helper/wrapper code.
+- UI component tests (`*.test.tsx`) should test DOM output, click events, and dialogs. Never test CSS classes, inline styles that only decorate, or form UI (`AutoForm`, form fields).
 - Always run "pnpm lint:fix" to fix formatting and linting issues before committing. Never commit a file with lint errors.
+
+### What not to test
+
+- An existing feature applied somewhere new. Building the widgets system earns tests; adding widget zones or widgets to another page or plugin does not, because the mechanism is already covered and only the wiring is new. The same goes for a route that only calls a tested helper, or a boot step that only calls a tested validator.
+- Database models or schema definitions (Drizzle tables, column types, indexes, foreign keys, RLS), or the SQL text Drizzle generates.
+- Static config, constants, color presets, plugin configuration (`config.api`, content type definitions), query-key literals, namespace lists, TanStack Query option values (`retry`, `staleTime`) and route `staticData`.
+- Third-party libraries or trivial helper/wrapper code. A shadcn or Base UI wrapper does not earn a test for what Base UI already does (stepping a `NumberField`, a `Tooltip` delay, a `Progress` aria value).
+- Source text. No `readFileSync` + `toContain`/`toMatch` on a module, no "this file still exists" or "this identifier is gone" checks - test behaviour. Import-graph checks that keep server or editor code out of a bundle are fine.
+- Translated copy or the contents of a locale JSON - `use-intl` renders keys in tests, so assert on the key.
+- The test's own fixtures.
+
+### One behaviour, one test
+
+- Test a rule once, in the layer that owns it: a pure function in its own file, a service in the service test, HTTP status, permissions and events in the route test. Don't re-assert the same rule through a wrapper, a route or a rendered screen.
+- Before adding a case, search for the behaviour - if another file already asserts it, extend that file instead of copying the scenario.
+- Prefer a pure-function test to a render. A DOM test costs about 15× a node test; render only to check what the user sees or clicks.
+- Collapse near-identical cases into one `it.each` table instead of a run of copy-pasted `it`s.
+- Content Engine route permissions go in `content/server/permission-matrix.test.ts`, not as allowed/403 pairs in every route file.
+- Security checks stay even when they look redundant: cookie scoping, auth ceremonies (origin, RP ID, replayed challenges), timing-safe paths, open-redirect guards and per-route `403`s.
+
+### Speed
+
+- The file name picks the environment: `*.test.tsx` runs in happy-dom (project `dom`), `*.test.ts` runs in node (project `unit`). Never add a `// @vitest-environment` pragma.
+- `unit` shares one module graph per worker (`isolate: false`). A test that asserts process-wide state ("nothing registered yet") goes in `ISOLATED` in `packages/vitnode/vitest.config.ts`.
+- Real builds, watchers and child processes go in `INTEGRATION` there. `pnpm test` runs everything; `pnpm test:unit` skips them.
+- Never wait out a real delay - use `vi.useFakeTimers()` and advance the clock.
+- Build a Hono app or a fixture once per file when the tests only read from it.
 
 ### Mocking
 

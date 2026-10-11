@@ -1,15 +1,12 @@
-// @vitest-environment node
 import type { Context } from "hono";
 
 import { getTableName } from "drizzle-orm";
-import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
 import {
   core_content_file_refs,
   core_content_revisions,
 } from "@/database/content";
-import { core_files } from "@/database/files";
 import {
   testEditorialPostContentType,
   testFilePostContentType,
@@ -76,62 +73,6 @@ const pins = (harness: ReturnType<typeof makeTx>) =>
   harness.inserts.filter(
     entry => entry.table === getTableName(core_content_file_refs),
   );
-
-describe("core_content_file_refs", () => {
-  const config = getTableConfig(core_content_file_refs);
-  const foreignKeys = config.foreignKeys.map(fk => {
-    const reference = fk.reference();
-
-    return {
-      column: reference.columns[0]?.name,
-      onDelete: fk.onDelete,
-      table: getTableName(reference.foreignTable),
-    };
-  });
-
-  it("refuses a file deletion and releases it when the revision goes", () => {
-    expect(foreignKeys).toEqual(
-      expect.arrayContaining([
-        {
-          column: "fileId",
-          onDelete: "restrict",
-          table: getTableName(core_files),
-        },
-        {
-          column: "revisionId",
-          onDelete: "cascade",
-          table: getTableName(core_content_revisions),
-        },
-      ]),
-    );
-  });
-
-  it("holds one pin per (revision, file) pair", () => {
-    expect(config.indexes.map(item => item.config.name)).toContain(
-      "core_content_file_refs_unique",
-    );
-    expect(
-      config.indexes.find(
-        item => item.config.name === "core_content_file_refs_unique",
-      )?.config.unique,
-    ).toBe(true);
-  });
-
-  it("indexes the file side, which RESTRICT scans on every delete", () => {
-    expect(config.indexes.map(item => item.config.name)).toContain(
-      "core_content_file_refs_file_id_idx",
-    );
-  });
-
-  it("copies nothing from the file", () => {
-    expect(config.columns.map(item => item.name).sort()).toEqual([
-      "createdAt",
-      "fileId",
-      "id",
-      "revisionId",
-    ]);
-  });
-});
 
 describe("revision capture", () => {
   it("pins every file the snapshot names, to the revision it just wrote", async () => {
@@ -213,24 +154,5 @@ describe("the ids a snapshot yields", () => {
     expect(contentSnapshotFileIds(testFilePostContentType, snapshot)).toEqual([
       1, 2,
     ]);
-  });
-
-  it("yields nothing for a record whose file fields are empty", () => {
-    const snapshot = contentRevisionSnapshot(testFilePostContentType, {
-      animation: null,
-      cover: null,
-      createdAt: new Date(0),
-      document: null,
-      id: 7,
-      slug: "hello",
-      status: "draft",
-      title: "Hello",
-      updatedAt: new Date(0),
-      version: 1,
-    });
-
-    expect(contentSnapshotFileIds(testFilePostContentType, snapshot)).toEqual(
-      [],
-    );
   });
 });

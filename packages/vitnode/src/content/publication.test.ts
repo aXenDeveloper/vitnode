@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import {
@@ -255,16 +254,6 @@ describe("publication config", () => {
         "can_delete",
         "can_publish",
       ]);
-    });
-
-    it("leaves the Stage 1 set untouched otherwise", () => {
-      expect(permissions(define())).toEqual([
-        "can_view",
-        "can_create",
-        "can_edit",
-        "can_delete",
-      ]);
-      expect(permissions()).toHaveLength(4);
     });
 
     it("depends on can_view, like every other generated permission", () => {

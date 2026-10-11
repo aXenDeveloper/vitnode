@@ -1,11 +1,7 @@
-// @vitest-environment node
 import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { PgDialect } from "drizzle-orm/pg-core";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AnyContentTypeDefinition } from "@/content/types";
@@ -15,7 +11,6 @@ import {
   testFilePostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
-import { runtimeImports } from "@/tests/import-graph";
 
 import type { ContentAdvancedStore } from "./advanced-store";
 
@@ -23,8 +18,6 @@ import {
   createContentPublicRowHydrator,
   nestContentPublicRow,
 } from "./public-row-hydration";
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 const dialect = new PgDialect();
 
@@ -229,20 +222,6 @@ describe("the file fields", () => {
       cover: descriptor(3),
       document: 4,
     });
-  });
-});
-
-describe("both public services", () => {
-  it("read their hydration out of this module rather than declaring it", () => {
-    for (const file of ["public-service.ts", "localized-public-service.ts"]) {
-      const source = readFileSync(join(here, file), "utf8");
-
-      expect(runtimeImports(join(here, file))).toContain(
-        "./public-row-hydration",
-      );
-      // The duplication this module removed: thirty-odd identical lines, twice.
-      expect(source).not.toMatch(/const withCollections = async \(/);
-    }
   });
 });
 
