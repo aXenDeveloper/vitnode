@@ -80,6 +80,8 @@ export type {
 export type {
   AdminNavBundle,
   AdminNavConfig,
+  AdminNavFeature,
+  AdminNavFeatures,
   AdminNavGroupDeclaration,
   AdminNavItem,
   AdminNavItemDeclaration,

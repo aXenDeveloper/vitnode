@@ -4,11 +4,40 @@ description: Connect VitNode Payments to Stripe - test keys, hosted Checkout, fo
 icon: Wallet
 ---
 
-`@vitnode/stripe` uses Stripe-hosted Checkout for payments and the Stripe
-Customer Portal for managing cards and cancellations. The buyer's card details
-never touch your server.
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+`@vitnode/stripe` is the Stripe [payment provider](/docs/dev/payments/providers).
+It uses Stripe-hosted Checkout for payments and the Stripe Customer Portal for
+managing cards and cancellations. The buyer's card details never touch your
+server.
 
 <Steps>
+
+<Step>
+
+### Install the package
+
+Install it in the app that runs the API: `apps/api` for a standalone API, or
+`apps/web` when the web app serves `/api/*` itself.
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install @vitnode/stripe'>
+
+```bash tab="bun"
+bun i @vitnode/stripe
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/stripe
+```
+
+```bash tab="npm"
+npm i @vitnode/stripe
+```
+
+</Tabs>
+
+</Step>
 
 <Step>
 
@@ -24,6 +53,36 @@ STRIPE_SECRET_KEY=sk_test_...
 
 A publishable key (`pk_...`) is refused at startup - it is for browsers, and
 VitNode never needs one.
+
+</Step>
+
+<Step>
+
+### Register the provider
+
+Add `StripePaymentProvider` to `payments.providers`, only when the key is set:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { StripePaymentProvider } from '@vitnode/stripe'
+
+payments: {
+  // defaultCurrency, currencies...
+  providers: [
+    ...(process.env.STRIPE_SECRET_KEY
+      ? [
+          StripePaymentProvider({
+            secretKey: process.env.STRIPE_SECRET_KEY,
+            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+          }),
+        ]
+      : []),
+  ],
+},
+```
+
+Without the key the list is empty and Payments stays off. With the key set, a
+missing `STRIPE_WEBHOOK_SECRET` stops the API at startup with a message that
+names it.
 
 </Step>
 
@@ -110,15 +169,8 @@ portal**:
 - **Switch plans / update quantities:** turn off. Plan changes are not supported.
 
 The portal returns to **Settings → Billing**, or to the offer's page when opened
-from there. To use a specific portal configuration, pass its id:
-
-```ts
-StripePaymentProvider({
-  secretKey: process.env.STRIPE_SECRET_KEY,
-  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-  portalConfigurationId: 'bpc_...',
-})
-```
+from there. To use a specific portal configuration, pass its
+`portalConfigurationId` (see [Options](#options)).
 
 ## Test renewals without waiting a month
 
@@ -149,3 +201,50 @@ Currencies Stripe counts differently are left out rather than converted on a
 guess. Narrow the list with `currencies: ['PLN', 'EUR']`. One payment is
 limited to Stripe's eight-digit maximum; Stripe enforces its per-currency
 minimum when the checkout is created.
+
+## Options
+
+```ts
+import {
+  StripePaymentProvider,
+  STRIPE_API_VERSION, // "2026-09-30.endive"
+  STRIPE_SUPPORTED_CURRENCIES,
+  STRIPE_WEBHOOK_EVENTS,
+} from '@vitnode/stripe'
+```
+
+<TypeTable
+  type={{
+    secretKey: {
+      description: 'sk_test_/sk_live_ or a restricted rk_ key.',
+      type: 'string | undefined',
+      required: true,
+    },
+    webhookSecret: {
+      description: "This endpoint's signing secret (whsec_...).",
+      type: 'string | undefined',
+      required: true,
+    },
+    id: {
+      description:
+        'Provider id. Change it to register a second Stripe account next to the first.',
+      type: 'string',
+      default: '"stripe"',
+    },
+    currencies: {
+      description: 'A subset of STRIPE_SUPPORTED_CURRENCIES.',
+      type: 'readonly string[]',
+    },
+    portalConfigurationId: {
+      description: 'Customer Portal configuration (bpc_...).',
+      type: 'string',
+    },
+    client: {
+      description: 'A pre-built Stripe client - for tests.',
+      type: 'Stripe',
+    },
+  }}
+/>
+
+With a custom `id`, the webhook URL ends in that id instead of `stripe`. See
+[Use several providers](/docs/dev/payments/providers#use-several-providers).

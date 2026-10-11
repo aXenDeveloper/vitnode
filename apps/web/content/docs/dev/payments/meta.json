@@ -1,11 +1,11 @@
 {
   "title": "Payments",
-  "description": "Sell one-time purchases and monthly or yearly subscriptions from any plugin, with Stripe",
+  "description": "Sell one-time purchases and monthly or yearly subscriptions from any plugin, through one or more payment providers",
   "icon": "CreditCard",
   "pages": [
     "index",
     "configuration",
-    "stripe",
+    "providers",
     "---Guides---",
     "one-time-purchase",
     "subscriptions",

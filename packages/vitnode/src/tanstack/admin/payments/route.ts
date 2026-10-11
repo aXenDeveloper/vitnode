@@ -7,6 +7,7 @@ import type {
   SubscriptionsAdminParams,
 } from "@/views/admin/views/core/payments/payments-admin-query";
 
+import { requirePaymentsEnabled } from "@/tanstack/payments/require-enabled";
 import {
   adminPurchaseQueryOptions,
   adminPurchasesQueryOptions,
@@ -14,7 +15,6 @@ import {
   adminWebhookEventsQueryOptions,
   paymentsOverviewQueryOptions,
 } from "@/views/admin/views/core/payments/payments-admin-query";
-import { paymentsSettingsQueryOptions } from "@/views/payments/payments-query";
 
 import type { AdminScreenContext } from "../screen";
 
@@ -59,22 +59,17 @@ type Loader<TParams> = AdminScreenContext & {
 };
 
 const warmShared = async ({ queryClient }: AdminScreenContext) => {
-  await Promise.all([
-    queryClient.query({
-      ...paymentsOverviewQueryOptions(),
-      staleTime: "static",
-    }),
-    queryClient.query({
-      ...paymentsSettingsQueryOptions(),
-      staleTime: "static",
-    }),
-  ]);
+  await queryClient.query({
+    ...paymentsOverviewQueryOptions(),
+    staleTime: "static",
+  });
 };
 
 export const loadAdminPaymentsRoute = async (
   context: Loader<PurchasesAdminParams>,
 ): Promise<AdminPaymentsRouteData> => {
   requireAdminPermission(context.adminAccess, VIEW);
+  await requirePaymentsEnabled(context.queryClient);
 
   await Promise.all([
     warmShared(context),
@@ -96,6 +91,7 @@ export const loadAdminSubscriptionsRoute = async (
   context: Loader<SubscriptionsAdminParams>,
 ): Promise<AdminSubscriptionsRouteData> => {
   requireAdminPermission(context.adminAccess, VIEW);
+  await requirePaymentsEnabled(context.queryClient);
 
   await Promise.all([
     warmShared(context),
@@ -117,6 +113,7 @@ export const loadAdminWebhookEventsRoute = async (
   context: Loader<EventsAdminParams>,
 ): Promise<AdminWebhookEventsRouteData> => {
   requireAdminPermission(context.adminAccess, VIEW);
+  await requirePaymentsEnabled(context.queryClient);
 
   await context.queryClient.query({
     ...adminWebhookEventsQueryOptions({ params: context.params }),
@@ -135,24 +132,18 @@ export const loadAdminPaymentRoute = async (
   context: Loader<{ id: string }>,
 ): Promise<AdminPaymentRouteData> => {
   requireAdminPermission(context.adminAccess, VIEW);
+  await requirePaymentsEnabled(context.queryClient);
 
   const { id } = context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
-    // TanStack Router's own control-flow signal.
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+    // oxlint-disable-next-line typescript/only-throw-error
     throw notFound();
   }
 
-  const [detail] = await Promise.all([
-    context.queryClient.query({
-      ...adminPurchaseQueryOptions({ id }),
-      staleTime: "static",
-    }),
-    context.queryClient.query({
-      ...paymentsSettingsQueryOptions(),
-      staleTime: "static",
-    }),
-  ]);
+  const detail = await context.queryClient.query({
+    ...adminPurchaseQueryOptions({ id }),
+    staleTime: "static",
+  });
 
   return {
     canRetry: hasAdminPermission(context.adminAccess, RETRY),

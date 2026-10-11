@@ -164,10 +164,6 @@
         "valid_until": "Valid until {date}",
         "loading": "Loading your certificate…",
         "error": "The certificate could not be loaded."
-      },
-      "disabled": {
-        "title": "Payments are not enabled",
-        "desc": "This demo needs a payment provider. Add Stripe test keys to the API's environment and restart - the Payments documentation walks through it in a few minutes."
       }
     },
     "events": {

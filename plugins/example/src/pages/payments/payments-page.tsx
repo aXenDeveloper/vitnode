@@ -42,6 +42,7 @@ import {
   isPaymentsRequestError,
   paymentOffersQueryOptions,
   paymentsSettingsQueryOptions,
+  requirePaymentsEnabled,
   subscriptionsQueryOptions,
   SubscriptionStateBadge,
   useBillingPortal,
@@ -93,19 +94,6 @@ const choosableCurrencies = (
     .filter(code =>
       offers.some(offer => offer.prices.some(price => price.currency === code)),
     );
-
-const DisabledNotice = () => {
-  const t = useTranslations("@vitnode/example.payments.disabled");
-
-  return (
-    <Alert variant="info">
-      <AlertTitle>{t("title")}</AlertTitle>
-      <AlertDescription className="leading-relaxed text-pretty">
-        {t("desc")}
-      </AlertDescription>
-    </Alert>
-  );
-};
 
 /** What happened to the purchase the buyer just came back from. */
 const ReturnStatus = ({
@@ -419,7 +407,7 @@ const PaymentsPage = ({
           </p>
         </div>
 
-        {settings.enabled && currency ? (
+        {currency ? (
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">{tCheckout("currency")}</span>
             <NativeSelect
@@ -442,8 +430,6 @@ const PaymentsPage = ({
         ) : null}
       </header>
 
-      {settings.enabled ? null : <DisabledNotice />}
-
       {search.purchase && userId !== null ? (
         <ReturnStatus purchaseId={search.purchase} userId={userId} />
       ) : null}
@@ -454,7 +440,7 @@ const PaymentsPage = ({
         </Alert>
       ) : null}
 
-      {settings.enabled && userId === null ? (
+      {userId === null ? (
         <Alert variant="info">
           <AlertDescription className="flex flex-wrap items-center gap-2">
             {t("sign_in")}
@@ -492,11 +478,11 @@ const PaymentsPage = ({
           <CardContent className="flex flex-1 flex-col gap-4">
             {lifetimePrice ? (
               <PriceLine {...lifetimePrice} interval={null} />
-            ) : settings.enabled ? (
+            ) : (
               <p className="text-muted-foreground">
                 {tCheckout("unavailable")}
               </p>
-            ) : null}
+            )}
             {owned && userId !== null ? (
               <FeatureCertificate
                 offerId={EXAMPLE_OFFERS.lifetime}
@@ -509,12 +495,10 @@ const PaymentsPage = ({
               </p>
             )}
           </CardContent>
-          {owned || !settings.enabled ? null : (
+          {owned ? null : (
             <CardFooter>
               <Button
-                disabled={
-                  !settings.enabled || !lifetimePrice || userId === null
-                }
+                disabled={!lifetimePrice || userId === null}
                 isLoading={
                   busy &&
                   checkout.variables?.offerId === EXAMPLE_OFFERS.lifetime
@@ -534,8 +518,7 @@ const PaymentsPage = ({
 
         <PlanCard
           busy={busy && checkout.variables?.offerId === EXAMPLE_OFFERS.plan}
-          canBuy={settings.enabled && !!planPrice && userId !== null}
-          enabled={settings.enabled}
+          canBuy={!!planPrice && userId !== null}
           interval={interval}
           onIntervalChange={setInterval}
           onManage={() => {
@@ -648,7 +631,6 @@ const SubscriptionSummary = ({
 const PlanCard = ({
   busy,
   canBuy,
-  enabled,
   interval,
   onIntervalChange,
   onManage,
@@ -661,7 +643,6 @@ const PlanCard = ({
 }: {
   busy: boolean;
   canBuy: boolean;
-  enabled: boolean;
   interval: Interval;
   onIntervalChange: (interval: Interval) => void;
   onManage: () => void;
@@ -719,9 +700,9 @@ const PlanCard = ({
         ) : null}
         {planPrice ? (
           <PriceLine {...planPrice} interval={interval} />
-        ) : enabled ? (
+        ) : (
           <p className="text-muted-foreground">{tCheckout("unavailable")}</p>
-        ) : null}
+        )}
         {userId === null ? null : (
           <React.Suspense fallback={<Skeleton className="h-16 w-full" />}>
             <PlanSubscriptionSlot userId={userId} />
@@ -736,26 +717,24 @@ const PlanCard = ({
           </p>
         )}
       </CardContent>
-      {enabled ? (
-        <CardFooter className="flex flex-wrap gap-2">
-          {subscribed || userId === null ? null : (
-            <Button disabled={!canBuy} isLoading={busy} onClick={onSubscribe}>
-              <CreditCardIcon aria-hidden="true" />
-              {busy ? tCheckout("redirecting") : tCheckout("subscribe")}
-            </Button>
-          )}
-          {userId !== null && subscribed ? (
-            <Button
-              isLoading={portalPending}
-              onClick={onManage}
-              variant="outline"
-            >
-              <ExternalLinkIcon aria-hidden="true" />
-              {tState("billing.manage")}
-            </Button>
-          ) : null}
-        </CardFooter>
-      ) : null}
+      <CardFooter className="flex flex-wrap gap-2">
+        {subscribed || userId === null ? null : (
+          <Button disabled={!canBuy} isLoading={busy} onClick={onSubscribe}>
+            <CreditCardIcon aria-hidden="true" />
+            {busy ? tCheckout("redirecting") : tCheckout("subscribe")}
+          </Button>
+        )}
+        {userId !== null && subscribed ? (
+          <Button
+            isLoading={portalPending}
+            onClick={onManage}
+            variant="outline"
+          >
+            <ExternalLinkIcon aria-hidden="true" />
+            {tState("billing.manage")}
+          </Button>
+        ) : null}
+      </CardFooter>
     </Card>
   );
 };
@@ -774,11 +753,10 @@ export const route = defineRoute<PaymentsPageData, PaymentsSearch>({
     const auth = await ensureAuthState(context.queryClient);
     const userId = auth.user?.id ?? null;
 
+    // No provider configured: the page does not exist.
+    await requirePaymentsEnabled(context.queryClient);
+
     await Promise.all([
-      context.queryClient.query({
-        ...paymentsSettingsQueryOptions(),
-        staleTime: "static",
-      }),
       context.queryClient.query({
         ...paymentOffersQueryOptions({ pluginId: CONFIG_PLUGIN.pluginId }),
         staleTime: "static",

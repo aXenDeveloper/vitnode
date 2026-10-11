@@ -1,6 +1,6 @@
 ---
 title: Configure Payments
-description: Enable VitNode Payments in vitnode.api.config.ts - currencies, the Stripe provider, environment variables and the queue worker, for a standalone API or an API embedded in the web app.
+description: Enable VitNode Payments in vitnode.api.config.ts - currencies, payment providers, environment variables and the queue worker, for a standalone API or an API embedded in the web app.
 icon: Settings
 ---
 
@@ -8,8 +8,10 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 Payments is configured in one place: `buildApiConfig` in
-`vitnode.api.config.ts`. Leave the `payments` key out and Payments is off -
-nothing else changes, and the build does not need Stripe.
+`vitnode.api.config.ts`. Payments is on when at least one
+[payment provider](/docs/dev/payments/providers) is registered. Leave the
+`payments` key out, or the `providers` list empty, and Payments is off: every
+payments screen is hidden and the build does not need Stripe.
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
@@ -17,28 +19,30 @@ import { StripePaymentProvider } from '@vitnode/stripe'
 
 export const vitNodeApiConfig = buildApiConfig({
   // ...
-  payments: process.env.STRIPE_SECRET_KEY
-    ? {
-        defaultCurrency: 'PLN',
-        currencies: {
-          PLN: { currencyDisplay: 'code' }, // 19,00 PLN
-          USD: { currencyDisplay: 'symbol' }, // $19.00
-          EUR: { currencyDisplay: 'symbol' },
-        },
-        providers: [
-          StripePaymentProvider({
-            secretKey: process.env.STRIPE_SECRET_KEY,
-            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-          }),
-        ],
-      }
-    : undefined,
+  payments: {
+    defaultCurrency: 'PLN',
+    currencies: {
+      PLN: { currencyDisplay: 'code' }, // 19,00 PLN
+      USD: { currencyDisplay: 'symbol' }, // $19.00
+      EUR: { currencyDisplay: 'symbol' },
+    },
+    providers: [
+      ...(process.env.STRIPE_SECRET_KEY
+        ? [
+            StripePaymentProvider({
+              secretKey: process.env.STRIPE_SECRET_KEY,
+              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+            }),
+          ]
+        : []),
+    ],
+  },
 })
 ```
 
-The ternary keeps the repository runnable without a Stripe account. Once
-`STRIPE_SECRET_KEY` is set, a missing `STRIPE_WEBHOOK_SECRET` stops the API at
-startup with a message that names the variable.
+Stripe is added only when its key is set, so the repository runs without a
+Stripe account - Payments simply stays off. Install and connect a provider with
+its own guide, for example [Set up Stripe](/docs/dev/payments/providers/stripe).
 
 <Callout title="API only">
   Never import `vitnode.api.config.ts` into browser code. The UI reads a
@@ -46,27 +50,6 @@ startup with a message that names the variable.
   enabled currencies, display preferences and provider capabilities - never a
   key.
 </Callout>
-
-## Install the Stripe provider
-
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install @vitnode/stripe'>
-
-```bash tab="bun"
-bun i @vitnode/stripe
-```
-
-```bash tab="pnpm"
-pnpm i @vitnode/stripe
-```
-
-```bash tab="npm"
-npm i @vitnode/stripe
-```
-
-</Tabs>
-
-Install it in the app that runs the API: `apps/api` for a standalone API, or
-`apps/web` when the web app serves `/api/*` itself.
 
 ## Options
 
@@ -84,7 +67,8 @@ Install it in the app that runs the API: `apps/api` for a standalone API, or
       required: true,
     },
     providers: {
-      description: 'Registered providers. Ids must be unique.',
+      description:
+        'Payment providers buyers pay through. Ids must be unique. Empty turns Payments off.',
       type: 'PaymentProvider[]',
       required: true,
     },
@@ -108,7 +92,8 @@ Install it in the app that runs the API: `apps/api` for a standalone API, or
 
 Startup refuses: a default currency that is not enabled, an unknown currency
 code, two providers with one id, a default provider that is not registered,
-and an offer that is malformed or registered twice.
+and an offer that is malformed or registered twice. An empty `providers` list
+is not an error - it turns Payments off.
 
 ## Environment variables
 
@@ -194,7 +179,7 @@ not Payments is configured, and nothing writes to them until it is.
 ## Next steps
 
 <Cards>
-  <Card title="Set up Stripe" href="/docs/dev/payments/stripe" />
+  <Card title="Payment providers" href="/docs/dev/payments/providers" />
   <Card
     title="Sell a one-time purchase"
     href="/docs/dev/payments/one-time-purchase"

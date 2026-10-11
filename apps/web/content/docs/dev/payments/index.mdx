@@ -1,12 +1,12 @@
 ---
 title: Payments
-description: How VitNode Payments splits work between core, the payment provider and your plugin - one-time purchases and monthly or yearly subscriptions with Stripe.
+description: How VitNode Payments splits work between core, payment providers and your plugin - one-time purchases and monthly or yearly subscriptions, with Stripe as the first provider.
 icon: CreditCard
 ---
 
 import { ImgDocs } from '@/components/fumadocs/img'
-import billingSettings from './billing-settings.png'
-import examplePage from './example-page.png'
+import billingSettings from './billing-settings.webp'
+import examplePage from './example-page.webp'
 
 VitNode Payments lets any plugin sell something: a one-time purchase or a
 fixed-price monthly or yearly subscription. Core takes the money and keeps the
@@ -26,7 +26,7 @@ working reference for everything on these pages.
 | Part         | Owns                                                                                                                                        |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Core**     | Checkout, purchase and subscription records, the webhook inbox, the queue jobs, reconciliation, the billing settings screen and the AdminCP |
-| **Provider** | Talking to the payment service: hosted checkout, signatures, customer portal. `@vitnode/stripe` is the first one                            |
+| **Provider** | Talking to the payment service: hosted checkout, signatures, customer portal. Several can run side by side; Stripe is the first one          |
 | **Plugin**   | Its offers, prices, who may buy, and what a payment unlocks - written in its own tables                                                     |
 
 A plugin never talks to Stripe and never sees a Stripe object. It declares an
@@ -50,8 +50,9 @@ asks the server, and the server asks the provider. See
 
 - One-time purchases and fixed-price monthly/yearly subscriptions
 - Several currencies with explicit prices, formatted with `Intl.NumberFormat`
-- Stripe-hosted Checkout and the Stripe Customer Portal
-- Refund and dispute tracking for payments made in Stripe
+- One or more [payment providers](/docs/dev/payments/providers) - Stripe today,
+  with hosted Checkout and the Customer Portal
+- Refund and dispute tracking for payments made in the provider
 - Billing history in **Settings → Billing** and an AdminCP **Payments** section
 
 <ImgDocs
@@ -74,7 +75,7 @@ AdminCP, and manual or offline payments.
 
 <Cards>
   <Card title="Configure Payments" href="/docs/dev/payments/configuration" />
-  <Card title="Set up Stripe" href="/docs/dev/payments/stripe" />
+  <Card title="Payment providers" href="/docs/dev/payments/providers" />
   <Card
     title="Sell a one-time purchase"
     href="/docs/dev/payments/one-time-purchase"

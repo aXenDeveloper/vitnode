@@ -1,10 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import {
-  paymentsSettingsQueryOptions,
   purchasesQueryOptions,
   subscriptionsQueryOptions,
 } from "@/views/payments/payments-query";
+
+import { requirePaymentsEnabled } from "./require-enabled";
 
 /** Translation namespaces the billing screen renders from. */
 export const BILLING_NAMESPACES = ["core.payments"] as const;
@@ -17,11 +18,9 @@ export const loadBillingRoute = async ({
   queryClient: QueryClient;
   userId: number;
 }): Promise<{ userId: number }> => {
+  await requirePaymentsEnabled(queryClient);
+
   await Promise.all([
-    queryClient.query({
-      ...paymentsSettingsQueryOptions(),
-      staleTime: "static",
-    }),
     queryClient.infiniteQuery({
       ...purchasesQueryOptions({ userId }),
       staleTime: "static",

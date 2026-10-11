@@ -5,14 +5,16 @@ icon: LifeBuoy
 ---
 
 import { ImgDocs } from '@/components/fumadocs/img'
-import uncertainAttempt from './admin-purchase-uncertain.png'
+import uncertainAttempt from './admin-purchase-uncertain.webp'
 
-## "Payments are not enabled"
+## Payments screens are missing or answer 404
 
-The API config has no `payments` key - in the example apps, because
-`STRIPE_SECRET_KEY` is empty. Add the keys to the `.env` of the app that runs
-the API and restart. `GET /api/@vitnode/core/payments/settings` should then
-answer `"enabled": true`. See [Configure Payments](/docs/dev/payments/configuration).
+Payments is off: no provider is registered. In the example apps that means
+`STRIPE_SECRET_KEY` is empty, so the Stripe provider is left out. **Settings →
+Billing**, **AdminCP → Payments** and `/example/payments` stay hidden until a
+provider is registered. Add the keys to the `.env` of the app that runs the API
+and restart. `GET /api/@vitnode/core/payments/settings` should then answer
+`"enabled": true`. See [Payment providers](/docs/dev/payments/providers).
 
 ## The API stops at startup with `[VitNode Payments]`
 

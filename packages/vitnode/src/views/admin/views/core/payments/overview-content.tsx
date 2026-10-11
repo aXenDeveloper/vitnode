@@ -64,12 +64,6 @@ export const PaymentsOverviewContent = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {data.enabled ? null : (
-        <Alert variant="info">
-          <AlertDescription>{t("disabled")}</AlertDescription>
-        </Alert>
-      )}
-
       <WorkerStatus worker={data.worker} />
 
       <div className="grid gap-4 md:grid-cols-2">

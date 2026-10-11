@@ -3320,7 +3320,6 @@
     "payments": {
       "title": "Payments",
       "desc": "Purchases, payment processing and fulfillment across every plugin.",
-      "disabled": "Payments are not configured. History stays readable; new purchases are off.",
       "overview": {
         "totals": "Collected",
         "totals_desc": "Totals are kept per currency and never added together.",

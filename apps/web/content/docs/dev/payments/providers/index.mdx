@@ -1,0 +1,136 @@
+---
+title: Payment providers
+description: Register the payment providers VitNode Payments charges through - Stripe today, several side by side, and what happens when no provider is registered.
+icon: Blocks
+---
+
+A payment provider connects VitNode Payments to a payment service. It creates
+the hosted checkout, verifies webhooks and opens the billing portal. Core keeps
+the records, and your plugins never talk to a provider directly.
+
+## Available providers
+
+| Provider                                       | Package           | One-time | Subscriptions   | Billing portal |
+| ---------------------------------------------- | ----------------- | -------- | --------------- | -------------- |
+| [Stripe](/docs/dev/payments/providers/stripe)  | `@vitnode/stripe` | Yes      | Monthly, yearly | Yes            |
+
+Stripe is the only provider for now. More will join this table.
+
+## Register a provider
+
+Providers go in `payments.providers` in `vitnode.api.config.ts`. Add one only
+when its keys exist, so the same config runs with and without them:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { StripePaymentProvider } from '@vitnode/stripe'
+
+export const vitNodeApiConfig = buildApiConfig({
+  payments: {
+    defaultCurrency: 'PLN',
+    currencies: { PLN: { currencyDisplay: 'code' } },
+    providers: [
+      ...(process.env.STRIPE_SECRET_KEY
+        ? [
+            StripePaymentProvider({
+              secretKey: process.env.STRIPE_SECRET_KEY,
+              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+            }),
+          ]
+        : []),
+    ],
+  },
+})
+```
+
+## Without a provider, Payments is off
+
+An empty `providers` list switches Payments off, the same as leaving `payments`
+out. Nothing fails at startup. Instead:
+
+- **Settings → Billing** and **AdminCP → Payments** disappear from the menus,
+  and their pages answer 404.
+- Plugin payment pages, like `/example/payments`, answer 404 too.
+- `GET /api/@vitnode/core/payments/settings` returns `"enabled": false`, and
+  starting a checkout or opening the billing portal answers
+  `503 payments_disabled`.
+
+Nothing is deleted. Register a provider again and the history is back.
+
+A plugin hides its own payment page with `requirePaymentsEnabled` in the page
+loader. It loads the public settings and throws a 404 when Payments is off:
+
+```ts title="plugins/example/src/pages/payments/payments-page.tsx"
+import { requirePaymentsEnabled } from '@vitnode/core/tanstack/payments'
+
+export const route = defineRoute({
+  load: async ({ context }) => {
+    await requirePaymentsEnabled(context.queryClient)
+    // ...load the page's data
+  },
+})
+```
+
+## Use several providers
+
+Register each provider under its own id, and name the one checkouts use by
+default. Two Stripe accounts, for example:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+payments: {
+  defaultCurrency: 'EUR',
+  currencies: { EUR: {}, PLN: { currencyDisplay: 'code' } },
+  defaultProvider: 'stripe',
+  providers: [
+    StripePaymentProvider({
+      secretKey: process.env.STRIPE_SECRET_KEY,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    }),
+    StripePaymentProvider({
+      id: 'stripe-pl',
+      secretKey: process.env.STRIPE_PL_SECRET_KEY,
+      webhookSecret: process.env.STRIPE_PL_WEBHOOK_SECRET,
+    }),
+  ],
+},
+```
+
+- Ids are 1-32 lowercase letters, digits or dashes, unique across providers.
+- `defaultProvider` is required once there is more than one.
+- Each provider has its own webhook URL:
+  `/api/@vitnode/core/payments/webhooks/{providerId}`, for example
+  `.../webhooks/stripe-pl`.
+
+Checkouts use the default provider. Pass `provider` to charge through another
+one, and ask for that provider's prices, since each provider supports its own
+currencies:
+
+```tsx
+const offers = useSuspenseQuery(
+  paymentOffersQueryOptions({ pluginId: '@vitnode/example', provider: 'stripe-pl' }),
+)
+
+checkout.mutate({
+  currency: 'PLN',
+  interval: null,
+  offerId: 'lifetime-pass',
+  pluginId: '@vitnode/example',
+  provider: 'stripe-pl',
+})
+```
+
+A purchase remembers the provider it was paid through. Webhooks, renewals,
+refunds and **Manage billing** in **Settings → Billing** always go back to
+that provider. `GET /api/@vitnode/core/payments/settings` lists every
+provider with what it can do, so a page can offer the choice.
+
+## Write your own provider
+
+A provider is a plain object that implements `PaymentProvider` from
+`@vitnode/core/payments`. Optional parts are capabilities: leave out
+`subscriptions` and the provider sells one-time purchases only. See
+[the provider contract](/docs/dev/payments/provider-reference#the-provider-contract).
+
+<Cards>
+  <Card title="Set up Stripe" href="/docs/dev/payments/providers/stripe" />
+  <Card title="Configure Payments" href="/docs/dev/payments/configuration" />
+</Cards>

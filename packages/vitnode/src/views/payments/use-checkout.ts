@@ -18,6 +18,8 @@ export interface CheckoutChoice {
   interval: BillingInterval | null;
   offerId: string;
   pluginId: string;
+  /** A registered provider's id. Omit for the default provider. */
+  provider?: string;
 }
 
 /** Errors after which repeating the same request is the right thing to do. */

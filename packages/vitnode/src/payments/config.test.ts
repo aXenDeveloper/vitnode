@@ -116,10 +116,8 @@ describe("resolvePaymentsConfig", () => {
     ).toThrow(/between 45 and 1440/);
   });
 
-  it("refuses an empty provider list", () => {
-    expect(() => resolvePaymentsConfig(config({ providers: [] }))).toThrow(
-      /at least one provider/,
-    );
+  it("turns Payments off when no provider is registered", () => {
+    expect(resolvePaymentsConfig(config({ providers: [] }))).toBeNull();
   });
 });
 

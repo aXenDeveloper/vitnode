@@ -187,12 +187,15 @@ export const BillingContent = ({ userId }: { userId: number }) => {
       .map(provider => provider.id),
   );
 
-  const manage = () => {
-    portal.mutate(undefined, {
-      onError: error => {
-        toast.error(t("portal_error"), { description: error.message });
+  const manage = (provider?: string) => {
+    portal.mutate(
+      { provider },
+      {
+        onError: error => {
+          toast.error(t("portal_error"), { description: error.message });
+        },
       },
-    });
+    );
   };
 
   return (
@@ -220,7 +223,9 @@ export const BillingContent = ({ userId }: { userId: number }) => {
                 canManage={portalProviders.has(subscription.provider)}
                 isManaging={portal.isPending}
                 key={subscription.id}
-                onManage={manage}
+                onManage={() => {
+                  manage(subscription.provider);
+                }}
                 subscription={subscription}
               />
             ))}
@@ -252,7 +257,9 @@ export const BillingContent = ({ userId }: { userId: number }) => {
           {portalProviders.size > 0 && purchaseRows.length > 0 ? (
             <Button
               isLoading={portal.isPending}
-              onClick={manage}
+              onClick={() => {
+                manage();
+              }}
               size="sm"
               variant="ghost"
             >

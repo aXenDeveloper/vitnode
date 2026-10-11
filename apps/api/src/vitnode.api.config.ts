@@ -70,22 +70,25 @@ export const vitNodeApiConfig = buildApiConfig({
   // Payments stay off until Stripe test keys are in `.env`, so the repository
   // runs without a Stripe account. With STRIPE_SECRET_KEY set, a missing
   // STRIPE_WEBHOOK_SECRET stops the API at startup instead of failing later.
-  payments: process.env.STRIPE_SECRET_KEY
-    ? {
-        defaultCurrency: "PLN",
-        currencies: {
-          PLN: { currencyDisplay: "code" },
-          USD: { currencyDisplay: "symbol" },
-          EUR: { currencyDisplay: "symbol" },
-        },
-        providers: [
-          StripePaymentProvider({
-            secretKey: process.env.STRIPE_SECRET_KEY,
-            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-          }),
-        ],
-      }
-    : undefined,
+  payments: {
+    defaultCurrency: "PLN",
+    currencies: {
+      PLN: { currencyDisplay: "code" },
+      USD: { currencyDisplay: "symbol" },
+      EUR: { currencyDisplay: "symbol" },
+    },
+    // No provider, no Payments: every payments screen stays hidden.
+    providers: [
+      ...(process.env.STRIPE_SECRET_KEY
+        ? [
+            StripePaymentProvider({
+              secretKey: process.env.STRIPE_SECRET_KEY,
+              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+            }),
+          ]
+        : []),
+    ],
+  },
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,

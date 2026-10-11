@@ -51,6 +51,7 @@ const hrefs = (nav: ReturnType<typeof buildAdminNav>): string[] =>
 describe("the core group", () => {
   it("gives a root admin every core screen", () => {
     const nav = buildAdminNav({
+      features: { payments: true },
       permissions: root,
       t,
       vitNodeConfig: config(),

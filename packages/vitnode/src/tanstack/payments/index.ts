@@ -5,6 +5,7 @@
  * config or a provider.
  */
 export { BILLING_NAMESPACES, loadBillingRoute } from "./billing-route";
+export { requirePaymentsEnabled } from "./require-enabled";
 
 export { BillingContent } from "@/views/payments/billing/billing-content";
 export {

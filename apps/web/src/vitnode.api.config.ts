@@ -62,22 +62,25 @@ export const vitNodeApiConfig = buildApiConfig({
   }),
   cron: process.env.VITNODE_CRON === 'node' ? NodeCronAdapter() : undefined,
   // Off unless Stripe test keys are in `.env` - see `.env.example`.
-  payments: process.env.STRIPE_SECRET_KEY
-    ? {
-        defaultCurrency: 'PLN',
-        currencies: {
-          PLN: { currencyDisplay: 'code' },
-          USD: { currencyDisplay: 'symbol' },
-          EUR: { currencyDisplay: 'symbol' },
-        },
-        providers: [
-          StripePaymentProvider({
-            secretKey: process.env.STRIPE_SECRET_KEY,
-            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-          }),
-        ],
-      }
-    : undefined,
+  payments: {
+    defaultCurrency: 'PLN',
+    currencies: {
+      PLN: { currencyDisplay: 'code' },
+      USD: { currencyDisplay: 'symbol' },
+      EUR: { currencyDisplay: 'symbol' },
+    },
+    // No provider, no Payments: every payments screen stays hidden.
+    providers: [
+      ...(process.env.STRIPE_SECRET_KEY
+        ? [
+            StripePaymentProvider({
+              secretKey: process.env.STRIPE_SECRET_KEY,
+              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+            }),
+          ]
+        : []),
+    ],
+  },
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,

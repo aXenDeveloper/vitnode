@@ -158,48 +158,10 @@ converts inside its adapter.
 `uncertain` and `unavailable` are retried; the others are recorded as permanent
 failures for the AdminCP.
 
-## `@vitnode/stripe`
+## Providers
 
-```ts
-import {
-  StripePaymentProvider,
-  STRIPE_API_VERSION, // "2026-09-30.endive"
-  STRIPE_SUPPORTED_CURRENCIES,
-  STRIPE_WEBHOOK_EVENTS,
-} from '@vitnode/stripe'
-```
-
-<TypeTable
-  type={{
-    secretKey: {
-      description: 'sk_test_/sk_live_ or a restricted rk_ key.',
-      type: 'string | undefined',
-      required: true,
-    },
-    webhookSecret: {
-      description: "This endpoint's signing secret (whsec_...).",
-      type: 'string | undefined',
-      required: true,
-    },
-    id: {
-      description: 'Provider id, for registering two Stripe accounts.',
-      type: 'string',
-      default: '"stripe"',
-    },
-    currencies: {
-      description: 'A subset of STRIPE_SUPPORTED_CURRENCIES.',
-      type: 'readonly string[]',
-    },
-    portalConfigurationId: {
-      description: 'Customer Portal configuration (bpc_...).',
-      type: 'string',
-    },
-    client: {
-      description: 'A pre-built Stripe client - for tests.',
-      type: 'Stripe',
-    },
-  }}
-/>
+The providers you can register, and the options of each, are listed in
+[Payment providers](/docs/dev/payments/providers).
 
 ## Money helpers
 

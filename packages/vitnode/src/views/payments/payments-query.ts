@@ -171,7 +171,14 @@ export const paymentsSettingsQueryOptions = () =>
     staleTime: 5 * RECORD_STALE_TIME,
   });
 
-export const paymentOffersQueryOptions = ({ pluginId }: { pluginId: string }) =>
+export const paymentOffersQueryOptions = ({
+  pluginId,
+  provider,
+}: {
+  pluginId: string;
+  /** Prices this provider can charge. Omit for the default provider. */
+  provider?: string;
+}) =>
   queryOptions({
     queryFn: async (): Promise<{
       enabled: boolean;
@@ -179,7 +186,7 @@ export const paymentOffersQueryOptions = ({ pluginId }: { pluginId: string }) =>
     }> => {
       const response = await fetcher({
         plugin: CONFIG_PLUGIN.pluginId,
-        args: { query: { pluginId } },
+        args: { query: { pluginId, provider } },
         method: "get",
         module: "payments",
         path: "/offers",
@@ -189,7 +196,12 @@ export const paymentOffersQueryOptions = ({ pluginId }: { pluginId: string }) =>
 
       return await response.json();
     },
-    queryKey: [...PAYMENTS_QUERY_ROOT, "offers", pluginId] as const,
+    queryKey: [
+      ...PAYMENTS_QUERY_ROOT,
+      "offers",
+      pluginId,
+      provider ?? null,
+    ] as const,
     retry: false,
     staleTime: RECORD_STALE_TIME,
   });
@@ -285,6 +297,8 @@ export interface StartCheckoutInput {
   interval: BillingInterval | null;
   offerId: string;
   pluginId: string;
+  /** A registered provider's id. Omit for the default provider. */
+  provider?: string;
 }
 
 export const startCheckoutRequest = async (
@@ -317,13 +331,27 @@ export const cancelPurchaseRequest = async (id: string): Promise<Purchase> => {
   return (await response.json()).purchase;
 };
 
-export const openBillingPortalRequest = async (returnTo?: {
-  offerId: string;
-  pluginId: string;
-}): Promise<string> => {
+export interface BillingPortalInput {
+  /** Return to this offer's page instead of Settings -> Billing. */
+  offerId?: string;
+  pluginId?: string;
+  /** A registered provider's id. Omit for the default provider. */
+  provider?: string;
+}
+
+export const openBillingPortalRequest = async ({
+  offerId,
+  pluginId,
+  provider,
+}: BillingPortalInput = {}): Promise<string> => {
   const response = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
-    args: { body: returnTo ? { returnTo } : {} },
+    args: {
+      body: {
+        provider,
+        returnTo: offerId && pluginId ? { offerId, pluginId } : undefined,
+      },
+    },
     method: "post",
     module: "payments",
     path: "/portal",

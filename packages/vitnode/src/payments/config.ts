@@ -16,7 +16,10 @@ export interface PaymentsCurrencyConfig {
   currencyDisplay?: CurrencyDisplay;
 }
 
-/** `payments` in `buildApiConfig`. Leave it out and Payments is off. */
+/**
+ * `payments` in `buildApiConfig`. Leave it out, or register no provider, and
+ * Payments is off.
+ */
 export interface PaymentsConfig {
   /** How long a hosted checkout stays payable, 45-1440 minutes. Default 60. */
   checkoutExpiresInMinutes?: number;
@@ -26,6 +29,7 @@ export interface PaymentsConfig {
   defaultCurrency: string;
   /** Required when more than one provider is registered. */
   defaultProvider?: string;
+  /** Every provider buyers can pay through. Empty turns Payments off. */
   providers: PaymentProvider[];
   /**
    * Days a processed webhook stays in the inbox before its row is deleted.
@@ -71,8 +75,8 @@ const wholeInRange = (
 
 /**
  * Validates `payments` once, at startup. Returns `null` when Payments is not
- * configured - every payment route then answers that Payments is disabled and
- * nothing else changes.
+ * configured or has no provider - every payment route then answers that
+ * Payments is disabled and every payments screen is hidden.
  */
 export const resolvePaymentsConfig = (
   config: PaymentsConfig | undefined,
@@ -115,11 +119,8 @@ export const resolvePaymentsConfig = (
 
   const providers = config.providers ?? [];
 
-  if (providers.length === 0) {
-    throw new PaymentsConfigError(
-      'Register at least one provider in "payments.providers", e.g. StripePaymentProvider().',
-    );
-  }
+  // No provider (say, no keys in this environment) means Payments is off.
+  if (providers.length === 0) return null;
 
   const ids = new Set<string>();
 
