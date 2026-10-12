@@ -29,7 +29,7 @@ import { prefetchSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { NotificationsBell } from "../notifications/bell";
-import { isPrerenderRequest } from "../prerender";
+import { isSharedRenderRequest } from "../prerender";
 import { MobileUserMenu } from "./mobile-user-menu";
 
 const NO_MESSAGES: AbstractIntlMessages = {};
@@ -139,7 +139,7 @@ const loadShellNavigation = async ({
 export const loadMainShell = async (
   context: { locale: string; queryClient: QueryClient },
   {
-    isPrerendering = isPrerenderRequest,
+    isPrerendering = isSharedRenderRequest,
   }: { isPrerendering?: () => boolean } = {},
 ): Promise<void> => {
   if (isPrerendering()) {

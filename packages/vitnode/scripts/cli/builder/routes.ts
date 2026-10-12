@@ -3,13 +3,35 @@ import { join } from "node:path";
 
 export type RouteMode = "dynamic" | "partial" | "static";
 
+export interface BuildRoutePageCache {
+  policy: null | { maxAge: number; staleWhileRevalidate?: number };
+  /** `"host"` when the app's `vitNodeConfig.pageCache` decided it. */
+  source: "host" | "route";
+}
+
 export interface BuildRoute {
+  /** The effective HTML cache policy, when anything declared one. */
+  cache?: BuildRoutePageCache | null;
+  /** Other locales' and domains' URL patterns for a cached route. */
+  localizedPaths?: string[];
   mode: RouteMode;
   path: string;
   staticPaths: string[];
 }
 
+export type PageCacheStorageKind = "memory" | "redis";
+
+export interface BuildRouteReport {
+  /** Whether the server entry applies the policies at all. */
+  pageCacheServed: boolean;
+  /** `null` when the app turned the page cache off. */
+  pageCacheStorage: null | PageCacheStorageKind;
+  routes: BuildRoute[];
+}
+
 interface RouteReportApi {
+  pageCacheServed?: () => boolean;
+  pageCacheStorage?: () => null | PageCacheStorageKind;
   routeReport: (htmlPaths: readonly string[]) => BuildRoute[];
 }
 

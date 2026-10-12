@@ -486,13 +486,16 @@ describe("vitnode build route summary", () => {
     const output = runtime.output();
 
     expect(output).toContain("Routes");
-    expect(output).toContain("├ ○ /\n");
-    expect(output).toContain("│   └ /pl");
-    expect(output).toContain("● /solutions/:slug");
-    expect(output).toContain("ƒ /login");
-    expect(output).toContain("ƒ /admin/*  2 AdminCP routes");
+    expect(output).toMatch(/Route\s+Rendering\s+Page cache/);
+    expect(output).toMatch(/ \/\s+Static\s+Build-time HTML\n/);
+    expect(output).toMatch(/└ \/pl\s+prerendered/);
+    expect(output).toMatch(
+      /\/solutions\/:slug\s+Partial\s+Build-time HTML × 1, others: None/,
+    );
+    expect(output).toMatch(/\/login\s+SSR\s+None/);
+    expect(output).toContain("/admin/*  2 AdminCP routes");
     expect(output).not.toContain("/admin/core/users");
-    expect(output).toMatch(/○ {2}Static\s+prerendered as static HTML/);
+    expect(output).toMatch(/Static\s+HTML written at build time/);
     expect(output.indexOf("Routes")).toBeGreaterThan(
       output.indexOf("Client JS"),
     );
@@ -506,7 +509,7 @@ describe("vitnode build route summary", () => {
       { verbose: true },
     );
 
-    expect(runtime.output()).toContain("ƒ /admin/core/users");
+    expect(runtime.output()).toMatch(/\/admin\/core\/users\s+SSR\s+None/);
   });
 
   it("skips the section rather than fail a finished build", async () => {

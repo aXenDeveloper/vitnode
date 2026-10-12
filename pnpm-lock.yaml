@@ -648,6 +648,9 @@ importers:
       motion:
         specifier: ^14.0.0
         version: 14.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      ocache:
+        specifier: ^0.3.0
+        version: 0.3.0
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1

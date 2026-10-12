@@ -22,6 +22,7 @@ So a published article shows up on the next request, with nothing to expire. Add
 | Where the content is read               | Cache with                              | Expire it with                                        |
 | --------------------------------------- | --------------------------------------- | ----------------------------------------------------- |
 | A page of your VitNode app              | TanStack Query, warmed in the loader    | Its `staleTime`, or `invalidateQueries` after a write |
+| The HTML of a public page in your app   | [Page cache](/docs/dev/cache/pages)     | Automatic: every content write invalidates it         |
 | A separate front end with its own cache | That front end's tag cache              | `content.revalidateOrigins` and the cache tags below  |
 | Your own Hono route                     | [`c.get("cache")`](/docs/dev/cache/api) | `c.get("cache").delete(key)` after a write            |
 
@@ -76,6 +77,8 @@ export const route = defineRoute({
 Each server render starts with an empty query client, so a full page load is always fresh. The `staleTime` only decides how long a visitor's open tab reuses the list during client-side navigation. `staleTime: "static"` keeps it until the tab reloads.
 
 Publishing in the AdminCP refreshes the AdminCP's own list, item and search queries. It cannot reach a visitor's browser, so pick a `staleTime` you are happy to wait out. For your own write routes, call `queryClient.invalidateQueries({ queryKey: ["@vitnode/example", "articles"] })` after the write.
+
+Public routes also send an `x-vitnode-cache-tags` header naming the record they read, such as `content:blog.post:item:3`, or the content type for a list. The page cache stores a page with these tags and invalidates it after every write, hard for a hide, delete, unpublish or slug change. [How cached pages stay fresh](/docs/dev/cache/pages-invalidation#content-engine-invalidation) explains the rules.
 
 ## Cache tags
 

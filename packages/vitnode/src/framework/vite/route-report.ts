@@ -1,8 +1,14 @@
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import type {
+  PageCachePolicy,
+  PageCachePolicySource,
+} from "@/page-cache/policy";
+import type { ResolvedPageCacheRoute } from "@/page-cache/resolve";
 import type { PluginRoute, PluginRouteSegment } from "@/routing/types";
 
 import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
-import { formatRoutePath } from "@/routing/path";
+import { compareRouteSpecificity, routeSegmentsMatch } from "@/routing/match";
+import { formatRoutePath, routeMatchKey } from "@/routing/path";
 
 import type { HostRoutePath, LocaleRoutePathsConfig } from "../plugin-routes";
 
@@ -10,7 +16,21 @@ import { hostRouteSegments } from "../plugin-routes";
 
 export type RouteRenderMode = "dynamic" | "partial" | "static";
 
+/** A page's effective HTML cache policy, and who chose it. */
+export interface RouteReportCache {
+  policy: null | PageCachePolicy;
+  /** `"host"` when `vitNodeConfig.pageCache` overrode or disabled it. */
+  source: PageCachePolicySource;
+}
+
 export interface RouteReportEntry {
+  /** `null` when nothing declared a policy for this route. */
+  cache: null | RouteReportCache;
+  /**
+   * The URL patterns other locales and domains serve this route under, for a
+   * cached route - the cache keys on those, not on the canonical path.
+   */
+  localizedPaths: string[];
   mode: RouteRenderMode;
   path: string;
   staticPaths: string[];
@@ -20,6 +40,7 @@ export interface RouteReportInput {
   hostRoutes: readonly HostRoutePath[];
   htmlPaths: readonly string[];
   i18n: LocaleRoutePathsConfig;
+  pageCacheRoutes?: readonly ResolvedPageCacheRoute[];
   pluginRoutes: readonly PluginRoute[];
 }
 
@@ -29,41 +50,8 @@ interface ReportedRoute {
   staticPaths: Set<string>;
 }
 
-const segmentRank = (segment: PluginRouteSegment | undefined): number => {
-  if (segment === undefined) return 2;
-
-  return { param: 1, splat: 3, static: 0 }[segment.kind];
-};
-
-const bySpecificity = (a: ReportedRoute, b: ReportedRoute): number => {
-  const length = Math.max(a.segments.length, b.segments.length);
-
-  for (let index = 0; index < length; index++) {
-    const difference =
-      segmentRank(a.segments[index]) - segmentRank(b.segments[index]);
-    if (difference !== 0) return difference;
-  }
-
-  return 0;
-};
-
-const matchesRoute = (
-  segments: readonly PluginRouteSegment[],
-  parts: readonly string[],
-): boolean => {
-  for (const [index, segment] of segments.entries()) {
-    if (segment.kind === "splat") return parts.length >= index;
-    if (index >= parts.length) return false;
-    if (
-      segment.kind === "static" &&
-      segment.value.toLowerCase() !== parts[index].toLowerCase()
-    ) {
-      return false;
-    }
-  }
-
-  return segments.length === parts.length;
-};
+const bySpecificity = (a: ReportedRoute, b: ReportedRoute): number =>
+  compareRouteSpecificity(a, b);
 
 const reportedRoutes = (
   hostRoutes: readonly HostRoutePath[],
@@ -120,10 +108,55 @@ const byPageThenLocale =
     return localeIndex(a) - localeIndex(b);
   };
 
+const PATTERN_BASE = "https://vitnode.invalid";
+
+/** Every public spelling of a route pattern other than the canonical one. */
+const localizedPatterns = (
+  path: string,
+  localeRouting: LocaleRouting,
+): string[] => {
+  const variants =
+    localeRouting.domains.length > 0
+      ? localeRouting.domains.flatMap(domain =>
+          domain.locales.map(locale => {
+            const url = localeRouting.localizeUrl(
+              new URL(path, domain.origin),
+              locale,
+              { host: domain.host },
+            );
+
+            return `${url.host}${decodeURI(url.pathname)}`;
+          }),
+        )
+      : localeRouting.locales.map(locale =>
+          decodeURI(
+            localeRouting.localizeUrl(new URL(path, PATTERN_BASE), locale, {})
+              .pathname,
+          ),
+        );
+
+  return [...new Set(variants)].filter(variant => variant !== path);
+};
+
+const cacheOf = (
+  route: ReportedRoute,
+  pageCacheRoutes: readonly ResolvedPageCacheRoute[],
+): null | RouteReportCache => {
+  const key = routeMatchKey(route.segments);
+  const resolved = pageCacheRoutes.find(
+    candidate => routeMatchKey(candidate.segments) === key,
+  );
+
+  return resolved?.source == null
+    ? null
+    : { policy: resolved.policy, source: resolved.source };
+};
+
 export const buildRouteReport = ({
   hostRoutes,
   htmlPaths,
   i18n,
+  pageCacheRoutes = [],
   pluginRoutes,
 }: RouteReportInput): RouteReportEntry[] => {
   const localeRouting = localeRoutingFromConfig(i18n);
@@ -136,7 +169,7 @@ export const buildRouteReport = ({
       .split("/")
       .filter(part => part.length > 0);
     const route = routes.find(candidate =>
-      matchesRoute(candidate.segments, parts),
+      routeSegmentsMatch(candidate.segments, parts),
     );
 
     if (route === undefined) unclaimed.push(htmlPath);
@@ -144,12 +177,25 @@ export const buildRouteReport = ({
   }
 
   const entries: RouteReportEntry[] = [
-    ...routes.map(route => ({
-      mode: modeOf(route, localeRouting),
-      path: route.path,
-      staticPaths: [...route.staticPaths].sort(byPageThenLocale(localeRouting)),
-    })),
+    ...routes.map(route => {
+      const cache = cacheOf(route, pageCacheRoutes);
+
+      return {
+        cache,
+        localizedPaths:
+          cache?.policy == null
+            ? []
+            : localizedPatterns(route.path, localeRouting),
+        mode: modeOf(route, localeRouting),
+        path: route.path,
+        staticPaths: [...route.staticPaths].sort(
+          byPageThenLocale(localeRouting),
+        ),
+      };
+    }),
     ...unclaimed.map(path => ({
+      cache: null,
+      localizedPaths: [],
       mode: "static" as const,
       path,
       staticPaths: [path],

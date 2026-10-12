@@ -1,7 +1,14 @@
+import { formatPageCachePolicy } from "@/page-cache/policy";
+
 import type { Ui } from "../ui/ui";
 import type { ChunkAnalysis } from "./analysis";
 import type { FileCategory, MeasuredFile } from "./output-files";
-import type { BuildRoute, RouteMode } from "./routes";
+import type {
+  BuildRoute,
+  BuildRouteReport,
+  PageCacheStorageKind,
+  RouteMode,
+} from "./routes";
 import type { SizeSeverity } from "./size-severity";
 import type { SnapshotComparison } from "./snapshot";
 import type { BuildWarning } from "./warnings";
@@ -275,48 +282,31 @@ const ADMIN_PREFIX = "/admin";
 const isAdminRoute = (route: BuildRoute) =>
   route.path === ADMIN_PREFIX || route.path.startsWith(`${ADMIN_PREFIX}/`);
 
-const routeMark = (ui: Ui, mode: RouteMode) => {
-  switch (mode) {
-    case "dynamic":
-      return ui.colors.muted(ui.symbols.fn);
-    case "partial":
-      return ui.symbols.dot;
-    case "static":
-      return ui.colors.success(ui.symbols.pending);
-  }
+const RENDERING_LABEL: Record<RouteMode, string> = {
+  dynamic: "SSR",
+  partial: "Partial",
+  static: "Static",
 };
 
-const ROUTE_LEGEND: { description: string; label: string; mode: RouteMode }[] =
-  [
-    {
-      description: "prerendered as static HTML",
-      label: "Static",
-      mode: "static",
-    },
-    {
-      description: "some paths prerendered, the rest rendered on demand",
-      label: "Partial",
-      mode: "partial",
-    },
-    {
-      description: "rendered on demand",
-      label: "Dynamic",
-      mode: "dynamic",
-    },
-  ];
-
 interface RouteLine {
+  /** Concrete URLs written at build time. */
   children: string[];
   detail?: string;
-  mode: RouteMode;
-  path: string;
+  /** Other locales' patterns this route answers to. */
+  localized: string[];
+  route: BuildRoute;
 }
 
 const routeLines = (ui: Ui, routes: readonly BuildRoute[]): RouteLine[] => {
   const collapsed = new Set(
     ui.verbose
       ? []
-      : routes.filter(route => isAdminRoute(route) && route.mode === "dynamic"),
+      : routes.filter(
+          route =>
+            isAdminRoute(route) &&
+            route.mode === "dynamic" &&
+            route.cache?.policy == null,
+        ),
   );
   const lines: RouteLine[] = routes
     .filter(route => !collapsed.has(route))
@@ -325,63 +315,136 @@ const routeLines = (ui: Ui, routes: readonly BuildRoute[]): RouteLine[] => {
         route.staticPaths.length === 1 && route.staticPaths[0] === route.path
           ? []
           : route.staticPaths,
-      mode: route.mode,
-      path: route.path,
+      localized: route.localizedPaths ?? [],
+      route,
     }));
 
   if (collapsed.size > 0) {
     lines.push({
       children: [],
       detail: `${plural(collapsed.size, "AdminCP route")} (--verbose lists all)`,
-      mode: "dynamic",
-      path: `${ADMIN_PREFIX}/*`,
+      localized: [],
+      route: { mode: "dynamic", path: `${ADMIN_PREFIX}/*`, staticPaths: [] },
     });
   }
 
-  return lines.sort((a, b) => (a.path < b.path ? -1 : 1));
+  return lines.sort((a, b) => (a.route.path < b.route.path ? -1 : 1));
 };
 
-export const renderRoutes = (ui: Ui, routes: readonly BuildRoute[]) => {
+/** What serves this route's HTML, in the words the docs use. */
+const pageCacheCell = (ui: Ui, route: BuildRoute): string => {
+  const { cache, mode, staticPaths } = route;
+  const override = cache?.source === "host" ? ui.colors.muted(" (app)") : "";
+  const policy = cache?.policy ?? null;
+
+  if (mode === "static") return ui.colors.success("Build-time HTML");
+
+  const ssr =
+    policy === null
+      ? `None${cache?.source === "host" ? ui.colors.muted(" (disabled by app)") : ""}`
+      : `${ui.colors.info(formatPageCachePolicy(policy))}${override}`;
+
+  if (mode === "partial") {
+    return `${ui.colors.success(`Build-time HTML × ${String(staticPaths.length)}`)}${ui.colors.muted(", others: ")}${ssr}`;
+  }
+
+  return ssr;
+};
+
+const renderingCell = (ui: Ui, route: BuildRoute): string => {
+  const label = RENDERING_LABEL[route.mode];
+
+  if (route.mode === "static") return ui.colors.success(label);
+  if (route.cache?.policy != null) return ui.colors.info(label);
+
+  return label;
+};
+
+const STORAGE_NOTES: Record<PageCacheStorageKind, string> = {
+  memory:
+    "Page cache storage: memory - one copy per server process, emptied on restart.",
+  redis:
+    "Page cache storage: Redis at REDIS_URL - connected when the server starts (runtime-dependent).",
+};
+
+/**
+ * The route summary of `vitnode build`: how each page is rendered and whether
+ * its HTML is reused. It reports the configured policy - never cache hits.
+ */
+export const renderRoutes = (
+  ui: Ui,
+  { pageCacheServed, pageCacheStorage, routes }: BuildRouteReport,
+) => {
   if (routes.length === 0) return;
 
-  const { bar, corner, tee } = ui.symbols;
+  const { corner, tee } = ui.symbols;
   const lines = routeLines(ui, routes);
+  const indent = ui.mode === "plain" ? "" : "  ";
 
   ui.section("Routes");
 
-  lines.forEach((line, index) => {
-    const isLast = index === lines.length - 1;
+  const rows = lines.flatMap(line => {
     const detail =
       line.detail === undefined ? "" : `  ${ui.colors.muted(line.detail)}`;
-    ui.line(
-      `  ${ui.colors.muted(isLast ? corner : tee)} ${routeMark(ui, line.mode)} ${line.path}${detail}`,
-    );
-
     const shown = ui.verbose
       ? line.children
       : line.children.slice(0, ROUTE_CHILD_LIMIT);
     const hidden = line.children.length - shown.length;
-    const rail = isLast ? " " : bar;
-    const children = [
-      ...shown,
-      ...(hidden > 0 ? [`… ${plural(hidden, "more path")}`] : []),
+    const children: [string, string][] = [
+      ...line.localized.map((path): [string, string] => [path, "pattern"]),
+      ...shown.map((path): [string, string] => [path, "prerendered"]),
+      ...(hidden > 0
+        ? [[`… ${plural(hidden, "more URL")}`, ""] as [string, string]]
+        : []),
     ];
 
-    children.forEach((child, childIndex) => {
-      const branch = childIndex === children.length - 1 ? corner : tee;
-      ui.line(
-        `  ${ui.colors.muted(rail)}   ${ui.colors.muted(branch)} ${ui.colors.muted(child)}`,
-      );
-    });
+    return [
+      [
+        `${line.route.path}${detail}`,
+        renderingCell(ui, line.route),
+        pageCacheCell(ui, line.route),
+      ],
+      ...children.map(([path, kind], index) => [
+        `${ui.colors.muted(index === children.length - 1 ? corner : tee)} ${ui.colors.muted(path)}`,
+        ui.colors.muted(kind),
+        "",
+      ]),
+    ];
   });
 
-  const used = new Set(lines.map(line => line.mode));
-  const legend = ROUTE_LEGEND.filter(entry => used.has(entry.mode));
-  const labelWidth = Math.max(...legend.map(entry => entry.label.length));
-  ui.line();
-  legend.forEach(entry => {
-    ui.line(
-      `  ${routeMark(ui, entry.mode)}  ${padEnd(entry.label, labelWidth)}   ${ui.colors.muted(entry.description)}`,
-    );
+  ui.table({
+    columns: [
+      { header: "Route" },
+      { header: "Rendering" },
+      { header: "Page cache" },
+    ],
+    rows,
   });
+
+  ui.line();
+  ui.line(
+    `${indent}${ui.colors.success("Static")}          ${ui.colors.muted("HTML written at build time; a route with parameters lists the URLs it generated")}`,
+  );
+  ui.line(
+    `${indent}${ui.colors.info("SSR, cached")}     ${ui.colors.muted("rendered on request, then reused for every visitor (TTL, then SWR window)")}`,
+  );
+  ui.line(
+    `${indent}SSR, uncached   ${ui.colors.muted("rendered on request for each visitor")}`,
+  );
+
+  const hasCachedRoute = routes.some(route => route.cache?.policy != null);
+  const hasDeclaredPolicy = routes.some(route => route.cache != null);
+
+  if (hasCachedRoute && !pageCacheServed) {
+    ui.line();
+    ui.warning(
+      "Routes declare a page cache policy, but src/server.ts does not wrap the server with withPageCache - nothing is cached until it does.",
+    );
+  } else if (hasCachedRoute && pageCacheStorage !== null) {
+    ui.line();
+    ui.note(STORAGE_NOTES[pageCacheStorage]);
+  } else if (hasDeclaredPolicy && pageCacheStorage === null) {
+    ui.line();
+    ui.note("Page cache: off (vitNodeConfig.pageCache.enabled is false).");
+  }
 };

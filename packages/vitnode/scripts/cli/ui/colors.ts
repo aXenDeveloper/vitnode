@@ -13,6 +13,8 @@ export interface Palette {
   /** Commands, URLs and paths a developer may copy. */
   command: Paint;
   error: Paint;
+  /** Informational states that are neither success nor warning: cached pages. */
+  info: Paint;
   /** Secondary text: timings, hints, labels. */
   muted: Paint;
   /** VitNode's own name and section markers. */
@@ -28,6 +30,7 @@ export const createPalette = (enabled: boolean): Palette => {
     bold: colors.bold,
     command: colors.cyan,
     error: colors.red,
+    info: colors.blue,
     muted: colors.gray,
     primary: text => colors.bold(colors.blue(text)),
     success: colors.green,

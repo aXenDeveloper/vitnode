@@ -31,6 +31,7 @@ import {
   parseSetCookies,
   shouldSaveApiCookies,
 } from "@/lib/fetcher/set-cookie";
+import { recordPageCacheApiResponse } from "@/page-cache/render-context.server";
 
 config({ quiet: true });
 
@@ -84,12 +85,16 @@ export const rawFetcher = async ({
   additionalHeaders,
   origin,
   ...args
-}: RawApiFetchArgs): Promise<Response> =>
-  await rawApiFetch({
+}: RawApiFetchArgs): Promise<Response> => {
+  const response = await rawApiFetch({
     ...args,
     additionalHeaders: { ...getForwardedApiHeaders(), ...additionalHeaders },
     origin: origin ?? resolveApiOrigin(),
   });
+  recordPageCacheApiResponse(response);
+
+  return response;
+};
 
 export type FetcherServerOptions = FetcherRequestOptions & {
   allowSaveCookies?: boolean;
@@ -135,6 +140,10 @@ export async function fetcher<
     // overrides both.
     origin: origin ?? resolveApiOrigin(),
   } as FetcherCall<P, M, Path, Method, FetcherRequestOptions>);
+
+  // Inside a shared render, the page is stored with the data it read - so a
+  // change to that data can invalidate it, and private data keeps it uncached.
+  recordPageCacheApiResponse(response);
 
   if (allowSaveCookies && shouldSaveApiCookies((response as Response).status)) {
     saveApiCookies(response);

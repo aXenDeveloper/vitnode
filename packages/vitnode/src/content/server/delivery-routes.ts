@@ -7,6 +7,7 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliveryService } from "./delivery-service";
 import type { ContentModel } from "./model";
 
+import { setPageCacheTags } from "../../api/lib/page-cache";
 import { buildRoute } from "../../api/lib/route";
 import { contentTypeName } from "../admin/labels";
 import {
@@ -19,6 +20,7 @@ import { ContentDeliveryNotEnabled } from "../errors";
 import { contentIdParamSchema, contentIdSchema } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
 import { listContentLanguages } from "./language-resolver";
+import { contentRecordPageCacheTags } from "./page-cache";
 import { contentIdentifier } from "./route-helpers";
 
 export const buildContentDeliveryRoutes = <
@@ -164,6 +166,13 @@ export const buildContentDeliveryRoutes = <
         locale: resolved.locale,
       });
 
+      if (resolution.type === "content" && !resolution.hidden) {
+        setPageCacheTags(
+          c,
+          contentRecordPageCacheTags(definition, resolution.itemId),
+        );
+      }
+
       return resolution.type === "content" && resolution.hidden
         ? c.json(resolution, 200, {
             "Cache-Control": "private, no-store",
@@ -204,6 +213,8 @@ export const buildContentDeliveryRoutes = <
         locale: resolved.locale,
       });
       if (!metadata) throw notFound(name);
+
+      setPageCacheTags(c, contentRecordPageCacheTags(definition, id));
 
       return c.json(metadata, 200);
     },

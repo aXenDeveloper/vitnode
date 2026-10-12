@@ -21,6 +21,11 @@ import {
 } from "@/blocks/registry";
 import { CONFIG_PLUGIN } from "@/config";
 import { CONFIG } from "@/lib/config";
+import {
+  configurePageCacheStore,
+  pageCacheRuntime,
+  pageCacheStoreFor,
+} from "@/page-cache/store.server";
 import { initRealtimePubSub } from "@/ws/registry";
 
 import {
@@ -79,6 +84,23 @@ export function VitNodeAPI({
   // Bridge realtime (WebSocket) messages across instances via Redis pub/sub, so
   // `broadcast`/`sendToUser` reach clients on every instance. No-op without Redis.
   initRealtimePubSub(redisClient);
+
+  // A separate API process writes page invalidations to the web app's Redis.
+  // Inside the web app the server entry has registered the store already.
+  if (vitNodeApiConfig.pageCache && pageCacheRuntime() === undefined) {
+    const store = pageCacheStoreFor(vitNodeApiConfig.pageCache.storage);
+
+    if (store === null) {
+      // oxlint-disable-next-line no-console
+      console.error(
+        '[vitnode page-cache] `pageCache.storage` is "redis" but REDIS_URL is not set, so content writes cannot invalidate cached pages.',
+      );
+    } else {
+      configurePageCacheStore(store, {
+        maxLifetime: vitNodeApiConfig.pageCache.maxLifetime ?? 86_400,
+      });
+    }
+  }
 
   const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
 

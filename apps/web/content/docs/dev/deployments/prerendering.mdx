@@ -104,7 +104,7 @@ curl -sI http://localhost:3000/pricing
 curl -sI http://localhost:3000/login
 ```
 
-The prerendered page answers with an `etag` and a `last-modified` date. The server-rendered page answers with `cache-control: private, no-store` instead, because VitNode renders it for one visitor.
+The prerendered page answers with an `etag` and a `last-modified` date. The server-rendered page answers with `cache-control: private, no-store` instead, because VitNode renders it for one visitor - unless its route has a [page cache](/docs/dev/cache/pages) policy, which renders it once for everybody.
 
 ## What a prerendered page leaves out
 

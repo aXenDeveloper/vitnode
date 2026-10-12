@@ -114,7 +114,13 @@ const DECLARED = {
   "content/server/delivery-routes.ts": ["private, no-store"],
   "content/server/public-routes.ts": ["private, no-store"],
   "content/server/public-write-routes.ts": ["private, no-store"],
+  // Reads the header of API responses: a private one keeps a page uncached.
+  "page-cache/render-context.server.ts": [],
   "tanstack/start/document-headers.ts": ["private, no-store"],
+  // The HTML cache. A shared page advertises no lifetime at all - every
+  // browser and CDN revalidates it, so a hard invalidation is never outlived
+  // downstream. Everything else gets `DOCUMENT_CACHE_CONTROL`, imported.
+  "tanstack/page-cache/server.ts": ["no-cache", "private, no-cache"],
 } satisfies Record<string, string[]>;
 
 describe("the cacheability predicate says what it means", () => {

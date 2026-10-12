@@ -461,6 +461,19 @@ export const routes = definePluginRoutes([
   staff roles or permissions, gate content inside the route component or loader.
 </Callout>
 
+## Cache public pages
+
+A page that looks the same for every visitor can declare `cache`, and VitNode reuses its server-rendered HTML for the given number of seconds:
+
+```ts title="plugins/blog/src/routes.ts"
+page('/blog/:slug', {
+  cache: { maxAge: 300, staleWhileRevalidate: 60 }, // [!code ++]
+  component: lazy(() => import('./pages/post-page')),
+})
+```
+
+Routes are uncached by default, and a route with `requires` cannot be cached. [Cache server-rendered pages](/docs/dev/cache/pages) covers the setup and how the host app overrides a policy.
+
 ## Nested routes and layouts
 
 A `layout()` wraps child routes in a shared UI frame without claiming a URL segment of its own. Use `index()` to render a page at the layout's root path.

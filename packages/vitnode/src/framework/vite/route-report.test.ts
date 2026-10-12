@@ -61,6 +61,8 @@ const entry = (htmlPaths: string[], path: string) =>
 describe("buildRouteReport", () => {
   it("calls a route static once every language has a file", () => {
     expect(entry(["/plugins", "/pl/plugins"], "/plugins")).toEqual({
+      cache: null,
+      localizedPaths: [],
       mode: "static",
       path: "/plugins",
       staticPaths: ["/plugins", "/pl/plugins"],
@@ -73,6 +75,8 @@ describe("buildRouteReport", () => {
 
   it("files a translated path under the route it translates", () => {
     expect(entry(["/discover", "/pl/odkrywaj"], "/discover")).toEqual({
+      cache: null,
+      localizedPaths: [],
       mode: "static",
       path: "/discover",
       staticPaths: ["/discover", "/pl/odkrywaj"],
@@ -91,6 +95,8 @@ describe("buildRouteReport", () => {
         "/solutions/:slug",
       ),
     ).toEqual({
+      cache: null,
+      localizedPaths: [],
       mode: "partial",
       path: "/solutions/:slug",
       staticPaths: [
@@ -115,6 +121,8 @@ describe("buildRouteReport", () => {
     });
 
     expect(docs).toEqual({
+      cache: null,
+      localizedPaths: [],
       mode: "static",
       path: "/docs",
       staticPaths: ["/docs", "/pl/docs"],
@@ -132,6 +140,8 @@ describe("buildRouteReport", () => {
 
   it("still reports a static file no route claims", () => {
     expect(entry(["/404"], "/404")).toEqual({
+      cache: null,
+      localizedPaths: [],
       mode: "static",
       path: "/404",
       staticPaths: ["/404"],

@@ -48,31 +48,39 @@ The steps are the build environments your app really has. For a TanStack Start a
 
 The symbols mark how a file compares with its size budget: `✓` is fine, `!` is worth a look and `▲` is large. From the second build on, you also see what grew or shrank since the last one. [Bundle size report](/docs/dev/cli/bundle-size) explains the thresholds, the comparison and `--analyze`.
 
-### See which pages are static
+### See how each page is served
 
-The build ends with every route your app serves - your own route files and the pages of core and every plugin - marked by how each one is served:
+The build ends with every page route your app serves - your own route files and the pages of core and every plugin - with how it is rendered and whether its HTML is reused:
 
 ```txt title="vitnode build (end of the output, shortened)"
 Routes
-  ├ ○ /
-  │   ├ /
-  │   └ /pl
-  ├ ƒ /admin/*  24 AdminCP routes (--verbose lists all)
-  ├ ƒ /login
-  ├ ● /solutions/:slug
-  │   ├ /solutions/help-center
-  │   ├ /pl/solutions/help-center
-  │   └ … 8 more paths
-  └ ƒ /users/:nameCode
+  Route                                               Rendering     Page cache
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+  /                                                   Static        Build-time HTML
+  ├ /                                                 prerendered
+  └ /pl                                               prerendered
+  /admin/*  24 AdminCP routes (--verbose lists all)   SSR           None
+  /blog/:slug                                         SSR           TTL 5m · SWR 1m
+  └ /pl/wpisy/:slug                                   pattern
+  /login                                              SSR           None
+  /solutions/:slug                                    Partial       Build-time HTML × 10, others: None
+  ├ /solutions/help-center                            prerendered
+  └ … 9 more URLs
 
-  ○  Static    prerendered as static HTML
-  ●  Partial   some paths prerendered, the rest rendered on demand
-  ƒ  Dynamic   rendered on demand
+  Static          HTML written at build time; a route with parameters lists the URLs it generated
+  SSR, cached     rendered on request, then reused for every visitor (TTL, then SWR window)
+  SSR, uncached   rendered on request for each visitor
+
+  Page cache storage: memory - one copy per server process, emptied on restart.
 ```
 
-A route is **static** when every language has a prerendered file, and **partial** when some of its paths do - a route with a parameter, such as `/solutions/:slug`, is always partial once any of its values is prerendered. The paths under a route are the files the build wrote, each page followed by its translations. The AdminCP is never prerendered, so its routes share one line unless you pass `--verbose`.
+- **Rendering** is `Static` when every language has a prerendered file, `Partial` when only some URLs of the route do, and `SSR` otherwise. A route with a parameter, such as `/solutions/:slug`, is partial once any of its values is prerendered. Its row shows the pattern, and the `prerendered` lines under it are the concrete URLs the build wrote, each page followed by its translations.
+- **Page cache** shows the [page cache](/docs/dev/cache/pages) policy the server applies after your app's overrides: `TTL 5m · SWR 1m`, or `None`. `(app)` marks a policy set in `vitNodeConfig.pageCache.routes`, and `None (disabled by app)` a plugin policy your app turned off. The `pattern` lines are the same route in your other languages and domains, which the cache keys separately.
+- In a color terminal, static output is green, cached SSR is blue and uncached SSR keeps the normal text color.
 
-Nothing is static until you ask for it. [Prerender static pages](/docs/dev/deployments/prerendering) shows how.
+The last line names the storage when the build can tell it. Redis is reported as runtime-dependent, because the server connects to `REDIS_URL` only when it starts. If routes declare a policy but `src/server.ts` does not use `withPageCache`, the build warns that nothing is cached. The report describes configuration, not how often the cache is hit.
+
+The AdminCP is never prerendered or cached, so its routes share one line unless you pass `--verbose`. Nothing is static until you ask for it: [Prerender static pages](/docs/dev/deployments/prerendering) shows how.
 
 ## Build an API app or a plugin
 

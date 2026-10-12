@@ -1,0 +1,82 @@
+---
+title: How cached pages stay fresh
+description: How VitNode's page cache expires HTML with TTL and stale-while-revalidate, keeps personal data out of shared pages, and invalidates articles when Content Engine content changes.
+icon: RefreshCw
+---
+
+A cached page is one rendered copy of HTML that every visitor receives. This page explains how long that copy lives, what it may contain, and how a Content Engine change replaces it. To turn caching on, follow [Cache server-rendered pages](/docs/dev/cache/pages).
+
+## TTL and stale-while-revalidate
+
+A route policy has two windows. Take `{ maxAge: 300, staleWhileRevalidate: 60 }` on `/blog/:slug`, and an article first requested at 12:00:00:
+
+| Request at  | What the visitor gets                                                                    | Header        |
+| ----------- | ---------------------------------------------------------------------------------------- | ------------- |
+| 12:00:00    | A fresh render, which is stored                                                          | `MISS`        |
+| 12:03:00    | The stored copy, without rendering                                                       | `HIT`         |
+| 12:05:30    | The stored copy right away, while a new render runs in the background and replaces it     | `STALE`       |
+| 12:05:31    | The new copy                                                                             | `HIT`         |
+| after 12:06 | If nobody asked during the stale window, the visitor waits for a fresh render            | `MISS`        |
+
+`maxAge` (the TTL) is how long a copy is fresh. `staleWhileRevalidate` is a fixed extra window, never an open-ended one: after it, nobody gets the old copy. Leave it out, or set it to `0`, and a visitor always waits for the fresh render once the TTL ends.
+
+When many visitors ask for the same uncached page at once, the server renders it once and hands the result to all of them. That only covers requests reaching the same server process.
+
+## Public HTML and personal UI
+
+A cached page is rendered once for everybody, so VitNode renders it as a signed-out visitor sees it:
+
+- The render receives no cookies and no `Authorization` header, whoever asked.
+- The main layout skips the session, exactly as it does for a [prerendered page](/docs/dev/deployments/prerendering#what-a-prerendered-page-leaves-out). The browser loads the account menu and header navigation after the page arrives.
+- A response is stored only when it is a `200` HTML page that sets no cookie and read no API response marked `private` or `no-store`. Everything else, including errors, redirects and `404`s, is sent once and forgotten.
+
+Signed-in visitors receive the same stored copy and see their account menu once the browser loads it. When the shared copy does not exist, for example a moderator opening a hidden article that answers `404` to everyone else, VitNode renders the page again for that visitor's own request. That copy is marked `private, no-store` and never stored.
+
+A page component on a cached route must not read the session on the server. Put anything that depends on who is looking, such as an edit button, in a component that loads its data in the browser.
+
+## Content Engine invalidation
+
+Content Engine routes label their responses with what they were built from: the record (`content:blog.post:item:3`) or, for a list, the whole content type (`content:blog.post:list`). While a cached page renders, VitNode collects the labels of every API response the page read, and stores them with the page.
+
+Every content write announces itself after its database transaction has committed, and VitNode then invalidates the pages that read that record or listed its type. Publishing, editing, translating, hiding, deleting, scheduled publishing and the API all go through that one path, so no write can skip it. Whether a stale copy may still be served depends on the change:
+
+| Change                                                                                          | Mode | What visitors see                                                            |
+| ----------------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------- |
+| Edit, publish, unhide, restore, translation added, edited or published                          | Soft | One more visitor may get the previous copy while the new one renders.        |
+| Hide, delete, unpublish, translation unpublished or deleted, slug changed                       | Hard | The old copy is never served again. The next request renders a fresh page.   |
+
+A hard invalidation also covers a render that started before the change and finishes after it: that render is sent to the visitor who asked, but not stored. After a slug change, the old address answers with its `308` redirect straight away.
+
+Invalidation is per record, not per language. Editing the Polish translation also refreshes the English page, which lists the Polish one in its `hreflang` links anyway. Scheduled publication and creating a draft are announced too, but a draft that nobody can see changes no page.
+
+Data your page reads from your own API routes is invalidated only if you label it. Call `setPageCacheTags(c, [tag])` in the route and `invalidatePageCacheTags([tag], { mode })` after the write. See the [reference](/docs/dev/cache/pages-reference#label-and-invalidate-your-own-data). Anything unlabelled, such as settings, shows up when the TTL ends.
+
+## From an edit to the public page
+
+With the blog's policy, an article saved in the AdminCP reaches visitors like this:
+
+1. The save commits. The page is invalidated before the API answers the editor.
+2. The next visitor gets the previous copy once (soft) or a fresh render (hard).
+3. Every visitor after that gets the new version.
+
+Visitors who navigate inside the app load the article from the public API, which is never cached on the server, so they see the new version at step 1.
+
+## How it differs from other caches
+
+| Cache                                                       | What it stores                                       | Shared by       | Expires                                  |
+| ----------------------------------------------------------- | ---------------------------------------------------- | --------------- | ---------------------------------------- |
+| [Prerendering](/docs/dev/deployments/prerendering)          | HTML files written by `vitnode build`                | Every visitor   | On the next build                        |
+| Page cache (this page)                                      | HTML rendered on request                             | Every visitor   | TTL, stale window, content changes       |
+| [App cache](/docs/dev/cache/app) (TanStack Query)           | API responses, in one browser tab                    | One visitor     | `staleTime`, `invalidateQueries`         |
+| [API cache](/docs/dev/cache/api) (`c.get("cache")`)         | Values your API routes choose                        | Every request   | Its TTL, `delete` after a write          |
+
+The page cache never stores API responses, and Content Engine public reads are not cached on the server, so a page rendered after an invalidation always reads the current database.
+
+## Deployment limits
+
+- **Memory storage is per process.** Each process keeps its own copy, and a restart empties it. An invalidation only reaches the process that handled the write, which is fine for one process and wrong for several. Use `storage: "redis"` for more than one instance.
+- **Separate API server.** In the default setup the API runs inside the web app and shares its cache. If your API runs in its own process, set `pageCache: { storage: "redis" }` in `buildApiConfig` too, with the same `REDIS_URL`, so writes reach the web app's cache.
+- **Browsers and CDNs** receive `cache-control: no-cache` and an `ETag`. They may keep a copy but must ask the server each time, and the server answers `304 Not Modified` while the copy is current. No lifetime is advertised, because nothing could purge a CDN after a hide or a delete.
+- **Clock skew.** A hard invalidation compares timestamps written by different servers. VitNode allows 2 seconds of difference between their clocks; keep them in sync with NTP.
+- **Deployments.** Every build gets its own id in the cache key, so two versions running side by side never serve each other's HTML. Set `VITNODE_BUILD_ID` at build time, for example to a commit SHA, to choose the id yourself.
+- **Storage outage.** If an invalidation cannot be written, VitNode does not report it as done. The write still succeeds, the failure is logged, scheduled publishing retries it, and the process that handled the write stops serving cached pages until the longest policy has expired. Other instances cannot be told and keep serving their copies until their TTL ends.

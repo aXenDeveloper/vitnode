@@ -1,0 +1,140 @@
+---
+title: Cache server-rendered pages
+description: Reuse a public page's server-rendered HTML for every visitor with a route cache policy, and invalidate it automatically when Content Engine content changes.
+icon: FileClock
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+The page cache stores the complete HTML a public page renders and sends the same copy to the next visitors. Use it for pages that look the same for everyone, such as a blog article, when they still have to be rendered on the server because their content lives in the database.
+
+A route is never cached unless it asks to be. This guide caches the blog plugin's article page, `/blog/:slug`.
+
+<Steps>
+<Step>
+
+### Declare a cache policy on the route
+
+Add `cache` to the page in your plugin's `src/routes.ts`. Both durations are in seconds:
+
+```ts title="plugins/blog/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/blog/:slug', {
+    cache: { maxAge: 300, staleWhileRevalidate: 60 }, // [!code ++]
+    component: lazy(() => import('./pages/post-page')),
+    messages: ['@vitnode/blog.post'],
+  }),
+])
+```
+
+`maxAge: 300` keeps a rendered article fresh for 5 minutes. `staleWhileRevalidate: 60` adds one more minute in which a visitor may still get the previous copy while a fresh one renders in the background. [How cached pages stay fresh](/docs/dev/cache/pages-invalidation#ttl-and-stale-while-revalidate) walks through the timeline.
+
+`index()` routes accept the same option. A layout, an AdminCP page and a route with `requires` cannot be cached, and the build fails if one declares a policy.
+
+</Step>
+<Step>
+
+### Serve pages through the cache
+
+Wrap TanStack Start's server entry in your app's `src/server.ts`. Apps created with `create-vitnode-app` already have this file:
+
+```ts title="apps/web/src/server.ts"
+import handler from '@tanstack/react-start/server-entry'
+import { withPageCache } from '@vitnode/core/tanstack/page-cache/server'
+
+import { pageCacheBuildId, pageCacheRoutes } from './page-cache.gen'
+import { vitNodeConfig } from './vitnode.config'
+
+export default withPageCache(handler, {
+  buildId: pageCacheBuildId,
+  config: vitNodeConfig,
+  routes: pageCacheRoutes,
+})
+```
+
+`src/page-cache.gen.ts` is written by VitNode's Vite plugin on every `vitnode dev` and `vitnode build`. It holds every page route with the policy that applies to it, so commit it like the other `*.gen.ts` files.
+
+</Step>
+<Step>
+
+### Choose the storage and override plugin policies
+
+Configure the cache once, in the host app. Every key is optional:
+
+```ts title="apps/web/src/vitnode.config.ts"
+export const vitNodeConfig = buildConfig({
+  // ...
+  pageCache: {
+    storage: 'redis', // reads REDIS_URL when the server starts
+    routes: {
+      '/blog/:slug': { maxAge: 600, staleWhileRevalidate: 120 },
+      '/events/:slug': false,
+    },
+  },
+})
+```
+
+| Storage    | Where entries live                     | Use it when                                                                                            |
+| ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `"memory"` | Inside each server process (default)   | You run one server process. A restart empties the cache, and each process would keep its own copy.     |
+| `"redis"`  | The Redis at the `REDIS_URL` variable  | You run more than one instance. All of them share entries, and an invalidation reaches every instance. |
+
+`routes` keys are canonical route paths, the same spelling the route was declared with. A policy replaces the plugin's, `false` turns caching off for that route, and you can also opt in one of your app's own route files. A key that matches no page route fails the build. `enabled: false` turns the whole cache off.
+
+The Redis URL stays in the runtime environment and never ends up in the build. If `storage` is `"redis"` and `REDIS_URL` is missing, the server logs an error and serves pages without caching them.
+
+</Step>
+<Step>
+
+### Build and start the app
+
+The cache only runs in production. Development always renders fresh, so an edit shows up on reload.
+
+<Tabs groupId="package-manager" persist items={['bun', 'pnpm', 'npm']} label="Build and start">
+
+```bash tab="bun"
+bun run build && bun start
+```
+
+```bash tab="pnpm"
+pnpm build && pnpm start
+```
+
+```bash tab="npm"
+npm run build && npm start
+```
+
+</Tabs>
+
+The build's route summary shows the policy that each route actually got. See [Build and start for production](/docs/dev/cli/build#see-how-each-page-is-served).
+
+</Step>
+</Steps>
+
+## Check the result
+
+Request a published article twice and look at the `x-vitnode-cache` header:
+
+```bash
+curl -s -o /dev/null -D - http://localhost:3000/blog/hello-world | grep -i 'x-vitnode-cache\|cache-control'
+curl -s -o /dev/null -D - http://localhost:3000/blog/hello-world | grep -i 'x-vitnode-cache\|cache-control'
+```
+
+```text
+cache-control: no-cache
+x-vitnode-cache: MISS
+cache-control: no-cache
+x-vitnode-cache: HIT
+```
+
+The first request rendered the page. The second was answered from the cache without rendering. Edit the article in the AdminCP and request it again: you get `STALE` once, then the new text. Hide it and the next request answers `404` immediately.
+
+`BYPASS` means the request skipped the cache, for example because of a `?preview=` link or another query parameter. The [reference](/docs/dev/cache/pages-reference#when-a-request-skips-the-cache) lists every reason.
+
+## Related
+
+- [How cached pages stay fresh](/docs/dev/cache/pages-invalidation)
+- [Page cache reference](/docs/dev/cache/pages-reference)
+- [Prerender static pages](/docs/dev/deployments/prerendering)

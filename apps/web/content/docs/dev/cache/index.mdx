@@ -1,10 +1,10 @@
 ---
 title: Cache
-description: Choose where to cache data in VitNode - TanStack Query in the app, or Redis inside your Hono API routes.
+description: Choose where to cache in VitNode - TanStack Query in the app, Redis inside your Hono API routes, or the HTML of public server-rendered pages.
 icon: Zap
 ---
 
-VitNode caches data in two places. The app keeps API responses in TanStack Query, so a page never asks for something it already has. The API keeps expensive results in Redis through `c.get("cache")`, so a slow query runs once for everyone. Both are opt-in: nothing is cached until your code asks for it.
+VitNode caches in three places. The app keeps API responses in TanStack Query, so a page never asks for something it already has. The API keeps expensive results in Redis through `c.get("cache")`, so a slow query runs once for everyone. The page cache stores the rendered HTML of public pages, so an article renders once for all its visitors. All three are opt-in: nothing is cached until your code asks for it.
 
 ## Pick a layer
 
@@ -13,6 +13,7 @@ VitNode caches data in two places. The app keeps API responses in TanStack Query
 | Render SSR data without refetching it, and skip repeat requests | App cache (TanStack Query) | [Cache app data](/docs/dev/cache/app)        |
 | Stop running the same slow database query for every visitor     | API cache (Redis)          | [Cache API data](/docs/dev/cache/api)        |
 | Look up `remember`, `delete`, `flush` and the other methods     | API cache (Redis)          | [Cache reference](/docs/dev/cache/reference) |
+| Render a public page once and send that HTML to every visitor   | Page cache                 | [Cache server-rendered pages](/docs/dev/cache/pages) |
 
 Most features use both. The API caches the expensive part once, and each visitor's app keeps its own copy of the response.
 

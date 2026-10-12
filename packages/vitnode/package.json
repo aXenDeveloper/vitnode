@@ -274,6 +274,7 @@
     "input-otp": "^1.5.0",
     "jiti": "^2.7.0",
     "motion": "^14.0.0",
+    "ocache": "^0.3.0",
     "picocolors": "^1.1.1",
     "postgres": "^3.4.9",
     "rate-limiter-flexible": "^11.2.1",

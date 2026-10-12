@@ -1,6 +1,14 @@
 {
   "title": "Cache",
-  "description": "Cache API responses in the app with TanStack Query and expensive reads in the API with Redis",
+  "description": "Cache API responses in the app, expensive reads in the API, and public server-rendered pages",
   "icon": "Zap",
-  "pages": ["index", "app", "api", "reference"]
+  "pages": [
+    "index",
+    "app",
+    "api",
+    "pages",
+    "pages-invalidation",
+    "reference",
+    "pages-reference"
+  ]
 }

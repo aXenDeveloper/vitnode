@@ -1,6 +1,7 @@
 import type { Plugin } from "vite";
 
 import { createJiti } from "jiti";
+import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -13,6 +14,8 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { ResolvedPageCacheConfig } from "../../page-cache/config";
+import type { ResolvedPageCacheRoute } from "../../page-cache/resolve";
 import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedApiPluginModule } from "../api-registry";
 import type { ResolvedBlocksModule } from "../blocks-registry";
@@ -27,6 +30,12 @@ import type {
 } from "../plugin-routes";
 import type { RouteReportEntry, RouteReportInput } from "./route-report";
 
+import { pageCacheConfigFromLoadedConfig } from "../../page-cache/config";
+import { generatePageCacheSource } from "../../page-cache/generate";
+import {
+  pageCacheRouteTable,
+  resolvePageCacheRoutes,
+} from "../../page-cache/resolve";
 import { generateAdminNavSource } from "../admin-nav";
 import { generateApiRegistrySource } from "../api-registry";
 import { generateBlocksRegistrySource } from "../blocks-registry";
@@ -41,6 +50,7 @@ import {
   contentTypesFromContentModule,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
+  hostRouteSegments,
   i18nFromLoadedConfig,
   lazyImportSpecifier,
   pluginsFromLoadedConfig,
@@ -95,6 +105,8 @@ const pathsFor = (appRoot: string) => ({
 
   packageMessages: join(appRoot, "src", "package-messages.gen.ts"),
 
+  pageCache: join(appRoot, "src", "page-cache.gen.ts"),
+
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
 
   staleManifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
@@ -118,6 +130,7 @@ export const resolverFor = (appRoot: string) => {
 
 interface AppConfig {
   i18n: LocaleRoutePathsConfig | undefined;
+  pageCache: ResolvedPageCacheConfig;
   plugins: PackageMessagesSource[];
 }
 
@@ -133,6 +146,7 @@ const readAppConfig = async (
 
   return {
     i18n: i18nFromLoadedConfig(loaded),
+    pageCache: pageCacheConfigFromLoadedConfig(loaded),
     plugins: pluginsFromLoadedConfig(loaded, relative(appRoot, configPath)),
   };
 };
@@ -458,7 +472,10 @@ const discover = async (
 ) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
-  const { i18n, plugins } = await readAppConfig(appRoot, paths.config);
+  const { i18n, pageCache, plugins } = await readAppConfig(
+    appRoot,
+    paths.config,
+  );
   const pluginIds = plugins.map(plugin => plugin.pluginId);
   const packageMessages = resolvePackageMessagesModules(
     plugins,
@@ -551,6 +568,16 @@ const discover = async (
     ),
   );
 
+  const pageCacheRoutes = resolvePageCacheRoutes({
+    config: pageCache,
+    hostRoutes: hostRoutes.flatMap(hostRoute => {
+      const segments = hostRouteSegments(hostRoute.path);
+
+      return segments === null ? [] : [{ file: hostRoute.file, segments }];
+    }),
+    pluginRoutes: compiled.manifest,
+  });
+
   return {
     adminNav: adminNav.modules,
     apiRegistry: apiRegistry.modules,
@@ -564,6 +591,8 @@ const discover = async (
     hostRoutes,
     i18n,
     packageMessages,
+    pageCache,
+    pageCacheRoutes,
     watch,
   };
 };
@@ -580,11 +609,16 @@ const removeIfPresent = async (path: string): Promise<void> => {
   await unlink(path);
 };
 
-type DiscoveredRoutes = Omit<RouteReportInput, "htmlPaths" | "i18n"> & {
+type DiscoveredRoutes = Omit<
+  RouteReportInput,
+  "htmlPaths" | "i18n" | "pageCacheRoutes"
+> & {
   i18n: RouteReportInput["i18n"] | undefined;
+  pageCache: ResolvedPageCacheConfig;
+  pageCacheRoutes: ResolvedPageCacheRoute[];
 };
 
-/** All seven generated files, from one discovery pass. */
+/** All eight generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -601,6 +635,8 @@ const writeGenerated = async (
     hostRoutes,
     i18n,
     packageMessages,
+    pageCache,
+    pageCacheRoutes,
   } = await discover(appRoot, options, onLoaded);
 
   await Promise.all([
@@ -623,15 +659,57 @@ const writeGenerated = async (
       paths.packageMessages,
       generatePackageMessagesSource(packageMessages),
     ),
+    writeIfChanged(
+      paths.pageCache,
+      generatePageCacheSource(pageCacheRouteTable(pageCacheRoutes)),
+    ),
     removeIfPresent(paths.staleManifest),
   ]);
 
-  return { hostRoutes, i18n, pluginRoutes: compiled.manifest };
+  return {
+    hostRoutes,
+    i18n,
+    pageCache,
+    pageCacheRoutes,
+    pluginRoutes: compiled.manifest,
+  };
 };
 
 export interface VitNodePluginRoutesApi {
+  /**
+   * Whether the app's server entry wraps the server with `withPageCache`.
+   * Without it, policies are resolved but nothing serves them.
+   */
+  pageCacheServed: () => boolean;
+  /** Where cached HTML is kept, as far as the build can tell. */
+  pageCacheStorage: () => null | ResolvedPageCacheConfig["storage"];
   routeReport: (htmlPaths: readonly string[]) => RouteReportEntry[];
 }
+
+const SERVER_ENTRY_FILES = [
+  "server.ts",
+  "server.tsx",
+  "server.js",
+  "server.mjs",
+];
+
+/** Whether `src/server.*` - TanStack Start's custom server entry - uses the page cache. */
+const serverEntryUsesPageCache = (appRoot: string): boolean =>
+  SERVER_ENTRY_FILES.some(name => {
+    const file = join(appRoot, "src", name);
+
+    return (
+      existsSync(file) && readFileSync(file, "utf8").includes("withPageCache")
+    );
+  });
+
+/**
+ * Identifies one build, so deployments sharing a cache never serve each other's
+ * HTML. `VITNODE_BUILD_ID` at build time wins - a commit SHA, say.
+ */
+const newBuildId = (): string =>
+  process.env.VITNODE_BUILD_ID ??
+  `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}`;
 
 export const vitNodePluginRoutes = (
   options: VitNodePluginRoutesOptions,
@@ -640,9 +718,15 @@ export const vitNodePluginRoutes = (
   const configPath = pathsFor(appRoot).config;
   const routesDir = hostRoutesConfigFor(appRoot, options.hostRoutesDir).dir;
   let discovered: DiscoveredRoutes | undefined;
+  const buildId = newBuildId();
 
   return {
     api: {
+      pageCacheServed: () => serverEntryUsesPageCache(appRoot),
+      pageCacheStorage: () =>
+        discovered?.pageCache.enabled === true
+          ? discovered.pageCache.storage
+          : null,
       routeReport: htmlPaths => {
         if (discovered?.i18n === undefined) {
           throw new Error(
@@ -660,6 +744,12 @@ export const vitNodePluginRoutes = (
 
     config: async () => {
       discovered = await writeGenerated(appRoot, options);
+
+      return {
+        define: {
+          "import.meta.env.VITNODE_BUILD_ID": JSON.stringify(buildId),
+        },
+      };
     },
 
     configureServer: server => {

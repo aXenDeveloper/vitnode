@@ -1,3 +1,4 @@
+import type { PageCacheSetting } from "../page-cache/policy";
 import type {
   PluginRouteArea,
   PluginRouteKind,
@@ -70,12 +71,22 @@ export interface PluginRoutePageOptions<
   TModule,
 > extends PluginRouteDeclarationShared<TModule> {
   area?: PluginRouteArea;
+  /**
+   * Reuse this page's server-rendered HTML for every visitor, in seconds:
+   * `{ maxAge: 300, staleWhileRevalidate: 60 }`. Off unless declared, and the
+   * host application can change or remove it through `vitNodeConfig.pageCache`.
+   * The page then renders without the visitor's session, so it may only show
+   * what is safe to share.
+   */
+  cache?: PageCacheSetting;
   search?: PluginRouteSearchSchema<TModule>;
 }
 
 export interface PluginRouteIndexOptions<
   TModule,
 > extends PluginRouteDeclarationShared<TModule> {
+  /** See {@link PluginRoutePageOptions.cache}. */
+  cache?: PageCacheSetting;
   search?: PluginRouteSearchSchema<TModule>;
 }
 
@@ -88,6 +99,7 @@ export interface PluginRouteLayoutOptions<
 
 export interface PluginRouteDeclaration {
   readonly area: PluginRouteArea | undefined;
+  readonly cache: unknown;
   readonly children: readonly PluginRouteDeclaration[] | undefined;
   readonly component: unknown;
   readonly [DECLARATION_BRAND]: true;
@@ -116,6 +128,7 @@ export const isPluginRouteDeclaration = (
 
 interface PluginRouteDeclarationOptions {
   area?: PluginRouteArea;
+  cache?: unknown;
   children?: readonly PluginRouteDeclaration[];
   component: unknown;
   messages?: readonly string[];
@@ -133,6 +146,7 @@ const declaration = (
 ): PluginRouteDeclaration => ({
   [DECLARATION_BRAND]: true,
   area: options.area,
+  cache: options.cache,
   children: options.children,
   component: options.component,
   isIndex: options.isIndex,

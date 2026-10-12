@@ -1,7 +1,7 @@
 import type { AppBuildOptions } from "../builder/app-build";
 import type { LoadTsdown, StepRunner } from "../builder/compiler-build";
 import type { MeasuredFile } from "../builder/output-files";
-import type { BuildRoute } from "../builder/routes";
+import type { BuildRouteReport } from "../builder/routes";
 import type { CommandContext, Env, OutputOptions } from "../context";
 import type { Project } from "../project/project";
 import type { Ui } from "../ui/ui";
@@ -97,7 +97,7 @@ const reportAppBuild = (
   }: {
     analyze: boolean;
     bundlerWarnings: readonly string[];
-    reportRoutes: (() => readonly BuildRoute[]) | null;
+    reportRoutes: (() => BuildRouteReport) | null;
   },
 ) => {
   const analyses = analyze

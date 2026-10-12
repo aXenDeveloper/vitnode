@@ -26,6 +26,7 @@ import type {
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { BuildPluginReturn } from "./lib/plugin";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
+import type { PageCacheConfig } from "./page-cache/config";
 
 export type { LocaleConfig };
 
@@ -38,6 +39,11 @@ export interface VitNodeConfig<
   i18n: VitNodeI18nConfig<AppLocales>;
   logo?: VitNodeLogo;
   metadata: VitNodeMetadata;
+  /**
+   * The server-rendered HTML cache: where it is stored, and per-route
+   * overrides of the policies plugins declare. See `PageCacheConfig`.
+   */
+  pageCache?: PageCacheConfig;
   plugins: BuildPluginReturn[];
   theme?: Omit<
     ThemeProviderProps,
@@ -119,6 +125,18 @@ export interface VitNodeApiConfig {
   maxBodySize?: number;
   metadata: VitNodeMetadata;
   notifications?: Partial<NotificationWorkerSettings>;
+  /**
+   * For an API that runs in its own process, next to a web app that caches
+   * pages in Redis (`vitNodeConfig.pageCache.storage: "redis"`). Content
+   * writes then invalidate those pages through the same `REDIS_URL`. An API
+   * mounted inside the web app needs nothing here - it shares the web app's
+   * cache.
+   */
+  pageCache?: {
+    /** The longest `maxAge + staleWhileRevalidate` of any cached route, in seconds. Defaults to a day. */
+    maxLifetime?: number;
+    storage: "redis";
+  };
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix"> & {
     auth?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;

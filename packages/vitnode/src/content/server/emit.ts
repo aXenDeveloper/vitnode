@@ -27,6 +27,7 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { contentEventName } from "../events";
+import { invalidateContentPages } from "./page-cache";
 
 type ContentPayload =
   | ContentCreatedPayload<ContentId>
@@ -64,6 +65,21 @@ export const emitContentEvent = async (
 ): Promise<EventEmitResult> => {
   const name = contentEventName(definition.id, action) as VitNodeEventName;
   const events = c.get("events") as unknown as ContentEventEmitter;
+  const result = await events.emit(name, payload, {
+    pluginId: options?.pluginId,
+  });
 
-  return await events.emit(name, payload, { pluginId: options?.pluginId });
+  // Every content write announces itself here once its transaction has
+  // committed, so this is where cached pages learn the content moved. A failure
+  // travels with the event's own, so the scheduled path retries it.
+  const pageCacheFailure = await invalidateContentPages(
+    c,
+    definition,
+    action,
+    payload as unknown as Record<string, unknown>,
+  );
+
+  return pageCacheFailure === null
+    ? result
+    : { ...result, failures: [...result.failures, pageCacheFailure] };
 };

@@ -1,3 +1,5 @@
+import type { PageCacheSetting } from "../page-cache/policy";
+
 export type PluginRouteArea = "admin" | "blank" | "main";
 
 export const PLUGIN_ROUTE_AREAS: PluginRouteArea[] = ["admin", "blank", "main"];
@@ -36,6 +38,8 @@ export type PluginRouteSearchValidator = (
 
 export interface PluginRoute {
   area: PluginRouteArea;
+  /** The page's declared HTML cache setting, when it declared one. */
+  cache?: PageCacheSetting;
   /** Globally unique, `"<pluginId>:<routeId>"`. */
   id: string;
   kind: PluginRouteKind;

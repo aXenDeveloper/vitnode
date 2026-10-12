@@ -1,3 +1,4 @@
+import type { PageCacheSetting } from "../page-cache/policy";
 import type { PluginRouteDeclaration, PluginRouteLazyComponent } from "./tree";
 import type {
   PluginRouteArea,
@@ -7,6 +8,10 @@ import type {
   PluginRouteSegment,
 } from "./types";
 
+import {
+  PageCachePolicyError,
+  readPageCacheSetting,
+} from "../page-cache/policy";
 import { PluginRouteError } from "./errors";
 import { namespaceProblem, normalizeNamespaceList } from "./namespaces";
 import { parseRoutePath } from "./path";
@@ -15,6 +20,7 @@ import { PLUGIN_ROUTE_AREAS, PLUGIN_ROUTE_REQUIREMENTS } from "./types";
 
 export interface FlatPluginRoute {
   area: PluginRouteArea;
+  cache: PageCacheSetting | undefined;
   component: PluginRouteLazyComponent;
   kind: PluginRouteKind;
   messages: string[];
@@ -167,6 +173,31 @@ const readPendingComponent = (
   }
 
   return pendingComponent as React.FunctionComponent;
+};
+
+const readCache = (
+  cache: unknown,
+  kind: PluginRouteKind,
+  pluginId: string,
+  where: string,
+): PageCacheSetting | undefined => {
+  if (cache === undefined) return undefined;
+
+  if (kind === "layout") {
+    return fail({
+      code: "invalid-cache",
+      message: `${where} in ${pluginId} is a layout and declares \`cache\`. A layout claims no URL of its own - declare the policy on the page whose HTML should be reused.`,
+      pluginId,
+    });
+  }
+
+  try {
+    return readPageCacheSetting(cache, `${where} in ${pluginId}`);
+  } catch (error) {
+    if (!(error instanceof PageCachePolicyError)) throw error;
+
+    return fail({ code: "invalid-cache", message: error.message, pluginId });
+  }
 };
 
 const readSearch = (
@@ -337,6 +368,7 @@ const readNode = ({
 
   const route: FlatPluginRoute = {
     area,
+    cache: readCache(declared.cache, declared.kind, pluginId, where),
     component: readComponent(declared.component, pluginId, where),
     kind: declared.kind,
     messages: readMessages(declared.messages, pluginId, where),

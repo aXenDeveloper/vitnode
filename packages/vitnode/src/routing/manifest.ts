@@ -60,6 +60,7 @@ const readPluginId = (source: unknown): string => {
 
 const builtRoute = (pluginId: string, flat: FlatPluginRoute): PluginRoute => ({
   area: flat.area,
+  ...(flat.cache === undefined ? {} : { cache: flat.cache }),
   id: pluginRouteId(pluginId, flat.routeId),
   kind: flat.kind,
   messages: flat.messages,

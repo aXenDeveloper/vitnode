@@ -1,0 +1,99 @@
+---
+title: Page cache reference
+description: Options, defaults, response headers and helpers of VitNode's server-rendered page cache - route cache policies, vitNodeConfig.pageCache, withPageCache and page cache tags.
+icon: BookOpen
+---
+
+Exact options and behavior of the page cache. For a walkthrough, see [Cache server-rendered pages](/docs/dev/cache/pages).
+
+## Route `cache` option
+
+Accepted by `page()` and `index()` from `@vitnode/core/routing`.
+
+| Name                   | Type     | Required | Default | Description                                                              |
+| ---------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------ |
+| `maxAge`               | `number` | Yes      | -       | Seconds a stored page is fresh. Whole number from 1 to 31536000.         |
+| `staleWhileRevalidate` | `number` | No       | `0`     | Extra seconds a stale page may be served while it re-renders. 0 to 31536000. |
+
+`cache: false` declares that the route is not cached, which is also the default. The build fails with `invalid-cache` for a layout, an unknown key or a duration outside these ranges. A policy on an AdminCP route, an `/api` path or a route with `requires` (its own or a parent layout's) fails the build too.
+
+## `vitNodeConfig.pageCache`
+
+Set in `buildConfig()` in the host app's `src/vitnode.config.ts`.
+
+| Name      | Type                                         | Required | Default    | Description                                                                         |
+| --------- | -------------------------------------------- | -------- | ---------- | ----------------------------------------------------------------------------------- |
+| `enabled` | `boolean`                                    | No       | `true`     | `false` turns the cache off for every route. Development never caches either way.   |
+| `storage` | `"memory" \| "redis"`                        | No       | `"memory"` | `"redis"` reads `REDIS_URL` when the server starts.                                 |
+| `routes`  | `Record<string, PageCacheSetting>`           | No       | `{}`       | Per-route override, keyed by canonical path (`"/blog/:slug"`). `false` disables.    |
+
+An override wins over the route's own `cache`, and may opt in one of the app's own route files. A key that matches no page route fails the build.
+
+## `withPageCache(entry, options)`
+
+From `@vitnode/core/tanstack/page-cache/server`. Wraps a TanStack Start server entry and returns one with the same `fetch`.
+
+| Name      | Type                  | Required | Description                                   |
+| --------- | --------------------- | -------- | --------------------------------------------- |
+| `buildId` | `string`              | Yes      | `pageCacheBuildId` from `src/page-cache.gen.ts` |
+| `config`  | `VitNodeConfig`       | Yes      | The app's `vitNodeConfig`                     |
+| `routes`  | `PageCacheRouteTable` | Yes      | `pageCacheRoutes` from `src/page-cache.gen.ts`  |
+
+## Response headers
+
+| Header             | Value                                          | Meaning                                                              |
+| ------------------ | ---------------------------------------------- | -------------------------------------------------------------------- |
+| `x-vitnode-cache`  | `HIT`, `STALE`, `MISS`, `REVALIDATED`          | Served from the cache, stale while refreshing, rendered and stored, or re-rendered after expiry |
+| `x-vitnode-cache`  | `BYPASS`                                       | The request skipped the cache, or the render could not be shared     |
+| `cache-control`    | `no-cache`                                     | A shared page: browsers and CDNs must revalidate with the `ETag`     |
+| `cache-control`    | `private, no-cache`                            | A shared page that also sets this visitor's locale cookie            |
+| `cache-control`    | `private, no-store`                            | A page rendered for one visitor                                      |
+
+Routes without a policy keep their usual headers and get no `x-vitnode-cache`.
+
+## When a request skips the cache
+
+A request on a cached route goes straight to the renderer when:
+
+- its method is not `GET` or `HEAD` (`GET` and `HEAD` are cached separately);
+- its query string has a parameter other than these analytics parameters, which are ignored: `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `utm_id`, `fbclid`, `gclid`, `gbraid`, `wbraid`, `dclid`, `msclkid`, `yclid`, `twclid`, `ttclid`, `li_fat_id`, `igshid`, `mc_cid`, `mc_eid`, `_ga`, `_gl`. A `?preview=` link is one such parameter;
+- the locale rules redirect it, for example `/en/blog/x` to `/blog/x`;
+- the server could not write an invalidation and has paused the cache.
+
+Entries are keyed by the request origin (scheme, host and port), the path, the method and the build id. Each language's URL and each domain therefore has its own entry.
+
+## Label and invalidate your own data
+
+From `@vitnode/core/api/lib/page-cache`, for data a cached page reads from your own Hono routes.
+
+| Function                                    | Returns                                   | Behavior                                                                                         |
+| ------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `setPageCacheTags(c, tags)`                 | `void`                                    | Labels the response. A cached page that reads it during its render is stored with these tags.  |
+| `invalidatePageCacheTags(tags, { mode })`   | `Promise<PageCacheInvalidationResult>`    | Invalidates every page stored with any of `tags`. `mode` is `"soft"` or `"hard"`.                |
+
+```ts title="plugins/events/src/api/modules/events/routes/list.route.ts"
+import { setPageCacheTags } from '@vitnode/core/api/lib/page-cache'
+
+// in the handler, before returning the response
+setPageCacheTags(c, ['events:list'])
+```
+
+```ts title="after the write commits"
+import { invalidatePageCacheTags } from '@vitnode/core/api/lib/page-cache'
+
+const result = await invalidatePageCacheTags(['events:list'], { mode: 'soft' })
+if (result.status === 'failed') {
+  await c.get('log').error('Cached event pages could not be invalidated.')
+}
+```
+
+`status` is `"done"`, `"failed"` (with `error`) or `"not-configured"` when this process has no page cache, such as an API server without `pageCache` in `buildApiConfig`. Content Engine routes and writes already do this for you.
+
+## `buildApiConfig({ pageCache })`
+
+Only for an API that runs in its own process next to a web app using `storage: "redis"`.
+
+| Name          | Type      | Required | Default | Description                                                            |
+| ------------- | --------- | -------- | ------- | ---------------------------------------------------------------------- |
+| `storage`     | `"redis"` | Yes      | -       | Writes invalidations to the Redis at `REDIS_URL`.                      |
+| `maxLifetime` | `number`  | No       | `86400` | Longest `maxAge + staleWhileRevalidate` of any cached route, in seconds. |

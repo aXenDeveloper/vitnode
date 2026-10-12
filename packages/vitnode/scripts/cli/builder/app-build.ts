@@ -5,7 +5,7 @@ import type { OutputCapture } from "../ui/capture-output";
 import type { TaskHandle, Ui } from "../ui/ui";
 import type { EnvironmentInfo } from "./collector";
 import type { MeasuredFile } from "./output-files";
-import type { BuildRoute } from "./routes";
+import type { BuildRouteReport } from "./routes";
 
 import { isPluginPackage } from "../plugins/discover";
 import { importFromProject, readPackageJson } from "../project/packages";
@@ -39,7 +39,7 @@ export interface AppBuildResult {
   /** Environments that wrote what ships, in build order. */
   environments: string[];
   files: MeasuredFile[];
-  reportRoutes: (() => BuildRoute[]) | null;
+  reportRoutes: (() => BuildRouteReport) | null;
 }
 
 const ENVIRONMENT_LABELS: Record<string, string> = {
@@ -183,6 +183,10 @@ export const runAppBuild = async ({
     reportRoutes:
       routeReportApi === null || publicDir == null
         ? null
-        : () => routeReportApi.routeReport(htmlPathsUnder(publicDir)),
+        : () => ({
+            pageCacheServed: routeReportApi.pageCacheServed?.() ?? false,
+            pageCacheStorage: routeReportApi.pageCacheStorage?.() ?? null,
+            routes: routeReportApi.routeReport(htmlPathsUnder(publicDir)),
+          }),
   };
 };

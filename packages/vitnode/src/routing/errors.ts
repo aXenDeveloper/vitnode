@@ -7,6 +7,7 @@ export type PluginRouteErrorCode =
   | "duplicate-path"
   | "eager-component"
   | "invalid-area"
+  | "invalid-cache"
   | "invalid-namespace"
   | "invalid-parent-kind"
   | "invalid-parent-path"

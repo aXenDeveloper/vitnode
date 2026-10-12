@@ -20,6 +20,7 @@ import type { ContentModel } from "./model";
 import type { ContentPreviewTokenPayload } from "./preview-token";
 import type { ContentPublicService } from "./public-service";
 
+import { setPageCacheTags } from "../../api/lib/page-cache";
 import { buildRoute } from "../../api/lib/route";
 import {
   zodPaginationPageInfo,
@@ -31,6 +32,7 @@ import {
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import { parseContentId } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
 import { partitionContentFields } from "../localization";
 import {
@@ -43,6 +45,10 @@ import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { resolveContentPublicRowFiles } from "./files";
 import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
+import {
+  contentListPageCacheTags,
+  contentRecordPageCacheTags,
+} from "./page-cache";
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
 import {
@@ -360,6 +366,8 @@ export const buildContentPublicRoutes = <
         query: { cursor, first, last, page, search },
       });
 
+      setPageCacheTags(c, contentListPageCacheTags(definition));
+
       return c.json(data, 200, localeHeaders(resolved.locale, resolved.source));
     },
   });
@@ -493,6 +501,17 @@ export const buildContentPublicRoutes = <
         locale: resolved.locale,
       });
       if (row) {
+        setPageCacheTags(
+          c,
+          contentRecordPageCacheTags(
+            definition,
+            parseContentId(
+              definition.idStrategy,
+              (row as Record<string, unknown>).id,
+            ),
+          ),
+        );
+
         return c.json(
           row,
           200,
