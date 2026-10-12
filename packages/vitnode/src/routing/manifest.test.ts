@@ -184,6 +184,56 @@ describe("normalising a declaration", () => {
   });
 });
 
+describe("a page cache policy", () => {
+  it("is carried by the page and index routes that declare one", () => {
+    const manifest = buildPluginRouteManifest([
+      catalog(
+        layout("/catalog", {
+          component: lazyPage(),
+          children: [index({ cache: false, component: lazyPage() })],
+        }),
+        page("/catalog/:productId", {
+          cache: { maxAge: 300, staleWhileRevalidate: 60 },
+          component: lazyPage(),
+        }),
+        page("/catalog/about", { component: lazyPage() }),
+      ),
+    ]);
+
+    expect(
+      Object.fromEntries(manifest.map(route => [route.id, route.cache])),
+    ).toEqual({
+      "@acme/catalog:layout#/catalog": undefined,
+      "@acme/catalog:page#/catalog": false,
+      "@acme/catalog:page#/catalog/:productId": {
+        maxAge: 300,
+        staleWhileRevalidate: 60,
+      },
+      "@acme/catalog:page#/catalog/about": undefined,
+    });
+  });
+
+  it.each<[string, () => PluginRouteDeclaration]>([
+    [
+      "on a layout",
+      () =>
+        layout("/catalog", {
+          component: lazyPage(),
+          children: [index({ component: lazyPage() })],
+          ...({ cache: { maxAge: 60 } } as object),
+        }),
+    ],
+    [
+      "that is not a policy",
+      () => page("/catalog", { cache: { maxAge: 0 }, component: lazyPage() }),
+    ],
+  ])("is refused %s", (_, declare) => {
+    expect(
+      thrownBy(() => buildPluginRouteManifest([catalog(declare())])).code,
+    ).toBe("invalid-cache");
+  });
+});
+
 describe("ordering is decided by the paths, not by the registration order", () => {
   const paths = (...sources: Parameters<typeof buildPluginRouteManifest>[0]) =>
     buildPluginRouteManifest(sources).map(route => route.path);

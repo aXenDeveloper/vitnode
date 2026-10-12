@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { ViteBuildApi } from "../builder/app-build";
-import type { BuildRoute } from "../builder/routes";
+import type { BuildRoute, PageCacheStorageKind } from "../builder/routes";
 
 import { snapshotPathFor } from "../builder/snapshot";
 import { RuntimeError } from "../errors";
@@ -69,9 +69,13 @@ const fakeVite = (
   environments: FakeEnvironment[],
   {
     fail,
+    pageCacheServed,
+    pageCacheStorage,
     routeReport,
   }: {
     fail?: Error;
+    pageCacheServed?: boolean;
+    pageCacheStorage?: null | PageCacheStorageKind;
     routeReport?: (htmlPaths: readonly string[]) => BuildRoute[];
   } = {},
 ): ViteBuildApi & { configs: InlineConfig[] } => {
@@ -132,7 +136,14 @@ const fakeVite = (
         config: {
           plugins: [
             {
-              api: routeReport === undefined ? undefined : { routeReport },
+              api:
+                routeReport === undefined
+                  ? undefined
+                  : {
+                      pageCacheServed: () => pageCacheServed ?? false,
+                      pageCacheStorage: () => pageCacheStorage ?? null,
+                      routeReport,
+                    },
               name: "vitnode:plugin-routes",
             },
           ],
@@ -510,6 +521,69 @@ describe("vitnode build route summary", () => {
     );
 
     expect(runtime.output()).toMatch(/\/admin\/core\/users\s+SSR\s+None/);
+  });
+
+  describe("page cache", () => {
+    const CACHED: BuildRoute[] = [
+      {
+        cache: {
+          policy: { maxAge: 300, staleWhileRevalidate: 60 },
+          source: "route",
+        },
+        localizedPaths: ["/pl/wpisy/:slug"],
+        mode: "dynamic",
+        path: "/blog/:slug",
+        staticPaths: [],
+      },
+      {
+        cache: { policy: { maxAge: 60 }, source: "host" },
+        mode: "dynamic",
+        path: "/about",
+        staticPaths: [],
+      },
+      {
+        cache: { policy: null, source: "host" },
+        mode: "dynamic",
+        path: "/discover",
+        staticPaths: [],
+      },
+    ];
+
+    const output = async (options: {
+      pageCacheServed: boolean;
+      pageCacheStorage: null | PageCacheStorageKind;
+    }) =>
+      (
+        await build(
+          fakeVite(appBuild({ admin: 1000, index: 1000 }), {
+            ...options,
+            routeReport: () => CACHED,
+          }),
+        )
+      ).runtime.output();
+
+    it("shows each route's policy and who chose it", async () => {
+      const text = await output({
+        pageCacheServed: true,
+        pageCacheStorage: "memory",
+      });
+
+      expect(text).toMatch(/\/blog\/:slug\s+SSR\s+TTL 5m · SWR 1m\n/);
+      expect(text).toMatch(/└ \/pl\/wpisy\/:slug\s+pattern/);
+      expect(text).toMatch(/\/about\s+SSR\s+TTL 1m \(app\)/);
+      expect(text).toMatch(/\/discover\s+SSR\s+None \(disabled by app\)/);
+      expect(text).toContain("Page cache storage: memory");
+    });
+
+    it("warns when the server entry does not apply the policies", async () => {
+      const text = await output({
+        pageCacheServed: false,
+        pageCacheStorage: "memory",
+      });
+
+      expect(text).toContain("does not wrap the server with withPageCache");
+      expect(text).not.toContain("Page cache storage");
+    });
   });
 
   it("skips the section rather than fail a finished build", async () => {

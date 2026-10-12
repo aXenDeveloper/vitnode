@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PluginRoute } from "@/routing/types";
 
+import { resolvePageCacheRoutes } from "@/page-cache/resolve";
 import { parseRoutePath } from "@/routing/path";
 
 import { buildRouteReport } from "./route-report";
@@ -145,6 +146,57 @@ describe("buildRouteReport", () => {
       mode: "static",
       path: "/404",
       staticPaths: ["/404"],
+    });
+  });
+
+  describe("page cache", () => {
+    const POLICY = { maxAge: 300, staleWhileRevalidate: 60 };
+
+    const cached = (routes: Record<string, false | typeof POLICY> = {}) => {
+      const pluginRoutes = [
+        { ...pluginRoute("/blog/:slug"), cache: POLICY },
+        { ...pluginRoute("/discover"), cache: POLICY },
+      ];
+
+      return buildRouteReport({
+        hostRoutes: [],
+        htmlPaths: [],
+        i18n: {
+          ...i18n,
+          routePaths: {
+            pl: { "/blog/:slug": "/wpisy/:slug", "/discover": "/odkrywaj" },
+          },
+        },
+        pageCacheRoutes: resolvePageCacheRoutes({
+          config: { enabled: true, routes, storage: "memory" },
+          hostRoutes: [],
+          pluginRoutes,
+        }),
+        pluginRoutes,
+      });
+    };
+
+    it("reports a cached route's policy and the patterns other locales use", () => {
+      expect(
+        cached().find(candidate => candidate.path === "/blog/:slug"),
+      ).toEqual({
+        cache: { policy: POLICY, source: "route" },
+        localizedPaths: ["/pl/wpisy/:slug"],
+        mode: "dynamic",
+        path: "/blog/:slug",
+        staticPaths: [],
+      });
+    });
+
+    it("credits the host app with an override that turned caching off", () => {
+      expect(
+        cached({ "/discover": false }).find(
+          candidate => candidate.path === "/discover",
+        ),
+      ).toMatchObject({
+        cache: { policy: null, source: "host" },
+        localizedPaths: [],
+      });
     });
   });
 });

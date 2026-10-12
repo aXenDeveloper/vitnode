@@ -233,14 +233,24 @@ describe("sessions never leak into shared HTML", () => {
     expect(seen[0].shared).toBe(false);
   });
 
-  it.each<[string, Respond]>([
-    [
-      "sets a cookie",
-      (_, count) =>
+  it("never stores a render that sets a cookie, and still delivers the cookie", async () => {
+    const { request, seen } = setup({
+      respond: (_, count) =>
         html(`render #${String(count)}`, {
           headers: { "set-cookie": "csrf=abc" },
         }),
-    ],
+    });
+
+    const first = await request("/blog/hello");
+    const second = await request("/blog/hello");
+
+    expect(first.response.headers.get("set-cookie")).toBe("csrf=abc");
+    expect(second.status).toBe("BYPASS");
+    // A shared render, then the visitor's own, on each request.
+    expect(seen.map(entry => entry.shared)).toEqual([true, false, true, false]);
+  });
+
+  it.each<[string, Respond]>([
     [
       "says it is private",
       (_, count) =>
@@ -426,10 +436,12 @@ describe("invalidation", () => {
   it("stores again once the clock-skew margin has passed", async () => {
     const { request } = setup();
     await invalidatePageCacheTags([TAG], { mode: "hard" });
+    // Another server's clock may run up to 2 s behind this one.
+    await vi.advanceTimersByTimeAsync(1_000);
 
     await request("/blog/hello");
     const withinMargin = await request("/blog/hello");
-    await vi.advanceTimersByTimeAsync(3_000);
+    await vi.advanceTimersByTimeAsync(2_000);
     await request("/blog/hello");
     const later = await request("/blog/hello");
 

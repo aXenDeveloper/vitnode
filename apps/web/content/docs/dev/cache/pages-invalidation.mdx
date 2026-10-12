@@ -30,7 +30,7 @@ A cached page is rendered once for everybody, so VitNode renders it as a signed-
 - The main layout skips the session, exactly as it does for a [prerendered page](/docs/dev/deployments/prerendering#what-a-prerendered-page-leaves-out). The browser loads the account menu and header navigation after the page arrives.
 - A response is stored only when it is a `200` HTML page that sets no cookie and read no API response marked `private` or `no-store`. Everything else, including errors, redirects and `404`s, is sent once and forgotten.
 
-Signed-in visitors receive the same stored copy and see their account menu once the browser loads it. When the shared copy does not exist, for example a moderator opening a hidden article that answers `404` to everyone else, VitNode renders the page again for that visitor's own request. That copy is marked `private, no-store` and never stored.
+Signed-in visitors receive the same stored copy and see their account menu once the browser loads it. When the shared copy does not exist, for example a moderator opening a hidden article that answers `404` to everyone else, VitNode renders the page again for that visitor's own request. That copy is marked `private, no-store` and never stored. The same happens when the shared render sets a cookie, so the visitor still receives it.
 
 A page component on a cached route must not read the session on the server. Put anything that depends on who is looking, such as an edit button, in a component that loads its data in the browser.
 

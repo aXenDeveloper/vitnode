@@ -64,7 +64,14 @@ export const PAGE_CACHE_IGNORED_QUERY_PARAMS: ReadonlySet<string> = new Set([
 const SHAREABLE_HEADER = "x-vitnode-page-cache-shareable";
 const TAGS_HEADER = "x-vitnode-page-cache-tags";
 const RENDERED_AT_HEADER = "x-vitnode-page-cache-rendered-at";
-const INTERNAL_HEADERS = [SHAREABLE_HEADER, TAGS_HEADER, RENDERED_AT_HEADER];
+/** The shared render set a cookie, which the cache layer cannot pass on. */
+const SETS_COOKIE_HEADER = "x-vitnode-page-cache-sets-cookie";
+const INTERNAL_HEADERS = [
+  SHAREABLE_HEADER,
+  TAGS_HEADER,
+  RENDERED_AT_HEADER,
+  SETS_COOKIE_HEADER,
+];
 
 /**
  * What a cached page tells browsers and CDNs: store it if you like, but ask
@@ -245,6 +252,8 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
     return withHeaders(response, out => {
       if (!isShareable) {
         out.set("cache-control", DOCUMENT_CACHE_CONTROL);
+        if (response.headers.has("set-cookie"))
+          out.set(SETS_COOKIE_HEADER, "1");
 
         return;
       }
@@ -379,8 +388,12 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
     ) {
       // Not something everybody may see. A visitor with cookies may be allowed
       // more than the public render showed - a moderator on a hidden article -
-      // so they get a render of their own request.
-      if (request.headers.has("cookie")) {
+      // so they get a render of their own request. So does a page that sets a
+      // cookie: the cache layer drops `set-cookie`, and the visitor needs it.
+      if (
+        request.headers.has("cookie") ||
+        response.headers.get(SETS_COOKIE_HEADER) === "1"
+      ) {
         await response.body?.cancel();
 
         return await bypass();
