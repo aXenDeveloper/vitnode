@@ -54,7 +54,7 @@ export const PAGE_CACHE_IGNORED_QUERY_PARAMS: ReadonlySet<string> = new Set([
   "utm_content",
   "utm_id",
   "utm_medium",
-  
+  "utm_source",
   "utm_term",
   "wbraid",
   "yclid",
