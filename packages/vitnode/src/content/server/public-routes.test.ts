@@ -1,10 +1,16 @@
+import type { Context } from "hono";
+
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
+import { core_content_containers } from "@/database/content-containers";
 import {
   testCategoryContentType,
   testPostContentType,
+  testThreadContentType,
 } from "@/tests/content-fixtures";
+import { createMemoryDb } from "@/tests/memory-db";
 
 import { createContentModel } from "./model";
 import { buildContentPublicModule } from "./public-module";
@@ -149,6 +155,154 @@ describe("public list route", () => {
     // the query builder. Draft-hunting by query string does not work.
     expect(service.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ filters: {} }),
+    );
+  });
+});
+
+describe("public list filtered by container", () => {
+  const threads = createContentModel(testThreadContentType);
+  const PUBLISHED = new Date("2026-08-01T09:00:00.000Z");
+
+  // 1 General > 3 News > 5 Releases, 2 Off topic; 9 is another collection's.
+  const BOARD = {
+    ELSEWHERE: 9,
+    GENERAL: 1,
+    MISSING: 99,
+    NEWS: 3,
+    OFF_TOPIC: 2,
+    RELEASES: 5,
+  } as const;
+  const THREAD_IN = {
+    [BOARD.GENERAL]: 11,
+    [BOARD.NEWS]: 12,
+    [BOARD.RELEASES]: 13,
+    [BOARD.OFF_TOPIC]: 14,
+  };
+
+  const board = (
+    id: number,
+    parentId: null | number,
+    definitionId: string = testThreadContentType.fields.board.definition.id,
+  ) => ({
+    createdAt: PUBLISHED,
+    definitionId,
+    id,
+    metadata: {},
+    name: `Board ${id}`,
+    parentId,
+    pluginId: PLUGIN_ID,
+    position: 0,
+    slug: `board-${id}`,
+    updatedAt: PUBLISHED,
+  });
+
+  const app = (() => {
+    const memory = createMemoryDb([
+      [
+        core_content_containers,
+        [
+          board(BOARD.GENERAL, null),
+          board(BOARD.NEWS, BOARD.GENERAL),
+          board(BOARD.RELEASES, BOARD.NEWS),
+          board(BOARD.OFF_TOPIC, null),
+          board(BOARD.ELSEWHERE, null, "test.sections"),
+        ],
+      ],
+      [
+        threads.table,
+        Object.entries(THREAD_IN).map(([boardId, id]) => ({
+          author: 1,
+          board: Number(boardId),
+          createdAt: PUBLISHED,
+          id,
+          publishedAt: PUBLISHED,
+          slug: `thread-${id}`,
+          status: "published",
+          title: `Thread ${id}`,
+          updatedAt: PUBLISHED,
+        })),
+      ],
+    ]);
+    const instance = new OpenAPIHono();
+    instance.use("*", async (c, next) => {
+      c.set("db", memory.db as unknown as Context["var"]["db"]);
+      await next();
+    });
+    instance.onError((error, c) =>
+      error instanceof HTTPException
+        ? error.getResponse()
+        : c.json({ error: String(error) }, 500),
+    );
+    for (const { handler, route } of buildContentPublicRoutes(threads, {
+      pluginId: PLUGIN_ID,
+    })) {
+      instance.openapi(route, handler);
+    }
+
+    return instance;
+  })();
+
+  const listed = async (query: string) => {
+    const response = await app.request(`/${query}`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { edges: { id: number }[] };
+
+    return body.edges.map(edge => edge.id).sort((a, b) => a - b);
+  };
+
+  it.each([
+    ["one container", `?board=${BOARD.GENERAL}`, [THREAD_IN[BOARD.GENERAL]]],
+    [
+      "a container and its subtree",
+      `?board=${BOARD.GENERAL}&includeDescendants=true`,
+      [
+        THREAD_IN[BOARD.GENERAL],
+        THREAD_IN[BOARD.NEWS],
+        THREAD_IN[BOARD.RELEASES],
+      ],
+    ],
+    [
+      "a subtree further down",
+      `?board=${BOARD.NEWS}&includeDescendants=true`,
+      [THREAD_IN[BOARD.NEWS], THREAD_IN[BOARD.RELEASES]],
+    ],
+    [
+      "one container when includeDescendants is false",
+      `?board=${BOARD.NEWS}&includeDescendants=false`,
+      [THREAD_IN[BOARD.NEWS]],
+    ],
+    [
+      "everything when no container is named",
+      "?includeDescendants=true",
+      Object.values(THREAD_IN),
+    ],
+  ])("lists %s", async (_label, query, expected) => {
+    await expect(listed(query)).resolves.toEqual(
+      [...expected].sort((a, b) => a - b),
+    );
+  });
+
+  it.each([
+    ["does not exist", BOARD.MISSING],
+    ["belongs to another collection", BOARD.ELSEWHERE],
+  ])("is a 404 for a container that %s", async (_label, id) => {
+    expect((await app.request(`/?board=${id}`)).status).toBe(404);
+    expect(
+      (await app.request(`/?board=${id}&includeDescendants=true`)).status,
+    ).toBe(404);
+  });
+
+  it("gives a content type without containers no includeDescendants", async () => {
+    const { app: postsApp, service } = harness();
+    service.findMany.mockResolvedValue(emptyPage);
+
+    const response = await postsApp.request(
+      "/?includeDescendants=true&category=3",
+    );
+
+    expect(response.status).toBe(200);
+    expect(service.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ filters: { category: 3 } }),
     );
   });
 });
