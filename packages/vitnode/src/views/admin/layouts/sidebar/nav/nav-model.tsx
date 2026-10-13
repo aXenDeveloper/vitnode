@@ -29,7 +29,7 @@ import {
 } from "@/content/admin/labels";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref } from "@/content/registry";
-import { normalizeNamespaceList } from "@/routing";
+import { fitNamespaceList, MAX_NAMESPACES } from "@/routing";
 
 /** A resolved sub-item, as the sidebar and the search index read it. */
 export interface AdminNavSubItem {
@@ -423,16 +423,18 @@ const titleNamespace = (title: AdminNavTitle): string => {
  * plugin route's namespaces go through, so two callers with the same navigation
  * ask for one cache entry rather than two holding identical bytes.
  *
- * Note the budget: `MAX_NAMESPACES` caps a single request at 16, which is the
- * shell's two plus roughly three per plugin that contributes navigation - a
- * heading, its content types and its declared entries. An installation large
- * enough to exceed that wants a coarser projection, and it will be told so
- * rather than quietly served half a sidebar.
+ * Note the budget: `MAX_NAMESPACES` caps a single request at 16, and the shell
+ * and the navigation screen add their own few. Three plugins with a handful of
+ * content types each already pass it, so the list is coarsened to fit - a
+ * plugin's whole `content` subtree, then its root - rather than refused.
  */
+/** What the shell (`core.global`, `admin.global`) and a screen leave over. */
+const ADMIN_NAV_NAMESPACE_BUDGET = MAX_NAMESPACES - 4;
+
 export const adminNavNamespaces = (
   declarations: readonly AdminNavGroupDeclaration[],
 ): string[] =>
-  normalizeNamespaceList(
+  fitNamespaceList(
     declarations.flatMap(group => [
       titleNamespace(group.title),
       ...group.items.flatMap(item => [
@@ -440,6 +442,7 @@ export const adminNavNamespaces = (
         ...(item.items ?? []).map(subItem => titleNamespace(subItem.title)),
       ]),
     ]),
+    ADMIN_NAV_NAMESPACE_BUDGET,
   );
 
 /**

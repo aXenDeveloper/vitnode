@@ -60,3 +60,29 @@ export const normalizeNamespaceList = (
 
     return a < b ? -1 : 1;
   });
+
+const coarsen = (namespace: string, depth: number): string =>
+  namespace.split(".").slice(0, depth).join(".");
+
+/**
+ * Shrinks a namespace list to at most `budget` entries by asking for broader
+ * subtrees: first each namespace as it is, then its first two segments
+ * (`@vitnode/example.content`), then the plugin root (`@vitnode/example`). A
+ * broader namespace holds every narrower one, so nothing renders as a key - the
+ * cost is a few more strings in the response.
+ */
+export const fitNamespaceList = (
+  namespaces: readonly string[],
+  budget: number = MAX_NAMESPACES,
+): string[] => {
+  let fitted = normalizeNamespaceList(namespaces);
+
+  for (const depth of [2, 1]) {
+    if (fitted.length <= budget) return fitted;
+    fitted = normalizeNamespaceList(
+      fitted.map(namespace => coarsen(namespace, depth)),
+    );
+  }
+
+  return fitted;
+};

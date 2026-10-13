@@ -97,11 +97,11 @@ deep, and you can drag them to reorder. A forum's **Icon** accepts the same
 | ------------------------ | ---------------------------------------------------------------------- |
 | `/forum`                 | Every forum with its topic and reply counts and its newest topic       |
 | `/forum/:slug`           | Subforums and the topics of one forum, newest first                    |
-| `/forum/topics/new`      | Start a topic (signed-in members)                                      |
+| `/forum/create/topic`    | Start a topic (signed-in members)                                      |
 | `/forum/topics/:slug`    | The topic, its nested replies, and a reply box                         |
 | `/forum/topics/:id/edit` | Edit your own topic                                                    |
 | `/forum/replies/:slug`   | Permalink of one reply - redirects to its place in the topic           |
-| `/forum/pending`         | Your posts a moderator approved, declined, or has not looked at yet    |
+| `/forum/me/pending`      | Your posts a moderator approved, declined, or has not looked at yet    |
 
 Replies nest up to six levels. On small screens deep replies stop indenting, so
 the text keeps its width, and every branch can be collapsed. A reply removed by
@@ -123,7 +123,7 @@ inherits from its parent until you override a value. See
 [Container policies](/docs/content-engine/container-policies) for every option.
 
 When a post needs approval, the author sees "Waiting for a moderator", and the
-post appears on `/forum/pending`. Moderators with the **Approve** permission for
+post appears on `/forum/me/pending`. Moderators with the **Approve** permission for
 that forum review it in ModCP. See [Approvals](/docs/content-engine/approvals).
 
 ## Grant moderators a forum

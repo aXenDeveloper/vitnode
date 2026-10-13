@@ -1,0 +1,309 @@
+{
+  "@vitnode/forum": {
+    "title": "Forum",
+    "navigation": {
+      "forum": {
+        "title": "Forum",
+        "description": "Topics, replies and the occasional heated debate about tabs versus spaces."
+      }
+    },
+    "containers": {
+      "forums": {
+        "label": "{count, plural, one {Forum} other {Forums}}",
+        "title": "Forums",
+        "desc": "The forum tree members post their topics into. Drag to reorder or nest forums, and set who publishes straight away.",
+        "fields": {
+          "description": "Description",
+          "icon": "Icon"
+        }
+      }
+    },
+    "content": {
+      "topic": {
+        "label": "{count, plural, one {Topic} other {Topics}}",
+        "title": "Topics",
+        "desc": "Conversations started by members. Each one lives in a forum and collects replies.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "body": "Message",
+          "author": "Author",
+          "forum": "Forum",
+          "publishedAt": "Published",
+          "updatedAt": "Updated",
+          "createdAt": "Created"
+        }
+      },
+      "reply": {
+        "label": "{count, plural, one {Reply} other {Replies}}",
+        "title": "Replies",
+        "desc": "Answers to topics and to each other, nested up to six levels deep.",
+        "fields": {
+          "slug": "Permalink",
+          "body": "Message",
+          "author": "Author",
+          "topic": "Topic",
+          "parent": "In reply to",
+          "publishedAt": "Published",
+          "updatedAt": "Updated",
+          "createdAt": "Created"
+        }
+      }
+    },
+    "forums": {
+      "title": "Forum",
+      "desc": "Pull up a chair. Ask questions, share what you built and help each other out.",
+      "tree": "Forums",
+      "new_topic": "New topic",
+      "empty": {
+        "title": "No forums yet",
+        "desc": "An administrator has not opened any forums. The chairs are stacked, the coffee is brewing - check back soon.",
+        "home": "Back to home"
+      },
+      "stats": {
+        "topics": "Topics",
+        "replies": "Replies"
+      },
+      "latest": "Latest topic",
+      "no_topics_yet": "No topics yet - be the first!",
+      "deleted_user": "Deleted user",
+      "not_found": {
+        "title": "Forum not found",
+        "desc": "This forum does not exist, or it moved somewhere else.",
+        "back": "All forums"
+      },
+      "forum_desc_fallback": "Topics and replies in {name}.",
+      "subforums": "Subforums",
+      "topics": "Topics",
+      "empty_forum": {
+        "title": "Quiet in here",
+        "desc": "Nobody has started a topic in this forum yet. Break the ice!"
+      },
+      "pagination": "Topic pages",
+      "newest": "Newest topics",
+      "older": "Older topics",
+      "reply_count": "{count, plural, =0 {No replies} one {# reply} other {# replies}}",
+      "last_reply": "Last reply",
+      "errors": {
+        "title": "That did not go through",
+        "unknown": "Something went wrong. Please try again in a moment.",
+        "forbidden": "You are not allowed to do that here.",
+        "invalid": "Some of what you sent is not valid. Check the form and try again.",
+        "not_found": "This no longer exists, or you cannot see it.",
+        "unauthenticated": "Your session ended. Sign in and try again.",
+        "unique": "A topic with this title already exists. Try a slightly different title.",
+        "issues": {
+          "edit_window_closed": "The time to edit this has run out. Ask a moderator if something needs fixing.",
+          "moderators_only": "Only moderators can post in this forum.",
+          "not_writable": "This field cannot be changed.",
+          "unavailable": "This is not available.",
+          "forum_unavailable": "This forum is not available. Pick another one.",
+          "parent_unavailable": "That reply can no longer be answered. Reply higher up in the thread.",
+          "topic_unavailable": "This topic no longer accepts replies."
+        }
+      }
+    },
+    "topics": {
+      "form": {
+        "title": {
+          "label": "Title",
+          "desc": "A short summary people will want to click.",
+          "min": "Use at least 3 characters.",
+          "max": "Keep it under 200 characters."
+        },
+        "body": {
+          "label": "Message",
+          "desc": "Say what is on your mind. Formatting, links and images are welcome.",
+          "required": "Write a message first."
+        },
+        "forum": {
+          "label": "Forum",
+          "desc": "Where your topic will live.",
+          "placeholder": "Choose a forum",
+          "required": "Choose a forum."
+        }
+      },
+      "new": {
+        "title": "Start a topic",
+        "desc": "Ask a question, share an idea or start a friendly argument.",
+        "submit": "Post topic",
+        "no_forums": {
+          "title": "No forums yet",
+          "desc": "There is nowhere to post a topic until an administrator opens a forum.",
+          "action": "Back to the forum"
+        }
+      },
+      "edit": {
+        "title": "Edit topic",
+        "desc": "Fix a typo or add what you forgot. We all do it.",
+        "submit": "Save changes",
+        "view": "View topic",
+        "success": {
+          "title": "Topic saved",
+          "desc": "\"{title}\" is up to date."
+        },
+        "pending": {
+          "title": "Sent for approval",
+          "desc": "A moderator will review your changes. Readers see the published version until then."
+        },
+        "conflict": {
+          "title": "This topic changed",
+          "desc": "Someone saved a newer version while you were editing. Reload to see it, then make your changes again.",
+          "reload": "Reload"
+        }
+      },
+      "state": {
+        "back": "Back to the forum",
+        "unauthenticated": {
+          "title": "Sign in to edit",
+          "desc": "Only the author and moderators can edit a topic.",
+          "action": "Sign in"
+        },
+        "forbidden": {
+          "title": "Not your topic",
+          "desc": "Only the author and moderators can edit this topic."
+        },
+        "not_found": {
+          "title": "Topic not found",
+          "desc": "This topic does not exist, or you cannot see it."
+        },
+        "window_closed": {
+          "title": "Editing has closed",
+          "desc": "The time to edit this topic has run out. Ask a moderator if something needs fixing."
+        }
+      },
+      "approval": {
+        "rejected": {
+          "title": "A moderator declined this",
+          "desc": "Your submission was not approved. You can edit it and send it again.",
+          "reason": "Reason: {reason}"
+        },
+        "pending_edit": {
+          "title": "Your changes are waiting for approval",
+          "desc": "Readers still see the published version. You are looking at your proposed changes."
+        },
+        "pending_create": {
+          "title": "Waiting for a moderator",
+          "desc": "Your topic goes live as soon as a moderator approves it. You can still polish it here.",
+          "link": "See all your posts awaiting approval."
+        }
+      },
+      "detail": {
+        "edit": "Edit",
+        "new": "New topic",
+        "posted": "Posted",
+        "actions": "Topic actions",
+        "created": {
+          "title": "Topic posted",
+          "desc": "Your topic is live. Now we wait for the replies to roll in."
+        }
+      }
+    },
+    "replies": {
+      "title": "{count, plural, =0 {Replies} one {# reply} other {# replies}}",
+      "empty": {
+        "title": "No replies yet",
+        "desc": "Be the first to answer. No pressure."
+      },
+      "truncated": "This thread is very long, so some deeper replies are not shown here.",
+      "load_more": "Load more replies",
+      "load_failed": {
+        "title": "Could not load replies",
+        "desc": "Please check your connection and try again."
+      },
+      "compose": {
+        "title": "Join the conversation",
+        "guest": "You need an account to reply.",
+        "sign_in": "Sign in to reply"
+      },
+      "form": {
+        "body_label": "Your reply",
+        "edit_label": "Edit your reply",
+        "answer_label": "Reply to {name}",
+        "submit": "Post reply",
+        "save": "Save",
+        "cancel": "Cancel",
+        "body": {
+          "required": "Write a reply first."
+        }
+      },
+      "pending": {
+        "title": "Your reply is waiting for a moderator",
+        "desc": "It will appear in the thread once it is approved."
+      },
+      "created": {
+        "title": "Reply posted",
+        "desc": "Your reply is in the thread."
+      },
+      "edited": {
+        "title": "Reply saved",
+        "desc": "Your changes are live."
+      },
+      "conflict": {
+        "title": "This reply changed",
+        "desc": "A newer version was saved while you were editing. Reload the page and try again."
+      },
+      "permalink": "Link to this reply",
+      "edited_label": "edited",
+      "reply": "Reply",
+      "edit": "Edit",
+      "someone": "this reply",
+      "removed": "This reply was removed.",
+      "show_answers": "{count, plural, one {Show # answer} other {Show # answers}}",
+      "hide_answers": "{count, plural, one {Hide # answer} other {Hide # answers}}"
+    },
+    "pending": {
+      "title": "My posts awaiting approval",
+      "desc": "Everything you posted that a moderator has reviewed or is about to.",
+      "untitled_reply": "A reply",
+      "untitled_topic": "A topic",
+      "status": {
+        "pending": "Waiting",
+        "approved": "Approved",
+        "rejected": "Declined"
+      },
+      "type": {
+        "topic": "Topic",
+        "reply": "Reply"
+      },
+      "kind": {
+        "create": "new",
+        "edit": "edit"
+      },
+      "submitted": "Submitted",
+      "reason": "Reason: {reason}",
+      "no_reason": "The moderator did not leave a reason.",
+      "empty": {
+        "title": "Nothing waiting",
+        "desc": "None of your posts need a moderator. Lovely.",
+        "action": "Back to the forum"
+      },
+      "pagination": "Submission pages",
+      "newer": "Newer",
+      "older": "Older"
+    }
+  },
+  "@vitnode/forum:topic": "Topics",
+  "@vitnode/forum:topic:can_view": "View topics",
+  "@vitnode/forum:topic:can_create": "Create topics",
+  "@vitnode/forum:topic:can_edit": "Edit topics",
+  "@vitnode/forum:topic:can_delete": "Delete topics",
+  "@vitnode/forum:topic:can_publish": "Publish and unpublish topics",
+  "@vitnode/forum:topic:can_hide": "Hide and unhide topics",
+  "@vitnode/forum:topic:can_restore": "Restore an earlier version of a topic",
+  "@vitnode/forum:topic:can_approve": "Approve or decline topics waiting for review",
+  "@vitnode/forum:reply": "Replies",
+  "@vitnode/forum:reply:can_view": "View replies",
+  "@vitnode/forum:reply:can_create": "Create replies",
+  "@vitnode/forum:reply:can_edit": "Edit replies",
+  "@vitnode/forum:reply:can_delete": "Delete replies",
+  "@vitnode/forum:reply:can_publish": "Publish and unpublish replies",
+  "@vitnode/forum:reply:can_hide": "Hide and unhide replies",
+  "@vitnode/forum:reply:can_restore": "Restore an earlier version of a reply",
+  "@vitnode/forum:reply:can_approve": "Approve or decline replies waiting for review",
+  "@vitnode/forum:forum_forums": "Forums",
+  "@vitnode/forum:forum_forums:can_view": "View forums",
+  "@vitnode/forum:forum_forums:can_create": "Create forums",
+  "@vitnode/forum:forum_forums:can_edit": "Edit, move and set policies of forums",
+  "@vitnode/forum:forum_forums:can_delete": "Delete forums"
+}
