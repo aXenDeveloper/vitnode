@@ -1,12 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 
-import { FileIcon, KeyRoundIcon, SettingsIcon, UserIcon } from "lucide-react";
+import {
+  FileIcon,
+  KeyRoundIcon,
+  SettingsIcon,
+  ShieldIcon,
+  UserIcon,
+} from "lucide-react";
 
 export interface UserHeaderUser {
   avatarColor: string;
   avatarUrl?: null | string;
   email: string;
   isAdmin: boolean;
+  isModerator?: boolean;
   name: string;
   nameCode: string;
 }
@@ -19,6 +26,7 @@ export type UserHeaderState =
 export const USER_HEADER_HREF = {
   adminCp: "/admin",
   files: "/files",
+  modCp: "/modcp/reports",
   settings: "/settings",
   signIn: "/login",
   signUp: "/register",
@@ -45,6 +53,7 @@ export interface UserHeaderMenuItem {
 export type UserHeaderMenuItemKey =
   | "admin_cp"
   | "files"
+  | "mod_cp"
   | "my_profile"
   | "settings";
 
@@ -70,19 +79,29 @@ export const userHeaderMenu = (
     { href: USER_HEADER_HREF.settings, Icon: SettingsIcon, key: "settings" },
   ];
 
-  if (!user.isAdmin) return [account];
-
-  return [
-    account,
-    [
-      {
-        href: USER_HEADER_HREF.adminCp,
-        Icon: KeyRoundIcon,
-        key: "admin_cp",
-        newTab: true,
-      },
-    ],
+  const staff: UserHeaderMenuItem[] = [
+    ...(user.isModerator
+      ? [
+          {
+            href: USER_HEADER_HREF.modCp,
+            Icon: ShieldIcon,
+            key: "mod_cp" as const,
+          },
+        ]
+      : []),
+    ...(user.isAdmin
+      ? [
+          {
+            href: USER_HEADER_HREF.adminCp,
+            Icon: KeyRoundIcon,
+            key: "admin_cp" as const,
+            newTab: true,
+          },
+        ]
+      : []),
   ];
+
+  return staff.length > 0 ? [account, staff] : [account];
 };
 
 export const userHeaderState = ({

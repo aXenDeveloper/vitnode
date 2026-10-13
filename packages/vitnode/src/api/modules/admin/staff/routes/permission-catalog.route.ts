@@ -9,9 +9,16 @@ const permissionStaffModulesSchema = z.record(
     z.object({
       permission: z.string(),
       dependsOn: z.array(z.string()),
+      scope: z.string().optional(),
     }),
   ),
 );
+
+const scopeFamilySchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  description: z.string().nullable(),
+});
 
 export const permissionCatalogStaffAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -29,11 +36,13 @@ export const permissionCatalogStaffAdminRoute = buildRoute({
                 pluginId: z.string(),
                 admin: permissionStaffModulesSchema,
                 moderator: permissionStaffModulesSchema,
+                scopes: z.array(scopeFamilySchema),
               }),
             ),
           },
         },
-        description: "Staff permission catalog",
+        description:
+          "Staff permission catalog, with the moderation scope families each plugin registers",
       },
       403: {
         description: "Access Denied",
@@ -41,6 +50,20 @@ export const permissionCatalogStaffAdminRoute = buildRoute({
     },
   },
   handler: c => {
-    return c.json(c.get("core").permissionStaff, 200);
+    const { moderation, permissionStaff } = c.get("core");
+
+    return c.json(
+      permissionStaff.map(plugin => ({
+        ...plugin,
+        scopes: (moderation?.scopes ?? [])
+          .filter(scope => scope.pluginId === plugin.pluginId)
+          .map(({ definition }) => ({
+            id: definition.id,
+            label: definition.label,
+            description: definition.description ?? null,
+          })),
+      })),
+      200,
+    );
   },
 });

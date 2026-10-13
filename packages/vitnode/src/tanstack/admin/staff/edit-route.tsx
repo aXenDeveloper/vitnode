@@ -2,9 +2,15 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { notFound } from "@tanstack/react-router";
 
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
+import type {
+  PermissionStaffScope,
+  PermissionStaffType,
+} from "@/api/lib/permission-staff";
 import type { PluginRouteTranslator } from "@/routing";
-import type { StaffPluginGroup } from "@/views/admin/views/core/staff/staff-model";
+import type {
+  StaffPluginGroup,
+  StaffScopeFamily,
+} from "@/views/admin/views/core/staff/staff-model";
 import type {
   AdminStaffRole,
   AdminStaffRow,
@@ -13,12 +19,15 @@ import type {
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 import {
   buildStaffPermissionGroups,
+  buildStaffScopeFamilies,
   chunkStaffLabelKeys,
   grantedStaffPermissionKeys,
+  grantedStaffScopes,
   normalizeStaffEntryId,
   staffLabelKeys,
   staffLabelLookupFrom,
   staffListHref,
+  staffPermissionItems,
 } from "@/views/admin/views/core/staff/staff-model";
 
 import type { AdminScreenContext } from "../screen";
@@ -66,7 +75,9 @@ export interface AdminStaffEditSubject {
 export interface AdminStaffEditRouteData {
   backHref: string;
   backLabel: string;
+  families: StaffScopeFamily[];
   grantedKeys: string[];
+  grantedScopes: Record<string, PermissionStaffScope>;
   id: string;
   plugins: StaffPluginGroup[];
   subject: AdminStaffEditSubject;
@@ -116,16 +127,20 @@ export const loadAdminStaffEditRoute = async ({
     queryClient,
   });
 
+  const label = staffLabelLookupFrom(labels);
+  const plugins = buildStaffPermissionGroups({ catalog, label, type });
+
   return {
     backHref: staffListHref(type),
     backLabel: t("admin.staff.edit.back"),
+    families: buildStaffScopeFamilies({ catalog, label }),
     grantedKeys: [...grantedStaffPermissionKeys(entry.permissions)],
+    grantedScopes: grantedStaffScopes(
+      entry.permissions,
+      staffPermissionItems(plugins),
+    ),
     id,
-    plugins: buildStaffPermissionGroups({
-      catalog,
-      label: staffLabelLookupFrom(labels),
-      type,
-    }),
+    plugins,
     subject: {
       protected: entry.protected,
       role: entry.role,

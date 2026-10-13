@@ -131,6 +131,12 @@
     },
     "events": {
       "sessions": "Sessions"
+    },
+    "moderation": {
+      "category": {
+        "label": "Categories",
+        "desc": "Limit this permission to articles in some categories."
+      }
     }
   },
   "@vitnode/example:article": "Articles",

@@ -15,12 +15,16 @@ import {
   validateContentTypes,
   withContentPermissions,
 } from "@/content/registry";
+import { contentDefinitionOf } from "@/content/server/model";
+import { contentReportTarget } from "@/content/server/report-target";
 
 import type { SearchIndexer } from "../models/search";
 import type { AnyAiActionDefinition } from "./ai/action";
 import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventListenerConfig } from "./events";
+import type { ModerationPluginConfig } from "./moderation/registry";
+import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
@@ -31,6 +35,7 @@ import { validateSearchIndexers } from "../models/search";
 import { collectAiActions } from "./ai/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
+import { withModerationPermissions } from "./moderation/registry";
 import { collectNavigationPresets } from "./navigation-presets";
 import { validateNotificationTypes } from "./notifications/registry";
 import { applyModuleTags } from "./openapi-tags";
@@ -51,6 +56,7 @@ export interface BuildPluginApiReturn<
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
   messages?: LocaleMessagesMap;
+  moderation?: Required<ModerationPluginConfig>;
   modules: Modules;
   navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
@@ -77,6 +83,7 @@ export function buildApiPlugin<
   editablePages,
   pluginId,
   messages,
+  moderation,
   modules = [] as unknown as Modules,
   navigation,
   notificationTypes,
@@ -87,6 +94,7 @@ export function buildApiPlugin<
   blocks?: BlockPluginSource;
   editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
+  moderation?: ModerationPluginConfig;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
@@ -177,6 +185,13 @@ export function buildApiPlugin<
     }
   }
 
+  const reportTargets: ModerationReportTargetDefinition[] = [
+    ...(moderation?.reportTargets ?? []),
+    ...contentModels
+      .filter(model => contentDefinitionOf(model).reports.enabled)
+      .map(model => contentReportTarget(model, pluginId)),
+  ];
+
   return {
     pluginId,
     aiActions,
@@ -198,7 +213,11 @@ export function buildApiPlugin<
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete
     // unless the plugin declared that module itself.
-    permissionStaff: withContentPermissions(permissionStaff, registered),
+    permissionStaff: withModerationPermissions(
+      withContentPermissions(permissionStaff, registered),
+      reportTargets,
+    ),
+    moderation: { reportTargets, scopes: moderation?.scopes ?? [] },
   };
 }
 

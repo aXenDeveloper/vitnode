@@ -22,6 +22,16 @@ export const permissionsRoute = buildRoute({
                   plugin: z.string(),
                   module: z.string(),
                   permission: z.string(),
+                  scope: z
+                    .discriminatedUnion("mode", [
+                      z.object({ family: z.string(), mode: z.literal("all") }),
+                      z.object({
+                        family: z.string(),
+                        mode: z.literal("selected"),
+                        ids: z.array(z.string()),
+                      }),
+                    ])
+                    .optional(),
                 }),
               ),
             }),

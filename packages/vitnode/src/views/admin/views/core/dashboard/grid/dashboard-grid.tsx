@@ -11,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { useStableIds } from "@/lib/dnd/use-stable-ids";
 
 import { useDashboardBoard } from "./board-context";
 import { DropPlaceholder, IncomingPlaceholder } from "./drop-placeholder";
@@ -38,10 +39,11 @@ export const DashboardGrid = () => {
   } = useDashboardBoard();
 
   const placedIds = placed.map(widget => widget.instanceId);
-  const sortableIds =
+  const sortableIds = useStableIds(
     incoming === null
       ? placedIds
-      : placedIds.toSpliced(incoming.index, 0, INCOMING_ID);
+      : placedIds.toSpliced(incoming.index, 0, INCOMING_ID),
+  );
   const incomingSlot =
     incoming === null ? null : (
       <IncomingPlaceholder key={INCOMING_ID} widget={incoming.widget} />

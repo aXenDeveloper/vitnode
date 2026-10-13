@@ -10,6 +10,7 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
 import { checkStaffPermissionOfUser } from "../../api/lib/check-staff-permission";
+import { MODERATION_PERMISSIONS } from "../../lib/moderation/const";
 import { CONTENT_PERMISSIONS } from "../const";
 import { parseContentId } from "../ids";
 import { toAuthorIds } from "./search-document";
@@ -32,7 +33,9 @@ const canEditContentType = async (
   });
 };
 
-const contentAuthorIds = async <TDefinition extends AnyContentTypeDefinition>(
+export const contentAuthorIds = async <
+  TDefinition extends AnyContentTypeDefinition,
+>(
   c: Context,
   model: ContentModel<TDefinition>,
   itemId: ContentId,
@@ -61,6 +64,50 @@ const contentAuthorIds = async <TDefinition extends AnyContentTypeDefinition>(
   return toAuthorIds(row?.value);
 };
 
+const canModeratorViewHidden = async <
+  TDefinition extends AnyContentTypeDefinition,
+>(
+  c: Context,
+  {
+    itemId,
+    model,
+    pluginId,
+  }: { itemId: ContentId; model: ContentModel<TDefinition>; pluginId: string },
+): Promise<boolean> => {
+  const user = c.get("user");
+  if (!user || !model.definition.reports.enabled) return false;
+
+  let resource: undefined | { family: string; id: string };
+  if (model.moderationScope) {
+    const columns = model.columns as Record<string, PgColumn>;
+    const table: PgTable = model.table;
+    const column = columns[model.moderationScope.column];
+    if (!column) return false;
+    const [row] = await c
+      .get("db")
+      .select({ value: column })
+      .from(table)
+      .where(eq(columns.id, itemId))
+      .limit(1);
+    const value: unknown = row?.value;
+    resource = {
+      family: model.moderationScope.family,
+      id:
+        typeof value === "number" || typeof value === "string"
+          ? String(value)
+          : "",
+    };
+  }
+
+  return await checkStaffPermissionOfUser(c, user, {
+    module: model.definition.permissionModule,
+    permission: MODERATION_PERMISSIONS.viewHidden,
+    plugin: pluginId,
+    resource,
+    type: "moderator",
+  });
+};
+
 const canViewHiddenContent = async <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -77,10 +124,16 @@ const canViewHiddenContent = async <
   const authors = await contentAuthorIds(c, model, itemId);
   if (authors.includes(user.id)) return true;
 
-  return await canEditContentType(c, {
-    definition: model.definition,
-    pluginId,
-  });
+  if (
+    await canEditContentType(c, {
+      definition: model.definition,
+      pluginId,
+    })
+  ) {
+    return true;
+  }
+
+  return await canModeratorViewHidden(c, { itemId, model, pluginId });
 };
 
 export const findViewableHiddenBySlug = async <

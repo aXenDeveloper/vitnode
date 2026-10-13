@@ -126,12 +126,13 @@ A record is public only when it is published, its `publishedAt` is not in the fu
 
 ## Who can still see it
 
-Hidden doesn't mean gone for the people working on it. Signed in, a record's **authors** and its **editors** still reach it:
+Hidden doesn't mean gone for the people working on it. Signed in, a record's **authors**, its **editors** and its **moderators** still reach it:
 
 - **Authors** are the users in the content type's [`search.authorField`](/docs/content-engine/search), such as the blog's **Author** field.
 - **Editors** are staff with `can_edit` on the content type, such as `posts:can_edit` for the blog.
+- **Moderators** with the moderator permission `can_view_hidden` on a [reportable](/docs/dev/moderation/enable-reports) content type, in the record's scope when it has one. They need no AdminCP permission.
 
-The route tells whose record it is by its `id`, so `id` must be in `publicApi.fields`. For authors and editors:
+The route tells whose record it is by its `id`, so `id` must be in `publicApi.fields`. For them:
 
 - The page opens with an eye-off icon before the title and a **This article is hidden** note, so nobody mistakes it for a live page. The response sends `noindex` and `Cache-Control: private, no-store`, so search engines and caches never keep it.
 - The detail route answers `200`, and `GET .../delivery/resolve/{slug}` returns `hidden: true`.

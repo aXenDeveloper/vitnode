@@ -114,7 +114,7 @@ export const EditableBlockShell = ({
       <div
         className={cn(
           "transition-opacity duration-150 motion-reduce:transition-none",
-          dragging && "opacity-30",
+          dragging && "opacity-0",
         )}
         inert
       >

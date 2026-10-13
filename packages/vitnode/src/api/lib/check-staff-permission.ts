@@ -13,8 +13,13 @@ import type {
   PermissionStaffType,
   ResolvedStaffPermissionSet,
 } from "./permission-staff";
+import type { StaffPermissionCheck } from "./staff-permission";
 
-import { hasStaffPermission, staffPermissionKey } from "./staff-permission";
+import {
+  applyScopedStaffDependencies,
+  hasStaffPermission,
+  mergeStaffPermissionGrants,
+} from "./staff-permission";
 import {
   readStaffPermissions,
   readStaffPermissionsOfUser,
@@ -83,22 +88,20 @@ const findStaffEntries = async (
 };
 
 const toStaffPermissionSet = (
+  c: Context,
   entries: Awaited<ReturnType<typeof findStaffEntries>>,
 ): ResolvedStaffPermissionSet => {
   if (entries.some(entry => entry.unrestricted)) {
     return rootStaffPermissions();
   }
 
-  const seen = new Set<string>();
-  const permissions: PermissionsStaffArgs[] = [];
-  for (const entry of entries) {
-    for (const permission of entry.permissions ?? []) {
-      const key = staffPermissionKey(permission);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      permissions.push(permission);
-    }
-  }
+  const merged: PermissionsStaffArgs[] = mergeStaffPermissionGrants(
+    entries.flatMap(entry => entry.permissions ?? []),
+  );
+  const catalog = c.get("core")?.permissionStaff;
+  const permissions = catalog
+    ? applyScopedStaffDependencies(merged, catalog)
+    : merged;
 
   return { root: false, permissions, staff: entries.length > 0 };
 };
@@ -112,6 +115,7 @@ const loadStaffPermissions = async (
   if (await hasRootRole(c, roleIds)) return rootStaffPermissions();
 
   return toStaffPermissionSet(
+    c,
     await findStaffEntries(c, { roleIds, type, userId: user.id }),
   );
 };
@@ -197,7 +201,7 @@ const loadMissingStaffPermissions = async (
 
   return entriesByType.map(([type, entries]) => [
     type,
-    root ? rootStaffPermissions() : toStaffPermissionSet(entries),
+    root ? rootStaffPermissions() : toStaffPermissionSet(c, entries),
   ]);
 };
 
@@ -229,7 +233,7 @@ export const getStaffFlags = async (
 export const checkStaffPermissionOfUser = async (
   c: Context,
   user: StaffUser,
-  { type, ...args }: PermissionsStaffArgs & { type: PermissionStaffType },
+  { type, ...args }: StaffPermissionCheck & { type: PermissionStaffType },
 ): Promise<boolean> => {
   const set = await resolveStaffPermissions(c, { type, user });
 
@@ -238,7 +242,7 @@ export const checkStaffPermissionOfUser = async (
 
 export const checkStaffPermission = async (
   c: Context,
-  args: PermissionsStaffArgs & { type: PermissionStaffType },
+  args: StaffPermissionCheck & { type: PermissionStaffType },
 ): Promise<boolean> => {
   const user = args.type === "admin" ? c.get("admin")?.user : c.get("user");
   if (!user) return false;
@@ -248,7 +252,7 @@ export const checkStaffPermission = async (
 
 export const assertStaffPermission = async (
   c: Context,
-  args: PermissionsStaffArgs & { type: PermissionStaffType },
+  args: StaffPermissionCheck & { type: PermissionStaffType },
 ): Promise<void> => {
   const allowed = await checkStaffPermission(c, args);
   if (!allowed) {

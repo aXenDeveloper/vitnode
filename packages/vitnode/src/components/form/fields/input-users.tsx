@@ -6,6 +6,7 @@ import { useTranslations } from "use-intl";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
+import { UserFormat } from "@/components/user-format";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
@@ -18,10 +19,33 @@ export interface UserOption {
   id: number;
   name: string;
   nameCode: string;
+  role?: UserOptionRole;
+}
+
+export interface UserOptionRole {
+  color: null | string;
+  prefix?: null | string;
 }
 
 export type PartialUserOption = Omit<UserOption, "avatarColor" | "nameCode"> &
   Partial<Pick<UserOption, "avatarColor" | "nameCode">>;
+
+const UserOptionName = ({
+  className,
+  user,
+}: {
+  className?: string;
+  user: PartialUserOption;
+}) =>
+  user.role ? (
+    <UserFormat
+      className={className}
+      format
+      user={{ name: user.name, role: user.role }}
+    />
+  ) : (
+    <span className={cn("truncate", className)}>{user.name}</span>
+  );
 
 const UserAvatar = ({
   size,
@@ -59,7 +83,7 @@ export const UserOptionRow = ({
 }) => (
   <div className="flex min-w-0 items-center gap-2">
     <UserAvatar size={size} user={user} />
-    <span className="truncate font-medium">{user.name}</span>
+    <UserOptionName className="font-medium" user={user} />
     {!!user.nameCode && (
       <span className="text-muted-foreground truncate text-sm">
         @{user.nameCode}
@@ -139,7 +163,7 @@ export const AutoFormUser = ({
                 )}
               >
                 <UserAvatar size={20} user={current} />
-                <span className="truncate">{current.name}</span>
+                <UserOptionName user={current} />
               </span>
             ) : (
               <span className="text-muted-foreground truncate">

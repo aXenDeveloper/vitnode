@@ -30,6 +30,40 @@ export interface VitNodeEvents {
     languageCodes: string[];
     origin: "ai" | "human";
   };
+  "moderation.report.action": {
+    action: "hide" | "unhide";
+    pluginId: string;
+    reportId: number;
+    targetId: string;
+    targetType: string;
+  };
+  "moderation.report.assigned": {
+    assigneeId: null | number;
+    previousAssigneeId: null | number;
+    reportId: number;
+  };
+  "moderation.report.created": {
+    pluginId: string;
+    reason: string;
+    reportId: number;
+    targetId: string;
+    targetType: string;
+  };
+  "moderation.report.note_deleted": {
+    noteId: number;
+    reportId: number;
+  };
+  "moderation.report.note_updated": {
+    noteId: number;
+    reportId: number;
+  };
+  "moderation.report.reopened": {
+    reportId: number;
+  };
+  "moderation.report.resolved": {
+    reportId: number;
+    resolution: string;
+  };
   "navigation.created": {
     navigationId: number;
   };

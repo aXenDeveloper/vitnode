@@ -13,8 +13,9 @@ import {
   getUserRoleIds,
   resolveStaffPermissions,
 } from "@/api/lib/check-staff-permission";
-import { staffPermissionKey } from "@/api/lib/staff-permission";
 import { core_roles } from "@/database/roles";
+
+import { staffGrantsWithinCeiling } from "./scoped-grants";
 
 interface StaffEntryTarget {
   roleId?: null | number;
@@ -77,13 +78,7 @@ interface StaffEntryGrant {
 const exceedsCeiling = (
   permissions: PermissionsStaffArgs[],
   ceiling: PermissionsStaffArgs[],
-): boolean => {
-  const allowed = new Set(ceiling.map(staffPermissionKey));
-
-  return permissions.some(
-    permission => !allowed.has(staffPermissionKey(permission)),
-  );
-};
+): boolean => !staffGrantsWithinCeiling(permissions, ceiling);
 
 export const assertCanManageStaffEntry = async (
   c: Context,

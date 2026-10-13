@@ -1,0 +1,164 @@
+---
+title: Moderation reference
+description: Reference for VitNode moderation, covering the reports option, scope families, report targets, permissions, ModCP API routes, statuses, events, snapshot format and limits.
+icon: BookOpen
+---
+
+Exact names, types and behavior of the moderation APIs. For step-by-step guides, start at [Moderation](/docs/dev/moderation).
+
+## `reports` on a content type
+
+`defineContentType({ reports })` from `@vitnode/core/content`. Omitted or `false` registers nothing.
+
+| Name             | Type          | Required | Default                                                             | Description                                       |
+| ---------------- | ------------- | -------- | ------------------------------------------------------------------- | ------------------------------------------------- |
+| `titleField`     | field name    | No       | `admin.titleField` when it is in `publicApi.fields`, else none      | A `text`, `textarea` or `slug` field              |
+| `snapshotFields` | field names   | No       | Public `text`, `textarea`, `richText`, `enum` and `file` fields, without the title | Fields of kind `text`, `textarea`, `richText`, `slug`, `number`, `boolean`, `enum`, `dateTime` or `file` |
+
+`reports: true` uses both defaults. It throws without `publicApi`, for an unknown option, for `reports.enabled`, and for a field that does not exist or cannot be snapshotted.
+
+The server-side model can scope reports with `createContentModel(definition, { moderationScope: { column, family } })`, where `column` is a base-table column holding the resource id.
+
+## Generated moderator permissions
+
+Added to the content type's `permissionModule` in the **moderator** catalog, unless the plugin declares that moderator module itself. All of them carry the target's scope family when it has one.
+
+| Permission           | Depends on         | Added when                   | Allows                                              |
+| -------------------- | ------------------ | ---------------------------- | --------------------------------------------------- |
+| `can_view_reports`   |                    | Always                       | The reports board, report details and related reports |
+| `can_manage_reports` | `can_view_reports` | Always                       | Take, reassign, notes, resolve, reopen; edit and delete your own notes |
+| `can_edit_notes`     | `can_manage_reports` | Always                     | Edit any moderator's notes                          |
+| `can_delete_notes`   | `can_manage_reports` | Always                     | Delete any moderator's notes                        |
+| `can_view_hidden`    |                    | The target can be hidden     | Opening hidden content on the public site           |
+| `can_hide`           | `can_view_hidden`  | The target can be hidden     | **Hide content** and **Restore content** in the ModCP |
+
+Content actions also need `can_manage_reports`, because they are recorded in the report.
+
+## Scoped grants
+
+A stored grant is `{ plugin, module, permission, scope? }`. `scope` is one of:
+
+```ts
+{ family: "example.category", mode: "all" }
+{ family: "example.category", mode: "selected", ids: ["1", "2"] }
+```
+
+Declare a scoped permission with `{ permission, dependsOn?, scope: "family.id" }` in `permissionStaff.moderator`. Admin permissions cannot be scoped. Resource ids match `/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/`.
+
+`PATCH /api/@vitnode/core/admin/staff/entry/moderator/{id}` answers `400` with `{ error: "invalid_permissions", issues }`. Each issue has a `key` and a `type`: `missing_scope`, `empty_selection`, `invalid_resource`, `unknown_resource`, `unexpected_scope`, `wrong_family` or `dependency_scope`. A grant wider than the caller's own permissions is `403`.
+
+`GET /api/@vitnode/core/users/permissions` returns the signed-in user's moderator grants, each with its `scope`.
+
+## `defineModerationScope`
+
+From `@vitnode/core/api/moderation`. Register with `buildApiPlugin({ moderation: { scopes } })`.
+
+| Name          | Type                                                                              | Required | Description                                       |
+| ------------- | --------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+| `id`          | `string`                                                                          | Yes      | Lowercase and dot separated, unique across plugins |
+| `label`       | `string`                                                                          | Yes      | i18n key                                          |
+| `description` | `string`                                                                          | No       | i18n key shown in the picker                      |
+| `list`        | `(c, { cursor, limit, search }) => Promise<{ items, nextCursor }>`                | Yes      | One page of resources for the AdminCP picker      |
+| `find`        | `(c, ids) => Promise<items>`                                                      | Yes      | The resources with these ids that exist           |
+
+An item is `{ id: string; label: string; context?: string[] }`. The AdminCP reads them through `GET /api/@vitnode/core/admin/staff/scope-resources/{family}?search=&cursor=`, or `?ids=1,2` to label a saved selection, which also returns `missing` ids.
+
+## Custom report targets
+
+Content Engine types register their target automatically. Anything else registers one with `defineReportTarget` and `buildApiPlugin({ moderation: { reportTargets } })`.
+
+| Name               | Type                                                                | Required | Description                                                                 |
+| ------------------ | ------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `type`             | `string`                                                            | Yes      | Stable id stored in reports, such as `forum.topic`                          |
+| `label`            | `string`                                                            | Yes      | i18n key for the kind of thing, an ICU plural called with `count: 1`        |
+| `permissionModule` | `string`                                                            | Yes      | Moderator module the report permissions are added to                        |
+| `parseId`          | `(value) => string \| null`                                         | Yes      | Validates a client id before anything reads it                              |
+| `capture`          | `(c, { targetId, locale }) => Promise<capture \| null>`             | Yes      | The snapshot body, or `null` when the reporter cannot read the target       |
+| `current`          | `(c, { targetId, locale }) => Promise<{ hidden, url } \| null>`     | Yes      | The target now, or `null` once deleted                                      |
+| `scope`            | `string`                                                            | No       | Scope family id                                                             |
+| `resolveScope`     | `(c, targetId) => Promise<string \| undefined>`                     | With `scope` | The resource id now, `""` for none, `undefined` once deleted            |
+| `actions`          | `{ hide?, unhide? }`                                                | No       | `{ permission, available(state), run(c, { actorUserId, targetId, tx }) }`    |
+
+`run` executes inside the report's transaction and returns `{ changed, effects }`. `effects` runs after the commit. When `run` throws, the transaction rolls back and no timeline entry is written.
+
+## Report lifecycle
+
+| Status        | Reached by                                         |
+| ------------- | -------------------------------------------------- |
+| `new`         | Filing a report, unassigning, or reopening an unassigned report |
+| `in_progress` | Taking or assigning a report, or reopening an assigned one |
+| `done`        | Resolving with `no_violation`, `action_taken` or `duplicate` |
+
+Reasons are `spam`, `abusive`, `rule_violation` and `other`; `other` needs details. Every change except a note needs `expectedVersion`. A stale version answers `409` with `{ error: "conflict", current }`, and taking a report someone else holds answers `409 already_claimed`.
+
+## ModCP API routes
+
+All under `/api/@vitnode/core/moderation`, using the user session. A guest gets `401`, a user without a moderator entry `403`, and a report outside the moderator's scopes `404`.
+
+| Method and path                      | Permission           | Body                                         |
+| ------------------------------------ | -------------------- | -------------------------------------------- |
+| `POST /reports`                      | Signed in            | `{ pluginId, targetType, targetId, locale?, requestedLocale?, reason, description? }` |
+| `GET /reports`                       | `can_view_reports`   | Query `status`, `assigned`, `search`, `page`, `pageSize` |
+| `GET /reports/{id}`                  | `can_view_reports`   |                                              |
+| `POST /reports/{id}/claim`           | `can_manage_reports` | `{ expectedVersion }`                        |
+| `POST /reports/{id}/assign`          | `can_manage_reports` | `{ expectedVersion, assigneeId }`            |
+| `POST /reports/{id}/notes`           | `can_manage_reports` | `{ body }`: plain text or a rich-text document |
+| `POST /reports/{id}/notes/{noteId}/edit` | `can_manage_reports` and the note's author, or `can_edit_notes` | `{ body }` |
+| `POST /reports/{id}/notes/{noteId}/delete` | `can_manage_reports` and the note's author, or `can_delete_notes` | |
+| `POST /reports/{id}/resolve`         | `can_manage_reports` | `{ expectedVersion, resolution, explanation? }` |
+| `POST /reports/{id}/reopen`          | `can_manage_reports` | `{ expectedVersion, reason }`                |
+| `POST /reports/{id}/actions/{action}` | `can_manage_reports` and the action's permission | `{ expectedVersion }` |
+| `GET /reports/{id}/assignees`        | `can_manage_reports` |                                              |
+
+## Events
+
+| Event                         | Payload                                                       |
+| ----------------------------- | ------------------------------------------------------------- |
+| `moderation.report.created`   | `{ reportId, pluginId, targetType, targetId, reason }`        |
+| `moderation.report.assigned`  | `{ reportId, assigneeId, previousAssigneeId }`                |
+| `moderation.report.action`    | `{ reportId, action, pluginId, targetType, targetId }`        |
+| `moderation.report.resolved`  | `{ reportId, resolution }`                                    |
+| `moderation.report.reopened`  | `{ reportId }`                                                |
+| `moderation.report.note_updated` | `{ reportId, noteId }`                                     |
+| `moderation.report.note_deleted` | `{ reportId, noteId }`                                     |
+
+Adding a note emits no event. Hiding through a report also emits the content type's own `hidden` or `unhidden` event. See [Built-in events](/docs/dev/events/built-in-events#moderation-events).
+
+## Snapshot format
+
+Stored in `core_moderation_reports.snapshot` as JSON, `version: 1`:
+
+| Field       | Description                                                            |
+| ----------- | ---------------------------------------------------------------------- |
+| `capturedAt` | When the server captured it                                          |
+| `target`    | `{ pluginId, type, id }`                                               |
+| `title`     | The display title                                                      |
+| `fields`    | `{ name, label, kind, value }` with `kind` `text`, `richText`, `file` or `value` |
+| `locale`    | `{ requested, served, fallback }`                                      |
+| `source`    | `{ version, updatedAt, publishedAt }` of the captured state            |
+| `authors`   | `{ id, name }` of the record's authors                                 |
+| `scope`     | The scope resource at capture time, as evidence                        |
+| `url`       | The public address at capture time                                     |
+| `truncated` | `true` when text was cut to fit                                        |
+
+The snapshot is read in one read-only transaction, so its fields and `source` describe the same state. The ModCP renders every snapshot with a generic viewer that needs no plugin code, and rich text goes through the same element allowlist as the public site.
+
+## Limits
+
+| Limit                            | Value      |
+| -------------------------------- | ---------- |
+| Report details                   | 2000 characters, at least 10 for `other` |
+| Plain-text notes, reopen reasons | 3 to 2000 characters |
+| Resolution explanations          | Optional, up to 2000 characters |
+| Rich-text notes                  | 64 KB, not empty |
+| One text value in a snapshot     | 20,000 characters |
+| Whole snapshot                   | 256 KB; rich text falls back to plain text, then fields are dropped |
+| Reports per user                 | 20 per hour |
+| Open reports per reporter and target | 1 |
+| Queue page size                  | 25 by default, up to 100 |
+
+File fields keep `{ id, name, mimeType, size, url }` only. The file's bytes are never copied, so a file deleted later cannot be opened from the report.
+
+## Database
+
+The migration `20261011193321_add_moderation_reports` adds `core_moderation_reports` and `core_moderation_report_events`. Neither references the reported content, so deleting content keeps its reports. Reporter, assignee and resolver are `ON DELETE SET NULL`, so deleting an account keeps the evidence. The unique `openKey` column enforces one open report per reporter and target, even under concurrent submissions.

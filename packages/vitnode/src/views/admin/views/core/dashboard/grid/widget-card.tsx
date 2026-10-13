@@ -134,7 +134,7 @@ export const WidgetCard = ({
         isEditing && isSelected && !isDragging && "ring-primary ring-2",
         resizing && "ring-primary z-20 ring-2",
         isDragging &&
-          "bg-primary/5 outline-primary/50 ring-0 outline-2 -outline-offset-2 outline-dashed *:opacity-30",
+          "bg-primary/5 outline-primary/50 ring-0 outline-2 -outline-offset-2 outline-dashed *:opacity-0",
         isArriving && ARRIVAL_CLASS,
       )}
       data-dashboard-widget={widget.instanceId}

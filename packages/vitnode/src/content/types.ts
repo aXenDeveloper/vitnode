@@ -973,6 +973,23 @@ type ContentVisibilityColumns<TDefinition> = TDefinition extends {
   ? { hiddenAt: Date | null; hiddenBy: null | number }
   : Record<never, never>;
 
+export interface ContentReportsConfig<TField extends string = string> {
+  snapshotFields?: TField[];
+  titleField?: TField;
+}
+
+export type ContentReportsInput<TField extends string = string> =
+  | boolean
+  | ContentReportsConfig<TField>;
+
+export interface ResolvedContentReportsConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+  snapshotFields: string[];
+  titleField: null | string;
+}
+
 export interface ContentDuplicationConfig {
   titleSuffix?: boolean;
 }
@@ -1757,6 +1774,7 @@ export interface ContentTypeDefinition<
     TPublicPath
   >;
   publication: ResolvedContentPublicationConfig<TPublication>;
+  reports: ResolvedContentReportsConfig;
   /** Zod schemas generated from `fields`. */
   schemas: ContentSchemas<
     ContentTypeDefinition<

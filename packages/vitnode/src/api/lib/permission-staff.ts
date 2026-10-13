@@ -1,6 +1,10 @@
 export type PermissionStaffEntryInput =
   | string
-  | { dependsOn?: string[]; permission: string };
+  | {
+      dependsOn?: string[];
+      permission: string;
+      scope?: string;
+    };
 
 /**
  * Author-facing module map - what a plugin declares in its API config.
@@ -13,6 +17,7 @@ export type PermissionStaffModulesInput = Record<
 export interface PermissionStaffEntry {
   dependsOn: string[];
   permission: string;
+  scope?: string;
 }
 
 export type PermissionStaffModules = Record<string, PermissionStaffEntry[]>;
@@ -33,15 +38,29 @@ export const normalizePermissionStaffModules = (
       entries.map(entry =>
         typeof entry === "string"
           ? { permission: entry, dependsOn: [] }
-          : { permission: entry.permission, dependsOn: entry.dependsOn ?? [] },
+          : {
+              permission: entry.permission,
+              dependsOn: entry.dependsOn ?? [],
+              ...(entry.scope ? { scope: entry.scope } : {}),
+            },
       ),
     ]),
   );
+
+export type PermissionStaffScope =
+  | { family: string; ids: string[]; mode: "selected" }
+  | { family: string; mode: "all" };
 
 export interface PermissionsStaffArgs {
   module: string;
   permission: string;
   plugin: string;
+  scope?: PermissionStaffScope;
+}
+
+export interface PermissionStaffResource {
+  family: string;
+  id: string;
 }
 
 /**

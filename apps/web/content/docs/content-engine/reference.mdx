@@ -66,6 +66,7 @@ Many of these rules are type errors too, so your editor often complains before t
 | `search`       | [`search`](#search)                     | No       | off        | Site search indexing                                                            |
 | `visibility`   | `boolean`                               | No       | off        | [Hide and unhide](#visibility) records. Needs `publication`                     |
 | `duplication`  | `true` \| [`duplication`](#duplication) | No       | off        | A [Duplicate](#duplication) action that copies a record into a new draft        |
+| `reports`      | `true` \| [`reports`](#reports)         | No       | off        | Readers can [report](#reports) published records to moderators. Needs `publicApi` |
 | `indexes`      | [`indexes`](#indexes)                   | No       | `[]`       | Extra database indexes                                                          |
 
 A feature block is on when it is present. `publicApi`, `localization` and `search` take an options object. `publication`, `liveEditing` and `visibility` are `true`, and `editorial`, `delivery` and `duplication` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
@@ -275,6 +276,15 @@ search: {
 ```ts title="plugins/blog/src/content/post.ts"
 publication: true,
 visibility: true,
+```
+
+## `reports`
+
+`reports: true` lets signed-in readers report a published record. It registers a report target, adds `can_view_reports` and `can_manage_reports` to the moderator catalog, plus `can_view_hidden` and `can_hide` with `visibility`, and needs no migration. Pass `{ titleField, snapshotFields }` to choose what the report's snapshot keeps. Guide: [Enable reports](/docs/dev/moderation/enable-reports). Options: [Moderation reference](/docs/dev/moderation/reference#reports-on-a-content-type).
+
+```ts title="plugins/blog/src/content/post.ts"
+publicApi: { path: "blog", fields: ["id", "title", "friendlyUrl", "content"] },
+reports: true,
 ```
 
 ## `duplication`

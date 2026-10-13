@@ -4,6 +4,7 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { buildContentPublicModule } from "@vitnode/core/content/server";
 
 import { articleExcerptAiAction } from "@/api/ai/actions";
+import { exampleCategoryScope } from "@/api/lib/moderation";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { settingsPage } from "@/content/settings-page";
@@ -25,6 +26,7 @@ export const exampleApiPlugin = () =>
     blocks: widgets,
     editablePages: [settingsPage],
     navigation: [{ href: "/example/browse", icon: "list", id: "browse" }],
+    moderation: { scopes: [exampleCategoryScope] },
     permissionStaff: {
       moderator: {
         widgets: ["can_edit"],

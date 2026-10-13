@@ -1,6 +1,6 @@
 ---
 title: User
-description: Pick a person by name, with their avatar, in an Auto Form field that stores the user id.
+description: Pick a person in an Auto Form field that stores the user id, or show a member's name with their role color and a link to their profile.
 icon: CircleUser
 ---
 
@@ -63,6 +63,50 @@ that sets the value to `null`, so pair it with `z.number().nullable()`.
 `selected` can be partial: just `id` and `name`. Without `avatarColor`, the
 field draws a neutral placeholder avatar instead of guessing a color.
 
+## Role colors
+
+<Preview name="user-roles" />
+
+Add a `role` to each option and the picker draws the name the way the rest of
+the site does: in the role's color, with its prefix icon or emoji in front.
+Options without a `role` keep a plain name, so you can add it gradually.
+
+```tsx
+const moderators: UserOption[] = [
+  {
+    avatarColor: '2563eb',
+    id: 1,
+    name: 'Ada Lovelace',
+    nameCode: 'ada',
+    role: { color: '#dc2626', prefix: 'icon:shield' },
+  },
+]
+```
+
+`prefix` takes the same `icon:<lucide-name>` or `emoji:<emoji>` value as a
+role's prefix in the AdminCP. In the AdminCP, `searchAdminUsersInBrowser`
+already returns each person's primary role, so its pickers show colored names
+without extra work.
+
+## Show a member's name
+
+<Preview name="user-format" />
+
+`UserFormat` prints a name the way the rest of the site does. `format` adds the
+role color and prefix, and `link` turns the name into a link to the member's
+profile at `/users/<nameCode>`.
+
+```tsx
+import { UserFormat } from '@vitnode/core/components/user-format'
+
+<UserFormat format link user={user} />
+```
+
+`user` is `{ name, nameCode?, role: { color, prefix? } }`. `link` needs a
+`nameCode`; without one, the name renders as plain text. Leave `link` off when
+the name sits inside another link or a button, such as a table row that
+already opens something.
+
 ## Custom search
 
 `search` can call any endpoint: a plugin's own members, fixtures in a test.
@@ -90,8 +134,9 @@ types. Results are never cached, so deleted users don't linger.
 | `clearable`         | `boolean`                                  | `false`            | Adds a button that sets `null`         |
 | `disabled`          | `boolean`                                  | `false`            | Blocks opening the picker and clearing |
 
-`UserOption` is `{ id, name, nameCode, avatarColor }`. `PartialUserOption`
-makes `nameCode` and `avatarColor` optional.
+`UserOption` is `{ id, name, nameCode, avatarColor, role? }`, where `role` is
+`{ color: string | null, prefix?: string | null }`. `PartialUserOption` makes
+`nameCode` and `avatarColor` optional.
 
 ## In the Content Engine
 

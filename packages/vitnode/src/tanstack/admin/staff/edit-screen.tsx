@@ -25,7 +25,9 @@ export interface AdminStaffEditRouteProps extends AdminStaffEditRouteData {
 export const AdminStaffEditRouteContent = ({
   backHref,
   backLabel,
+  families,
   grantedKeys,
+  grantedScopes,
   id,
   navigate,
   plugins,
@@ -47,7 +49,9 @@ export const AdminStaffEditRouteContent = ({
         />
 
         <StaffEditBody
+          families={families}
           grantedKeys={grantedKeys}
+          grantedScopes={grantedScopes}
           id={id}
           onSave={onSave}
           onSaved={async () => {
@@ -99,7 +103,9 @@ const StaffEditHeader = ({
 };
 
 const StaffEditBody = ({
+  families,
   grantedKeys,
+  grantedScopes,
   id,
   onSave,
   onSaved,
@@ -125,7 +131,9 @@ const StaffEditBody = ({
 
   return (
     <EditStaffFormContent
+      families={families}
       grantedKeys={grantedKeys}
+      grantedScopes={grantedScopes}
       id={id}
       onSave={onSave}
       onSaved={onSaved}

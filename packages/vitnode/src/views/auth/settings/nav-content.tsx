@@ -1,5 +1,3 @@
-import { Link } from "@tanstack/react-router";
-import { cn } from "cn";
 import {
   BellIcon,
   KeyRoundIcon,
@@ -13,6 +11,7 @@ import {
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import { SideNavCard, SideNavLink, SideNavList } from "@/components/side-nav";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -47,50 +46,21 @@ const SettingsNavList = ({
   onNavigate?: () => void;
   pathname: string;
 }) => {
-  const t = useTranslations("core.auth.settings");
   const tNav = useTranslations("core.auth.settings.nav");
-  const activeIndex = items.findIndex(item =>
-    isSettingsNavItemActive(item, pathname),
-  );
 
   return (
-    <nav aria-label={t("title")}>
-      <ul
-        className="relative flex flex-col ps-3"
-        style={{ "--active": activeIndex } as React.CSSProperties}
-      >
-        {activeIndex >= 0 ? (
-          <span
-            aria-hidden="true"
-            className="bg-card ring-foreground/5 dark:bg-muted before:bg-primary pointer-events-none absolute inset-s-3 inset-e-0 top-0 h-10 translate-y-[calc(var(--active)*100%)] rounded-md shadow-xs ring-1 transition-[translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] before:absolute before:inset-y-2 before:-inset-s-3 before:w-1 before:rounded-full motion-reduce:transition-none dark:shadow-none dark:ring-0"
-          />
-        ) : null}
-        {items.map(item => {
-          const Icon = ICONS[item.key];
-          const isActive = isSettingsNavItemActive(item, pathname);
-
-          return (
-            <li key={item.href}>
-              <Link
-                activeOptions={{ exact: true }}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "focus-visible:ring-ring/50 relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset",
-                  isActive
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-muted/50",
-                )}
-                onClick={onNavigate}
-                to={item.href}
-              >
-                <Icon aria-hidden="true" className="size-4 shrink-0" />
-                {tNav(item.key)}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <SideNavList>
+      {items.map(item => (
+        <SideNavLink
+          icon={ICONS[item.key]}
+          isActive={isSettingsNavItemActive(item, pathname)}
+          key={item.href}
+          label={tNav(item.key)}
+          onNavigate={onNavigate}
+          to={item.href}
+        />
+      ))}
+    </SideNavList>
   );
 };
 
@@ -127,16 +97,34 @@ const SettingsNavDrawer = ({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pt-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-          <SettingsNavList
-            items={items}
-            onNavigate={() => {
-              setIsOpen(false);
-            }}
-            pathname={pathname}
-          />
+          <nav aria-label={t("title")}>
+            <SettingsNavList
+              items={items}
+              onNavigate={() => {
+                setIsOpen(false);
+              }}
+              pathname={pathname}
+            />
+          </nav>
         </div>
       </DrawerContent>
     </Drawer>
+  );
+};
+
+const SettingsNavCard = ({
+  items,
+  pathname,
+}: {
+  items: readonly SettingsNavItem[];
+  pathname: string;
+}) => {
+  const t = useTranslations("core.auth.settings");
+
+  return (
+    <SideNavCard aria-label={t("title")} className="max-md:hidden">
+      <SettingsNavList items={items} pathname={pathname} />
+    </SideNavCard>
   );
 };
 
@@ -151,8 +139,6 @@ export const SettingsNavContent = ({
     <div className="md:hidden">
       <SettingsNavDrawer items={items} pathname={pathname} />
     </div>
-    <div className="max-md:hidden">
-      <SettingsNavList items={items} pathname={pathname} />
-    </div>
+    <SettingsNavCard items={items} pathname={pathname} />
   </>
 );

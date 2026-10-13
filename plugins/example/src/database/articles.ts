@@ -13,6 +13,7 @@ export const articleContent = createContentModel(articleContentType, {
   // `core_files.id` itself and asking a plugin to name it would be a line of
   // boilerplate with one correct value.
   references: { category: () => example_categories.id },
+  moderationScope: { column: "category", family: "example.category" },
 });
 
 export const example_articles = articleContent.table;

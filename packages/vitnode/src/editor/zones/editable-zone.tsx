@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 
 import { cn } from "cn";
 import { BanIcon, PlusIcon } from "lucide-react";
-import { createElement, useEffect, useMemo } from "react";
+import { createElement, Fragment, useEffect, useMemo } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import type {
   AnyBlockInstance,
   BlockRegistry,
   ContentNode,
-  RegisteredBlock,
 } from "../../blocks/types";
 import type { EditorZoneMount } from "../state/types";
 import type { ZoneDropTone } from "./drop-state";
@@ -31,13 +30,9 @@ import {
   zoneRootNodeCount,
 } from "../state/bounds";
 import { EditableAreaFrame } from "./area-frame";
-import {
-  InvalidBlock,
-  UnknownBlock,
-  UnknownVariantBlock,
-} from "./block-placeholder";
-import { editableBlockRender } from "./block-render";
+import { EditableBlockBody } from "./block-body";
 import { classifyZoneEntries } from "./classify";
+import { EditorDropSlot } from "./drop-slot";
 import { zoneDropState, zoneDropTone } from "./drop-state";
 import { InvalidZoneEntries } from "./invalid-entries";
 import { DROP_TARGET_CLASSES } from "./node-chrome";
@@ -58,45 +53,6 @@ const HIGHLIGHTED_TONES: ReadonlySet<ZoneDropTone> = new Set([
   "over",
   "targeting",
 ]);
-
-interface EditableBlockBodyProps {
-  entry: RegisteredBlock | undefined;
-  index: number;
-  instance: AnyBlockInstance;
-}
-
-const EditableBlockBody = ({
-  entry,
-  index,
-  instance,
-}: EditableBlockBodyProps): ReactElement => {
-  const render = editableBlockRender({ entry, instance });
-
-  if (render.kind === "unknown-type") {
-    return <UnknownBlock type={instance.type} />;
-  }
-
-  if (render.kind === "unknown-variant") {
-    return <UnknownVariantBlock variant={render.variant} />;
-  }
-
-  if (render.kind === "invalid-data") {
-    return (
-      <InvalidBlock
-        detail={render.detail}
-        name={entry?.definition.name ?? instance.type}
-      />
-    );
-  }
-
-  return createElement(render.entry.definition.component, {
-    blockId: instance.id,
-    data: instance.data,
-    index,
-    type: instance.type,
-    variant: render.variant,
-  });
-};
 
 const EditableBlock = ({
   areaId,
@@ -295,42 +251,67 @@ export const EditableZone = ({
             container={{ areaId: null, zoneId: mount.id }}
             nodes={nodes}
           >
-            {nodes.map((node, index) =>
-              isBlockAreaInstance(node) ? (
-                <EditableAreaFrame
-                  area={node}
-                  index={index}
-                  key={node.id}
-                  zoneId={mount.id}
-                >
-                  <ContainerSortable
-                    columns={node.layout.columns}
-                    container={{ areaId: node.id, zoneId: mount.id }}
-                    nodes={node.children}
-                  >
-                    {node.children.map((child, childIndex) => (
-                      <EditableBlock
-                        areaId={node.id}
-                        index={childIndex}
-                        instance={child}
-                        key={child.id}
-                        registry={registry}
-                        zoneId={mount.id}
-                      />
-                    ))}
-                  </ContainerSortable>
-                </EditableAreaFrame>
-              ) : (
-                <EditableBlock
+            {nodes.map((node, index) => (
+              <Fragment key={node.id}>
+                <EditorDropSlot
                   areaId={null}
-                  index={index}
-                  instance={node}
-                  key={node.id}
-                  registry={registry}
+                  edge="before"
+                  nodeId={node.id}
                   zoneId={mount.id}
                 />
-              ),
-            )}
+                {isBlockAreaInstance(node) ? (
+                  <EditableAreaFrame
+                    area={node}
+                    index={index}
+                    zoneId={mount.id}
+                  >
+                    <ContainerSortable
+                      columns={node.layout.columns}
+                      container={{ areaId: node.id, zoneId: mount.id }}
+                      nodes={node.children}
+                    >
+                      {node.children.map((child, childIndex) => (
+                        <Fragment key={child.id}>
+                          <EditorDropSlot
+                            areaId={node.id}
+                            edge="before"
+                            nodeId={child.id}
+                            zoneId={mount.id}
+                          />
+                          <EditableBlock
+                            areaId={node.id}
+                            index={childIndex}
+                            instance={child}
+                            registry={registry}
+                            zoneId={mount.id}
+                          />
+                          <EditorDropSlot
+                            areaId={node.id}
+                            edge="after"
+                            nodeId={child.id}
+                            zoneId={mount.id}
+                          />
+                        </Fragment>
+                      ))}
+                    </ContainerSortable>
+                  </EditableAreaFrame>
+                ) : (
+                  <EditableBlock
+                    areaId={null}
+                    index={index}
+                    instance={node}
+                    registry={registry}
+                    zoneId={mount.id}
+                  />
+                )}
+                <EditorDropSlot
+                  areaId={null}
+                  edge="after"
+                  nodeId={node.id}
+                  zoneId={mount.id}
+                />
+              </Fragment>
+            ))}
           </ContainerSortable>
 
           <div className="flex justify-center py-4">

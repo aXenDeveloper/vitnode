@@ -51,10 +51,36 @@ export const staffListAdminSchema = z.object({
   pageInfo: zodPaginationPageInfo,
 });
 
+export const permissionStaffScopeSchema = z.discriminatedUnion("mode", [
+  z.object({ family: z.string().max(100), mode: z.literal("all") }),
+  z.object({
+    family: z.string().max(100),
+    mode: z.literal("selected"),
+    ids: z.array(z.string().max(64)).max(500),
+  }),
+]);
+
 export const permissionsStaffArgsSchema = z.object({
   plugin: z.string(),
   module: z.string(),
   permission: z.string(),
+  scope: permissionStaffScopeSchema.optional(),
+});
+
+export const staffGrantIssueSchema = z.object({
+  key: z.string(),
+  type: z.enum([
+    "dependency_scope",
+    "empty_selection",
+    "invalid_resource",
+    "missing_scope",
+    "unexpected_scope",
+    "unknown_resource",
+    "wrong_family",
+  ]),
+  dependency: z.string().optional(),
+  expected: z.string().optional(),
+  ids: z.array(z.string()).optional(),
 });
 
 export const staffTypeSchema = z.enum(["admin", "moderator"]);

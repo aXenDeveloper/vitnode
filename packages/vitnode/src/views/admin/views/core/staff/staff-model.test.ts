@@ -7,6 +7,7 @@ import {
   chunkStaffLabelKeys,
   countGrantedStaffPermissions,
   grantedStaffPermissionKeys,
+  grantedStaffScopes,
   isStaffPermissionLocked,
   normalizeStaffEntryId,
   setStaffPermissionsChecked,
@@ -20,6 +21,7 @@ import {
   staffPermissionDependents,
   staffPermissionItems,
   staffPermissionsForSubmit,
+  staffScopeIssues,
   staffTypeFromSegment,
   toggleStaffPermission,
 } from "./staff-model";
@@ -409,6 +411,117 @@ describe("what is submitted", () => {
         unrestricted: false,
       }),
     );
+  });
+});
+
+describe("scoped moderator permissions", () => {
+  const FORUM = "@vitnode/forum";
+  const FAMILY = "forum.section";
+  const VIEW = `${FORUM}:topics:can_view_reports`;
+  const MANAGE = `${FORUM}:topics:can_manage_reports`;
+  const PIN = `${FORUM}:topics:can_pin`;
+  const items = staffPermissionItems(
+    buildStaffPermissionGroups({
+      catalog: [
+        {
+          admin: {},
+          moderator: {
+            topics: [
+              { dependsOn: [], permission: "can_view_reports", scope: FAMILY },
+              {
+                dependsOn: ["can_view_reports"],
+                permission: "can_manage_reports",
+                scope: FAMILY,
+              },
+              { dependsOn: [], permission: "can_pin" },
+            ],
+          },
+          pluginId: FORUM,
+        },
+      ],
+      label: () => undefined,
+      type: "moderator",
+    }),
+  );
+  const selected = (...ids: string[]) => ({
+    family: FAMILY,
+    ids,
+    mode: "selected" as const,
+  });
+  const all = { family: FAMILY, mode: "all" as const };
+
+  it("reads a legacy unscoped grant of a scoped permission as every resource", () => {
+    expect(
+      grantedStaffScopes(
+        [
+          { module: "topics", permission: "can_view_reports", plugin: FORUM },
+          {
+            module: "topics",
+            permission: "can_manage_reports",
+            plugin: FORUM,
+            scope: selected("10"),
+          },
+          { module: "topics", permission: "can_pin", plugin: FORUM },
+        ],
+        items,
+      ),
+    ).toEqual({ [MANAGE]: selected("10"), [VIEW]: all });
+  });
+
+  it.each<
+    [
+      string,
+      Record<string, ReturnType<typeof selected> | typeof all>,
+      unknown[],
+    ]
+  >([
+    ["no scope chosen", {}, [{ key: VIEW, type: "missing_scope" }]],
+    [
+      "an empty selection",
+      { [VIEW]: selected() },
+      [{ key: VIEW, type: "empty_selection" }],
+    ],
+    [
+      "a permission wider than its dependency",
+      { [MANAGE]: selected("10", "20"), [VIEW]: selected("10") },
+      [{ dependency: VIEW, key: MANAGE, type: "dependency_scope" }],
+    ],
+    [
+      "nothing when the dependency covers it",
+      { [MANAGE]: selected("10"), [VIEW]: all },
+      [],
+    ],
+  ])("finds %s", (_label, scopes, expected) => {
+    const checked = new Set(
+      Object.keys(scopes).length > 0 ? Object.keys(scopes) : [VIEW],
+    );
+
+    expect(staffScopeIssues({ checked, items, scopes })).toEqual(expected);
+  });
+
+  it("sends each scoped permission with its own scope, and none on the rest", () => {
+    expect(
+      staffPermissionsForSubmit({
+        checked: new Set([MANAGE, PIN, VIEW]),
+        items,
+        scopes: { [MANAGE]: selected("10"), [PIN]: all, [VIEW]: all },
+        unrestricted: false,
+      }),
+    ).toEqual([
+      {
+        module: "topics",
+        permission: "can_view_reports",
+        plugin: FORUM,
+        scope: all,
+      },
+      {
+        module: "topics",
+        permission: "can_manage_reports",
+        plugin: FORUM,
+        scope: selected("10"),
+      },
+      { module: "topics", permission: "can_pin", plugin: FORUM },
+    ]);
   });
 });
 
