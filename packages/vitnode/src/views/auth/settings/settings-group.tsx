@@ -1,4 +1,13 @@
 import { cn } from "cn";
+import React from "react";
+
+import {
+  Frame,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 
 export const SETTINGS_ROW =
   "flex min-h-12 w-full items-center gap-3 px-4 py-3 text-start outline-none";
@@ -19,18 +28,27 @@ export const SettingsGroup = ({
   children: React.ReactNode;
   footer?: React.ReactNode;
   title?: React.ReactNode;
-}) => (
-  <div className="flex flex-col gap-2">
-    {title ? (
-      <h3 className="text-muted-foreground text-sm font-medium">{title}</h3>
-    ) : null}
-    <ul className="bg-card ring-foreground/10 divide-y overflow-hidden rounded-md shadow-xs ring-1">
-      {children}
-    </ul>
-    {footer ? (
-      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-        {footer}
-      </p>
-    ) : null}
-  </div>
-);
+}) => {
+  const titleId = React.useId();
+
+  return (
+    <Frame
+      aria-labelledby={title ? titleId : undefined}
+      render={title ? <section /> : undefined}
+    >
+      {title ? (
+        <FrameHeader>
+          <FrameTitle
+            className="flex items-center gap-2"
+            id={titleId}
+            render={<h2 />}
+          >
+            {title}
+          </FrameTitle>
+        </FrameHeader>
+      ) : null}
+      <FramePanel render={<ul />}>{children}</FramePanel>
+      {footer ? <FrameFooter>{footer}</FrameFooter> : null}
+    </Frame>
+  );
+};

@@ -425,3 +425,46 @@ export class ContentDuplicateUniqueRequired extends ContentEngineError {
 
   readonly fields: string[];
 }
+
+export type ContentPublicWriteDenial =
+  | "forbidden"
+  | "notFound"
+  | "unauthenticated";
+
+export class ContentPublicWriteDenied extends ContentEngineError {
+  constructor({
+    contentTypeId,
+    reason,
+  }: {
+    contentTypeId: string;
+    reason: ContentPublicWriteDenial;
+  }) {
+    super(`Public write denied: ${reason}.`, { contentTypeId });
+
+    this.name = "ContentPublicWriteDenied";
+    this.reason = reason;
+  }
+
+  readonly reason: ContentPublicWriteDenial;
+}
+
+export class ContentPublicWriteInputError extends ContentInputError {
+  constructor({
+    contentTypeId,
+    field,
+    message,
+  }: {
+    contentTypeId: string;
+    field: string;
+    message: string;
+  }) {
+    super(message, { contentTypeId });
+
+    this.name = "ContentPublicWriteInputError";
+    this.field = field;
+    this.detail = message;
+  }
+
+  readonly detail: string;
+  readonly field: string;
+}

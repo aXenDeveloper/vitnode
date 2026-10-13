@@ -20,6 +20,10 @@ import type {
   ContentPreviewEnabled,
   ContentPublicApiConfig,
   ContentPublicExposableField,
+  ContentPublicOwnershipField,
+  ContentPublicWritableField,
+  ContentPublicWriteInput,
+  ContentPublicWriteResolved,
   ContentReportsInput,
   ContentSchedulingEnabled,
   ContentSearchAuthorField,
@@ -64,6 +68,7 @@ import {
   resolveVisibility,
 } from "./define-lifecycle";
 import { resolvePublicApi } from "./define-public-api";
+import { resolvePublicWrite } from "./define-public-write";
 import { resolveReports } from "./define-reports";
 import { resolveSearch } from "./define-search";
 import {
@@ -209,6 +214,13 @@ export const defineContentType = <
   TVisibility extends boolean = false,
   TDuplication extends ContentDuplicationInput = false,
   TIdStrategy extends ContentIdStrategy = "serial",
+  TPublicWrite extends
+    | ContentPublicWriteInput<
+        TPublicEnabled,
+        ContentPublicWritableField<TFields>,
+        ContentPublicOwnershipField<TFields>
+      >
+    | undefined = undefined,
 >({
   admin = {},
   delivery,
@@ -221,6 +233,7 @@ export const defineContentType = <
   liveEditing,
   localization,
   publicApi,
+  publicWrite,
   publication,
   reports,
   search,
@@ -258,6 +271,7 @@ export const defineContentType = <
   publicApi?: ContentPublicApiConfig<TPublicField, TPublicPath> | false;
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: TPublication;
+  publicWrite?: TPublicWrite;
   reports?: ContentReportsInput<keyof TFields & string>;
 
   search?: TSearch;
@@ -278,7 +292,8 @@ export const defineContentType = <
   TPublicPath,
   TVisibility,
   ContentDuplicationEnabled<TDuplication>,
-  TIdStrategy
+  TIdStrategy,
+  ContentPublicWriteResolved<TPublicWrite>
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -330,6 +345,7 @@ export const defineContentType = <
     editorial,
     localization,
     publicApi,
+    publicWrite,
     publication,
     reports,
     search,
@@ -467,6 +483,11 @@ export const defineContentType = <
     localizedFields,
   );
 
+  const resolvedPublicWrite = resolvePublicWrite(id, fieldMap, publicWrite, {
+    localized: Object.keys(localizedFields).length > 0,
+    publicApi: resolvedPublicApi,
+  });
+
   const resolvedSearch = resolveSearch(
     id,
     fieldMap,
@@ -541,7 +562,8 @@ export const defineContentType = <
     TPublicPath,
     TVisibility,
     ContentDuplicationEnabled<TDuplication>,
-    TIdStrategy
+    TIdStrategy,
+    ContentPublicWriteResolved<TPublicWrite>
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
@@ -575,6 +597,8 @@ export const defineContentType = <
       TPublicEnabled,
       TPublicPath
     >,
+    publicWrite:
+      resolvedPublicWrite as ContentPublicWriteResolved<TPublicWrite>,
     schemas: buildContentSchemas<
       ContentTypeDefinition<
         TId,
@@ -591,7 +615,8 @@ export const defineContentType = <
         TPublicPath,
         TVisibility,
         ContentDuplicationEnabled<TDuplication>,
-        TIdStrategy
+        TIdStrategy,
+        ContentPublicWriteResolved<TPublicWrite>
       >
     >({
       admin: resolvedAdmin,
@@ -601,6 +626,7 @@ export const defineContentType = <
       idStrategy: resolvedIdStrategy,
       localization: resolvedLocalization,
       publicApi: resolvedPublicApi,
+      publicWrite: resolvedPublicWrite,
       publication: publicationEnabled,
       visibility: visibilityEnabled,
     }),

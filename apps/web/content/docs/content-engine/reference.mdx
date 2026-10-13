@@ -59,6 +59,7 @@ Many of these rules are type errors too, so your editor often complains before t
 | `admin`        | [`admin`](#admin)                       | No       | `{}`       | AdminCP path, list, form and title                                              |
 | `publication`  | `boolean`                               | No       | off        | Draft and published states                                                      |
 | `publicApi`    | [`publicApi`](#publicapi)               | No       | off        | Read-only public routes                                                         |
+| `publicWrite`  | [`publicWrite`](#publicwrite)           | No       | off        | Create and edit routes for signed-in users. Needs `publicApi`                   |
 | `delivery`     | `true` \| [`delivery`](#delivery)       | No       | off        | Public page URLs, SEO metadata, redirects and sitemap                           |
 | `editorial`    | `true` \| [`editorial`](#editorial)     | No       | off        | Revisions, preview links and scheduling                                         |
 | `liveEditing`  | `boolean`                               | No       | `false`    | [Live editing](#liveediting) in the AdminCP. Needs `editorial`                  |
@@ -69,7 +70,7 @@ Many of these rules are type errors too, so your editor often complains before t
 | `reports`      | `true` \| [`reports`](#reports)         | No       | off        | Readers can [report](#reports) published records to moderators. Needs `publicApi` |
 | `indexes`      | [`indexes`](#indexes)                   | No       | `[]`       | Extra database indexes                                                          |
 
-A feature block is on when it is present. `publicApi`, `localization` and `search` take an options object. `publication`, `liveEditing` and `visibility` are `true`, and `editorial`, `delivery` and `duplication` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
+A feature block is on when it is present. `publicApi`, `publicWrite`, `localization` and `search` take an options object. `publication`, `liveEditing` and `visibility` are `true`, and `editorial`, `delivery` and `duplication` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
 
 ### Names
 
@@ -168,6 +169,18 @@ publicApi: {
   searchableFields: ["title", "excerpt"],
   orderableFields: ["publishedAt", "title"],
   filterableFields: ["category", "featured"],
+},
+```
+
+## `publicWrite`
+
+Adds create and edit routes for signed-in users beside the `publicApi` routes, with an owner stamped by the server and a `can_edit` moderator permission. Guide: [Public write](/docs/content-engine/public-write). Every option, route and error: [Public write API](/docs/content-engine/public-write-api).
+
+```ts title="plugins/example/src/content/discussion.ts"
+publicWrite: {
+  ownership: { field: "author" },
+  create: { fields: ["title", "body"], status: "published" },
+  update: { fields: ["title", "body"] },
 },
 ```
 
@@ -350,6 +363,8 @@ Each row is a rule `defineContentType` enforces, with the start of the message i
 | ------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `publicApi`                                                         | `publication`                                            | ``publicApi needs `publication: true`.``                                                                   |
 | `publicApi.fields`                                                  | Exactly one top-level slug field                         | `publicApi.fields must expose exactly one slug field`                                                      |
+| `publicWrite`                                                       | `publicApi`                                              | ``publicWrite needs `publicApi`.``                                                                         |
+| `publicWrite`                                                       | No localized fields                                      | `publicWrite is not available on a localized content type yet.`                                            |
 | `search`                                                            | `publication`                                            | ``search needs `publication: true`.``                                                                      |
 | `search`                                                            | `publicApi`                                              | ``search needs `publicApi: { path, fields }`.``                                                            |
 | `search.*Field`, `search.contentFields`                             | The field in `publicApi.fields`                          | `search.titleField names "x", which is not in publicApi.fields.`                                           |

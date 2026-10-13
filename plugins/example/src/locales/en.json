@@ -94,6 +94,19 @@
           "gallery": "Gallery",
           "updatedAt": "Updated"
         }
+      },
+      "discussion": {
+        "label": "{count, plural, one {Discussion} other {Discussions}}",
+        "title": "Discussions",
+        "desc": "Started and edited by signed-in members through the public write API.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "body": "Message",
+          "author": "Author",
+          "publishedAt": "Published",
+          "updatedAt": "Updated"
+        }
       }
     },
     "guide": {
@@ -137,6 +150,78 @@
         "label": "Categories",
         "desc": "Limit this permission to articles in some categories."
       }
+    },
+    "discussions": {
+      "new": {
+        "title": "Start a discussion",
+        "desc": "Ask a question or share an idea. Everyone can read it as soon as you post it.",
+        "submit": "Post discussion"
+      },
+      "edit": {
+        "title": "Edit discussion",
+        "desc": "Changes are saved as a new revision, so nothing you replace is lost.",
+        "submit": "Save changes",
+        "view": "View discussion",
+        "success": {
+          "title": "Changes saved",
+          "desc": "\"{title}\" now shows your latest edits."
+        },
+        "conflict": {
+          "title": "Someone else edited this discussion",
+          "desc": "It changed after you opened it. Reload to see the latest version - copy anything you want to keep first, because reloading discards your edits.",
+          "reload": "Reload latest version"
+        }
+      },
+      "detail": {
+        "actions": "Discussion actions",
+        "edit": "Edit",
+        "new": "Start a discussion",
+        "created": {
+          "title": "Discussion posted",
+          "desc": "It is live. Use Edit whenever you want to change it."
+        }
+      },
+      "form": {
+        "title": {
+          "label": "Title",
+          "min": "Use at least 3 characters",
+          "max": "Keep it under 200 characters"
+        },
+        "body": {
+          "label": "Message",
+          "desc": "Type / for headings, lists and more.",
+          "required": "Write a message"
+        }
+      },
+      "state": {
+        "unauthenticated": {
+          "title": "Sign in to continue",
+          "desc": "You need an account to start or edit a discussion.",
+          "action": "Sign in"
+        },
+        "forbidden": {
+          "title": "You can't edit this discussion",
+          "desc": "Only its author or a moderator can change it."
+        },
+        "not_found": {
+          "title": "Discussion not found",
+          "desc": "It may have been removed, or the link is wrong."
+        },
+        "back": "Start a new discussion"
+      },
+      "errors": {
+        "title": "Couldn't save the discussion",
+        "invalid": "Some details need another look.",
+        "unauthenticated": "Your session has ended. Sign in again, then try once more.",
+        "forbidden": "Only its author or a moderator can change this discussion.",
+        "not_found": "This discussion no longer exists.",
+        "unique": "A discussion with this title already exists. Try a different title.",
+        "unknown": "Something went wrong on our side. Please try again.",
+        "issues": {
+          "not_writable": "This field can't be changed here.",
+          "unavailable": "The selected item is no longer available."
+        }
+      }
     }
   },
   "@vitnode/example:article": "Articles",
@@ -167,6 +252,14 @@
   "@vitnode/example:event:can_publish": "Publish and unpublish events",
   "@vitnode/example:event:can_restore": "Restore an earlier version of an event",
   "@vitnode/example:event:can_hide": "Hide and unhide events",
+  "@vitnode/example:discussion": "Discussions",
+  "@vitnode/example:discussion:can_view": "View discussions",
+  "@vitnode/example:discussion:can_create": "Create discussions",
+  "@vitnode/example:discussion:can_edit": "Edit discussions",
+  "@vitnode/example:discussion:can_delete": "Delete discussions",
+  "@vitnode/example:discussion:can_publish": "Publish and unpublish discussions",
+  "@vitnode/example:discussion:can_restore": "Restore an earlier version of a discussion",
+  "@vitnode/example:discussion:can_hide": "Hide and unhide discussions",
   "ai_actions": {
     "@vitnode/example": {
       "article_excerpt": {

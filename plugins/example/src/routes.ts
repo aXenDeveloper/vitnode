@@ -9,6 +9,7 @@ import {
 import type { ExampleSearch } from "./pages/example-page";
 
 import { browseSearch } from "./pages/browse-search";
+import { discussionSearch } from "./pages/discussion-search";
 import { zonesSearch } from "./pages/zones-search";
 
 export const routes = definePluginRoutes([
@@ -68,6 +69,23 @@ export const routes = definePluginRoutes([
   page("/localized-articles/:slug", {
     component: lazy(() => import("./pages/localized-article-page")),
     messages: ["@vitnode/example.articles"],
+  }),
+
+  page("/discussions/new", {
+    component: lazy(() => import("./pages/discussion-new-page")),
+    messages: ["@vitnode/example.discussions"],
+    requires: "authenticated",
+  }),
+
+  page("/discussions/:id/edit", {
+    component: lazy(() => import("./pages/discussion-edit-page")),
+    messages: ["@vitnode/example.discussions"],
+  }),
+
+  page("/discussions/:slug", {
+    component: lazy(() => import("./pages/discussion-page")),
+    messages: ["@vitnode/example.articles", "@vitnode/example.discussions"],
+    search: discussionSearch,
   }),
 
   page("/admin/example", {

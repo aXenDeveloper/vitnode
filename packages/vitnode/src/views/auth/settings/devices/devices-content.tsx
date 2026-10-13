@@ -42,14 +42,14 @@ export const DevicesContent = ({
       <SettingsGroup
         footer={others.length === 0 ? undefined : t("others_desc")}
         title={
-          <span className="flex items-center gap-2">
+          <>
             {t("other_devices")}
             {others.length === 0 ? null : (
               <Badge className="tabular-nums" variant="secondary">
                 {others.length}
               </Badge>
             )}
-          </span>
+          </>
         }
       >
         {others.length === 0 ? (

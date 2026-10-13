@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   authRateLimiterMiddleware,
+  contentWriteRateLimiterMiddleware,
   rateLimiterMiddleware,
   rateLimitKey,
 } from "./rate-limiter.middleware";
@@ -177,5 +178,75 @@ describe("authRateLimiterMiddleware", () => {
     }
 
     expect(statuses).toEqual([200, 200, 200]);
+  });
+});
+
+describe("contentWriteRateLimiterMiddleware", () => {
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "production");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const buildContentApp = (ipAddress: string) => {
+    const app = new Hono<Env>().basePath("/api");
+    app.use("*", async (c, next) => {
+      c.set("ipAddress", ipAddress);
+
+      return next();
+    });
+    app.use(
+      "*",
+      contentWriteRateLimiterMiddleware({ points: 2, duration: 60 }),
+    );
+    app.on(["GET", "POST", "PATCH", "PUT", "DELETE"], "*", c =>
+      c.json({ ok: true }),
+    );
+
+    return app;
+  };
+
+  const statusesOf = async (
+    app: ReturnType<typeof buildContentApp>,
+    requests: [method: string, path: string][],
+  ) => {
+    const statuses: number[] = [];
+    for (const [method, path] of requests) {
+      statuses.push((await app.request(path, { method })).status);
+    }
+
+    return statuses;
+  };
+
+  it("counts public creates and edits against one budget", async () => {
+    const app = buildContentApp("content-write");
+
+    await expect(
+      statusesOf(app, [
+        ["POST", "/api/@acme/forum/content/topics"],
+        ["PATCH", "/api/@acme/forum/content/topics/7"],
+        ["POST", "/api/@acme/forum/content/topics"],
+      ]),
+    ).resolves.toEqual([200, 200, 429]);
+  });
+
+  it.each([
+    ["GET", "/api/@acme/forum/content/topics/7/edit"],
+    ["PUT", "/api/@acme/forum/content/topics/7"],
+    ["POST", "/api/@acme/forum/admin/content/topics"],
+    ["PATCH", "/api/@acme/forum/admin/content/topics/7"],
+    ["POST", "/api/@vitnode/core/users/sign_in"],
+  ])("leaves %s %s to the other budgets", async (method, path) => {
+    const app = buildContentApp(`other-${method}-${path}`);
+
+    await expect(
+      statusesOf(app, [
+        [method, path],
+        [method, path],
+        [method, path],
+      ]),
+    ).resolves.toEqual([200, 200, 200]);
   });
 });

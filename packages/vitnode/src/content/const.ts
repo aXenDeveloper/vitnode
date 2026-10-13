@@ -236,6 +236,31 @@ export const CONTENT_PUBLIC_EXPOSABLE_COLUMNS = [
 
 export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
 
+export const CONTENT_PUBLIC_WRITABLE_KINDS = [
+  "boolean",
+  "dateTime",
+  "enum",
+  "number",
+  "relation",
+  "richText",
+  "slug",
+  "text",
+  "textarea",
+] as const;
+
+export const CONTENT_PUBLIC_WRITE_ISSUE_CODES = {
+  invalidJson: "invalid_json",
+  notWritable: "not_writable",
+  unavailable: "unavailable",
+} as const;
+
+export const CONTENT_PUBLIC_WRITE_CODES = {
+  forbidden: "CONTENT_FORBIDDEN",
+  invalidInput: "CONTENT_INVALID_INPUT",
+  notFound: "CONTENT_NOT_FOUND",
+  unauthenticated: "CONTENT_UNAUTHENTICATED",
+} as const;
+
 export const CONTENT_SEARCH_TITLE_KINDS = ["text"] as const;
 
 /** Field kinds `search.descriptionField` may name. */

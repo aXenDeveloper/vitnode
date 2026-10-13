@@ -5,6 +5,7 @@ import { CONFIG_PLUGIN } from "@/const";
 import {
   exampleArticleNav,
   exampleCategoryNav,
+  exampleDiscussionNav,
   exampleEventNav,
   examplePageNav,
   exampleTagNav,
@@ -18,5 +19,6 @@ export const adminContent = {
     examplePageNav,
     exampleTagNav,
     exampleEventNav,
+    exampleDiscussionNav,
   ],
 } satisfies ContentFrontendPluginSource;

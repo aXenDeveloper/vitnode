@@ -870,3 +870,67 @@ export const testBigintPageContentType = defineContentType({
     sitemap: true,
   },
 });
+
+export const testForumContentType = defineContentType({
+  id: "test.forum",
+  tableName: "test_forums",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, maxLength: 100 }),
+    slug: field.slug({ source: "title" }),
+  },
+  publicApi: {
+    path: "forums",
+    fields: ["id", "title", "slug", "publishedAt"],
+  },
+});
+
+export const testTopicContentType = defineContentType({
+  id: "test.topic",
+  tableName: "test_topics",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ required: true, maxBytes: 2000 }),
+    pinned: field.boolean({ defaultValue: false }),
+    author: field.user(),
+    forum: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => testForumContentType,
+    }),
+  },
+  publicApi: {
+    path: "topics",
+    fields: ["id", "title", "slug", "forum", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "body", "forum"], status: "published" },
+    update: { fields: ["title", "body", "forum"] },
+  },
+});
+
+export const testEditorialTopicContentType = defineContentType({
+  id: "test.editorial-topic",
+  tableName: "test_editorial_topics",
+  publication: true,
+  editorial: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    author: field.user(),
+  },
+  publicApi: {
+    path: "editorial-topics",
+    fields: ["title", "slug", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title"] },
+    update: { fields: ["title"] },
+  },
+});

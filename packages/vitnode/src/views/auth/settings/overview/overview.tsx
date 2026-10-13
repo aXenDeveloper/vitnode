@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { AtSignIcon, MailIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
@@ -7,6 +7,13 @@ import type { ProfileRole } from "@/views/profile/profile-query";
 
 import { Avatar } from "@/components/avatar";
 import { RoleFormatContent } from "@/components/role-format-content";
+import { Badge } from "@/components/ui/badge";
+import {
+  Frame,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { PageTitle } from "@/components/ui/page-title";
 import { displayNameOf } from "@/lib/user-personal-information";
 import { SelfUserImageDialog } from "@/views/profile/images/self-image-dialog";
@@ -15,11 +22,7 @@ import type { UpdatePersonalInformation } from "./personal-update";
 import type { ProfileSummaryUser } from "./profile-summary";
 import type { UpdateTimeZone } from "./time-zone-update";
 
-import {
-  SETTINGS_ROW,
-  SETTINGS_ROW_LABEL,
-  SettingsGroup,
-} from "../settings-group";
+import { OverviewFact } from "./overview-fact";
 import { ProfileSheet } from "./profile-sheet";
 import { ProfileSummary } from "./profile-summary";
 
@@ -64,79 +67,101 @@ export const OverviewSettingsContent = ({
         subtitle={tSettings("title")}
       />
 
-      <SettingsGroup
-        footer={canEditPersonalInfo ? t("personalDesc") : undefined}
-        title={t("profileTitle")}
-      >
-        <li className={SETTINGS_ROW}>
-          <Avatar
-            className="size-12 shrink-0"
-            loading="eager"
-            size={48}
-            user={{ ...user, name: displayName }}
-          />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-foreground font-semibold text-pretty wrap-anywhere">
-              {displayName}
-            </span>
-            <span className="text-muted-foreground truncate text-sm">
-              @{user.nameCode}
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {editor ? (
-              <SelfUserImageDialog
-                editor={editor}
-                hasImage={user.avatarUrl !== null}
-                kind="avatar"
-                size="icon-sm"
+      <Frame>
+        <FramePanel>
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <Avatar
+                className="size-16 shrink-0"
+                loading="eager"
+                size={64}
+                user={{ ...user, name: displayName }}
               />
-            ) : null}
-            <ProfileSheet
-              canEdit={canEditPersonalInfo}
-              fields={personalFields}
-              onTimeZoneUpdate={onTimeZoneUpdate}
-              onUpdate={onUpdate}
-              user={user}
-            />
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="text-foreground text-lg font-semibold text-balance wrap-anywhere">
+                  {displayName}
+                </p>
+                <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
+                  <span className="truncate">@{user.nameCode}</span>
+                  <span aria-hidden>·</span>
+                  <RoleFormatContent role={user.role} />
+                </p>
+                {personalFields.headline && user.headline ? (
+                  <p className="text-foreground text-sm leading-relaxed text-pretty wrap-anywhere">
+                    {user.headline}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {editor ? (
+                <SelfUserImageDialog
+                  editor={editor}
+                  hasImage={user.avatarUrl !== null}
+                  kind="avatar"
+                  size="icon-sm"
+                />
+              ) : null}
+              <ProfileSheet
+                canEdit={canEditPersonalInfo}
+                fields={personalFields}
+                onTimeZoneUpdate={onTimeZoneUpdate}
+                onUpdate={onUpdate}
+                user={user}
+              />
+            </div>
           </div>
-        </li>
+        </FramePanel>
+      </Frame>
 
-        <ProfileSummary fields={personalFields} user={user} />
-      </SettingsGroup>
+      <div className="grid gap-4 md:grid-cols-2">
+        <ProfileSummary
+          canEdit={canEditPersonalInfo}
+          fields={personalFields}
+          user={user}
+        />
 
-      <SettingsGroup title={t("accountTitle")}>
-        <li className={SETTINGS_ROW}>
-          <span className={SETTINGS_ROW_LABEL}>{t("nickname")}</span>
-          <span className="text-muted-foreground min-w-0 flex-1 truncate text-end text-sm">
-            {user.name}
-          </span>
-        </li>
-        <li className={SETTINGS_ROW}>
-          <span className={SETTINGS_ROW_LABEL}>{t("email")}</span>
-          <span className="text-muted-foreground min-w-0 flex-1 text-end text-sm wrap-anywhere">
-            {user.email}
-          </span>
-        </li>
-        <li className={SETTINGS_ROW}>
-          <span className={SETTINGS_ROW_LABEL}>{t("role")}</span>
-          <span className="flex min-w-0 flex-1 justify-end text-sm">
-            <RoleFormatContent role={user.role} />
-          </span>
-        </li>
-        {user.secondaryRoles.length === 0 ? null : (
-          <li className={cn(SETTINGS_ROW, "items-start")}>
-            <span className={SETTINGS_ROW_LABEL}>{t("secondaryRoles")}</span>
-            <ul className="flex min-w-0 flex-1 flex-wrap justify-end gap-x-4 gap-y-1 text-sm">
-              {user.secondaryRoles.map(role => (
-                <li key={role.id}>
-                  <RoleFormatContent role={role} />
-                </li>
-              ))}
-            </ul>
-          </li>
-        )}
-      </SettingsGroup>
+        <Frame>
+          <FrameHeader>
+            <FrameTitle render={<h2 />}>{t("accountTitle")}</FrameTitle>
+          </FrameHeader>
+          <FramePanel render={<ul />}>
+            <OverviewFact
+              icon={AtSignIcon}
+              label={t("nickname")}
+              value={user.name}
+            />
+            <OverviewFact
+              badge={
+                user.emailVerified ? (
+                  <Badge variant="success">{t("emailVerified")}</Badge>
+                ) : null
+              }
+              icon={MailIcon}
+              label={t("email")}
+              value={user.email}
+            />
+            <OverviewFact
+              icon={ShieldIcon}
+              label={t("role")}
+              value={<RoleFormatContent role={user.role} />}
+            />
+            {user.secondaryRoles.length === 0 ? null : (
+              <OverviewFact
+                icon={UsersIcon}
+                label={t("secondaryRoles")}
+                value={
+                  <span className="flex flex-wrap gap-x-3 gap-y-1">
+                    {user.secondaryRoles.map(role => (
+                      <RoleFormatContent key={role.id} role={role} />
+                    ))}
+                  </span>
+                }
+              />
+            )}
+          </FramePanel>
+        </Frame>
+      </div>
 
       {aiPoints}
     </>

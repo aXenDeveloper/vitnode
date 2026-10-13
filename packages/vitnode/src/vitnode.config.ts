@@ -122,6 +122,7 @@ export interface VitNodeApiConfig {
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix"> & {
     auth?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
+    contentWrite?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
   };
 
   redis?: CacheConfig;

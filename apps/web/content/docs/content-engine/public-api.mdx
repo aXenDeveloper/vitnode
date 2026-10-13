@@ -254,3 +254,5 @@ All routes are `GET` and live under `/api/{pluginId}/content/{publicApi.path}`.
 The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A record is public only when its `status` is `published`, its `publishedAt` is set and not later than the database clock, and it is not [hidden](/docs/content-engine/content-visibility). Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
 
 Next, give each article a web page with [Public pages](/docs/content-engine/public-pages), or see how these reads are cached in [Caching](/docs/content-engine/caching).
+
+To let signed-in members create and edit records through the same path, add [Public write](/docs/content-engine/public-write).

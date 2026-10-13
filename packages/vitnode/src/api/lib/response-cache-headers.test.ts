@@ -113,6 +113,7 @@ const isSharedCacheable = (value: string): boolean => {
 const DECLARED = {
   "content/server/delivery-routes.ts": ["private, no-store"],
   "content/server/public-routes.ts": ["private, no-store"],
+  "content/server/public-write-routes.ts": ["private, no-store"],
   "tanstack/start/document-headers.ts": ["private, no-store"],
 } satisfies Record<string, string[]>;
 

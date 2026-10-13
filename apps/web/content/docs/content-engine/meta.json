@@ -9,6 +9,8 @@
     "create-a-content-type",
     "---Publish---",
     "public-api",
+    "public-write",
+    "public-write-frontend",
     "public-pages",
     "seo",
     "search",
@@ -34,6 +36,7 @@
     "reference",
     "fields",
     "plugin-files",
+    "public-write-api",
     "live-editing-api"
   ]
 }

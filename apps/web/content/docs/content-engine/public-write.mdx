@@ -1,0 +1,312 @@
+---
+title: Public write
+description: Let signed-in members create and edit Content Engine records from the public site with publicWrite, with server-stamped ownership, moderator permissions, strict field allowlists and rate limiting.
+icon: PenLine
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+`publicWrite` lets any signed-in member create records of a content type, and edit their own, through generated API routes on the public site. Staff keep the full AdminCP. Use it for discussions, reviews, listings or anything else your members write themselves.
+
+This guide follows `example.discussion` from the example plugin: members start discussions at `/api/@vitnode/example/content/discussions`, edit their own, and moderators can edit anyone's.
+
+## What public writing is
+
+The AdminCP and public writing are two doors into the same table. They differ in who may walk through them and what they may carry:
+
+|                       | AdminCP routes                                  | Public write routes                                              |
+| --------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| Who                   | Staff with the content type's admin permissions | Any signed-in user creates; the owner or a moderator edits       |
+| Session               | AdminCP session                                 | The user's normal session on the public site                     |
+| Fields                | Every field                                     | Only the fields listed in `publicWrite`                          |
+| Publish, hide, delete | Yes                                             | No. The server decides the status, and there is no public delete |
+| Path                  | `/api/{pluginId}/admin/content/{type}`          | `/api/{pluginId}/content/{publicApi.path}`                       |
+
+## Enable public writing
+
+You need a content type with [publication and a public API](/docs/content-engine/public-api), because the write routes live beside the public read routes and a member has to be able to find what they wrote.
+
+<Steps>
+
+<Step>
+
+### Define the content type
+
+Create `src/content/discussion.ts`. The `publicWrite` block is the new part:
+
+```ts title="plugins/example/src/content/discussion.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+export const discussionContentType = defineContentType({
+  id: "example.discussion",
+  tableName: "example_discussions",
+
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ required: true }),
+    author: field.user(),
+  },
+
+  publication: true,
+  visibility: true,
+  editorial: { revisions: { retention: 20 } },
+
+  publicApi: {
+    path: "discussions",
+    fields: ["id", "title", "slug", "body", "publishedAt"],
+  },
+
+  // [!code ++:5]
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "body"], status: "published" },
+    update: { fields: ["title", "body"] },
+  },
+
+  admin: {
+    path: "example/discussions",
+    titleField: "title",
+  },
+});
+```
+
+- `ownership.field` names a single `field.user()`. The server fills it with the signed-in user on create.
+- `create.fields` and `update.fields` are allowlists with no wildcard. A field you add later stays private until you list it. `slug` is derived from `title` on the server, so you list `title` instead.
+- `create.status` is what a new record starts as. It defaults to `"draft"`; discussions go live straight away.
+- `update.own` defaults to `true`, so owners can edit their own records.
+
+Every option and rule is in the [public write reference](/docs/content-engine/public-write-api#publicwrite-options).
+
+</Step>
+
+<Step>
+
+### Create the model
+
+Create `src/database/discussions.ts` and export the table so it reaches a migration:
+
+```ts title="plugins/example/src/database/discussions.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { discussionContentType } from "@/content/discussion";
+
+export const discussionContent = createContentModel(discussionContentType);
+
+export const example_discussions = discussionContent.table;
+```
+
+</Step>
+
+<Step>
+
+### Register the public module
+
+Add the model to `buildContentPublicModule` in your API plugin. The module mounts the read routes and, because of `publicWrite`, the write routes:
+
+```ts title="plugins/example/src/config.api.ts"
+import { discussionContent } from "@/database/discussions"; // [!code ++]
+
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [
+      adminModule,
+      buildContentPublicModule({
+        pluginId: CONFIG_PLUGIN.pluginId,
+        contentTypes: [articleContent, discussionContent], // [!code highlight]
+      }),
+    ],
+  });
+```
+
+The example plugin also adds `discussionContent` to its `admin` module and its AdminCP navigation, so staff can manage every discussion. That part is the same as in [Create a content type](/docs/content-engine/create-a-content-type#add-the-staff-api-routes).
+
+</Step>
+
+<Step>
+
+### Label the permissions
+
+A content type with `publicWrite.update` gets a `can_edit` **moderator** permission next to its usual admin permissions. Both share one label key:
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example:discussion": "Discussions",
+  "@vitnode/example:discussion:can_view": "View discussions",
+  "@vitnode/example:discussion:can_create": "Create discussions",
+  "@vitnode/example:discussion:can_edit": "Edit discussions",
+  "@vitnode/example:discussion:can_delete": "Delete discussions",
+  "@vitnode/example:discussion:can_publish": "Publish and unpublish discussions",
+  "@vitnode/example:discussion:can_restore": "Restore an earlier version of a discussion",
+  "@vitnode/example:discussion:can_hide": "Hide and unhide discussions"
+}
+```
+
+</Step>
+
+<Step>
+
+### Build, migrate and restart
+
+Run this from the workspace root, then restart `pnpm dev` so the API registers the new routes:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+The migration creates `example_discussions` with an `author` column that references `core_users`. [Database](/docs/content-engine/database) covers migrations in detail.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Sign in on the site, copy the value of your `vitnode_auth` cookie from the browser's developer tools, and create a discussion:
+
+```bash
+curl -i -X POST http://localhost:3000/api/@vitnode/example/content/discussions \
+  -b "vitnode_auth=<session>" \
+  -H "Content-Type: application/json" \
+  -d '{"values":{"title":"How do I add a widget zone?","body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"I want one under my article."}]}]}}}'
+```
+
+The API answers `201` with the new record. `version` is `2` because the create and the publish are each a version:
+
+```json title="201"
+{
+  "id": 1,
+  "slug": "how-do-i-add-a-widget-zone",
+  "status": "published",
+  "publishedAt": "2026-10-13T09:12:44.512Z",
+  "version": 2,
+  "values": {
+    "title": "How do I add a widget zone?",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "I want one under my article." }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+Now try to claim someone else's name. Send a short title and an `author`:
+
+```bash
+curl -i -X POST http://localhost:3000/api/@vitnode/example/content/discussions \
+  -b "vitnode_auth=<session>" \
+  -H "Content-Type: application/json" \
+  -d '{"values":{"title":"Hi","author":2,"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Nice try."}]}]}}}'
+```
+
+Nothing is written, and each problem names its field:
+
+```json title="400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "example.discussion",
+  "issues": [
+    {
+      "code": "too_small",
+      "field": "title",
+      "message": "Too small: expected string to have >=3 characters"
+    },
+    {
+      "code": "not_writable",
+      "field": "author",
+      "message": "This field cannot be written."
+    }
+  ]
+}
+```
+
+Without the cookie, every write route answers `401` with `"code": "CONTENT_UNAUTHENTICATED"` before it reads the body. Validation failures are `400`, the status every VitNode input error uses, not `422`.
+
+## Ownership
+
+Every publicly written record has exactly one owner, and only the server sets it. On create, the routes take the user from the session and write it into `ownership.field` after validating the payload. The field can never appear in `create.fields` or `update.fields`, and a payload that sends it gets the `not_writable` issue above.
+
+The owner never changes through the public routes, not even when a moderator edits the record. If the owner's account is deleted, the field becomes empty and nobody owns the record, so only moderators can edit it.
+
+This is why `ownership` is required and not configurable: if a client could choose the owner, it could write as somebody else or take over their records.
+
+## Permissions
+
+Creating needs a signed-in user and nothing else. Editing is allowed for two kinds of people:
+
+- **The owner**, while `update.own` is `true` (the default) and the record is not [hidden](/docs/content-engine/content-visibility). A record a moderator hid is the moderator's to restore, not the author's to keep editing. Set `update.own: false` to let only moderators edit.
+- **Moderators** who hold the content type's `can_edit` moderator permission, directly or through a role.
+
+To make someone a discussion moderator:
+
+1. Open **AdminCP → Staff → Moderators** and click **Add Moderator**.
+2. Pick a **Role** or a **User** and click **Add member**. The permission editor opens.
+3. Choose **Restricted**, turn on **Edit discussions** under the example plugin, and click **Save changes**.
+
+A moderator entry set to **Unrestricted**, and every root role, holds all moderator permissions, including this one.
+
+Being staff is not enough on its own. The admin `can_edit` permission only opens the AdminCP routes, and an AdminCP session never adds powers on the public site: the public routes always act as the user's normal session. Moderators edit with the same forms and routes as members, so you build one edit page instead of two.
+
+## Security
+
+Each layer below holds even if the one before it has a bug:
+
+- **Separate allowlists.** `publicWrite` fields are independent of `publicApi.fields`. A field can be writable without being public, and public without being writable. Server-managed columns (`id`, `status`, `publishedAt`, `version`, `hiddenAt` and friends), the owner field, file, user, group, repeatable and block fields can never be listed. See [writable fields](/docs/content-engine/public-write-api#writable-fields).
+- **Strict schemas.** The request schemas are built from the allowlists alone. An unknown key is a `400`, never silently dropped.
+- **Authentication.** An anonymous request gets `401` before its body is read.
+- **Ownership** is stamped by the server, as described above.
+- **Authorization under a row lock.** An edit reads the record with `SELECT ... FOR UPDATE`, checks the owner or moderator permission, and writes in the same transaction, so the owner that was checked is the owner that is written.
+- **Relation targets.** A relation field is writable only when its target content type has a `publicApi`. On every write, each referenced record must be published and visible, otherwise the request is a `400` with the `unavailable` issue code. Missing, draft and hidden targets get the same answer.
+- **No existence leaks.** `403` is only for records the public can already read. A draft or a hidden record answers `404`, like a record that does not exist.
+- **Rate limit and captcha.** `POST` and `PATCH` requests under `/content/` share a budget of 20 per minute per IP, on top of the global limit. Set `create.captcha: true` to require a [captcha](/docs/dev/captcha) token on every create.
+- **Session and CSRF.** The routes use the same session cookie, CORS and CSRF origin checks as every other VitNode API route, and they accept JSON bodies only.
+
+Tune the write budget with `rateLimiter.contentWrite`. Like every rate limit, it is off when `NODE_ENV=development`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  rateLimiter: {
+    // [!code ++]
+    contentWrite: { points: 10, duration: 60 },
+  },
+});
+```
+
+## Events, search and revisions
+
+Public writes trigger the same side effects as AdminCP writes, so nothing new needs wiring:
+
+- [Events](/docs/content-engine/events): `created` on create, then `published` when `create.status` is `"published"`, and `updated` with `changedFields` on an edit that changed something. There are no separate public-write events.
+- [Search](/docs/content-engine/search) is synced after the transaction commits, so a discussion published on create is searchable straight away.
+- On an [editorial](/docs/content-engine/editorial#revisions) content type, each create and edit stores a revision attributed to the signed-in user, and staff can restore it from the AdminCP.
+
+## Future container policies
+
+<Callout type="info" title="Not available yet">
+  Per-container publication policies are planned, not shipped. Today every
+  public create uses `publicWrite.create.status`.
+</Callout>
+
+Whether a new record starts as a draft or goes live is decided in one server-side function, `resolveContentPublicationPolicy`, and never by the payload. It already receives the signed-in user and the operation, so a later Content Containers feature can let each container choose its own policy, such as "publish immediately" in one forum and "wait for a moderator's approval" in another, without changing the routes or your forms.
+
+Next, build the create and edit pages in [Public write frontend](/docs/content-engine/public-write-frontend).

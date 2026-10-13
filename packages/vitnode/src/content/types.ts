@@ -8,6 +8,7 @@ import type {
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_LOCALIZATION_FALLBACKS,
   CONTENT_PUBLIC_EXPOSABLE_COLUMNS,
+  CONTENT_PUBLIC_WRITABLE_KINDS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_SEARCH_DESCRIPTION_KINDS,
@@ -1095,6 +1096,101 @@ export interface ResolvedContentPublicApiConfig<
   slugField: string;
 }
 
+export type ContentPublicWritableKind =
+  (typeof CONTENT_PUBLIC_WRITABLE_KINDS)[number];
+
+export type ContentPublicWritableField<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends { localized: true }
+      ? never
+      : TFields[K] extends { kind: "slug"; source: string }
+        ? never
+        : TFields[K] extends { kind: ContentPublicWritableKind }
+          ? K
+          : never;
+  }[keyof TFields];
+
+export type ContentPublicOwnershipField<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends { kind: "user"; multiple: false }
+      ? TFields[K] extends { localized: true }
+        ? never
+        : K
+      : never;
+  }[keyof TFields];
+
+export interface ContentPublicWriteCreateConfig<
+  TField extends string = string,
+> {
+  captcha?: boolean;
+  fields: readonly [TField, ...TField[]];
+  status?: ContentPublicationStatus;
+}
+
+export interface ContentPublicWriteUpdateConfig<
+  TField extends string = string,
+> {
+  fields: readonly [TField, ...TField[]];
+  own?: boolean;
+}
+
+export interface ContentPublicWriteConfig<
+  TField extends string = string,
+  TOwner extends string = string,
+> {
+  create?: ContentPublicWriteCreateConfig<TField>;
+  ownership: { field: TOwner };
+  update?: ContentPublicWriteUpdateConfig<TField>;
+}
+
+export type ContentPublicWriteInput<
+  TPublicEnabled extends boolean,
+  TField extends string,
+  TOwner extends string,
+> = TPublicEnabled extends true
+  ? ContentPublicWriteConfig<TField, TOwner> | false
+  : false;
+
+export interface ResolvedContentPublicWriteConfig<
+  TCreateField extends string = string,
+  TUpdateField extends string = string,
+  TCreateEnabled extends boolean = boolean,
+  TUpdateEnabled extends boolean = boolean,
+> {
+  create: {
+    captcha: boolean;
+    enabled: TCreateEnabled;
+    fields: TCreateField[];
+    status: ContentPublicationStatus;
+  };
+  enabled: boolean;
+  ownerField: null | string;
+  update: { enabled: TUpdateEnabled; fields: TUpdateField[]; own: boolean };
+}
+
+type PublicWriteFieldsOf<TBlock> = TBlock extends {
+  fields: readonly (infer TField extends string)[];
+}
+  ? TField
+  : never;
+
+export type ContentPublicWriteResolved<TWrite> = [TWrite] extends [
+  false | undefined,
+]
+  ? ResolvedContentPublicWriteConfig<string, string, false, false>
+  : [TWrite] extends [{ ownership: unknown }]
+    ? ResolvedContentPublicWriteConfig<
+        TWrite extends { create: infer TCreate }
+          ? PublicWriteFieldsOf<TCreate>
+          : never,
+        TWrite extends { update: infer TUpdate }
+          ? PublicWriteFieldsOf<TUpdate>
+          : never,
+        TWrite extends { create: object } ? true : false,
+        TWrite extends { update: object } ? true : false
+      >
+    : ResolvedContentPublicWriteConfig;
+
 // ---------------------------------------------------------------------------
 // Search
 // ---------------------------------------------------------------------------
@@ -1742,6 +1838,8 @@ export interface ContentTypeDefinition<
   TVisibilityEnabled extends boolean = boolean,
   TDuplicationEnabled extends boolean = boolean,
   TIdStrategy extends ContentIdStrategy = ContentIdStrategy,
+  TPublicWrite extends ResolvedContentPublicWriteConfig =
+    ResolvedContentPublicWriteConfig,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
@@ -1774,6 +1872,7 @@ export interface ContentTypeDefinition<
     TPublicPath
   >;
   publication: ResolvedContentPublicationConfig<TPublication>;
+  publicWrite: TPublicWrite;
   reports: ResolvedContentReportsConfig;
   /** Zod schemas generated from `fields`. */
   schemas: ContentSchemas<
@@ -1792,7 +1891,8 @@ export interface ContentTypeDefinition<
       TPublicPath,
       TVisibilityEnabled,
       TDuplicationEnabled,
-      TIdStrategy
+      TIdStrategy,
+      TPublicWrite
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
@@ -2121,3 +2221,67 @@ export type ContentPublicFilterInput<TDefinition> = Partial<
 export type ContentPublicOrderableFieldName<TDefinition> =
   | "publishedAt"
   | PublicFlatName<ContentPublicFieldName<TDefinition>>;
+
+export type PublicWritableContentTypeDefinition = PublicContentTypeDefinition &
+  (
+    | { publicWrite: { create: { enabled: true } } }
+    | { publicWrite: { update: { enabled: true } } }
+  );
+
+export type ContentPublicCreateFieldName<TDefinition> = TDefinition extends {
+  publicWrite: {
+    create: { enabled: true; fields: (infer TField extends string)[] };
+  };
+}
+  ? TField
+  : never;
+
+export type ContentPublicUpdateFieldName<TDefinition> = TDefinition extends {
+  publicWrite: {
+    update: { enabled: true; fields: (infer TField extends string)[] };
+  };
+}
+  ? TField
+  : never;
+
+export type ContentPublicCreateInput<TDefinition> = CreateValuesOf<
+  ContentFieldsOf<TDefinition>,
+  ContentPublicCreateFieldName<TDefinition> & keyof ContentFieldsOf<TDefinition>
+>;
+
+export type ContentPublicUpdateInput<TDefinition> = Prettify<{
+  [
+    K in ContentPublicUpdateFieldName<TDefinition> &
+      keyof ContentFieldsOf<TDefinition>
+  ]?: ContentFieldPatch<ContentFieldsOf<TDefinition>[K]>;
+}>;
+
+export interface ContentPublicCreateBody<TDefinition> {
+  values: ContentPublicCreateInput<TDefinition>;
+}
+
+export type ContentPublicUpdateBody<TDefinition> = Prettify<
+  (TDefinition extends { editorial: { enabled: true } }
+    ? { expectedVersion: number }
+    : Record<never, never>) & {
+    values: ContentPublicUpdateInput<TDefinition>;
+  }
+>;
+
+export type ContentPublicWriteRecord<TDefinition> = Prettify<
+  ContentEditorialColumns<TDefinition> & {
+    id: ContentIdOf<TDefinition>;
+    publishedAt: Date | null;
+    slug: null | string;
+    status: ContentPublicationStatus;
+    values: Prettify<{
+      [
+        K in (
+          | ContentPublicCreateFieldName<TDefinition>
+          | ContentPublicUpdateFieldName<TDefinition>
+        ) &
+          keyof ContentFieldsOf<TDefinition>
+      ]: ContentFieldValue<ContentFieldsOf<TDefinition>[K]>;
+    }>;
+  }
+>;

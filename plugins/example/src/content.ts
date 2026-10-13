@@ -1,6 +1,7 @@
 import { advancedArticleContentType } from "@/content/advanced-article";
 import { articleContentType } from "@/content/article";
 import { categoryContentType } from "@/content/category";
+import { discussionContentType } from "@/content/discussion";
 import { eventContentType } from "@/content/event";
 import { localizedArticleContentType } from "@/content/localized-article";
 import { pageContentType } from "@/content/page";
@@ -14,4 +15,5 @@ export const contentTypes = [
   pageContentType,
   tagContentType,
   eventContentType,
+  discussionContentType,
 ];

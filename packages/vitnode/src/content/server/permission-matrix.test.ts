@@ -1,4 +1,4 @@
-import type { MiddlewareHandler } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
@@ -7,12 +7,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { createTestCache } from "@/tests/cache";
-import { grantStaffPermissions } from "@/tests/staff-permissions";
+import {
+  testForumContentType,
+  testTopicContentType,
+} from "@/tests/content-fixtures";
+import { createMemoryDb } from "@/tests/memory-db";
+import {
+  grantStaffPermissions,
+  ROOT_STAFF_PERMISSIONS,
+} from "@/tests/staff-permissions";
 
 import { CONTENT_PERMISSIONS } from "../const";
 import { defineContentType } from "../define";
 import { field } from "../fields";
 import { createContentModel } from "./model";
+import { buildContentPublicRoutes } from "./public-routes";
 import { buildContentRoutes } from "./routes";
 
 /**
@@ -473,4 +482,160 @@ describe("the generated permission matrix", () => {
       expect(underOther.status).not.toBe(403);
     });
   });
+});
+
+describe("the public write permission matrix", () => {
+  const forums = createContentModel(testForumContentType);
+  const topics = createContentModel(testTopicContentType, {
+    references: { forum: () => forums.table.id },
+  });
+  const lockedTopicContentType = defineContentType({
+    id: "test.locked-topic",
+    tableName: "test_locked_topics",
+    publication: true,
+    visibility: true,
+    fields: {
+      title: field.text({ required: true, maxLength: 200 }),
+      slug: field.slug({ source: "title" }),
+      author: field.user(),
+    },
+    publicApi: { path: "locked-topics", fields: ["title", "slug"] },
+    publicWrite: {
+      ownership: { field: "author" },
+      update: { fields: ["title"], own: false },
+    },
+  });
+  const notOwnable = createContentModel(lockedTopicContentType);
+
+  const OWNER = 1;
+  const STRANGER = 2;
+  const MODERATOR = 3;
+  const ROOT_MODERATOR = 4;
+  const ADMIN = 5;
+  const OTHER_PLUGIN_MODERATOR = 6;
+  const LIVE = 10;
+  const HIDDEN = 11;
+
+  const row = (id: number, hiddenAt: Date | null) => ({
+    author: OWNER,
+    body: { content: [], type: "doc" },
+    forum: 1,
+    hiddenAt,
+    id,
+    pinned: false,
+    publishedAt: new Date("2026-09-01T10:00:00.000Z"),
+    slug: `topic-${id}`,
+    status: "published",
+    title: `Topic ${id}`,
+  });
+
+  const appFor = async (target: typeof notOwnable | typeof topics) => {
+    const memory = createMemoryDb([
+      [target.table, [row(LIVE, null), row(HIDDEN, new Date())]],
+    ]);
+    const store = createTestCache();
+    const permission = (plugin: string) => [
+      {
+        module: target.definition.permissionModule,
+        permission: CONTENT_PERMISSIONS.edit,
+        plugin,
+      },
+    ];
+    await grantStaffPermissions(store, {
+      permissions: permission(PLUGIN_ID),
+      type: "moderator",
+      userId: MODERATOR,
+    });
+    await grantStaffPermissions(store, {
+      permissions: ROOT_STAFF_PERMISSIONS,
+      type: "moderator",
+      userId: ROOT_MODERATOR,
+    });
+    await grantStaffPermissions(store, {
+      permissions: permission(PLUGIN_ID),
+      type: "admin",
+      userId: ADMIN,
+    });
+    await grantStaffPermissions(store, {
+      permissions: permission(OTHER_PLUGIN_ID),
+      type: "moderator",
+      userId: OTHER_PLUGIN_MODERATOR,
+    });
+
+    const instance = new OpenAPIHono();
+    instance.use("*", async (c, next) => {
+      const user = c.req.header("x-user");
+      c.set("user", (user ? { id: Number(user), roleId: 2 } : null) as never);
+      c.set("admin", { user: adminUser });
+      c.set("cache", store);
+      c.set("db", memory.db as unknown as Context["var"]["db"]);
+      c.set("events", {
+        emit: async () => await Promise.resolve({ failures: [] }),
+      } as never);
+      await next();
+    });
+    for (const { handler, route } of buildContentPublicRoutes(
+      target as typeof topics,
+      { pluginId: PLUGIN_ID },
+    )) {
+      instance.openapi(route, handler);
+    }
+    instance.onError((error, c) =>
+      error instanceof HTTPException
+        ? error.getResponse()
+        : c.json({ error: String(error) }, 500),
+    );
+
+    return instance;
+  };
+
+  const statuses = async (
+    target: typeof notOwnable | typeof topics,
+    user: null | number,
+    id: number,
+  ) => {
+    const instance = await appFor(target);
+    const headers = {
+      "Content-Type": "application/json",
+      ...(user === null ? {} : { "x-user": String(user) }),
+    };
+
+    return [
+      (await instance.request(`/${id}/edit`, { headers })).status,
+      (
+        await instance.request(`/${id}`, {
+          body: JSON.stringify({ values: { title: "Edited title" } }),
+          headers,
+          method: "PATCH",
+        })
+      ).status,
+    ];
+  };
+
+  it.each([
+    ["the owner", OWNER, LIVE, [200, 200]],
+    ["a moderator with can_edit", MODERATOR, LIVE, [200, 200]],
+    ["a root moderator", ROOT_MODERATOR, LIVE, [200, 200]],
+    ["a moderator of another plugin", OTHER_PLUGIN_MODERATOR, LIVE, [403, 403]],
+    ["staff with only the AdminCP can_edit", ADMIN, LIVE, [403, 403]],
+    ["another user", STRANGER, LIVE, [403, 403]],
+    ["nobody", null, LIVE, [401, 401]],
+    ["the owner of a hidden record", OWNER, HIDDEN, [404, 404]],
+    ["a moderator on a hidden record", MODERATOR, HIDDEN, [200, 200]],
+  ])(
+    "GET /{id}/edit and PATCH /{id} for %s",
+    async (_label, user, id, expected) => {
+      await expect(statuses(topics, user, id)).resolves.toEqual(expected);
+    },
+  );
+
+  it.each([
+    ["the owner", OWNER, [403, 403]],
+    ["a moderator with can_edit", MODERATOR, [200, 200]],
+  ])(
+    "with update.own off, refuses %s unless they moderate",
+    async (_label, user, expected) => {
+      await expect(statuses(notOwnable, user, LIVE)).resolves.toEqual(expected);
+    },
+  );
 });

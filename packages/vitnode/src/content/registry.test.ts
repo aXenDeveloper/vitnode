@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testForumContentType,
   testPostContentType,
+  testTopicContentType,
 } from "@/tests/content-fixtures";
 
 import type { RegisteredContentType } from "./registry";
@@ -320,6 +322,65 @@ describe("withContentPermissions", () => {
     const permissionStaff = { admin: { posts: ["can_view"] } };
 
     expect(withContentPermissions(permissionStaff, [])).toBe(permissionStaff);
+  });
+
+  describe("moderator permissions for publicWrite", () => {
+    const topicModule = testTopicContentType.permissionModule;
+    const createOnly = widget({
+      id: "test.suggestion",
+      tableName: "test_suggestions",
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug({ source: "title" }),
+        author: field.user(),
+      },
+      publication: true,
+      publicApi: { path: "suggestions", fields: ["title", "slug"] },
+      publicWrite: {
+        ownership: { field: "author" },
+        create: { fields: ["title"] },
+      } as never,
+    });
+
+    it("registers can_edit for a content type whose public writes include updates", () => {
+      const merged = withContentPermissions({}, [entry(testTopicContentType)]);
+
+      expect(merged?.moderator?.[topicModule]).toEqual(["can_edit"]);
+    });
+
+    it("registers it for a content type mounted only through the public module", () => {
+      const merged = withContentPermissions({}, [], [testTopicContentType]);
+
+      expect(merged?.moderator?.[topicModule]).toEqual(["can_edit"]);
+      expect(merged?.admin?.[topicModule]).toBeUndefined();
+    });
+
+    it("keeps an explicitly declared moderator module", () => {
+      const merged = withContentPermissions(
+        { moderator: { [topicModule]: ["can_hide"] } },
+        [entry(testTopicContentType)],
+      );
+
+      expect(merged?.moderator?.[topicModule]).toEqual(["can_hide"]);
+    });
+
+    it.each([
+      ["a read-only public API", testForumContentType],
+      ["a create-only publicWrite", createOnly],
+      ["no public API at all", testArticleContentType],
+    ])("adds no moderator module for %s", (_label, definition) => {
+      const merged = withContentPermissions({}, [entry(definition)]);
+
+      expect(merged?.moderator).toBeUndefined();
+    });
+
+    it("passes the config through when a public-only content type has nothing to add", () => {
+      const permissionStaff = { admin: { posts: ["can_view"] } };
+
+      expect(
+        withContentPermissions(permissionStaff, [], [testForumContentType]),
+      ).toBe(permissionStaff);
+    });
   });
 });
 

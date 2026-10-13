@@ -4,14 +4,21 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { cn } from "cn";
-import { ChevronRightIcon } from "lucide-react";
+import { ArrowUpRightIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { UpdatePersonalInformation } from "@/views/auth/settings/overview/personal-update";
 import type { UpdateTimeZone } from "@/views/auth/settings/overview/time-zone-update";
 
+import { Button } from "@/components/ui/button";
+import {
+  Frame,
+  FrameAction,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import {
   AiPointsBreakdown,
   AiUnlimitedPointsSummary,
@@ -24,10 +31,6 @@ import {
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
 import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
-import {
-  SETTINGS_ROW,
-  SettingsGroup,
-} from "@/views/auth/settings/settings-group";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 
@@ -48,31 +51,38 @@ const OverviewAiPoints = ({ userId }: { userId: number }) => {
   if (!usage || !hasAiFeatures(usage)) return null;
 
   return (
-    <SettingsGroup title={t("title")}>
-      {usage.points.total === null ? (
-        <>
-          <li className={cn(SETTINGS_ROW, "items-start")}>
-            <AiUnlimitedPointsSummary usage={usage} />
+    <Frame>
+      <FrameHeader>
+        <FrameTitle render={<h2 />}>{t("title")}</FrameTitle>
+        <FrameAction>
+          <Button
+            nativeButton={false}
+            render={<Link to="/settings/ai" />}
+            size="sm"
+            variant="outline"
+          >
+            {t("details")}
+            <ArrowUpRightIcon className="rtl:-scale-x-100" />
+          </Button>
+        </FrameAction>
+      </FrameHeader>
+      <FramePanel render={<ul />}>
+        {usage.points.total === null ? (
+          <>
+            <li className="flex items-start gap-3 p-4">
+              <AiUnlimitedPointsSummary usage={usage} />
+            </li>
+            <li className="flex items-center gap-3 p-4">
+              <AiPointsBreakdown actions={usage.actions} />
+            </li>
+          </>
+        ) : (
+          <li className="flex items-center gap-3 p-4">
+            <AiPointsContent usage={usage} />
           </li>
-          <li className={SETTINGS_ROW}>
-            <AiPointsBreakdown actions={usage.actions} />
-          </li>
-        </>
-      ) : (
-        <li className={SETTINGS_ROW}>
-          <AiPointsContent usage={usage} />
-        </li>
-      )}
-      <li className={SETTINGS_ROW}>
-        <Link
-          className="text-primary inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline"
-          to="/settings/ai"
-        >
-          {t("details")}
-          <ChevronRightIcon aria-hidden className="size-4 rtl:-scale-x-100" />
-        </Link>
-      </li>
-    </SettingsGroup>
+        )}
+      </FramePanel>
+    </Frame>
   );
 };
 

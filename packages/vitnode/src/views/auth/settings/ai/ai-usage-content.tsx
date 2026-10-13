@@ -12,6 +12,12 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Frame,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -350,34 +356,40 @@ export const AiFeaturesContent = ({
   const t = useTranslations("core.auth.settings.ai.features");
 
   return (
-    <section
-      aria-labelledby="ai-features-title"
-      className="flex flex-col gap-2"
-    >
-      <h3
-        className="text-muted-foreground text-sm font-medium"
-        id="ai-features-title"
-      >
-        {t("title")}
-      </h3>
+    <Frame>
+      <FrameHeader>
+        <FrameTitle render={<h2 />}>{t("title")}</FrameTitle>
+      </FrameHeader>
       {actions.length === 0 ? (
-        <div className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-md p-6 text-center shadow-xs ring-1">
+        <FramePanel className="gap-1 p-6 text-center">
           <p className="text-sm font-medium">{t("empty_title")}</p>
           <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
             {t("empty_desc")}
           </p>
-        </div>
+        </FramePanel>
       ) : (
-        <Accordion className="bg-card ring-foreground/10 overflow-hidden rounded-md shadow-xs ring-1">
+        <FramePanel render={<Accordion />}>
           {actions.map(action => (
             <AiFeatureRow action={action} key={action.key} userId={userId} />
           ))}
-        </Accordion>
+        </FramePanel>
       )}
-      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-        {t("footer")}
-      </p>
-    </section>
+    </Frame>
+  );
+};
+
+const AiPointsFrame = ({ usage }: { usage: AiUsage }) => {
+  const t = useTranslations("core.auth.settings.ai.overview");
+
+  return (
+    <Frame>
+      <FrameHeader>
+        <FrameTitle render={<h2 />}>{t("title")}</FrameTitle>
+      </FrameHeader>
+      <FramePanel className="p-4">
+        <AiPointsContent usage={usage} />
+      </FramePanel>
+    </Frame>
   );
 };
 
@@ -389,9 +401,7 @@ export const AiUsageContent = ({
   userId: number;
 }) => (
   <div className="flex flex-col gap-6">
-    <section className="bg-card ring-foreground/10 rounded-md p-4 shadow-xs ring-1">
-      <AiPointsContent usage={usage} />
-    </section>
+    <AiPointsFrame usage={usage} />
     <AiUsageNoticeContent usage={usage} />
     <AiFeaturesContent actions={usage.actions} userId={userId} />
   </div>

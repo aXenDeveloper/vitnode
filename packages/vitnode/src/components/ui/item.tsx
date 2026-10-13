@@ -87,6 +87,7 @@ const itemMediaVariants = cva(
       variant: {
         default: "bg-transparent",
         icon: "[&_svg:not([class*='size-'])]:size-4",
+        tile: "bg-muted/60 text-muted-foreground ring-foreground/10 size-10 rounded-md ring-1 group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_svg:not([class*='size-'])]:size-4.5 group-data-[size=sm]/item:[&_svg:not([class*='size-'])]:size-4 group-data-[size=xs]/item:[&_svg:not([class*='size-'])]:size-3.5",
         image:
           "size-10 overflow-hidden rounded-sm group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover",
       },

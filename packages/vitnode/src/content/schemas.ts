@@ -8,13 +8,19 @@ import type {
   ContentFieldMap,
   ContentLocalizedUpdateValues,
   ContentLocalizedValues,
+  ContentPublicCreateBody,
+  ContentPublicCreateInput,
   ContentPublicSelect,
+  ContentPublicUpdateBody,
+  ContentPublicUpdateInput,
+  ContentPublicWriteRecord,
   ContentSelect,
   ContentUpdateInput,
   ResolvedContentAdminConfig,
   ResolvedContentAdvancedConfig,
   ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
+  ResolvedContentPublicWriteConfig,
 } from "./types";
 
 import { zodBlockInstances, zodContentNode } from "../blocks/validate";
@@ -36,6 +42,7 @@ import {
   CONTENT_VISIBILITY_FILTERS,
   isFilterableFieldKind,
 } from "./const";
+import { DISABLED_PUBLIC_WRITE } from "./define-public-write";
 import { zodContentFileDescriptor } from "./files";
 import { contentIdSchema, parseContentId } from "./ids";
 import {
@@ -105,6 +112,16 @@ export interface ContentTranslationSchemas<
   versionEnvelope: z.ZodType<{ expectedVersion: number }>;
 }
 
+export interface ContentPublicWriteSchemas<
+  TDefinition = AnyContentTypeDefinition,
+> {
+  create: z.ZodType<ContentPublicCreateInput<TDefinition>>;
+  createBody: z.ZodType<ContentPublicCreateBody<TDefinition>>;
+  record: z.ZodType<ContentPublicWriteRecord<TDefinition>>;
+  update: z.ZodType<ContentPublicUpdateInput<TDefinition>>;
+  updateBody: z.ZodType<ContentPublicUpdateBody<TDefinition>>;
+}
+
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   advancedSelect: z.ZodObject<z.ZodRawShape>;
 
@@ -133,6 +150,7 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   publicSelect: z.ZodType<ContentPublicSelect<TDefinition>>;
   /** The same shape, left as a `ZodObject` so routes can compose it. */
   publicSelectObject: z.ZodObject<z.ZodRawShape>;
+  publicWrite: ContentPublicWriteSchemas<TDefinition>;
   /** API response shape. */
   select: z.ZodType<ContentSelect<TDefinition>>;
   /**
@@ -710,6 +728,68 @@ const publicSelectShape = (
   ),
 });
 
+const buildPublicWriteSchemas = <TDefinition>({
+  editorial,
+  fields,
+  idStrategy,
+  publicWrite,
+}: {
+  editorial: boolean;
+  fields: ContentFieldMap;
+  idStrategy: ContentIdStrategy;
+  publicWrite: ResolvedContentPublicWriteConfig;
+}): ContentPublicWriteSchemas<TDefinition> => {
+  const create = z.strictObject(
+    inputShape(fields, publicWrite.create.fields, idStrategy),
+  );
+  const update = z
+    .strictObject(updateShape(fields, publicWrite.update.fields, idStrategy))
+    .refine(value => Object.keys(value).length > 0, {
+      message: "Provide at least one field to update.",
+    });
+  const readable = [
+    ...new Set([...publicWrite.create.fields, ...publicWrite.update.fields]),
+  ];
+
+  const record = z.object({
+    id: recordIdOutputSchema(idStrategy),
+    publishedAt: z.date().nullable(),
+    slug: z.string().nullable(),
+    status: z.enum(CONTENT_PUBLICATION_STATUSES),
+    values: z.object(
+      Object.fromEntries(
+        readable.map(name => [
+          name,
+          applyNullable(
+            baseSelectSchema(fields[name], idStrategy),
+            fields[name],
+          ),
+        ]),
+      ),
+    ),
+    ...(editorial ? { version: z.number().int().positive() } : {}),
+  });
+
+  return {
+    create: create as unknown as z.ZodType<
+      ContentPublicCreateInput<TDefinition>
+    >,
+    createBody: z.strictObject({ values: create }) as unknown as z.ZodType<
+      ContentPublicCreateBody<TDefinition>
+    >,
+    record: record as unknown as z.ZodType<
+      ContentPublicWriteRecord<TDefinition>
+    >,
+    update: update as unknown as z.ZodType<
+      ContentPublicUpdateInput<TDefinition>
+    >,
+    updateBody: z.strictObject({
+      ...(editorial ? { expectedVersion: z.number().int().positive() } : {}),
+      values: update,
+    }) as unknown as z.ZodType<ContentPublicUpdateBody<TDefinition>>,
+  };
+};
+
 const idParamSchema = (strategy: ContentIdStrategy): z.ZodType =>
   strategy === "serial" ? z.coerce.number() : contentIdSchema(strategy);
 
@@ -819,6 +899,7 @@ export const buildContentSchemas = <TDefinition>({
   idStrategy = "serial",
   localization = contentLocalizationDisabled(),
   publicApi = DISABLED_PUBLIC_API,
+  publicWrite = DISABLED_PUBLIC_WRITE,
   publication = false,
   visibility = false,
 }: {
@@ -831,6 +912,7 @@ export const buildContentSchemas = <TDefinition>({
   localization?: ResolvedContentLocalizationConfig;
   publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
+  publicWrite?: ResolvedContentPublicWriteConfig;
   visibility?: boolean;
 }): ContentSchemas<TDefinition> => {
   // Everything below this line is about the base table, so it reads the shared
@@ -994,6 +1076,12 @@ export const buildContentSchemas = <TDefinition>({
       ContentPublicSelect<TDefinition>
     >,
     publicSelectObject,
+    publicWrite: buildPublicWriteSchemas<TDefinition>({
+      editorial,
+      fields: writableFields,
+      idStrategy,
+      publicWrite,
+    }),
     select: selectObject as unknown as z.ZodType<ContentSelect<TDefinition>>,
     selectObject,
     translation: buildTranslationSchemas<TDefinition>({

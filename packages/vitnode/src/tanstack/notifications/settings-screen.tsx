@@ -9,6 +9,12 @@ import type {
   NotificationPreferenceTypeView,
 } from "@/views/notifications/notifications-query";
 
+import {
+  Frame,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { PageTitle } from "@/components/ui/page-title";
 import { updateNotificationPreferencesInBrowser } from "@/views/notifications/notifications-actions";
 import {
@@ -122,7 +128,7 @@ export const NotificationSettingsPanel = ({ userId }: { userId: number }) => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <PageTitle
         className="mb-0"
         desc={t("desc")}
@@ -136,24 +142,22 @@ export const NotificationSettingsPanel = ({ userId }: { userId: number }) => {
         onEmailChange={setEmail}
       />
 
-      <section
-        aria-labelledby="notification-types"
-        className="flex flex-col gap-2"
-      >
-        <h2
-          className="text-muted-foreground text-sm font-medium"
-          id="notification-types"
-        >
-          {t("types.title")}
-        </h2>
+      <Frame>
+        <FrameHeader>
+          <FrameTitle render={<h2 />}>{t("types.title")}</FrameTitle>
+        </FrameHeader>
         {groups.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("types.empty")}</p>
+          <FramePanel>
+            <p className="text-muted-foreground p-4 text-sm">
+              {t("types.empty")}
+            </p>
+          </FramePanel>
         ) : (
-          <ul className="bg-card ring-foreground/10 overflow-hidden rounded-md shadow-xs ring-1">
+          <FramePanel render={<ul />}>
             {groups.map(group => (
               <React.Fragment key={group.label}>
                 {groups.length > 1 ? (
-                  <li className="bg-muted/40 text-muted-foreground border-b px-4 py-2 text-xs font-medium">
+                  <li className="bg-muted/40 text-muted-foreground px-4 py-2 text-xs font-medium">
                     <h3>{group.label}</h3>
                   </li>
                 ) : null}
@@ -174,9 +178,9 @@ export const NotificationSettingsPanel = ({ userId }: { userId: number }) => {
                 ))}
               </React.Fragment>
             ))}
-          </ul>
+          </FramePanel>
         )}
-      </section>
+      </Frame>
     </div>
   );
 };
