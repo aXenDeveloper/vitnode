@@ -86,6 +86,7 @@
     "message",
     "---Layout---",
     "page-title",
+    "frame",
     "separator",
     "aspect-ratio",
     "resizable",

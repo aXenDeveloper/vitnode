@@ -49,6 +49,7 @@ import {
   contentPublicSelection,
   createContentPublicProjector,
 } from "./public-service";
+import { contentPublicWriteRoutes } from "./public-write-routes";
 import {
   contentSnapshotRow,
   projectTranslationRevisionSnapshot,
@@ -526,5 +527,6 @@ export const buildContentPublicRoutes = <
       ? buildContentDeliveryRoutes(model, { pluginId })
       : []),
     detail,
+    ...contentPublicWriteRoutes(model, { pluginId }),
   ];
 };

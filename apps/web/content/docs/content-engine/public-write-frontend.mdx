@@ -1,0 +1,819 @@
+---
+title: Public write frontend
+description: Build create and edit pages for a Content Engine publicWrite content type with AutoForm and the typed fetcher, including field errors, version conflicts and refusals, or wire up your own form.
+icon: TextCursorInput
+---
+
+This guide builds the two pages members use to write content: `/discussions/new` to start a discussion and `/discussions/:id/edit` to change one. Both call the [public write routes](/docs/content-engine/public-write) of `example.discussion` with the typed [fetcher](/docs/dev/fetcher), show field errors where they belong, and handle sign-in, permission and version problems.
+
+The finished pages are in the example plugin under `plugins/example/src/pages/`. The code below is the same, with some styling and helpers trimmed.
+
+## Before you begin
+
+You need a content type with `publicWrite`, registered in the public module, like the one built in [Public write](/docs/content-engine/public-write#enable-public-writing). The fetcher's `module` is `content/` plus `publicApi.path`, so every call here uses `module: "content/discussions"`. Routes, bodies and responses are inferred from that, and a `post` to a content type without `publicWrite.create` is a compile error.
+
+<Steps>
+
+<Step>
+
+### Add the routes
+
+Register both pages in your plugin's `src/routes.ts`. The create page needs a signed-in visitor, so `requires: "authenticated"` sends guests to sign in first. The edit page handles a missing session itself, because the API decides who may edit:
+
+```ts title="plugins/example/src/routes.ts"
+import { discussionSearch } from "./pages/discussion-search"; // [!code ++]
+
+export const routes = definePluginRoutes([
+  // [!code ++:16]
+  page("/discussions/new", {
+    component: lazy(() => import("./pages/discussion-new-page")),
+    messages: ["@vitnode/example.discussions"],
+    requires: "authenticated",
+  }),
+
+  page("/discussions/:id/edit", {
+    component: lazy(() => import("./pages/discussion-edit-page")),
+    messages: ["@vitnode/example.discussions"],
+  }),
+
+  page("/discussions/:slug", {
+    component: lazy(() => import("./pages/discussion-page")),
+    messages: ["@vitnode/example.articles", "@vitnode/example.discussions"],
+    search: discussionSearch,
+  }),
+]);
+```
+
+`/discussions/:slug` is the read page the create form redirects to. It loads the discussion from the public `GET /{slug}` route like any [public page](/docs/content-engine/public-pages), and shows the success toast when the URL carries `?created=true`. Copy it from `plugins/example/src/pages/discussion-page.tsx`.
+
+</Step>
+
+<Step>
+
+### Add the messages
+
+The pages translate everything from the `discussions` namespace. Error messages are keyed by the API's codes, never by its English `message`:
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example": {
+    "discussions": {
+      "new": {
+        "title": "Start a discussion",
+        "desc": "Ask a question or share an idea. Everyone can read it as soon as you post it.",
+        "submit": "Post discussion"
+      },
+      "edit": {
+        "title": "Edit discussion",
+        "desc": "Changes are saved as a new revision, so nothing you replace is lost.",
+        "submit": "Save changes",
+        "success": {
+          "title": "Changes saved",
+          "desc": "\"{title}\" now shows your latest edits."
+        },
+        "conflict": {
+          "title": "Someone else edited this discussion",
+          "desc": "It changed after you opened it. Reload to see the latest version - copy anything you want to keep first, because reloading discards your edits.",
+          "reload": "Reload latest version"
+        }
+      },
+      "form": {
+        "title": {
+          "label": "Title",
+          "min": "Use at least 3 characters",
+          "max": "Keep it under 200 characters"
+        },
+        "body": {
+          "label": "Message",
+          "desc": "Type / for headings, lists and more.",
+          "required": "Write a message"
+        }
+      },
+      "state": {
+        "unauthenticated": {
+          "title": "Sign in to continue",
+          "desc": "You need an account to start or edit a discussion.",
+          "action": "Sign in"
+        },
+        "forbidden": {
+          "title": "You can't edit this discussion",
+          "desc": "Only its author or a moderator can change it."
+        },
+        "not_found": {
+          "title": "Discussion not found",
+          "desc": "It may have been removed, or the link is wrong."
+        }
+      },
+      "errors": {
+        "title": "Couldn't save the discussion",
+        "invalid": "Some details need another look.",
+        "unauthenticated": "Your session has ended. Sign in again, then try once more.",
+        "forbidden": "Only its author or a moderator can change this discussion.",
+        "not_found": "This discussion no longer exists.",
+        "unique": "A discussion with this title already exists. Try a different title.",
+        "unknown": "Something went wrong on our side. Please try again.",
+        "issues": {
+          "not_writable": "This field can't be changed here.",
+          "unavailable": "The selected item is no longer available."
+        }
+      }
+    }
+  }
+}
+```
+
+</Step>
+
+<Step>
+
+### Build the shared form
+
+Create `src/pages/discussion-form.tsx`. It holds the [AutoForm](/docs/ui/auto-form) both pages render and `useDiscussionRejection`, which turns a refusal into field errors and toasts:
+
+```tsx title="plugins/example/src/pages/discussion-form.tsx"
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+import type { ContentPublicWriteRejection } from "@vitnode/core/content";
+
+import {
+  AutoForm,
+  setFormFieldError,
+} from "@vitnode/core/components/form/auto-form";
+import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
+import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
+import {
+  emptyRichTextDocument,
+  isRichTextEmpty,
+  parseContentPublicWriteRejection,
+  type RichTextDocument,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+const DISCUSSION_FIELDS = ["title", "body"] as const;
+
+type DiscussionField = (typeof DISCUSSION_FIELDS)[number];
+
+export interface DiscussionFormValues {
+  body: RichTextDocument;
+  title: string;
+}
+
+const createDiscussionFormSchema = (
+  t: (key: "body.required" | "title.max" | "title.min") => string,
+  defaults: DiscussionFormValues,
+) =>
+  z.object({
+    title: z
+      .string()
+      .trim()
+      .min(3, t("title.min"))
+      .max(200, t("title.max"))
+      .default(defaults.title),
+    body: zodRichTextDocument
+      .refine(doc => !isRichTextEmpty(doc), t("body.required"))
+      .default(defaults.body),
+  });
+
+export type DiscussionFormSchema = ReturnType<
+  typeof createDiscussionFormSchema
+>;
+
+export type DiscussionFormApi = Parameters<
+  AutoFormOnSubmit<DiscussionFormSchema>
+>[1];
+
+const isDiscussionField = (field: null | string): field is DiscussionField =>
+  DISCUSSION_FIELDS.some(name => name === field);
+
+const ISSUE_MESSAGE_KEYS = {
+  not_writable: "issues.not_writable",
+  unavailable: "issues.unavailable",
+} as const;
+
+const isKnownIssueCode = (
+  code: string,
+): code is keyof typeof ISSUE_MESSAGE_KEYS => code in ISSUE_MESSAGE_KEYS;
+
+const REJECTION_MESSAGE_KEYS = {
+  CONTENT_FORBIDDEN: "forbidden",
+  CONTENT_INVALID_INPUT: "invalid",
+  CONTENT_NOT_FOUND: "not_found",
+  CONTENT_UNAUTHENTICATED: "unauthenticated",
+} as const satisfies Record<ContentPublicWriteRejection["code"], string>;
+
+export const useDiscussionRejection = () => {
+  const t = useTranslations("@vitnode/example.discussions.errors");
+
+  return async (response: Response, form: DiscussionFormApi) => {
+    const rejection = parseContentPublicWriteRejection(
+      await response.json().catch(() => null),
+    );
+
+    const messageOf = (code: string) =>
+      t(isKnownIssueCode(code) ? ISSUE_MESSAGE_KEYS[code] : "invalid");
+
+    const unmatched = (rejection?.issues ?? []).filter(issue => {
+      if (!isDiscussionField(issue.field)) return true;
+      setFormFieldError(form, issue.field, messageOf(issue.code));
+
+      return false;
+    });
+
+    if (rejection?.code === "CONTENT_INVALID_INPUT" && unmatched.length === 0) {
+      return;
+    }
+
+    toast.error(t("title"), {
+      description: rejection
+        ? rejection.code === "CONTENT_INVALID_INPUT"
+          ? messageOf(unmatched[0]?.code ?? "")
+          : t(REJECTION_MESSAGE_KEYS[rejection.code])
+        : t("unknown"),
+    });
+  };
+};
+
+export const DiscussionForm = ({
+  defaultValues = { body: emptyRichTextDocument(), title: "" },
+  isLeaving = false,
+  onSubmit,
+  submitLabel,
+}: {
+  defaultValues?: DiscussionFormValues;
+  isLeaving?: boolean;
+  onSubmit: AutoFormOnSubmit<DiscussionFormSchema>;
+  submitLabel: string;
+}) => {
+  const t = useTranslations("@vitnode/example.discussions.form");
+  const formSchema = createDiscussionFormSchema(t, defaultValues);
+
+  return (
+    <AutoForm
+      aria-busy={isLeaving}
+      fields={[
+        {
+          id: "title",
+          component: props => (
+            <AutoFormInput {...props} label={t("title.label")} />
+          ),
+        },
+        {
+          id: "body",
+          component: props => (
+            <AutoFormEditor
+              {...props}
+              description={t("body.desc")}
+              format="json"
+              label={t("body.label")}
+            />
+          ),
+        },
+      ]}
+      formSchema={formSchema}
+      onSubmit={onSubmit}
+      submitButtonProps={{
+        children: submitLabel,
+        className: "self-start",
+        disabled: isLeaving,
+      }}
+    />
+  );
+};
+```
+
+- `format="json"` makes the editor produce the ProseMirror document a [rich text field](/docs/content-engine/rich-text) stores. `isRichTextEmpty` catches a document with no text before the API does.
+- The client schema repeats the server's `minLength` and `maxLength` so members see mistakes before they submit. The server still validates everything.
+- Each issue has a `code`. Zod's own codes, such as `too_small`, and the public write codes `not_writable` and `unavailable` are stable, so translate by `code`. The `message` is English developer text.
+
+</Step>
+
+<Step>
+
+### Add the create page
+
+Create `src/pages/discussion-new-page.tsx`. It sends `{ values }`, redirects to the new discussion on `201` and keeps the submit button busy while the page changes:
+
+```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
+import {
+  type AutoFormOnSubmit,
+  setFormFieldError,
+} from "@vitnode/core/components/form/auto-form";
+import { definePluginRoute } from "@vitnode/core/routing";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useState } from "react";
+import { useTranslations } from "use-intl";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import {
+  DiscussionForm,
+  type DiscussionFormSchema,
+  useDiscussionRejection,
+} from "./discussion-form";
+
+const DiscussionNewBreadcrumb = () => {
+  const t = useTranslations("@vitnode/example.discussions.new");
+
+  return <span>{t("title")}</span>;
+};
+
+export const route = definePluginRoute({
+  head: ({ t }) => ({
+    description: t("@vitnode/example.discussions.new.desc"),
+    robots: "noindex, nofollow",
+    title: t("@vitnode/example.discussions.new.title"),
+  }),
+
+  breadcrumb: DiscussionNewBreadcrumb,
+});
+
+const DiscussionNewPage = () => {
+  const t = useTranslations("@vitnode/example.discussions");
+  const rejectDiscussion = useDiscussionRejection();
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (
+    values,
+    form,
+  ) => {
+    const res = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "post",
+      module: "content/discussions",
+      path: "/",
+      args: { body: { values } },
+    });
+
+    if (res.status === 201) {
+      const record = await res.json();
+      setIsLeaving(true);
+
+      window.location.assign(
+        record.slug === null
+          ? `/discussions/${record.id}/edit`
+          : `/discussions/${encodeURIComponent(record.slug)}?created=true`,
+      );
+
+      return;
+    }
+
+    // The slug is derived from the title, so a unique conflict is the title's.
+    if (res.status === 409) {
+      setFormFieldError(form, "title", t("errors.unique"));
+
+      return;
+    }
+
+    await rejectDiscussion(res, form);
+  };
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:py-12">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-3xl font-semibold text-balance">
+          {t("new.title")}
+        </h1>
+        <p className="text-muted-foreground leading-relaxed text-pretty">
+          {t("new.desc")}
+        </p>
+      </header>
+
+      <DiscussionForm
+        isLeaving={isLeaving}
+        onSubmit={onSubmit}
+        submitLabel={t("new.submit")}
+      />
+    </div>
+  );
+};
+
+export default DiscussionNewPage;
+```
+
+`AutoForm` shows a spinner on the submit button while `onSubmit` runs, and `isLeaving` keeps it disabled until the next page loads. The example's discussion page reads `?created=true` and shows the success toast there, because a full page load would drop a toast raised here.
+
+</Step>
+
+<Step>
+
+### Add the edit page
+
+Create `src/pages/discussion-edit-page.tsx`. Its loader reads the record with `GET /{id}/edit`, which answers only for the owner and moderators and includes drafts. Saving sends `PATCH /{id}` with the changed values and the record's `version`:
+
+```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
+import {
+  type AutoFormOnSubmit,
+  setFormFieldError,
+} from "@vitnode/core/components/form/auto-form";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@vitnode/core/components/ui/alert";
+import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from "@vitnode/core/routing";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import {
+  DiscussionForm,
+  type DiscussionFormSchema,
+  useDiscussionRejection,
+} from "./discussion-form";
+
+const loadEditableDiscussion = async (param: string) => {
+  const id = Number(param);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    return { state: "notFound" as const };
+  }
+
+  const res = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "content/discussions",
+    path: "/{id}/edit",
+    args: { params: { id } },
+  });
+
+  if (res.status === 200) {
+    return { record: await res.json(), state: "ready" as const };
+  }
+  if (res.status === 401) return { id, state: "unauthenticated" as const };
+  if (res.status === 403) return { state: "forbidden" as const };
+  if (res.status === 404) return { state: "notFound" as const };
+
+  throw new Error(`Loading discussion ${id} for editing failed.`);
+};
+
+type DiscussionEditData = Awaited<ReturnType<typeof loadEditableDiscussion>>;
+
+type EditableDiscussion = Extract<
+  DiscussionEditData,
+  { state: "ready" }
+>["record"];
+
+const DiscussionEditBreadcrumb = () => {
+  const t = useTranslations("@vitnode/example.discussions.edit");
+
+  return <span>{t("title")}</span>;
+};
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await loadEditableDiscussion(params.id),
+
+  head: ({ t }) => ({
+    robots: "noindex, nofollow",
+    title: t("@vitnode/example.discussions.edit.title"),
+  }),
+
+  breadcrumb: DiscussionEditBreadcrumb,
+});
+
+const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
+  const t = useTranslations("@vitnode/example.discussions");
+  const rejectDiscussion = useDiscussionRejection();
+  // Every save bumps the version, so the next save has to send the new one.
+  const [version, setVersion] = useState(record.version);
+  const [hasConflict, setHasConflict] = useState(false);
+
+  const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (
+    values,
+    form,
+  ) => {
+    const res = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "patch",
+      module: "content/discussions",
+      path: "/{id}",
+      args: {
+        params: { id: record.id },
+        body: { values, expectedVersion: version },
+      },
+    });
+
+    if (res.status === 200) {
+      const updated = await res.json();
+      setVersion(updated.version);
+      setHasConflict(false);
+      form.reset(values);
+
+      toast.success(t("edit.success.title"), {
+        description: t("edit.success.desc", { title: updated.values.title }),
+      });
+
+      return;
+    }
+
+    if (res.status === 409) {
+      const conflict = await res.json();
+
+      if (conflict.code === "CONTENT_VERSION_CONFLICT") {
+        setHasConflict(true);
+      } else {
+        setFormFieldError(form, "title", t("errors.unique"));
+      }
+
+      return;
+    }
+
+    await rejectDiscussion(res, form);
+  };
+
+  return (
+    <>
+      {hasConflict && (
+        <Alert variant="warning">
+          <AlertTitle>{t("edit.conflict.title")}</AlertTitle>
+          <AlertDescription>{t("edit.conflict.desc")}</AlertDescription>
+          <div className="flex pt-2">
+            <Button
+              onClick={() => {
+                window.location.reload();
+              }}
+              size="sm"
+              variant="outline"
+            >
+              {t("edit.conflict.reload")}
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      <DiscussionForm
+        defaultValues={record.values}
+        onSubmit={onSubmit}
+        submitLabel={t("edit.submit")}
+      />
+    </>
+  );
+};
+
+const PageShell = ({
+  children,
+  description,
+  title,
+}: {
+  children?: React.ReactNode;
+  description: string;
+  title: string;
+}) => (
+  <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:py-12">
+    <header className="flex flex-col gap-2">
+      <h1 className="text-3xl font-semibold text-balance">{title}</h1>
+      <p className="text-muted-foreground leading-relaxed text-pretty">
+        {description}
+      </p>
+    </header>
+    {children}
+  </div>
+);
+
+const DiscussionEditPage = ({
+  loaderData,
+}: PluginRoutePageProps<DiscussionEditData>) => {
+  const t = useTranslations("@vitnode/example.discussions");
+
+  if (loaderData.state === "unauthenticated") {
+    const returnTo = encodeURIComponent(`/discussions/${loaderData.id}/edit`);
+
+    return (
+      <PageShell
+        description={t("state.unauthenticated.desc")}
+        title={t("state.unauthenticated.title")}
+      >
+        <a
+          className={buttonVariants({ className: "self-start" })}
+          href={`/login?returnTo=${returnTo}`}
+        >
+          {t("state.unauthenticated.action")}
+        </a>
+      </PageShell>
+    );
+  }
+
+  if (loaderData.state === "forbidden" || loaderData.state === "notFound") {
+    const key = loaderData.state === "forbidden" ? "forbidden" : "not_found";
+
+    return (
+      <PageShell
+        description={t(`state.${key}.desc`)}
+        title={t(`state.${key}.title`)}
+      />
+    );
+  }
+
+  return (
+    <PageShell description={t("edit.desc")} title={t("edit.title")}>
+      <DiscussionEditForm record={loaderData.record} />
+    </PageShell>
+  );
+};
+
+export default DiscussionEditPage;
+```
+
+- The loader turns `401`, `403` and `404` into page states instead of errors. A stranger gets `403` for a published discussion and `404` for a draft or a hidden one, so the page never confirms that a draft exists.
+- `expectedVersion` exists only on [editorial](/docs/content-engine/editorial#safe-concurrent-edits) content types. When someone saved in between, the API answers `409` with `CONTENT_VERSION_CONFLICT` and writes nothing. The page keeps the member's text and offers a reload.
+- `PATCH` changes only the fields you send. A field you leave out keeps its stored value.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Restart `pnpm dev` and sign in with a member account:
+
+1. Open `/discussions/new`, type a two-letter title and submit. The title shows "Use at least 3 characters" without a request.
+2. Write a real title and message and click **Post discussion**. You land on the new discussion with a **Discussion posted** toast.
+3. Open `/discussions/1/edit`, change the title and click **Save changes**. A **Changes saved** toast appears.
+4. Open the same edit page in a second tab, save in one tab, then save in the other. The second tab shows **Someone else edited this discussion**.
+5. Sign in as a different member and open the edit page. It says **You can't edit this discussion**. Grant that member the moderator permission (see [Permissions](/docs/content-engine/public-write#permissions)) and it opens.
+
+{/* Image prompt: The /discussions/new page of the example plugin: "Start a discussion" heading, a Title input and a Message rich text editor, and a "Post discussion" button. Light theme, 1440x900. */}
+
+## Ask for a captcha
+
+With `create.captcha: true`, every create needs a captcha token, as long as a [captcha provider](/docs/dev/captcha) is configured. Pass the deployment's captcha config to `AutoForm` and forward the token it hands to `onSubmit`:
+
+```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
+import { useMiddlewareConfigQuery } from "@vitnode/core/tanstack/auth"; // [!code ++]
+
+const DiscussionNewPage = () => {
+  const { data: config } = useMiddlewareConfigQuery(); // [!code ++]
+
+  const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (
+    values,
+    form,
+    { captchaToken }, // [!code ++]
+  ) => {
+    const res = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "post",
+      module: "content/discussions",
+      path: "/",
+      captchaToken, // [!code ++]
+      args: { body: { values } },
+    });
+    // ...handle the response as before
+  };
+  // ...
+};
+```
+
+Then give `DiscussionForm` a `captcha` prop and pass `captcha={config.captcha}` to its `AutoForm`. A missing or failed token is a plain-text `400` from the captcha check, before the request reaches the write route.
+
+## Custom UI
+
+The routes do not care how the form is built. Any form library, or none, works as long as you:
+
+1. Send `{ values }` to `POST /`, or `{ values, expectedVersion }` to `PATCH /{id}`, with only the fields in the allowlist. A rich text field takes a ProseMirror document, not HTML.
+2. On `400`, `401`, `403` or `404`, read the body with `parseContentPublicWriteRejection` from `@vitnode/core/content`. It takes the parsed JSON and returns the rejection, or `null` for any other shape.
+3. On `409`, check `code` for `CONTENT_VERSION_CONFLICT` or `CONTENT_UNIQUE_CONFLICT`.
+
+This plain React form turns a textarea into paragraphs and puts each issue under its field:
+
+```tsx title="plugins/example/src/pages/quick-discussion-form.tsx"
+import {
+  parseContentPublicWriteRejection,
+  type RichTextDocument,
+} from "@vitnode/core/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useState } from "react";
+import { useTranslations } from "use-intl";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+const toDocument = (text: string): RichTextDocument => ({
+  type: "doc",
+  content: text
+    .split(/\n{2,}/)
+    .filter(part => part.trim() !== "")
+    .map(part => ({
+      type: "paragraph",
+      content: [{ type: "text", text: part }],
+    })),
+});
+
+export const QuickDiscussionForm = () => {
+  const t = useTranslations("@vitnode/example.discussions");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPending, setIsPending] = useState(false);
+
+  const onSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const text = (name: string) => {
+      const value = data.get(name);
+
+      return typeof value === "string" ? value : "";
+    };
+    setIsPending(true);
+
+    const res = await fetcher({
+      plugin: CONFIG_PLUGIN.pluginId,
+      method: "post",
+      module: "content/discussions",
+      path: "/",
+      args: {
+        body: {
+          values: {
+            title: text("title"),
+            body: toDocument(text("body")),
+          },
+        },
+      },
+    });
+
+    if (res.status === 201) {
+      const record = await res.json();
+      window.location.assign(`/discussions/${record.id}/edit`);
+
+      return;
+    }
+
+    setIsPending(false);
+    if (res.status === 409) {
+      setErrors({ title: t("errors.unique") });
+
+      return;
+    }
+
+    const rejection = parseContentPublicWriteRejection(
+      await res.json().catch(() => null),
+    );
+    if (rejection?.code !== "CONTENT_INVALID_INPUT") {
+      setErrors({
+        form:
+          rejection?.code === "CONTENT_UNAUTHENTICATED"
+            ? t("errors.unauthenticated")
+            : t("errors.unknown"),
+      });
+
+      return;
+    }
+
+    setErrors(
+      Object.fromEntries(
+        rejection.issues.map(issue => [
+          issue.field ?? "form",
+          issue.code === "unavailable"
+            ? t("errors.issues.unavailable")
+            : t("errors.invalid"),
+        ]),
+      ),
+    );
+  };
+
+  return (
+    <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
+      <label className="flex flex-col gap-2">
+        {t("form.title.label")}
+        <input
+          aria-describedby={errors.title ? "title-error" : undefined}
+          aria-invalid={Boolean(errors.title)}
+          name="title"
+          required
+        />
+      </label>
+      {errors.title && (
+        <p className="text-destructive text-sm" id="title-error">
+          {errors.title}
+        </p>
+      )}
+
+      <label className="flex flex-col gap-2">
+        {t("form.body.label")}
+        <textarea
+          aria-describedby={errors.body ? "body-error" : undefined}
+          aria-invalid={Boolean(errors.body)}
+          name="body"
+          required
+        />
+      </label>
+      {errors.body && (
+        <p className="text-destructive text-sm" id="body-error">
+          {errors.body}
+        </p>
+      )}
+
+      {errors.form && <p role="alert">{errors.form}</p>}
+
+      <button disabled={isPending} type="submit">
+        {t("new.submit")}
+      </button>
+    </form>
+  );
+};
+```
+
+Every status, body and error code is listed in the [public write API reference](/docs/content-engine/public-write-api).

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { testArticleContentType } from "@/tests/content-fixtures";
+import {
+  testArticleContentType,
+  testEditorialTopicContentType,
+  testTopicContentType,
+} from "@/tests/content-fixtures";
 
 import { defineContentType } from "./define";
 import { field } from "./fields";
@@ -347,6 +351,119 @@ describe("generated schemas", () => {
 
     it("survives z.toJSONSchema for AutoForm", () => {
       expect(() => z.toJSONSchema(withSource.form)).not.toThrow();
+    });
+  });
+
+  describe("public write", () => {
+    const topic = testTopicContentType.schemas.publicWrite;
+    const editorial = testEditorialTopicContentType.schemas.publicWrite;
+
+    const doc = (text: string) => ({
+      content: [{ content: [{ text, type: "text" }], type: "paragraph" }],
+      type: "doc",
+    });
+    const values = { body: doc("Hello"), forum: 1, title: "Hello world" };
+
+    it("accepts the allowlisted fields", () => {
+      expect(topic.create.safeParse(values).success).toBe(true);
+      expect(topic.update.safeParse({ title: "Renamed" }).success).toBe(true);
+    });
+
+    it.each([
+      ["the owner", "author", 2],
+      ["a field outside the allowlist", "pinned", true],
+      ["a derived slug", "slug", "squatted"],
+      ["the id", "id", 7],
+      ["the status", "status", "published"],
+      ["the publication date", "publishedAt", "2026-01-01T00:00:00.000Z"],
+      ["the hidden flag", "hiddenAt", "2026-01-01T00:00:00.000Z"],
+      ["a timestamp", "createdAt", "2026-01-01T00:00:00.000Z"],
+      ["an unknown key", "nope", 1],
+    ])("refuses %s in create and update", (_label, key, value) => {
+      expect(topic.create.safeParse({ ...values, [key]: value }).success).toBe(
+        false,
+      );
+      expect(
+        topic.update.safeParse({ title: "Renamed", [key]: value }).success,
+      ).toBe(false);
+    });
+
+    it("keeps the create and update allowlists apart", () => {
+      const { publicWrite } = defineContentType({
+        id: "test.split-write",
+        tableName: "test_split_writes",
+        publication: true,
+        fields: {
+          title: field.text({ required: true }),
+          slug: field.slug({ source: "title" }),
+          excerpt: field.textarea({ nullable: true }),
+          author: field.user(),
+        },
+        publicApi: { path: "split-writes", fields: ["title", "slug"] },
+        publicWrite: {
+          ownership: { field: "author" },
+          create: { fields: ["title"] },
+          update: { fields: ["excerpt"] },
+        },
+      }).schemas;
+
+      expect(
+        publicWrite.create.safeParse({ excerpt: "x", title: "Hi" }).success,
+      ).toBe(false);
+      expect(publicWrite.update.safeParse({ title: "Hi" }).success).toBe(false);
+      expect(publicWrite.update.safeParse({ excerpt: "x" }).success).toBe(true);
+    });
+
+    it.each([
+      ["a title under minLength", { title: "ab" }],
+      ["an empty rich text document", { body: { content: [], type: "doc" } }],
+      ["a rich text document over maxBytes", { body: doc("x".repeat(3000)) }],
+      ["a relation id that is not an id", { forum: "first" }],
+    ])("still applies the field's own rules: %s", (_label, patch) => {
+      expect(topic.create.safeParse({ ...values, ...patch }).success).toBe(
+        false,
+      );
+      expect(topic.update.safeParse(patch).success).toBe(false);
+    });
+
+    it("requires every required allowlisted field on create, none on update", () => {
+      expect(topic.create.safeParse({ forum: 1, title: "Hello" }).success).toBe(
+        false,
+      );
+      expect(topic.update.safeParse({ forum: 1 }).success).toBe(true);
+    });
+
+    it("refuses an update that changes nothing", () => {
+      expect(topic.update.safeParse({}).success).toBe(false);
+    });
+
+    it("wraps the values in a strict envelope", () => {
+      expect(topic.createBody.safeParse({ values }).success).toBe(true);
+      expect(topic.createBody.safeParse(values).success).toBe(false);
+      expect(topic.createBody.safeParse({ author: 2, values }).success).toBe(
+        false,
+      );
+    });
+
+    it.each([
+      [{ expectedVersion: 3, values: { title: "Renamed" } }, true],
+      [{ values: { title: "Renamed" } }, false],
+      [{ expectedVersion: 0, values: { title: "Renamed" } }, false],
+      [{ expectedVersion: 1.5, values: { title: "Renamed" } }, false],
+    ])(
+      "requires a positive integer expectedVersion on an editorial type: %j",
+      (body, success) => {
+        expect(editorial.updateBody.safeParse(body).success).toBe(success);
+      },
+    );
+
+    it("refuses an expectedVersion on a non-editorial type", () => {
+      expect(
+        topic.updateBody.safeParse({
+          expectedVersion: 3,
+          values: { title: "Renamed" },
+        }).success,
+      ).toBe(false);
     });
   });
 });

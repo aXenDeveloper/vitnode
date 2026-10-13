@@ -1,0 +1,447 @@
+---
+title: Public write API
+description: Reference for Content Engine publicWrite - options and defaults, writable fields, generated create and edit routes, request and response bodies, status and error codes, createContentPublicWriteService and definition errors.
+icon: FileJson
+---
+
+This page lists everything `publicWrite` accepts and everything its routes answer. For a guided setup, follow [Public write](/docs/content-engine/public-write). Examples use `example.discussion` from the example plugin, whose write routes live at `/api/@vitnode/example/content/discussions`.
+
+## `publicWrite` options
+
+`publicWrite` is a block of `defineContentType` from `@vitnode/core/content`. Leave it out, or set it to `false`, to keep public writing off.
+
+```ts title="plugins/example/src/content/discussion.ts"
+publicWrite: {
+  ownership: { field: "author" },
+  create: { fields: ["title", "body"], status: "published" },
+  update: { fields: ["title", "body"] },
+},
+```
+
+| Name              | Type                       | Required | Default   | Description                                                                                             |
+| ----------------- | -------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `ownership.field` | field name                 | Yes      |           | A single, shared `field.user()`. The server stamps it with the signed-in user on create                 |
+| `create`          | object                     | No       | off       | Adds `POST /`. At least one of `create` and `update` is required                                        |
+| `create.fields`   | field names                | Yes      |           | Non-empty allowlist of [writable fields](#writable-fields). Must include every field a new record needs |
+| `create.status`   | `"draft"` \| `"published"` | No       | `"draft"` | What a new record starts as. The server decides; the payload never does                                 |
+| `create.captcha`  | `boolean`                  | No       | `false`   | Requires a [captcha](/docs/dev/captcha) token on every create, when a captcha provider is configured    |
+| `update`          | object                     | No       | off       | Adds `GET /{id}/edit` and `PATCH /{id}`, and registers the `can_edit` moderator permission              |
+| `update.fields`   | field names                | Yes      |           | Non-empty allowlist of writable fields                                                                  |
+| `update.own`      | `boolean`                  | No       | `true`    | Lets the owner edit their own record while it is not hidden. With `false`, only moderators edit         |
+
+The content type also needs:
+
+- **`publicApi`**, and therefore `publication`. Without it, `publicWrite` only accepts `false` at the type level and throws when the definition loads.
+- **No localized fields.** Public writes do not create translations yet, so a content type with `localization` cannot use `publicWrite`.
+
+The read and write allowlists are independent. A field can be writable without being in `publicApi.fields`, and the other way around.
+
+### Writable fields
+
+`create.fields` and `update.fields` accept top-level, shared fields of these kinds, from `CONTENT_PUBLIC_WRITABLE_KINDS`:
+
+`boolean`, `dateTime`, `enum`, `number`, `relation`, `richText`, `slug`, `text`, `textarea`
+
+They never accept:
+
+| Field                                                                                                    | Why                                                                                            |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `file`                                                                                                   | A file id names somebody's upload, and the upload routes are AdminCP-only                      |
+| `user`                                                                                                   | A user id names a person. Ownership is stamped by the server instead                           |
+| `group`, `repeatable`, `blocks`                                                                          | Each hides more fields or child rows behind one name, which a strict allowlist cannot describe |
+| A group leaf such as `"seo.title"`                                                                       | Only top-level fields can be written publicly                                                  |
+| A slug with a `source`                                                                                   | Derived on the server. List its source field instead, so nobody can squat on another address   |
+| A `localized: true` field                                                                                | Public writes do not create translations yet                                                   |
+| The ownership field                                                                                      | Only the server sets the owner                                                                 |
+| `id`, `createdAt`, `updatedAt`, `status`, `publishedAt`, `version`, `hiddenAt`, `hiddenBy`, `visibility` | Managed by the server                                                                          |
+
+A `relation` is writable only when its target content type has a `publicApi`. On each request, every referenced record must also be published and not hidden.
+
+### Moderator permission
+
+A content type with `update` adds `can_edit` to its plugin's moderator permissions, under the content type's permission module, such as `discussion`. It shares the `@vitnode/example:discussion:can_edit` label with the admin permission. If the plugin declares that module under `permissionStaff.moderator` itself, the declared list wins.
+
+## Generated routes
+
+The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api#public-api-routes). Only the ones `publicWrite` enables are mounted, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
+
+| Method and path  | Enabled by | Body                          | Success                                                                    |
+| ---------------- | ---------- | ----------------------------- | -------------------------------------------------------------------------- |
+| `POST /`         | `create`   | `{ values }`                  | `201` with the record                                                      |
+| `GET /{id}/edit` | `update`   |                               | `200` with the record, drafts included, `Cache-Control: private, no-store` |
+| `PATCH /{id}`    | `update`   | `{ values, expectedVersion }` | `200` with the record                                                      |
+
+`GET /{id}/edit` and `PATCH /{id}` answer only for the owner and for moderators. There is no public delete, publish or hide route.
+
+A request passes these checks in order: the rate limit, the captcha (create only), the session, the body, then for an edit the owner or moderator check and the relation targets, all before anything is written.
+
+### Request bodies
+
+Both bodies are strict JSON objects. A key outside the allowlist is refused, never dropped.
+
+| Body          | Field             | Rules                                                                                                                                    |
+| ------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /`      | `values`          | The fields in `create.fields`. Required fields must be present; optional fields may be left out                                          |
+| `PATCH /{id}` | `values`          | Any non-empty subset of `update.fields`. Only the fields sent change                                                                     |
+| `PATCH /{id}` | `expectedVersion` | Positive integer, required on an [editorial](/docs/content-engine/editorial#safe-concurrent-edits) content type and refused on any other |
+
+Each value uses the field's own validation, the same as in the AdminCP. A rich text field takes a ProseMirror document, and a relation takes an id, or an array of ids for `multiple: true`.
+
+```http title="PATCH request"
+PATCH /api/@vitnode/example/content/discussions/1
+Content-Type: application/json
+Cookie: vitnode_auth=<session>
+
+{ "values": { "title": "How do I add a widget zone below an article?" }, "expectedVersion": 2 }
+```
+
+### Response record
+
+Every successful response is the same record shape:
+
+| Name          | Type                       | Description                                                                            |
+| ------------- | -------------------------- | -------------------------------------------------------------------------------------- |
+| `id`          | `number` or `string`       | A string for the `uuid` and `bigint` [ID strategies](/docs/content-engine/id-strategy) |
+| `slug`        | `string` \| `null`         | The value of the `publicApi` slug field, the key of `GET /{slug}`                      |
+| `status`      | `"draft"` \| `"published"` |                                                                                        |
+| `publishedAt` | ISO date string \| `null`  |                                                                                        |
+| `version`     | `number`                   | Editorial content types only. Send it back as `expectedVersion`                        |
+| `values`      | object                     | Every field in `create.fields` or `update.fields`, `null` when empty. Nothing else     |
+
+```json title="200"
+{
+  "id": 1,
+  "slug": "how-do-i-add-a-widget-zone-below-an-article",
+  "status": "published",
+  "publishedAt": "2026-10-13T09:12:44.512Z",
+  "version": 3,
+  "values": {
+    "title": "How do I add a widget zone below an article?",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "I want one under my article." }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+## Status codes
+
+| Status | Body                                 | When                                                                                                                 |
+| ------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `200`  | Record                               | `GET /{id}/edit` or `PATCH /{id}` succeeded                                                                          |
+| `201`  | Record                               | `POST /` succeeded                                                                                                   |
+| `400`  | Rejection, `CONTENT_INVALID_INPUT`   | The body is not JSON, breaks a rule, names a field outside the allowlist, or links to a record that is not available |
+| `400`  | Plain text                           | `create.captcha` is on and the captcha token is missing or invalid                                                   |
+| `401`  | Rejection, `CONTENT_UNAUTHENTICATED` | No user session                                                                                                      |
+| `403`  | Rejection, `CONTENT_FORBIDDEN`       | The record is publicly readable, but you are not its owner or a moderator                                            |
+| `404`  | Rejection, `CONTENT_NOT_FOUND`       | The record does not exist, or it is a draft or hidden and you may not edit it                                        |
+| `409`  | Conflict                             | A unique value is taken, or the record changed since `expectedVersion`                                               |
+| `429`  | `{ error, retryAfter }`              | The [rate limit](#rate-limit) is used up                                                                             |
+
+Validation failures are `400`, the status every VitNode input error uses, not `422`.
+
+### Rejection
+
+`400`, `401`, `403` and `404` answer with one JSON shape, `zodContentPublicWriteRejection` from `@vitnode/core/content`:
+
+```ts
+type ContentPublicWriteRejection = {
+  code:
+    | "CONTENT_FORBIDDEN"
+    | "CONTENT_INVALID_INPUT"
+    | "CONTENT_NOT_FOUND"
+    | "CONTENT_UNAUTHENTICATED";
+  contentTypeId: string;
+  issues: { code: string; field: string | null; message: string }[];
+};
+```
+
+`issues` is empty for `401`, `403` and `404`. For `400`, each issue names the field it belongs to, or `null` for the request as a whole. Translate an issue by its `code`; `message` is English text for developers.
+
+A title that is too short and an owner the client tried to set:
+
+```json title="400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "example.discussion",
+  "issues": [
+    {
+      "code": "too_small",
+      "field": "title",
+      "message": "Too small: expected string to have >=3 characters"
+    },
+    {
+      "code": "not_writable",
+      "field": "author",
+      "message": "This field cannot be written."
+    }
+  ]
+}
+```
+
+A body that is not JSON:
+
+```json title="400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "example.discussion",
+  "issues": [
+    {
+      "code": "invalid_json",
+      "field": null,
+      "message": "The body must be JSON."
+    }
+  ]
+}
+```
+
+If discussions had a `category` relation, a draft, hidden or missing category would all get the same answer:
+
+```json title="400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "example.discussion",
+  "issues": [
+    {
+      "code": "unavailable",
+      "field": "category",
+      "message": "The selected record is not available."
+    }
+  ]
+}
+```
+
+A member editing somebody else's published discussion:
+
+```json title="403"
+{
+  "code": "CONTENT_FORBIDDEN",
+  "contentTypeId": "example.discussion",
+  "issues": []
+}
+```
+
+The same member editing somebody else's draft gets `404` with `"code": "CONTENT_NOT_FOUND"`, so the answer never confirms that the draft exists.
+
+### Conflict
+
+`409` answers with `zodContentConflict`, the same shape the AdminCP's editorial routes use:
+
+```json title="409 version conflict"
+{
+  "code": "CONTENT_VERSION_CONFLICT",
+  "contentTypeId": "example.discussion",
+  "currentVersion": 4,
+  "expectedVersion": 3,
+  "itemId": 1
+}
+```
+
+```json title="409 unique conflict"
+{
+  "code": "CONTENT_UNIQUE_CONFLICT",
+  "contentTypeId": "example.discussion",
+  "itemId": null
+}
+```
+
+`itemId` is `null` for a unique conflict on create. On `example.discussion`, a unique conflict means the slug derived from the title is taken.
+
+### Rate limit
+
+`POST` and `PATCH` requests to a path containing `/content/`, outside `/admin/`, share a budget of 20 requests per 60 seconds per IP, on top of the global limit. Change it with `rateLimiter.contentWrite` in `apps/api/src/vitnode.api.config.ts`. It is off when `NODE_ENV=development`. See [Rate limiter](/docs/dev/advanced/rate-limiter) for the `429` body and Redis-backed counters.
+
+### Codes
+
+| Constant                                     | Value                      |
+| -------------------------------------------- | -------------------------- |
+| `CONTENT_PUBLIC_WRITE_CODES.invalidInput`    | `CONTENT_INVALID_INPUT`    |
+| `CONTENT_PUBLIC_WRITE_CODES.unauthenticated` | `CONTENT_UNAUTHENTICATED`  |
+| `CONTENT_PUBLIC_WRITE_CODES.forbidden`       | `CONTENT_FORBIDDEN`        |
+| `CONTENT_PUBLIC_WRITE_CODES.notFound`        | `CONTENT_NOT_FOUND`        |
+| `CONTENT_CONFLICT_CODES.version`             | `CONTENT_VERSION_CONFLICT` |
+| `CONTENT_CONFLICT_CODES.unique`              | `CONTENT_UNIQUE_CONFLICT`  |
+
+Issue codes:
+
+| Code                                                    | Source                                         | Meaning                                                                                 |
+| ------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `not_writable`                                          | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.notWritable` | A key in `values` outside the allowlist. One issue per key                              |
+| `unavailable`                                           | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.unavailable` | A relation names a record that is missing, a draft or hidden                            |
+| `invalid_json`                                          | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.invalidJson` | The body is not JSON                                                                    |
+| `too_small`, `too_big`, `invalid_type`, `invalid_value` | Zod                                            | A value breaks the field's rules, such as `minLength` or an enum                        |
+| `custom`                                                | Zod                                            | A custom rule, such as an empty required rich text document or an update with no fields |
+| `unrecognized_keys`                                     | Zod                                            | A key beside `values`, such as `expectedVersion` on a content type without `editorial`  |
+
+`parseContentPublicWriteRejection(body)` takes the parsed JSON body and returns the rejection, or `null` for any other shape. Unlike `parseContentConflict`, it does not take a string.
+
+```ts
+import { parseContentPublicWriteRejection } from "@vitnode/core/content";
+
+const rejection = parseContentPublicWriteRejection(
+  await res.json().catch(() => null),
+);
+```
+
+## Server API
+
+Use these from `@vitnode/core/content/server` when a plugin needs its own write route, such as "start a discussion from a question", with the same ownership, authorization and effects as the generated routes.
+
+### `createContentPublicWriteService`
+
+```ts
+createContentPublicWriteService({ c, model, pluginId });
+```
+
+`c` is the Hono context, `model` is the content model, such as `discussionContent`, and `pluginId` is the plugin that owns the content type. The service acts as the user session of `c`, never as an AdminCP session.
+
+| Method             | Returns                             | Behavior                                                                                                                                                                                                  |
+| ------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create(values)`   | `Promise<ContentPublicWriteRecord>` | Validates `values` against `create.fields`, stamps the owner, checks relation targets, creates and, when the policy says so, publishes in one transaction. Emits events and syncs search after the commit |
+| `findEditable(id)` | `Promise<ContentPublicWriteRecord>` | Reads one record for its owner or a moderator, drafts included                                                                                                                                            |
+| `update(id, body)` | `Promise<ContentPublicWriteRecord>` | Validates `{ values, expectedVersion }`, locks the row, authorizes, checks relation targets and writes in one transaction. Emits events and syncs search after the commit                                 |
+
+The methods throw instead of answering:
+
+| Error                          | When                                                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `ContentPublicWriteDenied`     | `reason` is `"unauthenticated"`, `"forbidden"` or `"notFound"`. Also `"notFound"` when `create` or `update` is off |
+| `ContentPublicWriteInputError` | A relation target is not available. Carries `field` and `detail`                                                   |
+| `ZodError`                     | `values` or the body breaks the allowlist or a field rule                                                          |
+| `ContentVersionConflict`       | `expectedVersion` is out of date (editorial content types)                                                         |
+| Postgres unique violation      | A unique value is taken                                                                                            |
+
+A route that starts a discussion from a single question. `withHttpErrors` turns a unique conflict into the structured `409`, and the `catch` maps a refusal to its status:
+
+```ts title="plugins/example/src/api/modules/discussions/ask.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { ContentPublicWriteDenied } from "@vitnode/core/content";
+import {
+  createContentPublicWriteService,
+  withHttpErrors,
+} from "@vitnode/core/content/server";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { discussionContent } from "@/database/discussions";
+
+export const askRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  route: {
+    method: "post",
+    path: "/ask",
+    description: "Start a discussion from a question",
+    withCaptcha: true,
+    request: {
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({ question: z.string().trim().min(3).max(200) }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        content: {
+          "application/json": {
+            schema: z.object({ id: z.number(), slug: z.string().nullable() }),
+          },
+        },
+        description: "Discussion started",
+      },
+      401: { description: "Not signed in" },
+      409: { description: "A discussion with this title exists" },
+    },
+  },
+  handler: async c => {
+    const { question } = c.req.valid("json");
+    const service = createContentPublicWriteService({
+      c,
+      model: discussionContent,
+      pluginId: CONFIG_PLUGIN.pluginId,
+    });
+
+    try {
+      const record = await withHttpErrors(
+        "create",
+        async () =>
+          await service.create({
+            title: question,
+            body: {
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: question }],
+                },
+              ],
+            },
+          }),
+        { contentTypeId: discussionContent.definition.id, structured: true },
+      );
+
+      return c.json({ id: record.id, slug: record.slug }, 201);
+    } catch (error) {
+      if (error instanceof ContentPublicWriteDenied) {
+        throw new HTTPException(error.reason === "unauthenticated" ? 401 : 404);
+      }
+      throw error;
+    }
+  },
+});
+```
+
+A route outside `/content/` only gets the global rate limit, which is why this one asks for a captcha.
+
+### Helpers
+
+| Function                                                                       | Returns                                            | Behavior                                                                             |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `resolveContentPublicWriteActor(c)`                                            | `{ type: "api", userId }` \| `null`                | The signed-in user of the public session. Never an AdminCP session, never the body   |
+| `authorizeContentPublicWrite(c, { action, actor, definition, pluginId, row })` | `{ allowed, via: "owner" \| "moderator" \| null }` | The owner and moderator rules above, for a stored `row`. `action` is `"update"`      |
+| `contentPublicWriteRefusal(row)`                                               | `"forbidden"` \| `"notFound"`                      | `"forbidden"` only when the public can already read `row`                            |
+| `resolveContentPublicationPolicy({ actor, definition, operation })`            | `"draft"` \| `"published"`                         | The status a public create starts with. Today it returns `publicWrite.create.status` |
+
+## Definition errors
+
+`defineContentType` checks `publicWrite` when the definition loads and throws a `ContentEngineError` that starts with `[Content Engine] <id>:`. Relation targets that were still loading are checked again when the routes are built at boot.
+
+| Problem                                                   | Error starts with                                                                            |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| No `publicApi`                                            | ``publicWrite needs `publicApi`.``                                                           |
+| A localized content type                                  | `publicWrite is not available on a localized content type yet.`                              |
+| Not an object or `false`                                  | ``publicWrite is an options object or `false`.``                                             |
+| An unknown option                                         | `publicWrite.x is not an option. publicWrite accepts: create, ownership, update.`            |
+| `delete`                                                  | `publicWrite.delete is not supported.`                                                       |
+| `permissions`, `create.permission` or `update.permission` | `publicWrite.permissions is not an option.`                                                  |
+| No `ownership`                                            | `publicWrite.ownership is required`                                                          |
+| `ownership.assignOnCreate`                                | `publicWrite.ownership.assignOnCreate is not an option.`                                     |
+| `ownership.field` is unknown                              | `publicWrite.ownership.field references unknown field "x".`                                  |
+| `ownership.field` is not a single, shared user field      | ``publicWrite.ownership.field "x" must be a single, shared `field.user()`.``                 |
+| Neither `create` nor `update`                             | `publicWrite enables nothing.`                                                               |
+| An empty `fields` list                                    | `publicWrite.create.fields is empty. There is no wildcard`                                   |
+| A field listed twice                                      | `publicWrite.create.fields lists "x" twice.`                                                 |
+| A group leaf                                              | `publicWrite.create.fields includes the leaf path "x".`                                      |
+| A server-managed column                                   | `publicWrite.create.fields includes "x", which the server manages.`                          |
+| The ownership field                                       | `publicWrite.create.fields includes the ownership field "x".`                                |
+| An unknown field                                          | `publicWrite.create.fields references unknown field "x".`                                    |
+| A localized field                                         | `publicWrite.create.fields includes the localized field "x".`                                |
+| A kind that cannot be written                             | `publicWrite.create.fields includes "x" of kind "file", which cannot be written publicly.`   |
+| A slug with a `source`                                    | `publicWrite.create.fields includes the slug "slug", which is derived from "title"`          |
+| A relation whose target has no `publicApi`                | `publicWrite.create.fields includes the relation "x", but its target "y" has no public API.` |
+| A required field missing from `create.fields`             | `publicWrite.create.fields leaves out "x", which every new record needs.`                    |
+| `create.status` is not a status                           | `publicWrite.create.status is "x". It is one of: draft, published.`                          |
+| `create.captcha` or `update.own` is not a boolean         | ``publicWrite.create.captcha is `true` or `false`.``                                         |
+
+The field-list errors read `publicWrite.update.fields` for the `update` list.

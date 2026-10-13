@@ -1,0 +1,134 @@
+---
+title: Frame
+description: A titled settings card that wraps a list of rows in a soft outer frame, with icon tiles, badges and controls on each row.
+icon: SquareStack
+---
+
+<Preview name="frame" />
+
+`Frame` groups related settings or facts under one title. The title sits on a
+soft outer layer, and the rows sit on a raised inner panel. It is the card the
+**Settings → Overview** page is built from.
+
+## Usage
+
+```ts
+import {
+  Frame,
+  FrameAction,
+  FrameDescription,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@vitnode/core/components/ui/frame'
+```
+
+```tsx
+<Frame>
+  <FrameHeader>
+    <FrameTitle render={<h2 />}>AI features</FrameTitle>
+  </FrameHeader>
+  <FramePanel>
+    <Item>
+      <ItemMedia aria-hidden variant="tile">
+        <BotIcon />
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>
+          Semantic search <Badge variant="outline">Smart</Badge>
+        </ItemTitle>
+        <ItemDescription>Find content by meaning, not exact wording.</ItemDescription>
+      </ItemContent>
+      <ItemActions>
+        <Switch aria-label="Semantic search" />
+      </ItemActions>
+    </Item>
+  </FramePanel>
+</Frame>
+```
+
+- `FrameHeader` holds the title, an optional description and an optional action.
+- `FramePanel` is the inner card. It draws a divider between its children, so
+  you never add separators yourself.
+- Rows are regular [Item](/docs/ui/item) components. Inside a panel they lose
+  their own border and radius, so they line up edge to edge.
+- `ItemMedia variant="tile"` gives the icon its small rounded square.
+
+## Header description and action
+
+<Preview name="frame-actions" />
+
+Add `FrameDescription` under the title and put a button in `FrameAction`. The
+action stays on the end side and centers against the title block.
+
+```tsx
+<FrameHeader>
+  <FrameTitle render={<h2 />}>Publishing</FrameTitle>
+  <FrameDescription>Where visitors find your site.</FrameDescription>
+  <FrameAction>
+    <Button size="sm" variant="ghost">
+      Learn more
+    </Button>
+  </FrameAction>
+</FrameHeader>
+```
+
+## Footer note
+
+Put a short note under the panel with `FrameFooter`. It sits on the outer
+layer, so it reads as a remark about the whole group, not as another row.
+
+```tsx
+<Frame>
+  <FrameHeader>...</FrameHeader>
+  <FramePanel>...</FramePanel>
+  <FrameFooter>A signed-out device has to sign in again.</FrameFooter>
+</Frame>
+```
+
+## Side by side
+
+<Preview className="*:max-w-none" name="frame-grid" />
+
+Frames stretch to fill their grid cell, so two frames in a
+`md:grid-cols-2` grid keep the same height even with different row counts.
+
+```tsx
+<div className="grid gap-4 md:grid-cols-2">
+  <Frame>...</Frame>
+  <Frame>...</Frame>
+</div>
+```
+
+## Accessibility
+
+- `FrameTitle` renders a `div`. Pass `render={<h2 />}` (or the level that fits
+  the page) so screen readers can jump between frames.
+- For a list of rows, render the panel as a list and each row as an item:
+  `<FramePanel render={<ul />}>` with `<Item render={<li />}>`.
+- Icon tiles are decorative. Give `ItemMedia` `aria-hidden`.
+- A switch or icon-only button in a row needs an `aria-label` that names the
+  setting.
+
+## Props
+
+`Frame`, `FrameHeader`, `FrameDescription`, `FrameAction` and `FrameFooter`
+take regular element props.
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+### FrameTitle and FramePanel
+
+<TypeTable
+  type={{
+    render: {
+      description: 'Replaces the `div`, such as with an `h2` or a `ul`.',
+      type: 'ReactElement | ((props, state) => ReactElement)',
+    },
+  }}
+/>
+
+## API Reference
+
+[Base UI - useRender](https://base-ui.com/react/utils/use-render)

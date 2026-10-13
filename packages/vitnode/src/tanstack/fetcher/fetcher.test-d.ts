@@ -7,7 +7,10 @@ import { buildModule } from "@/api/lib/module";
 import { buildApiPlugin } from "@/api/lib/plugin";
 import { buildRoute } from "@/api/lib/route";
 import { buildContentPublicModule, createContentModel } from "@/content/server";
-import { testPostContentType } from "@/tests/content-fixtures";
+import {
+  testPostContentType,
+  testTopicContentType,
+} from "@/tests/content-fixtures";
 
 import { fetcher } from "./index";
 
@@ -99,6 +102,7 @@ const notesModule = buildModule({
 });
 
 const postContent = createContentModel(testPostContentType);
+const topicContent = createContentModel(testTopicContentType);
 
 const notesApiPlugin = () =>
   buildApiPlugin({
@@ -107,7 +111,7 @@ const notesApiPlugin = () =>
       notesModule,
       buildContentPublicModule({
         pluginId: PLUGIN_ID,
-        contentTypes: [postContent],
+        contentTypes: [postContent, topicContent],
       }),
     ],
   });
@@ -138,7 +142,12 @@ describe("the contract carries the API surface and nothing else", () => {
 
   it("flattens every module path, at every depth", () => {
     expectTypeOf<NotesApiPlugin["modulePaths"]>().toEqualTypeOf<
-      "content" | "content/posts" | "notes" | "notes/tags" | "notes/tags/colors"
+      | "content"
+      | "content/posts"
+      | "content/topics"
+      | "notes"
+      | "notes/tags"
+      | "notes/tags/colors"
     >();
   });
 
@@ -230,6 +239,75 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
     });
 
     expectTypeOf(detail.status).toEqualTypeOf<200 | 404>();
+  });
+
+  it("types the routes a content type's publicWrite generates", async () => {
+    const body = { body: { type: "doc" as const }, forum: 1, title: "Hello" };
+
+    const created = await fetcher({
+      plugin: "@acme/notes",
+      args: { body: { values: body } },
+      method: "post",
+      module: "content/topics",
+      path: "/",
+    });
+
+    expectTypeOf(created.status).toEqualTypeOf<201 | 400 | 401 | 409>();
+    if (created.status === 201) {
+      const record = await created.json();
+      expectTypeOf(record.id).toEqualTypeOf<number>();
+      expectTypeOf(record.values.title).toEqualTypeOf<string>();
+    }
+
+    const editable = await fetcher({
+      plugin: "@acme/notes",
+      args: { params: { id: 1 } },
+      method: "get",
+      module: "content/topics",
+      path: "/{id}/edit",
+    });
+
+    expectTypeOf(editable.status).toEqualTypeOf<200 | 401 | 403 | 404>();
+
+    const updated = await fetcher({
+      plugin: "@acme/notes",
+      args: { body: { values: { title: "Renamed" } }, params: { id: 1 } },
+      method: "patch",
+      module: "content/topics",
+      path: "/{id}",
+    });
+
+    expectTypeOf(updated.status).toEqualTypeOf<
+      200 | 400 | 401 | 403 | 404 | 409
+    >();
+  });
+
+  it("rejects a write the content type does not allow", async () => {
+    await fetcher({
+      plugin: "@acme/notes",
+      // @ts-expect-error -- `content/posts` has a read-only public API
+      method: "post",
+      module: "content/posts",
+      path: "/",
+    });
+
+    await fetcher({
+      plugin: "@acme/notes",
+      args: {
+        body: {
+          values: {
+            // @ts-expect-error -- the owner is stamped by the server
+            author: 2,
+            body: { type: "doc" },
+            forum: 1,
+            title: "Hello",
+          },
+        },
+      },
+      method: "post",
+      module: "content/topics",
+      path: "/",
+    });
   });
 
   it("accepts the optional locale a content type's public routes declare", async () => {

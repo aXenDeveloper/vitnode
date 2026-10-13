@@ -71,7 +71,7 @@ const originalNameOf = (table: Table): string => {
 };
 
 const WORD_PATTERN =
-  /\s*(>=|<=|<>|!=|::|\|\||[(),*=<>]|'(?:[^']|'')*'|"[^"]*"|\d+(?:\.\d+)?|[A-Za-z_][\w]*)/y;
+  /\s*(>=|<=|<>|!=|::|\|\||[(),*=<>+]|'(?:[^']|'')*'|"[^"]*"|\d+(?:\.\d+)?|[A-Za-z_][\w]*)/y;
 
 const tokenizeText = (text: string): Token[] => {
   const tokens: Token[] = [];
@@ -209,12 +209,13 @@ const parseTokens = (tokens: Token[], source: string) => {
 
   const parseConcat = (): Node => {
     let node = parseCast();
-    while (isWord("||")) {
+    while (isWord("||") || isWord("+")) {
+      const operator = isWord("+") ? "+" : "||";
       position++;
       node = {
         kind: "compare",
         left: node,
-        operator: "||",
+        operator,
         right: parseCast(),
       };
     }
@@ -396,6 +397,13 @@ const compare = (left: unknown, operator: string, right: unknown) => {
     }
 
     return unsupported(`"||" between ${typeof left} and ${typeof right}`);
+  }
+  if (operator === "+") {
+    if (typeof left === "number" && typeof right === "number") {
+      return left + right;
+    }
+
+    return unsupported(`"+" between ${typeof left} and ${typeof right}`);
   }
   if (operator === "=") return equal(left, right);
   if (operator === "<>") return !equal(left, right);

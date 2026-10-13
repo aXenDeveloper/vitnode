@@ -95,6 +95,9 @@ const CONTENT_OPTION_PATHS: readonly (readonly string[])[] = [
   ["editorial", "scheduling"],
   ["localization"],
   ["publicApi"],
+  ["publicWrite"],
+  ["publicWrite", "create"],
+  ["publicWrite", "update"],
   ["publication"],
   ["reports"],
   ["search"],
@@ -104,6 +107,9 @@ const CONTENT_OPTION_PATHS: readonly (readonly string[])[] = [
 const CONTENT_OPTIONS_WITH_REQUIRED_KEYS = new Set([
   "localization",
   "publicApi",
+  "publicWrite",
+  "publicWrite.create",
+  "publicWrite.update",
   "search",
 ]);
 

@@ -11,6 +11,7 @@ import { settingsPage } from "@/content/settings-page";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
+import { discussionContent } from "@/database/discussions";
 import { eventContent } from "@/database/events";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
@@ -40,6 +41,7 @@ export const exampleApiPlugin = () =>
           advancedArticleContent,
           articleContent,
           categoryContent,
+          discussionContent,
           eventContent,
           localizedArticleContent,
           pageContent,

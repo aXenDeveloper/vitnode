@@ -5,6 +5,7 @@ import {
   FlaskConicalIcon,
   FolderIcon,
   LayoutTemplateIcon,
+  MessagesSquareIcon,
   NotebookPenIcon,
   TagIcon,
 } from "lucide-react";
@@ -12,6 +13,7 @@ import {
 import { CONFIG_PLUGIN } from "@/const";
 import { articleContentType } from "@/content/article";
 import { categoryContentType } from "@/content/category";
+import { discussionContentType } from "@/content/discussion";
 import { eventContentType } from "@/content/event";
 import { pageContentType } from "@/content/page";
 import { tagContentType } from "@/content/tag";
@@ -43,6 +45,11 @@ export const exampleEventNav = {
   icon: <CalendarDaysIcon />,
 };
 
+export const exampleDiscussionNav = {
+  definition: discussionContentType,
+  icon: <MessagesSquareIcon />,
+};
+
 export const adminNav = {
   pluginId: CONFIG_PLUGIN.pluginId,
   contentTypes: [
@@ -51,6 +58,7 @@ export const adminNav = {
     examplePageNav,
     exampleTagNav,
     exampleEventNav,
+    exampleDiscussionNav,
   ],
   admin: {
     nav: [

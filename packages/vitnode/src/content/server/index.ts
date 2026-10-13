@@ -185,6 +185,30 @@ export type {
   ContentPublicSlugReadOptions,
 } from "./public-service";
 export {
+  authorizeContentPublicWrite,
+  contentPublicWriteOwnerOf,
+  contentPublicWriteRefusal,
+  resolveContentPublicWriteActor,
+} from "./public-write-authorization";
+export type {
+  ContentPublicWriteActor,
+  ContentPublicWriteAuthorization,
+  ContentPublicWriteAuthorizationInput,
+} from "./public-write-authorization";
+export {
+  buildContentPublicWriteRoutes,
+  contentPublicWriteRoutes,
+} from "./public-write-routes";
+export type { ContentPublicWriteRoutesOf } from "./public-write-routes";
+export {
+  createContentPublicWriteService,
+  resolveContentPublicationPolicy,
+} from "./public-write-service";
+export type {
+  ContentPublicationPolicyInput,
+  ContentPublicWriteService,
+} from "./public-write-service";
+export {
   contentPublicCondition,
   contentTranslationPublicationColumns,
   publicationColumns,

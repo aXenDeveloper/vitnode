@@ -315,7 +315,7 @@ describe("SsoConnectionsContent sync", () => {
     renderContent();
 
     const group = within(
-      screen.getByText(label("groups.sync")).closest("div") as HTMLElement,
+      screen.getByRole("region", { name: label("groups.sync") }),
     );
     expect(group.getByText("Discord")).toBeDefined();
     expect(group.getByText(label("fields.avatar"))).toBeDefined();

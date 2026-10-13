@@ -957,7 +957,7 @@
           "realName": "Real name",
           "realNameShown": "Shown on your profile",
           "realNameHidden": "Hidden",
-          "personalTitle": "Personal Information",
+          "personalTitle": "Personal information",
           "personalDesc": "Tell the community who you are. Every field is optional.",
           "nickname": "Nickname",
           "role": "Role",
@@ -979,6 +979,8 @@
           "timeZone": "Time zone",
           "timeZoneDesc": "Search by city, like Warsaw or New York.",
           "timeZoneAuto": "Automatic - from your language",
+          "timeZoneAutoBadge": "Auto",
+          "emailVerified": "Verified",
           "timeZoneUseDevice": "Use this device's time zone ({timeZone})"
         },
         "devices": {
@@ -1230,11 +1232,22 @@
           "locked": "Set by the admin",
           "channels": {
             "title": "Where notifications reach you",
+            "status": {
+              "always_on": "Always on",
+              "on": "On",
+              "off": "Off",
+              "blocked": "Blocked",
+              "unsupported": "Not supported",
+              "unavailable": "Not available"
+            },
+            "list": {
+              "title": "Notification list",
+              "desc": "The bell in the header. Every notification lands here first."
+            },
             "push": {
               "title": "Push",
               "desc": "Sent to this device even when you're not browsing.",
               "enable": "Turn on push in this browser",
-              "enabled": "On",
               "denied": "Blocked by your browser. Allow notifications for this site in its settings to turn push on.",
               "unsupported": "This browser can't receive push notifications.",
               "soon": "Push delivery is on its way - the choices below are saved for when it lands.",
@@ -1244,16 +1257,17 @@
             },
             "email": {
               "title": "Email",
-              "desc": "Sent to <email></email>.",
               "stop_title": "Stop all email notifications?",
               "stop_desc": "You won't get notification emails or digests any more. Security alerts still arrive by email - they keep your account safe. Your notification list isn't affected.",
               "stop_cancel": "Keep emails",
               "stop_submit": "Stop all emails",
               "stopped_toast_desc": "No more notification emails. Security alerts still reach you.",
               "restored_toast_desc": "Your emails are back the way they were.",
-              "desc_off": "Off - only security alerts go to <email></email>.",
               "unavailable": "None of your notifications are sent by email right now.",
-              "on_toast_desc": "Notification emails are back on."
+              "on_toast_desc": "Notification emails are back on.",
+              "send": "Send emails",
+              "sent_to": "Sent to",
+              "off_to": "Off - only security alerts go to"
             }
           },
           "types": {
@@ -1335,7 +1349,6 @@
           },
           "features": {
             "title": "Your AI features",
-            "footer": "Only you and administrators can see this. Prompts and answers are never stored.",
             "empty_title": "No AI features yet",
             "empty_desc": "Once a role gives you AI points, each feature you can use is listed here with what it cost you.",
             "today": "{used} / {limit} today",

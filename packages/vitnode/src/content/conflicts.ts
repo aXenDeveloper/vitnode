@@ -4,6 +4,7 @@ import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
   CONTENT_DUPLICATE_CODES,
+  CONTENT_PUBLIC_WRITE_CODES,
   CONTENT_SCHEDULE_CODES,
   CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
@@ -216,4 +217,33 @@ export const parseContentDuplicateRejection = (
   } catch {
     return null;
   }
+};
+
+export const zodContentPublicWriteRejection = z.object({
+  code: z.enum([
+    CONTENT_PUBLIC_WRITE_CODES.forbidden,
+    CONTENT_PUBLIC_WRITE_CODES.invalidInput,
+    CONTENT_PUBLIC_WRITE_CODES.notFound,
+    CONTENT_PUBLIC_WRITE_CODES.unauthenticated,
+  ]),
+  contentTypeId: z.string(),
+  issues: z.array(
+    z.object({
+      code: z.string(),
+      field: z.string().nullable(),
+      message: z.string(),
+    }),
+  ),
+});
+
+export type ContentPublicWriteRejection = z.infer<
+  typeof zodContentPublicWriteRejection
+>;
+
+export const parseContentPublicWriteRejection = (
+  body: unknown,
+): ContentPublicWriteRejection | null => {
+  const parsed = zodContentPublicWriteRejection.safeParse(body);
+
+  return parsed.success ? parsed.data : null;
 };

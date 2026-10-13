@@ -1540,6 +1540,8 @@
           "timeZone": "Strefa czasowa",
           "timeZoneDesc": "Szukaj po mieście, np. Warsaw lub New York.",
           "timeZoneAuto": "Automatycznie - z Twojego języka",
+          "timeZoneAutoBadge": "Auto",
+          "emailVerified": "Zweryfikowany",
           "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})"
         },
         "passkeys": {
@@ -1769,11 +1771,22 @@
           "locked": "Ustawione przez administratora",
           "channels": {
             "title": "Gdzie docierają powiadomienia",
+            "status": {
+              "always_on": "Zawsze włączone",
+              "on": "Włączone",
+              "off": "Wyłączone",
+              "blocked": "Zablokowane",
+              "unsupported": "Nieobsługiwane",
+              "unavailable": "Niedostępne"
+            },
+            "list": {
+              "title": "Lista powiadomień",
+              "desc": "Dzwonek w nagłówku. Każde powiadomienie najpierw trafia tutaj."
+            },
             "push": {
               "title": "Push",
               "desc": "Wysyłane na to urządzenie, nawet gdy nie przeglądasz strony.",
               "enable": "Włącz push w tej przeglądarce",
-              "enabled": "Włączone",
               "denied": "Zablokowane przez przeglądarkę. Zezwól tej stronie na powiadomienia w jej ustawieniach, aby włączyć push.",
               "unsupported": "Ta przeglądarka nie obsługuje powiadomień push.",
               "soon": "Wysyłka push jest w drodze - wybory poniżej zapiszemy na czas, gdy ruszy.",
@@ -1783,16 +1796,17 @@
             },
             "email": {
               "title": "E-mail",
-              "desc": "Wysyłane na <email></email>.",
               "stop_title": "Wyłączyć wszystkie e-maile z powiadomieniami?",
               "stop_desc": "Nie dostaniesz już e-maili z powiadomieniami ani podsumowań. Alerty bezpieczeństwa nadal przyjdą e-mailem - chronią Twoje konto. Lista powiadomień się nie zmienia.",
               "stop_cancel": "Zostaw e-maile",
               "stop_submit": "Wyłącz wszystkie e-maile",
               "stopped_toast_desc": "Koniec e-maili z powiadomieniami. Alerty bezpieczeństwa nadal do Ciebie trafią.",
               "restored_toast_desc": "E-maile wróciły do poprzednich ustawień.",
-              "desc_off": "Wyłączone - na <email></email> trafiają tylko alerty bezpieczeństwa.",
               "unavailable": "Żadne z Twoich powiadomień nie jest teraz wysyłane e-mailem.",
-              "on_toast_desc": "E-maile z powiadomieniami znowu działają."
+              "on_toast_desc": "E-maile z powiadomieniami znowu działają.",
+              "send": "Wysyłaj e-maile",
+              "sent_to": "Wysyłane na",
+              "off_to": "Wyłączone - tylko alerty bezpieczeństwa trafiają na"
             }
           },
           "types": {
@@ -1874,7 +1888,6 @@
           },
           "features": {
             "title": "Twoje funkcje AI",
-            "footer": "Widzisz to tylko Ty i administratorzy. Polecenia i odpowiedzi nigdy nie są zapisywane.",
             "empty_title": "Brak funkcji AI",
             "empty_desc": "Gdy rola przyzna Ci punkty AI, każda dostępna funkcja pojawi się tutaj razem z jej kosztem.",
             "today": "Dziś {used} / {limit}",

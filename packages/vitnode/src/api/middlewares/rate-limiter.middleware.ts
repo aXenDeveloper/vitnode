@@ -142,3 +142,21 @@ export const authRateLimiterMiddleware = (
   return async (c: Context, next: Next) =>
     isAuthRateLimitedRequest(c) ? limit(c, next) : next();
 };
+
+const isContentWriteRequest = (c: Context): boolean =>
+  (c.req.method === "POST" || c.req.method === "PATCH") &&
+  c.req.path.includes("/content/") &&
+  !c.req.path.includes("/admin/");
+
+export const contentWriteRateLimiterMiddleware = (
+  options?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>,
+  storeClient?: CacheClient | null,
+) => {
+  const limit = rateLimiterMiddleware(options, storeClient, {
+    defaults: { duration: 60, points: 20 },
+    keyPrefix: "vitnode-api-content-write-rate-limiter",
+  });
+
+  return async (c: Context, next: Next) =>
+    isContentWriteRequest(c) ? limit(c, next) : next();
+};

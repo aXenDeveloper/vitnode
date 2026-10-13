@@ -214,7 +214,7 @@ export function buildApiPlugin<
     // Every content type contributes can_view/can_create/can_edit/can_delete
     // unless the plugin declared that module itself.
     permissionStaff: withModerationPermissions(
-      withContentPermissions(permissionStaff, registered),
+      withContentPermissions(permissionStaff, registered, publicContentTypes),
       reportTargets,
     ),
     moderation: { reportTargets, scopes: moderation?.scopes ?? [] },

@@ -34,6 +34,7 @@ import {
 } from "./middlewares/global.middleware";
 import {
   authRateLimiterMiddleware,
+  contentWriteRateLimiterMiddleware,
   rateLimiterMiddleware,
 } from "./middlewares/rate-limiter.middleware";
 import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
@@ -143,10 +144,17 @@ export function VitNodeAPI({
       onError: c => c.json({ error: "Payload Too Large" }, 413),
     }),
   );
-  const { auth: authRateLimiter, ...rateLimiter } =
-    vitNodeApiConfig.rateLimiter ?? {};
+  const {
+    auth: authRateLimiter,
+    contentWrite: contentWriteRateLimiter,
+    ...rateLimiter
+  } = vitNodeApiConfig.rateLimiter ?? {};
   app.use("*", rateLimiterMiddleware(rateLimiter, redisClient));
   app.use("*", authRateLimiterMiddleware(authRateLimiter, redisClient));
+  app.use(
+    "*",
+    contentWriteRateLimiterMiddleware(contentWriteRateLimiter, redisClient),
+  );
   if (docsEnabled) {
     app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
   }

@@ -57,13 +57,13 @@ export const DeviceItem = ({
     <li className={cn(SETTINGS_ROW, "items-start")}>
       <div
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+          "flex size-10 shrink-0 items-center justify-center rounded-md ring-1",
           device.isCurrent
-            ? "bg-primary/10 text-primary"
-            : "bg-muted text-muted-foreground",
+            ? "bg-primary/10 text-primary ring-primary/20"
+            : "bg-muted/60 text-muted-foreground ring-foreground/10",
         )}
       >
-        <Icon className="size-5" />
+        <Icon className="size-4.5" />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">

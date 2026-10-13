@@ -51,6 +51,24 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
+## Budget for public content writes
+
+Public [Content Engine writes](/docs/content-engine/public-write) - `POST` and `PATCH` requests under a plugin's `/content/` routes, outside `/admin/` - get their own budget on top of the global one: **20 requests per 60 seconds** per IP address. It keeps one member from flooding a forum with new discussions.
+
+Tune it with `rateLimiter.contentWrite`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  rateLimiter: {
+    // [!code ++:4]
+    contentWrite: {
+      points: 10,
+      duration: 60,
+    },
+  },
+})
+```
+
 <Callout type="info" title="Disabled in development">
   Rate limiting is automatically bypassed when `NODE_ENV=development` to prevent interruptions during local coding.
 </Callout>
@@ -135,6 +153,11 @@ The API never believes a plain `X-Forwarded-For` header (anyone can type one). I
     auth: {
       default: "{ points: 10, duration: 60 }",
       description: "Separate budget for sign-in, sign-up, password reset and passkey sign-in.",
+      type: "{ points?: number; duration?: number }",
+    },
+    contentWrite: {
+      default: "{ points: 20, duration: 60 }",
+      description: "Separate budget for public Content Engine creates and edits (POST and PATCH under /content/).",
       type: "{ points?: number; duration?: number }",
     },
   }}

@@ -420,6 +420,11 @@ export const contentPermissionEntries = (
   // may edit an article may edit every language of it.
 ];
 
+export const contentModeratorPermissionEntries = (
+  definition: AnyContentTypeDefinition,
+): PermissionStaffEntryInput[] =>
+  definition.publicWrite.update.enabled ? [CONTENT_PERMISSIONS.edit] : [];
+
 /**
  * Merges the derived content permissions into a plugin's `permissionStaff`.
  * An explicitly declared module always wins, so a plugin can still hand-tune
@@ -428,8 +433,15 @@ export const contentPermissionEntries = (
 export const withContentPermissions = (
   permissionStaff: PermissionStaffConfig | undefined,
   entries: readonly RegisteredContentType[],
+  publicContentTypes: readonly AnyContentTypeDefinition[] = [],
 ): PermissionStaffConfig | undefined => {
-  if (entries.length === 0) return permissionStaff;
+  const moderated = [
+    ...entries.map(entry => entry.definition),
+    ...publicContentTypes,
+  ].filter(
+    definition => contentModeratorPermissionEntries(definition).length > 0,
+  );
+  if (entries.length === 0 && moderated.length === 0) return permissionStaff;
 
   const admin: PermissionStaffModulesInput = { ...permissionStaff?.admin };
 
@@ -438,7 +450,19 @@ export const withContentPermissions = (
     admin[definition.permissionModule] = contentPermissionEntries(definition);
   }
 
-  return { ...permissionStaff, admin };
+  if (moderated.length === 0) return { ...permissionStaff, admin };
+
+  const moderator: PermissionStaffModulesInput = {
+    ...permissionStaff?.moderator,
+  };
+
+  for (const definition of moderated) {
+    if (moderator[definition.permissionModule]) continue;
+    moderator[definition.permissionModule] =
+      contentModeratorPermissionEntries(definition);
+  }
+
+  return { ...permissionStaff, admin, moderator };
 };
 
 /**
