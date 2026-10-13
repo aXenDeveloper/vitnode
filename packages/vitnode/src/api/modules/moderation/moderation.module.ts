@@ -1,6 +1,14 @@
 import { buildModule } from "@/api/lib/module";
 import { CONFIG_PLUGIN } from "@/config";
 
+import {
+  approvalFiltersRoute,
+  approveApprovalRoute,
+  listApprovalsRoute,
+  myApprovalsRoute,
+  rejectApprovalRoute,
+  showApprovalRoute,
+} from "./routes/approvals.routes";
 import { createReportRoute } from "./routes/create.route";
 import { listReportsRoute } from "./routes/list.route";
 import {
@@ -34,5 +42,11 @@ export const moderationModule = buildModule({
     reopenReportRoute,
     reportActionRoute,
     reportAssigneesRoute,
+    listApprovalsRoute,
+    approvalFiltersRoute,
+    myApprovalsRoute,
+    showApprovalRoute,
+    approveApprovalRoute,
+    rejectApprovalRoute,
   ],
 });

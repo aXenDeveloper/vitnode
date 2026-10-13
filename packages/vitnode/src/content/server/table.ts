@@ -132,6 +132,7 @@ const resolveReference = (
   fields: ContentFieldMap,
   references: Record<string, ColumnReferenceThunk>,
   builtStrategy?: ContentIdStrategy,
+  selfReference?: { tableName: string; thunk: ColumnReferenceThunk },
 ): ColumnReferenceThunk | undefined => {
   const fieldValue = fields[name];
 
@@ -164,12 +165,32 @@ const resolveReference = (
   }
   if (fieldValue.kind !== "relation") return undefined;
 
+  if (fieldValue.self) {
+    if (references[name] !== undefined) {
+      throw new ContentEngineError(
+        `Self-relation "${name}" has an entry in \`references\`. Remove it - the engine resolves a self-relation from the table it is building.`,
+        { contentTypeId },
+      );
+    }
+    if (!selfReference) {
+      throw new ContentEngineError(
+        `Self-relation "${name}" was built without its own table to point at. This is an internal error.`,
+        { contentTypeId },
+      );
+    }
+
+    return checkedReference(
+      contentTypeId,
+      name,
+      () => selfReference.tableName,
+      selfReference.thunk,
+    );
+  }
+
   const thunk = references[name];
   if (!thunk) {
     throw new ContentEngineError(
-      fieldValue.self
-        ? `Self-relation "${name}" should not have an entry in \`references\` - the engine resolves it from the table it is building. This is an internal error.`
-        : `Relation field "${name}" has no entry in \`references\`. Add \`${name}: () => <target_table>.id\`.`,
+      `Relation field "${name}" has no entry in \`references\`. Add \`${name}: () => <target_table>.id\`.`,
       { contentTypeId },
     );
   }
@@ -213,6 +234,14 @@ export const createContentTable = <
     partitionContentFields(definition.fields).sharedFields,
   );
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
+  // A to-one self-relation's foreign key points at this very table, which does
+  // not exist until `pgTable` returns. Drizzle reads the thunk lazily, so it
+  // resolves against the finished table.
+  const built: { columns?: Record<string, PgColumn> } = {};
+  const selfReference = {
+    tableName,
+    thunk: (() => built.columns?.id) as ColumnReferenceThunk,
+  };
 
   const columns: Record<string, AnyPgColumnBuilder> = {
     ...buildSystemColumns(definition.idStrategy),
@@ -239,6 +268,7 @@ export const createContentTable = <
         fields,
         referenceThunks,
         referenceStrategy,
+        selfReference,
       ),
       referenceStrategy,
     });
@@ -274,11 +304,14 @@ export const createContentTable = <
   // in a loop, so the descriptor-derived `ContentTableFor` is re-attached here.
   // It is built from Drizzle's own `BuildColumns`, so `$inferSelect` and
   // `$inferInsert` stay accurate - see `table.test-d.ts`.
-  return camelCase.table.withRLS(
+  const table = camelCase.table.withRLS(
     tableName,
     () => columns,
-    table => buildIndexes(table as unknown as Record<string, PgColumn>),
-  ) as unknown as ContentTableFor<TDefinition>;
+    columnMap => buildIndexes(columnMap as unknown as Record<string, PgColumn>),
+  );
+  built.columns = table as unknown as Record<string, PgColumn>;
+
+  return table as unknown as ContentTableFor<TDefinition>;
 };
 
 export const assertContentReferences = (table: PgTable): void => {

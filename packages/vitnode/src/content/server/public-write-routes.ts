@@ -93,7 +93,9 @@ const toHttpError = (
     throw reject(STATUS_OF[error.reason], {
       code: CODE_OF[error.reason],
       contentTypeId,
-      issues: [],
+      issues: error.issue
+        ? [{ code: error.issue, field: null, message: error.message }]
+        : [],
     });
   }
 

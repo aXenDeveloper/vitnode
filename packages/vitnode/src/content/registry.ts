@@ -16,6 +16,7 @@ import {
   isFilterableFieldKind,
   RESERVED_FILTER_KEYS,
 } from "./const";
+import { contentContainerSourceOf } from "./containers/association";
 import { ContentEngineError } from "./errors";
 import { contentIdKey } from "./ids";
 import { partitionContentFields } from "./localization";
@@ -420,10 +421,29 @@ export const contentPermissionEntries = (
   // may edit an article may edit every language of it.
 ];
 
+/**
+ * Moderators act from the public site. `can_edit` edits any record a member
+ * could edit; `can_approve` reviews submissions. In a container collection with
+ * policies both are scoped by that collection, so a grant names the containers
+ * it covers.
+ */
 export const contentModeratorPermissionEntries = (
   definition: AnyContentTypeDefinition,
-): PermissionStaffEntryInput[] =>
-  definition.publicWrite.update.enabled ? [CONTENT_PERMISSIONS.edit] : [];
+): PermissionStaffEntryInput[] => {
+  const container = contentContainerSourceOf(definition)?.container;
+  const scope = container?.policies.enabled ? container.id : undefined;
+  const scoped = (permission: string) =>
+    scope ? { permission, scope } : permission;
+
+  return [
+    ...(definition.publicWrite.update.enabled
+      ? [scoped(CONTENT_PERMISSIONS.edit)]
+      : []),
+    ...(scope && definition.publicWrite.enabled
+      ? [scoped(CONTENT_PERMISSIONS.approve)]
+      : []),
+  ];
+};
 
 /**
  * Merges the derived content permissions into a plugin's `permissionStaff`.

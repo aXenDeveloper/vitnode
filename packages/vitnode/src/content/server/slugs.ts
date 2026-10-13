@@ -1,10 +1,28 @@
+import { randomInt } from "node:crypto";
+
 import type { ContentFieldMap } from "../types";
 
-import { CONTENT_SLUG_DEFAULT_LENGTH } from "../const";
+import {
+  CONTENT_GENERATED_SLUG_LENGTH,
+  CONTENT_SLUG_DEFAULT_LENGTH,
+} from "../const";
 import { ContentInputError } from "../errors";
 import { slugify } from "../slug";
 
+const GENERATED_SLUG_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/** A random, URL-safe, lowercase token - the slug of a record with no title. */
+export const generateContentSlug = (
+  maxLength: number = CONTENT_SLUG_DEFAULT_LENGTH,
+): string =>
+  Array.from(
+    { length: Math.min(CONTENT_GENERATED_SLUG_LENGTH, maxLength) },
+    () => GENERATED_SLUG_ALPHABET[randomInt(GENERATED_SLUG_ALPHABET.length)],
+  ).join("");
+
 interface SlugFieldConfig {
+  /** Minted on create when the payload omits it. */
+  generated: boolean;
   maxLength: number;
   name: string;
   /** Field the value is derived from when a create payload omits the slug. */
@@ -18,6 +36,7 @@ const slugFieldsOf = (fields: ContentFieldMap): SlugFieldConfig[] => {
     if (fieldValue.kind !== "slug") continue;
 
     slugFields.push({
+      generated: fieldValue.generated,
       maxLength: fieldValue.maxLength ?? CONTENT_SLUG_DEFAULT_LENGTH,
       name,
       source: fieldValue.source,
@@ -69,6 +88,11 @@ export const createSlugNormalizer = (
         // apply whether the slug came from the caller or from the source field.
         if (typeof supplied === "string") {
           next[slugField.name] = toSlug(slugField, supplied, false);
+          continue;
+        }
+
+        if (slugField.generated) {
+          next[slugField.name] = generateContentSlug(slugField.maxLength);
           continue;
         }
 

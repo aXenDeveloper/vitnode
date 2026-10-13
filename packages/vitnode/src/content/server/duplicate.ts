@@ -49,6 +49,7 @@ import {
 } from "../paths";
 import { slugify } from "../slug";
 import { contentSlugHistoryFor } from "./delivery-writes";
+import { generateContentSlug } from "./slugs";
 
 export interface ContentDuplicateOptions<TDefinition> {
   overrides?: ContentUpdateInput<TDefinition>;
@@ -391,10 +392,18 @@ export const runContentDuplicate = async <TBase, TTranslation>(
           fieldValue.kind === "slug" && overridden[name] === undefined,
       )
       .map(([name, fieldValue]) => {
-        const { maxLength = CONTENT_SLUG_DEFAULT_LENGTH, source: from } =
-          fieldValue as { maxLength?: number; source?: string };
-        const derived =
-          from !== undefined && typeof values[from] === "string"
+        const {
+          generated,
+          maxLength = CONTENT_SLUG_DEFAULT_LENGTH,
+          source: from,
+        } = fieldValue as {
+          generated?: boolean;
+          maxLength?: number;
+          source?: string;
+        };
+        const derived = generated
+          ? generateContentSlug(maxLength)
+          : from !== undefined && typeof values[from] === "string"
             ? slugify(values[from], maxLength)
             : "";
         const current = typeof source[name] === "string" ? source[name] : "";

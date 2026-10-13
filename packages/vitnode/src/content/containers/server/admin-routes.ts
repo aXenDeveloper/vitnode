@@ -18,6 +18,10 @@ import { CONTENT_PERMISSIONS } from "../../const";
 import { CONTENT_CONTAINER_ERROR_CODES } from "../const";
 import { ContentContainerError } from "../errors";
 import {
+  zodContentContainerPolicyOverrides,
+  zodEffectiveContentContainerPolicy,
+} from "../policies";
+import {
   contentContainerInputRefusal,
   createContentContainerService,
 } from "./service";
@@ -45,6 +49,25 @@ const validationHook: RouteValidationHook = (result, c) => {
 
   return c.json(contentContainerInputRefusal(result.error), 400);
 };
+
+const zodPolicySource = z.union([
+  z.object({ containerId: z.number(), kind: z.literal("container") }),
+  z.object({ kind: z.enum(["contentType", "default", "fallback"]) }),
+]);
+
+export const zodContentContainerPolicyReport = z.object({
+  contentTypes: z.array(
+    z.object({
+      contentTypeId: z.string(),
+      effective: zodEffectiveContentContainerPolicy,
+      inherited: zodEffectiveContentContainerPolicy,
+      pluginId: z.string(),
+      sources: z.record(z.string(), zodPolicySource),
+    }),
+  ),
+  id: z.number(),
+  overrides: zodContentContainerPolicyOverrides,
+});
 
 const idParams = z.object({
   id: z.coerce.number().int().positive(),
@@ -229,5 +252,85 @@ export const buildContentContainerAdminRoutes = <
     },
   });
 
-  return [list, create, update, move, remove];
+  if (!definition.policies.enabled) {
+    return [list, create, update, move, remove];
+  }
+
+  const policies = buildRoute({
+    pluginId,
+    hook: validationHook,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/{id}/policies",
+      description: `Read a container's publishing policies in ${definition.id}: its own overrides and what applies to each content type (Admin only)`,
+      request: { params: idParams },
+      responses: {
+        200: {
+          content: {
+            "application/json": { schema: zodContentContainerPolicyReport },
+          },
+          description: "Overrides and effective policies",
+        },
+        403: { description: "Access Denied" },
+        404: errorResponse("No such container in this collection"),
+      },
+    },
+    handler: async c => {
+      try {
+        const { id } = c.req.valid("param");
+
+        return c.json(await service(c).policies(id), 200);
+      } catch (error) {
+        return containerError(error);
+      }
+    },
+  });
+
+  const updatePolicies = buildRoute({
+    pluginId,
+    hook: validationHook,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    route: {
+      method: "put",
+      path: "/{id}/policies",
+      description: `Replace a container's publishing policy overrides in ${definition.id}. A key left out inherits from the parent container and the definition (Admin only)`,
+      request: {
+        params: idParams,
+        body: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: z.object({
+                overrides: zodContentContainerPolicyOverrides,
+              }),
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          content: {
+            "application/json": { schema: zodContentContainerPolicyReport },
+          },
+          description: "Overrides saved",
+        },
+        400: errorResponse("An unknown content type or an invalid value"),
+        403: { description: "Access Denied" },
+        404: errorResponse("No such container in this collection"),
+      },
+    },
+    handler: async c => {
+      try {
+        const { id } = c.req.valid("param");
+        const { overrides } = c.req.valid("json");
+
+        return c.json(await service(c).updatePolicies(id, overrides), 200);
+      } catch (error) {
+        return containerError(error);
+      }
+    },
+  });
+
+  return [list, create, update, move, remove, policies, updatePolicies];
 };

@@ -9,7 +9,7 @@ import { alias, getTableConfig } from "drizzle-orm/pg-core";
 
 import type { AnyContentTypeDefinition, ContentReferenceField } from "../types";
 
-import { ContentEngineError } from "../errors";
+import { ContentEngineError, ContentInputError } from "../errors";
 import { partitionContentFields } from "../localization";
 import { isContentReferenceCollection } from "../paths";
 import { createContentTranslationTable } from "./translation-table";
@@ -217,4 +217,26 @@ const buildPickerTarget = (
         }
       : {}),
   };
+};
+
+/** A to-one self-relation may point at any record of its type but its own. */
+export const assertNoContentSelfReference = (
+  definition: Pick<AnyContentTypeDefinition, "fields" | "id">,
+  id: unknown,
+  values: Record<string, unknown>,
+): void => {
+  for (const [name, fieldValue] of Object.entries(definition.fields)) {
+    if (fieldValue.kind !== "relation" || !fieldValue.self) continue;
+    if (fieldValue.multiple) continue;
+
+    const value = values[name];
+    if (typeof value !== "number" && typeof value !== "string") continue;
+    if (typeof id !== "number" && typeof id !== "string") continue;
+    if (String(value) !== String(id)) continue;
+
+    throw new ContentInputError(
+      `Field "${name}" points at the record itself. A record cannot be its own ${name}.`,
+      { contentTypeId: definition.id },
+    );
+  }
 };

@@ -121,6 +121,7 @@ describe("model.publicService", () => {
       "findById",
       "findBySlug",
       "findMany",
+      "findManyByIds",
     ]);
   });
 });

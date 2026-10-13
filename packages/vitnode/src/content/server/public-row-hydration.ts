@@ -4,9 +4,40 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 
+import { loadPublicPeople } from "../../api/lib/public-people";
 import { isContentId } from "../ids";
 import { splitContentFieldPath } from "../paths";
 import { resolveContentPublicRowFiles } from "./files";
+
+/**
+ * Swaps each `publicApi.people` user id for its public summary, or `null`.
+ *
+ * One query for the whole page, whatever number of people fields and rows.
+ */
+export const resolveContentPublicRowPeople = async (
+  c: Context,
+  definition: AnyContentTypeDefinition,
+  rows: readonly Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> => {
+  const { people } = definition.publicApi;
+  if (people.length === 0 || rows.length === 0) return [...rows];
+
+  const loaded = await loadPublicPeople(
+    c,
+    rows.flatMap(row => people.map(name => row[name])),
+  );
+
+  return rows.map(row => ({
+    ...row,
+    ...Object.fromEntries(
+      people.map(name => {
+        const id = row[name];
+
+        return [name, typeof id === "number" ? (loaded.get(id) ?? null) : null];
+      }),
+    ),
+  }));
+};
 
 /**
  * Puts a group's leaves back under their owner.
@@ -46,9 +77,9 @@ export const nestContentPublicRow = (
  *    exposes, because querying a private junction table to discard its rows
  *    afterwards is work with no answer attached;
  * 3. attach them to their rows;
- * 4. batch-resolve the file fields **last**, because a `multiple: true` file
- *    field has no column: its identifiers only exist on the row once
- *    `loadMany` has put them there.
+ * 4. batch-resolve the file fields, because a `multiple: true` file field
+ *    has no column: its identifiers only exist on the row once `loadMany` has
+ *    put them there - and then the `publicApi.people` summaries.
  *
  * One batch per page either way. Shared by the localized public service and the
  * plain one, whose statements and localization strategies are deliberately
@@ -95,9 +126,9 @@ export const createContentPublicRowHydrator =
     // The identifier is replaced by the descriptor here rather than in the
     // projector, so the projector stays the one place that decides *what* is
     // public and this stays the one place that decides what it looks like.
-    return await resolveContentPublicRowFiles(
+    return await resolveContentPublicRowPeople(
       c,
       definition,
-      withCollectionValues,
+      await resolveContentPublicRowFiles(c, definition, withCollectionValues),
     );
   };

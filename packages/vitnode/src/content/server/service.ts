@@ -83,12 +83,14 @@ import {
   toInsertColumns,
 } from "./query";
 import {
+  assertNoContentSelfReference,
   LABEL_PREFIX,
   resolveCollectionPickerTargets,
   resolveReferenceTargets,
   toLabel,
 } from "./references";
 import { createSlugNormalizer } from "./slugs";
+import { assertContentThreadPlacement } from "./thread";
 import {
   isInVisibilityState,
   visibilityChange,
@@ -802,6 +804,14 @@ export const createContentService = <
         // content type with no file fields.
         await assertContentFileReferences(c, definition, parsed, tx);
         await resolveContentContainerAssignment(tx, definition, parsed);
+        await assertContentThreadPlacement(
+          tx,
+          { columns, definition, table },
+          {
+            id: null,
+            values: parsed,
+          },
+        );
 
         const [row] = await tx
           .insert(table)
@@ -1123,6 +1133,15 @@ export const createContentService = <
       });
 
       if (changedPaths.length > 0) {
+        assertNoContentSelfReference(definition, id, patch);
+        await assertContentThreadPlacement(
+          tx,
+          { columns, definition, table },
+          {
+            id,
+            values: patch,
+          },
+        );
         await resolveContentContainerAssignment(tx, definition, patch);
       }
 

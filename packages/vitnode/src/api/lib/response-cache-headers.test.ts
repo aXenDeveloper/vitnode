@@ -111,6 +111,7 @@ const isSharedCacheable = (value: string): boolean => {
 };
 
 const DECLARED = {
+  "api/modules/moderation/routes/approvals.routes.ts": ["private, no-store"],
   "content/server/delivery-routes.ts": ["private, no-store"],
   "content/server/public-routes.ts": ["private, no-store"],
   "content/server/public-write-routes.ts": ["private, no-store"],

@@ -16,6 +16,7 @@ import {
   contentContainerPermissionEntries,
   validateContentContainers,
 } from "@/content/containers/registry";
+import { contentContainerModerationScope } from "@/content/containers/server/scope";
 import { contentPublicUrls } from "@/content/public-urls";
 import {
   validateContentTypes,
@@ -243,8 +244,19 @@ export function buildApiPlugin<
         registeredContainers,
       ),
       reportTargets,
+      new Set(Object.keys(permissionStaff?.moderator ?? {})),
     ),
-    moderation: { reportTargets, scopes: moderation?.scopes ?? [] },
+    moderation: {
+      reportTargets,
+      scopes: [
+        ...(moderation?.scopes ?? []),
+        ...registeredContainers
+          .filter(definition => definition.policies.enabled)
+          .map(definition =>
+            contentContainerModerationScope(definition, pluginId),
+          ),
+      ],
+    },
   };
 }
 

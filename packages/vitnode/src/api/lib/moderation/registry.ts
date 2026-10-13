@@ -62,16 +62,33 @@ export const moderationPermissionEntries = (
   ];
 };
 
+const permissionNameOf = (entry: PermissionStaffEntryInput): string =>
+  typeof entry === "string" ? entry : entry.permission;
+
+/**
+ * Adds the report permissions of every target. A module the plugin declared
+ * itself (`declared`) is left alone; a generated one - such as a content type's
+ * `can_edit` - is merged with them instead of shadowing them.
+ */
 export const withModerationPermissions = (
   permissionStaff: PermissionStaffConfig | undefined,
   targets: readonly ModerationReportTargetDefinition[],
+  declared?: ReadonlySet<string>,
 ): PermissionStaffConfig | undefined => {
   if (targets.length === 0) return permissionStaff;
 
   const moderator = { ...permissionStaff?.moderator };
   for (const target of targets) {
-    if (moderator[target.permissionModule]) continue;
-    moderator[target.permissionModule] = moderationPermissionEntries(target);
+    const existing = moderator[target.permissionModule];
+    if (existing && (declared?.has(target.permissionModule) ?? true)) continue;
+
+    const taken = new Set((existing ?? []).map(permissionNameOf));
+    moderator[target.permissionModule] = [
+      ...(existing ?? []),
+      ...moderationPermissionEntries(target).filter(
+        entry => !taken.has(permissionNameOf(entry)),
+      ),
+    ];
   }
 
   return { ...permissionStaff, moderator };

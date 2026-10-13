@@ -54,6 +54,7 @@ import {
   isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
+import { zodContentPublicPerson } from "./public-person";
 import {
   createRichTextDocumentSchema,
   RICH_TEXT_ABSOLUTE_MAX_BYTES,
@@ -68,6 +69,7 @@ const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
   filterableFields: [],
   orderableFields: [],
   path: "",
+  people: [],
   searchableFields: [],
   slugField: "",
 };
@@ -680,6 +682,9 @@ const publicSelectShape = (
   // that was asked for. `defineContentType` reserves the name on a localized
   // content type, so this cannot shadow a declared field.
   ...(localization.enabled ? { locale: z.string() } : {}),
+  ...Object.fromEntries(
+    publicApi.people.map(name => [name, zodContentPublicPerson.nullable()]),
+  ),
   ...Object.fromEntries(
     publicApi.fields
       .filter(name => splitContentFieldPath(name) === null)

@@ -188,6 +188,7 @@ export type {
   ContentPublicRoutes,
 } from "./public-module";
 export { buildContentPublicRoutes } from "./public-routes";
+export { resolveContentPublicRowPeople } from "./public-row-hydration";
 export {
   contentPublicSelection,
   createContentPublicProjector,
@@ -319,7 +320,7 @@ export type {
   ContentSlugHistoryModel,
   ContentSlugHistoryTarget,
 } from "./slug-history-model";
-export { createSlugNormalizer } from "./slugs";
+export { createSlugNormalizer, generateContentSlug } from "./slugs";
 export type { ContentSlugNormalizer } from "./slugs";
 export {
   assertContentReferences,

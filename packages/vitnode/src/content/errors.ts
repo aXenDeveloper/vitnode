@@ -434,17 +434,22 @@ export type ContentPublicWriteDenial =
 export class ContentPublicWriteDenied extends ContentEngineError {
   constructor({
     contentTypeId,
+    issue = null,
     reason,
   }: {
     contentTypeId: string;
+    /** Why, when the reason alone would leave the member guessing. */
+    issue?: "edit_window_closed" | "moderators_only" | null;
     reason: ContentPublicWriteDenial;
   }) {
     super(`Public write denied: ${reason}.`, { contentTypeId });
 
     this.name = "ContentPublicWriteDenied";
+    this.issue = issue;
     this.reason = reason;
   }
 
+  readonly issue: "edit_window_closed" | "moderators_only" | null;
   readonly reason: ContentPublicWriteDenial;
 }
 

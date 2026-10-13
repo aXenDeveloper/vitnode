@@ -384,6 +384,8 @@ export {
   resolveContentLocalization,
 } from "./localization";
 export type { ContentFieldPartition } from "./localization";
+export { isContentPublicPerson, zodContentPublicPerson } from "./public-person";
+export type { ContentPublicPerson } from "./public-person";
 export {
   contentPublicHref,
   contentPublicUrl,
@@ -542,6 +544,8 @@ export type {
   ContentPublicListRow,
   ContentPublicOrderableFieldName,
   ContentPublicOwnershipField,
+  ContentPublicPeopleName,
+  ContentPublicPersonField,
   ContentPublicRelation,
   ContentPublicSelect,
   ContentPublicUpdateBody,

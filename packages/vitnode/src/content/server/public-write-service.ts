@@ -8,7 +8,9 @@ import type { Context } from "hono";
 import { eq, getColumns, getColumnTable, inArray } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
-import type { ResolvedContentContainerContext } from "../containers/server/assignment";
+import type { ContentSubmissionRow } from "../approvals/server/submissions";
+import type { EffectiveContentContainerPolicy } from "../containers/policies";
+import type { ContentRecordContainer } from "../containers/server/policy";
 import type { ContentId, ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
@@ -17,30 +19,52 @@ import type {
   ContentPublicUpdateBody,
   ContentPublicWriteRecord,
 } from "../types";
-import type { ContentEditorialOutcome } from "./editorial-service";
 import type { ContentModel } from "./model";
 import type { ContentPublicWriteActor } from "./public-write-authorization";
 import type { ContentDatabase } from "./service";
 
-import { ContentContainerAssignmentError } from "../containers/association";
-import { resolveContentContainerAssignment } from "../containers/server/assignment";
+import {
+  emitContentApprovalSubmitted,
+  findLatestContentSubmission,
+  findPendingContentSubmission,
+  openContentSubmission,
+  refreshContentSubmissionValues,
+  toContentApprovalState,
+} from "../approvals/server/submissions";
+import {
+  CONTENT_PERMISSIONS,
+  CONTENT_PUBLIC_WRITE_ISSUE_CODES,
+} from "../const";
+import {
+  ContentContainerAssignmentError,
+  contentContainerSourceOf,
+} from "../containers/association";
+import {
+  canModerateContent,
+  effectiveContentPolicy,
+  resolveContentRowContainer,
+  resolveContentWriteContainer,
+} from "../containers/server/policy";
 import {
   ContentEngineError,
   ContentPublicWriteDenied,
   ContentPublicWriteInputError,
+  ContentVersionConflict,
 } from "../errors";
 import { contentIdKey, requireContentId } from "../ids";
 import { isContentReferenceCollection } from "../paths";
-import { contentEditorialEffects } from "./editorial-effects";
-import { emitContentEvent } from "./emit";
 import {
   authorizeContentPublicWrite,
   contentPublicWriteRefusal,
   resolveContentPublicWriteActor,
 } from "./public-write-authorization";
 import { publicationMethods } from "./publication";
-import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
+import { ContentThreadPlacementError } from "./thread";
 import { isContentBaseRowPublic } from "./visibility";
+import {
+  contentEditorialWriteEffects,
+  contentPlainWriteEffects,
+} from "./write-effects";
 
 export interface ContentPublicWriteService<TDefinition> {
   create: (
@@ -57,15 +81,71 @@ export interface ContentPublicWriteService<TDefinition> {
 
 export interface ContentPublicationPolicyInput {
   actor: ContentPublicWriteActor;
-  container: null | ResolvedContentContainerContext;
+  c: Context;
+  container: ContentRecordContainer | null;
   definition: AnyContentTypeDefinition;
   operation: "create";
+  pluginId: string;
 }
 
-export const resolveContentPublicationPolicy = ({
+export interface ContentPublicationDecision {
+  /** The record waits for a moderator: it is stored as a draft with a submission. */
+  approval: boolean;
+  policy: EffectiveContentContainerPolicy | null;
+  status: ContentPublicationStatus;
+}
+
+/**
+ * How a member's new record is published - decided on the server from the
+ * container it is filed in, never from the payload.
+ *
+ * Without container policies it is the content type's own
+ * `publicWrite.create.status`. With them, `publish: "approve"` stores a draft
+ * and opens a submission, unless the author may approve in that container.
+ */
+export const resolveContentPublicationPolicy = async ({
+  c,
+  container,
   definition,
-}: ContentPublicationPolicyInput): ContentPublicationStatus =>
-  definition.publicWrite.create.status;
+  pluginId,
+}: ContentPublicationPolicyInput): Promise<ContentPublicationDecision> => {
+  const policy = effectiveContentPolicy(definition, container);
+  if (!policy) {
+    return {
+      approval: false,
+      policy: null,
+      status: definition.publicWrite.create.status,
+    };
+  }
+
+  const can = async (permission: string) =>
+    await canModerateContent(c, {
+      container,
+      definition,
+      permission,
+      pluginId,
+    });
+
+  if (
+    policy.policy.create === "moderators" &&
+    !(await can(CONTENT_PERMISSIONS.edit))
+  ) {
+    throw new ContentPublicWriteDenied({
+      contentTypeId: definition.id,
+      issue: CONTENT_PUBLIC_WRITE_ISSUE_CODES.moderatorsOnly,
+      reason: "forbidden",
+    });
+  }
+
+  if (
+    policy.policy.publish === "immediate" ||
+    (await can(CONTENT_PERMISSIONS.approve))
+  ) {
+    return { approval: false, policy, status: "published" };
+  }
+
+  return { approval: true, policy, status: "draft" };
+};
 
 export const createContentPublicWriteService = <
   TDefinition extends AnyContentTypeDefinition,
@@ -86,6 +166,7 @@ export const createContentPublicWriteService = <
   const schemas = model.schemas.publicWrite;
   const table: PgTableWithColumns<TableConfig> = model.table;
   const columns = model.columns as Record<string, PgColumn>;
+  const containerSource = contentContainerSourceOf(definition);
 
   const readable = [
     ...new Set([...publicWrite.create.fields, ...publicWrite.update.fields]),
@@ -94,8 +175,10 @@ export const createContentPublicWriteService = <
     isContentReferenceCollection(definition.fields[name]),
   );
 
-  const deny = (reason: ContentPublicWriteDenied["reason"]) =>
-    new ContentPublicWriteDenied({ contentTypeId, reason });
+  const deny = (
+    reason: ContentPublicWriteDenied["reason"],
+    issue: ContentPublicWriteDenied["issue"] = null,
+  ) => new ContentPublicWriteDenied({ contentTypeId, issue, reason });
 
   const requireActor = (): ContentPublicWriteActor => {
     const actor = resolveContentPublicWriteActor(c);
@@ -198,17 +281,16 @@ export const createContentPublicWriteService = <
     }
   };
 
-  const resolveContainer = async (
-    tx: ContentDatabase,
-    values: Record<string, unknown>,
-  ): Promise<null | ResolvedContentContainerContext> => {
+  const asInputError = async <T>(run: () => Promise<T>): Promise<T> => {
     try {
-      return (
-        (await resolveContentContainerAssignment(tx, definition, values)) ??
-        null
-      );
+      return await run();
     } catch (error) {
-      if (!(error instanceof ContentContainerAssignmentError)) throw error;
+      if (
+        !(error instanceof ContentContainerAssignmentError) &&
+        !(error instanceof ContentThreadPlacementError)
+      ) {
+        throw error;
+      }
 
       throw new ContentPublicWriteInputError({
         contentTypeId,
@@ -219,11 +301,17 @@ export const createContentPublicWriteService = <
   };
 
   const lockSelection = (): Record<string, PgColumn> => ({
+    createdAt: columns.createdAt,
     id: columns.id,
     publishedAt: columns.publishedAt,
     status: columns.status,
+    updatedAt: columns.updatedAt,
+    ...(editorial ? { version: columns.version } : {}),
     ...(ownerField === null ? {} : { [ownerField]: columns[ownerField] }),
     ...(definition.visibility.enabled ? { hiddenAt: columns.hiddenAt } : {}),
+    ...(containerSource && columns[containerSource.name]
+      ? { [containerSource.name]: columns[containerSource.name] }
+      : {}),
   });
 
   const lockRow = async (
@@ -240,9 +328,9 @@ export const createContentPublicWriteService = <
     return row ?? null;
   };
 
-  const toRecord = async (
+  const valuesOf = async (
     row: Record<string, unknown>,
-  ): Promise<ContentPublicWriteRecord<TDefinition>> => {
+  ): Promise<Record<string, unknown>> => {
     const id = requireContentId(definition.idStrategy, row.id, contentTypeId);
     const collections =
       collectionFields.length > 0
@@ -250,99 +338,135 @@ export const createContentPublicWriteService = <
             .service(c)
             .advancedFields(id as ContentIdOf<TDefinition>, collectionFields)
         : {};
+
+    return Object.fromEntries(
+      readable.map(name => [name, collections[name] ?? row[name] ?? null]),
+    );
+  };
+
+  const toRecord = async (
+    row: Record<string, unknown>,
+    approval: ContentSubmissionRow | null = null,
+  ): Promise<ContentPublicWriteRecord<TDefinition>> => {
+    const id = requireContentId(definition.idStrategy, row.id, contentTypeId);
     const slugField = definition.publicApi.slugField;
     const slug = slugField ? row[slugField] : null;
 
     return {
+      approval: approval ? toContentApprovalState(approval) : null,
       id,
       publishedAt: (row.publishedAt as Date | null | undefined) ?? null,
       slug: typeof slug === "string" ? slug : null,
       status: row.status as ContentPublicationStatus,
-      values: Object.fromEntries(
-        readable.map(name => [name, collections[name] ?? row[name] ?? null]),
-      ),
+      values: await valuesOf(row),
       ...(editorial ? { version: row.version as number } : {}),
     } as unknown as ContentPublicWriteRecord<TDefinition>;
   };
 
+  /** The submission an author should see: a pending one, or a rejection nothing replaced. */
+  const visibleSubmission = async (
+    id: ContentId,
+  ): Promise<ContentSubmissionRow | null> => {
+    const latest = await findLatestContentSubmission(
+      c.get("db"),
+      definition,
+      id,
+    );
+
+    return latest?.status === "pending" || latest?.status === "rejected"
+      ? latest
+      : null;
+  };
+
   const authorize = async (
+    tx: ContentDatabase,
     actor: ContentPublicWriteActor,
     row: null | Record<string, unknown>,
-  ): Promise<Record<string, unknown>> => {
+  ) => {
     if (!row) throw deny("notFound");
 
+    const container = await resolveContentRowContainer(c, tx, definition, row);
+    const policy = effectiveContentPolicy(definition, container);
     const decision = await authorizeContentPublicWrite(c, {
       action: "update",
       actor,
+      container,
       definition,
       pluginId,
+      policy,
       row,
     });
-    if (!decision.allowed) throw deny(contentPublicWriteRefusal(row));
-
-    return row;
-  };
-
-  const plainEffects = async (
-    operation: "create" | "update",
-    row: Record<string, unknown>,
-    {
-      changedFields = [],
-      published = false,
-    }: { changedFields?: string[]; published?: boolean } = {},
-  ): Promise<void> => {
-    const id = row.id as ContentId;
-
-    if (operation === "create") {
-      await emitContentEvent(
-        c,
-        definition,
-        "created",
-        { contentId: id },
-        { pluginId },
-      );
-      if (published && row.publishedAt instanceof Date) {
-        await emitContentEvent(
-          c,
-          definition,
-          "published",
-          { contentId: id, publishedAt: row.publishedAt },
-          { pluginId },
-        );
-      }
-    } else if (changedFields.length > 0) {
-      await emitContentEvent(
-        c,
-        definition,
-        "updated",
-        { changedFields, contentId: id },
-        { pluginId },
+    if (!decision.allowed) {
+      throw deny(
+        contentPublicWriteRefusal(row),
+        decision.reason === "editWindowClosed" &&
+          contentPublicWriteRefusal(row) === "forbidden"
+          ? CONTENT_PUBLIC_WRITE_ISSUE_CODES.editWindowClosed
+          : null,
       );
     }
 
-    await syncContentSearch(c, definition, {
-      advanced: await contentSearchAdvancedValues(
-        c,
-        model,
-        requireContentId(definition.idStrategy, id, contentTypeId),
-      ),
-      ...(operation === "update" ? { changedFields } : {}),
-      operation,
+    return { container, policy, row, via: decision.via };
+  };
+
+  const canApprove = async (container: ContentRecordContainer | null) =>
+    await canModerateContent(c, {
+      container,
+      definition,
+      permission: CONTENT_PERMISSIONS.approve,
       pluginId,
+    });
+
+  /**
+   * After an applied write to a record that is not public yet: a pending
+   * create follows the draft, and a draft in an approval container that has
+   * no pending submission is (re)submitted.
+   */
+  const syncDraftSubmission = async (
+    tx: ContentDatabase,
+    {
+      actor,
+      container,
+      policy,
       row,
+      via,
+    }: {
+      actor: ContentPublicWriteActor;
+      container: ContentRecordContainer | null;
+      policy: EffectiveContentContainerPolicy | null;
+      row: Record<string, unknown>;
+      via: "moderator" | "owner";
+    },
+  ): Promise<null | { replaced: null | number; row: ContentSubmissionRow }> => {
+    if (!policy || row.status === "published") return null;
+
+    const id = row.id as ContentId;
+    const pending = await findPendingContentSubmission(tx, definition, id, {
+      lock: true,
+    });
+    if (pending) {
+      await refreshContentSubmissionValues(tx, pending.id, await valuesOf(row));
+
+      return null;
+    }
+    if (via !== "owner" || policy.policy.publish !== "approve") return null;
+    if (await canApprove(container)) return null;
+
+    return await openContentSubmission(tx, {
+      authorId: actor.userId,
+      container,
+      definition,
+      itemId: id,
+      kind: "create",
+      pluginId,
+      values: await valuesOf(row),
     });
   };
 
-  const editorialEffects = async (
-    outcomes: (ContentEditorialOutcome<TDefinition> | null)[],
+  const announce = async (
+    opened: null | { replaced: null | number; row: ContentSubmissionRow },
   ): Promise<void> => {
-    for (const outcome of outcomes) {
-      if (!outcome) continue;
-      await contentEditorialEffects(c, definition, outcome, {
-        model,
-        pluginId,
-      });
-    }
+    if (opened) await emitContentApprovalSubmitted(c, opened);
   };
 
   return {
@@ -356,58 +480,109 @@ export const createContentPublicWriteService = <
 
       const prepare = async (tx: ContentDatabase) => {
         await assertPublicRelationTargets(tx, parsed);
-        const container = await resolveContainer(tx, parsed);
-
-        return resolveContentPublicationPolicy({
+        const container = await asInputError(
+          async () =>
+            await resolveContentWriteContainer(c, tx, definition, parsed),
+        );
+        const decision = await resolveContentPublicationPolicy({
           actor,
+          c,
           container,
           definition,
           operation: "create",
+          pluginId,
         });
+
+        return { container, decision };
       };
+
+      const submit = async (
+        tx: ContentDatabase,
+        row: Record<string, unknown>,
+        container: ContentRecordContainer | null,
+      ) =>
+        await openContentSubmission(tx, {
+          authorId: actor.userId,
+          container,
+          definition,
+          itemId: row.id as ContentId,
+          kind: "create",
+          pluginId,
+          values: await valuesOf(row),
+        });
 
       if (editorial) {
         const service = editorialService();
-        const { created, published } = await c
+        const { created, opened, published } = await c
           .get("db")
           .transaction(async tx => {
-            const status = await prepare(tx);
-            const created = await service.create(stamped as never, {
-              actor,
-              tx,
-            });
+            const { container, decision } = await prepare(tx);
+            const created = await asInputError(
+              async () =>
+                await service.create(stamped as never, {
+                  actor,
+                  tx,
+                }),
+            );
             const published =
-              status === "published"
+              decision.status === "published"
                 ? await service.publish(created.row.id as never, { actor, tx })
                 : null;
+            const opened = decision.approval
+              ? await submit(tx, created.row, container)
+              : null;
 
-            return { created, published };
+            return { created, opened, published };
           });
 
-        await editorialEffects([created, published]);
+        await contentEditorialWriteEffects(c, model, {
+          outcomes: [created, published],
+          pluginId,
+        });
+        await announce(opened);
 
-        return await toRecord(published?.row ?? created.row);
+        return await toRecord(published?.row ?? created.row, opened?.row);
       }
 
       const service = model.service(c);
-      const { row, status } = await c.get("db").transaction(async tx => {
-        const status = await prepare(tx);
-        const created = await service.create(stamped as never, { tx });
-        if (status !== "published") return { row: created, status };
+      const { opened, row, status } = await c
+        .get("db")
+        .transaction(async tx => {
+          const { container, decision } = await prepare(tx);
+          const created = await asInputError(
+            async () => await service.create(stamped as never, { tx }),
+          );
+          if (decision.status !== "published") {
+            return {
+              opened: decision.approval
+                ? await submit(tx, created, container)
+                : null,
+              row: created,
+              status: decision.status,
+            };
+          }
 
-        const result = await publicationMethods(definition, service).publish(
-          created.id as never,
-          { tx },
-        );
+          const result = await publicationMethods(definition, service).publish(
+            created.id as never,
+            { tx },
+          );
 
-        return { row: result?.row ?? created, status };
-      });
+          return {
+            opened: null,
+            row: result?.row ?? created,
+            status: decision.status,
+          };
+        });
 
-      await plainEffects("create", row, {
+      await contentPlainWriteEffects(c, model, {
+        operation: "create",
+        pluginId,
         published: status === "published",
+        row,
       });
+      await announce(opened);
 
-      return await toRecord(row);
+      return await toRecord(row, opened?.row);
     },
 
     findEditable: async id => {
@@ -420,12 +595,12 @@ export const createContentPublicWriteService = <
         .from(table)
         .where(eq(columns.id, id))
         .limit(1);
-      await authorize(actor, row ?? null);
+      await authorize(c.get("db"), actor, row ?? null);
 
       const full = await model.service(c).findById(id);
       if (!full) throw deny("notFound");
 
-      return await toRecord(full);
+      return await toRecord(full, await visibleSubmission(id));
     },
 
     update: async (id, body) => {
@@ -436,39 +611,151 @@ export const createContentPublicWriteService = <
         values: Record<string, unknown>;
       };
 
+      /**
+       * An owner's edit of a published record in a container that reviews
+       * edits becomes a proposal. The live row - and its version - stay as
+       * they are until a moderator approves.
+       */
+      const propose = async (
+        tx: ContentDatabase,
+        {
+          container,
+          row,
+        }: {
+          container: ContentRecordContainer | null;
+          row: Record<string, unknown>;
+        },
+      ) => {
+        if (editorial && (expectedVersion ?? 0) !== row.version) {
+          throw new ContentVersionConflict({
+            contentTypeId,
+            currentVersion: row.version as number,
+            expectedVersion: expectedVersion ?? 0,
+            itemId: id,
+          });
+        }
+
+        const full = await model.service(c).findById(id);
+        if (!full) throw deny("notFound");
+        const base = await valuesOf(full);
+        const proposed = Object.fromEntries(
+          publicWrite.update.fields.map(name => [
+            name,
+            Object.hasOwn(values, name) ? values[name] : (base[name] ?? null),
+          ]),
+        );
+
+        const opened = await openContentSubmission(tx, {
+          authorId: actor.userId,
+          baseUpdatedAt: row.updatedAt as Date,
+          baseValues: base,
+          baseVersion: editorial ? (row.version as number) : null,
+          container,
+          definition,
+          itemId: id,
+          kind: "edit",
+          pluginId,
+          values: proposed,
+        });
+
+        return { full, opened };
+      };
+
+      const needsReview = async ({
+        container,
+        policy,
+        row,
+        via,
+      }: Awaited<ReturnType<typeof authorize>>) =>
+        via === "owner" &&
+        policy?.policy.edits === "approve" &&
+        row.status === "published" &&
+        !(await canApprove(container));
+
       if (editorial) {
         const service = editorialService();
-        const outcome = await c.get("db").transaction(async tx => {
-          await authorize(actor, await lockRow(tx, id));
+        const result = await c.get("db").transaction(async tx => {
+          const access = await authorize(tx, actor, await lockRow(tx, id));
           await assertPublicRelationTargets(tx, values);
 
-          return await service.update(id, values as never, {
+          if (await needsReview(access)) {
+            return {
+              kind: "proposal" as const,
+              ...(await propose(tx, access)),
+            };
+          }
+
+          const outcome = await service.update(id, values as never, {
             actor,
             expectedVersion: expectedVersion ?? 0,
             tx,
           });
+          if (!outcome) throw deny("notFound");
+
+          return {
+            kind: "applied" as const,
+            opened: await syncDraftSubmission(tx, {
+              ...access,
+              actor,
+              row: outcome.row,
+            }),
+            outcome,
+          };
         });
-        if (!outcome) throw deny("notFound");
 
-        await editorialEffects([outcome]);
+        if (result.kind === "proposal") {
+          await announce(result.opened);
 
-        return await toRecord(outcome.row);
+          return await toRecord(result.full, result.opened.row);
+        }
+
+        await contentEditorialWriteEffects(c, model, {
+          outcomes: [result.outcome],
+          pluginId,
+        });
+        await announce(result.opened);
+
+        return await toRecord(result.outcome.row, await visibleSubmission(id));
       }
 
       const service = model.service(c);
       const result = await c.get("db").transaction(async tx => {
-        await authorize(actor, await lockRow(tx, id));
+        const access = await authorize(tx, actor, await lockRow(tx, id));
         await assertPublicRelationTargets(tx, values);
 
-        return await service.update(id, values as never, { tx });
-      });
-      if (!result) throw deny("notFound");
+        if (await needsReview(access)) {
+          return { kind: "proposal" as const, ...(await propose(tx, access)) };
+        }
 
-      await plainEffects("update", result.row, {
-        changedFields: result.changedFields,
+        const updated = await service.update(id, values as never, { tx });
+        if (!updated) throw deny("notFound");
+
+        return {
+          kind: "applied" as const,
+          opened: await syncDraftSubmission(tx, {
+            ...access,
+            actor,
+            row: updated.row,
+          }),
+          updated,
+        };
       });
 
-      return await toRecord(result.row);
+      if (result.kind === "proposal") {
+        await announce(result.opened);
+
+        return await toRecord(result.full, result.opened.row);
+      }
+
+      await contentPlainWriteEffects(c, model, {
+        changedFields: result.updated.changedFields,
+        operation: "update",
+        pluginId,
+        row: result.updated.row,
+      });
+      await announce(result.opened);
+
+      return await toRecord(result.updated.row, await visibleSubmission(id));
     },
   };
 };

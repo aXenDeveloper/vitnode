@@ -5,6 +5,12 @@ import type { z } from "zod";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { ContentDatabase } from "../../server/service";
+import type { AnyContentTypeDefinition } from "../../types";
+import type {
+  ContentContainerPolicy,
+  ContentContainerPolicyOverrides,
+  EffectiveContentContainerPolicy,
+} from "../policies";
 import type {
   AnyContentContainerDefinition,
   ContentContainerCreateInput,
@@ -20,12 +26,21 @@ import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { contentContainerTag } from "../../cache";
 import { contentDefinitionOf } from "../../server/model";
 import { slugify } from "../../slug";
-import { contentContainerFieldOf } from "../association";
+import {
+  contentContainerFieldOf,
+  contentContainerSourceOf,
+} from "../association";
 import {
   CONTENT_CONTAINER_MAX_PER_DEFINITION,
   CONTENT_CONTAINER_SLUG_MAX_LENGTH,
 } from "../const";
 import { ContentContainerError } from "../errors";
+import {
+  contentContainerPolicyFallback,
+  readContentContainerPolicyOverrides,
+  resolveContentContainerPolicy,
+  zodContentContainerPolicyOverrides,
+} from "../policies";
 import {
   contentContainerAncestors,
   contentContainerSubtreeIds,
@@ -103,6 +118,7 @@ export interface ContentContainerService<
     id: number,
     input: ContentContainerMoveInput,
   ) => Promise<ContentContainerRecord<TDefinition>>;
+  policies: (id: number) => Promise<ContentContainerPolicyReport>;
   toPublic: (
     record: ContentContainerRecord<TDefinition>,
   ) => ContentContainerPublicRecord<TDefinition>;
@@ -110,7 +126,38 @@ export interface ContentContainerService<
     id: number,
     input: ContentContainerUpdateInput<TDefinition>,
   ) => Promise<ContentContainerRecord<TDefinition>>;
+  updatePolicies: (
+    id: number,
+    overrides: unknown,
+  ) => Promise<ContentContainerPolicyReport>;
 }
+
+export interface ContentContainerPolicyReport {
+  contentTypes: {
+    contentTypeId: string;
+    effective: ContentContainerPolicy;
+    /** What applies once this container's own overrides are taken away. */
+    inherited: ContentContainerPolicy;
+    pluginId: string;
+    sources: EffectiveContentContainerPolicy["sources"];
+  }[];
+  id: number;
+  overrides: ContentContainerPolicyOverrides;
+}
+
+/** Content types filed in a container collection, directly or through a relation. */
+export const contentTypesInContainer = (
+  c: Context,
+  definitionId: string,
+): { definition: AnyContentTypeDefinition; pluginId: string }[] =>
+  (c.get("core")?.contentModels ?? []).flatMap(({ model, pluginId }) => {
+    const definition = contentDefinitionOf(model);
+
+    return contentContainerSourceOf(definition)?.container?.id ===
+      definitionId && definition.publicWrite.enabled
+      ? [{ definition, pluginId }]
+      : [];
+  });
 
 const zodErrorMessage = (error: z.ZodError): string =>
   error.issues
@@ -311,6 +358,49 @@ export const createContentContainerService = <
     return parsed.data;
   };
 
+  const policyReport = (
+    rows: readonly ContainerRow[],
+    id: number,
+  ): ContentContainerPolicyReport => {
+    const byId = new Map(rows.map(row => [row.id, row]));
+    const self = byId.get(id) ?? refuse("notFound");
+    const chain = [self, ...contentContainerAncestors(rows, id).reverse()].map(
+      row => ({
+        id: row.id,
+        policies: readContentContainerPolicyOverrides(row.policies),
+      }),
+    );
+
+    return {
+      contentTypes: contentTypesInContainer(c, definitionId).map(
+        ({ definition: contentType, pluginId: owner }) => {
+          const input = {
+            contentTypeId: contentType.id,
+            fallback: contentContainerPolicyFallback(contentType),
+            policies: definition.policies,
+          };
+          const { policy, sources } = resolveContentContainerPolicy({
+            ...input,
+            chain,
+          });
+
+          return {
+            contentTypeId: contentType.id,
+            effective: policy,
+            inherited: resolveContentContainerPolicy({
+              ...input,
+              chain: chain.slice(1),
+            }).policy,
+            pluginId: owner,
+            sources,
+          };
+        },
+      ),
+      id,
+      overrides: chain[0]?.policies ?? {},
+    };
+  };
+
   return {
     ancestors: async id => {
       const rows = await readAll(c.get("db"));
@@ -502,6 +592,89 @@ export const createContentContainerService = <
         position: record.position,
         slug: record.slug,
       }) as ContentContainerPublicRecord<TDefinition>,
+
+    policies: async id => {
+      if (!definition.policies.enabled) return refuse("invalidPolicy");
+
+      return policyReport(await readAll(c.get("db")), id);
+    },
+
+    updatePolicies: async (id, input) => {
+      if (!definition.policies.enabled) return refuse("invalidPolicy");
+
+      const parsed = zodContentContainerPolicyOverrides.safeParse(input);
+      if (!parsed.success) {
+        return refuse("invalidPolicy", zodErrorMessage(parsed.error));
+      }
+      const allowed = new Set(
+        contentTypesInContainer(c, definitionId).map(
+          entry => entry.definition.id,
+        ),
+      );
+      const stranger = Object.keys(parsed.data).find(key => !allowed.has(key));
+      if (stranger !== undefined) {
+        return refuse(
+          "invalidPolicy",
+          `"${stranger}" is not a content type filed in this collection.`,
+        );
+      }
+      const overrides = Object.fromEntries(
+        Object.entries(readContentContainerPolicyOverrides(parsed.data)).filter(
+          ([, value]) => Object.keys(value).length > 0,
+        ),
+      );
+
+      const { changed, report } = await c.get("db").transaction(async tx => {
+        await lock(tx);
+        const rows = await readAll(tx);
+        const row = rows.find(candidate => candidate.id === id);
+        if (!row) return refuse("notFound");
+
+        const changed =
+          JSON.stringify(readContentContainerPolicyOverrides(row.policies)) !==
+          JSON.stringify(overrides);
+        if (changed) {
+          await tx
+            .update(core_content_containers)
+            .set({ policies: overrides, updatedAt: new Date() })
+            .where(
+              and(
+                eq(core_content_containers.id, id),
+                eq(core_content_containers.definitionId, definitionId),
+              ),
+            );
+        }
+
+        return {
+          changed,
+          report: policyReport(
+            rows.map(candidate =>
+              candidate.id === id
+                ? { ...candidate, policies: overrides }
+                : candidate,
+            ),
+            id,
+          ),
+        };
+      });
+
+      if (changed) {
+        await expire("soft");
+        const record = await c
+          .get("db")
+          .select({ parentId: core_content_containers.parentId })
+          .from(core_content_containers)
+          .where(eq(core_content_containers.id, id))
+          .limit(1);
+        await emit("content.container.updated", {
+          changedFields: ["policies"],
+          containerId: id,
+          parentId: record[0]?.parentId ?? null,
+        });
+      }
+
+      return report;
+    },
 
     update: async (id, input) => {
       const values = parseInput(definition.schemas.update, input) as {

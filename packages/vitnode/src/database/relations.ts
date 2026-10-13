@@ -4,6 +4,7 @@ import * as admins from "./admins";
 import * as ai from "./ai";
 import * as content from "./content";
 import * as contentContainers from "./content-containers";
+import * as contentSubmissions from "./content-submissions";
 import * as cron from "./cron";
 import * as dashboard from "./dashboard";
 import * as files from "./files";
@@ -26,6 +27,7 @@ export const coreSchema = {
   ...ai,
   ...content,
   ...contentContainers,
+  ...contentSubmissions,
   ...cron,
   ...dashboard,
   ...files,

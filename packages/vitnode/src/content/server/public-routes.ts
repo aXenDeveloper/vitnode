@@ -54,6 +54,7 @@ import {
 } from "./page-cache";
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
+import { resolveContentPublicRowPeople } from "./public-row-hydration";
 import {
   contentPublicSelection,
   createContentPublicProjector,
@@ -63,6 +64,7 @@ import {
   contentSnapshotRow,
   projectTranslationRevisionSnapshot,
 } from "./revision-snapshot";
+import { readContentThread } from "./thread";
 
 export const buildContentPublicRoutes = <
   TDefinition extends AnyContentTypeDefinition,
@@ -492,9 +494,13 @@ export const buildContentPublicRoutes = <
       // The same file resolution the published reads do, through the same
       // function: a preview that showed a bare `core_files.id` where the live
       // page shows a descriptor would be previewing a different response.
-      const [withFiles] = await resolveContentPublicRowFiles(c, definition, [
-        { ...row, ...translated },
-      ]);
+      const [withFiles] = await resolveContentPublicRowPeople(
+        c,
+        definition,
+        await resolveContentPublicRowFiles(c, definition, [
+          { ...row, ...translated },
+        ]),
+      );
 
       return c.json(
         {
@@ -508,6 +514,96 @@ export const buildContentPublicRoutes = <
           ...localeHeaders(resolved.locale, resolved.source),
         },
       );
+    },
+  });
+
+  const threadNode = z.object({
+    depth: z.number(),
+    id: schemas.params.shape.id,
+    parentId: schemas.params.shape.id.nullable(),
+    record: schemas.publicSelectObject.nullable(),
+    removed: z.boolean(),
+  });
+
+  const thread = buildRoute({
+    pluginId,
+    route: {
+      method: "get",
+      path: "/thread",
+      description: `Read the ${name} thread under one root record: a page of top-level ${name} records, oldest first, each followed by every public answer below it`,
+      request: {
+        query: z.object({
+          root: z.string().min(1).max(64),
+          first: z.coerce
+            .number()
+            .int()
+            .min(1)
+            .max(CONTENT_PUBLIC_MAX_PAGE_SIZE)
+            .default(20),
+          after: z.string().max(512).optional(),
+        }),
+      },
+      responses: {
+        200: {
+          content: {
+            "application/json": {
+              schema: z.object({
+                items: z.array(threadNode),
+                pageInfo: z.object({
+                  endCursor: z.string().nullable(),
+                  hasNextPage: z.boolean(),
+                  totalCount: z.number(),
+                }),
+                replyCount: z.number(),
+                truncated: z.boolean(),
+              }),
+            },
+          },
+          description: "One page of the thread, flattened depth first",
+        },
+        404: { description: "The root record does not exist or is not public" },
+      },
+    },
+    handler: async c => {
+      const { after, first, root } = c.req.valid("query");
+      const rootField = definition.fields[definition.thread.rootField];
+      const target =
+        rootField?.kind === "relation" ? rootField.target() : undefined;
+      const rootModel = (c.get("core")?.contentModels ?? []).find(
+        entry => entry.model.definition.id === target?.id,
+      )?.model;
+      const rootId = target ? parseContentId(target.idStrategy, root) : null;
+      const rootRecord =
+        rootId === null
+          ? null
+          : await rootModel?.publicService?.(c).findById(rootId);
+      if (!rootRecord || rootId === null) {
+        throw new HTTPException(404, { message: "Thread not found." });
+      }
+
+      const read = service(c).findManyByIds;
+      const page = await readContentThread(c, model, {
+        after,
+        first,
+        project: async ids => {
+          const rows = read ? await read(ids as never) : [];
+
+          return new Map(
+            rows.map(row => [
+              String((row as unknown as { id: unknown }).id),
+              row,
+            ]),
+          );
+        },
+        root: rootId,
+      });
+
+      setPageCacheTags(c, [
+        ...contentListPageCacheTags(definition),
+        ...(target ? contentListPageCacheTags(target) : []),
+      ]);
+
+      return c.json(page, 200);
     },
   });
 
@@ -589,6 +685,7 @@ export const buildContentPublicRoutes = <
     ...(definition.delivery.enabled
       ? buildContentDeliveryRoutes(model, { pluginId })
       : []),
+    ...(definition.thread.enabled ? [thread] : []),
     detail,
     ...contentPublicWriteRoutes(model, { pluginId }),
   ];

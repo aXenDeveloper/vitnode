@@ -402,6 +402,7 @@ describe("GET /{id}/edit", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     await expect(response.json()).resolves.toEqual({
+      approval: null,
       id: TOPIC.DRAFT,
       publishedAt: null,
       slug: `topic-${TOPIC.DRAFT}`,

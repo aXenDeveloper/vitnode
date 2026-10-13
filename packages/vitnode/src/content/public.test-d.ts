@@ -156,9 +156,9 @@ describe("publicApi types", () => {
   describe("the public service", () => {
     type Service = ContentPublicService<Post>;
 
-    it("reads three ways and writes none", () => {
+    it("reads four ways and writes none", () => {
       expectTypeOf<keyof Service>().toEqualTypeOf<
-        "findById" | "findBySlug" | "findMany"
+        "findById" | "findBySlug" | "findMany" | "findManyByIds"
       >();
     });
 
