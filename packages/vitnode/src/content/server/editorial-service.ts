@@ -47,6 +47,7 @@ import type {
   ContentVisibilityMembers,
 } from "./visibility";
 
+import { cancelContentSubmissions } from "../approvals/server/submissions";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
@@ -93,7 +94,6 @@ import {
 import { createContentRevisionsModel } from "./revisions-model";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
-import { cancelContentSubmissions } from "../approvals/server/submissions";
 import { assertContentThreadPlacement } from "./thread";
 import {
   isContentBaseRowPublic,

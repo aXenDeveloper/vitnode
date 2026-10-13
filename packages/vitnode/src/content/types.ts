@@ -1,4 +1,5 @@
 import type { BlockAllowedSpec, ContentNode } from "../blocks/types";
+import type { ContentApprovalState } from "./approvals/schema";
 import type {
   CONTENT_ADMIN_FORM_MODES,
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
@@ -20,7 +21,6 @@ import type {
   CONTENT_VISIBILITY_FIELDS,
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
-import type { ContentApprovalState } from "./approvals/schema";
 import type { AnyContentContainerDefinition } from "./containers/types";
 import type { ContentFileDescriptor } from "./files";
 import type {

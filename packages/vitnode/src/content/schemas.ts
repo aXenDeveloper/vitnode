@@ -24,13 +24,13 @@ import type {
 } from "./types";
 
 import { zodBlockInstances, zodContentNode } from "../blocks/validate";
-import { zodContentApprovalState } from "./approvals/schema";
 import {
   contentAdvancedDisabled,
   contentFileCollectionMax,
   contentRepeatableMax,
   contentRepeatableMin,
 } from "./advanced";
+import { zodContentApprovalState } from "./approvals/schema";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_LOCALE_MAX_LENGTH,
