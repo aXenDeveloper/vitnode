@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fitNamespaceList,
   MAX_NAMESPACE_DEPTH,
   MAX_NAMESPACE_LENGTH,
   namespaceProblem,
@@ -88,5 +89,39 @@ describe("normalizeNamespaceList", () => {
 
   it("keeps an empty list empty", () => {
     expect(normalizeNamespaceList([])).toEqual([]);
+  });
+});
+
+describe("fitNamespaceList", () => {
+  const namespaces = [
+    "@vitnode/blog.post.list",
+    "@vitnode/blog.post.view",
+    "@vitnode/blog.tag.view",
+    "core.global",
+    "core.global",
+  ];
+
+  it.each<[string, number, string[]]>([
+    [
+      "leaves a list under budget alone, beyond normalising it",
+      10,
+      [
+        "@vitnode/blog.post.list",
+        "@vitnode/blog.post.view",
+        "@vitnode/blog.tag.view",
+        "core.global",
+      ],
+    ],
+    [
+      "coarsens to two segments when that is enough",
+      3,
+      ["@vitnode/blog.post", "@vitnode/blog.tag", "core.global"],
+    ],
+    ["falls back to the plugin root", 2, ["@vitnode/blog", "core"]],
+    // Dropping a namespace would render its strings as keys, so the plugin
+    // root is the floor even when it still overshoots.
+    ["stops at the plugin root even over budget", 1, ["@vitnode/blog", "core"]],
+  ])("%s", (_label, budget, expected) => {
+    expect(fitNamespaceList(namespaces, budget)).toEqual(expected);
   });
 });

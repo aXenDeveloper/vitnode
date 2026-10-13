@@ -101,10 +101,50 @@ describe("withModerationPermissions", () => {
     ]);
   });
 
-  it("keeps a module the plugin declared itself", () => {
-    const declared = { moderator: { topics: ["can_view_reports"] } };
+  it.each([
+    ["by default", undefined],
+    ["when listed as declared", new Set(["topics"])],
+  ])("keeps a module the plugin declared itself %s", (_label, declared) => {
+    const permissionStaff = { moderator: { topics: ["can_view_reports"] } };
 
-    expect(withModerationPermissions(declared, [target()])).toEqual(declared);
+    expect(
+      withModerationPermissions(permissionStaff, [target()], declared),
+    ).toEqual(permissionStaff);
+  });
+
+  it("merges into a generated module, keeping its entries and skipping duplicates", () => {
+    const generated = withModerationPermissions(
+      {
+        moderator: {
+          topics: [
+            { permission: "can_edit", scope: FAMILY },
+            { permission: "can_view_reports", scope: FAMILY },
+          ],
+        },
+      },
+      [target()],
+      new Set(),
+    );
+
+    expect(generated?.moderator?.topics).toEqual([
+      { permission: "can_edit", scope: FAMILY },
+      { permission: "can_view_reports", scope: FAMILY },
+      {
+        dependsOn: ["can_view_reports"],
+        permission: "can_manage_reports",
+        scope: FAMILY,
+      },
+      {
+        dependsOn: ["can_manage_reports"],
+        permission: "can_edit_notes",
+        scope: FAMILY,
+      },
+      {
+        dependsOn: ["can_manage_reports"],
+        permission: "can_delete_notes",
+        scope: FAMILY,
+      },
+    ]);
   });
 });
 

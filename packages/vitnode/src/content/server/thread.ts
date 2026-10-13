@@ -249,28 +249,66 @@ export const readContentThread = async <
     ...(columns.hiddenAt ? { hiddenAt: columns.hiddenAt } : {}),
   };
 
-  const cursor = decodeCursor(after);
   const topLevel = and(eq(rootColumn, root), isNull(parentColumn));
-  const [tops, [topTotal], [replyTotal]] = await Promise.all([
-    db
-      .select(nodeSelection)
-      .from(table)
-      .where(
-        and(
-          topLevel,
-          cursor
-            ? or(
-                gt(columns.createdAt, cursor.createdAt),
-                and(
-                  eq(columns.createdAt, cursor.createdAt),
-                  gt(columns.id, cursor.id),
-                ),
-              )
-            : undefined,
+  const after_ = (position: null | { createdAt: Date; id: ContentId }) =>
+    position
+      ? or(
+          gt(columns.createdAt, position.createdAt),
+          and(
+            eq(columns.createdAt, position.createdAt),
+            gt(columns.id, position.id),
+          ),
+        )
+      : undefined;
+
+  /**
+   * A top-level reply that is not public earns a place on the page only when
+   * something answers it - otherwise it would be pruned and leave a page short,
+   * or empty with `hasNextPage` still set. Skipped ones are read past in a few
+   * bounded rounds.
+   */
+  const readTops = async (): Promise<NodeRow[]> => {
+    const collected: NodeRow[] = [];
+    let position = decodeCursor(after);
+
+    for (let round = 0; round < 5 && collected.length <= first; round++) {
+      const batch = (await db
+        .select(nodeSelection)
+        .from(table)
+        .where(and(topLevel, after_(position)))
+        .orderBy(asc(columns.createdAt), asc(columns.id))
+        .limit(first + 1)) as NodeRow[];
+      if (batch.length === 0) break;
+
+      const hidden = batch
+        .filter(row => !isContentBaseRowPublic(row))
+        .map(row => row.id);
+      const answered = new Set(
+        hidden.length === 0
+          ? []
+          : (
+              await db
+                .select({ parent: parentColumn })
+                .from(table)
+                .where(inArray(parentColumn, hidden))
+            ).map(row => String(row.parent)),
+      );
+      collected.push(
+        ...batch.filter(
+          row => isContentBaseRowPublic(row) || answered.has(String(row.id)),
         ),
-      )
-      .orderBy(asc(columns.createdAt), asc(columns.id))
-      .limit(first + 1) as Promise<NodeRow[]>,
+      );
+
+      const last = batch.at(-1);
+      if (!last || batch.length <= first) break;
+      position = { createdAt: last.createdAt, id: last.id };
+    }
+
+    return collected;
+  };
+
+  const [tops, [topTotal], [replyTotal]] = await Promise.all([
+    readTops(),
     db
       .select({ value: count() })
       .from(table)

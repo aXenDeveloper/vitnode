@@ -8,7 +8,15 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { core_content_containers } from "@/database/content-containers";
 import { createTestCache } from "@/tests/cache";
-import { testBoardContainers } from "@/tests/content-fixtures";
+import {
+  testBoardContainers,
+  testPolicyBoardContainers,
+} from "@/tests/content-fixtures";
+import {
+  POLICY_PLUGIN_ID,
+  policyReplies,
+  policyTopics,
+} from "@/tests/content-policies";
 import { createMemoryDb } from "@/tests/memory-db";
 import {
   grantStaffPermissions,
@@ -287,6 +295,201 @@ describe("permission matrix", () => {
       await expect(
         statusWith(label, grantOf([permission], OTHER_PLUGIN_ID)),
       ).resolves.toBe(403);
+    },
+  );
+});
+
+describe("publishing policies", () => {
+  const POLICY_MODULE = testPolicyBoardContainers.admin.permissionModule;
+  const TOPIC = policyTopics.definition.id;
+  const REPLY = policyReplies.definition.id;
+  const PARENT = 1;
+  const CHILD = 2;
+
+  const policyRoutes = buildContentContainerAdminRoutes(
+    testPolicyBoardContainers,
+    { pluginId: POLICY_PLUGIN_ID, usage: holdsContent },
+  );
+
+  const policyHarness = async (
+    permissions:
+      | PermissionsStaffArgs[]
+      | typeof ROOT_STAFF_PERMISSIONS = ROOT_STAFF_PERMISSIONS,
+  ) => {
+    const memory = createMemoryDb([
+      [
+        core_content_containers,
+        [
+          {
+            ...row(PARENT, "parent", null, 0, testPolicyBoardContainers.id),
+            pluginId: POLICY_PLUGIN_ID,
+            policies: { [TOPIC]: { publish: "approve" } },
+          },
+          {
+            ...row(CHILD, "child", PARENT, 0, testPolicyBoardContainers.id),
+            pluginId: POLICY_PLUGIN_ID,
+            policies: { [TOPIC]: { authorEdit: "never" } },
+          },
+        ],
+      ],
+    ]);
+    const cache = createTestCache();
+    await grantStaffPermissions(cache, { permissions, userId: adminUser.id });
+
+    const app = new OpenAPIHono();
+    app.use("*", async (c, next) => {
+      c.set("admin", { user: adminUser } as unknown as Context["var"]["admin"]);
+      c.set("cache", cache);
+      c.set("db", memory.db as unknown as Context["var"]["db"]);
+      c.set("events", {
+        emit: async () => await Promise.resolve({ failures: [] }),
+      } as unknown as Context["var"]["events"]);
+      c.set("core", {
+        contentModels: [
+          { model: policyTopics, pluginId: POLICY_PLUGIN_ID },
+          { model: policyReplies, pluginId: POLICY_PLUGIN_ID },
+        ],
+      } as unknown as Context["var"]["core"]);
+      await next();
+    });
+    app.onError((error, c) =>
+      error instanceof HTTPException
+        ? error.getResponse()
+        : c.json({ error: String(error) }, 500),
+    );
+    for (const { handler, hook, route } of policyRoutes) {
+      app.openapi(route, handler, hook as never);
+    }
+
+    const send = async (method: string, path: string, body?: unknown) =>
+      await app.request(path, {
+        method,
+        ...(body === undefined
+          ? {}
+          : {
+              body: JSON.stringify(body),
+              headers: { "content-type": "application/json" },
+            }),
+      });
+
+    return { rows: () => memory.rows(core_content_containers), send };
+  };
+
+  const grantOf = (permissions: readonly string[]): PermissionsStaffArgs[] =>
+    permissions.map(permission => ({
+      module: POLICY_MODULE,
+      permission,
+      plugin: POLICY_PLUGIN_ID,
+    }));
+
+  it.each([
+    ["GET", CONTENT_PERMISSIONS.view, undefined],
+    ["PUT", CONTENT_PERMISSIONS.edit, { overrides: {} }],
+  ])(
+    "%s /{id}/policies is refused without %s and allowed with only it",
+    async (method, permission, body) => {
+      const statusWith = async (grant: PermissionsStaffArgs[]) => {
+        const { send } = await policyHarness(grant);
+
+        return (await send(method, `/${CHILD}/policies`, body)).status;
+      };
+
+      await expect(statusWith([])).resolves.toBe(403);
+      await expect(
+        statusWith(
+          grantOf(ALL_PERMISSIONS.filter(other => other !== permission)),
+        ),
+      ).resolves.toBe(403);
+      await expect(statusWith(grantOf([permission]))).resolves.toBe(200);
+    },
+  );
+
+  it("reports the container's overrides, what it inherits and where each value comes from", async () => {
+    const { send } = await policyHarness();
+
+    const response = await send("GET", `/${CHILD}/policies`);
+
+    expect(response.status).toBe(200);
+    const report = (await response.json()) as {
+      contentTypes: { contentTypeId: string }[];
+      overrides: unknown;
+    };
+    expect(report.overrides).toEqual({ [TOPIC]: { authorEdit: "never" } });
+    expect(report.contentTypes).toEqual([
+      {
+        contentTypeId: TOPIC,
+        effective: {
+          authorEdit: "never",
+          authorEditMinutes: 60,
+          create: "members",
+          edits: "immediate",
+          publish: "approve",
+        },
+        inherited: {
+          authorEdit: "always",
+          authorEditMinutes: 60,
+          create: "members",
+          edits: "immediate",
+          publish: "approve",
+        },
+        pluginId: POLICY_PLUGIN_ID,
+        sources: {
+          authorEdit: { containerId: CHILD, kind: "container" },
+          authorEditMinutes: { kind: "fallback" },
+          create: { kind: "fallback" },
+          edits: { kind: "default" },
+          publish: { containerId: PARENT, kind: "container" },
+        },
+      },
+      expect.objectContaining({
+        contentTypeId: REPLY,
+        effective: expect.objectContaining({
+          authorEdit: "window",
+          publish: "immediate",
+        }),
+        sources: expect.objectContaining({
+          authorEdit: { kind: "contentType" },
+          publish: { kind: "default" },
+        }),
+      }),
+    ]);
+  });
+
+  it("replaces the overrides", async () => {
+    const { rows, send } = await policyHarness();
+    const overrides = { [REPLY]: { publish: "approve" } };
+
+    const response = await send("PUT", `/${CHILD}/policies`, { overrides });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ overrides });
+    expect(rows().find(candidate => candidate.id === CHILD)?.policies).toEqual(
+      overrides,
+    );
+  });
+
+  it.each([
+    [
+      "a content type not filed in the collection",
+      { "test.topic": { publish: "approve" } },
+      "invalidPolicy",
+    ],
+    ["an unknown value", { [TOPIC]: { publish: "sometimes" } }, "invalidInput"],
+    ["an unknown key", { [TOPIC]: { moderated: true } }, "invalidInput"],
+  ])(
+    "refuses %s with 400 and keeps the overrides",
+    async (_label, overrides, code) => {
+      const { rows, send } = await policyHarness();
+      const before = rows();
+
+      const response = await send("PUT", `/${CHILD}/policies`, { overrides });
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        code,
+        message: expect.any(String),
+      });
+      expect(rows()).toEqual(before);
     },
   );
 });

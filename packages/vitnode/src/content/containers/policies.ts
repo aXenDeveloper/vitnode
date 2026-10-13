@@ -245,7 +245,7 @@ export const contentAuthorMayEdit = (
   );
 };
 
-/** Reads a stored `policies` column defensively: unknown keys and values are dropped. */
+/** Reads a stored `policies` column defensively: an entry that no longer parses is dropped whole. */
 export const readContentContainerPolicyOverrides = (
   value: unknown,
 ): ContentContainerPolicyOverrides => {

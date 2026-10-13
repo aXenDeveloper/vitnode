@@ -110,6 +110,21 @@ describe("defineContentType", () => {
   describe("container fields", () => {
     const boards = defineContentContainer({ id: "test.boards" });
 
+    it("accepts a required to-one container relation", () => {
+      expect(() =>
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            topic: field.relation({
+              container: true,
+              required: true,
+              target: () => testCategoryContentType,
+            }),
+          },
+        }),
+      ).not.toThrow();
+    });
+
     it.each([true, false])("accepts a container with required %s", required => {
       expect(() =>
         define({
@@ -164,6 +179,67 @@ describe("defineContentType", () => {
           section: field.container({ definition: boards }),
         },
         /declares 2 container fields \(board, section\)/,
+      ],
+      [
+        "a to-many container relation",
+        {
+          topics: field.relation({
+            container: true,
+            multiple: true,
+            target: () => testCategoryContentType,
+          }),
+        },
+        /Relation "topics" is `container: true` and `multiple: true`/,
+      ],
+      [
+        "a self container relation",
+        {
+          parent: field.relation({
+            container: true,
+            nullable: true,
+            self: true,
+          }),
+        },
+        /Relation "parent" is `container: true` and `self: true`/,
+      ],
+      [
+        "an optional container relation",
+        {
+          topic: field.relation({
+            container: true,
+            nullable: true,
+            target: () => testCategoryContentType,
+          }),
+        },
+        /Relation "topic" is `container: true` but not required/,
+      ],
+      [
+        "a container field and a container relation",
+        {
+          board: field.container({ definition: boards }),
+          topic: field.relation({
+            container: true,
+            required: true,
+            target: () => testCategoryContentType,
+          }),
+        },
+        /takes its container from 2 fields \(board, topic\)/,
+      ],
+      [
+        "two container relations",
+        {
+          topic: field.relation({
+            container: true,
+            required: true,
+            target: () => testCategoryContentType,
+          }),
+          thread: field.relation({
+            container: true,
+            required: true,
+            target: () => testCategoryContentType,
+          }),
+        },
+        /takes its container from 2 fields \(topic, thread\)/,
       ],
     ])("rejects %s", (_label, fields, message) => {
       expect(() =>
@@ -312,6 +388,36 @@ describe("defineContentType", () => {
       expect(
         defineSlug(field.slug({ source: "title" })).fields.slug,
       ).toMatchObject({ required: false });
+    });
+
+    it("is optional in the create payload when generated", () => {
+      const definition = defineSlug(field.slug({ generated: true }));
+
+      expect(
+        definition.schemas.create.safeParse({ title: "Hello" }).success,
+      ).toBe(true);
+    });
+
+    it.each([
+      [
+        "a source",
+        field.slug({ generated: true, source: "title" } as never),
+        {},
+        /is both `generated: true` and sourced from "title"/,
+      ],
+      [
+        "localization",
+        field.slug({ generated: true, localized: true }),
+        { localization: { defaultLocale: "en" } },
+        /is `generated: true` and `localized: true`/,
+      ],
+    ])("rejects a generated slug with %s", (_label, slug, extra, message) => {
+      expect(() =>
+        define({
+          fields: { title: field.text({ required: true }), slug },
+          ...extra,
+        }),
+      ).toThrow(message);
     });
 
     it("rejects a source that does not exist", () => {

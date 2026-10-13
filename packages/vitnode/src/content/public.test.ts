@@ -259,6 +259,41 @@ describe("publicApi", () => {
     });
   });
 
+  describe("people", () => {
+    it("publishes no one until asked", () => {
+      expect(define().publicApi.people).toEqual([]);
+    });
+
+    it("keeps the user fields it was given", () => {
+      expect(
+        define({ publicApi: { people: ["author"] } }).publicApi.people,
+      ).toEqual(["author"]);
+    });
+
+    it.each([
+      ["a list", { people: "author" }, /is a list of user field names/],
+      ["an unknown field", { people: ["ghost"] }, /unknown field "ghost"/],
+      [
+        "a field that is not a user",
+        { people: ["title"] },
+        /"title", which is a "text" field/,
+      ],
+      [
+        "a to-many user",
+        { people: ["editors"] },
+        /to-many user field "editors"/,
+      ],
+      ["a duplicate", { people: ["author", "author"] }, /lists "author" twice/],
+    ])("rejects %s", (_label, publicApi, message) => {
+      expect(() =>
+        define({
+          fields: { ...baseFields, editors: field.user({ multiple: true }) },
+          publicApi,
+        }),
+      ).toThrow(message);
+    });
+  });
+
   describe("generated schemas", () => {
     const { schemas } = testPostContentType;
 
@@ -419,6 +454,36 @@ describe("publicApi on a localized content type", () => {
         },
       } as never),
     ).toThrow(/reserves/);
+  });
+
+  it.each([
+    [
+      "a localized user",
+      { author: { ...field.user(), localized: true } },
+      ["author"],
+      /people includes the localized field "author"/,
+    ],
+    [
+      "a user called `locale`",
+      { locale: field.user() },
+      ["locale"],
+      /"locale", which the public response already uses/,
+    ],
+  ])("refuses %s in `people`", (_label, fields, people, message) => {
+    expect(() =>
+      defineContentType({
+        id: "test.public-people",
+        tableName: "test_public_people",
+        localization: { defaultLocale: "en" },
+        publication: true,
+        fields: {
+          title: field.text({ localized: true, required: true }),
+          slug: field.slug({ localized: true, source: "title" }),
+          ...fields,
+        },
+        publicApi: { fields: ["title", "slug"], path: "people", people },
+      } as never),
+    ).toThrow(message);
   });
 
   it("leaves a field called `locale` alone when nothing is localized", () => {
