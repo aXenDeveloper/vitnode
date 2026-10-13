@@ -23,6 +23,7 @@ import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 
 import { ContentFormFieldSkeleton } from "../form/skeleton";
+import { ContentContainerField } from "./container-field";
 import { ContentGroupField } from "./group-field";
 import { ContentOptionSwatch } from "./option-swatch";
 import { contentOptionsQueryKey } from "./options-query";
@@ -221,6 +222,9 @@ export const ContentField = ({
   switch (spec.kind) {
     case "boolean":
       return <AutoFormSwitch label={spec.label} {...props} />;
+
+    case "container":
+      return <ContentContainerField spec={spec} {...props} />;
 
     case "dateTime":
       return <AutoFormDateTime label={spec.label} {...props} />;

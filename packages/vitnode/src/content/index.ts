@@ -1,4 +1,12 @@
 export {
+  contentContainerAdminHref,
+  contentContainerI18nKeys,
+  contentContainerLabelsFrom,
+  contentContainerNamespace,
+  contentContainerNouns,
+} from "./admin/containers";
+export type { ContentContainerLabels } from "./admin/containers";
+export {
   contentEntityKey,
   contentI18nKeys,
   contentNouns,
@@ -19,14 +27,6 @@ export type {
   RegisteredFrontendContentContainer,
   RegisteredFrontendContentType,
 } from "./admin/registry";
-export {
-  contentContainerAdminHref,
-  contentContainerI18nKeys,
-  contentContainerLabelsFrom,
-  contentContainerNamespace,
-  contentContainerNouns,
-} from "./admin/containers";
-export type { ContentContainerLabels } from "./admin/containers";
 
 export { resolveContentAdminRoute } from "./admin/route";
 export type {
@@ -61,6 +61,7 @@ export {
 } from "./admin/upload";
 export type { ContentUploadRejection } from "./admin/upload";
 export {
+  contentContainerTag,
   contentDeliveryRedirectTag,
   contentDeliverySitemapTag,
   contentDeliveryTag,

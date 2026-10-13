@@ -42,6 +42,7 @@ interface SkeletonFieldSource {
 
 const controlOfKind: Record<string, ContentFormSkeletonControl> = {
   boolean: "switch",
+  container: "input",
   dateTime: "input",
   enum: "input",
   file: "media",

@@ -1,5 +1,6 @@
 import type { PermissionsStaffArgs } from "../api/lib/permission-staff";
 import type { ItemAutoFormComponentProps } from "../components/form/auto-form";
+import type { AnyContentContainerDefinition } from "../content/containers/types";
 import type { ContentId } from "../content/ids";
 import type {
   AnyContentTypeDefinition,
@@ -31,8 +32,19 @@ export type AdminNavContentType = Pick<
   "definition" | "icon"
 >;
 
+/**
+ * A container collection (`defineContentContainer`), as the AdminCP reads it:
+ * which collection, and the icon its sidebar entry and tree rows draw.
+ */
+export interface ContentContainerFrontendRegistration {
+  definition: AnyContentContainerDefinition;
+  /** Sidebar and tree icon. Defaults to a generic folder icon. */
+  icon?: React.ReactNode;
+}
+
 export interface AdminNavPluginSource {
   admin?: { nav?: AdminNavDeclaration[] };
+  containers?: ContentContainerFrontendRegistration[];
   contentTypes?: AdminNavContentType[];
   pluginId: string;
 }
@@ -119,6 +131,7 @@ export interface ContentTypeFrontendRegistration {
 }
 
 export interface ContentFrontendPluginSource {
+  containers?: ContentContainerFrontendRegistration[];
   contentTypes?: ContentTypeFrontendRegistration[];
   pluginId: string;
 }
@@ -163,6 +176,7 @@ export interface BuildPluginReturn<P extends string = string> {
     };
     nav?: AdminNavDeclaration[];
   };
+  containers?: ContentContainerFrontendRegistration[];
   contentTypes?: ContentTypeFrontendRegistration[];
   /**
    * Every locale file this plugin ships, as literal `*.json` specifiers an

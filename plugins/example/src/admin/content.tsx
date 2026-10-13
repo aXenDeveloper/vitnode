@@ -4,6 +4,7 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import {
   exampleArticleNav,
+  exampleBoardsNav,
   exampleCategoryNav,
   exampleDiscussionNav,
   exampleEventNav,
@@ -13,6 +14,7 @@ import {
 
 export const adminContent = {
   pluginId: CONFIG_PLUGIN.pluginId,
+  containers: [exampleBoardsNav],
   contentTypes: [
     exampleArticleNav,
     exampleCategoryNav,

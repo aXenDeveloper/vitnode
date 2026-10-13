@@ -32,6 +32,8 @@ const REFERENCE_LIFECYCLE =
 const DEFERRED: Partial<Record<ContentFieldKind, string>> = {
   blocks:
     "nested blocks are a later stage: a block that contains a zone needs the zone's own allowlist, depth limits and cycle detection before it can be stored safely",
+  container:
+    "a container is where a whole record is filed - one forum board, one blog section. A block is part of a record, not a record of its own, so it has nowhere to be filed",
   file: `${REFERENCE_LIFECYCLE}. Supporting it means extracting the references out of a block's data on write and pinning them exactly as a \`file\` column is pinned, with \`ON DELETE RESTRICT\`, so the Files screen answers 409 instead of orphaning a page`,
   relation: `${REFERENCE_LIFECYCLE}. It also needs somewhere to honour \`onDelete\`, which for a column is the foreign key itself`,
   repeatable:
