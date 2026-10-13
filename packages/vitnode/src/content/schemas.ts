@@ -24,6 +24,7 @@ import type {
 } from "./types";
 
 import { zodBlockInstances, zodContentNode } from "../blocks/validate";
+import { zodContentApprovalState } from "./approvals/schema";
 import {
   contentAdvancedDisabled,
   contentFileCollectionMax,
@@ -771,6 +772,7 @@ const buildPublicWriteSchemas = <TDefinition>({
   ];
 
   const record = z.object({
+    approval: zodContentApprovalState.nullable(),
     id: recordIdOutputSchema(idStrategy),
     publishedAt: z.date().nullable(),
     slug: z.string().nullable(),

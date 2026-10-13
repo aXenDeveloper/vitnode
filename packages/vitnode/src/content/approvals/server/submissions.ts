@@ -6,23 +6,15 @@ import type { ContentRecordContainer } from "../../containers/server/policy";
 import type { ContentId } from "../../ids";
 import type { ContentDatabase } from "../../server/service";
 import type { AnyContentTypeDefinition } from "../../types";
-import type { ContentSubmissionKind, ContentSubmissionStatus } from "../const";
+import type { ContentSubmissionKind } from "../const";
+import type { ContentApprovalState } from "../schema";
 
 import { core_content_submissions } from "../../../database/content-submissions";
 import { contentIdKey } from "../../ids";
 
-export type ContentSubmissionRow = typeof core_content_submissions.$inferSelect;
+export type { ContentApprovalState } from "../schema";
 
-/** What a public-write response tells its author about moderation. */
-export interface ContentApprovalState {
-  id: number;
-  kind: ContentSubmissionKind;
-  reason: null | string;
-  status: ContentSubmissionStatus;
-  submittedAt: Date;
-  /** The proposed values, for an edit still waiting for a moderator. */
-  values: null | Record<string, unknown>;
-}
+export type ContentSubmissionRow = typeof core_content_submissions.$inferSelect;
 
 export const toContentApprovalState = (
   row: ContentSubmissionRow,

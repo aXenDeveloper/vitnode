@@ -10,7 +10,10 @@ import { adminQueryRoot } from "@/views/admin/table/query";
 
 import type { ContentContainerApiTarget } from "./container-request";
 
-import { fetchContentContainers } from "./container-request";
+import {
+  fetchContentContainerPolicies,
+  fetchContentContainers,
+} from "./container-request";
 
 export const contentContainerQueryRoot = (definitionId: string) =>
   [...adminQueryRoot("containers"), definitionId] as const;
@@ -32,6 +35,25 @@ export const contentContainerListQuery = ({
     retry: (failureCount, error) =>
       !(isAdminRequestError(error) && error.status < 500) && failureCount < 2,
     staleTime: RECORD_STALE_TIME,
+  });
+
+export const contentContainerPoliciesQuery = ({
+  definitionId,
+  id,
+  target,
+}: {
+  definitionId: string;
+  id: number;
+  target: ContentContainerApiTarget;
+}) =>
+  queryOptions({
+    queryFn: async ({ signal }) =>
+      await fetchContentContainerPolicies(target, id, { signal }),
+    queryKey: [...contentContainerQueryRoot(definitionId), "policies", id],
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) =>
+      !(isAdminRequestError(error) && error.status < 500) && failureCount < 2,
+    staleTime: 0,
   });
 
 export const invalidateContentContainers = async (

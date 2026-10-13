@@ -8,6 +8,7 @@
     "scoped-permissions",
     "configure-moderators",
     "process-reports",
+    "review-approvals",
     "reference"
   ]
 }

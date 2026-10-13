@@ -1,0 +1,64 @@
+---
+title: Review approvals
+description: Approve or reject new content and edits waiting in the VitNode Moderator CP approval queue. Filter the queue, compare an edit with the live version and leave the author a reason.
+icon: ClipboardCheck
+---
+
+When a container asks for approval, new content and edits from members do not go live straight away. They wait in the **Approvals** queue of the Moderator CP at `/modcp/approvals` until a moderator says yes or no.
+
+## Before you begin
+
+You need a moderator entry with `can_approve` for the container the content lives in. The queue only shows submissions you may decide, so two moderators can see two different queues. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+
+<Steps>
+
+<Step>
+
+### Open the queue
+
+Choose **Moderator CP** in the user menu, then **Approvals**. The number next to it counts what is still pending.
+
+{/* Image prompt: Moderator CP approvals queue with status tabs (Pending, Approved, Rejected, Replaced, Cancelled), Type and Location filters, and a list of submissions showing the author avatar, a New or Edit badge, the content type, the title, the location and the date */}
+
+Each row shows who sent it, whether it is **New** content or an **Edit** of something already live, the content type (a topic or a reply, for example), where it lives and when it arrived.
+
+- The tabs switch between **Pending** and the decided ones: **Approved**, **Rejected**, **Replaced** (the author sent a newer version) and **Cancelled** (the content was deleted first).
+- **Type** and **Location** narrow the list to one content type or one container.
+
+Tabs, filters and the page number live in the address, so a filtered queue is a link you can share.
+
+</Step>
+
+<Step>
+
+### Read the submission
+
+Open a row. For **New** content you see every proposed field. For an **Edit** you see **Changes**: each changed field shows **Live now** next to **Proposed**, and the untouched fields are folded away below.
+
+**History** lists earlier submissions for the same content, with their outcomes and reasons. **View live** opens the content in a new tab when it has a page.
+
+</Step>
+
+<Step>
+
+### Decide
+
+- **Approve** publishes new content, or applies the edit as one new revision.
+- **Reject** opens a dialog with an optional **Reason**. Nothing on the site changes, and the author can read your reason and try again.
+
+Either way you land back in the queue with a short confirmation.
+
+</Step>
+
+</Steps>
+
+## When a decision fails
+
+| Message | What happened |
+| --- | --- |
+| **Already decided** | Another moderator got there first. |
+| **The record changed** | Someone edited the content after the proposal was made. Reject it and ask the author to resubmit. |
+| **The content is gone** | It was deleted, so the submission was cancelled. |
+| **Out of your reach** | The content moved to a container where you cannot approve. |
+
+The detail page warns you when the content is gone or has changed before you click, so surprises should be rare. Rare, not extinct.

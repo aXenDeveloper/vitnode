@@ -61,6 +61,19 @@ export {
 } from "./admin/upload";
 export type { ContentUploadRejection } from "./admin/upload";
 export {
+  CONTENT_SUBMISSION_DECISION_CODES,
+  CONTENT_SUBMISSION_KINDS,
+  CONTENT_SUBMISSION_LIMITS,
+  CONTENT_SUBMISSION_STATUSES,
+} from "./approvals/const";
+export type {
+  ContentSubmissionDecisionCode,
+  ContentSubmissionKind,
+  ContentSubmissionStatus,
+} from "./approvals/const";
+export { zodContentApprovalState } from "./approvals/schema";
+export type { ContentApprovalState } from "./approvals/schema";
+export {
   contentContainerTag,
   contentDeliveryRedirectTag,
   contentDeliverySitemapTag,
@@ -196,18 +209,49 @@ export {
 export {
   ContentContainerAssignmentError,
   contentContainerFieldOf,
+  contentContainerSourceOf,
 } from "./containers/association";
-export type { ContentContainerFieldEntry } from "./containers/association";
+export type {
+  ContentContainerFieldEntry,
+  ContentContainerSource,
+} from "./containers/association";
 export {
   CONTENT_CONTAINER_ABSOLUTE_MAX_DEPTH,
   CONTENT_CONTAINER_ERROR_CODES,
   CONTENT_CONTAINER_FIELD_KINDS,
+  CONTENT_CONTAINER_POLICY_AUTHOR_EDIT,
+  CONTENT_CONTAINER_POLICY_CREATE,
+  CONTENT_CONTAINER_POLICY_KEYS,
+  CONTENT_CONTAINER_POLICY_MAX_MINUTES,
+  CONTENT_CONTAINER_POLICY_MODES,
+  CONTENT_CONTAINER_TREE_SUFFIX,
 } from "./containers/const";
 export {
   defineContentContainer,
   isContentContainerDefinition,
 } from "./containers/define";
 export { ContentContainerError } from "./containers/errors";
+export {
+  contentAuthorMayEdit,
+  contentContainerPolicyFallback,
+  resolveContentContainerPolicy,
+  zodContentContainerPolicy,
+  zodContentContainerPolicyOverrides,
+  zodEffectiveContentContainerPolicy,
+} from "./containers/policies";
+export type {
+  ContentContainerPoliciesInput,
+  ContentContainerPolicy,
+  ContentContainerPolicyAuthorEdit,
+  ContentContainerPolicyCreate,
+  ContentContainerPolicyInput,
+  ContentContainerPolicyKey,
+  ContentContainerPolicyMode,
+  ContentContainerPolicyOverrides,
+  ContentContainerPolicySource,
+  EffectiveContentContainerPolicy,
+  ResolvedContentContainerPolicies,
+} from "./containers/policies";
 export {
   contentContainerPermissionEntries,
   validateContentContainers,

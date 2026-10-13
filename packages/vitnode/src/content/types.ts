@@ -20,6 +20,7 @@ import type {
   CONTENT_VISIBILITY_FIELDS,
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
+import type { ContentApprovalState } from "./approvals/schema";
 import type { AnyContentContainerDefinition } from "./containers/types";
 import type { ContentFileDescriptor } from "./files";
 import type {
@@ -2369,6 +2370,11 @@ export type ContentPublicUpdateBody<TDefinition> = Prettify<
 
 export type ContentPublicWriteRecord<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> & {
+    /**
+     * The record's moderation state as its author sees it: a pending or a
+     * rejected submission, or `null` when nothing is waiting.
+     */
+    approval: ContentApprovalState | null;
     id: ContentIdOf<TDefinition>;
     publishedAt: Date | null;
     slug: null | string;

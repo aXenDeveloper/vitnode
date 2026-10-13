@@ -104,7 +104,7 @@ describe("publicWrite types", () => {
       type Record = ContentPublicWriteRecord<Topic>;
 
       expectTypeOf<keyof Record>().toEqualTypeOf<
-        "id" | "publishedAt" | "slug" | "status" | "values"
+        "approval" | "id" | "publishedAt" | "slug" | "status" | "values"
       >();
       expectTypeOf<
         Record["status"]

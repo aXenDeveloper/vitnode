@@ -1,8 +1,13 @@
 import { z } from "zod";
 
+import type { ContentContainerPolicyOverrides } from "@/content/containers/policies";
 import type { ContentContainerErrorCode } from "@/content/containers/types";
 
 import { CONTENT_CONTAINER_ERROR_CODES } from "@/content/containers/const";
+import {
+  zodContentContainerPolicyOverrides,
+  zodEffectiveContentContainerPolicy,
+} from "@/content/containers/policies";
 import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
@@ -96,7 +101,7 @@ const send = async (
   target: ContentContainerApiTarget,
   request: {
     body?: unknown;
-    method: "delete" | "patch" | "post";
+    method: "delete" | "patch" | "post" | "put";
     params?: Record<string, number>;
     path: string;
   },
@@ -161,4 +166,73 @@ export const deleteContentContainer = async (
     method: "delete",
     params: { id },
     path: "/{id}",
+  });
+
+const policySourceSchema = z.union([
+  z.object({ containerId: z.number(), kind: z.literal("container") }),
+  z.object({ kind: z.enum(["contentType", "default", "fallback"]) }),
+]);
+
+const policyReportSchema = z.object({
+  contentTypes: z.array(
+    z.object({
+      contentTypeId: z.string(),
+      effective: zodEffectiveContentContainerPolicy,
+      inherited: zodEffectiveContentContainerPolicy,
+      pluginId: z.string(),
+      sources: z.record(z.string(), policySourceSchema),
+    }),
+  ),
+  id: z.number(),
+  overrides: zodContentContainerPolicyOverrides,
+});
+
+export type AdminContentContainerPolicyReport = z.infer<
+  typeof policyReportSchema
+>;
+
+export type AdminContentContainerPolicySource = z.infer<
+  typeof policySourceSchema
+>;
+
+export const fetchContentContainerPolicies = async (
+  target: ContentContainerApiTarget,
+  id: number,
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<AdminContentContainerPolicyReport> => {
+  const description = `the publishing rules of container ${String(id)} in ${describe(target)}`;
+  const response = await rawFetcher({
+    ...requestArgs(target),
+    method: "get",
+    options: { signal },
+    params: { id },
+    path: "/{id}/policies",
+  });
+
+  if (!response.ok) {
+    throw new AdminRequestError(response.status, description);
+  }
+
+  const parsed = policyReportSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    throw new AdminRequestError(
+      response.status,
+      description,
+      "the API returned a response this collection does not describe",
+    );
+  }
+
+  return parsed.data;
+};
+
+export const updateContentContainerPolicies = async (
+  target: ContentContainerApiTarget,
+  id: number,
+  overrides: ContentContainerPolicyOverrides,
+): Promise<ContentContainerMutationResult<null>> =>
+  await send(target, {
+    body: { overrides },
+    method: "put",
+    params: { id },
+    path: "/{id}/policies",
   });

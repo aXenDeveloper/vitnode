@@ -124,5 +124,99 @@ export const modcpAssigneesQueryOptions = (id: number) =>
     staleTime: 30_000,
   });
 
+export const MODCP_APPROVAL_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "superseded",
+  "cancelled",
+] as const;
+
+export type ModcpApprovalStatus = (typeof MODCP_APPROVAL_STATUSES)[number];
+
+export interface ModcpApprovalsFilter {
+  containerId?: number;
+  contentTypeId?: string;
+  page: number;
+  pageSize: number;
+  status: ModcpApprovalStatus;
+}
+
+const fetchApprovals = async (filter: ModcpApprovalsFilter) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { query: filter },
+    method: "get",
+    module: "moderation",
+    path: "/approvals",
+  });
+  if (!response.ok) throw new ModcpRequestError(response.status, "approvals");
+
+  return await response.json();
+};
+
+export type ModcpApprovalsPage = Awaited<ReturnType<typeof fetchApprovals>>;
+
+export type ModcpApprovalItem = ModcpApprovalsPage["items"][number];
+
+export const modcpApprovalsQueryOptions = (filter: ModcpApprovalsFilter) =>
+  queryOptions({
+    queryFn: async () => await fetchApprovals(filter),
+    queryKey: [...MODCP_ROOT, "approvals", filter],
+    retry: false,
+    staleTime: 10_000,
+  });
+
+const fetchApprovalFilters = async () => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "moderation",
+    path: "/approvals/filters",
+  });
+  if (!response.ok) {
+    throw new ModcpRequestError(response.status, "approval filters");
+  }
+
+  return await response.json();
+};
+
+export type ModcpApprovalFilters = Awaited<
+  ReturnType<typeof fetchApprovalFilters>
+>;
+
+export const modcpApprovalFiltersQueryOptions = () =>
+  queryOptions({
+    queryFn: fetchApprovalFilters,
+    queryKey: [...MODCP_ROOT, "approvals", "filters"],
+    retry: false,
+    staleTime: 60_000,
+  });
+
+const fetchApproval = async (id: number) => {
+  const response = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    args: { params: { id } },
+    method: "get",
+    module: "moderation",
+    path: "/approvals/{id}",
+  });
+  if (!response.ok) {
+    throw new ModcpRequestError(response.status, "a submission");
+  }
+
+  return await response.json();
+};
+
+export type ModcpApprovalDetail = Awaited<ReturnType<typeof fetchApproval>>;
+
+export const modcpApprovalQueryOptions = (id: number) =>
+  queryOptions({
+    queryFn: async () => await fetchApproval(id),
+    queryKey: [...MODCP_ROOT, "approval", id],
+    retry: false,
+    staleTime: 0,
+  });
+
 export const invalidateModcp = async (queryClient: QueryClient) =>
   await queryClient.invalidateQueries({ queryKey: MODCP_ROOT });

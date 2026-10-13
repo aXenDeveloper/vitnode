@@ -49,6 +49,7 @@ import type {
 } from "./visibility";
 
 import { withPagination } from "../../api/lib/with-pagination";
+import { cancelContentSubmissions } from "../approvals/server/submissions";
 import {
   CONTENT_DEFAULT_PAGE_SIZE,
   CONTENT_EDITORIAL_FIELDS,
@@ -837,6 +838,7 @@ export const createContentService = <
         .delete(table)
         .where(eq(primaryCursor, id))
         .returning(ownSelection());
+      if (row) await cancelContentSubmissions(db(options), definition, id);
 
       return row ? toRow(row) : null;
     },

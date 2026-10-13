@@ -23,6 +23,8 @@ type AutoFormNullableNumberProps = ItemAutoFormComponentProps &
   > & {
     orLabel?: React.ReactNode;
     placeholder?: string;
+    /** The number restored when the toggle is unchecked before anything was typed. */
+    resumeValue?: number;
     toggleLabel: React.ReactNode;
     unitLabel?: React.ReactNode;
   };
@@ -42,6 +44,7 @@ export const AutoFormNullableNumber = ({
   className,
   disabled,
   placeholder,
+  resumeValue = 0,
   unitLabel,
   orLabel,
   toggleLabel,
@@ -50,7 +53,7 @@ export const AutoFormNullableNumber = ({
   const { formItemId } = useFormField();
   const isToggled = field.value === null;
   const lastNumericRef = React.useRef(
-    typeof field.value === "number" ? field.value : 0,
+    typeof field.value === "number" ? field.value : resumeValue,
   );
 
   return (

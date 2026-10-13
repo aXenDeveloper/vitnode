@@ -7,14 +7,19 @@ import type { BoardPerson } from "@/views/moderation/modcp/board/board-moves";
 
 import {
   MODCP_BOARD_STATUSES,
+  modcpApprovalFiltersQueryOptions,
+  modcpApprovalQueryOptions,
+  modcpApprovalsQueryOptions,
   modcpBoardColumnQueryOptions,
   modcpReportQueryOptions,
   ModcpRequestError,
 } from "@/views/moderation/modcp/modcp-query";
 
 import type { AuthenticatedState } from "../auth/state";
+import type { ModcpApprovalsRouteSearch } from "./approvals-route-search";
 import type { ModcpReportsRouteSearch } from "./route-search";
 
+import { modcpApprovalsFilter } from "./approvals-route-search";
 import { modcpBoardFilter } from "./route-search";
 
 export interface ModcpRouteData {
@@ -30,6 +35,30 @@ export const requireModeratorRoute = (auth: AuthenticatedState): void => {
   if (!auth.user.isModerator) {
     // oxlint-disable-next-line typescript/only-throw-error
     throw notFound();
+  }
+};
+
+/** A serial id from the URL, or the route's 404. */
+const routeIdOf = (raw: string): number => {
+  const id = /^[1-9]\d{0,9}$/.test(raw) ? Number(raw) : Number.NaN;
+  if (!Number.isSafeInteger(id) || id > 2_147_483_647) {
+    // oxlint-disable-next-line typescript/only-throw-error
+    throw notFound();
+  }
+
+  return id;
+};
+
+/** Turns the API's 404 - which also covers "not in your scope" - into the route's. */
+const withNotFound = async (load: () => Promise<unknown>): Promise<void> => {
+  try {
+    await load();
+  } catch (error) {
+    if (error instanceof ModcpRequestError && error.status === 404) {
+      // oxlint-disable-next-line typescript/only-throw-error
+      throw notFound();
+    }
+    throw error;
   }
 };
 
@@ -89,29 +118,82 @@ export const loadModcpReportRoute = async ({
   t: PluginRouteTranslator;
 }): Promise<ModcpReportRouteData> => {
   requireModeratorRoute(auth);
-  const id = /^[1-9]\d{0,9}$/.test(raw) ? Number(raw) : Number.NaN;
-  if (!Number.isSafeInteger(id) || id > 2_147_483_647) {
-    // oxlint-disable-next-line typescript/only-throw-error
-    throw notFound();
-  }
+  const id = routeIdOf(raw);
 
-  try {
-    await queryClient.query({
-      ...modcpReportQueryOptions(id),
-      staleTime: "static",
-    });
-  } catch (error) {
-    if (error instanceof ModcpRequestError && error.status === 404) {
-      // oxlint-disable-next-line typescript/only-throw-error
-      throw notFound();
-    }
-    throw error;
-  }
+  await withNotFound(
+    async () =>
+      await queryClient.query({
+        ...modcpReportQueryOptions(id),
+        staleTime: "static",
+      }),
+  );
 
   return {
     description: t("core.moderation.modcp.reports.desc"),
     id,
     title: t("core.moderation.modcp.detail.title", { id }),
     userId: auth.user.id,
+  };
+};
+
+export const loadModcpApprovalsRoute = async ({
+  auth,
+  queryClient,
+  search,
+  t,
+}: {
+  auth: AuthenticatedState;
+  queryClient: QueryClient;
+  search: ModcpApprovalsRouteSearch;
+  t: PluginRouteTranslator;
+}): Promise<ModcpRouteData> => {
+  requireModeratorRoute(auth);
+  await Promise.all([
+    queryClient.query({
+      ...modcpApprovalsQueryOptions(modcpApprovalsFilter(search)),
+      staleTime: "static",
+    }),
+    queryClient.query({
+      ...modcpApprovalFiltersQueryOptions(),
+      staleTime: "static",
+    }),
+  ]);
+
+  return {
+    description: t("core.moderation.modcp.approvals.desc"),
+    title: t("core.moderation.modcp.approvals.title"),
+  };
+};
+
+export interface ModcpApprovalRouteData extends ModcpRouteData {
+  id: number;
+}
+
+export const loadModcpApprovalRoute = async ({
+  auth,
+  id: raw,
+  queryClient,
+  t,
+}: {
+  auth: AuthenticatedState;
+  id: string;
+  queryClient: QueryClient;
+  t: PluginRouteTranslator;
+}): Promise<ModcpApprovalRouteData> => {
+  requireModeratorRoute(auth);
+  const id = routeIdOf(raw);
+
+  await withNotFound(
+    async () =>
+      await queryClient.query({
+        ...modcpApprovalQueryOptions(id),
+        staleTime: "static",
+      }),
+  );
+
+  return {
+    description: t("core.moderation.modcp.approvals.desc"),
+    id,
+    title: t("core.moderation.modcp.approvals.detail.title", { id }),
   };
 };

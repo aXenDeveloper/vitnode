@@ -93,6 +93,7 @@ import {
 import { createContentRevisionsModel } from "./revisions-model";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
+import { cancelContentSubmissions } from "../approvals/server/submissions";
 import { assertContentThreadPlacement } from "./thread";
 import {
   isContentBaseRowPublic,
@@ -1077,6 +1078,7 @@ export const createContentEditorialService = <
           before: row,
           itemId: id,
         });
+        await cancelContentSubmissions(tx, definition, id);
 
         return {
           changed: true,
