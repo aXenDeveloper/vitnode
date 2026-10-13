@@ -167,11 +167,14 @@ slug: field.slug({ source: "title" }),
 | Name          | Type                 | Required | Default | Description                                                |
 | ------------- | -------------------- | -------- | ------- | ---------------------------------------------------------- |
 | `source`      | name of a text field | No       |         | Fills the slug from that field when a create sends no slug |
+| `generated`   | `boolean`            | No       | `false` | Mints a random token when a create sends no slug. Not with `source` |
 | `maxLength`   | `number`             | No       | `160`   | `varchar` length and the point where long slugs are cut    |
 | `localized`   | `boolean`            | No       | `false` | One slug per language                                      |
 | `description` | `string`             | No       |         | Shown under the input                                      |
 
 A slug has no `required` or `nullable` option. It is required when there is no `source`, and it is never empty. Every value is normalized, so `"Weekend Pancakes!"` becomes `weekend-pancakes`. Slugs are unique across the table, or within each language when localized. The slug is derived only on create, so renaming the title later keeps the old URL. `source` must name a `field.text()`, and a localized slug needs a localized source.
+
+For records without a natural title, such as forum replies, use `field.slug({ generated: true })`. The server mints a random token of lowercase letters and digits, 10 characters or `maxLength` if shorter, such as `k3v9q2m7xa`. A generated slug cannot be `localized` or have a `source`, and it is never [publicly writable](/docs/content-engine/public-write-api#writable-fields). See [Threaded replies](/docs/content-engine/threads).
 
 ## User
 
@@ -187,7 +190,7 @@ authorId: field.user({ multiple: true, ordered: true, min: 1 }),
 | `min`      | `number`                                    | No       |           | Fewest people. Needs `multiple`            |
 | `onDelete` | `"cascade"` \| `"restrict"` \| `"set null"` | No       | see below | What deleting the user does                |
 
-A single user field is nullable unless you set `required: true`. `onDelete` defaults to `"set null"` for a nullable single user, `"restrict"` for a required one and `"cascade"` for `multiple`. User fields cannot be listed in `publicApi.fields`.
+A single user field is nullable unless you set `required: true`. `onDelete` defaults to `"set null"` for a nullable single user, `"restrict"` for a required one and `"cascade"` for `multiple`. User fields cannot be listed in `publicApi.fields`. To publish an author's name and avatar, name a single, shared user field in [`publicApi.people`](/docs/content-engine/reference#publicapi) instead.
 
 ## File
 
@@ -228,8 +231,11 @@ category: field.relation({ required: true, onDelete: "restrict", target: () => c
 | `ordered`  | `boolean`                                   | No                 | `false`      | Keeps the editor's order. Needs `multiple`                                   |
 | `min`      | `number`                                    | No                 |              | Fewest targets, 1 to 500. Needs `multiple`                                   |
 | `onDelete` | `"restrict"` \| `"cascade"` \| `"set null"` | No                 | `"restrict"` | What deleting the target does. `"set null"` needs a nullable single relation |
+| `container` | `boolean`                                  | No                 | `false`      | The record lives in the target record's [container](#container). Required, to-one, never `self` |
 
-A single relation must be `required` or `nullable`. A to-many relation can be neither. The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
+A single relation must be `required` or `nullable`. A to-many relation can be neither. A to-one `self: true` relation, such as the reply a reply answers, must be `nullable`, because the first record has nothing to point at.
+
+`container: true` files the record in the container of the record it points at, such as a reply in its topic's forum. The server always reads that container from the related row, so a client cannot claim another one, and [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply as if the record had its own `field.container()`. A content type takes its container from one field only: one `field.container()` or one `container: true` relation. The target must have a `field.container()`, or the API stops at boot with ``Field "x" is `container: true`, but its target ... is not filed in a container.`` The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
 
 ## Container
 

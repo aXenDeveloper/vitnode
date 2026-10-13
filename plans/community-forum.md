@@ -200,8 +200,8 @@ ModCP `/modcp/approvals` (list + detail with compare, approve, reject).
 - `thread: { parent: "<self relation>", root: "<to-one relation>", maxDepth }`
   on a content type: the parent must be the same type, in the same root, public,
   and above `maxDepth`. The parent is set on create only, so cycles cannot form.
-- `GET /{path}/thread?root=<id>&first&cursor` pages top-level replies (oldest
-  first, `publishedAt, id`) and returns their public descendants. A non-public
+- `GET /{path}/thread?root=<id>&first&after` pages top-level replies (oldest
+  first, `createdAt, id`) and returns their public descendants. A non-public
   ancestor of a public reply is returned as a tombstone (`removed: true`, no
   values) so the tree stays intact.
 - `field.slug({ generated: true })` gives records without a natural title (a

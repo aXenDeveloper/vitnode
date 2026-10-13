@@ -164,7 +164,7 @@ export const boardMovedListener = buildEventListener({
 });
 ```
 
-`changedFields` names `name`, `slug` and the metadata fields whose value actually changed. A reorder among siblings is a `moved` event with the same `fromParentId` and `parentId`. Register listeners as described in [Events](/docs/dev/events). [Built-in events](/docs/dev/events/built-in-events#content-container-events) has the field-by-field payloads.
+`changedFields` names `name`, `slug` and the metadata fields whose value actually changed, or `policies` when the container's [publishing policies](/docs/content-engine/container-policies) were saved. A reorder among siblings is a `moved` event with the same `fromParentId` and `parentId`. Register listeners as described in [Events](/docs/dev/events). [Built-in events](/docs/dev/events/built-in-events#content-container-events) has the field-by-field payloads.
 
 Every write also expires the [page cache](/docs/content-engine/caching) entries that read the collection, including pages that list content filtered by one of its containers, so a renamed board shows its new name without a manual purge.
 

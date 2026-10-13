@@ -1,0 +1,233 @@
+---
+title: Threaded replies
+description: Build nested replies with the VitNode Content Engine thread option - a to-one self relation for the parent, a root relation that also gives the reply its container, generated slugs, public author summaries and the GET /thread route.
+icon: MessagesSquare
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+The `thread` option turns a content type into replies that answer each other under one root record, like forum replies under a topic or comments under a post. The server keeps the tree valid, and one public route returns a page of it, nested and in order.
+
+This guide builds `forum.reply` from the Forum plugin. Each reply belongs to a `forum.topic`, may answer another reply, and lives in its topic's forum.
+
+## Before you begin
+
+You need the root content type with a [public API](/docs/content-engine/public-api), here `forum.topic`. For members to post replies, read [Public write](/docs/content-engine/public-write) first.
+
+<Steps>
+
+<Step>
+
+### Define the reply
+
+Create the content type. Four fields do the threading work, and `thread` names two of them:
+
+```ts title="plugins/forum/src/content/reply.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+import { topicContentType } from "@/content/topic";
+
+export const replyContentType = defineContentType({
+  id: "forum.reply",
+  tableName: "forum_replies",
+
+  fields: {
+    slug: field.slug({ generated: true }),
+    body: field.richText({ required: true }),
+    author: field.user(),
+    topic: field.relation({
+      target: () => topicContentType,
+      required: true,
+      container: true,
+      onDelete: "cascade",
+    }),
+    parent: field.relation({ self: true, nullable: true, onDelete: "set null" }),
+  },
+
+  publication: true,
+  visibility: true,
+
+  publicApi: {
+    path: "replies",
+    fields: ["id", "slug", "body", "topic", "parent", "publishedAt", "createdAt"],
+    filterableFields: ["topic"],
+    people: ["author"],
+  },
+
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["body", "topic", "parent"], status: "published" },
+    update: { fields: ["body"] },
+  },
+
+  thread: { parent: "parent", root: "topic", maxDepth: 6 },
+});
+```
+
+- `parent` is a to-one **self relation**: the reply being answered, or `null` for a direct answer to the topic. It must be nullable, because the first reply has nothing to point at.
+- `topic` is the **root**. `container: true` files the reply in the topic's forum, so [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply to replies without a container field of their own. A `container: true` relation must be required and to-one.
+- `slug` with `generated: true` gets a random 10-character token on create, such as `k3v9q2m7xa`, because a reply has no title to derive one from.
+- `people: ["author"]` publishes the author as a small profile summary. `publicApi.fields` never exposes a user, so this is a separate opt-in.
+
+`parent` and `topic` must be in `publicApi.fields`, so readers can rebuild the tree, and they cannot be in `update.fields`: a reply is placed when it is written and stays there. Every option and its errors are in the [`thread` reference](/docs/content-engine/reference#thread).
+
+</Step>
+
+<Step>
+
+### Create the model
+
+A self relation finds its own table, so `references` lists only the topic:
+
+```ts title="plugins/forum/src/database/replies.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { replyContentType } from "@/content/reply";
+
+import { forum_topics } from "./topics";
+
+export const replyContent = createContentModel(replyContentType, {
+  references: { topic: () => forum_topics.id },
+});
+
+export const forum_replies = replyContent.table;
+```
+
+An entry for `parent` in `references` throws, which is the engine politely saying it has this one covered.
+
+</Step>
+
+<Step>
+
+### Register, build and migrate
+
+Add `replyContent` to `contentTypes` of `buildContentPublicModule` (and the admin module, for an AdminCP screen) next to the topics. Then run this from the workspace root and restart `pnpm dev`:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+
+```bash tab="bun"
+bun run build:plugins && bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins && pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins && npm run db:migrate
+```
+
+</Tabs>
+
+The table gets a `parent` column with a foreign key to `forum_replies.id` and a `topic` column pointing at `forum_topics.id`. The Forum plugin also adds `indexes: [{ on: ["topic", "parent", "createdAt"] }]` to the definition, which matches how the thread route reads. See [`indexes`](/docs/content-engine/reference#indexes).
+
+</Step>
+
+<Step>
+
+### Read the thread
+
+`GET /{path}/thread` returns one page of top-level replies, oldest first, each followed by every public answer below it. Call it with the [fetcher](/docs/dev/fetcher):
+
+```ts title="plugins/forum/src/pages/topic-thread-data.ts"
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+export const fetchTopicThread = async (topicId: number, after?: string) => {
+  const res = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "content/replies",
+    path: "/thread",
+    args: { query: { root: String(topicId), first: 20, after } },
+  });
+  if (!res.ok) throw new Error("Could not load the replies.");
+
+  return await res.json();
+};
+```
+
+`items` is already flattened depth first, so render it as a list and indent each item by its `depth`. Pass `pageInfo.endCursor` as `after` to load the next page.
+
+</Step>
+
+</Steps>
+
+## What the thread route returns
+
+| Query   | Type     | Default | Description                                         |
+| ------- | -------- | ------- | --------------------------------------------------- |
+| `root`  | `string` |         | The root record's id. Required                      |
+| `first` | `number` | `20`    | Top-level replies per page, from 1 to 50            |
+| `after` | `string` |         | `pageInfo.endCursor` of the previous page           |
+
+```json title="GET /api/@vitnode/forum/content/replies/thread?root=42 (trimmed)"
+{
+  "items": [
+    {
+      "depth": 1,
+      "id": 17,
+      "parentId": null,
+      "removed": false,
+      "record": {
+        "id": 17,
+        "slug": "k3v9q2m7xa",
+        "body": { "type": "doc", "content": [] },
+        "topic": 42,
+        "parent": null,
+        "publishedAt": "2026-10-13T09:20:00.000Z",
+        "createdAt": "2026-10-13T09:20:00.000Z",
+        "author": {
+          "id": 3,
+          "name": "Ada",
+          "nameCode": "ada",
+          "avatarColor": "#2563eb",
+          "avatarUrl": null,
+          "role": { "color": null, "prefix": null }
+        }
+      }
+    },
+    { "depth": 2, "id": 18, "parentId": 17, "removed": true, "record": null },
+    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21, "parent": 18 } }
+  ],
+  "pageInfo": { "endCursor": "WyIyMDI2LTEwLTEzVDA5OjIwOjAwLjAwMFoiLDE3XQ", "hasNextPage": false, "totalCount": 1 },
+  "replyCount": 2,
+  "truncated": false
+}
+```
+
+- **Tombstones.** A reply that is not public, such as a hidden one, is left out. If a public answer sits below it, it comes back as `removed: true` with `record: null`, so the tree keeps its shape. Reply 18 above is one.
+- **Counts.** `totalCount` counts public top-level replies, and `replyCount` counts public replies at any depth.
+- **Limits.** One page carries at most 500 nodes and stops at `maxDepth`. `truncated: true` means some nested replies did not fit.
+- **The root must be public.** A missing, draft or hidden topic answers `404`.
+
+`record` has the same shape as a record from the public list, including `people` summaries. A person is `null` when the account was deleted.
+
+## Placement rules
+
+Every create, and every update that touches `parent` or `topic`, is checked on the server, in the AdminCP too. A broken rule answers `400` with an issue on the field:
+
+| Rule                                                        | Message                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| The parent exists                                            | `The reply you are answering does not exist.`                             |
+| The parent is in the same topic                              | `The reply you are answering belongs to another conversation.`            |
+| A reply never answers itself or one of its answers           | `A reply cannot answer itself or one of its answers.`                     |
+| Nothing sits deeper than `maxDepth`                          | `Replies nest at most 6 levels deep. Answer a reply higher up.`           |
+| A reply with answers keeps its topic                         | `This reply has answers. Move the whole conversation instead of one reply.` |
+
+On the public routes, the parent must also be public: a hidden or draft parent gets the usual `unavailable` issue.
+
+Deleting a reply with `onDelete: "set null"` turns its answers into top-level replies. Hiding it with [visibility](/docs/content-engine/content-visibility) keeps them where they are, under a tombstone, which is usually what a forum wants.
+
+## Check the result
+
+Create a topic, then post a reply and an answer to it as a signed-in member:
+
+```bash
+curl -X POST http://localhost:3000/api/@vitnode/forum/content/replies \
+  -H "Content-Type: application/json" -b "vitnode_auth=<session>" \
+  -d '{"values":{"topic":42,"parent":17,"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Same here!"}]}]}}}'
+```
+
+The response has a generated `slug`. `GET /api/@vitnode/forum/content/replies/thread?root=42` now lists reply 17 with the new answer below it at `depth: 2`. Sending a `parent` from another topic answers `400` with an issue on `parent`.

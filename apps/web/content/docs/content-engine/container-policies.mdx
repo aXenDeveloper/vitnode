@@ -1,0 +1,159 @@
+---
+title: Publishing policies
+description: Set per-container publishing rules in the VitNode Content Engine. Decide who may post in a forum, whether new posts and edits wait for approval, and how long authors may edit, with defineContentContainer policies and the AdminCP Publishing sheet.
+icon: ShieldCheck
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+Publishing policies let each container decide how members post in it: who may start, whether new records go live or wait for a moderator, whether edits to live records wait too, and how long authors may edit. One forum can be a free-for-all while the one next to it reviews every post.
+
+This guide uses the Forum plugin: the `forum.forums` container collection, with topics (`forum.topic`) filed into forums and replies (`forum.reply`) living in their topic's forum.
+
+## Before you begin
+
+You need a [container collection](/docs/content-engine/containers) and at least one content type with [public write](/docs/content-engine/public-write) filed into it, through `field.container()` or a [`field.relation({ container: true })`](/docs/content-engine/fields#relation). Policies only govern the public write routes. Staff working in the AdminCP are not affected.
+
+<Steps>
+
+<Step>
+
+### Turn on policies for the collection
+
+Add `policies` to the collection's definition. `defaults` applies to every content type in it, and `contentTypes` overrides it for one content type:
+
+```ts title="plugins/forum/src/content/forums.ts"
+import { defineContentContainer, field } from "@vitnode/core/content";
+
+export const forumContainers = defineContentContainer({
+  id: "forum.forums",
+  fields: {
+    description: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  hierarchy: { maxDepth: 4 },
+  // [!code ++:10]
+  policies: {
+    defaults: {
+      publish: "immediate",
+      edits: "immediate",
+      authorEdit: "always",
+    },
+    contentTypes: {
+      "forum.reply": { authorEdit: "window", authorEditMinutes: 30 },
+    },
+  },
+  publicApi: { path: "forums", fields: ["description"] },
+  admin: { path: "forum/forums" },
+});
+```
+
+Topics go live straight away and stay editable by their authors. Replies go live too, but their authors can only edit them for 30 minutes.
+
+`policies: {}` is enough to switch the feature on and leave every decision to the AdminCP. Without `policies`, the collection does not take part: its content types keep using `publicWrite.create.status`, owners edit forever, and `can_edit` stays unscoped.
+
+</Step>
+
+<Step>
+
+### Build and restart
+
+Policies are stored in a column core already has, so there is no migration. Rebuild the plugin and restart `pnpm dev`:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins">
+
+```bash tab="bun"
+bun run build:plugins
+```
+
+```bash tab="pnpm"
+pnpm build:plugins
+```
+
+```bash tab="npm"
+npm run build:plugins
+```
+
+</Tabs>
+
+Turning policies on also gives each content type in the collection container-scoped `can_edit` and `can_approve` moderator permissions. Grant and label them as described in [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
+
+</Step>
+
+<Step>
+
+### Override one container in the AdminCP
+
+Open the collection's screen, such as `/admin/containers/forum/forums`. In a forum's row menu, choose **Publishing**. The **Publishing rules** sheet has one section per content type, with these settings:
+
+| Setting                      | Key                 | Choices                                                     |
+| ---------------------------- | ------------------- | ----------------------------------------------------------- |
+| **Who can start**            | `create`            | **Members**, **Moderators only**                            |
+| **New posts**                | `publish`           | **Publish immediately**, **Wait for approval**              |
+| **Edits to published posts** | `edits`             | **Apply immediately**, **Wait for approval**                |
+| **Author editing**           | `authorEdit`        | **Always**, **Never**, **For a limited time**               |
+| **Editing window**           | `authorEditMinutes` | Minutes, used by **For a limited time**                     |
+
+{/* Image prompt: AdminCP Publishing rules sheet for the forum "Help", with a Topics section where New posts is set to Wait for approval and the other settings show "Inherit (currently: ...)" with a line under each saying where the value comes from, and a Save rules button in the footer */}
+
+Every setting starts on **Inherit (currently: …)**, and the line below it says where the current value comes from: a parent forum, the collection's defaults or the content type's own default. For the "Help" forum, set **New posts** to **Wait for approval** for topics and choose **Save rules**.
+
+The sheet needs the collection's `can_view` admin permission to open and `can_edit` to save. Saving emits `content.container.updated` with `changedFields: ["policies"]`.
+
+</Step>
+
+</Steps>
+
+## How a value is chosen
+
+Each of the five keys is decided on its own. The engine takes the first layer that sets it:
+
+1. the record's container, for that content type;
+2. the nearest ancestor that sets it, walking up the parents;
+3. `policies.contentTypes[contentTypeId]` in the definition;
+4. `policies.defaults` in the definition;
+5. the fallback: `create: "members"`, `publish` from `publicWrite.create.status` (`"published"` becomes `"immediate"`, `"draft"` becomes `"approve"`), `edits: "immediate"`, `authorEdit: "always"`, `authorEditMinutes: 60`.
+
+With "Help" set to **Wait for approval** for topics, a topic in its child forum "Bug reports" waits for approval too, while replies there still publish immediately: rules are per content type, and nobody changed the reply rules.
+
+A key that is absent inherits. An explicit value is an override, even when it matches the parent today. If someone later relaxes "Help", a child that explicitly says **Wait for approval** keeps waiting. Choose **Inherit** to remove an override.
+
+## What members notice
+
+| Rule                       | What happens on the public write routes                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `publish: "approve"`       | A new record is stored as a draft, a submission opens, and the response carries `approval`. See [Approvals](/docs/content-engine/approvals) |
+| `edits: "approve"`         | An author's edit of a published record becomes a proposal. The live record does not change until a moderator approves      |
+| `authorEdit: "never"`      | Only moderators edit. The author gets `403` with the `edit_window_closed` issue                                             |
+| `authorEdit: "window"`     | The author edits until `authorEditMinutes` after the record's server `createdAt`, then gets `403` with `edit_window_closed`  |
+| `create: "moderators"`     | Only moderators holding `can_edit` in that container may create. Everyone else gets `403` with the `moderators_only` issue  |
+
+Moderators are never held back by these rules. A `can_edit` holder edits any record in the container at any age, and a `can_approve` holder skips approval for their own posts. Root roles pass every check. The issue codes come in the usual [rejection](/docs/content-engine/public-write-api#rejection) body, so translate them like any other issue.
+
+Changing a policy never touches submissions that are already pending.
+
+## Check the result
+
+Sign in as a regular member and create a topic in "Help". The response is a draft waiting for approval:
+
+```json title="POST /api/@vitnode/forum/content/topics → 201"
+{
+  "approval": {
+    "id": 7,
+    "kind": "create",
+    "reason": null,
+    "status": "pending",
+    "submittedAt": "2026-10-13T09:12:44.512Z",
+    "values": null
+  },
+  "id": 42,
+  "slug": "the-editor-forgets-my-draft",
+  "status": "draft",
+  "publishedAt": null,
+  "version": 1,
+  "values": { "title": "The editor forgets my draft", "body": { "type": "doc", "content": [] }, "forum": 3 }
+}
+```
+
+The topic is not on the public site yet. It appears in the [ModCP approval queue](/docs/dev/moderation/review-approvals) for moderators who hold `can_approve` in "Help". A topic in a forum without overrides still answers with `"status": "published"` and `"approval": null`.
+
+Every option, route and error is in the [Publishing policies reference](/docs/content-engine/container-policies-api).

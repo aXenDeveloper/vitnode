@@ -1,6 +1,6 @@
 ---
 title: Moderation reference
-description: Reference for VitNode moderation, covering the reports option, scope families, report targets, permissions, ModCP API routes, statuses, events, snapshot format and limits.
+description: Reference for VitNode moderation, covering the reports option, scope families, report targets, permissions, ModCP report and approval routes, statuses, events, snapshot format and limits.
 icon: BookOpen
 ---
 
@@ -33,6 +33,8 @@ Added to the content type's `permissionModule` in the **moderator** catalog, unl
 | `can_hide`           | `can_view_hidden`  | The target can be hidden     | **Hide content** and **Restore content** in the ModCP |
 
 Content actions also need `can_manage_reports`, because they are recorded in the report.
+
+[Public write](/docs/content-engine/public-write-api#moderator-permission) adds `can_edit` to the same module. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` and `can_approve` are scoped by the collection's family, whose id is the container definition id and whose resources are container ids and `"{id}:tree"` subtrees. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions). Generated entries merge with the report permissions; only a module the plugin declares itself in `permissionStaff.moderator` is left as declared.
 
 ## Scoped grants
 
@@ -110,6 +112,33 @@ All under `/api/@vitnode/core/moderation`, using the user session. A guest gets 
 | `POST /reports/{id}/actions/{action}` | `can_manage_reports` and the action's permission | `{ expectedVersion }` |
 | `GET /reports/{id}/assignees`        | `can_manage_reports` |                                              |
 
+## Approval routes
+
+Also under `/api/@vitnode/core/moderation`, for [approvals](/docs/content-engine/approvals). The queue routes need a moderator entry and show only submissions in containers where the moderator holds `can_approve`; anything else answers `404`, so its existence is not revealed. Every response is `Cache-Control: private, no-store`.
+
+| Method and path                  | Permission    | Input                                                                     | Success                            |
+| -------------------------------- | ------------- | ------------------------------------------------------------------------- | ---------------------------------- |
+| `GET /approvals`                 | `can_approve` | Query `status` (default `pending`), `contentTypeId`, `containerId`, `page`, `pageSize` | `{ items, page, pageSize, total }` |
+| `GET /approvals/filters`         | `can_approve` |                                                                           | `{ contentTypes, containers }` the moderator may review |
+| `GET /approvals/mine`            | Signed in     | Query `page`, `pageSize`                                                  | The member's own pending, approved and rejected submissions, newest first |
+| `GET /approvals/{id}`            | `can_approve` |                                                                           | The submission with `values`, `baseValues`, `current`, `fields`, `record` and `history` |
+| `POST /approvals/{id}/approve`   | `can_approve` |                                                                           | `{ id, status }`                   |
+| `POST /approvals/{id}/reject`    | `can_approve` | `{ reason? }`, up to 2000 characters                                      | `{ id, status }`                   |
+
+The pending queue is oldest first; decided statuses are newest decision first. A list item has `id`, `kind`, `status`, `contentTypeId`, `pluginId`, `itemId`, `title`, `author`, `reviewer`, `container` (`{ id, name, slug, path }`), `reason`, `createdAt` and `decidedAt`.
+
+A refused decision answers `{ error, message }`:
+
+| `error`     | Status | When                                                                    |
+| ----------- | ------ | ----------------------------------------------------------------------- |
+| `notFound`  | `404`  | No such submission in the moderator's scope                             |
+| `forbidden` | `403`  | The record now lives in a container where the moderator cannot approve  |
+| `decided`   | `409`  | The submission is no longer `pending`                                   |
+| `gone`      | `409`  | The record was deleted. The submission becomes `cancelled`              |
+| `stale`     | `409`  | The record changed since the proposal, or the proposal no longer validates |
+
+Statuses are `pending`, `approved`, `rejected`, `superseded` (replaced by the author's newer proposal) and `cancelled` (the record was deleted first). The constants are `CONTENT_SUBMISSION_STATUSES`, `CONTENT_SUBMISSION_KINDS` and `CONTENT_SUBMISSION_DECISION_CODES` from `@vitnode/core/content`. Server code can decide one with `decideContentSubmission(c, { decision, id, reason?, reviewerId })` from `@vitnode/core/content/server`, which throws `ContentSubmissionDecisionError` with the same `code` and `status`.
+
 ## Events
 
 | Event                         | Payload                                                       |
@@ -121,6 +150,9 @@ All under `/api/@vitnode/core/moderation`, using the user session. A guest gets 
 | `moderation.report.reopened`  | `{ reportId }`                                                |
 | `moderation.report.note_updated` | `{ reportId, noteId }`                                     |
 | `moderation.report.note_deleted` | `{ reportId, noteId }`                                     |
+| `content.approval.submitted`  | `{ submissionId, replacedSubmissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId }` |
+| `content.approval.approved`   | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId }` |
+| `content.approval.rejected`   | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId, reason }` |
 
 Adding a note emits no event. Hiding through a report also emits the content type's own `hidden` or `unhidden` event. See [Built-in events](/docs/dev/events/built-in-events#moderation-events).
 
@@ -156,9 +188,14 @@ The snapshot is read in one read-only transaction, so its fields and `source` de
 | Reports per user                 | 20 per hour |
 | Open reports per reporter and target | 1 |
 | Queue page size                  | 25 by default, up to 100 |
+| Approval queue page size         | 25 by default, up to 100 |
+| Rejection reason                 | Optional, up to 2000 characters |
+| Pending submissions per record   | 1 |
 
 File fields keep `{ id, name, mimeType, size, url }` only. The file's bytes are never copied, so a file deleted later cannot be opened from the report.
 
 ## Database
 
 The migration `20261011193321_add_moderation_reports` adds `core_moderation_reports` and `core_moderation_report_events`. Neither references the reported content, so deleting content keeps its reports. Reporter, assignee and resolver are `ON DELETE SET NULL`, so deleting an account keeps the evidence. The unique `openKey` column enforces one open report per reporter and target, even under concurrent submissions.
+
+Approvals live in `core_content_submissions`, one row per submission. Rows are never deleted with the content, author and reviewer are `ON DELETE SET NULL`, and a partial unique index allows one `pending` submission per record. Container policy overrides are stored in `core_content_containers.policies`.

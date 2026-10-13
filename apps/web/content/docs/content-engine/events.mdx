@@ -47,6 +47,8 @@ A few payload details that change what a listener does:
 
 [Container collections](/docs/content-engine/containers) emit their own four events, `content.container.created`, `updated`, `moved` and `deleted`, listed in [Container hierarchy](/docs/content-engine/container-hierarchy#events).
 
+A record waiting for [approval](/docs/content-engine/approvals) emits its `published` or `updated` only when a moderator approves it, once. The submission itself emits `content.approval.submitted`, `approved` and `rejected`, listed in [Built-in events](/docs/dev/events/built-in-events#content-approval-events).
+
 The listener also receives an envelope with the actor, the time and `pluginId`. `pluginId` is always the plugin that owns the content type, even when a core queue task ran the change. Field-by-field descriptions are in [Built-in events](/docs/dev/events/built-in-events#content-engine-events).
 
 ## Subscribe to an event

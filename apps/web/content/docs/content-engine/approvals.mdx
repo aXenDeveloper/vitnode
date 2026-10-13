@@ -1,0 +1,112 @@
+---
+title: Approvals
+description: How the VitNode Content Engine approval workflow works. New records wait as drafts, edits of live records wait as proposals, moderators approve or reject them, and authors follow their submissions through the approval field and /moderation/approvals/mine.
+icon: ClipboardCheck
+---
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+When a container's [publishing policy](/docs/content-engine/container-policies) says `publish: "approve"` or `edits: "approve"`, a member's post does not go live straight away. The server stores a **submission**, a moderator decides, and only an approval changes what readers see. This page explains what waits where, what the author sees, and what a decision does. The moderator's side is in [Review approvals](/docs/dev/moderation/review-approvals).
+
+## What waits, and where
+
+The server decides from the effective policy of the record's container. The client never sends a status.
+
+| The author                                       | What is stored                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Creates a topic in an `approve` forum            | A `draft` row plus a `create` submission. Nothing public can reach a draft                              |
+| Edits a published topic, with `edits: "approve"` | An `edit` submission holding the proposed values. The live row and its `version` do not change          |
+| Edits again while that proposal is pending       | A new proposal. The old one becomes `superseded`, so a record never has more than one pending submission |
+| Edits a draft whose create is pending            | The draft is updated in place, and the pending submission follows it                                    |
+| Edits a draft whose create was rejected          | The draft is updated, and a new `create` submission opens: a resubmission                               |
+
+A proposal is validated like a normal edit before it is stored, so a moderator never reviews something that could not be saved.
+
+Some people skip the queue. A moderator holding `can_approve` in the container publishes and edits their own posts immediately, and so does a root role. A moderator editing through `can_edit` always applies the edit at once, even to someone else's record. Those permissions are [scoped to containers](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
+
+AdminCP staff work outside this flow: their edits apply directly, as always.
+
+## What the author sees
+
+Every public write response carries `approval`. It is `null` when nothing waits, and otherwise describes the submission:
+
+```json title="PATCH /api/@vitnode/forum/content/topics/42 → 200"
+{
+  "approval": {
+    "id": 12,
+    "kind": "edit",
+    "reason": null,
+    "status": "pending",
+    "submittedAt": "2026-10-13T10:02:11.004Z",
+    "values": { "title": "The editor forgets my draft on Safari", "body": { "type": "doc", "content": [] } }
+  },
+  "id": 42,
+  "slug": "the-editor-forgets-my-draft",
+  "status": "published",
+  "publishedAt": "2026-10-13T09:40:02.118Z",
+  "version": 3,
+  "values": { "title": "The editor forgets my draft", "body": { "type": "doc", "content": [] } }
+}
+```
+
+For a proposal, `values` is still the live record and `approval.values` holds what the author asked for, so an edit page can show both.
+
+<TypeTable
+  type={{
+    id: { description: 'The submission id.', type: 'number' },
+    kind: { description: '`create` for a new record, `edit` for a proposal.', type: '"create" | "edit"' },
+    status: { description: '`pending` while it waits, `rejected` after a refusal.', type: '"pending" | "approved" | "rejected" | "superseded" | "cancelled"' },
+    reason: { description: "The moderator's reason. Only on a rejection.", type: 'string | null' },
+    submittedAt: { description: 'When the submission was opened.', type: 'Date' },
+    values: { description: 'The proposed values of a pending edit. `null` otherwise.', type: 'Record<string, unknown> | null' },
+  }}
+/>
+
+`GET /{id}/edit` returns the record's latest submission when it is pending, or rejected and not replaced yet, so the author's edit page can say "waiting for a moderator" or show the reason. The shape is `zodContentApprovalState` from `@vitnode/core/content`.
+
+To list everything an author sent, call the core moderation module. It returns pending, approved and rejected submissions, newest first, for the signed-in member:
+
+```ts title="plugins/forum/src/pages/my-submissions-data.ts"
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+export const fetchMySubmissions = async (page: number) => {
+  const res = await fetcher({
+    plugin: "@vitnode/core",
+    method: "get",
+    module: "moderation",
+    path: "/approvals/mine",
+    args: { query: { page } },
+  });
+  if (!res.ok) throw new Error("Could not load your submissions.");
+
+  return await res.json();
+};
+```
+
+Each item has `kind`, `status`, `title`, `contentTypeId`, `itemId`, the container, `reason` and the dates. A guest gets `401`.
+
+## What a decision does
+
+A moderator approves or rejects from the ModCP or through the [approval routes](/docs/dev/moderation/reference#approval-routes).
+
+- **Approving a create** publishes the draft, which emits the content type's `published` event once. A record a moderator hid stays hidden.
+- **Approving an edit** applies the proposal as an ordinary update against the version it was made from. That emits one `updated` event and, on an [editorial](/docs/content-engine/editorial) content type, writes one revision.
+- **Rejecting** changes nothing on the record. A new topic stays a draft, a published one keeps its live version, and the optional reason is stored for the author.
+
+Each decision locks the submission first, so two moderators clicking at once get one success. It then locks the record and resolves its container again from the row, so a topic moved to another forum since it was submitted is checked against where it lives now. If the decision cannot go through, the route answers with one of these codes:
+
+| Code        | Status | What happened                                                                                     |
+| ----------- | ------ | ------------------------------------------------------------------------------------------------- |
+| `decided`   | `409`  | The submission is no longer pending. Someone else decided first, or the author replaced it         |
+| `stale`     | `409`  | The record changed after the proposal was made, or the proposal no longer validates. Reject it, and the author can resubmit |
+| `gone`      | `409`  | The record was deleted. The submission is marked `cancelled`                                       |
+| `forbidden` | `403`  | The record now lives in a container where this moderator has no `can_approve`                      |
+| `notFound`  | `404`  | No such submission, or one outside the moderator's scope                                          |
+
+Deleting a record cancels its pending submission, from the AdminCP or anywhere else. If staff publish a pending draft from the AdminCP first, approving it later only closes the submission. Changing a container's policy never touches submissions that are already waiting.
+
+## Events
+
+Opening a submission emits `content.approval.submitted`, and a decision emits `content.approval.approved` or `content.approval.rejected`. They carry the submission id, the content type, the record id, the container, the author and, for decisions, the reviewer. The record's own events are not duplicated: a pending create emits `created` but not `published` until it is approved. Payloads are in [Built-in events](/docs/dev/events/built-in-events#content-approval-events).
+
+A listener on `content.approval.rejected` is a good place to tell the author why their post did not make it, gently.

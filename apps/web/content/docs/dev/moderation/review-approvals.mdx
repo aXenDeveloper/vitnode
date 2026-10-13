@@ -4,11 +4,11 @@ description: Approve or reject new content and edits waiting in the VitNode Mode
 icon: ClipboardCheck
 ---
 
-When a container asks for approval, new content and edits from members do not go live straight away. They wait in the **Approvals** queue of the Moderator CP at `/modcp/approvals` until a moderator says yes or no.
+When a container's [publishing policy](/docs/content-engine/container-policies) asks for approval, new content and edits from members do not go live straight away. They wait in the **Approvals** queue of the Moderator CP at `/modcp/approvals` until a moderator says yes or no. [Approvals](/docs/content-engine/approvals) explains what is stored meanwhile and what authors see.
 
 ## Before you begin
 
-You need a moderator entry with `can_approve` for the container the content lives in. The queue only shows submissions you may decide, so two moderators can see two different queues. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+You need a moderator entry with `can_approve` for the content type, in a scope that covers the container the content lives in: the container itself, its subtree, or **All resources**. The queue only shows submissions you may decide, so two moderators can see two different queues. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions) and [Configure moderators](/docs/dev/moderation/configure-moderators).
 
 <Steps>
 
@@ -35,7 +35,7 @@ Tabs, filters and the page number live in the address, so a filtered queue is a 
 
 Open a row. For **New** content you see every proposed field. For an **Edit** you see **Changes**: each changed field shows **Live now** next to **Proposed**, and the untouched fields are folded away below.
 
-**History** lists earlier submissions for the same content, with their outcomes and reasons. **View live** opens the content in a new tab when it has a page.
+**History** lists earlier submissions for the same content, with their outcomes and reasons. **View live** opens published content in a new tab when its content type has a page address (`search.pathTemplate`).
 
 </Step>
 
@@ -43,7 +43,7 @@ Open a row. For **New** content you see every proposed field. For an **Edit** yo
 
 ### Decide
 
-- **Approve** publishes new content, or applies the edit as one new revision.
+- **Approve** publishes new content, or applies the edit to the live version. On a content type with [revisions](/docs/content-engine/editorial#revisions), the edit is one new revision.
 - **Reject** opens a dialog with an optional **Reason**. Nothing on the site changes, and the author can read your reason and try again.
 
 Either way you land back in the queue with a short confirmation.
@@ -60,5 +60,6 @@ Either way you land back in the queue with a short confirmation.
 | **The record changed** | Someone edited the content after the proposal was made. Reject it and ask the author to resubmit. |
 | **The content is gone** | It was deleted, so the submission was cancelled. |
 | **Out of your reach** | The content moved to a container where you cannot approve. |
+| **Submission not found** | It no longer exists, or it is outside what you moderate. |
 
 The detail page warns you when the content is gone or has changed before you click, so surprises should be rare. Rare, not extinct.
