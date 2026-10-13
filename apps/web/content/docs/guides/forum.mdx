@@ -113,6 +113,13 @@ background. Edit buttons and the reply box load in the browser, so every
 visitor gets the same cached page. Topic pages set a canonical URL and
 `DiscussionForumPosting` structured data with the reply count.
 
+Topics also have [delivery](/docs/content-engine/seo): a renamed topic
+redirects its old address to the new one, and
+`/api/@vitnode/forum/content/topics/delivery/sitemap` lists every public topic
+for your `sitemap.xml`. Topics waiting for approval never appear there, in
+search or in any list - until a moderator says yes, they don't exist for
+anyone but their author.
+
 ## Choose who publishes straight away
 
 By default every member's topic and reply goes live immediately and authors can

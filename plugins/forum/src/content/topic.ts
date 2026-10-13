@@ -43,6 +43,13 @@ export const topicContentType = defineContentType({
     update: { fields: ["title", "body"] },
   },
 
+  delivery: {
+    path: "/forum/topics/:slug",
+    redirects: true,
+    seo: { titleField: "title", descriptionField: "body" },
+    sitemap: { changeFrequency: "daily", priority: 0.6 },
+  },
+
   search: {
     titleField: "title",
     contentFields: ["body"],
