@@ -21,11 +21,13 @@ import {
 } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
+import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
+import { blogPostContentType } from "@/content/post";
 
 const zodBlogPost = z.object({
   content: zodRichTextDocument,
@@ -100,14 +102,30 @@ const BlogPostPage = ({
       lang={metadata.locale ?? undefined}
     >
       <header className="flex flex-col gap-3">
-        {item.publishedAt ? (
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {t("published")}{" "}
-            <time dateTime={new Date(item.publishedAt).toISOString()}>
-              <DateFormat date={item.publishedAt} showFullDate />
-            </time>
-          </p>
-        ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {item.publishedAt ? (
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {t("published")}{" "}
+              <time dateTime={new Date(item.publishedAt).toISOString()}>
+                <DateFormat date={item.publishedAt} showFullDate />
+              </time>
+            </p>
+          ) : (
+            <span />
+          )}
+
+          {!metadata.hidden && metadata.itemId !== null ? (
+            <ReportButton
+              className="text-muted-foreground"
+              locale={metadata.locale}
+              pluginId={CONFIG_PLUGIN.pluginId}
+              requestedLocale={metadata.requestedLocale}
+              targetId={metadata.itemId}
+              targetType={blogPostContentType.id}
+              typeLabel={t("report_type")}
+            />
+          ) : null}
+        </div>
 
         <h1 className="text-foreground flex items-start gap-3 text-3xl font-semibold tracking-tight text-balance md:text-4xl">
           {metadata.hidden ? (

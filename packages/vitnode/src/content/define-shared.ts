@@ -96,6 +96,7 @@ const CONTENT_OPTION_PATHS: readonly (readonly string[])[] = [
   ["localization"],
   ["publicApi"],
   ["publication"],
+  ["reports"],
   ["search"],
   ["visibility"],
 ];

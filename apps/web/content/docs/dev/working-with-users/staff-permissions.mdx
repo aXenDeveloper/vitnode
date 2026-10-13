@@ -159,6 +159,27 @@ permissionStaff: {
 
 The AdminCP permission editor automatically disables child toggles until prerequisites are checked.
 
+## Moderator permissions with scopes
+
+A moderator permission can be limited to some resources of a scope family, such as some forum sections. Declare the family with `scope` on the entry:
+
+```ts title="config.api.ts"
+permissionStaff: {
+  moderator: {
+    topics: [
+      { permission: "can_view_reports", scope: "forum.section" },
+      {
+        permission: "can_manage_reports",
+        dependsOn: ["can_view_reports"],
+        scope: "forum.section",
+      },
+    ],
+  },
+},
+```
+
+Each grant then carries a scope, and dependencies are checked per resource: managing in a section needs viewing in that section. The scope families and the AdminCP picker are covered in [Scoped moderator permissions](/docs/dev/moderation/scoped-permissions).
+
 ## Learn More
 
 <Cards>

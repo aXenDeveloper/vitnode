@@ -1,9 +1,14 @@
 import type {
   PermissionsStaffArgs,
+  PermissionStaffScope,
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
 
-import { staffPermissionKey } from "@/api/lib/staff-permission";
+import {
+  staffPermissionKey,
+  staffScopeCovers,
+} from "@/api/lib/staff-permission";
+import { MODERATION_PERMISSIONS } from "@/lib/moderation/const";
 
 /* -------------------------------------------------------------------------- */
 /*                              Where things live                             */
@@ -100,6 +105,13 @@ export const normalizeStaffEntryId = (
 export interface StaffCatalogEntry {
   dependsOn: string[];
   permission: string;
+  scope?: string;
+}
+
+export interface StaffCatalogScopeFamily {
+  description: null | string;
+  id: string;
+  label: string;
 }
 
 /** `GET /admin/staff/permission-catalog`, as it comes back. */
@@ -107,17 +119,35 @@ export interface StaffCatalogPlugin {
   admin: Record<string, StaffCatalogEntry[]>;
   moderator: Record<string, StaffCatalogEntry[]>;
   pluginId: string;
+  scopes?: StaffCatalogScopeFamily[];
 }
 
 export type StaffCatalog = StaffCatalogPlugin[];
 
 /** One row of the form: a permission, and whether it can be ticked. */
-export interface StaffPermissionItem extends PermissionsStaffArgs {
+export interface StaffPermissionItem extends Omit<
+  PermissionsStaffArgs,
+  "scope"
+> {
   /** Every dependency, as full `plugin:module:permission` keys. */
   dependsOn: string[];
   key: string;
   label: string;
+  scopeFamily?: null | string;
 }
+
+export interface StaffScopeFamily {
+  description: null | string;
+  id: string;
+  label: string;
+}
+
+const MODERATION_PERMISSION_NAMES = new Set<string>(
+  Object.values(MODERATION_PERMISSIONS),
+);
+
+export const moderationPermissionLabelKey = (permission: string): string =>
+  `@vitnode/core:moderation:${permission}`;
 
 export interface StaffModuleGroup {
   label: string;
@@ -187,7 +217,14 @@ export const buildStaffPermissionGroups = ({
                 }),
               ),
               key,
-              label: label(key) ?? entry.permission,
+              label:
+                label(key) ??
+                (type === "moderator" &&
+                MODERATION_PERMISSION_NAMES.has(entry.permission)
+                  ? label(moderationPermissionLabelKey(entry.permission))
+                  : undefined) ??
+                entry.permission,
+              scopeFamily: type === "moderator" ? (entry.scope ?? null) : null,
             };
           }),
         }))
@@ -208,6 +245,83 @@ export const staffPermissionItems = (
   plugins.flatMap(plugin =>
     plugin.modules.flatMap(module => module.permissions),
   );
+
+export const buildStaffScopeFamilies = ({
+  catalog,
+  label,
+}: {
+  catalog: StaffCatalog;
+  label: StaffLabelLookup;
+}): StaffScopeFamily[] =>
+  catalog.flatMap(plugin =>
+    (plugin.scopes ?? []).map(family => ({
+      description: family.description
+        ? (label(family.description) ?? null)
+        : null,
+      id: family.id,
+      label: label(family.label) ?? family.id,
+    })),
+  );
+
+export const grantedStaffScopes = (
+  permissions: readonly PermissionsStaffArgs[],
+  items: readonly StaffPermissionItem[],
+): Record<string, PermissionStaffScope> => {
+  const families = new Map(items.map(item => [item.key, item.scopeFamily]));
+  const scopes: Record<string, PermissionStaffScope> = {};
+  for (const permission of permissions) {
+    const key = staffPermissionKey(permission);
+    const family = families.get(key);
+    if (!family) continue;
+    scopes[key] =
+      permission.scope?.family === family
+        ? permission.scope
+        : { family, mode: "all" };
+  }
+
+  return scopes;
+};
+
+export type StaffScopeIssue =
+  | { dependency: string; key: string; type: "dependency_scope" }
+  | { key: string; type: "empty_selection" }
+  | { key: string; type: "missing_scope" };
+
+export const staffScopeIssues = ({
+  checked,
+  items,
+  scopes,
+}: {
+  checked: ReadonlySet<string>;
+  items: readonly StaffPermissionItem[];
+  scopes: Readonly<Record<string, PermissionStaffScope | undefined>>;
+}): StaffScopeIssue[] => {
+  const issues: StaffScopeIssue[] = [];
+  const byKey = new Map(items.map(item => [item.key, item]));
+  for (const key of checked) {
+    const item = byKey.get(key);
+    if (!item?.scopeFamily) continue;
+    const scope = scopes[key];
+    if (!scope) {
+      issues.push({ key, type: "missing_scope" });
+      continue;
+    }
+    if (scope.mode === "selected" && scope.ids.length === 0) {
+      issues.push({ key, type: "empty_selection" });
+      continue;
+    }
+    for (const dependency of item.dependsOn) {
+      if (!checked.has(dependency) || !byKey.get(dependency)?.scopeFamily) {
+        continue;
+      }
+      if (!staffScopeCovers(scopes[dependency], scope)) {
+        issues.push({ dependency, key, type: "dependency_scope" });
+      }
+    }
+  }
+
+  return issues;
+};
 
 /** The keys granted on an entry, as the set the form starts from. */
 export const grantedStaffPermissionKeys = (
@@ -357,10 +471,12 @@ export const countGrantedStaffPermissions = (
 export const staffPermissionsForSubmit = ({
   checked,
   items,
+  scopes = {},
   unrestricted,
 }: {
   checked: ReadonlySet<string>;
   items: readonly StaffPermissionItem[];
+  scopes?: Readonly<Record<string, PermissionStaffScope | undefined>>;
   unrestricted: boolean;
 }): PermissionsStaffArgs[] => {
   if (unrestricted) return [];
@@ -385,7 +501,13 @@ export const staffPermissionsForSubmit = ({
   // administrators saving the same choices produce the same request body.
   return items
     .filter(item => granted.has(item.key))
-    .map(({ module, permission, plugin }) => ({ module, permission, plugin }));
+    .map(({ key, module, permission, plugin, scopeFamily }) => {
+      const scope = scopeFamily ? scopes[key] : undefined;
+
+      return scope
+        ? { module, permission, plugin, scope }
+        : { module, permission, plugin };
+    });
 };
 
 /* -------------------------------------------------------------------------- */
@@ -430,6 +552,20 @@ export const staffLabelKeys = ({
             plugin: plugin.pluginId,
           }),
         );
+        if (
+          type === "moderator" &&
+          MODERATION_PERMISSION_NAMES.has(entry.permission)
+        ) {
+          keys.add(moderationPermissionLabelKey(entry.permission));
+        }
+      }
+    }
+  }
+  if (type === "moderator") {
+    for (const plugin of catalog) {
+      for (const family of plugin.scopes ?? []) {
+        keys.add(family.label);
+        if (family.description) keys.add(family.description);
       }
     }
   }
@@ -477,6 +613,17 @@ export const staffLabelLookupFrom = (
     return typeof title === "string" ? title : undefined;
   };
 
+  const nested = (key: string): unknown =>
+    key
+      .split(".")
+      .reduce<unknown>(
+        (node, segment) =>
+          typeof node === "object" && node !== null
+            ? (node as Record<string, unknown>)[segment]
+            : undefined,
+        messages,
+      );
+
   return key => {
     // `"@vitnode/blog.title"` is how the plugin heading is asked for; the
     // messages hold it as `{ "@vitnode/blog": { title } }`.
@@ -484,6 +631,10 @@ export const staffLabelLookupFrom = (
       return titleOf(messages[key.slice(0, -".title".length)]);
     }
 
-    return titleOf(messages[key]);
+    const flat = titleOf(messages[key]);
+    if (flat !== undefined || !key.includes(".")) return flat;
+    const value = nested(key);
+
+    return typeof value === "string" ? value : undefined;
   };
 };

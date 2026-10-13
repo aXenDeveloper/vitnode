@@ -19,7 +19,7 @@ const readEpoch = async (c: Context): Promise<string> =>
 const permissionsKey = (
   epoch: string,
   { type, userId }: { type: PermissionStaffType; userId: number },
-): string => `staff-permissions:v2:${epoch}:${type}:${userId}`;
+): string => `staff-permissions:v3:${epoch}:${type}:${userId}`;
 
 /** The cached resolution, or `null` on a miss, without Redis, or on error. */
 export const readStaffPermissions = async (

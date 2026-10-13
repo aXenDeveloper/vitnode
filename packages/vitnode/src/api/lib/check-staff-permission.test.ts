@@ -10,11 +10,17 @@ import { createTestCache } from "@/tests/cache";
 import { createMemoryDb } from "@/tests/memory-db";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
+import type {
+  PermissionsStaffArgs,
+  PermissionStaffCatalogEntry,
+} from "./permission-staff";
+
 import {
   getStaffFlags,
   isStaff,
   resolveStaffPermissions,
 } from "./check-staff-permission";
+import { normalizePermissionStaffModules } from "./permission-staff";
 import {
   invalidateAllStaffPermissions,
   invalidateStaffEntry,
@@ -33,7 +39,7 @@ const DELETE_POSTS = {
 };
 
 const staffEntry = (entry: {
-  permissions?: (typeof DELETE_POSTS)[];
+  permissions?: PermissionsStaffArgs[];
   roleId?: number;
   unrestricted?: boolean;
   userId?: number;
@@ -48,11 +54,13 @@ const staffEntry = (entry: {
 const contextWith = ({
   admin = [],
   cache = createTestCache(),
+  catalog,
   moderator = [],
   secondaryRoleIds = [],
 }: {
   admin?: ReturnType<typeof staffEntry>[];
   cache?: ReturnType<typeof createTestCache>;
+  catalog?: PermissionStaffCatalogEntry[];
   moderator?: ReturnType<typeof staffEntry>[];
   secondaryRoleIds?: number[];
 }) => {
@@ -73,7 +81,11 @@ const contextWith = ({
     [core_admin_permissions, admin],
     [core_moderators_permissions, moderator],
   ]);
-  const values: Record<string, unknown> = { cache, db };
+  const values: Record<string, unknown> = {
+    cache,
+    core: catalog ? { permissionStaff: catalog } : undefined,
+    db,
+  };
 
   return Object.assign(
     { get: (key: string) => values[key] } as unknown as Context,
@@ -249,5 +261,108 @@ describe("getStaffFlags", () => {
     await c.db.delete(core_admin_permissions);
 
     expect((await getStaffFlags(c, USER)).isAdmin).toBe(false);
+  });
+});
+
+describe("resolveStaffPermissions with scoped grants", () => {
+  const FAMILY = "forum.section";
+  const reports = (
+    permission: string,
+    ids: string[],
+  ): PermissionsStaffArgs => ({
+    module: "topics",
+    permission,
+    plugin: "@vitnode/forum",
+    scope: { family: FAMILY, ids, mode: "selected" },
+  });
+  const CATALOG: PermissionStaffCatalogEntry[] = [
+    {
+      admin: {},
+      moderator: normalizePermissionStaffModules({
+        topics: [
+          { permission: "can_view_reports", scope: FAMILY },
+          {
+            dependsOn: ["can_view_reports"],
+            permission: "can_manage_reports",
+            scope: FAMILY,
+          },
+        ],
+      }),
+      pluginId: "@vitnode/forum",
+    },
+  ];
+
+  it("keeps the distinct scopes a user entry and a role entry grant", async () => {
+    const c = contextWith({
+      moderator: [
+        staffEntry({
+          permissions: [reports("can_view_reports", ["a"])],
+          userId: USER.id,
+        }),
+        staffEntry({
+          permissions: [reports("can_view_reports", ["b"])],
+          roleId: STAFF_ROLE,
+        }),
+      ],
+      secondaryRoleIds: [STAFF_ROLE],
+    });
+
+    expect(
+      await resolveStaffPermissions(c, { type: "moderator", user: USER }),
+    ).toEqual({
+      permissions: [reports("can_view_reports", ["a", "b"])],
+      root: false,
+      staff: true,
+    });
+  });
+
+  it("narrows a grant to where its dependency is held, across entries", async () => {
+    const c = contextWith({
+      catalog: CATALOG,
+      moderator: [
+        staffEntry({
+          permissions: [reports("can_view_reports", ["a"])],
+          userId: USER.id,
+        }),
+        staffEntry({
+          permissions: [reports("can_manage_reports", ["a", "b"])],
+          roleId: STAFF_ROLE,
+        }),
+      ],
+      secondaryRoleIds: [STAFF_ROLE],
+    });
+
+    const { permissions } = await resolveStaffPermissions(c, {
+      type: "moderator",
+      user: USER,
+    });
+
+    expect(permissions).toEqual([
+      reports("can_view_reports", ["a"]),
+      reports("can_manage_reports", ["a"]),
+    ]);
+  });
+
+  it("reflects a changed scope once the entry is invalidated", async () => {
+    const c = contextWith({
+      moderator: [
+        staffEntry({
+          permissions: [reports("can_view_reports", ["a"])],
+          userId: USER.id,
+        }),
+      ],
+    });
+    const resolve = async () =>
+      (await resolveStaffPermissions(c, { type: "moderator", user: USER }))
+        .permissions;
+    expect(await resolve()).toEqual([reports("can_view_reports", ["a"])]);
+
+    await c.db
+      .update(core_moderators_permissions)
+      .set({ permissions: [reports("can_view_reports", ["b"])] });
+    expect(await resolve()).toEqual([reports("can_view_reports", ["a"])]);
+
+    await invalidateStaffEntry(c, { userId: USER.id });
+    expect(await resolve()).toEqual([reports("can_view_reports", ["b"])]);
   });
 });

@@ -20,6 +20,7 @@ import type {
   ContentPreviewEnabled,
   ContentPublicApiConfig,
   ContentPublicExposableField,
+  ContentReportsInput,
   ContentSchedulingEnabled,
   ContentSearchAuthorField,
   ContentSearchConfig,
@@ -63,6 +64,7 @@ import {
   resolveVisibility,
 } from "./define-lifecycle";
 import { resolvePublicApi } from "./define-public-api";
+import { resolveReports } from "./define-reports";
 import { resolveSearch } from "./define-search";
 import {
   assertContentOptionShapes,
@@ -220,6 +222,7 @@ export const defineContentType = <
   localization,
   publicApi,
   publication,
+  reports,
   search,
   tableName,
   visibility,
@@ -255,6 +258,7 @@ export const defineContentType = <
   publicApi?: ContentPublicApiConfig<TPublicField, TPublicPath> | false;
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: TPublication;
+  reports?: ContentReportsInput<keyof TFields & string>;
 
   search?: TSearch;
   tableName: string;
@@ -327,6 +331,7 @@ export const defineContentType = <
     localization,
     publicApi,
     publication,
+    reports,
     search,
     visibility,
   });
@@ -508,6 +513,12 @@ export const defineContentType = <
     publication: publicationEnabled,
   });
 
+  const resolvedReports = resolveReports(id, reports, {
+    admin: resolvedAdmin,
+    fields: fieldMap,
+    publicApi: resolvedPublicApi,
+  });
+
   const resolvedDuplication = resolveDuplication(
     id,
     duplication,
@@ -558,6 +569,7 @@ export const defineContentType = <
     publication: {
       enabled: publicationEnabled as TPublication,
     },
+    reports: resolvedReports,
     publicApi: resolvedPublicApi as ResolvedContentPublicApiConfig<
       TPublicField,
       TPublicEnabled,

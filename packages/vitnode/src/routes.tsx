@@ -46,6 +46,8 @@ import {
 } from "./tanstack/auth/verify-email";
 import { MY_FILES_NAMESPACES } from "./tanstack/files/route";
 import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
+import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
+import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
 import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
@@ -177,6 +179,31 @@ export const routes = defineRoutes([
 
       page("ai", {
         component: lazy(() => import("./pages/settings/ai")),
+        pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
+    ],
+  }),
+
+  layout("/modcp", {
+    component: lazy(() => import("./pages/modcp/layout")),
+    messages: MODCP_NAMESPACES,
+    pendingComponent: () => (
+      <TablePendingSkeleton className="container mx-auto" />
+    ),
+    requires: "authenticated",
+    children: [
+      index({
+        component: lazy(() => import("./pages/modcp/index")),
+      }),
+
+      page("reports", {
+        component: lazy(() => import("./pages/modcp/reports")),
+        pendingComponent: TablePendingSkeleton,
+        search: normalizeModcpReportsSearch,
+      }),
+
+      page("reports/:id", {
+        component: lazy(() => import("./pages/modcp/report")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
       }),
     ],

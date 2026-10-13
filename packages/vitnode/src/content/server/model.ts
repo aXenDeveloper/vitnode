@@ -41,6 +41,11 @@ import {
   createContentTranslationTable,
 } from "./translation-table";
 
+export interface ContentModerationScope<TColumn extends string = string> {
+  column: TColumn;
+  family: string;
+}
+
 export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   advanced: ContentAdvancedStore;
 
@@ -69,6 +74,7 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
       ) => ContentLocalizedService<TDefinition>)
     | undefined;
 
+  moderationScope: ContentModerationScope | null;
   publicService:
     | ((c: Context) => ContentPublicService<TDefinition>)
     | undefined;
@@ -145,7 +151,10 @@ export const createContentModel = <
   TDefinition extends AnyContentTypeDefinition,
 >(
   definition: TDefinition,
-  options: { references?: ContentReferences<TDefinition["fields"]> } = {},
+  options: {
+    moderationScope?: ContentModerationScope<ContentColumnName<TDefinition>>;
+    references?: ContentReferences<TDefinition["fields"]>;
+  } = {},
 ): ContentModel<TDefinition> => {
   const table = createContentTable(definition, options);
   const columns = contentTableColumns(definition, table);
@@ -306,6 +315,7 @@ export const createContentModel = <
           })
       : undefined,
     localization: definition.localization,
+    moderationScope: options.moderationScope ?? null,
     localizedService: localized
       ? (c: Context, options?: { pluginId?: string }) => {
           const translations = buildTranslations(c);

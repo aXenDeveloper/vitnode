@@ -375,7 +375,7 @@ export const EditableAreaFrame = ({
       <div
         className={cn(
           "flex min-h-8 flex-wrap items-center justify-between gap-2 transition-opacity duration-150",
-          dragging && "opacity-30",
+          dragging && "opacity-0",
         )}
       >
         <button
@@ -411,7 +411,7 @@ export const EditableAreaFrame = ({
       <div
         className={cn(
           "flex flex-col gap-3 transition-opacity duration-150",
-          dragging && "opacity-30",
+          dragging && "opacity-0",
         )}
       >
         <div

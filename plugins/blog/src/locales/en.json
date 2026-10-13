@@ -179,8 +179,9 @@
       "hidden": {
         "label": "Article hidden",
         "title": "This article is hidden",
-        "desc": "Only its authors and editors can see it. Everyone else gets a page not found, and it stays out of search and the sitemap."
-      }
+        "desc": "Only its authors, editors and moderators can see it. Everyone else gets a page not found, and it stays out of search and the sitemap."
+      },
+      "report_type": "article"
     }
   },
   "@vitnode/blog:posts": "Articles",
@@ -191,6 +192,9 @@
   "@vitnode/blog:posts:can_publish": "Publish and unpublish articles",
   "@vitnode/blog:posts:can_restore": "Restore an earlier version of an article",
   "@vitnode/blog:posts:can_hide": "Hide and unhide articles",
+  "@vitnode/blog:posts:can_view_reports": "View article reports",
+  "@vitnode/blog:posts:can_manage_reports": "Claim, assign and resolve article reports",
+  "@vitnode/blog:posts:can_view_hidden": "Open hidden articles",
   "@vitnode/blog:categories": "Categories",
   "@vitnode/blog:categories:can_view": "View categories list",
   "@vitnode/blog:categories:can_create": "Create categories",

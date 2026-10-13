@@ -88,6 +88,7 @@ export interface AdminUserRole {
   color: null | string;
   id: number;
   name: { languageCode: string; name: string }[];
+  prefix?: null | string;
 }
 
 export interface AdminUserRow {
@@ -176,6 +177,7 @@ export interface AdminUserOption {
   id: number;
   name: string;
   nameCode: string;
+  role: { color: null | string; prefix: null | string };
 }
 
 /** The signature every user picker takes, wherever the read comes from. */
@@ -190,11 +192,12 @@ export const ADMIN_USER_SEARCH_LIMIT = 20;
 export const adminUserOptionsFrom = (
   page: Pick<AdminUsersPage, "edges">,
 ): AdminUserOption[] =>
-  page.edges.map(({ avatarColor, id, name, nameCode }) => ({
+  page.edges.map(({ avatarColor, id, name, nameCode, role }) => ({
     avatarColor,
     id,
     name,
     nameCode,
+    role: { color: role.color, prefix: role.prefix ?? null },
   }));
 
 export const searchAdminUsersInBrowser: AdminUserSearchOptions =

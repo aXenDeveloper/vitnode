@@ -18,6 +18,8 @@ export const blogPostContentType = defineContentType({
 
   visibility: true,
 
+  reports: true,
+
   editorial: {
     revisions: { retention: 20 },
     preview: { expiresInMinutes: 30 },

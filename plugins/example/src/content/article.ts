@@ -51,6 +51,8 @@ export const articleContentType = defineContentType({
 
   publication: true,
 
+  reports: true,
+
   publicApi: {
     path: "articles",
     fields: [

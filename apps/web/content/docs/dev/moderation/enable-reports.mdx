@@ -1,0 +1,120 @@
+---
+title: Enable reports
+description: Let signed-in readers report a VitNode Content Engine content type, such as blog articles, with one option and a Report button.
+icon: Flag
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import reportDialog from "./moderation-report-dialog.webp";
+
+Turn on reports for a content type so signed-in readers can flag a published record to your moderators. This guide follows the blog plugin, whose articles are reportable.
+
+## Before you begin
+
+The content type needs a [public API](/docs/content-engine/public-api). A reader can only report what the public API lets them read, so a draft, a hidden record or an unpublished translation can never be reported.
+
+<Steps>
+
+<Step>
+
+### Turn on reports
+
+Add `reports: true` to the content type definition:
+
+```ts title="plugins/blog/src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  id: "blog.post",
+  tableName: "blog_posts",
+  publication: true,
+  visibility: true,
+  reports: true, // [!code ++]
+  // ...
+});
+```
+
+`reports` needs no migration. Reports live in core tables, and the content type's own tables do not change.
+
+</Step>
+
+<Step>
+
+### Choose what the snapshot keeps (optional)
+
+By default, a report's snapshot keeps the record's title and its public `text`, `textarea`, `richText`, `enum` and `file` fields. The title comes from `admin.titleField` when that field is public. Pass an object to pick the fields yourself:
+
+```ts title="plugins/blog/src/content/post.ts"
+reports: {
+  titleField: "title",
+  snapshotFields: ["content", "excerpt"],
+},
+```
+
+An unknown field, or a field of a kind a snapshot cannot hold, such as a relation, throws when the content type is defined. Fields you list explicitly may be private, because only moderators read snapshots.
+
+</Step>
+
+<Step>
+
+### Label the generated permissions
+
+`reports: true` adds moderator permissions to the content type's permission module: `can_view_reports`, `can_manage_reports`, `can_edit_notes` and `can_delete_notes`, plus `can_view_hidden` and `can_hide` when the content type has [`visibility`](/docs/content-engine/content-visibility). Core ships generic labels, such as **View reports**. Override them in your plugin when you want your own wording:
+
+```json title="plugins/blog/src/locales/en.json"
+{
+  "@vitnode/blog:posts:can_view_reports": "View article reports",
+  "@vitnode/blog:posts:can_manage_reports": "Claim, assign and resolve article reports",
+  "@vitnode/blog:posts:can_view_hidden": "Open hidden articles"
+}
+```
+
+Enabling reports grants nothing. An administrator still has to give these permissions to a moderator. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+
+</Step>
+
+<Step>
+
+### Place the Report button
+
+A plugin's own pages place the button themselves. Pass the record's stable id and the language the reader was served:
+
+```tsx title="plugins/blog/src/pages/post-page.tsx"
+import { ReportButton } from "@vitnode/core/tanstack/moderation";
+
+{!metadata.hidden && metadata.itemId !== null ? (
+  <ReportButton
+    locale={metadata.locale}
+    pluginId={CONFIG_PLUGIN.pluginId}
+    requestedLocale={metadata.requestedLocale}
+    targetId={metadata.itemId}
+    targetType={blogPostContentType.id}
+    typeLabel={t("report_type")}
+  />
+) : null}
+```
+
+The blog reads `itemId`, `locale` and `requestedLocale` from the [delivery resolution](/docs/content-engine/public-pages), so the button reports the article in the language the reader actually saw, even after a fallback. The form loads only when the dialog opens. A signed-out reader gets a **Sign in** link instead of the form.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Rebuild with `pnpm build:plugins`, restart `pnpm dev`, sign in as a regular user and open a published article. Click **Report**, pick a reason and send it:
+
+<ImgDocs
+  src={reportDialog}
+  alt="Report article dialog with the reasons Spam, Abusive content, Rule violation and Other, Rule violation selected, a Details text box and Cancel and Send report buttons"
+/>
+
+A toast says **Report sent**. Try sending it again and the toast tells you, politely, that you already did. A moderator with `can_view_reports` on the blog now sees the report in [the ModCP](/docs/dev/moderation/process-reports).
+
+## What the server checks
+
+- The reporter must be signed in. A guest gets `401`.
+- The target must be readable by the reporter through the public API. Anything else is `404`, the same answer as a typo.
+- **Other** needs at least 10 characters of details. Details are at most 2000 characters.
+- One reporter can hold one open report per target. Other reporters get their own reports.
+- A user can file at most 20 reports per hour, on top of the per-IP [rate limiter](/docs/dev/advanced/rate-limiter) every API route has.
+
+Reports work for targets outside the Content Engine too. A plugin registers its own target with `defineReportTarget`. See the [reference](/docs/dev/moderation/reference#custom-report-targets).

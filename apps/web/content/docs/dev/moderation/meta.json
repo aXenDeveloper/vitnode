@@ -1,0 +1,13 @@
+{
+  "title": "Moderation",
+  "description": "Reports, the Moderator CP and scoped moderator permissions",
+  "icon": "ShieldAlert",
+  "pages": [
+    "index",
+    "enable-reports",
+    "scoped-permissions",
+    "configure-moderators",
+    "process-reports",
+    "reference"
+  ]
+}

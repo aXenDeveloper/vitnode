@@ -59,6 +59,12 @@
   "@vitnode/core:staff_admins:can_delete": "Remove administrators",
   "@vitnode/core:widgets": "Widgets",
   "@vitnode/core:widgets:can_edit": "Rearrange widgets on core's pages",
+  "@vitnode/core:moderation:can_view_reports": "View reports",
+  "@vitnode/core:moderation:can_manage_reports": "Claim, assign, annotate and resolve reports",
+  "@vitnode/core:moderation:can_edit_notes": "Edit any moderator's notes",
+  "@vitnode/core:moderation:can_delete_notes": "Delete any moderator's notes",
+  "@vitnode/core:moderation:can_view_hidden": "Open hidden content",
+  "@vitnode/core:moderation:can_hide": "Hide and restore content",
   "core": {
     "search": {
       "title": "Search",
@@ -1800,8 +1806,9 @@
         }
       },
       "dnd": {
-        "instructions": "Press Space to pick up a widget. Use the arrow keys to move it between positions and zones, Space to drop it where the line is, and Escape to put it back.",
+        "instructions": "Press Space to pick up a widget. Use the arrow keys to move it between positions and zones, Space to drop it in the highlighted spot, and Escape to put it back.",
         "picked_up": "Picked up {name}.",
+        "drop_slot": "Drop {name} here",
         "outside": "{name} is not over a content zone.",
         "rejected": "The {zone} zone does not accept {name}.",
         "unchanged": "{name} is over the {zone} zone, where it already is.",
@@ -1934,6 +1941,270 @@
       "empty_title": "Nothing here yet",
       "empty_unread_title": "No unread notifications",
       "empty_desc": "When something needs your attention, it lands here."
+    },
+    "moderation": {
+      "reasons": {
+        "spam": "Spam",
+        "abusive": "Abusive content",
+        "rule_violation": "Rule violation",
+        "other": "Other"
+      },
+      "reason_descs": {
+        "spam": "Advertising, scams or repeated junk.",
+        "abusive": "Harassment, hate or threats.",
+        "rule_violation": "Breaks the community rules in another way.",
+        "other": "Something else - tell us what."
+      },
+      "statuses": {
+        "new": "New",
+        "in_progress": "In progress",
+        "done": "Done"
+      },
+      "resolutions": {
+        "no_violation": "No violation",
+        "action_taken": "Action taken",
+        "duplicate": "Duplicate"
+      },
+      "resolution_descs": {
+        "no_violation": "You checked it and it can stay.",
+        "action_taken": "It broke the rules and you acted on it.",
+        "duplicate": "Another report already covers this."
+      },
+      "report": {
+        "button": "Report",
+        "title": "Report {type}",
+        "desc": "Tell the moderators what is wrong. They see what you saw, even if it changes later.",
+        "reason": "Reason",
+        "description": "Details",
+        "description_desc": "Optional, unless you chose Other. Moderators read this, the author does not.",
+        "submit": "Send report",
+        "cancel": "Cancel",
+        "signed_out": "Sign in to report content.",
+        "sign_in": "Sign in",
+        "success": "Report sent",
+        "success_desc": "Thanks. A moderator will take a look.",
+        "errors": {
+          "title": "Could not send the report",
+          "duplicate": "You already reported this, and that report is still open.",
+          "not_found": "This content is no longer available to report.",
+          "rate_limited": "You have sent a lot of reports recently. Try again later.",
+          "validation": "Check the reason and the details, then try again.",
+          "unknown": "Something went wrong. Try again in a moment."
+        }
+      },
+      "modcp": {
+        "title": "Moderator CP",
+        "nav": "Moderator CP",
+        "reports": {
+          "title": "Reports",
+          "desc": "Reports you can act on. Drag a card to another column to take it, close it or send it back.",
+          "search_placeholder": "Search by title or #id",
+          "filters": {
+            "assigned": "Assigned",
+            "any": "Anyone",
+            "me": "Assigned to me",
+            "unassigned": "Unassigned"
+          },
+          "untitled": "Untitled",
+          "empty_title": "Nothing to review",
+          "empty_desc": "No reports match these filters.",
+          "unassigned": "Unassigned",
+          "board": {
+            "actions": "Actions for report #{id}",
+            "drag": "Move report #{id}",
+            "extra_reports": "{count, plural, one {# more report on this content} other {# more reports on this content}}",
+            "hint_take": "Drop to take it - assigns it to you",
+            "hint_unassign": "Drop to unassign",
+            "hint_close": "Drop to close - pick an outcome",
+            "hint_reopen": "Drop to reopen",
+            "nothing_here": "Nothing here.",
+            "show_more": "Show more",
+            "unassigned": "Moved back to New",
+            "unassigned_desc": "It is unassigned, so anyone can take it.",
+            "dnd": {
+              "instructions": "Press Space to pick up a report. Use the arrow keys to move it to another column, Space to drop it there, and Escape to put it back. Each card's menu can move it too.",
+              "picked_up": "Picked up report #{id}.",
+              "over": "Report #{id} is over the {column} column.",
+              "outside": "Report #{id} is not over a column.",
+              "dropped": "Report #{id} was dropped on the {column} column.",
+              "cancelled": "Report #{id} was not moved."
+            }
+          }
+        },
+        "detail": {
+          "title": "Report #{id}",
+          "snapshot": {
+            "title": "Reported content",
+            "badge": "Snapshot",
+            "desc": "Captured {date}. This is what the reporter saw, and it does not change.",
+            "locale": "Language: {served}",
+            "fallback": "Language: {served} (asked for {requested})",
+            "version": "Version {version}",
+            "truncated": "Part of this content was too long and was cut.",
+            "by": "By {names}",
+            "file": "File reference only - the file itself is not stored with the report.",
+            "file_missing": "Unnamed file",
+            "empty": "(empty)",
+            "fallback_renderer": "Shown with the generic viewer."
+          },
+          "current": {
+            "open": "Open current content",
+            "hidden": "Hidden",
+            "visible": "Visible",
+            "deleted": "The content was deleted. The snapshot above is all that remains.",
+            "unregistered": "The plugin that owned this content is not installed. The snapshot above is all that remains."
+          },
+          "report": {
+            "reason": "Reason",
+            "description": "Reporter's details",
+            "no_description": "No details given.",
+            "deleted_user": "Deleted account",
+            "created": "Reported"
+          },
+          "assignment": {
+            "claim": "Take report",
+            "claimed": "Report taken",
+            "claimed_desc": "It is assigned to you and in progress.",
+            "assigned": "Assignment updated",
+            "assigned_desc": "The timeline records the change."
+          },
+          "actions": {
+            "title": "Content actions",
+            "hide": "Hide content",
+            "unhide": "Restore content",
+            "hide_desc": "Take it off the public site. Authors and moderators can still open it.",
+            "unhide_desc": "Put it back on the public site.",
+            "confirm_hide": "Hide this content?",
+            "confirm_unhide": "Restore this content?",
+            "confirm": "Confirm",
+            "hidden": "Content hidden",
+            "unhidden": "Content restored",
+            "recorded": "Recorded in the report's timeline.",
+            "unchanged": "Nothing changed - it was already in that state.",
+            "menu": "Actions"
+          },
+          "resolve": {
+            "resolution": "Outcome",
+            "explanation": "Explanation",
+            "explanation_desc": "A short note for the other moderators. Not shown to the reporter.",
+            "submit": "Close report",
+            "success": "Report closed",
+            "success_desc": "Related reports stay open until someone closes them.",
+            "dialog_title": "Close report #{id}"
+          },
+          "reopen": {
+            "reason": "Why reopen it?",
+            "submit": "Reopen report",
+            "success": "Report reopened",
+            "dialog_title": "Reopen report #{id}",
+            "dialog_desc": "It goes back to the queue. Tell the team why."
+          },
+          "notes": {
+            "desc": "Visible to moderators only.",
+            "submit": "Add note",
+            "success": "Note added",
+            "edit": "Edit",
+            "delete": "Delete",
+            "save": "Save",
+            "edited": "edited",
+            "updated": "Note updated",
+            "deleted": "Note deleted",
+            "confirm_delete": "Delete this note?",
+            "confirm_delete_desc": "It disappears from the activity for every moderator. This cannot be undone.",
+            "menu": "Note actions"
+          },
+          "timeline": {
+            "title": "Timeline",
+            "system": "The system",
+            "someone": "Someone"
+          },
+          "related": {
+            "empty": "No other reports you can see."
+          },
+          "read_only": "You can read this report. Managing it needs another permission.",
+          "errors": {
+            "conflict": "Someone else changed this report first. It now shows the latest state.",
+            "already_claimed": "Another moderator took this report first.",
+            "report_closed": "This report is already closed.",
+            "report_open": "This report is already open.",
+            "assignee_not_eligible": "That moderator cannot manage this report.",
+            "target_gone": "The content no longer exists.",
+            "forbidden": "You do not have permission to do that.",
+            "unknown": "Something went wrong. Try again in a moment.",
+            "note_not_found": "This note no longer exists. Someone may have deleted it."
+          },
+          "heading": "{type} by <author></author>",
+          "sections": {
+            "description": "Description",
+            "snapshot": "Snapshot",
+            "linked": "Linked reports",
+            "activity": "Activity"
+          },
+          "snapshot_card": {
+            "meta": "{type} by <author></author> · captured <date></date>",
+            "view": "View full snapshot",
+            "sheet_title": "What the reporter saw",
+            "sheet_desc": "Report #{id} · captured when the report was filed"
+          },
+          "status": {
+            "move_to": "Move to",
+            "start": "Start progress",
+            "close": "Close report",
+            "stop": "Stop progress",
+            "reopen": "Reopen"
+          },
+          "details": {
+            "title": "Details",
+            "plugin": "Plugin",
+            "assignee": "Assignee",
+            "reporter": "Reporter",
+            "author": "Author",
+            "reason": "Reason",
+            "visibility": "Visibility",
+            "resolution": "Resolution",
+            "created": "Created",
+            "updated": "Updated",
+            "resolved": "Resolved",
+            "assign_to_me": "Assign to me",
+            "unassigned": "Unassigned",
+            "you": "you"
+          },
+          "content_card": {
+            "untitled": "Untitled"
+          },
+          "linked": {
+            "no_details": "No details given"
+          },
+          "activity": {
+            "all": "All",
+            "notes": "Notes",
+            "history": "History",
+            "empty": "Nothing here yet.",
+            "placeholder": "Add an internal note…",
+            "editor_placeholder": "Write a note for the other moderators… Type / for blocks",
+            "hint": "Only moderators see notes · ⌘ Enter to save",
+            "cancel": "Cancel",
+            "events": {
+              "created": "reported this",
+              "note": "added a note",
+              "assigned": "assigned it to <assignee></assignee>",
+              "took": "took the report",
+              "unassigned": "unassigned <assignee></assignee>",
+              "lost_access": "was unassigned after losing access",
+              "status_changed": "moved it to <status></status>",
+              "action_hide": "hid the content",
+              "action_unhide": "restored the content",
+              "resolved": "closed it as {resolution}",
+              "reopened": "reopened it",
+              "note_edited": "edited a note",
+              "note_deleted": "deleted a note"
+            },
+            "note_required": "Write something before adding the note.",
+            "before": "Before",
+            "after": "After"
+          }
+        }
+      }
     }
   },
   "admin": {
@@ -2588,6 +2859,40 @@
           "restricted": {
             "label": "Restricted",
             "desc": "Choose exactly which permissions apply."
+          }
+        },
+        "scope": {
+          "all": "All resources",
+          "all_desc": "Includes resources created later.",
+          "selected": "{count, plural, one {# selected} other {# selected}}",
+          "selected_label": "Selected resources",
+          "selected_desc": "Only the resources you pick.",
+          "legend": "Where this permission applies",
+          "change": "Change",
+          "choose": "Choose where",
+          "title": "Where can they {permission}?",
+          "desc": "Limit this permission to {family}. Other permissions keep their own scope.",
+          "search": "Search {family}",
+          "load_more": "Load more",
+          "loading": "Loading…",
+          "empty": "Nothing matches your search.",
+          "removed": "Removed",
+          "removed_desc": "This resource no longer exists. Remove it before saving.",
+          "remove": "Remove {name}",
+          "apply": "Apply",
+          "apply_module": "Apply to every scoped permission in this module",
+          "cancel": "Cancel",
+          "selection_title": "Selected ({count})",
+          "none_selected": "Pick at least one resource.",
+          "issues": {
+            "title": "Some scopes need attention",
+            "missing_scope": "Choose where {permission} applies.",
+            "empty_selection": "Pick at least one resource for {permission}.",
+            "dependency_scope": "{permission} reaches further than {dependency}. Narrow it, or widen {dependency} first.",
+            "invalid_resource": "{permission} names a resource with an invalid id.",
+            "unknown_resource": "{permission} names resources that no longer exist. Remove them and save again.",
+            "unexpected_scope": "{permission} cannot be scoped.",
+            "wrong_family": "{permission} uses a different kind of resource. Reload the page and try again."
           }
         }
       },

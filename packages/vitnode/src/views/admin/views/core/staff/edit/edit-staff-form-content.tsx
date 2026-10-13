@@ -1,10 +1,13 @@
 import { cn } from "cn";
 import {
   ChevronRightIcon,
+  GlobeIcon,
+  ListChecksIcon,
   LockIcon,
   SearchIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -12,6 +15,7 @@ import { useTranslations } from "use-intl";
 
 import type {
   PermissionsStaffArgs,
+  PermissionStaffScope,
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
@@ -19,11 +23,21 @@ import type {
   StaffModuleGroup,
   StaffPermissionItem,
   StaffPluginGroup,
+  StaffScopeFamily,
+  StaffScopeIssue,
 } from "@/views/admin/views/core/staff/staff-model";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
   countGrantedStaffPermissions,
@@ -32,13 +46,44 @@ import {
   staffPermissionDependents,
   staffPermissionItems,
   staffPermissionsForSubmit,
+  staffScopeIssues,
   toggleStaffPermission,
 } from "@/views/admin/views/core/staff/staff-model";
 
 import { SelectableCard } from "../selectable-card";
 
+const StaffScopeDialogContent = React.lazy(
+  async () => await import("./scope/scope-dialog"),
+);
+
+export interface StaffRowIssue {
+  dependency?: string;
+  type: string;
+}
+
+const issuesFromResponse = (message: string | undefined): StaffScopeIssue[] => {
+  if (!message) return [];
+  try {
+    const body: unknown = JSON.parse(message);
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "issues" in body &&
+      Array.isArray(body.issues)
+    ) {
+      return body.issues as StaffScopeIssue[];
+    }
+  } catch {
+    return [];
+  }
+
+  return [];
+};
+
 export interface EditStaffFormProps {
+  families: StaffScopeFamily[];
   grantedKeys: readonly string[];
+  grantedScopes?: Readonly<Record<string, PermissionStaffScope>>;
   id: string;
   /** Performs the write. */
   onSave: (args: {
@@ -73,17 +118,79 @@ const CountBadge = ({ granted, total }: { granted: number; total: number }) => {
   );
 };
 
+const ScopeSummary = ({
+  issues,
+  labelByKey,
+  onEdit,
+  permission,
+  scope,
+  t,
+}: {
+  issues: StaffRowIssue[];
+  labelByKey: Map<string, string>;
+  onEdit: () => void;
+  permission: StaffPermissionItem;
+  scope: PermissionStaffScope | undefined;
+  t: Translate;
+}) => {
+  const issueText = (issue: StaffRowIssue) =>
+    t(`scope.issues.${issue.type}` as "scope.issues.missing_scope", {
+      dependency: issue.dependency
+        ? (labelByKey.get(issue.dependency) ?? issue.dependency)
+        : "",
+      permission: permission.label,
+    });
+
+  return (
+    <div className="flex flex-col gap-2 ps-11 pe-4 pb-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {scope ? (
+          <span className="bg-muted text-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium">
+            {scope.mode === "all" ? (
+              <GlobeIcon aria-hidden className="size-3.5" />
+            ) : (
+              <ListChecksIcon aria-hidden className="size-3.5" />
+            )}
+            {scope.mode === "all"
+              ? t("scope.all")
+              : t("scope.selected", { count: scope.ids.length })}
+          </span>
+        ) : null}
+        <Button onClick={onEdit} size="xs" variant="outline">
+          {scope ? t("scope.change") : t("scope.choose")}
+        </Button>
+      </div>
+      {issues.map(issue => (
+        <p
+          className="text-destructive flex items-start gap-1.5 text-xs leading-relaxed"
+          key={`${issue.type}:${issue.dependency ?? ""}`}
+          role="alert"
+        >
+          <TriangleAlertIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          {issueText(issue)}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 const PermissionRow = ({
   checked,
+  issues,
   labelByKey,
+  onEditScope,
   onToggle,
   permission,
+  scope,
   t,
 }: {
   checked: Set<string>;
+  issues: StaffRowIssue[];
   labelByKey: Map<string, string>;
+  onEditScope: (permission: StaffPermissionItem) => void;
   onToggle: (key: string, value: boolean) => void;
   permission: StaffPermissionItem;
+  scope: PermissionStaffScope | undefined;
   t: Translate;
 }) => {
   const isChecked = checked.has(permission.key);
@@ -93,59 +200,79 @@ const PermissionRow = ({
     .join(", ");
 
   return (
-    <label
-      className={cn(
-        "flex items-center gap-3 px-4 py-3 transition-colors",
-        !locked && "hover:bg-muted/40",
-      )}
-    >
-      <Checkbox
-        checked={isChecked}
-        disabled={locked}
-        onCheckedChange={value => {
-          onToggle(permission.key, value);
-        }}
-      />
+    <div>
+      <label
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 transition-colors",
+          !locked && "hover:bg-muted/40",
+        )}
+      >
+        <Checkbox
+          checked={isChecked}
+          disabled={locked}
+          onCheckedChange={value => {
+            onToggle(permission.key, value);
+          }}
+        />
 
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "flex items-center gap-1.5 text-sm leading-none",
-            locked && "text-muted-foreground",
-          )}
-        >
-          {locked ? (
-            <LockIcon aria-hidden className="size-3.5 shrink-0" />
-          ) : null}
-          {permission.label}
-        </p>
-        {locked ? (
-          <p className="text-muted-foreground mt-1 text-xs">
-            {t("requires", { permission: requires })}
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "flex items-center gap-1.5 text-sm leading-none",
+              locked && "text-muted-foreground",
+            )}
+          >
+            {locked ? (
+              <LockIcon aria-hidden className="size-3.5 shrink-0" />
+            ) : null}
+            {permission.label}
           </p>
-        ) : null}
-      </div>
-    </label>
+          {locked ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("requires", { permission: requires })}
+            </p>
+          ) : null}
+        </div>
+      </label>
+      {isChecked && permission.scopeFamily ? (
+        <ScopeSummary
+          issues={issues}
+          labelByKey={labelByKey}
+          onEdit={() => {
+            onEditScope(permission);
+          }}
+          permission={permission}
+          scope={scope}
+          t={t}
+        />
+      ) : null}
+    </div>
   );
 };
 
 const ModuleSection = ({
   checked,
+  issuesByKey,
   labelByKey,
   module,
+  onEditScope,
   onOpenChange,
   onToggle,
   onToggleModule,
   open,
+  scopes,
   t,
 }: {
   checked: Set<string>;
+  issuesByKey: Map<string, StaffRowIssue[]>;
   labelByKey: Map<string, string>;
   module: StaffModuleGroup;
+  onEditScope: (permission: StaffPermissionItem) => void;
   onOpenChange: (value: boolean) => void;
   onToggle: (key: string, value: boolean) => void;
   onToggleModule: (module: StaffModuleGroup, value: boolean) => void;
   open: boolean;
+  scopes: Readonly<Record<string, PermissionStaffScope | undefined>>;
   t: Translate;
 }) => {
   const granted = countGrantedStaffPermissions(module.permissions, checked);
@@ -188,10 +315,13 @@ const ModuleSection = ({
           {module.permissions.map(permission => (
             <PermissionRow
               checked={checked}
+              issues={issuesByKey.get(permission.key) ?? []}
               key={permission.key}
               labelByKey={labelByKey}
+              onEditScope={onEditScope}
               onToggle={onToggle}
               permission={permission}
+              scope={scopes[permission.key]}
               t={t}
             />
           ))}
@@ -202,7 +332,9 @@ const ModuleSection = ({
 };
 
 export const EditStaffFormContent = ({
+  families,
   grantedKeys,
+  grantedScopes = {},
   id,
   onSave,
   onSaved,
@@ -232,6 +364,13 @@ export const EditStaffFormContent = ({
   const [checked, setChecked] = React.useState<Set<string>>(
     () => new Set(grantedKeys),
   );
+  const [scopes, setScopes] = React.useState<
+    Record<string, PermissionStaffScope | undefined>
+  >(() => ({ ...grantedScopes }));
+  const [editingScope, setEditingScope] =
+    React.useState<null | StaffPermissionItem>(null);
+  const [showIssues, setShowIssues] = React.useState(false);
+  const [serverIssues, setServerIssues] = React.useState<StaffScopeIssue[]>([]);
 
   const labelByKey = React.useMemo(
     () => new Map(allItems.map(item => [item.key, item.label] as const)),
@@ -257,6 +396,54 @@ export const EditStaffFormContent = ({
     filteredPlugins.find(plugin => plugin.pluginId === selectedPluginId) ??
     filteredPlugins[0];
 
+  const scopeIssues = React.useMemo(
+    () => staffScopeIssues({ checked, items: allItems, scopes }),
+    [allItems, checked, scopes],
+  );
+  const issuesByKey = React.useMemo(() => {
+    const map = new Map<string, StaffRowIssue[]>();
+    const visible = [...(showIssues ? scopeIssues : []), ...serverIssues];
+    for (const issue of visible) {
+      const list = map.get(issue.key) ?? [];
+      if (
+        !list.some(
+          existing =>
+            existing.type === issue.type &&
+            existing.dependency ===
+              ("dependency" in issue ? issue.dependency : undefined),
+        )
+      ) {
+        list.push({
+          dependency: "dependency" in issue ? issue.dependency : undefined,
+          type: issue.type,
+        });
+      }
+      map.set(issue.key, list);
+    }
+
+    return map;
+  }, [scopeIssues, serverIssues, showIssues]);
+
+  const familyById = React.useMemo(
+    () => new Map(families.map(family => [family.id, family] as const)),
+    [families],
+  );
+  const editingFamily = editingScope?.scopeFamily
+    ? (familyById.get(editingScope.scopeFamily) ?? {
+        description: null,
+        id: editingScope.scopeFamily,
+        label: editingScope.scopeFamily,
+      })
+    : null;
+  const editingModuleScoped = editingScope
+    ? allItems.filter(
+        item =>
+          item.plugin === editingScope.plugin &&
+          item.module === editingScope.module &&
+          item.scopeFamily === editingScope.scopeFamily,
+      )
+    : [];
+
   const onToggle = (key: string, value: boolean) => {
     setChecked(previous =>
       toggleStaffPermission({ checked: previous, dependents, key, value }),
@@ -271,6 +458,28 @@ export const EditStaffFormContent = ({
 
   const onSubmit = async () => {
     const unrestricted = mode === "unrestricted";
+    setServerIssues([]);
+
+    if (!unrestricted && scopeIssues.length > 0) {
+      setShowIssues(true);
+      toast.error(t("scope.issues.title"), {
+        description: t(
+          `scope.issues.${scopeIssues[0].type}` as "scope.issues.missing_scope",
+          {
+            dependency:
+              "dependency" in scopeIssues[0]
+                ? (labelByKey.get(scopeIssues[0].dependency) ??
+                  scopeIssues[0].dependency)
+                : "",
+            permission:
+              labelByKey.get(scopeIssues[0].key) ?? scopeIssues[0].key,
+          },
+        ),
+      });
+
+      return;
+    }
+
     setIsLoading(true);
 
     const result = await onSave({
@@ -278,6 +487,7 @@ export const EditStaffFormContent = ({
       permissions: staffPermissionsForSubmit({
         checked,
         items: allItems,
+        scopes,
         unrestricted,
       }),
       type,
@@ -286,6 +496,28 @@ export const EditStaffFormContent = ({
 
     if ("error" in result) {
       setIsLoading(false);
+      const issues =
+        result.error.status === 400
+          ? issuesFromResponse(result.error.message)
+          : [];
+      if (issues.length > 0) {
+        setServerIssues(issues);
+        toast.error(t("scope.issues.title"), {
+          description: t(
+            `scope.issues.${issues[0].type}` as "scope.issues.missing_scope",
+            {
+              dependency:
+                "dependency" in issues[0]
+                  ? (labelByKey.get(issues[0].dependency) ??
+                    issues[0].dependency)
+                  : "",
+              permission: labelByKey.get(issues[0].key) ?? issues[0].key,
+            },
+          ),
+        });
+
+        return;
+      }
       toast.error(t("error"), {
         description:
           result.error.status === 403
@@ -460,9 +692,11 @@ export const EditStaffFormContent = ({
                     return (
                       <ModuleSection
                         checked={checked}
+                        issuesByKey={issuesByKey}
                         key={moduleKey}
                         labelByKey={labelByKey}
                         module={module}
+                        onEditScope={setEditingScope}
                         onOpenChange={value => {
                           setOpenModules(previous => {
                             const next = new Set(previous);
@@ -485,6 +719,7 @@ export const EditStaffFormContent = ({
                           );
                         }}
                         open={openModules.has(moduleKey)}
+                        scopes={scopes}
                         t={t}
                       />
                     );
@@ -504,6 +739,59 @@ export const EditStaffFormContent = ({
           {t("save")}
         </Button>
       </div>
+
+      <Dialog
+        onOpenChange={open => {
+          if (!open) setEditingScope(null);
+        }}
+        open={editingScope !== null}
+      >
+        <DialogContent className="sm:max-w-lg">
+          {editingScope && editingFamily ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-balance">
+                  {t("scope.title", { permission: editingScope.label })}
+                </DialogTitle>
+                <DialogDescription className="text-pretty">
+                  {editingFamily.description ??
+                    t("scope.desc", { family: editingFamily.label })}
+                </DialogDescription>
+              </DialogHeader>
+              <React.Suspense
+                fallback={
+                  <div className="flex flex-col gap-3">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                }
+              >
+                <StaffScopeDialogContent
+                  family={editingFamily}
+                  moduleScopedCount={editingModuleScoped.length}
+                  onApply={(scope, applyToModule) => {
+                    const keys = applyToModule
+                      ? editingModuleScoped.map(item => item.key)
+                      : [editingScope.key];
+                    setScopes(previous => {
+                      const next = { ...previous };
+                      for (const key of keys) next[key] = scope;
+
+                      return next;
+                    });
+                    setServerIssues([]);
+                    setEditingScope(null);
+                  }}
+                  onCancel={() => {
+                    setEditingScope(null);
+                  }}
+                  value={scopes[editingScope.key]}
+                />
+              </React.Suspense>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

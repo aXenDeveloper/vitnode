@@ -25,9 +25,9 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { Card } from "@/components/ui/card";
+import { DragLift } from "@/lib/dnd/drag-lift";
 import {
   DRAG_OVERLAY_LIFT_CLASS,
-  DRAG_OVERLAY_LIFT_STYLE,
   LIFTED_DROP_ANIMATION,
 } from "@/lib/dnd/drag-motion";
 import { revealWhenRendered } from "@/lib/dnd/reveal";
@@ -447,22 +447,28 @@ export const DashboardBoardProvider = ({
           }
         >
           {activeView ? (
-            <Card
-              className={cn(
-                "ring-primary/40 flex flex-col",
-                DRAG_OVERLAY_LIFT_CLASS,
-              )}
-              style={DRAG_OVERLAY_LIFT_STYLE}
-            >
-              <WidgetCardContent isEditing widget={activeView} />
-            </Card>
+            <DragLift>
+              <Card
+                className={cn(
+                  "ring-primary/40 flex size-full flex-col",
+                  DRAG_OVERLAY_LIFT_CLASS,
+                )}
+              >
+                <WidgetCardContent isEditing widget={activeView} />
+              </Card>
+            </DragLift>
           ) : activePanelWidget ? (
-            <div
-              className={cn(WIDGET_OPTION_CARD_CLASS, DRAG_OVERLAY_LIFT_CLASS)}
-              style={DRAG_OVERLAY_LIFT_STYLE}
-            >
-              <WidgetOptionCardBody widget={activePanelWidget} />
-            </div>
+            <DragLift>
+              <div
+                className={cn(
+                  WIDGET_OPTION_CARD_CLASS,
+                  "size-full",
+                  DRAG_OVERLAY_LIFT_CLASS,
+                )}
+              >
+                <WidgetOptionCardBody widget={activePanelWidget} />
+              </div>
+            </DragLift>
           ) : null}
         </DragOverlay>
       </DndContext>

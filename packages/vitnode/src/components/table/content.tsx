@@ -117,7 +117,7 @@ const ToolbarDataTable = ({
 
   return (
     <div className="border-foreground/10 flex flex-wrap items-center gap-2 border-b px-4 py-3">
-      <div className="w-full min-w-0 flex-1">
+      <div className="min-w-48 flex-1">
         {search && <SearchDataTable searchPlaceholder={searchPlaceholder} />}
       </div>
       {filters && filters.length > 0 && <FiltersDataTable filters={filters} />}

@@ -44,6 +44,7 @@ import type { AiActionRegistry } from "../lib/ai/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
+import type { ModerationRegistry } from "../lib/moderation/registry";
 import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
 import type { NotificationRegistry } from "../lib/notifications/registry";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
@@ -70,6 +71,7 @@ import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { validateModerationRegistry } from "../lib/moderation/registry";
 import { collectNavigationPresets } from "../lib/navigation-presets";
 import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
@@ -157,6 +159,7 @@ export interface EnvVariablesVitNode {
       shortTitle?: string;
       title: string;
     };
+    moderation: ModerationRegistry;
     /** Every prebuilt main-menu item the installed plugins offer. */
     navigation: NavigationPreset[];
     notifications?: NotificationRegistry;
@@ -420,6 +423,22 @@ export const globalMiddleware = ({
     permissionStaff: permissionStaffMetadata,
   });
 
+  const moderationMetadata: ModerationRegistry = validateModerationRegistry({
+    catalog: permissionStaffMetadata,
+    scopes: plugins.flatMap(plugin =>
+      (plugin.moderation?.scopes ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+    targets: plugins.flatMap(plugin =>
+      (plugin.moderation?.reportTargets ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  });
+
   return async (c: Context, next: Next) => {
     if (!c.get("ipAddress")) {
       c.set("ipAddress", resolveClientIp(c));
@@ -486,6 +505,7 @@ export const globalMiddleware = ({
       queue: queueMetadata,
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
+      moderation: moderationMetadata,
       navigation: navigationMetadata,
       notifications: notificationsMetadata,
       notificationWorkers,
