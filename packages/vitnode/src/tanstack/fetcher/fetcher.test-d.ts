@@ -228,7 +228,7 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
       path: "/",
     });
 
-    expectTypeOf(list.status).toEqualTypeOf<200 | 400>();
+    expectTypeOf(list.status).toEqualTypeOf<200 | 400 | 404>();
 
     const detail = await fetcher({
       plugin: "@acme/notes",

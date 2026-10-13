@@ -84,37 +84,42 @@ export const assertContentContainerNamespaces = ({
   contentTypes: readonly AnyContentTypeDefinition[];
   pluginId: string;
 }): void => {
+  // Owners are keyed by kind as well as id: a content type and a container may
+  // not share an id's namespace slot just because their ids happen to match.
   const modules = new Map<string, string>();
   const paths = new Map<string, string>();
+  const describeOwner = (owner: string): string =>
+    `${pluginId} -> ${owner.slice(owner.indexOf(":") + 1)}`;
 
   for (const definition of contentTypes) {
-    modules.set(definition.permissionModule, definition.id);
+    modules.set(definition.permissionModule, `type:${definition.id}`);
     if (definition.publicApi.enabled) {
-      paths.set(definition.publicApi.path, definition.id);
+      paths.set(definition.publicApi.path, `type:${definition.id}`);
     }
   }
 
   for (const definition of containers) {
+    const self = `container:${definition.id}`;
     const module = definition.admin.permissionModule;
     const moduleOwner = modules.get(module);
-    if (moduleOwner !== undefined && moduleOwner !== definition.id) {
+    if (moduleOwner !== undefined && moduleOwner !== self) {
       throw new ContentEngineError(
-        `Permission module "${module}" is used by both ${pluginId} -> ${moduleOwner} and ${pluginId} -> ${definition.id}. Set \`admin.permissionModule\` on one of them.`,
+        `Permission module "${module}" is used by both ${describeOwner(moduleOwner)} and ${pluginId} -> ${definition.id}. Set \`admin.permissionModule\` on one of them.`,
         { contentTypeId: definition.id },
       );
     }
-    modules.set(module, definition.id);
+    modules.set(module, self);
 
     if (!definition.publicApi.enabled) continue;
     const path = definition.publicApi.path;
     const pathOwner = paths.get(path);
-    if (pathOwner !== undefined && pathOwner !== definition.id) {
+    if (pathOwner !== undefined && pathOwner !== self) {
       throw new ContentEngineError(
-        `Public path "${path}" is claimed by both ${pluginId} -> ${pathOwner} and ${pluginId} -> ${definition.id}. Give one of them a different \`publicApi.path\`.`,
+        `Public path "${path}" is claimed by both ${describeOwner(pathOwner)} and ${pluginId} -> ${definition.id}. Give one of them a different \`publicApi.path\`.`,
         { contentTypeId: definition.id },
       );
     }
-    paths.set(path, definition.id);
+    paths.set(path, self);
   }
 };
 

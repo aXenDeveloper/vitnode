@@ -88,8 +88,8 @@ export function buildModule<
   const hono = new OpenAPIHono();
 
   if (routes) {
-    routes.forEach(({ handler, route }) => {
-      hono.openapi(route, handler);
+    routes.forEach(({ handler, hook, route }) => {
+      hono.openapi(route, handler, hook as never);
     });
   }
 

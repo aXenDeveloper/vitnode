@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import type { RouteValidationHook } from "../../../api/lib/route";
 import type {
   AnyContentContainerDefinition,
   ContentContainerCreateInput,
@@ -35,6 +36,32 @@ const containerError = (error: unknown): never => {
   }
 
   throw error;
+};
+
+/**
+ * A body the route schema refuses answers in the same `{ code, message }` shape
+ * the service's own refusals use, so the AdminCP translates one contract.
+ */
+const validationHook: RouteValidationHook = (result, c) => {
+  if (result.success) return undefined;
+
+  const { issues } = result.error;
+
+  return c.json(
+    {
+      code: issues.some(issue => issue.path[0] === "metadata")
+        ? "invalidMetadata"
+        : "invalidInput",
+      message: issues
+        .map(issue =>
+          issue.path.length > 0
+            ? `${issue.path.join(".")}: ${issue.message}`
+            : issue.message,
+        )
+        .join("; "),
+    },
+    400,
+  );
 };
 
 const idParams = z.object({
@@ -94,6 +121,7 @@ export const buildContentContainerAdminRoutes = <
 
   const create = buildRoute({
     pluginId,
+    hook: validationHook,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
     route: {
       method: "post",
@@ -126,6 +154,7 @@ export const buildContentContainerAdminRoutes = <
 
   const update = buildRoute({
     pluginId,
+    hook: validationHook,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
     route: {
       method: "patch",
@@ -162,6 +191,7 @@ export const buildContentContainerAdminRoutes = <
 
   const move = buildRoute({
     pluginId,
+    hook: validationHook,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
     route: {
       method: "post",
@@ -199,6 +229,7 @@ export const buildContentContainerAdminRoutes = <
 
   const remove = buildRoute({
     pluginId,
+    hook: validationHook,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
     route: {
       method: "delete",

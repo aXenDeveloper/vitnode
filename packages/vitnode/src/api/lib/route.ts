@@ -1,5 +1,6 @@
 import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
-import type { MiddlewareHandler } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
+import type { ZodError } from "zod";
 
 import { createRoute as createRouteHono } from "@hono/zod-openapi";
 
@@ -9,6 +10,16 @@ import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 import { pluginTag } from "./openapi-tags";
+
+/**
+ * Runs after request validation, before the handler. Return a response to
+ * answer a failed validation in the route's own error shape; return nothing to
+ * keep the default.
+ */
+export type RouteValidationHook = (
+  result: { error: ZodError; success: false } | { success: true },
+  c: Context,
+) => Promise<Response | undefined> | Response | undefined;
 
 export interface AdminStaffPermission {
   module: string;
@@ -61,11 +72,13 @@ export const buildRoute = <
 >({
   route,
   handler,
+  hook,
   pluginId,
   adminStaffPermission,
 }: {
   adminStaffPermission?: AdminStaffPermission;
   handler: RouteHandler<R & { path: P }, EnvVitNode>;
+  hook?: RouteValidationHook;
   pluginId: Plugin;
   route: R;
 }): Route<Plugin, R & { path: P }> => {
@@ -108,6 +121,7 @@ export const buildRoute = <
       middleware,
     }),
     handler: handler as Route<Plugin, R & { path: P }>["handler"],
+    ...(hook ? { hook } : {}),
     pluginId,
   };
 };
@@ -117,6 +131,7 @@ export interface Route<
   R extends RouteConfig = RouteConfig,
 > {
   handler: (...args: unknown[]) => Promise<Response> | Response;
+  hook?: RouteValidationHook;
   pluginId: Plugin;
   route: R;
 }
