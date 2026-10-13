@@ -6,9 +6,12 @@ import {
   testPostContentType,
 } from "@/tests/content-fixtures";
 
+import { defineContentContainer } from "./containers/define";
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
+
+const boards = defineContentContainer({ id: "test.boards" });
 
 const fields = {
   title: field.text({ required: true, maxLength: 200 }),
@@ -42,6 +45,7 @@ const fields = {
     fields: { question: field.text({ required: true }) },
   }),
   content: field.blocks(),
+  board: field.container({ definition: boards }),
 };
 
 const ownership = { field: "author" };
@@ -186,6 +190,11 @@ describe("publicWrite configuration", () => {
       new RegExp(`"${name}" of kind "${kind}", which cannot be written`),
     ]),
     [
+      "the container field in update",
+      { ownership, update: { fields: ["title", "board"] } },
+      /update.fields includes the container field "board"/,
+    ],
+    [
       "a slug derived from another field",
       { ownership, update: { fields: ["slug"] } },
       /slug "slug", which is derived from "title"/,
@@ -269,6 +278,27 @@ describe("publicWrite configuration", () => {
       expect(() => write(publicWrite)).toThrow(message);
     },
   );
+
+  it("lets a member pick the container on create", () => {
+    const definition = define({
+      publicApi: {
+        path: "threads",
+        fields: ["title", "slug", "board"],
+        filterableFields: ["board"],
+      },
+      publicWrite: {
+        ownership,
+        create: { fields: ["title", "handle", "board"] },
+      },
+    });
+
+    expect(definition.publicWrite.create.fields).toEqual([
+      "title",
+      "handle",
+      "board",
+    ]);
+    expect(definition.publicApi.filterableFields).toEqual(["board"]);
+  });
 
   it("needs a public API", () => {
     expect(() =>

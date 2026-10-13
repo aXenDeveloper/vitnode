@@ -1,7 +1,16 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type {
   ContentFieldDescriptor,
@@ -201,6 +210,19 @@ export const buildFilterCondition = ({
       }
 
       conditions.push(isNull(column));
+      continue;
+    }
+
+    if (
+      fieldValue.kind === "container" &&
+      typeof raw === "object" &&
+      Array.isArray((raw as { in?: unknown }).in)
+    ) {
+      const ids = (raw as { in: unknown[] }).in.filter(
+        (id): id is number =>
+          typeof id === "number" && Number.isSafeInteger(id),
+      );
+      conditions.push(ids.length > 0 ? inArray(column, ids) : eq(column, 0));
       continue;
     }
 

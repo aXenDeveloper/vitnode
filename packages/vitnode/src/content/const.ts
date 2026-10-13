@@ -44,6 +44,7 @@ export const CONTENT_PUBLICATION_STATUS_LENGTH = 32;
 
 export const CONTENT_FILTERABLE_FIELD_KINDS = [
   "boolean",
+  "container",
   "enum",
   "number",
   "relation",
@@ -211,6 +212,7 @@ export const CONTENT_PUBLIC_RESERVED_PATHS = ["admin"] as const;
 export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "blocks",
   "boolean",
+  "container",
   "dateTime",
   "enum",
   // A file is exposable, and what crosses is the normalised descriptor rather
@@ -238,6 +240,7 @@ export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
 
 export const CONTENT_PUBLIC_WRITABLE_KINDS = [
   "boolean",
+  "container",
   "dateTime",
   "enum",
   "number",

@@ -248,6 +248,13 @@ export const resolveContentIndexes = ({
           fieldValue.kind === "user",
       )
       .map(([name]) => named(tableName, { on: [name] })),
+    ...fieldEntries
+      .filter(([, fieldValue]) => fieldValue.kind === "container")
+      .map(([name]) =>
+        named(tableName, {
+          on: publication ? [name, "publishedAt"] : [name],
+        }),
+      ),
     ...CONTENT_SYSTEM_FIELDS.filter(name => name !== "id").map(name =>
       named(tableName, { on: [name] }),
     ),

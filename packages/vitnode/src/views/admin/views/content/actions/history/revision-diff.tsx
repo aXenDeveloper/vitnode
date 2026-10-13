@@ -22,6 +22,7 @@ const TEXTAREA_PREVIEW_LINES = 8;
 
 const TOKEN_KINDS = new Set([
   "boolean",
+  "container",
   "dateTime",
   "number",
   "relation",
@@ -114,6 +115,9 @@ const Value = ({
   switch (kind) {
     case "boolean":
       return <span>{value === true ? "✓" : "—"}</span>;
+
+    case "container":
+      return <span className="tabular-nums">{String(value)}</span>;
 
     case "dateTime":
       return <DateFormat date={String(value)} />;

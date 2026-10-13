@@ -67,13 +67,15 @@ describe("core's route tree", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  /** One catch-all, and it is the Content Engine's. */
-  it("declares exactly one catch-all", () => {
+  it("declares only the Content Engine's catch-alls", () => {
     const splats = manifest.filter(route =>
       route.segments.some(segment => segment.kind === "splat"),
     );
 
-    expect(splats.map(route => route.path)).toEqual(["/admin/content/*"]);
+    expect(splats.map(route => route.path).sort()).toEqual([
+      "/admin/containers/*",
+      "/admin/content/*",
+    ]);
   });
 
   /**

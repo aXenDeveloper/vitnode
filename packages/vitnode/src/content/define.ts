@@ -59,6 +59,7 @@ import {
   assertFieldAiAssist,
   assertFieldKind,
   assertFieldName,
+  assertSingleContainerField,
   assertSlugSources,
   bindSelfRelations,
 } from "./define-fields";
@@ -396,6 +397,7 @@ export const defineContentType = <
   }
 
   assertSlugSources(id, fieldMap);
+  assertSingleContainerField(id, fieldMap);
   assertFieldAiAssist(id, fieldMap);
 
   // First, because every resolver below is stated in terms of what it produces:

@@ -27,10 +27,13 @@ import {
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
 import { contentTypeName } from "../admin/labels";
+import { contentContainerTag } from "../cache";
 import {
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
+import { contentContainerFieldOf } from "../containers/association";
+import { createContentContainerService } from "../containers/server/service";
 import { ContentEngineError } from "../errors";
 import { parseContentId } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
@@ -103,7 +106,18 @@ export const buildContentPublicRoutes = <
     orderBy: z.enum(orderable).optional(),
     search: z.string().optional(),
   });
-  const listQuery = paginationQuery.extend(schemas.publicFilters.shape);
+  const containerField = contentContainerFieldOf(definition);
+  const containerFilter =
+    containerField &&
+    definition.publicApi.filterableFields.includes(containerField.name)
+      ? containerField
+      : null;
+  const listQuery = paginationQuery.extend({
+    ...schemas.publicFilters.shape,
+    ...(containerFilter
+      ? { includeDescendants: z.enum(["true", "false"]).optional() }
+      : {}),
+  });
   const localeOnlyQuery = z.object(localeQuery);
 
   const notFound = () =>
@@ -332,6 +346,10 @@ export const buildContentPublicRoutes = <
           description: `Up to ${CONTENT_PUBLIC_MAX_PAGE_SIZE} published ${name} records`,
         },
         400: { description: "Invalid query parameters" },
+        404: {
+          description:
+            "The requested locale is not served, or the container filter names a container that does not exist",
+        },
       },
     },
     handler: async c => {
@@ -345,6 +363,27 @@ export const buildContentPublicRoutes = <
       const filters = schemas.publicFilters.parse(
         raw,
       ) as ContentPublicFilterInput<TDefinition>;
+
+      if (containerFilter) {
+        const requested = (filters as Record<string, unknown>)[
+          containerFilter.name
+        ];
+        if (typeof requested === "number") {
+          const containers = createContentContainerService(c, {
+            definition: containerFilter.field.definition,
+            pluginId,
+          });
+          const ids = await containers.descendantIds(requested);
+          if (!ids) {
+            throw new HTTPException(404, { message: "Container not found." });
+          }
+          if (raw.includeDescendants === "true") {
+            (filters as Record<string, unknown>)[containerFilter.name] = {
+              in: ids,
+            };
+          }
+        }
+      }
 
       // An explicit locale naming no language this install serves is the same
       // 404 the detail route answers, not an empty list: an empty list would say
@@ -366,7 +405,12 @@ export const buildContentPublicRoutes = <
         query: { cursor, first, last, page, search },
       });
 
-      setPageCacheTags(c, contentListPageCacheTags(definition));
+      setPageCacheTags(c, [
+        ...contentListPageCacheTags(definition),
+        ...(containerFilter
+          ? [contentContainerTag(containerFilter.field.definition.id)]
+          : []),
+      ]);
 
       return c.json(data, 200, localeHeaders(resolved.locale, resolved.source));
     },

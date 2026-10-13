@@ -14,7 +14,7 @@ VitNode reads a plugin's content types from several small files instead of one b
 | `src/database/<type>.ts`                | Every table                        | Drizzle Kit, from `dist/src/database/*.js` | `createContentModel` and the generated tables. Server only         |
 | `src/api/modules/admin/admin.module.ts` | Any name                           | `src/config.api.ts`                        | `buildContentAdminModule` inside a module named `admin`            |
 | `src/config.api.ts`                     | The API plugin, `VitNodeApiPlugin` | The API, and the app's typed `fetcher`     | The admin module, and `buildContentPublicModule` for public routes |
-| `src/admin/nav.tsx`                     | `adminNav`                         | The AdminCP layout, on every AdminCP page  | `{ definition, icon }` per content type                            |
+| `src/admin/nav.tsx`                     | `adminNav`                         | The AdminCP layout, on every AdminCP page  | `{ definition, icon }` per content type and container collection   |
 | `src/admin/content.tsx`                 | `adminContent`                     | The content screens, loaded on demand      | Screen registrations, custom cells, fields and form layouts        |
 | `src/content.ts`                        | `contentTypes`                     | The web build and the API at startup       | Every content type with `delivery` or `search`                     |
 | `src/routes.ts`                         | `routes`                           | The web build                              | The pages that serve `delivery` and `search` URLs                  |

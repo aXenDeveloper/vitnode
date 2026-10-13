@@ -6,10 +6,12 @@ import { HTTPException } from "hono/http-exception";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { core_content_revisions } from "@/database/content";
+import { core_content_containers } from "@/database/content-containers";
 import { createTestCache } from "@/tests/cache";
 import {
   testEditorialTopicContentType,
   testForumContentType,
+  testThreadContentType,
   testTopicContentType,
 } from "@/tests/content-fixtures";
 import { createMemoryDb } from "@/tests/memory-db";
@@ -610,6 +612,137 @@ describe("editorial content types", () => {
     });
     expect(rows()).toEqual(before);
     expect(rows(core_content_revisions)).toEqual([]);
+    expect(events()).toEqual([]);
+  });
+});
+
+describe("a container field", () => {
+  const threads = createContentModel(testThreadContentType);
+  const BOARD = { ELSEWHERE: 9, GENERAL: 1, MISSING: 99 } as const;
+  const THREAD = 20;
+
+  const board = (id: number, slug: string, definitionId: string) => ({
+    createdAt: LIVE,
+    definitionId,
+    id,
+    metadata: {},
+    name: slug,
+    parentId: null,
+    pluginId: PLUGIN_ID,
+    position: 0,
+    slug,
+    updatedAt: LIVE,
+  });
+
+  const threadHarness = () =>
+    harness(threads as never, [
+      [
+        core_content_containers,
+        [
+          board(
+            BOARD.GENERAL,
+            "general",
+            testThreadContentType.fields.board.definition.id,
+          ),
+          board(BOARD.ELSEWHERE, "elsewhere", "test.sections"),
+        ],
+      ],
+      [
+        threads.table,
+        [
+          {
+            author: OWNER,
+            board: BOARD.GENERAL,
+            createdAt: LIVE,
+            id: THREAD,
+            publishedAt: LIVE,
+            slug: "first-thread",
+            status: "published",
+            title: "First thread",
+            updatedAt: LIVE,
+          },
+        ],
+      ],
+    ]);
+
+  it("creates a record inside the container the member picked", async () => {
+    const { rows, send } = threadHarness();
+
+    const response = await send("POST", "/", {
+      body: { values: { board: BOARD.GENERAL, title: "Hello world" } },
+      user: OWNER,
+    });
+
+    expect(response.status).toBe(201);
+    const record = (await response.json()) as { id: number };
+    expect(rows().find(row => row.id === record.id)).toMatchObject({
+      author: OWNER,
+      board: BOARD.GENERAL,
+    });
+  });
+
+  it.each([
+    ["does not exist", BOARD.MISSING],
+    ["belongs to another collection", BOARD.ELSEWHERE],
+  ])(
+    "refuses a container that %s, on that field",
+    async (_label, container) => {
+      const { events, rows, send } = threadHarness();
+      const before = rows();
+
+      const response = await send("POST", "/", {
+        body: { values: { board: container, title: "Hello world" } },
+        user: OWNER,
+      });
+
+      expect(response.status).toBe(400);
+      await expect(rejection(response)).resolves.toEqual({
+        code: CONTENT_PUBLIC_WRITE_CODES.invalidInput,
+        contentTypeId: threads.definition.id,
+        issues: [
+          {
+            code: CONTENT_PUBLIC_WRITE_ISSUE_CODES.unavailable,
+            field: "board",
+            message: expect.any(String),
+          },
+        ],
+      });
+      expect(rows()).toEqual(before);
+      expect(events()).toEqual([]);
+    },
+  );
+
+  it("keeps the record in its container on an update", async () => {
+    const { rows, send } = threadHarness();
+
+    const response = await send("PATCH", `/${THREAD}`, {
+      body: { values: { title: "Renamed thread" } },
+      user: OWNER,
+    });
+
+    expect(response.status).toBe(200);
+    expect(rows().find(row => row.id === THREAD)).toMatchObject({
+      board: BOARD.GENERAL,
+      title: "Renamed thread",
+    });
+  });
+
+  it("never lets an author move their record to another container", async () => {
+    const { events, rows, send } = threadHarness();
+    const before = rows();
+
+    const response = await send("PATCH", `/${THREAD}`, {
+      body: { values: { board: BOARD.GENERAL, title: "Renamed thread" } },
+      user: OWNER,
+    });
+
+    expect(response.status).toBe(400);
+    expect((await rejection(response)).issues).toContainEqual({
+      code: CONTENT_PUBLIC_WRITE_ISSUE_CODES.notWritable,
+      field: "board",
+      message: expect.any(String),
+    });
+    expect(rows()).toEqual(before);
     expect(events()).toEqual([]);
   });
 });

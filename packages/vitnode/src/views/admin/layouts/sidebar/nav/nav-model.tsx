@@ -1,5 +1,6 @@
 import {
   FileTextIcon,
+  FolderTreeIcon,
   LayoutDashboardIcon,
   ServerIcon,
   ShieldUserIcon,
@@ -16,6 +17,11 @@ import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { CONFIG_PLUGIN } from "@/config";
+import {
+  contentContainerAdminHref,
+  contentContainerNamespace,
+  contentContainerNouns,
+} from "@/content/admin/containers";
 import {
   contentEntityKey,
   type ContentLabelTranslator,
@@ -48,6 +54,7 @@ export type AdminNavTranslator = ContentLabelTranslator;
 
 export type AdminNavTitle =
   | { contentTypeId: string; kind: "content"; pluginId: string }
+  | { definitionId: string; kind: "container"; pluginId: string }
   | {
       key: string;
       kind: "key";
@@ -81,6 +88,10 @@ export interface AdminNavGroupDeclaration {
 /** One un-translated title, resolved. */
 const resolveTitle = (title: AdminNavTitle, t: AdminNavTranslator): string => {
   if (title.kind === "key") return t(title.key);
+  if (title.kind === "container") {
+    return contentContainerNouns({ id: title.definitionId }, title.pluginId, t)
+      .title;
+  }
 
   // The same resolution the screen's own heading uses, so the sidebar and the
   // page it opens cannot disagree about what the records are called.
@@ -286,6 +297,26 @@ const contentNavItems = (
       },
     }));
 
+const containerNavItems = (
+  plugin: VitNodeConfig["plugins"][number],
+): AdminNavItemDeclaration[] =>
+  (plugin.containers ?? [])
+    .filter(({ definition }) => definition.admin.navigation.enabled)
+    .map(({ definition, icon }) => ({
+      href: contentContainerAdminHref(definition),
+      icon: icon ?? <FolderTreeIcon />,
+      permission: {
+        module: definition.admin.permissionModule,
+        permission: CONTENT_PERMISSIONS.view,
+        plugin: plugin.pluginId,
+      },
+      title: {
+        definitionId: definition.id,
+        kind: "container" as const,
+        pluginId: plugin.pluginId,
+      },
+    }));
+
 const declaredNavItems = (
   plugin: VitNodeConfig["plugins"][number],
 ): AdminNavItemDeclaration[] =>
@@ -339,7 +370,11 @@ export const adminNavDeclarations = (
     // readily as a branch, and asking for `@vitnode/blog` instead would ship
     // every string that plugin has in order to render one heading.
     title: key(`${plugin.pluginId}.title`, `${plugin.pluginId}.title`),
-    items: [...contentNavItems(plugin), ...declaredNavItems(plugin)],
+    items: [
+      ...contentNavItems(plugin),
+      ...containerNavItems(plugin),
+      ...declaredNavItems(plugin),
+    ],
   })),
 ];
 
@@ -354,10 +389,17 @@ export const adminNavDeclarations = (
  * `.label` - and the branch holding both is exactly what a screen already loads
  * for that content type.
  */
-const titleNamespace = (title: AdminNavTitle): string =>
-  title.kind === "key"
-    ? title.namespace
-    : `${title.pluginId}.content.${contentEntityKey(title.contentTypeId)}`;
+const titleNamespace = (title: AdminNavTitle): string => {
+  if (title.kind === "key") return title.namespace;
+  if (title.kind === "container") {
+    return contentContainerNamespace(
+      { id: title.definitionId },
+      title.pluginId,
+    );
+  }
+
+  return `${title.pluginId}.content.${contentEntityKey(title.contentTypeId)}`;
+};
 
 /**
  * Every message namespace a set of declarations needs, and not one more.

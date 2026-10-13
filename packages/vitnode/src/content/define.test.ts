@@ -10,6 +10,7 @@ import {
   CONTENT_REVISION_MAX_RETENTION,
   CONTENT_REVISION_MIN_RETENTION,
 } from "./const";
+import { defineContentContainer } from "./containers/define";
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
@@ -103,6 +104,73 @@ describe("defineContentType", () => {
           },
         }),
       ).toThrow(/minLength 10 greater than maxLength 5/);
+    });
+  });
+
+  describe("container fields", () => {
+    const boards = defineContentContainer({ id: "test.boards" });
+
+    it.each([true, false])("accepts a container with required %s", required => {
+      expect(() =>
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            board: field.container({ definition: boards, required }),
+          },
+        }),
+      ).not.toThrow();
+    });
+
+    it.each([
+      [
+        "a definition that is not a container collection",
+        { board: field.container({ definition: {} as typeof boards }) },
+        /Container field "board" has no container definition/,
+      ],
+      [
+        "a localized container",
+        {
+          board: {
+            ...field.container({ definition: boards }),
+            localized: true,
+          },
+        },
+        /Container field "board" is `localized: true`/,
+      ],
+      [
+        "an optional container that is not nullable",
+        {
+          board: {
+            ...field.container({ definition: boards }),
+            nullable: false,
+          },
+        },
+        /"board" is optional but not nullable/,
+      ],
+      [
+        "a required container that is nullable",
+        {
+          board: {
+            ...field.container({ definition: boards, required: true }),
+            nullable: true,
+          },
+        },
+        /"board" is required but nullable/,
+      ],
+      [
+        "two container fields",
+        {
+          board: field.container({ definition: boards }),
+          section: field.container({ definition: boards }),
+        },
+        /declares 2 container fields \(board, section\)/,
+      ],
+    ])("rejects %s", (_label, fields, message) => {
+      expect(() =>
+        define({
+          fields: { title: field.text({ required: true }), ...fields },
+        }),
+      ).toThrow(message);
     });
   });
 

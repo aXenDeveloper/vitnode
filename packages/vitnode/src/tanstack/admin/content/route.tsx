@@ -12,6 +12,8 @@ import type { ContentRouteLabels } from "@/views/admin/views/content/content-lab
 
 import { resolveContentAdminRoute } from "@/content/index";
 import { CONTENT_PERMISSIONS } from "@/content/index";
+import { contentContainerListQuery } from "@/views/admin/views/containers/container-query";
+import { contentContainerApiTarget } from "@/views/admin/views/containers/container-request";
 import {
   contentLabelsFrom,
   contentRouteLabels,
@@ -19,6 +21,7 @@ import {
 } from "@/views/admin/views/content/content-labels";
 
 import type { AdminScreenContext } from "../screen";
+import type { AdminAccessState } from "../session-api";
 import type {
   ContentListParams,
   UncheckedContentListSearch,
@@ -26,6 +29,7 @@ import type {
 
 import { intlQueryOptions } from "../../i18n/query";
 import { requireAdminPermission } from "../screen";
+import { hasAdminPermission } from "../state";
 import { contentListPageQuery } from "./query";
 import { contentListRouteParams } from "./route-search";
 
@@ -78,6 +82,49 @@ export interface ContentAdminRouteData {
   title: string;
 }
 
+const preloadListContainers = async ({
+  adminAccess,
+  entry,
+  queryClient,
+  registry,
+}: Pick<AdminScreenContext, "queryClient"> & {
+  adminAccess: AdminAccessState;
+  entry: RegisteredFrontendContentType;
+  registry: ContentFrontendRegistry;
+}): Promise<void> => {
+  const { fields } = entry.definition;
+  const reads = entry.definition.admin.list.columns.flatMap(name => {
+    const descriptor = fields[name] as (typeof fields)[string] | undefined;
+    if (descriptor?.kind !== "container") return [];
+
+    const collection = registry.containers.byId(descriptor.definition.id);
+    if (
+      !collection ||
+      !hasAdminPermission(adminAccess, {
+        module: collection.definition.admin.permissionModule,
+        permission: CONTENT_PERMISSIONS.view,
+        plugin: collection.pluginId,
+      })
+    ) {
+      return [];
+    }
+
+    return [
+      queryClient
+        .query({
+          ...contentContainerListQuery({
+            definitionId: collection.definition.id,
+            target: contentContainerApiTarget(collection),
+          }),
+          staleTime: "static",
+        })
+        .catch(() => undefined),
+    ];
+  });
+
+  await Promise.all(reads);
+};
+
 export const loadContentAdminRoute = async ({
   adminAccess,
   locale,
@@ -126,6 +173,9 @@ export const loadContentAdminRoute = async ({
           }),
           staleTime: "static",
         })
+      : undefined,
+    listParams
+      ? preloadListContainers({ adminAccess, entry, queryClient, registry })
       : undefined,
   ]);
 

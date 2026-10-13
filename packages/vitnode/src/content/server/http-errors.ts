@@ -17,6 +17,7 @@ import {
   CONTENT_DUPLICATE_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "../const";
+import { ContentContainerAssignmentError } from "../containers/association";
 import {
   ContentDeliverySlugReserved,
   ContentDuplicateSlugConflict,
@@ -156,6 +157,14 @@ export const rethrowAsHttpError = (
   // the two parts a form can act on. A `ContentFileReferenceError` is the same
   // 400 either way - it just says which field and which rule.
   if (error instanceof ContentFileReferenceError) {
+    throw contentFileRejected({
+      code: error.code,
+      field: error.field,
+      message: error.detail,
+    });
+  }
+
+  if (error instanceof ContentContainerAssignmentError) {
     throw contentFileRejected({
       code: error.code,
       field: error.field,

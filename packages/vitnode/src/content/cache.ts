@@ -57,6 +57,9 @@ export const contentDeliverySitemapTag = (
   locale?: string,
 ): string => tag(contentTypeId, "sitemap", ...localeParts(locale));
 
+export const contentContainerTag = (definitionId: string): string =>
+  tag(definitionId, "containers");
+
 export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
 
 export interface ContentLocaleInvalidation {

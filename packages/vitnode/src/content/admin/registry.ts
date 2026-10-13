@@ -1,10 +1,13 @@
 import type {
+  ContentContainerFrontendRegistration,
   ContentFrontendPluginSource,
   ContentTypeFrontendRegistration,
 } from "../../lib/plugin";
+import type { AnyContentContainerDefinition } from "../containers/types";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentTypeLookup } from "./route";
 
+import { validateContentContainers } from "../containers/registry";
 import { validateContentTypes } from "../registry";
 
 /** A content type's frontend registration, plus the plugin that registered it. */
@@ -14,6 +17,22 @@ export interface RegisteredFrontendContentType {
   registration: ContentTypeFrontendRegistration;
 }
 
+export interface RegisteredFrontendContentContainer {
+  definition: AnyContentContainerDefinition;
+  pluginId: string;
+  registration: ContentContainerFrontendRegistration;
+}
+
+export interface ContentContainerFrontendRegistry {
+  all: () => readonly RegisteredFrontendContentContainer[];
+  byAdminPath: (
+    adminPath: string,
+  ) => RegisteredFrontendContentContainer | undefined;
+  byId: (
+    definitionId: string,
+  ) => RegisteredFrontendContentContainer | undefined;
+}
+
 export interface ContentFrontendRegistry {
   /** Every registration, sorted by content type id. */
   all: () => readonly RegisteredFrontendContentType[];
@@ -21,9 +40,38 @@ export interface ContentFrontendRegistry {
   byAdminPath: (adminPath: string) => RegisteredFrontendContentType | undefined;
   /** By `definition.id` - `blog.post`. */
   byId: (contentTypeId: string) => RegisteredFrontendContentType | undefined;
+  containers: ContentContainerFrontendRegistry;
 
   lookup: ContentTypeLookup;
 }
+
+const buildContainerRegistry = (
+  plugins: readonly ContentFrontendPluginSource[],
+): ContentContainerFrontendRegistry => {
+  const entries = plugins.flatMap(plugin =>
+    (plugin.containers ?? []).map(registration => ({
+      definition: registration.definition,
+      pluginId: plugin.pluginId,
+      registration,
+    })),
+  );
+
+  const firstRegistrations = new Set(validateContentContainers(entries));
+  const all = entries
+    .filter(entry => firstRegistrations.has(entry))
+    .sort((a, b) => a.definition.id.localeCompare(b.definition.id));
+
+  const byId = new Map(all.map(entry => [entry.definition.id, entry]));
+  const byAdminPath = new Map(
+    all.map(entry => [entry.definition.admin.path, entry]),
+  );
+
+  return {
+    all: () => all,
+    byAdminPath: adminPath => byAdminPath.get(adminPath),
+    byId: definitionId => byId.get(definitionId),
+  };
+};
 
 export const buildContentFrontendRegistry = (
   plugins: readonly ContentFrontendPluginSource[],
@@ -53,6 +101,7 @@ export const buildContentFrontendRegistry = (
     all: () => all,
     byAdminPath: adminPath => byAdminPath.get(adminPath),
     byId: contentTypeId => byId.get(contentTypeId),
+    containers: buildContainerRegistry(plugins),
     lookup: adminPath => byAdminPath.get(adminPath)?.definition,
   };
 };

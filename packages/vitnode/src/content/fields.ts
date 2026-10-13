@@ -1,8 +1,10 @@
 import type { BlockAllowedSpec } from "../blocks/types";
+import type { AnyContentContainerDefinition } from "./containers/types";
 import type {
   AnyContentTypeDefinition,
   ContentBlocksField,
   ContentBooleanField,
+  ContentContainerField,
   ContentDateTimeField,
   ContentEnumField,
   ContentFieldAiAssist,
@@ -378,9 +380,28 @@ const blocks = <
   required: false,
 });
 
+const container = <
+  const TDefinition extends AnyContentContainerDefinition,
+  TRequired extends boolean = false,
+>(args: {
+  definition: TDefinition;
+  description?: string;
+  required?: TRequired;
+}): ContentContainerField<TRequired, TDefinition> => {
+  const required = (args.required ?? false) as TRequired;
+
+  return {
+    ...args,
+    kind: "container",
+    nullable: !required as TRequired extends true ? false : true,
+    required,
+  };
+};
+
 export const field = {
   blocks,
   boolean,
+  container,
   dateTime,
   enum: enumField,
   file,

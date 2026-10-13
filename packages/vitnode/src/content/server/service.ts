@@ -57,6 +57,7 @@ import {
   CONTENT_SYSTEM_FIELDS,
   CONTENT_VISIBILITY_FIELDS,
 } from "../const";
+import { resolveContentContainerAssignment } from "../containers/server/assignment";
 import { ContentEngineError } from "../errors";
 import { contentRelationStrategy, requireContentId } from "../ids";
 import { partitionContentFields } from "../localization";
@@ -800,6 +801,7 @@ export const createContentService = <
         // against the field it is being written to. No statement at all for a
         // content type with no file fields.
         await assertContentFileReferences(c, definition, parsed, tx);
+        await resolveContentContainerAssignment(tx, definition, parsed);
 
         const [row] = await tx
           .insert(table)
@@ -1119,6 +1121,10 @@ export const createContentService = <
           ...(await store?.load(id, tx, galleryFieldNames)),
         }),
       });
+
+      if (changedPaths.length > 0) {
+        await resolveContentContainerAssignment(tx, definition, patch);
+      }
 
       if (changedCollections.length > 0) await store?.write(tx, id, patch);
 

@@ -1,0 +1,504 @@
+---
+title: Containers on the frontend
+description: Read Content Engine containers with the typed fetcher, render a nested board tree, list the records of a container and its subcontainers with includeDescendants, and let members create content inside a container through publicWrite.
+icon: AppWindow
+---
+
+This guide builds the member-facing side of the example plugin's boards: a `/boards` page with the nested board tree, a `/boards/:slug` page that lists the discussions of a board and every board below it, and a board picker on the "Start a discussion" form.
+
+The finished pages are in `plugins/example/src/pages/`, in the `board-*` and `discussion-*` files. The code below is the same, with some styling trimmed.
+
+## Before you begin
+
+You need a container collection with `publicApi`, and a content type whose `field.container()` is public, filterable and writable on create, as set up in [Containers](/docs/content-engine/containers#add-a-container-collection). The example's collection has `publicApi.path: "boards"`, so the fetcher's module is `content/boards`.
+
+The collection's public routes are read-only and need no session:
+
+| Route             | Returns                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /`           | `{ items }`: every container in tree order. `?parent=root` or `?parent={id}` returns one level |
+| `GET /{idOrSlug}` | `{ container, ancestors, children }`: ancestors root first, direct children in order           |
+
+Each item is `{ id, parentId, name, slug, position, depth, metadata }`, where `metadata` holds only `publicApi.fields`. An unknown container or `parent` answers `404`. A numeric segment is read as an id, anything else as a slug.
+
+<Steps>
+
+<Step>
+
+### Add the routes
+
+Register the two board pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?board=`. A `pendingComponent` is drawn while the loader runs, so import it directly rather than through `lazy()`:
+
+```ts title="plugins/example/src/routes.ts"
+// [!code ++:4]
+import {
+  FeedPendingSkeleton,
+  RoutePendingSkeleton,
+} from "@vitnode/core/tanstack/pending";
+
+import { boardSearch } from "./pages/board-search"; // [!code ++]
+import { discussionNewSearch } from "./pages/discussion-search"; // [!code ++]
+
+export const routes = definePluginRoutes([
+  // [!code ++:13]
+  page("/boards", {
+    component: lazy(() => import("./pages/boards-page")),
+    messages: ["@vitnode/example.boards"],
+    pendingComponent: RoutePendingSkeleton,
+  }),
+
+  page("/boards/:slug", {
+    component: lazy(() => import("./pages/board-page")),
+    messages: ["@vitnode/example.boards"],
+    pendingComponent: FeedPendingSkeleton,
+    search: boardSearch,
+  }),
+
+  page("/discussions/new", {
+    component: lazy(() => import("./pages/discussion-new-page")),
+    messages: ["@vitnode/example.discussions"],
+    requires: "authenticated",
+    search: discussionNewSearch, // [!code ++]
+  }),
+]);
+```
+
+`boardSearch` keeps a valid `cursor` for paging through discussions, and `discussionNewSearch` keeps a positive `board` id. Both are small functions in `board-search.ts` and `discussion-search.ts`. The strings live under `@vitnode/example.boards` in `src/locales/en.json`.
+
+</Step>
+
+<Step>
+
+### Load the tree
+
+Create a helper that reads every board. The list comes back in tree order, flat, so one request loads the whole tree:
+
+```ts title="plugins/example/src/pages/boards-data.ts"
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+export const fetchBoards = async () => {
+  const res = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "content/boards",
+    path: "/",
+    args: { query: {} },
+  });
+
+  if (res.status !== 200) throw new Error("Loading the boards failed.");
+
+  const { items } = await res.json();
+
+  return items;
+};
+
+export type Board = Awaited<ReturnType<typeof fetchBoards>>[number];
+
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+export const boardColor = (board: Pick<Board, "metadata">): null | string =>
+  typeof board.metadata.color === "string" &&
+  HEX_COLOR.test(board.metadata.color)
+    ? board.metadata.color
+    : null;
+```
+
+`Board` is inferred from the API, so `board.metadata.color` is typed as `string | null` from the definition's fields, and `board.metadata.locked` is a compile error because `locked` is not public. `boardColor` accepts only a hex value before it goes into a `style` attribute, because an admin typed it.
+
+</Step>
+
+<Step>
+
+### Render the tree
+
+`contentContainerTree` from `@vitnode/core/content` nests a tree-ordered list: each node gets a `children` array. Render it recursively as nested lists inside a labelled `nav`, so screen readers announce the structure:
+
+```tsx title="plugins/example/src/pages/board-tree.tsx"
+import type { ContentContainerTreeNode } from "@vitnode/core/content";
+
+import type { Board } from "./boards-data";
+
+import { boardHref } from "./board-search";
+import { boardColor } from "./boards-data";
+
+export const BoardColorDot = ({ board }: { board: Board }) => {
+  const color = boardColor(board);
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`size-3 shrink-0 rounded-full border${color === null ? " bg-muted" : ""}`}
+      style={color === null ? undefined : { backgroundColor: color }}
+    />
+  );
+};
+
+const BoardTreeItems = ({
+  nodes,
+}: {
+  nodes: ContentContainerTreeNode<Board>[];
+}) => (
+  <ul className="flex flex-col gap-2">
+    {nodes.map(node => (
+      <li className="flex flex-col gap-2" key={node.id}>
+        <a
+          className="flex flex-col gap-1 rounded-lg border p-4"
+          href={boardHref(node.slug)}
+        >
+          <span className="text-foreground flex items-center gap-2 font-medium text-balance">
+            <BoardColorDot board={node} />
+            {node.name}
+          </span>
+          {node.metadata.description ? (
+            <span className="text-muted-foreground text-sm leading-relaxed text-pretty">
+              {node.metadata.description}
+            </span>
+          ) : null}
+        </a>
+
+        {node.children.length > 0 ? (
+          <div className="border-l pl-4 md:pl-6">
+            <BoardTreeItems nodes={node.children} />
+          </div>
+        ) : null}
+      </li>
+    ))}
+  </ul>
+);
+
+export const BoardTree = ({
+  label,
+  nodes,
+}: {
+  label: string;
+  nodes: ContentContainerTreeNode<Board>[];
+}) => (
+  <nav aria-label={label}>
+    <BoardTreeItems nodes={nodes} />
+  </nav>
+);
+```
+
+`contentContainerTree` keeps the server's order, so siblings appear in the order staff arranged them. It works on any rows with `id` and `parentId`, including the AdminCP records.
+
+</Step>
+
+<Step>
+
+### Add the boards page
+
+The route's `load` fetches and nests the tree, and the page shows it, or an empty state when no board exists yet:
+
+```tsx title="plugins/example/src/pages/boards-page.tsx"
+import { contentContainerTree } from "@vitnode/core/content";
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from "@vitnode/core/routing";
+import { useTranslations } from "use-intl";
+
+import { BoardTree } from "./board-tree";
+import { fetchBoards } from "./boards-data";
+
+const loadBoards = async () => ({
+  tree: contentContainerTree(await fetchBoards()),
+});
+
+type BoardsPageData = Awaited<ReturnType<typeof loadBoards>>;
+
+export const route = definePluginRoute<BoardsPageData>({
+  load: loadBoards,
+
+  head: ({ t }) => ({
+    description: t("@vitnode/example.boards.desc"),
+    title: t("@vitnode/example.boards.title"),
+  }),
+});
+
+const BoardsPage = ({ loaderData }: PluginRoutePageProps<BoardsPageData>) => {
+  const t = useTranslations("@vitnode/example.boards");
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {t("title")}
+      </h1>
+
+      {loaderData.tree.length === 0 ? (
+        <p className="text-muted-foreground leading-relaxed">
+          {t("empty.desc")}
+        </p>
+      ) : (
+        <BoardTree label={t("tree")} nodes={loaderData.tree} />
+      )}
+    </div>
+  );
+};
+
+export default BoardsPage;
+```
+
+The example's page also has a breadcrumb, a **New discussion** button and an `Empty` state with an icon.
+
+</Step>
+
+<Step>
+
+### Add the board page
+
+`/boards/:slug` makes two requests. The detail route returns the board, its ancestors for the breadcrumb and its child boards. The discussions list is filtered by the board, and `includeDescendants: "true"` widens the filter to every board below it, so **Frontend** also lists what was posted in **React**:
+
+```tsx title="plugins/example/src/pages/board-page.tsx"
+import { contentPageItem } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+
+import type { BoardSearch } from "./board-search";
+
+const zodDiscussionRow = z.object({
+  id: z.number(),
+  publishedAt: z.string().nullable(),
+  slug: z.string().nullable(),
+  title: z.string(),
+});
+
+const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
+  const detail = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "content/boards",
+    path: "/{idOrSlug}",
+    args: { params: { idOrSlug: encodeURIComponent(idOrSlug) } },
+  });
+
+  if (detail.status !== 200 && detail.status !== 404) {
+    throw new Error("Loading the board failed.");
+  }
+
+  // A 404 becomes the route's not-found page.
+  const { ancestors, children, container } = contentPageItem(
+    detail.status === 200 ? await detail.json() : null,
+  );
+
+  const filters = {
+    board: String(container.id),
+    includeDescendants: "true",
+  };
+
+  const list = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "content/discussions",
+    path: "/",
+    args: {
+      query: { ...filters, first: "20", ...(cursor ? { cursor } : {}) },
+    },
+  });
+
+  if (list.status !== 200) throw new Error("Loading the discussions failed.");
+
+  const { edges, pageInfo } = await list.json();
+
+  return {
+    ancestors,
+    children,
+    container,
+    discussions: z.array(zodDiscussionRow).parse(edges),
+    isFirstPage: cursor === undefined,
+    nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
+  };
+};
+```
+
+- The filter parameter is named after the field, `board`, and works only because `board` is in `publicApi.filterableFields`. Without `includeDescendants`, it matches that one board.
+- Filter parameters are not part of the inferred query type yet, so they are spread in from a small object instead of written as literal keys.
+- An unknown board id in the filter answers `404`, not an empty list, so a stale link never looks like an empty board.
+- `nextCursor` goes into `?cursor=` for an **Older discussions** link. Pass it back unchanged.
+
+Declare the trail as a breadcrumb group, one crumb per ancestor, and give the route a `notFound` component for the 404:
+
+```tsx title="plugins/example/src/pages/board-page.tsx"
+export const route = definePluginRoute<BoardPageData, BoardSearch>({
+  load: async ({ params, search }) => await loadBoard(params.slug, search),
+
+  head: ({ loaderData }) => ({
+    description: loaderData?.container.metadata.description ?? undefined,
+    title: loaderData?.container.name,
+  }),
+
+  breadcrumb: {
+    group: ({ loaderData }) => (
+      <>
+        <BreadcrumbItem>
+          <BreadcrumbLink href={BOARDS_HREF}>
+            <BoardsCrumb />
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        {loaderData.ancestors.map(ancestor => (
+          <Fragment key={ancestor.id}>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href={boardHref(ancestor.slug)}>
+                {ancestor.name}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+          </Fragment>
+        ))}
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{loaderData.container.name}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </>
+    ),
+  },
+
+  notFound: BoardNotFound,
+});
+```
+
+The page renders the children with the same `BoardTree`, the discussions as a list of links, and a **New discussion** link to `/discussions/new?board={container.id}`. See the full component in `board-page.tsx`.
+
+</Step>
+
+<Step>
+
+### Let members pick a board
+
+Load the same tree for the create page and turn it into select options, indented by depth so the select reads like the tree:
+
+```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
+const loadBoardOptions = async () =>
+  (await fetchBoards()).map(board => ({
+    label: `${"— ".repeat(board.depth - 1)}${board.name}`,
+    value: String(board.id),
+  }));
+
+export const route = definePluginRoute<DiscussionNewData, DiscussionNewSearch>({
+  load: loadBoardOptions,
+});
+```
+
+Add the board to the form schema. A select works with strings, so the ids become a `z.enum`, preselected from `?board=` when it names a real board:
+
+```tsx title="plugins/example/src/pages/discussion-form.tsx"
+const createDiscussionCreateFormSchema = (
+  t: (
+    key: "board.required" | "body.required" | "title.max" | "title.min",
+  ) => string,
+  ids: [string, ...string[]],
+  selected: string | undefined,
+) => {
+  const board = z.enum(ids, { error: t("board.required") });
+
+  return createDiscussionFormSchema(t, {
+    body: emptyRichTextDocument(),
+    title: "",
+  }).extend({
+    board:
+      selected !== undefined && ids.includes(selected)
+        ? board.default(selected)
+        : board,
+  });
+};
+```
+
+Render it with `AutoFormSelect` before the title and body fields:
+
+```tsx title="plugins/example/src/pages/discussion-form.tsx"
+{
+  id: "board",
+  component: props => (
+    <AutoFormSelect
+      {...props}
+      description={t("board.desc")}
+      label={t("board.label")}
+      labels={boards.options}
+      placeholder={t("board.placeholder")}
+    />
+  ),
+},
+```
+
+On submit, send the board as a number inside `values`, like every other writable field:
+
+```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
+const onSubmit: AutoFormOnSubmit<DiscussionCreateFormSchema> = async (
+  { board, ...values },
+  form,
+) => {
+  const res = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "post",
+    module: "content/discussions",
+    path: "/",
+    args: { body: { values: { ...values, board: Number(board) } } },
+  });
+
+  if (res.status === 201) {
+    // Redirect to the new discussion, as in Public write frontend.
+    return;
+  }
+
+  await rejectDiscussion(res, form);
+};
+```
+
+The server never trusts the id. It reads the board back inside the write's transaction and checks that it belongs to `example.boards`. A board that was deleted while the form was open, or one from another collection, answers `400` with an issue on the `board` field:
+
+```json
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "example.discussion",
+  "issues": [
+    {
+      "code": "unavailable",
+      "field": "board",
+      "message": "The selected container does not exist."
+    }
+  ]
+}
+```
+
+`useDiscussionRejection` from [Public write frontend](/docs/content-engine/public-write-frontend#build-the-shared-form) already puts field issues under their field. Add `"board"` to its list of fields and a board-specific message for `unavailable`:
+
+```tsx title="plugins/example/src/pages/discussion-form.tsx"
+const DISCUSSION_FIELDS = ["title", "body", "board"] as const; // [!code highlight]
+
+const messageOf = (code: string, field?: DiscussionField) =>
+  t(
+    field === "board" && code === "unavailable"
+      ? "issues.board_unavailable"
+      : isKnownIssueCode(code)
+        ? ISSUE_MESSAGE_KEYS[code]
+        : "invalid",
+  );
+```
+
+The edit form stays as it was. A container field cannot be in `publicWrite.update.fields`, so moving a discussion to another board is a staff edit in the AdminCP.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+1. Create **Frontend** with **React** inside it in the AdminCP, then open `/boards`. Both boards show, **React** nested under **Frontend**.
+2. Open **React** and click **New discussion**. The form opens with **— React** preselected. Post it.
+3. Open `/boards/frontend`. The discussion is listed there too, because of `includeDescendants`, and the breadcrumb ends with **Boards** and **Frontend**.
+4. Open `/boards/nope`. The not-found page shows.
+
+## Errors to handle
+
+| Request                                                             | Answer                  | What the page does                                     |
+| ------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------ |
+| `GET content/boards/{idOrSlug}` for an unknown board                | `404`                   | `contentPageItem(null)` renders the route's `notFound` |
+| `GET content/boards?parent={id}` for an unknown parent              | `404`                   | Treat it like a missing board                          |
+| `GET content/discussions?board={id}` for an unknown board           | `404`                   | Treat it like a missing board                          |
+| `POST content/discussions` with a missing, deleted or foreign board | `400`, issue on `board` | Show the message under the select                      |
+| `POST content/discussions` with no `board` at all                   | `400`, issue on `board` | The form's own `required` check catches it first       |
+
+The [public write status codes](/docs/content-engine/public-write-api#status-codes) cover sign-in, permission and rate-limit answers, which work the same with or without containers.

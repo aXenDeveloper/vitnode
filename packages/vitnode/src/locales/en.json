@@ -1576,6 +1576,15 @@
           "move_up": "Move entry {position} up",
           "position": "{label} {position} of {total}",
           "remove": "Remove entry {position}"
+        },
+        "container": {
+          "placeholder": "Select a place…",
+          "none": "None",
+          "empty": "There is nowhere to file this yet. Create the first one in its collection, then come back.",
+          "loadFailed": "The list of places could not be loaded. Check your connection and try again.",
+          "forbidden": "You can't see this collection, so you can't choose a place in it. Ask an administrator for permission to view it.",
+          "unregistered": "This field points at a collection no installed plugin registers, so there is nothing to choose from.",
+          "retry": "Try again"
         }
       },
       "conflict": {
@@ -1754,6 +1763,101 @@
             "desc": "The form is back to the saved version."
           }
         }
+      }
+    },
+    "containers": {
+      "list": {
+        "label": "{name} tree",
+        "summary": "{count, plural, one {# item} other {# items}}",
+        "depth": "up to {max} levels deep",
+        "flat": "one level",
+        "sorted": "sorted A–Z",
+        "collapseAll": "Collapse all",
+        "expandAll": "Expand all",
+        "showChildren": "Show what's inside {name}",
+        "hideChildren": "Hide what's inside {name}",
+        "actions": "More actions for {name}",
+        "dragHandle": "Drag to move {name}",
+        "edit": "Edit",
+        "addChild": "Add inside",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "moveToTop": "Move to top level",
+        "moveInside": "Move inside…",
+        "delete": "Delete",
+        "moveSuccess": "Moved",
+        "moveSuccessDesc": "\"{name}\" is in its new place.",
+        "moveFailed": "Could not move \"{name}\""
+      },
+      "dnd": {
+        "instructions": "Press space bar or enter to pick up an item. Use the up and down arrow keys to move it, and the left and right arrow keys to change how deep it sits. Press space bar or enter again to drop it, or escape to cancel.",
+        "started": "Picked up {name}.",
+        "overRoot": "{name} would move to the top level{sorted, select, true {} other {, place {position}}}.",
+        "overInside": "{name} would move inside {parent}{sorted, select, true {} other {, place {position}}}.",
+        "overInvalid": "{name} can't go here. {reason}",
+        "droppedRoot": "Dropped {name} at the top level{sorted, select, true {} other {, place {position}}}.",
+        "droppedInside": "Dropped {name} inside {parent}{sorted, select, true {} other {, place {position}}}.",
+        "droppedInvalid": "{name} can't go there, so it stays where it was. {reason}",
+        "unchanged": "{name} stays where it was.",
+        "cancelled": "Moving cancelled. {name} is back where it was."
+      },
+      "empty": {
+        "title": "No {name} yet",
+        "desc": "Create the first one, then nest more inside it to build your structure."
+      },
+      "error": {
+        "title": "Could not load {name}",
+        "desc": "Something went wrong while reading the list. Check your connection and try again.",
+        "forbidden": "You don't have permission to view this collection.",
+        "retry": "Try again"
+      },
+      "form": {
+        "name": "Name",
+        "slug": "Slug",
+        "slugDesc": "The address part. Leave it empty and it's made from the name.",
+        "parent": "Place it in",
+        "parentDesc": "The tree goes up to {max} levels deep.",
+        "parentRoot": "Top level",
+        "fields": "Details"
+      },
+      "create": {
+        "title": "Create {name}",
+        "desc": "Add a new {name} to the tree.",
+        "submit": "Create",
+        "success": "Created",
+        "successDesc": "\"{name}\" is in the tree."
+      },
+      "edit": {
+        "title": "Edit {name}",
+        "submit": "Save changes",
+        "success": "Saved",
+        "successDesc": "\"{name}\" has been updated."
+      },
+      "delete": {
+        "title": "Delete {name}",
+        "desc": "Delete \"{name}\"? This can't be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel",
+        "success": "{name} deleted",
+        "successDesc": "\"{name}\" is gone from the tree.",
+        "failed": "Could not delete \"{name}\""
+      },
+      "errors": {
+        "cycle": "It can't go inside itself or inside something it contains.",
+        "definitionMismatch": "That belongs to a different collection.",
+        "hasChildren": "It still has items inside. Move or delete them first.",
+        "hasContent": "Content is still filed here. Move or delete that content first.",
+        "invalidInput": "Some of the values aren't valid. Check the form and try again.",
+        "invalidMetadata": "Some of the details don't match what this collection expects.",
+        "invalidPosition": "That position is outside the list. Refresh and try again.",
+        "limitReached": "This collection is full. Delete something before adding more.",
+        "maxDepth": "That would nest it deeper than this collection allows.",
+        "notFound": "It no longer exists - someone may have deleted it. Refresh the list.",
+        "parentNotFound": "The place you picked no longer exists. Refresh the list.",
+        "slugEmpty": "The slug needs at least one letter or digit.",
+        "slugTaken": "Another item in this collection already uses this slug.",
+        "forbidden": "You don't have permission to do that.",
+        "unknown": "Something went wrong. Try again in a moment."
       }
     },
     "editor": {

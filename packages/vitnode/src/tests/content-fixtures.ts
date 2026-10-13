@@ -1,5 +1,6 @@
 import type { LocaleRoutingConfig } from "@/lib/i18n/locale-routing";
 
+import { defineContentContainer } from "@/content/containers/define";
 import { defineContentType } from "@/content/define";
 import { field } from "@/content/fields";
 import { createLocaleRouting } from "@/lib/i18n/locale-routing";
@@ -931,6 +932,45 @@ export const testEditorialTopicContentType = defineContentType({
   publicWrite: {
     ownership: { field: "author" },
     create: { fields: ["title"] },
+    update: { fields: ["title"] },
+  },
+});
+
+export const testBoardContainers = defineContentContainer({
+  id: "test.boards",
+  fields: {
+    description: field.textarea({ maxLength: 500, nullable: true }),
+    color: field.text({ maxLength: 7, nullable: true }),
+    locked: field.boolean({ defaultValue: false }),
+    notes: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  hierarchy: { maxDepth: 3 },
+  publicApi: { path: "boards", fields: ["description", "color"] },
+});
+
+export const testSectionContainers = defineContentContainer({
+  id: "test.sections",
+  publicApi: { path: "sections" },
+});
+
+export const testThreadContentType = defineContentType({
+  id: "test.thread",
+  tableName: "test_threads",
+  publication: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    author: field.user(),
+    board: field.container({ definition: testBoardContainers, required: true }),
+  },
+  publicApi: {
+    path: "threads",
+    fields: ["id", "title", "slug", "board", "publishedAt"],
+    filterableFields: ["board"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "board"], status: "published" },
     update: { fields: ["title"] },
   },
 });

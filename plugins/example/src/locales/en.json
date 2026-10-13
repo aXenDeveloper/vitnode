@@ -105,7 +105,21 @@
           "body": "Message",
           "author": "Author",
           "publishedAt": "Published",
-          "updatedAt": "Updated"
+          "updatedAt": "Updated",
+          "board": "Board"
+        }
+      }
+    },
+    "containers": {
+      "boards": {
+        "label": "{count, plural, one {Board} other {Boards}}",
+        "title": "Boards",
+        "desc": "The board tree members file their discussions into. Drag to reorder or nest boards.",
+        "fields": {
+          "description": "Description",
+          "color": "Color",
+          "icon": "Icon",
+          "locked": "Locked"
         }
       }
     },
@@ -151,11 +165,41 @@
         "desc": "Limit this permission to articles in some categories."
       }
     },
+    "boards": {
+      "title": "Boards",
+      "desc": "Find the right place for your question, or start a new discussion.",
+      "tree": "All boards",
+      "children": "Boards inside",
+      "discussions": "Discussions",
+      "new_discussion": "New discussion",
+      "pagination": "Discussion pages",
+      "newest": "Newest discussions",
+      "older": "Older discussions",
+      "empty": {
+        "title": "No boards yet",
+        "desc": "An admin has not created any boards. Once they do, they show up here.",
+        "home": "Back to home"
+      },
+      "empty_board": {
+        "title": "Nothing here yet",
+        "desc": "Be the first to start a discussion in this board."
+      },
+      "not_found": {
+        "title": "Board not found",
+        "desc": "It may have been removed, or the link is wrong.",
+        "back": "See all boards"
+      }
+    },
     "discussions": {
       "new": {
         "title": "Start a discussion",
         "desc": "Ask a question or share an idea. Everyone can read it as soon as you post it.",
-        "submit": "Post discussion"
+        "submit": "Post discussion",
+        "no_boards": {
+          "title": "No boards yet",
+          "desc": "Discussions live in boards, and an admin has not created one yet. Check back soon.",
+          "action": "Browse boards"
+        }
       },
       "edit": {
         "title": "Edit discussion",
@@ -179,9 +223,17 @@
         "created": {
           "title": "Discussion posted",
           "desc": "It is live. Use Edit whenever you want to change it."
-        }
+        },
+        "board": "Board",
+        "boards": "Boards"
       },
       "form": {
+        "board": {
+          "label": "Board",
+          "desc": "Pick where the discussion belongs. You can't move it later.",
+          "placeholder": "Choose a board",
+          "required": "Pick a board"
+        },
         "title": {
           "label": "Title",
           "min": "Use at least 3 characters",
@@ -219,7 +271,8 @@
         "unknown": "Something went wrong on our side. Please try again.",
         "issues": {
           "not_writable": "This field can't be changed here.",
-          "unavailable": "The selected item is no longer available."
+          "unavailable": "The selected item is no longer available.",
+          "board_unavailable": "This board is no longer available. Pick another one."
         }
       }
     }
@@ -260,6 +313,11 @@
   "@vitnode/example:discussion:can_publish": "Publish and unpublish discussions",
   "@vitnode/example:discussion:can_restore": "Restore an earlier version of a discussion",
   "@vitnode/example:discussion:can_hide": "Hide and unhide discussions",
+  "@vitnode/example:example_boards": "Boards",
+  "@vitnode/example:example_boards:can_view": "View boards",
+  "@vitnode/example:example_boards:can_create": "Create boards",
+  "@vitnode/example:example_boards:can_edit": "Edit and move boards",
+  "@vitnode/example:example_boards:can_delete": "Delete boards",
   "ai_actions": {
     "@vitnode/example": {
       "article_excerpt": {

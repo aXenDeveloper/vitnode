@@ -23,6 +23,7 @@ import { isContentPublished } from "@/content/publication";
 import { isRichTextDocument } from "@/content/rich-text/document";
 import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
+import { useContentContainerOptions } from "../lib/container-field";
 import { ContentHiddenIcon } from "../lib/hidden-badge";
 
 export interface ContentRowData extends Record<string, unknown> {
@@ -152,6 +153,23 @@ const ContentReferenceList = ({
   );
 };
 
+const ContentContainerCellValue = ({
+  definitionId,
+  value,
+}: {
+  definitionId: string | undefined;
+  value: number;
+}) => {
+  const { query } = useContentContainerOptions(definitionId);
+  const name = query.data?.find(container => container.id === value)?.name;
+
+  return name === undefined ? (
+    <span className="text-muted-foreground tabular-nums">#{value}</span>
+  ) : (
+    <Badge variant="secondary">{name}</Badge>
+  );
+};
+
 export interface ContentStatusLabels {
   draft: string;
   published: string;
@@ -218,6 +236,16 @@ const ContentCellValue = ({
         <CheckIcon aria-hidden className="size-4" />
       ) : (
         <MinusIcon aria-hidden className="text-muted-foreground size-4" />
+      );
+
+    case "container":
+      return typeof value === "number" ? (
+        <ContentContainerCellValue
+          definitionId={spec.containerDefinitionId}
+          value={value}
+        />
+      ) : (
+        <Empty label={emptyLabel} />
       );
 
     case "dateTime":

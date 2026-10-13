@@ -7,6 +7,7 @@ import { articleExcerptAiAction } from "@/api/ai/actions";
 import { exampleCategoryScope } from "@/api/lib/moderation";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
+import { boardContainers } from "@/content/boards";
 import { settingsPage } from "@/content/settings-page";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
@@ -37,6 +38,7 @@ export const exampleApiPlugin = () =>
       adminModule,
       buildContentPublicModule({
         pluginId: CONFIG_PLUGIN.pluginId,
+        containers: [boardContainers],
         contentTypes: [
           advancedArticleContent,
           articleContent,

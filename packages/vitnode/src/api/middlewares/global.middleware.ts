@@ -29,6 +29,11 @@ import {
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
+import {
+  assertContentContainerReferences,
+  type RegisteredContentContainer,
+  validateContentContainers,
+} from "@/content/containers/registry";
 import { validateContentTypes } from "@/content/registry";
 import { ensureContentLocalizationLanguages } from "@/content/server/language-resolver";
 import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
@@ -133,6 +138,7 @@ export interface EnvVariablesVitNode {
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
 
+    contentContainers: RegisteredContentContainer[];
     contentModels: RegisteredContentModel[];
 
     contentPreviewSecret?: string;
@@ -330,6 +336,22 @@ export const globalMiddleware = ({
     ),
   );
 
+  const contentContainersMetadata = validateContentContainers(
+    plugins.flatMap(plugin =>
+      (plugin.contentContainers ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+  assertContentContainerReferences(
+    [
+      ...contentTypesMetadata.map(entry => entry.definition),
+      ...plugins.flatMap(plugin => plugin.publicContentTypes ?? []),
+    ],
+    contentContainersMetadata,
+  );
+
   // Once, here, because "does anything have preview enabled" is only answerable
   // after every plugin's content types are in. A warning, never a boot failure:
   // preview is one content type's opt-in feature, not a prerequisite for the
@@ -509,6 +531,7 @@ export const globalMiddleware = ({
       navigation: navigationMetadata,
       notifications: notificationsMetadata,
       notificationWorkers,
+      contentContainers: contentContainersMetadata,
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,

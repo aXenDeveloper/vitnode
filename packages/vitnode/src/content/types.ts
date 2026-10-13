@@ -20,6 +20,7 @@ import type {
   CONTENT_VISIBILITY_FIELDS,
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
+import type { AnyContentContainerDefinition } from "./containers/types";
 import type { ContentFileDescriptor } from "./files";
 import type {
   ContentId,
@@ -231,6 +232,16 @@ export interface ContentUserField<
   ordered: TOrdered;
 }
 
+export interface ContentContainerField<
+  TRequired extends boolean = boolean,
+  TDefinition extends AnyContentContainerDefinition =
+    AnyContentContainerDefinition,
+> extends ContentFieldShared<TRequired, TRequired extends true ? false : true> {
+  definition: TDefinition;
+  kind: "container";
+  localized?: false;
+}
+
 interface ContentReferenceCollection {
   kind: "file" | "relation" | "user";
   multiple: true;
@@ -298,6 +309,7 @@ export interface ContentRepeatableField<
 export type ContentFieldDescriptor =
   | ContentBlocksField
   | ContentBooleanField
+  | ContentContainerField
   | ContentDateTimeField
   | ContentEnumField
   | ContentFileField
@@ -368,7 +380,7 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
       ? TValue
       : TField extends { kind: "relation" }
         ? ContentRelationIdOf<TField>
-        : TField extends { kind: "file" | "number" | "user" }
+        : TField extends { kind: "container" | "file" | "number" | "user" }
           ? number
           : TField extends { kind: "richText" }
             ? RichTextDocument
@@ -383,7 +395,7 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
       ? TValue
       : TField extends { kind: "relation" }
         ? ContentRelationIdOf<TField>
-        : TField extends { kind: "file" | "number" | "user" }
+        : TField extends { kind: "container" | "file" | "number" | "user" }
           ? number
           : TField extends { kind: "richText" }
             ? RichTextDocument

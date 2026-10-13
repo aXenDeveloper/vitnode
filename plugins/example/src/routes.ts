@@ -5,11 +5,19 @@ import {
   lazy,
   page,
 } from "@vitnode/core/routing";
+import {
+  FeedPendingSkeleton,
+  RoutePendingSkeleton,
+} from "@vitnode/core/tanstack/pending";
 
 import type { ExampleSearch } from "./pages/example-page";
 
+import { boardSearch } from "./pages/board-search";
 import { browseSearch } from "./pages/browse-search";
-import { discussionSearch } from "./pages/discussion-search";
+import {
+  discussionNewSearch,
+  discussionSearch,
+} from "./pages/discussion-search";
 import { zonesSearch } from "./pages/zones-search";
 
 export const routes = definePluginRoutes([
@@ -71,10 +79,24 @@ export const routes = definePluginRoutes([
     messages: ["@vitnode/example.articles"],
   }),
 
+  page("/boards", {
+    component: lazy(() => import("./pages/boards-page")),
+    messages: ["@vitnode/example.boards"],
+    pendingComponent: RoutePendingSkeleton,
+  }),
+
+  page("/boards/:slug", {
+    component: lazy(() => import("./pages/board-page")),
+    messages: ["@vitnode/example.boards"],
+    pendingComponent: FeedPendingSkeleton,
+    search: boardSearch,
+  }),
+
   page("/discussions/new", {
     component: lazy(() => import("./pages/discussion-new-page")),
     messages: ["@vitnode/example.discussions"],
     requires: "authenticated",
+    search: discussionNewSearch,
   }),
 
   page("/discussions/:id/edit", {

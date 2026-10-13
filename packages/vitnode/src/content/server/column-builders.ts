@@ -190,6 +190,21 @@ export const buildContentColumn = ({
         defaultValue: fieldValue.defaultValue,
         nullable,
       });
+    case "container": {
+      if (!reference) {
+        throw new ContentEngineError(
+          `Field "${name}" is a container but the \`core_content_containers\` column was not resolved. This is an internal error.`,
+          { contentTypeId },
+        );
+      }
+
+      const column = integer().references(reference, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      });
+
+      return nullable ? column : column.notNull();
+    }
     case "dateTime": {
       const column = nullable ? timestamp() : timestamp().notNull();
 

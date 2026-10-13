@@ -1,4 +1,20 @@
 export { escapeLikePattern } from "../../lib/api/like-pattern";
+export {
+  buildContentContainerAdminRoutes,
+  zodContentContainerError,
+} from "../containers/server/admin-routes";
+export { resolveContentContainerAssignment } from "../containers/server/assignment";
+export type { ResolvedContentContainerContext } from "../containers/server/assignment";
+export { buildContentContainerPublicRoutes } from "../containers/server/public-routes";
+export {
+  contentContainerReferencingModels,
+  contentContainerUsageFrom,
+  createContentContainerService,
+} from "../containers/server/service";
+export type {
+  ContentContainerService,
+  ContentContainerUsageCheck,
+} from "../containers/server/service";
 export { CONTENT_SYSTEM_ACTOR, resolveContentActor } from "./actor";
 export {
   buildContentColumn,

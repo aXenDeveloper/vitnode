@@ -13,7 +13,7 @@ describe("AdminNavPluginSource", () => {
 
   it("carries only what a sidebar reads", () => {
     expectTypeOf<keyof AdminNavPluginSource>().toEqualTypeOf<
-      "admin" | "contentTypes" | "pluginId"
+      "admin" | "containers" | "contentTypes" | "pluginId"
     >();
   });
 

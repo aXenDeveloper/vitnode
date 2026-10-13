@@ -39,6 +39,7 @@ export interface ContentFormFieldSpec {
   allowedExtensions?: string[];
   /** `file` fields only: the media types the field accepts, lowercased. */
   allowedMimeTypes?: string[];
+  containerDefinitionId?: string;
   defaultValue?: boolean | null | number | string;
   description?: string;
   display?: "radio" | "select";
@@ -101,6 +102,7 @@ export interface ContentFormSpec {
 }
 
 export interface ContentColumnSpec {
+  containerDefinitionId?: string;
   kind: "publication" | "system" | ContentFieldKind;
   label: string;
 
@@ -156,6 +158,8 @@ export const projectFormField = (
   switch (fieldValue.kind) {
     case "boolean":
       return { ...base, defaultValue: fieldValue.defaultValue };
+    case "container":
+      return { ...base, containerDefinitionId: fieldValue.definition.id };
     case "enum":
       return {
         ...base,
@@ -359,6 +363,9 @@ export const buildContentColumnSpec = ({
       ...(fieldValue && isContentReferenceCollection(fieldValue)
         ? { multiple: true }
         : {}),
+      ...(fieldValue?.kind === "container"
+        ? { containerDefinitionId: fieldValue.definition.id }
+        : {}),
       ...(name === definition.admin.titleField ? { title: true } : {}),
       ...(name === definition.admin.titleField &&
       definition.admin.list.thumbnailField !== null
@@ -466,6 +473,8 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
       return z.array(zodContentNode);
     case "boolean":
       return z.boolean();
+    case "container":
+      return z.number().int().positive();
     case "dateTime":
       // ISO strings all the way through the form - `z.toJSONSchema`, which
       // AutoForm runs on every schema, throws on `z.date()`.

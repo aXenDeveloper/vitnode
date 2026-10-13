@@ -4,6 +4,7 @@ import {
   CalendarDaysIcon,
   FlaskConicalIcon,
   FolderIcon,
+  FolderTreeIcon,
   LayoutTemplateIcon,
   MessagesSquareIcon,
   NotebookPenIcon,
@@ -12,6 +13,7 @@ import {
 
 import { CONFIG_PLUGIN } from "@/const";
 import { articleContentType } from "@/content/article";
+import { boardContainers } from "@/content/boards";
 import { categoryContentType } from "@/content/category";
 import { discussionContentType } from "@/content/discussion";
 import { eventContentType } from "@/content/event";
@@ -50,8 +52,14 @@ export const exampleDiscussionNav = {
   icon: <MessagesSquareIcon />,
 };
 
+export const exampleBoardsNav = {
+  definition: boardContainers,
+  icon: <FolderTreeIcon />,
+};
+
 export const adminNav = {
   pluginId: CONFIG_PLUGIN.pluginId,
+  containers: [exampleBoardsNav],
   contentTypes: [
     exampleArticleNav,
     exampleCategoryNav,

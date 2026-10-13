@@ -7,6 +7,13 @@ import type { SsoProfileField } from "@/lib/sso-profile";
 
 import type { EventListenerConfig } from "../lib/events";
 
+export interface ContentContainerEventPayload {
+  containerId: number;
+  definitionId: string;
+  parentId: null | number;
+  pluginId: string;
+}
+
 export interface VitNodeEvents {
   "ai.run.completed": {
     actionKey: string;
@@ -20,6 +27,15 @@ export interface VitNodeEvents {
     errorCode: null | string;
     runId: number;
     userId: null | number;
+  };
+  "content.container.created": ContentContainerEventPayload;
+  "content.container.deleted": ContentContainerEventPayload;
+  "content.container.moved": ContentContainerEventPayload & {
+    fromParentId: null | number;
+    position: number;
+  };
+  "content.container.updated": ContentContainerEventPayload & {
+    changedFields: string[];
   };
   "core.page-layout.updated": {
     changedZones: string[];

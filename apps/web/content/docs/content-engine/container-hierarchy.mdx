@@ -1,0 +1,171 @@
+---
+title: Container hierarchy
+description: How Content Engine containers nest, order, move and delete, how concurrent edits stay consistent, and how to read and change a container tree from your own API routes with createContentContainerService.
+icon: ListTree
+---
+
+A container collection is a tree. This page explains the rules every change to that tree follows, whether it comes from the AdminCP or from your own code, and shows how to use the container service on the server. It uses the `example.boards` collection from [Containers](/docs/content-engine/containers).
+
+## Depth
+
+`depth` is 1 for a root, 2 for its children, and so on. `hierarchy.maxDepth` caps it and counts roots, so the example's `maxDepth: 3` allows **Frontend → React → Hooks** and nothing below **Hooks**.
+
+- The default is 5, the ceiling is 10.
+- `hierarchy: { enabled: false }` keeps every container at the root: a flat, ordered list. Any `parentId` is refused.
+- A move checks the whole subtree it carries. Moving a board that has children under a deep parent is refused if the deepest child would cross the limit.
+
+## Ordering
+
+Siblings are ordered by `ordering.mode`:
+
+| Mode           | Order                                      | Reordering                                                                                                            |
+| -------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `manual`       | `position`, the order staff drag them into | Allowed. `position` is zero-based among siblings and kept as `0..n-1`                                                 |
+| `alphabetical` | `name`, case-insensitive                   | Ignored. A new or moved container goes last by position, but reads sort by name. Moving to another parent still works |
+
+Both modes break ties by `id`, so two reads of the same tree always agree.
+
+## Moves and reorders
+
+One operation covers both: `move(id, { parentId, position })`. `parentId: null` moves to the root. `position` is the index among the new siblings **after** the container has left its old place. So moving the first of three siblings to `position: 2` puts it last.
+
+A move is refused, and changes nothing, when:
+
+| Code              | Status | When                                                                                    |
+| ----------------- | ------ | --------------------------------------------------------------------------------------- |
+| `cycle`           | 400    | The new parent is the container itself or one of its descendants                        |
+| `parentNotFound`  | 400    | The new parent does not exist in this collection                                        |
+| `maxDepth`        | 400    | The container or its deepest descendant would be too deep, or the hierarchy is disabled |
+| `invalidPosition` | 400    | `position` is negative or past the end of the sibling list                              |
+| `notFound`        | 404    | The container does not exist                                                            |
+
+The old and the new sibling lists are both renumbered, so positions never have gaps.
+
+## Safe deletion
+
+Deleting never cascades. A container is deleted only when it is empty:
+
+- `hasChildren` (409): it still has child containers. Move or delete them first.
+- `hasContent` (409): a record of any content type that uses this collection still points at it. Move or delete those records first.
+
+The database enforces the same rules. Both `parentId` and every `field.container()` column are foreign keys with `ON DELETE RESTRICT`, so a delete can never orphan a board or a discussion, even if another request slips in between the check and the delete. The remaining siblings are renumbered to close the gap.
+
+## Slugs
+
+A slug addresses one container of one collection, so `frontend` can exist once in `example.boards` and once in another collection. A slug you pass is normalized (lowercase ASCII, dashes) and must be free, or the write fails with `slugTaken`. A missing slug is derived from the name, with `-2`, `-3` and so on added until it is free. A slug that normalizes to nothing, such as `"!!!"`, fails with `slugEmpty`.
+
+## Concurrent edits
+
+Two admins dragging boards at the same moment cannot corrupt the tree. Every write to a collection:
+
+1. Takes a transaction-scoped Postgres advisory lock for that collection, so writes to one collection run one after another. Different collections never wait for each other.
+2. Reads the whole tree inside the transaction, so it plans against what the previous write committed.
+3. Checks every rule before changing a single row. A refused write leaves the tree exactly as it was.
+
+A collection holds at most 5,000 containers (`limitReached`, 409). The whole tree is read in one query, so a read costs the same at any depth and never runs one query per level.
+
+## Use the service on the server
+
+`createContentContainerService` is the one way to read and change a collection. The AdminCP routes and the public routes both use it, so your code gets the same rules, cache expiry and events. Call it inside any Hono handler with the request context:
+
+```ts title="plugins/example/src/api/modules/boards/archive.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { createContentContainerService } from "@vitnode/core/content/server";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+import { CONFIG_PLUGIN } from "@/const";
+import { boardContainers } from "@/content/boards";
+
+export const archiveBoardRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "example_boards", permission: "can_edit" },
+  route: {
+    method: "post",
+    path: "/{id}/archive",
+    description: "Move a board under the Archive board and lock it",
+    request: { params: z.object({ id: z.coerce.number().int().positive() }) },
+    responses: {
+      200: { description: "Board archived" },
+      404: { description: "Board or Archive not found" },
+    },
+  },
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const boards = createContentContainerService(c, {
+      definition: boardContainers,
+      pluginId: CONFIG_PLUGIN.pluginId,
+    });
+
+    const archive = await boards.findBySlug("archive");
+    if (!archive) {
+      throw new HTTPException(404, {
+        message: "Create an Archive board first.",
+      });
+    }
+
+    const siblings = await boards.children(archive.id);
+    await boards.move(id, { parentId: archive.id, position: siblings.length });
+    await boards.update(id, { metadata: { locked: true } });
+
+    return c.json({ message: "Board archived." }, 200);
+  },
+});
+```
+
+Refused writes throw a `ContentContainerError` with `code`, `status` (400, 404 or 409) and a readable `detail`. The generated AdminCP routes turn it into a response body of `{ code, message }`, typed by `zodContentContainerError`. In your own route, catch it or let it surface as a 500.
+
+| Method               | Returns                     | Behavior                                                                                       |
+| -------------------- | --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `list()`             | `Promise<Record[]>`         | Every container, in tree order: each parent, then its subtree                                  |
+| `children(parentId)` | `Promise<Record[]>`         | Direct children in sibling order. `null` returns the roots                                     |
+| `ancestors(id)`      | `Promise<Record[]>`         | Every container above `id`, root first. Empty for a root or an unknown id                      |
+| `descendantIds(id)`  | `Promise<number[] \| null>` | `id` plus every id below it, or `null` when `id` does not exist                                |
+| `findById(id)`       | `Promise<Record \| null>`   | One container                                                                                  |
+| `findBySlug(slug)`   | `Promise<Record \| null>`   | One container by its exact slug                                                                |
+| `create(input)`      | `Promise<Record>`           | `{ name, slug?, parentId?, position?, metadata? }`. Goes last when `position` is left out      |
+| `update(id, input)`  | `Promise<Record>`           | `{ name?, slug?, metadata? }`. `metadata` is a partial patch, validated against the definition |
+| `move(id, input)`    | `Promise<Record>`           | `{ parentId, position }`, as described in [Moves and reorders](#moves-and-reorders)            |
+| `delete(id)`         | `Promise<void>`             | Deletes an empty container, as described in [Safe deletion](#safe-deletion)                    |
+| `toPublic(record)`   | `PublicRecord`              | Drops every metadata field not in `publicApi.fields`                                           |
+
+A record is `{ id, parentId, name, slug, position, depth, metadata, createdAt, updatedAt }`, with `metadata` typed from the definition's fields. `ContentContainerRecord<typeof boardContainers>` and `ContentContainerPublicRecord<typeof boardContainers>` from `@vitnode/core/content` name those types.
+
+The tree helpers the service uses are pure and browser-safe, exported from `@vitnode/core/content`: `contentContainerTree` nests a list, `orderContentContainers` sorts rows into tree order with their depth, and `contentContainerAncestors` and `contentContainerSubtreeIds` walk it.
+
+## Events
+
+Each successful write emits one event after its transaction commits. A write that is refused emits nothing, and an update that changes nothing emits nothing.
+
+| Event                       | Payload                                                                     |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `content.container.created` | `{ definitionId, pluginId, containerId, parentId }`                         |
+| `content.container.updated` | `{ definitionId, pluginId, containerId, parentId, changedFields }`          |
+| `content.container.moved`   | `{ definitionId, pluginId, containerId, parentId, fromParentId, position }` |
+| `content.container.deleted` | `{ definitionId, pluginId, containerId, parentId }`                         |
+
+The names are shared by every collection, so filter on `definitionId`:
+
+```ts title="plugins/example/src/api/lib/events.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
+
+export const boardMovedListener = buildEventListener({
+  event: "content.container.moved",
+  name: "log-board-moves",
+  handler: async (c, payload) => {
+    if (payload.definitionId !== "example.boards") return;
+
+    await c
+      .get("log")
+      .debug(
+        `Board ${payload.containerId} moved from ${payload.fromParentId ?? "the root"} to ${payload.parentId ?? "the root"}`,
+      );
+  },
+});
+```
+
+`changedFields` names `name`, `slug` and the metadata fields whose value actually changed. A reorder among siblings is a `moved` event with the same `fromParentId` and `parentId`. Register listeners as described in [Events](/docs/dev/events). [Built-in events](/docs/dev/events/built-in-events#content-container-events) has the field-by-field payloads.
+
+Every write also expires the [page cache](/docs/content-engine/caching) entries that read the collection, including pages that list content filtered by one of its containers, so a renamed board shows its new name without a manual purge.
+
+Next, build pages on top of the tree in [Containers on the frontend](/docs/content-engine/container-frontend).

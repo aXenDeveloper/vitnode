@@ -50,25 +50,25 @@ Many of these rules are type errors too, so your editor often complains before t
 
 ## Top-level options
 
-| Name           | Type                                    | Required | Default    | Description                                                                     |
-| -------------- | --------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------- |
-| `id`           | `string`                                | Yes      |            | `plugin.entity`, such as `example.article`. See [Names](#names)                 |
-| `tableName`    | `string`                                | Yes      |            | Postgres table name, such as `example_articles`                                 |
-| `fields`       | `Record<string, field>`                 | Yes      |            | At least one field built with a [`field.*` helper](/docs/content-engine/fields) |
-| `idStrategy`   | `"serial"` \| `"uuid"` \| `"bigint"`    | No       | `"serial"` | Type of the primary key. See [`idStrategy`](#idstrategy)                        |
-| `admin`        | [`admin`](#admin)                       | No       | `{}`       | AdminCP path, list, form and title                                              |
-| `publication`  | `boolean`                               | No       | off        | Draft and published states                                                      |
-| `publicApi`    | [`publicApi`](#publicapi)               | No       | off        | Read-only public routes                                                         |
-| `publicWrite`  | [`publicWrite`](#publicwrite)           | No       | off        | Create and edit routes for signed-in users. Needs `publicApi`                   |
-| `delivery`     | `true` \| [`delivery`](#delivery)       | No       | off        | Public page URLs, SEO metadata, redirects and sitemap                           |
-| `editorial`    | `true` \| [`editorial`](#editorial)     | No       | off        | Revisions, preview links and scheduling                                         |
-| `liveEditing`  | `boolean`                               | No       | `false`    | [Live editing](#liveediting) in the AdminCP. Needs `editorial`                  |
-| `localization` | [`localization`](#localization)         | No       | off        | A translation table for `localized: true` fields                                |
-| `search`       | [`search`](#search)                     | No       | off        | Site search indexing                                                            |
-| `visibility`   | `boolean`                               | No       | off        | [Hide and unhide](#visibility) records. Needs `publication`                     |
-| `duplication`  | `true` \| [`duplication`](#duplication) | No       | off        | A [Duplicate](#duplication) action that copies a record into a new draft        |
+| Name           | Type                                    | Required | Default    | Description                                                                       |
+| -------------- | --------------------------------------- | -------- | ---------- | --------------------------------------------------------------------------------- |
+| `id`           | `string`                                | Yes      |            | `plugin.entity`, such as `example.article`. See [Names](#names)                   |
+| `tableName`    | `string`                                | Yes      |            | Postgres table name, such as `example_articles`                                   |
+| `fields`       | `Record<string, field>`                 | Yes      |            | At least one field built with a [`field.*` helper](/docs/content-engine/fields)   |
+| `idStrategy`   | `"serial"` \| `"uuid"` \| `"bigint"`    | No       | `"serial"` | Type of the primary key. See [`idStrategy`](#idstrategy)                          |
+| `admin`        | [`admin`](#admin)                       | No       | `{}`       | AdminCP path, list, form and title                                                |
+| `publication`  | `boolean`                               | No       | off        | Draft and published states                                                        |
+| `publicApi`    | [`publicApi`](#publicapi)               | No       | off        | Read-only public routes                                                           |
+| `publicWrite`  | [`publicWrite`](#publicwrite)           | No       | off        | Create and edit routes for signed-in users. Needs `publicApi`                     |
+| `delivery`     | `true` \| [`delivery`](#delivery)       | No       | off        | Public page URLs, SEO metadata, redirects and sitemap                             |
+| `editorial`    | `true` \| [`editorial`](#editorial)     | No       | off        | Revisions, preview links and scheduling                                           |
+| `liveEditing`  | `boolean`                               | No       | `false`    | [Live editing](#liveediting) in the AdminCP. Needs `editorial`                    |
+| `localization` | [`localization`](#localization)         | No       | off        | A translation table for `localized: true` fields                                  |
+| `search`       | [`search`](#search)                     | No       | off        | Site search indexing                                                              |
+| `visibility`   | `boolean`                               | No       | off        | [Hide and unhide](#visibility) records. Needs `publication`                       |
+| `duplication`  | `true` \| [`duplication`](#duplication) | No       | off        | A [Duplicate](#duplication) action that copies a record into a new draft          |
 | `reports`      | `true` \| [`reports`](#reports)         | No       | off        | Readers can [report](#reports) published records to moderators. Needs `publicApi` |
-| `indexes`      | [`indexes`](#indexes)                   | No       | `[]`       | Extra database indexes                                                          |
+| `indexes`      | [`indexes`](#indexes)                   | No       | `[]`       | Extra database indexes                                                            |
 
 A feature block is on when it is present. `publicApi`, `publicWrite`, `localization` and `search` take an options object. `publication`, `liveEditing` and `visibility` are `true`, and `editorial`, `delivery` and `duplication` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
 
@@ -143,19 +143,19 @@ publication: true,
 
 Generates read-only routes at `/api/{pluginId}/content/{path}` that return published records only. Guide: [Publish content with a public API](/docs/content-engine/public-api).
 
-| Name               | Type                | Required | Default         | Description                                                                                      |
-| ------------------ | ------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------ |
-| `path`             | `string`            | Yes      |                 | One URL segment matching `/^[a-z][a-z0-9-]*$/`, at most 64 characters, not `admin`               |
-| `fields`           | field names         | Yes      |                 | The allowlist, with no wildcard. Must contain exactly one top-level slug field. No duplicates    |
-| `searchableFields` | field names         | No       | `[]`            | Matched by `?search=`. Text, textarea, richText or slug fields. Rich text matches its words only |
-| `filterableFields` | field names         | No       | `[]`            | Each becomes an equality query parameter. Boolean, enum, number, relation, slug or text fields   |
-| `orderableFields`  | field names         | No       | `[]`            | Accepted by `?orderBy=`. `publishedAt` is always added                                           |
-| `defaultOrderBy`   | field name          | No       | `"publishedAt"` | Must be orderable                                                                                |
-| `defaultOrder`     | `"asc"` \| `"desc"` | No       | `"desc"`        |                                                                                                  |
+| Name               | Type                | Required | Default         | Description                                                                                                                                                 |
+| ------------------ | ------------------- | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`             | `string`            | Yes      |                 | One URL segment matching `/^[a-z][a-z0-9-]*$/`, at most 64 characters, not `admin`                                                                          |
+| `fields`           | field names         | Yes      |                 | The allowlist, with no wildcard. Must contain exactly one top-level slug field. No duplicates                                                               |
+| `searchableFields` | field names         | No       | `[]`            | Matched by `?search=`. Text, textarea, richText or slug fields. Rich text matches its words only                                                            |
+| `filterableFields` | field names         | No       | `[]`            | Each becomes an equality query parameter. Boolean, container, enum, number, relation, slug or text fields. A container also takes `includeDescendants=true` |
+| `orderableFields`  | field names         | No       | `[]`            | Accepted by `?orderBy=`. `publishedAt` is always added                                                                                                      |
+| `defaultOrderBy`   | field name          | No       | `"publishedAt"` | Must be orderable                                                                                                                                           |
+| `defaultOrder`     | `"asc"` \| `"desc"` | No       | `"desc"`        |                                                                                                                                                             |
 
 What `fields` accepts:
 
-- Fields of kind text, textarea, richText, slug, number, boolean, enum, dateTime, file, relation and blocks. A file is returned as its public descriptor, never as the file id.
+- Fields of kind text, textarea, richText, slug, number, boolean, enum, dateTime, file, relation, container and blocks. A file is returned as its public descriptor, never as the file id. A container is returned as its id.
 - The columns `id`, `createdAt`, `updatedAt` and `publishedAt`.
 - Group and repeatable leaves one at a time, as `"seo.title"`. Naming the whole group throws, so a leaf added later stays private.
 - Not `status` (every public row is published), and not `field.user()`, so an author is never published by accident.
@@ -179,10 +179,12 @@ Adds create and edit routes for signed-in users beside the `publicApi` routes, w
 ```ts title="plugins/example/src/content/discussion.ts"
 publicWrite: {
   ownership: { field: "author" },
-  create: { fields: ["title", "body"], status: "published" },
+  create: { fields: ["title", "body", "board"], status: "published" },
   update: { fields: ["title", "body"] },
 },
 ```
+
+A [container field](/docs/content-engine/fields#container), such as `board`, may be in `create.fields` only. Moving a record to another container is a staff edit.
 
 ## `delivery`
 

@@ -261,6 +261,8 @@ const baseSelectSchema = (
       return blocksSelectSchema();
     case "boolean":
       return z.boolean();
+    case "container":
+      return referenceSchema();
     case "dateTime":
       return z.date();
     case "enum":
@@ -356,6 +358,7 @@ const applyPresence = (
 
   if (
     fieldValue.kind !== "blocks" &&
+    fieldValue.kind !== "container" &&
     fieldValue.kind !== "dateTime" &&
     // A file field has no default and cannot have one: a `core_files.id` in a
     // definition would name a different row on every installation.
@@ -535,6 +538,15 @@ const updateShape = (
     }),
   );
 
+export const contentFieldPatchObject = (
+  fields: ContentFieldMap,
+): z.ZodObject<z.ZodRawShape> =>
+  z.strictObject(updateShape(fields, Object.keys(fields)));
+
+export const contentFieldSelectSchema = (
+  fieldValue: ContentFieldDescriptor,
+): z.ZodType => applyNullable(baseSelectSchema(fieldValue), fieldValue);
+
 export const contentFieldUpdateSchema = (
   fields: ContentFieldMap,
   name: string,
@@ -576,6 +588,8 @@ const filterShape = (
         switch (fieldValue.kind) {
           case "boolean":
             return [name, z.enum(["true", "false"]).optional()];
+          case "container":
+            return [name, z.coerce.number().int().positive().optional()];
           case "enum":
             return [name, z.enum(fieldValue.values).optional()];
           case "number":

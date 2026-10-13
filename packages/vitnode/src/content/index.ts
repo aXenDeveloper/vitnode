@@ -1,4 +1,12 @@
 export {
+  contentContainerAdminHref,
+  contentContainerI18nKeys,
+  contentContainerLabelsFrom,
+  contentContainerNamespace,
+  contentContainerNouns,
+} from "./admin/containers";
+export type { ContentContainerLabels } from "./admin/containers";
+export {
   contentEntityKey,
   contentI18nKeys,
   contentNouns,
@@ -14,7 +22,9 @@ export {
   setContentFrontendRegistry,
 } from "./admin/registry";
 export type {
+  ContentContainerFrontendRegistry,
   ContentFrontendRegistry,
+  RegisteredFrontendContentContainer,
   RegisteredFrontendContentType,
 } from "./admin/registry";
 
@@ -51,6 +61,7 @@ export {
 } from "./admin/upload";
 export type { ContentUploadRejection } from "./admin/upload";
 export {
+  contentContainerTag,
   contentDeliveryRedirectTag,
   contentDeliverySitemapTag,
   contentDeliveryTag,
@@ -182,6 +193,58 @@ export {
   isLocalizableFieldKind,
   RESERVED_FILTER_KEYS,
 } from "./const";
+export {
+  ContentContainerAssignmentError,
+  contentContainerFieldOf,
+} from "./containers/association";
+export type { ContentContainerFieldEntry } from "./containers/association";
+export {
+  CONTENT_CONTAINER_ABSOLUTE_MAX_DEPTH,
+  CONTENT_CONTAINER_ERROR_CODES,
+  CONTENT_CONTAINER_FIELD_KINDS,
+} from "./containers/const";
+export {
+  defineContentContainer,
+  isContentContainerDefinition,
+} from "./containers/define";
+export { ContentContainerError } from "./containers/errors";
+export {
+  contentContainerPermissionEntries,
+  validateContentContainers,
+} from "./containers/registry";
+export type { RegisteredContentContainer } from "./containers/registry";
+export {
+  contentContainerAncestors,
+  contentContainerSubtreeIds,
+  contentContainerTree,
+  orderContentContainers,
+  planContentContainerCreate,
+  planContentContainerDelete,
+  planContentContainerMove,
+} from "./containers/tree";
+export type {
+  ContentContainerPlacement,
+  ContentContainerPlan,
+  ContentContainerTreeNode,
+  ContentContainerTreeRow,
+  ContentContainerTreeRules,
+} from "./containers/tree";
+export type {
+  AnyContentContainerDefinition,
+  ContentContainerCreateInput,
+  ContentContainerDefinition,
+  ContentContainerErrorCode,
+  ContentContainerFieldDescriptor,
+  ContentContainerFieldMap,
+  ContentContainerMetadata,
+  ContentContainerMetadataInput,
+  ContentContainerMoveInput,
+  ContentContainerOrderingMode,
+  ContentContainerPublicMetadata,
+  ContentContainerPublicRecord,
+  ContentContainerRecord,
+  ContentContainerUpdateInput,
+} from "./containers/types";
 export { defineContentType } from "./define";
 export {
   contentDeliveryAlternateHref,
@@ -551,6 +614,7 @@ export type {
   SchedulableContentTypeDefinition,
   SearchableContentTypeDefinition,
 } from "./types";
+export type { ContentContainerField } from "./types";
 export { contentVisibilityTransition, isContentHidden } from "./visibility";
 export type {
   ContentVisibilityAction,

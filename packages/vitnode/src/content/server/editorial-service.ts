@@ -53,6 +53,8 @@ import {
   CONTENT_SYSTEM_FIELDS,
   CONTENT_VISIBILITY_FIELDS,
 } from "../const";
+import { ContentContainerAssignmentError } from "../containers/association";
+import { resolveContentContainerAssignment } from "../containers/server/assignment";
 import {
   ContentEngineError,
   ContentRevisionNotRestorable,
@@ -955,6 +957,7 @@ export const createContentEditorialService = <
         // assignment, and an upload that succeeded for one field proves nothing
         // about another.
         await assertContentFileReferences(c, definition, parsed, tx);
+        await resolveContentContainerAssignment(tx, definition, parsed);
 
         const [row] = await tx
           .insert(table)
@@ -1156,8 +1159,14 @@ export const createContentEditorialService = <
           await assertContentFileReferences(c, definition, patch, tx, {
             existing: async () => Promise.resolve(patch),
           });
+          await resolveContentContainerAssignment(tx, definition, patch);
         } catch (error) {
-          if (!(error instanceof ContentFileReferenceError)) throw error;
+          if (
+            !(error instanceof ContentFileReferenceError) &&
+            !(error instanceof ContentContainerAssignmentError)
+          ) {
+            throw error;
+          }
 
           throw new ContentRevisionNotRestorable({
             contentTypeId,
@@ -1302,6 +1311,7 @@ export const createContentEditorialService = <
             ...(await store?.load(id, tx, galleryFieldNames)),
           }),
         });
+        await resolveContentContainerAssignment(tx, definition, patch);
 
         // The version guard runs **first**, before a single junction or child
         // row is touched. That ordering is the whole concurrency story: a writer
