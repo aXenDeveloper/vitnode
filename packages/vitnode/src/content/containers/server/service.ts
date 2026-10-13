@@ -90,7 +90,7 @@ export const contentContainerUsageFrom =
 export interface ContentContainerService<
   TDefinition extends AnyContentContainerDefinition,
 > {
-  /** The container and everything above it, root first, as public records. */
+  /** Everything above the container, root first - its breadcrumb. Empty for a root or an unknown id. */
   ancestors: (id: number) => Promise<ContentContainerRecord<TDefinition>[]>;
   /** Direct children of a container, or the roots for `null`, in sibling order. */
   children: (

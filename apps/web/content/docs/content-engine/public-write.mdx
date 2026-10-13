@@ -300,13 +300,17 @@ Public writes trigger the same side effects as AdminCP writes, so nothing new ne
 - [Search](/docs/content-engine/search) is synced after the transaction commits, so a discussion published on create is searchable straight away.
 - On an [editorial](/docs/content-engine/editorial#revisions) content type, each create and edit stores a revision attributed to the signed-in user, and staff can restore it from the AdminCP.
 
-## Future container policies
+## Containers
+
+A content type organized into [containers](/docs/content-engine/containers), such as discussions in forum boards, lets members pick the container when they create a record: list the `field.container()` in `create.fields`. It cannot be in `update.fields`, so moving a record to another container stays a staff edit. The server resolves the container inside the write's transaction and refuses a missing or foreign one with a `400` on that field.
+
+### Future container policies
 
 <Callout type="info" title="Not available yet">
   Per-container publication policies are planned, not shipped. Today every
   public create uses `publicWrite.create.status`.
 </Callout>
 
-Whether a new record starts as a draft or goes live is decided in one server-side function, `resolveContentPublicationPolicy`, and never by the payload. It already receives the signed-in user and the operation, so a later Content Containers feature can let each container choose its own policy, such as "publish immediately" in one forum and "wait for a moderator's approval" in another, without changing the routes or your forms.
+Whether a new record starts as a draft or goes live is decided in one server-side function, `resolveContentPublicationPolicy`, and never by the payload. It already receives the signed-in user, the operation and the resolved container, so each container will be able to choose its own policy, such as "publish immediately" in one board and "wait for a moderator's approval" in another, without changing the routes or your forms.
 
 Next, build the create and edit pages in [Public write frontend](/docs/content-engine/public-write-frontend).

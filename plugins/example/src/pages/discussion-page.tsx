@@ -17,10 +17,12 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import type { DiscussionSearch } from "./discussion-search";
 
+import { boardHref, BOARDS_HREF } from "./board-search";
 import { ContentArticle } from "./content-article";
-import { discussionEditHref } from "./discussion-search";
+import { discussionEditHref, discussionNewHref } from "./discussion-search";
 
 const zodDiscussion = z.object({
+  board: z.number(),
   body: zodRichTextDocument,
   id: z.number(),
   publishedAt: z.string().nullable(),
@@ -36,9 +38,25 @@ const loadDiscussion = async (slug: string) => {
     args: { params: { slug: encodeURIComponent(slug) } },
   });
 
-  return contentPageItem(
+  const item = contentPageItem(
     detail.status === 200 ? zodDiscussion.parse(await detail.json()) : null,
   );
+
+  // The public record carries only the board's id; its detail route adds the
+  // name, the slug and every board above it for the trail.
+  const board = await fetcher({
+    plugin: CONFIG_PLUGIN.pluginId,
+    method: "get",
+    module: "content/boards",
+    path: "/{idOrSlug}",
+    args: { params: { idOrSlug: String(item.board) } },
+  });
+
+  if (board.status !== 200) return { ...item, boardTrail: [] };
+
+  const { ancestors, container } = await board.json();
+
+  return { ...item, boardTrail: [...ancestors, container] };
 };
 
 type DiscussionPageData = Awaited<ReturnType<typeof loadDiscussion>>;
@@ -71,6 +89,29 @@ const DiscussionPage = ({
 
   return (
     <ContentArticle publishedAt={item.publishedAt} title={item.title}>
+      {item.boardTrail.length > 0 ? (
+        <nav aria-label={t("board")}>
+          <ol className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm leading-relaxed">
+            <li>
+              <a className="hover:text-foreground" href={BOARDS_HREF}>
+                {t("boards")}
+              </a>
+            </li>
+            {item.boardTrail.map(board => (
+              <li className="flex items-center gap-2" key={board.id}>
+                <span aria-hidden="true">/</span>
+                <a
+                  className="hover:text-foreground"
+                  href={boardHref(board.slug)}
+                >
+                  {board.name}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      ) : null}
+
       <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
         <a
           className={buttonVariants({ variant: "outline" })}
@@ -81,7 +122,7 @@ const DiscussionPage = ({
         </a>
         <a
           className={buttonVariants({ variant: "ghost" })}
-          href="/discussions/new"
+          href={discussionNewHref(item.board)}
         >
           {t("new")}
         </a>

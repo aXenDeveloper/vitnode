@@ -1,5 +1,7 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
+import { boardContainers } from "@/content/boards";
+
 export const discussionContentType = defineContentType({
   id: "example.discussion",
   tableName: "example_discussions",
@@ -9,6 +11,7 @@ export const discussionContentType = defineContentType({
     slug: field.slug({ source: "title" }),
     body: field.richText({ required: true }),
     author: field.user(),
+    board: field.container({ definition: boardContainers, required: true }),
   },
 
   publication: true,
@@ -17,12 +20,13 @@ export const discussionContentType = defineContentType({
 
   publicApi: {
     path: "discussions",
-    fields: ["id", "title", "slug", "body", "publishedAt"],
+    fields: ["id", "title", "slug", "body", "board", "publishedAt"],
+    filterableFields: ["board"],
   },
 
   publicWrite: {
     ownership: { field: "author" },
-    create: { fields: ["title", "body"], status: "published" },
+    create: { fields: ["title", "body", "board"], status: "published" },
     update: { fields: ["title", "body"] },
   },
 
@@ -34,6 +38,7 @@ export const discussionContentType = defineContentType({
         "status",
         "title",
         "slug",
+        "board",
         "author",
         "publishedAt",
         "updatedAt",

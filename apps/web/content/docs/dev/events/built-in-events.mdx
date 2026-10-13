@@ -1140,6 +1140,84 @@ inspects `failures` and retries the whole delivery when it is non-empty.
   [Services and API](/docs/content-engine/services).
 </Callout>
 
+## Content container events
+
+Four names, declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts` and shared by every
+[container collection](/docs/content-engine/containers). Each fires **after**
+the write's transaction has committed. A refused write, such as deleting a board
+that still has discussions, emits nothing, and so does an update that changes
+nothing.
+
+| Event                       | Payload                                                                     | Fires when                                                   |
+| --------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `content.container.created` | `{ definitionId, pluginId, containerId, parentId }`                         | A container is created                                       |
+| `content.container.updated` | `{ definitionId, pluginId, containerId, parentId, changedFields }`          | Its name, slug or a metadata field actually changed          |
+| `content.container.moved`   | `{ definitionId, pluginId, containerId, parentId, fromParentId, position }` | It moved to another parent, another position, or both        |
+| `content.container.deleted` | `{ definitionId, pluginId, containerId, parentId }`                         | An empty container is deleted                                |
+
+<Accordions>
+<Accordion title="content.container.*">
+
+Emitted by `createContentContainerService`, so the AdminCP routes and your own
+code that uses the service emit the same events. Siblings renumbered by a move
+or a delete do not get events of their own.
+
+<TypeTable
+  type={{
+    definitionId: {
+      description:
+        'The collection, as `defineContentContainer` declared it, such as `example.boards`. Filter on it, because every collection shares these names.',
+      type: 'string',
+    },
+    pluginId: {
+      description: 'The plugin that registered the collection.',
+      type: 'string',
+    },
+    containerId: {
+      description: 'Id of the container in `core_content_containers`.',
+      type: 'number',
+    },
+    parentId: {
+      description:
+        'The parent after the write, or `null` for a root. On `deleted`, the parent it had.',
+      type: 'number | null',
+    },
+    fromParentId: {
+      description:
+        '`moved` only. The parent before the move. Equal to `parentId` for a reorder among siblings.',
+      type: 'number | null',
+    },
+    position: {
+      description: '`moved` only. Zero-based index among the new siblings.',
+      type: 'number',
+    },
+    changedFields: {
+      description:
+        '`updated` only. `name`, `slug` and the metadata fields whose value changed.',
+      type: 'string[]',
+    },
+  }}
+/>
+
+**A listener would** rebuild a navigation menu kept outside VitNode, or post to
+a staff channel when a board is deleted:
+
+```ts title="Example: announce deleted boards"
+export const boardDeletedListener = buildEventListener({
+  event: 'content.container.deleted',
+  name: 'announce-deleted-board',
+  handler: async (c, payload) => {
+    if (payload.definitionId !== 'example.boards') return
+
+    await c.get('log').warn(`Board ${payload.containerId} was deleted`)
+  },
+})
+```
+
+</Accordion>
+</Accordions>
+
 ## Blog events (`@vitnode/blog`)
 
 <Callout type="warn" title="These six names are compatibility adapters">

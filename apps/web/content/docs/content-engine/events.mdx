@@ -45,6 +45,8 @@ A few payload details that change what a listener does:
 - `scheduledBy` and `scheduleId` are set only when a schedule fired the change. `actorUserId` on `scheduled` is the same person as `scheduledBy` later.
 - The delivery events arrive alongside `updated`, `restored` or a publication event, never instead of them. `locale` is `null` for a shared slug.
 
+[Container collections](/docs/content-engine/containers) emit their own four events, `content.container.created`, `updated`, `moved` and `deleted`, listed in [Container hierarchy](/docs/content-engine/container-hierarchy#events).
+
 The listener also receives an envelope with the actor, the time and `pluginId`. `pluginId` is always the plugin that owns the content type, even when a core queue task ran the change. Field-by-field descriptions are in [Built-in events](/docs/dev/events/built-in-events#content-engine-events).
 
 ## Subscribe to an event

@@ -40,7 +40,7 @@ The read and write allowlists are independent. A field can be writable without b
 
 `create.fields` and `update.fields` accept top-level, shared fields of these kinds, from `CONTENT_PUBLIC_WRITABLE_KINDS`:
 
-`boolean`, `dateTime`, `enum`, `number`, `relation`, `richText`, `slug`, `text`, `textarea`
+`boolean`, `container`, `dateTime`, `enum`, `number`, `relation`, `richText`, `slug`, `text`, `textarea`
 
 They never accept:
 
@@ -56,6 +56,8 @@ They never accept:
 | `id`, `createdAt`, `updatedAt`, `status`, `publishedAt`, `version`, `hiddenAt`, `hiddenBy`, `visibility` | Managed by the server                                                                          |
 
 A `relation` is writable only when its target content type has a `publicApi`. On each request, every referenced record must also be published and not hidden.
+
+A `container` is writable in `create.fields` only. A member picks the container once, when they create the record; moving it later is a staff edit, so an author cannot drop their record into a container they could not post in. On each create, the server reads the container back inside the write's transaction and checks that it belongs to the field's collection. A missing or foreign container answers `400` with an `unavailable` issue on that field. See [Containers on the frontend](/docs/content-engine/container-frontend#let-members-pick-a-board).
 
 ### Moderator permission
 
@@ -406,12 +408,12 @@ A route outside `/content/` only gets the global rate limit, which is why this o
 
 ### Helpers
 
-| Function                                                                       | Returns                                            | Behavior                                                                             |
-| ------------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `resolveContentPublicWriteActor(c)`                                            | `{ type: "api", userId }` \| `null`                | The signed-in user of the public session. Never an AdminCP session, never the body   |
-| `authorizeContentPublicWrite(c, { action, actor, definition, pluginId, row })` | `{ allowed, via: "owner" \| "moderator" \| null }` | The owner and moderator rules above, for a stored `row`. `action` is `"update"`      |
-| `contentPublicWriteRefusal(row)`                                               | `"forbidden"` \| `"notFound"`                      | `"forbidden"` only when the public can already read `row`                            |
-| `resolveContentPublicationPolicy({ actor, definition, operation })`            | `"draft"` \| `"published"`                         | The status a public create starts with. Today it returns `publicWrite.create.status` |
+| Function                                                                       | Returns                                            | Behavior                                                                                                                               |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveContentPublicWriteActor(c)`                                            | `{ type: "api", userId }` \| `null`                | The signed-in user of the public session. Never an AdminCP session, never the body                                                     |
+| `authorizeContentPublicWrite(c, { action, actor, definition, pluginId, row })` | `{ allowed, via: "owner" \| "moderator" \| null }` | The owner and moderator rules above, for a stored `row`. `action` is `"update"`                                                        |
+| `contentPublicWriteRefusal(row)`                                               | `"forbidden"` \| `"notFound"`                      | `"forbidden"` only when the public can already read `row`                                                                              |
+| `resolveContentPublicationPolicy({ actor, container, definition, operation })` | `"draft"` \| `"published"`                         | The status a public create starts with. Today it returns `publicWrite.create.status`. `container` is the resolved container, or `null` |
 
 ## Definition errors
 
@@ -441,6 +443,7 @@ A route outside `/content/` only gets the global rate limit, which is why this o
 | A slug with a `source`                                    | `publicWrite.create.fields includes the slug "slug", which is derived from "title"`          |
 | A relation whose target has no `publicApi`                | `publicWrite.create.fields includes the relation "x", but its target "y" has no public API.` |
 | A required field missing from `create.fields`             | `publicWrite.create.fields leaves out "x", which every new record needs.`                    |
+| A container field in `update.fields`                      | `publicWrite.update.fields includes the container field "x".`                                |
 | `create.status` is not a status                           | `publicWrite.create.status is "x". It is one of: draft, published.`                          |
 | `create.captcha` or `update.own` is not a boolean         | ``publicWrite.create.captcha is `true` or `false`.``                                         |
 

@@ -2,6 +2,7 @@ import { buildModule } from "@vitnode/core/api/lib/module";
 import { buildContentAdminModule } from "@vitnode/core/content/server";
 
 import { CONFIG_PLUGIN } from "@/const";
+import { boardContainers } from "@/content/boards";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
@@ -18,6 +19,7 @@ export const adminModule = buildModule({
   modules: [
     buildContentAdminModule({
       pluginId: CONFIG_PLUGIN.pluginId,
+      containers: [boardContainers],
       // The localized article is registered on the API side only, so its
       // generated CRUD *and* translation routes exist and its staff permissions
       // are derived - but it gets no AdminCP screen yet, because a form that

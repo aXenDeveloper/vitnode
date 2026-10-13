@@ -46,22 +46,23 @@ The second half holds the references: a user picker, two file dropzones and a re
 
 ## Field helpers
 
-| Helper               | Postgres column                              | AdminCP control                          | Can be `localized` |
-| -------------------- | -------------------------------------------- | ---------------------------------------- | ------------------ |
-| `field.text()`       | `varchar(maxLength)`, 255 by default         | Text input                               | Yes                |
-| `field.textarea()`   | `text`                                       | Textarea                                 | Yes                |
-| `field.richText()`   | `jsonb`                                      | Rich text editor                         | Yes                |
-| `field.number()`     | `integer` or `double precision`              | Number input with steppers               | No                 |
-| `field.boolean()`    | `boolean`                                    | Switch                                   | No                 |
-| `field.enum()`       | `varchar(length)`, 64 by default             | Select or radio buttons                  | No                 |
-| `field.dateTime()`   | `timestamp`                                  | Date and time picker                     | No                 |
-| `field.slug()`       | `varchar(maxLength)`, 160 by default, unique | Text input                               | Yes                |
-| `field.user()`       | `integer` referencing `core_users.id`        | User picker                              | No                 |
-| `field.file()`       | `integer` referencing `core_files.id`        | File dropzone                            | No                 |
-| `field.relation()`   | The target's key type, referencing its table | Search picker                            | No                 |
-| `field.group()`      | One column per leaf                          | A fieldset with the leaf controls        | Yes, as a whole    |
-| `field.repeatable()` | A child table                                | A list of rows you can add, move, remove | No                 |
-| `field.blocks()`     | `jsonb`, `NOT NULL DEFAULT '[]'`             | Not in the form; edited as widgets       | Yes                |
+| Helper               | Postgres column                                    | AdminCP control                          | Can be `localized` |
+| -------------------- | -------------------------------------------------- | ---------------------------------------- | ------------------ |
+| `field.text()`       | `varchar(maxLength)`, 255 by default               | Text input                               | Yes                |
+| `field.textarea()`   | `text`                                             | Textarea                                 | Yes                |
+| `field.richText()`   | `jsonb`                                            | Rich text editor                         | Yes                |
+| `field.number()`     | `integer` or `double precision`                    | Number input with steppers               | No                 |
+| `field.boolean()`    | `boolean`                                          | Switch                                   | No                 |
+| `field.enum()`       | `varchar(length)`, 64 by default                   | Select or radio buttons                  | No                 |
+| `field.dateTime()`   | `timestamp`                                        | Date and time picker                     | No                 |
+| `field.slug()`       | `varchar(maxLength)`, 160 by default, unique       | Text input                               | Yes                |
+| `field.user()`       | `integer` referencing `core_users.id`              | User picker                              | No                 |
+| `field.file()`       | `integer` referencing `core_files.id`              | File dropzone                            | No                 |
+| `field.relation()`   | The target's key type, referencing its table       | Search picker                            | No                 |
+| `field.container()`  | `integer` referencing `core_content_containers.id` | Container tree picker                    | No                 |
+| `field.group()`      | One column per leaf                                | A fieldset with the leaf controls        | Yes, as a whole    |
+| `field.repeatable()` | A child table                                      | A list of rows you can add, move, remove | No                 |
+| `field.blocks()`     | `jsonb`, `NOT NULL DEFAULT '[]'`                   | Not in the form; edited as widgets       | Yes                |
 
 `user`, `file` and `relation` with `multiple: true` store their values in a junction table instead of a column. Localized fields live in the translation table. See [Translations](/docs/content-engine/localization).
 
@@ -229,6 +230,24 @@ category: field.relation({ required: true, onDelete: "restrict", target: () => c
 | `onDelete` | `"restrict"` \| `"cascade"` \| `"set null"` | No                 | `"restrict"` | What deleting the target does. `"set null"` needs a nullable single relation |
 
 A single relation must be `required` or `nullable`. A to-many relation can be neither. The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
+
+## Container
+
+```ts
+board: field.container({ definition: boardContainers, required: true }),
+```
+
+| Name          | Type                              | Required | Default | Description                                                        |
+| ------------- | --------------------------------- | -------- | ------- | ------------------------------------------------------------------ |
+| `definition`  | `defineContentContainer()` result | Yes      |         | The collection the record's container comes from                   |
+| `required`    | `boolean`                         | No       | `false` | Every record needs a container. Without it, a record may have none |
+| `description` | `string`                          | No       |         | Text or an i18n key shown under the picker in the AdminCP          |
+
+`field.container()` files a record into one container of a [container collection](/docs/content-engine/containers), such as a discussion into a forum board. `nullable` is always the opposite of `required`, so there is no `nullable` option, no default and no `localized`. A content type can have at most one container field, and its collection must be registered with `buildContentAdminModule({ containers })`.
+
+The column is an `ON DELETE RESTRICT` foreign key with an index on the field (plus `publishedAt` when `publication` is on), so a container that still holds records cannot be deleted. Every write checks that the id belongs to the field's collection and answers `400` with `CONTAINER_NOT_FOUND` or `CONTAINER_DEFINITION_MISMATCH` otherwise.
+
+The public API returns the container as its id. In `publicApi.filterableFields`, it filters a list with `?board=4`, and `includeDescendants=true` widens that to the whole subtree. In `publicWrite`, it may be listed in `create.fields` but not in `update.fields`. [Containers on the frontend](/docs/content-engine/container-frontend) shows both.
 
 ## Group
 

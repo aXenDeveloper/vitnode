@@ -351,6 +351,10 @@ export const buildContentPublicRoutes = <
           description: `Up to ${CONTENT_PUBLIC_MAX_PAGE_SIZE} published ${name} records`,
         },
         400: { description: "Invalid query parameters" },
+        404: {
+          description:
+            "The requested locale is not served, or the container filter names a container that does not exist",
+        },
       },
     },
     handler: async c => {
