@@ -198,9 +198,6 @@ export const buildContentColumn = ({
         );
       }
 
-      // RESTRICT, always: deleting a board must not delete its topics, and
-      // blanking their container would orphan them silently. The container
-      // service refuses first, with a message an admin can act on.
       const column = integer().references(reference, {
         onDelete: "restrict",
         onUpdate: "cascade",

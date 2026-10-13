@@ -232,11 +232,6 @@ export interface ContentUserField<
   ordered: TOrdered;
 }
 
-/**
- * The container a record belongs to - one forum board, one blog section. A
- * foreign key to `core_content_containers`, always `RESTRICT`: a container
- * holding content cannot be deleted from under it.
- */
 export interface ContentContainerField<
   TRequired extends boolean = boolean,
   TDefinition extends AnyContentContainerDefinition =

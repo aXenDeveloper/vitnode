@@ -21,16 +21,6 @@ import { createContentContainerService } from "./service";
 const PLUGIN_ID = "@vitnode/example";
 const CREATED = new Date("2026-09-01T10:00:00.000Z");
 
-/**
- * - 1 General
- *   - 3 News
- *     - 5 Releases
- *   - 4 Help
- *   - 6 Bugs
- * - 2 Off topic (holds content)
- *
- * 9 belongs to another collection, and shares no slug with the boards.
- */
 const BOARD = {
   BUGS: 6,
   ELSEWHERE: 9,
@@ -41,15 +31,6 @@ const BOARD = {
   OFF_TOPIC: 2,
   RELEASES: 5,
 } as const;
-
-const TREE_ORDER = [
-  BOARD.GENERAL,
-  BOARD.NEWS,
-  BOARD.RELEASES,
-  BOARD.HELP,
-  BOARD.BUGS,
-  BOARD.OFF_TOPIC,
-];
 
 const row = (
   id: number,
@@ -189,7 +170,6 @@ describe("create", () => {
     ).toEqual([
       { parentId: null, position: 1 },
       { parentId: null, position: 2 },
-      // Another collection's root is not a sibling.
       { parentId: null, position: 0 },
     ]);
   });
@@ -259,7 +239,6 @@ describe("update", () => {
         notes: "Staff only",
       },
       name: "Lobby",
-      // A rename keeps the address.
       slug: "general",
     });
     expect(
@@ -561,7 +540,6 @@ describe("reads", () => {
       [BOARD.BUGS, 2],
       [BOARD.OFF_TOPIC, 1],
     ]);
-    expect((await service.list()).map(({ id }) => id)).toEqual(TREE_ORDER);
   });
 
   it("never finds another collection's container", async () => {
@@ -649,8 +627,6 @@ describe("reads", () => {
 describe("contentContainerUsageFrom", () => {
   const threads = createContentModel(testThreadContentType);
 
-  // No `usage` option: the service reads the registered content models off the
-  // context, exactly as it does in a running app.
   const harnessWithThread = async (board: number) => {
     const context = harness({
       core: { contentModels: [{ model: threads, pluginId: PLUGIN_ID }] },

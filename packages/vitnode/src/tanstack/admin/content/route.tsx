@@ -82,11 +82,6 @@ export interface ContentAdminRouteData {
   title: string;
 }
 
-/**
- * Warms the container trees a list's `container` columns name, so the cells
- * render names on the server rather than ids. Only collections this admin may
- * view; a failed read leaves the cells on the id.
- */
 const preloadListContainers = async ({
   adminAccess,
   entry,

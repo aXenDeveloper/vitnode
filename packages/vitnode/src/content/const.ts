@@ -212,8 +212,6 @@ export const CONTENT_PUBLIC_RESERVED_PATHS = ["admin"] as const;
 export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "blocks",
   "boolean",
-  // The container's id. Its name and slug come from the container routes, which
-  // read the whole collection in one query, rather than being joined per row.
   "container",
   "dateTime",
   "enum",
@@ -242,9 +240,6 @@ export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
 
 export const CONTENT_PUBLIC_WRITABLE_KINDS = [
   "boolean",
-  // On create only - `resolvePublicWrite` refuses it in `update.fields`. Which
-  // container a member may post into is checked against the collection on the
-  // server; moving a record afterwards is a staff edit.
   "container",
   "dateTime",
   "enum",

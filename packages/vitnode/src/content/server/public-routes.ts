@@ -106,17 +106,12 @@ export const buildContentPublicRoutes = <
     orderBy: z.enum(orderable).optional(),
     search: z.string().optional(),
   });
-  // A container field the public list filters by also takes
-  // `includeDescendants=true`, which widens `?board=4` to board 4 and every board
-  // below it.
-  const containerFilter = (() => {
-    const container = contentContainerFieldOf(definition);
-
-    return container &&
-      definition.publicApi.filterableFields.includes(container.name)
-      ? container
+  const containerField = contentContainerFieldOf(definition);
+  const containerFilter =
+    containerField &&
+    definition.publicApi.filterableFields.includes(containerField.name)
+      ? containerField
       : null;
-  })();
   const listQuery = paginationQuery.extend({
     ...schemas.publicFilters.shape,
     ...(containerFilter
@@ -369,8 +364,6 @@ export const buildContentPublicRoutes = <
         raw,
       ) as ContentPublicFilterInput<TDefinition>;
 
-      // Resolved against the collection, so a container that does not exist is
-      // the 404 it is rather than an empty page that looks like an empty board.
       if (containerFilter) {
         const requested = (filters as Record<string, unknown>)[
           containerFilter.name

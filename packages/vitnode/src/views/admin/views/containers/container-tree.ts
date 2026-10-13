@@ -17,7 +17,6 @@ import {
 
 import type { AdminContentContainer } from "./container-request";
 
-/** One indentation level, in pixels - `ms-3` plus `w-3` per guide. */
 export const CONTAINER_INDENTATION_PX = 24;
 
 export const containerTreeRules = (
@@ -28,7 +27,6 @@ export const containerTreeRules = (
   mode: definition.ordering.mode,
 });
 
-/** Whether anything can be dragged at all: a reorder, or a move to another parent. */
 export const canRearrangeContainers = (rules: ContentContainerTreeRules) =>
   rules.mode === "manual" || rules.hierarchy;
 
@@ -44,11 +42,6 @@ export const containerChildCounts = (
   return counts;
 };
 
-/**
- * The records below `id`, in tree order. Records arrive in tree order - each
- * parent followed by its subtree - so a subtree is the run of deeper rows
- * straight after it.
- */
 export const containerDescendants = (
   records: readonly AdminContentContainer[],
   id: number,
@@ -66,7 +59,6 @@ export const containerDescendants = (
   return descendants;
 };
 
-/** Records whose ancestor is collapsed, which the list does not render. */
 export const visibleContainers = (
   records: readonly AdminContentContainer[],
   collapsed: ReadonlySet<number>,
@@ -88,11 +80,6 @@ export type ContainerMoveCheck =
   | { kind: "move"; placements: ContentContainerPlacement[] }
   | { kind: "unchanged" };
 
-/**
- * `planContentContainerMove`, read as the three things the screen does with it:
- * refuse, persist, or ignore. In alphabetical mode the position is the server's
- * to choose, so staying under the same parent is never a move.
- */
 export const checkContainerMove = (
   records: readonly AdminContentContainer[],
   move: { id: number; parentId: null | number; position: number },
@@ -111,7 +98,6 @@ export const checkContainerMove = (
     : { kind: "move", placements: plan.placements };
 };
 
-/** The optimistic tree: the planned placements applied, re-sorted, re-depthed. */
 export const applyContainerPlacements = (
   records: readonly AdminContentContainer[],
   placements: readonly ContentContainerPlacement[],
@@ -139,7 +125,6 @@ export interface ContainerDropProjection {
   check: ContainerMoveCheck;
   depth: number;
   parentId: null | number;
-  /** Zero-based, among the new siblings once the container has left its place. */
   position: number;
 }
 
@@ -158,12 +143,6 @@ const parentAt = (
   return null;
 };
 
-/**
- * Where a drop lands: the row it is over picks the slot, the horizontal offset
- * picks the depth - one level per {@link CONTAINER_INDENTATION_PX} - clamped to
- * what the neighbours allow. `visible` is the rendered list without the dragged
- * container's own subtree, which travels with it.
- */
 export const projectContainerDrop = ({
   activeId,
   offsetLeft,
@@ -218,7 +197,6 @@ export const containerSiblings = (
 ): AdminContentContainer[] =>
   records.filter(record => record.parentId === parentId);
 
-/** One step up or down among its siblings - the keyboard alternative to a drag. */
 export const shiftContainerMove = (
   records: readonly AdminContentContainer[],
   id: number,
@@ -235,7 +213,6 @@ export const shiftContainerMove = (
   return { id, parentId: record.parentId, position };
 };
 
-/** Out to the top level, right after the root it used to live under. */
 export const rootContainerMove = (
   records: readonly AdminContentContainer[],
   id: number,
@@ -253,7 +230,6 @@ export const rootContainerMove = (
   };
 };
 
-/** Every container `id` may move inside of - last among its children - with the plan's blessing. */
 export const containerParentTargets = (
   records: readonly AdminContentContainer[],
   id: number,

@@ -11,11 +11,6 @@ import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 import { pluginTag } from "./openapi-tags";
 
-/**
- * Runs after request validation, before the handler. Return a response to
- * answer a failed validation in the route's own error shape; return nothing to
- * keep the default.
- */
 export type RouteValidationHook = (
   result: { error: ZodError; success: false } | { success: true },
   c: Context,

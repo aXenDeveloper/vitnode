@@ -91,7 +91,6 @@ import {
 
 export interface ContentContainerManagerProps {
   definition: AnyContentContainerDefinition;
-  /** The query's failure, when the tree could not be read. */
   error?: unknown;
   icon?: React.ReactNode;
   isPending: boolean;
@@ -101,7 +100,7 @@ export interface ContentContainerManagerProps {
     id: number;
     parentId: null | number;
     position: number;
-  }) => Promise<ContentContainerMutationResult<unknown>>;
+  }) => Promise<ContentContainerMutationResult<null>>;
   onRetry: () => void;
   onSave: ContentContainerSave;
   pluginId: string;

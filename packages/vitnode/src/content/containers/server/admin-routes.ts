@@ -17,9 +17,11 @@ import { buildRoute } from "../../../api/lib/route";
 import { CONTENT_PERMISSIONS } from "../../const";
 import { CONTENT_CONTAINER_ERROR_CODES } from "../const";
 import { ContentContainerError } from "../errors";
-import { createContentContainerService } from "./service";
+import {
+  contentContainerInputRefusal,
+  createContentContainerService,
+} from "./service";
 
-/** The body every refused container write answers with. */
 export const zodContentContainerError = z.object({
   code: z.enum(CONTENT_CONTAINER_ERROR_CODES),
   message: z.string(),
@@ -38,30 +40,10 @@ const containerError = (error: unknown): never => {
   throw error;
 };
 
-/**
- * A body the route schema refuses answers in the same `{ code, message }` shape
- * the service's own refusals use, so the AdminCP translates one contract.
- */
 const validationHook: RouteValidationHook = (result, c) => {
   if (result.success) return undefined;
 
-  const { issues } = result.error;
-
-  return c.json(
-    {
-      code: issues.some(issue => issue.path[0] === "metadata")
-        ? "invalidMetadata"
-        : "invalidInput",
-      message: issues
-        .map(issue =>
-          issue.path.length > 0
-            ? `${issue.path.join(".")}: ${issue.message}`
-            : issue.message,
-        )
-        .join("; "),
-    },
-    400,
-  );
+  return c.json(contentContainerInputRefusal(result.error), 400);
 };
 
 const idParams = z.object({
@@ -73,11 +55,6 @@ const errorResponse = (description: string) => ({
   description,
 });
 
-/**
- * The AdminCP routes of one container collection, mounted under
- * `/api/{pluginId}/admin/content/{admin.permissionModule}`. Every one of them is
- * gated by the collection's own staff permission module.
- */
 export const buildContentContainerAdminRoutes = <
   TDefinition extends AnyContentContainerDefinition,
   P extends string,
@@ -86,8 +63,6 @@ export const buildContentContainerAdminRoutes = <
   { pluginId, usage }: { pluginId: P; usage?: ContentContainerUsageCheck },
 ) => {
   const module = definition.admin.permissionModule;
-  // Typed views of the definition's schemas, so the fetcher infers each
-  // container's own metadata rather than an anonymous record.
   const schemas = definition.schemas as unknown as {
     create: z.ZodType<ContentContainerCreateInput<TDefinition>>;
     move: z.ZodType<ContentContainerMoveInput>;

@@ -22,13 +22,11 @@ export const ADMIN_CONTAINERS_NAMESPACES = [
   "core.containers",
 ] as const;
 
-/** The strings a collection's screen and breadcrumb render with. */
 export const contentContainerRouteNamespaces = (pluginId: string): string[] => [
   ...ADMIN_CONTAINERS_NAMESPACES,
   pluginId,
 ];
 
-/** The query one collection's tree is read through. */
 export const contentContainerRouteQuery = (
   entry: Pick<RegisteredFrontendContentContainer, "definition" | "pluginId">,
 ) =>
@@ -37,7 +35,6 @@ export const contentContainerRouteQuery = (
     target: contentContainerApiTarget(entry),
   });
 
-/** What the loader returns - serialisable, so no definition and no icon. */
 export interface ContentContainerRouteData {
   adminPath: string;
   definitionId: string;
@@ -78,8 +75,6 @@ export const loadContentContainerRoute = async ({
       ...intlQueryOptions({ locale, namespaces }),
       staleTime: "static",
     }),
-    // A failed read is the screen's to show - with a retry - rather than the
-    // route's error boundary.
     queryClient
       .query({ ...contentContainerRouteQuery(entry), staleTime: "static" })
       .catch(() => undefined),
@@ -88,8 +83,6 @@ export const loadContentContainerRoute = async ({
   const t = createTranslator({
     locale,
     messages: intl.messages,
-    // Every collection key is optional; a missing one falls back to a name
-    // derived from the definition id, so an absent translation is not an error.
     onError: () => undefined,
   }) as unknown as ContentLabelTranslator;
 

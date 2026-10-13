@@ -7,17 +7,11 @@ export type ContentContainerBreadcrumbProps = Partial<
   Pick<ContentContainerRouteData, "adminPath" | "namespaces" | "title">
 >;
 
-/**
- * `Containers › Example › Boards`. The last crumb is the collection's own
- * heading; the sidebar entry at `/admin/containers/{path}` names it too, but the
- * heading may legitimately differ from the shorter sidebar name.
- */
 export const ContentContainerBreadcrumbContent = ({
   adminPath,
   namespaces,
   title,
 }: ContentContainerBreadcrumbProps) => {
-  // The loader did not resolve - a 404, or a permission refusal.
   if (adminPath === undefined || title === undefined) return null;
 
   return (

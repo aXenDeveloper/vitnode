@@ -1,6 +1,5 @@
 import type { ContentContainerDefinition } from "./types";
 
-/** Tells a `defineContentContainer` result apart from anything else. Dependency-free on purpose. */
 export const isContentContainerDefinition = (
   value: unknown,
 ): value is ContentContainerDefinition =>

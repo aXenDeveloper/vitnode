@@ -17,7 +17,6 @@ export interface RegisteredFrontendContentType {
   registration: ContentTypeFrontendRegistration;
 }
 
-/** A container collection's frontend registration, plus the plugin that registered it. */
 export interface RegisteredFrontendContentContainer {
   definition: AnyContentContainerDefinition;
   pluginId: string;
@@ -25,13 +24,10 @@ export interface RegisteredFrontendContentContainer {
 }
 
 export interface ContentContainerFrontendRegistry {
-  /** Every collection, sorted by definition id. */
   all: () => readonly RegisteredFrontendContentContainer[];
-  /** By `admin.path` - `/admin/containers/{path}`. */
   byAdminPath: (
     adminPath: string,
   ) => RegisteredFrontendContentContainer | undefined;
-  /** By `definition.id` - `example.boards`. */
   byId: (
     definitionId: string,
   ) => RegisteredFrontendContentContainer | undefined;
@@ -44,7 +40,6 @@ export interface ContentFrontendRegistry {
   byAdminPath: (adminPath: string) => RegisteredFrontendContentType | undefined;
   /** By `definition.id` - `blog.post`. */
   byId: (contentTypeId: string) => RegisteredFrontendContentType | undefined;
-  /** Container collections (`defineContentContainer`) the plugins registered. */
   containers: ContentContainerFrontendRegistry;
 
   lookup: ContentTypeLookup;
@@ -61,24 +56,9 @@ const buildContainerRegistry = (
     })),
   );
 
-  const valid = new Set(
-    validateContentContainers(
-      entries.map(({ definition, pluginId }) => ({ definition, pluginId })),
-    ).map(entry => entry.definition),
-  );
-
-  // `validateContentContainers` folds a definition registered twice by one
-  // plugin into one; the first registration's icon wins.
-  const seen = new Set<string>();
+  const firstRegistrations = new Set(validateContentContainers(entries));
   const all = entries
-    .filter(entry => {
-      if (!valid.has(entry.definition) || seen.has(entry.definition.id)) {
-        return false;
-      }
-      seen.add(entry.definition.id);
-
-      return true;
-    })
+    .filter(entry => firstRegistrations.has(entry))
     .sort((a, b) => a.definition.id.localeCompare(b.definition.id));
 
   const byId = new Map(all.map(entry => [entry.definition.id, entry]));

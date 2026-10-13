@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import type { ContentLabelTranslator } from "@/content/admin/labels";
 import type { RegisteredFrontendContentContainer } from "@/content/admin/registry";
 import type { ContentContainerSave } from "@/views/admin/views/containers/container-form-content";
+import type { ContentContainerMutationResult } from "@/views/admin/views/containers/container-request";
 
 import { contentContainerLabelsFrom } from "@/content/admin/containers";
 import { ContentContainerManager } from "@/views/admin/views/containers/container-manager";
@@ -26,7 +27,6 @@ export interface ContentContainerScreenProps extends ContentContainerRouteData {
   entry: RegisteredFrontendContentContainer;
 }
 
-/** Writes through the collection's admin routes, then refreshes every reader of its tree. */
 const useContentContainerMutations = (
   entry: RegisteredFrontendContentContainer,
 ) => {
@@ -34,8 +34,8 @@ const useContentContainerMutations = (
 
   return React.useMemo(() => {
     const target = contentContainerApiTarget(entry);
-    const settle = async <T,>(result: T): Promise<T> => {
-      if (typeof result === "object" && result !== null && "data" in result) {
+    const settle = async (result: ContentContainerMutationResult<null>) => {
+      if ("data" in result) {
         await invalidateContentContainers(queryClient, entry.definition.id);
       }
 

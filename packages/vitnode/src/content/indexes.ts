@@ -248,9 +248,6 @@ export const resolveContentIndexes = ({
           fieldValue.kind === "user",
       )
       .map(([name]) => named(tableName, { on: [name] })),
-    // A container list reads "published records of this board, newest first",
-    // so the publication timestamp rides along: one index answers the filter,
-    // the order and the `RESTRICT` check on container deletion.
     ...fieldEntries
       .filter(([, fieldValue]) => fieldValue.kind === "container")
       .map(([name]) =>

@@ -43,7 +43,6 @@ export const ContentContainerSheet = ({
 }: Omit<ContentContainerFormProps, "container"> & {
   container: AdminContentContainer | undefined;
   formKey: number;
-  /** `edit` with no container is a container that vanished - nothing renders. */
   mode: "create" | "edit";
   onOpenChange: (open: boolean) => void;
   open: boolean;

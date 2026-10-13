@@ -7,7 +7,6 @@ import { ContentEngineError } from "../errors";
 import { contentContainerFieldOf } from "./association";
 import { isContentContainerDefinition } from "./guard";
 
-/** A container definition plus the plugin that registered it. */
 export interface RegisteredContentContainer {
   definition: AnyContentContainerDefinition;
   pluginId: string;
@@ -16,13 +15,6 @@ export interface RegisteredContentContainer {
 const describe = (entry: RegisteredContentContainer): string =>
   `${entry.pluginId} -> ${entry.definition.id}`;
 
-/**
- * Validates container definitions from one or more plugins. Runs at boot, per
- * plugin and once more across every plugin, like `validateContentTypes`.
- *
- * Ids are global - every row in `core_content_containers` carries one - and
- * AdminCP paths are a site-wide URL namespace (`/admin/containers/{path}`).
- */
 export const validateContentContainers = (
   entries: readonly RegisteredContentContainer[],
 ): RegisteredContentContainer[] => {
@@ -39,8 +31,6 @@ export const validateContentContainers = (
 
     const duplicate = byId.get(definition.id);
     if (duplicate) {
-      // The same object registered twice by one plugin - say, by its admin and
-      // its public module - is one definition, not a clash.
       if (
         duplicate.definition === definition &&
         duplicate.pluginId === entry.pluginId
@@ -70,11 +60,6 @@ export const validateContentContainers = (
   );
 };
 
-/**
- * Container collections and content types of one plugin share two namespaces:
- * admin modules (`/admin/content/{permissionModule}`) and public paths
- * (`/content/{publicApi.path}`). A clash would mount two route sets on one URL.
- */
 export const assertContentContainerNamespaces = ({
   containers,
   contentTypes,
@@ -84,8 +69,6 @@ export const assertContentContainerNamespaces = ({
   contentTypes: readonly AnyContentTypeDefinition[];
   pluginId: string;
 }): void => {
-  // Owners are keyed by kind as well as id: a content type and a container may
-  // not share an id's namespace slot just because their ids happen to match.
   const modules = new Map<string, string>();
   const paths = new Map<string, string>();
   const describeOwner = (owner: string): string =>
@@ -123,12 +106,6 @@ export const assertContentContainerNamespaces = ({
   }
 };
 
-/**
- * Every content type's `field.container()` must name a registered collection -
- * otherwise records could point at containers no screen manages and no route
- * reads. Runs once, across every plugin, because a content type may use a
- * collection another plugin owns.
- */
 export const assertContentContainerReferences = (
   contentTypes: readonly AnyContentTypeDefinition[],
   containers: readonly RegisteredContentContainer[],
@@ -150,7 +127,6 @@ export const assertContentContainerReferences = (
   }
 };
 
-/** `can_view`, plus create, edit and delete that each depend on it - the same shape a content type gets. */
 export const contentContainerPermissionEntries =
   (): PermissionStaffEntryInput[] => [
     CONTENT_PERMISSIONS.view,

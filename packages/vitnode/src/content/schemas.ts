@@ -261,8 +261,6 @@ const baseSelectSchema = (
       return blocksSelectSchema();
     case "boolean":
       return z.boolean();
-    // The `core_content_containers.id`. Which collection it belongs to is
-    // checked by the service against the database, not by the shape.
     case "container":
       return referenceSchema();
     case "dateTime":
@@ -545,7 +543,6 @@ export const contentFieldPatchObject = (
 ): z.ZodObject<z.ZodRawShape> =>
   z.strictObject(updateShape(fields, Object.keys(fields)));
 
-/** One field's value as it leaves the API, nullability applied. */
 export const contentFieldSelectSchema = (
   fieldValue: ContentFieldDescriptor,
 ): z.ZodType => applyNullable(baseSelectSchema(fieldValue), fieldValue);

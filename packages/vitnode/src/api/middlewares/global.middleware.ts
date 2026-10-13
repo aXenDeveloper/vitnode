@@ -336,17 +336,14 @@ export const globalMiddleware = ({
     ),
   );
 
-  // Across every plugin: ids are global, and a content type may organize its
-  // records into a collection another plugin owns.
-  const contentContainersMetadata: RegisteredContentContainer[] =
-    validateContentContainers(
-      plugins.flatMap(plugin =>
-        (plugin.contentContainers ?? []).map(definition => ({
-          definition,
-          pluginId: plugin.pluginId,
-        })),
-      ),
-    );
+  const contentContainersMetadata = validateContentContainers(
+    plugins.flatMap(plugin =>
+      (plugin.contentContainers ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
   assertContentContainerReferences(
     [
       ...contentTypesMetadata.map(entry => entry.definition),

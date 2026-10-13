@@ -936,11 +936,6 @@ export const testEditorialTopicContentType = defineContentType({
   },
 });
 
-/**
- * A container collection: nested up to three levels, manually ordered, with a
- * public half (`description`, `color`) and a private half (`locked`, `notes`)
- * so "private metadata never crosses" has something to be true of.
- */
 export const testBoardContainers = defineContentContainer({
   id: "test.boards",
   fields: {
@@ -953,13 +948,11 @@ export const testBoardContainers = defineContentContainer({
   publicApi: { path: "boards", fields: ["description", "color"] },
 });
 
-/** A second collection, for every "a container of another collection" refusal. */
 export const testSectionContainers = defineContentContainer({
   id: "test.sections",
   publicApi: { path: "sections" },
 });
 
-/** Content filed into `testBoardContainers`, writable by members on create only. */
 export const testThreadContentType = defineContentType({
   id: "test.thread",
   tableName: "test_threads",

@@ -116,7 +116,6 @@ const Value = ({
     case "boolean":
       return <span>{value === true ? "✓" : "—"}</span>;
 
-    // A container is stored as its id - a number, like any other.
     case "container":
       return <span className="tabular-nums">{String(value)}</span>;
 

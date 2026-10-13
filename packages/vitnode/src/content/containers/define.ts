@@ -322,14 +322,6 @@ const buildSchemas = (
   };
 };
 
-/**
- * Declares a collection of containers - forum boards, blog sections,
- * knowledge-base categories - that content is organized into.
- *
- * The definition describes the collection; each container is a row an admin
- * creates. Every definition shares one core table, so declaring one adds no
- * table and no migration of its own.
- */
 export const defineContentContainer = <
   const TId extends string,
   const TFields extends ContentContainerFieldMap = Record<never, never>,
@@ -348,10 +340,8 @@ export const defineContentContainer = <
   publicApi,
 }: {
   admin?: ContentContainerAdminInput;
-  /** What each container holds beside its name and slug. Scalars only. */
   fields?: TFields;
   hierarchy?: ContentContainerHierarchyInput;
-  /** `plugin.collection` - lowercase, dot separated. Never rename it: every row carries it. */
   id: TId;
   ordering?: ContentContainerOrderingInput;
   publicApi?: (

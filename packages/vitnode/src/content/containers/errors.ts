@@ -37,11 +37,6 @@ const STATUS: Record<ContentContainerErrorCode, 400 | 404 | 409> = {
   slugTaken: 409,
 };
 
-/**
- * A container write the tree rules refuse. Per-request, like
- * `ContentInputError`: the message is safe to show, and `code` is what the
- * AdminCP translates.
- */
 export class ContentContainerError extends ContentEngineError {
   constructor({
     code,
@@ -52,11 +47,12 @@ export class ContentContainerError extends ContentEngineError {
     definitionId: string;
     message?: string;
   }) {
-    super(message ?? MESSAGES[code], { contentTypeId: definitionId });
+    const detail = message ?? MESSAGES[code];
+    super(detail, { contentTypeId: definitionId });
 
     this.name = "ContentContainerError";
     this.code = code;
-    this.detail = message ?? MESSAGES[code];
+    this.detail = detail;
     this.status = STATUS[code];
   }
 

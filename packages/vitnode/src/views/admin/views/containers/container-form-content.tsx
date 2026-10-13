@@ -44,24 +44,20 @@ import {
 
 export interface ContentContainerSaveArgs {
   body: ContentContainerWriteBody;
-  /** Set while editing. */
   id?: number;
-  /** Create only: `null` for the top level. */
   parentId?: null | number;
 }
 
 export type ContentContainerSave = (
   args: ContentContainerSaveArgs,
-) => Promise<ContentContainerMutationResult<AdminContentContainer | null>>;
+) => Promise<ContentContainerMutationResult<null>>;
 
 export interface ContentContainerFormProps {
-  /** The container being edited; absent when creating one. */
   container?: AdminContentContainer;
   definition: AnyContentContainerDefinition;
   labels: Pick<ContentContainerLabels, "labelEnum" | "labelField" | "singular">;
   onSave: ContentContainerSave;
   onSaved?: () => void;
-  /** Create only: where the new container goes until the admin picks otherwise. */
   parentId?: null | number;
   pluginId: string;
   records: readonly AdminContentContainer[];
@@ -72,7 +68,6 @@ const SLUG_ERRORS: ReadonlySet<string> = new Set(["slugEmpty", "slugTaken"]);
 
 const noOptions = async () => await Promise.resolve([]);
 
-/** A definition's own fields, as the Content Engine's form spec - so the inputs are the same ones a content form renders. */
 const metadataSpec = (
   definition: AnyContentContainerDefinition,
   labels: ContentContainerFormProps["labels"],
@@ -94,7 +89,6 @@ const metadataSpec = (
   titleField: null,
 });
 
-/** An empty text box on a nullable field means "no value", not "an empty string". */
 const metadataForApi = (
   fields: readonly ContentFormFieldSpec[],
   values: Record<string, unknown>,
@@ -215,7 +209,7 @@ export const ContentContainerFormContent = ({
 
     toast.success(t(isEdit ? "edit.success" : "create.success"), {
       description: t(isEdit ? "edit.successDesc" : "create.successDesc", {
-        name: result.data?.name ?? name,
+        name,
       }),
     });
     setIsDirty?.(false);

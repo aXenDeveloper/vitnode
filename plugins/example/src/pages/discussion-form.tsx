@@ -52,9 +52,7 @@ export type DiscussionFormSchema = ReturnType<
 >;
 
 export interface DiscussionBoardChoice {
-  /** Every board a member can pick, in tree order. `value` is the id as a string. */
   options: { label: string; value: string }[];
-  /** Preselected board id, e.g. from `/discussions/new?board=4`. */
   selected?: string;
 }
 
@@ -92,7 +90,6 @@ const ISSUE_MESSAGE_KEYS = {
   unavailable: "issues.unavailable",
 } as const;
 
-/** A board the server could not resolve was deleted, or never existed. */
 const BOARD_ISSUE_MESSAGE_KEY = "issues.board_unavailable";
 
 const isKnownIssueCode = (
@@ -197,11 +194,6 @@ export const DiscussionForm = ({
   );
 };
 
-/**
- * The create form: title and body, plus the board the discussion goes into.
- * The board is picked once, here - `publicWrite.update.fields` leaves it out, so
- * moving a discussion later is a staff edit.
- */
 export const DiscussionCreateForm = ({
   boards,
   isLeaving = false,

@@ -3,7 +3,6 @@ import { RotateCwIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
-import type { RegisteredFrontendContentContainer } from "@/content/admin/registry";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
 
 import { AutoFormLabel } from "@/components/form/common/label";
@@ -22,23 +21,13 @@ import {
   containerSelectOptions,
 } from "@/views/admin/views/containers/container-select";
 
-/** The collection a `container` field points at, from the registry the content screens load. */
-export const contentContainerEntryFor = (
-  definitionId: string | undefined,
-): RegisteredFrontendContentContainer | undefined =>
-  definitionId !== undefined && hasContentFrontendRegistry()
-    ? contentFrontendRegistry().containers.byId(definitionId)
-    : undefined;
-
-/**
- * The query behind a container picker and a container cell - the same one the
- * collection's own tree screen reads, so all three share one cached read.
- * `enabled` is false for a collection this installation does not register.
- */
 export const useContentContainerOptions = (
   definitionId: string | undefined,
 ) => {
-  const entry = contentContainerEntryFor(definitionId);
+  const entry =
+    definitionId !== undefined && hasContentFrontendRegistry()
+      ? contentFrontendRegistry().containers.byId(definitionId)
+      : undefined;
   const query = useQuery({
     ...contentContainerListQuery({
       definitionId: definitionId ?? "",
@@ -91,7 +80,6 @@ const ContainerFieldProblem = ({
   );
 };
 
-/** One container of a `defineContentContainer` collection, picked from its tree. */
 export const ContentContainerField = ({
   spec,
   ...props

@@ -6,11 +6,8 @@ import { CONTENT_CONTAINER_ERROR_CODES } from "@/content/containers/const";
 import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
-/** Which generated module serves one collection's admin routes. */
 export interface ContentContainerApiTarget {
-  /** `definition.admin.permissionModule` - the module name under `content/`. */
   permissionModule: string;
-  /** The plugin that registered the collection. */
   pluginId: string;
 }
 
@@ -37,7 +34,6 @@ const adminContentContainerSchema = z.object({
   updatedAt: z.string(),
 });
 
-/** One container as the AdminCP holds it - the admin list route's record, over JSON. */
 export type AdminContentContainer = z.infer<typeof adminContentContainerSchema>;
 
 const listSchema = z.object({ items: z.array(adminContentContainerSchema) });
@@ -53,7 +49,6 @@ const requestArgs = (target: ContentContainerApiTarget) => ({
   prefixPath: "/admin",
 });
 
-/** Every container of one collection, in tree order. Throws so a query can fail. */
 export const fetchContentContainers = async (
   target: ContentContainerApiTarget,
   { signal }: { signal?: AbortSignal } = {},
@@ -105,13 +100,11 @@ const send = async (
     params?: Record<string, number>;
     path: string;
   },
-): Promise<ContentContainerMutationResult<Response>> => {
+): Promise<ContentContainerMutationResult<null>> => {
   let response: Response;
   try {
     response = await rawFetcher({ ...requestArgs(target), ...request });
   } catch {
-    // `rawApiFetch` throws on a 500 and the network throws on its own; either
-    // way the write did not land as far as this screen can tell.
     return { error: { status: 500 } };
   }
 
@@ -121,24 +114,7 @@ const send = async (
     };
   }
 
-  return { data: response };
-};
-
-/** The record a write answered with, or `null` when its body is not one. */
-const asRecord = async (
-  result: ContentContainerMutationResult<Response>,
-): Promise<ContentContainerMutationResult<AdminContentContainer | null>> => {
-  if ("error" in result) return result;
-
-  try {
-    const parsed = adminContentContainerSchema.safeParse(
-      await result.data.json(),
-    );
-
-    return { data: parsed.success ? parsed.data : null };
-  } catch {
-    return { data: null };
-  }
+  return { data: null };
 };
 
 export interface ContentContainerWriteBody {
@@ -150,46 +126,39 @@ export interface ContentContainerWriteBody {
 export const createContentContainer = async (
   target: ContentContainerApiTarget,
   body: ContentContainerWriteBody & { name: string; parentId: null | number },
-): Promise<ContentContainerMutationResult<AdminContentContainer | null>> =>
-  await asRecord(await send(target, { body, method: "post", path: "/" }));
+): Promise<ContentContainerMutationResult<null>> =>
+  await send(target, { body, method: "post", path: "/" });
 
 export const updateContentContainer = async (
   target: ContentContainerApiTarget,
   id: number,
   body: ContentContainerWriteBody,
-): Promise<ContentContainerMutationResult<AdminContentContainer | null>> =>
-  await asRecord(
-    await send(target, {
-      body,
-      method: "patch",
-      params: { id },
-      path: "/{id}",
-    }),
-  );
+): Promise<ContentContainerMutationResult<null>> =>
+  await send(target, {
+    body,
+    method: "patch",
+    params: { id },
+    path: "/{id}",
+  });
 
 export const moveContentContainer = async (
   target: ContentContainerApiTarget,
   id: number,
   body: { parentId: null | number; position: number },
-): Promise<ContentContainerMutationResult<AdminContentContainer | null>> =>
-  await asRecord(
-    await send(target, {
-      body,
-      method: "post",
-      params: { id },
-      path: "/{id}/move",
-    }),
-  );
+): Promise<ContentContainerMutationResult<null>> =>
+  await send(target, {
+    body,
+    method: "post",
+    params: { id },
+    path: "/{id}/move",
+  });
 
 export const deleteContentContainer = async (
   target: ContentContainerApiTarget,
   id: number,
-): Promise<ContentContainerMutationResult<null>> => {
-  const result = await send(target, {
+): Promise<ContentContainerMutationResult<null>> =>
+  await send(target, {
     method: "delete",
     params: { id },
     path: "/{id}",
   });
-
-  return "error" in result ? result : { data: null };
-};

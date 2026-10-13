@@ -10,23 +10,12 @@ import {
   CONTENT_CONTAINER_SLUG_MAX_LENGTH,
 } from "../content/containers/const";
 
-/**
- * Every container of every definition, as an adjacency list.
- *
- * One table rather than one per definition: a definition is code, not schema,
- * so adding a forum's boards needs no migration, and a content type's
- * `field.container()` always points at the same column. The definition's own
- * fields live in `metadata`, validated against the definition on every write.
- */
 export const core_content_containers = camelCase.table.withRLS(
   "core_content_containers",
   t => ({
     id: t.serial().primaryKey(),
     pluginId: t.varchar({ length: 255 }).notNull(),
     definitionId: t.varchar({ length: 100 }).notNull(),
-    // RESTRICT, so a parent with children cannot disappear underneath them -
-    // the service refuses first with a readable error, and the constraint is
-    // what makes that true under a concurrent writer too.
     parentId: t
       .integer()
       .references((): AnyPgColumn => core_content_containers.id, {
@@ -44,12 +33,10 @@ export const core_content_containers = camelCase.table.withRLS(
       .$onUpdate(() => new Date()),
   }),
   t => [
-    // A slug addresses one container of one definition: `/forums/frontend`.
     uniqueIndex("core_content_containers_definition_slug_key").on(
       t.definitionId,
       t.slug,
     ),
-    // The tree read: every container of a definition, in sibling order.
     index("core_content_containers_definition_parent_position_idx").on(
       t.definitionId,
       t.parentId,

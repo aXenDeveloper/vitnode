@@ -3,7 +3,6 @@ import type {
   ContentContainerOrderingMode,
 } from "./types";
 
-/** The four columns every tree operation reads. */
 export interface ContentContainerTreeRow {
   id: number;
   name: string;
@@ -48,9 +47,6 @@ const childrenByParent = <TRow extends ContentContainerTreeRow>(
   const byParent = new Map<null | number, TRow[]>();
 
   for (const row of rows) {
-    // A parent outside the set - another definition's row, or one this read
-    // could not see - would orphan the subtree. It is shown at the root rather
-    // than silently dropped.
     const parent =
       row.parentId !== null && known.has(row.parentId) ? row.parentId : null;
     const siblings = byParent.get(parent) ?? [];
@@ -64,11 +60,6 @@ const childrenByParent = <TRow extends ContentContainerTreeRow>(
   return byParent;
 };
 
-/**
- * Every row in tree order - each parent followed by its subtree, siblings in
- * their sibling order - with its depth. One pass over rows a single query read,
- * which is what keeps a tree read free of N+1.
- */
 export const orderContentContainers = <TRow extends ContentContainerTreeRow>(
   rows: readonly TRow[],
   mode: ContentContainerOrderingMode = "manual",
@@ -79,8 +70,6 @@ export const orderContentContainers = <TRow extends ContentContainerTreeRow>(
 
   const walk = (parent: null | number, depth: number): void => {
     for (const row of byParent.get(parent) ?? []) {
-      // A cycle cannot be written through the service, but a hand-edited row
-      // must not hang a read.
       if (visited.has(row.id)) continue;
       visited.add(row.id);
       ordered.push({ ...row, depth });
@@ -92,11 +81,6 @@ export const orderContentContainers = <TRow extends ContentContainerTreeRow>(
   return ordered;
 };
 
-/**
- * Nests a list in tree order - what the list routes return - into a tree.
- * Works on any rows with `id` and `parentId`, so it nests public and admin
- * records alike.
- */
 export const contentContainerTree = <
   TRow extends { id: number; parentId: null | number },
 >(
@@ -107,10 +91,9 @@ export const contentContainerTree = <
 
   for (const row of rows) nodes.set(row.id, { ...row, children: [] });
 
-  for (const row of rows) {
-    const node = nodes.get(row.id);
-    if (!node) continue;
-    const parent = row.parentId === null ? undefined : nodes.get(row.parentId);
+  for (const node of nodes.values()) {
+    const parent =
+      node.parentId === null ? undefined : nodes.get(node.parentId);
     if (parent) parent.children.push(node);
     else roots.push(node);
   }
@@ -118,7 +101,6 @@ export const contentContainerTree = <
   return roots;
 };
 
-/** Root first, the container's parent last. Empty for a root. */
 export const contentContainerAncestors = <TRow extends ContentContainerTreeRow>(
   rows: readonly TRow[],
   id: number,
@@ -139,17 +121,23 @@ export const contentContainerAncestors = <TRow extends ContentContainerTreeRow>(
   return ancestors;
 };
 
-/** The container itself and everything below it. */
-export const contentContainerSubtreeIds = (
+const childIdsByParent = (
   rows: readonly ContentContainerTreeRow[],
-  id: number,
-): Set<number> => {
+): Map<number, number[]> => {
   const children = new Map<number, number[]>();
   for (const row of rows) {
     if (row.parentId === null) continue;
     children.set(row.parentId, [...(children.get(row.parentId) ?? []), row.id]);
   }
 
+  return children;
+};
+
+export const contentContainerSubtreeIds = (
+  rows: readonly ContentContainerTreeRow[],
+  id: number,
+): Set<number> => {
+  const children = childIdsByParent(rows);
   const subtree = new Set<number>();
   const stack = [id];
   while (stack.length > 0) {
@@ -162,23 +150,16 @@ export const contentContainerSubtreeIds = (
   return subtree;
 };
 
-/** 1 for a root. */
 export const contentContainerDepth = (
   rows: readonly ContentContainerTreeRow[],
   id: number,
 ): number => contentContainerAncestors(rows, id).length + 1;
 
-/** How many levels the subtree spans, the container included. 1 for a leaf. */
 const subtreeHeight = (
   rows: readonly ContentContainerTreeRow[],
   id: number,
 ): number => {
-  const children = new Map<number, number[]>();
-  for (const row of rows) {
-    if (row.parentId === null) continue;
-    children.set(row.parentId, [...(children.get(row.parentId) ?? []), row.id]);
-  }
-
+  const children = childIdsByParent(rows);
   const height = (current: number, seen: Set<number>): number => {
     if (seen.has(current)) return 0;
     const next = new Set(seen).add(current);
@@ -195,7 +176,6 @@ const subtreeHeight = (
   return height(id, new Set());
 };
 
-/** Renumbers a sibling list 0..n-1 and reports only the rows that moved. */
 const renumber = (
   siblings: readonly ContentContainerTreeRow[],
   parentId: null | number,
@@ -206,14 +186,11 @@ const renumber = (
       : [{ id: row.id, parentId, position }],
   );
 
-const siblingsOf = (
+const siblingsByPosition = (
   rows: readonly ContentContainerTreeRow[],
   parentId: null | number,
-  mode: ContentContainerOrderingMode,
 ): ContentContainerTreeRow[] =>
-  rows
-    .filter(row => row.parentId === parentId)
-    .sort(compareSiblings(mode === "alphabetical" ? "manual" : mode));
+  rows.filter(row => row.parentId === parentId).sort(compareSiblings("manual"));
 
 const checkParent = (
   rows: readonly ContentContainerTreeRow[],
@@ -236,10 +213,6 @@ export interface ContentContainerTreeRules {
   mode: ContentContainerOrderingMode;
 }
 
-/**
- * Where a new container goes. `rows` is every container of the definition, as
- * read inside the transaction that will insert it.
- */
 export const planContentContainerCreate = (
   rows: readonly ContentContainerTreeRow[],
   {
@@ -254,7 +227,7 @@ export const planContentContainerCreate = (
   const problem = checkParent(rows, parentId, rules);
   if (problem) return { code: problem, ok: false };
 
-  const siblings = siblingsOf(rows, parentId, rules.mode);
+  const siblings = siblingsByPosition(rows, parentId);
   const at =
     rules.mode === "alphabetical" || position === undefined
       ? siblings.length
@@ -263,8 +236,6 @@ export const planContentContainerCreate = (
     return { code: "invalidPosition", ok: false };
   }
 
-  // Everything at or after the slot moves down one, so the new row lands
-  // exactly where it was asked for and the sibling positions stay 0..n.
   const shifted = siblings.flatMap((row, index) => {
     const next = index < at ? index : index + 1;
 
@@ -276,10 +247,6 @@ export const planContentContainerCreate = (
   return { ok: true, position: at, shifted };
 };
 
-/**
- * A move to another parent, a reorder among siblings, or both. Every rule is
- * checked before anything is planned, so a refused move changes nothing.
- */
 export const planContentContainerMove = (
   rows: readonly ContentContainerTreeRow[],
   {
@@ -306,7 +273,7 @@ export const planContentContainerMove = (
   if (problem) return { code: problem, ok: false };
 
   const remaining = rows.filter(row => row.id !== id);
-  const target = siblingsOf(remaining, parentId, rules.mode);
+  const target = siblingsByPosition(remaining, parentId);
   const at = rules.mode === "alphabetical" ? target.length : position;
   if (!Number.isInteger(at) || at < 0 || at > target.length) {
     return { code: "invalidPosition", ok: false };
@@ -318,17 +285,13 @@ export const planContentContainerMove = (
   const placements = renumber(placed, parentId);
   if (node.parentId !== parentId) {
     placements.push(
-      ...renumber(
-        siblingsOf(remaining, node.parentId, rules.mode),
-        node.parentId,
-      ),
+      ...renumber(siblingsByPosition(remaining, node.parentId), node.parentId),
     );
   }
 
   return { ok: true, placements };
 };
 
-/** Closes the gap a deleted container leaves among its siblings. */
 export const planContentContainerDelete = (
   rows: readonly ContentContainerTreeRow[],
   id: number,
@@ -342,10 +305,9 @@ export const planContentContainerDelete = (
   return {
     ok: true,
     shifted: renumber(
-      siblingsOf(
+      siblingsByPosition(
         rows.filter(row => row.id !== id),
         node.parentId,
-        "manual",
       ),
       node.parentId,
     ),

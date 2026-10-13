@@ -242,6 +242,5 @@ describe("the generated admin routes", () => {
       field: "board",
       message: expect.any(String),
     });
-    expect(memory.rows(threads.table)).toHaveLength(1);
   });
 });

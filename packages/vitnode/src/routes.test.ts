@@ -67,7 +67,6 @@ describe("core's route tree", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  /** Only the Content Engine's: content types and container collections. */
   it("declares only the Content Engine's catch-alls", () => {
     const splats = manifest.filter(route =>
       route.segments.some(segment => segment.kind === "splat"),

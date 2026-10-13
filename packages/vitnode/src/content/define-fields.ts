@@ -57,8 +57,6 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   // the empty set is its default, and it has no column to default at all.
   if (fieldValue.kind === "file") return fieldValue.multiple;
   if (fieldValue.kind === "richText") return false;
-  // `field.container()` keeps `nullable` the inverse of `required`, so an
-  // optional container is always writable as `null`.
   if (fieldValue.kind === "container") return fieldValue.nullable;
 
   return fieldValue.defaultValue !== undefined;
@@ -244,11 +242,6 @@ const assertContainerField = (
   }
 };
 
-/**
- * At most one container per content type: "where does this topic live" has one
- * answer, and the public list's `includeDescendants` filter needs to know which
- * field it reads.
- */
 export const assertSingleContainerField = (
   id: string,
   fields: ContentFieldMap,

@@ -59,8 +59,6 @@ const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
     detail.status === 200 ? await detail.json() : null,
   );
 
-  // `board` filters by one board; `includeDescendants` widens it to the whole
-  // subtree, so a parent board lists what was posted in its child boards too.
   const filters = {
     board: String(container.id),
     includeDescendants: "true",
@@ -136,7 +134,6 @@ export const route = definePluginRoute<BoardPageData, BoardSearch>({
     title: loaderData?.container.name,
   }),
 
-  // Boards, then every ancestor, then this board - one crumb per level.
   breadcrumb: {
     group: ({ loaderData }) => (
       <>

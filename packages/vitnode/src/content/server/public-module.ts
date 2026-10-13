@@ -62,7 +62,6 @@ export const buildContentPublicModule = <
   contentTypes,
   pluginId,
 }: {
-  /** Container collections whose `publicApi` gets read routes beside the content types'. */
   containers?: Containers;
   contentTypes: Models;
   pluginId: P;

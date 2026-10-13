@@ -32,13 +32,8 @@ export type AdminNavContentType = Pick<
   "definition" | "icon"
 >;
 
-/**
- * A container collection (`defineContentContainer`), as the AdminCP reads it:
- * which collection, and the icon its sidebar entry and tree rows draw.
- */
 export interface ContentContainerFrontendRegistration {
   definition: AnyContentContainerDefinition;
-  /** Sidebar and tree icon. Defaults to a generic folder icon. */
   icon?: React.ReactNode;
 }
 

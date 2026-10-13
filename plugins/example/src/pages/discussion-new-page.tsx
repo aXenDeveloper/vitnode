@@ -34,7 +34,6 @@ import {
 import { discussionEditHref, discussionHref } from "./discussion-search";
 import { DiscussionShell } from "./discussion-shell";
 
-/** Every board in tree order, indented by depth so the select reads like the tree. */
 const loadBoardOptions = async () =>
   (await fetchBoards()).map(board => ({
     label: `${"— ".repeat(board.depth - 1)}${board.name}`,
@@ -100,8 +99,6 @@ const DiscussionNewPage = ({
       return;
     }
 
-    // A board deleted while the form was open comes back as a 400 issue on
-    // `board`, which lands under the select.
     await rejectDiscussion(res, form);
   };
 

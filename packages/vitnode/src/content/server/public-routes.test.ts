@@ -163,7 +163,6 @@ describe("public list filtered by container", () => {
   const threads = createContentModel(testThreadContentType);
   const PUBLISHED = new Date("2026-08-01T09:00:00.000Z");
 
-  // 1 General > 3 News > 5 Releases, 2 Off topic; 9 is another collection's.
   const BOARD = {
     ELSEWHERE: 9,
     GENERAL: 1,

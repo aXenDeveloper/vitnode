@@ -248,7 +248,6 @@ export function buildApiPlugin<
   };
 }
 
-/** Each container collection gets its own admin module, unless the plugin declared it. */
 function withContainerPermissions(
   permissionStaff: PermissionStaffConfig | undefined,
   containers: readonly AnyContentContainerDefinition[],

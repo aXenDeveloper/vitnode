@@ -23,10 +23,6 @@ const row = (
   position: number,
 ): ContentContainerTreeRow => ({ id, name, parentId, position });
 
-// News (1)               Archive (2)   Help (6)
-// ├─ Rules (3)
-// │  └─ Old rules (5)
-// └─ announcements (4)
 const rows: ContentContainerTreeRow[] = [
   row(6, "Help", null, 2),
   row(4, "announcements", 1, 1),

@@ -57,12 +57,6 @@ export interface ContentPublicWriteService<TDefinition> {
 
 export interface ContentPublicationPolicyInput {
   actor: ContentPublicWriteActor;
-  /**
-   * The container the record is being created in, resolved on the server - or
-   * `null` for a content type without one. Nothing reads it yet; it is here so
-   * a per-container publishing mode can be decided without reshaping the
-   * pipeline.
-   */
   container: null | ResolvedContentContainerContext;
   definition: AnyContentTypeDefinition;
   operation: "create";
@@ -360,10 +354,6 @@ export const createContentPublicWriteService = <
       const parsed = schemas.create.parse(values) as Record<string, unknown>;
       const stamped = { ...parsed, [ownerField]: actor.userId };
 
-      // Resolved inside the write's transaction: the id is client-supplied, so
-      // the container is read back and checked against the content type's
-      // collection before anything is inserted, and the policy decides the
-      // status with the real container in hand.
       const prepare = async (tx: ContentDatabase) => {
         await assertPublicRelationTargets(tx, parsed);
         const container = await resolveContainer(tx, parsed);

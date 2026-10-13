@@ -37,10 +37,6 @@ import {
 
 type ContainerRow = typeof core_content_containers.$inferSelect;
 
-/**
- * Whether anything still points at one of these containers. Defaults to every
- * registered content type whose `field.container()` uses this definition.
- */
 export type ContentContainerUsageCheck = (
   tx: ContentDatabase,
   containerIds: readonly number[],
@@ -51,7 +47,6 @@ export interface ContentContainerReferencingModel {
   table: PgTable;
 }
 
-/** Every content table with a container field for this definition, from the boot-time registry. */
 export const contentContainerReferencingModels = (
   c: Context,
   definitionId: string,
@@ -90,9 +85,7 @@ export const contentContainerUsageFrom =
 export interface ContentContainerService<
   TDefinition extends AnyContentContainerDefinition,
 > {
-  /** Everything above the container, root first - its breadcrumb. Empty for a root or an unknown id. */
   ancestors: (id: number) => Promise<ContentContainerRecord<TDefinition>[]>;
-  /** Direct children of a container, or the roots for `null`, in sibling order. */
   children: (
     parentId: null | number,
   ) => Promise<ContentContainerRecord<TDefinition>[]>;
@@ -100,19 +93,16 @@ export interface ContentContainerService<
     input: ContentContainerCreateInput<TDefinition>,
   ) => Promise<ContentContainerRecord<TDefinition>>;
   delete: (id: number) => Promise<void>;
-  /** The container's id plus every descendant's - what a "include subcategories" filter reads. */
   descendantIds: (id: number) => Promise<null | number[]>;
   findById: (id: number) => Promise<ContentContainerRecord<TDefinition> | null>;
   findBySlug: (
     slug: string,
   ) => Promise<ContentContainerRecord<TDefinition> | null>;
-  /** Every container of the definition in tree order: a parent, then its subtree. */
   list: () => Promise<ContentContainerRecord<TDefinition>[]>;
   move: (
     id: number,
     input: ContentContainerMoveInput,
   ) => Promise<ContentContainerRecord<TDefinition>>;
-  /** Drops every metadata field the definition does not publish. */
   toPublic: (
     record: ContentContainerRecord<TDefinition>,
   ) => ContentContainerPublicRecord<TDefinition>;
@@ -131,15 +121,15 @@ const zodErrorMessage = (error: z.ZodError): string =>
     )
     .join("; ");
 
-/**
- * The one way to read and change a container collection.
- *
- * Every write takes a transaction-scoped advisory lock on the definition before
- * it reads the tree, so two admins dragging at once are serialized rather than
- * interleaved: each plans against the tree the other one already committed.
- * Every rule is checked against that read before the first row changes, so a
- * refused write leaves the tree exactly as it was.
- */
+export const contentContainerInputRefusal = (
+  error: z.ZodError,
+): { code: "invalidInput" | "invalidMetadata"; message: string } => ({
+  code: error.issues.some(issue => issue.path[0] === "metadata")
+    ? "invalidMetadata"
+    : "invalidInput",
+  message: zodErrorMessage(error),
+});
+
 export const createContentContainerService = <
   TDefinition extends AnyContentContainerDefinition,
 >(
@@ -186,23 +176,20 @@ export const createContentContainerService = <
   const toRecord = (
     row: ContainerRow,
     depth: number,
-  ): ContentContainerRecord<TDefinition> => {
-    const stored = row.metadata ?? {};
-
-    return {
+  ): ContentContainerRecord<TDefinition> =>
+    ({
       createdAt: row.createdAt,
       depth,
       id: row.id,
       metadata: Object.fromEntries(
-        fieldNames.map(name => [name, stored[name] ?? null]),
+        fieldNames.map(name => [name, row.metadata[name] ?? null]),
       ),
       name: row.name,
       parentId: row.parentId,
       position: row.position,
       slug: row.slug,
       updatedAt: row.updatedAt,
-    } as ContentContainerRecord<TDefinition>;
-  };
+    }) as ContentContainerRecord<TDefinition>;
 
   const ordered = (rows: readonly ContainerRow[]) =>
     orderContentContainers(rows, definition.ordering.mode).map(row =>
@@ -234,7 +221,6 @@ export const createContentContainerService = <
     return slug;
   };
 
-  /** An explicit slug must be free; a derived one is suffixed until it is. */
   const resolveSlug = (
     rows: readonly ContainerRow[],
     {
@@ -306,9 +292,9 @@ export const createContentContainerService = <
     name: TName,
     payload: Record<string, unknown>,
   ): Promise<void> => {
-    const events = c.get("events");
-    if (!events) return;
-    await events.emit(name, { definitionId, pluginId, ...payload } as never);
+    await c
+      .get("events")
+      .emit(name, { definitionId, pluginId, ...payload } as never);
   };
 
   const parseInput = <TSchema extends z.ZodType>(
@@ -317,14 +303,9 @@ export const createContentContainerService = <
   ): z.infer<TSchema> => {
     const parsed = schema.safeParse(input);
     if (!parsed.success) {
-      const metadataIssue = parsed.error.issues.some(
-        issue => issue.path[0] === "metadata",
-      );
+      const { code, message } = contentContainerInputRefusal(parsed.error);
 
-      return refuse(
-        metadataIssue ? "invalidMetadata" : "invalidInput",
-        zodErrorMessage(parsed.error),
-      );
+      return refuse(code, message);
     }
 
     return parsed.data;
@@ -333,11 +314,10 @@ export const createContentContainerService = <
   return {
     ancestors: async id => {
       const rows = await readAll(c.get("db"));
-      if (!rows.some(row => row.id === id)) return [];
-      const depths = new Map(ordered(rows).map(record => [record.id, record]));
+      const records = new Map(ordered(rows).map(record => [record.id, record]));
 
       return contentContainerAncestors(rows, id).flatMap(row => {
-        const record = depths.get(row.id);
+        const record = records.get(row.id);
 
         return record ? [record] : [];
       });
@@ -494,7 +474,6 @@ export const createContentContainerService = <
           };
         });
 
-      // Dropped back where it was: nothing moved, so nothing to tell anyone.
       if (!changed) return moved;
 
       await expire("soft");
@@ -554,8 +533,8 @@ export const createContentContainerService = <
           const metadata = patch
             ? parseMetadata(definition.schemas.metadata, {
                 ...Object.fromEntries(
-                  Object.entries(row.metadata ?? {}).filter(([key]) =>
-                    fieldNames.includes(key),
+                  Object.entries(row.metadata).filter(([key]) =>
+                    Object.hasOwn(definition.fields, key),
                   ),
                 ),
                 ...patch,
@@ -568,7 +547,7 @@ export const createContentContainerService = <
             ...(slug === row.slug ? [] : ["slug"]),
             ...Object.keys(patch ?? {}).filter(
               key =>
-                JSON.stringify((row.metadata ?? {})[key] ?? null) !==
+                JSON.stringify(row.metadata[key] ?? null) !==
                 JSON.stringify(metadata[key] ?? null),
             ),
           ];

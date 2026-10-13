@@ -153,11 +153,6 @@ const ContentReferenceList = ({
   );
 };
 
-/**
- * A record's container, by name. Every cell of the column reads the same cached
- * tree, so a page of rows costs one request; until it lands - or when it cannot,
- * say for a staff member who may not view that collection - the id stands in.
- */
 const ContentContainerCellValue = ({
   definitionId,
   value,

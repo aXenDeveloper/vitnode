@@ -10,15 +10,11 @@ import { setPageCacheTags } from "../../../api/lib/page-cache";
 import { buildRoute } from "../../../api/lib/route";
 import { contentContainerTag } from "../../cache";
 import { CONTENT_CONTAINER_SLUG_MAX_LENGTH } from "../const";
+import { contentContainerAncestors } from "../tree";
 import { createContentContainerService } from "./service";
 
 const NUMERIC_ID = /^[1-9][0-9]{0,15}$/;
 
-/**
- * The public, read-only routes of one container collection, mounted under
- * `/api/{pluginId}/content/{publicApi.path}`. Only `publicApi.fields` of each
- * container's metadata crosses.
- */
 export const buildContentContainerPublicRoutes = <
   TDefinition extends AnyContentContainerDefinition,
   P extends string,
@@ -110,8 +106,6 @@ export const buildContentContainerPublicRoutes = <
       const { idOrSlug } = c.req.valid("param");
       const containers = service(c);
       const all = await containers.list();
-      // A numeric segment is an id; anything else is a slug. A slug made only
-      // of digits is still reachable - by its id, which never changes.
       const container = NUMERIC_ID.test(idOrSlug)
         ? all.find(item => item.id === Number(idOrSlug))
         : all.find(item => item.slug === idOrSlug);
@@ -119,17 +113,7 @@ export const buildContentContainerPublicRoutes = <
         throw new HTTPException(404, { message: "Container not found." });
       }
 
-      const byId = new Map(all.map(item => [item.id, item]));
-      const ancestors: typeof all = [];
-      for (
-        let parentId = container.parentId;
-        parentId !== null && ancestors.length < all.length;
-      ) {
-        const parent = byId.get(parentId);
-        if (!parent) break;
-        ancestors.unshift(parent);
-        parentId = parent.parentId;
-      }
+      const ancestors = contentContainerAncestors(all, container.id);
 
       setPageCacheTags(c, [contentContainerTag(definition.id)]);
 

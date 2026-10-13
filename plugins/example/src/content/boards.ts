@@ -1,10 +1,5 @@
 import { defineContentContainer, field } from "@vitnode/core/content";
 
-/**
- * Discussion boards: one collection of containers, one content type
- * (`example.discussion`) filed into it. An admin builds the tree; members post
- * into whichever board they pick.
- */
 export const boardContainers = defineContentContainer({
   id: "example.boards",
 

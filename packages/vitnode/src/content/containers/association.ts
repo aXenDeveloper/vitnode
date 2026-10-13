@@ -7,7 +7,6 @@ export interface ContentContainerFieldEntry {
   name: string;
 }
 
-/** The content type's container field, or `null` for one that is not organized into containers. */
 export const contentContainerFieldOf = (
   definition: Pick<AnyContentTypeDefinition, "fields">,
 ): ContentContainerFieldEntry | null => {
@@ -22,11 +21,6 @@ export type ContentContainerAssignmentCode =
   | "CONTAINER_DEFINITION_MISMATCH"
   | "CONTAINER_NOT_FOUND";
 
-/**
- * A record pointed at a container that does not exist, or at one from another
- * collection. A 400 that names the field, so a form can put the message under
- * the picker.
- */
 export class ContentContainerAssignmentError extends ContentInputError {
   constructor({
     code,

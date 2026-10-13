@@ -52,7 +52,6 @@ export const exampleDiscussionNav = {
   icon: <MessagesSquareIcon />,
 };
 
-/** The discussion boards collection - a tree managed at `/admin/containers/example/boards`. */
 export const exampleBoardsNav = {
   definition: boardContainers,
   icon: <FolderTreeIcon />,

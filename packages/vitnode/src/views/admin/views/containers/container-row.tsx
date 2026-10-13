@@ -36,9 +36,7 @@ import { containerGuideLevels } from "./container-select";
 export interface ContainerRowPermissions {
   canCreate: boolean;
   canDelete: boolean;
-  /** Edit the container's values. */
   canEdit: boolean;
-  /** Drag it, or move it from the menu. */
   canMove: boolean;
 }
 
@@ -52,17 +50,14 @@ export interface ContainerRowActions {
   onToggle: (id: number) => void;
 }
 
-/** What the menu may offer one row - worked out by the list, which sees the whole tree. */
 export interface ContainerRowMoves {
   canAddChild: boolean;
   canMoveDown: boolean;
   canMoveToRoot: boolean;
   canMoveUp: boolean;
-  /** Valid parents, in tree order. Empty hides "Move inside…". */
   parents: readonly AdminContentContainer[];
 }
 
-/** One guide per level above the row, so depth reads as a staircase of lines. */
 const IndentGuides = ({ depth }: { depth: number }) =>
   containerGuideLevels(depth).map(level => (
     <span
@@ -72,19 +67,10 @@ const IndentGuides = ({ depth }: { depth: number }) =>
     />
   ));
 
-export const ContainerGlyph = ({
-  className,
-  icon,
-}: {
-  className?: string;
-  icon?: React.ReactNode;
-}) => (
+const ContainerGlyph = ({ icon }: { icon?: React.ReactNode }) => (
   <span
     aria-hidden
-    className={cn(
-      "text-muted-foreground flex shrink-0 items-center [&_svg]:size-4",
-      className,
-    )}
+    className="text-muted-foreground flex shrink-0 items-center [&_svg]:size-4"
   >
     {icon ?? <FolderIcon />}
   </span>
@@ -306,7 +292,6 @@ export const SortableContainerRow = ({
   actions: ContainerRowActions;
   childCount: number;
   container: AdminContentContainer;
-  /** The depth to draw at - the projected one while this row is being dragged. */
   depth: number;
   disabled: boolean;
   icon?: React.ReactNode;

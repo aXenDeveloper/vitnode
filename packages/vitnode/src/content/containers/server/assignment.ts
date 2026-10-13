@@ -17,19 +17,6 @@ export interface ResolvedContentContainerContext {
   slug: string;
 }
 
-/**
- * Resolves the container a write names, on the server, inside the write's own
- * transaction.
- *
- * The id came from a client, so it proves nothing: the row is read back and its
- * collection compared with the one the content type's field declares. The
- * foreign key already guarantees existence at commit; this is what guarantees
- * the *right* collection, which no constraint can express - and it is the
- * context a later per-container publishing policy reads.
- *
- * `undefined` means the write does not touch the container; `null` means it
- * clears it (the schema only lets that through for an optional field).
- */
 export const resolveContentContainerAssignment = async (
   tx: ContentDatabase,
   definition: AnyContentTypeDefinition,
@@ -66,8 +53,6 @@ export const resolveContentContainerAssignment = async (
     .from(core_content_containers)
     .where(eq(core_content_containers.id, value))
     .limit(1)
-    // A concurrent delete of this container waits for the write to commit, and
-    // then fails on the RESTRICT foreign key rather than racing past the check.
     .for("share");
 
   if (!row) throw refuse("CONTAINER_NOT_FOUND");

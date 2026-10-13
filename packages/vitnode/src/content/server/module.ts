@@ -16,10 +16,6 @@ export const buildContentAdminModule = <P extends string>({
   contentTypes,
   pluginId,
 }: {
-  /**
-   * Container collections this plugin owns. Each gets its AdminCP routes
-   * beside the content types' and a staff permission module of its own.
-   */
   containers?: AnyContentContainerDefinition[];
   contentTypes: AnyContentModel[];
   pluginId: P;

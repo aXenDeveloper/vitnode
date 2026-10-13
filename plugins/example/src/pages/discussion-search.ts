@@ -28,7 +28,6 @@ const positiveId = (raw: unknown): number | undefined => {
 };
 
 export interface DiscussionNewSearch {
-  /** The board the "New discussion" link came from, preselected in the form. */
   board?: number;
 }
 

@@ -39,7 +39,6 @@ export interface ContentFormFieldSpec {
   allowedExtensions?: string[];
   /** `file` fields only: the media types the field accepts, lowercased. */
   allowedMimeTypes?: string[];
-  /** `container` fields only: the `defineContentContainer` id the picker reads. */
   containerDefinitionId?: string;
   defaultValue?: boolean | null | number | string;
   description?: string;
@@ -103,7 +102,6 @@ export interface ContentFormSpec {
 }
 
 export interface ContentColumnSpec {
-  /** `container` columns only: the collection the cell resolves a name from. */
   containerDefinitionId?: string;
   kind: "publication" | "system" | ContentFieldKind;
   label: string;
@@ -475,8 +473,6 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
       return z.array(zodContentNode);
     case "boolean":
       return z.boolean();
-    // The container's id, as the API takes it. The picker hands the form a
-    // number, and `null` once a nullable field is cleared.
     case "container":
       return z.number().int().positive();
     case "dateTime":

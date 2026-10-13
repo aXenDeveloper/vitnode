@@ -15,21 +15,17 @@ import {
 
 import type { AdminContentContainer } from "./container-request";
 
-/** One entry per level above a row of `depth` - `[1, 2]` for depth 3 - for its indent guides. */
 export const containerGuideLevels = (depth: number): number[] =>
   Array.from({ length: Math.max(0, depth - 1) }, (_, at) => at + 1);
 
-/** The key the select holds for "no container" / "top level". */
 const NONE = "__none__";
 
 export interface ContainerSelectOption {
   depth: number;
-  /** `null` is the "no container" / "top level" choice. */
   id: null | number;
   label: string;
 }
 
-/** Records in tree order, as options that keep their depth. */
 export const containerSelectOptions = (
   records: readonly Pick<AdminContentContainer, "depth" | "id" | "name">[],
 ): ContainerSelectOption[] =>
@@ -41,11 +37,6 @@ export const containerSelectOptions = (
 
 const keyOf = (id: null | number) => (id === null ? NONE : String(id));
 
-/**
- * A select over a container tree. Each option is indented by its depth, so the
- * list reads as the tree it is; the trigger shows the bare name. The field holds
- * the container's id - a number - or `null`.
- */
 export const AutoFormContainerSelect = ({
   description,
   disabled,

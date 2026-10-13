@@ -42,8 +42,6 @@ const loadDiscussion = async (slug: string) => {
     detail.status === 200 ? zodDiscussion.parse(await detail.json()) : null,
   );
 
-  // The public record carries only the board's id; its detail route adds the
-  // name, the slug and every board above it for the trail.
   const board = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
     method: "get",

@@ -50,7 +50,6 @@ const BoardTreeItems = ({
   </ul>
 );
 
-/** A nested list of boards, each one linking to its own page. */
 export const BoardTree = ({
   label,
   nodes,

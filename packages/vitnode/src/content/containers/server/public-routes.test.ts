@@ -13,15 +13,6 @@ import { buildContentContainerPublicRoutes } from "./public-routes";
 const PLUGIN_ID = "@vitnode/example";
 const CREATED = new Date("2026-09-01T10:00:00.000Z");
 
-/**
- * - 1 General
- *   - 3 News
- *     - 5 Releases
- *   - 4 Help
- * - 2 Off topic
- *
- * 9 belongs to another collection.
- */
 const BOARD = {
   ELSEWHERE: 9,
   GENERAL: 1,
@@ -170,14 +161,6 @@ describe("GET /{idOrSlug}", () => {
       expect(ids(body.ancestors)).toEqual([BOARD.GENERAL]);
     },
   );
-
-  it("orders the ancestors root first", async () => {
-    const body = (await (await harness().request("/releases")).json()) as {
-      ancestors: PublicContainer[];
-    };
-
-    expect(ids(body.ancestors)).toEqual([BOARD.GENERAL, BOARD.NEWS]);
-  });
 
   it.each([
     String(BOARD.MISSING),

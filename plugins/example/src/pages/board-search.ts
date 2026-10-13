@@ -1,5 +1,4 @@
 export interface BoardSearch {
-  /** The `endCursor` of the previous page of discussions. */
   cursor?: string;
 }
 

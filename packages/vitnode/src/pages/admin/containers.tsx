@@ -3,7 +3,6 @@ import { notFound } from "@tanstack/react-router";
 import type { ContentFrontendRegistry } from "@/content/admin/registry";
 import type { PluginRoutePageProps } from "@/routing";
 import type { ContentContainerRouteData } from "@/tanstack/admin/containers/route";
-import type { AdminRouteLoadContext } from "@/tanstack/plugin-routes";
 
 import { ContentContainerBreadcrumbContent } from "@/tanstack/admin/containers/breadcrumb";
 import { loadContentContainerRoute } from "@/tanstack/admin/containers/route";
@@ -15,25 +14,7 @@ import {
   routeBreadcrumbGroup,
 } from "@/tanstack/plugin-routes";
 
-/**
- * The same registry the content screens read - container collections ride
- * along in it. Resolved once per module load and kept out of loader data: a
- * definition carries Zod schemas and an icon, neither of which serialises.
- */
 const registry: ContentFrontendRegistry = await getContentRegistryLoader()();
-
-const loadContainerPage = async ({
-  context,
-  params,
-}: {
-  context: AdminRouteLoadContext;
-  params: Readonly<Record<string, string>>;
-}) =>
-  await loadContentContainerRoute({
-    ...context,
-    registry,
-    segments: contentRouteSegments(params._splat),
-  });
 
 const ContentContainerPage = ({
   loaderData,
@@ -49,9 +30,12 @@ const ContentContainerPage = ({
 };
 
 export const route = defineAdminRoute<ContentContainerRouteData>({
-  // `head` after `load`, always.
   load: async ({ context, params }) =>
-    await loadContainerPage({ context, params }),
+    await loadContentContainerRoute({
+      ...context,
+      registry,
+      segments: contentRouteSegments(params._splat),
+    }),
   head: ({ loaderData }) => ({ ...loaderData }),
 
   breadcrumb: routeBreadcrumbGroup<ContentContainerRouteData>(
