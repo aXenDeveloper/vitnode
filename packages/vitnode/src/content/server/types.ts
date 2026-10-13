@@ -73,7 +73,7 @@ type BaseBuilderFor<TField> = TField extends { kind: "relation" }
         ? PgVarcharBuilder<EnumValuesOf<TField>>
         : TField extends { integer: false; kind: "number" }
           ? PgDoublePrecisionBuilder
-          : TField extends { kind: "number" | "user" }
+          : TField extends { kind: "container" | "number" | "user" }
             ? PgIntegerBuilder
             : TField extends { kind: "textarea" }
               ? PgTextBuilder

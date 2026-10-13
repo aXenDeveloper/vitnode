@@ -1,8 +1,10 @@
 import type { BlockAllowedSpec } from "../blocks/types";
+import type { AnyContentContainerDefinition } from "./containers/types";
 import type {
   AnyContentTypeDefinition,
   ContentBlocksField,
   ContentBooleanField,
+  ContentContainerField,
   ContentDateTimeField,
   ContentEnumField,
   ContentFieldAiAssist,
@@ -378,9 +380,35 @@ const blocks = <
   required: false,
 });
 
+/**
+ * Where the record lives: one container of a `defineContentContainer`
+ * collection. A content type has at most one, and it is the only field that
+ * filters a public list by a whole subtree (`includeDescendants`).
+ */
+const container = <
+  const TDefinition extends AnyContentContainerDefinition,
+  TRequired extends boolean = false,
+>(args: {
+  /** The collection the record's container comes from. */
+  definition: TDefinition;
+  description?: string;
+  /** Every record needs a container. Omitted, a record may sit outside any. */
+  required?: TRequired;
+}): ContentContainerField<TRequired, TDefinition> => {
+  const required = (args.required ?? false) as TRequired;
+
+  return {
+    ...args,
+    kind: "container",
+    nullable: !required as TRequired extends true ? false : true,
+    required,
+  };
+};
+
 export const field = {
   blocks,
   boolean,
+  container,
   dateTime,
   enum: enumField,
   file,

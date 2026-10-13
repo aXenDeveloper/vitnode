@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { AnyContentContainerDefinition } from "@/content/containers/types";
 import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
@@ -21,6 +22,7 @@ export interface BaseBuildModuleReturn<
   M extends string = string,
   Routes extends Route<P>[] = Route<P>[],
 > {
+  contentContainers?: AnyContentContainerDefinition[];
   contentModels?: AnyContentModel[];
 
   contentTypes?: AnyContentTypeDefinition[];
@@ -57,6 +59,7 @@ export function buildModule<
   pluginId,
   name,
   modules,
+  contentContainers,
   contentModels,
   contentTypes,
   notificationTypes,
@@ -67,6 +70,7 @@ export function buildModule<
   searchIndexers,
   webSockets = [],
 }: {
+  contentContainers?: AnyContentContainerDefinition[];
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: BuildCronReturn[];
@@ -101,6 +105,7 @@ export function buildModule<
     hono,
     name,
     modules,
+    contentContainers,
     contentModels,
     contentTypes,
     cronJobs,

@@ -57,6 +57,10 @@ export const contentDeliverySitemapTag = (
   locale?: string,
 ): string => tag(contentTypeId, "sitemap", ...localeParts(locale));
 
+/** Every public read of one container collection - its tree, its containers, their names. */
+export const contentContainerTag = (definitionId: string): string =>
+  tag(definitionId, "containers");
+
 export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
 
 export interface ContentLocaleInvalidation {

@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { BlockPluginSource } from "@/blocks/types";
+import type { AnyContentContainerDefinition } from "@/content/containers/types";
 import type { AnyEditablePageDefinition } from "@/content/editor/types";
 import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
@@ -10,6 +11,11 @@ import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
 
 import { BlockError } from "@/blocks/errors";
+import {
+  assertContentContainerNamespaces,
+  contentContainerPermissionEntries,
+  validateContentContainers,
+} from "@/content/containers/registry";
 import { contentPublicUrls } from "@/content/public-urls";
 import {
   validateContentTypes,
@@ -49,6 +55,7 @@ export interface BuildPluginApiReturn<
 > {
   aiActions?: AnyAiActionDefinition[];
   blocks?: BlockPluginSource;
+  contentContainers?: AnyContentContainerDefinition[];
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
@@ -123,6 +130,7 @@ export function buildApiPlugin<
   collectAiActions([{ aiActions, pluginId }]);
 
   const hono = new OpenAPIHono();
+  const contentContainers: AnyContentContainerDefinition[] = [];
   const contentModels: AnyContentModel[] = [];
   const contentTypes: AnyContentTypeDefinition[] = [];
   const publicContentTypes: AnyContentTypeDefinition[] = [];
@@ -140,6 +148,9 @@ export function buildApiPlugin<
 
     hono.route(`/${handler.name}`, handler.hono);
 
+    contentContainers.push(
+      ...collectModuleTree(handler, m => m.contentContainers),
+    );
     contentModels.push(...collectContentModels(handler));
     contentTypes.push(...collectContentTypes(handler));
     publicContentTypes.push(...collectPublicContentTypes(handler));
@@ -168,6 +179,18 @@ export function buildApiPlugin<
   const registered: RegisteredContentType[] = validateContentTypes(
     contentTypes.map(definition => ({ definition, pluginId })),
   );
+
+  const registeredContainers = validateContentContainers(
+    contentContainers.map(definition => ({ definition, pluginId })),
+  ).map(entry => entry.definition);
+  assertContentContainerNamespaces({
+    containers: registeredContainers,
+    contentTypes: [
+      ...registered.map(entry => entry.definition),
+      ...publicContentTypes,
+    ],
+    pluginId,
+  });
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
@@ -202,6 +225,7 @@ export function buildApiPlugin<
     navigation,
     hono,
     openApiTags: [...new Set(openApiTags)],
+    contentContainers: registeredContainers,
     contentModels,
     contentTypes: registered.map(entry => entry.definition),
     publicContentTypes: [...publishing.values()],
@@ -214,11 +238,30 @@ export function buildApiPlugin<
     // Every content type contributes can_view/can_create/can_edit/can_delete
     // unless the plugin declared that module itself.
     permissionStaff: withModerationPermissions(
-      withContentPermissions(permissionStaff, registered, publicContentTypes),
+      withContainerPermissions(
+        withContentPermissions(permissionStaff, registered, publicContentTypes),
+        registeredContainers,
+      ),
       reportTargets,
     ),
     moderation: { reportTargets, scopes: moderation?.scopes ?? [] },
   };
+}
+
+/** Each container collection gets its own admin module, unless the plugin declared it. */
+function withContainerPermissions(
+  permissionStaff: PermissionStaffConfig | undefined,
+  containers: readonly AnyContentContainerDefinition[],
+): PermissionStaffConfig | undefined {
+  if (containers.length === 0) return permissionStaff;
+
+  const admin = { ...permissionStaff?.admin };
+  for (const definition of containers) {
+    admin[definition.admin.permissionModule] ??=
+      contentContainerPermissionEntries();
+  }
+
+  return { ...permissionStaff, admin };
 }
 
 /**

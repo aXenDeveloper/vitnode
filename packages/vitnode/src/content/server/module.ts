@@ -1,7 +1,9 @@
 import type { BuildModuleReturn } from "../../api/lib/module";
+import type { AnyContentContainerDefinition } from "../containers/types";
 import type { AnyContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";
+import { buildContentContainerAdminRoutes } from "../containers/server/admin-routes";
 import { buildContentRoutes } from "./routes";
 import {
   createContentLocalizedSearchIndexer,
@@ -10,9 +12,15 @@ import {
 import { assertContentReferences } from "./table";
 
 export const buildContentAdminModule = <P extends string>({
+  containers = [],
   contentTypes,
   pluginId,
 }: {
+  /**
+   * Container collections this plugin owns. Each gets its AdminCP routes
+   * beside the content types' and a staff permission module of its own.
+   */
+  containers?: AnyContentContainerDefinition[];
   contentTypes: AnyContentModel[];
   pluginId: P;
 }): BuildModuleReturn<NoInfer<P>, "content"> => {
@@ -29,11 +37,20 @@ export const buildContentAdminModule = <P extends string>({
     });
   });
 
+  const containerModules = containers.map(definition =>
+    buildModule({
+      pluginId,
+      name: definition.admin.permissionModule,
+      routes: buildContentContainerAdminRoutes(definition, { pluginId }),
+    }),
+  );
+
   return buildModule({
     pluginId,
     name: "content",
     routes: [],
-    modules,
+    modules: [...modules, ...containerModules],
+    contentContainers: containers,
     contentTypes: contentTypes.map(model => model.definition),
     // The models themselves, not just the definitions. Background work - the
     // scheduled-publication task - needs the table and the editorial service,

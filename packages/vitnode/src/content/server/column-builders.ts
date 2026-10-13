@@ -190,6 +190,24 @@ export const buildContentColumn = ({
         defaultValue: fieldValue.defaultValue,
         nullable,
       });
+    case "container": {
+      if (!reference) {
+        throw new ContentEngineError(
+          `Field "${name}" is a container but the \`core_content_containers\` column was not resolved. This is an internal error.`,
+          { contentTypeId },
+        );
+      }
+
+      // RESTRICT, always: deleting a board must not delete its topics, and
+      // blanking their container would orphan them silently. The container
+      // service refuses first, with a message an admin can act on.
+      const column = integer().references(reference, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      });
+
+      return nullable ? column : column.notNull();
+    }
     case "dateTime": {
       const column = nullable ? timestamp() : timestamp().notNull();
 

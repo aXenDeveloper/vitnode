@@ -1,5 +1,6 @@
 import type {
   AnyContentTypeDefinition,
+  ContentContainerField,
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentFileField,
@@ -12,6 +13,7 @@ import {
 } from "../blocks/const";
 import { parseBlockId } from "../blocks/namespace";
 import { CONTENT_FIELD_NAME_PATTERN } from "./const";
+import { isContentContainerDefinition } from "./containers/guard";
 import {
   editorialFields,
   publicationFields,
@@ -55,6 +57,9 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   // the empty set is its default, and it has no column to default at all.
   if (fieldValue.kind === "file") return fieldValue.multiple;
   if (fieldValue.kind === "richText") return false;
+  // `field.container()` keeps `nullable` the inverse of `required`, so an
+  // optional container is always writable as `null`.
+  if (fieldValue.kind === "container") return fieldValue.nullable;
 
   return fieldValue.defaultValue !== undefined;
 };
@@ -112,6 +117,7 @@ export const assertFieldName = (
 const FIELD_KINDS = new Set<string>([
   "blocks",
   "boolean",
+  "container",
   "dateTime",
   "enum",
   "file",
@@ -211,6 +217,53 @@ const assertFileField = (
   }
 };
 
+const assertContainerField = (
+  id: string,
+  name: string,
+  fieldValue: ContentContainerField,
+): void => {
+  if (!isContentContainerDefinition(fieldValue.definition)) {
+    throw new ContentEngineError(
+      `Container field "${name}" has no container definition. Pass the object \`defineContentContainer\` returned: \`field.container({ definition: forumBoards })\`.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if ((fieldValue.localized as boolean | undefined) === true) {
+    throw new ContentEngineError(
+      `Container field "${name}" is \`localized: true\`. A record sits in the same container in every language.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (fieldValue.nullable === fieldValue.required) {
+    throw new ContentEngineError(
+      `Container field "${name}" is ${fieldValue.required ? "required but nullable" : "optional but not nullable"}. Build it with \`field.container()\`, which keeps the two in step.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+/**
+ * At most one container per content type: "where does this topic live" has one
+ * answer, and the public list's `includeDescendants` filter needs to know which
+ * field it reads.
+ */
+export const assertSingleContainerField = (
+  id: string,
+  fields: ContentFieldMap,
+): void => {
+  const containers = Object.entries(fields).filter(
+    ([, fieldValue]) => fieldValue.kind === "container",
+  );
+  if (containers.length <= 1) return;
+
+  throw new ContentEngineError(
+    `Content type declares ${containers.length} container fields (${containers.map(([name]) => name).join(", ")}). A record belongs to one container - keep one, and use a relation for anything else it points at.`,
+    { contentTypeId: id },
+  );
+};
+
 export const assertField = (
   id: string,
   name: string,
@@ -220,6 +273,10 @@ export const assertField = (
   // author to add a default value a file field structurally cannot have.
   if (fieldValue.kind === "file") {
     assertFileField(id, name, fieldValue);
+  }
+
+  if (fieldValue.kind === "container") {
+    assertContainerField(id, name, fieldValue);
   }
 
   if (!fieldValue.required && !fieldValue.nullable) {

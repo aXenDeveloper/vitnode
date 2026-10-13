@@ -385,6 +385,17 @@ export const resolvePublicWrite = (
       own?: unknown;
     };
     const list = listOf(id, "publicWrite.update.fields", names);
+    const container = list.find(
+      name =>
+        (fields[name] as ContentFieldDescriptor | undefined)?.kind ===
+        "container",
+    );
+    if (container !== undefined) {
+      throw new ContentEngineError(
+        `publicWrite.update.fields includes the container field "${container}". A member picks a container when they create a record; moving it afterwards is a staff edit (\`can_edit\` in the AdminCP), so an author cannot drop their topic into a board they could not post in.`,
+        { contentTypeId: id },
+      );
+    }
     for (const name of list) {
       assertWritableField(
         id,

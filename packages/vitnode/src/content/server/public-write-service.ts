@@ -8,6 +8,7 @@ import type { Context } from "hono";
 import { eq, getColumns, getColumnTable, inArray } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
+import type { ResolvedContentContainerContext } from "../containers/server/assignment";
 import type { ContentId, ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
@@ -21,6 +22,8 @@ import type { ContentModel } from "./model";
 import type { ContentPublicWriteActor } from "./public-write-authorization";
 import type { ContentDatabase } from "./service";
 
+import { ContentContainerAssignmentError } from "../containers/association";
+import { resolveContentContainerAssignment } from "../containers/server/assignment";
 import {
   ContentEngineError,
   ContentPublicWriteDenied,
@@ -54,6 +57,13 @@ export interface ContentPublicWriteService<TDefinition> {
 
 export interface ContentPublicationPolicyInput {
   actor: ContentPublicWriteActor;
+  /**
+   * The container the record is being created in, resolved on the server - or
+   * `null` for a content type without one. Nothing reads it yet; it is here so
+   * a per-container publishing mode can be decided without reshaping the
+   * pipeline.
+   */
+  container: null | ResolvedContentContainerContext;
   definition: AnyContentTypeDefinition;
   operation: "create";
 }
@@ -194,6 +204,26 @@ export const createContentPublicWriteService = <
     }
   };
 
+  const resolveContainer = async (
+    tx: ContentDatabase,
+    values: Record<string, unknown>,
+  ): Promise<null | ResolvedContentContainerContext> => {
+    try {
+      return (
+        (await resolveContentContainerAssignment(tx, definition, values)) ??
+        null
+      );
+    } catch (error) {
+      if (!(error instanceof ContentContainerAssignmentError)) throw error;
+
+      throw new ContentPublicWriteInputError({
+        contentTypeId,
+        field: error.field,
+        message: error.detail,
+      });
+    }
+  };
+
   const lockSelection = (): Record<string, PgColumn> => ({
     id: columns.id,
     publishedAt: columns.publishedAt,
@@ -328,19 +358,30 @@ export const createContentPublicWriteService = <
       }
       const actor = requireActor();
       const parsed = schemas.create.parse(values) as Record<string, unknown>;
-      const status = resolveContentPublicationPolicy({
-        actor,
-        definition,
-        operation: "create",
-      });
       const stamped = { ...parsed, [ownerField]: actor.userId };
+
+      // Resolved inside the write's transaction: the id is client-supplied, so
+      // the container is read back and checked against the content type's
+      // collection before anything is inserted, and the policy decides the
+      // status with the real container in hand.
+      const prepare = async (tx: ContentDatabase) => {
+        await assertPublicRelationTargets(tx, parsed);
+        const container = await resolveContainer(tx, parsed);
+
+        return resolveContentPublicationPolicy({
+          actor,
+          container,
+          definition,
+          operation: "create",
+        });
+      };
 
       if (editorial) {
         const service = editorialService();
         const { created, published } = await c
           .get("db")
           .transaction(async tx => {
-            await assertPublicRelationTargets(tx, parsed);
+            const status = await prepare(tx);
             const created = await service.create(stamped as never, {
               actor,
               tx,
@@ -359,17 +400,17 @@ export const createContentPublicWriteService = <
       }
 
       const service = model.service(c);
-      const row = await c.get("db").transaction(async tx => {
-        await assertPublicRelationTargets(tx, parsed);
+      const { row, status } = await c.get("db").transaction(async tx => {
+        const status = await prepare(tx);
         const created = await service.create(stamped as never, { tx });
-        if (status !== "published") return created;
+        if (status !== "published") return { row: created, status };
 
         const result = await publicationMethods(definition, service).publish(
           created.id as never,
           { tx },
         );
 
-        return result?.row ?? created;
+        return { row: result?.row ?? created, status };
       });
 
       await plainEffects("create", row, {

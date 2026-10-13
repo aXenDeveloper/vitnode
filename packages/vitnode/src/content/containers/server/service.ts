@@ -1,0 +1,615 @@
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { Context } from "hono";
+import type { z } from "zod";
+
+import { and, eq, inArray, sql } from "drizzle-orm";
+
+import type { ContentDatabase } from "../../server/service";
+import type {
+  AnyContentContainerDefinition,
+  ContentContainerCreateInput,
+  ContentContainerErrorCode,
+  ContentContainerMoveInput,
+  ContentContainerPublicRecord,
+  ContentContainerRecord,
+  ContentContainerUpdateInput,
+} from "../types";
+
+import { core_content_containers } from "../../../database/content-containers";
+import { invalidatePageCacheTags } from "../../../page-cache/store.server";
+import { contentContainerTag } from "../../cache";
+import { contentDefinitionOf } from "../../server/model";
+import { slugify } from "../../slug";
+import { contentContainerFieldOf } from "../association";
+import {
+  CONTENT_CONTAINER_MAX_PER_DEFINITION,
+  CONTENT_CONTAINER_SLUG_MAX_LENGTH,
+} from "../const";
+import { ContentContainerError } from "../errors";
+import {
+  contentContainerAncestors,
+  contentContainerSubtreeIds,
+  orderContentContainers,
+  planContentContainerCreate,
+  planContentContainerDelete,
+  planContentContainerMove,
+} from "../tree";
+
+type ContainerRow = typeof core_content_containers.$inferSelect;
+
+/**
+ * Whether anything still points at one of these containers. Defaults to every
+ * registered content type whose `field.container()` uses this definition.
+ */
+export type ContentContainerUsageCheck = (
+  tx: ContentDatabase,
+  containerIds: readonly number[],
+) => Promise<boolean>;
+
+export interface ContentContainerReferencingModel {
+  column: PgColumn;
+  table: PgTable;
+}
+
+/** Every content table with a container field for this definition, from the boot-time registry. */
+export const contentContainerReferencingModels = (
+  c: Context,
+  definitionId: string,
+): ContentContainerReferencingModel[] => {
+  const models = c.get("core")?.contentModels ?? [];
+
+  return models.flatMap(({ model }) => {
+    const container = contentContainerFieldOf(contentDefinitionOf(model));
+    if (container?.field.definition.id !== definitionId) return [];
+
+    const column = (model.columns as Record<string, PgColumn>)[container.name];
+
+    return column ? [{ column, table: model.table }] : [];
+  });
+};
+
+export const contentContainerUsageFrom =
+  (
+    models: readonly ContentContainerReferencingModel[],
+  ): ContentContainerUsageCheck =>
+  async (tx, containerIds) => {
+    if (containerIds.length === 0) return false;
+
+    for (const { column, table } of models) {
+      const [row] = await tx
+        .select({ value: column })
+        .from(table)
+        .where(inArray(column, [...containerIds]))
+        .limit(1);
+      if (row) return true;
+    }
+
+    return false;
+  };
+
+export interface ContentContainerService<
+  TDefinition extends AnyContentContainerDefinition,
+> {
+  /** The container and everything above it, root first, as public records. */
+  ancestors: (id: number) => Promise<ContentContainerRecord<TDefinition>[]>;
+  /** Direct children of a container, or the roots for `null`, in sibling order. */
+  children: (
+    parentId: null | number,
+  ) => Promise<ContentContainerRecord<TDefinition>[]>;
+  create: (
+    input: ContentContainerCreateInput<TDefinition>,
+  ) => Promise<ContentContainerRecord<TDefinition>>;
+  delete: (id: number) => Promise<void>;
+  /** The container's id plus every descendant's - what a "include subcategories" filter reads. */
+  descendantIds: (id: number) => Promise<null | number[]>;
+  findById: (id: number) => Promise<ContentContainerRecord<TDefinition> | null>;
+  findBySlug: (
+    slug: string,
+  ) => Promise<ContentContainerRecord<TDefinition> | null>;
+  /** Every container of the definition in tree order: a parent, then its subtree. */
+  list: () => Promise<ContentContainerRecord<TDefinition>[]>;
+  move: (
+    id: number,
+    input: ContentContainerMoveInput,
+  ) => Promise<ContentContainerRecord<TDefinition>>;
+  /** Drops every metadata field the definition does not publish. */
+  toPublic: (
+    record: ContentContainerRecord<TDefinition>,
+  ) => ContentContainerPublicRecord<TDefinition>;
+  update: (
+    id: number,
+    input: ContentContainerUpdateInput<TDefinition>,
+  ) => Promise<ContentContainerRecord<TDefinition>>;
+}
+
+const zodErrorMessage = (error: z.ZodError): string =>
+  error.issues
+    .map(issue =>
+      issue.path.length > 0
+        ? `${issue.path.join(".")}: ${issue.message}`
+        : issue.message,
+    )
+    .join("; ");
+
+/**
+ * The one way to read and change a container collection.
+ *
+ * Every write takes a transaction-scoped advisory lock on the definition before
+ * it reads the tree, so two admins dragging at once are serialized rather than
+ * interleaved: each plans against the tree the other one already committed.
+ * Every rule is checked against that read before the first row changes, so a
+ * refused write leaves the tree exactly as it was.
+ */
+export const createContentContainerService = <
+  TDefinition extends AnyContentContainerDefinition,
+>(
+  c: Context,
+  {
+    definition,
+    pluginId,
+    usage,
+  }: {
+    definition: TDefinition;
+    pluginId: string;
+    usage?: ContentContainerUsageCheck;
+  },
+): ContentContainerService<TDefinition> => {
+  const definitionId = definition.id;
+  const fieldNames = Object.keys(definition.fields);
+  const rules = {
+    hierarchy: definition.hierarchy.enabled,
+    maxDepth: definition.hierarchy.maxDepth,
+    mode: definition.ordering.mode,
+  };
+  const inUse =
+    usage ??
+    contentContainerUsageFrom(
+      contentContainerReferencingModels(c, definitionId),
+    );
+
+  const refuse = (code: ContentContainerErrorCode, message?: string): never => {
+    throw new ContentContainerError({ code, definitionId, message });
+  };
+
+  const readAll = async (db: ContentDatabase): Promise<ContainerRow[]> =>
+    await db
+      .select()
+      .from(core_content_containers)
+      .where(eq(core_content_containers.definitionId, definitionId));
+
+  const lock = async (tx: ContentDatabase): Promise<void> => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`core_content_containers:${definitionId}`}))`,
+    );
+  };
+
+  const toRecord = (
+    row: ContainerRow,
+    depth: number,
+  ): ContentContainerRecord<TDefinition> => {
+    const stored = row.metadata ?? {};
+
+    return {
+      createdAt: row.createdAt,
+      depth,
+      id: row.id,
+      metadata: Object.fromEntries(
+        fieldNames.map(name => [name, stored[name] ?? null]),
+      ),
+      name: row.name,
+      parentId: row.parentId,
+      position: row.position,
+      slug: row.slug,
+      updatedAt: row.updatedAt,
+    } as ContentContainerRecord<TDefinition>;
+  };
+
+  const ordered = (rows: readonly ContainerRow[]) =>
+    orderContentContainers(rows, definition.ordering.mode).map(row =>
+      toRecord(row, row.depth),
+    );
+
+  const recordOf = (
+    rows: readonly ContainerRow[],
+    id: number,
+  ): ContentContainerRecord<TDefinition> | null =>
+    ordered(rows).find(record => record.id === id) ?? null;
+
+  const parseMetadata = (
+    schema: z.ZodType,
+    value: unknown,
+  ): Record<string, unknown> => {
+    const parsed = schema.safeParse(value ?? {});
+    if (!parsed.success) {
+      return refuse("invalidMetadata", zodErrorMessage(parsed.error));
+    }
+
+    return parsed.data as Record<string, unknown>;
+  };
+
+  const normalizeSlug = (value: string): string => {
+    const slug = slugify(value, CONTENT_CONTAINER_SLUG_MAX_LENGTH);
+    if (slug === "") return refuse("slugEmpty");
+
+    return slug;
+  };
+
+  /** An explicit slug must be free; a derived one is suffixed until it is. */
+  const resolveSlug = (
+    rows: readonly ContainerRow[],
+    {
+      explicit,
+      from,
+      self,
+    }: { explicit?: string; from: string; self?: number },
+  ): string => {
+    const taken = new Set(
+      rows.filter(row => row.id !== self).map(row => row.slug),
+    );
+
+    if (explicit !== undefined) {
+      const slug = normalizeSlug(explicit);
+      if (taken.has(slug)) refuse("slugTaken");
+
+      return slug;
+    }
+
+    const base =
+      slugify(from, CONTENT_CONTAINER_SLUG_MAX_LENGTH) || "container";
+    let candidate = base;
+    for (let suffix = 2; taken.has(candidate); suffix++) {
+      const tail = `-${suffix}`;
+      candidate = `${base.slice(0, CONTENT_CONTAINER_SLUG_MAX_LENGTH - tail.length)}${tail}`;
+    }
+
+    return candidate;
+  };
+
+  const applyPlacements = async (
+    tx: ContentDatabase,
+    placements: readonly {
+      id: number;
+      parentId: null | number;
+      position: number;
+    }[],
+  ): Promise<void> => {
+    for (const placement of placements) {
+      await tx
+        .update(core_content_containers)
+        .set({
+          parentId: placement.parentId,
+          position: placement.position,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(core_content_containers.id, placement.id),
+            eq(core_content_containers.definitionId, definitionId),
+          ),
+        );
+    }
+  };
+
+  const expire = async (mode: "hard" | "soft"): Promise<void> => {
+    await invalidatePageCacheTags([contentContainerTag(definitionId)], {
+      mode,
+    });
+  };
+
+  const emit = async <
+    TName extends
+      | "content.container.created"
+      | "content.container.deleted"
+      | "content.container.moved"
+      | "content.container.updated",
+  >(
+    name: TName,
+    payload: Record<string, unknown>,
+  ): Promise<void> => {
+    const events = c.get("events");
+    if (!events) return;
+    await events.emit(name, { definitionId, pluginId, ...payload } as never);
+  };
+
+  const parseInput = <TSchema extends z.ZodType>(
+    schema: TSchema,
+    input: unknown,
+  ): z.infer<TSchema> => {
+    const parsed = schema.safeParse(input);
+    if (!parsed.success) {
+      const metadataIssue = parsed.error.issues.some(
+        issue => issue.path[0] === "metadata",
+      );
+
+      return refuse(
+        metadataIssue ? "invalidMetadata" : "invalidInput",
+        zodErrorMessage(parsed.error),
+      );
+    }
+
+    return parsed.data;
+  };
+
+  return {
+    ancestors: async id => {
+      const rows = await readAll(c.get("db"));
+      if (!rows.some(row => row.id === id)) return [];
+      const depths = new Map(ordered(rows).map(record => [record.id, record]));
+
+      return contentContainerAncestors(rows, id).flatMap(row => {
+        const record = depths.get(row.id);
+
+        return record ? [record] : [];
+      });
+    },
+
+    children: async parentId =>
+      ordered(await readAll(c.get("db"))).filter(
+        record => record.parentId === parentId,
+      ),
+
+    create: async input => {
+      const values = parseInput(definition.schemas.create, input) as {
+        metadata?: Record<string, unknown>;
+        name: string;
+        parentId?: null | number;
+        position?: number;
+        slug?: string;
+      };
+      const metadata = parseMetadata(
+        definition.schemas.metadata,
+        values.metadata,
+      );
+      const parentId = values.parentId ?? null;
+
+      const created = await c.get("db").transaction(async tx => {
+        await lock(tx);
+        const rows = await readAll(tx);
+        if (rows.length >= CONTENT_CONTAINER_MAX_PER_DEFINITION) {
+          refuse("limitReached");
+        }
+
+        const plan = planContentContainerCreate(
+          rows,
+          { parentId, position: values.position },
+          rules,
+        );
+        if (!plan.ok) return refuse(plan.code);
+
+        const slug = resolveSlug(rows, {
+          explicit: values.slug,
+          from: values.name,
+        });
+
+        await applyPlacements(tx, plan.shifted);
+        const [row] = await tx
+          .insert(core_content_containers)
+          .values({
+            definitionId,
+            metadata,
+            name: values.name,
+            parentId,
+            pluginId,
+            position: plan.position,
+            slug,
+          })
+          .returning();
+
+        return recordOf([...rows, row], row.id) ?? refuse("notFound");
+      });
+
+      await expire("soft");
+      await emit("content.container.created", {
+        containerId: created.id,
+        parentId: created.parentId,
+      });
+
+      return created;
+    },
+
+    delete: async id => {
+      const removed = await c.get("db").transaction(async tx => {
+        await lock(tx);
+        const rows = await readAll(tx);
+        const plan = planContentContainerDelete(rows, id);
+        if (!plan.ok) return refuse(plan.code);
+        if (await inUse(tx, [id])) refuse("hasContent");
+
+        const row =
+          rows.find(candidate => candidate.id === id) ?? refuse("notFound");
+        await tx
+          .delete(core_content_containers)
+          .where(
+            and(
+              eq(core_content_containers.id, id),
+              eq(core_content_containers.definitionId, definitionId),
+            ),
+          );
+        await applyPlacements(tx, plan.shifted);
+
+        return row;
+      });
+
+      await expire("hard");
+      await emit("content.container.deleted", {
+        containerId: removed.id,
+        parentId: removed.parentId,
+      });
+    },
+
+    descendantIds: async id => {
+      const rows = await readAll(c.get("db"));
+      if (!rows.some(row => row.id === id)) return null;
+
+      return [...contentContainerSubtreeIds(rows, id)];
+    },
+
+    findById: async id => {
+      if (!Number.isSafeInteger(id) || id <= 0) return null;
+      const rows = await readAll(c.get("db"));
+
+      return recordOf(rows, id);
+    },
+
+    findBySlug: async slug => {
+      const rows = await readAll(c.get("db"));
+      const row = rows.find(candidate => candidate.slug === slug);
+
+      return row ? recordOf(rows, row.id) : null;
+    },
+
+    list: async () => ordered(await readAll(c.get("db"))),
+
+    move: async (id, input) => {
+      const { parentId, position } = parseInput(
+        definition.schemas.move,
+        input,
+      ) as unknown as ContentContainerMoveInput;
+
+      const { changed, from, moved } = await c
+        .get("db")
+        .transaction(async tx => {
+          await lock(tx);
+          const rows = await readAll(tx);
+          const plan = planContentContainerMove(
+            rows,
+            { id, parentId, position },
+            rules,
+          );
+          if (!plan.ok) return refuse(plan.code);
+
+          const before = rows.find(row => row.id === id) ?? refuse("notFound");
+          await applyPlacements(tx, plan.placements);
+          const placed = new Map(plan.placements.map(item => [item.id, item]));
+          const after = rows.map(row => {
+            const placement = placed.get(row.id);
+
+            return placement ? { ...row, ...placement } : row;
+          });
+
+          return {
+            changed: plan.placements.length > 0,
+            from: before.parentId,
+            moved: recordOf(after, id) ?? refuse("notFound"),
+          };
+        });
+
+      // Dropped back where it was: nothing moved, so nothing to tell anyone.
+      if (!changed) return moved;
+
+      await expire("soft");
+      await emit("content.container.moved", {
+        containerId: moved.id,
+        fromParentId: from,
+        parentId: moved.parentId,
+        position: moved.position,
+      });
+
+      return moved;
+    },
+
+    toPublic: record =>
+      ({
+        depth: record.depth,
+        id: record.id,
+        metadata: Object.fromEntries(
+          definition.publicApi.fields.map(name => [
+            name,
+            (record.metadata as Record<string, unknown>)[name] ?? null,
+          ]),
+        ),
+        name: record.name,
+        parentId: record.parentId,
+        position: record.position,
+        slug: record.slug,
+      }) as ContentContainerPublicRecord<TDefinition>,
+
+    update: async (id, input) => {
+      const values = parseInput(definition.schemas.update, input) as {
+        metadata?: Record<string, unknown>;
+        name?: string;
+        slug?: string;
+      };
+      const patch =
+        values.metadata === undefined
+          ? undefined
+          : parseMetadata(definition.schemas.metadataPatch, values.metadata);
+
+      const { changedFields, record, slugChanged } = await c
+        .get("db")
+        .transaction(async tx => {
+          await lock(tx);
+          const rows = await readAll(tx);
+          const row = rows.find(candidate => candidate.id === id);
+          if (!row) return refuse("notFound");
+
+          const slug =
+            values.slug === undefined
+              ? row.slug
+              : resolveSlug(rows, {
+                  explicit: values.slug,
+                  from: row.name,
+                  self: id,
+                });
+          const metadata = patch
+            ? parseMetadata(definition.schemas.metadata, {
+                ...Object.fromEntries(
+                  Object.entries(row.metadata ?? {}).filter(([key]) =>
+                    fieldNames.includes(key),
+                  ),
+                ),
+                ...patch,
+              })
+            : row.metadata;
+          const name = values.name ?? row.name;
+
+          const changed = [
+            ...(name === row.name ? [] : ["name"]),
+            ...(slug === row.slug ? [] : ["slug"]),
+            ...Object.keys(patch ?? {}).filter(
+              key =>
+                JSON.stringify((row.metadata ?? {})[key] ?? null) !==
+                JSON.stringify(metadata[key] ?? null),
+            ),
+          ];
+
+          const [updated] =
+            changed.length === 0
+              ? [row]
+              : await tx
+                  .update(core_content_containers)
+                  .set({ metadata, name, slug, updatedAt: new Date() })
+                  .where(
+                    and(
+                      eq(core_content_containers.id, id),
+                      eq(core_content_containers.definitionId, definitionId),
+                    ),
+                  )
+                  .returning();
+
+          return {
+            changedFields: changed,
+            record:
+              recordOf(
+                rows.map(candidate =>
+                  candidate.id === id ? updated : candidate,
+                ),
+                id,
+              ) ?? refuse("notFound"),
+            slugChanged: slug !== row.slug,
+          };
+        });
+
+      if (changedFields.length > 0) {
+        await expire(slugChanged ? "hard" : "soft");
+        await emit("content.container.updated", {
+          changedFields,
+          containerId: record.id,
+          parentId: record.parentId,
+        });
+      }
+
+      return record;
+    },
+  };
+};

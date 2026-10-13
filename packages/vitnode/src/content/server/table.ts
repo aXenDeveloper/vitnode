@@ -25,6 +25,7 @@ import type {
   ContentTableFor,
 } from "./types";
 
+import { core_content_containers } from "../../database/content-containers";
 import { core_files } from "../../database/files";
 import { core_users } from "../../database/users";
 import {
@@ -151,6 +152,14 @@ const resolveReference = (
       name,
       () => getTableName(core_files),
       () => core_files.id,
+    );
+  }
+  if (fieldValue.kind === "container") {
+    return checkedReference(
+      contentTypeId,
+      name,
+      () => getTableName(core_content_containers),
+      () => core_content_containers.id,
     );
   }
   if (fieldValue.kind !== "relation") return undefined;

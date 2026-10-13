@@ -1,7 +1,16 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type {
   ContentFieldDescriptor,
@@ -201,6 +210,23 @@ export const buildFilterCondition = ({
       }
 
       conditions.push(isNull(column));
+      continue;
+    }
+
+    // A container filter widened to a subtree - `includeDescendants` on the
+    // public list - arrives as the ids the container service resolved from one
+    // read of the collection. One `IN` over the indexed column, never a join.
+    if (
+      fieldValue.kind === "container" &&
+      typeof raw === "object" &&
+      Array.isArray((raw as { in?: unknown }).in)
+    ) {
+      const ids = (raw as { in: unknown[] }).in.filter(
+        (id): id is number =>
+          typeof id === "number" && Number.isSafeInteger(id),
+      );
+      // Serial ids start at 1, so an empty set matches nothing.
+      conditions.push(ids.length > 0 ? inArray(column, ids) : eq(column, 0));
       continue;
     }
 
