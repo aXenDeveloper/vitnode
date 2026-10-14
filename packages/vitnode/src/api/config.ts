@@ -37,11 +37,7 @@ import {
   globalAdminMiddleware,
   globalMiddleware,
 } from "./middlewares/global.middleware";
-import {
-  authRateLimiterMiddleware,
-  contentWriteRateLimiterMiddleware,
-  rateLimiterMiddleware,
-} from "./middlewares/rate-limiter.middleware";
+import { rateLimiterMiddleware } from "./middlewares/rate-limiter.middleware";
 import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
 
 /** 25 MB: room for an image upload, and nothing like enough to be a weapon. */
@@ -135,6 +131,10 @@ export function VitNodeAPI({
   }
 
   const webOrigin = CONFIG.web.origin;
+  const rateLimiter = rateLimiterMiddleware(
+    vitNodeApiConfig.rateLimiter,
+    redisClient,
+  );
 
   app.use(
     secureHeaders({
@@ -143,6 +143,10 @@ export function VitNodeAPI({
       strictTransportSecurity: false,
     }),
   );
+  app.use("*", clientIpMiddleware);
+  // `cors()` answers a preflight itself and never calls `next`, so `OPTIONS`
+  // spends its budget here or nowhere.
+  app.use("*", rateLimiter.preflight);
   app.use(cors(corsOptions ?? { credentials: true, origin: webOrigin }));
   app.use(
     csrf(
@@ -152,7 +156,6 @@ export function VitNodeAPI({
       },
     ),
   );
-  app.use("*", clientIpMiddleware);
   // Nothing bounded a request body before this. `POST /sign_in` reads its JSON
   // and then runs scrypt unconditionally, so a body the server is willing to
   // buffer is memory *and* CPU an unauthenticated caller gets to choose the size
@@ -166,17 +169,7 @@ export function VitNodeAPI({
       onError: c => c.json({ error: "Payload Too Large" }, 413),
     }),
   );
-  const {
-    auth: authRateLimiter,
-    contentWrite: contentWriteRateLimiter,
-    ...rateLimiter
-  } = vitNodeApiConfig.rateLimiter ?? {};
-  app.use("*", rateLimiterMiddleware(rateLimiter, redisClient));
-  app.use("*", authRateLimiterMiddleware(authRateLimiter, redisClient));
-  app.use(
-    "*",
-    contentWriteRateLimiterMiddleware(contentWriteRateLimiter, redisClient),
-  );
+  app.use("*", rateLimiter.requests);
   if (docsEnabled) {
     app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
   }

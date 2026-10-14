@@ -1,87 +1,94 @@
 ---
 title: Rate Limiter
-description: Restrict API request rates per client IP, return 429 responses with Retry-After headers, and share counters across clusters with Redis.
+description: How VitNode splits API rate limits into read, write, sign-in and content-write budgets under a global safety cap, with Redis-shared counters and 429 responses that carry Retry-After.
 icon: ShieldAlert
 ---
 
 import { TypeTable } from "fumadocs-ui/components/type-table"
 
-VitNode includes automated IP-based rate limiting middleware. Exceeding the request budget immediately returns `429 Too Many Requests` with a `Retry-After` header, protecting authentication and public endpoints from brute-force attacks.
+VitNode limits API requests per client IP. Reads, writes, sign-in attempts and public content writes each get their own budget, and one global safety cap sits above them all. A request over any budget gets `429 Too Many Requests` with a `Retry-After` header.
 
-## Quick start
+## How the budgets work
 
-Customize the rate limiter budget in `apps/api/src/vitnode.api.config.ts`:
+Every request spends points from the budgets that apply to it, in this order, and stops at the first one that is used up:
 
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
+| Budget         | Spent by                                                                 | Default per IP | Config key                 |
+| -------------- | ------------------------------------------------------------------------ | -------------- | -------------------------- |
+| Safety cap     | Every request, including `OPTIONS` preflights                            | 1000 / 60 s    | `rateLimiter.safety`       |
+| Read           | `GET` and `HEAD`                                                         | 300 / 60 s     | `rateLimiter.read`         |
+| Write          | `POST`, `PUT`, `PATCH`, `DELETE` and any other method                    | 60 / 60 s      | `rateLimiter.write`        |
+| Sign-in        | `POST` to the sign-in, sign-up, password and passkey routes, plus write  | 10 / 60 s      | `rateLimiter.auth`         |
+| Content writes | `POST` and `PATCH` under a plugin's `/content/`, outside `/admin/`, plus write | 20 / 60 s | `rateLimiter.contentWrite` |
 
-export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:4]
-  rateLimiter: {
-    points: 60, // Max requests allowed
-    duration: 60, // Window in seconds
-  },
-})
-```
+So a sign-in spends the safety cap, the write budget and the sign-in budget. A `GET` spends only the safety cap and the read budget. Each budget is spent at most once per request.
 
-The default configuration allows **80 requests per 60 seconds** per IP address.
-
-IPv6 visitors are counted per `/64` network, not per address - an ISP usually hands one person a whole `/64`, and we'd rather not give them 18 quintillion fresh budgets.
-
-## Stricter budget for sign-in
-
-Routes that check a password or send an email to whoever is named in the request get a second, much smaller budget on top of the global one: **10 requests per 60 seconds** per IP address. That covers:
+The sign-in budget covers:
 
 - `POST /users/sign_in` and `POST /users/sign_up`
 - `POST /users/reset-password` and `POST /users/change-password`
 - `POST /users/verify-email` and `POST /users/verify-email/resend`
 - `POST /users/passkeys/sign-in` and `POST /users/passkeys/admin-sign-in`
 
-Tune it with `rateLimiter.auth`:
-
-```ts title="apps/api/src/vitnode.api.config.ts"
-export const vitNodeApiConfig = buildApiConfig({
-  rateLimiter: {
-    // [!code ++:4]
-    auth: {
-      points: 5,
-      duration: 60,
-    },
-  },
-})
-```
-
-## Budget for public content writes
-
-Public [Content Engine writes](/docs/content-engine/public-write) - `POST` and `PATCH` requests under a plugin's `/content/` routes, outside `/admin/` - get their own budget on top of the global one: **20 requests per 60 seconds** per IP address. It keeps one member from flooding a forum with new discussions.
-
-Tune it with `rateLimiter.contentWrite`:
-
-```ts title="apps/api/src/vitnode.api.config.ts"
-export const vitNodeApiConfig = buildApiConfig({
-  rateLimiter: {
-    // [!code ++:4]
-    contentWrite: {
-      points: 10,
-      duration: 60,
-    },
-  },
-})
-```
+IPv6 visitors are counted per `/64` network, not per address. An ISP usually hands one person a whole `/64`, and we'd rather not give them 18 quintillion fresh budgets.
 
 <Callout type="info" title="Disabled in development">
-  Rate limiting is automatically bypassed when `NODE_ENV=development` to prevent interruptions during local coding.
+  Every budget is skipped when `NODE_ENV=development`, so local clicking never
+  hits a `429`.
 </Callout>
 
----
+## Why reads and writes are separate
 
-## 429 Error Response Format
+The router [preloads a page](/docs/dev/routing/preloading) when a visitor rests the pointer on a link. A preload runs the page's loader, and the loader calls the API. Those are real `GET` requests that the visitor never asked for.
 
-When a client exhausts their request allowance, the API returns a structured JSON error:
+With one shared budget, a visitor who hovered across a long forum list could use up the minute before pressing **Post comment**. With separate budgets, preloads can only use up the read budget. The comment still has its own 60 writes, and the sign-in and content-write budgets still apply to it.
+
+The safety cap is the wall behind both. It is set well above read plus write (300 + 60), so normal use never reaches it. It stops a client that would otherwise spend every budget in parallel, and it also counts `OPTIONS` preflights, which no other budget sees.
+
+The defaults leave room for a busy reader: a server-rendered page with a few queries costs 3 to 6 reads, and the [query cache](/docs/dev/cache/app) answers repeat visits without a request. Writes stay low because a person rarely submits more than one form a second, and a script that does is what the budget is for.
+
+## Change a budget
+
+Set only the budgets you want to change in `apps/api/src/vitnode.api.config.ts`. Each one falls back to its own default for any option you leave out:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config"
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:5]
+  rateLimiter: {
+    read: { points: 600 }, // a busy reading site
+    write: { points: 30, duration: 60 },
+    auth: { points: 5, duration: 60, blockDuration: 300 },
+  },
+})
+```
+
+`blockDuration` keeps a client blocked for that many seconds after it goes over, instead of until the window ends.
+
+## Migrate from the single global limit
+
+Older configs set `points` and `duration` at the top of `rateLimiter`. Those keys configured a cap on every request, which is what `safety` is now, so VitNode keeps them working as the safety cap with the old defaults (80 requests per 60 seconds). The read and write budgets apply underneath.
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+rateLimiter: {
+  points: 120, // [!code --]
+  duration: 60, // [!code --]
+  safety: { points: 120, duration: 60 }, // [!code ++]
+},
+```
+
+Nothing gets looser on its own: an old config keeps exactly the cap it had and logs a deprecation warning at boot. To get the new defaults, delete the top-level keys. With them gone, the safety cap is 1000 and reads get 300 of their own.
+
+Setting both the old top-level keys and `safety` stops the API at boot with an error, because both name the same limiter. `auth` and `contentWrite` work as before, and their Redis counters carry over a deploy.
+
+## 429 response format
+
+When a client goes over any budget, the API returns:
 
 ```http
 HTTP/1.1 429 Too Many Requests
 Retry-After: 24
+X-RateLimit-Category: read
 Content-Type: application/json
 
 {
@@ -90,16 +97,18 @@ Content-Type: application/json
 }
 ```
 
----
+`X-RateLimit-Category` names the budget that refused the request: `safety`, `read`, `write`, `auth` or `content-write`. In the browser, VitNode shows one toast that uses `Retry-After` for its countdown, even when several requests fail at once.
 
-## Distributed Rate Limiting (Redis)
+[Debug unexpected 429 errors](/docs/dev/advanced/rate-limiter-debugging) explains how to find which budget a real visitor ran out of.
 
-- **Without Redis**: Counters are tracked in local memory per server instance.
-- **With Redis**: Counters are synchronized across all API containers using a distributed sliding window.
+## Distributed rate limiting (Redis)
 
-Configure Redis in `vitnode.api.config.ts`:
+- **Without Redis**: each API instance counts in its own memory.
+- **With Redis**: all API instances share the counters, so a visitor gets the same budget whichever instance answers. Each budget has its own key prefix, so the counters never mix.
 
-```ts
+If Redis stops answering, each instance falls back to counting in memory until it returns, so requests keep flowing and limits keep holding.
+
+```ts title="apps/api/src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
@@ -107,11 +116,9 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
----
-
 ## Real visitor IPs for server-rendered pages
 
-When your web app renders a page on the server, it calls the API itself - so the API sees the **web server's** address, not your visitor's. Every server-rendered request then lands in the same bucket, and 80 requests a minute disappears fast on a busy site.
+When your web app renders a page on the server, it calls the API itself - so the API sees the **web server's** address, not your visitor's. Every server-rendered request then lands in the same bucket, and one busy page fills it fast.
 
 The API never believes a plain `X-Forwarded-For` header (anyone can type one). Instead, the web server works out the visitor's address, signs it with a key derived from your `CRON_SECRET` - the secret the web app and the API already share - and the API checks that signature before trusting it.
 
@@ -134,46 +141,68 @@ The API never believes a plain `X-Forwarded-For` header (anyone can type one). I
   Anyone holding `CRON_SECRET` can trigger cron jobs and pick any IP address the rate limiter will believe. Use a long random value and rotate it in both apps together.
 </Callout>
 
----
+No request header can skip or refill a budget. A header such as `X-Prefetch: true` is ignored, because any client can send it.
 
-## `rateLimiter` Options
+## `rateLimiter` options
+
+Every budget takes the same options: `points` (requests per window), `duration` (window length in seconds), `blockDuration` (seconds to stay blocked after going over, `0` by default) and `execEvenly` / `execEvenlyMinDelayMs` (delay allowed requests so they spread across the window).
 
 <TypeTable
   type={{
-    points: {
-      default: "80",
-      description: "Total number of request points allowed within the duration window.",
-      type: "number",
+    safety: {
+      default: "{ points: 1000, duration: 60 }",
+      description: "Cap on every request from one IP, including OPTIONS preflights.",
+      type: "RateLimiterCategoryOptions",
     },
-    duration: {
-      default: "60",
-      description: "Window length in seconds before points reset.",
-      type: "number",
+    read: {
+      default: "{ points: 300, duration: 60 }",
+      description: "GET and HEAD requests, including the ones route preloading sends.",
+      type: "RateLimiterCategoryOptions",
+    },
+    write: {
+      default: "{ points: 60, duration: 60 }",
+      description: "Every request that is not a read or a preflight.",
+      type: "RateLimiterCategoryOptions",
     },
     auth: {
       default: "{ points: 10, duration: 60 }",
-      description: "Separate budget for sign-in, sign-up, password reset and passkey sign-in.",
-      type: "{ points?: number; duration?: number }",
+      description: "Sign-in, sign-up, password reset and passkey sign-in. Spent on top of write.",
+      type: "RateLimiterCategoryOptions",
     },
     contentWrite: {
       default: "{ points: 20, duration: 60 }",
-      description: "Separate budget for public Content Engine creates and edits (POST and PATCH under /content/).",
-      type: "{ points?: number; duration?: number }",
+      description: "Public Content Engine creates and edits (POST and PATCH under /content/). Spent on top of write.",
+      type: "RateLimiterCategoryOptions",
+    },
+    points: {
+      default: "-",
+      description: "Deprecated. Configures the safety cap with the old defaults (80 per 60 s). Move it to safety.points.",
+      type: "number",
+    },
+    duration: {
+      default: "-",
+      description: "Deprecated. Move it to safety.duration.",
+      type: "number",
     },
   }}
 />
 
-## Learn More
+## Learn more
 
 <Cards>
+  <Card
+    title="Debug unexpected 429 errors"
+    description="Find which budget a visitor ran out of, and why"
+    href="/docs/dev/advanced/rate-limiter-debugging"
+  />
+  <Card
+    title="Preload pages on hover"
+    description="Control which links send API requests before a click"
+    href="/docs/dev/routing/preloading"
+  />
   <Card
     title="Redis"
     description="Setup Redis for distributed caching and clustering"
     href="/docs/dev/advanced/redis"
-  />
-  <Card
-    title="Captcha"
-    description="Bot protection on sign-up and password reset forms"
-    href="/docs/dev/captcha"
   />
 </Cards>

@@ -1,0 +1,61 @@
+---
+title: Debug unexpected 429 errors
+description: Find which VitNode rate-limit budget a visitor ran out of, using the X-RateLimit-Category header and the API's rate-limit log line, then fix the cause.
+icon: SearchCheck
+---
+
+When a real visitor sees "Too many requests", find out which [rate-limit budget](/docs/dev/advanced/rate-limiter) refused them before you raise anything. Raising the wrong budget hides the cause and weakens protection you still need.
+
+<Steps>
+<Step>
+
+### Read the refused budget
+
+Open the browser's Network tab, repeat what the visitor did, and select the first request with status `429`. The `X-RateLimit-Category` response header names the budget:
+
+| Value           | What ran out                                     | Usual cause                                                   |
+| --------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| `read`          | `GET` / `HEAD` budget                            | A loader that fetches on every preload, or a polling screen   |
+| `write`         | Mutation budget                                  | A form that submits in a loop, or autosave on every keystroke |
+| `auth`          | Sign-in budget                                   | Repeated failed sign-ins, often a password manager retrying   |
+| `content-write` | Public Content Engine create and edit budget     | A member, or a script, posting very quickly                   |
+| `safety`        | The cap on every request                         | A client sending requests in parallel, or many people on one IP |
+
+</Step>
+<Step>
+
+### Find the route in the API log
+
+The API prints one line the first time a client goes over a budget in each window:
+
+```txt
+[VitNode] Rate limit exceeded: {"category":"read","method":"GET","path":"/api/@vitnode/forum/content/topics/:param","status":429,"retryAfter":24,"store":"redis"}
+```
+
+`path` is the route template with IDs and slugs replaced, and `store` says whether the counters live in `redis` or in each instance's `memory`. The line never includes the IP address, cookies, headers or the query string, and later refusals in the same window are not logged, so a flood stays one line per client.
+
+</Step>
+<Step>
+
+### Fix the cause
+
+- **`read` from navigation**: check that the page's loader reads through the [query cache](/docs/dev/cache/app) with a `staleTime`, so hovering a link twice or hovering and then clicking costs one request. For a page that should never load early, set [`preload: false`](/docs/dev/routing/preloading#turn-off-preloading-for-a-route).
+- **`write` or `content-write`**: debounce autosave, and disable the submit button while a request is pending.
+- **Many people behind one IP**: an office or school shares one public address, so its people share every budget. Raise the budget they reach, such as `rateLimiter.read.points`, rather than the safety cap.
+- **Every server-rendered request in one bucket**: the API sees your web server instead of the visitor. Set up [real visitor IPs](/docs/dev/advanced/rate-limiter#real-visitor-ips-for-server-rendered-pages).
+- **Limits differ between instances**: with `store` set to `memory`, each API instance counts on its own. Set `REDIS_URL` to share counters.
+
+</Step>
+</Steps>
+
+## Check the result
+
+Repeat the visitor's steps with the Network tab open. You see no `429`, and the API prints no new `Rate limit exceeded` line.
+
+<Callout type="info" title="Why limits are per IP, not per user">
+  The rate limiter runs before the API reads the session, so it cannot know who
+  is signed in without a session lookup on every request, including the ones it
+  rejects. Keying by IP keeps a refused request cheap. Per-user budgets for
+  signed-in members could stack on top of the IP budgets later, but the IP-based
+  safety cap would stay.
+</Callout>
