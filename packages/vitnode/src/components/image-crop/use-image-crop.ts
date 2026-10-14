@@ -48,6 +48,11 @@ export interface ImageCrop {
   zoom: number;
 }
 
+const INITIAL_VIEW: { offset: Offset; zoom: number } = {
+  offset: { x: 0, y: 0 },
+  zoom: MIN_ZOOM,
+};
+
 export const useImageCrop = ({
   constraints,
   fileName,
@@ -60,8 +65,8 @@ export const useImageCrop = ({
   const sourceRef = React.useRef<LoadedSource | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<null | string>(null);
-  const [zoom, setZoom] = React.useState(MIN_ZOOM);
-  const [offset, setOffset] = React.useState<Offset>({ x: 0, y: 0 });
+  const [view, setView] = React.useState(INITIAL_VIEW);
+  const { offset, zoom } = view;
   const frameRef = React.useRef<Size>({ height: 0, width: 0 });
 
   const formats = fileFormatLabels(constraints);
@@ -77,8 +82,7 @@ export const useImageCrop = ({
     if (sourceRef.current) URL.revokeObjectURL(sourceRef.current.url);
     sourceRef.current = next;
     setSource(next);
-    setZoom(MIN_ZOOM);
-    setOffset({ x: 0, y: 0 });
+    setView(INITIAL_VIEW);
     onSourceChange?.(next !== null);
   };
 
@@ -122,27 +126,28 @@ export const useImageCrop = ({
     if (frame) frameRef.current = frame;
     if (!source) return;
 
-    setOffset(current =>
-      clampOffset(
-        update(current, frameRef.current),
+    setView(current => ({
+      offset: clampOffset(
+        update(current.offset, frameRef.current),
         source.size,
         frameRef.current,
-        zoom,
+        current.zoom,
       ),
-    );
+      zoom: current.zoom,
+    }));
   };
 
   const updateZoom = React.useCallback(
     (update: (current: number) => number) => {
-      setZoom(current => {
-        const next = clampZoom(update(current));
-        if (source) {
-          setOffset(offsetNow =>
-            clampOffset(offsetNow, source.size, frameRef.current, next),
-          );
-        }
+      setView(current => {
+        const next = clampZoom(update(current.zoom));
 
-        return next;
+        return {
+          offset: source
+            ? clampOffset(current.offset, source.size, frameRef.current, next)
+            : current.offset,
+          zoom: next,
+        };
       });
     },
     [source],
