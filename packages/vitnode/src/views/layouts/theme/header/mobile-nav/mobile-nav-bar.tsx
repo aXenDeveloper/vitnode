@@ -1,13 +1,8 @@
-import { cn } from "cn";
 import { MenuIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import {
-  slidingIndicatorTransitionClassName,
-  useSlidingIndicator,
-} from "@/hooks/use-sliding-indicator";
 
 import type { HeaderNavChildItem, HeaderNavItem } from "../header-nav";
 
@@ -15,10 +10,10 @@ import { useIsNavHrefActive } from "../use-is-nav-href-active";
 import { MobileNavLinks } from "./mobile-nav-links";
 import { MobileNavIcon, MobileNavLink } from "./mobile-nav-parts";
 
-const BODY_CLEARANCE_CSS = `@media (width < 40rem){body:has([data-slot="mobile-nav"]){padding-bottom:calc(4.75rem + max(env(safe-area-inset-bottom, 0px), 0.75rem))}}`;
+const BODY_CLEARANCE_CSS = `@media (width < 40rem){body:has([data-slot="mobile-nav"]){padding-bottom:calc(4rem + env(safe-area-inset-bottom, 0px))}}`;
 
 const tabClassName =
-  "relative flex h-14 w-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 rounded-full px-0.5 text-muted-foreground transition-[color,scale] duration-150 ease-out select-none active:scale-[0.96] aria-[current=page]:text-primary aria-expanded:text-primary data-[current=true]:text-primary";
+  "flex h-16 w-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 px-1 text-muted-foreground transition-colors duration-150 ease-out select-none active:text-foreground aria-[current=page]:text-primary aria-expanded:text-primary data-[current=true]:text-primary";
 
 const tabLabelClassName = "w-full truncate text-center text-xs font-medium";
 
@@ -47,7 +42,7 @@ const MenuTab = ({
         }}
         type="button"
       >
-        <MenuIcon aria-hidden className="size-5" />
+        <MenuIcon aria-hidden className="size-6" />
         <span className={tabLabelClassName}>{t("menu")}</span>
       </button>
 
@@ -80,17 +75,13 @@ export const MobileNavBar = ({
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   const hasMenu = menuNavigation.length > 0;
-  const activeIndex = items.findIndex(item => isActive(item.href));
   const isInMenu =
     hasMenu &&
-    activeIndex === -1 &&
+    !items.some(item => isActive(item.href)) &&
     menuNavigation.some(
       item =>
         isActive(item.href) || item.items?.some(child => isActive(child.href)),
     );
-  const highlightedIndex = isMenuOpen || isInMenu ? items.length : activeIndex;
-  const { containerRef, indicatorRef, isReady } =
-    useSlidingIndicator<HTMLDivElement>(highlightedIndex);
 
   if (items.length === 0) return null;
 
@@ -99,58 +90,40 @@ export const MobileNavBar = ({
       <style href="vitnode-mobile-nav" precedence="default">
         {BODY_CLEARANCE_CSS}
       </style>
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:hidden"
+      <nav
+        aria-label={t("label")}
+        className="bg-card text-card-foreground fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] sm:hidden"
         data-slot="mobile-nav"
       >
-        <nav
-          aria-label={t("label")}
-          className="bg-card/75 text-card-foreground dark:bg-background/75 dark:text-foreground pointer-events-auto flex w-full max-w-md items-center rounded-full p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.2)] backdrop-blur dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-        >
-          <div className="relative flex min-w-0 flex-1" ref={containerRef}>
-            <span
-              aria-hidden
-              className={cn(
-                "bg-accent pointer-events-none absolute top-0 left-0 rounded-full opacity-0",
-                isReady && slidingIndicatorTransitionClassName,
-              )}
-              ref={indicatorRef}
-            />
-            <ul className="flex min-w-0 flex-1 items-center">
-              {items.map(item => (
-                <li
-                  className="flex min-w-0 flex-1"
-                  data-sliding-indicator-item
-                  key={item.id}
-                >
-                  <MobileNavLink
-                    aria-current={isActive(item.href) ? "page" : undefined}
-                    className={tabClassName}
-                    item={item}
-                  >
-                    <MobileNavIcon
-                      className="size-5"
-                      icon={item.icon}
-                      label={item.label}
-                    />
-                    <span className={tabLabelClassName}>{item.label}</span>
-                  </MobileNavLink>
-                </li>
-              ))}
-              {hasMenu ? (
-                <li className="flex min-w-0 flex-1" data-sliding-indicator-item>
-                  <MenuTab
-                    isCurrent={isInMenu}
-                    menuNavigation={menuNavigation}
-                    onOpenChange={setIsMenuOpen}
-                    open={isMenuOpen}
-                  />
-                </li>
-              ) : null}
-            </ul>
-          </div>
-        </nav>
-      </div>
+        <ul className="mx-auto flex max-w-lg items-stretch">
+          {items.map(item => (
+            <li className="flex min-w-0 flex-1" key={item.id}>
+              <MobileNavLink
+                aria-current={isActive(item.href) ? "page" : undefined}
+                className={tabClassName}
+                item={item}
+              >
+                <MobileNavIcon
+                  className="size-6"
+                  icon={item.icon}
+                  label={item.label}
+                />
+                <span className={tabLabelClassName}>{item.label}</span>
+              </MobileNavLink>
+            </li>
+          ))}
+          {hasMenu ? (
+            <li className="flex min-w-0 flex-1">
+              <MenuTab
+                isCurrent={isInMenu}
+                menuNavigation={menuNavigation}
+                onOpenChange={setIsMenuOpen}
+                open={isMenuOpen}
+              />
+            </li>
+          ) : null}
+        </ul>
+      </nav>
     </>
   );
 };
