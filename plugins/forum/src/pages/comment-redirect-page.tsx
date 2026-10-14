@@ -6,27 +6,27 @@ import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
 
-import { replyAnchorId, topicHref } from "./forum-links";
+import { commentAnchorId, topicHref } from "./forum-links";
 import { zodRelationId } from "./thread-data";
 
-const zodReplyLink = z.object({ slug: z.string(), topic: zodRelationId });
+const zodCommentLink = z.object({ slug: z.string(), topic: zodRelationId });
 
-/** A reply has no page of its own: its permalink is its place in the thread. */
-const resolveReply = async (slug: string): Promise<never> => {
-  const reply = await fetcher({
+/** A comment has no page of its own: its permalink is its place in the thread. */
+const resolveComment = async (slug: string): Promise<never> => {
+  const comment = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
     method: "get",
-    module: "content/replies",
+    module: "content/comments",
     path: "/{slug}",
     args: { params: { slug: encodeURIComponent(slug) } },
   });
 
-  if (reply.status !== 200 && reply.status !== 404) {
-    throw new Error(`Resolving the reply "${slug}" failed.`);
+  if (comment.status !== 200 && comment.status !== 404) {
+    throw new Error(`Resolving the comment "${slug}" failed.`);
   }
 
   const record = contentPageItem(
-    reply.status === 200 ? zodReplyLink.parse(await reply.json()) : null,
+    comment.status === 200 ? zodCommentLink.parse(await comment.json()) : null,
   );
 
   const topic = await fetcher({
@@ -43,20 +43,20 @@ const resolveReply = async (slug: string): Promise<never> => {
 
   // oxlint-disable-next-line typescript/only-throw-error
   throw redirect({
-    href: `${topicHref(target.slug)}#${replyAnchorId(record.slug)}`,
+    href: `${topicHref(target.slug)}#${commentAnchorId(record.slug)}`,
     statusCode: 302,
   });
 };
 
 export const route = definePluginRoute({
-  load: async ({ params }) => await resolveReply(params.slug),
+  load: async ({ params }) => await resolveComment(params.slug),
 
   head: ({ t }) => ({
     robots: "noindex, nofollow",
-    title: t("@vitnode/forum.replies.permalink"),
+    title: t("@vitnode/forum.comments.permalink"),
   }),
 });
 
-const ReplyRedirectPage = () => null;
+const CommentRedirectPage = () => null;
 
-export default ReplyRedirectPage;
+export default CommentRedirectPage;

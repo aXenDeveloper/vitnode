@@ -174,7 +174,7 @@ slug: field.slug({ source: "title" }),
 
 A slug has no `required` or `nullable` option. It is required when there is no `source`, and it is never empty. Every value is normalized, so `"Weekend Pancakes!"` becomes `weekend-pancakes`. Slugs are unique across the table, or within each language when localized. The slug is derived only on create, so renaming the title later keeps the old URL. `source` must name a `field.text()`, and a localized slug needs a localized source.
 
-For records without a natural title, such as forum replies, use `field.slug({ generated: true })`. The server mints a random token of lowercase letters and digits, 10 characters or `maxLength` if shorter, such as `k3v9q2m7xa`. A generated slug cannot be `localized` or have a `source`, and it is never [publicly writable](/docs/content-engine/public-write-api#writable-fields). See [Threaded replies](/docs/content-engine/threads).
+For records without a natural title, such as forum comments, use `field.slug({ generated: true })`. The server mints a random token of lowercase letters and digits, 10 characters or `maxLength` if shorter, such as `k3v9q2m7xa`. A generated slug cannot be `localized` or have a `source`, and it is never [publicly writable](/docs/content-engine/public-write-api#writable-fields). See [Threaded replies](/docs/content-engine/threads).
 
 ## User
 
@@ -235,7 +235,7 @@ category: field.relation({ required: true, onDelete: "restrict", target: () => c
 
 A single relation must be `required` or `nullable`. A to-many relation can be neither. A to-one `self: true` relation, such as the reply a reply answers, must be `nullable`, because the first record has nothing to point at.
 
-`container: true` files the record in the container of the record it points at, such as a reply in its topic's forum. The server always reads that container from the related row, so a client cannot claim another one, and [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply as if the record had its own `field.container()`. A content type takes its container from one field only: one `field.container()` or one `container: true` relation. The target must have a `field.container()`, or the API stops at boot with ``Field "x" is `container: true`, but its target ... is not filed in a container.`` The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
+`container: true` files the record in the container of the record it points at, such as a comment in its topic's forum. The server always reads that container from the related row, so a client cannot claim another one, and [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply as if the record had its own `field.container()`. A content type takes its container from one field only: one `field.container()` or one `container: true` relation. The target must have a `field.container()`, or the API stops at boot with ``Field "x" is `container: true`, but its target ... is not filed in a container.`` The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
 
 ## Container
 

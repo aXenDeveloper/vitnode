@@ -16,26 +16,28 @@ import { HTTPException } from "hono/http-exception";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { forumContainers } from "@/content/forums";
-import { replyContent } from "@/database/replies";
+import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
 
 export const FORUM_STATS_MAX_TOPICS = 50;
 
 const topicColumns = topicContent.columns as Record<string, PgColumn>;
-const replyColumns = replyContent.columns as Record<string, PgColumn>;
+const commentColumns = commentContent.columns as Record<string, PgColumn>;
 
 const publicTopic = () =>
   publishedCondition(publicationColumns(topicContent.definition, topicColumns));
 
-const publicReply = () =>
-  publishedCondition(publicationColumns(replyContent.definition, replyColumns));
+const publicComment = () =>
+  publishedCondition(
+    publicationColumns(commentContent.definition, commentColumns),
+  );
 
 const iso = (value: Date | null | string | undefined): null | string =>
   value === null || value === undefined ? null : new Date(value).toISOString();
 
 const statsTags = (): string[] => [
   contentPublicListTag(topicContent.definition.id),
-  contentPublicListTag(replyContent.definition.id),
+  contentPublicListTag(commentContent.definition.id),
   contentContainerTag(forumContainers.id),
 ];
 
@@ -57,7 +59,7 @@ export const forumStatsRoute = buildRoute({
     method: "get",
     path: "/stats/forums",
     description:
-      "Public topic and reply counts per forum, with each forum's newest public topic",
+      "Public topic and comment counts per forum, with each forum's newest public topic",
     responses: {
       200: json(
         z.object({
@@ -65,7 +67,7 @@ export const forumStatsRoute = buildRoute({
             z.object({
               forumId: z.number(),
               latestTopic: zodLatestTopic.nullable(),
-              replyCount: z.number(),
+              commentCount: z.number(),
               topicCount: z.number(),
             }),
           ),
@@ -77,9 +79,9 @@ export const forumStatsRoute = buildRoute({
   handler: async c => {
     const db = c.get("db");
     const topics = topicContent.table;
-    const replies = replyContent.table;
+    const comments = commentContent.table;
 
-    const [topicCounts, replyCounts, latest] = await Promise.all([
+    const [topicCounts, commentCounts, latest] = await Promise.all([
       db
         .select({ forumId: topics.forum, value: count() })
         .from(topics)
@@ -87,9 +89,9 @@ export const forumStatsRoute = buildRoute({
         .groupBy(topics.forum),
       db
         .select({ forumId: topics.forum, value: count() })
-        .from(replies)
-        .innerJoin(topics, eq(replies.topic, topics.id))
-        .where(and(publicReply(), publicTopic()))
+        .from(comments)
+        .innerJoin(topics, eq(comments.topic, topics.id))
+        .where(and(publicComment(), publicTopic()))
         .groupBy(topics.forum),
       db
         .selectDistinctOn([topics.forum], {
@@ -104,8 +106,8 @@ export const forumStatsRoute = buildRoute({
         .orderBy(topics.forum, desc(topics.publishedAt), desc(topics.id)),
     ]);
 
-    const replyCountOf = new Map(
-      replyCounts.map(row => [row.forumId, row.value]),
+    const commentCountOf = new Map(
+      commentCounts.map(row => [row.forumId, row.value]),
     );
     const latestOf = new Map(latest.map(row => [row.forumId, row]));
 
@@ -126,7 +128,7 @@ export const forumStatsRoute = buildRoute({
                   title: newest.title,
                 }
               : null,
-            replyCount: replyCountOf.get(row.forumId) ?? 0,
+            commentCount: commentCountOf.get(row.forumId) ?? 0,
             topicCount: row.value,
           };
         }),
@@ -145,7 +147,7 @@ export const topicStatsRoute = buildRoute({
   route: {
     method: "get",
     path: "/stats/topics",
-    description: `Public reply count and last public reply time for up to ${FORUM_STATS_MAX_TOPICS} topics`,
+    description: `Public comment count and last public comment time for up to ${FORUM_STATS_MAX_TOPICS} topics`,
     request: {
       query: z.object({
         ids: z.string().regex(TOPIC_IDS).openapi({ example: "1,2,3" }),
@@ -156,13 +158,13 @@ export const topicStatsRoute = buildRoute({
         z.object({
           items: z.array(
             z.object({
-              lastReplyAt: z.string().nullable(),
-              replyCount: z.number(),
+              lastCommentAt: z.string().nullable(),
+              commentCount: z.number(),
               topicId: z.number(),
             }),
           ),
         }),
-        "Stats for the requested topics that have public replies",
+        "Stats for the requested topics that have public comments",
       ),
       400: { description: "`ids` is not a list of up to 50 topic ids" },
     },
@@ -171,7 +173,7 @@ export const topicStatsRoute = buildRoute({
     const ids = [
       ...new Set(c.req.valid("query").ids.split(",").map(Number)),
     ].filter(id => Number.isSafeInteger(id));
-    const replies = replyContent.table;
+    const comments = commentContent.table;
     const topics = topicContent.table;
 
     const rows =
@@ -180,24 +182,24 @@ export const topicStatsRoute = buildRoute({
         : await c
             .get("db")
             .select({
-              lastReplyAt: max(replies.publishedAt),
-              topicId: replies.topic,
+              lastCommentAt: max(comments.publishedAt),
+              topicId: comments.topic,
               value: count(),
             })
-            .from(replies)
-            .innerJoin(topics, eq(replies.topic, topics.id))
+            .from(comments)
+            .innerJoin(topics, eq(comments.topic, topics.id))
             .where(
-              and(inArray(replies.topic, ids), publicReply(), publicTopic()),
+              and(inArray(comments.topic, ids), publicComment(), publicTopic()),
             )
-            .groupBy(replies.topic);
+            .groupBy(comments.topic);
 
     setPageCacheTags(c, statsTags());
 
     return c.json(
       {
         items: rows.map(row => ({
-          lastReplyAt: iso(row.lastReplyAt),
-          replyCount: row.value,
+          lastCommentAt: iso(row.lastCommentAt),
+          commentCount: row.value,
           topicId: row.topicId,
         })),
       },
@@ -211,7 +213,8 @@ export const topicSlugRoute = buildRoute({
   route: {
     method: "get",
     path: "/topics/{id}/slug",
-    description: "The public slug of one topic, for building a reply permalink",
+    description:
+      "The public slug of one topic, for building a comment permalink",
     request: {
       params: z.object({
         id: z.coerce.number().int().positive().openapi({ example: 1 }),

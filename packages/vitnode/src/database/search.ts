@@ -115,5 +115,6 @@ export const core_search_index = camelCase.table.withRLS(
     index("core_search_index_language_code_idx").on(t.languageCode),
     index("core_search_index_is_public_idx").on(t.isPublic),
     index("core_search_index_image_id_idx").on(t.imageId),
+    index("core_search_index_container_idx").on(t.containerType, t.containerId),
   ],
 );

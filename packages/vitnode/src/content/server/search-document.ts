@@ -11,7 +11,11 @@ import { partitionContentFields } from "../localization";
 import { readContentPath, splitContentFieldPath } from "../paths";
 import { isRichTextDocument } from "../rich-text/document";
 import { richTextToPlainText } from "../rich-text/plain-text";
-import { contentSearchUrl } from "../search";
+import {
+  contentSearchContextSource,
+  contentSearchTitleRelation,
+  contentSearchUrl,
+} from "../search";
 import { isContentHidden } from "../visibility";
 
 /** Collapses whitespace so a multi-line value cannot break a result heading. */
@@ -87,16 +91,26 @@ const toFileId = (value: unknown): null | number =>
     ? value
     : null;
 
+export interface ContentSearchContext {
+  containerId: null | number;
+  containerType: string;
+  isPublic: boolean;
+  title: string;
+  url: null | string;
+}
+
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
   row: object,
   {
-    isHidden = isContentRowHidden(row),
-    isPublic = isContentRowPublic(row),
+    context,
+    isHidden: isOwnHidden = isContentRowHidden(row),
+    isPublic: isOwnPublic = isContentRowPublic(row),
     locale,
     pluginId,
     routing,
   }: {
+    context?: ContentSearchContext | null;
     isHidden?: boolean;
     isPublic?: boolean;
     locale?: string;
@@ -112,8 +126,17 @@ export const contentSearchDocument = (
   const itemId = values.id;
   if (!isContentId(definition.idStrategy, itemId)) return null;
 
-  const title = normalize(readSearchValue(values, search.titleField));
+  const titleRelation = contentSearchTitleRelation(definition);
+  const title = normalize(
+    titleRelation ? context?.title : readSearchValue(values, search.titleField),
+  );
   if (title === "") return null;
+
+  const isReachable =
+    contentSearchContextSource(definition)?.kind !== "relation" ||
+    context?.isPublic === true;
+  const isPublic = isOwnPublic && isReachable;
+  const isHidden = isOwnHidden && isReachable;
 
   const url =
     isPublic || isHidden
@@ -171,9 +194,18 @@ export const contentSearchDocument = (
     // value that matches every locale, and what every document written before
     // Stage 5D already carries. A localized one is indexed once per language.
     ...(locale === undefined || locale === "" ? {} : { languageCode: locale }),
-    // Deliberately absent: `containerType` / `containerId` (there is no
-    // `containerType` query filter to qualify them with), and `metadata`
-    // (nothing reads it).
+    // Deliberately absent: `metadata` (nothing reads it).
+    ...(context
+      ? {
+          containerType: context.containerType,
+          ...(context.containerId === null
+            ? {}
+            : { containerId: context.containerId }),
+          metadata: {
+            context: { title: normalize(context.title), url: context.url },
+          },
+        }
+      : {}),
     title,
     updatedAt: toDate(values.updatedAt),
     ...(url === null ? {} : { url }),

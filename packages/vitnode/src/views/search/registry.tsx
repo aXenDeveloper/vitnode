@@ -1,8 +1,20 @@
-import { FileTextIcon, type LucideIcon } from "lucide-react";
+import {
+  FileTextIcon,
+  type LucideIcon,
+  MessageSquareIcon,
+  MessagesSquareIcon,
+} from "lucide-react";
 
-export type SearchTypeLabelKey = "types.blog_post" | "types.unknown";
+export type SearchTypeLabelKey =
+  | "types.blog_post"
+  | "types.forum_comment"
+  | "types.forum_topic"
+  | "types.unknown";
+
+export type SearchActivityKey = "activity.commented" | "activity.posted_in";
 
 export interface SearchTypeRenderer {
+  activityKey?: SearchActivityKey;
   icon: LucideIcon;
   labelKey: SearchTypeLabelKey;
 }
@@ -12,6 +24,16 @@ export interface SearchTypeRenderer {
 // indexes a new type never breaks the feed.
 const renderers: Record<string, SearchTypeRenderer> = {
   "blog.post": { icon: FileTextIcon, labelKey: "types.blog_post" },
+  "forum.comment": {
+    activityKey: "activity.commented",
+    icon: MessageSquareIcon,
+    labelKey: "types.forum_comment",
+  },
+  "forum.topic": {
+    activityKey: "activity.posted_in",
+    icon: MessagesSquareIcon,
+    labelKey: "types.forum_topic",
+  },
 };
 
 const fallback: SearchTypeRenderer = {

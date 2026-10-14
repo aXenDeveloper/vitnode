@@ -8,7 +8,7 @@ import { zodPerson } from "./forum-data";
 
 export const THREAD_PAGE_SIZE = 20;
 
-/** `CONTENT_PUBLIC_MAX_PAGE_SIZE` - the most top-level replies one read carries. */
+/** `CONTENT_PUBLIC_MAX_PAGE_SIZE` - the most top-level comments one read carries. */
 export const THREAD_MAX_PAGE_SIZE = 50;
 
 /** A to-one relation as the public API projects it: `{ id }`, read as the bare id. */
@@ -16,7 +16,7 @@ export const zodRelationId = z
   .object({ id: z.number() })
   .transform(relation => relation.id);
 
-const zodReply = z.object({
+const zodComment = z.object({
   author: zodPerson,
   body: zodRichTextDocument,
   createdAt: z.string(),
@@ -28,26 +28,31 @@ const zodReply = z.object({
   updatedAt: z.string(),
 });
 
-export type ThreadReply = z.infer<typeof zodReply>;
+export type ThreadComment = z.infer<typeof zodComment>;
 
-const zodThreadPage = z.object({
-  items: z.array(
-    z.object({
-      depth: z.number(),
-      id: z.number(),
-      parentId: z.number().nullable(),
-      record: zodReply.nullable(),
-      removed: z.boolean(),
+const zodThreadPage = z
+  .object({
+    items: z.array(
+      z.object({
+        depth: z.number(),
+        id: z.number(),
+        parentId: z.number().nullable(),
+        record: zodComment.nullable(),
+        removed: z.boolean(),
+      }),
+    ),
+    pageInfo: z.object({
+      endCursor: z.string().nullable(),
+      hasNextPage: z.boolean(),
+      totalCount: z.number(),
     }),
-  ),
-  pageInfo: z.object({
-    endCursor: z.string().nullable(),
-    hasNextPage: z.boolean(),
-    totalCount: z.number(),
-  }),
-  replyCount: z.number(),
-  truncated: z.boolean(),
-});
+    replyCount: z.number(),
+    truncated: z.boolean(),
+  })
+  .transform(({ replyCount, ...page }) => ({
+    ...page,
+    commentCount: replyCount,
+  }));
 
 export type ThreadPage = z.infer<typeof zodThreadPage>;
 
@@ -65,7 +70,7 @@ export const fetchThreadPage = async ({
   const res = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
     method: "get",
-    module: "content/replies",
+    module: "content/comments",
     path: "/thread",
     args: {
       query: {
@@ -77,7 +82,7 @@ export const fetchThreadPage = async ({
   });
 
   if (res.status === 404) return null;
-  if (res.status !== 200) throw new Error("Loading the replies failed.");
+  if (res.status !== 200) throw new Error("Loading the comments failed.");
 
   return zodThreadPage.parse(await res.json());
 };

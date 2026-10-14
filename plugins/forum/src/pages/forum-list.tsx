@@ -47,9 +47,9 @@ const ForumRow = ({
           </dd>
         </div>
         <div className="flex flex-col md:items-end">
-          <dt>{t("stats.replies")}</dt>
+          <dt>{t("stats.comments")}</dt>
           <dd className="text-foreground font-medium tabular-nums">
-            {format.number(stats?.replyCount ?? 0)}
+            {format.number(stats?.commentCount ?? 0)}
           </dd>
         </div>
       </dl>

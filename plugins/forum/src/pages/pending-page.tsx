@@ -18,7 +18,7 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
-import { replyContentType } from "@/content/reply";
+import { commentContentType } from "@/content/comment";
 import { topicContentType } from "@/content/topic";
 
 import type { PendingSearch } from "./forum-links";
@@ -105,17 +105,18 @@ const isKnownStatus = (status: string): status is keyof typeof STATUS_VARIANT =>
 const SubmissionRow = ({ item }: { item: Submission }) => {
   const t = useTranslations("@vitnode/forum.pending");
   const isTopic = item.contentTypeId === topicContentType.id;
-  const isReply = item.contentTypeId === replyContentType.id;
+  const isComment = item.contentTypeId === commentContentType.id;
   const status = isKnownStatus(item.status) ? item.status : "pending";
   const title =
-    item.title ?? (isReply ? t("untitled_reply") : t("untitled_topic"));
+    item.title ?? (isComment ? t("untitled_comment") : t("untitled_topic"));
 
   return (
     <li className="flex flex-col gap-2 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={STATUS_VARIANT[status]}>{t(`status.${status}`)}</Badge>
         <Badge variant="outline">
-          {t(isReply ? "type.reply" : "type.topic")} · {t(`kind.${item.kind}`)}
+          {t(isComment ? "type.comment" : "type.topic")} ·{" "}
+          {t(`kind.${item.kind}`)}
         </Badge>
       </div>
 

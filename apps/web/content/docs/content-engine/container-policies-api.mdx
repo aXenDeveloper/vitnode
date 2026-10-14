@@ -14,7 +14,7 @@ Exact names, values and behavior of container publishing policies. For a guided 
 policies: {
   defaults: { publish: "immediate", edits: "immediate", authorEdit: "always" },
   contentTypes: {
-    "forum.reply": { authorEdit: "window", authorEditMinutes: 30 },
+    "forum.comment": { authorEdit: "window", authorEditMinutes: 30 },
   },
 },
 ```
@@ -22,7 +22,7 @@ policies: {
 | Name           | Type                                   | Required | Default | Description                                                         |
 | -------------- | -------------------------------------- | -------- | ------- | ------------------------------------------------------------------- |
 | `defaults`     | policy                                 | No       | `{}`    | Applies to every content type filed in the collection               |
-| `contentTypes` | `Record<contentTypeId, policy>`        | No       | `{}`    | Per content type, such as `"forum.reply"`. Wins over `defaults`     |
+| `contentTypes` | `Record<contentTypeId, policy>`        | No       | `{}`    | Per content type, such as `"forum.comment"`. Wins over `defaults`   |
 
 Omit `policies`, or set it to `false`, and the collection does not take part: its content types use `publicWrite.create.status`, owners edit for as long as `update.own` allows, `can_edit` stays unscoped and no `can_approve` exists. `policies: {}` turns the feature on with every key on its fallback.
 
@@ -52,7 +52,7 @@ For each key, the first layer that sets it wins:
 
 A missing key inherits. An explicit value, including `"never"` or a value equal to the parent's, is an override and stops the walk. The engine never stores `undefined`, and empty per-type objects are dropped on save.
 
-The record's container is always resolved on the server: from its `field.container()`, or for a `field.relation({ container: true })`, from the related record's container. A reply follows its topic, whatever the payload claims.
+The record's container is always resolved on the server: from its `field.container()`, or for a `field.relation({ container: true })`, from the related record's container. A comment follows its topic, whatever the payload claims.
 
 ## Who passes which rule
 
@@ -74,10 +74,10 @@ Both answer `403` with `"code": "CONTENT_FORBIDDEN"` and one issue whose `field`
 | `edit_window_closed` | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.editWindowClosed` | The owner edits a public record after `authorEdit` stopped allowing it    |
 | `moderators_only`    | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.moderatorsOnly`   | A create in a container with `create: "moderators"` by a non-moderator     |
 
-```json title="PATCH /api/@vitnode/forum/content/replies/18 → 403"
+```json title="PATCH /api/@vitnode/forum/content/comments/18 → 403"
 {
   "code": "CONTENT_FORBIDDEN",
-  "contentTypeId": "forum.reply",
+  "contentTypeId": "forum.comment",
   "issues": [
     { "code": "edit_window_closed", "field": null, "message": "Public write denied: forbidden." }
   ]

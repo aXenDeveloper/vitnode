@@ -20,24 +20,24 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import { useForumRejection } from "./forum-errors";
 
-const REPLY_FORM_FIELDS = ["body"] as const;
+const COMMENT_FORM_FIELDS = ["body"] as const;
 
-export type ReplyComposerProps = {
+export type CommentComposerProps = {
   label: string;
   onCancel?: () => void;
   onDone: (outcome: { pending: boolean }) => void;
 } & (
   | {
+      commentId: number;
       defaultBody: RichTextDocument;
       expectedVersion: number;
       mode: "edit";
-      replyId: number;
     }
   | { mode: "create"; parentId: null | number; topicId: number }
 );
 
-const useReplySchema = (defaultBody: RichTextDocument) => {
-  const t = useTranslations("@vitnode/forum.replies.form");
+const useCommentSchema = (defaultBody: RichTextDocument) => {
+  const t = useTranslations("@vitnode/forum.comments.form");
 
   return z.object({
     body: zodRichTextDocument
@@ -46,13 +46,13 @@ const useReplySchema = (defaultBody: RichTextDocument) => {
   });
 };
 
-type ReplySchema = ReturnType<typeof useReplySchema>;
+type CommentSchema = ReturnType<typeof useCommentSchema>;
 
-const ReplyComposer = (props: ReplyComposerProps) => {
+const CommentComposer = (props: CommentComposerProps) => {
   const { label, onCancel, onDone } = props;
-  const t = useTranslations("@vitnode/forum.replies");
-  const rejectReply = useForumRejection(REPLY_FORM_FIELDS);
-  const formSchema = useReplySchema(
+  const t = useTranslations("@vitnode/forum.comments");
+  const rejectComment = useForumRejection(COMMENT_FORM_FIELDS);
+  const formSchema = useCommentSchema(
     props.mode === "edit" ? props.defaultBody : emptyRichTextDocument(),
   );
 
@@ -67,15 +67,15 @@ const ReplyComposer = (props: ReplyComposerProps) => {
     onDone({ pending });
   };
 
-  const onSubmit: AutoFormOnSubmit<ReplySchema> = async ({ body }, form) => {
+  const onSubmit: AutoFormOnSubmit<CommentSchema> = async ({ body }, form) => {
     if (props.mode === "edit") {
       const res = await fetcher({
         plugin: CONFIG_PLUGIN.pluginId,
         method: "patch",
-        module: "content/replies",
+        module: "content/comments",
         path: "/{id}",
         args: {
-          params: { id: props.replyId },
+          params: { id: props.commentId },
           body: { values: { body }, expectedVersion: props.expectedVersion },
         },
       });
@@ -93,7 +93,7 @@ const ReplyComposer = (props: ReplyComposerProps) => {
         return;
       }
 
-      await rejectReply(res, form);
+      await rejectComment(res, form);
 
       return;
     }
@@ -101,7 +101,7 @@ const ReplyComposer = (props: ReplyComposerProps) => {
     const res = await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
       method: "post",
-      module: "content/replies",
+      module: "content/comments",
       path: "/",
       args: {
         body: {
@@ -118,7 +118,7 @@ const ReplyComposer = (props: ReplyComposerProps) => {
       return;
     }
 
-    await rejectReply(res, form);
+    await rejectComment(res, form);
   };
 
   return (
@@ -151,4 +151,4 @@ const ReplyComposer = (props: ReplyComposerProps) => {
   );
 };
 
-export default ReplyComposer;
+export default CommentComposer;

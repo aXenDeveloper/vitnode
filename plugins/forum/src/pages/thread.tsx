@@ -24,13 +24,13 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
-import { FORUM_REPLY_MAX_DEPTH } from "@/content/reply";
+import { FORUM_COMMENT_MAX_DEPTH } from "@/content/comment";
 
-import type { ReplyComposerProps } from "./reply-composer";
-import type { ThreadPage, ThreadReply, ThreadTreeNode } from "./thread-data";
+import type { CommentComposerProps } from "./comment-composer";
+import type { ThreadComment, ThreadPage, ThreadTreeNode } from "./thread-data";
 
 import { useForumRejection } from "./forum-errors";
-import { loginHref, replyAnchorId, topicHref } from "./forum-links";
+import { commentAnchorId, loginHref, topicHref } from "./forum-links";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
 import {
   buildThreadTree,
@@ -40,7 +40,7 @@ import {
   THREAD_PAGE_SIZE,
 } from "./thread-data";
 
-const ReplyComposer = lazy(async () => await import("./reply-composer"));
+const CommentComposer = lazy(async () => await import("./comment-composer"));
 
 const ComposerFallback = () => (
   <div
@@ -49,9 +49,9 @@ const ComposerFallback = () => (
   />
 );
 
-const LazyReplyComposer = (props: ReplyComposerProps) => (
+const LazyCommentComposer = (props: CommentComposerProps) => (
   <Suspense fallback={<ComposerFallback />}>
-    <ReplyComposer {...props} />
+    <CommentComposer {...props} />
   </Suspense>
 );
 
@@ -60,17 +60,17 @@ const zodProposedBody = z
   .catch({});
 
 /** Edits open on the latest text the author wrote, a pending proposal included. */
-const useReplyEditor = () => {
+const useCommentEditor = () => {
   const reject = useForumRejection([]);
   const t = useTranslations("@vitnode/forum.forums.errors");
 
-  return async (replyId: number) => {
+  return async (commentId: number) => {
     const res = await fetcher({
       plugin: CONFIG_PLUGIN.pluginId,
       method: "get",
-      module: "content/replies",
+      module: "content/comments",
       path: "/{id}/edit",
-      args: { params: { id: replyId } },
+      args: { params: { id: commentId } },
     });
 
     if (res.status !== 200) {
@@ -98,53 +98,53 @@ const useReplyEditor = () => {
 };
 
 interface ThreadActions {
-  canReply: boolean;
+  canComment: boolean;
   currentUserId: null | number;
   onChanged: (outcome: { pending: boolean }) => void;
   topicId: number;
   topicSlug: string;
 }
 
-const ReplyBody = ({
+const CommentBody = ({
   actions,
   node,
-  reply,
+  comment,
 }: {
   actions: ThreadActions;
+  comment: ThreadComment;
   node: ThreadTreeNode;
-  reply: ThreadReply;
 }) => {
-  const t = useTranslations("@vitnode/forum.replies");
-  const openEditor = useReplyEditor();
+  const t = useTranslations("@vitnode/forum.comments");
+  const openEditor = useCommentEditor();
   const [mode, setMode] = useState<"idle" | "reply">("idle");
   const [editing, setEditing] = useState<null | {
-    body: ThreadReply["body"];
+    body: ThreadComment["body"];
     version: number;
   }>(null);
   const [isOpeningEditor, setIsOpeningEditor] = useState(false);
   const isOwner =
     actions.currentUserId !== null &&
-    reply.author?.id === actions.currentUserId;
-  const canAnswer = actions.canReply && node.depth < FORUM_REPLY_MAX_DEPTH;
+    comment.author?.id === actions.currentUserId;
+  const canAnswer = actions.canComment && node.depth < FORUM_COMMENT_MAX_DEPTH;
   const edited =
-    reply.publishedAt !== null &&
-    new Date(reply.updatedAt).getTime() -
-      new Date(reply.publishedAt).getTime() >
+    comment.publishedAt !== null &&
+    new Date(comment.updatedAt).getTime() -
+      new Date(comment.publishedAt).getTime() >
       60_000;
 
   return (
     <div className="flex flex-col gap-2">
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
-        <PersonAvatar person={reply.author} size={24} />
-        <PersonName person={reply.author} />
+        <PersonAvatar person={comment.author} size={24} />
+        <PersonName person={comment.author} />
         <span aria-hidden="true" className="text-muted-foreground">
           ·
         </span>
         <a
           className="text-muted-foreground hover:text-foreground hover:underline"
-          href={`${topicHref(actions.topicSlug)}#${replyAnchorId(reply.slug)}`}
+          href={`${topicHref(actions.topicSlug)}#${commentAnchorId(comment.slug)}`}
         >
-          <TimeAgo date={reply.publishedAt ?? reply.createdAt} />
+          <TimeAgo date={comment.publishedAt ?? comment.createdAt} />
           <span className="sr-only"> {t("permalink")}</span>
         </a>
         {edited ? (
@@ -153,7 +153,8 @@ const ReplyBody = ({
       </header>
 
       {editing ? (
-        <LazyReplyComposer
+        <LazyCommentComposer
+          commentId={comment.id}
           defaultBody={editing.body}
           expectedVersion={editing.version}
           label={t("form.edit_label")}
@@ -165,12 +166,11 @@ const ReplyBody = ({
             setEditing(null);
             actions.onChanged(outcome);
           }}
-          replyId={reply.id}
         />
       ) : (
         <RichTextContent
           className="text-foreground leading-relaxed text-pretty"
-          content={reply.body}
+          content={comment.body}
         />
       )}
 
@@ -194,7 +194,7 @@ const ReplyBody = ({
               isLoading={isOpeningEditor}
               onClick={async () => {
                 setIsOpeningEditor(true);
-                const editable = await openEditor(reply.id);
+                const editable = await openEditor(comment.id);
                 setIsOpeningEditor(false);
                 if (editable) setEditing(editable);
               }}
@@ -209,9 +209,9 @@ const ReplyBody = ({
       )}
 
       {mode === "reply" ? (
-        <LazyReplyComposer
+        <LazyCommentComposer
           label={t("form.answer_label", {
-            name: reply.author?.name ?? t("someone"),
+            name: comment.author?.name ?? t("someone"),
           })}
           mode="create"
           onCancel={() => {
@@ -221,7 +221,7 @@ const ReplyBody = ({
             setMode("idle");
             actions.onChanged(outcome);
           }}
-          parentId={reply.id}
+          parentId={comment.id}
           topicId={actions.topicId}
         />
       ) : null}
@@ -236,18 +236,18 @@ const ThreadNodeView = ({
   actions: ThreadActions;
   node: ThreadTreeNode;
 }) => {
-  const t = useTranslations("@vitnode/forum.replies");
+  const t = useTranslations("@vitnode/forum.comments");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const hidden = countDescendants(node);
-  const childrenId = `reply-children-${node.id}`;
+  const childrenId = `comment-children-${node.id}`;
 
   return (
     <li
       className="flex scroll-mt-24 flex-col gap-3"
-      id={node.record ? replyAnchorId(node.record.slug) : undefined}
+      id={node.record ? commentAnchorId(node.record.slug) : undefined}
     >
       {node.record ? (
-        <ReplyBody actions={actions} node={node} reply={node.record} />
+        <CommentBody actions={actions} comment={node.record} node={node} />
       ) : (
         <p className="text-muted-foreground text-sm leading-relaxed italic">
           {t("removed")}
@@ -279,7 +279,7 @@ const ThreadNodeView = ({
             <ol
               className={cn(
                 "flex flex-col gap-6 border-l-2",
-                // Deep threads stop indenting on small screens, so a reply six
+                // Deep threads stop indenting on small screens, so a comment six
                 // levels down still has room for its text.
                 node.depth >= 3 ? "pl-2 md:pl-6" : "pl-3 md:pl-6",
               )}
@@ -305,7 +305,7 @@ export const ForumThread = ({
   topicId: number;
   topicSlug: string;
 }) => {
-  const t = useTranslations("@vitnode/forum.replies");
+  const t = useTranslations("@vitnode/forum.comments");
   const { data: session, isPending: isSessionPending } = useSessionQuery();
   const currentUserId = session?.user?.id ?? null;
   const [pages, setPages] = useState<ThreadPage[]>([initial]);
@@ -315,7 +315,7 @@ export const ForumThread = ({
   const last = pages.at(-1) ?? initial;
   const items = pages.flatMap(page => page.items);
   const tree = buildThreadTree(items);
-  const replyCount = last.replyCount;
+  const commentCount = last.commentCount;
 
   const loadMore = async () => {
     if (!last.pageInfo.endCursor) return;
@@ -339,7 +339,7 @@ export const ForumThread = ({
     const loaded = items.filter(item => item.depth === 1).length;
     try {
       const fresh = await fetchThreadPage({
-        // One more than is on screen, so a new top-level reply at the end of
+        // One more than is on screen, so a new top-level comment at the end of
         // the conversation shows up without another click.
         first: Math.min(
           THREAD_MAX_PAGE_SIZE,
@@ -356,7 +356,7 @@ export const ForumThread = ({
   };
 
   const actions: ThreadActions = {
-    canReply: currentUserId !== null,
+    canComment: currentUserId !== null,
     currentUserId,
     onChanged: ({ pending }) => {
       if (!pending) void refresh();
@@ -366,13 +366,13 @@ export const ForumThread = ({
   };
 
   return (
-    <section aria-labelledby="forum-replies" className="flex flex-col gap-6">
+    <section aria-labelledby="forum-comments" className="flex flex-col gap-6">
       <h2
         className="text-foreground flex items-center gap-2 text-xl font-semibold text-balance"
-        id="forum-replies"
+        id="forum-comments"
       >
         <MessageSquareIcon aria-hidden="true" className="size-5" />
-        {t("title", { count: replyCount })}
+        {t("title", { count: commentCount })}
       </h2>
 
       {tree.length === 0 ? (
@@ -427,7 +427,7 @@ export const ForumThread = ({
             </a>
           </p>
         ) : (
-          <LazyReplyComposer
+          <LazyCommentComposer
             key={composerKey}
             label={t("form.body_label")}
             mode="create"

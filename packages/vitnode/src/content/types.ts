@@ -1314,11 +1314,24 @@ export type ContentSearchTitleField<
   TPublicField extends string,
 > = Extract<
   TPublicField,
-  ContentNonNullableFieldNamesOfKind<
-    TFields,
-    (typeof CONTENT_SEARCH_TITLE_KINDS)[number]
-  >
+  | ContentNonNullableFieldNamesOfKind<
+      TFields,
+      (typeof CONTENT_SEARCH_TITLE_KINDS)[number]
+    >
+  | ContentSearchTitleRelationNames<TFields>
 >;
+
+type ContentSearchTitleRelationNames<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends {
+      kind: "relation";
+      multiple: false;
+      nullable: false;
+      self: false;
+    }
+      ? K
+      : never;
+  }[keyof TFields];
 
 /**
  * The generated tables a to-many relation and a repeatable field each get.
@@ -1419,12 +1432,24 @@ export interface ContentSearchConfig<
   authorField?: TAuthor;
   /** Concatenated into the indexed body, in order. At least one. */
   contentFields: readonly [TText, ...TText[]];
+  context?: ContentSearchContextInput;
   /** Prepended to the indexed body so it shows up in result excerpts. */
   descriptionField?: TDescription;
   imageField?: string;
   pathTemplate: string;
   /** The result heading. Weighted above the body by the index. */
   titleField: TTitle;
+}
+
+export interface ContentSearchContextInput {
+  field: string;
+  pathTemplate?: string;
+}
+
+export interface ResolvedContentSearchContext {
+  field: string;
+  kind: "container" | "relation";
+  pathTemplate: string;
 }
 
 export type ContentOptionEnabled<TOption> = [TOption] extends [object | true]
@@ -1445,6 +1470,7 @@ export interface ResolvedContentSearchConfig<
 > {
   authorField: null | string;
   contentFields: string[];
+  context: null | ResolvedContentSearchContext;
   descriptionField: null | string;
   enabled: TEnabled;
   imageField: null | string;

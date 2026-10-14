@@ -39,7 +39,7 @@ const isPlacementField = (
 /**
  * Turns a refused public write into field errors where the form has the field,
  * and one toast for everything else - a closed edit window, a moderators-only
- * forum, a reply that can no longer be answered.
+ * forum, a comment that can no longer be answered.
  */
 export const useForumRejection = (formFields: readonly string[]) => {
   const t = useTranslations("@vitnode/forum.forums.errors");

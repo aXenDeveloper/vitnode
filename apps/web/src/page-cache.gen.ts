@@ -43,7 +43,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/forum/me/pending' },
   { path: '/forum/topics/:id/edit' },
   { path: '/example/guide/:topic' },
-  { path: '/forum/replies/:slug' },
+  { path: '/forum/comments/:slug' },
   { path: '/forum/topics/:slug', maxAge: 60, staleWhileRevalidate: 30 },
   { path: '/login/sso/:providerId' },
   { path: '/modcp/approvals/:id' },

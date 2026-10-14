@@ -8,7 +8,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 Publishing policies let each container decide how members post in it: who may start, whether new records go live or wait for a moderator, whether edits to live records wait too, and how long authors may edit. One forum can be a free-for-all while the one next to it reviews every post.
 
-This guide uses the Forum plugin: the `forum.forums` container collection, with topics (`forum.topic`) filed into forums and replies (`forum.reply`) living in their topic's forum.
+This guide uses the Forum plugin: the `forum.forums` container collection, with topics (`forum.topic`) filed into forums and comments (`forum.comment`) living in their topic's forum.
 
 ## Before you begin
 
@@ -39,7 +39,7 @@ export const forumContainers = defineContentContainer({
       authorEdit: "always",
     },
     contentTypes: {
-      "forum.reply": { authorEdit: "window", authorEditMinutes: 30 },
+      "forum.comment": { authorEdit: "window", authorEditMinutes: 30 },
     },
   },
   publicApi: { path: "forums", fields: ["description"] },
@@ -47,7 +47,7 @@ export const forumContainers = defineContentContainer({
 });
 ```
 
-Topics go live straight away and stay editable by their authors. Replies go live too, but their authors can only edit them for 30 minutes.
+Topics go live straight away and stay editable by their authors. Comments go live too, but their authors can only edit them for 30 minutes.
 
 `policies: {}` is enough to switch the feature on and leave every decision to the AdminCP. Without `policies`, the collection does not take part: its content types keep using `publicWrite.create.status`, owners edit forever, and `can_edit` stays unscoped.
 
@@ -113,7 +113,7 @@ Each of the five keys is decided on its own. The engine takes the first layer th
 4. `policies.defaults` in the definition;
 5. the fallback: `create: "members"`, `publish` from `publicWrite.create.status` (`"published"` becomes `"immediate"`, `"draft"` becomes `"approve"`), `edits: "immediate"`, `authorEdit: "always"`, `authorEditMinutes: 60`.
 
-With "Help" set to **Wait for approval** for topics, a topic in its child forum "Bug reports" waits for approval too, while replies there still publish immediately: rules are per content type, and nobody changed the reply rules.
+With "Help" set to **Wait for approval** for topics, a topic in its child forum "Bug reports" waits for approval too, while comments there still publish immediately: rules are per content type, and nobody changed the comment rules.
 
 A key that is absent inherits. An explicit value is an override, even when it matches the parent today. If someone later relaxes "Help", a child that explicitly says **Wait for approval** keeps waiting. Choose **Inherit** to remove an override.
 

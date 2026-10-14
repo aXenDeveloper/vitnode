@@ -269,12 +269,13 @@ Keeps published records in the [site search index](/docs/dev/search). Drafts nev
 
 | Name               | Type        | Required | Description                                                                                                                           |
 | ------------------ | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `titleField`       | field name  | Yes      | The result heading. A text field that is not nullable                                                                                 |
+| `titleField`       | field name  | Yes      | The result heading. A text field that is not nullable, or a to-one, non-nullable relation to another searchable content type that lends its title. [Guide](/docs/content-engine/search#borrow-the-title-from-a-related-record) |
 | `contentFields`    | field names | Yes      | The indexed body, at least one, no duplicates. Text, textarea, richText or slug. Repeatable leaves such as `"faq.answer"` are allowed |
 | `pathTemplate`     | `string`    | Yes      | The result URL. Starts with `/`, contains `{slug}` exactly once, at most 512 characters                                               |
 | `descriptionField` | field name  | No       | Shown in result excerpts. Text, textarea or richText                                                                                  |
 | `authorField`      | field name  | No       | A top-level `field.user()` credited in the index. It does not have to be public                                                       |
 | `imageField`       | field name  | No       | A shared single `field.file()` shown as the result image. Must be in `publicApi.fields`                                               |
+| `context`          | `{ field, pathTemplate? }` | No | What the record belongs to, for feed sentences. A `field.container()` with a `pathTemplate`, or a to-one relation to a searchable content type. Defaults to the `titleField` relation. [Guide](/docs/content-engine/search#say-where-a-record-lives) |
 
 Every field except `authorField` must be in `publicApi.fields`, or a result snippet would leak a private value. Leave the language out of `pathTemplate`, because your [i18n settings](/docs/dev/i18n) add the locale prefix.
 
@@ -308,9 +309,9 @@ reports: true,
 
 ## `thread`
 
-Makes records of one content type answer each other under a root record, like forum replies under a topic. It adds the public `GET /{path}/thread` route and checks every placement on the server. Guide: [Threaded replies](/docs/content-engine/threads).
+Makes records of one content type answer each other under a root record, like forum comments under a topic. It adds the public `GET /{path}/thread` route and checks every placement on the server. Guide: [Threaded replies](/docs/content-engine/threads).
 
-```ts title="plugins/forum/src/content/reply.ts"
+```ts title="plugins/forum/src/content/comment.ts"
 thread: { parent: "parent", root: "topic", maxDepth: 6 },
 ```
 

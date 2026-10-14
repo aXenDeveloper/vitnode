@@ -1,4 +1,4 @@
-import { replyContentType } from "@/content/reply";
+import { commentContentType } from "@/content/comment";
 import { topicContentType } from "@/content/topic";
 
-export const contentTypes = [topicContentType, replyContentType];
+export const contentTypes = [topicContentType, commentContentType];

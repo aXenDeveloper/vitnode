@@ -127,7 +127,7 @@ const loadTopic = async ({
     thread: thread ?? {
       items: [],
       pageInfo: { endCursor: null, hasNextPage: false, totalCount: 0 },
-      replyCount: 0,
+      commentCount: 0,
       truncated: false,
     },
     topic,
@@ -233,7 +233,7 @@ const TopicJsonLd = ({
           },
         }
       : {}),
-    commentCount: thread.replyCount,
+    commentCount: thread.commentCount,
     dateModified: topic.updatedAt,
     datePublished: topic.publishedAt ?? topic.createdAt,
     headline: topic.title,
@@ -241,7 +241,7 @@ const TopicJsonLd = ({
     interactionStatistic: {
       "@type": "InteractionCounter",
       interactionType: "https://schema.org/CommentAction",
-      userInteractionCount: thread.replyCount,
+      userInteractionCount: thread.commentCount,
     },
     mainEntityOfPage: canonicalUrl,
     text: description,

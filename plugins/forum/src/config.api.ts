@@ -7,7 +7,7 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { forumModule } from "@/api/modules/forum/forum.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { forumContainers } from "@/content/forums";
-import { replyContent } from "@/database/replies";
+import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
 
 export const forumApiPlugin = () =>
@@ -20,7 +20,7 @@ export const forumApiPlugin = () =>
       buildContentPublicModule({
         pluginId: CONFIG_PLUGIN.pluginId,
         containers: [forumContainers],
-        contentTypes: [topicContent, replyContent],
+        contentTypes: [topicContent, commentContent],
       }),
     ],
   });

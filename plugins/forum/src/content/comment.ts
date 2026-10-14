@@ -2,11 +2,11 @@ import { defineContentType, field } from "@vitnode/core/content";
 
 import { topicContentType } from "@/content/topic";
 
-export const FORUM_REPLY_MAX_DEPTH = 6;
+export const FORUM_COMMENT_MAX_DEPTH = 6;
 
-export const replyContentType = defineContentType({
-  id: "forum.reply",
-  tableName: "forum_replies",
+export const commentContentType = defineContentType({
+  id: "forum.comment",
+  tableName: "forum_comments",
 
   fields: {
     slug: field.slug({ generated: true }),
@@ -32,7 +32,7 @@ export const replyContentType = defineContentType({
   indexes: [{ on: ["topic", "parent", "createdAt"] }],
 
   publicApi: {
-    path: "replies",
+    path: "comments",
     fields: [
       "id",
       "slug",
@@ -53,27 +53,18 @@ export const replyContentType = defineContentType({
     update: { fields: ["body"] },
   },
 
+  search: {
+    titleField: "topic",
+    contentFields: ["body"],
+    authorField: "author",
+    pathTemplate: "/forum/comments/{slug}",
+  },
+
   thread: {
     parent: "parent",
     root: "topic",
-    maxDepth: FORUM_REPLY_MAX_DEPTH,
+    maxDepth: FORUM_COMMENT_MAX_DEPTH,
   },
 
-  admin: {
-    path: "forum/replies",
-    titleField: "slug",
-    list: {
-      columns: [
-        "status",
-        "slug",
-        "topic",
-        "author",
-        "publishedAt",
-        "updatedAt",
-      ],
-      orderableFields: ["slug"],
-      defaultOrderBy: "updatedAt",
-      defaultOrder: "desc",
-    },
-  },
+  admin: { titleField: "slug" },
 });

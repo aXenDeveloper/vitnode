@@ -7,6 +7,29 @@ import { contentIdKey } from "./ids";
 import { isContentReferenceCollection, splitContentFieldPath } from "./paths";
 import { contentPublicHref, contentPublicUrl } from "./public-url";
 
+export const contentSearchTemplateUrl = ({
+  pathTemplate,
+  routing,
+  slug,
+}: {
+  pathTemplate: string;
+  routing: ContentLocaleRouting;
+  slug: string;
+}): null | string => {
+  const trimmed = slug.trim();
+  if (trimmed === "" || pathTemplate === "") return null;
+
+  const url = contentPublicUrl({
+    internalPath: pathTemplate
+      .split(CONTENT_SEARCH_SLUG_PLACEHOLDER)
+      .join(encodeURIComponent(trimmed)),
+    locale: routing.defaultLocale,
+    routing,
+  });
+
+  return url === null ? null : contentPublicHref(url);
+};
+
 export const contentSearchUrl = ({
   definition,
   locale,
@@ -40,6 +63,53 @@ export const contentSearchUrl = ({
   return url === null ? null : contentPublicHref(url);
 };
 
+export type ContentSearchContextSource =
+  | {
+      containerType: string;
+      field: string;
+      kind: "container";
+      pathTemplate: string;
+    }
+  | { field: string; kind: "relation"; target: AnyContentTypeDefinition };
+
+export const contentSearchContextSource = (
+  definition: AnyContentTypeDefinition,
+): ContentSearchContextSource | null => {
+  const context = definition.search.enabled ? definition.search.context : null;
+  if (!context) return null;
+
+  const descriptor = definition.fields[context.field];
+  if (context.kind === "relation" && descriptor?.kind === "relation") {
+    return {
+      field: context.field,
+      kind: "relation",
+      target: descriptor.target(),
+    };
+  }
+  if (context.kind === "container" && descriptor?.kind === "container") {
+    return {
+      containerType: descriptor.definition.id,
+      field: context.field,
+      kind: "container",
+      pathTemplate: context.pathTemplate,
+    };
+  }
+
+  return null;
+};
+
+export const contentSearchTitleRelation = (
+  definition: AnyContentTypeDefinition,
+): null | { field: string; target: AnyContentTypeDefinition } => {
+  const { search } = definition;
+  if (!search.enabled) return null;
+
+  const descriptor = definition.fields[search.titleField];
+  if (descriptor?.kind !== "relation") return null;
+
+  return { field: search.titleField, target: descriptor.target() };
+};
+
 export const contentSearchDocumentId = (
   definition: AnyContentTypeDefinition,
   id: ContentId,
@@ -71,6 +141,7 @@ export const contentSearchIndexedFieldNames = (
         publicApi.slugField,
         search.authorField,
         search.imageField,
+        search.context?.field,
       ].filter((name): name is string => Boolean(name)),
     ),
   ];

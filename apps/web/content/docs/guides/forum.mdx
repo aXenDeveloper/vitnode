@@ -1,11 +1,11 @@
 ---
 title: Run a Community Forum
-description: Enable the @vitnode/forum plugin, create forums in AdminCP, choose who publishes straight away, and let members post topics and nested replies.
+description: Enable the @vitnode/forum plugin, create forums in AdminCP, choose who publishes straight away, and let members post topics and nested comments.
 icon: MessagesSquare
 ---
 
 `@vitnode/forum` adds a community forum to a VitNode app: a tree of forums,
-topics inside them and Reddit-style nested replies. It is built only from
+topics inside them and Reddit-style nested comments. It is built only from
 Content Engine pieces - a [container](/docs/content-engine/containers) for the
 forums, two content types and a [thread](/docs/content-engine/threads) - so
 everything you learn here works the same way in your own plugins.
@@ -38,7 +38,8 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ### Enable the web plugin
 
-The web factory brings the pages, the AdminCP screens and the translations.
+The web factory brings the pages, the AdminCP **Forums** screen and the
+translations.
 
 ```ts title="apps/web/src/vitnode.config.ts"
 import { forumPlugin } from "@vitnode/forum/config"; // [!code ++]
@@ -55,7 +56,7 @@ export const vitNodeConfig = buildConfig({
 
 ### Migrate and start
 
-The plugin owns two tables, `forum_topics` and `forum_replies`. Run the
+The plugin owns two tables, `forum_topics` and `forum_comments`. Run the
 migrations, then start the app.
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate and start the forum">
@@ -95,23 +96,24 @@ deep, and you can drag them to reorder. A forum's **Icon** accepts the same
 
 | Page                     | What it does                                                           |
 | ------------------------ | ---------------------------------------------------------------------- |
-| `/forum`                 | Every forum with its topic and reply counts and its newest topic       |
+| `/forum`                 | Every forum with its topic and comment counts and its newest topic     |
 | `/forum/:slug`           | Subforums and the topics of one forum, newest first                    |
 | `/forum/create/topic`    | Start a topic (signed-in members)                                      |
-| `/forum/topics/:slug`    | The topic, its nested replies, and a reply box                         |
+| `/forum/topics/:slug`    | The topic, its nested comments, and a comment box                      |
 | `/forum/topics/:id/edit` | Edit your own topic                                                    |
-| `/forum/replies/:slug`   | Permalink of one reply - redirects to its place in the topic           |
+| `/forum/comments/:slug`  | Permalink of one comment - redirects to its place in the topic         |
 | `/forum/me/pending`      | Your posts a moderator approved, declined, or has not looked at yet    |
 
-Replies nest up to six levels. On small screens deep replies stop indenting, so
-the text keeps its width, and every branch can be collapsed. A reply removed by
-a moderator stays as "This reply was removed." when it has public answers, so
-the conversation keeps its shape.
+Comments nest up to six levels - hit **Reply** under any comment to answer it.
+On small screens deep comments stop indenting, so the text keeps its width, and
+every branch can be collapsed. A comment removed by a moderator stays as "This
+comment was removed." when it has public replies, so the conversation keeps its
+shape.
 
 The forum index, forum and topic pages are cached for a minute and refreshed in the
-background. Edit buttons and the reply box load in the browser, so every
+background. Edit buttons and the comment box load in the browser, so every
 visitor gets the same cached page. Topic pages set a canonical URL and
-`DiscussionForumPosting` structured data with the reply count.
+`DiscussionForumPosting` structured data with the comment count.
 
 Topics also have [delivery](/docs/content-engine/seo): a renamed topic
 redirects its old address to the new one, and
@@ -120,12 +122,19 @@ for your `sitemap.xml`. Topics waiting for approval never appear there, in
 search or in any list - until a moderator says yes, they don't exist for
 anyone but their author.
 
+Topics and comments show up in [search](/docs/dev/search), on `/discover` and
+on their authors' profile timelines. A comment is headed by its topic's title
+and stays out of public results while its topic is not public - see
+[Borrow the title from a related record](/docs/content-engine/search#borrow-the-title-from-a-related-record).
+Upgrading a forum that already has posts? Rebuild the index once in
+**AdminCP → Advanced → Search**.
+
 ## Choose who publishes straight away
 
-By default every member's topic and reply goes live immediately and authors can
+By default every member's topic and comment goes live immediately and authors can
 edit their posts for as long as they like. Change that per forum in the forum's
 **Publishing** settings - for example, require approval for new topics in
-**Announcements**, or let authors edit replies for one hour only. A forum
+**Announcements**, or let authors edit comments for one hour only. A forum
 inherits from its parent until you override a value. See
 [Container policies](/docs/content-engine/container-policies) for every option.
 
@@ -135,7 +144,11 @@ that forum review it in ModCP. See [Approvals](/docs/content-engine/approvals).
 
 ## Grant moderators a forum
 
-Moderator permissions for topics and replies are scoped by forum. Give a
-moderator role **Edit** and **Approve** on **Topics** and **Replies**, and pick
+AdminCP only manages the forums themselves. Topics and comments live on the
+public forum: authors edit their own, and moderators step in right there or in
+ModCP.
+
+Moderator permissions for topics and comments are scoped by forum. Give a
+moderator role **Edit** and **Approve** on **Topics** and **Comments**, and pick
 the forums it covers - a single forum, or a forum and everything below it. See
 [Scoped permissions](/docs/dev/moderation/scoped-permissions).

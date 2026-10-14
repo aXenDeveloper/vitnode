@@ -2766,8 +2766,14 @@
       },
       "sortBy": "Sortuj według",
       "title": "Szukaj",
+      "activity": {
+        "commented": "<profile>{author}</profile> dodaje komentarz w <target>{context}</target>",
+        "posted_in": "<profile>{author}</profile> publikuje <link>{item}</link> w <target>{context}</target>"
+      },
       "types": {
         "blog_post": "Wpis",
+        "forum_comment": "Komentarz",
+        "forum_topic": "Temat",
         "unknown": "Treść"
       },
       "userTab": {

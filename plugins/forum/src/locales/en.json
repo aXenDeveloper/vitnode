@@ -4,7 +4,7 @@
     "navigation": {
       "forum": {
         "title": "Forum",
-        "description": "Topics, replies and the occasional heated debate about tabs versus spaces."
+        "description": "Topics, comments and the occasional heated debate about tabs versus spaces."
       }
     },
     "containers": {
@@ -22,7 +22,7 @@
       "topic": {
         "label": "{count, plural, one {Topic} other {Topics}}",
         "title": "Topics",
-        "desc": "Conversations started by members. Each one lives in a forum and collects replies.",
+        "desc": "Conversations started by members. Each one lives in a forum and collects comments.",
         "fields": {
           "title": "Title",
           "slug": "Slug",
@@ -34,10 +34,10 @@
           "createdAt": "Created"
         }
       },
-      "reply": {
-        "label": "{count, plural, one {Reply} other {Replies}}",
-        "title": "Replies",
-        "desc": "Answers to topics and to each other, nested up to six levels deep.",
+      "comment": {
+        "label": "{count, plural, one {Comment} other {Comments}}",
+        "title": "Comments",
+        "desc": "Comments on topics and replies to them, nested up to six levels deep.",
         "fields": {
           "slug": "Permalink",
           "body": "Message",
@@ -62,7 +62,7 @@
       },
       "stats": {
         "topics": "Topics",
-        "replies": "Replies"
+        "comments": "Comments"
       },
       "latest": "Latest topic",
       "no_topics_yet": "No topics yet - be the first!",
@@ -72,7 +72,7 @@
         "desc": "This forum does not exist, or it moved somewhere else.",
         "back": "All forums"
       },
-      "forum_desc_fallback": "Topics and replies in {name}.",
+      "forum_desc_fallback": "Topics and comments in {name}.",
       "subforums": "Subforums",
       "topics": "Topics",
       "empty_forum": {
@@ -82,8 +82,8 @@
       "pagination": "Topic pages",
       "newest": "Newest topics",
       "older": "Older topics",
-      "reply_count": "{count, plural, =0 {No replies} one {# reply} other {# replies}}",
-      "last_reply": "Last reply",
+      "comment_count": "{count, plural, =0 {No comments} one {# comment} other {# comments}}",
+      "last_comment": "Last comment",
       "errors": {
         "title": "That did not go through",
         "unknown": "Something went wrong. Please try again in a moment.",
@@ -98,8 +98,8 @@
           "not_writable": "This field cannot be changed.",
           "unavailable": "This is not available.",
           "forum_unavailable": "This forum is not available. Pick another one.",
-          "parent_unavailable": "That reply can no longer be answered. Reply higher up in the thread.",
-          "topic_unavailable": "This topic no longer accepts replies."
+          "parent_unavailable": "That comment can no longer be answered. Reply higher up in the thread.",
+          "topic_unavailable": "This topic no longer accepts comments."
         }
       }
     },
@@ -195,67 +195,67 @@
         "actions": "Topic actions",
         "created": {
           "title": "Topic posted",
-          "desc": "Your topic is live. Now we wait for the replies to roll in."
+          "desc": "Your topic is live. Now we wait for the comments to roll in."
         }
       }
     },
-    "replies": {
-      "title": "{count, plural, =0 {Replies} one {# reply} other {# replies}}",
+    "comments": {
+      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
       "empty": {
-        "title": "No replies yet",
-        "desc": "Be the first to answer. No pressure."
+        "title": "No comments yet",
+        "desc": "Be the first to comment. No pressure."
       },
-      "truncated": "This thread is very long, so some deeper replies are not shown here.",
-      "load_more": "Load more replies",
+      "truncated": "This thread is very long, so some deeper comments are not shown here.",
+      "load_more": "Load more comments",
       "load_failed": {
-        "title": "Could not load replies",
+        "title": "Could not load comments",
         "desc": "Please check your connection and try again."
       },
       "compose": {
         "title": "Join the conversation",
-        "guest": "You need an account to reply.",
-        "sign_in": "Sign in to reply"
+        "guest": "You need an account to comment.",
+        "sign_in": "Sign in to comment"
       },
       "form": {
-        "body_label": "Your reply",
-        "edit_label": "Edit your reply",
+        "body_label": "Your comment",
+        "edit_label": "Edit your comment",
         "answer_label": "Reply to {name}",
-        "submit": "Post reply",
+        "submit": "Post comment",
         "save": "Save",
         "cancel": "Cancel",
         "body": {
-          "required": "Write a reply first."
+          "required": "Write a comment first."
         }
       },
       "pending": {
-        "title": "Your reply is waiting for a moderator",
+        "title": "Your comment is waiting for a moderator",
         "desc": "It will appear in the thread once it is approved."
       },
       "created": {
-        "title": "Reply posted",
-        "desc": "Your reply is in the thread."
+        "title": "Comment posted",
+        "desc": "Your comment is in the thread."
       },
       "edited": {
-        "title": "Reply saved",
+        "title": "Comment saved",
         "desc": "Your changes are live."
       },
       "conflict": {
-        "title": "This reply changed",
+        "title": "This comment changed",
         "desc": "A newer version was saved while you were editing. Reload the page and try again."
       },
-      "permalink": "Link to this reply",
+      "permalink": "Link to this comment",
       "edited_label": "edited",
       "reply": "Reply",
       "edit": "Edit",
-      "someone": "this reply",
-      "removed": "This reply was removed.",
-      "show_answers": "{count, plural, one {Show # answer} other {Show # answers}}",
-      "hide_answers": "{count, plural, one {Hide # answer} other {Hide # answers}}"
+      "someone": "this comment",
+      "removed": "This comment was removed.",
+      "show_answers": "{count, plural, one {Show # reply} other {Show # replies}}",
+      "hide_answers": "{count, plural, one {Hide # reply} other {Hide # replies}}"
     },
     "pending": {
       "title": "My posts awaiting approval",
       "desc": "Everything you posted that a moderator has reviewed or is about to.",
-      "untitled_reply": "A reply",
+      "untitled_comment": "A comment",
       "untitled_topic": "A topic",
       "status": {
         "pending": "Waiting",
@@ -264,7 +264,7 @@
       },
       "type": {
         "topic": "Topic",
-        "reply": "Reply"
+        "comment": "Comment"
       },
       "kind": {
         "create": "new",
@@ -292,15 +292,15 @@
   "@vitnode/forum:topic:can_hide": "Hide and unhide topics",
   "@vitnode/forum:topic:can_restore": "Restore an earlier version of a topic",
   "@vitnode/forum:topic:can_approve": "Approve or decline topics waiting for review",
-  "@vitnode/forum:reply": "Replies",
-  "@vitnode/forum:reply:can_view": "View replies",
-  "@vitnode/forum:reply:can_create": "Create replies",
-  "@vitnode/forum:reply:can_edit": "Edit replies",
-  "@vitnode/forum:reply:can_delete": "Delete replies",
-  "@vitnode/forum:reply:can_publish": "Publish and unpublish replies",
-  "@vitnode/forum:reply:can_hide": "Hide and unhide replies",
-  "@vitnode/forum:reply:can_restore": "Restore an earlier version of a reply",
-  "@vitnode/forum:reply:can_approve": "Approve or decline replies waiting for review",
+  "@vitnode/forum:comment": "Comments",
+  "@vitnode/forum:comment:can_view": "View comments",
+  "@vitnode/forum:comment:can_create": "Create comments",
+  "@vitnode/forum:comment:can_edit": "Edit comments",
+  "@vitnode/forum:comment:can_delete": "Delete comments",
+  "@vitnode/forum:comment:can_publish": "Publish and unpublish comments",
+  "@vitnode/forum:comment:can_hide": "Hide and unhide comments",
+  "@vitnode/forum:comment:can_restore": "Restore an earlier version of a comment",
+  "@vitnode/forum:comment:can_approve": "Approve or decline comments waiting for review",
   "@vitnode/forum:forum_forums": "Forums",
   "@vitnode/forum:forum_forums:can_view": "View forums",
   "@vitnode/forum:forum_forums:can_create": "Create forums",

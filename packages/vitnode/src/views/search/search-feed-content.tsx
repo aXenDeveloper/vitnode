@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import React from "react";
 import { useFormatter, useTranslations } from "use-intl";
+import { z } from "zod";
 
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
@@ -12,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { userProfileHref } from "@/components/user-format";
 
+import type { SearchActivityKey } from "./registry";
 import type { SearchFeedQueryOptions } from "./search-feed-query";
 import type {
   SearchFeedPage,
@@ -206,6 +209,118 @@ const ResultImage = ({ image }: { image: SearchResultItem["image"] }) =>
     />
   ) : null;
 
+const zodActivityContext = z.object({
+  context: z.object({ title: z.string().min(1), url: z.string().nullable() }),
+});
+
+interface SearchActivity {
+  context: { title: string; url: null | string };
+  key: SearchActivityKey;
+}
+
+const activityOf = (item: SearchResultItem): null | SearchActivity => {
+  const { activityKey } = getSearchTypeRenderer(item.itemType);
+  if (!activityKey) return null;
+
+  const parsed = zodActivityContext.safeParse(item.metadata);
+
+  return parsed.success
+    ? { context: parsed.data.context, key: activityKey }
+    : null;
+};
+
+const ActivityLink = ({
+  children,
+  href,
+}: {
+  children: React.ReactNode;
+  href: null | string;
+}) =>
+  href ? (
+    <ResultLink
+      className="text-foreground relative z-10 font-medium hover:underline"
+      href={href}
+    >
+      {children}
+    </ResultLink>
+  ) : (
+    <span className="text-foreground font-medium">{children}</span>
+  );
+
+const CARD_OVERLAY_LINK =
+  "after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring";
+
+const ActivitySentence = ({
+  activity,
+  authors,
+  item,
+}: {
+  activity: SearchActivity;
+  authors: SearchResultAuthor[];
+  item: SearchResultItem;
+}) => {
+  const t = useTranslations("core.search");
+  const format = useFormatter();
+  const [onlyAuthor] = authors.length === 1 ? authors : [];
+
+  return (
+    <span className="min-w-0 text-pretty">
+      {t.rich(activity.key, {
+        author: format.list(authors.map(author => author.name)),
+        context: activity.context.title,
+        item: item.title,
+        link: chunks => <ActivityLink href={item.url}>{chunks}</ActivityLink>,
+        profile: chunks => (
+          <ActivityLink
+            href={onlyAuthor ? userProfileHref(onlyAuthor.nameCode) : null}
+          >
+            {chunks}
+          </ActivityLink>
+        ),
+        target: chunks => (
+          <ActivityLink href={activity.context.url}>{chunks}</ActivityLink>
+        ),
+      })}
+    </span>
+  );
+};
+
+const ActivityBody = ({
+  className,
+  item,
+  snippet,
+}: {
+  className?: string;
+  item: SearchResultItem;
+  snippet: string;
+}) => {
+  if (item.url && !snippet) {
+    return (
+      <ResultLink className={CARD_OVERLAY_LINK} href={item.url}>
+        <span className="sr-only">{item.title}</span>
+      </ResultLink>
+    );
+  }
+  if (!snippet) return null;
+
+  return item.url ? (
+    <ResultLink
+      className={cn(
+        "text-foreground leading-relaxed",
+        CARD_OVERLAY_LINK,
+        className,
+      )}
+      href={item.url}
+    >
+      {snippet}
+    </ResultLink>
+  ) : (
+    <p className={cn("text-foreground leading-relaxed", className)}>
+      {snippet}
+    </p>
+  );
+};
+
 const DraftBadge = () => {
   const t = useTranslations("core.search");
 
@@ -224,6 +339,27 @@ const TimelineItem = ({
   const Icon = renderer.icon;
   const snippet = getSnippet(item.content);
   const authors = authorsOf(item);
+  const activity = activityOf(item);
+
+  const activityContent = activity ? (
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        {authors.length > 0 && <AuthorAvatars authors={authors} />}
+        <ActivitySentence activity={activity} authors={authors} item={item} />
+        <span aria-hidden className="max-sm:hidden">
+          ·
+        </span>
+        <DateFormat date={item.createdAt} />
+        <ItemHiddenIcon
+          className="relative z-10 size-4"
+          focusable
+          item={item}
+        />
+        {!item.isPublic && !item.isHidden && <DraftBadge />}
+      </div>
+      <ActivityBody className="text-base" item={item} snippet={snippet} />
+    </div>
+  ) : null;
 
   const content = (
     <>
@@ -269,7 +405,17 @@ const TimelineItem = ({
       </div>
 
       <div className={cn("min-w-0 flex-1", !isLast && "pb-8")}>
-        {item.url ? (
+        {activityContent ? (
+          <div
+            className={cn(
+              "relative flex flex-col-reverse gap-3 rounded-lg border p-4 sm:flex-row sm:items-start",
+              item.url && "hover:bg-muted/50 transition-colors",
+            )}
+          >
+            {activityContent}
+            <ResultImage image={item.image} />
+          </div>
+        ) : item.url ? (
           <ResultLink
             className="hover:bg-muted/50 flex flex-col-reverse gap-3 rounded-lg border p-4 transition-colors sm:flex-row sm:items-start"
             href={item.url}
@@ -292,9 +438,14 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
   const Icon = renderer.icon;
   const snippet = getSnippet(item.content);
   const authors = authorsOf(item);
+  const activity = activityOf(item);
 
   return (
-    <Card>
+    <Card
+      className={cn(
+        activity && item.url && "hover:bg-muted/50 relative transition-colors",
+      )}
+    >
       <CardContent className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start">
         <div className="flex min-w-0 flex-1 gap-3">
           {item.author ? (
@@ -311,22 +462,40 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
                 <Icon className="size-3.5" />
                 {t(renderer.labelKey)}
               </span>
-              {authors.length > 0 && <AuthorNames authors={authors} />}
+              {activity ? (
+                <ActivitySentence
+                  activity={activity}
+                  authors={authors}
+                  item={item}
+                />
+              ) : (
+                authors.length > 0 && <AuthorNames authors={authors} />
+              )}
               <DateFormat date={item.createdAt} />
               {!item.isPublic && !item.isHidden && <DraftBadge />}
             </div>
 
-            <h3 className="text-foreground flex min-w-0 items-center gap-2 text-lg font-semibold">
-              <ItemHiddenIcon className="size-4" item={item} />
-              <span className="truncate">
-                <ItemTitle item={item} />
-              </span>
-            </h3>
+            {activity ? (
+              <ActivityBody
+                className="line-clamp-3 text-sm"
+                item={item}
+                snippet={snippet}
+              />
+            ) : (
+              <>
+                <h3 className="text-foreground flex min-w-0 items-center gap-2 text-lg font-semibold">
+                  <ItemHiddenIcon className="size-4" item={item} />
+                  <span className="truncate">
+                    <ItemTitle item={item} />
+                  </span>
+                </h3>
 
-            {snippet && (
-              <p className="text-muted-foreground line-clamp-2 text-sm">
-                {snippet}
-              </p>
+                {snippet && (
+                  <p className="text-muted-foreground line-clamp-2 text-sm">
+                    {snippet}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>

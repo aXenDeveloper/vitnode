@@ -190,7 +190,7 @@ const TopicListRow = ({
   topic: TopicRow;
 }) => {
   const t = useTranslations("@vitnode/forum.forums");
-  const replyCount = stats?.replyCount ?? 0;
+  const commentCount = stats?.commentCount ?? 0;
 
   return (
     <li className="flex items-start gap-3 p-4">
@@ -218,12 +218,12 @@ const TopicListRow = ({
           <span className="flex items-center gap-1.5">
             <MessageSquareIcon aria-hidden="true" className="size-4" />
             <span className="tabular-nums">
-              {t("reply_count", { count: replyCount })}
+              {t("comment_count", { count: commentCount })}
             </span>
           </span>
-          {stats?.lastReplyAt ? (
+          {stats?.lastCommentAt ? (
             <span className="sr-only md:not-sr-only">
-              {t("last_reply")} <TimeAgo date={stats.lastReplyAt} />
+              {t("last_comment")} <TimeAgo date={stats.lastCommentAt} />
             </span>
           ) : null}
         </p>

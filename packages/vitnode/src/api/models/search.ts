@@ -557,6 +557,36 @@ export class SearchModel {
     await this.provider().delete(this.c, itemType, itemId, languageCode);
   }
 
+  async deleteByContainer({
+    containerId,
+    containerType,
+    itemType,
+  }: {
+    containerId: number;
+    containerType: string;
+    itemType: string;
+  }): Promise<void> {
+    const rows = await this.c
+      .get("db")
+      .selectDistinct({ itemId: core_search_index.itemId })
+      .from(core_search_index)
+      .where(
+        and(
+          eq(core_search_index.itemType, itemType),
+          eq(core_search_index.containerType, containerType),
+          eq(core_search_index.containerId, containerId),
+        ),
+      );
+
+    const contentTypes = this.c.get("core")?.contentTypes ?? [];
+    for (const { itemId } of rows) {
+      await this.delete(
+        itemType,
+        searchItemIdFromKey(contentTypes, itemType, itemId),
+      );
+    }
+  }
+
   /** Canonical projection lives in `core_search_index`; the provider mirrors it. */
   async index(doc: SearchDocument): Promise<void> {
     const clean = this.resolveOwner({

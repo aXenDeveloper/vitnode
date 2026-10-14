@@ -42,11 +42,11 @@ export const topicHref = (
 ): string =>
   `${FORUM_HREF}/topics/${encodeURIComponent(slug)}${created ? "?created=true" : ""}`;
 
-export const replyAnchorId = (replySlug: string): string =>
-  `reply-${replySlug}`;
+export const commentAnchorId = (commentSlug: string): string =>
+  `comment-${commentSlug}`;
 
-export const replyPermalink = (replySlug: string): string =>
-  `${FORUM_HREF}/replies/${encodeURIComponent(replySlug)}`;
+export const commentPermalink = (commentSlug: string): string =>
+  `${FORUM_HREF}/comments/${encodeURIComponent(commentSlug)}`;
 
 export interface TopicNewSearch {
   forum?: number;

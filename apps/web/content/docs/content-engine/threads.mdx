@@ -6,30 +6,30 @@ icon: MessagesSquare
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-The `thread` option turns a content type into replies that answer each other under one root record, like forum replies under a topic or comments under a post. The server keeps the tree valid, and one public route returns a page of it, nested and in order.
+The `thread` option turns a content type into replies that answer each other under one root record, like comments under a forum topic or under a blog post. The server keeps the tree valid, and one public route returns a page of it, nested and in order.
 
-This guide builds `forum.reply` from the Forum plugin. Each reply belongs to a `forum.topic`, may answer another reply, and lives in its topic's forum.
+This guide builds `forum.comment` from the Forum plugin. Each comment belongs to a `forum.topic`, may answer another comment, and lives in its topic's forum.
 
 ## Before you begin
 
-You need the root content type with a [public API](/docs/content-engine/public-api), here `forum.topic`. For members to post replies, read [Public write](/docs/content-engine/public-write) first.
+You need the root content type with a [public API](/docs/content-engine/public-api), here `forum.topic`. For members to post comments, read [Public write](/docs/content-engine/public-write) first.
 
 <Steps>
 
 <Step>
 
-### Define the reply
+### Define the comment
 
 Create the content type. Four fields do the threading work, and `thread` names two of them:
 
-```ts title="plugins/forum/src/content/reply.ts"
+```ts title="plugins/forum/src/content/comment.ts"
 import { defineContentType, field } from "@vitnode/core/content";
 
 import { topicContentType } from "@/content/topic";
 
-export const replyContentType = defineContentType({
-  id: "forum.reply",
-  tableName: "forum_replies",
+export const commentContentType = defineContentType({
+  id: "forum.comment",
+  tableName: "forum_comments",
 
   fields: {
     slug: field.slug({ generated: true }),
@@ -48,7 +48,7 @@ export const replyContentType = defineContentType({
   visibility: true,
 
   publicApi: {
-    path: "replies",
+    path: "comments",
     fields: ["id", "slug", "body", "topic", "parent", "publishedAt", "createdAt"],
     filterableFields: ["topic"],
     people: ["author"],
@@ -64,12 +64,12 @@ export const replyContentType = defineContentType({
 });
 ```
 
-- `parent` is a to-one **self relation**: the reply being answered, or `null` for a direct answer to the topic. It must be nullable, because the first reply has nothing to point at.
-- `topic` is the **root**. `container: true` files the reply in the topic's forum, so [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply to replies without a container field of their own. A `container: true` relation must be required and to-one.
-- `slug` with `generated: true` gets a random 10-character token on create, such as `k3v9q2m7xa`, because a reply has no title to derive one from.
+- `parent` is a to-one **self relation**: the comment being answered, or `null` for a direct answer to the topic. It must be nullable, because the first comment has nothing to point at.
+- `topic` is the **root**. `container: true` files the comment in the topic's forum, so [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply to comments without a container field of their own. A `container: true` relation must be required and to-one.
+- `slug` with `generated: true` gets a random 10-character token on create, such as `k3v9q2m7xa`, because a comment has no title to derive one from.
 - `people: ["author"]` publishes the author as a small profile summary. `publicApi.fields` never exposes a user, so this is a separate opt-in.
 
-`parent` and `topic` must be in `publicApi.fields`, so readers can rebuild the tree, and they cannot be in `update.fields`: a reply is placed when it is written and stays there. Every option and its errors are in the [`thread` reference](/docs/content-engine/reference#thread).
+`parent` and `topic` must be in `publicApi.fields`, so readers can rebuild the tree, and they cannot be in `update.fields`: a comment is placed when it is written and stays there. Every option and its errors are in the [`thread` reference](/docs/content-engine/reference#thread).
 
 </Step>
 
@@ -79,18 +79,18 @@ export const replyContentType = defineContentType({
 
 A self relation finds its own table, so `references` lists only the topic:
 
-```ts title="plugins/forum/src/database/replies.ts"
+```ts title="plugins/forum/src/database/comments.ts"
 import { createContentModel } from "@vitnode/core/content/server";
 
-import { replyContentType } from "@/content/reply";
+import { commentContentType } from "@/content/comment";
 
 import { forum_topics } from "./topics";
 
-export const replyContent = createContentModel(replyContentType, {
+export const commentContent = createContentModel(commentContentType, {
   references: { topic: () => forum_topics.id },
 });
 
-export const forum_replies = replyContent.table;
+export const forum_comments = commentContent.table;
 ```
 
 An entry for `parent` in `references` throws, which is the engine politely saying it has this one covered.
@@ -101,7 +101,7 @@ An entry for `parent` in `references` throws, which is the engine politely sayin
 
 ### Register, build and migrate
 
-Add `replyContent` to `contentTypes` of `buildContentPublicModule` (and the admin module, for an AdminCP screen) next to the topics. Then run this from the workspace root and restart `pnpm dev`:
+Add `commentContent` to `contentTypes` of `buildContentPublicModule` (and the admin module, for an AdminCP screen) next to the topics. Then run this from the workspace root and restart `pnpm dev`:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
 
@@ -119,7 +119,7 @@ npm run build:plugins && npm run db:migrate
 
 </Tabs>
 
-The table gets a `parent` column with a foreign key to `forum_replies.id` and a `topic` column pointing at `forum_topics.id`. The Forum plugin also adds `indexes: [{ on: ["topic", "parent", "createdAt"] }]` to the definition, which matches how the thread route reads. See [`indexes`](/docs/content-engine/reference#indexes).
+The table gets a `parent` column with a foreign key to `forum_comments.id` and a `topic` column pointing at `forum_topics.id`. The Forum plugin also adds `indexes: [{ on: ["topic", "parent", "createdAt"] }]` to the definition, which matches how the thread route reads. See [`indexes`](/docs/content-engine/reference#indexes).
 
 </Step>
 
@@ -129,7 +129,7 @@ The table gets a `parent` column with a foreign key to `forum_replies.id` and a 
 
 `GET /{path}/thread` returns one page of top-level replies, oldest first, each followed by every public answer below it. Call it with the [fetcher](/docs/dev/fetcher):
 
-```ts title="plugins/forum/src/pages/topic-thread-data.ts"
+```ts title="plugins/forum/src/pages/thread-data.ts"
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { CONFIG_PLUGIN } from "@/const";
@@ -138,11 +138,11 @@ export const fetchTopicThread = async (topicId: number, after?: string) => {
   const res = await fetcher({
     plugin: CONFIG_PLUGIN.pluginId,
     method: "get",
-    module: "content/replies",
+    module: "content/comments",
     path: "/thread",
     args: { query: { root: String(topicId), first: 20, after } },
   });
-  if (!res.ok) throw new Error("Could not load the replies.");
+  if (!res.ok) throw new Error("Could not load the comments.");
 
   return await res.json();
 };
@@ -162,7 +162,7 @@ export const fetchTopicThread = async (topicId: number, after?: string) => {
 | `first` | `number` | `20`    | Top-level replies per page, from 1 to 50            |
 | `after` | `string` |         | `pageInfo.endCursor` of the previous page           |
 
-```json title="GET /api/@vitnode/forum/content/replies/thread?root=42 (trimmed)"
+```json title="GET /api/@vitnode/forum/content/comments/thread?root=42 (trimmed)"
 {
   "items": [
     {
@@ -222,12 +222,12 @@ Deleting a reply with `onDelete: "set null"` turns its answers into top-level re
 
 ## Check the result
 
-Create a topic, then post a reply and an answer to it as a signed-in member:
+Create a topic, then post a comment and an answer to it as a signed-in member:
 
 ```bash
-curl -X POST http://localhost:3000/api/@vitnode/forum/content/replies \
+curl -X POST http://localhost:3000/api/@vitnode/forum/content/comments \
   -H "Content-Type: application/json" -b "vitnode_auth=<session>" \
   -d '{"values":{"topic":42,"parent":17,"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Same here!"}]}]}}}'
 ```
 
-The response has a generated `slug`. `GET /api/@vitnode/forum/content/replies/thread?root=42` now lists reply 17 with the new answer below it at `depth: 2`. Sending a `parent` from another topic answers `400` with an issue on `parent`.
+The response has a generated `slug`. `GET /api/@vitnode/forum/content/comments/thread?root=42` now lists comment 17 with the new answer below it at `depth: 2`. Sending a `parent` from another topic answers `400` with an issue on `parent`.

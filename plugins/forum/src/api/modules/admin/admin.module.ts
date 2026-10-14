@@ -3,7 +3,7 @@ import { buildContentAdminModule } from "@vitnode/core/content/server";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { forumContainers } from "@/content/forums";
-import { replyContent } from "@/database/replies";
+import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
 
 export const adminModule = buildModule({
@@ -14,7 +14,7 @@ export const adminModule = buildModule({
     buildContentAdminModule({
       pluginId: CONFIG_PLUGIN.pluginId,
       containers: [forumContainers],
-      contentTypes: [topicContent, replyContent],
+      contentTypes: [topicContent, commentContent],
     }),
   ],
 });

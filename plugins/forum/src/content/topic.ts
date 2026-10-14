@@ -55,25 +55,8 @@ export const topicContentType = defineContentType({
     contentFields: ["body"],
     authorField: "author",
     pathTemplate: "/forum/topics/{slug}",
+    context: { field: "forum", pathTemplate: "/forum/{slug}" },
   },
 
-  admin: {
-    path: "forum/topics",
-    titleField: "title",
-    list: {
-      columns: [
-        "status",
-        "title",
-        "slug",
-        "forum",
-        "author",
-        "publishedAt",
-        "updatedAt",
-      ],
-      searchableFields: ["title"],
-      orderableFields: ["title", "slug"],
-      defaultOrderBy: "updatedAt",
-      defaultOrder: "desc",
-    },
-  },
+  admin: { titleField: "title" },
 });

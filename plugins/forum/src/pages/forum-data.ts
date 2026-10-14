@@ -38,6 +38,7 @@ export const fetchForumStats = async (): Promise<ForumStats[]> => {
 };
 
 export interface ForumStats {
+  commentCount: number;
   forumId: number;
   latestTopic: null | {
     id: number;
@@ -45,7 +46,6 @@ export interface ForumStats {
     slug: string;
     title: string;
   };
-  replyCount: number;
   topicCount: number;
 }
 
@@ -71,8 +71,8 @@ export const fetchTopicStats = async (
 };
 
 export interface TopicStats {
-  lastReplyAt: null | string;
-  replyCount: number;
+  commentCount: number;
+  lastCommentAt: null | string;
   topicId: number;
 }
 

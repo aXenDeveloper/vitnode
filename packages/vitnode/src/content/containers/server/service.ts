@@ -25,6 +25,7 @@ import { core_content_containers } from "../../../database/content-containers";
 import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { contentContainerTag } from "../../cache";
 import { contentDefinitionOf } from "../../server/model";
+import { syncContentSearchContainerDependents } from "../../server/search-sync";
 import { slugify } from "../../slug";
 import {
   contentContainerFieldOf,
@@ -758,6 +759,13 @@ export const createContentContainerService = <
           changedFields,
           containerId: record.id,
           parentId: record.parentId,
+        });
+      }
+
+      if (changedFields.includes("name") || changedFields.includes("slug")) {
+        await syncContentSearchContainerDependents(c, {
+          container: record,
+          containerType: definitionId,
         });
       }
 

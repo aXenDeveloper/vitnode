@@ -68,15 +68,15 @@ export const routes = definePluginRoutes([
     messages: [
       "@vitnode/forum.forums",
       "@vitnode/forum.topics",
-      "@vitnode/forum.replies",
+      "@vitnode/forum.comments",
     ],
     pendingComponent: RoutePendingSkeleton,
     search: topicSearch,
   }),
 
-  page("/forum/replies/:slug", {
-    component: lazy(() => import("./pages/reply-redirect-page")),
-    messages: ["@vitnode/forum.replies"],
+  page("/forum/comments/:slug", {
+    component: lazy(() => import("./pages/comment-redirect-page")),
+    messages: ["@vitnode/forum.comments"],
     pendingComponent: RoutePendingSkeleton,
   }),
 ]);

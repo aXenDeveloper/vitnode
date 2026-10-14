@@ -50,7 +50,7 @@ export const articleContentType = defineContentType({
 });
 ```
 
-- `titleField` is the result heading. It must be a `field.text()` that is not nullable.
+- `titleField` is the result heading. It must be a `field.text()` that is not nullable, or a relation that lends the related record's title (see [Borrow the title from a related record](#borrow-the-title-from-a-related-record)).
 - `descriptionField` is optional and leads the result excerpt. Text, textarea or rich text.
 - `contentFields` is the searchable body. It takes at least one field and no duplicates. Text, textarea, rich text or slug fields, plus repeatable leaves such as `"faq.answer"`. Rich text is indexed as its words, never as JSON. The title always ranks higher than the body, so listing it here as well only repeats it in the excerpt.
 - `pathTemplate` is the result URL. It starts with `/` and contains `{slug}` exactly once. Leave the language out, because your i18n settings add it (see [Localized content types](#localized-content-types)).
@@ -127,6 +127,63 @@ The definition throws when either one points at the wrong kind of field, for exa
 Adding `authorField` or `imageField` to content that already exists needs a **Reindex** of the collection, so older records pick them up. After that, changing the authors or the image re-indexes the record on save.
 
 In the API, each result carries `authors` (id, name, `nameCode`, avatar) in order, `authorIds`, and `image` with `url`, `width` and `height`, or `null`.
+
+## Borrow the title from a related record
+
+Some records have no title of their own. A forum comment is one: on `/search` it should be headed by the topic it belongs to. Point `titleField` at a relation instead of a text field:
+
+```ts title="plugins/forum/src/content/comment.ts"
+search: {
+  titleField: "topic", // [!code highlight]
+  contentFields: ["body"],
+  authorField: "author",
+  pathTemplate: "/forum/comments/{slug}",
+},
+```
+
+The result is headed by the related record's own `search.titleField`, here the topic's title. The relation has a few rules:
+
+- It points at exactly one record of another content type: to-one, not nullable and not `self: true`.
+- It is in `publicApi.fields`, like every other indexed field.
+- The target has a `search` block of its own, because that is where the title comes from. Without one there is no heading to borrow, and the record stays out of the index.
+- The content type is not [localized](#localized-content-types), because one related title would have to serve every language.
+
+A broken rule throws when the definition loads, for example `search.titleField names the nullable relation "topic". A search result needs a heading, so the relation must not be nullable.`
+
+The two records then stay in step:
+
+- A document is public only while both the record and the related record are. A comment under a draft or hidden topic stays out of `/search`, `/discover` and public timelines.
+- The document stores the related record as its container: `containerType` is the target's content type id and `containerId` its record id.
+- When the related record's search title changes, or it is published, unpublished, hidden or unhidden, every record that borrows its title is re-indexed. Deleting it removes their documents.
+
+Records saved before you turned this on need a **Reindex** of the collection, or **Rebuild index** in **AdminCP → Advanced → Search**.
+
+## Say where a record lives
+
+A feed reads better as activity than as a list of headings: "aXen commented on Tabs or spaces", "aXen posted Tabs or spaces in General". For that, a document needs to know what it belongs to. `search.context` names that field:
+
+```ts title="plugins/forum/src/content/topic.ts"
+search: {
+  titleField: "title",
+  contentFields: ["body"],
+  authorField: "author",
+  pathTemplate: "/forum/topics/{slug}",
+  context: { field: "forum", pathTemplate: "/forum/{slug}" }, // [!code highlight]
+},
+```
+
+`field` is one of two things:
+
+- A `field.container()`. The context is the container's name, linked through `pathTemplate`, because a container has no public URL of its own. `{slug}` is the container's slug.
+- A to-one `field.relation()` to another searchable content type. The context is the related record's search title, linked to its own search URL, so leave `pathTemplate` out. When `titleField` already [borrows from a relation](#borrow-the-title-from-a-related-record), that relation is the context automatically, which is why forum comments need no `context` line.
+
+The document stores the context's title and URL in its `metadata` (`{ context: { title, url } }`) and the record it points at as `containerType` / `containerId`. Renaming a container, or changing its slug, re-indexes every record in it.
+
+The feed turns that into a sentence for the types it knows, with links to the author, the record and its context, and the record's text underneath. Types without a sentence keep the plain heading-and-excerpt layout.
+
+{/* Image prompt: The VitNode Discover feed in light theme. Two timeline cards. The first reads "aXen commented on Tabs or spaces · 18 minutes ago" in small grey text with the names in dark medium weight, then "Searchable comment about tabs versus spaces" as body text. The second reads "aXen posted Tabs or spaces in General · 1 hour ago", then the topic excerpt. Small square icons on a vertical line to the left. 1200x500. */}
+
+Like the title, the context is filled in on the next write or reindex.
 
 ## What gets indexed and when
 

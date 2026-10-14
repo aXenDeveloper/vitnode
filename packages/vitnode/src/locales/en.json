@@ -88,8 +88,14 @@
         "newest": "Newest",
         "oldest": "Oldest"
       },
+      "activity": {
+        "commented": "<profile>{author}</profile> commented on <target>{context}</target>",
+        "posted_in": "<profile>{author}</profile> posted <link>{item}</link> in <target>{context}</target>"
+      },
       "types": {
         "blog_post": "Article",
+        "forum_comment": "Comment",
+        "forum_topic": "Topic",
         "unknown": "Content"
       },
       "userTab": {
