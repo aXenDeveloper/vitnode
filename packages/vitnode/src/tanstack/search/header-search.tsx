@@ -63,7 +63,7 @@ const isOpenShortcut = (event: KeyboardEvent): boolean => {
   );
 };
 
-export const HeaderSearch = () => {
+export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
   const t = useTranslations("core.global");
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -165,7 +165,11 @@ export const HeaderSearch = () => {
             <DialogDescription>{t("search_dialog.desc")}</DialogDescription>
           </DialogHeader>
           <React.Suspense fallback={<HeaderSearchSkeleton />}>
-            <HeaderSearchContent onNavigate={navigateOnClose} open={open} />
+            <HeaderSearchContent
+              firstSourceId={firstSourceId}
+              onNavigate={navigateOnClose}
+              open={open}
+            />
           </React.Suspense>
         </DialogContent>
       </Dialog>

@@ -1,54 +1,42 @@
 import type { Root } from 'fumadocs-core/page-tree'
 
-import { useRouterState } from '@tanstack/react-router'
-import { LogoVitNode } from '@vitnode/core/components/logo-vitnode'
-import { ThemeSwitcher } from '@vitnode/core/components/switchers/themes/theme-switcher'
-import { LOGO_VIEW_TRANSITION_NAME } from '@vitnode/core/tanstack/view-transitions'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { MainHeader } from '@vitnode/core/tanstack/layout'
 import { cn } from 'cn'
-import { DocsLayout, useSpaciousLayout } from 'fumadocs-ui/layouts/spacious'
+import { DocsLayout } from 'fumadocs-ui/layouts/spacious'
+import {
+  Sidebar,
+  SidebarDrawer,
+  SidebarProvider,
+} from 'fumadocs-ui/layouts/spacious/slots/sidebar'
 import { RootProvider } from 'fumadocs-ui/provider/tanstack'
-import React, { useId } from 'react'
+import { BookOpenIcon } from 'lucide-react'
+import React from 'react'
 
+import { docsSearchSource } from './search-source'
 import { docsSectionOf } from './section'
+import { DocsSidebarToggle } from './sidebar-toggle'
 
-const DocsSearchDialog = React.lazy(async () => await import('./search-dialog'))
+const DocsNavTitle = ({ className }: React.ComponentProps<'a'>) => (
+  <Link className={className} to="/docs">
+    <BookOpenIcon aria-hidden className="text-fd-muted-foreground size-4" />
+    Documentation
+  </Link>
+)
 
-const DocsNavTitle = () => {
-  const logoId = useId()
-
-  return (
-    <LogoVitNode
-      className="w-30"
-      idPrefix={logoId}
-      style={{ viewTransitionName: LOGO_VIEW_TRANSITION_NAME }}
+const DocsSidebarProvider = ({
+  children,
+  ...props
+}: React.ComponentProps<typeof SidebarProvider>) => (
+  <SidebarProvider {...props}>
+    <MainHeader
+      firstSearchSourceId={docsSearchSource.id}
+      leading={<DocsSidebarToggle />}
+      variant="bar"
     />
-  )
-}
-
-const DocsActions = ({ className, ...props }: React.ComponentProps<'div'>) => {
-  const { menuItems } = useSpaciousLayout()
-
-  return (
-    <div className={cn('flex items-center gap-1', className)} {...props}>
-      {menuItems.map(
-        (item) =>
-          item.type === 'icon' && (
-            <a
-              aria-label={item.label}
-              className="text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-accent-foreground focus-visible:ring-fd-ring inline-flex items-center justify-center rounded-md p-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none [&_svg]:size-4.5"
-              href={item.url}
-              key={item.url}
-              rel="noreferrer noopener"
-              target="_blank"
-            >
-              {item.icon}
-            </a>
-          ),
-      )}
-      <ThemeSwitcher />
-    </div>
-  )
-}
+    {children}
+  </SidebarProvider>
+)
 
 export const DocsShellContent = ({
   children,
@@ -58,23 +46,27 @@ export const DocsShellContent = ({
   pageTree: Root
 }) => {
   const section = useRouterState({
-    select: (state) => docsSectionOf(state.location.pathname),
+    select: (state) =>
+      docsSectionOf((state.resolvedLocation ?? state.location).pathname),
   })
 
   return (
-    <RootProvider
-      search={{ SearchDialog: DocsSearchDialog }}
-      theme={{ enabled: false }}
-    >
+    <RootProvider search={{ enabled: false }} theme={{ enabled: false }}>
       {/*
        * The section accent, as a class on a wrapper rather than on `<html>`.
        * See `./section` for why that is now possible and what it replaces.
        */}
-      <div className={section}>
+      <div className={cn('[--fd-banner-height:--spacing(14)]', section)}>
         <DocsLayout
-          githubUrl="https://github.com/VitNode/vitnode"
-          nav={{ title: <DocsNavTitle /> }}
-          slots={{ actions: DocsActions, themeSwitch: ThemeSwitcher }}
+          searchToggle={{ enabled: false }}
+          slots={{
+            navTitle: DocsNavTitle,
+            sidebar: {
+              drawer: SidebarDrawer,
+              main: Sidebar,
+              provider: DocsSidebarProvider,
+            },
+          }}
           tabs={{
             transform(option) {
               const tab = docsSectionOf(option.url)
@@ -95,6 +87,7 @@ export const DocsShellContent = ({
               }
             },
           }}
+          themeSwitch={{ enabled: false }}
           tree={pageTree}
         >
           {children}

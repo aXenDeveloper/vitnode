@@ -32,6 +32,8 @@ Suggestions match the start of every word in the title, so `hel wor` finds "Hell
 
 Suggestions and popular items always read the Postgres `core_search_index` table, so they also work when [Elasticsearch](/docs/dev/search-elasticsearch) answers `/search`.
 
+Results that live outside the index, like your docs, can join the dialog as their own group. See [External sources](/docs/dev/search-external).
+
 ## How popularity is counted
 
 Each item gets one score, made of three signals:

@@ -1,11 +1,17 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
-import { ArrowRightIcon, ClockIcon, SearchIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  ClockIcon,
+  type LucideIcon,
+  SearchIcon,
+} from "lucide-react";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSearchTypeRenderer } from "@/views/search/registry";
@@ -27,8 +33,16 @@ import {
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE } from "../i18n/query";
 import { RouteMessages } from "../i18n/route-messages";
+import {
+  getSearchSources,
+  type SearchSource,
+  type SearchSourceItem,
+  searchSourceQueryOptions,
+} from "./sources";
 
 const HEADER_SEARCH_NAMESPACES = [GLOBAL_NAMESPACE, "core.search"];
+
+type SearchSourceLabelTranslator = (key: string) => string;
 
 const RECENT_SEARCHES_KEY = "vitnode-search-recent";
 const MAX_RECENT_SEARCHES = 5;
@@ -49,7 +63,13 @@ interface HeaderSearchItem {
 
 type HeaderSearchEntry =
   | { id: string; item: HeaderSearchItem; kind: "item" }
+  | { id: string; item: SearchSourceItem; kind: "source"; source: SearchSource }
   | { id: string; kind: "see-all" };
+
+interface SearchSourceGroup {
+  entries: Extract<HeaderSearchEntry, { kind: "source" }>[];
+  source: SearchSource;
+}
 
 const isInternalPath = (url: string): boolean =>
   url.startsWith("/") && !url.startsWith("//");
@@ -122,6 +142,46 @@ const AutoHeight = ({
   );
 };
 
+const IconThumbnail = ({ icon: Icon }: { icon: LucideIcon }) => (
+  <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-md">
+    <Icon aria-hidden className="size-4" />
+  </span>
+);
+
+const SourceItemThumbnail = ({
+  fallback: FallbackIcon,
+  item,
+}: {
+  fallback: LucideIcon;
+  item: SearchSourceItem;
+}) => {
+  if (!item.icon) return <IconThumbnail icon={FallbackIcon} />;
+
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-10 shrink-0 items-center justify-center rounded-md",
+        !item.color && "bg-muted text-muted-foreground",
+      )}
+      style={
+        item.color
+          ? {
+              backgroundColor: `color-mix(in oklab, ${item.color} 14%, transparent)`,
+              color: item.color,
+            }
+          : undefined
+      }
+    >
+      <DynamicIcon
+        className="size-4"
+        fallback={<FallbackIcon aria-hidden className="size-4" />}
+        name={item.icon}
+      />
+    </span>
+  );
+};
+
 const ItemThumbnail = ({ item }: { item: HeaderSearchItem }) => {
   if (item.image) {
     return (
@@ -135,51 +195,59 @@ const ItemThumbnail = ({ item }: { item: HeaderSearchItem }) => {
     );
   }
 
-  const Icon = getSearchTypeRenderer(item.itemType).icon;
-
-  return (
-    <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-md">
-      <Icon aria-hidden className="size-4" />
-    </span>
-  );
+  return <IconThumbnail icon={getSearchTypeRenderer(item.itemType).icon} />;
 };
 
 const ItemRow = ({
   active,
-  item,
+  context,
+  date,
+  excerpt: fullExcerpt,
   optionProps,
   pattern,
+  thumbnail,
+  title,
 }: {
   active: boolean;
-  item: HeaderSearchItem;
-  optionProps: React.LiHTMLAttributes<HTMLLIElement>;
+  context?: null | string;
+  date?: Date | string;
+  excerpt?: null | string;
+  optionProps: React.HTMLAttributes<HTMLDivElement>;
   pattern: null | RegExp;
+  thumbnail: React.ReactNode;
+  title: string;
 }) => {
   const t = useTranslations("core.search");
-  const excerpt = searchSnippetAround(item.excerpt, pattern, EXCERPT_LENGTH);
+  const excerpt = searchSnippetAround(
+    fullExcerpt ?? "",
+    pattern,
+    EXCERPT_LENGTH,
+  );
 
   return (
-    <li
+    <div
       className={cn(
         "flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2",
         active && "bg-muted",
       )}
       {...optionProps}
     >
-      <ItemThumbnail item={item} />
+      {thumbnail}
       <span className="flex min-h-10 min-w-0 flex-1 flex-col justify-center">
         <span className="flex items-baseline gap-2 text-sm">
           <span className="text-foreground min-w-0 truncate font-medium">
-            <SearchHighlightText pattern={pattern} text={item.title} />
+            <SearchHighlightText pattern={pattern} text={title} />
           </span>
-          {item.context && item.context !== item.title && (
+          {context && context !== title && (
             <span className="text-muted-foreground min-w-0 shrink truncate text-xs">
-              {t("dialog.in_context", { context: item.context })}
+              {t("dialog.in_context", { context })}
             </span>
           )}
-          <span className="text-muted-foreground ms-auto shrink-0 text-xs">
-            <DateFormat date={item.createdAt} />
-          </span>
+          {date && (
+            <span className="text-muted-foreground ms-auto shrink-0 text-xs">
+              <DateFormat date={date} />
+            </span>
+          )}
         </span>
         {excerpt && (
           <span
@@ -199,19 +267,48 @@ const ItemRow = ({
           </span>
         )}
       </span>
-    </li>
+    </div>
+  );
+};
+
+const ResultGroup = ({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) => {
+  const labelId = React.useId();
+
+  return (
+    <div
+      aria-labelledby={labelId}
+      className="flex flex-col gap-0.5"
+      role="group"
+    >
+      <div
+        className="text-muted-foreground px-2 pt-1 pb-1.5 text-xs font-medium"
+        id={labelId}
+      >
+        {label}
+      </div>
+      {children}
+    </div>
   );
 };
 
 const HeaderSearchMorph = ({
+  firstSourceId,
   onNavigate,
   open,
 }: {
+  firstSourceId?: string;
   onNavigate: (href: string) => void;
   open: boolean;
 }) => {
   const t = useTranslations("core.search");
   const tGlobal = useTranslations("core.global");
+  const tSource = useTranslations() as unknown as SearchSourceLabelTranslator;
   const locale = useLocale();
   const listId = React.useId();
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -239,25 +336,64 @@ const HeaderSearchMorph = ({
     ...searchPopularQueryOptions({ locale }),
     enabled: open,
   });
+  const sources = getSearchSources();
+  const sourceResults = useQueries({
+    queries: sources.map(source => ({
+      ...searchSourceQueryOptions({ locale, source, term: trimmedTerm }),
+      enabled: canSuggest,
+      placeholderData: canSuggest ? keepPreviousData : undefined,
+    })),
+  });
 
   const active = isSuggesting ? suggestions : popular;
   const items: HeaderSearchItem[] = (active.data ?? []).filter(item =>
     isInternalPath(item.url),
   );
+  const sourceGroups: SearchSourceGroup[] = isSuggesting
+    ? sources
+        .map((source, index) => ({
+          entries: (sourceResults[index]?.data ?? [])
+            .filter(item => isInternalPath(item.url))
+            .map(item => ({
+              id: `source-${source.id}-${item.id}`,
+              item,
+              kind: "source" as const,
+              source,
+            })),
+          source,
+        }))
+        .filter(group => group.entries.length > 0)
+    : [];
+  const leadingGroups = sourceGroups.filter(
+    group => group.source.id === firstSourceId,
+  );
+  const trailingGroups = sourceGroups.filter(
+    group => group.source.id !== firstSourceId,
+  );
+  const sourceEntries = sourceGroups.flatMap(group => group.entries);
+  const isSourcePending =
+    isSuggesting &&
+    sourceResults.some(
+      result => !result.data && (result.isFetching || !canSuggest),
+    );
   const isLoading = isSuggesting
-    ? !suggestions.data && (suggestions.isFetching || !canSuggest)
+    ? (!suggestions.data && (suggestions.isFetching || !canSuggest)) ||
+      (items.length === 0 && sourceEntries.length === 0 && isSourcePending)
     : popular.isPending;
+  const resultCount = items.length + sourceEntries.length;
   const canSeeAll = trimmedQuery.length >= MIN_SEARCH_TERM_LENGTH;
   const pattern = isSuggesting
     ? searchHighlightPattern(searchHighlightWords(trimmedTerm))
     : null;
 
   const entries: HeaderSearchEntry[] = [
+    ...leadingGroups.flatMap(group => group.entries),
     ...items.map(item => ({
       id: `item-${item.id}`,
       item,
       kind: "item" as const,
     })),
+    ...trailingGroups.flatMap(group => group.entries),
     ...(canSeeAll ? [{ id: "see-all", kind: "see-all" as const }] : []),
   ];
   const activePosition = Math.max(0, Math.min(activeIndex, entries.length - 1));
@@ -265,7 +401,7 @@ const HeaderSearchMorph = ({
 
   const completion =
     isSuggesting && query.length > 0
-      ? items.find(item =>
+      ? [...items, ...sourceEntries.map(entry => entry.item)].find(item =>
           item.title.toLowerCase().startsWith(query.toLowerCase()),
         )
       : undefined;
@@ -283,6 +419,11 @@ const HeaderSearchMorph = ({
 
     if (entry.kind === "see-all") {
       onNavigate(searchPageHref(trimmedQuery));
+
+      return;
+    }
+    if (entry.kind === "source") {
+      onNavigate(entry.item.url);
 
       return;
     }
@@ -322,7 +463,7 @@ const HeaderSearchMorph = ({
   const optionProps = (
     entry: HeaderSearchEntry,
     position: number,
-  ): React.LiHTMLAttributes<HTMLLIElement> => ({
+  ): React.HTMLAttributes<HTMLDivElement> => ({
     "aria-selected": activeEntry?.id === entry.id,
     id: `${listId}-${optionId(entry.id)}`,
     onClick: () => select(entry),
@@ -333,6 +474,29 @@ const HeaderSearchMorph = ({
   const showRecent = !isSuggesting && recent.length > 0;
   const expanded =
     isLoading || entries.length > 0 || isSuggesting || active.isError;
+  const positionOf = (entry: HeaderSearchEntry) => entries.indexOf(entry);
+
+  const renderSourceGroup = (group: SearchSourceGroup) => (
+    <ResultGroup key={group.source.id} label={tSource(group.source.labelKey)}>
+      {group.entries.map(entry => (
+        <ItemRow
+          active={activeEntry?.id === entry.id}
+          context={entry.item.context}
+          excerpt={entry.item.excerpt}
+          key={entry.id}
+          optionProps={optionProps(entry, positionOf(entry))}
+          pattern={pattern}
+          thumbnail={
+            <SourceItemThumbnail
+              fallback={group.source.icon}
+              item={entry.item}
+            />
+          }
+          title={entry.item.title}
+        />
+      ))}
+    </ResultGroup>
+  );
 
   return (
     <div className="bg-popover text-popover-foreground ring-foreground/10 overflow-hidden rounded-2xl shadow-2xl ring-1">
@@ -380,7 +544,7 @@ const HeaderSearchMorph = ({
       </div>
 
       <div aria-live="polite" className="sr-only">
-        {isLoading ? t("loading") : t("dialog.count", { count: items.length })}
+        {isLoading ? t("loading") : t("dialog.count", { count: resultCount })}
       </div>
 
       {showRecent && (
@@ -417,50 +581,67 @@ const HeaderSearchMorph = ({
                 </div>
               ))}
             </div>
-          ) : items.length === 0 ? (
-            <p className="text-muted-foreground px-3 py-6 text-center text-sm leading-relaxed text-pretty">
-              {active.isError
-                ? t("dialog.error")
-                : isSuggesting
-                  ? t("dialog.no_results")
-                  : t("dialog.popular_empty")}
-            </p>
           ) : (
-            <p className="text-muted-foreground px-2 pt-1 pb-1.5 text-xs font-medium">
-              {isSuggesting ? t("dialog.suggestions") : t("dialog.popular")}
-            </p>
+            resultCount === 0 && (
+              <p className="text-muted-foreground px-3 py-6 text-center text-sm leading-relaxed text-pretty">
+                {active.isError
+                  ? t("dialog.error")
+                  : isSuggesting
+                    ? t("dialog.no_results")
+                    : t("dialog.popular_empty")}
+              </p>
+            )
           )}
-          <ul
+          <div
             aria-label={t("dialog.label")}
-            className="flex flex-col gap-0.5"
+            className="flex flex-col gap-2"
             id={listId}
             role="listbox"
           >
+            {!isLoading && leadingGroups.map(renderSourceGroup)}
+            {!isLoading && items.length > 0 && (
+              <ResultGroup
+                label={
+                  isSuggesting ? t("dialog.suggestions") : t("dialog.popular")
+                }
+              >
+                {entries.map(
+                  entry =>
+                    entry.kind === "item" && (
+                      <ItemRow
+                        active={activeEntry?.id === entry.id}
+                        context={entry.item.context}
+                        date={entry.item.createdAt}
+                        excerpt={entry.item.excerpt}
+                        key={entry.id}
+                        optionProps={optionProps(entry, positionOf(entry))}
+                        pattern={pattern}
+                        thumbnail={<ItemThumbnail item={entry.item} />}
+                        title={entry.item.title}
+                      />
+                    ),
+                )}
+              </ResultGroup>
+            )}
+            {!isLoading && trailingGroups.map(renderSourceGroup)}
             {!isLoading &&
-              entries.map((entry, position) =>
-                entry.kind === "item" ? (
-                  <ItemRow
-                    active={activeEntry?.id === entry.id}
-                    item={entry.item}
-                    key={entry.id}
-                    optionProps={optionProps(entry, position)}
-                    pattern={pattern}
-                  />
-                ) : (
-                  <li
-                    className={cn(
-                      "text-primary flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
-                      activeEntry?.id === entry.id && "bg-muted",
-                    )}
-                    key={entry.id}
-                    {...optionProps(entry, position)}
-                  >
-                    <ArrowRightIcon aria-hidden className="size-4" />
-                    {t("dialog.see_all", { term: trimmedQuery })}
-                  </li>
-                ),
+              entries.map(
+                entry =>
+                  entry.kind === "see-all" && (
+                    <div
+                      className={cn(
+                        "text-primary flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
+                        activeEntry?.id === entry.id && "bg-muted",
+                      )}
+                      key={entry.id}
+                      {...optionProps(entry, positionOf(entry))}
+                    >
+                      <ArrowRightIcon aria-hidden className="size-4" />
+                      {t("dialog.see_all", { term: trimmedQuery })}
+                    </div>
+                  ),
               )}
-          </ul>
+          </div>
         </div>
       </AutoHeight>
 
@@ -486,13 +667,26 @@ const HeaderSearchMorph = ({
 };
 
 export const HeaderSearchContent = ({
+  firstSourceId,
   onNavigate,
   open,
 }: {
+  firstSourceId?: string;
   onNavigate: (href: string) => void;
   open: boolean;
 }) => (
-  <RouteMessages namespaces={HEADER_SEARCH_NAMESPACES}>
-    <HeaderSearchMorph onNavigate={onNavigate} open={open} />
+  <RouteMessages
+    namespaces={[
+      ...new Set([
+        ...HEADER_SEARCH_NAMESPACES,
+        ...getSearchSources().map(source => source.namespace),
+      ]),
+    ]}
+  >
+    <HeaderSearchMorph
+      firstSourceId={firstSourceId}
+      onNavigate={onNavigate}
+      open={open}
+    />
   </RouteMessages>
 );

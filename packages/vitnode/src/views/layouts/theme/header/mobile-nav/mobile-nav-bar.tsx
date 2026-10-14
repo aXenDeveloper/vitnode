@@ -11,12 +11,9 @@ import {
 
 import type { HeaderNavChildItem, HeaderNavItem } from "../header-nav";
 
+import { useIsNavHrefActive } from "../use-is-nav-href-active";
 import { MobileNavLinks } from "./mobile-nav-links";
-import {
-  MobileNavIcon,
-  MobileNavLink,
-  useIsMobileNavHrefActive,
-} from "./mobile-nav-parts";
+import { MobileNavIcon, MobileNavLink } from "./mobile-nav-parts";
 
 const BODY_CLEARANCE_CSS = `@media (width < 40rem){body:has([data-slot="mobile-nav"]){padding-bottom:calc(4.75rem + max(env(safe-area-inset-bottom, 0px), 0.75rem))}}`;
 
@@ -79,7 +76,7 @@ export const MobileNavBar = ({
   menuNavigation: HeaderNavItem[];
 }) => {
   const t = useTranslations("core.global.mobile_nav");
-  const isActive = useIsMobileNavHrefActive();
+  const isActive = useIsNavHrefActive();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   const hasMenu = menuNavigation.length > 0;

@@ -16,12 +16,14 @@ import {
   pluginRouteSpecs,
   withVitNodeRoutes,
 } from '@vitnode/core/tanstack/plugin-routes'
+import { configureSearchSources } from '@vitnode/core/tanstack/search'
 import { navigationViewTransition } from '@vitnode/core/tanstack/view-transitions'
 
 // Imported for its side effect: this module calls `configureIntl`, which is
 // what registers the locale rules every route's redirects are rewritten by.
 import './lib/i18n'
 import { dehydrateDocsPage, hydrateDocsPage } from './docs/hydration'
+import { docsSearchSource } from './docs/search-source'
 import { pluginRouteSources } from './plugin-routes.gen'
 import { Route as adminShellRoute } from './routes/_admin'
 import { Route as mainShellRoute } from './routes/_main'
@@ -31,6 +33,8 @@ import { vitNodeConfig } from './vitnode.config'
 configureContentRegistry(
   async () => (await import('@/content-registry.gen')).contentRegistry,
 )
+
+configureSearchSources([docsSearchSource])
 
 const routeTree = withVitNodeRoutes(
   fileRouteTree,

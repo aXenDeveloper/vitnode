@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import React from "react";
 
@@ -7,14 +7,6 @@ import { parseEmojiIcon } from "@/lib/emoji-icon";
 import { isExternalNavigationHref } from "@/lib/navigation";
 
 import type { HeaderNavChildItem } from "../header-nav";
-
-export const useIsMobileNavHrefActive = () => {
-  const matchRoute = useMatchRoute();
-
-  return (href: string): boolean =>
-    !isExternalNavigationHref(href) &&
-    Boolean(matchRoute({ fuzzy: href !== "/", to: href }));
-};
 
 export const MobileNavIcon = ({
   className,

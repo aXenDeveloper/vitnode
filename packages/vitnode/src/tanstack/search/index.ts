@@ -20,6 +20,12 @@ export {
 export type { SearchLoaderContext, SearchRouteData } from "./search-route";
 export { loadSearchRoute, SEARCH_NAMESPACES } from "./search-route";
 export { SearchRouteContent } from "./search-screen";
+export type {
+  SearchSource,
+  SearchSourceItem,
+  SearchSourceQuery,
+} from "./sources";
+export { configureSearchSources } from "./sources";
 export { useRecordView } from "./use-record-view";
 
 export type {
