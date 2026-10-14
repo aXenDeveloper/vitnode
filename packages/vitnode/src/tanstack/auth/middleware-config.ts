@@ -62,14 +62,13 @@ const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
 /** Everything a middleware-configuration cache entry's key starts with. */
 const MIDDLEWARE_QUERY_KEY = ["vitnode", "middleware"] as const;
 
-const MIDDLEWARE_STALE_TIME = 300_000;
-
 export const middlewareConfigQueryOptions = () =>
   queryOptions({
+    gcTime: Infinity,
     queryFn: async () => await fetchMiddlewareConfig(),
     queryKey: MIDDLEWARE_QUERY_KEY,
     refetchOnMount: query => (query.state.data?.isKnown ? true : "always"),
-    staleTime: query => (query.state.data?.isKnown ? MIDDLEWARE_STALE_TIME : 0),
+    staleTime: query => (query.state.data?.isKnown ? Infinity : 0),
   });
 
 export const loadMiddlewareConfig = async (
