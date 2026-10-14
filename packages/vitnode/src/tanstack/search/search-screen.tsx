@@ -17,7 +17,7 @@ export const SearchRouteContent = ({
 
   return (
     <RouteMessages namespaces={SEARCH_NAMESPACES}>
-      <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
+      <div className="container mx-auto flex max-w-6xl flex-col gap-6 p-4">
         <PageTitle desc={description} h1={title} />
 
         <SearchControlsContent

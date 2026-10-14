@@ -2,7 +2,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import React from "react";
-import { useFormatter, useTranslations } from "use-intl";
+import {
+  useFormatter,
+  useLocale,
+  useNow,
+  useTimeZone,
+  useTranslations,
+} from "use-intl";
 import { z } from "zod";
 
 import { Avatar } from "@/components/avatar";
@@ -11,6 +17,7 @@ import { HiddenIcon } from "@/components/hidden-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { userProfileHref } from "@/components/user-format";
@@ -288,15 +295,17 @@ const ActivitySentence = ({
 const ActivityBody = ({
   className,
   item,
+  overlayClassName = CARD_OVERLAY_LINK,
   snippet,
 }: {
   className?: string;
   item: SearchResultItem;
+  overlayClassName?: string;
   snippet: string;
 }) => {
   if (item.url && !snippet) {
     return (
-      <ResultLink className={CARD_OVERLAY_LINK} href={item.url}>
+      <ResultLink className={overlayClassName} href={item.url}>
         <span className="sr-only">{item.title}</span>
       </ResultLink>
     );
@@ -307,7 +316,7 @@ const ActivityBody = ({
     <ResultLink
       className={cn(
         "text-foreground leading-relaxed",
-        CARD_OVERLAY_LINK,
+        overlayClassName,
         className,
       )}
       href={item.url}
@@ -327,108 +336,448 @@ const DraftBadge = () => {
   return <Badge variant="warning">{t("draft")}</Badge>;
 };
 
-const TimelineItem = ({
+const DAY_MS = 86_400_000;
+
+const SURFACE = "bg-card rounded-xl shadow-xs ring-1 ring-foreground/8";
+
+const CARD_OVERLAY_LINK_XL =
+  "after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring";
+
+const dateOf = (item: SearchResultItem): Date =>
+  typeof item.createdAt === "string"
+    ? new Date(item.createdAt)
+    : item.createdAt;
+
+const useDayKey = () => {
+  const timeZone = useTimeZone();
+  const formatter = React.useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-CA", {
+        day: "2-digit",
+        month: "2-digit",
+        timeZone,
+        year: "numeric",
+      }),
+    [timeZone],
+  );
+
+  return (date: Date) => formatter.format(date);
+};
+
+const dayKeyDate = (key: string) =>
+  new Date(`${key.length === 7 ? `${key}-15` : key}T12:00:00Z`);
+
+const groupConsecutive = <T,>(
+  items: readonly T[],
+  keyOf: (item: T) => string,
+) => {
+  const groups: { items: T[]; key: string }[] = [];
+
+  for (const item of items) {
+    const key = keyOf(item);
+    const last = groups.at(-1);
+    if (last?.key === key) last.items.push(item);
+    else groups.push({ items: [item], key });
+  }
+
+  return groups;
+};
+
+const useDayHeading = (todayKey: string) => {
+  const locale = useLocale();
+  const format = useFormatter();
+
+  return (key: string) => {
+    const diff = Math.round(
+      (dayKeyDate(todayKey).getTime() - dayKeyDate(key).getTime()) / DAY_MS,
+    );
+
+    if (diff === 0 || diff === 1) {
+      const word = new Intl.RelativeTimeFormat(locale, {
+        numeric: "auto",
+      }).format(-diff, "day");
+
+      return word.charAt(0).toLocaleUpperCase(locale) + word.slice(1);
+    }
+
+    return format.dateTime(dayKeyDate(key), {
+      day: "numeric",
+      month: "long",
+      weekday: "long",
+    });
+  };
+};
+
+const DayTile = ({ date, isToday }: { date: Date; isToday: boolean }) => {
+  const format = useFormatter();
+
+  return (
+    <time
+      className={cn(
+        "bg-card flex w-12 shrink-0 flex-col items-center rounded-xl pt-1.5 pb-1 shadow-sm",
+        isToday ? "ring-destructive/60 ring-2" : "ring-foreground/8 ring-1",
+      )}
+      dateTime={date.toISOString().slice(0, 10)}
+    >
+      <span
+        className={cn(
+          "text-xs leading-none font-semibold tracking-wide uppercase",
+          FEEDBACK_TONE_TEXT.destructive,
+        )}
+      >
+        {format.dateTime(date, { weekday: "short" })}
+      </span>
+      <span className="text-foreground text-2xl leading-tight font-medium tabular-nums">
+        {format.dateTime(date, { day: "numeric" })}
+      </span>
+    </time>
+  );
+};
+
+const RailNode = ({ itemType }: { itemType: string }) => {
+  const t = useTranslations("core.search");
+  const renderer = getSearchTypeRenderer(itemType);
+  const Icon = renderer.icon;
+
+  return (
+    <TooltipWithContent text={t(renderer.labelKey)}>
+      <span className="bg-card text-muted-foreground ring-foreground/8 flex size-9 shrink-0 items-center justify-center rounded-full shadow-xs ring-1">
+        <Icon aria-hidden className="size-4" />
+      </span>
+    </TooltipWithContent>
+  );
+};
+
+const CardMeta = ({
+  children,
   item,
-  isLast,
 }: {
-  isLast: boolean;
+  children?: React.ReactNode;
   item: SearchResultItem;
 }) => {
   const t = useTranslations("core.search");
-  const renderer = getSearchTypeRenderer(item.itemType);
-  const Icon = renderer.icon;
-  const snippet = getSnippet(item.content);
-  const authors = authorsOf(item);
-  const activity = activityOf(item);
 
-  const activityContent = activity ? (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        {authors.length > 0 && <AuthorAvatars authors={authors} />}
-        <ActivitySentence activity={activity} authors={authors} item={item} />
-        <span aria-hidden className="max-sm:hidden">
-          ·
-        </span>
-        <DateFormat date={item.createdAt} />
-        <ItemHiddenIcon
-          className="relative z-10 size-4"
-          focusable
-          item={item}
-        />
-        {!item.isPublic && !item.isHidden && <DraftBadge />}
-      </div>
-      <ActivityBody className="text-base" item={item} snippet={snippet} />
+  return (
+    <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      <span className="text-foreground font-medium">
+        {t(getSearchTypeRenderer(item.itemType).labelKey)}
+      </span>
+      {children}
+      <DateFormat date={item.createdAt} />
+      <ItemHiddenIcon className="relative z-10 size-4" focusable item={item} />
+      {!item.isPublic && !item.isHidden && <DraftBadge />}
+    </div>
+  );
+};
+
+const CardTitle = ({
+  className,
+  item,
+}: {
+  className: string;
+  item: SearchResultItem;
+}) => (
+  <h3 className={cn("text-foreground leading-snug font-semibold", className)}>
+    {item.url ? (
+      <ResultLink className={CARD_OVERLAY_LINK_XL} href={item.url}>
+        {item.title}
+      </ResultLink>
+    ) : (
+      item.title
+    )}
+  </h3>
+);
+
+const visibleAuthorsOf = (
+  item: SearchResultItem,
+  ownerId?: number,
+): SearchResultAuthor[] => {
+  const authors = authorsOf(item);
+  const [only] = authors;
+
+  return ownerId !== undefined && authors.length === 1 && only?.id === ownerId
+    ? []
+    : authors;
+};
+
+const CardAuthors = ({ authors }: { authors: SearchResultAuthor[] }) =>
+  authors.length > 0 ? (
+    <div className="text-muted-foreground flex min-w-0 items-center gap-2 pt-1 text-sm">
+      <AuthorAvatars authors={authors} />
+      <span className="truncate">
+        <AuthorNames authors={authors} />
+      </span>
     </div>
   ) : null;
 
-  const content = (
-    <>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          {authors.length > 0 && (
-            <>
-              <span className="flex min-w-0 items-center gap-2 max-sm:basis-full">
-                <AuthorAvatars authors={authors} />
-                <AuthorNames authors={authors} />
-              </span>
-              <span aria-hidden className="max-sm:hidden">
-                ·
-              </span>
-            </>
-          )}
-          <DateFormat date={item.createdAt} />
-          {!item.isPublic && !item.isHidden && <DraftBadge />}
-        </div>
-        <h3 className="flex items-center gap-2 text-xl leading-tight font-bold">
-          <ItemHiddenIcon
-            className="size-5"
-            focusable={!item.url}
-            item={item}
-          />
-          {item.title}
-        </h3>
-        {snippet && <p className="text-muted-foreground">{snippet}</p>}
+const cardSurface = (item: SearchResultItem, className: string) =>
+  cn(
+    SURFACE,
+    "relative min-w-0 flex-1",
+    item.url && "hover:ring-foreground/15 transition-shadow",
+    item.isHidden && "opacity-70",
+    className,
+  );
+
+const ArticleCard = ({
+  item,
+  ownerId,
+}: {
+  item: SearchResultItem;
+  ownerId?: number;
+}) => {
+  const snippet = getSnippet(item.content);
+
+  return (
+    <article className={cardSurface(item, "flex flex-col overflow-hidden")}>
+      {item.image && (
+        <img
+          alt=""
+          className="bg-muted h-32 w-full object-cover sm:h-44"
+          decoding="async"
+          height={item.image.height}
+          loading="lazy"
+          src={item.image.url}
+          width={item.image.width}
+        />
+      )}
+      <div className="flex flex-col gap-2 p-4 sm:p-5">
+        <CardMeta item={item} />
+        <CardTitle className="text-xl text-balance" item={item} />
+        {snippet && (
+          <p className="text-muted-foreground line-clamp-3 leading-relaxed text-pretty">
+            {snippet}
+          </p>
+        )}
+        <CardAuthors authors={visibleAuthorsOf(item, ownerId)} />
       </div>
-      <ResultImage image={item.image} />
-    </>
+    </article>
+  );
+};
+
+const TopicCard = ({
+  activity,
+  item,
+  ownerId,
+}: {
+  activity: SearchActivity;
+  item: SearchResultItem;
+  ownerId?: number;
+}) => {
+  const t = useTranslations("core.search");
+  const snippet = getSnippet(item.content);
+
+  return (
+    <article className={cardSurface(item, "flex gap-4 p-4")}>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <CardMeta item={item}>
+          <span className="min-w-0 truncate">
+            {t.rich("timeline.in_context", {
+              context: activity.context.title,
+              target: chunks => (
+                <ActivityLink href={activity.context.url}>
+                  {chunks}
+                </ActivityLink>
+              ),
+            })}
+          </span>
+        </CardMeta>
+        <CardTitle className="text-lg text-pretty" item={item} />
+        {snippet && (
+          <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
+            {snippet}
+          </p>
+        )}
+        <CardAuthors authors={visibleAuthorsOf(item, ownerId)} />
+      </div>
+      {item.image && (
+        <img
+          alt=""
+          className="bg-muted size-14 shrink-0 rounded-lg object-cover outline-1 -outline-offset-1 outline-black/10 sm:h-24 sm:w-32 dark:outline-white/10"
+          decoding="async"
+          loading="lazy"
+          src={item.image.url}
+        />
+      )}
+    </article>
+  );
+};
+
+const CommentCard = ({
+  activity,
+  item,
+  ownerId,
+}: {
+  activity: SearchActivity;
+  item: SearchResultItem;
+  ownerId?: number;
+}) => {
+  const t = useTranslations("core.search");
+  const snippet = getSnippet(item.content);
+  const authors = visibleAuthorsOf(item, ownerId);
+
+  return (
+    <article className={cardSurface(item, "flex flex-col gap-2 p-4")}>
+      <CardMeta item={item} />
+      <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-sm">
+        {authors.length > 0 && <AuthorAvatars authors={authors} />}
+        <p className="line-clamp-2 min-w-0">
+          {authors.length > 0 ? (
+            <ActivitySentence
+              activity={activity}
+              authors={authors}
+              item={item}
+            />
+          ) : (
+            t.rich("activity.commented_self", {
+              context: activity.context.title,
+              target: chunks => (
+                <ActivityLink href={activity.context.url}>
+                  {chunks}
+                </ActivityLink>
+              ),
+            })
+          )}
+        </p>
+      </div>
+      {snippet ? (
+        <div className="border-border border-s-2 ps-3">
+          <ActivityBody
+            className="line-clamp-3"
+            item={item}
+            overlayClassName={CARD_OVERLAY_LINK_XL}
+            snippet={snippet}
+          />
+        </div>
+      ) : (
+        <ActivityBody
+          item={item}
+          overlayClassName={CARD_OVERLAY_LINK_XL}
+          snippet={snippet}
+        />
+      )}
+    </article>
+  );
+};
+
+const TimelineCard = ({
+  item,
+  ownerId,
+}: {
+  item: SearchResultItem;
+  ownerId?: number;
+}) => {
+  const activity = activityOf(item);
+
+  if (activity?.key === "activity.commented") {
+    return <CommentCard activity={activity} item={item} ownerId={ownerId} />;
+  }
+  if (activity) {
+    return <TopicCard activity={activity} item={item} ownerId={ownerId} />;
+  }
+
+  return <ArticleCard item={item} ownerId={ownerId} />;
+};
+
+const SearchTimeline = ({
+  items,
+  ownerId,
+}: {
+  items: SearchResultItem[];
+  ownerId?: number;
+}) => {
+  const t = useTranslations("core.search");
+  const format = useFormatter();
+  const dayKey = useDayKey();
+  const todayKey = dayKey(useNow({ updateInterval: 60_000 }));
+  const dayHeading = useDayHeading(todayKey);
+  const months = groupConsecutive(items, item =>
+    dayKey(dateOf(item)).slice(0, 7),
   );
 
   return (
-    <li className="flex gap-4">
-      <div className="flex flex-col items-center gap-2">
-        <TooltipWithContent text={t(renderer.labelKey)}>
-          <span className="bg-muted/50 text-foreground flex size-10 shrink-0 items-center justify-center rounded-lg border shadow-sm">
-            <Icon className="size-4" />
-          </span>
-        </TooltipWithContent>
-        {!isLast && <span className="bg-border w-px grow" />}
-      </div>
+    <div className="flex flex-col gap-10">
+      {months.map((month, monthIndex) => {
+        const days = groupConsecutive(month.items, item =>
+          dayKey(dateOf(item)),
+        );
+        const headingId = `search-month-${month.key}`;
 
-      <div className={cn("min-w-0 flex-1", !isLast && "pb-8")}>
-        {activityContent ? (
-          <div
-            className={cn(
-              "relative flex flex-col-reverse gap-3 rounded-lg border p-4 sm:flex-row sm:items-start",
-              item.url && "hover:bg-muted/50 transition-colors",
-            )}
+        return (
+          <section
+            aria-labelledby={headingId}
+            className="flex flex-col gap-4"
+            key={month.key}
           >
-            {activityContent}
-            <ResultImage image={item.image} />
-          </div>
-        ) : item.url ? (
-          <ResultLink
-            className="hover:bg-muted/50 flex flex-col-reverse gap-3 rounded-lg border p-4 transition-colors sm:flex-row sm:items-start"
-            href={item.url}
-          >
-            {content}
-          </ResultLink>
-        ) : (
-          <div className="flex flex-col-reverse gap-3 rounded-lg border p-4 sm:flex-row sm:items-start">
-            {content}
-          </div>
-        )}
-      </div>
-    </li>
+            <h2 className="text-xl font-semibold" id={headingId}>
+              {format.dateTime(dayKeyDate(month.key), {
+                month: "long",
+                year: "numeric",
+              })}
+            </h2>
+            <ol className="flex flex-col">
+              {days.map((day, dayIndex) => (
+                <li className="flex flex-col" key={day.key}>
+                  <div className="flex gap-3 sm:gap-4">
+                    <div className="flex w-12 shrink-0 flex-col items-center">
+                      {dayIndex > 0 && (
+                        <span aria-hidden className="bg-border h-4 w-px" />
+                      )}
+                      <DayTile
+                        date={dayKeyDate(day.key)}
+                        isToday={day.key === todayKey}
+                      />
+                    </div>
+                    <p
+                      className={cn(
+                        "flex items-center gap-2 text-sm",
+                        dayIndex > 0 && "pt-4",
+                      )}
+                    >
+                      <span className="text-foreground font-medium">
+                        {dayHeading(day.key)}
+                      </span>
+                      <span className="text-muted-foreground tabular-nums">
+                        · {t("timeline.items", { count: day.items.length })}
+                      </span>
+                    </p>
+                  </div>
+                  <ol className="flex flex-col">
+                    {day.items.map((item, itemIndex) => {
+                      const isLast =
+                        monthIndex === months.length - 1 &&
+                        dayIndex === days.length - 1 &&
+                        itemIndex === day.items.length - 1;
+
+                      return (
+                        <li
+                          className="flex gap-3 sm:gap-4"
+                          key={`${item.itemType}-${item.itemId}`}
+                        >
+                          <div className="flex w-12 shrink-0 flex-col items-center">
+                            <span aria-hidden className="bg-border h-4 w-px" />
+                            <RailNode itemType={item.itemType} />
+                            {!isLast && (
+                              <span
+                                aria-hidden
+                                className="bg-border w-px grow"
+                              />
+                            )}
+                          </div>
+                          <div className="flex min-w-0 flex-1 pt-4">
+                            <TimelineCard item={item} ownerId={ownerId} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </li>
+              ))}
+            </ol>
+          </section>
+        );
+      })}
+    </div>
   );
 };
 
@@ -514,9 +863,11 @@ export interface SearchFeedListQuery {
 }
 
 export const SearchFeedList = ({
+  ownerId,
   query: { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading },
   variant = "list",
 }: {
+  ownerId?: number;
   query: SearchFeedListQuery;
   variant?: SearchFeedVariant;
 }) => {
@@ -574,17 +925,8 @@ export const SearchFeedList = ({
 
   if (variant === "timeline") {
     return (
-      <div className="flex flex-col gap-4">
-        <ol className="flex flex-col">
-          {items.map((item, index) => (
-            <TimelineItem
-              isLast={index === items.length - 1}
-              item={item}
-              key={`${item.itemType}-${item.itemId}`}
-            />
-          ))}
-        </ol>
-
+      <div className="flex flex-col gap-6">
+        <SearchTimeline items={items} ownerId={ownerId} />
         {loadMore}
       </div>
     );

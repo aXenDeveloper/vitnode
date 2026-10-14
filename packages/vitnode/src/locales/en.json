@@ -90,7 +90,8 @@
       },
       "activity": {
         "commented": "<profile>{author}</profile> commented on <target>{context}</target>",
-        "posted_in": "<profile>{author}</profile> posted <link>{item}</link> in <target>{context}</target>"
+        "posted_in": "<profile>{author}</profile> posted <link>{item}</link> in <target>{context}</target>",
+        "commented_self": "Commented on <target>{context}</target>"
       },
       "types": {
         "blog_post": "Article",
@@ -161,6 +162,39 @@
           "empty": "No collections found",
           "emptyDesc": "No collection matches your search. Try a different term."
         }
+      },
+      "searchField": "Search posts, topics and comments…",
+      "clearSearch": "Clear search",
+      "results": "{count, plural, one {# result} other {# results}}",
+      "filters": {
+        "title": "Filters",
+        "active": "{count, plural, one {# filter on} other {# filters on}}",
+        "clearAll": "Clear all",
+        "reset": "Reset",
+        "content": "Content",
+        "date": "Date created",
+        "authors": "Authors",
+        "anyAuthor": "Any author",
+        "addAuthor": "Add",
+        "findAuthor": "Find an author",
+        "noAuthors": "No authors match “{term}”.",
+        "loadingAuthors": "Looking for authors…",
+        "removeAuthor": "Remove {name}",
+        "pickDates": "Pick a start and end day",
+        "done": "Done",
+        "customRange": "Custom range, {range}"
+      },
+      "range": {
+        "all": "Any time",
+        "day": "Past 24 hours",
+        "week": "Past week",
+        "month": "Past month",
+        "year": "Past year",
+        "custom": "Custom range"
+      },
+      "timeline": {
+        "items": "{count, plural, one {# item} other {# items}}",
+        "in_context": "in <target>{context}</target>"
       }
     },
     "global": {

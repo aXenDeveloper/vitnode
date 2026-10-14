@@ -2768,7 +2768,8 @@
       "title": "Szukaj",
       "activity": {
         "commented": "<profile>{author}</profile> dodaje komentarz w <target>{context}</target>",
-        "posted_in": "<profile>{author}</profile> publikuje <link>{item}</link> w <target>{context}</target>"
+        "posted_in": "<profile>{author}</profile> publikuje <link>{item}</link> w <target>{context}</target>",
+        "commented_self": "Dodaje komentarz w <target>{context}</target>"
       },
       "types": {
         "blog_post": "Wpis",
@@ -2779,6 +2780,39 @@
       "userTab": {
         "overview": "Przegląd",
         "timeline": "Oś czasu"
+      },
+      "searchField": "Szukaj wpisów, tematów i komentarzy…",
+      "clearSearch": "Wyczyść wyszukiwanie",
+      "results": "{count, plural, one {# wynik} few {# wyniki} many {# wyników} other {# wyniku}}",
+      "filters": {
+        "title": "Filtry",
+        "active": "{count, plural, one {# aktywny filtr} few {# aktywne filtry} many {# aktywnych filtrów} other {# aktywnego filtra}}",
+        "clearAll": "Wyczyść wszystko",
+        "reset": "Resetuj",
+        "content": "Treść",
+        "date": "Data utworzenia",
+        "authors": "Autorzy",
+        "anyAuthor": "Dowolny autor",
+        "addAuthor": "Dodaj",
+        "findAuthor": "Znajdź autora",
+        "noAuthors": "Brak autorów pasujących do „{term}”.",
+        "loadingAuthors": "Szukanie autorów…",
+        "removeAuthor": "Usuń {name}",
+        "pickDates": "Wybierz dzień początkowy i końcowy",
+        "done": "Gotowe",
+        "customRange": "Własny zakres, {range}"
+      },
+      "range": {
+        "all": "Kiedykolwiek",
+        "day": "Ostatnie 24 godziny",
+        "week": "Ostatni tydzień",
+        "month": "Ostatni miesiąc",
+        "year": "Ostatni rok",
+        "custom": "Własny zakres"
+      },
+      "timeline": {
+        "items": "{count, plural, one {# element} few {# elementy} many {# elementów} other {# elementu}}",
+        "in_context": "w <target>{context}</target>"
       }
     },
     "notifications": {

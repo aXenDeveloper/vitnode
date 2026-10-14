@@ -1,4 +1,3 @@
-import { requestHandler } from "@tanstack/react-start/server";
 import {
   afterEach,
   aroundEach,
@@ -8,6 +7,8 @@ import {
   it,
   vi,
 } from "vitest";
+
+import { runInStartRequest } from "@/tests/start-request";
 
 import {
   createContentInBrowser,
@@ -66,17 +67,9 @@ const uniqueConflict = JSON.stringify({
   itemId: 7,
 });
 
-const insideStartRequest = async (
-  runTest: () => Promise<void>,
-): Promise<void> => {
-  await requestHandler(async () => {
-    await runTest();
-
-    return new Response(null, { status: 204 });
-  })(new Request(`${API_ORIGIN}/admin/content/posts`), undefined);
-};
-
-aroundEach(insideStartRequest);
+aroundEach(async runTest => {
+  await runInStartRequest(`${API_ORIGIN}/admin/content/posts`, runTest);
+});
 
 beforeEach(() => {
   respond = () => new Response(null, { status: 200 });

@@ -1,5 +1,4 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { requestHandler } from "@tanstack/react-start/server";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { IntlProvider } from "use-intl";
@@ -20,6 +19,7 @@ import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
 import { defineContentType } from "@/content/define";
 import { field } from "@/content/fields";
+import { runInStartRequest } from "@/tests/start-request";
 
 import type { ContentDuplicatedRecord } from "./row-actions";
 
@@ -116,11 +116,7 @@ const mount = ({
 const API_ORIGIN = "http://api.test";
 
 aroundEach(async runTest => {
-  await requestHandler(async () => {
-    await runTest();
-
-    return new Response(null, { status: 204 });
-  })(new Request(`${API_ORIGIN}/admin/content/blog/articles`), undefined);
+  await runInStartRequest(`${API_ORIGIN}/admin/content/blog/articles`, runTest);
 });
 
 beforeEach(() => {

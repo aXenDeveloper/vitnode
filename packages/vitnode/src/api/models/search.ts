@@ -1,6 +1,16 @@
 import type { Context } from "hono";
 
-import { and, eq, inArray } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  ilike,
+  inArray,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { ContentId } from "@/content/ids";
@@ -12,6 +22,7 @@ import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
 import { core_search_index } from "@/database/search";
 import { core_users } from "@/database/users";
+import { containsLikePattern } from "@/lib/api/like-pattern";
 import { parseImageDimensions } from "@/lib/api/upload";
 import { stripHtml } from "@/lib/strip-html";
 
@@ -44,6 +55,7 @@ export interface SearchDocument {
 
 export interface SearchQueryParams {
   authorId?: number;
+  authorIds?: readonly number[];
   containerId?: number;
   cursor?: string;
   dateFrom?: Date;
@@ -281,6 +293,10 @@ export interface SearchProviderApiPlugin {
     c: Context,
     args: { itemType: string; languageCode?: string },
   ) => Promise<number>;
+  countByType?: (
+    c: Context,
+    params: SearchQueryParams,
+  ) => Promise<Record<string, number>>;
   /**
    * Removes one item's documents.
    *
@@ -490,6 +506,114 @@ export class SearchModel {
       });
   }
 
+  private withFallbacks(params: SearchQueryParams): SearchQueryParams {
+    const languageFallbacks = params.languageCode
+      ? searchLanguageFallbacks(
+          this.c.get("core").contentTypes,
+          params.languageCode,
+        )
+      : [];
+
+    return languageFallbacks.length > 0
+      ? { ...params, languageFallbacks }
+      : params;
+  }
+
+  async authors({
+    limit,
+    term,
+  }: {
+    limit: number;
+    term?: string;
+  }): Promise<SearchHitAuthor[]> {
+    const db = this.c.get("db");
+    const listed = and(
+      eq(core_search_index.isPublic, true),
+      eq(core_search_index.isHidden, false),
+    );
+    const columns = {
+      id: core_users.id,
+      name: core_users.name,
+      nameCode: core_users.nameCode,
+      avatarColor: core_users.avatarColor,
+      avatarKey: authorAvatarFile.key,
+    };
+    const toAuthor = ({
+      avatarKey,
+      ...row
+    }: Omit<SearchHitAuthor, "avatarUrl"> & {
+      avatarKey: null | string;
+    }): SearchHitAuthor => ({
+      ...row,
+      avatarUrl: storageUrlOf(this.c, avatarKey),
+    });
+
+    if (term) {
+      const rows = await db
+        .select(columns)
+        .from(core_users)
+        .leftJoin(
+          authorAvatarFile,
+          eq(authorAvatarFile.id, core_users.avatarId),
+        )
+        .where(
+          and(
+            ilike(core_users.name, containsLikePattern(term)),
+            exists(
+              db
+                .select({ id: core_search_index.id })
+                .from(core_search_index)
+                .where(
+                  and(
+                    listed,
+                    sql`${core_search_index.authorIds} @> ARRAY[${core_users.id}]::integer[]`,
+                  ),
+                ),
+            ),
+          ),
+        )
+        .orderBy(asc(core_users.name))
+        .limit(limit);
+
+      return rows.map(toAuthor);
+    }
+
+    const activity = db
+      .select({
+        authorId: sql<number>`unnest(${core_search_index.authorIds})`.as(
+          "author_id",
+        ),
+      })
+      .from(core_search_index)
+      .where(listed)
+      .as("activity");
+    const top = await db
+      .select({ authorId: activity.authorId, total: count() })
+      .from(activity)
+      .groupBy(activity.authorId)
+      .orderBy(desc(count()), asc(activity.authorId))
+      .limit(limit);
+    if (top.length === 0) return [];
+
+    const rows = await db
+      .select(columns)
+      .from(core_users)
+      .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
+      .where(
+        inArray(
+          core_users.id,
+          top.map(row => row.authorId),
+        ),
+      );
+    const byId = new Map(rows.map(row => [row.id, toAuthor(row)]));
+
+    return top.flatMap(row => {
+      const author = byId.get(row.authorId);
+
+      return author ? [author] : [];
+    });
+  }
+
   async bulkIndex(docs: SearchDocument[]): Promise<void> {
     const clean = docs.map(doc =>
       this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),
@@ -509,6 +633,15 @@ export class SearchModel {
       .where(itemType ? eq(core_search_index.itemType, itemType) : undefined);
 
     await this.provider().clear(this.c, itemType);
+  }
+
+  async countByType(
+    params: SearchQueryParams,
+  ): Promise<null | Record<string, number>> {
+    const provider = this.provider();
+    if (!provider.countByType) return null;
+
+    return await provider.countByType(this.c, this.withFallbacks(params));
   }
 
   /**
@@ -619,15 +752,9 @@ export class SearchModel {
   }
 
   async search(params: SearchQueryParams): Promise<SearchResult> {
-    const languageFallbacks = params.languageCode
-      ? searchLanguageFallbacks(
-          this.c.get("core").contentTypes,
-          params.languageCode,
-        )
-      : [];
     const result = await this.provider().search(
       this.c,
-      languageFallbacks.length > 0 ? { ...params, languageFallbacks } : params,
+      this.withFallbacks(params),
     );
 
     return {

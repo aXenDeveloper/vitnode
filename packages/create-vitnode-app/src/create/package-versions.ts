@@ -35,7 +35,7 @@ export const versionsPackageJson = {
   cva: "^0.7.1",
   tanstackReactForm: "^1.33",
   tanstackReactRouter: "^1.170",
-  tanstackReactStart: "^1.168",
+  tanstackReactStart: "^1.169",
   tanstackReactQuery: "^5.104",
   tanstackRouterSsrQuery: "^1.167",
   tanstackReactDevtools: "^0.10",

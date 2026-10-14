@@ -68,13 +68,66 @@ export const serializeSearchTypes = (value: unknown): string | undefined => {
   return types.length > 0 ? types.join(",") : undefined;
 };
 
+export const SEARCH_DATE_PRESETS = ["day", "week", "month", "year"] as const;
+
+export type SearchDatePreset = (typeof SEARCH_DATE_PRESETS)[number];
+
+export type SearchDateRange = "all" | "custom" | SearchDatePreset;
+
+export interface SearchDayRange {
+  from: Date;
+  to: Date;
+}
+
+export const searchDatePresetStart = (
+  preset: SearchDatePreset,
+  now: Date,
+): Date => {
+  const start = new Date(now);
+
+  if (preset === "day") start.setHours(start.getHours() - 24);
+  if (preset === "week") start.setDate(start.getDate() - 7);
+  if (preset === "month") start.setMonth(start.getMonth() - 1);
+  if (preset === "year") start.setFullYear(start.getFullYear() - 1);
+
+  return start;
+};
+
+export const searchDayRangeBounds = ({
+  from,
+  to,
+}: SearchDayRange): { from: string; to: string } => {
+  const start = new Date(from);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(to);
+  end.setHours(23, 59, 59, 999);
+
+  return { from: start.toISOString(), to: end.toISOString() };
+};
+
+export const serializeSearchAuthorIds = (
+  ids: readonly number[],
+): string | undefined => {
+  const unique = [...new Set(ids)]
+    .filter(id => Number.isSafeInteger(id) && id > 0)
+    .sort((a, b) => a - b);
+
+  return unique.length > 0 ? unique.join(",") : undefined;
+};
+
 export const searchFeedParamsFor = ({
+  authorIds,
+  from,
   search,
   sort,
+  to,
   types,
 }: {
+  authorIds?: readonly number[];
+  from?: string;
   search?: unknown;
   sort?: unknown;
+  to?: string;
   types?: unknown;
 } = {}): SearchFeedParams => {
   const term = normalizeSearchTerm(search);
@@ -86,6 +139,11 @@ export const searchFeedParamsFor = ({
 
   const filter = serializeSearchTypes(types);
   if (filter !== undefined) params.types = filter;
+
+  const authors = authorIds ? serializeSearchAuthorIds(authorIds) : undefined;
+  if (authors !== undefined) params.authorIds = authors;
+  if (from) params.from = from;
+  if (to) params.to = to;
 
   return params;
 };

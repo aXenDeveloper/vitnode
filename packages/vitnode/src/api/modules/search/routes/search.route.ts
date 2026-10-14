@@ -15,7 +15,7 @@ const zodSearchPageInfo = z.object({
   endCursor: z.number().nullable(),
 });
 
-const zodSearchHitAuthor = z.object({
+export const zodSearchHitAuthor = z.object({
   id: z.number(),
   name: z.string(),
   nameCode: z.string(),
@@ -73,8 +73,29 @@ export const positiveIntOrUndefined = (
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+export const MAX_SEARCH_AUTHOR_IDS = 20;
+
+export const positiveIntListOrUndefined = (
+  value: string | undefined,
+): number[] | undefined => {
+  if (!value) return undefined;
+
+  const ids = [
+    ...new Set(
+      value
+        .split(",")
+        .map(entry => positiveIntOrUndefined(entry.trim()))
+        .filter(id => id !== undefined),
+    ),
+  ].slice(0, MAX_SEARCH_AUTHOR_IDS);
+
+  return ids.length > 0 ? ids : undefined;
+};
+
 /** A query parameter as a real date, or nothing. See above. */
-const dateOrUndefined = (value: string | undefined): Date | undefined => {
+export const dateOrUndefined = (
+  value: string | undefined,
+): Date | undefined => {
   if (value === undefined || value === "") return undefined;
 
   const parsed = new Date(value);
@@ -102,6 +123,7 @@ export const searchRoute = buildRoute({
         search: z.string().optional(),
         types: z.string().optional(),
         authorId: z.string().optional(),
+        authorIds: z.string().max(512).optional(),
         containerId: z.string().optional(),
         sort: z.enum(["newest", "oldest", "relevance"]).optional(),
         from: z.string().optional(),
@@ -129,6 +151,7 @@ export const searchRoute = buildRoute({
         ? query.types.split(",").filter(Boolean)
         : undefined,
       authorId: positiveIntOrUndefined(query.authorId),
+      authorIds: positiveIntListOrUndefined(query.authorIds),
       containerId: positiveIntOrUndefined(query.containerId),
       sort: query.sort,
       dateFrom: dateOrUndefined(query.from),

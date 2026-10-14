@@ -5,6 +5,7 @@ import type { Context } from "hono";
 import {
   and,
   arrayContains,
+  arrayOverlaps,
   asc,
   count,
   desc,
@@ -129,6 +130,11 @@ const buildFilters = (
       arrayContains(core_search_index.authorIds, [params.authorId]),
     );
   }
+  if (params.authorIds?.length) {
+    conditions.push(
+      arrayOverlaps(core_search_index.authorIds, [...params.authorIds]),
+    );
+  }
   if (params.containerId !== undefined) {
     conditions.push(eq(core_search_index.containerId, params.containerId));
   }
@@ -155,7 +161,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   capabilities: {
     authorBoost: false,
     canonicalStorage: true,
-    facets: false,
+    facets: true,
     languageScopedDelete: true,
     timeDecay: false,
   },
@@ -175,6 +181,17 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     } catch {
       return false;
     }
+  },
+
+  countByType: async (c: Context, params: SearchQueryParams) => {
+    const rows = await c
+      .get("db")
+      .select({ itemType: core_search_index.itemType, total: count() })
+      .from(core_search_index)
+      .where(buildFilters(c, params))
+      .groupBy(core_search_index.itemType);
+
+    return Object.fromEntries(rows.map(row => [row.itemType, row.total]));
   },
 
   search: async (
