@@ -1,5 +1,6 @@
 import type { ContentApprovalState } from "@vitnode/core/content";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type AutoFormOnSubmit,
   setFormFieldError,
@@ -46,6 +47,7 @@ import {
   topicEditHref,
   topicHref,
 } from "./forum-links";
+import { invalidateForumTopics } from "./forum-queries";
 import { ForumShell, RefusedState } from "./forum-ui";
 import {
   TOPIC_FORM_FIELDS,
@@ -195,6 +197,7 @@ const TopicEditForm = ({
   const t = useTranslations("@vitnode/forum.topics");
   const tErrors = useTranslations("@vitnode/forum.forums.errors");
   const rejectTopic = useForumRejection(TOPIC_FORM_FIELDS);
+  const queryClient = useQueryClient();
   const versionRef = useRef(record.version);
   const [current, setCurrent] = useState({
     approval: record.approval,
@@ -217,6 +220,7 @@ const TopicEditForm = ({
 
     if (res.status === 200) {
       const updated = await res.json();
+      await invalidateForumTopics(queryClient);
       versionRef.current = updated.version;
       setCurrent({
         approval: updated.approval,

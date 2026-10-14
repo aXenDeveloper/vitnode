@@ -1,3 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import {
   type AutoFormOnSubmit,
   setFormFieldError,
@@ -11,11 +14,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
@@ -24,9 +24,9 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import type { TopicNewSearch } from "./forum-links";
 
-import { fetchForums } from "./forum-data";
 import { useForumRejection } from "./forum-errors";
 import { FORUM_HREF, topicEditHref, topicHref } from "./forum-links";
+import { forumsQueryOptions } from "./forum-queries";
 import { ForumShell } from "./forum-ui";
 import {
   TOPIC_FORM_FIELDS,
@@ -34,8 +34,8 @@ import {
   type TopicCreateFormSchema,
 } from "./topic-form";
 
-const loadForumOptions = async () =>
-  (await fetchForums()).map(forum => ({
+const loadForumOptions = async (queryClient: QueryClient) =>
+  (await queryClient.query(forumsQueryOptions())).map(forum => ({
     label: `${"— ".repeat(forum.depth - 1)}${forum.name}`,
     value: String(forum.id),
   }));
@@ -48,8 +48,8 @@ const TopicNewBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<TopicNewData, TopicNewSearch>({
-  load: loadForumOptions,
+export const route = defineRoute<TopicNewData, TopicNewSearch>({
+  load: async ({ context }) => await loadForumOptions(context.queryClient),
 
   head: ({ t }) => ({
     description: t("@vitnode/forum.topics.new.desc"),

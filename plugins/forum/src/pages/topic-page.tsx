@@ -1,3 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { queryOptions } from "@tanstack/react-query";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import {
   BreadcrumbItem,
@@ -10,14 +14,11 @@ import {
   richTextToPlainText,
   zodRichTextDocument,
 } from "@vitnode/core/content";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { PencilIcon } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
@@ -39,9 +40,15 @@ import {
   topicHref,
   topicNewHref,
 } from "./forum-links";
+import {
+  forumQueryKeys,
+  forumQueryOptions,
+  isSharedResponse,
+  threadQueryOptions,
+  TOPIC_STALE_TIME,
+} from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
 import { ForumThread } from "./thread";
-import { fetchThreadPage } from "./thread-data";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
@@ -73,46 +80,49 @@ const absoluteUrl = (path: string, base: string): string => {
   }
 };
 
-const loadTopic = async ({
-  locale,
-  slug,
-}: {
-  locale: string;
-  slug: string;
-}) => {
-  const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
-    method: "get",
-    module: "content/topics",
-    path: "/{slug}",
-    args: { params: { slug: encodeURIComponent(slug) } },
+/** One topic by slug, `null` when there is none for this visitor. */
+const topicQueryOptions = (slug: string) =>
+  queryOptions({
+    queryFn: async () => {
+      const res = await fetcher({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "get",
+        module: "content/topics",
+        path: "/{slug}",
+        args: { params: { slug: encodeURIComponent(slug) } },
+      });
+
+      if (res.status === 404) return { shared: false, topic: null };
+      if (res.status !== 200) {
+        throw new Error(`Loading the topic "${slug}" failed.`);
+      }
+
+      return {
+        shared: isSharedResponse(res),
+        topic: zodTopic.parse(await res.json()),
+      };
+    },
+    queryKey: forumQueryKeys.topic(slug),
+    // A miss may be a hidden topic a moderator can see, and a hidden one is
+    // that moderator's alone - only an answer every visitor gets is reused.
+    staleTime: ({ state }) => (state.data?.shared ? TOPIC_STALE_TIME : 0),
   });
 
-  if (detail.status !== 200 && detail.status !== 404) {
-    throw new Error(`Loading the topic "${slug}" failed.`);
-  }
-
+const loadTopic = async (
+  queryClient: QueryClient,
+  { locale, slug }: { locale: string; slug: string },
+) => {
   const topic = contentPageItem(
-    detail.status === 200 ? zodTopic.parse(await detail.json()) : null,
+    (await queryClient.query(topicQueryOptions(slug))).topic,
   );
 
   const [forum, thread] = await Promise.all([
-    fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
-      method: "get",
-      module: "content/forums",
-      path: "/{idOrSlug}",
-      args: { params: { idOrSlug: String(topic.forum) } },
-    }),
-    fetchThreadPage({ topicId: topic.id }),
+    // The trail is decoration: a forum that fails to load leaves it empty.
+    queryClient.query(forumQueryOptions(String(topic.forum))).catch(() => null),
+    queryClient.query(threadQueryOptions(topic.id)),
   ]);
 
-  const trail =
-    forum.status === 200
-      ? await forum
-          .json()
-          .then(({ ancestors, container }) => [...ancestors, container])
-      : [];
+  const trail = forum ? [...forum.ancestors, forum.container] : [];
 
   const path = topicHref(topic.slug);
   const canonicalUrl =
@@ -149,9 +159,12 @@ const ForumsCrumb = () => {
   return <>{t("title")}</>;
 };
 
-export const route = definePluginRoute<TopicPageData, TopicSearch>({
+export const route = defineRoute<TopicPageData, TopicSearch>({
   load: async ({ context, params }) =>
-    await loadTopic({ locale: context.locale, slug: params.slug }),
+    await loadTopic(context.queryClient, {
+      locale: context.locale,
+      slug: params.slug,
+    }),
 
   head: ({ loaderData }) => ({
     alternates: loaderData

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
 import {
@@ -31,6 +32,7 @@ import type { ThreadComment, ThreadPage, ThreadTreeNode } from "./thread-data";
 
 import { useForumRejection } from "./forum-errors";
 import { commentAnchorId, loginHref, topicHref } from "./forum-links";
+import { invalidateForumComments } from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
 import {
   buildThreadTree,
@@ -306,6 +308,7 @@ export const ForumThread = ({
   topicSlug: string;
 }) => {
   const t = useTranslations("@vitnode/forum.comments");
+  const queryClient = useQueryClient();
   const { data: session, isPending: isSessionPending } = useSessionQuery();
   const currentUserId = session?.user?.id ?? null;
   const [pages, setPages] = useState<ThreadPage[]>([initial]);
@@ -359,6 +362,7 @@ export const ForumThread = ({
     canComment: currentUserId !== null,
     currentUserId,
     onChanged: ({ pending }) => {
+      void invalidateForumComments(queryClient, topicId);
       if (!pending) void refresh();
     },
     topicId,
