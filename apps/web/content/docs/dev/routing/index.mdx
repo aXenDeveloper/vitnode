@@ -474,6 +474,19 @@ page('/blog/:slug', {
 
 Routes are uncached by default, and a route with `requires` cannot be cached. [Cache server-rendered pages](/docs/dev/cache/pages) covers the setup and how the host app overrides a policy.
 
+## Control preloading
+
+Hovering a link runs the destination's loader early. Set `preload: false` on a page or layout whose loader is too costly to run on a hover:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/notes/:slug/history', {
+  component: lazy(() => import('./pages/note-history-page')),
+  preload: false, // [!code ++]
+})
+```
+
+Children of a `layout()` inherit its setting. [Preloading](/docs/dev/routing/preloading) explains what a preload runs and how to keep it to one request.
+
 ## Nested routes and layouts
 
 A `layout()` wraps child routes in a shared UI frame without claiming a URL segment of its own. Use `index()` to render a page at the layout's root path.
