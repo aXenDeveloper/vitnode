@@ -27,6 +27,8 @@ export interface FlatPluginRoute {
   parentId: null | string;
   path: string;
   pendingComponent: null | React.FunctionComponent;
+  /** Resolved: the route's own setting, else its nearest layout's, else none. */
+  preload: boolean | undefined;
   requires: null | PluginRouteRequirement;
   routeId: string;
   search: null | PluginRouteSearchValidator;
@@ -173,6 +175,39 @@ const readPendingComponent = (
   }
 
   return pendingComponent as React.FunctionComponent;
+};
+
+/**
+ * A route's preload setting, with inheritance already applied.
+ *
+ * Resolved here rather than left to the router, because TanStack reads a
+ * route's `preload` for that route's own loader and no other: a layout that
+ * declared `false` would still let every page inside it run its loader on a
+ * hover, which is not what anybody writing it on a layout means. The parent has
+ * already resolved its own, so one step up is the whole chain.
+ */
+const readPreload = (
+  preload: unknown,
+  parent: FlatPluginRoute | null,
+  pluginId: string,
+  where: string,
+): boolean | undefined => {
+  if (preload === undefined) return parent?.preload;
+
+  if (typeof preload !== "boolean") {
+    const got =
+      typeof preload === "string" || typeof preload === "number"
+        ? JSON.stringify(preload)
+        : typeof preload;
+
+    return fail({
+      code: "invalid-preload",
+      message: `${where} in ${pluginId} declares a \`preload\` that is not a boolean (got ${got}). \`false\` keeps a hover from running this route's loader, \`true\` turns that back on under a layout that turned it off, and leaving it out inherits from the layout around it. When links preload ("intent", "viewport") is not the route's to say - that is the application's \`defaultPreload\`, or a link's own \`preload\`.`,
+      pluginId,
+    });
+  }
+
+  return preload;
 };
 
 const readCache = (
@@ -379,6 +414,7 @@ const readNode = ({
       pluginId,
       where,
     ),
+    preload: readPreload(declared.preload, parent, pluginId, where),
     requires: readRequires(declared.requires, area, pluginId, where),
     routeId: pluginRouteIdFor(declared.kind, parsed.path),
     search: readSearch(declared.search, declared.kind, pluginId, where),

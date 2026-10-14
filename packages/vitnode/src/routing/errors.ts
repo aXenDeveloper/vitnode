@@ -14,6 +14,7 @@ export type PluginRouteErrorCode =
   | "invalid-path"
   | "invalid-pending"
   | "invalid-plugin-id"
+  | "invalid-preload"
   | "invalid-requires"
   | "invalid-search"
   | "invalid-tree"

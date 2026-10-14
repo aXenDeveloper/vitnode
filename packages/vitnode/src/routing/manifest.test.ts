@@ -234,6 +234,34 @@ describe("a page cache policy", () => {
   });
 });
 
+/**
+ * Carried only when it resolved to a boolean, the way `cache` is: a manifest for
+ * a tree that never mentions `preload` is the manifest it was before the option
+ * existed, and the router's `defaultPreload` keeps deciding for those routes.
+ */
+describe("a preload setting", () => {
+  it("is on the routes it resolved for, and absent from the rest", () => {
+    const manifest = buildPluginRouteManifest([
+      catalog(
+        layout("/catalog", {
+          component: lazyPage(),
+          children: [index({ component: lazyPage() })],
+          preload: false,
+        }),
+        page("/catalog/:productId", { component: lazyPage() }),
+      ),
+    ]);
+
+    expect(
+      manifest.map(route => [route.id, "preload" in route, route.preload]),
+    ).toEqual([
+      ["@acme/catalog:layout#/catalog", true, false],
+      ["@acme/catalog:page#/catalog", true, false],
+      ["@acme/catalog:page#/catalog/:productId", false, undefined],
+    ]);
+  });
+});
+
 describe("ordering is decided by the paths, not by the registration order", () => {
   const paths = (...sources: Parameters<typeof buildPluginRouteManifest>[0]) =>
     buildPluginRouteManifest(sources).map(route => route.path);

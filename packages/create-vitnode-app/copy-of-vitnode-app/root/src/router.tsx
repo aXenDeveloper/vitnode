@@ -54,6 +54,13 @@ export function getRouter() {
     defaultPendingMs: 150,
     defaultPendingMinMs: 300,
     defaultPreload: "intent",
+    // A pointer sweeping across a list shouldn't fire a loader - and its API
+    // reads - for every link it crosses: only a hover that rests this long is
+    // intent. Focus waits the same; a touch preloads at once.
+    defaultPreloadDelay: 250,
+    // TanStack Query owns freshness, not the router: a preloaded match is stale
+    // at once, so the click reruns the loader - and that costs a cache read,
+    // because loaders read through `queryClient.query` with their own staleTime.
     defaultPreloadStaleTime: 0,
     defaultViewTransition: navigationViewTransition(
       vitNodeConfig.viewTransitions,

@@ -55,6 +55,23 @@ interface PluginRouteDeclarationShared<TModule> {
    * bundle, and a heavy one is worth a second thought.
    */
   pendingComponent?: React.FunctionComponent;
+  /**
+   * Whether hovering or focusing a link to this route may run its loader ahead
+   * of the click. Left out, a route inherits the nearest layout around it that
+   * declares one, and otherwise follows the application's `defaultPreload`.
+   *
+   * `false` keeps a preload from running this route's loader - its module's
+   * `load` and the warm-up of its `messages` - which is the setting for a page
+   * whose `load` is costly, or not worth an API read nobody may look at. It is
+   * the loader alone: a preload still fetches the route's chunk, and still runs
+   * the `requires` guard, which reads the session through the query cache. The
+   * click is untouched - it runs the guard and the loader in full, as always.
+   *
+   * `true` turns preloading back on under a layout that turned it off. A link's
+   * own `preload` prop decides *whether* that link preloads, but cannot make a
+   * route declared `false` run its loader early.
+   */
+  preload?: boolean;
   requires?: PluginRouteRequirement;
 }
 
@@ -108,6 +125,7 @@ export interface PluginRouteDeclaration {
   readonly messages: readonly string[] | undefined;
   readonly path: null | string;
   readonly pendingComponent: unknown;
+  readonly preload: unknown;
   readonly requires: PluginRouteRequirement | undefined;
   readonly search: unknown;
 }
@@ -133,6 +151,7 @@ interface PluginRouteDeclarationOptions {
   component: unknown;
   messages?: readonly string[];
   pendingComponent?: unknown;
+  preload?: unknown;
   requires?: PluginRouteRequirement;
   search?: unknown;
 }
@@ -154,6 +173,7 @@ const declaration = (
   messages: options.messages,
   path: options.path,
   pendingComponent: options.pendingComponent,
+  preload: options.preload,
   requires: options.requires,
   search: options.search,
 });
