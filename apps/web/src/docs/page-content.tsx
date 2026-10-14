@@ -1,6 +1,7 @@
+import { useRouterState } from '@tanstack/react-router'
 import { usePathname } from 'fumadocs-core/framework'
 import { DocsBody, DocsPage } from 'fumadocs-ui/layouts/spacious/page'
-import { use } from 'react'
+import { use, useEffect } from 'react'
 
 import type { DocsPageData } from './transport'
 
@@ -8,6 +9,16 @@ import { getMDXComponents } from './mdx-components'
 import { DocsPageFooter } from './page-footer'
 import { DocsPageHeader } from './page-header'
 import { docs } from './source'
+
+const ScrollToHash = () => {
+  const hash = useRouterState({ select: (state) => state.location.hash })
+
+  useEffect(() => {
+    if (hash) document.getElementById(hash)?.scrollIntoView()
+  }, [hash])
+
+  return null
+}
 
 export const DocsPageContent = ({
   githubUrl,
@@ -25,6 +36,7 @@ export const DocsPageContent = ({
   return (
     <DocsPage
       breadcrumb={{ enabled: false }}
+      className="pt-4 md:pt-0"
       key={pathname}
       slots={{ footer: DocsPageFooter }}
       tableOfContent={{ single: false, style: 'clerk' }}
@@ -39,6 +51,7 @@ export const DocsPageContent = ({
 
       <DocsBody className="pt-2">
         <MDX components={getMDXComponents()} />
+        <ScrollToHash />
       </DocsBody>
     </DocsPage>
   )

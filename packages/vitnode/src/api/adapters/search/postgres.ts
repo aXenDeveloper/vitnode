@@ -1,23 +1,7 @@
 import type { SQL } from "drizzle-orm";
-import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import {
-  and,
-  arrayContains,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  gte,
-  inArray,
-  lt,
-  lte,
-  notExists,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type {
@@ -27,6 +11,7 @@ import type {
   SearchResult,
 } from "@/api/models/search";
 
+import { searchIndexFilters } from "@/api/lib/search-filters";
 import { parseSearchOffset } from "@/api/lib/search-offset";
 import { storageUrlOf } from "@/api/lib/storage-url";
 import { searchItemIdFromKey } from "@/api/models/search";
@@ -38,111 +23,8 @@ const authorAvatarFile = alias(core_files, "search_author_avatar_file");
 
 const leadAuthorId = sql<null | number>`${core_search_index.authorIds}[1]`;
 
-const requestedTranslation = alias(
-  core_search_index,
-  "search_requested_translation",
-);
-
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
-
-const visibleCondition = (
-  table: Record<"authorIds" | "isHidden" | "isPublic" | "itemType", PgColumn>,
-  params: SearchQueryParams,
-): SQL | undefined => {
-  if (params.includePrivate) return undefined;
-
-  const access = params.hiddenAccess;
-  const viewer = or(
-    access?.authorId === undefined
-      ? undefined
-      : arrayContains(table.authorIds, [access.authorId]),
-    access?.itemTypes.length
-      ? inArray(table.itemType, [...access.itemTypes])
-      : undefined,
-  );
-
-  return viewer
-    ? or(eq(table.isPublic, true), and(eq(table.isHidden, true), viewer))
-    : eq(table.isPublic, true);
-};
-
-const fallbackLanguageConditions = (
-  c: Context,
-  params: SearchQueryParams,
-  languageCode: string,
-): SQL[] =>
-  (params.languageFallbacks ?? []).flatMap(fallback => {
-    const condition = and(
-      eq(core_search_index.itemType, fallback.itemType),
-      eq(core_search_index.languageCode, fallback.languageCode),
-      notExists(
-        c
-          .get("db")
-          .select({ id: requestedTranslation.id })
-          .from(requestedTranslation)
-          .where(
-            and(
-              eq(requestedTranslation.itemType, core_search_index.itemType),
-              eq(requestedTranslation.itemId, core_search_index.itemId),
-              eq(requestedTranslation.languageCode, languageCode),
-              visibleCondition(requestedTranslation, params),
-            ),
-          ),
-      ),
-    );
-
-    return condition ? [condition] : [];
-  });
-
-const buildFilters = (
-  c: Context,
-  params: SearchQueryParams,
-): SQL | undefined => {
-  const conditions: SQL[] = [];
-
-  const term = params.term?.trim();
-  if (term) {
-    // Match the config the row's vector was built with (scoped by locale, else
-    // `simple`) so `websearch_to_tsquery` stems the term the same way.
-    const config = resolveSearchTextConfig(params.languageCode);
-    conditions.push(
-      sql`"core_search_index"."search_vector" @@ websearch_to_tsquery(${config}::regconfig, ${term})`,
-    );
-  }
-  if (params.languageCode) {
-    // Language-agnostic rows (empty `languageCode`) match every locale.
-    const languageCondition = or(
-      eq(core_search_index.languageCode, params.languageCode),
-      eq(core_search_index.languageCode, ""),
-      ...fallbackLanguageConditions(c, params, params.languageCode),
-    );
-    if (languageCondition) {
-      conditions.push(languageCondition);
-    }
-  }
-  if (params.itemTypes?.length) {
-    conditions.push(inArray(core_search_index.itemType, params.itemTypes));
-  }
-  if (params.authorId !== undefined) {
-    conditions.push(
-      arrayContains(core_search_index.authorIds, [params.authorId]),
-    );
-  }
-  if (params.containerId !== undefined) {
-    conditions.push(eq(core_search_index.containerId, params.containerId));
-  }
-  if (params.dateFrom) {
-    conditions.push(gte(core_search_index.createdAt, params.dateFrom));
-  }
-  if (params.dateTo) {
-    conditions.push(lte(core_search_index.createdAt, params.dateTo));
-  }
-  const visible = visibleCondition(core_search_index, params);
-  if (visible) conditions.push(visible);
-
-  return conditions.length ? and(...conditions) : undefined;
-};
 
 export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   name: "postgres",
@@ -155,7 +37,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   capabilities: {
     authorBoost: false,
     canonicalStorage: true,
-    facets: false,
+    facets: true,
     languageScopedDelete: true,
     timeDecay: false,
   },
@@ -177,6 +59,17 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     }
   },
 
+  countByType: async (c: Context, params: SearchQueryParams) => {
+    const rows = await c
+      .get("db")
+      .select({ itemType: core_search_index.itemType, total: count() })
+      .from(core_search_index)
+      .where(searchIndexFilters(c, params))
+      .groupBy(core_search_index.itemType);
+
+    return Object.fromEntries(rows.map(row => [row.itemType, row.total]));
+  },
+
   search: async (
     c: Context,
     params: SearchQueryParams,
@@ -185,9 +78,9 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     const term = params.term?.trim();
     const useRelevance = params.sort === "relevance" && !!term;
     const size = Math.min(params.first ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-    const filters = buildFilters(c, params);
+    const filters = searchIndexFilters(c, params);
 
-    const [{ total }] = await db
+    const totalQuery = db
       .select({ total: count() })
       .from(core_search_index)
       .where(filters);
@@ -227,7 +120,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
       }
     }
 
-    const rows = await db
+    const rowsQuery = db
       .select({
         id: core_search_index.id,
         pluginId: core_search_index.pluginId,
@@ -262,6 +155,8 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
       .orderBy(...orderBy)
       .limit(size + 1)
       .offset(useRelevance ? offset : 0);
+
+    const [[{ total }], rows] = await Promise.all([totalQuery, rowsQuery]);
 
     const hasNextPage = rows.length > size;
     const sliced = rows.slice(0, size);

@@ -22,6 +22,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 
 import type { ContentContainerFormProps } from "./container-form-content";
+import type { ContentContainerPoliciesFormProps } from "./container-policies-form";
 import type {
   AdminContentContainer,
   ContentContainerMutationResult,
@@ -33,6 +34,18 @@ const ContentContainerFormContent = React.lazy(async () =>
   import("./container-form-content").then(module => ({
     default: module.ContentContainerFormContent,
   })),
+);
+
+const ContentContainerPoliciesFormContent = React.lazy(async () =>
+  import("./container-policies-form").then(module => ({
+    default: module.ContentContainerPoliciesFormContent,
+  })),
+);
+
+const SheetFallback = () => (
+  <div className="flex flex-1 items-center justify-center p-6">
+    <Spinner size="xl" />
+  </div>
 );
 
 export const ContentContainerSheet = ({
@@ -71,13 +84,7 @@ export const ContentContainerSheet = ({
         </SheetHeader>
 
         {isEdit && !container ? null : (
-          <React.Suspense
-            fallback={
-              <div className="flex flex-1 items-center justify-center p-6">
-                <Spinner size="xl" />
-              </div>
-            }
-          >
+          <React.Suspense fallback={<SheetFallback />}>
             <ContentContainerFormContent
               container={isEdit ? container : undefined}
               key={formKey}
@@ -85,6 +92,47 @@ export const ContentContainerSheet = ({
             />
           </React.Suspense>
         )}
+      </SheetContent>
+    </Dialog>
+  );
+};
+
+export const ContentContainerPoliciesSheet = ({
+  container,
+  formKey,
+  onOpenChange,
+  open,
+  ...form
+}: Omit<ContentContainerPoliciesFormProps, "container"> & {
+  container: AdminContentContainer | undefined;
+  formKey: number;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) => {
+  const t = useTranslations("core.containers.policies");
+
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <SheetContent
+        className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        side="right"
+      >
+        <SheetHeader className="border-b pe-12">
+          <SheetTitle className="text-balance">{t("title")}</SheetTitle>
+          <SheetDescription className="truncate">
+            {container?.name}
+          </SheetDescription>
+        </SheetHeader>
+
+        {container ? (
+          <React.Suspense fallback={<SheetFallback />}>
+            <ContentContainerPoliciesFormContent
+              container={container}
+              key={formKey}
+              {...form}
+            />
+          </React.Suspense>
+        ) : null}
       </SheetContent>
     </Dialog>
   );

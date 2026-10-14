@@ -14,6 +14,27 @@
   --color-fd-accent: var(--accent);
 }
 
+@media (width >= 48rem) {
+  #nd-sidebar > div > div:first-child,
+  #nd-page-panel button[aria-controls='nd-sidebar'] {
+    display: none;
+  }
+
+  #nd-sidebar > div > div:nth-child(2) {
+    padding-top: --spacing(4);
+  }
+}
+
+@container (width >= 64rem) {
+  #nd-page-panel > header {
+    display: none;
+  }
+
+  #nd-page-panel > div {
+    padding-top: --spacing(4);
+  }
+}
+
 :root:not(.dark) #fd-spacious-layout .prose {
   --tw-prose-body: oklch(0.373 0.003 264);
 }

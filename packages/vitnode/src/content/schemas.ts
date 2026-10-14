@@ -30,6 +30,7 @@ import {
   contentRepeatableMax,
   contentRepeatableMin,
 } from "./advanced";
+import { zodContentApprovalState } from "./approvals/schema";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_LOCALE_MAX_LENGTH,
@@ -54,6 +55,7 @@ import {
   isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
+import { zodContentPublicPerson } from "./public-person";
 import {
   createRichTextDocumentSchema,
   RICH_TEXT_ABSOLUTE_MAX_BYTES,
@@ -68,6 +70,7 @@ const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
   filterableFields: [],
   orderableFields: [],
   path: "",
+  people: [],
   searchableFields: [],
   slugField: "",
 };
@@ -681,6 +684,9 @@ const publicSelectShape = (
   // content type, so this cannot shadow a declared field.
   ...(localization.enabled ? { locale: z.string() } : {}),
   ...Object.fromEntries(
+    publicApi.people.map(name => [name, zodContentPublicPerson.nullable()]),
+  ),
+  ...Object.fromEntries(
     publicApi.fields
       .filter(name => splitContentFieldPath(name) === null)
       .map(name => {
@@ -766,6 +772,7 @@ const buildPublicWriteSchemas = <TDefinition>({
   ];
 
   const record = z.object({
+    approval: zodContentApprovalState.nullable(),
     id: recordIdOutputSchema(idStrategy),
     publishedAt: z.date().nullable(),
     slug: z.string().nullable(),

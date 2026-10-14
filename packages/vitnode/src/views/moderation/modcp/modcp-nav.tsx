@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { FlagIcon } from "lucide-react";
+import { ClipboardCheckIcon, FlagIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { SideNavCard, SideNavLink, SideNavList } from "@/components/side-nav";
 
-import { modcpReportsQueryOptions } from "./modcp-query";
+import {
+  modcpApprovalsQueryOptions,
+  modcpReportsQueryOptions,
+} from "./modcp-query";
 
-export type ModcpNavKey = "reports";
+export type ModcpNavKey = "approvals" | "reports";
 
 interface ModcpNavItem {
   href: string;
@@ -18,6 +21,7 @@ interface ModcpNavItem {
 
 export const MODCP_NAV_ITEMS: readonly ModcpNavItem[] = [
   { href: "/modcp/reports", icon: FlagIcon, key: "reports" },
+  { href: "/modcp/approvals", icon: ClipboardCheckIcon, key: "approvals" },
 ];
 
 const OPEN_REPORTS_FILTER = {
@@ -27,15 +31,24 @@ const OPEN_REPORTS_FILTER = {
   status: "open",
 } as const;
 
+const PENDING_APPROVALS_FILTER = {
+  page: 1,
+  pageSize: 1,
+  status: "pending",
+} as const;
+
 export const isModcpNavItemActive = (
   item: ModcpNavItem,
   pathname: string,
 ): boolean => pathname === item.href || pathname.startsWith(`${item.href}/`);
 
 const useNavCounts = (): Partial<Record<ModcpNavKey, number>> => {
-  const { data } = useQuery(modcpReportsQueryOptions(OPEN_REPORTS_FILTER));
+  const reports = useQuery(modcpReportsQueryOptions(OPEN_REPORTS_FILTER));
+  const approvals = useQuery(
+    modcpApprovalsQueryOptions(PENDING_APPROVALS_FILTER),
+  );
 
-  return { reports: data?.total };
+  return { approvals: approvals.data?.total, reports: reports.data?.total };
 };
 
 const ModcpNavChip = ({

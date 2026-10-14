@@ -21,6 +21,8 @@ import type {
   ContentPublicApiConfig,
   ContentPublicExposableField,
   ContentPublicOwnershipField,
+  ContentPublicPeopleResolved,
+  ContentPublicPersonField,
   ContentPublicWritableField,
   ContentPublicWriteInput,
   ContentPublicWriteResolved,
@@ -32,6 +34,7 @@ import type {
   ContentSearchEnabled,
   ContentSearchTextField,
   ContentSearchTitleField,
+  ContentThreadInput,
   ContentTypeDefinition,
   ResolvedContentDeliveryConfig,
   ResolvedContentDuplicationConfig,
@@ -80,6 +83,7 @@ import {
   systemFields,
   visibilityFields,
 } from "./define-shared";
+import { resolveContentThread } from "./define-thread";
 import { resolveContentDelivery } from "./delivery";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
@@ -222,6 +226,7 @@ export const defineContentType = <
         ContentPublicOwnershipField<TFields>
       >
     | undefined = undefined,
+  TPublicPeople extends ContentPublicPersonField<TFields> = never,
 >({
   admin = {},
   delivery,
@@ -239,6 +244,7 @@ export const defineContentType = <
   reports,
   search,
   tableName,
+  thread,
   visibility,
 }: {
   admin?: ContentAdminConfig<
@@ -269,7 +275,9 @@ export const defineContentType = <
    * Opts into a generated read-only public API. Needs `publication` and exactly
    * one exposed slug field. Omit it and nothing public is generated.
    */
-  publicApi?: ContentPublicApiConfig<TPublicField, TPublicPath> | false;
+  publicApi?:
+    | ContentPublicApiConfig<TPublicField, TPublicPath, TPublicPeople>
+    | false;
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: TPublication;
   publicWrite?: TPublicWrite;
@@ -277,6 +285,11 @@ export const defineContentType = <
 
   search?: TSearch;
   tableName: string;
+  /**
+   * Records that answer each other under one root - forum replies under a
+   * topic. Adds the public `GET /thread` route and server-side parent checks.
+   */
+  thread?: ContentThreadInput<keyof TFields & string> | false;
   visibility?: TVisibility;
 }): ContentTypeDefinition<
   TId,
@@ -294,7 +307,8 @@ export const defineContentType = <
   TVisibility,
   ContentDuplicationEnabled<TDuplication>,
   TIdStrategy,
-  ContentPublicWriteResolved<TPublicWrite>
+  ContentPublicWriteResolved<TPublicWrite>,
+  ContentPublicPeopleResolved<TPublicPeople>
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -542,6 +556,12 @@ export const defineContentType = <
     publicApi: resolvedPublicApi,
   });
 
+  const resolvedThread = resolveContentThread(id, fieldMap, thread, {
+    localized: resolvedLocalization.enabled,
+    publicApi: resolvedPublicApi,
+    publicWrite: resolvedPublicWrite,
+  });
+
   const resolvedDuplication = resolveDuplication(
     id,
     duplication,
@@ -565,7 +585,8 @@ export const defineContentType = <
     TVisibility,
     ContentDuplicationEnabled<TDuplication>,
     TIdStrategy,
-    ContentPublicWriteResolved<TPublicWrite>
+    ContentPublicWriteResolved<TPublicWrite>,
+    ContentPublicPeopleResolved<TPublicPeople>
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
@@ -594,10 +615,12 @@ export const defineContentType = <
       enabled: publicationEnabled as TPublication,
     },
     reports: resolvedReports,
+    thread: resolvedThread,
     publicApi: resolvedPublicApi as ResolvedContentPublicApiConfig<
       TPublicField,
       TPublicEnabled,
-      TPublicPath
+      TPublicPath,
+      ContentPublicPeopleResolved<TPublicPeople>
     >,
     publicWrite:
       resolvedPublicWrite as ContentPublicWriteResolved<TPublicWrite>,
@@ -618,7 +641,8 @@ export const defineContentType = <
         TVisibility,
         ContentDuplicationEnabled<TDuplication>,
         TIdStrategy,
-        ContentPublicWriteResolved<TPublicWrite>
+        ContentPublicWriteResolved<TPublicWrite>,
+        ContentPublicPeopleResolved<TPublicPeople>
       >
     >({
       admin: resolvedAdmin,

@@ -12,6 +12,8 @@ const MESSAGES: Record<ContentContainerErrorCode, string> = {
     "The container still holds content. Move or delete that content first.",
   invalidInput: "The request does not describe a valid container.",
   invalidMetadata: "The container's values do not match its definition.",
+  invalidPolicy:
+    "The publishing policy does not match what this collection supports.",
   invalidPosition: "The position is outside the list of siblings.",
   limitReached: "This collection already holds as many containers as it can.",
   maxDepth: "The container would be nested deeper than this collection allows.",
@@ -28,6 +30,7 @@ const STATUS: Record<ContentContainerErrorCode, 400 | 404 | 409> = {
   hasContent: 409,
   invalidInput: 400,
   invalidMetadata: 400,
+  invalidPolicy: 400,
   invalidPosition: 400,
   limitReached: 409,
   maxDepth: 400,

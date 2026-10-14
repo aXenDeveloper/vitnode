@@ -2,6 +2,7 @@ import { blogPlugin } from '@vitnode/blog/config'
 import { LogoVitNodeBrand } from '@vitnode/core/components/logo-vitnode'
 import { buildConfig } from '@vitnode/core/vitnode.config'
 import { examplePlugin } from '@vitnode/example/config'
+import { forumPlugin } from '@vitnode/forum/config'
 
 export const vitNodeConfig = buildConfig({
   debug: false,
@@ -40,7 +41,7 @@ export const vitNodeConfig = buildConfig({
     shortTitle: 'VitNode',
     title: 'VitNode',
   },
-  plugins: [blogPlugin(), examplePlugin()],
+  plugins: [blogPlugin(), examplePlugin(), forumPlugin()],
   theme: {
     defaultTheme: 'system',
   },

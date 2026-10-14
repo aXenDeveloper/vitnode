@@ -17,6 +17,7 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition, ContentFieldMap } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentModel } from "./model";
+import type { ContentSearchContext } from "./search-document";
 
 import { ContentEngineError } from "../errors";
 import { contentIdKey, parseContentId } from "../ids";
@@ -33,6 +34,10 @@ import {
   contentSearchDocument,
   contentTranslationSearchDocument,
 } from "./search-document";
+import {
+  contentSearchContextKey,
+  loadContentSearchContexts,
+} from "./search-related";
 
 /** System columns the mapper reads, on top of the configured search fields. */
 const REQUIRED_COLUMNS = [
@@ -174,12 +179,31 @@ export interface ContentSearchIndexer extends SearchIndexer {
   ) => Promise<SearchIndexerPage>;
 }
 
+export interface ContentSearchRelationPage {
+  documents: SearchDocument[];
+  lastId: ContentId | null;
+  unindexed: ContentId[];
+}
+
+export interface ContentSearchRelationIndexer extends ContentSearchIndexer {
+  loadByRelation: (
+    c: Context,
+    args: {
+      after?: ContentId;
+      context: ContentSearchContext;
+      field: string;
+      limit: number;
+      value: ContentId;
+    },
+  ) => Promise<ContentSearchRelationPage>;
+}
+
 export const createContentSearchIndexer = <
   TDefinition extends AnyContentTypeDefinition,
 >(
   model: ContentModel<TDefinition>,
   { pluginId }: { pluginId: string },
-): ContentSearchIndexer => {
+): ContentSearchRelationIndexer => {
   const { definition } = model;
   // Widened the same way `createContentPublicService` takes it: the query
   // builders are written against the erased table, not this content type's.
@@ -197,6 +221,54 @@ export const createContentSearchIndexer = <
   );
 
   const cursors = new WeakMap<Context, ContentId>();
+
+  const buildDocuments = async (
+    c: Context,
+    rows: readonly Record<string, unknown>[],
+    {
+      contexts,
+      fixedContext,
+    }: {
+      contexts?: Map<string, ContentSearchContext>;
+      fixedContext?: ContentSearchContext;
+    },
+  ): Promise<{ document: null | SearchDocument; id: ContentId | null }[]> => {
+    // One batch for the whole page, and only the collections the search
+    // configuration names - never one query per document.
+    const collections = await loadSearchCollections({
+      advanced,
+      c,
+      definition,
+      itemIds: rows.map(row => row.id),
+      wanted: sources.collections,
+    });
+
+    return rows.map(values => {
+      const contextKey = contentSearchContextKey(definition, values);
+
+      return {
+        document: contentSearchDocument(
+          definition,
+          {
+            ...values,
+            // Folded back into the nested logical shape the document builder
+            // reads: it is handed `seo.description`, and a flat `seoDescription`
+            // column would resolve to nothing.
+            ...contentColumnsToValues(sources.sharedGroups, values),
+            ...collections.get(rowKey(values)),
+          },
+          {
+            context:
+              fixedContext ??
+              (contextKey === null ? null : contexts?.get(contextKey)),
+            pluginId,
+            routing: contentLocaleRouting(c),
+          },
+        ),
+        id: parseContentId(definition.idStrategy, values.id),
+      };
+    });
+  };
 
   return {
     itemType: definition.id,
@@ -229,35 +301,47 @@ export const createContentSearchIndexer = <
         : null;
       if (lastId !== null) cursors.set(c, lastId);
 
-      // One batch for the whole page, and only the collections the search
-      // configuration names - never one query per document.
-      const collections = await loadSearchCollections({
-        advanced,
-        c,
-        definition,
-        itemIds: rows.map(row => (row as Record<string, unknown>).id),
-        wanted: sources.collections,
+      const built = await buildDocuments(c, rows, {
+        contexts: await loadContentSearchContexts(c, definition, rows),
       });
 
-      const documents = rows.flatMap(row => {
-        const values = row as Record<string, unknown>;
-        const document = contentSearchDocument(
-          definition,
-          {
-            ...values,
-            // Folded back into the nested logical shape the document builder
-            // reads: it is handed `seo.description`, and a flat `seoDescription`
-            // column would resolve to nothing.
-            ...contentColumnsToValues(sources.sharedGroups, values),
-            ...collections.get(rowKey(values)),
-          },
-          { pluginId, routing: contentLocaleRouting(c) },
-        );
+      return {
+        documents: built.flatMap(({ document }) =>
+          document ? [document] : [],
+        ),
+        itemsRead: rows.length,
+      };
+    },
 
-        return document ? [document] : [];
-      }) satisfies SearchDocument[];
+    loadByRelation: async (c, { after, context, field, limit, value }) => {
+      const column = columns[field];
+      if (!column) return { documents: [], lastId: null, unindexed: [] };
 
-      return { documents, itemsRead: rows.length };
+      const rows = await c
+        .get("db")
+        .select(selection)
+        .from(table)
+        .where(
+          and(
+            eq(column, value),
+            after === undefined ? undefined : gt(primaryCursor, after),
+          ),
+        )
+        .orderBy(asc(primaryCursor))
+        .limit(limit);
+
+      const built = await buildDocuments(c, rows, { fixedContext: context });
+      const last = rows.at(-1);
+
+      return {
+        documents: built.flatMap(({ document }) =>
+          document ? [document] : [],
+        ),
+        lastId: last ? parseContentId(definition.idStrategy, last.id) : null,
+        unindexed: built.flatMap(({ document, id }) =>
+          document || id === null ? [] : [id],
+        ),
+      };
     },
   };
 };

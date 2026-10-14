@@ -14,6 +14,7 @@ import type {
   CONTENT_CONTAINER_ERROR_CODES,
   CONTENT_CONTAINER_ORDERING_MODES,
 } from "./const";
+import type { ResolvedContentContainerPolicies } from "./policies";
 
 export type ContentContainerFieldDescriptor =
   | ContentBooleanField
@@ -93,6 +94,7 @@ export interface ContentContainerDefinition<
   id: TId;
   kind: "contentContainer";
   ordering: { mode: ContentContainerOrderingMode };
+  policies: ResolvedContentContainerPolicies;
   publicApi: ResolvedContentContainerPublicApi<
     TPublicField,
     TPublicEnabled,

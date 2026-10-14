@@ -1,8 +1,10 @@
 import type {
+  ContentFieldDescriptor,
   ContentFieldMap,
   ContentSearchConfig,
   ResolvedContentPublicApiConfig,
   ResolvedContentSearchConfig,
+  ResolvedContentSearchContext,
 } from "./types";
 
 import {
@@ -28,6 +30,7 @@ const searchTextKinds: ReadonlySet<string> = new Set(CONTENT_SEARCH_TEXT_KINDS);
 const disabledSearch: ResolvedContentSearchConfig = {
   authorField: null,
   contentFields: [],
+  context: null,
   descriptionField: null,
   enabled: false,
   imageField: null,
@@ -141,6 +144,34 @@ const assertSearchImageField = (
   }
 };
 
+const assertSearchTitleRelation = (
+  id: string,
+  descriptor: Extract<ContentFieldDescriptor, { kind: "relation" }>,
+  exposed: ReadonlySet<string>,
+  name: string,
+): void => {
+  if (descriptor.multiple || descriptor.self) {
+    throw new ContentEngineError(
+      `search.titleField names the relation "${name}", which is ${descriptor.multiple ? "to-many" : "a self relation"}. A relation lends its record's search title only when it points at exactly one record of another content type.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (descriptor.nullable) {
+    throw new ContentEngineError(
+      `search.titleField names the nullable relation "${name}". A search result needs a heading, so the relation must not be nullable.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!exposed.has(name)) {
+    throw new ContentEngineError(
+      `search.titleField names "${name}", which is not in publicApi.fields. Every indexed field must be publicly exposed.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
 const LEGACY_LOCALE_PREFIX = `/${CONTENT_SEARCH_LOCALE_PLACEHOLDER}/`;
 
 const resolveSearchPathTemplate = (
@@ -216,6 +247,84 @@ const resolveSearchPathTemplate = (
   return source;
 };
 
+const resolveSearchContext = ({
+  exposed,
+  fields,
+  id,
+  localized,
+  search,
+}: {
+  exposed: ReadonlySet<string>;
+  fields: ContentFieldMap;
+  id: string;
+  localized: boolean;
+  search: ContentSearchConfig;
+}): null | ResolvedContentSearchContext => {
+  const titleRelation =
+    fields[search.titleField]?.kind === "relation" ? search.titleField : null;
+  const input =
+    search.context ?? (titleRelation ? { field: titleRelation } : undefined);
+  if (input === undefined) return null;
+
+  const { field } = input;
+  if (titleRelation !== null && field !== titleRelation) {
+    throw new ContentEngineError(
+      `search.context names "${field}", but search.titleField borrows its title from the relation "${titleRelation}". A record that takes its heading from a related record belongs to that record, so the context has to be "${titleRelation}" too.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const descriptor = fields[field];
+  if (descriptor?.kind === "container") {
+    if (input.pathTemplate === undefined) {
+      throw new ContentEngineError(
+        `search.context names the container field "${field}" without a pathTemplate. A container has no public URL of its own, so say where it lives, e.g. "/forum/{slug}".`,
+        { contentTypeId: id },
+      );
+    }
+
+    return {
+      field,
+      kind: "container",
+      pathTemplate: resolveSearchPathTemplate(id, input.pathTemplate, false),
+    };
+  }
+
+  if (
+    descriptor?.kind !== "relation" ||
+    descriptor.multiple ||
+    descriptor.self
+  ) {
+    throw new ContentEngineError(
+      `search.context names "${field}", which is not a \`field.container()\` or a to-one \`field.relation()\` to another content type.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (localized) {
+    throw new ContentEngineError(
+      `search.context names the relation "${field}", but this content type is localized. A relation lends one context to every language, so it is only supported on content types that are not localized.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!exposed.has(field)) {
+    throw new ContentEngineError(
+      `search.context names "${field}", which is not in publicApi.fields. Every indexed field must be publicly exposed.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (input.pathTemplate !== undefined) {
+    throw new ContentEngineError(
+      `search.context names the relation "${field}" with a pathTemplate. A related record links to its own search URL, so leave pathTemplate out.`,
+      { contentTypeId: id },
+    );
+  }
+
+  return { field, kind: "relation", pathTemplate: "" };
+};
+
 export const resolveSearch = (
   id: string,
   fields: ContentFieldMap,
@@ -250,14 +359,25 @@ export const resolveSearch = (
   const exposed = new Set(publicApi.fields);
 
   const { titleField } = search;
-  assertSearchField({
-    exposed,
-    fields,
-    id,
-    kinds: searchTitleKinds,
-    label: "search.titleField",
-    name: titleField,
-  });
+  const titleDescriptor = fields[titleField];
+  if (titleDescriptor?.kind === "relation") {
+    if (localized) {
+      throw new ContentEngineError(
+        `search.titleField names the relation "${titleField}", but this content type is localized. A relation lends one title to every language, so it is only supported on content types that are not localized.`,
+        { contentTypeId: id },
+      );
+    }
+    assertSearchTitleRelation(id, titleDescriptor, exposed, titleField);
+  } else {
+    assertSearchField({
+      exposed,
+      fields,
+      id,
+      kinds: searchTitleKinds,
+      label: "search.titleField",
+      name: titleField,
+    });
+  }
 
   // A `null` title can never be a result heading, and a record whose title is
   // missing is skipped by the mapper - which shows up as a collection that never
@@ -335,9 +455,18 @@ export const resolveSearch = (
     assertSearchImageField(id, fields, exposed, imageField);
   }
 
+  const context = resolveSearchContext({
+    exposed,
+    fields,
+    id,
+    localized,
+    search,
+  });
+
   return {
     authorField,
     contentFields,
+    context,
     descriptionField,
     enabled: true,
     imageField,

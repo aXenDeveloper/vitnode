@@ -250,6 +250,7 @@ All routes are `GET` and live under `/api/{pluginId}/content/{publicApi.path}`.
 | `/delivery/resolve/{slug}` | Whether a URL is a record, a redirect or nothing, only with [delivery](/docs/content-engine/public-pages) |
 | `/delivery/item/{id}`      | Canonical URL and SEO metadata for one record, only with delivery                                         |
 | `/delivery/sitemap`        | Sitemap entries, only with `delivery.sitemap`                                                             |
+| `/thread?root={id}`        | One page of a reply tree under a root record, only with [`thread`](/docs/content-engine/threads)          |
 
 The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A filterable [container field](/docs/content-engine/fields#container) also accepts `includeDescendants=true`, so `?board=4&includeDescendants=true` lists board 4 and every board below it; an unknown container answers `404`. See [Containers on the frontend](/docs/content-engine/container-frontend#add-the-board-page). A record is public only when its `status` is `published`, its `publishedAt` is set and not later than the database clock, and it is not [hidden](/docs/content-engine/content-visibility). Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
 

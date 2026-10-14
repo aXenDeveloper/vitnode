@@ -46,6 +46,7 @@
     "@vitnode/blog": "workspace:*",
     "@vitnode/config": "workspace:*",
     "@vitnode/example": "workspace:*",
+    "@vitnode/forum": "workspace:*",
     "@vitnode/nodemailer": "workspace:*",
     "dotenv": "^18.0.6",
     "oxlint": "^1.87.0",

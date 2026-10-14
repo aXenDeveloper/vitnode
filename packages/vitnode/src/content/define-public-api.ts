@@ -90,6 +90,74 @@ const assertPublicLeafPath = (
   }
 };
 
+const resolvePublicPeople = (
+  id: string,
+  fields: ContentFieldMap,
+  people: unknown,
+  { exposed, localized }: { exposed: readonly string[]; localized: boolean },
+): string[] => {
+  if (people === undefined) return [];
+  if (!Array.isArray(people)) {
+    throw new ContentEngineError(
+      'publicApi.people is a list of user field names, e.g. `people: ["author"]`.',
+      { contentTypeId: id },
+    );
+  }
+
+  const names = people.map(String);
+  const duplicate = names.find(
+    (name, position) => names.indexOf(name) !== position,
+  );
+  if (duplicate !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.people lists "${duplicate}" twice.`,
+      {
+        contentTypeId: id,
+      },
+    );
+  }
+
+  for (const name of names) {
+    const fieldValue = fields[name];
+    if (!fieldValue) {
+      throw new ContentEngineError(
+        `publicApi.people references unknown field "${name}". Name a top-level \`field.user()\`.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (fieldValue.kind !== "user") {
+      throw new ContentEngineError(
+        `publicApi.people includes "${name}", which is a "${fieldValue.kind}" field. Only a \`field.user()\` is published as a person - list anything else in publicApi.fields.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (fieldValue.multiple) {
+      throw new ContentEngineError(
+        `publicApi.people includes the to-many user field "${name}". A person summary is published for one user per record - use a to-one \`field.user()\`.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if ((fieldValue as { localized?: boolean }).localized === true) {
+      throw new ContentEngineError(
+        `publicApi.people includes the localized field "${name}". A person is the same in every language - make the field shared.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (exposed.includes(name) || (localized && name === "locale")) {
+      throw new ContentEngineError(
+        `publicApi.people includes "${name}", which the public response already uses for something else. Rename the field.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  return names;
+};
+
 export const resolvePublicApi = <TField extends string>(
   id: string,
   fields: ContentFieldMap,
@@ -106,6 +174,7 @@ export const resolvePublicApi = <TField extends string>(
       filterableFields: [],
       orderableFields: [],
       path: "",
+      people: [],
       searchableFields: [],
       slugField: "",
     };
@@ -335,6 +404,10 @@ export const resolvePublicApi = <TField extends string>(
     filterableFields,
     orderableFields,
     path: publicApi.path,
+    people: resolvePublicPeople(id, fields, publicApi.people, {
+      exposed,
+      localized: Object.keys(localizedFields).length > 0,
+    }),
     searchableFields,
     slugField: slugFields[0],
   };

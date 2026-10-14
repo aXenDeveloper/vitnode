@@ -255,7 +255,7 @@ This is why `ownership` is required and not configurable: if a client could choo
 Creating needs a signed-in user and nothing else. Editing is allowed for two kinds of people:
 
 - **The owner**, while `update.own` is `true` (the default) and the record is not [hidden](/docs/content-engine/content-visibility). A record a moderator hid is the moderator's to restore, not the author's to keep editing. Set `update.own: false` to let only moderators edit.
-- **Moderators** who hold the content type's `can_edit` moderator permission, directly or through a role.
+- **Moderators** who hold the content type's `can_edit` moderator permission, directly or through a role. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` is [scoped to containers](/docs/dev/moderation/scoped-permissions#container-scoped-permissions), and the policy can also limit how long the owner may edit.
 
 To make someone a discussion moderator:
 
@@ -296,7 +296,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
 Public writes trigger the same side effects as AdminCP writes, so nothing new needs wiring:
 
-- [Events](/docs/content-engine/events): `created` on create, then `published` when `create.status` is `"published"`, and `updated` with `changedFields` on an edit that changed something. There are no separate public-write events.
+- [Events](/docs/content-engine/events): `created` on create, then `published` when the record goes live, and `updated` with `changedFields` on an edit that changed something. There are no separate public-write events. A record waiting for [approval](/docs/content-engine/approvals) emits `published` or `updated` when a moderator approves it, plus the `content.approval.*` events.
 - [Search](/docs/content-engine/search) is synced after the transaction commits, so a discussion published on create is searchable straight away.
 - On an [editorial](/docs/content-engine/editorial#revisions) content type, each create and edit stores a revision attributed to the signed-in user, and staff can restore it from the AdminCP.
 
@@ -304,13 +304,8 @@ Public writes trigger the same side effects as AdminCP writes, so nothing new ne
 
 A content type organized into [containers](/docs/content-engine/containers), such as discussions in forum boards, lets members pick the container when they create a record: list the `field.container()` in `create.fields`. It cannot be in `update.fields`, so moving a record to another container stays a staff edit. The server resolves the container inside the write's transaction and refuses a missing or foreign one with a `400` on that field.
 
-### Future container policies
+### Container policies
 
-<Callout type="info" title="Not available yet">
-  Per-container publication policies are planned, not shipped. Today every
-  public create uses `publicWrite.create.status`.
-</Callout>
-
-Whether a new record starts as a draft or goes live is decided in one server-side function, `resolveContentPublicationPolicy`, and never by the payload. It already receives the signed-in user, the operation and the resolved container, so each container will be able to choose its own policy, such as "publish immediately" in one board and "wait for a moderator's approval" in another, without changing the routes or your forms.
+Whether a new record starts as a draft or goes live is decided on the server, never by the payload. Without container policies, it is `create.status`. When the record's container collection has [publishing policies](/docs/content-engine/container-policies), the container decides instead: who may create, whether new records and edits wait for a moderator, and how long the owner may edit. A new record that waits answers with `status: "draft"`, and every response carries an `approval` object, described in [Approvals](/docs/content-engine/approvals).
 
 Next, build the create and edit pages in [Public write frontend](/docs/content-engine/public-write-frontend).

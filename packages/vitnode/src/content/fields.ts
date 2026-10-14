@@ -166,21 +166,32 @@ const enumField = <
 const slug = <
   TSource extends string | undefined = undefined,
   TLocalized extends boolean = false,
+  TGenerated extends boolean = false,
 >(
   args: LocalizableArgs<TLocalized> & {
     description?: string;
+    /** A random token minted on create. Mutually exclusive with `source`. */
+    generated?: TGenerated;
     /** `varchar` length and the truncation point. Defaults to 160. */
     maxLength?: number;
     source?: TSource;
   } = {},
-): ContentSlugField<TSource, TLocalized> => ({
-  ...args,
-  kind: "slug",
-  localized: localizedOf(args),
-  nullable: false,
-  required: (args.source === undefined) as ContentSlugRequired<TSource>,
-  source: args.source as TSource,
-});
+): ContentSlugField<TSource, TLocalized, TGenerated> => {
+  const generated = (args.generated ?? false) as TGenerated;
+
+  return {
+    ...args,
+    generated,
+    kind: "slug",
+    localized: localizedOf(args),
+    nullable: false,
+    required: (args.source === undefined && !generated) as ContentSlugRequired<
+      TSource,
+      TGenerated
+    >,
+    source: args.source as TSource,
+  };
+};
 
 const dateTime = <
   TRequired extends boolean = false,
@@ -297,8 +308,14 @@ const relation = <
   TOrdered extends boolean = false,
   TSelf extends boolean = false,
   TTarget extends ContentRelationTarget = ContentRelationTarget<"serial">,
+  TContainer extends boolean = false,
 >(
   args: SharedArgs<TRequired, TNullable> & {
+    /**
+     * The record lives in the related record's container - a reply sits in its
+     * topic's forum. To-one, required and never `self`.
+     */
+    container?: TContainer;
     min?: number;
     multiple?: TMultiple;
     onDelete?: ContentOnDelete;
@@ -313,10 +330,12 @@ const relation = <
   TMultiple,
   TOrdered,
   TSelf,
-  TSelf extends true ? "serial" : TTarget["idStrategy"]
+  TSelf extends true ? "serial" : TTarget["idStrategy"],
+  TContainer
 > => ({
   ...args,
   ...shared(args),
+  container: (args.container ?? false) as TContainer,
   kind: "relation",
   // The assertions keep the literal the caller inferred, exactly as `shared`
   // and `localizedOf` do: `?? false` alone widens back to `boolean`, and every

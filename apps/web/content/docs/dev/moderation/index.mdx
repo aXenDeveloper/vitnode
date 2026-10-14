@@ -9,7 +9,7 @@ VitNode moderation lets signed-in users report content, and lets moderators revi
 | Part                 | What it does                                                                                                   |
 | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Reports              | A report stores the reason, the reporter's details and a server-side snapshot of what the reporter saw          |
-| Moderator CP         | `/modcp/reports` on the public site: a reports board, the snapshot, assignment, notes, resolution and content actions |
+| Moderator CP         | `/modcp/reports` on the public site: a reports board, the snapshot, assignment, notes, resolution and content actions. `/modcp/approvals` holds content waiting for approval |
 | Scoped permissions   | A moderator permission can cover every resource of a family, such as every forum section, or only some of them |
 
 A moderator signs in with their normal user session. The ModCP never asks for an AdminCP session, and the server authorizes every ModCP request.
@@ -22,6 +22,7 @@ A moderator signs in with their normal user session. The ModCP never asks for an
 | Limit moderators to some categories or sections                 | [Scoped permissions](/docs/dev/moderation/scoped-permissions)       |
 | Give a user or role moderator permissions in the AdminCP        | [Configure moderators](/docs/dev/moderation/configure-moderators)   |
 | Review, assign, resolve and act on reports                      | [Process reports](/docs/dev/moderation/process-reports)             |
+| Approve or reject new content and edits before they go live     | [Review approvals](/docs/dev/moderation/review-approvals)           |
 | Look up routes, options, events and limits                      | [Moderation reference](/docs/dev/moderation/reference)              |
 
 ## How the parts fit together
@@ -35,4 +36,4 @@ Reports belong to core, not to the plugin. They keep their snapshot after the ar
 
 ## What is not included yet
 
-This first version covers reports plus hiding and restoring content. It has no warnings, bans, approval queues, automatic moderation, anonymous reports, report notifications or permanent deletion from the ModCP. Moderators still have to read things themselves, sorry.
+This version covers reports, hiding and restoring content, and [reviewing approvals](/docs/dev/moderation/review-approvals). It has no warnings, bans, automatic moderation, anonymous reports, report notifications or permanent deletion from the ModCP. Moderators still have to read things themselves, sorry.

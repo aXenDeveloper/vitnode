@@ -49,6 +49,7 @@ import type {
 } from "./visibility";
 
 import { withPagination } from "../../api/lib/with-pagination";
+import { cancelContentSubmissions } from "../approvals/server/submissions";
 import {
   CONTENT_DEFAULT_PAGE_SIZE,
   CONTENT_EDITORIAL_FIELDS,
@@ -83,12 +84,14 @@ import {
   toInsertColumns,
 } from "./query";
 import {
+  assertNoContentSelfReference,
   LABEL_PREFIX,
   resolveCollectionPickerTargets,
   resolveReferenceTargets,
   toLabel,
 } from "./references";
 import { createSlugNormalizer } from "./slugs";
+import { assertContentThreadPlacement } from "./thread";
 import {
   isInVisibilityState,
   visibilityChange,
@@ -802,6 +805,14 @@ export const createContentService = <
         // content type with no file fields.
         await assertContentFileReferences(c, definition, parsed, tx);
         await resolveContentContainerAssignment(tx, definition, parsed);
+        await assertContentThreadPlacement(
+          tx,
+          { columns, definition, table },
+          {
+            id: null,
+            values: parsed,
+          },
+        );
 
         const [row] = await tx
           .insert(table)
@@ -827,6 +838,7 @@ export const createContentService = <
         .delete(table)
         .where(eq(primaryCursor, id))
         .returning(ownSelection());
+      if (row) await cancelContentSubmissions(db(options), definition, id);
 
       return row ? toRow(row) : null;
     },
@@ -1123,6 +1135,15 @@ export const createContentService = <
       });
 
       if (changedPaths.length > 0) {
+        assertNoContentSelfReference(definition, id, patch);
+        await assertContentThreadPlacement(
+          tx,
+          { columns, definition, table },
+          {
+            id,
+            values: patch,
+          },
+        );
         await resolveContentContainerAssignment(tx, definition, patch);
       }
 

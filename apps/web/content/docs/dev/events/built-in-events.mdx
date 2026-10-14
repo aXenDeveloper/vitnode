@@ -1152,7 +1152,7 @@ nothing.
 | Event                       | Payload                                                                     | Fires when                                                   |
 | --------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `content.container.created` | `{ definitionId, pluginId, containerId, parentId }`                         | A container is created                                       |
-| `content.container.updated` | `{ definitionId, pluginId, containerId, parentId, changedFields }`          | Its name, slug or a metadata field actually changed          |
+| `content.container.updated` | `{ definitionId, pluginId, containerId, parentId, changedFields }`          | Its name, slug, a metadata field or its publishing policies actually changed |
 | `content.container.moved`   | `{ definitionId, pluginId, containerId, parentId, fromParentId, position }` | It moved to another parent, another position, or both        |
 | `content.container.deleted` | `{ definitionId, pluginId, containerId, parentId }`                         | An empty container is deleted                                |
 
@@ -1194,7 +1194,7 @@ or a delete do not get events of their own.
     },
     changedFields: {
       description:
-        '`updated` only. `name`, `slug` and the metadata fields whose value changed.',
+        '`updated` only. `name`, `slug` and the metadata fields whose value changed, or `["policies"]` when the container\'s [publishing policies](/docs/content-engine/container-policies) were saved.',
       type: 'string[]',
     },
   }}
@@ -1211,6 +1211,100 @@ export const boardDeletedListener = buildEventListener({
     if (payload.definitionId !== 'example.boards') return
 
     await c.get('log').warn(`Board ${payload.containerId} was deleted`)
+  },
+})
+```
+
+</Accordion>
+</Accordions>
+
+## Content approval events
+
+Three names, declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts` and shared by every content type
+that waits for [approval](/docs/content-engine/approvals) under a container's
+[publishing policy](/docs/content-engine/container-policies). Each fires
+**after** its transaction commits. A refused decision, such as a `409 stale`,
+emits nothing.
+
+| Event                        | Payload                                                                                                   | Fires when                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `content.approval.submitted` | `{ submissionId, replacedSubmissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId }` | A member's create or edit starts waiting, including a resubmission or a newer proposal |
+| `content.approval.approved`  | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId }`           | A moderator approves a submission                                             |
+| `content.approval.rejected`  | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId, reason }`   | A moderator rejects a submission                                              |
+
+The record's own events are never duplicated. A pending create emits the
+content type's `created` when it is stored, and its `published` only when it is
+approved. Approving an edit emits one `updated`, with the changed fields.
+Rejecting emits nothing from the content type, because nothing on the record
+changed.
+
+<Accordions>
+<Accordion title="content.approval.*">
+
+Emitted by the public write service when a submission opens, and by
+`decideContentSubmission` when a moderator decides, so the ModCP and your own
+code that calls it emit the same events. Updating a draft whose create is
+already pending refreshes that submission and emits no approval event.
+
+<TypeTable
+  type={{
+    submissionId: {
+      description: 'Id of the submission in `core_content_submissions`.',
+      type: 'number',
+    },
+    pluginId: {
+      description: 'The plugin that owns the content type.',
+      type: 'string',
+    },
+    contentTypeId: {
+      description: 'The content type, such as `forum.topic`. Filter on it, because every content type shares these names.',
+      type: 'string',
+    },
+    contentId: {
+      description: 'The record id, always as a string, whatever the id strategy.',
+      type: 'string',
+    },
+    containerId: {
+      description: 'The container the record lives in: at submission time on `submitted`, as resolved again at decision time on the other two.',
+      type: 'number | null',
+    },
+    kind: {
+      description: '`create` for a new record, `edit` for a proposed change to a published one.',
+      type: '"create" | "edit"',
+    },
+    authorId: {
+      description: 'Who sent it. `null` once the account is deleted.',
+      type: 'number | null',
+    },
+    replacedSubmissionId: {
+      description: '`submitted` only. The pending proposal this one replaced, now `superseded`, or `null`.',
+      type: 'number | null',
+    },
+    reviewerId: {
+      description: '`approved` and `rejected` only. The moderator who decided.',
+      type: 'number',
+    },
+    reason: {
+      description: "`rejected` only. The moderator's reason, or `null`.",
+      type: 'string | null',
+    },
+  }}
+/>
+
+**A listener would** notify the author when their topic is approved or
+rejected, or ping a moderators' channel when the queue grows:
+
+```ts title="Example: tell the author about a rejection"
+export const approvalRejectedListener = buildEventListener({
+  event: 'content.approval.rejected',
+  name: 'notify-rejected-author',
+  handler: async (c, payload) => {
+    if (payload.authorId === null) return
+
+    await c.get('log').info(
+      `Submission ${payload.submissionId} by user ${payload.authorId} was rejected`,
+    )
   },
 })
 ```

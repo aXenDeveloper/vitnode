@@ -1,0 +1,161 @@
+---
+title: Publishing policies reference
+description: Reference for Content Engine container publishing policies - the defineContentContainer policies option, the five policy keys and their fallbacks, the resolution order, the GET and PUT policies routes, the policy report, errors and server helpers.
+icon: FileJson
+---
+
+Exact names, values and behavior of container publishing policies. For a guided setup, follow [Publishing policies](/docs/content-engine/container-policies). Examples use the Forum plugin's `forum.forums` collection.
+
+## `policies` option
+
+`defineContentContainer({ policies })` from `@vitnode/core/content`:
+
+```ts title="plugins/forum/src/content/forums.ts"
+policies: {
+  defaults: { publish: "immediate", edits: "immediate", authorEdit: "always" },
+  contentTypes: {
+    "forum.comment": { authorEdit: "window", authorEditMinutes: 30 },
+  },
+},
+```
+
+| Name           | Type                                   | Required | Default | Description                                                         |
+| -------------- | -------------------------------------- | -------- | ------- | ------------------------------------------------------------------- |
+| `defaults`     | policy                                 | No       | `{}`    | Applies to every content type filed in the collection               |
+| `contentTypes` | `Record<contentTypeId, policy>`        | No       | `{}`    | Per content type, such as `"forum.comment"`. Wins over `defaults`   |
+
+Omit `policies`, or set it to `false`, and the collection does not take part: its content types use `publicWrite.create.status`, owners edit for as long as `update.own` allows, `can_edit` stays unscoped and no `can_approve` exists. `policies: {}` turns the feature on with every key on its fallback.
+
+## Policy keys
+
+A policy is a partial object of these keys. Each one is resolved on its own.
+
+| Key                 | Values                                  | Fallback                                                                     | Description                                                       |
+| ------------------- | --------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `create`            | `"members"` \| `"moderators"`           | `"members"`                                                                  | Who may create. `"moderators"` means `can_edit` holders in the container |
+| `publish`           | `"immediate"` \| `"approve"`            | From `publicWrite.create.status`: `"published"` → `"immediate"`, `"draft"` → `"approve"` | Whether a new record goes live or waits as a draft with a submission |
+| `edits`             | `"immediate"` \| `"approve"`            | `"immediate"`                                                                | Whether an author's edit of a published record applies or becomes a proposal |
+| `authorEdit`        | `"always"` \| `"never"` \| `"window"`   | `"always"`                                                                   | How long the owner may edit                                       |
+| `authorEditMinutes` | Whole number from 1 to 525600 (a year)  | `60`                                                                         | The window for `"window"`, counted from the record's server `createdAt` |
+
+The constants are exported from `@vitnode/core/content`: `CONTENT_CONTAINER_POLICY_KEYS`, `CONTENT_CONTAINER_POLICY_CREATE`, `CONTENT_CONTAINER_POLICY_MODES`, `CONTENT_CONTAINER_POLICY_AUTHOR_EDIT` and `CONTENT_CONTAINER_POLICY_MAX_MINUTES`.
+
+## Resolution order
+
+For each key, the first layer that sets it wins:
+
+1. the record's container's override for the content type;
+2. the nearest ancestor's override, walking `parentId`;
+3. `policies.contentTypes[contentTypeId]`;
+4. `policies.defaults`;
+5. the fallback in the table above.
+
+A missing key inherits. An explicit value, including `"never"` or a value equal to the parent's, is an override and stops the walk. The engine never stores `undefined`, and empty per-type objects are dropped on save.
+
+The record's container is always resolved on the server: from its `field.container()`, or for a `field.relation({ container: true })`, from the related record's container. A comment follows its topic, whatever the payload claims.
+
+## Who passes which rule
+
+| Check                     | Passes                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| Create with `"moderators"` | `can_edit` for the container, a root role                                                |
+| Skip `publish` / `edits` approval | `can_approve` for the container, a root role                                      |
+| Edit any record           | `can_edit` for the container, a root role. Independent of `authorEdit`                    |
+| Edit own record           | The owner, while `update.own` is on, the record is not hidden and `authorEdit` allows it  |
+
+Container scopes are explained in [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
+
+## Refusals on the public write routes
+
+Both answer `403` with `"code": "CONTENT_FORBIDDEN"` and one issue whose `field` is `null`:
+
+| Issue code           | Constant                                          | When                                                                       |
+| -------------------- | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| `edit_window_closed` | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.editWindowClosed` | The owner edits a public record after `authorEdit` stopped allowing it    |
+| `moderators_only`    | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.moderatorsOnly`   | A create in a container with `create: "moderators"` by a non-moderator     |
+
+```json title="PATCH /api/@vitnode/forum/content/comments/18 → 403"
+{
+  "code": "CONTENT_FORBIDDEN",
+  "contentTypeId": "forum.comment",
+  "issues": [
+    { "code": "edit_window_closed", "field": null, "message": "Public write denied: forbidden." }
+  ]
+}
+```
+
+An owner editing a record the public cannot read, such as a hidden one, still gets `404` with no issue, so the answer never confirms it exists. A submission opened by `publish` or `edits` is described in [Approvals](/docs/content-engine/approvals).
+
+## AdminCP routes
+
+Mounted only for a collection with policies, in the admin module, under `/api/{pluginId}/admin/content/{admin.permissionModule}`. For the forum that is `/api/@vitnode/forum/admin/content/forum_forums`.
+
+| Method and path       | Admin permission | Body            | Success                    |
+| --------------------- | ---------------- | --------------- | -------------------------- |
+| `GET /{id}/policies`  | `can_view`       |                 | `200` with the report      |
+| `PUT /{id}/policies`  | `can_edit`       | `{ overrides }` | `200` with the new report  |
+
+`PUT` replaces the container's whole overrides object. `overrides` maps a content type id to a policy, and only content types filed in the collection with `publicWrite` are accepted. A saved change expires the collection's page cache and emits `content.container.updated` with `changedFields: ["policies"]`. Saving the same overrides again changes nothing and emits nothing.
+
+```json title="PUT /api/@vitnode/forum/admin/content/forum_forums/3/policies"
+{ "overrides": { "forum.topic": { "publish": "approve" } } }
+```
+
+### Policy report
+
+| Name                          | Type                                   | Description                                                            |
+| ----------------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
+| `id`                          | `number`                               | The container                                                          |
+| `overrides`                   | `Record<contentTypeId, policy>`        | What this container sets itself                                        |
+| `contentTypes[].contentTypeId` | `string`                              | A content type filed in the collection with `publicWrite`              |
+| `contentTypes[].pluginId`     | `string`                               | Its plugin                                                             |
+| `contentTypes[].effective`    | full policy                            | What applies in this container                                         |
+| `contentTypes[].inherited`    | full policy                            | What would apply without this container's own overrides                |
+| `contentTypes[].sources`      | `Record<key, source>`                  | Where each effective value comes from                                  |
+
+A source is `{ kind: "container", containerId }`, `{ kind: "contentType" }`, `{ kind: "default" }` or `{ kind: "fallback" }`.
+
+### Errors
+
+Errors answer `{ code, message }`:
+
+| Status | `code`          | When                                                                                  |
+| ------ | --------------- | ------------------------------------------------------------------------------------- |
+| `400`  | `invalidInput`  | The body breaks the schema: an unknown key, a value outside the enum, minutes out of range |
+| `400`  | `invalidPolicy` | `overrides` names a content type that is not filed in the collection                   |
+| `403`  |                 | Missing the admin permission                                                           |
+| `404`  | `notFound`      | No such container in this collection                                                   |
+
+## Definition errors
+
+`defineContentContainer` throws a `ContentEngineError` when the module loads:
+
+| Cause                                         | Message starts with                                                         |
+| --------------------------------------------- | --------------------------------------------------------------------------- |
+| `policies` is not an object or `false`        | ``policies is an object with `defaults` and `contentTypes`, or `false`.``   |
+| An unknown key beside `defaults` and `contentTypes` | `policies.x is not an option.`                                        |
+| A `contentTypes` key that is not `plugin.entity` | `policies.contentTypes has the key "x", which is not a content type id`  |
+| An unknown policy key                         | `policies.defaults.x is not a policy.`                                      |
+| A value outside the allowed ones              | `policies.defaults.publish is not valid:`                                   |
+
+## Server helpers
+
+From `@vitnode/core/content` (browser-safe):
+
+| Function                                                        | Returns                                  | Behavior                                                       |
+| --------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
+| `resolveContentContainerPolicy({ chain, contentTypeId, fallback, policies })` | `{ policy, sources }`        | The pure resolution above. `chain` is the container, then its ancestors, nearest first |
+| `contentContainerPolicyFallback(definition)`                    | `ContentContainerPolicy`                 | The fallback for one content type                              |
+| `contentAuthorMayEdit(policy, createdAt, now?)`                 | `boolean`                                | Whether the owner may still edit                               |
+
+From `@vitnode/core/content/server`:
+
+| Function                                                      | Returns                                      | Behavior                                                                  |
+| ------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
+| `resolveContentRowContainer(c, db, definition, row)`          | `ContentRecordContainer \| null`             | The container an existing row is filed in, with its ancestor chain        |
+| `resolveContentWriteContainer(c, db, definition, values)`     | `ContentRecordContainer \| null`             | The container a new record would be filed in                              |
+| `effectiveContentPolicy(definition, container)`               | `EffectiveContentContainerPolicy \| null`    | `null` when the collection has no policies                                |
+| `resolveContentPublicationPolicy({ actor, c, container, definition, operation: "create", pluginId })` | `{ approval, policy, status }` | How a member's new record is published. Throws `moderators_only` when creating is not allowed |
+| `canModerateContent(c, { container, definition, permission, pluginId })` | `Promise<boolean>`                | Checks a moderator permission against the container's scope               |
+
+The container service from `createContentContainerService` has `policies(id)` and `updatePolicies(id, overrides)`, the same calls the routes make.

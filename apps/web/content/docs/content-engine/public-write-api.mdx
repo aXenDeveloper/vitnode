@@ -23,11 +23,11 @@ publicWrite: {
 | `ownership.field` | field name                 | Yes      |           | A single, shared `field.user()`. The server stamps it with the signed-in user on create                 |
 | `create`          | object                     | No       | off       | Adds `POST /`. At least one of `create` and `update` is required                                        |
 | `create.fields`   | field names                | Yes      |           | Non-empty allowlist of [writable fields](#writable-fields). Must include every field a new record needs |
-| `create.status`   | `"draft"` \| `"published"` | No       | `"draft"` | What a new record starts as. The server decides; the payload never does                                 |
+| `create.status`   | `"draft"` \| `"published"` | No       | `"draft"` | What a new record starts as. The server decides; the payload never does. [Container policies](/docs/content-engine/container-policies) take over when the container collection has them |
 | `create.captcha`  | `boolean`                  | No       | `false`   | Requires a [captcha](/docs/dev/captcha) token on every create, when a captcha provider is configured    |
 | `update`          | object                     | No       | off       | Adds `GET /{id}/edit` and `PATCH /{id}`, and registers the `can_edit` moderator permission              |
 | `update.fields`   | field names                | Yes      |           | Non-empty allowlist of writable fields                                                                  |
-| `update.own`      | `boolean`                  | No       | `true`    | Lets the owner edit their own record while it is not hidden. With `false`, only moderators edit         |
+| `update.own`      | `boolean`                  | No       | `true`    | Lets the owner edit their own record while it is not hidden and the container's `authorEdit` allows it. With `false`, only moderators edit |
 
 The content type also needs:
 
@@ -62,6 +62,8 @@ A `container` is writable in `create.fields` only. A member picks the container 
 ### Moderator permission
 
 A content type with `update` adds `can_edit` to its plugin's moderator permissions, under the content type's permission module, such as `discussion`. It shares the `@vitnode/example:discussion:can_edit` label with the admin permission. If the plugin declares that module under `permissionStaff.moderator` itself, the declared list wins.
+
+When the content type lives in a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` is scoped by that collection and `can_approve` is added next to it. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
 
 ## Generated routes
 
@@ -108,10 +110,12 @@ Every successful response is the same record shape:
 | `status`      | `"draft"` \| `"published"` |                                                                                        |
 | `publishedAt` | ISO date string \| `null`  |                                                                                        |
 | `version`     | `number`                   | Editorial content types only. Send it back as `expectedVersion`                        |
+| `approval`    | object \| `null`           | The record's pending submission, or a rejection nothing replaced yet. See [Approvals](/docs/content-engine/approvals#what-the-author-sees) |
 | `values`      | object                     | Every field in `create.fields` or `update.fields`, `null` when empty. Nothing else     |
 
 ```json title="200"
 {
+  "approval": null,
   "id": 1,
   "slug": "how-do-i-add-a-widget-zone-below-an-article",
   "status": "published",
@@ -143,7 +147,7 @@ Every successful response is the same record shape:
 | `400`  | Rejection, `CONTENT_INVALID_INPUT`   | The body is not JSON, breaks a rule, names a field outside the allowlist, or links to a record that is not available |
 | `400`  | Plain text                           | `create.captcha` is on and the captcha token is missing or invalid                                                   |
 | `401`  | Rejection, `CONTENT_UNAUTHENTICATED` | No user session                                                                                                      |
-| `403`  | Rejection, `CONTENT_FORBIDDEN`       | The record is publicly readable, but you are not its owner or a moderator                                            |
+| `403`  | Rejection, `CONTENT_FORBIDDEN`       | The record is publicly readable, but you are not its owner or a moderator, the author's edit window closed, or the container lets only moderators create |
 | `404`  | Rejection, `CONTENT_NOT_FOUND`       | The record does not exist, or it is a draft or hidden and you may not edit it                                        |
 | `409`  | Conflict                             | A unique value is taken, or the record changed since `expectedVersion`                                               |
 | `429`  | `{ error, retryAfter }`              | The [rate limit](#rate-limit) is used up                                                                             |
@@ -166,7 +170,7 @@ type ContentPublicWriteRejection = {
 };
 ```
 
-`issues` is empty for `401`, `403` and `404`. For `400`, each issue names the field it belongs to, or `null` for the request as a whole. Translate an issue by its `code`; `message` is English text for developers.
+`issues` is empty for `401` and `404`, and for `403` unless a [container policy](/docs/content-engine/container-policies-api#refusals-on-the-public-write-routes) refused the write. For `400`, each issue names the field it belongs to, or `null` for the request as a whole. Translate an issue by its `code`; `message` is English text for developers.
 
 A title that is too short and an owner the client tried to set:
 
@@ -279,6 +283,8 @@ Issue codes:
 | `not_writable`                                          | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.notWritable` | A key in `values` outside the allowlist. One issue per key                              |
 | `unavailable`                                           | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.unavailable` | A relation names a record that is missing, a draft or hidden                            |
 | `invalid_json`                                          | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.invalidJson` | The body is not JSON                                                                    |
+| `edit_window_closed`                                    | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.editWindowClosed` | On `403`: the container's `authorEdit` no longer lets the owner edit               |
+| `moderators_only`                                       | `CONTENT_PUBLIC_WRITE_ISSUE_CODES.moderatorsOnly` | On `403`: the container has `create: "moderators"` and you hold no `can_edit` there  |
 | `too_small`, `too_big`, `invalid_type`, `invalid_value` | Zod                                            | A value breaks the field's rules, such as `minLength` or an enum                        |
 | `custom`                                                | Zod                                            | A custom rule, such as an empty required rich text document or an update with no fields |
 | `unrecognized_keys`                                     | Zod                                            | A key beside `values`, such as `expectedVersion` on a content type without `editorial`  |
@@ -307,15 +313,15 @@ createContentPublicWriteService({ c, model, pluginId });
 
 | Method             | Returns                             | Behavior                                                                                                                                                                                                  |
 | ------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create(values)`   | `Promise<ContentPublicWriteRecord>` | Validates `values` against `create.fields`, stamps the owner, checks relation targets, creates and, when the policy says so, publishes in one transaction. Emits events and syncs search after the commit |
+| `create(values)`   | `Promise<ContentPublicWriteRecord>` | Validates `values` against `create.fields`, stamps the owner, checks relation targets, creates and, when the policy says so, publishes or opens an approval submission in one transaction. Emits events and syncs search after the commit |
 | `findEditable(id)` | `Promise<ContentPublicWriteRecord>` | Reads one record for its owner or a moderator, drafts included                                                                                                                                            |
-| `update(id, body)` | `Promise<ContentPublicWriteRecord>` | Validates `{ values, expectedVersion }`, locks the row, authorizes, checks relation targets and writes in one transaction. Emits events and syncs search after the commit                                 |
+| `update(id, body)` | `Promise<ContentPublicWriteRecord>` | Validates `{ values, expectedVersion }`, locks the row, authorizes, checks relation targets and writes, or stores a proposal when the container reviews edits, in one transaction. Emits events and syncs search after the commit                                 |
 
 The methods throw instead of answering:
 
 | Error                          | When                                                                                                               |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `ContentPublicWriteDenied`     | `reason` is `"unauthenticated"`, `"forbidden"` or `"notFound"`. Also `"notFound"` when `create` or `update` is off |
+| `ContentPublicWriteDenied`     | `reason` is `"unauthenticated"`, `"forbidden"` or `"notFound"`. Also `"notFound"` when `create` or `update` is off. `issue` is `"edit_window_closed"`, `"moderators_only"` or `null` |
 | `ContentPublicWriteInputError` | A relation target is not available. Carries `field` and `detail`                                                   |
 | `ZodError`                     | `values` or the body breaks the allowlist or a field rule                                                          |
 | `ContentVersionConflict`       | `expectedVersion` is out of date (editorial content types)                                                         |
@@ -411,9 +417,9 @@ A route outside `/content/` only gets the global rate limit, which is why this o
 | Function                                                                       | Returns                                            | Behavior                                                                                                                               |
 | ------------------------------------------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `resolveContentPublicWriteActor(c)`                                            | `{ type: "api", userId }` \| `null`                | The signed-in user of the public session. Never an AdminCP session, never the body                                                     |
-| `authorizeContentPublicWrite(c, { action, actor, definition, pluginId, row })` | `{ allowed, via: "owner" \| "moderator" \| null }` | The owner and moderator rules above, for a stored `row`. `action` is `"update"`                                                        |
+| `authorizeContentPublicWrite(c, { action, actor, container?, definition, pluginId, policy?, row })` | `{ allowed, via, reason? }` | The owner and moderator rules above, for a stored `row`. `action` is `"update"`. With a `policy`, a closed edit window gives `reason: "editWindowClosed"` |
 | `contentPublicWriteRefusal(row)`                                               | `"forbidden"` \| `"notFound"`                      | `"forbidden"` only when the public can already read `row`                                                                              |
-| `resolveContentPublicationPolicy({ actor, container, definition, operation })` | `"draft"` \| `"published"`                         | The status a public create starts with. Today it returns `publicWrite.create.status`. `container` is the resolved container, or `null` |
+| `resolveContentPublicationPolicy({ actor, c, container, definition, operation, pluginId })` | `{ approval, policy, status }` | How a public create starts. Without container policies, `status` is `publicWrite.create.status`. With them, see [Publishing policies reference](/docs/content-engine/container-policies-api#server-helpers) |
 
 ## Definition errors
 

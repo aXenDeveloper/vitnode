@@ -56,6 +56,7 @@ import { FinePointerSensor } from "@/lib/dnd/sensors";
 import { isAdminRequestError } from "@/views/admin/admin-request";
 
 import type { ContentContainerSave } from "./container-form-content";
+import type { ContentContainerPoliciesSave } from "./container-policies-form";
 import type {
   AdminContentContainer,
   ContentContainerMutationResult,
@@ -64,6 +65,7 @@ import type { ContainerDropProjection } from "./container-tree";
 
 import {
   ContentContainerDeleteDialog,
+  ContentContainerPoliciesSheet,
   ContentContainerSheet,
 } from "./container-dialogs";
 import { contentContainerErrorKey } from "./container-query";
@@ -103,6 +105,7 @@ export interface ContentContainerManagerProps {
   }) => Promise<ContentContainerMutationResult<null>>;
   onRetry: () => void;
   onSave: ContentContainerSave;
+  onSavePolicies?: ContentContainerPoliciesSave;
   pluginId: string;
   records: AdminContentContainer[] | undefined;
 }
@@ -215,6 +218,7 @@ export const ContentContainerManager = ({
   onMove,
   onRetry,
   onSave,
+  onSavePolicies,
   pluginId,
   records,
 }: ContentContainerManagerProps) => {
@@ -255,6 +259,7 @@ export const ContentContainerManager = ({
   const sheet = useOverlay();
   const [sheetMode, setSheetMode] = React.useState<"create" | "edit">("create");
   const deleting = useOverlay();
+  const policies = useOverlay();
   const announcementContainer = React.useSyncExternalStore(
     subscribeToNothing,
     getAnnouncementContainer,
@@ -464,6 +469,12 @@ export const ContentContainerManager = ({
       const move = rootContainerMove(ordered, id);
       if (move) commitMove(move);
     },
+    onPolicies:
+      definition.policies.enabled && onSavePolicies
+        ? id => {
+            policies.show({ id });
+          }
+        : undefined,
     onShift: (id, step) => {
       const move = shiftContainerMove(ordered, id, step);
       if (move) commitMove(move);
@@ -659,6 +670,10 @@ export const ContentContainerManager = ({
     sheet.id === null
       ? undefined
       : ordered.find(record => record.id === sheet.id);
+  const policiesContainer =
+    policies.id === null
+      ? undefined
+      : ordered.find(record => record.id === policies.id);
   const deletingContainer =
     deleting.id === null
       ? undefined
@@ -686,6 +701,20 @@ export const ContentContainerManager = ({
         records={ordered}
         rules={rules}
       />
+
+      {definition.policies.enabled && onSavePolicies ? (
+        <ContentContainerPoliciesSheet
+          container={policiesContainer}
+          definition={definition}
+          formKey={policies.session}
+          onOpenChange={policies.setOpen}
+          onSavePolicies={onSavePolicies}
+          open={policies.isOpen}
+          pluginId={pluginId}
+          records={ordered}
+          singular={labels.singular}
+        />
+      ) : null}
 
       <ContentContainerDeleteDialog
         childCount={

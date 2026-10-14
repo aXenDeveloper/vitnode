@@ -43,7 +43,7 @@ const UserTimeline = ({
     adminUserTimelineQueryOptions({ adminUserId, locale, userId }),
   );
 
-  return <SearchFeedList query={query} variant="timeline" />;
+  return <SearchFeedList ownerId={userId} query={query} variant="timeline" />;
 };
 
 const UserAiAccess = ({

@@ -228,6 +228,9 @@
           }
         }
       }
+    },
+    "search": {
+      "docs": "Dokumentacja"
     }
   }
 }

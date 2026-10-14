@@ -47,6 +47,7 @@ import type {
   ContentVisibilityMembers,
 } from "./visibility";
 
+import { cancelContentSubmissions } from "../approvals/server/submissions";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
@@ -85,6 +86,7 @@ import {
   diffChangedPaths,
   toInsertColumns,
 } from "./query";
+import { assertNoContentSelfReference } from "./references";
 import {
   contentRevisionSnapshot,
   projectRevisionSnapshot,
@@ -92,6 +94,7 @@ import {
 import { createContentRevisionsModel } from "./revisions-model";
 import { createContentSchedulesModel } from "./schedules-model";
 import { createSlugNormalizer } from "./slugs";
+import { assertContentThreadPlacement } from "./thread";
 import {
   isContentBaseRowPublic,
   isInVisibilityState,
@@ -958,6 +961,14 @@ export const createContentEditorialService = <
         // about another.
         await assertContentFileReferences(c, definition, parsed, tx);
         await resolveContentContainerAssignment(tx, definition, parsed);
+        await assertContentThreadPlacement(
+          tx,
+          { columns, definition, table },
+          {
+            id: null,
+            values: parsed,
+          },
+        );
 
         const [row] = await tx
           .insert(table)
@@ -1067,6 +1078,7 @@ export const createContentEditorialService = <
           before: row,
           itemId: id,
         });
+        await cancelContentSubmissions(tx, definition, id);
 
         return {
           changed: true,
@@ -1311,6 +1323,15 @@ export const createContentEditorialService = <
             ...(await store?.load(id, tx, galleryFieldNames)),
           }),
         });
+        assertNoContentSelfReference(definition, id, patch);
+        await assertContentThreadPlacement(
+          tx,
+          { columns, definition, table },
+          {
+            id,
+            values: patch,
+          },
+        );
         await resolveContentContainerAssignment(tx, definition, patch);
 
         // The version guard runs **first**, before a single junction or child

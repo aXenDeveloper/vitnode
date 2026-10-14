@@ -46,6 +46,7 @@ import {
 } from "./tanstack/auth/verify-email";
 import { MY_FILES_NAMESPACES } from "./tanstack/files/route";
 import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
+import { normalizeModcpApprovalsSearch } from "./tanstack/moderation/approvals-route-search";
 import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
@@ -53,9 +54,11 @@ import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/rout
 import {
   AuthPendingSkeleton,
   CardsPendingSkeleton,
+  DiscoverPendingSkeleton,
   FeedPendingSkeleton,
   FormPendingSkeleton,
   ProfilePendingSkeleton,
+  SearchPendingSkeleton,
   TablePendingSkeleton,
 } from "./tanstack/pending";
 import { PROFILE_NAMESPACES } from "./tanstack/profile/route";
@@ -88,13 +91,13 @@ export const routes = defineRoutes([
   page("/discover", {
     component: lazy(() => import("./pages/discover")),
     messages: DISCOVER_NAMESPACES,
-    pendingComponent: FeedPendingSkeleton,
+    pendingComponent: DiscoverPendingSkeleton,
   }),
 
   page("/search", {
     component: lazy(() => import("./pages/search")),
     messages: SEARCH_NAMESPACES,
-    pendingComponent: FeedPendingSkeleton,
+    pendingComponent: SearchPendingSkeleton,
     search: normalizeSearchRouteSearch,
   }),
 
@@ -204,6 +207,17 @@ export const routes = defineRoutes([
 
       page("reports/:id", {
         component: lazy(() => import("./pages/modcp/report")),
+        pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
+
+      page("approvals", {
+        component: lazy(() => import("./pages/modcp/approvals")),
+        pendingComponent: () => <FeedPendingSkeleton rows={5} />,
+        search: normalizeModcpApprovalsSearch,
+      }),
+
+      page("approvals/:id", {
+        component: lazy(() => import("./pages/modcp/approval")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
       }),
     ],

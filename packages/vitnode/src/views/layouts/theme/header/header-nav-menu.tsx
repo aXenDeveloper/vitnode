@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { ChevronDownIcon } from "lucide-react";
 import React from "react";
@@ -20,6 +20,7 @@ import { isExternalNavigationHref } from "@/lib/navigation";
 import type { HeaderNavChildItem, HeaderNavItem } from "./header-nav";
 
 import { visibleHeaderNavCount } from "./header-nav";
+import { useIsNavHrefActive } from "./use-is-nav-href-active";
 
 const navLinkRender = ({
   href,
@@ -71,13 +72,6 @@ const NavIcon = ({
   className?: string;
   icon: string | undefined;
 }) => <EmojiIcon className={className} value={parseEmojiIcon(icon)} />;
-
-const useIsNavHrefActive = () => {
-  const matchRoute = useMatchRoute();
-
-  return (href: string): boolean =>
-    !isExternalNavigationHref(href) && Boolean(matchRoute({ to: href }));
-};
 
 const HeaderNavDropdownLink = ({ item }: { item: HeaderNavChildItem }) => {
   const isActive = useIsNavHrefActive();

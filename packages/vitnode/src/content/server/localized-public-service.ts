@@ -245,6 +245,7 @@ export const createContentLocalizedPublicService = <
     // "this translation row". A reader has no notion of a translation to
     // attribute a timestamp to.
     ...Object.fromEntries(exposedShared.map(name => [name, columns[name]])),
+    ...Object.fromEntries(publicApi.people.map(name => [name, columns[name]])),
     ...Object.fromEntries(
       exposedLocalized.map(name => [name, localizedValue(name, withFallback)]),
     ),

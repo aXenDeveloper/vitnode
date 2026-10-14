@@ -113,6 +113,38 @@ For setup, credentials, configuration, and the first rebuild, follow the
 
 ---
 
+## Filter the search page
+
+`/search` has a filter sidebar next to the results (a **Filters** sheet on phones):
+
+- **Content** - tick one or more types. Each row shows how many results it would have with the other filters applied.
+- **Date created** - any time, the past 24 hours, week, month or year, or a **Custom range** picked on a calendar.
+- **Authors** - add as many people as you like. A result matches when any of them wrote it, which counts co-authors too.
+
+Results sit on a timeline grouped by month and day, so you can tell at a glance what happened yesterday and what is from last spring.
+
+The same filters work in the public search API:
+
+| Parameter   | Example                     | What it does                                     |
+| ----------- | --------------------------- | ------------------------------------------------ |
+| `types`     | `forum.topic,forum.comment` | Only these content types                         |
+| `authorIds` | `1,7`                       | Written by any of these members (up to 20)       |
+| `from`      | `2026-10-01T00:00:00.000Z`  | Created at or after this moment                  |
+| `to`        | `2026-10-14T23:59:59.999Z`  | Created at or before this moment                 |
+
+```bash
+curl "http://localhost:3000/api/@vitnode/core/search?authorIds=1,7&from=2026-10-01T00:00:00.000Z"
+```
+
+Two small routes feed the sidebar:
+
+- `GET /api/@vitnode/core/search/authors?search=ax` finds members credited on public content. Without `search` it returns the most active ones.
+- `GET /api/@vitnode/core/search/facets` takes the same filters as the search route (minus `types`) and returns `{ "types": { "forum.comment": 4, ... } }`.
+
+A search engine plugin that can count implements `countByType` and sets `capabilities.facets` to `true`. One that can't returns `types: null`, and the sidebar quietly drops the numbers. Engines should also honour `authorIds`, or the author filter will be more of a suggestion.
+
+---
+
 ## Member timelines
 
 Every member gets a timeline: everything credited to them, newest first. It lives on their profile (`/users/{nameCode}`) and on the **Timeline** tab of their AdminCP user page.
@@ -262,6 +294,11 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
     title="Table search"
     description="Add search filtering to a single database table"
     href="/docs/dev/database/search"
+  />
+  <Card
+    title="Suggestions"
+    description="Header search dialog, popular content and popularity signals"
+    href="/docs/dev/search-suggestions"
   />
   <Card
     title="Elasticsearch"

@@ -73,6 +73,7 @@ Every container already has `id`, `parentId`, `name`, `slug`, `position` and `de
 | `ordering`  | `{ mode?: "manual" \| "alphabetical" }`     | No       | `{ mode: "manual" }`             | How siblings are sorted. See [Hierarchy and ordering](/docs/content-engine/container-hierarchy) |
 | `publicApi` | `{ path: string; fields?: string[] }`       | No       | off                              | Read-only public routes at `/api/{pluginId}/content/{path}`                                     |
 | `admin`     | `{ path?; permissionModule?; navigation? }` | No       | see below                        | The AdminCP screen and its staff permissions                                                    |
+| `policies`  | `{ defaults?; contentTypes? }` \| `false`  | No       | off                              | Per-container publishing rules. See [Publishing policies](/docs/content-engine/container-policies) |
 
 `admin.path` defaults to the id with dots turned into slashes (`example/boards`), so the screen opens at `/admin/containers/example/boards`. `admin.permissionModule` defaults to the snake-cased id (`example_boards`), and `admin.navigation: false` hides the sidebar entry.
 
@@ -114,6 +115,8 @@ export const discussionContentType = defineContentType({
 ```
 
 The column is an `integer` foreign key to `core_content_containers.id` with `ON DELETE RESTRICT`, plus an index on `(board, publishedAt)`. Every write checks that the id belongs to `example.boards`, not just that it exists. All options are in [Fields](/docs/content-engine/fields#container).
+
+A content type can also live in the container of a record it points at, such as a reply in its topic's board, with a required `field.relation({ target, container: true })` instead of a `field.container()`. See [Threaded replies](/docs/content-engine/threads).
 
 </Step>
 
@@ -326,12 +329,8 @@ Items come in tree order: each parent, then its subtree. `metadata` holds only `
 
 ## What's next
 
-<Callout type="info" title="Not available yet">
-  Per-container policies are planned, not shipped. Today every container behaves
-  the same way.
-</Callout>
-
-Containers are where per-place rules will live: a publishing mode per board (go live or wait as a draft), moderator approval, who may post or read in a board, and boards hidden from guests. The groundwork is in place. A public create already resolves the container on the server and hands it to `resolveContentPublicationPolicy`, so these policies can arrive without changing your routes or forms.
-
 - [Hierarchy and ordering](/docs/content-engine/container-hierarchy): depth, moves, safe deletion and the server-side service.
 - [Containers on the frontend](/docs/content-engine/container-frontend): a board tree, a board page and a create form with a board picker.
+- [Publishing policies](/docs/content-engine/container-policies): who may post in each board, whether posts wait for [approval](/docs/content-engine/approvals), and how long authors may edit.
+
+Read permissions per container, such as boards hidden from guests, are not available yet. Today every reader sees every container in the public tree.

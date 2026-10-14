@@ -21,11 +21,13 @@
 
 import type { VitNodeApiPlugin as ApiPlugin0 } from '@vitnode/blog/config.api'
 import type { VitNodeApiPlugin as ApiPlugin1 } from '@vitnode/example/config.api'
+import type { VitNodeApiPlugin as ApiPlugin2 } from '@vitnode/forum/config.api'
 
 declare module '@vitnode/core/lib/fetcher/registry' {
   interface ApiPluginRegistry {
     '@vitnode/blog': ApiPlugin0
     '@vitnode/example': ApiPlugin1
+    '@vitnode/forum': ApiPlugin2
   }
 }
 

@@ -17,6 +17,7 @@
     "caching",
     "---Model content---",
     "relations",
+    "threads",
     "localization",
     "rich-text",
     "id-strategy",
@@ -24,6 +25,8 @@
     "containers",
     "container-hierarchy",
     "container-frontend",
+    "container-policies",
+    "approvals",
     "---Editorial---",
     "editorial",
     "live-editing",
@@ -41,6 +44,7 @@
     "fields",
     "plugin-files",
     "public-write-api",
+    "container-policies-api",
     "live-editing-api"
   ]
 }

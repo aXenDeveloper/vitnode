@@ -32,6 +32,7 @@ export type {
 } from "./module";
 export { readPluginRouteModule } from "./module";
 export {
+  fitNamespaceList,
   MAX_NAMESPACE_DEPTH,
   MAX_NAMESPACE_LENGTH,
   MAX_NAMESPACES,

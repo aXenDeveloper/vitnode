@@ -47,6 +47,7 @@ export const CONTENT_CONTAINER_ERROR_CODES = [
   "hasContent",
   "invalidInput",
   "invalidMetadata",
+  "invalidPolicy",
   "invalidPosition",
   "limitReached",
   "maxDepth",
@@ -55,3 +56,28 @@ export const CONTENT_CONTAINER_ERROR_CODES = [
   "slugEmpty",
   "slugTaken",
 ] as const;
+
+export const CONTENT_CONTAINER_POLICY_CREATE = [
+  "members",
+  "moderators",
+] as const;
+
+export const CONTENT_CONTAINER_POLICY_MODES = ["immediate", "approve"] as const;
+
+export const CONTENT_CONTAINER_POLICY_AUTHOR_EDIT = [
+  "always",
+  "never",
+  "window",
+] as const;
+
+export const CONTENT_CONTAINER_POLICY_KEYS = [
+  "create",
+  "publish",
+  "edits",
+  "authorEdit",
+  "authorEditMinutes",
+] as const;
+
+export const CONTENT_CONTAINER_POLICY_MAX_MINUTES = 60 * 24 * 365;
+
+export const CONTENT_CONTAINER_TREE_SUFFIX = ":tree";

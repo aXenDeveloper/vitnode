@@ -76,6 +76,25 @@
         "discover": "Discover"
       },
       "placeholder": "Search…",
+      "dialog": {
+        "label": "Search the community",
+        "popular": "Popular right now",
+        "popular_empty": "Nothing is trending yet. Start typing to search.",
+        "suggestions": "Suggestions",
+        "no_results": "No quick matches. Try another word or see all results.",
+        "error": "Search is taking a nap. Try again in a moment.",
+        "see_all": "See all results for “{term}”",
+        "in_context": "in {context}",
+        "count": "{count, plural, =0 {No results} one {# result} other {# results}}",
+        "recent": "Recent searches",
+        "complete": "to complete",
+        "close": "to close",
+        "navigate": "to navigate",
+        "open": "to open",
+        "key_up": "Up arrow",
+        "key_down": "Down arrow",
+        "key_enter": "Enter"
+      },
       "empty": "Nothing found yet.",
       "loadMore": "Load more",
       "loading": "Loading…",
@@ -88,8 +107,15 @@
         "newest": "Newest",
         "oldest": "Oldest"
       },
+      "activity": {
+        "commented": "<profile>{author}</profile> commented on <target>{context}</target>",
+        "posted_in": "<profile>{author}</profile> posted <link>{item}</link> in <target>{context}</target>",
+        "commented_self": "Commented on <target>{context}</target>"
+      },
       "types": {
         "blog_post": "Article",
+        "forum_comment": "Comment",
+        "forum_topic": "Topic",
         "unknown": "Content"
       },
       "userTab": {
@@ -155,6 +181,40 @@
           "empty": "No collections found",
           "emptyDesc": "No collection matches your search. Try a different term."
         }
+      },
+      "searchField": "Search posts, topics and comments…",
+      "clearSearch": "Clear search",
+      "results": "{count, plural, one {# result} other {# results}}",
+      "filters": {
+        "title": "Filters",
+        "active": "{count, plural, one {# filter on} other {# filters on}}",
+        "clearAll": "Clear all",
+        "reset": "Reset",
+        "content": "Content",
+        "date": "Date created",
+        "authors": "Authors",
+        "anyAuthor": "Any author",
+        "addAuthor": "Add",
+        "findAuthor": "Find an author",
+        "noAuthors": "No authors match “{term}”.",
+        "loadingAuthors": "Looking for authors…",
+        "removeAuthor": "Remove {name}",
+        "pickDates": "Pick a start and end day",
+        "done": "Done",
+        "customRange": "Custom range, {range}"
+      },
+      "range": {
+        "all": "Any time",
+        "day": "Past 24 hours",
+        "week": "Past week",
+        "month": "Past month",
+        "year": "Past year",
+        "custom": "Custom range"
+      },
+      "timeline": {
+        "items": "{count, plural, one {# item} other {# items}}",
+        "posted_in": "<profile>{author}</profile> posted in <target>{context}</target>",
+        "posted_in_self": "Posted in <target>{context}</target>"
       }
     },
     "global": {
@@ -358,6 +418,11 @@
         "confirm": "Yes, confirm"
       },
       "search_placeholder": "Search...",
+      "search_dialog": {
+        "open": "Open search",
+        "title": "Search",
+        "desc": "Find articles, topics and comments as you type."
+      },
       "results_not_found": "No results found",
       "selected_count": "<number>{count}</number> selected",
       "clear_filters": "Clear filters",
@@ -1849,6 +1914,7 @@
         "hasContent": "Content is still filed here. Move or delete that content first.",
         "invalidInput": "Some of the values aren't valid. Check the form and try again.",
         "invalidMetadata": "Some of the details don't match what this collection expects.",
+        "invalidPolicy": "Some publishing settings aren't valid for this collection.",
         "invalidPosition": "That position is outside the list. Refresh and try again.",
         "limitReached": "This collection is full. Delete something before adding more.",
         "maxDepth": "That would nest it deeper than this collection allows.",
@@ -1858,6 +1924,56 @@
         "slugTaken": "Another item in this collection already uses this slug.",
         "forbidden": "You don't have permission to do that.",
         "unknown": "Something went wrong. Try again in a moment."
+      },
+      "policies": {
+        "action": "Publishing",
+        "title": "Publishing rules",
+        "desc": "Choose who can post in \"{name}\" and whether posts wait for approval. Anything on Inherit follows the parent or the collection's defaults.",
+        "submit": "Save rules",
+        "success": "Publishing rules saved",
+        "successDesc": "\"{name}\" now follows its new rules.",
+        "loadError": "Could not load the publishing rules. Check your connection and try again.",
+        "retry": "Try again",
+        "empty": "No content type lives in this collection yet, so there's nothing to set.",
+        "inherit": "Inherit (currently: {value})",
+        "inheritMinutes": "Inherit (currently: {count, plural, one {# minute} other {# minutes}})",
+        "source": {
+          "self": "Set on this {name}.",
+          "container": "Inherited from \"{name}\".",
+          "contentType": "Inherited from the collection's default for this type.",
+          "default": "Inherited from the collection default.",
+          "fallback": "Inherited from the content type's own default."
+        },
+        "create": {
+          "label": "Who can start",
+          "desc": "Who can create new posts here.",
+          "members": "Members",
+          "moderators": "Moderators only"
+        },
+        "publish": {
+          "label": "New posts",
+          "desc": "Whether new posts go live right away or wait for a moderator.",
+          "immediate": "Publish immediately",
+          "approve": "Wait for approval"
+        },
+        "edits": {
+          "label": "Edits to published posts",
+          "desc": "Whether an author's changes to a live post show up right away.",
+          "immediate": "Apply immediately",
+          "approve": "Wait for approval"
+        },
+        "authorEdit": {
+          "label": "Author editing",
+          "desc": "How long authors can edit their own posts.",
+          "always": "Always",
+          "never": "Never",
+          "window": "For a limited time"
+        },
+        "authorEditMinutes": {
+          "label": "Editing window",
+          "desc": "How many minutes after posting an author can still edit.",
+          "unit": "minutes"
+        }
       }
     },
     "editor": {
@@ -2112,6 +2228,141 @@
       "modcp": {
         "title": "Moderator CP",
         "nav": "Moderator CP",
+        "approvals": {
+          "title": "Approvals",
+          "desc": "New content and edits waiting for a moderator before they go live.",
+          "status_label": "Filter by status",
+          "statuses": {
+            "pending": "Pending",
+            "approved": "Approved",
+            "rejected": "Rejected",
+            "superseded": "Replaced",
+            "cancelled": "Cancelled"
+          },
+          "kinds": {
+            "create": "New",
+            "edit": "Edit"
+          },
+          "filters": {
+            "type": "Type",
+            "all_types": "All types",
+            "container": "Location",
+            "all_containers": "Everywhere"
+          },
+          "untitled": "Untitled",
+          "deleted_user": "Deleted account",
+          "reason_preview": "Reason: {reason}",
+          "empty": {
+            "pending_title": "All caught up",
+            "pending_desc": "Nothing is waiting for approval. Go grab a coffee.",
+            "title": "Nothing here",
+            "desc": "No submissions match these filters."
+          },
+          "approve": {
+            "button": "Approve",
+            "success": "Approved",
+            "success_desc": "“{title}” is live now."
+          },
+          "reject": {
+            "button": "Reject",
+            "title": "Reject this submission?",
+            "desc": "Nothing on the site changes. The author sees your reason and can try again.",
+            "reason": "Reason",
+            "reason_desc": "Optional, and shown to the author - keep it kind and specific.",
+            "submit": "Reject submission",
+            "success": "Rejected",
+            "success_desc": "“{title}” stays as it was."
+          },
+          "errors": {
+            "decided": {
+              "title": "Already decided",
+              "desc": "Another moderator got here first. The queue shows what they decided."
+            },
+            "stale": {
+              "title": "The record changed",
+              "desc": "The record changed since this was proposed - reject it and ask the author to resubmit."
+            },
+            "gone": {
+              "title": "The content is gone",
+              "desc": "It was deleted before anyone decided, so the submission was cancelled."
+            },
+            "forbidden": {
+              "title": "Out of your reach",
+              "desc": "The content moved somewhere you cannot approve in."
+            },
+            "notFound": {
+              "title": "Submission not found",
+              "desc": "It no longer exists, or it is outside what you moderate."
+            },
+            "rate_limited": {
+              "title": "Easy there",
+              "desc": "That was a lot of decisions at once. Try again in a moment."
+            },
+            "unknown": {
+              "title": "Something went wrong",
+              "desc": "The decision was not saved. Please try again."
+            }
+          },
+          "detail": {
+            "title": "Submission #{id}",
+            "subtitle": "{type}",
+            "subtitle_in": "{type} in {container}",
+            "sections": {
+              "proposed": "Proposed content",
+              "changes": "Changes",
+              "history": "History"
+            },
+            "history_empty": "This is the first submission for this content.",
+            "empty": "(empty)",
+            "yes": "Yes",
+            "no": "No",
+            "changed": "Changed",
+            "live": "Live now",
+            "proposed": "Proposed",
+            "no_changes": "The proposal matches the live version, so nothing would change.",
+            "unchanged": "{count, plural, one {# unchanged field} other {# unchanged fields}}",
+            "view_live": "View live",
+            "view_draft": "Open draft",
+            "new_tab": "(opens in a new tab)",
+            "details": {
+              "title": "Details",
+              "author": "Author",
+              "deleted_user": "Deleted account",
+              "type": "Type",
+              "container": "Location",
+              "kind": "Kind",
+              "status": "Status",
+              "reviewer": "Reviewer",
+              "submitted": "Submitted",
+              "decided": "Decided"
+            },
+            "decided": {
+              "approved": {
+                "title": "Approved",
+                "desc": "This submission went live."
+              },
+              "rejected": {
+                "title": "Rejected",
+                "desc": "The record stayed as it was."
+              },
+              "superseded": {
+                "title": "Replaced",
+                "desc": "The author sent a newer version, which took this one's place."
+              },
+              "cancelled": {
+                "title": "Cancelled",
+                "desc": "The content was deleted before anyone decided."
+              },
+              "reason": "Reason: {reason}"
+            },
+            "warnings": {
+              "gone_title": "The content is gone",
+              "gone_desc": "It was deleted after this was submitted, so it can only be rejected.",
+              "stale_title": "The live version changed",
+              "stale_desc": "Someone edited the record after this was proposed - reject it and ask the author to resubmit."
+            }
+          }
+        },
         "reports": {
           "title": "Reports",
           "desc": "Reports you can act on. Drag a card to another column to take it, close it or send it back.",

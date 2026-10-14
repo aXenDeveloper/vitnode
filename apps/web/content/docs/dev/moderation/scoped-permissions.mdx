@@ -1,6 +1,6 @@
 ---
 title: Scoped moderator permissions
-description: Limit VitNode moderator permissions to selected resources, such as some forum sections or categories, with defineModerationScope and a content model's moderationScope.
+description: Limit VitNode moderator permissions to selected resources, such as some forum sections or categories, with defineModerationScope, a content model's moderationScope, or the container-scoped can_edit and can_approve of a container collection with policies.
 icon: ListChecks
 ---
 
@@ -120,6 +120,41 @@ The report permissions of `example.article` are now scoped by `example.category`
 ## Check the result
 
 Rebuild with `pnpm build:plugins` and restart `pnpm dev`. Open **AdminCP → Staff → Moderators**, edit a moderator and select the example plugin. **View reports** and **Claim, assign, annotate and resolve reports** now show a scope under the checkbox, and **Change** opens the category picker. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+
+## Container-scoped permissions
+
+A [container collection](/docs/content-engine/containers) with [publishing policies](/docs/content-engine/container-policies) brings its own scope family, so there is nothing to define. The family id is the collection's id, such as `forum.forums`, and its label is the collection's title.
+
+Every content type filed in that collection with [public write](/docs/content-engine/public-write), through `field.container()` or `field.relation({ container: true })`, gets two moderator permissions scoped by it:
+
+| Permission    | Added when                 | Allows                                                                                   |
+| ------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
+| `can_edit`    | `publicWrite.update` is on | Edit any record in the container from the public site, at any age; create where `create: "moderators"` |
+| `can_approve` | `publicWrite` is on        | See and decide [approvals](/docs/dev/moderation/review-approvals) there, and skip approval for your own posts |
+
+They merge with the report permissions when the content type also has `reports: true`. Label them in the plugin's locale file. `can_edit` shares its key with the admin permission, and a missing label shows the raw name:
+
+```json title="plugins/forum/src/locales/en.json"
+{
+  "@vitnode/forum:topic:can_edit": "Edit topics",
+  "@vitnode/forum:topic:can_approve": "Approve topics",
+  "@vitnode/forum:comment:can_edit": "Edit comments",
+  "@vitnode/forum:comment:can_approve": "Approve comments"
+}
+```
+
+### Pick forums or whole subtrees
+
+A resource is either one container or one container with everything below it:
+
+| Resource    | Picker label | Covers                                                                    |
+| ----------- | ------------ | ------------------------------------------------------------------------- |
+| `"12"`      | Help         | Container 12 only, never its children                                     |
+| `"12:tree"` | Help › *     | Container 12 and every container below it, including ones created later   |
+
+The `:tree` entry is listed only for a container that has children. A record in container `C` is covered by a grant that names `C`, `C:tree` or the `:tree` of any ancestor, by **All resources**, by an unscoped grant, or by a root role. The server resolves the record's container on every check, and again when a decision is made, so a topic moved to another forum follows its new scope.
+
+A moderator entry on its own grants nothing. Someone flagged as staff, with no `can_edit` or `can_approve` for a forum, edits and approves exactly as much there as any member: nothing beyond their own posts.
 
 ## How grants combine
 

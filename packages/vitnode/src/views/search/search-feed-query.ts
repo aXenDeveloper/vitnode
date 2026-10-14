@@ -16,6 +16,7 @@ export const SEARCH_FEED_FIRST_PAGE: SearchFeedCursor = null;
 
 export interface SearchFeedParams {
   authorId?: string;
+  authorIds?: string;
   from?: string;
   search?: string;
   sort?: "newest" | "oldest" | "relevance";
@@ -57,6 +58,7 @@ export const searchFeedQuery = ({
   if (params.search) query.search = params.search;
   if (params.types) query.types = params.types;
   if (params.authorId) query.authorId = params.authorId;
+  if (params.authorIds) query.authorIds = params.authorIds;
   if (params.sort) query.sort = params.sort;
   if (params.from) query.from = params.from;
   if (params.to) query.to = params.to;

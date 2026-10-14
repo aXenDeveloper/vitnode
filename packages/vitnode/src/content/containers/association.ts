@@ -1,4 +1,9 @@
-import type { AnyContentTypeDefinition, ContentContainerField } from "../types";
+import type {
+  AnyContentTypeDefinition,
+  ContentContainerField,
+  ContentFieldDescriptor,
+} from "../types";
+import type { AnyContentContainerDefinition } from "./types";
 
 import { ContentInputError } from "../errors";
 
@@ -47,3 +52,67 @@ export class ContentContainerAssignmentError extends ContentInputError {
   readonly detail: string;
   readonly field: string;
 }
+
+export type ContentContainerSource =
+  | {
+      container: AnyContentContainerDefinition;
+      field: ContentContainerField;
+      kind: "field";
+      name: string;
+    }
+  | {
+      container: AnyContentContainerDefinition | null;
+      kind: "relation";
+      name: string;
+      target: AnyContentTypeDefinition | null;
+    };
+
+const isContainerRelation = (field: ContentFieldDescriptor): boolean =>
+  field.kind === "relation" &&
+  (field as { container?: boolean }).container === true &&
+  !field.multiple;
+
+const relationTargetOf = (
+  field: ContentFieldDescriptor,
+): AnyContentTypeDefinition | null => {
+  if (field.kind !== "relation") return null;
+  try {
+    return field.target() ?? null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Where a content type's container comes from: its own `field.container()`, or
+ * a to-one `field.relation({ container: true })` whose target is filed in one.
+ */
+export const contentContainerSourceOf = (
+  definition: Pick<AnyContentTypeDefinition, "fields">,
+): ContentContainerSource | null => {
+  const own = contentContainerFieldOf(definition);
+  if (own) {
+    return {
+      container: own.field.definition,
+      field: own.field,
+      kind: "field",
+      name: own.name,
+    };
+  }
+
+  for (const [name, field] of Object.entries(definition.fields)) {
+    if (!isContainerRelation(field)) continue;
+    const target = relationTargetOf(field);
+
+    return {
+      container: target
+        ? (contentContainerFieldOf(target)?.field.definition ?? null)
+        : null,
+      kind: "relation",
+      name,
+      target,
+    };
+  }
+
+  return null;
+};

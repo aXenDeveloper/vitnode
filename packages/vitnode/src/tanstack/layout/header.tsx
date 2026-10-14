@@ -9,6 +9,7 @@ import type {
   PublicNavigationItem,
   PublicNavigationNode,
 } from "@/lib/navigation";
+import type { HeaderVariant } from "@/views/layouts/theme/header/header-content";
 import type { HeaderNavTranslate } from "@/views/layouts/theme/header/header-nav";
 
 import { useLogo } from "@/components/logo-context";
@@ -30,6 +31,7 @@ import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { NotificationsBell } from "../notifications/bell";
 import { isSharedRenderRequest } from "../prerender";
+import { HeaderSearch } from "../search/header-search";
 import { MobileUserMenu } from "./mobile-user-menu";
 
 const NO_MESSAGES: AbstractIntlMessages = {};
@@ -54,7 +56,17 @@ const headerNavTranslator = (
   };
 };
 
-export const Header = ({ user }: { user?: React.ReactNode }) => {
+export const Header = ({
+  firstSearchSourceId,
+  leading,
+  user,
+  variant,
+}: {
+  firstSearchSourceId?: string;
+  leading?: React.ReactNode;
+  user?: React.ReactNode;
+  variant?: HeaderVariant;
+}) => {
   const logo = useLogo();
   const locale = useLocale();
   const t = useTranslations("core.global");
@@ -94,6 +106,7 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
     <>
       <HeaderLayoutContent
         isNavigationPending={config.isDeferred || isPlaceholderData}
+        leading={leading}
         logo={logo}
         mobileUser={
           <MobileUserMenu
@@ -105,7 +118,9 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
         navigation={navigation}
         navigationLoadingLabel={t("loading")}
         notifications={<NotificationsBell />}
+        search={<HeaderSearch firstSourceId={firstSearchSourceId} />}
         user={user}
+        variant={variant}
       />
       <MobileNavBar items={bottomBar} menuNavigation={menuNavigation} />
     </>

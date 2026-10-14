@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import type { ContentLabelTranslator } from "@/content/admin/labels";
 import type { RegisteredFrontendContentContainer } from "@/content/admin/registry";
 import type { ContentContainerSave } from "@/views/admin/views/containers/container-form-content";
+import type { ContentContainerPoliciesSave } from "@/views/admin/views/containers/container-policies-form";
 import type { ContentContainerMutationResult } from "@/views/admin/views/containers/container-request";
 
 import { contentContainerLabelsFrom } from "@/content/admin/containers";
@@ -16,6 +17,7 @@ import {
   deleteContentContainer,
   moveContentContainer,
   updateContentContainer,
+  updateContentContainerPolicies,
 } from "@/views/admin/views/containers/container-request";
 
 import type { ContentContainerRouteData } from "./route";
@@ -53,6 +55,12 @@ const useContentContainerMutations = (
           : await updateContentContainer(target, id, body),
       );
 
+    const onSavePolicies: ContentContainerPoliciesSave = async ({
+      id,
+      overrides,
+    }) =>
+      await settle(await updateContentContainerPolicies(target, id, overrides));
+
     return {
       onDelete: async (id: number) =>
         await settle(await deleteContentContainer(target, id)),
@@ -65,6 +73,7 @@ const useContentContainerMutations = (
         position: number;
       }) => await settle(await moveContentContainer(target, id, move)),
       onSave,
+      onSavePolicies,
     };
   }, [entry, queryClient]);
 };

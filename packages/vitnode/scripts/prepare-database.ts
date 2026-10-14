@@ -14,6 +14,7 @@ import { SEARCH_TEXT_CONFIGS } from "@/database/search.js";
 import type { VitNodeApiI18nConfig } from "../src/lib/i18n/types.js";
 import type { VitNodeApiConfig } from "../src/vitnode.config.js";
 
+import { restoreMissingIndexes } from "./cli/db/missing-indexes.js";
 import { RuntimeError } from "./cli/errors.js";
 import { resolveBin } from "./cli/project/packages.js";
 import { runProcess } from "./cli/project/processes.js";
@@ -223,9 +224,15 @@ export const describePostgresError = (err: unknown): string[] => {
 export const runMigrations = async ({
   config: given,
   drizzle,
+  log = message => {
+    console.log(`[VitNode] ${message}`);
+  },
+  root = process.cwd(),
 }: {
   config?: VitNodeApiConfig;
   drizzle?: DrizzleProjectConfig;
+  log?: (message: string) => void;
+  root?: string;
 } = {}) => {
   const config = given ?? (await getConfig({ type: "api.config" }));
 
@@ -234,7 +241,7 @@ export const runMigrations = async ({
   await ensureSearchTextConfigs(config.dbProvider);
 
   const { migrationsFolder, migrationsSchema, migrationsTable } =
-    drizzle ?? (await readDrizzleConfig());
+    drizzle ?? (await readDrizzleConfig(root));
 
   try {
     // Run migrations in-process instead of shelling out to `drizzle-kit migrate`:
@@ -252,6 +259,20 @@ export const runMigrations = async ({
     // The in-process migrator throws Postgres' own error, with every field
     // that explains it - kept whole rather than squashed into one line.
     throw new RuntimeError("Database migration failed.", {
+      cause: err,
+      details: describePostgresError(err),
+    });
+  }
+
+  try {
+    await restoreMissingIndexes({
+      log,
+      migrationsFolder,
+      query: async text => await config.dbProvider.execute(sql.raw(text)),
+      root,
+    });
+  } catch (err) {
+    throw new RuntimeError("Restoring missing indexes failed.", {
       cause: err,
       details: describePostgresError(err),
     });

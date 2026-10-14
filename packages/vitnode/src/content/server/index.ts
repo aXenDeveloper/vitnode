@@ -1,10 +1,29 @@
 export { escapeLikePattern } from "../../lib/api/like-pattern";
 export {
+  ContentSubmissionDecisionError,
+  decideContentSubmission,
+} from "../approvals/server/decide";
+export type { ContentSubmissionDecision } from "../approvals/server/decide";
+export {
+  cancelContentSubmissions,
+  findLatestContentSubmission,
+  findPendingContentSubmission,
+} from "../approvals/server/submissions";
+export type { ContentSubmissionRow } from "../approvals/server/submissions";
+export {
   buildContentContainerAdminRoutes,
   zodContentContainerError,
 } from "../containers/server/admin-routes";
 export { resolveContentContainerAssignment } from "../containers/server/assignment";
 export type { ResolvedContentContainerContext } from "../containers/server/assignment";
+export {
+  canModerateContent,
+  contentContainerScopeResources,
+  effectiveContentPolicy,
+  resolveContentRowContainer,
+  resolveContentWriteContainer,
+} from "../containers/server/policy";
+export type { ContentRecordContainer } from "../containers/server/policy";
 export { buildContentContainerPublicRoutes } from "../containers/server/public-routes";
 export {
   contentContainerReferencingModels,
@@ -188,6 +207,7 @@ export type {
   ContentPublicRoutes,
 } from "./public-module";
 export { buildContentPublicRoutes } from "./public-routes";
+export { resolveContentPublicRowPeople } from "./public-row-hydration";
 export {
   contentPublicSelection,
   createContentPublicProjector,
@@ -319,13 +339,19 @@ export type {
   ContentSlugHistoryModel,
   ContentSlugHistoryTarget,
 } from "./slug-history-model";
-export { createSlugNormalizer } from "./slugs";
+export { createSlugNormalizer, generateContentSlug } from "./slugs";
 export type { ContentSlugNormalizer } from "./slugs";
 export {
   assertContentReferences,
   contentTableColumns,
   createContentTable,
 } from "./table";
+export {
+  assertContentThreadPlacement,
+  ContentThreadPlacementError,
+  readContentThread,
+} from "./thread";
+export type { ContentThreadNode, ContentThreadPage } from "./thread";
 export { createContentTranslationEditorialService } from "./translation-editorial-service";
 export type {
   ContentRevisionDetailForLocale,
@@ -394,3 +420,7 @@ export {
   contentVisibilityRevalidation,
 } from "./visibility-effects";
 export type { ContentVisibilityEffectsResult } from "./visibility-effects";
+export {
+  contentEditorialWriteEffects,
+  contentPlainWriteEffects,
+} from "./write-effects";

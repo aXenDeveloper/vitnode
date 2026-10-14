@@ -26,6 +26,22 @@
   height: 100%;
 }
 
+::view-transition-group(vitnode-header),
+::view-transition-group(vitnode-header-navigation),
+::view-transition-group(vitnode-header-actions) {
+  animation-duration: 250ms;
+  animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+::view-transition-old(vitnode-header),
+::view-transition-new(vitnode-header),
+::view-transition-old(vitnode-header-navigation),
+::view-transition-new(vitnode-header-navigation),
+::view-transition-old(vitnode-header-actions),
+::view-transition-new(vitnode-header-actions) {
+  height: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),

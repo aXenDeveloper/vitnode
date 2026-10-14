@@ -5,11 +5,14 @@ import {
   testCategoryContentType,
   testForumContentType,
   testPostContentType,
+  testThreadContentType,
   testTopicContentType,
 } from "@/tests/content-fixtures";
 
 import type { RegisteredContentType } from "./registry";
+import type { AnyContentTypeDefinition } from "./types";
 
+import { defineContentContainer } from "./containers/define";
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
@@ -19,6 +22,7 @@ import {
   contentCreateHref,
   contentEditHref,
   contentEditHrefTemplate,
+  contentModeratorPermissionEntries,
   contentTypeToPath,
   findContentTypeById,
   orderableColumns,
@@ -898,5 +902,81 @@ describe("delivery paths", () => {
         ),
       ]),
     ).not.toThrow();
+  });
+});
+
+describe("contentModeratorPermissionEntries", () => {
+  const forums = defineContentContainer({ id: "test.forums", policies: {} });
+
+  const topicIn = (
+    publicWrite: Record<string, unknown>,
+  ): AnyContentTypeDefinition =>
+    defineContentType({
+      id: "test.forum-topic",
+      tableName: "test_forum_topics",
+      publication: true,
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug({ source: "title" }),
+        author: field.user(),
+        forum: field.container({ definition: forums, required: true }),
+      },
+      publicApi: { path: "forum-topics", fields: ["id", "title", "slug"] },
+      publicWrite: {
+        ownership: { field: "author" },
+        create: { fields: ["title", "forum"] },
+        ...publicWrite,
+      },
+    } as never);
+
+  const topic = topicIn({ update: { fields: ["title"] } });
+
+  const reply: AnyContentTypeDefinition = defineContentType({
+    id: "test.forum-reply",
+    tableName: "test_forum_replies",
+    publication: true,
+    fields: {
+      slug: field.slug({ generated: true }),
+      body: field.text({ required: true }),
+      author: field.user(),
+      topic: field.relation({
+        container: true,
+        required: true,
+        target: () => topic,
+      }),
+    },
+    publicApi: { path: "forum-replies", fields: ["id", "slug", "body"] },
+    publicWrite: {
+      ownership: { field: "author" },
+      create: { fields: ["body", "topic"] },
+      update: { fields: ["body"] },
+    },
+  } as never);
+
+  const scoped = (permission: string) => ({ permission, scope: forums.id });
+
+  it.each<[string, AnyContentTypeDefinition, unknown[]]>([
+    [
+      "an unscoped can_edit in a container without policies",
+      testThreadContentType,
+      ["can_edit"],
+    ],
+    [
+      "scoped can_edit and can_approve in a container with policies",
+      topic,
+      [scoped("can_edit"), scoped("can_approve")],
+    ],
+    [
+      "the same, scoped by an inherited container",
+      reply,
+      [scoped("can_edit"), scoped("can_approve")],
+    ],
+    [
+      "only can_approve when public writes cannot update",
+      topicIn({}),
+      [scoped("can_approve")],
+    ],
+  ])("registers %s", (_label, definition, expected) => {
+    expect(contentModeratorPermissionEntries(definition)).toEqual(expected);
   });
 });

@@ -1,4 +1,5 @@
 import type { BlockAllowedSpec, ContentNode } from "../blocks/types";
+import type { ContentApprovalState } from "./approvals/schema";
 import type {
   CONTENT_ADMIN_FORM_MODES,
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
@@ -28,6 +29,7 @@ import type {
   ContentIdOfStrategy,
   ContentIdStrategy,
 } from "./ids";
+import type { ContentPublicPerson } from "./public-person";
 import type { RichTextDocument } from "./rich-text/document";
 import type { ContentSchemas } from "./schemas";
 
@@ -106,14 +108,21 @@ export interface ContentTextField<
   unique?: boolean;
 }
 
-export type ContentSlugRequired<TSource> = TSource extends string
-  ? false
-  : true;
+export type ContentSlugRequired<
+  TSource,
+  TGenerated extends boolean = false,
+> = TGenerated extends true ? false : TSource extends string ? false : true;
 
 export interface ContentSlugField<
   TSource extends string | undefined = string | undefined,
   TLocalized extends boolean = boolean,
-> extends ContentFieldShared<ContentSlugRequired<TSource>, false> {
+  TGenerated extends boolean = boolean,
+> extends ContentFieldShared<ContentSlugRequired<TSource, TGenerated>, false> {
+  /**
+   * The server mints a random URL-safe token on create when no slug is sent -
+   * for records with no natural title, such as a forum reply.
+   */
+  generated: TGenerated;
   kind: "slug";
   localized: TLocalized;
   /** `varchar` length and the truncation point. Defaults to 160. */
@@ -258,7 +267,10 @@ export interface ContentRelationField<
   TOrdered extends boolean = boolean,
   TSelf extends boolean = boolean,
   TTargetStrategy extends ContentIdStrategy = ContentIdStrategy,
+  TContainer extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
+  /** The record lives in the container of the record this points at. */
+  container: TContainer;
   kind: "relation";
 
   min?: number;
@@ -995,6 +1007,22 @@ export type ContentReportsInput<TField extends string = string> =
   | boolean
   | ContentReportsConfig<TField>;
 
+export interface ContentThreadInput<TField extends string = string> {
+  /** Deepest nesting level a reply may sit at. 1 is a flat list. Defaults to 8. */
+  maxDepth?: number;
+  /** A to-one, nullable `field.relation({ self: true })` - the reply being answered. */
+  parent: TField;
+  /** A required, to-one `field.relation({ target })` - the record the thread belongs to. */
+  root: TField;
+}
+
+export interface ResolvedContentThreadConfig {
+  enabled: boolean;
+  maxDepth: number;
+  parentField: string;
+  rootField: string;
+}
+
 export interface ResolvedContentReportsConfig<
   TEnabled extends boolean = boolean,
 > {
@@ -1063,9 +1091,23 @@ type ExposableFlatFieldKeys<TFields> = Exclude<
  * at definition time. Enabling publication on its own never makes anything
  * public - this block is the only thing that does, by being present.
  */
+/**
+ * The `field.user()` fields `publicApi.people` may name: top-level, shared and
+ * to-one. Each is published as a {@link ContentPublicPerson}.
+ */
+export type ContentPublicPersonField<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends { kind: "user"; multiple: false }
+      ? TFields[K] extends { localized: true }
+        ? never
+        : K
+      : never;
+  }[keyof TFields];
+
 export interface ContentPublicApiConfig<
   TField extends string = string,
   TPath extends string = string,
+  TPeople extends string = string,
 > {
   defaultOrder?: "asc" | "desc";
   /** Defaults to `publishedAt`. Must be orderable. */
@@ -1078,6 +1120,11 @@ export interface ContentPublicApiConfig<
   orderableFields?: readonly TField[];
   /** One lowercase URL segment, e.g. `articles`. Never `admin`. */
   path: TPath;
+  /**
+   * To-one user fields published as a person summary (name, avatar, role) -
+   * an explicit opt-in, since `fields` never exposes a user. Defaults to none.
+   */
+  people?: readonly TPeople[];
   /** Columns `search` scans. Defaults to none. */
   searchableFields?: readonly TField[];
 }
@@ -1095,6 +1142,7 @@ export interface ResolvedContentPublicApiConfig<
   TField extends string = string,
   TEnabled extends boolean = boolean,
   TPath extends string = string,
+  TPeople extends string = string,
 > {
   defaultOrder: "asc" | "desc";
   defaultOrderBy: string;
@@ -1103,6 +1151,8 @@ export interface ResolvedContentPublicApiConfig<
   filterableFields: string[];
   orderableFields: string[];
   path: TPath;
+  /** User fields published as a {@link ContentPublicPerson}. */
+  people: TPeople[];
   searchableFields: string[];
   /** The exposed slug field the detail route resolves by. */
   slugField: string;
@@ -1117,9 +1167,11 @@ export type ContentPublicWritableField<TFields> = string &
       ? never
       : TFields[K] extends { kind: "slug"; source: string }
         ? never
-        : TFields[K] extends { kind: ContentPublicWritableKind }
-          ? K
-          : never;
+        : TFields[K] extends { generated: true; kind: "slug" }
+          ? never
+          : TFields[K] extends { kind: ContentPublicWritableKind }
+            ? K
+            : never;
   }[keyof TFields];
 
 export type ContentPublicOwnershipField<TFields> = string &
@@ -1262,11 +1314,24 @@ export type ContentSearchTitleField<
   TPublicField extends string,
 > = Extract<
   TPublicField,
-  ContentNonNullableFieldNamesOfKind<
-    TFields,
-    (typeof CONTENT_SEARCH_TITLE_KINDS)[number]
-  >
+  | ContentNonNullableFieldNamesOfKind<
+      TFields,
+      (typeof CONTENT_SEARCH_TITLE_KINDS)[number]
+    >
+  | ContentSearchTitleRelationNames<TFields>
 >;
+
+type ContentSearchTitleRelationNames<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends {
+      kind: "relation";
+      multiple: false;
+      nullable: false;
+      self: false;
+    }
+      ? K
+      : never;
+  }[keyof TFields];
 
 /**
  * The generated tables a to-many relation and a repeatable field each get.
@@ -1367,12 +1432,24 @@ export interface ContentSearchConfig<
   authorField?: TAuthor;
   /** Concatenated into the indexed body, in order. At least one. */
   contentFields: readonly [TText, ...TText[]];
+  context?: ContentSearchContextInput;
   /** Prepended to the indexed body so it shows up in result excerpts. */
   descriptionField?: TDescription;
   imageField?: string;
   pathTemplate: string;
   /** The result heading. Weighted above the body by the index. */
   titleField: TTitle;
+}
+
+export interface ContentSearchContextInput {
+  field: string;
+  pathTemplate?: string;
+}
+
+export interface ResolvedContentSearchContext {
+  field: string;
+  kind: "container" | "relation";
+  pathTemplate: string;
 }
 
 export type ContentOptionEnabled<TOption> = [TOption] extends [object | true]
@@ -1393,6 +1470,7 @@ export interface ResolvedContentSearchConfig<
 > {
   authorField: null | string;
   contentFields: string[];
+  context: null | ResolvedContentSearchContext;
   descriptionField: null | string;
   enabled: TEnabled;
   imageField: null | string;
@@ -1852,6 +1930,7 @@ export interface ContentTypeDefinition<
   TIdStrategy extends ContentIdStrategy = ContentIdStrategy,
   TPublicWrite extends ResolvedContentPublicWriteConfig =
     ResolvedContentPublicWriteConfig,
+  TPublicPeople extends string = string,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
@@ -1881,7 +1960,8 @@ export interface ContentTypeDefinition<
   publicApi: ResolvedContentPublicApiConfig<
     TPublicField,
     TPublicEnabled,
-    TPublicPath
+    TPublicPath,
+    TPublicPeople
   >;
   publication: ResolvedContentPublicationConfig<TPublication>;
   publicWrite: TPublicWrite;
@@ -1904,12 +1984,15 @@ export interface ContentTypeDefinition<
       TVisibilityEnabled,
       TDuplicationEnabled,
       TIdStrategy,
-      TPublicWrite
+      TPublicWrite,
+      TPublicPeople
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
   search: ResolvedContentSearchConfig<TSearchEnabled>;
   tableName: string;
+  /** Replies answering replies under one root, or the disabled default. */
+  thread: ResolvedContentThreadConfig;
   visibility: ResolvedContentVisibilityConfig<TVisibilityEnabled>;
 }
 
@@ -1936,7 +2019,9 @@ type ContentBindSelfRelations<TFields, TStrategy extends ContentIdStrategy> = {
     infer TNullable,
     infer TMultiple,
     infer TOrdered,
-    true
+    true,
+    ContentIdStrategy,
+    infer TContainer
   >
     ? ContentRelationField<
         TRequired,
@@ -1944,7 +2029,8 @@ type ContentBindSelfRelations<TFields, TStrategy extends ContentIdStrategy> = {
         TMultiple,
         TOrdered,
         true,
-        TStrategy
+        TStrategy,
+        TContainer
       >
     : TFields[K];
 };
@@ -2161,7 +2247,8 @@ export type ContentPublicSelect<TDefinition> = Prettify<
     ContentPublicNested<
       ContentFieldsOf<TDefinition>,
       ContentPublicFieldName<TDefinition>
-    > & {
+    > &
+    ContentPublicPeopleColumns<TDefinition> & {
       [
         K in PublicFlatName<ContentPublicFieldName<TDefinition>>
       ]: ContentPublicValue<
@@ -2170,6 +2257,33 @@ export type ContentPublicSelect<TDefinition> = Prettify<
         ContentIdOf<TDefinition>
       >;
     }
+>;
+
+/** The `publicApi.people` names of one content type, read off its resolved config. */
+export type ContentPublicPeopleName<TDefinition> = TDefinition extends {
+  publicApi: { people: (infer TName extends string)[] };
+}
+  ? string extends TName
+    ? never
+    : TName
+  : never;
+
+/**
+ * What `defineContentType` records for `publicApi.people`. No people at all is
+ * `string`, the same as {@link AnyContentTypeDefinition}, so a definition
+ * without people stays comparable with the erased one; it publishes nothing
+ * because {@link ContentPublicPeopleName} reads `string` as "none".
+ */
+export type ContentPublicPeopleResolved<TPeople extends string> = [
+  TPeople,
+] extends [never]
+  ? string
+  : TPeople;
+
+/** One {@link ContentPublicPerson} per `publicApi.people` entry. */
+type ContentPublicPeopleColumns<TDefinition> = Record<
+  ContentPublicPeopleName<TDefinition>,
+  ContentPublicPerson | null
 >;
 
 /**
@@ -2282,6 +2396,11 @@ export type ContentPublicUpdateBody<TDefinition> = Prettify<
 
 export type ContentPublicWriteRecord<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> & {
+    /**
+     * The record's moderation state as its author sees it: a pending or a
+     * rejected submission, or `null` when nothing is waiting.
+     */
+    approval: ContentApprovalState | null;
     id: ContentIdOf<TDefinition>;
     publishedAt: Date | null;
     slug: null | string;

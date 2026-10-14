@@ -6,11 +6,14 @@ import { eq } from "drizzle-orm";
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
+import type { RegisteredContentModel } from "./model";
+import type { ContentSearchContext } from "./search-document";
 
 import { parseContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import {
+  contentSearchContextSource,
   contentSearchDocumentId,
   contentSearchIndexedCollections,
   contentSearchIndexedPaths,
@@ -22,6 +25,13 @@ import {
   contentSearchDocument,
   contentTranslationSearchDocument,
 } from "./search-document";
+import { createContentSearchIndexer } from "./search-indexer";
+import {
+  contentSearchContextKey,
+  loadContentSearchContexts,
+  toContainerSearchContext,
+  toRelatedSearchContext,
+} from "./search-related";
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
 export type ContentSearchOperation =
@@ -110,12 +120,23 @@ export const syncContentSearch = async (
   // A row the mapper will not build - a title that is only whitespace, say - has
   // its document removed rather than left holding whatever text it was indexed
   // with last time.
+  const contextKey = contentSearchContextKey(definition, values);
+  const context =
+    decided === "upsert" && contextKey !== null
+      ? (await loadContentSearchContexts(c, definition, [values])).get(
+          contextKey,
+        )
+      : undefined;
   const document =
     decided === "upsert"
       ? contentSearchDocument(
           definition,
           { ...input.row, ...input.advanced },
-          { pluginId: input.pluginId, routing: contentLocaleRouting(c) },
+          {
+            context,
+            pluginId: input.pluginId,
+            routing: contentLocaleRouting(c),
+          },
         )
       : null;
   const action = decided === "upsert" && !document ? "delete" : decided;
@@ -126,6 +147,12 @@ export const syncContentSearch = async (
     } else {
       await c.get("search").delete(definition.id, itemId);
     }
+
+    await syncContentSearchDependents(c, definition, {
+      documentId,
+      input,
+      itemId,
+    });
 
     return { action, documentId };
   } catch (err) {
@@ -159,6 +186,157 @@ export const syncContentSearch = async (
     }
 
     return { action, documentId, error };
+  }
+};
+
+const CONTENT_SEARCH_DEPENDENT_PAGE_SIZE = 200;
+
+const dependentSyncOf = (
+  definition: AnyContentTypeDefinition,
+  { changed, changedFields, operation }: ContentSearchSyncInput,
+): "delete" | "skip" | "upsert" => {
+  if (operation === "delete") return "delete";
+  if (operation === "create") return "skip";
+  if (isReachabilityOperation(operation)) {
+    return changed === true ? "upsert" : "skip";
+  }
+
+  const linked = [definition.search.titleField, definition.publicApi.slugField];
+
+  return (changedFields ?? []).some(name => linked.includes(name))
+    ? "upsert"
+    : "skip";
+};
+
+const reindexContentSearchDependent = async (
+  c: Context,
+  { model, pluginId }: RegisteredContentModel,
+  {
+    context,
+    field,
+    value,
+  }: { context: ContentSearchContext; field: string; value: ContentId },
+): Promise<void> => {
+  const dependent = contentDefinitionOf(model);
+  const indexer = createContentSearchIndexer(model, { pluginId });
+  let after: ContentId | undefined;
+
+  for (;;) {
+    const page = await indexer.loadByRelation(c, {
+      after,
+      context,
+      field,
+      limit: CONTENT_SEARCH_DEPENDENT_PAGE_SIZE,
+      value,
+    });
+
+    if (page.documents.length > 0) {
+      await c.get("search").bulkIndex(page.documents);
+    }
+    for (const id of page.unindexed) {
+      await c.get("search").delete(dependent.id, id);
+    }
+
+    const read = page.documents.length + page.unindexed.length;
+    if (page.lastId === null || read < CONTENT_SEARCH_DEPENDENT_PAGE_SIZE) {
+      return;
+    }
+    after = page.lastId;
+  }
+};
+
+const syncContentSearchDependents = async (
+  c: Context,
+  definition: AnyContentTypeDefinition,
+  {
+    documentId,
+    input,
+    itemId,
+  }: { documentId: string; input: ContentSearchSyncInput; itemId: ContentId },
+): Promise<void> => {
+  const sync = dependentSyncOf(definition, input);
+  if (sync === "skip") return;
+
+  const dependents = (c.get("core")?.contentModels ?? []).flatMap(entry => {
+    const source = contentSearchContextSource(contentDefinitionOf(entry.model));
+
+    return source?.kind === "relation" && source.target.id === definition.id
+      ? [{ entry, field: source.field }]
+      : [];
+  });
+  if (dependents.length === 0) return;
+
+  await write(c, definition, {
+    action: sync,
+    documentId,
+    input,
+    itemId,
+    run: async () => {
+      for (const { entry, field } of dependents) {
+        const dependent = contentDefinitionOf(entry.model);
+
+        if (sync === "delete") {
+          if (typeof itemId === "number") {
+            await c.get("search").deleteByContainer({
+              containerId: itemId,
+              containerType: definition.id,
+              itemType: dependent.id,
+            });
+          }
+          continue;
+        }
+
+        await reindexContentSearchDependent(c, entry, {
+          context: toRelatedSearchContext(
+            definition,
+            input.row,
+            contentLocaleRouting(c),
+          ),
+          field,
+          value: itemId,
+        });
+      }
+    },
+  });
+};
+
+export const syncContentSearchContainerDependents = async (
+  c: Context,
+  {
+    container,
+    containerType,
+  }: {
+    container: { id: number; name: string; slug: string };
+    containerType: string;
+  },
+): Promise<void> => {
+  for (const entry of c.get("core")?.contentModels ?? []) {
+    const definition = contentDefinitionOf(entry.model);
+    const source = contentSearchContextSource(definition);
+    if (
+      source?.kind !== "container" ||
+      source.containerType !== containerType
+    ) {
+      continue;
+    }
+
+    await write(c, definition, {
+      action: "upsert",
+      documentId: `${containerType}:${container.id}`,
+      input: { operation: "update", pluginId: entry.pluginId },
+      itemId: container.id,
+      run: async () => {
+        await reindexContentSearchDependent(c, entry, {
+          context: toContainerSearchContext(
+            source,
+            container,
+            contentLocaleRouting(c),
+          ),
+          field: source.field,
+          value: container.id,
+        });
+      },
+    });
   }
 };
 

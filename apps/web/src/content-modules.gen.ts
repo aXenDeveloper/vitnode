@@ -13,8 +13,10 @@
 
 import * as contentModule0 from '@vitnode/blog/content'
 import * as contentModule1 from '@vitnode/example/content'
+import * as contentModule2 from '@vitnode/forum/content'
 
 export const contentModules: Readonly<Record<string, unknown>> = {
   '@vitnode/blog': contentModule0,
   '@vitnode/example': contentModule1,
+  '@vitnode/forum': contentModule2,
 }

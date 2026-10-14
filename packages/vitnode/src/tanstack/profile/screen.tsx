@@ -64,7 +64,7 @@ const ProfileTimeline = ({
       >
         {t("timeline")}
       </h2>
-      <SearchFeedList query={query} variant="timeline" />
+      <SearchFeedList ownerId={userId} query={query} variant="timeline" />
     </section>
   );
 };

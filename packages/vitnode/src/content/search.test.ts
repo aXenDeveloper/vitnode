@@ -70,6 +70,7 @@ describe("search configuration", () => {
     expect(definition.search).toEqual({
       authorField: null,
       contentFields: ["excerpt", "body"],
+      context: null,
       descriptionField: "excerpt",
       enabled: true,
       imageField: null,
@@ -82,6 +83,7 @@ describe("search configuration", () => {
     expect(define().search).toEqual({
       authorField: null,
       contentFields: [],
+      context: null,
       descriptionField: null,
       enabled: false,
       imageField: null,

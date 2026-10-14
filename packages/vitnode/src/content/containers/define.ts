@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { ContentFieldDescriptor, ContentFieldMap } from "../types";
+import type { ContentContainerPoliciesInput } from "./policies";
 import type {
   ContentContainerAdminInput,
   ContentContainerDefinition,
@@ -37,6 +38,7 @@ import {
   CONTENT_CONTAINER_RESERVED_FIELDS,
   CONTENT_CONTAINER_SLUG_MAX_LENGTH,
 } from "./const";
+import { resolveContentContainerPolicies } from "./policies";
 
 const fieldKinds: ReadonlySet<string> = new Set(CONTENT_CONTAINER_FIELD_KINDS);
 const reservedFields: readonly string[] = CONTENT_CONTAINER_RESERVED_FIELDS;
@@ -337,6 +339,7 @@ export const defineContentContainer = <
   hierarchy,
   id,
   ordering,
+  policies,
   publicApi,
 }: {
   admin?: ContentContainerAdminInput;
@@ -344,6 +347,11 @@ export const defineContentContainer = <
   hierarchy?: ContentContainerHierarchyInput;
   id: TId;
   ordering?: ContentContainerOrderingInput;
+  /**
+   * Per-container publishing rules for the content types filed here. Omit it
+   * and those content types keep their own `publicWrite` behaviour.
+   */
+  policies?: ContentContainerPoliciesInput | false;
   publicApi?: (
     | ContentContainerPublicApiInput<TPublicField, TPublicPath>
     | false
@@ -381,6 +389,7 @@ export const defineContentContainer = <
     id,
     kind: "contentContainer",
     ordering: resolveOrdering(id, ordering),
+    policies: resolveContentContainerPolicies(id, policies),
     publicApi: resolvedPublicApi as never,
     schemas: buildSchemas(fields, resolvedPublicApi.fields),
   };

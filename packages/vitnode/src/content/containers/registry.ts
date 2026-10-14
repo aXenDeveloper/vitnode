@@ -4,7 +4,10 @@ import type { AnyContentContainerDefinition } from "./types";
 
 import { CONTENT_PERMISSIONS } from "../const";
 import { ContentEngineError } from "../errors";
-import { contentContainerFieldOf } from "./association";
+import {
+  contentContainerFieldOf,
+  contentContainerSourceOf,
+} from "./association";
 import { isContentContainerDefinition } from "./guard";
 
 export interface RegisteredContentContainer {
@@ -115,6 +118,14 @@ export const assertContentContainerReferences = (
   );
 
   for (const definition of contentTypes) {
+    const source = contentContainerSourceOf(definition);
+    if (source?.kind === "relation" && !source.container) {
+      throw new ContentEngineError(
+        `Field "${source.name}" is \`container: true\`, but its target ${source.target ? `"${source.target.id}"` : "could not be resolved and"} is not filed in a container. Point it at a content type with a \`field.container()\`.`,
+        { contentTypeId: definition.id },
+      );
+    }
+
     const container = contentContainerFieldOf(definition);
     if (!container) continue;
 

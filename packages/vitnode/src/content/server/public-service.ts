@@ -6,7 +6,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
 import type { ContentIdOf } from "../ids";
@@ -28,6 +28,7 @@ import {
 import { ContentEngineError } from "../errors";
 import { contentRelationStrategy, parseContentId } from "../ids";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
+import { isContentPublicPerson } from "../public-person";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
 import { createContentPublicRowHydrator } from "./public-row-hydration";
@@ -91,6 +92,14 @@ export interface ContentPublicService<TDefinition> {
     edges: ContentPublicListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
   }>;
+  /**
+   * The published rows among `ids`, in no particular order - for a caller that
+   * already knows which records it wants, such as a thread. Unpublished and
+   * hidden ids are simply missing. Not available on localized content types.
+   */
+  findManyByIds?: (
+    ids: readonly ContentIdOf<TDefinition>[],
+  ) => Promise<ContentPublicSelect<TDefinition>[]>;
 }
 
 export const createContentPublicProjector = <
@@ -108,6 +117,7 @@ export const createContentPublicProjector = <
   }
 
   const exposed = publicApi.fields;
+  const { people } = publicApi;
   const exposesId = exposed.includes("id");
   const flat = exposed.filter(name => splitContentFieldPath(name) === null);
   // A `user` field is never exposable, so this is only ever relations.
@@ -177,6 +187,13 @@ export const createContentPublicProjector = <
           : pick(value as Record<string, unknown>, leaves);
     }
 
+    // Only ever the hydrated summary: a bare user id that skipped hydration
+    // is dropped rather than published.
+    for (const name of people) {
+      const person = row[name];
+      projected[name] = isContentPublicPerson(person) ? person : null;
+    }
+
     if (exposesId) projected.id = row.id;
 
     return projected as ContentPublicSelect<TDefinition>;
@@ -194,6 +211,11 @@ export const contentPublicSelection = (
   columns: Record<string, PgColumn>,
 ): Record<string, PgColumn> => ({
   id: columns.id,
+  // The user ids behind `publicApi.people`; the hydrator swaps each for a
+  // public summary and the projector never lets a bare id through.
+  ...Object.fromEntries(
+    definition.publicApi.people.map(name => [name, columns[name]]),
+  ),
   ...Object.fromEntries(
     definition.publicApi.fields
       // A collection has no column, and a repeatable leaf is a column on a
@@ -322,6 +344,20 @@ export const createContentPublicService = <
 
     findBySlug: async (slug, options) =>
       await readOne(eq(columns[publicApi.slugField], slug), options),
+
+    findManyByIds: async ids => {
+      if (ids.length === 0) return [];
+
+      const rows = await c
+        .get("db")
+        .select(selection())
+        .from(table)
+        .where(
+          and(publishedCondition(published), inArray(primaryCursor, [...ids])),
+        );
+
+      return (await withCollections(rows)).map(project);
+    },
 
     findMany: async ({ filters = {}, orderBy, query = {} } = {}) => {
       const conditions = [

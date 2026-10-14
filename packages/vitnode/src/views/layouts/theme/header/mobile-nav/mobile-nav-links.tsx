@@ -6,11 +6,8 @@ import { NewTabIndicator } from "@/components/new-tab-indicator";
 
 import type { HeaderNavItem } from "../header-nav";
 
-import {
-  MobileNavIcon,
-  MobileNavLink,
-  useIsMobileNavHrefActive,
-} from "./mobile-nav-parts";
+import { useIsNavHrefActive } from "../use-is-nav-href-active";
+import { MobileNavIcon, MobileNavLink } from "./mobile-nav-parts";
 
 export const mobileNavRowClassName =
   "flex min-h-11 w-full touch-manipulation items-center gap-3 rounded-lg px-3 text-start text-sm font-medium transition-colors duration-150 active:bg-accent aria-[current=page]:bg-accent aria-[current=page]:text-foreground";
@@ -35,7 +32,7 @@ export const MobileNavLinks = ({
   onNavigate: () => void;
 }) => {
   const t = useTranslations("core.global.mobile_nav");
-  const isActive = useIsMobileNavHrefActive();
+  const isActive = useIsNavHrefActive();
   const headingId = React.useId();
   const currentFor = (href: string) => (isActive(href) ? "page" : undefined);
 

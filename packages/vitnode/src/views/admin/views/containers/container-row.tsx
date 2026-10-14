@@ -12,6 +12,7 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
+  ShieldCheckIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -46,6 +47,8 @@ export interface ContainerRowActions {
   onEdit: (id: number) => void;
   onMoveInside: (id: number, parentId: number) => void;
   onMoveToRoot: (id: number) => void;
+  /** Opens the publishing rules; absent when the collection has no policies. */
+  onPolicies?: (id: number) => void;
   onShift: (id: number, step: -1 | 1) => void;
   onToggle: (id: number) => void;
 }
@@ -88,7 +91,9 @@ const ContainerRowMenu = ({
   permissions: ContainerRowPermissions;
 }) => {
   const t = useTranslations("core.containers.list");
+  const tPolicies = useTranslations("core.containers.policies");
   const { id, name } = container;
+  const { onPolicies } = actions;
   const showMoves =
     permissions.canMove &&
     (moves.canMoveUp ||
@@ -120,6 +125,16 @@ const ContainerRowMenu = ({
           >
             <PencilIcon />
             {t("edit")}
+          </DropdownMenuItem>
+        ) : null}
+        {permissions.canEdit && onPolicies ? (
+          <DropdownMenuItem
+            onClick={() => {
+              onPolicies(id);
+            }}
+          >
+            <ShieldCheckIcon />
+            {tPolicies("action")}
           </DropdownMenuItem>
         ) : null}
         {moves.canAddChild ? (

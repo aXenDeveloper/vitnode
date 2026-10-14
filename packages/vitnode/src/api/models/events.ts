@@ -14,6 +14,16 @@ export interface ContentContainerEventPayload {
   pluginId: string;
 }
 
+export interface ContentApprovalEventPayload {
+  authorId: null | number;
+  containerId: null | number;
+  contentId: string;
+  contentTypeId: string;
+  kind: "create" | "edit";
+  pluginId: string;
+  submissionId: number;
+}
+
 export interface VitNodeEvents {
   "ai.run.completed": {
     actionKey: string;
@@ -27,6 +37,17 @@ export interface VitNodeEvents {
     errorCode: null | string;
     runId: number;
     userId: null | number;
+  };
+  "content.approval.approved": ContentApprovalEventPayload & {
+    reviewerId: number;
+  };
+  "content.approval.rejected": ContentApprovalEventPayload & {
+    reason: null | string;
+    reviewerId: number;
+  };
+  "content.approval.submitted": ContentApprovalEventPayload & {
+    /** Id of the pending proposal this one replaced, if any. */
+    replacedSubmissionId: null | number;
   };
   "content.container.created": ContentContainerEventPayload;
   "content.container.deleted": ContentContainerEventPayload;

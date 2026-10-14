@@ -91,6 +91,8 @@ export const CONTENT_TEXT_DEFAULT_LENGTH = 255;
 export const CONTENT_ENUM_DEFAULT_LENGTH = 64;
 
 export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
+/** Length of the random token `field.slug({ generated: true })` mints. */
+export const CONTENT_GENERATED_SLUG_LENGTH = 10;
 
 export const CONTENT_LOCALIZED_FIELD_KINDS = [
   "blocks",
@@ -252,7 +254,9 @@ export const CONTENT_PUBLIC_WRITABLE_KINDS = [
 ] as const;
 
 export const CONTENT_PUBLIC_WRITE_ISSUE_CODES = {
+  editWindowClosed: "edit_window_closed",
   invalidJson: "invalid_json",
+  moderatorsOnly: "moderators_only",
   notWritable: "not_writable",
   unavailable: "unavailable",
 } as const;
@@ -421,6 +425,7 @@ export const CONTENT_ADMIN_EDIT_SEGMENT = "edit";
 export const CONTENT_ADMIN_PATH_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 
 export const CONTENT_PERMISSIONS = {
+  approve: "can_approve",
   create: "can_create",
   delete: "can_delete",
   edit: "can_edit",

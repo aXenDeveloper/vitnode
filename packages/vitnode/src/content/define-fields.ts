@@ -4,6 +4,7 @@ import type {
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentFileField,
+  ContentRelationField,
 } from "./types";
 
 import {
@@ -49,7 +50,9 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   }
   // A sourced slug has no column default and is not required, but it is always
   // writable: the service derives it from the source field.
-  if (fieldValue.kind === "slug") return fieldValue.source !== undefined;
+  if (fieldValue.kind === "slug") {
+    return fieldValue.source !== undefined || fieldValue.generated;
+  }
   // A single file has no default and cannot have one: a column default would be
   // a `core_files.id` written into the definition, pointing at a row that exists
   // on one installation and not on the next. `assertField` says so in words. A
@@ -215,6 +218,49 @@ const assertFileField = (
   }
 };
 
+const assertRelationField = (
+  id: string,
+  name: string,
+  fieldValue: ContentRelationField,
+): void => {
+  if (fieldValue.self && !fieldValue.multiple && !fieldValue.nullable) {
+    throw new ContentEngineError(
+      `Self-relation "${name}" is to-one but not nullable, so the first record could never be inserted - there is nothing for it to point at yet. Add \`nullable: true\`.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!fieldValue.container) return;
+
+  if (fieldValue.multiple) {
+    throw new ContentEngineError(
+      `Relation "${name}" is \`container: true\` and \`multiple: true\`. A record lives in one container, so it can inherit it from one related record only - drop \`multiple\`.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (fieldValue.self) {
+    throw new ContentEngineError(
+      `Relation "${name}" is \`container: true\` and \`self: true\`. A record cannot inherit its container from a record of its own type - point it at the record that is filed in the container, such as the topic a reply belongs to.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!fieldValue.required) {
+    throw new ContentEngineError(
+      `Relation "${name}" is \`container: true\` but not required. A record with no related record would have no container - add \`required: true\`.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if ((fieldValue as { localized?: boolean }).localized === true) {
+    throw new ContentEngineError(
+      `Relation "${name}" is \`container: true\` and \`localized: true\`. A record sits in the same container in every language.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
 const assertContainerField = (
   id: string,
   name: string,
@@ -249,10 +295,22 @@ export const assertSingleContainerField = (
   const containers = Object.entries(fields).filter(
     ([, fieldValue]) => fieldValue.kind === "container",
   );
-  if (containers.length <= 1) return;
+  if (containers.length > 1) {
+    throw new ContentEngineError(
+      `Content type declares ${containers.length} container fields (${containers.map(([name]) => name).join(", ")}). A record belongs to one container - keep one, and use a relation for anything else it points at.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const sources = Object.entries(fields).filter(
+    ([, fieldValue]) =>
+      fieldValue.kind === "container" ||
+      (fieldValue.kind === "relation" && fieldValue.container),
+  );
+  if (sources.length <= 1) return;
 
   throw new ContentEngineError(
-    `Content type declares ${containers.length} container fields (${containers.map(([name]) => name).join(", ")}). A record belongs to one container - keep one, and use a relation for anything else it points at.`,
+    `Content type takes its container from ${sources.length} fields (${sources.map(([name]) => name).join(", ")}). A record belongs to one container - keep either one \`field.container()\` or one \`field.relation({ container: true })\`.`,
     { contentTypeId: id },
   );
 };
@@ -270,6 +328,12 @@ export const assertField = (
 
   if (fieldValue.kind === "container") {
     assertContainerField(id, name, fieldValue);
+  }
+
+  // Before the generic writability check, which would otherwise ask a to-one
+  // self-relation for a default value instead of saying why it must be nullable.
+  if (fieldValue.kind === "relation") {
+    assertRelationField(id, name, fieldValue);
   }
 
   if (!fieldValue.required && !fieldValue.nullable) {
@@ -383,7 +447,23 @@ export const assertSlugSources = (
   fields: ContentFieldMap,
 ): void => {
   for (const [name, fieldValue] of Object.entries(fields)) {
-    if (fieldValue.kind !== "slug" || fieldValue.source === undefined) continue;
+    if (fieldValue.kind !== "slug") continue;
+
+    if (fieldValue.generated && fieldValue.source !== undefined) {
+      throw new ContentEngineError(
+        `Slug field "${name}" is both \`generated: true\` and sourced from "${fieldValue.source}". Pick one: derive it from a title, or let the server mint a random one.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (fieldValue.generated && fieldValue.localized) {
+      throw new ContentEngineError(
+        `Slug field "${name}" is \`generated: true\` and \`localized: true\`. A generated slug is a random token with no language in it - drop \`localized\`.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (fieldValue.source === undefined) continue;
 
     const source = fields[fieldValue.source];
     if (!source) {

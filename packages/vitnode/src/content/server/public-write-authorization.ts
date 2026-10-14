@@ -1,10 +1,13 @@
 import type { Context } from "hono";
 
+import type { EffectiveContentContainerPolicy } from "../containers/policies";
+import type { ContentRecordContainer } from "../containers/server/policy";
 import type { ContentActor } from "../revisions";
 import type { AnyContentTypeDefinition } from "../types";
 
-import { checkStaffPermission } from "../../api/lib/check-staff-permission";
 import { CONTENT_PERMISSIONS } from "../const";
+import { contentAuthorMayEdit } from "../containers/policies";
+import { canModerateContent } from "../containers/server/policy";
 import { isContentBaseRowPublic } from "./visibility";
 
 export interface ContentPublicWriteActor extends ContentActor {
@@ -33,41 +36,63 @@ export const contentPublicWriteOwnerOf = (
 export interface ContentPublicWriteAuthorizationInput {
   action: "update";
   actor: ContentPublicWriteActor;
+  container?: ContentRecordContainer | null;
   definition: AnyContentTypeDefinition;
   pluginId: string;
+  policy?: EffectiveContentContainerPolicy | null;
   row: Record<string, unknown>;
 }
 
 export type ContentPublicWriteAuthorization =
-  | { allowed: false; via: null }
+  | { allowed: false; reason: "editWindowClosed" | null; via: null }
   | { allowed: true; via: "moderator" | "owner" };
 
+/**
+ * Who may edit a record from the public site. A moderator holding `can_edit`
+ * for the record's container edits anything there, at any age. An owner edits
+ * their own record while it is not hidden and the container's `authorEdit`
+ * policy still allows it - measured from the row's server `createdAt`.
+ */
 export const authorizeContentPublicWrite = async (
   c: Context,
-  { actor, definition, pluginId, row }: ContentPublicWriteAuthorizationInput,
+  {
+    actor,
+    container = null,
+    definition,
+    pluginId,
+    policy = null,
+    row,
+  }: ContentPublicWriteAuthorizationInput,
 ): Promise<ContentPublicWriteAuthorization> => {
   const { update } = definition.publicWrite;
-  if (!update.enabled) return { allowed: false, via: null };
+  if (!update.enabled) return { allowed: false, reason: null, via: null };
 
-  const hidden = row.hiddenAt !== null && row.hiddenAt !== undefined;
   if (
-    update.own &&
-    !hidden &&
-    contentPublicWriteOwnerOf(definition, row) === actor.userId
+    await canModerateContent(c, {
+      container,
+      definition,
+      permission: CONTENT_PERMISSIONS.edit,
+      pluginId,
+    })
   ) {
-    return { allowed: true, via: "owner" };
+    return { allowed: true, via: "moderator" };
   }
 
-  const moderator = await checkStaffPermission(c, {
-    module: definition.permissionModule,
-    permission: CONTENT_PERMISSIONS.edit,
-    plugin: pluginId,
-    type: "moderator",
-  });
+  const hidden = row.hiddenAt !== null && row.hiddenAt !== undefined;
+  const owns =
+    update.own &&
+    !hidden &&
+    contentPublicWriteOwnerOf(definition, row) === actor.userId;
+  if (!owns) return { allowed: false, reason: null, via: null };
 
-  return moderator
-    ? { allowed: true, via: "moderator" }
-    : { allowed: false, via: null };
+  if (
+    policy &&
+    !contentAuthorMayEdit(policy.policy, row.createdAt as Date | undefined)
+  ) {
+    return { allowed: false, reason: "editWindowClosed", via: null };
+  }
+
+  return { allowed: true, via: "owner" };
 };
 
 export const contentPublicWriteRefusal = (

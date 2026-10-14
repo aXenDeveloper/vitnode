@@ -35,6 +35,7 @@ import type {
   UserHeaderUser,
 } from "../user/user-header-model";
 
+import { useIsNavHrefActive } from "../use-is-nav-href-active";
 import {
   USER_HEADER_HREF,
   userHeaderMenu,
@@ -45,7 +46,7 @@ import {
   mobileNavRowClassName,
   MobileNavSectionHeading,
 } from "./mobile-nav-links";
-import { MobileNavLink, useIsMobileNavHrefActive } from "./mobile-nav-parts";
+import { MobileNavLink } from "./mobile-nav-parts";
 
 export type MobileNavSignOut = () => Promise<void> | void;
 
@@ -194,7 +195,7 @@ const AccountLinks = ({
 }) => {
   const t = useTranslations("core.global.mobile_nav");
   const tUser = useTranslations("core.global.user_bar");
-  const isActive = useIsMobileNavHrefActive();
+  const isActive = useIsNavHrefActive();
 
   return (
     <section

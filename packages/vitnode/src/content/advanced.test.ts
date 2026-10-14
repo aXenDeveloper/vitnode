@@ -100,6 +100,32 @@ describe("relations", () => {
     expect(definition.advanced.junctions).toStrictEqual([]);
   });
 
+  it("binds a nullable to-one `self: true` relation without a junction table", () => {
+    const definition = defineContentType({
+      ...base,
+      fields: {
+        name: field.text({ required: true }),
+        parent: field.relation({ nullable: true, self: true }),
+      },
+    });
+
+    expect(definition.advanced.junctions).toStrictEqual([]);
+    expect(definition.fields.parent.target()).toBe(definition);
+  });
+
+  it("rejects a to-one `self: true` relation that is not nullable", () => {
+    // The first record would have nothing to point at.
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          parent: field.relation({ required: true, self: true }),
+        },
+      }),
+    ).toThrow(/Self-relation "parent" is to-one but not nullable/);
+  });
+
   it("rejects `ordered` without `multiple`", () => {
     expect(() =>
       defineContentType({

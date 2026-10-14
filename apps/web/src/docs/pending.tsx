@@ -82,43 +82,50 @@ const DocsSidebarGroupPendingSkeleton = ({ links }: { links: number }) => (
 export const DocsShellPendingSkeleton = () => (
   <div
     aria-busy="true"
-    className="bg-card flex min-h-dvh flex-col md:flex-row"
+    className="flex min-h-dvh flex-col"
     data-slot="route-pending"
   >
     <DocsPendingStatus />
 
-    <header
+    <div
       aria-hidden="true"
-      className="flex h-14 shrink-0 items-center gap-4 px-4 md:hidden"
+      className="bg-background dark:bg-card flex h-14 shrink-0 items-center gap-4 border-b px-4 md:px-3"
     >
-      <Skeleton className="h-6 w-30" />
+      <Skeleton className="size-8 rounded-md max-md:hidden" />
+      <Skeleton className="h-7 w-30" />
+      <Skeleton className="h-4 w-60 max-md:hidden" />
 
       <div className="ms-auto flex items-center gap-3">
-        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-8 rounded-md md:h-9 md:w-48" />
         <Skeleton className="size-8 rounded-md" />
       </div>
-    </header>
+    </div>
 
-    <aside
-      aria-hidden="true"
-      className="flex w-67 shrink-0 flex-col gap-6 p-4 max-md:hidden"
-    >
-      <Skeleton className="h-7 w-30" />
+    <div className="bg-background dark:bg-card flex flex-1 flex-col md:flex-row">
+      <div
+        aria-hidden="true"
+        className="flex h-14 shrink-0 items-center gap-4 px-4 md:hidden"
+      >
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="ms-auto size-8 rounded-md" />
+      </div>
 
-      <div className="flex flex-col gap-2">
+      <aside
+        aria-hidden="true"
+        className="flex w-67 shrink-0 flex-col gap-6 p-4 max-md:hidden"
+      >
         <Skeleton className="h-10 w-full rounded-lg" />
-        <Skeleton className="h-9 w-full rounded-lg" />
-      </div>
 
-      <DocsSidebarGroupPendingSkeleton links={4} />
-      <DocsSidebarGroupPendingSkeleton links={3} />
-      <DocsSidebarGroupPendingSkeleton links={2} />
-    </aside>
+        <DocsSidebarGroupPendingSkeleton links={4} />
+        <DocsSidebarGroupPendingSkeleton links={3} />
+        <DocsSidebarGroupPendingSkeleton links={2} />
+      </aside>
 
-    <div className="bg-background flex flex-1 xl:my-2 xl:me-2 xl:rounded-2xl xl:border xl:shadow-sm">
-      <div className={DOCS_PAGE_FRAME}>
-        <DocsHeadingPendingSkeleton />
-        <DocsProsePendingSkeleton />
+      <div className="bg-background flex flex-1 xl:my-2 xl:me-2 xl:rounded-2xl xl:border xl:shadow-sm">
+        <div className={DOCS_PAGE_FRAME}>
+          <DocsHeadingPendingSkeleton />
+          <DocsProsePendingSkeleton />
+        </div>
       </div>
     </div>
   </div>

@@ -1,5 +1,11 @@
 export const LOGO_VIEW_TRANSITION_NAME = "vitnode-logo";
 
+export const HEADER_VIEW_TRANSITION_NAMES = {
+  actions: "vitnode-header-actions",
+  bar: "vitnode-header",
+  navigation: "vitnode-header-navigation",
+} as const;
+
 export const PAGE_VIEW_TRANSITION_TYPE = "vitnode-page";
 
 interface LocationChange {

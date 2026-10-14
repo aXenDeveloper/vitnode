@@ -974,3 +974,81 @@ export const testThreadContentType = defineContentType({
     update: { fields: ["title"] },
   },
 });
+
+/** A container collection that takes part in publishing policies. */
+export const testPolicyBoardContainers = defineContentContainer({
+  id: "test.policy-boards",
+  hierarchy: { maxDepth: 3 },
+  policies: {
+    defaults: {
+      publish: "immediate",
+      edits: "immediate",
+      authorEdit: "always",
+    },
+    contentTypes: {
+      "test.policy-reply": { authorEdit: "window", authorEditMinutes: 60 },
+    },
+  },
+  publicApi: { path: "policy-boards" },
+});
+
+export const testPolicyTopicContentType = defineContentType({
+  id: "test.policy-topic",
+  tableName: "test_policy_topics",
+  publication: true,
+  visibility: true,
+  editorial: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    author: field.user(),
+    board: field.container({
+      definition: testPolicyBoardContainers,
+      required: true,
+    }),
+  },
+  publicApi: {
+    path: "policy-topics",
+    fields: ["id", "title", "slug", "board", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "board"], status: "published" },
+    update: { fields: ["title"] },
+  },
+  admin: { titleField: "title" },
+});
+
+/** Answers under a topic: filed in the topic's board, threaded by `parent`. */
+export const testPolicyReplyContentType = defineContentType({
+  id: "test.policy-reply",
+  tableName: "test_policy_replies",
+  publication: true,
+  visibility: true,
+  fields: {
+    slug: field.slug({ generated: true }),
+    body: field.text({ required: true, maxLength: 2000 }),
+    author: field.user(),
+    topic: field.relation({
+      target: () => testPolicyTopicContentType,
+      required: true,
+      container: true,
+      onDelete: "cascade",
+    }),
+    parent: field.relation({
+      self: true,
+      nullable: true,
+      onDelete: "set null",
+    }),
+  },
+  publicApi: {
+    path: "policy-replies",
+    fields: ["id", "slug", "body", "topic", "parent", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["body", "topic", "parent"], status: "published" },
+    update: { fields: ["body"] },
+  },
+  thread: { parent: "parent", root: "topic", maxDepth: 4 },
+});

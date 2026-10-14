@@ -25,6 +25,11 @@ export const core_content_containers = camelCase.table.withRLS(
     slug: t.varchar({ length: CONTENT_CONTAINER_SLUG_MAX_LENGTH }).notNull(),
     position: t.integer().notNull().default(0),
     metadata: t.jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    policies: t
+      .jsonb()
+      .$type<Record<string, Record<string, unknown>>>()
+      .notNull()
+      .default({}),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t
       .timestamp()

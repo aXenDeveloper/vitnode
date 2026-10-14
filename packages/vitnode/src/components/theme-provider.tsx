@@ -166,22 +166,19 @@ export const ThemeProvider = ({
 
   const setTheme = React.useCallback(
     (next: React.SetStateAction<string | undefined>) => {
-      setThemeState(prev => {
-        const resolved = typeof next === "function" ? next(prev) : next;
-        try {
-          if (resolved === undefined) {
-            window.localStorage.removeItem(storageKey);
-          } else {
-            window.localStorage.setItem(storageKey, resolved);
-          }
-        } catch {
-          // localStorage unavailable
+      const resolved = typeof next === "function" ? next(theme) : next;
+      setThemeState(resolved);
+      try {
+        if (resolved === undefined) {
+          window.localStorage.removeItem(storageKey);
+        } else {
+          window.localStorage.setItem(storageKey, resolved);
         }
-
-        return resolved;
-      });
+      } catch {
+        // localStorage unavailable
+      }
     },
-    [storageKey],
+    [storageKey, theme],
   );
 
   React.useEffect(() => {

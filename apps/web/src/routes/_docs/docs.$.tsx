@@ -6,7 +6,7 @@ import { DocsError, DocsNotFound } from '@/docs/error-views'
 import { DocsPageContent } from '@/docs/page-content'
 import { DocsPagePendingSkeleton } from '@/docs/pending'
 import { movedDocsPath } from '@/docs/redirects'
-import { DOCS_STALE_TIME } from '@/docs/shared'
+import { DOCS_PENDING_MS, DOCS_STALE_TIME } from '@/docs/shared'
 import { getDocsPage } from '@/docs/transport'
 
 export const Route = createFileRoute('/_docs/docs/$')({
@@ -42,6 +42,7 @@ export const Route = createFileRoute('/_docs/docs/$')({
       title: loaderData?.metaTitle,
     }),
   staleTime: DOCS_STALE_TIME,
+  pendingMs: DOCS_PENDING_MS,
   component: DocsRoute,
   errorComponent: DocsError,
   notFoundComponent: DocsNotFound,
