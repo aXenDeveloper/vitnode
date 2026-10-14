@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 
+import { loadLucideIconCatalog } from "./icon-catalog";
 import {
   loadLucideIcon,
-  loadLucideIcons,
   preloadAllLucideIcons,
   readLucideIcon,
   seedLucideIcons,
@@ -73,7 +73,7 @@ describe("preloadAllLucideIcons", () => {
   test("caches every name the picker offers and marks the rest as missing", async () => {
     await preloadAllLucideIcons();
 
-    const { names } = await loadLucideIcons();
+    const { names } = await loadLucideIconCatalog();
     const cold = names.filter(name => !readLucideIcon(name));
 
     expect(cold).toStrictEqual([]);

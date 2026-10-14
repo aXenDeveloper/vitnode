@@ -29,7 +29,7 @@ export const PricingSection = () => (
     >
       <div
         aria-hidden
-        className="mk-anim-drift bg-primary/15 absolute -top-32 left-1/2 -z-10 size-96 -translate-x-1/2 rounded-full blur-3xl"
+        className="mk-anim-drift bg-primary/10 absolute -top-32 left-1/2 -z-10 size-96 -translate-x-1/2 rounded-full blur-3xl"
       />
 
       <Eyebrow>Pricing</Eyebrow>

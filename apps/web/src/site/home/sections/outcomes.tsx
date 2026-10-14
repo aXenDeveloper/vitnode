@@ -55,7 +55,7 @@ const ICON_BADGE: Record<Surface, string> = {
 
 const BODY: Record<Surface, string> = {
   dark: 'text-muted-foreground',
-  primary: 'text-primary-foreground/80',
+  primary: 'text-primary-foreground/90',
   soft: 'text-muted-foreground',
   tint: 'text-muted-foreground',
 }

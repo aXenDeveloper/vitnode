@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { humanizeIconName } from "@/lib/emoji-icon";
 
-import { loadLucideIcons } from "./icon-registry";
+import { loadLucideIconCatalog } from "./icon-catalog";
 import { Input } from "./input";
 
 const COLUMNS = 8;
@@ -66,7 +66,7 @@ const IconGrid = ({
   value?: string;
 }) => {
   const t = useTranslations("core.global.emoji_icon_picker");
-  const { get, names } = React.use(loadLucideIcons());
+  const { get, names } = React.use(loadLucideIconCatalog());
   const [scroll, setScroll] = React.useState({ search, top: 0 });
   const scrollTop = scroll.search === search ? scroll.top : 0;
   const [active, setActive] = React.useState({ index: 0, search });

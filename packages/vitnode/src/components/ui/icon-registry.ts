@@ -7,18 +7,6 @@ import {
   iconNameToComponentName,
 } from "@/lib/emoji-icon";
 
-export type LucideIconComponent = React.ComponentType<{
-  absoluteStrokeWidth?: boolean;
-  className?: string;
-  size?: number | string;
-  strokeWidth?: number | string;
-}>;
-
-export interface LucideIconRegistry {
-  get: (name: string) => LucideIconComponent | undefined;
-  names: string[];
-}
-
 export type LucideIconSnapshot = Record<string, LucideIconData | null>;
 
 export interface LucideIconCollector {
@@ -146,23 +134,3 @@ export const createLucideIconCollector = (): LucideIconCollector => {
 export const LucideIconCollectorContext = React.createContext<
   LucideIconCollector | undefined
 >(undefined);
-
-let registry: Promise<LucideIconRegistry> | undefined;
-
-// oxlint-disable-next-line typescript/promise-function-async
-export const loadLucideIcons = (): Promise<LucideIconRegistry> => {
-  registry ??= import("lucide-react").then(({ icons }) => {
-    const components = icons as unknown as Record<
-      string,
-      LucideIconComponent | undefined
-    >;
-    const names = Object.keys(components).map(componentNameToIconName).sort();
-
-    return {
-      get: (name: string) => components[iconNameToComponentName(name)],
-      names,
-    };
-  });
-
-  return registry;
-};

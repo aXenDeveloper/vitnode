@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 
 import { cn } from 'cn'
-import { Compass, Gavel, UserRound, UsersRound } from 'lucide-react'
+import { Check, Compass, Gavel, UserRound, UsersRound } from 'lucide-react'
 
 import type { Surface } from '@/site/marketing/shared'
 
@@ -86,10 +86,17 @@ export const CommunitySection = () => (
             <span
               className={
                 status === 'Included'
-                  ? 'bg-primary/15 text-success rounded-full px-2.5 py-1 text-xs font-semibold'
+                  ? 'bg-success/10 text-foreground inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold'
                   : 'bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-xs font-semibold'
               }
             >
+              {status === 'Included' && (
+                <Check
+                  aria-hidden
+                  className="text-success size-3.5"
+                  strokeWidth={3}
+                />
+              )}
               {status}
             </span>
           </div>
