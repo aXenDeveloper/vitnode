@@ -2505,6 +2505,11 @@
       "results_not_found": "Brak wyników",
       "save": "Zapisz",
       "search_placeholder": "Szukaj...",
+      "search_dialog": {
+        "desc": "Znajduj artykuły, tematy i komentarze już podczas pisania.",
+        "open": "Otwórz wyszukiwanie",
+        "title": "Szukaj"
+      },
       "select_language": "Wybierz język",
       "select_option": "Wybierz opcję",
       "select_options": "Wybierz opcje",
@@ -2759,6 +2764,25 @@
         "search": "Szukaj"
       },
       "placeholder": "Szukaj…",
+      "dialog": {
+        "count": "{count, plural, =0 {Brak wyników} one {# wynik} few {# wyniki} many {# wyników} other {# wyniku}}",
+        "error": "Wyszukiwarka ucięła sobie drzemkę. Spróbuj ponownie za chwilę.",
+        "in_context": "w {context}",
+        "label": "Przeszukaj społeczność",
+        "no_results": "Brak szybkich dopasowań. Spróbuj innego słowa albo zobacz wszystkie wyniki.",
+        "popular": "Popularne teraz",
+        "popular_empty": "Nic jeszcze nie jest popularne. Zacznij pisać, aby wyszukać.",
+        "see_all": "Zobacz wszystkie wyniki dla „{term}”",
+        "suggestions": "Podpowiedzi",
+        "recent": "Ostatnie wyszukiwania",
+        "complete": "aby uzupełnić",
+        "close": "aby zamknąć",
+        "navigate": "aby się poruszać",
+        "open": "aby otworzyć",
+        "key_up": "Strzałka w górę",
+        "key_down": "Strzałka w dół",
+        "key_enter": "Enter"
+      },
       "sort": {
         "newest": "Najnowsze",
         "oldest": "Najstarsze",
@@ -2812,7 +2836,8 @@
       },
       "timeline": {
         "items": "{count, plural, one {# element} few {# elementy} many {# elementów} other {# elementu}}",
-        "in_context": "w <target>{context}</target>"
+        "posted_in": "<profile>{author}</profile> publikuje w <target>{context}</target>",
+        "posted_in_self": "Opublikowano w <target>{context}</target>"
       }
     },
     "notifications": {

@@ -54,9 +54,11 @@ import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/rout
 import {
   AuthPendingSkeleton,
   CardsPendingSkeleton,
+  DiscoverPendingSkeleton,
   FeedPendingSkeleton,
   FormPendingSkeleton,
   ProfilePendingSkeleton,
+  SearchPendingSkeleton,
   TablePendingSkeleton,
 } from "./tanstack/pending";
 import { PROFILE_NAMESPACES } from "./tanstack/profile/route";
@@ -89,13 +91,13 @@ export const routes = defineRoutes([
   page("/discover", {
     component: lazy(() => import("./pages/discover")),
     messages: DISCOVER_NAMESPACES,
-    pendingComponent: FeedPendingSkeleton,
+    pendingComponent: DiscoverPendingSkeleton,
   }),
 
   page("/search", {
     component: lazy(() => import("./pages/search")),
     messages: SEARCH_NAMESPACES,
-    pendingComponent: FeedPendingSkeleton,
+    pendingComponent: SearchPendingSkeleton,
     search: normalizeSearchRouteSearch,
   }),
 

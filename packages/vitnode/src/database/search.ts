@@ -1,7 +1,14 @@
 import type { SQL } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { sql } from "drizzle-orm";
-import { camelCase, customType, index, unique } from "drizzle-orm/pg-core";
+import {
+  camelCase,
+  customType,
+  index,
+  primaryKey,
+  unique,
+} from "drizzle-orm/pg-core";
 
 import { CONTENT_ID_KEY_LENGTH } from "../content/const";
 import { core_files } from "./files";
@@ -62,6 +69,9 @@ const SEARCH_CONFIG_CASE = `CASE lower(split_part("core_search_index"."languageC
   .map(([code, config]) => `WHEN '${code}' THEN '${config}'::regconfig`)
   .join(" ")} ELSE '${DEFAULT_SEARCH_TEXT_CONFIG}'::regconfig END`;
 
+export const searchTitleVector = (title: AnyPgColumn): SQL =>
+  sql`to_tsvector('simple'::regconfig, ${title})`;
+
 // One row per (itemType, itemId, languageCode): multi-language content is
 // indexed once per language so search and discovery can be scoped to the
 // viewer's locale.
@@ -109,6 +119,10 @@ export const core_search_index = camelCase.table.withRLS(
       t.languageCode,
     ),
     index("core_search_index_search_vector_idx").using("gin", t.searchVector),
+    index("core_search_index_title_vector_idx").using(
+      "gin",
+      searchTitleVector(t.title),
+    ),
     index("core_search_index_created_at_idx").on(t.createdAt),
     index("core_search_index_author_ids_idx").using("gin", t.authorIds),
     index("core_search_index_item_type_idx").on(t.itemType),
@@ -116,5 +130,22 @@ export const core_search_index = camelCase.table.withRLS(
     index("core_search_index_is_public_idx").on(t.isPublic),
     index("core_search_index_image_id_idx").on(t.imageId),
     index("core_search_index_container_idx").on(t.containerType, t.containerId),
+  ],
+);
+
+export const core_search_popularity = camelCase.table.withRLS(
+  "core_search_popularity",
+  t => ({
+    itemType: t.varchar({ length: 100 }).notNull(),
+    itemId: t.varchar({ length: CONTENT_ID_KEY_LENGTH }).notNull(),
+    logScore: t.doublePrecision().notNull(),
+    views: t.integer().notNull().default(0),
+    clicks: t.integer().notNull().default(0),
+    comments: t.integer().notNull().default(0),
+    updatedAt: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [
+    primaryKey({ columns: [t.itemType, t.itemId] }),
+    index("core_search_popularity_log_score_idx").on(t.logScore),
   ],
 );

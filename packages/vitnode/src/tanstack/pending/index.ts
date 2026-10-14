@@ -8,8 +8,10 @@ export {
   AuthPendingSkeleton,
   BreadcrumbPendingSkeleton,
   CardsPendingSkeleton,
+  DiscoverPendingSkeleton,
   FeedPendingSkeleton,
   FormPendingSkeleton,
   ProfilePendingSkeleton,
+  SearchPendingSkeleton,
   TablePendingSkeleton,
 } from "./shapes";

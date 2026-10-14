@@ -30,6 +30,7 @@
     "---Services---",
     "ai",
     "search",
+    "search-suggestions",
     "search-elasticsearch",
     "storage",
     "email",

@@ -13,9 +13,19 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import type { SearchPopularitySignal } from "@/api/lib/search-popularity";
+import type { SearchSuggestion } from "@/api/lib/search-suggestions";
 import type { ContentId } from "@/content/ids";
 import type { RegisteredContentType } from "@/content/registry";
 
+import {
+  deleteSearchPopularity,
+  recordSearchPopularity,
+} from "@/api/lib/search-popularity";
+import {
+  canonicalPopularSearchItems,
+  canonicalSearchSuggestions,
+} from "@/api/lib/search-suggestions";
 import { storageUrlOf } from "@/api/lib/storage-url";
 import { contentIdFromKey, contentIdKey } from "@/content/ids";
 import { contentLocalesMatch } from "@/content/locale";
@@ -27,6 +37,8 @@ import { parseImageDimensions } from "@/lib/api/upload";
 import { stripHtml } from "@/lib/strip-html";
 
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
+
+const SEARCH_TOP_AUTHORS_TTL_SECONDS = 5 * 60;
 
 export interface SearchDocument {
   authorIds?: readonly number[];
@@ -125,6 +137,10 @@ export interface SearchHitImage {
   url: string;
   width?: number;
 }
+
+export type SearchSuggestionResult = Omit<SearchSuggestion, "imageId"> & {
+  image: null | SearchHitImage;
+};
 
 export interface SearchHit {
   author: null | SearchHitAuthor;
@@ -401,7 +417,9 @@ export class SearchModel {
     });
   }
 
-  private async hydrateImages(edges: SearchHit[]): Promise<SearchHit[]> {
+  private async hydrateImages<T extends { imageId: null | number }>(
+    edges: T[],
+  ): Promise<(T & { image: null | SearchHitImage })[]> {
     const wanted = [
       ...new Set(
         edges.flatMap(edge => (edge.imageId === null ? [] : [edge.imageId])),
@@ -448,6 +466,27 @@ export class SearchModel {
       ...edge,
       image: edge.imageId === null ? null : (byId.get(edge.imageId) ?? null),
     }));
+  }
+
+  private async newCommentParent(
+    doc: SearchDocument,
+  ): Promise<null | { itemId: string; itemType: string }> {
+    if (doc.isPublic === false) return null;
+    if (doc.containerType === undefined || doc.containerId === undefined) {
+      return null;
+    }
+
+    const parentType = doc.containerType;
+    const isIndexedContent = (this.c.get("core")?.contentTypes ?? []).some(
+      ({ definition }) =>
+        definition.id === parentType && definition.search.enabled,
+    );
+    if (!isIndexedContent) return null;
+    if (await this.isListed(doc.itemType, contentIdKey(doc.itemId))) {
+      return null;
+    }
+
+    return { itemId: contentIdKey(doc.containerId), itemType: parentType };
   }
 
   private provider(): SearchProviderApiPlugin {
@@ -519,6 +558,14 @@ export class SearchModel {
       : params;
   }
 
+  private async withSuggestionImages(
+    suggestions: SearchSuggestion[],
+  ): Promise<SearchSuggestionResult[]> {
+    const hydrated = await this.hydrateImages(suggestions);
+
+    return hydrated.map(({ imageId: _imageId, ...suggestion }) => suggestion);
+  }
+
   async authors({
     limit,
     term,
@@ -578,37 +625,42 @@ export class SearchModel {
       return rows.map(toAuthor);
     }
 
-    const activity = db
-      .select({
-        authorId: sql<number>`unnest(${core_search_index.authorIds})`.as(
-          "author_id",
-        ),
-      })
-      .from(core_search_index)
-      .where(listed)
-      .as("activity");
-    const top = await db
-      .select({ authorId: activity.authorId, total: count() })
-      .from(activity)
-      .groupBy(activity.authorId)
-      .orderBy(desc(count()), asc(activity.authorId))
-      .limit(limit);
-    if (top.length === 0) return [];
+    const topAuthorIds = await this.c
+      .get("cache")
+      .remember(
+        `search:top-authors:${limit}`,
+        SEARCH_TOP_AUTHORS_TTL_SECONDS,
+        async () => {
+          const activity = db
+            .select({
+              authorId: sql<number>`unnest(${core_search_index.authorIds})`.as(
+                "author_id",
+              ),
+            })
+            .from(core_search_index)
+            .where(listed)
+            .as("activity");
+          const top = await db
+            .select({ authorId: activity.authorId, total: count() })
+            .from(activity)
+            .groupBy(activity.authorId)
+            .orderBy(desc(count()), asc(activity.authorId))
+            .limit(limit);
+
+          return top.map(row => row.authorId);
+        },
+      );
+    if (topAuthorIds.length === 0) return [];
 
     const rows = await db
       .select(columns)
       .from(core_users)
       .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
-      .where(
-        inArray(
-          core_users.id,
-          top.map(row => row.authorId),
-        ),
-      );
+      .where(inArray(core_users.id, topAuthorIds));
     const byId = new Map(rows.map(row => [row.id, toAuthor(row)]));
 
-    return top.flatMap(row => {
-      const author = byId.get(row.authorId);
+    return topAuthorIds.flatMap(authorId => {
+      const author = byId.get(authorId);
 
       return author ? [author] : [];
     });
@@ -687,6 +739,13 @@ export class SearchModel {
         ),
       );
 
+    if (languageCode === undefined) {
+      await deleteSearchPopularity(this.c, {
+        itemId: contentIdKey(itemId),
+        itemType,
+      });
+    }
+
     await this.provider().delete(this.c, itemType, itemId, languageCode);
   }
 
@@ -727,8 +786,17 @@ export class SearchModel {
       content: stripHtml(doc.content),
     });
 
+    const commentParent = await this.newCommentParent(clean);
+
     await this.upsertRow(clean);
     await this.provider().index(this.c, clean);
+
+    if (commentParent) {
+      await recordSearchPopularity(this.c, {
+        ...commentParent,
+        signal: "comment",
+      });
+    }
   }
 
   /**
@@ -741,6 +809,23 @@ export class SearchModel {
     return this.provider().capabilities?.canonicalStorage === true;
   }
 
+  async isListed(itemType: string, itemId: string): Promise<boolean> {
+    const [row] = await this.c
+      .get("db")
+      .select({ id: core_search_index.id })
+      .from(core_search_index)
+      .where(
+        and(
+          eq(core_search_index.itemType, itemType),
+          eq(core_search_index.itemId, itemId),
+          eq(core_search_index.isPublic, true),
+        ),
+      )
+      .limit(1);
+
+    return row !== undefined;
+  }
+
   name(): string {
     return this.provider().name;
   }
@@ -751,15 +836,67 @@ export class SearchModel {
     return provider.ping ? provider.ping(this.c) : true;
   }
 
+  async popular({
+    languageCode,
+    limit,
+  }: {
+    languageCode?: string;
+    limit: number;
+  }): Promise<SearchSuggestionResult[]> {
+    return await this.withSuggestionImages(
+      await canonicalPopularSearchItems(this.c, {
+        limit,
+        params: this.withFallbacks({ includePrivate: false, languageCode }),
+      }),
+    );
+  }
+
+  async recordPopularity({
+    itemId,
+    itemType,
+    signal,
+  }: {
+    itemId: string;
+    itemType: string;
+    signal: SearchPopularitySignal;
+  }): Promise<void> {
+    await recordSearchPopularity(this.c, { itemId, itemType, signal });
+  }
+
   async search(params: SearchQueryParams): Promise<SearchResult> {
     const result = await this.provider().search(
       this.c,
       this.withFallbacks(params),
     );
 
+    const [withAuthors, withImages] = await Promise.all([
+      this.hydrateAuthors(result.edges),
+      this.hydrateImages(result.edges),
+    ]);
+
     return {
       ...result,
-      edges: await this.hydrateImages(await this.hydrateAuthors(result.edges)),
+      edges: withAuthors.map((edge, index) => ({
+        ...edge,
+        image: withImages[index]?.image ?? null,
+      })),
     };
+  }
+
+  async suggest({
+    limit,
+    term,
+    ...params
+  }: Omit<SearchQueryParams, "term"> & {
+    limit: number;
+    term: string;
+  }): Promise<SearchSuggestionResult[]> {
+    return await this.withSuggestionImages(
+      await canonicalSearchSuggestions(this.c, {
+        limit,
+        params: this.withFallbacks(params),
+        term,
+      }),
+    );
   }
 }

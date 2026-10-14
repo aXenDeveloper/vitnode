@@ -8,6 +8,16 @@ import { RouteMessages } from "../i18n/route-messages";
 import { feedQueryOptions } from "./feed";
 import { SEARCH_NAMESPACES } from "./search-route";
 
+const replaceSearchInUrl = (term: string) => {
+  const url = new URL(window.location.href);
+  if (term) url.searchParams.set("search", term);
+  else url.searchParams.delete("search");
+
+  if (url.href !== window.location.href) {
+    window.history.replaceState(window.history.state, "", url);
+  }
+};
+
 export const SearchRouteContent = ({
   description,
   params,
@@ -26,6 +36,7 @@ export const SearchRouteContent = ({
             feedQueryOptions({ locale, params: feedParams })
           }
           key={params.search ?? ""}
+          onSearchChange={replaceSearchInUrl}
           variant="timeline"
         />
       </div>

@@ -18,6 +18,7 @@ import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
+import { useRecordView } from "@vitnode/core/tanstack/search";
 import { PencilIcon } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
+import { topicContentType } from "@/content/topic";
 
 import type { ForumPerson } from "./forum-data";
 import type { TopicSearch } from "./forum-links";
@@ -269,6 +271,7 @@ const TopicPage = ({
   const created = search.created === true;
   const announcedRef = useRef(false);
   const forum = trail.at(-1);
+  useRecordView({ itemId: topic.id, itemType: topicContentType.id });
 
   useEffect(() => {
     // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the event happened on the previous page; landing here is all that is left of it

@@ -31,6 +31,15 @@ import type {
 } from "./types";
 
 import { getSearchTypeRenderer } from "./registry";
+import {
+  SearchHighlightContext,
+  searchHighlightPattern,
+  searchHighlightWords,
+  searchSnippetAround,
+  useSearchHighlight,
+} from "./search-highlight";
+import { SearchHighlightText } from "./search-highlight-text";
+import { SearchTimelineSkeleton } from "./search-timeline-skeleton";
 
 const SNIPPET_LENGTH = 240;
 
@@ -48,10 +57,12 @@ export interface SearchFeedLinkProps {
   href: string;
 }
 
-const getSnippet = (content: string): string =>
-  content.length > SNIPPET_LENGTH
-    ? `${content.slice(0, SNIPPET_LENGTH).trimEnd()}…`
-    : content;
+const useSnippet = (content: string): string =>
+  searchSnippetAround(content, useSearchHighlight(), SNIPPET_LENGTH);
+
+const Highlight = ({ text }: { text: string }) => (
+  <SearchHighlightText pattern={useSearchHighlight()} text={text} />
+);
 
 /**
  * The schemes a search result is allowed to link to.
@@ -136,10 +147,10 @@ const ResultLink = ({ children, className, href }: SearchFeedLinkProps) => {
 const ItemTitle = ({ item }: { item: SearchResultItem }) =>
   item.url ? (
     <ResultLink className="hover:underline" href={item.url}>
-      {item.title}
+      <Highlight text={item.title} />
     </ResultLink>
   ) : (
-    <>{item.title}</>
+    <Highlight text={item.title} />
   );
 
 const ItemHiddenIcon = ({
@@ -284,8 +295,10 @@ const ActivitySentence = ({
             {chunks}
           </ActivityLink>
         ),
-        target: chunks => (
-          <ActivityLink href={activity.context.url}>{chunks}</ActivityLink>
+        target: () => (
+          <ActivityLink href={activity.context.url}>
+            <Highlight text={activity.context.title} />
+          </ActivityLink>
         ),
       })}
     </span>
@@ -321,11 +334,11 @@ const ActivityBody = ({
       )}
       href={item.url}
     >
-      {snippet}
+      <Highlight text={snippet} />
     </ResultLink>
   ) : (
     <p className={cn("text-foreground leading-relaxed", className)}>
-      {snippet}
+      <Highlight text={snippet} />
     </p>
   );
 };
@@ -480,10 +493,10 @@ const CardTitle = ({
   <h3 className={cn("text-foreground leading-snug font-semibold", className)}>
     {item.url ? (
       <ResultLink className={CARD_OVERLAY_LINK_XL} href={item.url}>
-        {item.title}
+        <Highlight text={item.title} />
       </ResultLink>
     ) : (
-      item.title
+      <Highlight text={item.title} />
     )}
   </h3>
 );
@@ -500,15 +513,24 @@ const visibleAuthorsOf = (
     : authors;
 };
 
-const CardAuthors = ({ authors }: { authors: SearchResultAuthor[] }) =>
-  authors.length > 0 ? (
-    <div className="text-muted-foreground flex min-w-0 items-center gap-2 pt-1 text-sm">
-      <AuthorAvatars authors={authors} />
-      <span className="truncate">
-        <AuthorNames authors={authors} />
-      </span>
-    </div>
-  ) : null;
+const AuthorLine = ({
+  authors,
+  children,
+}: {
+  authors: SearchResultAuthor[];
+  children: React.ReactNode;
+}) => (
+  <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-sm">
+    {authors.length > 0 && <AuthorAvatars authors={authors} />}
+    <p className="line-clamp-2 min-w-0">{children}</p>
+  </div>
+);
+
+const onlyAuthorHref = (authors: SearchResultAuthor[]): null | string => {
+  const [only] = authors;
+
+  return authors.length === 1 && only ? userProfileHref(only.nameCode) : null;
+};
 
 const cardSurface = (item: SearchResultItem, className: string) =>
   cn(
@@ -526,7 +548,9 @@ const ArticleCard = ({
   item: SearchResultItem;
   ownerId?: number;
 }) => {
-  const snippet = getSnippet(item.content);
+  const snippet = useSnippet(item.content);
+  const authors = visibleAuthorsOf(item, ownerId);
+  const profileHref = onlyAuthorHref(authors);
 
   return (
     <article className={cardSurface(item, "flex flex-col overflow-hidden")}>
@@ -543,13 +567,21 @@ const ArticleCard = ({
       )}
       <div className="flex flex-col gap-2 p-4 sm:p-5">
         <CardMeta item={item} />
+        {authors.length > 0 && (
+          <AuthorLine authors={authors}>
+            {profileHref ? (
+              <ActivityLink href={profileHref}>{authors[0]?.name}</ActivityLink>
+            ) : (
+              <AuthorNames authors={authors} />
+            )}
+          </AuthorLine>
+        )}
         <CardTitle className="text-xl text-balance" item={item} />
         {snippet && (
           <p className="text-muted-foreground line-clamp-3 leading-relaxed text-pretty">
-            {snippet}
+            <Highlight text={snippet} />
           </p>
         )}
-        <CardAuthors authors={visibleAuthorsOf(item, ownerId)} />
       </div>
     </article>
   );
@@ -565,30 +597,40 @@ const TopicCard = ({
   ownerId?: number;
 }) => {
   const t = useTranslations("core.search");
-  const snippet = getSnippet(item.content);
+  const format = useFormatter();
+  const snippet = useSnippet(item.content);
+  const authors = visibleAuthorsOf(item, ownerId);
+  const target = (chunks: React.ReactNode) => (
+    <ActivityLink href={activity.context.url}>{chunks}</ActivityLink>
+  );
 
   return (
     <article className={cardSurface(item, "flex gap-4 p-4")}>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <CardMeta item={item}>
-          <span className="min-w-0 truncate">
-            {t.rich("timeline.in_context", {
-              context: activity.context.title,
-              target: chunks => (
-                <ActivityLink href={activity.context.url}>
-                  {chunks}
-                </ActivityLink>
-              ),
-            })}
-          </span>
-        </CardMeta>
+        <CardMeta item={item} />
+        <AuthorLine authors={authors}>
+          {authors.length > 0
+            ? t.rich("timeline.posted_in", {
+                author: format.list(authors.map(author => author.name)),
+                context: activity.context.title,
+                profile: chunks => (
+                  <ActivityLink href={onlyAuthorHref(authors)}>
+                    {chunks}
+                  </ActivityLink>
+                ),
+                target,
+              })
+            : t.rich("timeline.posted_in_self", {
+                context: activity.context.title,
+                target,
+              })}
+        </AuthorLine>
         <CardTitle className="text-lg text-pretty" item={item} />
         {snippet && (
           <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
-            {snippet}
+            <Highlight text={snippet} />
           </p>
         )}
-        <CardAuthors authors={visibleAuthorsOf(item, ownerId)} />
       </div>
       {item.image && (
         <img
@@ -613,33 +655,24 @@ const CommentCard = ({
   ownerId?: number;
 }) => {
   const t = useTranslations("core.search");
-  const snippet = getSnippet(item.content);
+  const snippet = useSnippet(item.content);
   const authors = visibleAuthorsOf(item, ownerId);
 
   return (
     <article className={cardSurface(item, "flex flex-col gap-2 p-4")}>
       <CardMeta item={item} />
-      <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-sm">
-        {authors.length > 0 && <AuthorAvatars authors={authors} />}
-        <p className="line-clamp-2 min-w-0">
-          {authors.length > 0 ? (
-            <ActivitySentence
-              activity={activity}
-              authors={authors}
-              item={item}
-            />
-          ) : (
-            t.rich("activity.commented_self", {
-              context: activity.context.title,
-              target: chunks => (
-                <ActivityLink href={activity.context.url}>
-                  {chunks}
-                </ActivityLink>
-              ),
-            })
-          )}
-        </p>
-      </div>
+      <AuthorLine authors={authors}>
+        {authors.length > 0 ? (
+          <ActivitySentence activity={activity} authors={authors} item={item} />
+        ) : (
+          t.rich("activity.commented_self", {
+            context: activity.context.title,
+            target: chunks => (
+              <ActivityLink href={activity.context.url}>{chunks}</ActivityLink>
+            ),
+          })
+        )}
+      </AuthorLine>
       {snippet ? (
         <div className="border-border border-s-2 ps-3">
           <ActivityBody
@@ -785,7 +818,7 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
   const t = useTranslations("core.search");
   const renderer = getSearchTypeRenderer(item.itemType);
   const Icon = renderer.icon;
-  const snippet = getSnippet(item.content);
+  const snippet = useSnippet(item.content);
   const authors = authorsOf(item);
   const activity = activityOf(item);
 
@@ -841,7 +874,7 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
 
                 {snippet && (
                   <p className="text-muted-foreground line-clamp-2 text-sm">
-                    {snippet}
+                    <Highlight text={snippet} />
                   </p>
                 )}
               </>
@@ -863,15 +896,21 @@ export interface SearchFeedListQuery {
 }
 
 export const SearchFeedList = ({
+  highlight,
   ownerId,
   query: { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading },
   variant = "list",
 }: {
+  highlight?: string;
   ownerId?: number;
   query: SearchFeedListQuery;
   variant?: SearchFeedVariant;
 }) => {
   const t = useTranslations("core.search");
+  const pattern = React.useMemo(
+    () => searchHighlightPattern(searchHighlightWords(highlight)),
+    [highlight],
+  );
   const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -891,7 +930,9 @@ export const SearchFeedList = ({
   const items = data?.pages.flatMap(page => page.edges) ?? [];
 
   if (isLoading) {
-    return (
+    return variant === "timeline" ? (
+      <SearchTimelineSkeleton />
+    ) : (
       <div className="flex flex-col gap-3">
         {["a", "b", "c"].map(id => (
           <Skeleton className="h-24 w-full rounded-xl" key={id} />
@@ -925,21 +966,28 @@ export const SearchFeedList = ({
 
   if (variant === "timeline") {
     return (
-      <div className="flex flex-col gap-6">
-        <SearchTimeline items={items} ownerId={ownerId} />
-        {loadMore}
-      </div>
+      <SearchHighlightContext value={pattern}>
+        <div className="flex flex-col gap-6">
+          <SearchTimeline items={items} ownerId={ownerId} />
+          {loadMore}
+        </div>
+      </SearchHighlightContext>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {items.map(item => (
-        <SearchResultCard item={item} key={`${item.itemType}-${item.itemId}`} />
-      ))}
+    <SearchHighlightContext value={pattern}>
+      <div className="flex flex-col gap-3">
+        {items.map(item => (
+          <SearchResultCard
+            item={item}
+            key={`${item.itemType}-${item.itemId}`}
+          />
+        ))}
 
-      {loadMore}
-    </div>
+        {loadMore}
+      </div>
+    </SearchHighlightContext>
   );
 };
 

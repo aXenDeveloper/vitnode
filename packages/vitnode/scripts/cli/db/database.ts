@@ -128,6 +128,8 @@ export const createDatabaseServices = (root: string): DatabaseServices => ({
             await bootstrap.runMigrations({
               config: apiConfig,
               drizzle: config,
+              log,
+              root,
             });
             await bootstrap.initialDataForDatabase(apiConfig);
           },

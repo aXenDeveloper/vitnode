@@ -22,6 +22,7 @@ import {
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
+import { useRecordView } from "@vitnode/core/tanstack/search";
 import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -95,6 +96,10 @@ const BlogPostPage = ({
   loaderData: { item, metadata },
 }: PluginRoutePageProps<BlogPostPageData>) => {
   const t = useTranslations("@vitnode/blog.post");
+  useRecordView({
+    itemId: metadata.hidden ? null : metadata.itemId,
+    itemType: blogPostContentType.id,
+  });
 
   return (
     <article

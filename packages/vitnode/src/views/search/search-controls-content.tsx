@@ -133,10 +133,12 @@ const SearchField = ({
 export const SearchControlsContent = ({
   defaultParams,
   feedQuery,
+  onSearchChange,
   variant = "timeline",
 }: {
   defaultParams: SearchFeedParams;
   feedQuery: SearchFeedQueryFactory;
+  onSearchChange?: (term: string) => void;
   variant?: SearchFeedVariant;
 }) => {
   const t = useTranslations("core.search");
@@ -160,6 +162,7 @@ export const SearchControlsContent = ({
     if (next === null) return;
 
     setAppliedTerm(next);
+    onSearchChange?.(next);
     if (next.length > 0) setSort(sortForAppliedTerm);
   }, SEARCH_TERM_DEBOUNCE_MS);
 
@@ -180,9 +183,10 @@ export const SearchControlsContent = ({
   const total = query.data?.pages[0]?.pageInfo.totalCount;
   const active = activeSearchFilterCount(filters);
 
-  const sidebar = (
+  const sidebar = (showTitle: boolean) => (
     <SearchFilters
       onChange={changeFilters}
+      showTitle={showTitle}
       typeCounts={facets.data?.types}
       value={filters}
     />
@@ -203,7 +207,7 @@ export const SearchControlsContent = ({
           aria-label={t("filters.title")}
           className="self-start p-1 max-lg:hidden lg:sticky lg:top-24"
         >
-          {sidebar}
+          {sidebar(true)}
         </aside>
 
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
@@ -226,7 +230,7 @@ export const SearchControlsContent = ({
                   <SheetTitle>{t("filters.title")}</SheetTitle>
                 </SheetHeader>
                 <div className="min-h-0 overflow-y-auto px-4 pb-6">
-                  {sidebar}
+                  {sidebar(false)}
                 </div>
               </SheetContent>
             </Sheet>
@@ -253,7 +257,11 @@ export const SearchControlsContent = ({
             </NativeSelect>
           </div>
 
-          <SearchFeedList query={query} variant={variant} />
+          <SearchFeedList
+            highlight={appliedTerm}
+            query={query}
+            variant={variant}
+          />
         </div>
       </div>
     </div>

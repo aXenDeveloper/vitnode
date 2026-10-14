@@ -76,6 +76,25 @@
         "discover": "Discover"
       },
       "placeholder": "Search…",
+      "dialog": {
+        "label": "Search the community",
+        "popular": "Popular right now",
+        "popular_empty": "Nothing is trending yet. Start typing to search.",
+        "suggestions": "Suggestions",
+        "no_results": "No quick matches. Try another word or see all results.",
+        "error": "Search is taking a nap. Try again in a moment.",
+        "see_all": "See all results for “{term}”",
+        "in_context": "in {context}",
+        "count": "{count, plural, =0 {No results} one {# result} other {# results}}",
+        "recent": "Recent searches",
+        "complete": "to complete",
+        "close": "to close",
+        "navigate": "to navigate",
+        "open": "to open",
+        "key_up": "Up arrow",
+        "key_down": "Down arrow",
+        "key_enter": "Enter"
+      },
       "empty": "Nothing found yet.",
       "loadMore": "Load more",
       "loading": "Loading…",
@@ -194,7 +213,8 @@
       },
       "timeline": {
         "items": "{count, plural, one {# item} other {# items}}",
-        "in_context": "in <target>{context}</target>"
+        "posted_in": "<profile>{author}</profile> posted in <target>{context}</target>",
+        "posted_in_self": "Posted in <target>{context}</target>"
       }
     },
     "global": {
@@ -398,6 +418,11 @@
         "confirm": "Yes, confirm"
       },
       "search_placeholder": "Search...",
+      "search_dialog": {
+        "open": "Open search",
+        "title": "Search",
+        "desc": "Find articles, topics and comments as you type."
+      },
       "results_not_found": "No results found",
       "selected_count": "<number>{count}</number> selected",
       "clear_filters": "Clear filters",

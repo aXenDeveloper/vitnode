@@ -19,6 +19,7 @@ export interface HeaderLayoutContentProps extends Omit<
   navigation: HeaderNavItem[];
   navigationLoadingLabel: string;
   notifications?: React.ReactNode;
+  search?: React.ReactNode;
   user?: React.ReactNode;
 }
 
@@ -31,6 +32,7 @@ export const HeaderLayoutContent = ({
   navigation,
   navigationLoadingLabel,
   notifications,
+  search,
   user,
   ...props
 }: HeaderLayoutContentProps) => (
@@ -61,6 +63,7 @@ export const HeaderLayoutContent = ({
       )}
 
       <div className="ms-auto flex shrink-0 items-center gap-2">
+        {search}
         {notifications}
         <div
           className={cn(

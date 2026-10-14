@@ -466,10 +466,12 @@ const AuthorGroup = ({
 
 export const SearchFilters = ({
   onChange,
+  showTitle = true,
   typeCounts,
   value,
 }: {
   onChange: (value: SearchFilterValue) => void;
+  showTitle?: boolean;
   typeCounts?: null | Record<string, number>;
   value: SearchFilterValue;
 }) => {
@@ -478,19 +480,31 @@ export const SearchFilters = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        className={cn(
-          "flex items-center justify-between px-2",
-          active === 0 && "invisible",
-        )}
-      >
-        <span className="text-muted-foreground text-sm">
-          {t("active", { count: active })}
-        </span>
-        <LinkButton onClick={() => onChange(EMPTY_SEARCH_FILTERS)}>
-          {t("clearAll")}
-        </LinkButton>
-      </div>
+      {(showTitle || active > 0) && (
+        <div className="flex h-8 items-center gap-2 px-2">
+          {showTitle && (
+            <h2 className="text-foreground text-base font-semibold">
+              {t("title")}
+            </h2>
+          )}
+          {active > 0 && (
+            <>
+              <span
+                aria-label={t("active", { count: active })}
+                className="bg-foreground text-background flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium tabular-nums"
+                role="status"
+              >
+                {active}
+              </span>
+              <span className="ms-auto">
+                <LinkButton onClick={() => onChange(EMPTY_SEARCH_FILTERS)}>
+                  {t("clearAll")}
+                </LinkButton>
+              </span>
+            </>
+          )}
+        </div>
+      )}
       <TypeGroup
         counts={typeCounts}
         onChange={types => onChange({ ...value, types })}

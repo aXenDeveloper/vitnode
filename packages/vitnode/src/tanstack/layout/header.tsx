@@ -30,6 +30,7 @@ import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { NotificationsBell } from "../notifications/bell";
 import { isSharedRenderRequest } from "../prerender";
+import { HeaderSearch } from "../search/header-search";
 import { MobileUserMenu } from "./mobile-user-menu";
 
 const NO_MESSAGES: AbstractIntlMessages = {};
@@ -105,6 +106,7 @@ export const Header = ({ user }: { user?: React.ReactNode }) => {
         navigation={navigation}
         navigationLoadingLabel={t("loading")}
         notifications={<NotificationsBell />}
+        search={<HeaderSearch />}
         user={user}
       />
       <MobileNavBar items={bottomBar} menuNavigation={menuNavigation} />

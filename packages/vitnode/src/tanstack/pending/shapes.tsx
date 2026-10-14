@@ -1,6 +1,7 @@
 import { cn } from "cn";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchTimelineSkeleton } from "@/views/search/search-timeline-skeleton";
 
 import type { RoutePendingSkeletonProps } from "./route-pending-skeleton";
 
@@ -41,6 +42,66 @@ export const FeedPendingSkeleton = ({
           </div>
         </div>
       ))}
+    </div>
+  </PendingFrame>
+);
+
+export const DiscoverPendingSkeleton = ({
+  className,
+  label,
+}: Pick<RoutePendingSkeletonProps, "className" | "label">) => (
+  <PendingFrame
+    className={cn("container mx-auto max-w-3xl", className)}
+    label={label}
+  >
+    <PendingHeading />
+    <SearchTimelineSkeleton />
+  </PendingFrame>
+);
+
+const SEARCH_FILTER_GROUPS = [
+  { id: "content", rows: 3 },
+  { id: "date", rows: 6 },
+] as const;
+
+export const SearchPendingSkeleton = ({
+  className,
+  label,
+}: Pick<RoutePendingSkeletonProps, "className" | "label">) => (
+  <PendingFrame
+    className={cn("container mx-auto max-w-6xl", className)}
+    label={label}
+  >
+    <PendingHeading />
+    <div aria-hidden="true" className="flex flex-col gap-8">
+      <Skeleton className="h-14 w-full rounded-2xl" />
+      <div className="grid gap-10 lg:grid-cols-4">
+        <div className="flex flex-col gap-6 p-1 max-lg:hidden">
+          {SEARCH_FILTER_GROUPS.map(group => (
+            <div className="flex flex-col gap-3 px-2" key={group.id}>
+              <Skeleton className="h-4 w-24" />
+              {pendingRowKeys(group.rows).map(key => (
+                <div className="flex items-center gap-2.5" key={key}>
+                  <Skeleton className="size-4 shrink-0 rounded" />
+                  <Skeleton className="h-3.5 w-28" />
+                </div>
+              ))}
+            </div>
+          ))}
+          <div className="flex flex-col gap-3 px-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
+          <Skeleton className="h-9 w-28 rounded-md lg:hidden" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="ms-auto h-8 w-36 rounded-md" />
+          </div>
+          <SearchTimelineSkeleton />
+        </div>
+      </div>
     </div>
   </PendingFrame>
 );
@@ -240,6 +301,11 @@ export const ProfilePendingSkeleton = ({
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-6 w-24" />
+        <SearchTimelineSkeleton />
       </div>
     </div>
   </PendingFrame>
