@@ -6,6 +6,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 import type { SSOProvider } from "@/views/auth/sso/providers";
 
+import { seedLucideIcons } from "@/components/ui/icon-registry";
 import { CONFIG_PLUGIN } from "@/config";
 import { fetcher } from "@/tanstack/fetcher";
 import { normalizeSSOProviders } from "@/views/auth/sso/providers";
@@ -19,6 +20,7 @@ export interface MiddlewareConfigState extends MiddlewareConfig {
 
 export const UNKNOWN_MIDDLEWARE_CONFIG: MiddlewareConfigState = Object.freeze({
   ai: { models: [] },
+  icons: {},
   isDeferred: false,
   isEmail: false,
   isKnown: false,
@@ -50,7 +52,10 @@ const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
 
     if (response.status !== 200) return UNKNOWN_MIDDLEWARE_CONFIG;
 
-    return knownMiddlewareConfig(await response.json());
+    const config = await response.json();
+    seedLucideIcons(config.icons);
+
+    return knownMiddlewareConfig(config);
   } catch (error) {
     // oxlint-disable-next-line no-console
     console.error("[auth] middleware configuration unavailable", error);

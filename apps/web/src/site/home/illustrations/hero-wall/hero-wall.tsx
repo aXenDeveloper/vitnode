@@ -2,6 +2,8 @@ import { lazy, startTransition, Suspense, useEffect, useState } from 'react'
 
 import { useScrollProgress } from '@/site/home/use-scroll-progress'
 
+import { whenIdle } from './when-idle'
+
 const HeroWallColumns = lazy(async () =>
   import('./hero-wall-columns').then((module) => ({
     default: module.HeroWallColumns,
@@ -12,11 +14,15 @@ export const HeroWall = () => {
   const ref = useScrollProgress<HTMLDivElement>(0.9)
   const [isMounted, setIsMounted] = useState(false)
 
-  useEffect(() => {
-    startTransition(() => {
-      setIsMounted(true)
-    })
-  }, [])
+  useEffect(
+    () =>
+      whenIdle(() => {
+        startTransition(() => {
+          setIsMounted(true)
+        })
+      }),
+    [],
+  )
 
   return (
     <div
@@ -27,10 +33,7 @@ export const HeroWall = () => {
     >
       {isMounted ? (
         <Suspense fallback={null}>
-          <div
-            className="motion-safe:animate-in motion-safe:fade-in absolute inset-0 motion-safe:duration-700"
-            style={{ perspective: '1800px' }}
-          >
+          <div className="absolute inset-0" style={{ perspective: '1800px' }}>
             <HeroWallColumns />
           </div>
         </Suspense>

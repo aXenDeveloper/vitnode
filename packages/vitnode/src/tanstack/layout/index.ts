@@ -1,3 +1,5 @@
+export { DocumentHead } from "./document-head";
+export { DocumentScripts } from "./document-scripts";
 export { ErrorActions } from "./error-actions";
 export { Header, loadMainShell } from "./header";
 export { LanguageSwitcher } from "./language-switcher";

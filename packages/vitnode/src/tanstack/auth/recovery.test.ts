@@ -205,6 +205,7 @@ describe("whether this deployment has password recovery at all", () => {
         password: true,
         navigation: [],
         bottomBar: [],
+        icons: {},
         sso: [],
       }).isKnown,
     ).toBe(true);
@@ -217,6 +218,7 @@ describe("whether this deployment has password recovery at all", () => {
           password: true,
           navigation: [],
           bottomBar: [],
+          icons: {},
           sso: [],
         }),
       ),

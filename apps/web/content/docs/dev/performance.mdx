@@ -183,6 +183,36 @@ build: {
 
 Group only libraries whose shared surface is small. A UI primitive library shared by every AdminCP screen turns into a single 280 KB chunk that public pages then download for a tooltip.
 
+### 9. Load JavaScript After the First Paint
+
+TanStack's `HeadContent` puts a `modulepreload` link for every chunk the page needs into `<head>`, ahead of the stylesheet. On a slow phone those downloads compete with the CSS the browser has to wait for, so the first paint arrives late. Render the document with `DocumentHead` and `DocumentScripts` from `@vitnode/core/tanstack/layout` instead:
+
+```tsx title="src/routes/__root.tsx"
+import {
+  DocumentHead, // [!code ++]
+  DocumentScripts, // [!code ++]
+  VitNodeRootProviders,
+} from '@vitnode/core/tanstack/layout'
+
+<html lang={locale} suppressHydrationWarning>
+  <head>
+    {/* [!code --] */}
+    <HeadContent />
+    {/* [!code ++] */}
+    <DocumentHead />
+  </head>
+  <body>
+    {children}
+    {/* [!code --] */}
+    <Scripts />
+    {/* [!code ++] */}
+    <DocumentScripts />
+  </body>
+</html>
+```
+
+In a production build the HTML and CSS load first, and a small inline script adds the preloads and the app entry right after the browser paints. In a hidden tab it adds them immediately. Hydration starts a frame or two later than before. During `vite dev` both components render the stock `HeadContent` and `Scripts`. New apps from `create-vitnode-app` already use them.
+
 ---
 
 ## Measuring Bundle Size

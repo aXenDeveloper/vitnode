@@ -1,19 +1,19 @@
 import { RouteMessages } from '@vitnode/core/tanstack/i18n'
 
 import { HOME_NAMESPACES } from '@/site/home/namespaces'
-import { AgentsSection } from '@/site/home/sections/agents'
-import { CommunitySection } from '@/site/home/sections/community'
-import { DevelopersSection } from '@/site/home/sections/developers'
-import { FaqSection } from '@/site/home/sections/faq'
-import { FeaturesBentoSection } from '@/site/home/sections/features-bento'
-import { FinalCtaSection } from '@/site/home/sections/final-cta'
+// import { AgentsSection } from '@/site/home/sections/agents'
+// import { CommunitySection } from '@/site/home/sections/community'
+// import { DevelopersSection } from '@/site/home/sections/developers'
+// import { FaqSection } from '@/site/home/sections/faq'
+// import { FeaturesBentoSection } from '@/site/home/sections/features-bento'
+// import { FinalCtaSection } from '@/site/home/sections/final-cta'
 import { HeroSection } from '@/site/home/sections/hero'
 import { IntegrationsSection } from '@/site/home/sections/integrations'
-import { OutcomesSection } from '@/site/home/sections/outcomes'
-import { PluginsSection } from '@/site/home/sections/plugins'
-import { PricingSection } from '@/site/home/sections/pricing'
-import { SecuritySection } from '@/site/home/sections/security'
-import { ShowcaseSection } from '@/site/home/sections/showcase'
+// import { OutcomesSection } from '@/site/home/sections/outcomes'
+// import { PluginsSection } from '@/site/home/sections/plugins'
+// import { PricingSection } from '@/site/home/sections/pricing'
+// import { SecuritySection } from '@/site/home/sections/security'
+// import { ShowcaseSection } from '@/site/home/sections/showcase'
 import { MarketingPage } from '@/site/marketing/marketing-page'
 import { CanaryNotice } from '@/site/marketing/shared'
 
@@ -24,7 +24,7 @@ export const HomeRouteContent = () => (
       <div className="container mx-auto px-4 pt-12 sm:px-6">
         <CanaryNotice />
       </div>
-      <OutcomesSection />
+      {/* <OutcomesSection />
       <FeaturesBentoSection />
       <PluginsSection />
       <ShowcaseSection />
@@ -33,9 +33,9 @@ export const HomeRouteContent = () => (
       <SecuritySection />
       <DevelopersSection />
       <PricingSection />
-      <FaqSection />
+      <FaqSection /> */}
       <IntegrationsSection />
-      <FinalCtaSection />
+      {/* <FinalCtaSection /> */}
     </MarketingPage>
   </RouteMessages>
 )

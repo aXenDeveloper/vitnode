@@ -391,6 +391,50 @@
   }
 }
 
+@keyframes mk-wall-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-wall-rise {
+  from {
+    transform: translateY(4%);
+  }
+
+  to {
+    transform: translateY(-10%);
+  }
+}
+
+@keyframes mk-wall-sink {
+  from {
+    transform: translateY(-8%);
+  }
+
+  to {
+    transform: translateY(6%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mk-wall-fade {
+    animation: mk-wall-fade 700ms ease-out both;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .mk-wall-column {
+      animation: mk-wall-rise linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 max(90vh, 360px);
+    }
+
+    .mk-wall-column:nth-child(even) {
+      animation-name: mk-wall-sink;
+    }
+  }
+}
+
 @keyframes mk-cycle-2 {
   0%,
   46% {
