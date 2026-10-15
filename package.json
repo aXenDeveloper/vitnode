@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "release": "tsx ./scripts/bump-version/bump-version.ts",
+    "release:update-manifest": "tsx ./scripts/update-manifest/publish-update-manifest.ts",
     "db:migrate": "turbo db:migrate",
     "db:prepare": "turbo db:prepare",
     "docker:dev": "turbo docker:dev",

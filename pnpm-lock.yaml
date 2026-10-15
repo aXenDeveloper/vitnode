@@ -687,6 +687,9 @@ importers:
       sanitize-html:
         specifier: ^2.18.0
         version: 2.18.0
+      semver:
+        specifier: ^7.8.5
+        version: 7.8.5
       shadcn:
         specifier: ^4.21.4
         version: 4.21.4
@@ -748,6 +751,9 @@ importers:
       '@types/sanitize-html':
         specifier: ^2.16.2
         version: 2.16.2
+      '@types/semver':
+        specifier: ^7.8.0
+        version: 7.8.0
       '@vitejs/plugin-react':
         specifier: ^6.1.2
         version: 6.1.2(babel-plugin-react-compiler@1.0.0)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
@@ -4937,6 +4943,9 @@ packages:
 
   '@types/sanitize-html@2.16.2':
     resolution: {integrity: sha512-kuAbgDCFv418flrp3z4o/4ufLA/5ovmXRH0L419iZCPGO7w00znjeDI5Wy/KZWNIBpDQc7hucCK+J5almB6FyA==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
@@ -12859,6 +12868,8 @@ snapshots:
   '@types/sanitize-html@2.16.2':
     dependencies:
       htmlparser2: 12.0.0
+
+  '@types/semver@7.8.0': {}
 
   '@types/unist@2.0.11': {}
 

@@ -1,0 +1,14 @@
+{
+  "title": "Updates & Security",
+  "description": "Daily update checks and security advisories for VitNode core and plugins, read from public JSON manifests",
+  "icon": "RefreshCw",
+  "pages": [
+    "index",
+    "admin",
+    "---Publish updates---",
+    "plugin-authors",
+    "manifest",
+    "security-advisories",
+    "official-releases"
+  ]
+}

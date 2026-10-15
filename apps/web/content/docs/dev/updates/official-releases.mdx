@@ -1,0 +1,55 @@
+---
+title: Official release feed
+description: How VitNode's release workflow publishes the official update manifest after npm publication, where publishedAt comes from, and how reruns and advisories are handled.
+icon: Workflow
+---
+
+VitNode core and the official plugins read the feed at `https://raw.githubusercontent.com/aXenDeveloper/vitnode/update-manifest/updates.json`. A GitHub Actions job writes it after every successful npm publish. Maintainers never edit it by hand.
+
+## How a release updates the feed
+
+The **Bump and Publish npm packages** workflow has a **Publish update manifest** job. It runs only in the `bump_and_publish` and `publish` modes, and only after the publish job succeeds - a `bump` run publishes nothing, so it advertises nothing.
+
+1. It checks out the exact commit that was published.
+2. From `PUBLISHED_PACKAGES` - the same list the publish steps use - it keeps the packages whose `package.json` declares this feed as `vitnode.updates.url` (today `@vitnode/core` and `@vitnode/blog`).
+3. It reads each version from `package.json`. A plugin's `@vitnode/core` dependency becomes the release's `requiresCore`, resolving `workspace:*` the way pnpm does on publish.
+4. It adds the releases and moves only the channel of this run: **canary**, **release-candidate** (`rc`) or **stable**. A channel never moves backwards.
+5. It commits `updates.json` to the `update-manifest` branch. That branch exists only for the feed, so it outlives release branches.
+
+## Where publishedAt comes from
+
+`publishedAt` and the release `url` come from the GitHub Release tagged `v<version>` (`gh release view`). Nobody types a date. When the run skipped release notes (`skip_release_github_patch_notes`) or the release is still a draft, both fields are left out - the date is never invented, and the time of the workflow run is never used instead.
+
+## Reruns and partial failures
+
+- **Reruns are idempotent.** An existing release entry keeps its `publishedAt` and `url`; a rerun only fills in fields that were missing, for example after the GitHub Release was created later. A run that changes nothing pushes nothing.
+- **Concurrent runs** share the `vitnode-update-manifest` concurrency group, and every push is fetched, merged and retried if another run got there first.
+- **If npm publishing fails**, the job does not run. Fix the cause and re-run the workflow in `publish` mode.
+- **If only the manifest job fails**, use **Re-run failed jobs**: it publishes the same commit again.
+
+## Add an advisory to the official feed
+
+Advisories are not part of releases. Edit `security/advisories.json` in a pull request:
+
+```json title="security/advisories.json"
+{
+  "schemaVersion": 1,
+  "advisories": {
+    "@vitnode/blog": [
+      {
+        "id": "VITNODE-BLOG-2026-001",
+        "severity": "high",
+        "affected": ">=2.0.0 <2.1.3",
+        "fixed": "2.1.3",
+        "url": "https://github.com/aXenDeveloper/vitnode/security/advisories/GHSA-xxxx-xxxx-xxxx"
+      }
+    ]
+  }
+}
+```
+
+The **Publish security advisories** workflow validates the file on the pull request. After it merges into `canary`, the workflow replaces the advisories in `updates.json` with exactly what the file lists; releases and channels stay untouched. The example above is illustrative - only real advisories belong in that file. Writing ranges is covered in [Publish a security advisory](/docs/dev/updates/security-advisories).
+
+## Check the result
+
+After a release or an advisory change, open the feed URL above. Within a few minutes of GitHub's cache, it shows the new version under `channels` and its entry under `releases`.

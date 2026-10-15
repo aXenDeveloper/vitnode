@@ -26,6 +26,7 @@ import type {
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { BuildPluginReturn } from "./lib/plugin";
 import type { FrontendPluginInventory } from "./lib/plugin-manifest";
+import type { UpdateChannel } from "./lib/updates/manifest";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
 import type { PageCacheConfig } from "./page-cache/config";
 
@@ -157,6 +158,21 @@ export interface VitNodeApiConfig {
       quality?: number;
       webp?: boolean;
     };
+  };
+  /**
+   * Update and security-advisory checks for core and plugins, shown in
+   * AdminCP → System → Plugins. They read public JSON manifests once a day and
+   * never install anything.
+   */
+  updates?: {
+    /**
+     * The release channel to compare against. Defaults to the channel of the
+     * installed version: `2.1.0` follows stable, `-rc.N` rc, `-canary.N`
+     * canary. Setting it is how an installation moves channels on purpose.
+     */
+    channel?: UpdateChannel;
+    /** `false` turns checking off - for an install without outbound network access. Defaults to `true`. */
+    enabled?: boolean;
   };
   users?: {
     /**

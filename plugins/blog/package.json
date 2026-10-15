@@ -8,6 +8,11 @@
     "url": "https://vitnode.com"
   },
   "license": "MIT",
+  "vitnode": {
+    "updates": {
+      "url": "https://raw.githubusercontent.com/aXenDeveloper/vitnode/update-manifest/updates.json"
+    }
+  },
   "homepage": "https://vitnode.com",
   "repository": {
     "type": "git",

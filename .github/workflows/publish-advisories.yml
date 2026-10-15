@@ -1,0 +1,50 @@
+name: Publish security advisories
+
+on:
+  pull_request:
+    paths:
+      - "security/advisories.json"
+  push:
+    branches:
+      - canary
+    paths:
+      - "security/advisories.json"
+  workflow_dispatch:
+
+jobs:
+  advisories:
+    name: "Validate and publish advisories"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Shared with the release workflow: one writer of updates.json at a time.
+    concurrency:
+      group: vitnode-update-manifest
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6.1.0
+        name: Install pnpm
+        with:
+          version: 11.9.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate security/advisories.json
+        run: pnpm run release:update-manifest check
+
+      - name: Publish advisories to updates.json
+        if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/canary' }}
+        run: pnpm run release:update-manifest advisories
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

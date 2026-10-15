@@ -2,6 +2,7 @@ import type {
   FrontendPluginInventoryEntry,
   PluginAuthor,
   PluginManifest,
+  PluginUpdateSource,
 } from "../../lib/plugin-manifest.js";
 
 import { assertPluginManifest } from "../../lib/plugin-manifest.js";
@@ -21,6 +22,9 @@ const isAuthor = (value: unknown): value is PluginAuthor =>
   isNullableString(value.email) &&
   isNullableString(value.url);
 
+const isUpdateSource = (value: unknown): value is PluginUpdateSource =>
+  isRecord(value) && typeof value.url === "string";
+
 const manifestFrom = (
   value: unknown,
   pluginId: string,
@@ -36,6 +40,11 @@ const manifestFrom = (
     !isNullableString(value.description) ||
     !isNullableString(value.version) ||
     !(value.license === undefined || isNullableString(value.license)) ||
+    !(
+      value.updates === undefined ||
+      value.updates === null ||
+      isUpdateSource(value.updates)
+    ) ||
     !(
       value.author === undefined ||
       value.author === null ||
@@ -61,6 +70,10 @@ const manifestFrom = (
     id: value.id,
     license: value.license ?? null,
     title: value.title,
+    updates:
+      value.updates === undefined || value.updates === null
+        ? null
+        : { url: value.updates.url },
     version: value.version,
   };
   assertPluginManifest(pluginId, manifest, where);
@@ -128,6 +141,11 @@ const entrySource = ({ id, manifest }: FrontendPluginInventoryEntry): string =>
       },
       license: ${literal(manifest.license)},
       version: ${literal(manifest.version)},
+      updates: ${
+        manifest.updates === undefined || manifest.updates === null
+          ? "null"
+          : `{ url: ${literal(manifest.updates.url)} }`
+      },
     },
   },
 `;

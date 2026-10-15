@@ -1,5 +1,6 @@
 import type { PluginRouteTranslator } from "@/routing";
 
+import { pluginUpdatesQueryOptions } from "@/views/admin/views/core/system/plugins/plugin-updates-query";
 import { installedPluginsQueryOptions } from "@/views/admin/views/core/system/plugins/plugins-query";
 
 import type { AdminScreenContext } from "../screen";
@@ -30,10 +31,16 @@ export const loadAdminPluginsRoute = async ({
 }): Promise<AdminPluginsRouteData> => {
   requireAdminPermission(adminAccess, PLUGINS_VIEW_PERMISSION);
 
-  await queryClient.query({
-    ...installedPluginsQueryOptions(),
-    staleTime: "static",
-  });
+  await Promise.all([
+    queryClient.query({
+      ...installedPluginsQueryOptions(),
+      staleTime: "static",
+    }),
+    // Warmed, not required: a failure leaves the catalog without update results.
+    queryClient
+      .query({ ...pluginUpdatesQueryOptions(), staleTime: "static" })
+      .catch(() => undefined),
+  ]);
 
   return {
     description: t("admin.system.plugins.desc"),

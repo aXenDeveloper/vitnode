@@ -32,6 +32,11 @@ on:
         required: false
         type: boolean
 
+env:
+  # Every package this workflow publishes. The publish steps and the update
+  # manifest both read it, so the manifest never names a package npm did not get.
+  PUBLISHED_PACKAGES: "create-vitnode-app @vitnode/core @vitnode/config @vitnode/blog @vitnode/nodemailer @vitnode/resend @vitnode/node-cron"
+
 jobs:
   bump-version:
     name: "Bump Version"
@@ -39,6 +44,8 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    outputs:
+      sha: ${{ steps.published.outputs.sha }}
 
     steps:
       - name: Checkout
@@ -83,21 +90,21 @@ jobs:
 
       - name: Publish canary
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'canary' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --filter @vitnode/resend --filter @vitnode/node-cron --tag canary --no-git-checks --access public
+        run: pnpm publish $(printf -- "--filter %s " $PUBLISHED_PACKAGES) --tag canary --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish release candidate
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'release-candidate' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --filter @vitnode/resend --filter @vitnode/node-cron --tag rc --no-git-checks --access public
+        run: pnpm publish $(printf -- "--filter %s " $PUBLISHED_PACKAGES) --tag rc --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish stable
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'stable' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --filter @vitnode/resend --filter @vitnode/node-cron --tag latest --no-git-checks --access public
+        run: pnpm publish $(printf -- "--filter %s " $PUBLISHED_PACKAGES) --tag latest --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -113,3 +120,48 @@ jobs:
         run: gh release create ${{ steps.version-bump.outputs.newTag }} --generate-notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remember the published commit
+        id: published
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  publish-update-manifest:
+    name: "Publish update manifest"
+    needs: bump-version
+    # Only after npm has the packages: a bump-only run publishes nothing, so it
+    # advertises nothing.
+    if: ${{ github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Shared with the advisories workflow: one writer of updates.json at a time.
+    concurrency:
+      group: vitnode-update-manifest
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout the published commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump-version.outputs.sha }}
+
+      - uses: pnpm/action-setup@v6.1.0
+        name: Install pnpm
+        with:
+          version: 11.9.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Add the published versions to updates.json
+        run: pnpm run release:update-manifest release
+        env:
+          RELEASE_TYPE: ${{ github.event.inputs.release }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

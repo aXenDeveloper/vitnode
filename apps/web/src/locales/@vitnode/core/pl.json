@@ -873,7 +873,110 @@
         },
         "search": "Szukaj wtyczek...",
         "title": "Wtyczki",
-        "version_unknown": "Nieznana wersja"
+        "version_unknown": "Nieznana wersja",
+        "inventory_missing": {
+          "title": "Widoczne są tylko wtyczki API",
+          "desc": "API nie otrzymało inwentarza wtyczek aplikacji webowej, więc wtyczki działające tylko w przeglądarce nie są wymienione, a wersje frontendu nie są porównywane. Przekaż frontendPlugins do buildApiConfig, aby zobaczyć obie strony."
+        },
+        "core": {
+          "title": "Rdzeń VitNode",
+          "version": "Zainstalowana wersja <mono>{version}</mono>"
+        },
+        "updates": {
+          "check": {
+            "button": "Sprawdź aktualizacje",
+            "success": {
+              "title": "Sprawdzanie aktualizacji zakończone",
+              "desc": "Znaleziono {updates, plural, =0 {0 aktualizacji} one {# aktualizację} few {# aktualizacje} many {# aktualizacji} other {# aktualizacji}} i {advisories, plural, =0 {0 ostrzeżeń bezpieczeństwa} one {# ostrzeżenie bezpieczeństwa} few {# ostrzeżenia bezpieczeństwa} many {# ostrzeżeń bezpieczeństwa} other {# ostrzeżeń bezpieczeństwa}}."
+            },
+            "partial": {
+              "title": "Nie udało się odczytać niektórych źródeł aktualizacji",
+              "desc": "Liczba nieudanych źródeł: {count}. Wcześniejsze wyniki dla nich zostały zachowane."
+            },
+            "running": {
+              "title": "Sprawdzanie już trwa",
+              "desc": "Trwa inne sprawdzanie - codzienne albo uruchomione przez kogoś innego. Jego wyniki pojawią się tutaj po zakończeniu."
+            },
+            "cooldown": {
+              "title": "Sprawdzono przed chwilą",
+              "desc": "Spróbuj ponownie za {seconds} s."
+            },
+            "disabled": {
+              "title": "Sprawdzanie aktualizacji jest wyłączone",
+              "desc": "Ta instalacja ustawia updates.enabled na false w konfiguracji API."
+            },
+            "error": {
+              "title": "Nie udało się rozpocząć sprawdzania",
+              "desc": "API nie odpowiedziało. Spróbuj ponownie za chwilę."
+            }
+          },
+          "summary": {
+            "last_checked": "Ostatnio sprawdzono <date></date>",
+            "never": "Codzienne sprawdzanie uruchamia harmonogram cron. Kliknij Sprawdź aktualizacje, aby uruchomić je teraz.",
+            "disabled": "Sprawdzanie aktualizacji jest wyłączone w tej instalacji.",
+            "channel": "Kanał: {channel} (ustawiony w konfiguracji API)",
+            "info": "Informacje o aktualizacjach mają charakter wyłącznie informacyjny: nic nie jest instalowane ani zmieniane. Brak ostrzeżenia nie dowodzi, że wersja jest bezpieczna."
+          },
+          "status": {
+            "not_checked": "Jeszcze nie sprawdzono",
+            "unavailable": "Sprawdzanie aktualizacji niedostępne",
+            "disabled": "Sprawdzanie aktualizacji jest wyłączone",
+            "up_to_date": "Aktualna",
+            "update_available": "Dostępna aktualizacja: {version}",
+            "package_missing": "Brak w manifeście aktualizacji wydawcy",
+            "channel_missing": "Brak opublikowanych wydań na kanale {channel}",
+            "unknown_channel": "Zainstalowana wersja nie należy do żadnego znanego kanału. Ustaw updates.channel w konfiguracji API, aby go wybrać.",
+            "version_unknown": "Nieznana zainstalowana wersja - nie można potwierdzić, że jest aktualna"
+          },
+          "released": "wydana <date></date>",
+          "release_notes": "Informacje o wydaniu",
+          "compatibility": {
+            "compatible": "Wydawca deklaruje obsługę rdzenia {range}.",
+            "incompatible": "Wymaga nowszego rdzenia ({range}); ta instalacja używa {core}.",
+            "unknown": "Zgodność z Twoją wersją rdzenia jest nieznana - wydawca jej nie zadeklarował.",
+            "alternative": "{version} to najnowsze wydanie na tym kanale, które deklaruje obsługę Twojego rdzenia."
+          },
+          "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki pochodzą z danych wydawcy pobranych <date></date>.",
+          "failed": "Ostatnie sprawdzanie nie powiodło się: {reason}",
+          "failed_with_previous": "Ostatnie sprawdzanie nie powiodło się: {reason} Widoczny jest ostatni udany wynik z <date></date>.",
+          "checked_at": "Sprawdzono <date></date>",
+          "error": {
+            "blocked_address": "źródło aktualizacji wskazuje na adres prywatny lub lokalny.",
+            "http_error": "źródło aktualizacji odpowiedziało kodem HTTP {detail}.",
+            "invalid_json": "źródło aktualizacji nie jest poprawnym JSON-em.",
+            "invalid_manifest": "manifest aktualizacji jest nieprawidłowy ({detail}).",
+            "invalid_url": "adres źródła aktualizacji jest niedozwolony ({detail}).",
+            "network": "nie udało się połączyć ze źródłem aktualizacji.",
+            "timeout": "źródło aktualizacji nie odpowiedziało na czas.",
+            "too_large": "manifest aktualizacji jest większy niż 1 MB.",
+            "too_many_redirects": "źródło aktualizacji przekierowało zbyt wiele razy.",
+            "unsupported_schema": "manifest aktualizacji używa formatu nieobsługiwanego przez tę wersję VitNode ({detail})."
+          },
+          "security": {
+            "label": "Ostrzeżenia bezpieczeństwa",
+            "title": "Ostrzeżenie bezpieczeństwa {id} - poziom {severity}",
+            "affects": "Dotyczy zainstalowanej wersji {versions} (zakres {range}).",
+            "fixed": "Naprawiono w {version}.",
+            "no_fix": "Poprawiona wersja nie została jeszcze opublikowana.",
+            "details": "Szczegóły ostrzeżenia"
+          },
+          "severity": {
+            "low": "niski",
+            "moderate": "umiarkowany",
+            "high": "wysoki",
+            "critical": "krytyczny"
+          },
+          "channel": {
+            "stable": "stabilny",
+            "rc": "kandydat do wydania",
+            "canary": "canary"
+          },
+          "side": {
+            "api": "API",
+            "frontend": "aplikacja webowa"
+          },
+          "version_on_side": "{version} ({side})"
+        }
       }
     },
     "user": {
@@ -2928,5 +3031,6 @@
         "description": "Przeredagowuje zaznaczony tekst: skraca, poprawia, upraszcza albo zmienia ton."
       }
     }
-  }
+  },
+  "@vitnode/core:plugins:can_check_updates": "Sprawdzanie aktualizacji wtyczek i rdzenia na żądanie"
 }
