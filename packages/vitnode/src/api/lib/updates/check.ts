@@ -155,7 +155,7 @@ export const checkForUpdates = async ({
     try {
       const response = await fetchSource(url, {
         validators:
-          reusable === null
+          reusable === null || (!previous?.etag && !previous?.lastModified)
             ? null
             : {
                 etag: previous?.etag ?? null,

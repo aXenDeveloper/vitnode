@@ -10,9 +10,9 @@ import type {
 import { channelOfVersion, versionInRange } from "@/lib/updates/manifest";
 
 export type UpdateStatus =
-  /** The publisher has no entry for this package. */
-  | "channel_missing"
   /** The package exists, but publishes nothing on the selected channel. */
+  | "channel_missing"
+  /** The publisher has no entry for this package. */
   | "package_missing"
   /** The installed version is on no known channel, and no override names one. */
   | "unknown_channel"

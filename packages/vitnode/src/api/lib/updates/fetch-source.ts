@@ -257,7 +257,7 @@ export const fetchUpdateSource = async (
 
     if (response.status === 304) {
       response.destroy();
-      if (!validators) {
+      if (!headers["if-none-match"] && !headers["if-modified-since"]) {
         throw new UpdateSourceError(
           "http_error",
           "304 without a request for it",

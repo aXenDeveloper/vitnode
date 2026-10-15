@@ -99,7 +99,21 @@ describe("writePluginManifest", () => {
       id: "@acme/blog",
       license: null,
       title,
+      updates: null,
       version: "1.0.0",
+    });
+  });
+
+  it("writes the update source declared in package.json", async () => {
+    const root = pluginAt({
+      ...BLOG,
+      vitnode: { updates: { url: "https://example.com/updates.json" } },
+    });
+
+    writePluginManifest(root);
+
+    expect(await generated(root)).toMatchObject({
+      updates: { url: "https://example.com/updates.json" },
     });
   });
 
@@ -122,6 +136,16 @@ describe("writePluginManifest", () => {
       "a new version",
       (root: string) => {
         writeManifest(root, { ...BLOG, version: "1.1.0" });
+      },
+      true,
+    ],
+    [
+      "a new update source",
+      (root: string) => {
+        writeManifest(root, {
+          ...BLOG,
+          vitnode: { updates: { url: "https://example.com/updates.json" } },
+        });
       },
       true,
     ],
