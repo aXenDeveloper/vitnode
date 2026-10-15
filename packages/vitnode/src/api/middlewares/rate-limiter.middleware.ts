@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
 
+import { getCookie } from "hono/cookie";
 import { routePath } from "hono/route";
 import { isIP } from "node:net";
 import {
@@ -115,6 +116,57 @@ export const rateLimiterCategoriesFor = (
   return categories;
 };
 
+/**
+ * The headers a 429 carries. A cross-origin caller reads them only when CORS
+ * exposes them, so `VitNodeAPI` adds these to `exposeHeaders`.
+ */
+export const RATE_LIMIT_RESPONSE_HEADERS = [
+  "Retry-After",
+  "X-RateLimit-Category",
+] as const;
+
+/**
+ * An app's `exposeHeaders` with the rate limit headers added, keeping the
+ * app's own entries and spelling. Header names are case-insensitive.
+ */
+export const exposeRateLimitHeaders = (
+  exposeHeaders: readonly string[] = [],
+): string[] => {
+  const exposed = new Set(exposeHeaders.map(header => header.toLowerCase()));
+
+  return [
+    ...exposeHeaders,
+    ...RATE_LIMIT_RESPONSE_HEADERS.filter(
+      header => !exposed.has(header.toLowerCase()),
+    ),
+  ];
+};
+
+// Spent per signed-in member when `perUser` is on. `safety` and `auth` always
+// stay per address: sign-in is anonymous, and the address cap is the one
+// protection that never depends on who the caller claims to be.
+const PER_USER_CATEGORIES = new Set<RateLimiterCategory>([
+  "contentWrite",
+  "read",
+  "write",
+]);
+
+type RateLimitSubject = "ip" | "user";
+
+interface RateLimitIdentity {
+  key: string;
+  subject: RateLimitSubject;
+}
+
+const ipIdentity = (c: Context): RateLimitIdentity => ({
+  key: rateLimitKey(c.get("ipAddress")),
+  subject: "ip",
+});
+
+// `rateLimitKey` never returns a string starting with `user:`, so a member's
+// counters can share a limiter with addresses without colliding.
+export const userRateLimitKey = (userId: number): string => `user:${userId}`;
+
 const CATEGORY_HEADER_VALUES: Record<RateLimiterCategory, string> = {
   safety: "safety",
   read: "read",
@@ -171,18 +223,42 @@ interface CategoryLimiter {
   points: number;
 }
 
+export interface RateLimiterMiddlewareOptions {
+  /** The public session cookie, to tell a member's request from a guest's. */
+  sessionCookieName: string;
+  storeClient?: CacheClient | null;
+}
+
 /**
- * Every limiter VitNode applies, built once. `preflight` runs before `cors()`,
- * which answers an `OPTIONS` request without calling the next middleware, and
- * spends only the `safety` budget. `requests` runs after it and skips
- * `OPTIONS`, so each request is counted once and each limiter consumed at
- * most once, stopping at the first that refuses.
+ * Every limiter VitNode applies, built once, in three stages.
+ *
+ * - `preflight` runs before `cors()`, which answers an `OPTIONS` request
+ *   without calling the next middleware. It counts the preflight against
+ *   `safety` but never refuses it: a refused preflight reaches the page as an
+ *   opaque network error, while the real request that follows gets a 429 that
+ *   carries CORS headers and a readable `Retry-After`.
+ * - `requests` runs after `cors()` and before the session is resolved. It
+ *   spends `safety` and `auth` per address and, for a request with no session
+ *   cookie, `read`, `write` and `contentWrite` per address too.
+ * - `identified` runs after `globalMiddleware`. A request with a session
+ *   cookie spends `read`, `write` and `contentWrite` here, per member when the
+ *   session is valid and per address when it is not. Such a request is
+ *   counted after its session lookup, so the address `safety` cap is what
+ *   bounds how many lookups one address can cause.
+ *
+ * Each limiter is consumed at most once per request, stopping at the first
+ * that refuses.
  */
 export const rateLimiterMiddleware = (
   config: RateLimiterConfig | undefined,
-  storeClient?: CacheClient | null,
-): { preflight: MiddlewareHandler; requests: MiddlewareHandler } => {
+  { sessionCookieName, storeClient }: RateLimiterMiddlewareOptions,
+): {
+  identified: MiddlewareHandler;
+  preflight: MiddlewareHandler;
+  requests: MiddlewareHandler;
+} => {
   const resolved = resolveRateLimiterConfig(config);
+  const perUser = config?.perUser ?? true;
 
   if (usesLegacyRateLimiterOptions(config)) {
     // oxlint-disable-next-line no-console
@@ -197,7 +273,7 @@ export const rateLimiterMiddleware = (
       await next();
     };
 
-    return { preflight: skip, requests: skip };
+    return { preflight: skip, requests: skip, identified: skip };
   }
 
   const store = storeClient ? "redis" : "memory";
@@ -219,9 +295,43 @@ export const rateLimiterMiddleware = (
     contentWrite: build("contentWrite"),
   };
 
+  const retryAfterOf = (
+    { duration }: CategoryLimiter,
+    res: RateLimiterRes | undefined,
+  ) => Math.ceil((res?.msBeforeNext ?? duration * 1000) / 1000);
+
+  // Only the first refusal in a window is logged, so a flood stays one line
+  // per visitor per window instead of one per request. `subject` says whether
+  // a member or an address ran out, never which one.
+  const logFirstRefusal = (
+    c: Context,
+    limiter: CategoryLimiter,
+    subject: RateLimitSubject,
+    res: RateLimiterRes | undefined,
+    status: number,
+  ) => {
+    if (res?.consumedPoints !== limiter.points + 1) return;
+
+    // oxlint-disable-next-line no-console
+    console.warn(
+      `\x1b[34m[VitNode]\x1b[0m \x1b[33mRate limit exceeded\x1b[0m: ${JSON.stringify(
+        {
+          category: CATEGORY_HEADER_VALUES[limiter.category],
+          subject,
+          method: KNOWN_METHODS.has(c.req.method) ? c.req.method : "OTHER",
+          path: requestPathTemplate(c),
+          status,
+          retryAfter: retryAfterOf(limiter, res),
+          store,
+        },
+      )}`,
+    );
+  };
+
   const reject = (
     c: Context,
-    { category, duration, points }: CategoryLimiter,
+    limiter: CategoryLimiter,
+    subject: RateLimitSubject,
     rejection: unknown,
   ) => {
     // `rate-limiter-flexible` rejects with a `RateLimiterRes` carrying
@@ -229,61 +339,90 @@ export const rateLimiterMiddleware = (
     // so clients that expect a JSON body don't choke while parsing, and
     // advertise when to retry via the standard `Retry-After` header.
     const res = rejection instanceof RateLimiterRes ? rejection : undefined;
-    const retryAfter = Math.ceil((res?.msBeforeNext ?? duration * 1000) / 1000);
-    const categoryHeader = CATEGORY_HEADER_VALUES[category];
+    const retryAfter = retryAfterOf(limiter, res);
+    const [retryAfterHeader, categoryHeader] = RATE_LIMIT_RESPONSE_HEADERS;
 
-    // Only the first refusal in a window is logged, so a flood stays one line
-    // per visitor per window instead of one per request.
-    if (res?.consumedPoints === points + 1) {
-      // oxlint-disable-next-line no-console
-      console.warn(
-        `\x1b[34m[VitNode]\x1b[0m \x1b[33mRate limit exceeded\x1b[0m: ${JSON.stringify(
-          {
-            category: categoryHeader,
-            method: KNOWN_METHODS.has(c.req.method) ? c.req.method : "OTHER",
-            path: requestPathTemplate(c),
-            status: 429,
-            retryAfter,
-            store,
-          },
-        )}`,
-      );
-    }
+    logFirstRefusal(c, limiter, subject, res, 429);
 
-    c.header("Retry-After", `${retryAfter}`);
-    c.header("X-RateLimit-Category", categoryHeader);
+    c.header(retryAfterHeader, `${retryAfter}`);
+    c.header(categoryHeader, CATEGORY_HEADER_VALUES[limiter.category]);
 
     return c.json({ error: "Too Many Requests", retryAfter }, 429);
   };
 
-  const consume = async (c: Context, categories: RateLimiterCategory[]) => {
-    const key = rateLimitKey(c.get("ipAddress"));
+  const consume = async (
+    c: Context,
+    categories: RateLimiterCategory[],
+    identity: RateLimitIdentity,
+  ) => {
+    const ip = ipIdentity(c);
 
     for (const category of categories) {
+      const { key, subject } = PER_USER_CATEGORIES.has(category)
+        ? identity
+        : ip;
+
       try {
         await limiters[category].limiter.consume(key);
       } catch (rejection) {
-        return reject(c, limiters[category], rejection);
+        return reject(c, limiters[category], subject, rejection);
       }
     }
 
     return undefined;
   };
 
+  // The same test `SessionModel.getUser` makes before it looks anything up:
+  // without a non-empty cookie the request is a guest's, whatever it says.
+  const carriesSession = (c: Context): boolean =>
+    perUser && !!getCookie(c, sessionCookieName);
+
   return {
     preflight: async (c, next) => {
       if (c.req.method === "OPTIONS") {
-        const rejected = await consume(c, ["safety"]);
-        if (rejected) return rejected;
+        const limiter = limiters.safety;
+
+        try {
+          await limiter.limiter.consume(ipIdentity(c).key);
+        } catch (rejection) {
+          logFirstRefusal(
+            c,
+            limiter,
+            "ip",
+            rejection instanceof RateLimiterRes ? rejection : undefined,
+            204,
+          );
+        }
       }
 
       await next();
     },
     requests: async (c, next) => {
       if (c.req.method !== "OPTIONS") {
+        const categories = rateLimiterCategoriesFor(c.req.method, c.req.path);
         const rejected = await consume(
           c,
-          rateLimiterCategoriesFor(c.req.method, c.req.path),
+          carriesSession(c)
+            ? categories.filter(category => !PER_USER_CATEGORIES.has(category))
+            : categories,
+          ipIdentity(c),
+        );
+        if (rejected) return rejected;
+      }
+
+      await next();
+    },
+    identified: async (c, next) => {
+      if (c.req.method !== "OPTIONS" && carriesSession(c)) {
+        const userId = c.get("user")?.id;
+        const rejected = await consume(
+          c,
+          rateLimiterCategoriesFor(c.req.method, c.req.path).filter(category =>
+            PER_USER_CATEGORIES.has(category),
+          ),
+          userId === undefined
+            ? ipIdentity(c)
+            : { key: userRateLimitKey(userId), subject: "user" },
         );
         if (rejected) return rejected;
       }

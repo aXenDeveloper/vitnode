@@ -28,6 +28,13 @@ export interface RateLimiterConfig {
   execEvenly?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.execEvenlyMinDelayMs`. */
   execEvenlyMinDelayMs?: number;
+  /**
+   * Gives each signed-in member their own `read`, `write` and `contentWrite`
+   * budget, so people behind one office address don't share one. Guests and
+   * invalid sessions stay keyed by address, and `safety` and `auth` always
+   * are. `false` keys every budget by address. Defaults to `true`.
+   */
+  perUser?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.points`. */
   points?: number;
   /** `GET` and `HEAD` requests. */

@@ -1,3 +1,5 @@
+import type { ContextVariableMap } from "hono";
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { RateLimiterMemory, RateLimiterRedis } from "rate-limiter-flexible";
@@ -15,6 +17,8 @@ import {
 } from "./rate-limiter-config";
 import {
   createRateLimiter,
+  exposeRateLimitHeaders,
+  RATE_LIMIT_RESPONSE_HEADERS,
   rateLimiterCategoriesFor,
   rateLimiterMiddleware,
   rateLimitKey,
@@ -25,11 +29,65 @@ interface Env {
   Variables: { ipAddress: string };
 }
 
+const SESSION_COOKIE = "vitnode_auth";
+const WEB_ORIGIN = "https://web.example";
+
 const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
 
 // Budgets big enough to stay out of the way of the one a test exhausts.
 const ROOMY = { points: 100, duration: 60 };
 
+const member = (id: number): NonNullable<ContextVariableMap["user"]> => ({
+  avatarColor: "000000",
+  avatarUrl: null,
+  birthday: null,
+  coverUrl: null,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  email: `${id}@example.com`,
+  emailVerified: true,
+  firstName: null,
+  headline: null,
+  id,
+  language: "en",
+  lastName: null,
+  name: `Member ${id}`,
+  nameCode: `member-${id}`,
+  newsletter: false,
+  phone: null,
+  roleId: 2,
+  showRealName: false,
+  timeZone: null,
+});
+
+// Just enough of node-redis for `RateLimiterRedis`: its Lua script increments
+// a key that expires with the window.
+const fakeRedis = ({ down = false } = {}) => {
+  const counters = new Map<string, number>();
+  const client = {
+    multi: () => ({}),
+    eval: async (
+      _script: string,
+      {
+        arguments: [points],
+        keys: [key],
+      }: { arguments: string[]; keys: string[] },
+    ): Promise<[number, number]> => {
+      if (down) return Promise.reject(new Error("ECONNREFUSED"));
+      const consumed = (counters.get(key) ?? 0) + Number(points);
+      counters.set(key, consumed);
+
+      return Promise.resolve([consumed, 60_000]);
+    },
+  };
+
+  return { counters, storeClient: client as unknown as CacheClient };
+};
+
+/**
+ * The middleware order `VitNodeAPI` uses. A session cookie `member-<id>`
+ * stands in for a valid session; any other value resolves to no user, the
+ * way `globalMiddleware` treats a forged or expired one.
+ */
 const buildApp = (
   config: RateLimiterConfig,
   {
@@ -38,7 +96,11 @@ const buildApp = (
   }: { ipAddress?: string; storeClient?: CacheClient } = {},
 ) => {
   const app = new Hono<Env>().basePath("/api");
-  const limiter = rateLimiterMiddleware(config, storeClient);
+  const limiter = rateLimiterMiddleware(config, {
+    sessionCookieName: SESSION_COOKIE,
+    storeClient,
+  });
+  const sessionLookups: string[] = [];
 
   app.use("*", async (c, next) => {
     c.set("ipAddress", c.req.header("x-test-ip") ?? ipAddress);
@@ -46,20 +108,54 @@ const buildApp = (
     return next();
   });
   app.use("*", limiter.preflight);
-  app.use("*", cors({ origin: "https://web.example" }));
+  app.use(
+    "*",
+    cors({
+      credentials: true,
+      exposeHeaders: exposeRateLimitHeaders(),
+      origin: WEB_ORIGIN,
+    }),
+  );
   app.use("*", limiter.requests);
+  app.use("*", async (c, next) => {
+    const cookie = c.req.header("cookie") ?? "";
+    const id = new RegExp(`^${SESSION_COOKIE}=member-(\\d+)$`).exec(
+      cookie,
+    )?.[1];
+    sessionLookups.push(cookie);
+    c.set("user", id ? member(Number(id)) : null);
+
+    return next();
+  });
+  app.use("*", limiter.identified);
   app.all("*", c => c.json({ ok: true }));
 
-  return app;
+  return Object.assign(app, { sessionLookups });
 };
 
-const statusesOf = async (
-  app: ReturnType<typeof buildApp>,
-  requests: [method: string, path: string][],
+type Visit = [
+  method: string,
+  path: string,
+  as?: { cookie?: string; ip?: string },
+];
+
+type RequestableApp = Pick<ReturnType<typeof buildApp>, "request">;
+
+const visit = async (
+  app: RequestableApp,
+  [method, path, { cookie, ip } = {}]: Visit,
 ) => {
+  const headers = new Headers({ origin: WEB_ORIGIN });
+  if (cookie) headers.set("cookie", `${SESSION_COOKIE}=${cookie}`);
+  if (ip) headers.set("x-test-ip", ip);
+
+  return await app.request(path, { method, headers });
+};
+
+const statusesOf = async (app: RequestableApp, requests: Visit[]) => {
   const statuses: number[] = [];
-  for (const [method, path] of requests) {
-    statuses.push((await app.request(path, { method })).status);
+  for (const request of requests) {
+    statuses.push((await visit(app, request)).status);
   }
 
   return statuses;
@@ -144,24 +240,26 @@ describe("rateLimiterMiddleware", () => {
     });
   });
 
-  it("counts a CORS preflight once, against safety only", async () => {
+  it("counts a preflight against safety, but leaves the refusal to the request after it", async () => {
     const app = buildApp({ safety: { points: 2 }, read: ROOMY, write: ROOMY });
     const preflight = {
       method: "OPTIONS",
       headers: {
-        origin: "https://web.example",
+        origin: WEB_ORIGIN,
         "access-control-request-method": "POST",
       },
     };
 
-    const first = await app.request("/api/topics", preflight);
-    const second = await app.request("/api/topics", preflight);
-    const third = await app.request("/api/topics", preflight);
+    const preflights = await Promise.all(
+      times(3, preflight).map(async init => app.request("/api/topics", init)),
+    );
+    const request = await visit(app, ["POST", "/api/topics"]);
 
-    expect([first.status, second.status, third.status]).toEqual([
-      204, 204, 429,
-    ]);
-    expect(third.headers.get("X-RateLimit-Category")).toBe("safety");
+    expect(preflights.map(res => res.status)).toEqual([204, 204, 204]);
+    expect(preflights[2].headers.get("Retry-After")).toBeNull();
+    expect(request.status).toBe(429);
+    expect(request.headers.get("X-RateLimit-Category")).toBe("safety");
+    expect(request.headers.get("Access-Control-Allow-Origin")).toBe(WEB_ORIGIN);
   });
 
   it("keeps different visitors on separate budgets", async () => {
@@ -197,7 +295,10 @@ describe("rateLimiterMiddleware", () => {
   it("logs the first refusal in a window with a route template and no visitor details", async () => {
     const warn = silenceWarnings();
     const app = new Hono<Env>().basePath("/api");
-    const limiter = rateLimiterMiddleware({ write: { points: 1 } });
+    const limiter = rateLimiterMiddleware(
+      { write: { points: 1 } },
+      { sessionCookieName: SESSION_COOKIE },
+    );
     app.use("*", async (c, next) => {
       c.set("ipAddress", "198.51.100.77");
 
@@ -216,6 +317,7 @@ describe("rateLimiterMiddleware", () => {
     expect(line).toContain(
       JSON.stringify({
         category: "write",
+        subject: "ip",
         method: "PATCH",
         path: "/api/@acme/forum/topics/:id",
         status: 429,
@@ -314,7 +416,10 @@ describe("rateLimiterMiddleware identity", () => {
     vi.stubEnv("CRON_SECRET", "");
     vi.stubEnv("VITNODE_TRUSTED_PROXY_HOPS", "0");
     const app = new Hono();
-    const limiter = rateLimiterMiddleware({ read: { points: 2 } });
+    const limiter = rateLimiterMiddleware(
+      { read: { points: 2 } },
+      { sessionCookieName: SESSION_COOKIE },
+    );
     app.use("*", clientIpMiddleware);
     app.use("*", limiter.requests);
     app.get("/", c => c.json({ ok: true }));
@@ -334,31 +439,234 @@ describe("rateLimiterMiddleware identity", () => {
   });
 });
 
+describe("rateLimiterMiddleware per member", () => {
+  const OFFICE = "198.51.100.10";
+
+  it("gives each member behind one address their own read budget, under one safety cap", async () => {
+    const app = buildApp({ safety: { points: 3 }, read: { points: 1 } });
+
+    await expect(
+      statusesOf(app, [
+        ["GET", "/api/topics", { cookie: "member-1", ip: OFFICE }],
+        ["GET", "/api/topics", { cookie: "member-2", ip: OFFICE }],
+        ["GET", "/api/topics", { cookie: "member-2", ip: OFFICE }],
+        ["GET", "/api/topics", { cookie: "member-3", ip: OFFICE }],
+      ]),
+    ).resolves.toEqual([200, 200, 429, 429]);
+
+    const capped = await visit(app, [
+      "GET",
+      "/api/topics",
+      { cookie: "member-4", ip: OFFICE },
+    ]);
+    expect(capped.headers.get("X-RateLimit-Category")).toBe("safety");
+  });
+
+  it("keeps one budget for a member who changes address", async () => {
+    const app = buildApp({ read: { points: 2 }, write: { points: 1 } });
+    const as = (ip: string) => ({ cookie: "member-1", ip });
+
+    await expect(
+      statusesOf(app, [
+        ["GET", "/api/topics", as("198.51.100.1")],
+        ["GET", "/api/topics", as("198.51.100.2")],
+        ["GET", "/api/topics", as("198.51.100.3")],
+        ["DELETE", "/api/topics/7", as("198.51.100.1")],
+        ["DELETE", "/api/topics/7", as("198.51.100.2")],
+        ["GET", "/api/topics", { ip: "198.51.100.2" }],
+      ]),
+    ).resolves.toEqual([200, 200, 429, 200, 429, 200]);
+  });
+
+  it("keys a cookie with no valid session by address", async () => {
+    const app = buildApp({ read: { points: 1 } });
+
+    await expect(
+      statusesOf(app, [
+        ["GET", "/api/topics", { cookie: "expired", ip: OFFICE }],
+        ["GET", "/api/topics", { ip: OFFICE }],
+        ["GET", "/api/topics", { cookie: "forged", ip: "198.51.100.11" }],
+      ]),
+    ).resolves.toEqual([200, 429, 200]);
+  });
+
+  it("refuses a guest before the session lookup", async () => {
+    const app = buildApp({ read: { points: 1 } });
+
+    await expect(
+      statusesOf(app, times(3, ["GET", "/api/topics"])),
+    ).resolves.toEqual([200, 429, 429]);
+    expect(app.sessionLookups).toHaveLength(1);
+  });
+
+  it("keys every budget by address with perUser: false", async () => {
+    const app = buildApp({ perUser: false, read: { points: 1 } });
+
+    await expect(
+      statusesOf(app, [
+        ["GET", "/api/topics", { cookie: "member-1", ip: OFFICE }],
+        ["GET", "/api/topics", { cookie: "member-2", ip: OFFICE }],
+      ]),
+    ).resolves.toEqual([200, 429]);
+    expect(app.sessionLookups).toHaveLength(1);
+  });
+
+  it("keeps sign-in per address for members too", async () => {
+    const app = buildApp({ auth: { points: 1 } });
+    const signIn = "/api/@vitnode/core/users/sign_in";
+
+    await expect(
+      statusesOf(app, [
+        ["POST", signIn, { cookie: "member-1", ip: OFFICE }],
+        ["POST", signIn, { cookie: "member-2", ip: OFFICE }],
+        ["POST", signIn, { cookie: "member-1", ip: "198.51.100.11" }],
+      ]),
+    ).resolves.toEqual([200, 429, 200]);
+  });
+
+  const ip = "203.0.113.7";
+  const counted = (
+    keys: [category: keyof typeof RATE_LIMITER_KEY_PREFIXES, key: string][],
+  ) =>
+    Object.fromEntries(
+      keys.map(([category, key]) => [
+        `${RATE_LIMITER_KEY_PREFIXES[category]}:${key}`,
+        1,
+      ]),
+    );
+
+  it.each<[string, Visit, Record<string, number>]>([
+    [
+      "a member's read",
+      ["GET", "/api/topics", { cookie: "member-7" }],
+      counted([
+        ["safety", ip],
+        ["read", "user:7"],
+      ]),
+    ],
+    [
+      "a member's content write",
+      ["POST", "/api/@acme/forum/content/topics", { cookie: "member-7" }],
+      counted([
+        ["safety", ip],
+        ["write", "user:7"],
+        ["contentWrite", "user:7"],
+      ]),
+    ],
+    [
+      "a member's sign-in",
+      ["POST", "/api/@vitnode/core/users/sign_in", { cookie: "member-7" }],
+      counted([
+        ["safety", ip],
+        ["auth", ip],
+        ["write", "user:7"],
+      ]),
+    ],
+    [
+      "a forged session's write",
+      ["POST", "/api/@acme/forum/content/topics", { cookie: "forged" }],
+      counted([
+        ["safety", ip],
+        ["write", ip],
+        ["contentWrite", ip],
+      ]),
+    ],
+    [
+      "a guest's write",
+      ["POST", "/api/@acme/forum/content/topics"],
+      counted([
+        ["safety", ip],
+        ["write", ip],
+        ["contentWrite", ip],
+      ]),
+    ],
+    [
+      "a guest's read",
+      ["GET", "/api/topics"],
+      counted([
+        ["safety", ip],
+        ["read", ip],
+      ]),
+    ],
+  ])("spends each budget once for %s", async (_name, request, expected) => {
+    const redis = fakeRedis();
+    const app = buildApp({}, { ipAddress: ip, storeClient: redis.storeClient });
+
+    expect((await visit(app, request)).status).toBe(200);
+    expect(Object.fromEntries(redis.counters)).toEqual(expected);
+  });
+
+  it("logs that a member ran out, but not which one", async () => {
+    const warn = silenceWarnings();
+    const app = buildApp({ read: { points: 1 } });
+
+    await statusesOf(
+      app,
+      times(3, ["GET", "/api/topics", { cookie: "member-4242" }]),
+    );
+
+    expect(warn).toHaveBeenCalledOnce();
+    const [line] = warn.mock.calls[0] as [string];
+    expect(line).toContain('"category":"read","subject":"user"');
+    expect(line).not.toContain("4242");
+    expect(line).not.toContain("203.0.113");
+  });
+});
+
+describe("rateLimiterMiddleware across origins", () => {
+  it.each<[string, RateLimiterConfig, Visit]>([
+    ["safety", { safety: { points: 1 } }, ["GET", "/api/topics"]],
+    ["read", { read: { points: 1 } }, ["GET", "/api/topics"]],
+    [
+      "read",
+      { read: { points: 1 } },
+      ["GET", "/api/topics", { cookie: "member-1" }],
+    ],
+    ["write", { write: { points: 1 } }, ["DELETE", "/api/topics/7"]],
+    [
+      "auth",
+      { auth: { points: 1 } },
+      ["POST", "/api/@vitnode/core/users/sign_in"],
+    ],
+    [
+      "content-write",
+      { contentWrite: { points: 1 } },
+      ["POST", "/api/@acme/forum/content/topics", { cookie: "member-1" }],
+    ],
+  ])("lets the page read a %s refusal", async (category, config, request) => {
+    const app = buildApp(config);
+    await visit(app, request);
+
+    const res = await visit(app, request);
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("X-RateLimit-Category")).toBe(category);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(WEB_ORIGIN);
+    expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+    expect(
+      res.headers.get("Access-Control-Expose-Headers")?.split(","),
+    ).toEqual([...RATE_LIMIT_RESPONSE_HEADERS]);
+  });
+});
+
+describe("exposeRateLimitHeaders", () => {
+  it.each([
+    [undefined, ["Retry-After", "X-RateLimit-Category"]],
+    [
+      ["X-Total-Count"],
+      ["X-Total-Count", "Retry-After", "X-RateLimit-Category"],
+    ],
+    [["retry-after"], ["retry-after", "X-RateLimit-Category"]],
+    [
+      ["X-RateLimit-Category", "Retry-After"],
+      ["X-RateLimit-Category", "Retry-After"],
+    ],
+  ])("adds the rate limit headers to %j", (exposeHeaders, expected) => {
+    expect(exposeRateLimitHeaders(exposeHeaders)).toEqual(expected);
+  });
+});
+
 describe("rateLimiterMiddleware with Redis", () => {
-  // Just enough of node-redis for `RateLimiterRedis`: its Lua script increments
-  // a key that expires with the window.
-  const fakeRedis = ({ down = false } = {}) => {
-    const counters = new Map<string, number>();
-    const client = {
-      multi: () => ({}),
-      eval: async (
-        _script: string,
-        {
-          arguments: [points],
-          keys: [key],
-        }: { arguments: string[]; keys: string[] },
-      ): Promise<[number, number]> => {
-        if (down) return Promise.reject(new Error("ECONNREFUSED"));
-        const consumed = (counters.get(key) ?? 0) + Number(points);
-        counters.set(key, consumed);
-
-        return Promise.resolve([consumed, 60_000]);
-      },
-    };
-
-    return { counters, storeClient: client as unknown as CacheClient };
-  };
-
   it("uses Redis when a client is set, and memory otherwise", () => {
     const limiter = createRateLimiter({
       ...ROOMY,
@@ -486,8 +794,11 @@ describe("resolveRateLimiterConfig", () => {
   it("passes no option a category does not own", () => {
     const write = { points: 5, keyPrefix: "stolen", storeClient: {} };
     const resolved = resolveRateLimiterConfig({ write });
+    const legacyCap = { perUser: false, points: 5 };
+    const legacy = resolveRateLimiterConfig(legacyCap);
 
     expect(resolved.write).toEqual({ points: 5, duration: 60 });
+    expect(legacy.safety).toEqual({ points: 5, duration: 60 });
   });
 
   it("gives every category its own key prefix", () => {
@@ -544,7 +855,8 @@ describe("rateLimitKey", () => {
     ["2001:0db8:0001:0002:ffff:ffff:ffff:ffff", "2001:db8:1:2::/64"],
     ["2001:db8::1", "2001:db8:0:0::/64"],
     ["::1", "0:0:0:0::/64"],
-  ])("keys %s as %s", (ipAddress, key) => {
+  ])("keys %s as %s, apart from member keys", (ipAddress, key) => {
     expect(rateLimitKey(ipAddress)).toBe(key);
+    expect(key).not.toMatch(/^user:/);
   });
 });

@@ -3,6 +3,9 @@ import type { CookieOptions } from "hono/utils/cookie";
 
 import { deleteCookie, setCookie } from "hono/cookie";
 
+/** The public session cookie, unless `authorization.cookieName` renames it. */
+export const DEFAULT_SESSION_COOKIE_NAME = "vitnode_auth";
+
 const authCookieOptions = (c: Context): CookieOptions => {
   const { cookieDomain, cookieSecure } = c.get("core").authorization;
 

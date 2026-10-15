@@ -10,6 +10,7 @@ import { secureHeaders } from "hono/secure-headers";
 
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
+import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { createCacheClient } from "@/api/lib/cache-client";
 import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
@@ -37,7 +38,10 @@ import {
   globalAdminMiddleware,
   globalMiddleware,
 } from "./middlewares/global.middleware";
-import { rateLimiterMiddleware } from "./middlewares/rate-limiter.middleware";
+import {
+  exposeRateLimitHeaders,
+  rateLimiterMiddleware,
+} from "./middlewares/rate-limiter.middleware";
 import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
 
 /** 25 MB: room for an image upload, and nothing like enough to be a weapon. */
@@ -131,10 +135,12 @@ export function VitNodeAPI({
   }
 
   const webOrigin = CONFIG.web.origin;
-  const rateLimiter = rateLimiterMiddleware(
-    vitNodeApiConfig.rateLimiter,
-    redisClient,
-  );
+  const rateLimiter = rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, {
+    sessionCookieName:
+      vitNodeApiConfig.authorization?.cookieName ?? DEFAULT_SESSION_COOKIE_NAME,
+    storeClient: redisClient,
+  });
+  const corsConfig = corsOptions ?? { credentials: true, origin: webOrigin };
 
   app.use(
     secureHeaders({
@@ -145,9 +151,16 @@ export function VitNodeAPI({
   );
   app.use("*", clientIpMiddleware);
   // `cors()` answers a preflight itself and never calls `next`, so `OPTIONS`
-  // spends its budget here or nowhere.
+  // spends its budget here or nowhere. Every 429 comes from a stage after
+  // `cors()`, so it carries CORS headers, and the exposed rate limit headers
+  // let a cross-origin page read when to retry.
   app.use("*", rateLimiter.preflight);
-  app.use(cors(corsOptions ?? { credentials: true, origin: webOrigin }));
+  app.use(
+    cors({
+      ...corsConfig,
+      exposeHeaders: exposeRateLimitHeaders(corsConfig.exposeHeaders),
+    }),
+  );
   app.use(
     csrf(
       csrfOptions ?? {
@@ -194,6 +207,9 @@ export function VitNodeAPI({
       cacheClient: redisClient,
     }),
   );
+  // After the session lookup, so a member's reads and writes count against
+  // their own budget rather than their address's.
+  app.use("*", rateLimiter.identified);
   app.use(async (c, next) => {
     if (c.req.path.includes("/admin/")) {
       return await globalAdminMiddleware()(c, next);
