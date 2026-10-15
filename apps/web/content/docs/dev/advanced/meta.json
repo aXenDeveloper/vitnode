@@ -2,5 +2,11 @@
   "title": "Advanced",
   "description": "Sessions and cookies, request rate limiting, the background task queue, and the optional Redis cache",
   "icon": "Wrench",
-  "pages": ["auth", "rate-limiter", "queue", "redis"]
+  "pages": [
+    "auth",
+    "rate-limiter",
+    "rate-limiter-debugging",
+    "queue",
+    "redis"
+  ]
 }

@@ -79,6 +79,8 @@ export default NotesPage
 
 `staleTime: 'static'` makes the loader reuse an entry that is already cached instead of fetching again on every navigation. The page reads the entry the loader just filled, so it renders without suspending.
 
+The router also runs this loader when a visitor rests on a link to the page, and again on the click. Because the loader reads through the cache, both runs share one request. See [Preloading](/docs/dev/routing/preloading).
+
 </Step>
 <Step>
 

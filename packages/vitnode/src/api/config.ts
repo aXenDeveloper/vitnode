@@ -10,6 +10,7 @@ import { secureHeaders } from "hono/secure-headers";
 
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
+import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { createCacheClient } from "@/api/lib/cache-client";
 import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
@@ -38,8 +39,7 @@ import {
   globalMiddleware,
 } from "./middlewares/global.middleware";
 import {
-  authRateLimiterMiddleware,
-  contentWriteRateLimiterMiddleware,
+  exposeRateLimitHeaders,
   rateLimiterMiddleware,
 } from "./middlewares/rate-limiter.middleware";
 import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
@@ -135,6 +135,12 @@ export function VitNodeAPI({
   }
 
   const webOrigin = CONFIG.web.origin;
+  const rateLimiter = rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, {
+    sessionCookieName:
+      vitNodeApiConfig.authorization?.cookieName ?? DEFAULT_SESSION_COOKIE_NAME,
+    storeClient: redisClient,
+  });
+  const corsConfig = corsOptions ?? { credentials: true, origin: webOrigin };
 
   app.use(
     secureHeaders({
@@ -143,7 +149,14 @@ export function VitNodeAPI({
       strictTransportSecurity: false,
     }),
   );
-  app.use(cors(corsOptions ?? { credentials: true, origin: webOrigin }));
+  app.use("*", clientIpMiddleware);
+  app.use("*", rateLimiter.preflight);
+  app.use(
+    cors({
+      ...corsConfig,
+      exposeHeaders: exposeRateLimitHeaders(corsConfig.exposeHeaders),
+    }),
+  );
   app.use(
     csrf(
       csrfOptions ?? {
@@ -152,7 +165,6 @@ export function VitNodeAPI({
       },
     ),
   );
-  app.use("*", clientIpMiddleware);
   // Nothing bounded a request body before this. `POST /sign_in` reads its JSON
   // and then runs scrypt unconditionally, so a body the server is willing to
   // buffer is memory *and* CPU an unauthenticated caller gets to choose the size
@@ -166,17 +178,7 @@ export function VitNodeAPI({
       onError: c => c.json({ error: "Payload Too Large" }, 413),
     }),
   );
-  const {
-    auth: authRateLimiter,
-    contentWrite: contentWriteRateLimiter,
-    ...rateLimiter
-  } = vitNodeApiConfig.rateLimiter ?? {};
-  app.use("*", rateLimiterMiddleware(rateLimiter, redisClient));
-  app.use("*", authRateLimiterMiddleware(authRateLimiter, redisClient));
-  app.use(
-    "*",
-    contentWriteRateLimiterMiddleware(contentWriteRateLimiter, redisClient),
-  );
+  app.use("*", rateLimiter.requests);
   if (docsEnabled) {
     app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
   }
@@ -201,6 +203,7 @@ export function VitNodeAPI({
       cacheClient: redisClient,
     }),
   );
+  app.use("*", rateLimiter.identified);
   app.use(async (c, next) => {
     if (c.req.path.includes("/admin/")) {
       return await globalAdminMiddleware()(c, next);

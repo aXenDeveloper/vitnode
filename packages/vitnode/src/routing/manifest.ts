@@ -68,6 +68,7 @@ const builtRoute = (pluginId: string, flat: FlatPluginRoute): PluginRoute => ({
     flat.parentId === null ? null : pluginRouteId(pluginId, flat.parentId),
   path: flat.path,
   pluginId,
+  ...(flat.preload === undefined ? {} : { preload: flat.preload }),
   requires: flat.requires,
   routeId: flat.routeId,
   segments: flat.segments,

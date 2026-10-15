@@ -1,5 +1,6 @@
 import type { ContentApprovalState } from "@vitnode/core/content";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type AutoFormOnSubmit,
   setFormFieldError,
@@ -20,6 +21,7 @@ import {
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import {
   ClockIcon,
   HourglassIcon,
@@ -46,6 +48,7 @@ import {
   topicEditHref,
   topicHref,
 } from "./forum-links";
+import { invalidateForumTopics } from "./forum-queries";
 import { ForumShell, RefusedState } from "./forum-ui";
 import {
   TOPIC_FORM_FIELDS,
@@ -174,9 +177,9 @@ const ApprovalNotice = ({
         <AlertTitle>{t("pending_create.title")}</AlertTitle>
         <AlertDescription>
           {t("pending_create.desc")}{" "}
-          <a className="font-medium underline" href={FORUM_PENDING_HREF}>
+          <HrefLink className="font-medium underline" href={FORUM_PENDING_HREF}>
             {t("pending_create.link")}
-          </a>
+          </HrefLink>
         </AlertDescription>
       </Alert>
     );
@@ -195,6 +198,7 @@ const TopicEditForm = ({
   const t = useTranslations("@vitnode/forum.topics");
   const tErrors = useTranslations("@vitnode/forum.forums.errors");
   const rejectTopic = useForumRejection(TOPIC_FORM_FIELDS);
+  const queryClient = useQueryClient();
   const versionRef = useRef(record.version);
   const [current, setCurrent] = useState({
     approval: record.approval,
@@ -217,6 +221,7 @@ const TopicEditForm = ({
 
     if (res.status === 200) {
       const updated = await res.json();
+      await invalidateForumTopics(queryClient);
       versionRef.current = updated.version;
       setCurrent({
         approval: updated.approval,
@@ -287,7 +292,7 @@ const TopicEditForm = ({
       />
 
       {current.slug !== null && current.status === "published" ? (
-        <a
+        <HrefLink
           className={buttonVariants({
             className: "self-start",
             variant: "link",
@@ -295,7 +300,7 @@ const TopicEditForm = ({
           href={topicHref(current.slug)}
         >
           {t("edit.view")}
-        </a>
+        </HrefLink>
       ) : null}
     </>
   );
@@ -312,12 +317,12 @@ const TopicEditPage = ({
     return (
       <RefusedState
         action={
-          <a
+          <HrefLink
             className={buttonVariants()}
             href={loginHref(topicEditHref(loaderData.id))}
           >
             {t("state.unauthenticated.action")}
-          </a>
+          </HrefLink>
         }
         description={t("state.unauthenticated.desc")}
         icon={<LogInIcon aria-hidden="true" />}
@@ -337,12 +342,12 @@ const TopicEditPage = ({
     return (
       <RefusedState
         action={
-          <a
+          <HrefLink
             className={buttonVariants({ variant: "outline" })}
             href={FORUM_HREF}
           >
             {t("state.back")}
-          </a>
+          </HrefLink>
         }
         description={t(`state.${key}.desc`)}
         icon={

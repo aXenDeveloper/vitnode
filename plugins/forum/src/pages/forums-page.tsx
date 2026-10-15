@@ -1,3 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
   Empty,
@@ -8,20 +11,22 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { contentContainerTree } from "@vitnode/core/content";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { MessagesSquareIcon, PenSquareIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import { fetchForums, fetchForumStats, indexBy } from "./forum-data";
+import { indexBy } from "./forum-data";
 import { topicNewHref } from "./forum-links";
 import { ForumList } from "./forum-list";
+import { forumsQueryOptions, forumStatsQueryOptions } from "./forum-queries";
 import { ForumShell } from "./forum-ui";
 
-const loadForums = async () => {
-  const [forums, stats] = await Promise.all([fetchForums(), fetchForumStats()]);
+const loadForums = async (queryClient: QueryClient) => {
+  const [forums, stats] = await Promise.all([
+    queryClient.query(forumsQueryOptions()),
+    queryClient.query(forumStatsQueryOptions()),
+  ]);
 
   return { stats, tree: contentContainerTree(forums) };
 };
@@ -34,8 +39,8 @@ const ForumsBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<ForumsPageData>({
-  load: loadForums,
+export const route = defineRoute<ForumsPageData>({
+  load: async ({ context }) => await loadForums(context.queryClient),
 
   head: ({ t }) => ({
     description: t("@vitnode/forum.forums.desc"),
@@ -53,10 +58,10 @@ const ForumsPage = ({ loaderData }: PluginRoutePageProps<ForumsPageData>) => {
     <ForumShell
       actions={
         loaderData.tree.length > 0 ? (
-          <a className={buttonVariants()} href={topicNewHref()}>
+          <HrefLink className={buttonVariants()} href={topicNewHref()}>
             <PenSquareIcon aria-hidden="true" />
             {t("new_topic")}
-          </a>
+          </HrefLink>
         ) : null
       }
       description={t("desc")}
@@ -72,9 +77,12 @@ const ForumsPage = ({ loaderData }: PluginRoutePageProps<ForumsPageData>) => {
             <EmptyDescription>{t("empty.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a className={buttonVariants({ variant: "outline" })} href="/">
+            <HrefLink
+              className={buttonVariants({ variant: "outline" })}
+              href="/"
+            >
               {t("empty.home")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (

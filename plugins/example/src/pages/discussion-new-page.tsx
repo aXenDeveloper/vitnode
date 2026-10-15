@@ -16,6 +16,7 @@ import {
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink, useHrefNavigate } from "@vitnode/core/tanstack/link";
 import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
@@ -67,6 +68,7 @@ const DiscussionNewPage = ({
   const t = useTranslations("@vitnode/example.discussions");
   const rejectDiscussion = useDiscussionRejection();
   const [isLeaving, setIsLeaving] = useState(false);
+  const navigate = useHrefNavigate();
 
   const onSubmit: AutoFormOnSubmit<DiscussionCreateFormSchema> = async (
     { board, ...values },
@@ -83,8 +85,7 @@ const DiscussionNewPage = ({
     if (res.status === 201) {
       const record = await res.json();
       setIsLeaving(true);
-
-      window.location.assign(
+      await navigate(
         record.slug === null
           ? discussionEditHref(record.id)
           : discussionHref(record.slug, { created: true }),
@@ -114,12 +115,12 @@ const DiscussionNewPage = ({
             <EmptyDescription>{t("new.no_boards.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={BOARDS_HREF}
             >
               {t("new.no_boards.action")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (

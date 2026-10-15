@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
 import { zodRichTextDocument } from "@vitnode/core/content";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
@@ -31,6 +33,7 @@ import type { ThreadComment, ThreadPage, ThreadTreeNode } from "./thread-data";
 
 import { useForumRejection } from "./forum-errors";
 import { commentAnchorId, loginHref, topicHref } from "./forum-links";
+import { invalidateForumComments } from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
 import {
   buildThreadTree,
@@ -140,13 +143,13 @@ const CommentBody = ({
         <span aria-hidden="true" className="text-muted-foreground">
           ·
         </span>
-        <a
+        <HrefLink
           className="text-muted-foreground hover:text-foreground hover:underline"
           href={`${topicHref(actions.topicSlug)}#${commentAnchorId(comment.slug)}`}
         >
           <TimeAgo date={comment.publishedAt ?? comment.createdAt} />
           <span className="sr-only"> {t("permalink")}</span>
-        </a>
+        </HrefLink>
         {edited ? (
           <span className="text-muted-foreground">({t("edited_label")})</span>
         ) : null}
@@ -306,6 +309,7 @@ export const ForumThread = ({
   topicSlug: string;
 }) => {
   const t = useTranslations("@vitnode/forum.comments");
+  const queryClient = useQueryClient();
   const { data: session, isPending: isSessionPending } = useSessionQuery();
   const currentUserId = session?.user?.id ?? null;
   const [pages, setPages] = useState<ThreadPage[]>([initial]);
@@ -359,6 +363,7 @@ export const ForumThread = ({
     canComment: currentUserId !== null,
     currentUserId,
     onChanged: ({ pending }) => {
+      void invalidateForumComments(queryClient, topicId);
       if (!pending) void refresh();
     },
     topicId,
@@ -419,12 +424,12 @@ export const ForumThread = ({
         ) : currentUserId === null ? (
           <p className="text-muted-foreground leading-relaxed text-pretty">
             {t("compose.guest")}{" "}
-            <a
+            <HrefLink
               className={buttonVariants({ size: "sm", variant: "outline" })}
               href={loginHref(topicHref(topicSlug))}
             >
               {t("compose.sign_in")}
-            </a>
+            </HrefLink>
           </p>
         ) : (
           <LazyCommentComposer

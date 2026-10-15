@@ -1,3 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { queryOptions } from "@tanstack/react-query";
 import {
   BreadcrumbItem,
   BreadcrumbLink,
@@ -13,12 +17,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import {
   MessageSquareIcon,
   MessagesSquareIcon,
@@ -34,14 +37,15 @@ import { CONFIG_PLUGIN } from "@/const";
 import type { TopicRow, TopicStats } from "./forum-data";
 import type { ForumSearch } from "./forum-links";
 
-import {
-  fetchForumStats,
-  fetchTopicStats,
-  indexBy,
-  zodTopicRow,
-} from "./forum-data";
+import { fetchTopicStats, indexBy, zodTopicRow } from "./forum-data";
 import { FORUM_HREF, forumHref, topicHref, topicNewHref } from "./forum-links";
 import { ForumList } from "./forum-list";
+import {
+  FORUM_ACTIVITY_STALE_TIME,
+  forumQueryKeys,
+  forumQueryOptions,
+  forumStatsQueryOptions,
+} from "./forum-queries";
 import {
   ForumIcon,
   ForumShell,
@@ -52,48 +56,63 @@ import {
 
 const PAGE_SIZE = 25;
 
-const loadForum = async (slug: string, { cursor }: ForumSearch) => {
-  const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
-    method: "get",
-    module: "content/forums",
-    path: "/{idOrSlug}",
-    args: { params: { idOrSlug: encodeURIComponent(slug) } },
+const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
+  queryOptions({
+    meta: LOADER_DATA_QUERY_META,
+    queryFn: async () => {
+      // Spread rather than written inline: the generated list query types its
+      // filters loosely, so an inline key reads as an excess property.
+      const filters = { forum: String(request.forumId) };
+
+      const list = await fetcher({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "get",
+        module: "content/topics",
+        path: "/",
+        args: {
+          query: {
+            ...filters,
+            first: String(PAGE_SIZE),
+            ...(request.cursor ? { cursor: request.cursor } : {}),
+          },
+        },
+      });
+
+      if (list.status !== 200) throw new Error("Loading the topics failed.");
+
+      const { edges, pageInfo } = await list.json();
+      const topics = z.array(zodTopicRow).parse(edges);
+
+      return {
+        nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
+        topicStats: await fetchTopicStats(topics.map(topic => topic.id)),
+        topics,
+      };
+    },
+    queryKey: forumQueryKeys.topicList(request),
+    staleTime: FORUM_ACTIVITY_STALE_TIME,
   });
 
-  if (detail.status !== 200 && detail.status !== 404) {
-    throw new Error("Loading the forum failed.");
-  }
-
+const loadForum = async (
+  queryClient: QueryClient,
+  slug: string,
+  { cursor }: ForumSearch,
+) => {
   const { ancestors, children, container } = contentPageItem(
-    detail.status === 200 ? await detail.json() : null,
+    await queryClient.query(forumQueryOptions(slug)),
   );
 
-  // Spread rather than written inline: the generated list query types its
-  // filters loosely, so an inline key reads as an excess property.
-  const filters = { forum: String(container.id) };
-
-  const [list, forumStats] = await Promise.all([
-    fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
-      method: "get",
-      module: "content/topics",
-      path: "/",
-      args: {
-        query: {
-          ...filters,
-          first: String(PAGE_SIZE),
-          ...(cursor ? { cursor } : {}),
-        },
-      },
-    }),
-    children.length > 0 ? fetchForumStats() : Promise.resolve([]),
+  const [{ nextCursor, topicStats, topics }, forumStats] = await Promise.all([
+    queryClient.query(
+      forumTopicsQueryOptions({
+        forumId: container.id,
+        ...(cursor ? { cursor } : {}),
+      }),
+    ),
+    children.length > 0
+      ? queryClient.query(forumStatsQueryOptions())
+      : Promise.resolve([]),
   ]);
-
-  if (list.status !== 200) throw new Error("Loading the topics failed.");
-
-  const { edges, pageInfo } = await list.json();
-  const topics = z.array(zodTopicRow).parse(edges);
 
   return {
     ancestors,
@@ -101,8 +120,8 @@ const loadForum = async (slug: string, { cursor }: ForumSearch) => {
     container,
     forumStats,
     isFirstPage: cursor === undefined,
-    nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
-    topicStats: await fetchTopicStats(topics.map(topic => topic.id)),
+    nextCursor,
+    topicStats,
     topics,
   };
 };
@@ -123,12 +142,12 @@ const ForumNotFound = () => {
           <EmptyDescription>{t("desc")}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <a
+          <HrefLink
             className={buttonVariants({ variant: "outline" })}
             href={FORUM_HREF}
           >
             {t("back")}
-          </a>
+          </HrefLink>
         </EmptyContent>
       </Empty>
     </div>
@@ -141,8 +160,9 @@ const ForumsCrumb = () => {
   return <>{t("title")}</>;
 };
 
-export const route = definePluginRoute<ForumPageData, ForumSearch>({
-  load: async ({ params, search }) => await loadForum(params.slug, search),
+export const route = defineRoute<ForumPageData, ForumSearch>({
+  load: async ({ context, params, search }) =>
+    await loadForum(context.queryClient, params.slug, search),
 
   head: ({ loaderData, t }) => ({
     description:
@@ -157,7 +177,7 @@ export const route = definePluginRoute<ForumPageData, ForumSearch>({
     group: ({ loaderData }) => (
       <>
         <BreadcrumbItem>
-          <BreadcrumbLink href={FORUM_HREF}>
+          <BreadcrumbLink render={<HrefLink href={FORUM_HREF} />}>
             <ForumsCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -165,7 +185,9 @@ export const route = definePluginRoute<ForumPageData, ForumSearch>({
           <Fragment key={ancestor.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={forumHref(ancestor.slug)}>
+              <BreadcrumbLink
+                render={<HrefLink href={forumHref(ancestor.slug)} />}
+              >
                 {ancestor.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -197,12 +219,12 @@ const TopicListRow = ({
       <PersonAvatar person={topic.author} size={40} />
       <div className="flex min-w-0 flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-6">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <a
+          <HrefLink
             className="text-foreground font-medium text-balance hover:underline"
             href={topicHref(topic.slug)}
           >
             {topic.title}
-          </a>
+          </HrefLink>
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
             <PersonName person={topic.author} />
             {topic.publishedAt ? (
@@ -250,10 +272,13 @@ const ForumPage = ({
   return (
     <ForumShell
       actions={
-        <a className={buttonVariants()} href={topicNewHref(container.id)}>
+        <HrefLink
+          className={buttonVariants()}
+          href={topicNewHref(container.id)}
+        >
           <PenSquareIcon aria-hidden="true" />
           {t("new_topic")}
-        </a>
+        </HrefLink>
       }
       description={container.metadata.description}
       title={
@@ -300,12 +325,12 @@ const ForumPage = ({
               <EmptyDescription>{t("empty_forum.desc")}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={topicNewHref(container.id)}
               >
                 {t("new_topic")}
-              </a>
+              </HrefLink>
             </EmptyContent>
           </Empty>
         ) : (
@@ -326,20 +351,20 @@ const ForumPage = ({
             className="flex flex-wrap items-center gap-2"
           >
             {isFirstPage ? null : (
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={forumHref(container.slug)}
               >
                 {t("newest")}
-              </a>
+              </HrefLink>
             )}
             {nextCursor === null ? null : (
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={forumHref(container.slug, { cursor: nextCursor })}
               >
                 {t("older")}
-              </a>
+              </HrefLink>
             )}
           </nav>
         )}

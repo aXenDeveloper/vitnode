@@ -564,3 +564,77 @@ describe("requires", () => {
     ).toBe("invalid-requires");
   });
 });
+
+describe("preload", () => {
+  const tree = (
+    outer: Record<string, unknown>,
+    inner: Record<string, unknown>,
+  ) =>
+    flatten(
+      layout(
+        "/catalog",
+        withExtra(
+          {
+            component: lazyPage(),
+            children: [
+              index(withExtra({ component: lazyPage() }, inner)),
+              page("about", { component: lazyPage() }),
+            ],
+          },
+          outer,
+        ),
+      ),
+      page("/elsewhere", { component: lazyPage() }),
+    ).map(route => [route.routeId, route.preload]);
+
+  it.each<
+    [string, Record<string, unknown>, Record<string, unknown>, unknown[]]
+  >([
+    [
+      "stays unset when nothing declares it",
+      {},
+      {},
+      [undefined, undefined, undefined, undefined],
+    ],
+    [
+      "is inherited from a layout by every route inside it",
+      { preload: false },
+      {},
+      [false, false, false, undefined],
+    ],
+    [
+      "lets a route inside the layout turn it back on",
+      { preload: false },
+      { preload: true },
+      [false, true, false, undefined],
+    ],
+    [
+      "stays on the route that declared it",
+      {},
+      { preload: false },
+      [undefined, false, undefined, undefined],
+    ],
+  ])("%s", (_, outer, inner, expected) => {
+    expect(tree(outer, inner)).toEqual(
+      [
+        "layout#/catalog",
+        "page#/catalog",
+        "page#/catalog/about",
+        "page#/elsewhere",
+      ].map((routeId, position) => [routeId, expected[position]]),
+    );
+  });
+
+  it.each(["intent", 0, null])("refuses %j, which is not a boolean", value => {
+    expect(
+      thrownBy(() =>
+        flatten(
+          page(
+            "/catalog",
+            withExtra({ component: lazyPage() }, { preload: value }),
+          ),
+        ),
+      ).code,
+    ).toBe("invalid-preload");
+  });
+});

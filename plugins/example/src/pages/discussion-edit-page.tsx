@@ -21,6 +21,7 @@ import {
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { LogInIcon, SearchXIcon, ShieldAlertIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -162,7 +163,7 @@ const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
       />
 
       {slug !== null && record.status === "published" && (
-        <a
+        <HrefLink
           className={buttonVariants({
             className: "self-start",
             variant: "link",
@@ -170,7 +171,7 @@ const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
           href={discussionHref(slug)}
         >
           {t("edit.view")}
-        </a>
+        </HrefLink>
       )}
     </>
   );
@@ -208,12 +209,12 @@ const DiscussionEditPage = ({
     return (
       <RefusedState
         action={
-          <a
+          <HrefLink
             className={buttonVariants()}
             href={`/login?returnTo=${encodeURIComponent(discussionEditHref(loaderData.id))}`}
           >
             {t("state.unauthenticated.action")}
-          </a>
+          </HrefLink>
         }
         description={t("state.unauthenticated.desc")}
         icon={<LogInIcon aria-hidden="true" />}
@@ -228,12 +229,12 @@ const DiscussionEditPage = ({
     return (
       <RefusedState
         action={
-          <a
+          <HrefLink
             className={buttonVariants({ variant: "outline" })}
             href="/discussions/new"
           >
             {t("state.back")}
-          </a>
+          </HrefLink>
         }
         description={t(`state.${key}.desc`)}
         icon={

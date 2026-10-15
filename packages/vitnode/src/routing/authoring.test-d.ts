@@ -8,8 +8,14 @@ import type {
   PluginRoutePageModule,
   PluginRoutePageProps,
 } from "./module";
+import type {
+  PluginRouteIndexOptions,
+  PluginRouteLayoutOptions,
+  PluginRoutePageOptions,
+} from "./tree";
 
 import { definePluginRoute } from "./authoring";
+import { index, layout, lazy, page } from "./tree";
 
 describe("definePluginRoute", () => {
   it("accepts every member of the contract, and only those", () => {
@@ -188,5 +194,37 @@ describe("a plugin route module's default export", () => {
     expectTypeOf<
       PluginRoutePageProps<{ title: string }>["loaderData"]
     >().toEqualTypeOf<{ title: string }>();
+  });
+});
+
+describe("a route declaration's `preload`", () => {
+  const component = lazy(
+    async () => await Promise.resolve({ default: () => null }),
+  );
+
+  it("is an optional boolean on page(), index() and layout()", () => {
+    expectTypeOf<PluginRoutePageOptions<unknown>["preload"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<PluginRouteIndexOptions<unknown>["preload"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<PluginRouteLayoutOptions<unknown>["preload"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
+  });
+
+  it("is accepted on every shape", () => {
+    layout("/catalog", {
+      children: [index({ component, preload: true })],
+      component,
+      preload: false,
+    });
+    page("/catalog/:productId", { component, preload: false });
+  });
+
+  it("refuses a router's preload mode", () => {
+    // @ts-expect-error `preload` is `true` or `false`; *when* to preload is the router's.
+    page("/catalog", { component, preload: "intent" });
   });
 });

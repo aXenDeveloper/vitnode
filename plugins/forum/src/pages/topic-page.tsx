@@ -1,3 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { queryOptions } from "@tanstack/react-query";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import {
   BreadcrumbItem,
@@ -10,14 +14,13 @@ import {
   richTextToPlainText,
   zodRichTextDocument,
 } from "@vitnode/core/content";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { PencilIcon } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
@@ -39,9 +42,15 @@ import {
   topicHref,
   topicNewHref,
 } from "./forum-links";
+import {
+  forumQueryKeys,
+  forumQueryOptions,
+  isSharedResponse,
+  threadQueryOptions,
+  TOPIC_STALE_TIME,
+} from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
 import { ForumThread } from "./thread";
-import { fetchThreadPage } from "./thread-data";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
@@ -73,46 +82,46 @@ const absoluteUrl = (path: string, base: string): string => {
   }
 };
 
-const loadTopic = async ({
-  locale,
-  slug,
-}: {
-  locale: string;
-  slug: string;
-}) => {
-  const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
-    method: "get",
-    module: "content/topics",
-    path: "/{slug}",
-    args: { params: { slug: encodeURIComponent(slug) } },
+const topicQueryOptions = (slug: string) =>
+  queryOptions({
+    meta: LOADER_DATA_QUERY_META,
+    queryFn: async () => {
+      const res = await fetcher({
+        plugin: CONFIG_PLUGIN.pluginId,
+        method: "get",
+        module: "content/topics",
+        path: "/{slug}",
+        args: { params: { slug: encodeURIComponent(slug) } },
+      });
+
+      if (res.status === 404) return { shared: false, topic: null };
+      if (res.status !== 200) {
+        throw new Error(`Loading the topic "${slug}" failed.`);
+      }
+
+      return {
+        shared: isSharedResponse(res),
+        topic: zodTopic.parse(await res.json()),
+      };
+    },
+    queryKey: forumQueryKeys.topic(slug),
+    staleTime: ({ state }) => (state.data?.shared ? TOPIC_STALE_TIME : 0),
   });
 
-  if (detail.status !== 200 && detail.status !== 404) {
-    throw new Error(`Loading the topic "${slug}" failed.`);
-  }
-
+const loadTopic = async (
+  queryClient: QueryClient,
+  { locale, slug }: { locale: string; slug: string },
+) => {
   const topic = contentPageItem(
-    detail.status === 200 ? zodTopic.parse(await detail.json()) : null,
+    (await queryClient.query(topicQueryOptions(slug))).topic,
   );
 
   const [forum, thread] = await Promise.all([
-    fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
-      method: "get",
-      module: "content/forums",
-      path: "/{idOrSlug}",
-      args: { params: { idOrSlug: String(topic.forum) } },
-    }),
-    fetchThreadPage({ topicId: topic.id }),
+    queryClient.query(forumQueryOptions(String(topic.forum))).catch(() => null),
+    queryClient.query(threadQueryOptions(topic.id)),
   ]);
 
-  const trail =
-    forum.status === 200
-      ? await forum
-          .json()
-          .then(({ ancestors, container }) => [...ancestors, container])
-      : [];
+  const trail = forum ? [...forum.ancestors, forum.container] : [];
 
   const path = topicHref(topic.slug);
   const canonicalUrl =
@@ -149,9 +158,12 @@ const ForumsCrumb = () => {
   return <>{t("title")}</>;
 };
 
-export const route = definePluginRoute<TopicPageData, TopicSearch>({
+export const route = defineRoute<TopicPageData, TopicSearch>({
   load: async ({ context, params }) =>
-    await loadTopic({ locale: context.locale, slug: params.slug }),
+    await loadTopic(context.queryClient, {
+      locale: context.locale,
+      slug: params.slug,
+    }),
 
   head: ({ loaderData }) => ({
     alternates: loaderData
@@ -165,7 +177,7 @@ export const route = definePluginRoute<TopicPageData, TopicSearch>({
     group: ({ loaderData }) => (
       <>
         <BreadcrumbItem>
-          <BreadcrumbLink href={FORUM_HREF}>
+          <BreadcrumbLink render={<HrefLink href={FORUM_HREF} />}>
             <ForumsCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -173,7 +185,9 @@ export const route = definePluginRoute<TopicPageData, TopicSearch>({
           <Fragment key={forum.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={forumHref(forum.slug)}>
+              <BreadcrumbLink
+                render={<HrefLink href={forumHref(forum.slug)} />}
+              >
                 {forum.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -205,13 +219,13 @@ const TopicOwnerActions = ({
   }
 
   return (
-    <a
+    <HrefLink
       className={buttonVariants({ size: "sm", variant: "outline" })}
       href={topicEditHref(topicId)}
     >
       <PencilIcon aria-hidden="true" />
       {t("edit")}
-    </a>
+    </HrefLink>
   );
 };
 
@@ -289,12 +303,12 @@ const TopicPage = ({
       <article className="flex flex-col gap-6">
         <header className="flex flex-col gap-4">
           {forum ? (
-            <a
+            <HrefLink
               className="text-primary self-start text-sm font-medium hover:underline"
               href={forumHref(forum.slug)}
             >
               {forum.name}
-            </a>
+            </HrefLink>
           ) : null}
 
           <h1 className="text-foreground text-3xl font-semibold tracking-tight text-balance md:text-4xl">
@@ -316,12 +330,12 @@ const TopicPage = ({
             <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
               <TopicOwnerActions author={topic.author} topicId={topic.id} />
               {forum ? (
-                <a
+                <HrefLink
                   className={buttonVariants({ size: "sm", variant: "ghost" })}
                   href={topicNewHref(forum.id)}
                 >
                   {t("new")}
-                </a>
+                </HrefLink>
               ) : null}
             </nav>
           </div>

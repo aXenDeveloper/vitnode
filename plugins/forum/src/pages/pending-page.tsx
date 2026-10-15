@@ -1,3 +1,6 @@
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { queryOptions } from "@tanstack/react-query";
 import { Badge } from "@vitnode/core/components/ui/badge";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
@@ -8,11 +11,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import {
+  type AuthenticatedRouteLoadContext,
+  defineAuthenticatedRoute,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { InboxIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -29,6 +34,7 @@ import {
   pendingHref,
   topicEditHref,
 } from "./forum-links";
+import { forumQueryKeys, PENDING_STALE_TIME } from "./forum-queries";
 import { ForumShell, TimeAgo } from "./forum-ui";
 
 const PAGE_SIZE = 25;
@@ -49,29 +55,49 @@ const zodSubmission = z.object({
 
 type Submission = z.infer<typeof zodSubmission>;
 
-const loadPending = async ({ page = 1 }: PendingSearch) => {
-  const res = await fetcher({
-    plugin: "@vitnode/core",
-    method: "get",
-    module: "moderation",
-    path: "/approvals/mine",
-    args: { query: { page, pageSize: PAGE_SIZE } },
+const pendingQueryOptions = ({
+  page,
+  userId,
+}: {
+  page: number;
+  userId: number;
+}) =>
+  queryOptions({
+    meta: LOADER_DATA_QUERY_META,
+    queryFn: async () => {
+      const res = await fetcher({
+        plugin: "@vitnode/core",
+        method: "get",
+        module: "moderation",
+        path: "/approvals/mine",
+        args: { query: { page, pageSize: PAGE_SIZE } },
+      });
+
+      if (res.status !== 200) {
+        throw new Error("Loading your submissions failed.");
+      }
+
+      const data = await res.json();
+
+      return {
+        // The queue is every plugin's; this page is the forum's corner of it.
+        items: z
+          .array(zodSubmission)
+          .parse(data.items)
+          .filter(item => item.pluginId === CONFIG_PLUGIN.pluginId),
+        page: data.page,
+        pageCount: Math.max(1, Math.ceil(data.total / data.pageSize)),
+      };
+    },
+    queryKey: forumQueryKeys.pending(userId, page),
+    staleTime: PENDING_STALE_TIME,
   });
 
-  if (res.status !== 200) throw new Error("Loading your submissions failed.");
-
-  const data = await res.json();
-
-  return {
-    // The queue is every plugin's; this page is the forum's corner of it.
-    items: z
-      .array(zodSubmission)
-      .parse(data.items)
-      .filter(item => item.pluginId === CONFIG_PLUGIN.pluginId),
-    page: data.page,
-    pageCount: Math.max(1, Math.ceil(data.total / data.pageSize)),
-  };
-};
+const loadPending = async (
+  { auth, queryClient }: AuthenticatedRouteLoadContext,
+  { page = 1 }: PendingSearch,
+) =>
+  await queryClient.query(pendingQueryOptions({ page, userId: auth.user.id }));
 
 type PendingPageData = Awaited<ReturnType<typeof loadPending>>;
 
@@ -81,8 +107,8 @@ const PendingBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<PendingPageData, PendingSearch>({
-  load: async ({ search }) => await loadPending(search),
+export const route = defineAuthenticatedRoute<PendingPageData, PendingSearch>({
+  load: async ({ context, search }) => await loadPending(context, search),
 
   head: ({ t }) => ({
     description: t("@vitnode/forum.pending.desc"),
@@ -121,12 +147,12 @@ const SubmissionRow = ({ item }: { item: Submission }) => {
       </div>
 
       {isTopic ? (
-        <a
+        <HrefLink
           className="text-foreground font-medium text-balance hover:underline"
           href={topicEditHref(item.itemId)}
         >
           {title}
-        </a>
+        </HrefLink>
       ) : (
         <span className="text-foreground font-medium text-balance">
           {title}
@@ -140,12 +166,12 @@ const SubmissionRow = ({ item }: { item: Submission }) => {
         {item.container ? (
           <>
             <span aria-hidden="true">·</span>
-            <a
+            <HrefLink
               className="hover:underline"
               href={forumHref(item.container.slug)}
             >
               {item.container.name}
-            </a>
+            </HrefLink>
           </>
         ) : null}
       </p>
@@ -176,12 +202,12 @@ const PendingPage = ({
             <EmptyDescription>{t("empty.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={FORUM_HREF}
             >
               {t("empty.action")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (
@@ -198,20 +224,20 @@ const PendingPage = ({
           className="flex flex-wrap items-center gap-2"
         >
           {page > 1 ? (
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={pendingHref(page - 1)}
             >
               {t("newer")}
-            </a>
+            </HrefLink>
           ) : null}
           {page < pageCount ? (
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={pendingHref(page + 1)}
             >
               {t("older")}
-            </a>
+            </HrefLink>
           ) : null}
         </nav>
       ) : null}

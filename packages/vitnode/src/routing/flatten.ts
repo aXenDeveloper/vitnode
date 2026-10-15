@@ -27,6 +27,7 @@ export interface FlatPluginRoute {
   parentId: null | string;
   path: string;
   pendingComponent: null | React.FunctionComponent;
+  preload: boolean | undefined;
   requires: null | PluginRouteRequirement;
   routeId: string;
   search: null | PluginRouteSearchValidator;
@@ -173,6 +174,30 @@ const readPendingComponent = (
   }
 
   return pendingComponent as React.FunctionComponent;
+};
+
+const readPreload = (
+  preload: unknown,
+  parent: FlatPluginRoute | null,
+  pluginId: string,
+  where: string,
+): boolean | undefined => {
+  if (preload === undefined) return parent?.preload;
+
+  if (typeof preload !== "boolean") {
+    const got =
+      typeof preload === "string" || typeof preload === "number"
+        ? JSON.stringify(preload)
+        : typeof preload;
+
+    return fail({
+      code: "invalid-preload",
+      message: `${where} in ${pluginId} declares a \`preload\` that is not a boolean (got ${got}). \`false\` keeps a hover from running this route's loader, \`true\` turns that back on under a layout that turned it off, and leaving it out inherits from the layout around it. When links preload ("intent", "viewport") is not the route's to say - that is the application's \`defaultPreload\`, or a link's own \`preload\`.`,
+      pluginId,
+    });
+  }
+
+  return preload;
 };
 
 const readCache = (
@@ -379,6 +404,7 @@ const readNode = ({
       pluginId,
       where,
     ),
+    preload: readPreload(declared.preload, parent, pluginId, where),
     requires: readRequires(declared.requires, area, pluginId, where),
     routeId: pluginRouteIdFor(declared.kind, parsed.path),
     search: readSearch(declared.search, declared.kind, pluginId, where),

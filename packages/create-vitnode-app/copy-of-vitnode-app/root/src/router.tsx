@@ -54,6 +54,7 @@ export function getRouter() {
     defaultPendingMs: 150,
     defaultPendingMinMs: 300,
     defaultPreload: "intent",
+    defaultPreloadDelay: 250,
     defaultPreloadStaleTime: 0,
     defaultViewTransition: navigationViewTransition(
       vitNodeConfig.viewTransitions,

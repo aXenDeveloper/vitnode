@@ -263,7 +263,7 @@ The same member editing somebody else's draft gets `404` with `"code": "CONTENT_
 
 ### Rate limit
 
-`POST` and `PATCH` requests to a path containing `/content/`, outside `/admin/`, share a budget of 20 requests per 60 seconds per IP, on top of the global limit. Change it with `rateLimiter.contentWrite` in `apps/api/src/vitnode.api.config.ts`. It is off when `NODE_ENV=development`. See [Rate limiter](/docs/dev/advanced/rate-limiter) for the `429` body and Redis-backed counters.
+`POST` and `PATCH` requests to a path containing `/content/`, outside `/admin/`, share a budget of 20 requests per 60 seconds per IP, on top of the write budget every mutation spends. Change it with `rateLimiter.contentWrite` in `apps/api/src/vitnode.api.config.ts`. It is off when `NODE_ENV=development`. See [Rate limiter](/docs/dev/advanced/rate-limiter) for the `429` body and Redis-backed counters.
 
 ### Codes
 
@@ -410,7 +410,7 @@ export const askRoute = buildRoute({
 });
 ```
 
-A route outside `/content/` only gets the global rate limit, which is why this one asks for a captcha.
+A route outside `/content/` only gets the general write budget, which is why this one asks for a captcha.
 
 ### Helpers
 

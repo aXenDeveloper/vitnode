@@ -50,6 +50,7 @@ export interface PluginRoute {
   /** Canonical path, normalised (no trailing slash). */
   path: string;
   pluginId: string;
+  preload?: boolean;
   /** As declared. `null` means the route is offered to everybody. */
   requires: null | PluginRouteRequirement;
   /**

@@ -55,6 +55,7 @@ interface PluginRouteDeclarationShared<TModule> {
    * bundle, and a heavy one is worth a second thought.
    */
   pendingComponent?: React.FunctionComponent;
+  preload?: boolean;
   requires?: PluginRouteRequirement;
 }
 
@@ -108,6 +109,7 @@ export interface PluginRouteDeclaration {
   readonly messages: readonly string[] | undefined;
   readonly path: null | string;
   readonly pendingComponent: unknown;
+  readonly preload: unknown;
   readonly requires: PluginRouteRequirement | undefined;
   readonly search: unknown;
 }
@@ -133,6 +135,7 @@ interface PluginRouteDeclarationOptions {
   component: unknown;
   messages?: readonly string[];
   pendingComponent?: unknown;
+  preload?: unknown;
   requires?: PluginRouteRequirement;
   search?: unknown;
 }
@@ -154,6 +157,7 @@ const declaration = (
   messages: options.messages,
   path: options.path,
   pendingComponent: options.pendingComponent,
+  preload: options.preload,
   requires: options.requires,
   search: options.search,
 });

@@ -1,0 +1,139 @@
+---
+title: Preloading
+description: How VitNode preloads a page when a visitor rests on a link, why that sends API requests, and how to keep it cheap with TanStack Query or turn it off for a route with preload false.
+icon: MousePointerClick
+---
+
+VitNode starts loading a page when a visitor rests the pointer on a link to it, so the page is often ready by the time they click. This page explains what a preload costs, how to keep it to one API request, and how to turn it off for a route.
+
+## What a preload does
+
+A preload runs the destination route the same way a navigation does, without showing it:
+
+1. Downloads the route's JavaScript chunk.
+2. Runs its guard, such as `requires: 'authenticated'`.
+3. Runs its loader, including your module's `load` function.
+
+Step 3 is what reaches your API. A forum list with 50 links can send many `GET` requests if a visitor sweeps across it, and each one counts against the [read budget](/docs/dev/advanced/rate-limiter#how-the-budgets-work) of the rate limiter.
+
+## When a link preloads
+
+The app's router sets the defaults in `src/router.tsx`:
+
+```tsx title="apps/web/src/router.tsx"
+const router = createTanStackRouter({
+  defaultPreload: 'intent',
+  defaultPreloadDelay: 250,
+  defaultPreloadStaleTime: 0,
+  // ...
+})
+```
+
+| Visitor action                      | Result                                    |
+| ----------------------------------- | ----------------------------------------- |
+| Hover or focus a link for 250 ms    | The destination preloads once             |
+| Pass over a link in less than 250 ms | Nothing is loaded                         |
+| Touch a link on a phone             | The destination preloads at once          |
+| Click before 250 ms                 | The page loads normally, with no preload  |
+
+`defaultPreloadStaleTime: 0` hands freshness to TanStack Query instead of the router. The router reruns the loader for every preload and again on the click, and the loader answers from the query cache. That is why the next section matters.
+
+## Make repeat preloads free
+
+Read your API through `context.queryClient.query` in `load`, with a `staleTime`. The first preload fills the cache. Hovering again, or clicking after the hover, reads the same entry without a request, and two identical requests in flight at once share one fetch.
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import { queryOptions } from '@tanstack/react-query'
+import { LOADER_DATA_QUERY_META } from '@vitnode/core/lib/query-client'
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
+
+import { fetchNote } from '../features/notes/fetch-note'
+
+const noteQuery = (slug: string) =>
+  queryOptions({
+    queryKey: ['@acme/site-notes', 'note', { slug }],
+    queryFn: async () => await fetchNote(slug),
+    staleTime: 60_000, // [!code ++]
+    meta: LOADER_DATA_QUERY_META, // [!code ++]
+  })
+
+export const route = defineRoute({
+  load: async ({ context, params }) =>
+    await context.queryClient.query(noteQuery(params.slug)), // [!code ++]
+})
+```
+
+`LOADER_DATA_QUERY_META` is for a query whose data `load` returns, as here. The router already sends that data to the browser with the server-rendered HTML, so the meta keeps the query cache from sending it a second time. Leave it out when the page reads the query with `useSuspenseQuery` instead, as in [Cache app data](/docs/dev/cache/app).
+
+A `load` that calls `fetcher` directly sends a new request on every hover and again on the click. Pick a `staleTime` per query: a minute is fine for a public article, a few seconds for a busy list, and data that changes after a write needs its key invalidated by that write. [Cache app data](/docs/dev/cache/app) covers keys, invalidation and per-user data.
+
+## Turn off preloading for a route
+
+Set `preload: false` on a `page()`, `index()` or `layout()` when its loader is expensive or the visitor rarely opens it:
+
+```ts title="plugins/site-notes/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  page('/notes/:slug/history', {
+    component: lazy(() => import('./pages/note-history-page')),
+    preload: false, // [!code ++]
+  }),
+])
+```
+
+A hover then skips the route's loader: its `load` and the loading of its `messages`. The click still runs everything.
+
+| Value     | Effect                                                                        |
+| --------- | ----------------------------------------------------------------------------- |
+| left out  | Uses the nearest parent `layout()` that sets it, otherwise the app's defaults |
+| `false`   | A preload skips this route's loader                                           |
+| `true`    | Turns preloading back on under a `layout()` that set `false`                  |
+
+<Callout type="info" title="The guard still runs">
+  `preload: false` skips only the loader. A preload still downloads the route's
+  chunk and still runs its `requires` guard, which reads the session from the
+  query cache. A real navigation always runs the guard and the loader, so
+  protected pages stay protected.
+</Callout>
+
+Any value other than `true` or `false` stops the build with an `invalid-preload` route error.
+
+## Turn off preloading for one link
+
+To change a single link instead of a route, use the `Link` props from TanStack Router:
+
+```tsx
+import { Link } from '@tanstack/react-router'
+
+const ExportLink = () => (
+  <Link preload={false} to="/settings/export">
+    Export data
+  </Link>
+)
+```
+
+`preload={false}` stops this link from preloading. `preloadDelay={500}` waits longer for this link only. In a plugin page, [`HrefLink`](/docs/dev/routing/navigation#link-from-a-plugin-page) takes the same two props. A link cannot make a `preload: false` route run its loader early.
+
+## When to turn it off
+
+- The loader is slow or expensive, such as a report, a search or an export.
+- The page is rarely opened from the link, such as an edit or history page.
+- The loader writes something or counts a view. A loader should only read, but a preload would count a visit nobody made.
+
+Keep it on for ordinary reading pages. One cached preload makes the click feel instant and costs nothing on the second hover.
+
+## Next
+
+<Cards>
+  <Card
+    title="Cache app data"
+    description="Query keys, staleTime and invalidation after a write"
+    href="/docs/dev/cache/app"
+  />
+  <Card
+    title="Rate Limiter"
+    description="How preloads use the read budget, not the write budget"
+    href="/docs/dev/advanced/rate-limiter"
+  />
+</Cards>

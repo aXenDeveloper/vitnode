@@ -1,3 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { HiddenIcon } from "@vitnode/core/components/hidden-icon";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
@@ -6,85 +9,37 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
-import {
-  zodContentFileDescriptor,
-  zodRichTextDocument,
-} from "@vitnode/core/content";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import {
   contentDeliveryPage,
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
-import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blogPostContentType } from "@/content/post";
 
-const zodBlogPost = z.object({
-  content: zodRichTextDocument,
-  coverImage: zodContentFileDescriptor.nullable(),
-  coverImageAlt: z.string().nullable(),
-  publishedAt: z.string().nullable(),
-  title: z.string(),
-});
+import { blogPostQueryOptions } from "./post-query";
 
-const loadBlogPost = async ({
-  locale,
-  slug,
-}: {
-  locale: string;
-  slug: string;
-}) => {
-  const [resolution, detail] = await Promise.all([
-    fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
-      method: "get",
-      module: "content/blog",
-      path: "/delivery/resolve/{slug}",
-      args: {
-        params: { slug: encodeURIComponent(slug) },
-        query: { locale },
-      },
-    }),
-    fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
-      method: "get",
-      module: "content/blog",
-      path: "/{slug}",
-      args: {
-        params: { slug: encodeURIComponent(slug) },
-        query: { locale },
-      },
-    }),
-  ]);
-
-  if (resolution.status !== 200) {
-    throw new Error(
-      `Resolving the blog article "${slug}" answered ${resolution.status}.`,
-    );
-  }
-
-  return contentDeliveryPage({
-    item: detail.status === 200 ? zodBlogPost.parse(await detail.json()) : null,
-    resolution: await resolution.json(),
-  });
-};
+const loadBlogPost = async (
+  queryClient: QueryClient,
+  request: { locale: string; slug: string },
+) =>
+  contentDeliveryPage(await queryClient.query(blogPostQueryOptions(request)));
 
 type BlogPostPageData = Awaited<ReturnType<typeof loadBlogPost>>;
 
-export const route = definePluginRoute({
+export const route = defineRoute({
   load: async ({ context, params }) =>
-    await loadBlogPost({ locale: context.locale, slug: params.slug }),
+    await loadBlogPost(context.queryClient, {
+      locale: context.locale,
+      slug: params.slug,
+    }),
 
   head: ({ loaderData }) =>
     contentDeliveryPageHead(loaderData?.metadata, {

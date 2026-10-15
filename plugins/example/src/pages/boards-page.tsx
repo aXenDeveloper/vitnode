@@ -12,6 +12,7 @@ import {
   definePluginRoute,
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { FolderTreeIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
@@ -57,12 +58,12 @@ const BoardsPage = ({ loaderData }: PluginRoutePageProps<BoardsPageData>) => {
           </p>
         </div>
 
-        <a
+        <HrefLink
           className={buttonVariants({ className: "self-start" })}
           href={discussionNewHref()}
         >
           {t("new_discussion")}
-        </a>
+        </HrefLink>
       </header>
 
       {loaderData.tree.length === 0 ? (
@@ -75,9 +76,12 @@ const BoardsPage = ({ loaderData }: PluginRoutePageProps<BoardsPageData>) => {
             <EmptyDescription>{t("empty.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a className={buttonVariants({ variant: "outline" })} href="/">
+            <HrefLink
+              className={buttonVariants({ variant: "outline" })}
+              href="/"
+            >
               {t("empty.home")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (

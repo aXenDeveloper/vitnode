@@ -15,7 +15,7 @@ Live editing runs on two channels. Field locks and the shared draft are plain HT
 | Long-lived Node API server with the WebSocket                      | Live, pushed over the socket | Yes      | Co-edited                                       |
 | No WebSocket, such as [Vercel](/docs/dev/deployments/cloud/vercel) | Polled over HTTP every 10 s  | No       | One editor at a time, locked like a plain field |
 
-A form without a socket polls `GET /{id}/locks` and `GET /{id}/draft` every 10 seconds, on top of lock renewals. Every request counts against the [rate limiter](/docs/dev/advanced/rate-limiter), which is keyed by IP address. A newsroom behind one office IP can reach the default of 80 requests a minute. A refused lock request leaves the field without autosave, so raise `rateLimiter.points` if that is you.
+A form without a socket polls `GET /{id}/locks` and `GET /{id}/draft` every 10 seconds, on top of lock renewals. Every request counts against the [rate limiter](/docs/dev/advanced/rate-limiter), which is keyed by IP address: the polls against the read budget (300 a minute), lock renewals and draft saves against the write budget (60 a minute). A newsroom behind one office IP can reach the write budget. A refused lock request leaves the field without autosave, so raise `rateLimiter.write.points` if that is you.
 
 With more than one API instance, set `REDIS_URL`. Instances share presence and document updates over Redis pub/sub. Without it, editors connected to different instances do not see each other.
 

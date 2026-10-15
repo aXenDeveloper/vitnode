@@ -1,3 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type AutoFormOnSubmit,
   setFormFieldError,
@@ -11,11 +15,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink, useHrefNavigate } from "@vitnode/core/tanstack/link";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
@@ -24,9 +26,9 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import type { TopicNewSearch } from "./forum-links";
 
-import { fetchForums } from "./forum-data";
 import { useForumRejection } from "./forum-errors";
 import { FORUM_HREF, topicEditHref, topicHref } from "./forum-links";
+import { forumsQueryOptions, invalidateForumTopics } from "./forum-queries";
 import { ForumShell } from "./forum-ui";
 import {
   TOPIC_FORM_FIELDS,
@@ -34,8 +36,8 @@ import {
   type TopicCreateFormSchema,
 } from "./topic-form";
 
-const loadForumOptions = async () =>
-  (await fetchForums()).map(forum => ({
+const loadForumOptions = async (queryClient: QueryClient) =>
+  (await queryClient.query(forumsQueryOptions())).map(forum => ({
     label: `${"— ".repeat(forum.depth - 1)}${forum.name}`,
     value: String(forum.id),
   }));
@@ -48,8 +50,8 @@ const TopicNewBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<TopicNewData, TopicNewSearch>({
-  load: loadForumOptions,
+export const route = defineRoute<TopicNewData, TopicNewSearch>({
+  load: async ({ context }) => await loadForumOptions(context.queryClient),
 
   head: ({ t }) => ({
     description: t("@vitnode/forum.topics.new.desc"),
@@ -68,6 +70,8 @@ const TopicNewPage = ({
   const tErrors = useTranslations("@vitnode/forum.forums.errors");
   const rejectTopic = useForumRejection(TOPIC_FORM_FIELDS);
   const [isLeaving, setIsLeaving] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useHrefNavigate();
 
   const onSubmit: AutoFormOnSubmit<TopicCreateFormSchema> = async (
     { forum, ...values },
@@ -84,8 +88,8 @@ const TopicNewPage = ({
     if (res.status === 201) {
       const record = await res.json();
       setIsLeaving(true);
-
-      window.location.assign(
+      await invalidateForumTopics(queryClient);
+      await navigate(
         record.approval?.status === "pending" || record.slug === null
           ? topicEditHref(record.id, { submitted: true })
           : topicHref(record.slug, { created: true }),
@@ -115,12 +119,12 @@ const TopicNewPage = ({
             <EmptyDescription>{t("new.no_forums.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={FORUM_HREF}
             >
               {t("new.no_forums.action")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (

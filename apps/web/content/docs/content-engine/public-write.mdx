@@ -278,7 +278,7 @@ Each layer below holds even if the one before it has a bug:
 - **Authorization under a row lock.** An edit reads the record with `SELECT ... FOR UPDATE`, checks the owner or moderator permission, and writes in the same transaction, so the owner that was checked is the owner that is written.
 - **Relation targets.** A relation field is writable only when its target content type has a `publicApi`. On every write, each referenced record must be published and visible, otherwise the request is a `400` with the `unavailable` issue code. Missing, draft and hidden targets get the same answer.
 - **No existence leaks.** `403` is only for records the public can already read. A draft or a hidden record answers `404`, like a record that does not exist.
-- **Rate limit and captcha.** `POST` and `PATCH` requests under `/content/` share a budget of 20 per minute per IP, on top of the global limit. Set `create.captcha: true` to require a [captcha](/docs/dev/captcha) token on every create.
+- **Rate limit and captcha.** `POST` and `PATCH` requests under `/content/` share a budget of 20 per minute per IP, on top of the write budget every mutation spends. Set `create.captcha: true` to require a [captcha](/docs/dev/captcha) token on every create.
 - **Session and CSRF.** The routes use the same session cookie, CORS and CSRF origin checks as every other VitNode API route, and they accept JSON bodies only.
 
 Tune the write budget with `rateLimiter.contentWrite`. Like every rate limit, it is off when `NODE_ENV=development`:

@@ -1,11 +1,11 @@
 import type { drizzle } from "drizzle-orm/postgres-js";
-import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
 import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
 import type { NotificationWorkerSettings } from "./api/lib/notifications/preferences";
 import type { PasskeysConfig } from "./api/lib/passkey-config";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
+import type { RateLimiterConfig } from "./api/middlewares/rate-limiter-config";
 import type { AIConfig } from "./api/models/ai";
 import type { EmailApiPlugin } from "./api/models/email";
 import type { EventsApiPlugin } from "./api/models/events";
@@ -138,10 +138,7 @@ export interface VitNodeApiConfig {
     storage: "redis";
   };
   plugins: BuildPluginApiReturn[];
-  rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix"> & {
-    auth?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
-    contentWrite?: Partial<Omit<IRateLimiterOptions, "keyPrefix">>;
-  };
+  rateLimiter?: RateLimiterConfig;
 
   redis?: CacheConfig;
 

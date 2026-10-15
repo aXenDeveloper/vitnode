@@ -14,6 +14,7 @@ import type { VitNodeRealtime } from "@/ws/registry";
 
 import { LocalEventsAdapter } from "@/api/adapters/events/local";
 import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
+import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { CacheModel } from "@/api/lib/cache";
 import { AIModel } from "@/api/models/ai";
 import { EmailModel } from "@/api/models/email";
@@ -498,7 +499,7 @@ export const globalMiddleware = ({
       searchIndexers: searchIndexersMetadata,
       storage,
       authorization: {
-        cookieName: authorization?.cookieName ?? "vitnode_auth",
+        cookieName: authorization?.cookieName ?? DEFAULT_SESSION_COOKIE_NAME,
         cookie_expires:
           authorization?.cookieExpires ?? 1000 * 60 * 60 * 24 * 90, // 90 days
         ssoAdapters: authorization?.ssoAdapters ?? [],

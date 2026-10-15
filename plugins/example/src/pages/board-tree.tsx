@@ -1,5 +1,7 @@
 import type { ContentContainerTreeNode } from "@vitnode/core/content";
 
+import { HrefLink } from "@vitnode/core/tanstack/link";
+
 import type { Board } from "./boards-data";
 
 import { boardHref } from "./board-search";
@@ -25,7 +27,7 @@ const BoardTreeItems = ({
   <ul className="flex flex-col gap-2">
     {nodes.map(node => (
       <li className="flex flex-col gap-2" key={node.id}>
-        <a
+        <HrefLink
           className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring flex flex-col gap-1 rounded-lg border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
           href={boardHref(node.slug)}
         >
@@ -38,7 +40,7 @@ const BoardTreeItems = ({
               {node.metadata.description}
             </span>
           ) : null}
-        </a>
+        </HrefLink>
 
         {node.children.length > 0 ? (
           <div className="border-l pl-4 md:pl-6">
