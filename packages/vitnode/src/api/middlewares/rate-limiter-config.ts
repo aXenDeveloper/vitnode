@@ -1,9 +1,5 @@
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
-/**
- * Tuning for one limiter. The store, the key prefix and the insurance limiter
- * are VitNode's to set, so they are not configurable here.
- */
 export type RateLimiterCategoryOptions = Partial<
   Pick<
     IRateLimiterOptions,
@@ -16,11 +12,9 @@ export type RateLimiterCategoryOptions = Partial<
 >;
 
 export interface RateLimiterConfig {
-  /** Sign-in, sign-up, password reset and passkey sign-in. Stacks on `write`. */
   auth?: RateLimiterCategoryOptions;
   /** @deprecated Moved to `rateLimiter.safety.blockDuration`. */
   blockDuration?: number;
-  /** Public Content Engine creates and edits. Stacks on `write`. */
   contentWrite?: RateLimiterCategoryOptions;
   /** @deprecated Moved to `rateLimiter.safety.duration`. */
   duration?: number;
@@ -28,20 +22,11 @@ export interface RateLimiterConfig {
   execEvenly?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.execEvenlyMinDelayMs`. */
   execEvenlyMinDelayMs?: number;
-  /**
-   * Gives each signed-in member their own `read`, `write` and `contentWrite`
-   * budget, so people behind one office address don't share one. Guests and
-   * invalid sessions stay keyed by address, and `safety` and `auth` always
-   * are. `false` keys every budget by address. Defaults to `true`.
-   */
   perUser?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.points`. */
   points?: number;
-  /** `GET` and `HEAD` requests. */
   read?: RateLimiterCategoryOptions;
-  /** A cap on every request, whatever its method. */
   safety?: RateLimiterCategoryOptions;
-  /** Every request that is not a read or a CORS preflight. */
   write?: RateLimiterCategoryOptions;
 }
 
@@ -69,10 +54,6 @@ export const RATE_LIMITER_DEFAULTS: Record<
   contentWrite: { points: 20, duration: 60 },
 };
 
-// `auth` and `contentWrite` keep their prefixes, so live Redis counters carry
-// over a deploy. The old single limiter's `vitnode-api-rate-limiter` is retired
-// rather than handed to `safety`: it counted a different budget, and its keys
-// expire within one window.
 export const RATE_LIMITER_KEY_PREFIXES: Record<RateLimiterCategory, string> = {
   safety: "vitnode-api-safety-rate-limiter",
   read: "vitnode-api-read-rate-limiter",
@@ -89,7 +70,6 @@ const LEGACY_OPTION_KEYS = [
   "points",
 ] as const satisfies (keyof RateLimiterCategoryOptions)[];
 
-// The budget the single limiter enforced on every request before categories.
 const LEGACY_DEFAULTS: ResolvedRateLimiterOptions = {
   points: 80,
   duration: 60,
@@ -108,8 +88,6 @@ const resolveCategory = (
     duration: options?.duration ?? defaults.duration,
   };
 
-  // Picked one by one, so nothing else on the object - a stray `keyPrefix` or
-  // `storeClient` from an untyped config - reaches a limiter's constructor.
   if (options?.blockDuration !== undefined) {
     resolved.blockDuration = options.blockDuration;
   }
@@ -123,12 +101,6 @@ const resolveCategory = (
   return resolved;
 };
 
-/**
- * Turns `rateLimiter` into complete options for every limiter. The deprecated
- * top-level keys configured a cap on every request, which is what `safety`
- * is, so they map there with the old 80-per-minute defaults - an old config
- * keeps exactly the budget it had, and `read` and `write` apply underneath.
- */
 export const resolveRateLimiterConfig = (
   config: RateLimiterConfig | undefined,
 ): Record<RateLimiterCategory, ResolvedRateLimiterOptions> => {

@@ -10,7 +10,6 @@ import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/const";
 
-/** {@link RECORD_STALE_TIME} - An article changes when an editor saves it, well inside the five minutes its HTML is cached for. */
 const POST_STALE_TIME = RECORD_STALE_TIME;
 
 const zodBlogPost = z.object({
@@ -23,7 +22,6 @@ const zodBlogPost = z.object({
 
 const all = [CONFIG_PLUGIN.pluginId] as const;
 
-/** Every key starts with the plugin id, so a prefix never reaches another plugin's entries. */
 export const blogQueryKeys = {
   all,
   post: (request: { locale: string; slug: string }) =>
@@ -74,11 +72,6 @@ const fetchBlogPost = async ({
 
 export type BlogPostAnswer = Awaited<ReturnType<typeof fetchBlogPost>>;
 
-/**
- * Whether every visitor gets this same answer. A hidden article is answered
- * only to staff, and a miss may be one they can see - reusing either across a
- * sign-in or sign-out would show the next visitor somebody else's page.
- */
 const isSharedAnswer = ({ item, resolution }: BlogPostAnswer): boolean =>
   resolution.type === "redirect" ||
   (resolution.type === "content" && !resolution.hidden && item !== null);

@@ -23,12 +23,10 @@ import { setSessionData } from "../auth/session-query";
 import { withVitNodeRoutes } from "./mount";
 import { pluginRouteSpecs } from "./specs";
 
-/** `defaultPreloadDelay`, as both `router.tsx` files set it. */
 const PRELOAD_DELAY = 250;
 
 const pageHead: PluginRoutePageHead = () => ({ meta: [] });
 
-/** A page whose module's `load` is the spy this file counts. */
 const pageWith = (
   path: string,
   load: (args: { context: PluginRouteRuntimeContext }) => unknown,
@@ -46,11 +44,6 @@ const pageWith = (
     ),
   });
 
-/**
- * An application as `router.tsx` builds one: plugin routes mounted through
- * `withVitNodeRoutes`, the query client on the router context, and the same
- * preload options - so what a hover does here is what it does on the site.
- */
 const mount = async (routes: PluginRouteDeclaration[]) => {
   const queryClient = createVitNodeQueryClient();
   const root = createRootRoute({
@@ -101,7 +94,6 @@ const mount = async (routes: PluginRouteDeclaration[]) => {
   return { queryClient, router };
 };
 
-/** Lets the router's timers and the promises they start run to the end. */
 const wait = async (ms: number) => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
@@ -119,10 +111,6 @@ describe("preloading a plugin route on intent", () => {
     vi.useRealTimers();
   });
 
-  /**
-   * The delay is what keeps a pointer sweeping down a list of topics from
-   * firing one loader - and its API reads - per link it crosses.
-   */
   it.each([
     ["does not run a loader for a hover that leaves before the delay", 249, 0],
     ["runs the loader once for a hover that rests", PRELOAD_DELAY, 1],
@@ -156,18 +144,12 @@ describe("preloading a plugin route on intent", () => {
     expect(screen.getByText("/reports: loaded")).toBeTruthy();
   });
 
-  /**
-   * `preload: false` turns off a loader, never a guard: the click still runs
-   * `requires`, and an anonymous visitor still ends up at the sign-in page
-   * without the page's `load` ever having run for them.
-   */
   it("still guards a `preload: false` route on navigation", async () => {
     const load = vi.fn(() => "secret");
     const { queryClient, router } = await mount([
       pageWith("/private", load, { preload: false, requires: "authenticated" }),
     ]);
 
-    // Read by the guard through the query cache, as the session is on the site.
     setSessionData(queryClient, { user: null } as unknown as SessionApi);
 
     fireEvent.mouseEnter(linkTo("/private"));
@@ -180,12 +162,6 @@ describe("preloading a plugin route on intent", () => {
     expect(load).not.toHaveBeenCalled();
   });
 
-  /**
-   * Why `defaultPreloadStaleTime` stays `0`: the click after a preload reruns
-   * the route's loader, and a `load` that reads through `queryClient.query`
-   * turns that rerun into a cache hit - one request for the hover and the
-   * click together, with freshness decided by the query's own `staleTime`.
-   */
   it("fetches once across the hover and the click when `load` reads through the query cache", async () => {
     const queryFn = vi.fn(async () => Promise.resolve("topic"));
 

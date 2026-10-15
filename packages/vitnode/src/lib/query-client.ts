@@ -1,21 +1,15 @@
 import type { Query, QueryClientConfig } from "@tanstack/react-query";
 
-import { QueryClient } from "@tanstack/react-query";
+import {
+  defaultShouldDehydrateQuery,
+  QueryClient,
+} from "@tanstack/react-query";
 
-/**
- * `meta` for a query whose data a route loader returns as its `loaderData`.
- *
- * The router already ships `loaderData` to the browser with the HTML, so
- * dehydrating the query as well would put the same data in the page twice. The
- * browser starts without the entry, renders from `loaderData`, and the next
- * loader run fills the cache.
- */
 export const LOADER_DATA_QUERY_META = { dehydrate: false } as const;
 
-// Every query streams to the browser - pending ones included, as the router's
-// SSR integration does by default - except the ones a loader already ships.
 const shouldDehydrateQuery = (query: Query): boolean =>
-  query.meta?.dehydrate !== false;
+  query.meta?.dehydrate !== false &&
+  (defaultShouldDehydrateQuery(query) || query.state.status === "pending");
 
 export const createVitNodeQueryClient = (
   config?: QueryClientConfig,

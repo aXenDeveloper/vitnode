@@ -27,7 +27,6 @@ export interface FlatPluginRoute {
   parentId: null | string;
   path: string;
   pendingComponent: null | React.FunctionComponent;
-  /** Resolved: the route's own setting, else its nearest layout's, else none. */
   preload: boolean | undefined;
   requires: null | PluginRouteRequirement;
   routeId: string;
@@ -177,15 +176,6 @@ const readPendingComponent = (
   return pendingComponent as React.FunctionComponent;
 };
 
-/**
- * A route's preload setting, with inheritance already applied.
- *
- * Resolved here rather than left to the router, because TanStack reads a
- * route's `preload` for that route's own loader and no other: a layout that
- * declared `false` would still let every page inside it run its loader on a
- * hover, which is not what anybody writing it on a layout means. The parent has
- * already resolved its own, so one step up is the whole chain.
- */
 const readPreload = (
   preload: unknown,
   parent: FlatPluginRoute | null,

@@ -87,10 +87,6 @@ const AUTH_RATE_LIMITED_PATHS = [
 
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
-/**
- * The limiters a request spends, in order. Anything that is not a read or a
- * preflight counts as a write, so an unusual method gets the stricter budget.
- */
 export const rateLimiterCategoriesFor = (
   method: string,
   path: string,
@@ -116,19 +112,11 @@ export const rateLimiterCategoriesFor = (
   return categories;
 };
 
-/**
- * The headers a 429 carries. A cross-origin caller reads them only when CORS
- * exposes them, so `VitNodeAPI` adds these to `exposeHeaders`.
- */
 export const RATE_LIMIT_RESPONSE_HEADERS = [
   "Retry-After",
   "X-RateLimit-Category",
 ] as const;
 
-/**
- * An app's `exposeHeaders` with the rate limit headers added, keeping the
- * app's own entries and spelling. Header names are case-insensitive.
- */
 export const exposeRateLimitHeaders = (
   exposeHeaders: readonly string[] = [],
 ): string[] => {
@@ -142,9 +130,6 @@ export const exposeRateLimitHeaders = (
   ];
 };
 
-// Spent per signed-in member when `perUser` is on. `safety` and `auth` always
-// stay per address: sign-in is anonymous, and the address cap is the one
-// protection that never depends on who the caller claims to be.
 const PER_USER_CATEGORIES = new Set<RateLimiterCategory>([
   "contentWrite",
   "read",
@@ -163,9 +148,10 @@ const ipIdentity = (c: Context): RateLimitIdentity => ({
   subject: "ip",
 });
 
-// `rateLimitKey` never returns a string starting with `user:`, so a member's
-// counters can share a limiter with addresses without colliding.
-export const userRateLimitKey = (userId: number): string => `user:${userId}`;
+const userRateLimitKey = (userId: number): string => `user:${userId}`;
+
+const rateLimiterResOf = (rejection: unknown): RateLimiterRes | undefined =>
+  rejection instanceof RateLimiterRes ? rejection : undefined;
 
 const CATEGORY_HEADER_VALUES: Record<RateLimiterCategory, string> = {
   safety: "safety",
@@ -185,10 +171,6 @@ const isDynamicSegment = (segment: string): boolean =>
   /[^\w.@-]/.test(segment) ||
   (segment.length >= 8 && /\d/.test(segment) && /[a-z]/i.test(segment));
 
-/**
- * A path with its ids, hashes, tokens and slugs swapped for `:param`, so a
- * log line names the route without naming the record or the visitor.
- */
 export const rateLimitPathTemplate = (path: string): string =>
   path
     .split("/")
@@ -196,8 +178,6 @@ export const rateLimitPathTemplate = (path: string): string =>
     .map(segment => (segment && isDynamicSegment(segment) ? ":param" : segment))
     .join("/");
 
-// The router already knows the template of a matched route. A path no route
-// matched (a scanner probing `/wp-admin`) only reaches the catch-all `*`.
 const requestPathTemplate = (c: Context): string => {
   const route = routePath(c, -1);
 
@@ -223,32 +203,11 @@ interface CategoryLimiter {
   points: number;
 }
 
-export interface RateLimiterMiddlewareOptions {
-  /** The public session cookie, to tell a member's request from a guest's. */
+interface RateLimiterMiddlewareOptions {
   sessionCookieName: string;
   storeClient?: CacheClient | null;
 }
 
-/**
- * Every limiter VitNode applies, built once, in three stages.
- *
- * - `preflight` runs before `cors()`, which answers an `OPTIONS` request
- *   without calling the next middleware. It counts the preflight against
- *   `safety` but never refuses it: a refused preflight reaches the page as an
- *   opaque network error, while the real request that follows gets a 429 that
- *   carries CORS headers and a readable `Retry-After`.
- * - `requests` runs after `cors()` and before the session is resolved. It
- *   spends `safety` and `auth` per address and, for a request with no session
- *   cookie, `read`, `write` and `contentWrite` per address too.
- * - `identified` runs after `globalMiddleware`. A request with a session
- *   cookie spends `read`, `write` and `contentWrite` here, per member when the
- *   session is valid and per address when it is not. Such a request is
- *   counted after its session lookup, so the address `safety` cap is what
- *   bounds how many lookups one address can cause.
- *
- * Each limiter is consumed at most once per request, stopping at the first
- * that refuses.
- */
 export const rateLimiterMiddleware = (
   config: RateLimiterConfig | undefined,
   { sessionCookieName, storeClient }: RateLimiterMiddlewareOptions,
@@ -300,9 +259,6 @@ export const rateLimiterMiddleware = (
     res: RateLimiterRes | undefined,
   ) => Math.ceil((res?.msBeforeNext ?? duration * 1000) / 1000);
 
-  // Only the first refusal in a window is logged, so a flood stays one line
-  // per visitor per window instead of one per request. `subject` says whether
-  // a member or an address ran out, never which one.
   const logFirstRefusal = (
     c: Context,
     limiter: CategoryLimiter,
@@ -338,7 +294,7 @@ export const rateLimiterMiddleware = (
     // `msBeforeNext` when the limit is hit. Reply with JSON (not plain text)
     // so clients that expect a JSON body don't choke while parsing, and
     // advertise when to retry via the standard `Retry-After` header.
-    const res = rejection instanceof RateLimiterRes ? rejection : undefined;
+    const res = rateLimiterResOf(rejection);
     const retryAfter = retryAfterOf(limiter, res);
     const [retryAfterHeader, categoryHeader] = RATE_LIMIT_RESPONSE_HEADERS;
 
@@ -372,8 +328,6 @@ export const rateLimiterMiddleware = (
     return undefined;
   };
 
-  // The same test `SessionModel.getUser` makes before it looks anything up:
-  // without a non-empty cookie the request is a guest's, whatever it says.
   const carriesSession = (c: Context): boolean =>
     perUser && !!getCookie(c, sessionCookieName);
 
@@ -385,13 +339,7 @@ export const rateLimiterMiddleware = (
         try {
           await limiter.limiter.consume(ipIdentity(c).key);
         } catch (rejection) {
-          logFirstRefusal(
-            c,
-            limiter,
-            "ip",
-            rejection instanceof RateLimiterRes ? rejection : undefined,
-            204,
-          );
+          logFirstRefusal(c, limiter, "ip", rateLimiterResOf(rejection), 204);
         }
       }
 

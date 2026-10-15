@@ -234,11 +234,6 @@ describe("a page cache policy", () => {
   });
 });
 
-/**
- * Carried only when it resolved to a boolean, the way `cache` is: a manifest for
- * a tree that never mentions `preload` is the manifest it was before the option
- * existed, and the router's `defaultPreload` keeps deciding for those routes.
- */
 describe("a preload setting", () => {
   it("is on the routes it resolved for, and absent from the rest", () => {
     const manifest = buildPluginRouteManifest([

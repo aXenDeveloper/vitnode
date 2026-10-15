@@ -199,10 +199,6 @@ const pluginRouteOptions = (
     ...(beforeLoad ? { beforeLoad } : {}),
 
     ...(spec.validateSearch ? { validateSearch: spec.validateSearch } : {}),
-    // Already resolved through the route's layouts, and absent when nothing
-    // declared one, so the router's `defaultPreload` and a link's own `preload`
-    // keep deciding. `false` skips only the loader during a preload: TanStack
-    // still runs `beforeLoad` - the guard above - and still fetches the chunk.
     ...(spec.route.preload === undefined
       ? {}
       : { preload: spec.route.preload }),

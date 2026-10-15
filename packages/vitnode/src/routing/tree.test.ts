@@ -587,11 +587,6 @@ describe("preload", () => {
       page("/elsewhere", { component: lazyPage() }),
     ).map(route => [route.routeId, route.preload]);
 
-  /**
-   * Inherited because TanStack reads a route's `preload` for that route's own
-   * loader only - a layout's `false` that stopped at the layout would still let
-   * every page inside it run its loader on a hover.
-   */
   it.each<
     [string, Record<string, unknown>, Record<string, unknown>, unknown[]]
   >([

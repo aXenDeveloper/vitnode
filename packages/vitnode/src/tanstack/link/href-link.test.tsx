@@ -49,7 +49,6 @@ const mount = async (ui: React.ReactNode, pathname = "/") => {
 describe("HrefLink", () => {
   it.each([
     "/forum/news?cursor=abc#comment-7",
-    // Search values reach the URL as written - not JSON-quoted (`%22123%22`).
     "/forum/create/topic?forum=123",
     "/forum/news?created=true",
   ])("renders the internal href %s as written", async href => {
@@ -80,7 +79,6 @@ describe("HrefLink", () => {
 
     const link = await screen.findByRole("link", { name: "Next" });
 
-    // `false`: the click was taken over, so the browser loads no document.
     expect(fireEvent.click(link)).toBe(false);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/forum/news");

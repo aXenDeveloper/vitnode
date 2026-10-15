@@ -150,10 +150,6 @@ export function VitNodeAPI({
     }),
   );
   app.use("*", clientIpMiddleware);
-  // `cors()` answers a preflight itself and never calls `next`, so `OPTIONS`
-  // spends its budget here or nowhere. Every 429 comes from a stage after
-  // `cors()`, so it carries CORS headers, and the exposed rate limit headers
-  // let a cross-origin page read when to retry.
   app.use("*", rateLimiter.preflight);
   app.use(
     cors({
@@ -207,8 +203,6 @@ export function VitNodeAPI({
       cacheClient: redisClient,
     }),
   );
-  // After the session lookup, so a member's reads and writes count against
-  // their own budget rather than their address's.
   app.use("*", rateLimiter.identified);
   app.use(async (c, next) => {
     if (c.req.path.includes("/admin/")) {

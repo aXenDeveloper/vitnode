@@ -82,7 +82,6 @@ const absoluteUrl = (path: string, base: string): string => {
   }
 };
 
-/** One topic by slug, `null` when there is none for this visitor. */
 const topicQueryOptions = (slug: string) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,
@@ -106,8 +105,6 @@ const topicQueryOptions = (slug: string) =>
       };
     },
     queryKey: forumQueryKeys.topic(slug),
-    // A miss may be a hidden topic a moderator can see, and a hidden one is
-    // that moderator's alone - only an answer every visitor gets is reused.
     staleTime: ({ state }) => (state.data?.shared ? TOPIC_STALE_TIME : 0),
   });
 
@@ -120,7 +117,6 @@ const loadTopic = async (
   );
 
   const [forum, thread] = await Promise.all([
-    // The trail is decoration: a forum that fails to load leaves it empty.
     queryClient.query(forumQueryOptions(String(topic.forum))).catch(() => null),
     queryClient.query(threadQueryOptions(topic.id)),
   ]);

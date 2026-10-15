@@ -55,7 +55,6 @@ const zodSubmission = z.object({
 
 type Submission = z.infer<typeof zodSubmission>;
 
-/** The viewer's own submissions, keyed by who they are so another account in this tab never reads them. */
 const pendingQueryOptions = ({
   page,
   userId,

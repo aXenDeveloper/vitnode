@@ -20,7 +20,6 @@ import { zodRelationId } from "./thread-data";
 
 const zodCommentLink = z.object({ slug: z.string(), topic: zodRelationId });
 
-/** Where a comment lives: its topic's slug and its own, `null` when there is none for this visitor. */
 const commentLinkQueryOptions = (slug: string) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,
@@ -57,7 +56,6 @@ const commentLinkQueryOptions = (slug: string) =>
       };
     },
     queryKey: forumQueryKeys.commentLink(slug),
-    // The same rule as a topic's: a miss or a hidden comment is asked again.
     staleTime: ({ state }) => (state.data?.shared ? TOPIC_STALE_TIME : 0),
   });
 

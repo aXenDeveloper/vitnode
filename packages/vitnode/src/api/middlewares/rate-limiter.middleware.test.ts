@@ -34,7 +34,6 @@ const WEB_ORIGIN = "https://web.example";
 
 const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
 
-// Budgets big enough to stay out of the way of the one a test exhausts.
 const ROOMY = { points: 100, duration: 60 };
 
 const member = (id: number): NonNullable<ContextVariableMap["user"]> => ({
@@ -59,8 +58,6 @@ const member = (id: number): NonNullable<ContextVariableMap["user"]> => ({
   timeZone: null,
 });
 
-// Just enough of node-redis for `RateLimiterRedis`: its Lua script increments
-// a key that expires with the window.
 const fakeRedis = ({ down = false } = {}) => {
   const counters = new Map<string, number>();
   const client = {
@@ -83,11 +80,6 @@ const fakeRedis = ({ down = false } = {}) => {
   return { counters, storeClient: client as unknown as CacheClient };
 };
 
-/**
- * The middleware order `VitNodeAPI` uses. A session cookie `member-<id>`
- * stands in for a valid session; any other value resolves to no user, the
- * way `globalMiddleware` treats a forged or expired one.
- */
 const buildApp = (
   config: RateLimiterConfig,
   {
@@ -394,7 +386,6 @@ describe("rateLimiterMiddleware for public content writes", () => {
     });
     const comment = "/api/@vitnode/forum/content/comments";
 
-    // Hover prefetching on a forum page spends reads fast.
     const reads = await statusesOf(
       app,
       times(7, ["GET", "/api/@vitnode/forum/content/topics/42"]),
@@ -713,8 +704,6 @@ describe("rateLimiterMiddleware with Redis", () => {
   });
 });
 
-// Configs written before the categories existed. Plain objects, the way an
-// older config file hands them over.
 describe("legacy rateLimiter config", () => {
   it.each(METHODS.filter(method => method !== "OPTIONS"))(
     "keeps a top-level cap on every request (%s)",

@@ -56,7 +56,6 @@ import {
 
 const PAGE_SIZE = 25;
 
-/** One page of a forum's topics, newest first, with each topic's comment stats. */
 const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,

@@ -197,12 +197,6 @@ describe("a plugin route module's default export", () => {
   });
 });
 
-/**
- * `preload` is a boolean on all three shapes - the setting is about a route's
- * loader, which a layout has as much as a page. The words a link or a router
- * takes (`"intent"`, `"viewport"`) are refused here before they reach
- * `flattenPluginRoutes`, which refuses them again for a tree typed as `unknown`.
- */
 describe("a route declaration's `preload`", () => {
   const component = lazy(
     async () => await Promise.resolve({ default: () => null }),
