@@ -49,11 +49,6 @@ const apiHost = (host: DevOptions["host"]): string | undefined =>
 const ownsDatabase = (project: Project) =>
   project.drizzleConfig !== null && project.hasApi;
 
-/**
- * Writes the plugin's manifest module, then keeps them in step with
- * `package.json` and the icon. A broken edit is reported and the last good
- * files stay, so the watchers keep running while it is fixed.
- */
 const watchManifest = (root: string, ui: CommandContext["ui"]) => {
   let inputs: string[];
   try {

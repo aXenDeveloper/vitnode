@@ -53,6 +53,7 @@ import {
 } from "../plugin-inventory";
 import {
   compilePluginRoutes,
+  configuredPluginsFrom,
   contentTypesFromContentModule,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
@@ -153,18 +154,15 @@ const readAppConfig = async (
   });
   const loaded = await jiti.import(configPath);
   const source = relative(appRoot, configPath);
-  const plugins = pluginsFromLoadedConfig(loaded, source);
 
   return {
     i18n: i18nFromLoadedConfig(loaded),
-    // Read only once `pluginsFromLoadedConfig` has proven the list is an array.
     inventory: pluginInventoryFromLoadedConfig(
-      (loaded as { vitNodeConfig: { plugins: unknown[] } }).vitNodeConfig
-        .plugins,
+      configuredPluginsFrom(loaded, source),
       source,
     ),
     pageCache: pageCacheConfigFromLoadedConfig(loaded),
-    plugins,
+    plugins: pluginsFromLoadedConfig(loaded, source),
   };
 };
 
@@ -538,8 +536,6 @@ const discover = async (
     WIDGETS_SUBPATH,
     resolvePackageFile,
   );
-  // Watched only: the inventory is read from the loaded config, and a plugin's
-  // rebuilt manifest module is what changes it while the dev server runs.
   const pluginManifests = readOptionalPluginModules<{
     pluginId: string;
     specifier: string;

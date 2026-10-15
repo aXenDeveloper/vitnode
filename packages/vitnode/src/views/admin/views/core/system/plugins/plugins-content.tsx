@@ -102,62 +102,58 @@ export const PluginsContent = ({ data }: PluginsContentProps) => {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <DataTableNavigationProvider value={navigation}>
-        <ContentDataTable
-          columns={[
-            {
-              id: "plugin",
-              header: t("list.plugin"),
-              className: "w-full whitespace-normal",
-              cell: ({ row }) => <PluginCell plugin={row} />,
-            },
-            {
-              id: "version",
-              header: t("list.version"),
-              cell: ({ row }) => <PluginVersion version={row.version} />,
-            },
-          ]}
-          customNoResults={
-            data.plugins.length === 0
-              ? { description: t("empty.desc"), title: t("empty.title") }
-              : {
-                  description: t("no_results.desc"),
-                  footer: (
-                    <Button
-                      onClick={() => {
-                        setSearchParams(
-                          new URLSearchParams(
-                            withTableSearch(searchParams, ""),
-                          ),
-                        );
-                      }}
-                      variant="outline"
-                    >
-                      {t("no_results.clear")}
-                    </Button>
-                  ),
-                  title: t("no_results.title"),
-                }
-          }
-          edges={pageRows}
-          id="installed-plugins"
-          order={{ defaultOrder: { column: "id", order: "asc" } }}
-          pageInfo={{
-            count: pageRows.length,
-            currentPage,
-            endCursor: null,
-            hasNextPage: currentPage < totalPages,
-            hasPreviousPage: currentPage > 1,
-            pageSize,
-            startCursor: null,
-            totalCount: rows.length,
-            totalPages,
-          }}
-          search
-          searchPlaceholder={t("search")}
-        />
-      </DataTableNavigationProvider>
-    </div>
+    <DataTableNavigationProvider value={navigation}>
+      <ContentDataTable
+        columns={[
+          {
+            id: "plugin",
+            header: t("list.plugin"),
+            className: "w-full whitespace-normal",
+            cell: ({ row }) => <PluginCell plugin={row} />,
+          },
+          {
+            id: "version",
+            header: t("list.version"),
+            cell: ({ row }) => <PluginVersion version={row.version} />,
+          },
+        ]}
+        customNoResults={
+          data.plugins.length === 0
+            ? { description: t("empty.desc"), title: t("empty.title") }
+            : {
+                description: t("no_results.desc"),
+                footer: (
+                  <Button
+                    onClick={() => {
+                      setSearchParams(
+                        new URLSearchParams(withTableSearch(searchParams, "")),
+                      );
+                    }}
+                    variant="outline"
+                  >
+                    {t("no_results.clear")}
+                  </Button>
+                ),
+                title: t("no_results.title"),
+              }
+        }
+        edges={pageRows}
+        id="installed-plugins"
+        order={{ defaultOrder: { column: "id", order: "asc" } }}
+        pageInfo={{
+          count: pageRows.length,
+          currentPage,
+          endCursor: null,
+          hasNextPage: currentPage < totalPages,
+          hasPreviousPage: currentPage > 1,
+          pageSize,
+          startCursor: null,
+          totalCount: rows.length,
+          totalPages,
+        }}
+        search
+        searchPlaceholder={t("search")}
+      />
+    </DataTableNavigationProvider>
   );
 };

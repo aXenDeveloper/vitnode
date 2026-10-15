@@ -6,11 +6,6 @@ import type { AdminScreenContext } from "../screen";
 
 import { requireAdminPermission } from "../screen";
 
-/**
- * `/admin/core/system/plugins`, as everything a TanStack Start route needs
- * and nothing a route owns.
- */
-
 export const ADMIN_PLUGINS_NAMESPACES = [
   "admin.system.plugins",
   "core.global",
@@ -21,7 +16,7 @@ export interface AdminPluginsRouteData {
   title: string;
 }
 
-export const PLUGINS_VIEW_PERMISSION = {
+const PLUGINS_VIEW_PERMISSION = {
   module: "plugins",
   permission: "can_view",
 } as const;

@@ -52,6 +52,5 @@ export const installedPluginsQueryOptions = () =>
     queryFn: async () => await fetchInstalledPlugins(),
     queryKey: installedPluginsQueryKey,
     retry: false,
-    // The list changes only when the application is rebuilt and restarted.
     staleTime: Infinity,
   });

@@ -18,8 +18,6 @@ import {
   writePluginManifest,
 } from "./write-plugin-manifest.js";
 
-// Real `fs.watchFile` polling (every 300ms), so this lives in INTEGRATION.
-
 const BLOG = { name: "@acme/blog", version: "1.0.0" };
 
 let root: string;
@@ -31,7 +29,6 @@ const write = (path: string, content: string) => {
 
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
-/** Lets the poller take its first snapshot, so the next edit is a change. */
 const settle = async () =>
   await new Promise(resolve => setTimeout(resolve, 400));
 

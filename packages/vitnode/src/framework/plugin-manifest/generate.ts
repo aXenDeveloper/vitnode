@@ -5,13 +5,10 @@ import type {
 
 import { PLUGIN_MANIFEST_ERROR_PREFIX as ERROR_PREFIX } from "../../lib/plugin-manifest.js";
 
-/** Where `vitnode build` and `vitnode dev` write a plugin's manifest, relative to its root. */
 export const PLUGIN_MANIFEST_PATH = "src/manifest.gen.ts";
 
-/** The plugin's own title and icon, written by hand - see `PluginInfo`. */
 export const PLUGIN_INFO_PATH = "src/plugin-info.ts";
 
-/** What the generated module reads from `package.json`. */
 export type PluginPackageManifest = Pick<
   PluginManifest,
   "author" | "description" | "id" | "license" | "version"
@@ -79,11 +76,6 @@ const authorFrom = (value: unknown, source: string): null | PluginAuthor => {
   };
 };
 
-/**
- * Reads the catalog's fields out of a parsed `package.json`: `name` - required,
- * it is the plugin id - and the optional `author`, `description`, `license` and `version`, `null`
- * when the package does not declare them.
- */
 export const pluginManifestFromPackageJson = (
   manifest: unknown,
   source: string,
@@ -120,15 +112,6 @@ const authorLiteral = (author: null | PluginAuthor): string =>
     url: ${literal(author.url)},
   }`;
 
-/**
- * `src/manifest.gen.ts` - what the AdminCP plugin catalog lists.
- *
- * The package's own fields as literals, plus the title and icon of the
- * plugin's `src/plugin-info.ts` when it has one. Plain data, imported by
- * both registrations - `buildPlugin({ manifest })` and
- * `buildApiPlugin({ manifest })` - so neither copies the plugin id or a
- * version by hand.
- */
 export const generatePluginManifestSource = (
   fields: PluginPackageManifest,
   { hasInfo }: { hasInfo: boolean },

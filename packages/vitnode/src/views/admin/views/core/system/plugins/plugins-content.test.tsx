@@ -58,7 +58,6 @@ const renderPlugins = (data: Partial<AdminInstalledPlugins> = {}) =>
     </IntlProvider>,
   );
 
-// The table's search box is debounced, and navigates in an async transition.
 const search = async (value: string) => {
   fireEvent.change(screen.getByRole("searchbox"), { target: { value } });
   await act(async () => {

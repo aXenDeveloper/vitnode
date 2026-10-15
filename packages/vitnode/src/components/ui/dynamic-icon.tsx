@@ -24,9 +24,7 @@ export const DynamicIcon = ({
   name,
   ...props
 }: DynamicIconProps & {
-  /** Shown while the icon loads. */
   fallback?: React.ReactNode;
-  /** Shown when Lucide has no icon by that name. Nothing by default. */
   missing?: React.ReactNode;
 }) => {
   const collector = React.use(LucideIconCollectorContext);

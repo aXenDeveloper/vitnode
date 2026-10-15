@@ -13,7 +13,6 @@ const AdminPluginsPage = ({
 );
 
 export const route = defineAdminRoute<AdminPluginsRouteData>({
-  // `head` after `load`, always.
   load: async ({ context, t }) =>
     await loadAdminPluginsRoute({ ...context, t }),
   head: ({ loaderData }) => ({ ...loaderData }),

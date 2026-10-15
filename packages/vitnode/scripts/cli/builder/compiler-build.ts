@@ -203,10 +203,6 @@ export const prepareRegistryStep = (project: Project, ui: Ui) => {
   }
 };
 
-/**
- * Writes `src/manifest.gen.ts` from the plugin's `package.json` and
- * `src/plugin-info.ts`, before tsdown and `tsc` resolve the import of it.
- */
 export const prepareManifestStep = (project: Project, ui: Ui) => {
   if (!definesPlugin(project.root)) return;
 

@@ -164,7 +164,6 @@ export interface EnvVariablesVitNode {
       locales: LocaleConfig[];
       sources: MessagesSource[];
     };
-    /** Every configured plugin once, for AdminCP → System → Plugins. */
     installedPlugins: InstalledPluginRegistry;
     metadata: {
       shortTitle?: string;

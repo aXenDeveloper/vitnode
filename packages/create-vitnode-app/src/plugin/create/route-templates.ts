@@ -3,7 +3,6 @@ export const routeSlugFor = (pluginName: string): string =>
     ? pluginName.slice(pluginName.indexOf("/") + 1)
     : pluginName;
 
-/** The plugin's AdminCP title - `@acme/my-blog` becomes `My Blog`. */
 export const pluginTitleFor = (pluginName: string): string =>
   routeSlugFor(pluginName)
     .split(/[^A-Za-z0-9]+/)
@@ -11,20 +10,9 @@ export const pluginTitleFor = (pluginName: string): string =>
     .map(part => `${part[0].toUpperCase()}${part.slice(1)}`)
     .join(" ") || pluginName;
 
-/**
- * `src/plugin-info.ts` - how AdminCP → System → Plugins shows the plugin.
- *
- * Written by hand and kept by the build: `vitnode build` imports it into the
- * generated `manifest.gen.ts` next to the version and description it
- * reads from `package.json`.
- */
 export const pluginInfoTemplate = (pluginName: string): string =>
   `import type { PluginInfo } from "@vitnode/core/lib/plugin-manifest";
 
-/**
- * How AdminCP → System → Plugins shows this plugin. \`icon\` is a Lucide icon
- * name - https://lucide.dev/icons.
- */
 export const pluginInfo: PluginInfo = {
   title: ${JSON.stringify(pluginTitleFor(pluginName))},
   icon: "puzzle",

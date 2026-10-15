@@ -7,7 +7,6 @@ import type {
 import { assertPluginManifest } from "../../lib/plugin-manifest.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "../plugin-routes/diagnostics.js";
 
-/** Where the manifest a configured plugin registers comes from. */
 export const PLUGIN_MANIFEST_SUBPATH = "manifest.gen";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -69,10 +68,6 @@ const manifestFrom = (
   return manifest;
 };
 
-/**
- * Every plugin the app's loaded `vitnode.config.ts` registers, with the
- * manifest its registration carries - and nothing else from it.
- */
 export const pluginInventoryFromLoadedConfig = (
   plugins: readonly unknown[],
   source: string,

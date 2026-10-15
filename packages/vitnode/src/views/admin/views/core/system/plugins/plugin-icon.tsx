@@ -2,11 +2,6 @@ import { PuzzleIcon } from "lucide-react";
 
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 
-/**
- * The plugin's Lucide icon, or a puzzle piece while it loads, when the plugin
- * names none and when Lucide has no icon by that name. Decorative, because the
- * title sits right next to it.
- */
 export const PluginIcon = ({ icon }: { icon: null | string }) => {
   const fallback = <PuzzleIcon className="size-5" />;
 

@@ -113,17 +113,6 @@ export interface VitNodeApiConfig {
     adapter?: EventsApiPlugin;
   };
 
-  /**
-   * The plugins the web app registers in `vitnode.config.ts`, as its build
-   * generates them into `src/plugin-inventory.gen.ts` - metadata only, no
-   * frontend code.
-   *
-   * The API cannot see the web app's configuration, so this is how
-   * AdminCP → System → Plugins lists frontend-only plugins and spots a web
-   * build and an API running different versions. Leave it out for an API
-   * deployed without that web build: the catalog then lists the API's own
-   * plugins and says the frontend is unknown.
-   */
   frontendPlugins?: FrontendPluginInventory;
 
   i18n?: VitNodeApiI18nConfig;

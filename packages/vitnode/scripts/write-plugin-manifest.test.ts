@@ -58,7 +58,6 @@ const pluginAt = (manifest: Record<string, unknown>) => {
 
 const BLOG = { description: "Posts", name: "@acme/blog", version: "1.0.0" };
 
-/** What the generated module exports, evaluated for real. */
 const generated = async (root: string): Promise<unknown> => {
   const module = (await import(join(root, PLUGIN_MANIFEST_PATH))) as {
     manifest: unknown;

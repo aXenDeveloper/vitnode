@@ -5,7 +5,6 @@ import { manifest } from "@/manifest";
 
 const registrationSchema = z
   .object({
-    /** `null` when this side registered the plugin without a known version. */
     version: z.string().nullable(),
   })
   .nullable();
@@ -23,13 +22,11 @@ export const listPluginsAdminRoute = buildRoute({
           "application/json": {
             schema: z.object({
               core: z.object({ version: z.string() }),
-              /** Whether the API was given the web build's plugin inventory. */
               frontendInventory: z.boolean(),
               plugins: z.array(
                 z.object({
                   id: z.string(),
                   title: z.string(),
-                  /** A Lucide icon name, `null` for the default icon. */
                   icon: z.string().nullable(),
                   description: z.string().nullable(),
                   version: z.string().nullable(),

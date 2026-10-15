@@ -30,8 +30,6 @@ export const POSTGRES_URL =
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin(), forumApiPlugin()],
   contentModules,
-  // What this web build registers in `vitnode.config.ts`, so AdminCP →
-  // System → Plugins lists frontend-only plugins and version mismatches.
   frontendPlugins,
   storage: {
     image: {

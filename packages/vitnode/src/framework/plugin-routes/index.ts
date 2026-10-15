@@ -46,6 +46,7 @@ export {
 
 export {
   assertPluginId,
+  configuredPluginsFrom,
   pluginIdsFromLoadedConfig,
   pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
