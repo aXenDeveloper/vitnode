@@ -9,6 +9,7 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 
 import { contentModules } from './content-modules.gen'
 import { appMessages } from './locales/app'
+import { frontendPlugins } from './plugin-inventory.gen'
 import { vitNodeConfig } from './vitnode.config'
 
 config({ quiet: true })
@@ -29,6 +30,9 @@ export const POSTGRES_URL =
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin(), forumApiPlugin()],
   contentModules,
+  // What this web build registers in `vitnode.config.ts`, so AdminCP →
+  // System → Plugins lists frontend-only plugins and version mismatches.
+  frontendPlugins,
   storage: {
     image: {
       quality: 85,

@@ -100,6 +100,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],
+      plugins: ["can_view"],
       notifications: [
         "can_view",
         { permission: "can_edit", dependsOn: ["can_view"] },

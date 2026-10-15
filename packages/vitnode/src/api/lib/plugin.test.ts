@@ -255,3 +255,21 @@ describe("buildApiPlugin public content URLs", () => {
     ).toEqual([]);
   });
 });
+
+describe("buildApiPlugin metadata", () => {
+  it("refuses metadata generated for another package", () => {
+    expect(() =>
+      buildApiPlugin({
+        metadata: {
+          description: null,
+          id: "@vitnode/blog",
+          title: "Blog",
+          version: "1.0.0",
+        },
+        pluginId: "@vitnode/example",
+      }),
+    ).toThrow(
+      /^\[VitNode plugin metadata\] buildApiPlugin\(\) registers the plugin "@vitnode\/example" with the metadata of "@vitnode\/blog"/,
+    );
+  });
+});

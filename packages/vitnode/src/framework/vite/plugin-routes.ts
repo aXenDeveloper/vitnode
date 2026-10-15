@@ -14,6 +14,7 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { FrontendPluginInventoryEntry } from "../../lib/plugin-metadata";
 import type { ResolvedPageCacheConfig } from "../../page-cache/config";
 import type { ResolvedPageCacheRoute } from "../../page-cache/resolve";
 import type { ResolvedAdminNavModule } from "../admin-nav";
@@ -45,6 +46,11 @@ import {
   generatePackageMessagesSource,
   resolvePackageMessagesModules,
 } from "../package-messages";
+import {
+  generatePluginInventorySource,
+  PLUGIN_METADATA_SUBPATH,
+  pluginInventoryFromLoadedConfig,
+} from "../plugin-inventory";
 import {
   compilePluginRoutes,
   contentTypesFromContentModule,
@@ -107,6 +113,8 @@ const pathsFor = (appRoot: string) => ({
 
   pageCache: join(appRoot, "src", "page-cache.gen.ts"),
 
+  pluginInventory: join(appRoot, "src", "plugin-inventory.gen.ts"),
+
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
 
   staleManifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
@@ -130,6 +138,7 @@ export const resolverFor = (appRoot: string) => {
 
 interface AppConfig {
   i18n: LocaleRoutePathsConfig | undefined;
+  inventory: FrontendPluginInventoryEntry[];
   pageCache: ResolvedPageCacheConfig;
   plugins: PackageMessagesSource[];
 }
@@ -143,11 +152,19 @@ const readAppConfig = async (
     moduleCache: false,
   });
   const loaded = await jiti.import(configPath);
+  const source = relative(appRoot, configPath);
+  const plugins = pluginsFromLoadedConfig(loaded, source);
 
   return {
     i18n: i18nFromLoadedConfig(loaded),
+    // Read only once `pluginsFromLoadedConfig` has proven the list is an array.
+    inventory: pluginInventoryFromLoadedConfig(
+      (loaded as { vitNodeConfig: { plugins: unknown[] } }).vitNodeConfig
+        .plugins,
+      source,
+    ),
     pageCache: pageCacheConfigFromLoadedConfig(loaded),
-    plugins: pluginsFromLoadedConfig(loaded, relative(appRoot, configPath)),
+    plugins,
   };
 };
 
@@ -472,7 +489,7 @@ const discover = async (
 ) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
-  const { i18n, pageCache, plugins } = await readAppConfig(
+  const { i18n, inventory, pageCache, plugins } = await readAppConfig(
     appRoot,
     paths.config,
   );
@@ -521,6 +538,12 @@ const discover = async (
     WIDGETS_SUBPATH,
     resolvePackageFile,
   );
+  // Watched only: the inventory is read from the loaded config, and a plugin's
+  // rebuilt metadata module is what changes it while the dev server runs.
+  const pluginMetadata = readOptionalPluginModules<{
+    pluginId: string;
+    specifier: string;
+  }>(pluginIds, PLUGIN_METADATA_SUBPATH, resolvePackageFile);
   const remainingPluginIds = pluginIds.filter(
     id => !pluginWidgets.modules.some(m => m.pluginId === id),
   );
@@ -542,6 +565,7 @@ const discover = async (
     ...coreBlocks.watch,
     ...pluginBlocks.watch,
     ...contentModules.map(({ file }) => file),
+    ...pluginMetadata.watch,
   ];
 
   onLoaded?.(watch);
@@ -590,6 +614,7 @@ const discover = async (
     contentRegistry: contentRegistry.modules,
     hostRoutes,
     i18n,
+    inventory,
     packageMessages,
     pageCache,
     pageCacheRoutes,
@@ -618,7 +643,7 @@ type DiscoveredRoutes = Omit<
   pageCacheRoutes: ResolvedPageCacheRoute[];
 };
 
-/** All eight generated files, from one discovery pass. */
+/** All nine generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -634,6 +659,7 @@ const writeGenerated = async (
     contentRegistry,
     hostRoutes,
     i18n,
+    inventory,
     packageMessages,
     pageCache,
     pageCacheRoutes,
@@ -662,6 +688,10 @@ const writeGenerated = async (
     writeIfChanged(
       paths.pageCache,
       generatePageCacheSource(pageCacheRouteTable(pageCacheRoutes)),
+    ),
+    writeIfChanged(
+      paths.pluginInventory,
+      generatePluginInventorySource(inventory),
     ),
     removeIfPresent(paths.staleManifest),
   ]);

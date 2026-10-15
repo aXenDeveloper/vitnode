@@ -17,6 +17,7 @@ import { eventContent } from "@/database/events";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
 import { tagContent } from "@/database/tags";
+import { pluginMetadata } from "@/plugin-metadata.gen";
 
 import { widgets } from "./widgets";
 import "@/api/lib/events";
@@ -24,6 +25,7 @@ import "@/api/lib/events";
 export const exampleApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    metadata: pluginMetadata,
     aiActions: [articleExcerptAiAction],
     blocks: widgets,
     editablePages: [settingsPage],

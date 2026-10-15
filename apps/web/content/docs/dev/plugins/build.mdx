@@ -76,6 +76,10 @@ Declarations are written from every file `tsconfig.build.json` includes. That ma
 
 You don't need `isolatedDeclarations` or explicit return types. Inferred types come out the same as `tsc` would write them.
 
+## Generated metadata
+
+Before compiling, `vitnode build` also writes `src/plugin-metadata.gen.ts` and `src/plugin-icon.gen.ts` from the plugin's `package.json`: its name, version, description, and the `vitnode.title` and `vitnode.icon` fields. `vitnode dev` writes them on start and again whenever `package.json` or the icon changes. They are what the [AdminCP plugin catalog](/docs/dev/plugins/catalog) shows, so commit them with the rest of `src`.
+
 ## What a plugin package needs
 
 | File                  | Why                                                                                     |

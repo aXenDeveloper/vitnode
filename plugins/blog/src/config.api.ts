@@ -8,10 +8,12 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { categoryContent } from "@/database/categories";
 import { postContent } from "@/database/posts";
+import { pluginMetadata } from "@/plugin-metadata.gen";
 
 export const blogApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    metadata: pluginMetadata,
     aiActions: blogAiActions,
     modules: [
       adminModule,

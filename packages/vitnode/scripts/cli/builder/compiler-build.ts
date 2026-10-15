@@ -7,7 +7,11 @@ import type { MeasuredFile } from "./output-files";
 import type { TsdownApi } from "./package-build";
 
 import { writePluginApiRegistry } from "../../write-plugin-api-registry";
-import { errorMessage, RuntimeError } from "../errors";
+import {
+  definesPlugin,
+  writePluginMetadata,
+} from "../../write-plugin-metadata";
+import { ConfigError, errorMessage, RuntimeError } from "../errors";
 import { importFromProject, resolveBin } from "../project/packages";
 import { runProcess } from "../project/processes";
 import { captureProcessOutput } from "../ui/capture-output";
@@ -197,6 +201,21 @@ export const prepareRegistryStep = (project: Project, ui: Ui) => {
   if (writePluginApiRegistry(project.root)) {
     ui.success("API registry generated");
   }
+};
+
+/**
+ * Writes `src/plugin-metadata.gen.ts` and `src/plugin-icon.gen.ts` from the
+ * plugin's `package.json`, before tsdown and `tsc` resolve the imports of them.
+ */
+export const prepareMetadataStep = (project: Project, ui: Ui) => {
+  if (!definesPlugin(project.root)) return;
+
+  try {
+    writePluginMetadata(project.root);
+  } catch (error) {
+    throw new ConfigError(errorMessage(error), { cause: error });
+  }
+  ui.success("Plugin metadata generated");
 };
 
 /** Every file under `dir`, as measured output, for the compiler builds. */

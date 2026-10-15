@@ -3,6 +3,20 @@ export const routeSlugFor = (pluginName: string): string =>
     ? pluginName.slice(pluginName.indexOf("/") + 1)
     : pluginName;
 
+/** The plugin's AdminCP title - `@acme/my-blog` becomes `My Blog`. */
+export const pluginTitleFor = (pluginName: string): string =>
+  routeSlugFor(pluginName)
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map(part => `${part[0].toUpperCase()}${part.slice(1)}`)
+    .join(" ") || pluginName;
+
+/**
+ * The icon `package.json` names as `vitnode.icon`, copied with the rest of
+ * `copy-of-vitnode-plugin/root`.
+ */
+export const PLUGIN_ICON_PATH = "assets/icon.svg";
+
 export const pluginConstTemplate = (pluginName: string): string =>
   `export const CONFIG_PLUGIN = {
   pluginId: "${pluginName}" as const,
@@ -151,11 +165,15 @@ export const pluginVariableName = (pluginName: string): string => {
 /**
  * `src/config.tsx` - what an application registers.
  *
- * The routes, the locale files and the messages, and nothing else. `routes` is
- * the same tree `routes.ts` exports, handed on unchanged: an app on Vite reads
- * that file directly at build time and an app that registers the plugin the
- * ordinary way reads it through here, so the two paths cannot describe
- * different routes.
+ * The routes, the locale files, the messages and the package metadata, and
+ * nothing else. `plugin-metadata.gen.ts` and `plugin-icon.gen.ts` are written
+ * from `package.json` by `vitnode build` and `vitnode dev`, so the version the
+ * AdminCP shows is never typed by hand.
+ *
+ * `routes` is the same tree `routes.ts` exports, handed on unchanged: an app on
+ * Vite reads that file directly at build time and an app that registers the
+ * plugin the ordinary way reads it through here, so the two paths cannot
+ * describe different routes.
  *
  * `localeFiles` is the same list as the barrel above it, spelled as specifiers
  * rather than as loaders: an app's build writes its own loaders from it, and a
@@ -167,11 +185,14 @@ export const pluginConfigTemplate = (pluginName: string): string =>
 import { CONFIG_PLUGIN } from "@/const";
 
 import messages from "./locales";
+import { pluginMetadata } from "./plugin-metadata.gen";
 import { routes } from "./routes";
 
 export const ${pluginVariableName(pluginName)} = () =>
   buildPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    metadata: pluginMetadata,
+    icon: async () => await import("./plugin-icon.gen"),
     localeFiles: {
       en: "${pluginName}/locales/en.json",
     },
@@ -229,12 +250,14 @@ export const pluginApiConfigTemplate = (pluginName: string): string =>
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { CONFIG_PLUGIN } from "@/const";
+import { pluginMetadata } from "@/plugin-metadata.gen";
 
 import { helloModule } from "./api/modules/hello/hello.module";
 
 export const ${pluginApiVariableName(pluginName)} = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    metadata: pluginMetadata,
     modules: [helloModule],
   });
 

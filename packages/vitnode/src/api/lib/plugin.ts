@@ -9,6 +9,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
+import type { PluginMetadata } from "@/lib/plugin-metadata";
 
 import { BlockError } from "@/blocks/errors";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/content/registry";
 import { contentDefinitionOf } from "@/content/server/model";
 import { contentReportTarget } from "@/content/server/report-target";
+import { assertPluginMetadataId } from "@/lib/plugin-metadata";
 
 import type { SearchIndexer } from "../models/search";
 import type { AnyAiActionDefinition } from "./ai/action";
@@ -64,6 +66,8 @@ export interface BuildPluginApiReturn<
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
   messages?: LocaleMessagesMap;
+  /** What the AdminCP plugin catalog lists - see `buildApiPlugin({ metadata })`. */
+  metadata?: PluginMetadata;
   moderation?: Required<ModerationPluginConfig>;
   modules: Modules;
   navigation?: NavigationPresetDeclaration[];
@@ -91,6 +95,7 @@ export function buildApiPlugin<
   editablePages,
   pluginId,
   messages,
+  metadata,
   moderation,
   modules = [] as unknown as Modules,
   navigation,
@@ -102,6 +107,12 @@ export function buildApiPlugin<
   blocks?: BlockPluginSource;
   editablePages?: AnyEditablePageDefinition[];
   messages?: LocaleMessagesMap;
+  /**
+   * `pluginMetadata` from the plugin's generated `src/plugin-metadata.gen.ts`:
+   * the title, description and installed version AdminCP → System → Plugins
+   * lists. Without it the plugin is listed by id with an unknown version.
+   */
+  metadata?: PluginMetadata;
   moderation?: ModerationPluginConfig;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
@@ -112,6 +123,7 @@ export function buildApiPlugin<
 }): BuildPluginApiReturn<P, Modules> {
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
+  assertPluginMetadataId(pluginId, metadata, "buildApiPlugin()");
 
   if (blocks && blocks.pluginId !== pluginId) {
     throw new BlockError(
@@ -222,6 +234,7 @@ export function buildApiPlugin<
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
     messages,
+    metadata,
     modules,
     navigation,
     hono,

@@ -9,10 +9,12 @@ import { CONFIG_PLUGIN } from "@/const";
 import { forumContainers } from "@/content/forums";
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
+import { pluginMetadata } from "@/plugin-metadata.gen";
 
 export const forumApiPlugin = () =>
   buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    metadata: pluginMetadata,
     navigation: [{ href: "/forum", icon: "messages-square", id: "forum" }],
     modules: [
       adminModule,

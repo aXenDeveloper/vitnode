@@ -37,6 +37,7 @@ const INTEGRATION = [
   "scripts/cli/commands/plugin.test.ts",
   "scripts/cli/commands/start.test.ts",
   "scripts/cli/dev/package-watch.test.ts",
+  "scripts/watch-plugin-metadata.test.ts",
 ];
 
 export default defineConfig({

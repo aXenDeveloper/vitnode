@@ -6,6 +6,11 @@ import type { ProcessGroup } from "../project/processes";
 import type { Project } from "../project/project";
 
 import { writePluginApiRegistry } from "../../write-plugin-api-registry";
+import {
+  definesPlugin,
+  watchPluginMetadata,
+  writePluginMetadata,
+} from "../../write-plugin-metadata";
 import { createDatabaseServices } from "../db/database";
 import { prepareDevelopmentDatabase } from "../db/prepare";
 import { openUrl } from "../dev/open-url";
@@ -16,6 +21,7 @@ import {
   runWatchers,
   toProcess,
 } from "../dev/watchers";
+import { ConfigError, errorMessage } from "../errors";
 import { loadConfiguredPluginIds } from "../plugins/discover";
 import { resolveFromProject } from "../project/packages";
 import { detectProject } from "../project/project";
@@ -44,6 +50,32 @@ const ownsDatabase = (project: Project) =>
   project.drizzleConfig !== null && project.hasApi;
 
 /**
+ * Writes the plugin's metadata modules, then keeps them in step with
+ * `package.json` and the icon. A broken edit is reported and the last good
+ * files stay, so the watchers keep running while it is fixed.
+ */
+const watchMetadata = (root: string, ui: CommandContext["ui"]) => {
+  let inputs: string[];
+  try {
+    inputs = writePluginMetadata(root).inputs;
+  } catch (error) {
+    throw new ConfigError(errorMessage(error), { cause: error });
+  }
+  ui.success("Plugin metadata generated");
+
+  return watchPluginMetadata({
+    inputs,
+    onChange: () => {
+      ui.success("Plugin metadata regenerated from package.json");
+    },
+    onError: error => {
+      ui.error(errorMessage(error));
+    },
+    root,
+  });
+};
+
+/**
  * `vitnode dev` - the development environment for whatever this folder is.
  *
  * - An app: database bootstrap (when it owns the schema), then Vite.
@@ -66,17 +98,26 @@ export const runDevCommand = async (
     resolveFromProject(project.root, "tsdown");
     if (writePluginApiRegistry(project.root))
       ui.success("API registry generated");
+    const metadata = definesPlugin(project.root)
+      ? watchMetadata(project.root, ui)
+      : null;
     ui.info(
       "Watching sources - apps using this plugin reload as dist/ changes",
     );
     ui.line();
 
-    return runWatchers({
-      group: deps.group,
-      processes: packageWatchers().map(watcher => toProcess(project, watcher)),
-      signals,
-      ui,
-    });
+    try {
+      return await runWatchers({
+        group: deps.group,
+        processes: packageWatchers().map(watcher =>
+          toProcess(project, watcher),
+        ),
+        signals,
+        ui,
+      });
+    } finally {
+      metadata?.close();
+    }
   }
 
   ui.header("Development");

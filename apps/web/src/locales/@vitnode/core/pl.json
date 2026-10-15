@@ -27,6 +27,8 @@
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "Wyświetlanie użycia, ustawień i historii AI",
   "@vitnode/core:ai:can_manage": "Zarządzanie ustawieniami, modelami, cenami i dostępem AI",
+  "@vitnode/core:plugins": "Wtyczki",
+  "@vitnode/core:plugins:can_view": "Przeglądanie zainstalowanych wtyczek i ich wersji",
   "@vitnode/core:queue": "Zadania w kolejce",
   "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
   "@vitnode/core:roles": "Role",
@@ -310,6 +312,7 @@
           "files": "Pliki",
           "integrations": "Integracje",
           "navigation": "Nawigacja",
+          "plugins": "Wtyczki",
           "title": "System"
         },
         "user_bar": {
@@ -850,6 +853,29 @@
           "desc": "Aktualizacje na żywo i powiadomienia wysyłane do połączonych klientów w czasie rzeczywistym.",
           "title": "WebSocket"
         }
+      },
+      "plugins": {
+        "core": "Rdzeń VitNode",
+        "count_label": "Zainstalowane wtyczki",
+        "desc": "Wszystkie wtyczki skonfigurowane w tej aplikacji i wersje, których używa.",
+        "empty": {
+          "desc": "Dodaj wtyczkę do vitnode.config.ts lub vitnode.api.config.ts, a pojawi się tutaj po następnym buildzie.",
+          "title": "Brak zainstalowanych wtyczek"
+        },
+        "frontend_unknown": {
+          "desc": "To API nie otrzymało inwentarza wtyczek z buildu aplikacji webowej, więc wtyczki zarejestrowane tylko w vitnode.config.ts nie są widoczne, a wersji nie da się porównać. Przekaż frontendPlugins do buildApiConfig, aby je uwzględnić.",
+          "title": "Widoczne są tylko wtyczki API"
+        },
+        "mismatch": "Niezgodne wersje: aplikacja webowa używa {frontend}, a API {api}. Przebuduj i wdróż oba tak, aby były zgodne.",
+        "no_description": "Brak opisu.",
+        "no_results": {
+          "clear": "Wyczyść wyszukiwanie",
+          "desc": "Spróbuj nazwy wtyczki, jej ID pakietu lub słowa z opisu.",
+          "title": "Żadna wtyczka nie pasuje do wyszukiwania"
+        },
+        "search": "Szukaj wtyczek...",
+        "title": "Wtyczki",
+        "version_unknown": "Nieznana wersja"
       }
     },
     "user": {
