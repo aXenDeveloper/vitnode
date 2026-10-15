@@ -1,15 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { PluginIconLoader } from "@/lib/plugin-metadata";
 
 import type {
   AdminInstalledPlugin,
@@ -22,6 +14,7 @@ const plugin = (
   overrides: Partial<AdminInstalledPlugin> = {},
 ): AdminInstalledPlugin => ({
   description: "Posts and categories",
+  icon: null,
   id: "@acme/blog",
   registrations: {
     api: { version: "1.0.0" },
@@ -45,10 +38,7 @@ const forum = plugin({
   versionMismatch: true,
 });
 
-const renderPlugins = (
-  data: Partial<AdminInstalledPlugins> = {},
-  icons: Record<string, PluginIconLoader | undefined> = {},
-) =>
+const renderPlugins = (data: Partial<AdminInstalledPlugins> = {}) =>
   render(
     <IntlProvider locale="en" messages={{}} timeZone="UTC">
       <QueryClientProvider
@@ -63,7 +53,6 @@ const renderPlugins = (
             plugins: [plugin(), forum],
             ...data,
           }}
-          icons={icons}
         />
       </QueryClientProvider>
     </IntlProvider>,
@@ -144,21 +133,10 @@ describe("PluginsContent", () => {
     },
   );
 
-  it("shows the default icon when the plugin ships none", () => {
-    const { container } = renderPlugins({ plugins: [plugin()] });
+  it("shows the default icon for a plugin that names none", () => {
+    const { container } = renderPlugins({ plugins: [plugin({ icon: null })] });
 
-    expect(container.querySelector("img")).toBeNull();
-  });
-
-  it("shows the plugin's own icon from its loader", async () => {
-    const icon = "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=";
-    const { container } = renderPlugins(
-      { plugins: [plugin()] },
-      { "@acme/blog": async () => await Promise.resolve({ default: icon }) },
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("img")?.getAttribute("src")).toBe(icon);
-    });
+    expect(screen.getByText("Blog")).toBeTruthy();
+    expect(container.querySelector("svg.lucide-puzzle")).not.toBeNull();
   });
 });

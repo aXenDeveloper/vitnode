@@ -10,7 +10,6 @@ export const forumPlugin = () =>
   buildPlugin({
     ...CONFIG_PLUGIN,
     metadata: pluginMetadata,
-    icon: async () => await import("./plugin-icon.gen"),
     localeFiles: {
       en: "@vitnode/forum/locales/en.json",
     },

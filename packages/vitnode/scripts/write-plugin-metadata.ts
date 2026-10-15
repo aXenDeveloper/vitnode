@@ -1,29 +1,27 @@
 import {
   existsSync,
   readFileSync,
-  realpathSync,
-  statSync,
   unwatchFile,
   watchFile,
   writeFileSync,
 } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { join, relative } from "node:path";
 
 import {
-  generatePluginIconSource,
   generatePluginMetadataSource,
-  PLUGIN_ICON_PATH,
+  PLUGIN_INFO_PATH,
   PLUGIN_METADATA_PATH,
-  pluginIconDataUrl,
   pluginMetadataFromManifest,
 } from "../src/framework/plugin-metadata/generate.js";
 import { CORE_PLUGIN_ID } from "../src/framework/plugin-routes/core.js";
-import { PLUGIN_METADATA_ERROR_PREFIX as ERROR_PREFIX } from "../src/lib/plugin-metadata.js";
 
 export interface PluginMetadataWrite {
-  /** Whether either generated file changed on disk. */
+  /** Whether the generated file changed on disk. */
   changed: boolean;
-  /** The files the output depends on: `package.json`, and the icon if any. */
+  /**
+   * What the output depends on: `package.json`, and whether
+   * `src/plugin-metadata.ts` exists - watched even while it does not.
+   */
   inputs: string[];
 }
 
@@ -50,93 +48,43 @@ export const definesPlugin = (root: string): boolean => {
   );
 };
 
-const isInside = (root: string, path: string): boolean => {
-  const rel = relative(root, path);
-
-  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
-};
-
 /**
- * The declared icon, read only once it is proven to live inside the package -
- * by its path *and* by where its symlinks lead, since a published package
- * carries the file and nothing outside it.
- */
-const readIcon = (root: string, declared: string, source: string) => {
-  const path = resolve(root, declared);
-
-  if (!isInside(root, path)) {
-    throw new Error(
-      `${ERROR_PREFIX} \`vitnode.icon\` in ${source} is ${JSON.stringify(declared)}, which points outside the package. Keep the icon inside it, such as "./assets/icon.svg".`,
-    );
-  }
-
-  if (!existsSync(path) || !statSync(path).isFile()) {
-    throw new Error(
-      `${ERROR_PREFIX} \`vitnode.icon\` in ${source} is ${JSON.stringify(declared)}, and there is no file there.`,
-    );
-  }
-
-  if (!isInside(realpathSync(root), realpathSync(path))) {
-    throw new Error(
-      `${ERROR_PREFIX} \`vitnode.icon\` in ${source} is ${JSON.stringify(declared)}, a link to a file outside the package. Copy the icon into the package instead.`,
-    );
-  }
-
-  return { bytes: readFileSync(path), path };
-};
-
-const writeIfChanged = (path: string, source: string): boolean => {
-  if (existsSync(path) && readFileSync(path, "utf8") === source) return false;
-
-  writeFileSync(path, source, "utf8");
-
-  return true;
-};
-
-/**
- * `src/plugin-metadata.gen.ts` and `src/plugin-icon.gen.ts`, from the plugin's
- * own `package.json`.
+ * `src/plugin-metadata.gen.ts`, from the plugin's own `package.json` and
+ * `src/plugin-metadata.ts`.
  *
  * Synchronous and before the compilers, like the API registry: `tsc` and tsdown
- * must find both modules on their first pass. A file is only rewritten when its
- * bytes change, so an edit to an unrelated `package.json` field - a new
- * dependency - rebuilds nothing.
+ * must find the module on their first pass. The title and icon are imported
+ * from `src/plugin-metadata.ts` rather than copied, so editing them rebuilds
+ * like any other source; this only rewrites the file when the package fields
+ * change or that module appears or disappears - an edit to an unrelated
+ * `package.json` field, such as a new dependency, rebuilds nothing.
  */
 export const writePluginMetadata = (
   root: string = process.cwd(),
 ): PluginMetadataWrite => {
   const manifestPath = join(root, "package.json");
+  const infoPath = join(root, PLUGIN_INFO_PATH);
   const source = relative(process.cwd(), manifestPath) || "package.json";
-  const { icon, metadata } = pluginMetadataFromManifest(
+  const metadata = pluginMetadataFromManifest(
     JSON.parse(readFileSync(manifestPath, "utf8")) as unknown,
     source,
   );
-  const iconFile = icon === null ? null : readIcon(root, icon, source);
-  // Both checked before either file is written, so a broken icon never leaves
-  // new metadata next to a stale icon.
-  const iconSource = generatePluginIconSource(
-    icon === null || iconFile === null
-      ? null
-      : pluginIconDataUrl(icon, iconFile.bytes, source),
-  );
+  const path = join(root, PLUGIN_METADATA_PATH);
+  const output = generatePluginMetadataSource(metadata, {
+    hasInfo: existsSync(infoPath),
+  });
+  const changed = !existsSync(path) || readFileSync(path, "utf8") !== output;
 
-  const changedMetadata = writeIfChanged(
-    join(root, PLUGIN_METADATA_PATH),
-    generatePluginMetadataSource(metadata),
-  );
-  const changedIcon = writeIfChanged(join(root, PLUGIN_ICON_PATH), iconSource);
+  if (changed) writeFileSync(path, output, "utf8");
 
-  return {
-    changed: changedMetadata || changedIcon,
-    inputs: [manifestPath, ...(iconFile === null ? [] : [iconFile.path])],
-  };
+  return { changed, inputs: [manifestPath, infoPath] };
 };
 
 const POLL_MS = 300;
 
 /**
  * Regenerates the metadata while `vitnode dev` runs, whenever `package.json`
- * or the declared icon changes.
+ * changes or `src/plugin-metadata.ts` is created or deleted.
  *
  * Polled rather than `fs.watch`ed: editors and package managers replace
  * `package.json` instead of writing into it, which ends a native watcher. Only

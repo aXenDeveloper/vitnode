@@ -4,7 +4,7 @@ import type {
 } from "@/lib/plugin-metadata";
 
 import { CONFIG_PLUGIN } from "@/config";
-import { assertPluginMetadataId } from "@/lib/plugin-metadata";
+import { assertPluginMetadata } from "@/lib/plugin-metadata";
 
 /** One side's registration of a plugin, as far as the catalog cares. */
 export interface InstalledPluginRegistration {
@@ -14,6 +14,8 @@ export interface InstalledPluginRegistration {
 
 export interface InstalledPlugin {
   description: null | string;
+  /** A Lucide icon name, or `null` for the default icon. */
+  icon: null | string;
   id: string;
   registrations: {
     api: InstalledPluginRegistration | null;
@@ -55,7 +57,7 @@ const byId = (
       );
     }
 
-    assertPluginMetadataId(id, metadata ?? undefined, `The ${side} config`);
+    assertPluginMetadata(id, metadata ?? undefined, `The ${side} config`);
     map.set(id, { metadata });
   }
 
@@ -109,6 +111,7 @@ export const buildInstalledPluginRegistry = ({
 
       return {
         description: metadata?.description ?? null,
+        icon: metadata?.icon ?? null,
         id,
         registrations: {
           api: registrationOf(fromApi),

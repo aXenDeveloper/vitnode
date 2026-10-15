@@ -30,6 +30,8 @@ export const listPluginsAdminRoute = buildRoute({
                 z.object({
                   id: z.string(),
                   title: z.string(),
+                  /** A Lucide icon name, `null` for the default icon. */
+                  icon: z.string().nullable(),
                   description: z.string().nullable(),
                   version: z.string().nullable(),
                   versionMismatch: z.boolean(),

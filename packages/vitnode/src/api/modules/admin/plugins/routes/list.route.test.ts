@@ -19,6 +19,7 @@ const installedPlugins = buildInstalledPluginRegistry({
     {
       metadata: {
         description: "Posts and categories",
+        icon: "newspaper",
         id: "@acme/blog",
         title: "Blog",
         version: "2.0.0",
@@ -31,6 +32,7 @@ const installedPlugins = buildInstalledPluginRegistry({
       id: "@acme/blog",
       metadata: {
         description: "Posts and categories",
+        icon: "newspaper",
         id: "@acme/blog",
         title: "Blog",
         version: "1.0.0",

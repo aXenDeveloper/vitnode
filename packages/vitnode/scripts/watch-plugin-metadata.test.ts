@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  PLUGIN_ICON_PATH,
+  PLUGIN_INFO_PATH,
   PLUGIN_METADATA_PATH,
 } from "../src/framework/plugin-metadata/generate.js";
 import {
@@ -20,7 +20,6 @@ import {
 
 // Real `fs.watchFile` polling (every 300ms), so this lives in INTEGRATION.
 
-const SVG = '<svg xmlns="http://www.w3.org/2000/svg"/>';
 const BLOG = { name: "@acme/blog", version: "1.0.0" };
 
 let root: string;
@@ -49,7 +48,6 @@ const watch = async () => {
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "vitnode-plugin-metadata-watch-"));
   mkdirSync(join(root, "src"));
-  mkdirSync(join(root, "assets"));
   write("package.json", JSON.stringify(BLOG));
 });
 
@@ -59,36 +57,41 @@ afterEach(() => {
 });
 
 describe("watchPluginMetadata", () => {
-  it("regenerates when package.json changes, then follows a newly declared icon", async () => {
+  it("regenerates when package.json changes and when src/plugin-metadata.ts comes and goes", async () => {
     const { onChange, onError } = await watch();
+    const importsInfo = () => read(PLUGIN_METADATA_PATH).includes("pluginInfo");
 
-    write("assets/icon.svg", SVG);
-    write(
-      "package.json",
-      JSON.stringify({ ...BLOG, vitnode: { icon: "./assets/icon.svg" } }),
-    );
+    write("package.json", JSON.stringify({ ...BLOG, version: "2.0.0" }));
     await vi.waitFor(
       () => {
-        expect(read(PLUGIN_ICON_PATH)).toContain("data:image/svg+xml");
+        expect(read(PLUGIN_METADATA_PATH)).toContain('"2.0.0"');
       },
       { timeout: 5000 },
     );
-    expect(onChange).toHaveBeenCalled();
     await settle();
 
-    write("assets/icon.svg", `${SVG}\n`);
+    write(PLUGIN_INFO_PATH, 'export const pluginInfo = { icon: "newspaper" };');
     await vi.waitFor(
       () => {
-        expect(read(PLUGIN_ICON_PATH)).toContain(
-          Buffer.from(`${SVG}\n`).toString("base64"),
-        );
+        expect(importsInfo()).toBe(true);
       },
       { timeout: 5000 },
     );
+    await settle();
+
+    rmSync(join(root, PLUGIN_INFO_PATH));
+    await vi.waitFor(
+      () => {
+        expect(importsInfo()).toBe(false);
+      },
+      { timeout: 5000 },
+    );
+
+    expect(onChange).toHaveBeenCalledTimes(3);
     expect(onError).not.toHaveBeenCalled();
   });
 
-  it("reports a broken edit, keeps the last files, and recovers", async () => {
+  it("reports a broken edit, keeps the last file, and recovers", async () => {
     const { onChange, onError } = await watch();
     const metadata = read(PLUGIN_METADATA_PATH);
 

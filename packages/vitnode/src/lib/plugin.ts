@@ -11,9 +11,9 @@ import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
 import type { LocaleFilesMap, LocaleMessagesMap } from "./i18n/types";
-import type { PluginIconLoader, PluginMetadata } from "./plugin-metadata";
+import type { PluginMetadata } from "./plugin-metadata";
 
-import { assertPluginMetadataId } from "./plugin-metadata";
+import { assertPluginMetadata } from "./plugin-metadata";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
@@ -177,12 +177,6 @@ export interface BuildPluginReturn<P extends string = string> {
   containers?: ContentContainerFrontendRegistration[];
   contentTypes?: ContentTypeFrontendRegistration[];
   /**
-   * The plugin's icon for AdminCP → System → Plugins, loaded only there:
-   * `() => import("./plugin-icon.gen")`, generated from `vitnode.icon` in
-   * `package.json`. Without it the catalog shows a default icon.
-   */
-  icon?: PluginIconLoader;
-  /**
    * Every locale file this plugin ships, as literal `*.json` specifiers an
    * app's bundler can resolve - `{ en: "@acme/blog/locales/en.json" }`.
    *
@@ -199,9 +193,9 @@ export interface BuildPluginReturn<P extends string = string> {
   messages?: LocaleMessagesMap;
   /**
    * `pluginMetadata` from the plugin's generated `src/plugin-metadata.gen.ts`:
-   * its title, description and installed version, read from `package.json` by
-   * `vitnode build`. Without it the AdminCP lists the plugin by id with an
-   * unknown version.
+   * its title and icon, and the description and installed version
+   * `vitnode build` reads from `package.json`. Without it the AdminCP lists the
+   * plugin by id with an unknown version.
    */
   metadata?: PluginMetadata;
   pluginId: P;
@@ -212,7 +206,7 @@ export interface BuildPluginReturn<P extends string = string> {
 export function buildPlugin<P extends string>(
   props: BuildPluginReturn<P>,
 ): BuildPluginReturn<P> {
-  assertPluginMetadataId(props.pluginId, props.metadata, "buildPlugin()");
+  assertPluginMetadata(props.pluginId, props.metadata, "buildPlugin()");
 
   return props;
 }

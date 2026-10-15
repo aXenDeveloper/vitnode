@@ -12,10 +12,24 @@ export const pluginTitleFor = (pluginName: string): string =>
     .join(" ") || pluginName;
 
 /**
- * The icon `package.json` names as `vitnode.icon`, copied with the rest of
- * `copy-of-vitnode-plugin/root`.
+ * `src/plugin-metadata.ts` - how AdminCP → System → Plugins shows the plugin.
+ *
+ * Written by hand and kept by the build: `vitnode build` imports it into the
+ * generated `plugin-metadata.gen.ts` next to the version and description it
+ * reads from `package.json`.
  */
-export const PLUGIN_ICON_PATH = "assets/icon.svg";
+export const pluginInfoTemplate = (pluginName: string): string =>
+  `import type { PluginInfo } from "@vitnode/core/lib/plugin-metadata";
+
+/**
+ * How AdminCP → System → Plugins shows this plugin. \`icon\` is a Lucide icon
+ * name - https://lucide.dev/icons.
+ */
+export const pluginInfo: PluginInfo = {
+  title: ${JSON.stringify(pluginTitleFor(pluginName))},
+  icon: "puzzle",
+};
+`;
 
 export const pluginConstTemplate = (pluginName: string): string =>
   `export const CONFIG_PLUGIN = {
@@ -165,10 +179,10 @@ export const pluginVariableName = (pluginName: string): string => {
 /**
  * `src/config.tsx` - what an application registers.
  *
- * The routes, the locale files, the messages and the package metadata, and
- * nothing else. `plugin-metadata.gen.ts` and `plugin-icon.gen.ts` are written
- * from `package.json` by `vitnode build` and `vitnode dev`, so the version the
- * AdminCP shows is never typed by hand.
+ * The routes, the locale files, the messages and the plugin metadata, and
+ * nothing else. `plugin-metadata.gen.ts` is written by `vitnode build` and
+ * `vitnode dev` from `package.json` and `src/plugin-metadata.ts`, so the
+ * version the AdminCP shows is never typed by hand.
  *
  * `routes` is the same tree `routes.ts` exports, handed on unchanged: an app on
  * Vite reads that file directly at build time and an app that registers the
@@ -192,7 +206,6 @@ export const ${pluginVariableName(pluginName)} = () =>
   buildPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
     metadata: pluginMetadata,
-    icon: async () => await import("./plugin-icon.gen"),
     localeFiles: {
       en: "${pluginName}/locales/en.json",
     },
@@ -371,6 +384,7 @@ export const pluginRouteScaffold = (
   "src/const.ts": pluginConstTemplate(pluginName),
   "src/locales/en.json": pluginMessagesTemplate(pluginName),
   "src/locales/index.ts": pluginMessagesBarrelTemplate(),
+  "src/plugin-metadata.ts": pluginInfoTemplate(pluginName),
   "src/pages/home-page.tsx": pluginRouteModuleTemplate(pluginName),
   "src/routes.ts": pluginRoutesTemplate(pluginName),
 });

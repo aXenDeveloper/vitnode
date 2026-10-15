@@ -9,6 +9,7 @@ const metadata = (
   overrides: Partial<PluginMetadata> = {},
 ): PluginMetadata => ({
   description: `${id} description`,
+  icon: null,
   id,
   title: `${id} title`,
   version: "1.0.0",
@@ -45,6 +46,7 @@ describe("buildInstalledPluginRegistry", () => {
 
     expect(plugin).toEqual({
       description: "@acme/blog description",
+      icon: null,
       id: "@acme/blog",
       registrations: {
         api: { version: "1.0.0" },
@@ -96,6 +98,27 @@ describe("buildInstalledPluginRegistry", () => {
     },
   );
 
+  it.each([
+    [
+      "the API's metadata first",
+      metadata("@acme/blog", { icon: "rss" }),
+      "rss",
+    ],
+    ["the frontend's when the API has no metadata", undefined, "newspaper"],
+  ])("takes the icon from %s", (_, apiMetadata, icon) => {
+    const [plugin] = buildInstalledPluginRegistry({
+      api: [{ metadata: apiMetadata, pluginId: "@acme/blog" }],
+      frontend: [
+        {
+          id: "@acme/blog",
+          metadata: metadata("@acme/blog", { icon: "newspaper" }),
+        },
+      ],
+    }).plugins;
+
+    expect(plugin?.icon).toBe(icon);
+  });
+
   it("treats a side without metadata as unknown, not a mismatch", () => {
     const [plugin] = buildInstalledPluginRegistry({
       api: [{ pluginId: "@acme/blog" }],
@@ -118,6 +141,7 @@ describe("buildInstalledPluginRegistry", () => {
 
     expect(plugin).toEqual({
       description: null,
+      icon: null,
       id: "@acme/blog",
       registrations: { api: null, frontend: { version: null } },
       title: "@acme/blog",

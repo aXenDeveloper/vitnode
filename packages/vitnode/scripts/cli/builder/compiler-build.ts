@@ -204,8 +204,8 @@ export const prepareRegistryStep = (project: Project, ui: Ui) => {
 };
 
 /**
- * Writes `src/plugin-metadata.gen.ts` and `src/plugin-icon.gen.ts` from the
- * plugin's `package.json`, before tsdown and `tsc` resolve the imports of them.
+ * Writes `src/plugin-metadata.gen.ts` from the plugin's `package.json` and
+ * `src/plugin-metadata.ts`, before tsdown and `tsc` resolve the import of it.
  */
 export const prepareMetadataStep = (project: Project, ui: Ui) => {
   if (!definesPlugin(project.root)) return;

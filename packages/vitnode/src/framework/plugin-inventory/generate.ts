@@ -3,7 +3,7 @@ import type {
   PluginMetadata,
 } from "../../lib/plugin-metadata.js";
 
-import { assertPluginMetadataId } from "../../lib/plugin-metadata.js";
+import { assertPluginMetadata } from "../../lib/plugin-metadata.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "../plugin-routes/diagnostics.js";
 
 /** Where the plugin metadata a configured plugin registers comes from. */
@@ -26,6 +26,7 @@ const metadataFrom = (
     !isRecord(value) ||
     typeof value.id !== "string" ||
     typeof value.title !== "string" ||
+    !isNullableString(value.icon) ||
     !isNullableString(value.description) ||
     !isNullableString(value.version)
   ) {
@@ -36,11 +37,12 @@ const metadataFrom = (
 
   const metadata: PluginMetadata = {
     description: value.description,
+    icon: value.icon,
     id: value.id,
     title: value.title,
     version: value.version,
   };
-  assertPluginMetadataId(pluginId, metadata, where);
+  assertPluginMetadata(pluginId, metadata, where);
 
   return metadata;
 };
@@ -96,6 +98,7 @@ const entrySource = ({ id, metadata }: FrontendPluginInventoryEntry): string =>
     metadata: {
       id: ${literal(metadata.id)},
       title: ${literal(metadata.title)},
+      icon: ${literal(metadata.icon)},
       description: ${literal(metadata.description)},
       version: ${literal(metadata.version)},
     },

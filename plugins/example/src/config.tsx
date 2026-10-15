@@ -10,7 +10,6 @@ export const examplePlugin = () =>
   buildPlugin({
     ...CONFIG_PLUGIN,
     metadata: pluginMetadata,
-    icon: async () => await import("./plugin-icon.gen"),
     localeFiles: {
       en: "@vitnode/example/locales/en.json",
     },

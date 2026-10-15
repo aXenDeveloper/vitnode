@@ -6,11 +6,7 @@ import { versionsPackageJson } from "../../create/package-versions.js";
 import { getVitnodePackageVersion } from "../../helpers/get-vitnode-package-version.js";
 import { supportedNodeRange } from "../../helpers/node-version.js";
 import { withIf } from "../../helpers/with-If.js";
-import {
-  PLUGIN_ICON_PATH,
-  pluginPackageExports,
-  pluginTitleFor,
-} from "./route-templates.js";
+import { pluginPackageExports } from "./route-templates.js";
 
 const writeJson = async (path: string, data: unknown) =>
   writeFile(path, JSON.stringify(data, null, 2));
@@ -41,10 +37,6 @@ export const createPluginPackageJSON = async ({
     name: pluginName,
     version: "0.1.0",
     description: "A VitNode plugin.",
-    vitnode: {
-      title: pluginTitleFor(pluginName),
-      icon: `./${PLUGIN_ICON_PATH}`,
-    },
     private: true,
     type: "module",
     engines: { node: supportedNodeRange },

@@ -10,7 +10,6 @@ export const blogPlugin = () =>
   buildPlugin({
     ...CONFIG_PLUGIN,
     metadata: pluginMetadata,
-    icon: async () => await import("./plugin-icon.gen"),
     localeFiles: {
       en: "@vitnode/blog/locales/en.json",
     },

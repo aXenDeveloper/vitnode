@@ -13,7 +13,5 @@ export interface PackageJSON {
   scripts?: Record<string, string>;
   type?: string;
   version?: string;
-  /** What AdminCP → System → Plugins shows for a plugin package. */
-  vitnode?: { icon?: string; title?: string };
   workspaces?: string[];
 }

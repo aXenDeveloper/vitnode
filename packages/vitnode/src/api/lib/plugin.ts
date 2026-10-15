@@ -25,7 +25,7 @@ import {
 } from "@/content/registry";
 import { contentDefinitionOf } from "@/content/server/model";
 import { contentReportTarget } from "@/content/server/report-target";
-import { assertPluginMetadataId } from "@/lib/plugin-metadata";
+import { assertPluginMetadata } from "@/lib/plugin-metadata";
 
 import type { SearchIndexer } from "../models/search";
 import type { AnyAiActionDefinition } from "./ai/action";
@@ -109,8 +109,8 @@ export function buildApiPlugin<
   messages?: LocaleMessagesMap;
   /**
    * `pluginMetadata` from the plugin's generated `src/plugin-metadata.gen.ts`:
-   * the title, description and installed version AdminCP → System → Plugins
-   * lists. Without it the plugin is listed by id with an unknown version.
+   * the title, icon, description and installed version AdminCP → System →
+   * Plugins lists. Without it the plugin is listed by id with an unknown version.
    */
   metadata?: PluginMetadata;
   moderation?: ModerationPluginConfig;
@@ -123,7 +123,7 @@ export function buildApiPlugin<
 }): BuildPluginApiReturn<P, Modules> {
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
-  assertPluginMetadataId(pluginId, metadata, "buildApiPlugin()");
+  assertPluginMetadata(pluginId, metadata, "buildApiPlugin()");
 
   if (blocks && blocks.pluginId !== pluginId) {
     throw new BlockError(

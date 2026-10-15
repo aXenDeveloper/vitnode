@@ -262,6 +262,7 @@ describe("buildApiPlugin metadata", () => {
       buildApiPlugin({
         metadata: {
           description: null,
+          icon: null,
           id: "@vitnode/blog",
           title: "Blog",
           version: "1.0.0",

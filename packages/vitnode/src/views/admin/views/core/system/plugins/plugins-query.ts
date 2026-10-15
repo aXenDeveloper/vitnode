@@ -11,6 +11,7 @@ export interface AdminPluginRegistration {
 
 export interface AdminInstalledPlugin {
   description: null | string;
+  icon: null | string;
   id: string;
   registrations: {
     api: AdminPluginRegistration | null;

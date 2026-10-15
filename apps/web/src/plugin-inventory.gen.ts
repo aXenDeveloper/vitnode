@@ -22,6 +22,7 @@ export const frontendPlugins: FrontendPluginInventory = [
     metadata: {
       id: "@vitnode/blog",
       title: "Blog",
+      icon: "newspaper",
       description: "Blog plugin for VitNode, providing a blogging platform on Hono.js.",
       version: "2.0.0-canary.13",
     },
@@ -31,6 +32,7 @@ export const frontendPlugins: FrontendPluginInventory = [
     metadata: {
       id: "@vitnode/example",
       title: "Example",
+      icon: "flask-conical",
       description: "Reference plugin exercising the VitNode Content Engine end to end.",
       version: "2.0.0-canary.13",
     },
@@ -40,6 +42,7 @@ export const frontendPlugins: FrontendPluginInventory = [
     metadata: {
       id: "@vitnode/forum",
       title: "Forum",
+      icon: "messages-square",
       description: "Community forum for VitNode: structured forums and nested threads, built on the Content Engine.",
       version: "2.0.0-canary.13",
     },

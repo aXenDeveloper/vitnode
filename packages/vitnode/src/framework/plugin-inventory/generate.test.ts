@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { FrontendPluginInventoryEntry } from "../../lib/plugin-metadata.js";
@@ -11,6 +14,7 @@ const SOURCE = "src/vitnode.config.ts";
 
 const BLOG_METADATA = {
   description: "Posts",
+  icon: "newspaper",
   id: "@acme/blog",
   title: "Blog",
   version: "1.0.0",
@@ -35,6 +39,7 @@ describe("pluginInventoryFromLoadedConfig", () => {
   it.each([
     ["a string", "Blog"],
     ["a missing title", { ...BLOG_METADATA, title: undefined }],
+    ["a missing icon", { ...BLOG_METADATA, icon: undefined }],
     ["a numeric version", { ...BLOG_METADATA, version: 1 }],
     ["an undefined description", { ...BLOG_METADATA, description: undefined }],
   ])("rejects metadata that is %s", (_, metadata) => {
@@ -59,28 +64,36 @@ describe("pluginInventoryFromLoadedConfig", () => {
 });
 
 describe("generatePluginInventorySource", () => {
+  const blog: FrontendPluginInventoryEntry = {
+    id: "@acme/blog",
+    metadata: BLOG_METADATA,
+  };
+  const shop: FrontendPluginInventoryEntry = {
+    id: "@acme/shop",
+    metadata: null,
+  };
+  const forum: FrontendPluginInventoryEntry = {
+    id: "@acme/forum",
+    metadata: { ...BLOG_METADATA, icon: null, id: "@acme/forum" },
+  };
+
   it("writes the same bytes whatever order the plugins are configured in", () => {
-    const blog: FrontendPluginInventoryEntry = {
-      id: "@acme/blog",
-      metadata: BLOG_METADATA,
-    };
-    const shop: FrontendPluginInventoryEntry = {
-      id: "@acme/shop",
-      metadata: null,
-    };
-    const forum: FrontendPluginInventoryEntry = {
-      id: "@acme/forum",
-      metadata: null,
-    };
-
-    const source = generatePluginInventorySource([shop, blog, forum]);
-
-    expect(generatePluginInventorySource([forum, shop, blog])).toBe(source);
-    expect(source.indexOf("@acme/blog")).toBeLessThan(
-      source.indexOf("@acme/forum"),
+    expect(generatePluginInventorySource([forum, shop, blog])).toBe(
+      generatePluginInventorySource([shop, blog, forum]),
     );
-    expect(source.indexOf("@acme/forum")).toBeLessThan(
-      source.indexOf("@acme/shop"),
-    );
+  });
+
+  it("evaluates to the entries, sorted by id", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vitnode-plugin-inventory-"));
+    const path = join(dir, "plugin-inventory.gen.ts");
+    writeFileSync(path, generatePluginInventorySource([shop, blog, forum]));
+
+    try {
+      const module = (await import(path)) as { frontendPlugins: unknown };
+
+      expect(module.frontendPlugins).toEqual([blog, forum, shop]);
+    } finally {
+      rmSync(dir, { force: true, recursive: true });
+    }
   });
 });

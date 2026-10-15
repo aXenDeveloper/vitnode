@@ -1,6 +1,6 @@
 ---
 title: Show a plugin in the AdminCP catalog
-description: Add a title, description and icon to package.json so AdminCP → System → Plugins lists your plugin with the version that is actually installed.
+description: Give your plugin a title and a Lucide icon so AdminCP → System → Plugins lists it with the version that is actually installed.
 icon: Puzzle
 ---
 
@@ -8,7 +8,7 @@ import { ImgDocs } from '@/components/fumadocs/img'
 
 import catalog from './admin-plugins-catalog.webp'
 
-**AdminCP → System → Plugins** lists every plugin the running application is configured with: its icon, title, package ID, description and installed version, with the VitNode core version shown separately above the list. Everything on that page comes from each plugin's own `package.json`, read at build time, so nobody types a version number by hand.
+**AdminCP → System → Plugins** lists every plugin the running application is configured with: its icon, title, package ID, description and installed version, with the VitNode core version shown separately above the list. The version and description come from each plugin's own `package.json` at build time, so nobody types a version number by hand. The title and icon come from a small file in the plugin.
 
 <ImgDocs
   src={catalog}
@@ -25,28 +25,40 @@ The catalog only reports what is installed. It does not check for updates, insta
 
 ### Describe the plugin in package.json
 
-Add a `description` and a `vitnode` field next to the `name` and `version` your package already has:
+Make sure your `package.json` has a `description` next to its `name` and `version`:
 
 ```json title="plugins/site-notes/package.json"
 {
   "name": "@acme/site-notes",
   "version": "1.2.0",
-  "description": "Pin short notes to any page of your community.",
-  "vitnode": {
-    "title": "Site Notes",
-    "icon": "./assets/icon.svg"
-  }
+  "description": "Pin short notes to any page of your community."
 }
 ```
 
-Put the icon file at `plugins/site-notes/assets/icon.svg`. Plugins created with the generator already have all of this.
+  </Step>
+  <Step>
+
+### Set the title and icon
+
+Create `src/plugin-metadata.ts` with the title and a [Lucide icon](https://lucide.dev/icons) name:
+
+```ts title="src/plugin-metadata.ts"
+import type { PluginInfo } from '@vitnode/core/lib/plugin-metadata'
+
+export const pluginInfo: PluginInfo = {
+  title: 'Site Notes',
+  icon: 'sticky-note',
+}
+```
+
+Plugins created with the generator already have this file, with the `puzzle` icon.
 
   </Step>
   <Step>
 
 ### Register the generated metadata
 
-`vitnode build` writes `src/plugin-metadata.gen.ts` and `src/plugin-icon.gen.ts` from that `package.json`. Pass them to both registrations:
+`vitnode build` writes `src/plugin-metadata.gen.ts`. It holds the `name`, `version` and `description` from `package.json` and imports the title and icon from `src/plugin-metadata.ts`. Pass it to both registrations:
 
 ```tsx title="src/config.tsx"
 import { buildPlugin } from '@vitnode/core/lib/plugin'
@@ -60,7 +72,6 @@ export const siteNotesPlugin = () =>
   buildPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
     metadata: pluginMetadata,
-    icon: async () => await import('./plugin-icon.gen'),
     routes,
   })
 ```
@@ -79,8 +90,6 @@ export const siteNotesApiPlugin = () =>
   })
 ```
 
-The icon is a lazy `import()`, so its bytes reach the browser only on the catalog page, never on your public pages.
-
   </Step>
   <Step>
 
@@ -92,7 +101,7 @@ Run the build in the plugin's folder, or keep `vitnode dev` running:
 vitnode build
 ```
 
-Both commands generate the two files before TypeScript and tsdown run. Commit them, like `types/api-registry.gen.d.ts`.
+Both commands generate the file before TypeScript and tsdown run. Commit it, like `types/api-registry.gen.d.ts`.
 
   </Step>
 </Steps>
@@ -101,25 +110,23 @@ Both commands generate the two files before TypeScript and tsdown run. Commit th
 
 Restart your app, sign in to the AdminCP and open **System → Plugins**. Your plugin shows its icon, title, `@acme/site-notes`, the description and `1.2.0`. Search matches the title, the package ID and the description.
 
-## package.json fields
+## Where each value comes from
 
-| Name            | Type   | Required | Default     | Description                                                       |
-| --------------- | ------ | -------- | ----------- | ----------------------------------------------------------------- |
-| `name`          | string | Yes      | -           | The plugin ID. It must equal the `pluginId` you register.         |
-| `version`       | string | No       | Unknown     | The installed version, exactly as published.                      |
-| `description`   | string | No       | -           | Plain text shown under the title.                                 |
-| `vitnode.title` | string | No       | `name`      | Human-readable title, shown as written in every language.         |
-| `vitnode.icon`  | string | No       | Puzzle icon | Path to an image inside the package, relative to `package.json`. |
+| Value       | Source                              | Required | Default        |
+| ----------- | ----------------------------------- | -------- | -------------- |
+| ID          | `name` in `package.json`            | Yes      | -              |
+| Version     | `version` in `package.json`         | No       | Unknown        |
+| Description | `description` in `package.json`     | No       | No description |
+| Title       | `title` in `src/plugin-metadata.ts` | No       | The ID         |
+| Icon        | `icon` in `src/plugin-metadata.ts`  | No       | Puzzle icon    |
 
-The build stops with a clear error when `vitnode.icon` is a URL, an absolute path, a path outside the package (including a symlink that leads outside), a missing file, a format other than SVG, PNG, WebP or JPEG, a file whose bytes don't match its extension, or a file over 32 KB. Icons are never fetched from the internet.
-
-The icon is inlined into `src/plugin-icon.gen.ts` as a `data:` URL, so it ships inside your compiled package and works the same in a workspace and from `node_modules`. The AdminCP draws it with an `<img>` tag, never as inline SVG markup, so an SVG icon cannot run scripts. A square icon around 48 × 48 looks best.
+The ID must equal the `pluginId` you register. Title and description are plain text, shown as written in every language. The icon is a Lucide icon name in kebab-case, such as `newspaper` or `messages-square`. `buildPlugin()` and `buildApiPlugin()` throw at startup for anything else, and an unknown name falls back to the puzzle icon. Because an icon is just a name, the API returns it too, so plugins registered only in the API show their own icon as well.
 
 ## When the metadata is regenerated
 
-- `vitnode build` regenerates both files before every build, so a published package always carries its real version.
-- `vitnode dev` regenerates them whenever `package.json` or the icon changes. A file is only rewritten when its content changes, so adding a dependency rebuilds nothing.
-- A broken edit, such as a missing icon, is reported in the terminal and the last good files stay in place.
+- `vitnode build` regenerates the file before every build, so a published package always carries its real version.
+- `vitnode dev` regenerates it whenever `package.json` changes, or `src/plugin-metadata.ts` is created or deleted. Edits inside `src/plugin-metadata.ts` need no regeneration: the generated file imports it. The file is only rewritten when its content changes, so adding a dependency rebuilds nothing.
+- A broken `package.json` edit is reported in the terminal and the last good file stays in place.
 
 The app picks up a new plugin, a removed one or a new version after it is rebuilt and restarted. Nothing is stored in the database.
 
@@ -149,7 +156,7 @@ A side that reports no version is unknown, not a mismatch.
 
 ## Older plugins
 
-Plugins registered without `metadata` keep working. The catalog lists them by plugin ID, with the default icon, "Unknown version" and "No description provided." Add the metadata when convenient.
+Plugins registered without `metadata` keep working. The catalog lists them by plugin ID, with the default icon, "Unknown version" and "No description provided." A plugin without `src/plugin-metadata.ts` gets its ID as the title and the default icon. Add either when convenient.
 
 Passing the metadata of another package throws at startup: `buildPlugin()` and `buildApiPlugin()` check that `metadata.id` equals `pluginId`.
 

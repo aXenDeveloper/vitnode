@@ -2,10 +2,6 @@
   "name": "@vitnode/blog",
   "version": "2.0.0-canary.13",
   "description": "Blog plugin for VitNode, providing a blogging platform on Hono.js.",
-  "vitnode": {
-    "title": "Blog",
-    "icon": "./assets/icon.svg"
-  },
   "author": "VitNode Team",
   "license": "MIT",
   "homepage": "https://vitnode.com",

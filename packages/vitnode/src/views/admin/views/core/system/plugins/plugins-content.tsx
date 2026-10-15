@@ -3,7 +3,6 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
-import type { PluginIconLoader } from "@/lib/plugin-metadata";
 
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
@@ -27,8 +26,6 @@ import { matchesPluginSearch } from "./plugin-search";
 
 export interface PluginsContentProps {
   data: AdminInstalledPlugins;
-  /** Each frontend registration's icon loader, by plugin id. */
-  icons: Readonly<Record<string, PluginIconLoader | undefined>>;
 }
 
 const PluginVersion = ({ version }: { version: null | string }) => {
@@ -45,19 +42,13 @@ const PluginVersion = ({ version }: { version: null | string }) => {
   );
 };
 
-const PluginRow = ({
-  icon,
-  plugin,
-}: {
-  icon: PluginIconLoader | undefined;
-  plugin: AdminInstalledPlugin;
-}) => {
+const PluginRow = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
   const t = useTranslations("admin.system.plugins");
   const { api, frontend } = plugin.registrations;
 
   return (
     <div className="flex items-start gap-3">
-      <PluginIcon id={plugin.id} load={icon} />
+      <PluginIcon icon={plugin.icon} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-medium text-pretty">{plugin.title}</span>
@@ -105,7 +96,7 @@ const PluginsSummary = ({ core, count }: { core: string; count: number }) => {
   );
 };
 
-export const PluginsContent = ({ data, icons }: PluginsContentProps) => {
+export const PluginsContent = ({ data }: PluginsContentProps) => {
   const t = useTranslations("admin.system.plugins");
   const [searchParams, setSearchParams] = React.useState(
     () => new URLSearchParams(),
@@ -181,9 +172,7 @@ export const PluginsContent = ({ data, icons }: PluginsContentProps) => {
             totalCount: rows.length,
             totalPages,
           }}
-          renderRow={({ row }) => (
-            <PluginRow icon={icons[row.id]} plugin={row} />
-          )}
+          renderRow={({ row }) => <PluginRow plugin={row} />}
           search
           searchPlaceholder={t("search")}
         />
