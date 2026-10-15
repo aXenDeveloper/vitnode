@@ -2,8 +2,8 @@ import type { z } from "zod";
 
 import type { zodSendNotificationSchema } from "@/api/modules/admin/routes/notifications.route";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import type { DashboardMutationResult } from "./dashboard-actions";
 
@@ -17,7 +17,7 @@ export const saveWidgetSettingsInBrowser = async ({
 }): Promise<DashboardMutationResult> => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { settings, widgetId } },
       method: "put",
       module: "admin/dashboard",
@@ -41,7 +41,7 @@ export const sendNotificationInBrowser = async (
 ): Promise<DashboardMutationResult> => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body },
       method: "post",
       module: "admin",

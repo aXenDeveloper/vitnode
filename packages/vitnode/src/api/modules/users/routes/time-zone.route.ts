@@ -2,14 +2,12 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { buildRoute } from "@/api/builders";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
-import { buildRoute } from "@/api/lib/route";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
 export const updateMyTimeZoneRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "put",
     description:

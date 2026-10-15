@@ -6,9 +6,8 @@ import { z } from "zod";
 
 import type { ContentId } from "@/content/ids";
 
+import { buildRoute } from "@/api/builders";
 import { checkStaffPermission } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   contentAnyIdSchema,
   contentIdKey,
@@ -57,7 +56,6 @@ const zodTranslationSourceRecord = z.object({
 });
 
 export const getTranslationSourcesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:
@@ -112,7 +110,6 @@ export const getTranslationSourcesAdminRoute = buildRoute({
 });
 
 export const saveTranslationSourcesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "put",
     description:

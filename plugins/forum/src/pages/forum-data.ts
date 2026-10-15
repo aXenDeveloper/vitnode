@@ -2,11 +2,11 @@ import { zodContentPublicPerson } from "@vitnode/core/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 export const fetchForums = async () => {
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/forums",
     path: "/",
@@ -24,7 +24,7 @@ export type Forum = Awaited<ReturnType<typeof fetchForums>>[number];
 
 export const fetchForumStats = async (): Promise<ForumStats[]> => {
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "forum",
     path: "/stats/forums",
@@ -56,7 +56,7 @@ export const fetchTopicStats = async (
   if (unique.length === 0) return [];
 
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "forum",
     path: "/stats/topics",

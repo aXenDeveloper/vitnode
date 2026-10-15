@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import type { PasskeyCeremonyFailure } from "../../passkeys/webauthn";
 import type { Passkey } from "./passkeys-query";
@@ -46,7 +46,7 @@ const failed = <Failure>(failure: Failure) => ({ failure, ok: false as const });
 export const addPasskeyInBrowser: AddPasskey = async () => {
   try {
     const optionsResponse = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "post",
       module: "users/passkeys",
       options: CREDENTIALS,
@@ -66,7 +66,7 @@ export const addPasskeyInBrowser: AddPasskey = async () => {
     if (!ceremony.ok) return failed(ceremony.failure);
 
     const verifyResponse = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { response: ceremony.response } },
       method: "post",
       module: "users/passkeys",
@@ -93,7 +93,7 @@ export const addPasskeyInBrowser: AddPasskey = async () => {
 export const renamePasskeyInBrowser: RenamePasskey = async ({ id, name }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { name }, params: { id: String(id) } },
       method: "patch",
       module: "users/passkeys",
@@ -113,7 +113,7 @@ export const renamePasskeyInBrowser: RenamePasskey = async ({ id, name }) => {
 export const deletePasskeyInBrowser: DeletePasskey = async ({ id }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { params: { id: String(id) } },
       method: "delete",
       module: "users/passkeys",

@@ -1,6 +1,6 @@
 import type { WidgetPluginSource } from "@vitnode/core/widgets";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { calloutWidget } from "./widgets/callout";
 import { featuresWidget } from "./widgets/features";
@@ -15,7 +15,7 @@ export {
 } from "./widgets/features";
 
 export const widgets = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   blocks: [calloutWidget, featuresWidget],
 } satisfies WidgetPluginSource;
 

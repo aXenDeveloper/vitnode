@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { PasswordModel } from "@/api/models/password";
 import { UserModel } from "@/api/models/user";
 import {
@@ -8,7 +8,6 @@ import {
   USER_NAME_MAX_LENGTH,
   USER_PASSWORD_MAX_LENGTH,
 } from "@/api/modules/users/credential-limits";
-import { CONFIG_PLUGIN } from "@/config";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
@@ -30,7 +29,6 @@ export const zodCreateUserAdminSchema = z.object({
 });
 
 export const createUserAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_create" },
   route: {
     method: "post",

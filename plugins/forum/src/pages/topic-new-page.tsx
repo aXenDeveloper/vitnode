@@ -22,7 +22,7 @@ import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { TopicNewSearch } from "./forum-links";
 
@@ -78,7 +78,7 @@ const TopicNewPage = ({
     form,
   ) => {
     const res = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "post",
       module: "content/topics",
       path: "/",

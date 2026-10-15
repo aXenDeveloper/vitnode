@@ -3,10 +3,28 @@ export const routeSlugFor = (pluginName: string): string =>
     ? pluginName.slice(pluginName.indexOf("/") + 1)
     : pluginName;
 
-export const pluginConstTemplate = (pluginName: string): string =>
-  `export const CONFIG_PLUGIN = {
-  pluginId: "${pluginName}" as const,
+export const pluginTitleFor = (pluginName: string): string =>
+  routeSlugFor(pluginName)
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map(part => `${part[0].toUpperCase()}${part.slice(1)}`)
+    .join(" ") || pluginName;
+
+export const pluginInfoTemplate = (pluginName: string): string =>
+  `import type { PluginInfo } from "@vitnode/core/lib/plugin-manifest";
+
+export const pluginInfo: PluginInfo = {
+  title: ${JSON.stringify(pluginTitleFor(pluginName))},
+  icon: "puzzle",
 };
+`;
+
+export const pluginApiBuildersTemplate = (): string =>
+  `import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+
+import { manifest } from "@/manifest.gen";
+
+export const { buildModule, buildRoute } = bindApiPlugin(manifest);
 `;
 
 export const pluginRoutesTemplate = (pluginName: string): string => {
@@ -14,12 +32,12 @@ export const pluginRoutesTemplate = (pluginName: string): string => {
 
   return `import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
 
-import { CONFIG_PLUGIN } from "./const";
+import { manifest } from "./manifest.gen";
 
 export const routes = definePluginRoutes([
   page("/${slug}", {
     component: lazy(() => import("./pages/home-page")),
-    messages: [\`\${CONFIG_PLUGIN.pluginId}.home\`],
+    messages: [\`\${manifest.id}.home\`],
   }),
 ]);
 `;
@@ -39,7 +57,7 @@ import { definePluginRoute } from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { useTranslations } from "use-intl";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 interface HelloMessage {
   message: string;
@@ -48,7 +66,7 @@ interface HelloMessage {
 export const route = definePluginRoute<HelloMessage>({
   load: async () => {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "hello",
       path: "/",
@@ -151,11 +169,15 @@ export const pluginVariableName = (pluginName: string): string => {
 /**
  * `src/config.tsx` - what an application registers.
  *
- * The routes, the locale files and the messages, and nothing else. `routes` is
- * the same tree `routes.ts` exports, handed on unchanged: an app on Vite reads
- * that file directly at build time and an app that registers the plugin the
- * ordinary way reads it through here, so the two paths cannot describe
- * different routes.
+ * The routes, the locale files, the messages and the plugin manifest, and
+ * nothing else. `manifest.gen.ts` is written by `vitnode build` and
+ * `vitnode dev` from `package.json` and `src/plugin-info.ts`, so the
+ * version the AdminCP shows is never typed by hand.
+ *
+ * `routes` is the same tree `routes.ts` exports, handed on unchanged: an app on
+ * Vite reads that file directly at build time and an app that registers the
+ * plugin the ordinary way reads it through here, so the two paths cannot
+ * describe different routes.
  *
  * `localeFiles` is the same list as the barrel above it, spelled as specifiers
  * rather than as loaders: an app's build writes its own loaders from it, and a
@@ -164,14 +186,13 @@ export const pluginVariableName = (pluginName: string): string => {
 export const pluginConfigTemplate = (pluginName: string): string =>
   `import { buildPlugin } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
-
 import messages from "./locales";
+import { manifest } from "./manifest.gen";
 import { routes } from "./routes";
 
 export const ${pluginVariableName(pluginName)} = () =>
   buildPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     localeFiles: {
       en: "${pluginName}/locales/en.json",
     },
@@ -185,12 +206,11 @@ export const pluginApiVariableName = (pluginName: string): string =>
 
 export const pluginApiRouteTemplate = (): string =>
   `import { z } from "@hono/zod-openapi";
-import { buildRoute } from "@vitnode/core/api/lib/route";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
+import { manifest } from "@/manifest.gen";
 
 export const helloRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",
@@ -205,19 +225,16 @@ export const helloRoute = buildRoute({
       },
     },
   },
-  handler: c => c.json({ message: \`Hello from \${CONFIG_PLUGIN.pluginId}!\` }),
+  handler: c => c.json({ message: \`Hello from \${manifest.id}!\` }),
 });
 `;
 
 export const pluginApiModuleTemplate = (): string =>
-  `import { buildModule } from "@vitnode/core/api/lib/module";
-
-import { CONFIG_PLUGIN } from "@/const";
+  `import { buildModule } from "@/api/builders";
 
 import { helloRoute } from "./hello.route";
 
 export const helloModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "hello",
   routes: [helloRoute],
 });
@@ -228,13 +245,13 @@ export const pluginApiConfigTemplate = (pluginName: string): string =>
 
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { helloModule } from "./api/modules/hello/hello.module";
 
 export const ${pluginApiVariableName(pluginName)} = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     modules: [helloModule],
   });
 
@@ -339,15 +356,16 @@ export const pluginRouteScaffold = (
   pluginName: string,
 ): Record<string, string> => ({
   "global.d.ts": pluginGlobalTypesTemplate(),
+  "src/api/builders.ts": pluginApiBuildersTemplate(),
   "src/api/modules/hello/hello.module.test.ts":
     pluginApiModuleTestTemplate(pluginName),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
   "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),
   "src/config.tsx": pluginConfigTemplate(pluginName),
-  "src/const.ts": pluginConstTemplate(pluginName),
   "src/locales/en.json": pluginMessagesTemplate(pluginName),
   "src/locales/index.ts": pluginMessagesBarrelTemplate(),
+  "src/plugin-info.ts": pluginInfoTemplate(pluginName),
   "src/pages/home-page.tsx": pluginRouteModuleTemplate(pluginName),
   "src/routes.ts": pluginRoutesTemplate(pluginName),
 });

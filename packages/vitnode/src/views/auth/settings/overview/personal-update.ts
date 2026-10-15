@@ -5,9 +5,9 @@ import type {
   UserPersonalInformation,
 } from "@/lib/user-personal-information";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface PersonalInfoPolicy {
@@ -19,7 +19,7 @@ export type PersonalInfoPolicyFetcher = () => Promise<PersonalInfoPolicy>;
 
 export const fetchPersonalInfoPolicy: PersonalInfoPolicyFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "users",
     path: "/me/policy",
@@ -60,7 +60,7 @@ export const updatePersonalInformationInBrowser: UpdatePersonalInformation =
   async input => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: input },
         method: "patch",
         module: "users",

@@ -5,9 +5,9 @@ import type {
   EditablePageSavePayload,
 } from "@/content/editor";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { EditablePageSaveRefused } from "@/content/editor";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface ModeratorPermissions {
@@ -54,7 +54,7 @@ export const pageLayoutQueryOptions = (pageId: string) =>
   queryOptions({
     queryFn: async (): Promise<EditablePageLayoutPayload | null> => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "pages",
         path: "/layout",
@@ -79,7 +79,7 @@ export const moderatorPermissionsQueryOptions = () =>
   queryOptions({
     queryFn: async (): Promise<ModeratorPermissions> => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "users",
         path: "/permissions",
@@ -130,7 +130,7 @@ export const savePageLayout = async (
   payload: EditablePageSavePayload,
 ): Promise<EditablePageLayoutPayload> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "put",
     module: "pages",
     path: "/layout",

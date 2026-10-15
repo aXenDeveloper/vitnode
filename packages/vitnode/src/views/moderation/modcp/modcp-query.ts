@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface ModcpReportsFilter {
@@ -37,7 +37,7 @@ const MODCP_ROOT = ["vitnode", "moderation"] as const;
 
 const fetchReports = async (filter: ModcpReportsFilter) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: filter },
     method: "get",
     module: "moderation",
@@ -82,7 +82,7 @@ export const modcpBoardColumnQueryOptions = (
 
 const fetchReport = async (id: number) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "get",
     module: "moderation",
@@ -105,7 +105,7 @@ export const modcpReportQueryOptions = (id: number) =>
 
 const fetchAssignees = async (id: number) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "get",
     module: "moderation",
@@ -144,7 +144,7 @@ export interface ModcpApprovalsFilter {
 
 const fetchApprovals = async (filter: ModcpApprovalsFilter) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: filter },
     method: "get",
     module: "moderation",
@@ -169,7 +169,7 @@ export const modcpApprovalsQueryOptions = (filter: ModcpApprovalsFilter) =>
 
 const fetchApprovalFilters = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "moderation",
     path: "/approvals/filters",
@@ -195,7 +195,7 @@ export const modcpApprovalFiltersQueryOptions = () =>
 
 const fetchApproval = async (id: number) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "get",
     module: "moderation",

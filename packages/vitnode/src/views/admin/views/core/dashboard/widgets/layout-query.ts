@@ -3,9 +3,9 @@ import { queryOptions } from "@tanstack/react-query";
 import type { AdminDashboardWidgetLayoutItem } from "@/database/dashboard";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   ADMIN_DASHBOARD_SCREEN,
@@ -24,7 +24,7 @@ export type DashboardLayoutFetcher = () => Promise<DashboardStoredLayout>;
 /** The stored layout, over whichever transport the host hands in. */
 export const fetchDashboardLayout: DashboardLayoutFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/dashboard",
     path: "/",
@@ -61,7 +61,7 @@ export const saveDashboardLayoutInBrowser = async ({
 }): Promise<DashboardMutationResult> => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: {
         body: {
           managed,

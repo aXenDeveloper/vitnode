@@ -1,7 +1,6 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { zodSsoConnectionsOverview } from "@/api/modules/users/sso/connections/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   findTargetUserId,
@@ -10,7 +9,6 @@ import {
 } from "../lib/target-user";
 
 export const listUserSsoAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",

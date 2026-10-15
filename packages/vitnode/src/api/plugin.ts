@@ -1,7 +1,7 @@
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 
 import { blocks } from "@/blocks/built-in";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
 import {
@@ -26,7 +26,7 @@ import { searchModule } from "./modules/search/search.module";
 import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
-  pluginId: CONFIG_PLUGIN.pluginId,
+  manifest,
   aiActions: [
     altGenerateAiAction,
     altTranslateAiAction,
@@ -100,6 +100,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],
+      plugins: ["can_view"],
       notifications: [
         "can_view",
         { permission: "can_edit", dependsOn: ["can_view"] },

@@ -1,7 +1,7 @@
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 export type NotificationsMutationResult<T> =
   | { data: T; error?: never; status?: never }
@@ -54,7 +54,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   cancelQueuedEmails: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/emails/cancel",
@@ -69,7 +69,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   deleteAll: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/delete-all",
@@ -84,7 +84,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   markEverythingRead: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/read-all",
@@ -99,7 +99,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   pause: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/pause",
@@ -114,7 +114,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   resetMemberPreferences: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/members/reset-preferences",
@@ -129,7 +129,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   resume: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/resume",
@@ -144,7 +144,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   sendTestEmail: async () => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "post",
         module: "admin/notifications",
         path: "/test-email",
@@ -159,7 +159,7 @@ export const notificationsAdminActionsInBrowser: NotificationsAdminActions = {
   updateTypePolicy: async (type, body) => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body, params: { type } },
         method: "put",
         module: "admin/notifications",

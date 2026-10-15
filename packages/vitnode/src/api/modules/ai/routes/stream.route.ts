@@ -1,15 +1,13 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { zodAiRunBody } from "@/api/lib/ai/run-schemas";
 import {
   AI_NDJSON_HEADERS,
   aiNdjsonStream,
 } from "@/api/lib/ai/stream-response";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const streamAiRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Stream a registered AI text action for the signed-in user.",
@@ -43,7 +41,6 @@ export const streamAiRoute = buildRoute({
 });
 
 export const estimateAiRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

@@ -16,7 +16,6 @@ import type {
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   contentContainerAdminHref,
   contentContainerNamespace,
@@ -29,6 +28,7 @@ import {
 } from "@/content/admin/labels";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref } from "@/content/registry";
+import { manifest } from "@/manifest";
 import { fitNamespaceList, MAX_NAMESPACES } from "@/routing";
 
 /** A resolved sub-item, as the sidebar and the search index read it. */
@@ -156,7 +156,7 @@ const core = (
 ): PermissionsStaffArgs => ({
   module,
   permission,
-  plugin: CONFIG_PLUGIN.pluginId,
+  plugin: manifest.id,
 });
 
 /** Core's own group, before the permission filter. */
@@ -175,19 +175,24 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
       icon: <ServerIcon />,
       items: [
         {
+          title: key("admin.global.nav.system.plugins"),
+          href: "/admin/core/system/plugins",
+          permission: core("plugins"),
+        },
+        {
           title: key("admin.global.nav.system.integrations"),
           href: "/admin/core/system/integrations",
           permission: core("system"),
         },
         {
-          title: key("admin.global.nav.system.navigation"),
-          href: "/admin/core/system/navigation",
-          permission: core("navigation"),
-        },
-        {
           title: key("admin.global.nav.system.files"),
           href: "/admin/core/system/files",
           permission: core("files"),
+        },
+        {
+          title: key("admin.global.nav.system.navigation"),
+          href: "/admin/core/system/navigation",
+          permission: core("navigation"),
         },
         {
           title: key("admin.global.nav.system.notifications"),

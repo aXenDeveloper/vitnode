@@ -9,6 +9,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
+import type { PluginManifest } from "@/lib/plugin-manifest";
 
 import { BlockError } from "@/blocks/errors";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/content/registry";
 import { contentDefinitionOf } from "@/content/server/model";
 import { contentReportTarget } from "@/content/server/report-target";
+import { assertPluginManifest } from "@/lib/plugin-manifest";
 
 import type { SearchIndexer } from "../models/search";
 import type { AnyAiActionDefinition } from "./ai/action";
@@ -63,6 +65,7 @@ export interface BuildPluginApiReturn<
   editablePages?: AnyEditablePageDefinition[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
+  manifest?: PluginManifest<P>;
   messages?: LocaleMessagesMap;
   moderation?: Required<ModerationPluginConfig>;
   modules: Modules;
@@ -89,7 +92,7 @@ export function buildApiPlugin<
   aiActions,
   blocks,
   editablePages,
-  pluginId,
+  manifest,
   messages,
   moderation,
   modules = [] as unknown as Modules,
@@ -101,17 +104,19 @@ export function buildApiPlugin<
   aiActions?: AnyAiActionDefinition[];
   blocks?: BlockPluginSource;
   editablePages?: AnyEditablePageDefinition[];
+  manifest: PluginManifest<P>;
   messages?: LocaleMessagesMap;
   moderation?: ModerationPluginConfig;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
   permissionStaff?: PermissionStaffConfig;
-  pluginId: P;
   searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn<P, Modules> {
+  const pluginId = manifest.id;
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
+  assertPluginManifest(pluginId, manifest, "buildApiPlugin()");
 
   if (blocks && blocks.pluginId !== pluginId) {
     throw new BlockError(
@@ -221,6 +226,7 @@ export function buildApiPlugin<
     aiActions,
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
+    manifest,
     messages,
     modules,
     navigation,

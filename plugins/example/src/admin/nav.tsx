@@ -11,7 +11,6 @@ import {
   TagIcon,
 } from "lucide-react";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { articleContentType } from "@/content/article";
 import { boardContainers } from "@/content/boards";
 import { categoryContentType } from "@/content/category";
@@ -19,6 +18,7 @@ import { discussionContentType } from "@/content/discussion";
 import { eventContentType } from "@/content/event";
 import { pageContentType } from "@/content/page";
 import { tagContentType } from "@/content/tag";
+import { manifest } from "@/manifest.gen";
 
 /** The article content type, as the sidebar reads it. */
 export const exampleArticleNav = {
@@ -58,7 +58,7 @@ export const exampleBoardsNav = {
 };
 
 export const adminNav = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   containers: [exampleBoardsNav],
   contentTypes: [
     exampleArticleNav,

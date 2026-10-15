@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import {
   ADMIN_ROLE_PERMISSIONS,
@@ -116,7 +116,7 @@ describe("the roles screen names the API's own permissions", () => {
     expect(ADMIN_ROLE_PERMISSIONS.view).toEqual({
       module: "roles",
       permission: "can_view",
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
     });
   });
 
@@ -199,6 +199,6 @@ describe("every tuple is a core permission", () => {
   ])("%s names @vitnode/core", (_name, permission) => {
     // A permission granted under core must not open a plugin's page, and the
     // reverse: a core screen naming a plugin id would check a grant nobody has.
-    expect(permission.plugin).toBe(CONFIG_PLUGIN.pluginId);
+    expect(permission.plugin).toBe(manifest.id);
   });
 });

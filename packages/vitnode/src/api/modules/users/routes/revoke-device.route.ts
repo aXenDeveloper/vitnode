@@ -2,13 +2,11 @@ import { z } from "@hono/zod-openapi";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { findUserDeviceId } from "@/api/models/user-devices";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const revokeDeviceRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description: "Sign out one of the current user's devices.",

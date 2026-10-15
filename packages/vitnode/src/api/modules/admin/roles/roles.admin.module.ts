@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { createRoleAdminRoute } from "./routes/create.route";
 import { deleteRoleAdminRoute } from "./routes/delete.route";
@@ -8,7 +7,6 @@ import { showRoleAdminRoute } from "./routes/show.route";
 import { updateRoleAdminRoute } from "./routes/update.route";
 
 export const rolesAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "roles",
   routes: [
     listRolesAdminRoute,

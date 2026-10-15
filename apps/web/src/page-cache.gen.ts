@@ -34,6 +34,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/admin/core/system/integrations' },
   { path: '/admin/core/system/navigation' },
   { path: '/admin/core/system/notifications' },
+  { path: '/admin/core/system/plugins' },
   { path: '/admin/core/users/roles' },
   { path: '/admin/core/users/:id' },
   { path: '/admin/core/ai' },

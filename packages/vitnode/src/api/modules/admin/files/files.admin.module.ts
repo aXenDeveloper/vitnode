@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import {
   deleteFileAltAdminRoute,
@@ -12,7 +11,6 @@ import { downloadFileAdminRoute } from "./routes/download.route";
 import { listFilesAdminRoute } from "./routes/list.route";
 
 export const filesAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "files",
   routes: [
     listFilesAdminRoute,

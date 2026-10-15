@@ -1,7 +1,4 @@
-import { buildModule } from "@vitnode/core/api/lib/module";
-import { buildContentAdminModule } from "@vitnode/core/content/server";
-
-import { CONFIG_PLUGIN } from "@/const";
+import { buildContentAdminModule, buildModule } from "@/api/builders";
 import { boardContainers } from "@/content/boards";
 import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
@@ -13,12 +10,10 @@ import { pageContent } from "@/database/pages";
 import { tagContent } from "@/database/tags";
 
 export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [],
   modules: [
     buildContentAdminModule({
-      pluginId: CONFIG_PLUGIN.pluginId,
       containers: [boardContainers],
       // The localized article is registered on the API side only, so its
       // generated CRUD *and* translation routes exist and its staff permissions

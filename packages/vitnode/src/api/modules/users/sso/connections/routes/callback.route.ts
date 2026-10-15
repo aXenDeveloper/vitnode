@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 import { SSO_CONNECTION_INTENTS } from "@/lib/sso-profile";
 
 import { requireSignedInUser } from "../../../passkeys/failure";
@@ -19,7 +18,6 @@ export const zodSsoConnectionCallbackSchema = z.object({
 });
 
 export const ssoConnectionCallbackRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

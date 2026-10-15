@@ -50,14 +50,12 @@ The three sections below build one real example for each.
 ### Write the route
 
 ```ts title="plugins/example/src/api/modules/articles/by-category.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 import { articleContent } from "@/database/articles";
 
 export const articlesByCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/by-category/{categoryId}",
@@ -121,14 +119,11 @@ The handler does three things:
 Put the route in a module and add the module to your API plugin:
 
 ```ts title="plugins/example/src/api/modules/articles/articles.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
-
-import { CONFIG_PLUGIN } from "@/const";
+import { buildModule } from "@/api/builders";
 
 import { articlesByCategoryRoute } from "./by-category.route";
 
 export const articlesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "articles",
   routes: [articlesByCategoryRoute],
 });
@@ -224,7 +219,6 @@ await c.get("db").transaction(async tx => {
 That is the `editorialService` (available with [`editorial`](/docs/content-engine/editorial)). It needs one extra input, `expectedVersion`: the version of the article the button's page loaded. If somebody saved the article in the meantime, the versions differ and the request fails with `409` instead of silently overwriting their work.
 
 ```ts title="plugins/example/src/api/modules/admin/routes/feature.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import {
   contentEditorialEffects,
   resolveContentActor,
@@ -233,11 +227,11 @@ import {
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 import { articleContent } from "@/database/articles";
+import { manifest } from "@/manifest.gen";
 
 export const featureArticleRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "article", permission: "can_edit" },
   route: {
     method: "post",
@@ -271,7 +265,7 @@ export const featureArticleRoute = buildRoute({
 
     const { id } = c.req.valid("param");
     const { expectedVersion } = c.req.valid("json");
-    const pluginId = CONFIG_PLUGIN.pluginId;
+    const pluginId = manifest.id;
 
     const outcome = await withHttpErrors(
       "update",
@@ -345,7 +339,7 @@ import { contentVisibilityEffects, resolveContentActor } from "@vitnode/core/con
 const { editorialService } = postContent;
 if (!editorialService) throw new Error("Articles have no editorial.");
 
-const pluginId = CONFIG_PLUGIN.pluginId;
+const pluginId = manifest.id;
 const outcome = await editorialService(c, { pluginId }).hide(703, {
   actor: resolveContentActor(c),
 });
@@ -364,17 +358,15 @@ Service methods take and return ids typed by the content type's [`idStrategy`](/
 A custom route reads an id from the URL as text. Parse it with the content type's strategy before calling a service, so a malformed id answers `400` instead of reaching the database. The example plugin's events use bigint ids:
 
 ```ts title="plugins/example/src/api/modules/events/title.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import { parseContentIdOf } from "@vitnode/core/content";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 import { eventContentType } from "@/content/event";
 import { eventContent } from "@/database/events";
 
 export const eventTitleRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/{id}/title",

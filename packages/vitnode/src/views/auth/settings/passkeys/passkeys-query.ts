@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface Passkey {
@@ -39,7 +39,7 @@ export const isPasskeysRequestError = (
 
 export const fetchPasskeys: PasskeysFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "users/passkeys",
     path: "/",

@@ -3,13 +3,13 @@ import type {
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 /** A core permission tuple. The plugin is always `@vitnode/core` here. */
 const core = (module: string, permission: string): PermissionsStaffArgs => ({
   module,
   permission,
-  plugin: CONFIG_PLUGIN.pluginId,
+  plugin: manifest.id,
 });
 
 export const ADMIN_USER_PERMISSIONS = {

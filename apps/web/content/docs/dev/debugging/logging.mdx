@@ -17,12 +17,9 @@ server's stdout. No setup, no adapter, no configuration.
 middleware, a cron job, a queue task, an event listener:
 
 ```ts title="src/api/modules/orders/routes/refund.route.ts"
-import { buildRoute } from '@vitnode/core/api/lib/route'
-
-import { CONFIG_PLUGIN } from '@/const'
+import { buildRoute } from '@/api/builders'
 
 export const refundOrderRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: { method: 'post', path: '/refund' },
   handler: async (c) => {
     await c.get('log').warn('Refund requested with no matching payment') // [!code ++]

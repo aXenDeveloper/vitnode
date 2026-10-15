@@ -6,8 +6,8 @@ import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope"
 import type { AdminUserRole } from "@/views/admin/views/core/users/list/users-query";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
@@ -59,7 +59,7 @@ export type AdminUserFetcher = (id: string) => Promise<AdminUserDetail>;
 
 export const fetchAdminUser: AdminUserFetcher = async id => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "get",
     module: "admin/users",

@@ -1,9 +1,8 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { loadAiOverview } from "@/api/lib/ai/admin-stats";
 import { localDayOf } from "@/api/lib/ai/periods";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   AI_OVERVIEW_PRESETS,
   aiMonthOf,
@@ -70,7 +69,6 @@ export const zodAiOverview = z.object({
 });
 
 export const aiOverviewAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",

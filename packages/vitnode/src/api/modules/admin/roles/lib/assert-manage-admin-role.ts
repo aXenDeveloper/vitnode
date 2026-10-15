@@ -3,10 +3,10 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
+import { manifest } from "@/manifest";
 
 const isStaffRole = async (c: Context, roleId: number): Promise<boolean> => {
   const db = c.get("db");
@@ -50,7 +50,7 @@ export const assertCanManageAdminRole = async (
 
   await assertStaffPermission(c, {
     type: "admin",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     module: "roles",
     permission,
   });

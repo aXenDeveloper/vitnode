@@ -40,8 +40,8 @@ import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
 import { checkStaffPermission } from '@vitnode/core/api/lib/check-staff-permission'
 import { z } from 'zod'
 
-import { CONFIG_PLUGIN } from '@/const'
 import { articleContentType } from '@/content/article'
+import { manifest } from '@/manifest.gen'
 
 export const articleExcerptAiAction = defineAiAction({
   id: 'article.excerpt',
@@ -77,7 +77,7 @@ export const articleExcerptAiAction = defineAiAction({
     await checkStaffPermission(c, {
       module: articleContentType.permissionModule,
       permission: 'can_edit',
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       type: 'admin',
     }),
 })
@@ -94,7 +94,7 @@ The real file turns the locale code into a language name with `Intl.DisplayNames
 ```ts title="plugins/example/src/config.api.ts"
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     aiActions: [articleExcerptAiAction], // [!code ++]
     modules: [adminModule /* ... */],
   })

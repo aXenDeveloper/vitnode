@@ -92,10 +92,13 @@ import generatedPageImage from './generated-page-image.png'
   <Folder name="plugins" defaultOpen>
     <Folder name="site-notes" defaultOpen>
       <Folder name="src" defaultOpen>
-        <Folder name="api/modules/hello">
-          <File name="hello.module.ts" />
-          <File name="hello.module.test.ts" />
-          <File name="hello.route.ts" />
+        <Folder name="api">
+          <Folder name="modules/hello">
+            <File name="hello.module.ts" />
+            <File name="hello.module.test.ts" />
+            <File name="hello.route.ts" />
+          </Folder>
+          <File name="builders.ts" />
         </Folder>
         <Folder name="locales">
           <File name="en.json" />
@@ -106,7 +109,7 @@ import generatedPageImage from './generated-page-image.png'
         </Folder>
         <File name="config.api.ts" />
         <File name="config.tsx" />
-        <File name="const.ts" />
+        <File name="plugin-info.ts" />
         <File name="routes.ts" />
       </Folder>
       <File name="package.json" />
@@ -116,7 +119,7 @@ import generatedPageImage from './generated-page-image.png'
   </Folder>
 </Files>
 
-One page at `/site-notes` whose loader calls the plugin's own `hello` endpoint, its strings, and a Vitest test for the endpoint (`pnpm test` in the plugin). The generator also registers the plugin in your apps' `vitnode.config.ts` and `vitnode.api.config.ts`, installs it and builds it.
+One page at `/site-notes` whose loader calls the plugin's own `hello` endpoint, its strings, and a Vitest test for the endpoint (`pnpm test` in the plugin). `src/plugin-info.ts` sets the plugin's title and Lucide icon for [the AdminCP plugin catalog](/docs/dev/plugins/catalog), and `src/api/builders.ts` binds `buildModule` and `buildRoute` to the plugin's generated `manifest`, so API files never spell the plugin id. The generator also registers the plugin in your apps' `vitnode.config.ts` and `vitnode.api.config.ts`, installs it and builds it.
 
 The plugin name must be a valid npm name and must not be one of core's routes: `admin`, `api`, `core`, `discover`, `files`, `login`, `notifications`, `register`, `search`, `users` or `vitnode`.
 

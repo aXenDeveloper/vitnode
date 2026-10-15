@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { PageTitle } from "@/components/ui/page-title";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { NotificationsContent } from "@/views/admin/views/core/system/notifications/notifications-content";
 import { notificationsOverviewQueryOptions } from "@/views/admin/views/core/system/notifications/notifications-query";
 import { NotificationsSettingsSheet } from "@/views/admin/views/core/system/notifications/settings-sheet";
@@ -22,12 +22,12 @@ export const AdminNotificationsRouteContent = ({
   const canEdit = useAdminPermission({
     module: NOTIFICATIONS_MODULE,
     permission: "can_edit",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
   const canManage = useAdminPermission({
     module: NOTIFICATIONS_MODULE,
     permission: "can_manage",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
 
   return (

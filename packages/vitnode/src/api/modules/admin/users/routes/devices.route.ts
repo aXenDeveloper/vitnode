@@ -1,11 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   listUserDevices,
   zodUserDeviceSchema,
 } from "@/api/models/user-devices";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   findTargetUserId,
@@ -15,7 +14,6 @@ import {
 } from "../lib/target-user";
 
 export const listUserDevicesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",

@@ -1,6 +1,5 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { passkeyFailure } from "../failure";
 import {
@@ -9,7 +8,6 @@ import {
 } from "../schema";
 
 export const passkeyAdminSignInOptionsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

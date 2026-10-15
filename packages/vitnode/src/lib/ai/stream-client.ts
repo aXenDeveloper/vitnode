@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import {
   AiRequestError,
@@ -38,7 +38,7 @@ export const streamAiAction = async ({
   const response =
     scope === "admin"
       ? await fetcherClient({
-          plugin: CONFIG_PLUGIN.pluginId,
+          plugin: manifest.id,
           args: { body },
           method: "post",
           module: "admin/ai",
@@ -46,7 +46,7 @@ export const streamAiAction = async ({
           path: "/assist/stream",
         })
       : await fetcherClient({
-          plugin: CONFIG_PLUGIN.pluginId,
+          plugin: manifest.id,
           args: { body },
           method: "post",
           module: "ai",
@@ -96,14 +96,14 @@ export const estimateAiAction = async ({
   const response =
     scope === "admin"
       ? await fetcherClient({
-          plugin: CONFIG_PLUGIN.pluginId,
+          plugin: manifest.id,
           args: { body },
           method: "post",
           module: "admin/ai",
           path: "/assist/estimate",
         })
       : await fetcherClient({
-          plugin: CONFIG_PLUGIN.pluginId,
+          plugin: manifest.id,
           args: { body },
           method: "post",
           module: "ai",

@@ -1,10 +1,9 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 import { parseEmojiIcon, serializeEmojiIcon } from "@/lib/emoji-icon";
 
@@ -36,7 +35,6 @@ export const zodUpdateRoleAdminSchema = z
   });
 
 export const updateRoleAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "roles", permission: "can_edit" },
   route: {
     method: "patch",

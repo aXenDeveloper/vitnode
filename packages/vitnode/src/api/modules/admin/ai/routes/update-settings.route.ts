@@ -1,14 +1,12 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { saveAiSettings } from "@/api/lib/ai/settings-store";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { zodAiSettings } from "../schemas";
 
 export const updateAiSettingsAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_manage" },
   route: {
     method: "put",

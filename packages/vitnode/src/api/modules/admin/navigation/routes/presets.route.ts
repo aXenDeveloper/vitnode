@@ -1,12 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 import { zodNavigationPresetSchema } from "../lib/schema";
 
 export const presetsNavigationAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "navigation", permission: "can_view" },
   route: {
     method: "get",

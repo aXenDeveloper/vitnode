@@ -129,7 +129,7 @@ import { contentDuplicateEffects, resolveContentActor } from "@vitnode/core/cont
 const { editorialService } = postContent;
 if (!editorialService) throw new Error("Articles have no editorial features.");
 
-const pluginId = CONFIG_PLUGIN.pluginId;
+const pluginId = manifest.id;
 const actor = resolveContentActor(c);
 const outcome = await editorialService(c, { pluginId }).duplicate(sourceId, {
   actor,

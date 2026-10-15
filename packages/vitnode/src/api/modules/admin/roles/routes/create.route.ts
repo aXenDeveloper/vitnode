@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 import {
   EMOJI_ICON_MAX_LENGTH,
@@ -48,7 +47,6 @@ export const zodCreateRoleAdminSchema = z.object({
 });
 
 export const createRoleAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "roles", permission: "can_create" },
   route: {
     method: "post",

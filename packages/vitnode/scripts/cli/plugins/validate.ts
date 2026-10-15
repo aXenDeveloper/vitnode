@@ -213,7 +213,7 @@ export const validatePlugin = async (
     definition = findDefinition(await importModule(configFile));
     if (definition === null) {
       fail("Plugin definition", [
-        `${show(configFile)} exports no factory returning buildPlugin({ pluginId, ... }).`,
+        `${show(configFile)} exports no factory returning buildPlugin({ manifest, ... }).`,
       ]);
     } else {
       pluginsFromLoadedConfig(

@@ -4,12 +4,12 @@ import { HTTPException } from "hono/http-exception";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
+import { buildRoute } from "@/api/builders";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
+import { manifest } from "@/manifest";
 
 import {
   permissionsStaffArgsSchema,
@@ -30,7 +30,6 @@ const tableByType = {
 } as const;
 
 export const updatePermissionsStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "patch",
     description: "Update the granted permissions of a staff entry (Admin only)",
@@ -92,7 +91,7 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
     const { type, id } = c.req.valid("param");
     await assertStaffPermission(c, {
       type: "admin",
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       module: staffPermissionModuleByType[type],
       permission: "can_edit",
     });

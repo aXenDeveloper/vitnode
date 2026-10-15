@@ -1,14 +1,12 @@
 import { z } from "@hono/zod-openapi";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
-import { buildRoute } from "../../../lib/route";
 import { zodSearchHitAuthor } from "./search.route";
 
 export const SEARCH_AUTHORS_LIMIT = 10;
 
 export const authorsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

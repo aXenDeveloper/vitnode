@@ -1,14 +1,12 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { getNotificationsOverview } from "@/api/models/notifications/admin";
 import { zodNotificationEmailMode } from "@/api/modules/notifications/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 const zodCounts = z.record(z.string(), z.number());
 
 export const getNotificationsOverviewRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "notifications", permission: "can_view" },
   route: {
     method: "get",

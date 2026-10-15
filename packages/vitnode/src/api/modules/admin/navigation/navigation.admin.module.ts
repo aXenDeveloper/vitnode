@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { createNavigationAdminRoute } from "./routes/create.route";
 import { deleteNavigationAdminRoute } from "./routes/delete.route";
@@ -9,7 +8,6 @@ import { reorderNavigationAdminRoute } from "./routes/reorder.route";
 import { updateNavigationAdminRoute } from "./routes/update.route";
 
 export const navigationAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "navigation",
   routes: [
     listNavigationAdminRoute,

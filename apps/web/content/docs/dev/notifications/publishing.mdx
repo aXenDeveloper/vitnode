@@ -76,12 +76,12 @@ import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
 import { topicReplyNotification } from '@/api/lib/notifications' // [!code ++]
 import { topicsModule } from '@/api/modules/topics/topics.module'
-import { CONFIG_PLUGIN } from '@/const'
 import messages from '@/locales/api'
+import { manifest } from '@/manifest.gen'
 
 export const forumApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     messages,
     notificationTypes: [topicReplyNotification], // [!code ++]
     modules: [topicsModule],

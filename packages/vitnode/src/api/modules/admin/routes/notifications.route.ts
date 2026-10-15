@@ -1,9 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { adminMessageNotification } from "@/api/lib/notifications/core-types";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { notificationsChannel } from "@/ws/notifications";
 
 export const zodSendNotificationSchema = z.object({
@@ -14,7 +13,6 @@ export const zodSendNotificationSchema = z.object({
 });
 
 export const sendNotificationRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   // The send-notification dashboard widget is the only caller, and its sibling
   // (`PUT /admin/dashboard/widget-settings`) is gated the same way. Without a
   // declaration the route asked only for *an* admin session, so an

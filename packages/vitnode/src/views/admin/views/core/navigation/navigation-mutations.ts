@@ -6,8 +6,8 @@ import type {
   zodUpdateNavigationSchema,
 } from "@/api/modules/admin/navigation/lib/schema";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
@@ -33,7 +33,7 @@ export const createAdminNavigation = async (
     parse: async response => (await response.json()) as { id: number },
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "post",
         module: "admin/navigation",
@@ -51,7 +51,7 @@ export const updateAdminNavigation = async (
     parse: () => true as const,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body, params: { id: String(id) } },
         method: "patch",
         module: "admin/navigation",
@@ -68,7 +68,7 @@ export const reorderAdminNavigation = async (
     parse: () => true as const,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "post",
         module: "admin/navigation",
@@ -85,7 +85,7 @@ export const deleteAdminNavigation = async (
     parse: () => true as const,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id: String(id) } },
         method: "delete",
         module: "admin/navigation",

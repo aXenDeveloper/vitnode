@@ -1,13 +1,12 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   archiveNotification,
   markAllNotificationsRead,
   markNotificationRead,
   markNotificationUnread,
 } from "@/api/models/notifications/inbox";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   requireNotificationUser,
@@ -26,7 +25,6 @@ const stateResponse = {
 } as const;
 
 export const markNotificationReadRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:
@@ -65,7 +63,6 @@ export const markNotificationReadRoute = buildRoute({
 });
 
 export const markNotificationUnreadRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Mark one notification unread again.",
@@ -84,7 +81,6 @@ export const markNotificationUnreadRoute = buildRoute({
 });
 
 export const archiveNotificationRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:
@@ -104,7 +100,6 @@ export const archiveNotificationRoute = buildRoute({
 });
 
 export const markAllNotificationsReadRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

@@ -17,11 +17,11 @@ import type {
 } from "@/views/admin/table/params";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { CONFIG_PLUGIN } from "@/config";
 import {
   OPERATIONAL_STALE_TIME,
   RECORD_STALE_TIME,
 } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
@@ -180,7 +180,7 @@ export type AdminAiOverviewFetcher = (
 
 export const fetchAdminAiOverview: AdminAiOverviewFetcher = async search => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: search },
     method: "get",
     module: "admin/ai",
@@ -202,7 +202,7 @@ export type AdminAiSettingsFetcher = () => Promise<AdminAiSettings>;
 
 export const fetchAdminAiSettings: AdminAiSettingsFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/ai",
     path: "/settings",
@@ -219,7 +219,7 @@ export type AdminAiModelsFetcher = () => Promise<{ models: AdminAiModel[] }>;
 
 export const fetchAdminAiModels: AdminAiModelsFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/ai",
     path: "/models",
@@ -238,7 +238,7 @@ export type AdminAiActionsFetcher = () => Promise<{
 
 export const fetchAdminAiActions: AdminAiActionsFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/ai",
     path: "/actions",
@@ -258,7 +258,7 @@ export type AdminAiRoleAccessFetcher = (
 export const fetchAdminAiRoleAccess: AdminAiRoleAccessFetcher =
   async roleId => {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { query: roleId === null ? {} : { roleId } },
       method: "get",
       module: "admin/ai",
@@ -283,7 +283,7 @@ export type AdminAiUserOverrideFetcher = (
 export const fetchAdminAiUserOverride: AdminAiUserOverrideFetcher =
   async userId => {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { params: { userId } },
       method: "get",
       module: "admin/ai",
@@ -307,7 +307,7 @@ export type AdminAiHistoryFetcher = (
 
 export const fetchAdminAiHistory: AdminAiHistoryFetcher = async params => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/ai",
@@ -329,7 +329,7 @@ export type AdminAiRunFetcher = (id: number) => Promise<AdminAiRunDetail>;
 
 export const fetchAdminAiRun: AdminAiRunFetcher = async id => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "get",
     module: "admin/ai",

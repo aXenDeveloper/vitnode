@@ -2,7 +2,6 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 
 import { z } from "@hono/zod-openapi";
 import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import {
   contentContainerTag,
   contentPublicListTag,
@@ -14,7 +13,7 @@ import {
 import { and, count, desc, eq, inArray, max } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 import { forumContainers } from "@/content/forums";
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
@@ -54,7 +53,6 @@ const zodLatestTopic = z.object({
 });
 
 export const forumStatsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/stats/forums",
@@ -143,7 +141,6 @@ const TOPIC_IDS = new RegExp(
 );
 
 export const topicStatsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/stats/topics",
@@ -209,7 +206,6 @@ export const topicStatsRoute = buildRoute({
 });
 
 export const topicSlugRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/topics/{id}/slug",

@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 /** What a mutation reports back. `error` is the API's own text. */
 export interface SearchIndexMutationResult {
@@ -26,7 +26,7 @@ export const rebuildSearchIndexInBrowser: RebuildSearchIndex =
   async itemType => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: itemType ? { itemType } : {} },
         method: "post",
         module: "admin/debug",
@@ -47,7 +47,7 @@ export const clearSearchCollectionInBrowser: ClearSearchCollection =
   async itemType => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { itemType } },
         method: "post",
         module: "admin/debug",

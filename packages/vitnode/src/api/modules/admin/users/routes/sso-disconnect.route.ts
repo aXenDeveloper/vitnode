@@ -1,13 +1,12 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { ssoConnectionFailure } from "@/api/modules/users/sso/connections/failure";
 import {
   zodSsoConnectionErrorSchema,
   zodSsoProviderIdParam,
 } from "@/api/modules/users/sso/connections/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -17,7 +16,6 @@ import {
 } from "../lib/target-user";
 
 export const disconnectUserSsoAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "delete",

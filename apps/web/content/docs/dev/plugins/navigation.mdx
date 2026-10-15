@@ -32,9 +32,11 @@ all a preset needs; `isOpenInNewTab` is optional and off by default.
 ```ts title="plugins/site-notes/src/config.api.ts"
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
+import { manifest } from '@/manifest.gen'
+
 export const siteNotesApiPlugin = () =>
   buildApiPlugin({
-    pluginId: '@acme/site-notes',
+    manifest,
     // [!code ++:9]
     navigation: [
       { href: '/notes', icon: 'notebook-pen', id: 'notes' },

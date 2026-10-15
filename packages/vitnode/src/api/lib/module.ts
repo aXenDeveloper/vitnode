@@ -49,6 +49,27 @@ export interface BuildModuleReturn<
   modules?: Modules;
 }
 
+export interface BuildModuleOptions<
+  P extends string,
+  M extends string,
+  Routes extends Route<P>[],
+  Modules extends BaseBuildModuleReturn<P>[],
+> {
+  contentContainers?: AnyContentContainerDefinition[];
+  contentModels?: AnyContentModel[];
+  contentTypes?: AnyContentTypeDefinition[];
+  cronJobs?: BuildCronReturn[];
+  events?: BuildEventListenerReturn[];
+  modules?: Modules;
+  name: M;
+  notificationTypes?: AnyNotificationTypeDefinition[];
+  publicContentTypes?: AnyContentTypeDefinition[];
+  queueTasks?: BuildQueueTaskReturn[];
+  routes: Routes;
+  searchIndexers?: SearchIndexer[];
+  webSockets?: BuildWebSocketReturn[];
+}
+
 export function buildModule<
   const P extends string,
   const M extends string,
@@ -69,21 +90,8 @@ export function buildModule<
   queueTasks = [],
   searchIndexers,
   webSockets = [],
-}: {
-  contentContainers?: AnyContentContainerDefinition[];
-  contentModels?: AnyContentModel[];
-  contentTypes?: AnyContentTypeDefinition[];
-  cronJobs?: BuildCronReturn[];
-  events?: BuildEventListenerReturn[];
-  modules?: Modules;
-  name: M;
-  notificationTypes?: AnyNotificationTypeDefinition[];
+}: BuildModuleOptions<P, M, Routes, Modules> & {
   pluginId: P;
-  publicContentTypes?: AnyContentTypeDefinition[];
-  queueTasks?: BuildQueueTaskReturn[];
-  routes: Routes;
-  searchIndexers?: SearchIndexer[];
-  webSockets?: BuildWebSocketReturn[];
 }): BuildModuleReturn<NoInfer<P>, M, Routes, Modules> {
   const hono = new OpenAPIHono();
 

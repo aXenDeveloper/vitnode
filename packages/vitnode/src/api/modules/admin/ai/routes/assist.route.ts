@@ -1,13 +1,11 @@
+import { buildRoute } from "@/api/builders";
 import {
   zodAiErrorBody,
   zodAiRunBody,
   zodAiRunResponse,
 } from "@/api/lib/ai/run-schemas";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const assistAiAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Run a registered AI action for the signed-in admin.",

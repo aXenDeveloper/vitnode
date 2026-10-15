@@ -20,9 +20,13 @@ export interface DynamicIconProps {
 export const DynamicIcon = ({
   className,
   fallback,
+  missing = null,
   name,
   ...props
-}: DynamicIconProps & { fallback?: React.ReactNode }) => {
+}: DynamicIconProps & {
+  fallback?: React.ReactNode;
+  missing?: React.ReactNode;
+}) => {
   const collector = React.use(LucideIconCollectorContext);
   const icon = React.useSyncExternalStore(
     subscribeLucideIcons,
@@ -46,7 +50,7 @@ export const DynamicIcon = ({
 
   collector?.collect(name, icon);
 
-  if (icon === null) return null;
+  if (icon === null) return <>{missing}</>;
 
   return <Icon className={className} icon={icon} {...props} />;
 };

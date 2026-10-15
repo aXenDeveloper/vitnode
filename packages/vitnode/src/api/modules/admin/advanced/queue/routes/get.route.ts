@@ -1,13 +1,12 @@
 import { inArray } from "drizzle-orm";
 import z from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_queue } from "@/database/queue";
 
 const QUEUE_STATUSES = [
@@ -18,7 +17,6 @@ const QUEUE_STATUSES = [
 ] as const;
 
 export const getQueueTasksRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "queue", permission: "can_view" },
   route: {
     method: "get",

@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import {
   deleteAiUserOverrideAdminRoute,
@@ -31,7 +30,6 @@ import { updateAiActionAdminRoute } from "./routes/update-action.route";
 import { updateAiSettingsAdminRoute } from "./routes/update-settings.route";
 
 export const aiAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "ai",
   routes: [
     aiOverviewAdminRoute,

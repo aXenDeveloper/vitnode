@@ -1,13 +1,12 @@
 import { z } from "@hono/zod-openapi";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import {
   requireModerator,
   viewableReportsCondition,
 } from "@/api/lib/moderation/access";
 import { findReportTarget } from "@/api/lib/moderation/registry";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_moderation_reports } from "@/database/moderation";
 import { containsLikePattern } from "@/lib/api/like-pattern";
 import {
@@ -51,7 +50,6 @@ const searchCondition = (search: string) => {
 };
 
 export const listReportsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/reports",

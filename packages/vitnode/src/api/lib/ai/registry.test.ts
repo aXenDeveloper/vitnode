@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { testManifest } from "@/tests/manifest";
+
 import { buildApiPlugin } from "../plugin";
 import { AiActionDefinitionError, defineAiAction } from "./action";
 import { collectAiActions, UnknownAiActionError } from "./registry";
@@ -157,7 +159,7 @@ describe("AI action registry", () => {
     expect(() =>
       buildApiPlugin({
         aiActions: [summarize(), summarize()],
-        pluginId: "@acme/blog",
+        manifest: testManifest("@acme/blog"),
       }),
     ).toThrow(AiActionDefinitionError);
   });

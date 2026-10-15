@@ -156,7 +156,7 @@ import messages from './locales'
 
 export const yourPlugin = () =>
   buildPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     localeFiles: {
       // [!code ++:2]
       en: '@acme/your-plugin/locales/en.json',
@@ -184,7 +184,7 @@ import messages from './locales/api' // [!code ++]
 
 export const yourApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     messages, // [!code ++]
     modules: [postsModule],
   })

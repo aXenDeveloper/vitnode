@@ -1,10 +1,9 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
+import { manifest } from "@/manifest";
 
 import { buildPageLayoutRoutes } from "./page-layout-routes";
 
 export const pagesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "pages",
-  routes: buildPageLayoutRoutes({ pluginId: CONFIG_PLUGIN.pluginId }),
+  routes: buildPageLayoutRoutes({ pluginId: manifest.id }),
 });

@@ -2,7 +2,7 @@ import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
 
 import { contentTypeAdmin } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 import { BlogArticleEditorField } from "@/views/admin/article/editor-field";
 import {
   ArticleCoverAltField,
@@ -17,7 +17,7 @@ import { BlogCategoryColorField } from "@/views/admin/category/color-field";
 import { blogCategoryNav, blogPostNav } from "./nav";
 
 export const adminContent = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   contentTypes: [
     contentTypeAdmin({
       ...blogPostNav,

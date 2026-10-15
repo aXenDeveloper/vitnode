@@ -20,8 +20,8 @@ import {
   createBlockRegistry,
   setDefaultBlockRegistry,
 } from "@/blocks/registry";
-import { CONFIG_PLUGIN } from "@/config";
 import { CONFIG } from "@/lib/config";
+import { manifest } from "@/manifest";
 import {
   configurePageCacheStore,
   pageCacheRuntime,
@@ -125,7 +125,7 @@ export function VitNodeAPI({
     app.doc("/swagger/doc", {
       openapi: "3.0.0",
       info: {
-        version: CONFIG_PLUGIN.version,
+        version: manifest.version,
         title: "VitNode API",
       },
       tags: plugins.flatMap(
@@ -195,6 +195,7 @@ export function VitNodeAPI({
       content: vitNodeApiConfig.content,
       cron: vitNodeApiConfig.cron,
       events: vitNodeApiConfig.events,
+      frontendPlugins: vitNodeApiConfig.frontendPlugins,
       notifications: vitNodeApiConfig.notifications,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,

@@ -20,8 +20,8 @@ import {
   AttachmentTitle,
   AttachmentTrigger,
 } from "@/components/ui/attachment";
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 export const ContentTestStorage = () => {
   const t = useTranslations("admin.system.integrations.storage.test");
@@ -35,7 +35,7 @@ export const ContentTestStorage = () => {
       formData.append("file", file);
 
       const res = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         module: "admin/debug",
         path: "/test-storage-upload",
         method: "post",

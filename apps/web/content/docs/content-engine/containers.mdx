@@ -130,7 +130,6 @@ Pass the definition to both content modules. The admin module adds the staff rou
 import { boardContainers } from "@/content/boards"; // [!code ++]
 
 buildContentAdminModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   containers: [boardContainers], // [!code ++]
   contentTypes: [articleContent, discussionContent],
 }),
@@ -138,7 +137,6 @@ buildContentAdminModule({
 
 ```ts title="plugins/example/src/config.api.ts"
 buildContentPublicModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   containers: [boardContainers], // [!code ++]
   contentTypes: [articleContent, discussionContent],
 }),
@@ -166,7 +164,7 @@ export const exampleBoardsNav = {
 };
 
 export const adminNav = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   containers: [exampleBoardsNav], // [!code ++]
   contentTypes: [exampleArticleNav, exampleDiscussionNav],
 } satisfies AdminNavPluginSource;
@@ -174,7 +172,7 @@ export const adminNav = {
 
 ```tsx title="plugins/example/src/admin/content.tsx"
 export const adminContent = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   containers: [exampleBoardsNav], // [!code ++]
   contentTypes: [exampleArticleNav, exampleDiscussionNav],
 } satisfies ContentFrontendPluginSource;

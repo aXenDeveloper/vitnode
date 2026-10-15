@@ -1,6 +1,7 @@
+import { manifest } from "@/manifest";
+
 import type { BlockPluginSource } from "../types";
 
-import { CONFIG_PLUGIN } from "../../config";
 import { ctaBlock } from "./cta";
 import { heroBlock } from "./hero";
 import { textBlock } from "./text";
@@ -10,7 +11,7 @@ export { heroBlock } from "./hero";
 export { textBlock } from "./text";
 
 export const blocks = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   blocks: [ctaBlock, heroBlock, textBlock],
   namespace: "core",
 } satisfies BlockPluginSource;

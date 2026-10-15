@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { findUserDeviceId } from "@/api/models/user-devices";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -13,7 +12,6 @@ import {
 } from "../lib/target-user";
 
 export const revokeUserDeviceAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "delete",

@@ -3,15 +3,15 @@ import { languageName } from "@vitnode/core/api/lib/ai/language-name";
 import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { articleContentType } from "@/content/article";
+import { manifest } from "@/manifest.gen";
 
 export const articleExcerptAiAction = defineAiAction({
   authorize: async ({ c }) =>
     await checkStaffPermission(c, {
       module: articleContentType.permissionModule,
       permission: "can_edit",
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       type: "admin",
     }),
   buildPrompt: (input, { instructions }) => ({

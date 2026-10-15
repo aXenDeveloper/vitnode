@@ -71,12 +71,12 @@ The subpath is the registration. Name the file `src/blocks.tsx` so it resolves a
 ```tsx title="plugins/example/src/blocks.tsx"
 import type { BlockPluginSource } from '@vitnode/core/widgets'
 
-import { CONFIG_PLUGIN } from '@/const'
+import { manifest } from '@/manifest.gen'
 
 import { calloutBlock } from './blocks/callout'
 
 export const blocks = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   blocks: [calloutBlock],
 } satisfies BlockPluginSource
 ```
@@ -95,14 +95,14 @@ The API validates writes, so it needs the definitions too. Pass the **same objec
 ```ts title="plugins/example/src/config.api.ts"
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
-import { CONFIG_PLUGIN } from '@/const'
+import { manifest } from '@/manifest.gen'
 
 // [!code ++:2]
 import { blocks } from './blocks'
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     // [!code ++:2]
     blocks,
     modules: [adminModule],

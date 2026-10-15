@@ -1,13 +1,12 @@
 import { z } from "@hono/zod-openapi";
 import { and, count, eq, ilike, inArray, ne } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_languages_words } from "@/database/languages";
 import { core_moderators_permissions } from "@/database/moderators";
@@ -54,7 +53,6 @@ const rolesAdminListSchema = z.object({
 });
 
 export const listRolesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Get list of all roles (Admin only)",

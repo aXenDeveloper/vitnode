@@ -1,8 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import TestEmailTemplate from "@/emails/test-email";
 
 export const zodSendTestEmailSchema = z.object({
@@ -12,7 +11,6 @@ export const zodSendTestEmailSchema = z.object({
 });
 
 export const sendTestEmailDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_send_test_email" },
   route: {
     method: "post",

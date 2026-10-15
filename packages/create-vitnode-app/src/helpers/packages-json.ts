@@ -1,5 +1,6 @@
 export interface PackageJSON {
   dependencies?: Record<string, string>;
+  description?: string;
   devDependencies?: Record<string, string>;
   engines?: Record<string, string>;
 

@@ -1,11 +1,9 @@
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import { z } from "zod";
 
 import { EXCERPT_AI_ACTION, zodExcerptAiSchema } from "@/api/ai/actions";
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 
 export const excerptAiAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "posts", permission: "can_edit" },
   route: {
     method: "post",

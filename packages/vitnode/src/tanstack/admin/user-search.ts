@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { AdminSearchUser } from "@/views/admin/layouts/search/search-users";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { MAX_SEARCH_RESULTS } from "@/views/admin/layouts/search/constants";
 
@@ -17,7 +17,7 @@ export const readAdminUserSearch = async (
 
   try {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: {
         query: { first: String(MAX_SEARCH_RESULTS), search: parsed.data },
       },

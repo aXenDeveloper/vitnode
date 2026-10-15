@@ -137,6 +137,7 @@ of those modules, and that is the part worth knowing:
 | `src/content-registry.gen.ts` | the plugin's `admin/content` | behind a dynamic `import()` in `src/router.tsx`               |
 | `src/package-messages.gen.ts` | the factory's `localeFiles`  | per request, one locale at a time                             |
 | `src/api-registry.gen.ts`     | the plugin's `config.api`    | never - type-only, it teaches the fetcher which plugins exist |
+| `src/plugin-inventory.gen.ts` | the factory's `metadata`     | by the API only, through `buildApiConfig({ frontendPlugins })` |
 
 One literal import per configured plugin, written at build time. So a content
 type's editing screen - a Tiptap field, a form layout, a table cell - arrives
@@ -144,7 +145,8 @@ with the route that renders it, not with the config that the document shell
 imports. Spreading `admin/content` into the factory undoes exactly that: the
 whole editing stack rides along with every public page. See
 [Plugin routes](/docs/dev/routing) and
-[Plugin frontend modules](/docs/content-engine/plugin-files).
+[Plugin frontend modules](/docs/content-engine/plugin-files). The inventory is
+what [the AdminCP plugin catalog](/docs/dev/plugins/catalog) lists.
 
 <Callout type="info" title="Where its locale files come from">
   The `messages` a factory carries is the plugin's own locale barrel, which loads
@@ -158,7 +160,7 @@ whole editing stack rides along with every public page. See
 <Callout type="warn" title="Build-time cost">
   Your Vite build executes this file with `jiti` on every regeneration pass to
   discover the plugin list. Running a plugin's registration graph in Node
-  measures ~340ms per pass against ~6ms for `buildPlugin({pluginId})`, which is
+  measures ~340ms per pass against ~6ms for `buildPlugin({ manifest })`, which is
   the minimum a TanStack host needs - worth knowing if a large plugin set makes
   the dev watcher feel slow.
 </Callout>

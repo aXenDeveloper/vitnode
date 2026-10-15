@@ -1,7 +1,7 @@
 import { infiniteQueryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import type { SearchFeedPage } from "./types";
@@ -142,7 +142,7 @@ export const fetchSearchFeedPage: SearchFeedPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: searchFeedQuery(args) },
     method: "get",
     module: "search",

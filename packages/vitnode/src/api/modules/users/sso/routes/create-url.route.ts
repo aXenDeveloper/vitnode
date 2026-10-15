@@ -1,11 +1,9 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SSOModel } from "@/api/models/sso";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const createUrlRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Generate SSO URL",

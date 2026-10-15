@@ -1,12 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
-import { buildRoute } from "../../../lib/route";
 import { searchSuggestionsLimit, zodSearchSuggestion } from "./suggest.route";
 
 export const popularRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

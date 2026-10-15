@@ -75,7 +75,7 @@ Pass the family to `buildApiPlugin`, and translate its label:
 
 ```ts title="plugins/example/src/config.api.ts"
 buildApiPlugin({
-  pluginId: CONFIG_PLUGIN.pluginId,
+  manifest,
   moderation: { scopes: [exampleCategoryScope] }, // [!code ++]
   modules: [/* ... */],
 });

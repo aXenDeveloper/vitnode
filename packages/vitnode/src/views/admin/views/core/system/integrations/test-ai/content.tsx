@@ -13,8 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import type { TestAIModel } from "./test-ai";
 
@@ -54,7 +54,7 @@ export const ContentTestAI = ({ models }: { models: TestAIModel[] }) => {
 
     try {
       const res = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         module: "admin/debug",
         path: "/test-ai",
         method: "post",

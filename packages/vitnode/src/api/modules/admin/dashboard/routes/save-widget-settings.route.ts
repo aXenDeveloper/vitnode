@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 import {
   isSettingsTooLarge,
@@ -19,7 +18,6 @@ export const zodSaveWidgetSettingsSchema = z.object({
 });
 
 export const saveDashboardWidgetSettingsAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "dashboard", permission: "can_edit" },
   route: {
     method: "put",

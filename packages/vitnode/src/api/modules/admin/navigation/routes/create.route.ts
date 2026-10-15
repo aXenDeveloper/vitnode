@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 import { and, eq, sql } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { findNavigationPreset } from "@/api/lib/navigation-presets";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_navigation } from "@/database/navigation";
 import { isValidNavigationHref } from "@/lib/navigation";
 
@@ -39,7 +38,6 @@ export const NAVIGATION_PARENT_ERRORS = {
 } as const;
 
 export const createNavigationAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "navigation", permission: "can_create" },
   route: {
     method: "post",

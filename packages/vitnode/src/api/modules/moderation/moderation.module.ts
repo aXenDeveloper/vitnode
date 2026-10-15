@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import {
   approvalFiltersRoute,
@@ -27,7 +26,6 @@ import {
 } from "./routes/workflow.routes";
 
 export const moderationModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "moderation",
   routes: [
     createReportRoute,

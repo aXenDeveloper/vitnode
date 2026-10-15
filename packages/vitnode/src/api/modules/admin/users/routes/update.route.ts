@@ -1,13 +1,12 @@
 import { z } from "@hono/zod-openapi";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
-import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
 import { matchesEmail } from "@/api/lib/user-email-lookup";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_languages } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
@@ -100,7 +99,6 @@ export const zodUpdateUserAdminSchema = z
   });
 
 export const updateUserAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "patch",

@@ -11,6 +11,7 @@ import { runAppBuild } from "../builder/app-build";
 import {
   apiBuildSteps,
   listOutput,
+  prepareManifestStep,
   prepareRegistryStep,
   runCompilerSteps,
   runPackageBuild,
@@ -153,6 +154,7 @@ export const runBuildCommand = async (
   if (project.kind === "package") {
     ui.header(`Building ${project.name}`);
     if (isPluginPackage(project.root)) prepareRegistryStep(project, ui);
+    prepareManifestStep(project, ui);
     await runPackageBuild({
       loadTsdown: deps.loadTsdown,
       project,

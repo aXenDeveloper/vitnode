@@ -50,6 +50,7 @@ import type { AiActionRegistry } from "../lib/ai/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
+import type { InstalledPluginRegistry } from "../lib/installed-plugins";
 import type { ModerationRegistry } from "../lib/moderation/registry";
 import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
 import type { NotificationRegistry } from "../lib/notifications/registry";
@@ -73,6 +74,7 @@ import {
   registerEditablePage,
   validateEditablePages,
 } from "../lib/editable-pages";
+import { buildInstalledPluginRegistry } from "../lib/installed-plugins";
 import {
   loggerMiddleware,
   type LoggerMiddlewareType,
@@ -162,6 +164,7 @@ export interface EnvVariablesVitNode {
       locales: LocaleConfig[];
       sources: MessagesSource[];
     };
+    installedPlugins: InstalledPluginRegistry;
     metadata: {
       shortTitle?: string;
       title: string;
@@ -228,6 +231,7 @@ export const globalMiddleware = ({
   captcha,
   cron,
   events,
+  frontendPlugins,
   plugins,
   i18n,
   notifications,
@@ -245,6 +249,7 @@ export const globalMiddleware = ({
   | "dbProvider"
   | "email"
   | "events"
+  | "frontendPlugins"
   | "i18n"
   | "notifications"
   | "plugins"
@@ -259,6 +264,10 @@ export const globalMiddleware = ({
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
+  const installedPlugins = buildInstalledPluginRegistry({
+    api: plugins,
+    frontend: frontendPlugins,
+  });
 
   // Resolved once at boot: the packages installed here can't change per
   // request. With no `i18n` block the locale list is whatever the installed
@@ -523,6 +532,7 @@ export const globalMiddleware = ({
       cronSecret: CONFIG.cronJobSecret,
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
+      installedPlugins,
       cron: cronMetadata,
       editablePages: editablePagesMetadata,
       queue: queueMetadata,

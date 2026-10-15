@@ -1,13 +1,13 @@
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 import type { DeleteFileResult } from "@/lib/files/in-use";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import {
   runBulkFileDelete,
   shouldRefreshAfterBulkDelete,
 } from "@/lib/files/bulk-delete";
 import { readFileInUse } from "@/lib/files/in-use";
+import { manifest } from "@/manifest";
 
 export interface DeleteMyFileArgs {
   force?: boolean;
@@ -33,7 +33,7 @@ export const deleteMyFileInBrowser: DeleteMyFile = async ({
 }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: {
         params: { id: String(id) },
         query: force ? { force: "true" } : {},

@@ -1,10 +1,9 @@
 import { z } from "@hono/zod-openapi";
 
+import { buildRoute } from "@/api/builders";
 import { isStaff } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
 import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
 import { SessionAdminModel } from "@/api/models/session-admin";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { passkeyFailure } from "../failure";
 import {
@@ -13,7 +12,6 @@ import {
 } from "../schema";
 
 export const passkeyAdminSignInVerifyRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

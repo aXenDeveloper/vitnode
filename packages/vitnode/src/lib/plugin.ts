@@ -11,6 +11,9 @@ import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
 import type { LocaleFilesMap, LocaleMessagesMap } from "./i18n/types";
+import type { PluginManifest } from "./plugin-manifest";
+
+import { assertPluginManifest } from "./plugin-manifest";
 
 export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
@@ -187,14 +190,25 @@ export interface BuildPluginReturn<P extends string = string> {
    * follow.
    */
   localeFiles?: LocaleFilesMap;
+  manifest?: PluginManifest<P>;
   messages?: LocaleMessagesMap;
   pluginId: P;
 
   routes?: PluginRoutes;
 }
 
-export function buildPlugin<P extends string>(
-  props: BuildPluginReturn<P>,
-): BuildPluginReturn<P> {
-  return props;
+export type BuildPluginOptions<P extends string> = Omit<
+  BuildPluginReturn<P>,
+  "manifest" | "pluginId"
+> & {
+  manifest: PluginManifest<P>;
+};
+
+export function buildPlugin<const P extends string>({
+  manifest,
+  ...props
+}: BuildPluginOptions<P>): BuildPluginReturn<P> {
+  assertPluginManifest(manifest.id, manifest, "buildPlugin()");
+
+  return { ...props, manifest, pluginId: manifest.id };
 }

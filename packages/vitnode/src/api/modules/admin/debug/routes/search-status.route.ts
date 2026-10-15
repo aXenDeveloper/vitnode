@@ -10,9 +10,8 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { searchDocumentOwner } from "@/api/models/search";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_logs } from "@/database/logs";
 import { core_search_index } from "@/database/search";
 
@@ -48,7 +47,6 @@ const syncErrorSchema = z.object({
 });
 
 export const searchStatusDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_view" },
   route: {
     method: "get",

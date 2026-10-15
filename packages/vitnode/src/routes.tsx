@@ -14,6 +14,7 @@ import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-sea
 import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
 import { ADMIN_NAVIGATION_NAMESPACES } from "./tanstack/admin/navigation/route";
 import { ADMIN_NOTIFICATIONS_NAMESPACES } from "./tanstack/admin/notifications/route";
+import { ADMIN_PLUGINS_NAMESPACES } from "./tanstack/admin/plugins/route";
 import { ADMIN_QUEUE_NAMESPACES } from "./tanstack/admin/queue/route";
 import { normalizeQueueRouteSearch } from "./tanstack/admin/queue/route-search";
 import { ADMIN_ROLES_NAMESPACES } from "./tanstack/admin/roles/route";
@@ -324,6 +325,13 @@ export const routes = defineRoutes([
     component: lazy(() => import("./pages/admin/system/integrations")),
     messages: ADMIN_INTEGRATIONS_NAMESPACES,
     pendingComponent: CardsPendingSkeleton,
+  }),
+
+  page("/admin/core/system/plugins", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/system/plugins")),
+    messages: ADMIN_PLUGINS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
   }),
 
   page("/admin/core/system/notifications", {

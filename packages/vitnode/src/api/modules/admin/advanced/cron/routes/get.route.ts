@@ -1,18 +1,16 @@
 import { getColumns } from "drizzle-orm";
 import z from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
 import { isCronJobOverdue } from "@/lib/api/cron-health";
 
 export const getCronsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "cron", permission: "can_view" },
   route: {
     method: "get",

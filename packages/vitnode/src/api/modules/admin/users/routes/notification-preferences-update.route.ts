@@ -1,4 +1,4 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -7,7 +7,6 @@ import {
   zodNotificationPreferences,
   zodUpdateNotificationPreferences,
 } from "@/api/modules/notifications/routes/preferences.route";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -17,7 +16,6 @@ import {
 } from "../lib/target-user";
 
 export const updateUserNotificationPreferencesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "put",

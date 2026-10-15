@@ -1,12 +1,11 @@
 import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
 
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
-import { buildContentPublicModule } from "@vitnode/core/content/server";
 
 import { articleExcerptAiAction } from "@/api/ai/actions";
+import { buildContentPublicModule } from "@/api/builders";
 import { exampleCategoryScope } from "@/api/lib/moderation";
 import { adminModule } from "@/api/modules/admin/admin.module";
-import { CONFIG_PLUGIN } from "@/const";
 import { boardContainers } from "@/content/boards";
 import { settingsPage } from "@/content/settings-page";
 import { advancedArticleContent } from "@/database/advanced-articles";
@@ -17,13 +16,14 @@ import { eventContent } from "@/database/events";
 import { localizedArticleContent } from "@/database/localized-articles";
 import { pageContent } from "@/database/pages";
 import { tagContent } from "@/database/tags";
+import { manifest } from "@/manifest.gen";
 
 import { widgets } from "./widgets";
 import "@/api/lib/events";
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     aiActions: [articleExcerptAiAction],
     blocks: widgets,
     editablePages: [settingsPage],
@@ -37,7 +37,6 @@ export const exampleApiPlugin = () =>
     modules: [
       adminModule,
       buildContentPublicModule({
-        pluginId: CONFIG_PLUGIN.pluginId,
         containers: [boardContainers],
         contentTypes: [
           advancedArticleContent,

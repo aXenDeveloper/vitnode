@@ -1,15 +1,13 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 export const zodClearSearchSchema = z.object({
   itemType: z.string().min(1),
 });
 
 export const clearSearchDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_manage_search" },
   route: {
     method: "post",

@@ -40,6 +40,8 @@
   "@vitnode/core:ai:can_manage": "Manage AI settings, models, pricing and access",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
+  "@vitnode/core:plugins": "Plugins",
+  "@vitnode/core:plugins:can_view": "View installed plugins and their versions",
   "@vitnode/core:notifications": "Notifications",
   "@vitnode/core:notifications:can_view": "View notification settings and delivery health",
   "@vitnode/core:notifications:can_edit": "Edit notification settings",
@@ -2690,7 +2692,8 @@
           "integrations": "Integrations",
           "navigation": "Navigation",
           "files": "Files",
-          "notifications": "Notifications"
+          "notifications": "Notifications",
+          "plugins": "Plugins"
         },
         "advanced": {
           "title": "Advanced",
@@ -3710,6 +3713,27 @@
               "desc": "The image is never sent to an external AI. Use it for private or sensitive images."
             }
           }
+        }
+      },
+      "plugins": {
+        "title": "Plugins",
+        "desc": "Every plugin this application is configured with, and the version it runs.",
+        "search": "Search plugins...",
+        "list": {
+          "plugin": "Plugin",
+          "version": "Version"
+        },
+        "version_unknown": "Unknown version",
+        "no_description": "No description provided.",
+        "mismatch": "Version mismatch: the web app runs {frontend}, the API runs {api}. Rebuild and redeploy both so they match.",
+        "empty": {
+          "title": "No plugins installed",
+          "desc": "Add a plugin to vitnode.config.ts or vitnode.api.config.ts and it shows up here after the next build."
+        },
+        "no_results": {
+          "title": "No plugins match your search",
+          "desc": "Try the plugin's name, its package ID or a word from its description.",
+          "clear": "Clear search"
         }
       }
     },

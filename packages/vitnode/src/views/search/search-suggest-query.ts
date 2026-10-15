@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import { SEARCH_QUERY_ROOT } from "./search-feed-query";
@@ -24,7 +24,7 @@ export const searchSuggestQueryOptions = ({
   queryOptions({
     queryFn: async ({ signal }) => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           query: {
             first: String(SEARCH_SUGGESTIONS_LIMIT),
@@ -54,7 +54,7 @@ export const searchPopularQueryOptions = ({ locale }: { locale: string }) =>
   queryOptions({
     queryFn: async ({ signal }) => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           query: { first: String(SEARCH_SUGGESTIONS_LIMIT), lang: locale },
         },
@@ -82,7 +82,7 @@ export const recordSearchPopularity = async (input: {
   signal: SearchPopularitySignal;
 }): Promise<void> => {
   await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { body: input },
     method: "post",
     module: "search",

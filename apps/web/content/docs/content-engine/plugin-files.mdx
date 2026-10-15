@@ -18,7 +18,9 @@ VitNode reads a plugin's content types from several small files instead of one b
 | `src/admin/content.tsx`                 | `adminContent`                     | The content screens, loaded on demand      | Screen registrations, custom cells, fields and form layouts        |
 | `src/content.ts`                        | `contentTypes`                     | The web build and the API at startup       | Every content type with `delivery` or `search`                     |
 | `src/routes.ts`                         | `routes`                           | The web build                              | The pages that serve `delivery` and `search` URLs                  |
-| `src/config.tsx`                        | The plugin                         | The app's `vitnode.config.ts`              | Plugin id, `messages`, `localeFiles` and `routes` only             |
+| `src/config.tsx`                        | The plugin                         | The app's `vitnode.config.ts`              | `manifest`, `messages`, `localeFiles` and `routes` only            |
+| `src/manifest.gen.ts`                   | `manifest`                         | Every file that needs the plugin id        | The plugin id as `manifest.id`. Written by `vitnode build` / `dev` |
+| `src/api/builders.ts`                   | `buildModule`, `buildRoute`, `buildContent*Module` | Every API module and route file | The builders bound to `manifest` by `bindApiPlugin` and `bindContentPlugin` |
 | `src/locales/en.json`                   | JSON                               | The app, through `localeFiles`             | Labels for content types, fields and permissions                   |
 
 A content type with an AdminCP screen needs an entry in both `admin/nav` and `admin/content`. The first adds the sidebar link, the second the screen behind it. They are separate files so the sidebar stays small on every AdminCP page, while form and editor code loads only with the screen.
@@ -34,12 +36,12 @@ Once you customize a screen, build `adminContent` on its own and reuse the nav e
 ```tsx title="plugins/example/src/admin/content.tsx"
 import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { exampleArticleNav, exampleCategoryNav, examplePageNav } from "./nav";
 
 export const adminContent = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   contentTypes: [exampleArticleNav, exampleCategoryNav, examplePageNav],
 } satisfies ContentFrontendPluginSource;
 ```
@@ -83,14 +85,13 @@ Tables are the exception. Drizzle Kit reads `node_modules/<pluginId>/dist/src/da
 ```tsx title="plugins/example/src/config.tsx"
 import { buildPlugin } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
-
 import messages from "./locales";
+import { manifest } from "./manifest.gen";
 import { routes } from "./routes";
 
 export const examplePlugin = () =>
   buildPlugin({
-    ...CONFIG_PLUGIN,
+    manifest,
     localeFiles: {
       en: "@vitnode/example/locales/en.json",
     },

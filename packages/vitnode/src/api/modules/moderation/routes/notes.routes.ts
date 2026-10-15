@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { requireModerator } from "@/api/lib/moderation/access";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_moderation_report_events } from "@/database/moderation";
 
 import { canChangeNote, loadReportNote } from "../lib/notes";
@@ -38,7 +37,6 @@ const noteResponses = {
 };
 
 export const editReportNoteRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/notes/{noteId}/edit",
@@ -94,7 +92,6 @@ export const editReportNoteRoute = buildRoute({
 });
 
 export const deleteReportNoteRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/notes/{noteId}/delete",

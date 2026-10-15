@@ -2,6 +2,11 @@
   "name": "@vitnode/forum",
   "version": "2.0.0-canary.13",
   "description": "Community forum for VitNode: structured forums and nested threads, built on the Content Engine.",
+  "author": {
+    "name": "VitNode",
+    "email": "contact@vitnode.com",
+    "url": "https://vitnode.com"
+  },
   "license": "MIT",
   "private": true,
   "type": "module",

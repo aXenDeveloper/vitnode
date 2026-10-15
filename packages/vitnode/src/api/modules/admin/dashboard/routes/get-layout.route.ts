@@ -1,13 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 import { getDashboardWidgets, zodStoredDashboardWidget } from "../lib/layout";
 
 export const getDashboardLayoutAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "dashboard", permission: "can_view" },
   route: {
     method: "get",

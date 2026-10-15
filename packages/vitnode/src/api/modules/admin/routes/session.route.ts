@@ -1,12 +1,11 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 export const sessionAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Verify admin session",
@@ -71,7 +70,7 @@ export const sessionAdminRoute = buildRoute({
     return c.json({
       user,
       permissions,
-      vitnode_version: CONFIG_PLUGIN.version,
+      vitnode_version: manifest.version,
       expiresAt,
       signOutWhenTabsClose:
         c.get("core").authorization.cookieDomain === undefined,

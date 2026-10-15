@@ -36,6 +36,7 @@ export const createPluginPackageJSON = async ({
   const pluginPkg: PackageJSON = {
     name: pluginName,
     version: "0.1.0",
+    description: "A VitNode plugin.",
     private: true,
     type: "module",
     engines: { node: supportedNodeRange },

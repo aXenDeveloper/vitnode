@@ -1,8 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 export const zodRebuildSearchSchema = z.object({
   // Rebuild a single collection; omit to rebuild the whole index.
@@ -10,7 +9,6 @@ export const zodRebuildSearchSchema = z.object({
 });
 
 export const rebuildSearchDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_manage_search" },
   route: {
     method: "post",

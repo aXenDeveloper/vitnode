@@ -4,8 +4,8 @@ import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope"
 import type { SsoConnectionsApi } from "@/views/auth/settings/sso/sso-connections-query";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
@@ -60,7 +60,7 @@ export const fetchAdminUserDevices = async (
   userId: number,
 ): Promise<AdminUserDevice[]> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: params(userId) },
     method: "get",
     module: "admin/users",
@@ -81,7 +81,7 @@ export const fetchAdminUserPasskeys = async (
   userId: number,
 ): Promise<AdminUserPasskey[]> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: params(userId) },
     method: "get",
     module: "admin/users",
@@ -102,7 +102,7 @@ export const fetchAdminUserSso = async (
   userId: number,
 ): Promise<SsoConnectionsApi> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: params(userId) },
     method: "get",
     module: "admin/users",
@@ -123,7 +123,7 @@ export const fetchAdminUserNotificationPreferences = async (
   userId: number,
 ): Promise<NotificationPreferenceTypeView[]> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: params(userId) },
     method: "get",
     module: "admin/users",

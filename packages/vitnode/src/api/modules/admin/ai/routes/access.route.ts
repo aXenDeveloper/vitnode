@@ -1,9 +1,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { formatDecimal, parseDecimal } from "@/api/lib/ai/decimal";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   core_ai_role_permissions,
   core_ai_role_policies,
@@ -19,7 +18,6 @@ const decimalOrNull = (value: null | string | undefined) =>
     : formatDecimal(parseDecimal(value));
 
 export const getAiRoleAccessAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",
@@ -153,7 +151,6 @@ export const getAiRoleAccessAdminRoute = buildRoute({
 });
 
 export const getAiUserOverrideAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",
@@ -203,7 +200,6 @@ export const getAiUserOverrideAdminRoute = buildRoute({
 });
 
 export const updateAiRoleAccessAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_manage" },
   route: {
     method: "put",
@@ -289,7 +285,6 @@ export const updateAiRoleAccessAdminRoute = buildRoute({
 });
 
 export const updateAiUserOverrideAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_manage" },
   route: {
     method: "put",
@@ -336,7 +331,6 @@ export const updateAiUserOverrideAdminRoute = buildRoute({
 });
 
 export const deleteAiUserOverrideAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_manage" },
   route: {
     method: "delete",

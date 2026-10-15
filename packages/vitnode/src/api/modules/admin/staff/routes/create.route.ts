@@ -1,12 +1,12 @@
 import { z } from "@hono/zod-openapi";
 import { eq, or } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
+import { manifest } from "@/manifest";
 
 import { staffPermissionModuleByType, staffTypeSchema } from "../lib/schema";
 import {
@@ -20,7 +20,6 @@ const tableByType = {
 } as const;
 
 export const createStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Create a staff entry for a role or a user (Admin only)",
@@ -78,7 +77,7 @@ export const createStaffAdminRoute = buildRoute({
     const { type } = c.req.valid("param");
     await assertStaffPermission(c, {
       type: "admin",
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       module: staffPermissionModuleByType[type],
       permission: "can_create",
     });

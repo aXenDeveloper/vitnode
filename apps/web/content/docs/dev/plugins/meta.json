@@ -6,6 +6,7 @@
   "pages": [
     "create",
     "build",
+    "catalog",
     "api",
     "admin",
     "navigation",

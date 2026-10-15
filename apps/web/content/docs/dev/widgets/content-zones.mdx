@@ -446,7 +446,7 @@ In `plugins/example/src/blocks.tsx`, comment the callout out of the registered l
 
 ```ts
 export const blocks = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   blocks: [], // was [calloutBlock]
 } satisfies BlockPluginSource
 ```

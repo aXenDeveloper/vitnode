@@ -69,16 +69,15 @@ A collection holds at most 5,000 containers (`limitReached`, 409). The whole tre
 `createContentContainerService` is the one way to read and change a collection. The AdminCP routes and the public routes both use it, so your code gets the same rules, cache expiry and events. Call it inside any Hono handler with the request context:
 
 ```ts title="plugins/example/src/api/modules/boards/archive.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import { createContentContainerService } from "@vitnode/core/content/server";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 import { boardContainers } from "@/content/boards";
+import { manifest } from "@/manifest.gen";
 
 export const archiveBoardRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "example_boards", permission: "can_edit" },
   route: {
     method: "post",
@@ -94,7 +93,7 @@ export const archiveBoardRoute = buildRoute({
     const { id } = c.req.valid("param");
     const boards = createContentContainerService(c, {
       definition: boardContainers,
-      pluginId: CONFIG_PLUGIN.pluginId,
+      pluginId: manifest.id,
     });
 
     const archive = await boards.findBySlug("archive");

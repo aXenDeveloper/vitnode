@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { AiAssistScope } from "@/lib/ai/stream-client";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export const useAvailableAiActions = (scope: AiAssistScope = "admin") =>
@@ -11,13 +11,13 @@ export const useAvailableAiActions = (scope: AiAssistScope = "admin") =>
       const response =
         scope === "admin"
           ? await fetcher({
-              plugin: CONFIG_PLUGIN.pluginId,
+              plugin: manifest.id,
               method: "get",
               module: "admin/ai",
               path: "/assist/available",
             })
           : await fetcher({
-              plugin: CONFIG_PLUGIN.pluginId,
+              plugin: manifest.id,
               method: "get",
               module: "ai",
               path: "/available",

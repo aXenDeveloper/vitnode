@@ -1,18 +1,16 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import {
   DEFAULT_AI_MODEL_CAPABILITIES,
   missingCapabilities,
 } from "@/api/lib/ai/capabilities";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_ai_action_settings } from "@/database/ai";
 
 import { zodAiActionSettingsInput } from "../schemas";
 
 export const updateAiActionAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_manage" },
   route: {
     method: "put",

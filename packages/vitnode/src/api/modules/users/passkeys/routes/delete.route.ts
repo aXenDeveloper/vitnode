@@ -1,14 +1,12 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { passkeyFailure, requireSignedInUser } from "../failure";
 import { PASSKEY_ERROR_RESPONSES, zodPasskeyIdParam } from "../schema";
 
 export const deletePasskeyRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description:

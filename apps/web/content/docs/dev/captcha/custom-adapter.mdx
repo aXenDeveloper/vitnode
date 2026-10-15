@@ -114,7 +114,6 @@ route does, in a [plugin](/docs/dev/plugins/create) exactly as in core.
 
 ```ts title="plugins/my-plugin/src/api/modules/contact/routes/create.route.ts"
 export const createContactRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: 'post',
     path: '/',

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import { defineAiAction } from "./action";
 import { languageName } from "./language-name";
@@ -102,10 +102,10 @@ export const altTranslateAiAction = defineAiAction({
 });
 
 export const ALT_GENERATE_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   altGenerateAiAction,
 );
 export const ALT_TRANSLATE_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   altTranslateAiAction,
 );

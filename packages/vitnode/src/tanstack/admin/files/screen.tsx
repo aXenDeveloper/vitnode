@@ -5,7 +5,7 @@ import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { PageTitle } from "@/components/ui/page-title";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { FilesTableContent } from "@/views/admin/views/core/system/files/files-table-content";
 
 import type { AdminTableNavigate } from "../table-search";
@@ -39,12 +39,12 @@ export const AdminFilesRouteContent = ({
   const canDelete = useAdminPermission({
     module: FILES_MODULE,
     permission: "can_delete",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
   const canDownload = useAdminPermission({
     module: FILES_MODULE,
     permission: "can_download",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
 
   const navigation = React.useMemo<DataTableNavigation>(

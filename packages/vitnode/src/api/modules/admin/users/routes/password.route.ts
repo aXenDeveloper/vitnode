@@ -1,12 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
-import { buildRoute } from "@/api/lib/route";
 import { PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { USER_PASSWORD_MAX_LENGTH } from "@/api/modules/users/credential-limits";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
@@ -20,7 +19,6 @@ export const zodSetPasswordUserAdminSchema = z.object({
 });
 
 export const setPasswordUserAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "put",

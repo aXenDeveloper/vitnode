@@ -2,6 +2,11 @@
   "name": "@vitnode/example",
   "version": "2.0.0-canary.13",
   "description": "Reference plugin exercising the VitNode Content Engine end to end.",
+  "author": {
+    "name": "VitNode",
+    "email": "contact@vitnode.com",
+    "url": "https://vitnode.com"
+  },
   "license": "MIT",
   "private": true,
   "type": "module",

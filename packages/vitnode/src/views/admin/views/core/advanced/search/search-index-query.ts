@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
@@ -27,7 +27,7 @@ export type SearchIndexStatusFetcher = () => Promise<SearchIndexStatus>;
 /** The status, over whichever transport the host hands in. */
 export const fetchSearchIndexStatus: SearchIndexStatusFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/debug",
     path: "/search/status",

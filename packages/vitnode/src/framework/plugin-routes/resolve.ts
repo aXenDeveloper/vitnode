@@ -48,19 +48,10 @@ export const toSingleQuotedLiteral = (value: string): string =>
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")}'`;
 
-/**
- * Every plugin an app configured, as much of each one as a build tool reads:
- * its id, and the locale files it declares.
- *
- * Nothing here is evaluated beyond the config module itself - a route tree, an
- * AdminCP navigation declaration and a content registration are all reached
- * through their own package subpaths instead, and a locale file through the
- * literal specifier this returns.
- */
-export const pluginsFromLoadedConfig = (
+export const configuredPluginsFrom = (
   loaded: unknown,
   source: string,
-): PackageMessagesSource[] => {
+): unknown[] => {
   if (!isRecord(loaded) || !isRecord(loaded.vitNodeConfig)) {
     throw new Error(
       `${ERROR_PREFIX} ${source} does not export \`vitNodeConfig\`. It has to, because the configured plugins are what the route registry is generated from.`,
@@ -75,7 +66,23 @@ export const pluginsFromLoadedConfig = (
     );
   }
 
-  return plugins.map((plugin: unknown, index) => {
+  return plugins;
+};
+
+/**
+ * Every plugin an app configured, as much of each one as a build tool reads:
+ * its id, and the locale files it declares.
+ *
+ * Nothing here is evaluated beyond the config module itself - a route tree, an
+ * AdminCP navigation declaration and a content registration are all reached
+ * through their own package subpaths instead, and a locale file through the
+ * literal specifier this returns.
+ */
+export const pluginsFromLoadedConfig = (
+  loaded: unknown,
+  source: string,
+): PackageMessagesSource[] =>
+  configuredPluginsFrom(loaded, source).map((plugin, index) => {
     if (!isRecord(plugin) || typeof plugin.pluginId !== "string") {
       throw new Error(
         `${ERROR_PREFIX} \`vitNodeConfig.plugins[${String(index)}]\` in ${source} has no string \`pluginId\`.`,
@@ -90,7 +97,6 @@ export const pluginsFromLoadedConfig = (
       pluginId: assertPluginId(plugin.pluginId, source),
     };
   });
-};
 
 export const pluginIdsFromLoadedConfig = (
   loaded: unknown,

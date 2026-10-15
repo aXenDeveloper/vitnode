@@ -59,12 +59,10 @@ spec people ignore:
 
 ```ts title="src/api/modules/orders/routes/show.route.ts"
 import { z } from '@hono/zod-openapi'
-import { buildRoute } from '@vitnode/core/api/lib/route'
 
-import { CONFIG_PLUGIN } from '@/const'
+import { buildRoute } from '@/api/builders'
 
 export const showOrderRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: 'get',
     path: '/{id}',
@@ -95,13 +93,11 @@ export const showOrderRoute = buildRoute({
 ### Register it in a module
 
 ```ts title="src/api/modules/orders/orders.module.ts"
-import { buildModule } from '@vitnode/core/api/lib/module'
+import { buildModule } from '@/api/builders'
 
-import { CONFIG_PLUGIN } from '@/const'
 import { showOrderRoute } from './routes/show.route'
 
 export const ordersModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: 'orders', // [!code ++]
   routes: [showOrderRoute], // [!code ++]
 })
@@ -119,11 +115,11 @@ read in the sidebar.
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
 import { ordersModule } from '@/api/modules/orders/orders.module'
-import { CONFIG_PLUGIN } from '@/const'
+import { manifest } from '@/manifest.gen'
 
 export const shopApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     modules: [ordersModule], // [!code ++]
   })
 ```

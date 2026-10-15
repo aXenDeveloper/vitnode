@@ -34,7 +34,7 @@ export const sendNewsletterTask = buildQueueTask<NewsletterPayload>({
 Attach the task to your module's `queueTasks` list:
 
 ```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module"
+import { buildModule } from "@/api/builders"
 import { sendNewsletterTask } from "../../tasks/send-newsletter.task"
 
 export const postsModule = buildModule({

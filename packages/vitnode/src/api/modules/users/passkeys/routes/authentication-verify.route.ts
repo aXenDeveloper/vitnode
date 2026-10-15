@@ -1,14 +1,13 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   EMAIL_NOT_VERIFIED,
   mustVerifyEmail,
 } from "@/api/models/email-verification";
 import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
 import { SessionModel } from "@/api/models/session";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
 import { passkeyFailure } from "../failure";
@@ -18,7 +17,6 @@ import {
 } from "../schema";
 
 export const passkeyAuthenticationVerifyRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

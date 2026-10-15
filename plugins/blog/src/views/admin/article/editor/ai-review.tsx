@@ -14,11 +14,11 @@ import { CheckIcon, SparklesIcon, WandSparklesIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { applyPassageFix, type PassageFix } from "./passage-fix";
 
-const ARTICLE_REVIEW_ACTION = `${CONFIG_PLUGIN.pluginId}:article.review`;
+const ARTICLE_REVIEW_ACTION = `${manifest.id}:article.review`;
 
 interface ArticleReviewSuggestion {
   area: "clarity" | "completeness" | "structure" | "tone";

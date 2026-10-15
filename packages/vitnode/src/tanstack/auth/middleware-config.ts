@@ -7,7 +7,7 @@ import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 import type { SSOProvider } from "@/views/auth/sso/providers";
 
 import { seedLucideIcons } from "@/components/ui/icon-registry";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 
@@ -44,7 +44,7 @@ export const knownMiddlewareConfig = (
 const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
   try {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "middleware",
       path: "/",

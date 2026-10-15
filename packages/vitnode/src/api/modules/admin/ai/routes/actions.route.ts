@@ -1,18 +1,16 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import {
   DEFAULT_AI_MODEL_CAPABILITIES,
   missingCapabilities,
 } from "@/api/lib/ai/capabilities";
 import { projectAiAction } from "@/api/lib/ai/registry";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_ai_action_settings } from "@/database/ai";
 
 import { zodAiAction } from "../schemas";
 
 export const listAiActionsAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",

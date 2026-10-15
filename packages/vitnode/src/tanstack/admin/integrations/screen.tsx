@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { PageTitle } from "@/components/ui/page-title";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { IntegrationsContent } from "@/views/admin/views/core/system/integrations/integrations-content";
 import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
 import { sendTestEmailInBrowser } from "@/views/admin/views/core/system/integrations/send-test-email/send-test-email-mutation";
@@ -21,17 +21,17 @@ export const AdminIntegrationsRouteContent = ({
   const canSendTestEmail = useAdminPermission({
     module: SYSTEM_MODULE,
     permission: "can_send_test_email",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
   const canTestStorage = useAdminPermission({
     module: SYSTEM_MODULE,
     permission: "can_test_storage",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
   const canTestAi = useAdminPermission({
     module: SYSTEM_MODULE,
     permission: "can_test_ai",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   });
 
   return (

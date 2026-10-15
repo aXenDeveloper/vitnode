@@ -2,11 +2,11 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
-import { CONFIG_PLUGIN } from "@/config";
 import {
   OPERATIONAL_STALE_TIME,
   RECORD_STALE_TIME,
 } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface NotificationActorView {
@@ -74,7 +74,7 @@ export const fetchNotificationsPage = async ({
   signal?: AbortSignal;
 }): Promise<NotificationsPage> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: {
       query: {
         category,
@@ -141,7 +141,7 @@ export const recentNotificationsQueryOptions = ({
 
 export const fetchNotificationState = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "notifications",
     path: "/state",
@@ -186,7 +186,7 @@ export const notificationPreferencesQueryOptions = ({
   queryOptions({
     queryFn: async (): Promise<NotificationPreferencesView> => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "notifications",
         path: "/preferences",

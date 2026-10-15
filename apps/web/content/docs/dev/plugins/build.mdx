@@ -76,6 +76,10 @@ Declarations are written from every file `tsconfig.build.json` includes. That ma
 
 You don't need `isolatedDeclarations` or explicit return types. Inferred types come out the same as `tsc` would write them.
 
+## Generated manifest
+
+Before compiling, `vitnode build` also writes `src/manifest.gen.ts`. It exports `manifest`, which holds the plugin's `name` (as `id`), `version`, `description`, `author` and `license` from `package.json`, and imports the title and Lucide icon from the plugin's own `src/plugin-info.ts`. `vitnode dev` writes it on start and again whenever `package.json` changes. It is the single source of the plugin id, passed to `buildPlugin()`, `buildApiPlugin()` and `bindApiPlugin()`, and it is what the [AdminCP plugin catalog](/docs/dev/plugins/catalog) shows, so commit it with the rest of `src`.
+
 ## What a plugin package needs
 
 | File                  | Why                                                                                     |

@@ -1,8 +1,8 @@
 import type { SsoProfileField } from "@/lib/sso-profile";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
@@ -23,7 +23,7 @@ export const setAdminUserPassword = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { password }, params: { id: String(id) } },
         method: "put",
         module: "admin/users",
@@ -41,7 +41,7 @@ export const revokeAdminUserDevice = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           params: { id: String(id), publicId: encodeURIComponent(publicId) },
         },
@@ -60,7 +60,7 @@ export const revokeAdminUserDevices = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id: String(id) } },
         method: "delete",
         module: "admin/users",
@@ -79,7 +79,7 @@ export const renameAdminUserPasskey = async (
     parse: async response => (await response.json()) as AdminUserPasskey,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           body: { name },
           params: { id: String(id), passkeyId: String(passkeyId) },
@@ -100,7 +100,7 @@ export const deleteAdminUserPasskey = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id: String(id), passkeyId: String(passkeyId) } },
         method: "delete",
         module: "admin/users",
@@ -118,7 +118,7 @@ export const disconnectAdminUserSso = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           params: {
             id: String(id),
@@ -146,7 +146,7 @@ export const updateAdminUserSsoPreferences = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body, params: { id: String(id) } },
         method: "put",
         module: "admin/users",
@@ -170,7 +170,7 @@ export const updateAdminUserNotificationPreferences = async (
         .types,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { types }, params: { id: String(id) } },
         method: "put",
         module: "admin/users",

@@ -1,17 +1,15 @@
 import { z } from "@hono/zod-openapi";
 
+import { buildRoute } from "@/api/builders";
 import { isStaff } from "@/api/lib/check-staff-permission";
 import { resolveUserRoles, userRoleSchema } from "@/api/lib/resolve-user-roles";
-import { buildRoute } from "@/api/lib/route";
 import {
   resolveUserImagePolicy,
   zodUserImagePolicy,
 } from "@/api/lib/user-images";
 import { UserModel } from "@/api/models/user";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const showUserAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",

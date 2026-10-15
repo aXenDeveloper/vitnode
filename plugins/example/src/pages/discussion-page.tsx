@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { DiscussionSearch } from "./discussion-search";
 
@@ -32,7 +32,7 @@ const zodDiscussion = z.object({
 
 const loadDiscussion = async (slug: string) => {
   const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/discussions",
     path: "/{slug}",
@@ -44,7 +44,7 @@ const loadDiscussion = async (slug: string) => {
   );
 
   const board = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/boards",
     path: "/{idOrSlug}",

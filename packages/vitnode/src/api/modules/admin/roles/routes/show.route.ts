@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 
@@ -35,7 +34,6 @@ const roleAdminSchema = z.object({
 });
 
 export const showRoleAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "roles", permission: "can_view" },
   route: {
     method: "get",

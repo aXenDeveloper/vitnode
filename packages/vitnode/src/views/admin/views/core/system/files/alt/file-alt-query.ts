@@ -1,8 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
@@ -32,7 +32,7 @@ export type FileAltFetcher = (id: number) => Promise<FileAlt>;
 
 export const fetchFileAlt: FileAltFetcher = async id => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "get",
     module: "admin/files",
@@ -74,7 +74,7 @@ export const saveFileAlt = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body, params: { id } },
         method: "put",
         module: "admin/files",
@@ -92,7 +92,7 @@ export const removeFileAlt = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id }, query: { languageCode } },
         method: "delete",
         module: "admin/files",
@@ -110,7 +110,7 @@ export const saveFileAltPolicy = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { altPolicy }, params: { id } },
         method: "put",
         module: "admin/files",

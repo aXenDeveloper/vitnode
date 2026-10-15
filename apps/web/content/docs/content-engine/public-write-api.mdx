@@ -330,7 +330,6 @@ The methods throw instead of answering:
 A route that starts a discussion from a single question. `withHttpErrors` turns a unique conflict into the structured `409`, and the `catch` maps a refusal to its status:
 
 ```ts title="plugins/example/src/api/modules/discussions/ask.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import { ContentPublicWriteDenied } from "@vitnode/core/content";
 import {
   createContentPublicWriteService,
@@ -339,11 +338,11 @@ import {
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 import { discussionContent } from "@/database/discussions";
+import { manifest } from "@/manifest.gen";
 
 export const askRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/ask",
@@ -377,7 +376,7 @@ export const askRoute = buildRoute({
     const service = createContentPublicWriteService({
       c,
       model: discussionContent,
-      pluginId: CONFIG_PLUGIN.pluginId,
+      pluginId: manifest.id,
     });
 
     try {

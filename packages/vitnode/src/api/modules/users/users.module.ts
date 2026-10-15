@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { userFilesModule } from "./files/files.module";
 import { userImagesModule } from "./images/images.module";
@@ -22,7 +21,6 @@ import { verifyEmailRoute } from "./routes/verify-email.route";
 import { ssoUserModule } from "./sso/sso.module";
 
 export const usersModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "users",
   routes: [
     sessionRoute,

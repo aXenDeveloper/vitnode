@@ -14,6 +14,7 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { FrontendPluginInventoryEntry } from "../../lib/plugin-manifest";
 import type { ResolvedPageCacheConfig } from "../../page-cache/config";
 import type { ResolvedPageCacheRoute } from "../../page-cache/resolve";
 import type { ResolvedAdminNavModule } from "../admin-nav";
@@ -46,7 +47,13 @@ import {
   resolvePackageMessagesModules,
 } from "../package-messages";
 import {
+  generatePluginInventorySource,
+  PLUGIN_MANIFEST_SUBPATH,
+  pluginInventoryFromLoadedConfig,
+} from "../plugin-inventory";
+import {
   compilePluginRoutes,
+  configuredPluginsFrom,
   contentTypesFromContentModule,
   CORE_PLUGIN_ID,
   hostRoutePathsFromFiles,
@@ -107,6 +114,8 @@ const pathsFor = (appRoot: string) => ({
 
   pageCache: join(appRoot, "src", "page-cache.gen.ts"),
 
+  pluginInventory: join(appRoot, "src", "plugin-inventory.gen.ts"),
+
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
 
   staleManifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
@@ -130,6 +139,7 @@ export const resolverFor = (appRoot: string) => {
 
 interface AppConfig {
   i18n: LocaleRoutePathsConfig | undefined;
+  inventory: FrontendPluginInventoryEntry[];
   pageCache: ResolvedPageCacheConfig;
   plugins: PackageMessagesSource[];
 }
@@ -143,11 +153,16 @@ const readAppConfig = async (
     moduleCache: false,
   });
   const loaded = await jiti.import(configPath);
+  const source = relative(appRoot, configPath);
 
   return {
     i18n: i18nFromLoadedConfig(loaded),
+    inventory: pluginInventoryFromLoadedConfig(
+      configuredPluginsFrom(loaded, source),
+      source,
+    ),
     pageCache: pageCacheConfigFromLoadedConfig(loaded),
-    plugins: pluginsFromLoadedConfig(loaded, relative(appRoot, configPath)),
+    plugins: pluginsFromLoadedConfig(loaded, source),
   };
 };
 
@@ -472,7 +487,7 @@ const discover = async (
 ) => {
   const paths = pathsFor(appRoot);
   const resolvePackageFile = resolverFor(appRoot);
-  const { i18n, pageCache, plugins } = await readAppConfig(
+  const { i18n, inventory, pageCache, plugins } = await readAppConfig(
     appRoot,
     paths.config,
   );
@@ -521,6 +536,10 @@ const discover = async (
     WIDGETS_SUBPATH,
     resolvePackageFile,
   );
+  const pluginManifests = readOptionalPluginModules<{
+    pluginId: string;
+    specifier: string;
+  }>(pluginIds, PLUGIN_MANIFEST_SUBPATH, resolvePackageFile);
   const remainingPluginIds = pluginIds.filter(
     id => !pluginWidgets.modules.some(m => m.pluginId === id),
   );
@@ -542,6 +561,7 @@ const discover = async (
     ...coreBlocks.watch,
     ...pluginBlocks.watch,
     ...contentModules.map(({ file }) => file),
+    ...pluginManifests.watch,
   ];
 
   onLoaded?.(watch);
@@ -590,6 +610,7 @@ const discover = async (
     contentRegistry: contentRegistry.modules,
     hostRoutes,
     i18n,
+    inventory,
     packageMessages,
     pageCache,
     pageCacheRoutes,
@@ -618,7 +639,7 @@ type DiscoveredRoutes = Omit<
   pageCacheRoutes: ResolvedPageCacheRoute[];
 };
 
-/** All eight generated files, from one discovery pass. */
+/** All nine generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -634,6 +655,7 @@ const writeGenerated = async (
     contentRegistry,
     hostRoutes,
     i18n,
+    inventory,
     packageMessages,
     pageCache,
     pageCacheRoutes,
@@ -662,6 +684,10 @@ const writeGenerated = async (
     writeIfChanged(
       paths.pageCache,
       generatePageCacheSource(pageCacheRouteTable(pageCacheRoutes)),
+    ),
+    writeIfChanged(
+      paths.pluginInventory,
+      generatePluginInventorySource(inventory),
     ),
     removeIfPresent(paths.staleManifest),
   ]);

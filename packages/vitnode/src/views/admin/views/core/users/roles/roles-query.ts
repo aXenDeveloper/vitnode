@@ -8,9 +8,9 @@ import type {
 } from "@/views/admin/table/params";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
@@ -81,7 +81,7 @@ export type AdminRolesPageFetcher = (
 
 export const fetchAdminRolesPage: AdminRolesPageFetcher = async params => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/roles",
@@ -151,7 +151,7 @@ export const adminRoleOptionsFrom = (
 export const searchAdminRolesInBrowser: AdminRoleSearch = async search => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { query: { first: String(ADMIN_ROLE_SEARCH_LIMIT), search } },
       method: "get",
       module: "admin/roles",

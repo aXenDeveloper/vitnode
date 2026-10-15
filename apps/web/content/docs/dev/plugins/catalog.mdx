@@ -1,0 +1,160 @@
+---
+title: Show a plugin in the AdminCP catalog
+description: Give your plugin a title and a Lucide icon so AdminCP → System → Plugins lists it with the version that is actually installed.
+icon: Puzzle
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+
+import catalog from './admin-plugins-catalog.webp'
+
+**AdminCP → System → Plugins** lists every plugin the running application is configured with: its icon, title, package ID, description and installed version, with the VitNode core version shown separately above the list. The version and description come from each plugin's own `package.json` at build time, so nobody types a version number by hand. The title and icon come from a small file in the plugin.
+
+<ImgDocs
+  src={catalog}
+  alt="System → Plugins page showing the VitNode core version, a plugin count of 3, a search field and the Blog, Example and Forum plugins with their icons, versions, package IDs and descriptions"
+  withoutBackground
+/>
+
+The catalog only reports what is installed. It does not check for updates, install or remove plugins, or switch them on and off. One thing at a time.
+
+## Add your plugin to the catalog
+
+<Steps>
+  <Step>
+
+### Describe the plugin in package.json
+
+Make sure your `package.json` has a `description` next to its `name` and `version`:
+
+```json title="plugins/site-notes/package.json"
+{
+  "name": "@acme/site-notes",
+  "version": "1.2.0",
+  "description": "Pin short notes to any page of your community."
+}
+```
+
+  </Step>
+  <Step>
+
+### Set the title and icon
+
+Create `src/plugin-info.ts` with the title and a [Lucide icon](https://lucide.dev/icons) name:
+
+```ts title="src/plugin-info.ts"
+import type { PluginInfo } from '@vitnode/core/lib/plugin-manifest'
+
+export const pluginInfo: PluginInfo = {
+  title: 'Site Notes',
+  icon: 'sticky-note',
+}
+```
+
+Plugins created with the generator already have this file, with the `puzzle` icon.
+
+  </Step>
+  <Step>
+
+### Register the generated manifest
+
+`vitnode build` writes `src/manifest.gen.ts`. It holds the `name`, `version`, `description`, `author` and `license` from `package.json` and imports the title and icon from `src/plugin-info.ts`. It is also the single source of the plugin id (`manifest.id`), so nothing else spells the id by hand. Pass it to both registrations:
+
+```tsx title="src/config.tsx"
+import { buildPlugin } from '@vitnode/core/lib/plugin'
+
+import { manifest } from './manifest.gen'
+import { routes } from './routes'
+
+export const siteNotesPlugin = () =>
+  buildPlugin({
+    manifest,
+    routes,
+  })
+```
+
+```ts title="src/config.api.ts"
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+
+import { manifest } from '@/manifest.gen'
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    modules: [],
+  })
+```
+
+  </Step>
+  <Step>
+
+### Build the plugin
+
+Run the build in the plugin's folder, or keep `vitnode dev` running:
+
+```bash
+vitnode build
+```
+
+Both commands generate the file before TypeScript and tsdown run. Commit it, like `types/api-registry.gen.d.ts`.
+
+  </Step>
+</Steps>
+
+### Check the result
+
+Restart your app, sign in to the AdminCP and open **System → Plugins**. Your plugin shows its icon, title, `@acme/site-notes`, the description and `1.2.0`. Search matches the title, the package ID and the description.
+
+## Where each value comes from
+
+| Value       | Source                          | Required | Default        |
+| ----------- | ------------------------------- | -------- | -------------- |
+| ID          | `name` in `package.json`        | Yes      | -              |
+| Version     | `version` in `package.json`     | No       | Unknown        |
+| Description | `description` in `package.json` | No       | No description |
+| Title       | `title` in `src/plugin-info.ts` | No       | The ID         |
+| Icon        | `icon` in `src/plugin-info.ts`  | No       | Puzzle icon    |
+
+The ID is the plugin id: `buildPlugin()` and `buildApiPlugin()` read it from `manifest.id`. Title and description are plain text, shown as written in every language. The icon is a Lucide icon name in kebab-case, such as `newspaper` or `messages-square`. `buildPlugin()` and `buildApiPlugin()` throw at startup for anything else, and an unknown name falls back to the puzzle icon. Because an icon is just a name, the API returns it too, so plugins registered only in the API show their own icon as well.
+
+## When the manifest is regenerated
+
+- `vitnode build` regenerates the file before every build, so a published package always carries its real version.
+- `vitnode dev` regenerates it whenever `package.json` changes, or `src/plugin-info.ts` is created or deleted. Edits inside `src/plugin-info.ts` need no regeneration: the generated file imports it. The file is only rewritten when its content changes, so adding a dependency rebuilds nothing.
+- A broken `package.json` edit is reported in the terminal and the last good file stays in place.
+
+The app picks up a new plugin, a removed one or a new version after it is rebuilt and restarted. Nothing is stored in the database.
+
+## Frontend and API inventory
+
+A plugin can be registered in `vitnode.config.ts` (frontend), in `vitnode.api.config.ts` (API), or both. The catalog lists each plugin ID once. The API cannot see the frontend config, so the web build hands it over: the Vite plugin writes `src/plugin-inventory.gen.ts`, a plain list of `{ id, manifest }` entries with no plugin code, and you pass it to the API config:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+import { frontendPlugins } from './plugin-inventory.gen'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [siteNotesApiPlugin()],
+  frontendPlugins,
+  // ...the rest of your API config
+})
+```
+
+New apps that serve their API from the web app already do this. If your API runs as a separate deployment without that web build, leave `frontendPlugins` out. The catalog then lists the API's plugins only and says so with a notice, instead of guessing what the browser runs.
+
+## Version mismatch warnings
+
+When the web build and the API both report a version for the same plugin and the versions differ, the row shows a warning such as _"Version mismatch: the web app runs 1.1.0, the API runs 1.2.0."_ It usually means one side was redeployed without the other. Rebuild and redeploy both.
+
+A side that reports no version is unknown, not a mismatch.
+
+## Older plugins
+
+`buildPlugin()` and `buildApiPlugin()` take the plugin id from `manifest`, so an older plugin that still passes `pluginId` needs `src/manifest.gen.ts` first: run `vitnode build` or `vitnode dev` once, then pass `manifest` instead. A plugin without `src/plugin-info.ts` gets its ID as the title and the default icon. Add it when convenient.
+
+A frontend inventory entry carrying the manifest of another package throws at startup: the API checks that `manifest.id` equals the entry's `id`.
+
+## Who can see the catalog
+
+The page and its endpoint, `GET /api/@vitnode/core/admin/plugins`, require the **Plugins → View installed plugins and their versions** permission (`plugins.can_view` in the `@vitnode/core` module). Staff without it don't see the link, get a not-found page on a direct visit, and a `403` from the API. Root administrators have it automatically.

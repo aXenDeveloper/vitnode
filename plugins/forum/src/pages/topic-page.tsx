@@ -28,8 +28,8 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { topicContentType } from "@/content/topic";
+import { manifest } from "@/manifest.gen";
 
 import type { ForumPerson } from "./forum-data";
 import type { TopicSearch } from "./forum-links";
@@ -87,7 +87,7 @@ const topicQueryOptions = (slug: string) =>
     meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const res = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "content/topics",
         path: "/{slug}",

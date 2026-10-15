@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { contentEngineDiagnostics } from "@/content/server/diagnostics";
 
 const localeDriftSchema = z.object({
@@ -64,7 +63,6 @@ const contentTypeSchema = z.object({
 });
 
 export const contentStatusDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_view" },
   route: {
     method: "get",

@@ -1,13 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { attachStoredFile } from "@/api/lib/file-download";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_files } from "@/database/files";
 
 export const downloadFileAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_download" },
   route: {
     method: "get",

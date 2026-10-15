@@ -1,12 +1,10 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { updateNotificationTypePolicy } from "@/api/models/notifications/admin";
 import { zodNotificationEmailMode } from "@/api/modules/notifications/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const updateNotificationTypePolicyRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "notifications", permission: "can_edit" },
   route: {
     method: "put",

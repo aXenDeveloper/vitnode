@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import type { Device } from "./devices-query";
 
@@ -37,7 +37,7 @@ export const revokeDeviceInBrowser: RevokeDevice = async ({ publicId }) => {
 
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { params: { publicId } },
       method: "delete",
       module: "users",

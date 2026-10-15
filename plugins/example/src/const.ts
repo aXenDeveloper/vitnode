@@ -1,5 +1,3 @@
-export const CONFIG_PLUGIN = { pluginId: "@vitnode/example" as const };
-
 export const EXAMPLE_MIGRATIONS = [
   "add_example_content",
   "add_publication_to_example_articles",

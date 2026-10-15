@@ -2,9 +2,9 @@ import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
 
 import { ListIcon, NotebookPenIcon } from "lucide-react";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blogCategoryContentType } from "@/content/category";
 import { blogPostContentType } from "@/content/post";
+import { manifest } from "@/manifest.gen";
 
 /** The post content type, as the sidebar reads it. */
 export const blogPostNav = {
@@ -19,6 +19,6 @@ export const blogCategoryNav = {
 };
 
 export const adminNav = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   contentTypes: [blogPostNav, blogCategoryNav],
 } satisfies AdminNavPluginSource;

@@ -108,12 +108,10 @@ VitNode collects listeners only from the `events` array of a module passed direc
 
 ```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
 export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [],
   modules: [
     buildContentAdminModule({
-      pluginId: CONFIG_PLUGIN.pluginId,
       contentTypes: [articleContent],
     }),
   ],

@@ -2,12 +2,12 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { buildRoute } from "@/api/builders";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
+import { manifest } from "@/manifest";
 
 import { staffPermissionModuleByType, staffTypeSchema } from "../lib/schema";
 import {
@@ -21,7 +21,6 @@ const tableByType = {
 } as const;
 
 export const deleteStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description: "Remove a staff entry (Admin only)",
@@ -53,7 +52,7 @@ export const deleteStaffAdminRoute = buildRoute({
     const { type, id } = c.req.valid("param");
     await assertStaffPermission(c, {
       type: "admin",
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       module: staffPermissionModuleByType[type],
       permission: "can_delete",
     });

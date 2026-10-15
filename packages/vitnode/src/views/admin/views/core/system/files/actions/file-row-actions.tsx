@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import type { DeleteAdminFile } from "../files-delete";
 
@@ -37,7 +37,7 @@ const FileAltContent = React.lazy(async () =>
 const FILES_EDIT_ALT = {
   module: "files",
   permission: "can_edit_alt",
-  plugin: CONFIG_PLUGIN.pluginId,
+  plugin: manifest.id,
 } as const;
 
 const EditAltAction = ({ id, name }: { id: number; name: string }) => {
@@ -99,7 +99,7 @@ export const FileRowActions = ({
     setIsDownloading(true);
     try {
       const res = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         module: "admin/files",
         path: "/{id}/download",
         method: "get",

@@ -14,10 +14,9 @@ VitNode provides a unified transactional email service accessible via `c.get("em
 ### Queue an email from a Hono route
 
 ```ts title="plugins/blog/src/api/modules/newsletter/routes/welcome.route.ts"
-import { buildRoute } from '@vitnode/core/api/lib/route'
+import { buildRoute } from '@/api/builders'
 
 export const sendWelcomeRoute = buildRoute({
-  pluginId: 'blog',
   route: {
     method: 'post',
     path: '/welcome',

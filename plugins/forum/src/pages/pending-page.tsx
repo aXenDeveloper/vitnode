@@ -22,9 +22,9 @@ import { InboxIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { commentContentType } from "@/content/comment";
 import { topicContentType } from "@/content/topic";
+import { manifest } from "@/manifest.gen";
 
 import type { PendingSearch } from "./forum-links";
 
@@ -84,7 +84,7 @@ const pendingQueryOptions = ({
         items: z
           .array(zodSubmission)
           .parse(data.items)
-          .filter(item => item.pluginId === CONFIG_PLUGIN.pluginId),
+          .filter(item => item.pluginId === manifest.id),
         page: data.page,
         pageCount: Math.max(1, Math.ceil(data.total / data.pageSize)),
       };

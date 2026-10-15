@@ -3,7 +3,7 @@ import type { AdminDashboardWidget } from "@/lib/plugin";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import type { ResolvedDashboardWidget } from "./types";
 
@@ -98,7 +98,7 @@ export const dashboardWidgetSources = ({
   pluginTitle: (pluginId: string) => string;
 }): DashboardWidgetSource[] => [
   {
-    pluginId: CONFIG_PLUGIN.pluginId,
+    pluginId: manifest.id,
     keyPrefix: "admin.dashboard.widgets",
     pluginTitle: coreTitle,
     widgets: coreWidgets,

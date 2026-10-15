@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import { defineAiAction } from "./action";
 import { languageName } from "./language-name";
@@ -162,10 +162,10 @@ export const editorQuickAskAiAction = defineAiAction({
 });
 
 export const EDITOR_REWRITE_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   editorRewriteAiAction,
 );
 export const EDITOR_QUICK_ASK_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   editorQuickAskAiAction,
 );

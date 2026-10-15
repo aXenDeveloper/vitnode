@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 
+import { buildRoute } from "@/api/builders";
 import { findModerationScope } from "@/api/lib/moderation/registry";
 import { isModerationResourceId } from "@/api/lib/moderation/scopes";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { staffPermissionModuleByType } from "../lib/schema";
 
@@ -16,7 +15,6 @@ const resourceSchema = z.object({
 const PAGE_SIZE = 20;
 
 export const scopeResourcesStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: {
     module: staffPermissionModuleByType.moderator,
     permission: "can_edit",

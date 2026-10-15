@@ -12,7 +12,6 @@ import type {
 } from "@/lib/navigation";
 
 import { findNavigationPreset } from "@/api/lib/navigation-presets";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_languages_words } from "@/database/languages";
 import { core_navigation } from "@/database/navigation";
 import {
@@ -21,6 +20,7 @@ import {
   NAVIGATION_TABLE_NAME,
   NAVIGATION_WORDS,
 } from "@/lib/navigation";
+import { manifest } from "@/manifest";
 
 import { navigationLocationOf } from "./location";
 
@@ -95,7 +95,7 @@ export const readNavigationWords = async (
     .from(core_languages_words)
     .where(
       and(
-        eq(core_languages_words.pluginCode, CONFIG_PLUGIN.pluginId),
+        eq(core_languages_words.pluginCode, manifest.id),
         eq(core_languages_words.tableName, NAVIGATION_TABLE_NAME),
         inArray(core_languages_words.variable, [
           NAVIGATION_WORDS.title,

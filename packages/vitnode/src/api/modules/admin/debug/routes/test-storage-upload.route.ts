@@ -1,8 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 const ADMIN_TEST_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -15,7 +14,6 @@ const ADMIN_TEST_MIME_TYPES = [
 ];
 
 export const testStorageUploadDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_test_storage" },
   route: {
     method: "post",

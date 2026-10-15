@@ -8,8 +8,8 @@ import type {
 } from "@/lib/navigation";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import {
@@ -46,7 +46,7 @@ export interface AdminNavigationPresets {
 
 export const fetchAdminNavigation = async (): Promise<AdminNavigationList> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/navigation",
     path: "/list",
@@ -62,7 +62,7 @@ export const fetchAdminNavigation = async (): Promise<AdminNavigationList> => {
 export const fetchAdminNavigationPresets =
   async (): Promise<AdminNavigationPresets> => {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "admin/navigation",
       path: "/presets",

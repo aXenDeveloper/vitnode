@@ -1,15 +1,13 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_confirm_emails } from "@/database/users";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
 export const verifyEmailUserAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "post",

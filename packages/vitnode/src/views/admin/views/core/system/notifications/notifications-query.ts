@@ -2,8 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
@@ -86,7 +86,7 @@ export interface AdminNotificationStats {
 export const fetchNotificationsOverview =
   async (): Promise<AdminNotificationsOverview> => {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "admin/notifications",
       path: "/overview",
@@ -110,7 +110,7 @@ export const fetchNotificationStats = async ({
   timeZone: string;
 }): Promise<AdminNotificationStats> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: { range, timeZone } },
     method: "get",
     module: "admin/notifications",

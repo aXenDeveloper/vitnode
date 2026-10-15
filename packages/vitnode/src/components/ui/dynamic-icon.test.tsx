@@ -76,3 +76,17 @@ test("renders nothing for an unknown icon", async () => {
 
   expect(html).toBe("");
 });
+
+test("renders `missing` for an unknown icon", async () => {
+  const html = await renderToHtml(
+    <LucideIconCollectorContext.Provider value={createLucideIconCollector()}>
+      <DynamicIcon
+        fallback={<span id="fallback" />}
+        missing={<span id="missing" />}
+        name="not-a-real-icon"
+      />
+    </LucideIconCollectorContext.Provider>,
+  );
+
+  expect(html).toBe('<span id="missing"></span>');
+});
