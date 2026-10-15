@@ -44,6 +44,7 @@ Read your API through `context.queryClient.query` in `load`, with a `staleTime`.
 
 ```tsx title="plugins/site-notes/src/pages/note-page.tsx"
 import { queryOptions } from '@tanstack/react-query'
+import { LOADER_DATA_QUERY_META } from '@vitnode/core/lib/query-client'
 import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
 
 import { fetchNote } from '../features/notes/fetch-note'
@@ -53,6 +54,7 @@ const noteQuery = (slug: string) =>
     queryKey: ['@acme/site-notes', 'note', { slug }],
     queryFn: async () => await fetchNote(slug),
     staleTime: 60_000, // [!code ++]
+    meta: LOADER_DATA_QUERY_META, // [!code ++]
   })
 
 export const route = defineRoute({
@@ -60,6 +62,8 @@ export const route = defineRoute({
     await context.queryClient.query(noteQuery(params.slug)), // [!code ++]
 })
 ```
+
+`LOADER_DATA_QUERY_META` is for a query whose data `load` returns, as here. The router already sends that data to the browser with the server-rendered HTML, so the meta keeps the query cache from sending it a second time. Leave it out when the page reads the query with `useSuspenseQuery` instead, as in [Cache app data](/docs/dev/cache/app).
 
 A `load` that calls `fetcher` directly sends a new request on every hover and again on the click. Pick a `staleTime` per query: a minute is fine for a public article, a few seconds for a busy list, and data that changes after a write needs its key invalidated by that write. [Cache app data](/docs/dev/cache/app) covers keys, invalidation and per-user data.
 
