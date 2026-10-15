@@ -44,6 +44,7 @@ setAuthTransport({
 const KNOWN_CONFIG = knownMiddlewareConfig({
   ai: { models: [] },
   bottomBar: [],
+  icons: {},
   isEmail: false,
   navigation: [],
   passkeys: false,

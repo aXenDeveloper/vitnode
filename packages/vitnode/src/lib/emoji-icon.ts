@@ -6,13 +6,16 @@ export const EMOJI_ICON_MAX_LENGTH = 64;
 
 const LUCIDE_ICON_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
-const SINGLE_EMOJI = /^\p{RGI_Emoji}$/v;
+let singleEmoji: RegExp | undefined;
 
 export const isLucideIconName = (value: string): boolean =>
   LUCIDE_ICON_NAME.test(value);
 
-export const isSingleEmoji = (value: string): boolean =>
-  SINGLE_EMOJI.test(value);
+export const isSingleEmoji = (value: string): boolean => {
+  singleEmoji ??= /^\p{RGI_Emoji}$/v;
+
+  return singleEmoji.test(value);
+};
 
 export const parseEmojiIcon = (
   raw: null | string | undefined,

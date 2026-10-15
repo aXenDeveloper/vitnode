@@ -58,8 +58,6 @@ const subscribeSystemTheme = (callback: () => void): (() => void) => {
   };
 };
 
-const getServerSystemTheme = (): undefined => undefined;
-
 const getStoredTheme = (
   storageKey: string,
   fallback?: string,
@@ -120,11 +118,19 @@ export const ThemeProvider = ({
   const [theme, setThemeState] = React.useState<string | undefined>(() =>
     getStoredTheme(storageKey, defaultTheme),
   );
-  const systemTheme = React.useSyncExternalStore(
-    subscribeSystemTheme,
-    getSystemTheme,
-    getServerSystemTheme,
-  );
+  const [systemTheme, setSystemTheme] = React.useState<"dark" | "light">();
+
+  React.useEffect(() => {
+    const syncSystemTheme = () => {
+      React.startTransition(() => {
+        setSystemTheme(getSystemTheme());
+      });
+    };
+
+    syncSystemTheme();
+
+    return subscribeSystemTheme(syncSystemTheme);
+  }, []);
 
   const resolvedTheme =
     forcedTheme ?? (theme === "system" ? systemTheme : theme);

@@ -40,6 +40,7 @@ describe("loadMiddlewareConfig", () => {
     const known = knownMiddlewareConfig({
       ai: { models: [] },
       bottomBar: [],
+      icons: {},
       isEmail: true,
       navigation: [],
       passkeys: false,
@@ -76,6 +77,7 @@ describe("middlewareConfigQueryOptions", () => {
         knownMiddlewareConfig({
           ai: { models: [] },
           bottomBar: [],
+          icons: {},
           isEmail: true,
           navigation: [],
           passkeys: false,

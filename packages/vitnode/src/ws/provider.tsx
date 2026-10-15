@@ -67,7 +67,11 @@ export const VitNodeWebSocketProvider = ({
     const manager = createWebSocketManager({
       url: getWebSocketUrl(),
       onMessage: dispatch,
-      onReadyStateChange: setReadyState,
+      onReadyStateChange: state => {
+        React.startTransition(() => {
+          setReadyState(state);
+        });
+      },
     });
     managerRef.current = manager;
     pendingSendRef.current.splice(0).forEach(message => manager.send(message));

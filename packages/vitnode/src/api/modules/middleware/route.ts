@@ -9,6 +9,8 @@ import {
 } from "@/api/modules/admin/navigation/lib/schema";
 import { CONFIG_PLUGIN } from "@/config";
 
+import { loadNavigationIcons, zodLucideIconSchema } from "./navigation-icons";
+
 export const routeMiddlewareSchema = z.object({
   ai: z.object({
     models: z.array(
@@ -34,6 +36,7 @@ export const routeMiddlewareSchema = z.object({
   password: z.boolean(),
   navigation: z.array(zodPublicNavigationNodeSchema),
   bottomBar: z.array(zodPublicNavigationItemSchema),
+  icons: z.record(z.string(), zodLucideIconSchema),
   captcha: z
     .object({
       siteKey: z.string(),
@@ -71,6 +74,7 @@ export const routeMiddleware = buildRoute({
         password: c.get("core").authorization.password.enabled,
         navigation,
         bottomBar,
+        icons: await loadNavigationIcons({ bottomBar, navigation }),
         sso: sso.map(s => ({
           id: s.id,
           name: s.name,

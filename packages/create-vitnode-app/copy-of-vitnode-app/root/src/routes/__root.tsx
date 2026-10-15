@@ -2,12 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
-import {
-  createRootRouteWithContext,
-  HeadContent,
-  Outlet,
-  Scripts,
-} from "@tanstack/react-router";
+import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeScript } from "@vitnode/core/components/theme-script";
 import {
@@ -16,7 +11,11 @@ import {
   resolveLocale,
   useLocale,
 } from "@vitnode/core/tanstack/i18n";
-import { VitNodeRootProviders } from "@vitnode/core/tanstack/layout";
+import {
+  DocumentHead,
+  DocumentScripts,
+  VitNodeRootProviders,
+} from "@vitnode/core/tanstack/layout";
 
 import type { Locale } from "@/vitnode.config";
 
@@ -77,7 +76,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <HeadContent />
+        <DocumentHead />
         <ThemeScript {...theme} />
       </head>
 
@@ -102,7 +101,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           />
         ) : null}
 
-        <Scripts />
+        <DocumentScripts />
       </body>
     </html>
   );

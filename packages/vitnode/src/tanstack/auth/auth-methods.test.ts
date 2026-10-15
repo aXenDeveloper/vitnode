@@ -9,6 +9,7 @@ const config = (
 ): MiddlewareConfig => ({
   ai: { models: [] },
   bottomBar: [],
+  icons: {},
   isEmail: true,
   navigation: [],
   passkeys: true,

@@ -3,13 +3,16 @@ import { useEffect, useRef } from 'react'
 const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+const supportsScrollTimeline = () =>
+  CSS.supports('animation-timeline: scroll()')
+
 export const useScrollProgress = <T extends HTMLElement>(viewports: number) => {
   const ref = useRef<T>(null)
 
   useEffect(() => {
     const node = ref.current
 
-    if (!node || prefersReducedMotion()) return
+    if (!node || prefersReducedMotion() || supportsScrollTimeline()) return
 
     let frame = 0
 
@@ -24,7 +27,7 @@ export const useScrollProgress = <T extends HTMLElement>(viewports: number) => {
       if (!frame) frame = requestAnimationFrame(update)
     }
 
-    update()
+    schedule()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)
 

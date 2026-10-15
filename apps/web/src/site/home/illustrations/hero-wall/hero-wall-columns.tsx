@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 import {
   ArticleScreen,
   CategoriesScreen,
@@ -18,6 +20,7 @@ import {
   IntegrationsScreen,
   SearchScreen,
 } from './system-screens'
+import { whenIdle } from './when-idle'
 
 const COLUMNS = [
   {
@@ -65,29 +68,53 @@ const slide = (index: number) => {
   return `translateY(calc(var(--progress, 0) * ${direction * 14}% + ${offset}%))`
 }
 
-export const HeroWallColumns = () => (
-  <div
-    className="absolute top-1/2 left-1/2 flex gap-8"
-    style={{
-      transform:
-        'translate(-50%, -50%) rotateX(50deg) rotateZ(-30deg) scale(var(--wall-scale))',
-    }}
-  >
-    {COLUMNS.map(({ key, screens }, index) => (
-      <div
-        className="flex flex-col gap-8 will-change-transform"
-        key={key}
-        style={{ transform: slide(index) }}
-      >
-        {screens.map(({ key: screenKey, Screen }) => (
-          <div
-            className="bg-card overflow-hidden rounded-2xl border shadow-xl"
-            key={screenKey}
-          >
-            <Screen />
-          </div>
-        ))}
-      </div>
-    ))}
-  </div>
-)
+const useMountedColumnCount = () => {
+  const [count, setCount] = useState(1)
+
+  useEffect(() => {
+    if (count >= COLUMNS.length) return
+
+    return whenIdle(() => {
+      setCount(count + 1)
+    })
+  }, [count])
+
+  return count
+}
+
+export const HeroWallColumns = () => {
+  const mountedCount = useMountedColumnCount()
+
+  return (
+    <div
+      className="absolute top-1/2 left-1/2 flex gap-8"
+      style={{
+        transform:
+          'translate(-50%, -50%) rotateX(50deg) rotateZ(-30deg) scale(var(--wall-scale))',
+      }}
+    >
+      {COLUMNS.map(({ key, screens }, index) => (
+        <div
+          className="mk-wall-column will-change-transform"
+          key={key}
+          style={{ transform: slide(index) }}
+        >
+          {index < mountedCount ? (
+            <div className="mk-wall-fade flex flex-col gap-8">
+              {screens.map(({ key: screenKey, Screen }) => (
+                <div
+                  className="bg-card overflow-hidden rounded-2xl border shadow-xl"
+                  key={screenKey}
+                >
+                  <Screen />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-130 w-240 border border-transparent" />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
