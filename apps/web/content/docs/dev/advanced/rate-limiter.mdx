@@ -6,13 +6,13 @@ icon: ShieldAlert
 
 import { TypeTable } from "fumadocs-ui/components/type-table"
 
-VitNode limits API requests per client IP. Reads, writes, sign-in attempts and public content writes each get their own budget, and one global safety cap sits above them all. A request over any budget gets `429 Too Many Requests` with a `Retry-After` header.
+VitNode limits API requests per client IP, and per member once they sign in. Reads, writes, sign-in attempts and public content writes each get their own budget, and one global safety cap per IP sits above them all. A request over any budget gets `429 Too Many Requests` with a `Retry-After` header.
 
 ## How the budgets work
 
 Every request spends points from the budgets that apply to it, in this order, and stops at the first one that is used up:
 
-| Budget         | Spent by                                                                 | Default per IP | Config key                 |
+| Budget         | Spent by                                                                 | Default        | Config key                 |
 | -------------- | ------------------------------------------------------------------------ | -------------- | -------------------------- |
 | Safety cap     | Every request, including `OPTIONS` preflights                            | 1000 / 60 s    | `rateLimiter.safety`       |
 | Read           | `GET` and `HEAD`                                                         | 300 / 60 s     | `rateLimiter.read`         |
@@ -29,6 +29,17 @@ The sign-in budget covers:
 - `POST /users/verify-email` and `POST /users/verify-email/resend`
 - `POST /users/passkeys/sign-in` and `POST /users/passkeys/admin-sign-in`
 
+## Who a budget belongs to
+
+| Budget                        | Guest           | Signed-in member |
+| ----------------------------- | --------------- | ---------------- |
+| Safety cap, sign-in           | IP address      | IP address       |
+| Read, write, content writes   | IP address      | The member       |
+
+A member's read and write budgets follow them, not their network. Fifty colleagues behind one office IP each get their own 300 reads once signed in, and a member who switches from Wi-Fi to mobile data keeps the budget they had. The safety cap stays per IP, so many accounts on one address still share its 1000 requests. The sign-in budget stays per IP because a sign-in request has no member yet.
+
+VitNode only trusts a session the API has verified. A request with a forged or expired session cookie is counted against its IP address. Set `rateLimiter.perUser: false` to count every budget per IP address, as older versions did.
+
 IPv6 visitors are counted per `/64` network, not per address. An ISP usually hands one person a whole `/64`, and we'd rather not give them 18 quintillion fresh budgets.
 
 <Callout type="info" title="Disabled in development">
@@ -42,7 +53,7 @@ The router [preloads a page](/docs/dev/routing/preloading) when a visitor rests 
 
 With one shared budget, a visitor who hovered across a long forum list could use up the minute before pressing **Post comment**. With separate budgets, preloads can only use up the read budget. The comment still has its own 60 writes, and the sign-in and content-write budgets still apply to it.
 
-The safety cap is the wall behind both. It is set well above read plus write (300 + 60), so normal use never reaches it. It stops a client that would otherwise spend every budget in parallel, and it also counts `OPTIONS` preflights, which no other budget sees.
+The safety cap is the wall behind both. It is set well above read plus write (300 + 60), so normal use never reaches it. It stops a client that would otherwise spend every budget in parallel, and it also counts `OPTIONS` preflights, which no other budget sees. A preflight is counted but never refused: once the cap is used up, the request that follows the preflight gets the `429`, so the browser can read it instead of reporting a CORS error.
 
 The defaults leave room for a busy reader: a server-rendered page with a few queries costs 3 to 6 reads, and the [query cache](/docs/dev/cache/app) answers repeat visits without a request. Writes stay low because a person rarely submits more than one form a second, and a script that does is what the budget is for.
 
@@ -97,7 +108,7 @@ Content-Type: application/json
 }
 ```
 
-`X-RateLimit-Category` names the budget that refused the request: `safety`, `read`, `write`, `auth` or `content-write`. In the browser, VitNode shows one toast that uses `Retry-After` for its countdown, even when several requests fail at once.
+`X-RateLimit-Category` names the budget that refused the request: `safety`, `read`, `write`, `auth` or `content-write`. Both headers are listed in the CORS `exposeHeaders`, so a web app on another origin can read them; VitNode adds them to your own `cors` options if you pass any. In the browser, VitNode shows one toast that uses `Retry-After` for its countdown, even when several requests fail at once.
 
 [Debug unexpected 429 errors](/docs/dev/advanced/rate-limiter-debugging) explains how to find which budget a real visitor ran out of.
 
@@ -173,6 +184,11 @@ Every budget takes the same options: `points` (requests per window), `duration` 
       default: "{ points: 20, duration: 60 }",
       description: "Public Content Engine creates and edits (POST and PATCH under /content/). Spent on top of write.",
       type: "RateLimiterCategoryOptions",
+    },
+    perUser: {
+      default: "true",
+      description: "Count read, write and content-write budgets per signed-in member instead of per IP address. The safety cap and sign-in budget are always per IP.",
+      type: "boolean",
     },
     points: {
       default: "-",
