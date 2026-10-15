@@ -1,11 +1,9 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const permissionsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

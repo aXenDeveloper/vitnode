@@ -1,10 +1,9 @@
 import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_moderation_reports } from "@/database/moderation";
 import { core_users } from "@/database/users";
 import { MODERATION_PERMISSIONS } from "@/lib/moderation/const";
@@ -60,7 +59,6 @@ const body = <T extends z.ZodType>(schema: T) => ({
 });
 
 export const claimReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/claim",
@@ -121,7 +119,6 @@ export const claimReportRoute = buildRoute({
 });
 
 export const assignReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/assign",
@@ -212,7 +209,6 @@ export const assignReportRoute = buildRoute({
 });
 
 export const noteReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/notes",
@@ -250,7 +246,6 @@ export const noteReportRoute = buildRoute({
 });
 
 export const resolveReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/resolve",
@@ -309,7 +304,6 @@ export const resolveReportRoute = buildRoute({
 });
 
 export const reopenReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/reopen",
@@ -382,7 +376,6 @@ export const reopenReportRoute = buildRoute({
 });
 
 export const reportActionRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports/{id}/actions/{action}",
@@ -461,7 +454,6 @@ export const reportActionRoute = buildRoute({
 });
 
 export const reportAssigneesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/reports/{id}/assignees",

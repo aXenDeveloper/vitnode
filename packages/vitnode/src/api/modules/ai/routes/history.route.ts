@@ -2,14 +2,12 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_ai_runs } from "@/database/ai";
 
 const DEFAULT_PAGE_SIZE = 20;
 
 export const aiHistoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Your recent AI operations, newest first.",

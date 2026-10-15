@@ -1,13 +1,12 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
 import { passkeyFailure } from "@/api/modules/users/passkeys/failure";
 import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeyIdParam,
 } from "@/api/modules/users/passkeys/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -18,7 +17,6 @@ import {
 } from "../lib/target-user";
 
 export const deleteUserPasskeyAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "delete",

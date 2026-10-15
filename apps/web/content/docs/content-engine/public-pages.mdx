@@ -105,7 +105,7 @@ import {
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { ContentArticle } from "./content-article";
 
@@ -118,14 +118,14 @@ const zodArticle = z.object({
 const loadArticle = async (slug: string) => {
   const [resolution, detail] = await Promise.all([
     fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/articles",
       path: "/delivery/resolve/{slug}",
       args: { params: { slug: encodeURIComponent(slug) } },
     }),
     fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/articles",
       path: "/{slug}",

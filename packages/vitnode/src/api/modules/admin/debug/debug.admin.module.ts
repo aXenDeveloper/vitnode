@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "../../../../config";
-import { buildModule } from "../../../lib/module";
+import { buildModule } from "@/api/builders";
+
 import { clearSearchDebugAdminRoute } from "./routes/clear-search.route";
 import { contentStatusDebugAdminRoute } from "./routes/content-status.route";
 import { integrationsDebugAdminRoute } from "./routes/integrations.route";
@@ -12,7 +12,6 @@ import { testAiDebugAdminRoute } from "./routes/test-ai.route";
 import { testStorageUploadDebugAdminRoute } from "./routes/test-storage-upload.route";
 
 export const debugAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "debug",
   routes: [
     logsDebugAdminRoute,

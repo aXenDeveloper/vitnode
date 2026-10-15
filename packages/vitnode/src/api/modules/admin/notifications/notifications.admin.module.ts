@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import {
   cancelQueuedNotificationEmailsRoute,
@@ -22,7 +21,6 @@ import { updateNotificationTypePolicyRoute } from "./routes/settings.route";
 import { getNotificationStatsRoute } from "./routes/stats.route";
 
 export const notificationsAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "notifications",
   routes: [
     getNotificationsOverviewRoute,

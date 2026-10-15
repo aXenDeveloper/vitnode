@@ -119,20 +119,6 @@ describe("PluginsContent", () => {
     ).toBeTruthy();
   });
 
-  it.each([
-    [true, 0],
-    [false, 1],
-  ])(
-    "warns that frontend plugins are unknown only when the inventory is missing (%s)",
-    (frontendInventory, count) => {
-      renderPlugins({ frontendInventory });
-
-      expect(
-        screen.queryAllByText("admin.system.plugins.frontend_unknown.title"),
-      ).toHaveLength(count);
-    },
-  );
-
   it("shows the default icon for a plugin that names none", () => {
     const { container } = renderPlugins({ plugins: [plugin({ icon: null })] });
 

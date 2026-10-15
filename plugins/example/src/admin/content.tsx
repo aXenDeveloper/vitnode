@@ -1,6 +1,6 @@
 import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import {
   exampleArticleNav,
@@ -13,7 +13,7 @@ import {
 } from "./nav";
 
 export const adminContent = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   containers: [exampleBoardsNav],
   contentTypes: [
     exampleArticleNav,

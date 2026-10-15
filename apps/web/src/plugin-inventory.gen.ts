@@ -4,7 +4,7 @@
 //
 // It is rewritten by the `vitnode:plugin-routes` Vite plugin on every
 // `vite dev` and `vite build`, from the plugins configured in
-// `src/vitnode.config.ts` and the package metadata each one registers.
+// `src/vitnode.config.ts` and the manifest each one registers.
 //
 // Plain data and nothing else: no plugin code is imported, so the API can read
 // it without loading the frontend. Pass it to
@@ -14,36 +14,54 @@
 // Same plugin configuration in, same bytes out: the entries are sorted by
 // plugin id.
 
-import type { FrontendPluginInventory } from '@vitnode/core/lib/plugin-metadata'
+import type { FrontendPluginInventory } from '@vitnode/core/lib/plugin-manifest'
 
 export const frontendPlugins: FrontendPluginInventory = [
   {
     id: "@vitnode/blog",
-    metadata: {
+    manifest: {
       id: "@vitnode/blog",
       title: "Blog",
       icon: "newspaper",
       description: "Blog plugin for VitNode, providing a blogging platform on Hono.js.",
+      author: {
+        name: "VitNode",
+        email: "contact@vitnode.com",
+        url: "https://vitnode.com",
+      },
+      license: "MIT",
       version: "2.0.0-canary.13",
     },
   },
   {
     id: "@vitnode/example",
-    metadata: {
+    manifest: {
       id: "@vitnode/example",
       title: "Example",
       icon: "flask-conical",
       description: "Reference plugin exercising the VitNode Content Engine end to end.",
+      author: {
+        name: "VitNode",
+        email: "contact@vitnode.com",
+        url: "https://vitnode.com",
+      },
+      license: "MIT",
       version: "2.0.0-canary.13",
     },
   },
   {
     id: "@vitnode/forum",
-    metadata: {
+    manifest: {
       id: "@vitnode/forum",
       title: "Forum",
       icon: "messages-square",
       description: "Community forum for VitNode: structured forums and nested threads, built on the Content Engine.",
+      author: {
+        name: "VitNode",
+        email: "contact@vitnode.com",
+        url: "https://vitnode.com",
+      },
+      license: "MIT",
       version: "2.0.0-canary.13",
     },
   },

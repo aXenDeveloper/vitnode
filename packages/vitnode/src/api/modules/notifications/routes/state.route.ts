@@ -1,6 +1,5 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { getNotificationState } from "@/api/models/notifications/inbox";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   requireNotificationUser,
@@ -9,7 +8,6 @@ import {
 } from "../schema";
 
 export const notificationStateRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

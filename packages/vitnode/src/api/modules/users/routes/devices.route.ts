@@ -2,15 +2,13 @@ import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   listUserDevices,
   zodUserDeviceSchema,
 } from "@/api/models/user-devices";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const listDevicesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

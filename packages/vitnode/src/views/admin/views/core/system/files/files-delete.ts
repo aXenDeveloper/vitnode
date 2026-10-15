@@ -1,10 +1,10 @@
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
 import type { DeleteFileResult } from "@/lib/files/in-use";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { runBulkFileDelete } from "@/lib/files/bulk-delete";
 import { readFileInUse } from "@/lib/files/in-use";
+import { manifest } from "@/manifest";
 
 /** Deleting one file. `force` releases retained revisions; see `FileInUse`. */
 export interface DeleteAdminFileArgs {
@@ -32,7 +32,7 @@ export const deleteAdminFileInBrowser: DeleteAdminFile = async ({
 }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: {
         params: { id: String(id) },
         query: force ? { force: "true" } : {},

@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 import { contentLiveWebSocket } from "@/content/server/live/socket";
 
 import { contentEditorialCleanupCron } from "./cron/content-editorial-cleanup.cron";
@@ -7,7 +6,6 @@ import { contentScheduleEffectsQueueTask } from "./tasks/content-schedule-effect
 import { contentScheduleQueueTask } from "./tasks/content-schedule.task";
 
 export const contentModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "content",
   routes: [],
   cronJobs: [contentEditorialCleanupCron],

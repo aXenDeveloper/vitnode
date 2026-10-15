@@ -1,21 +1,19 @@
 import { eq } from "drizzle-orm";
 import z from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { resolveRoleNames } from "@/api/lib/resolve-role-names";
-import { buildRoute } from "@/api/lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import { parseImageDimensions } from "@/lib/api/upload";
 
 export const listFilesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_view" },
   route: {
     method: "get",

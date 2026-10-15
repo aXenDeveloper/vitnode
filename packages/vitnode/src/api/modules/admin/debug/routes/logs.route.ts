@@ -1,11 +1,10 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_logs } from "@/database/logs";
 
 import { core_users } from "../../../../../database/users";
-import { buildRoute } from "../../../../lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
@@ -13,7 +12,6 @@ import {
 } from "../../../../lib/with-pagination";
 
 export const logsDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "debug", permission: "can_view" },
   route: {
     method: "get",

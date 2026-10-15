@@ -9,8 +9,8 @@ import type { TsdownApi } from "./package-build";
 import { writePluginApiRegistry } from "../../write-plugin-api-registry";
 import {
   definesPlugin,
-  writePluginMetadata,
-} from "../../write-plugin-metadata";
+  writePluginManifest,
+} from "../../write-plugin-manifest";
 import { ConfigError, errorMessage, RuntimeError } from "../errors";
 import { importFromProject, resolveBin } from "../project/packages";
 import { runProcess } from "../project/processes";
@@ -204,18 +204,18 @@ export const prepareRegistryStep = (project: Project, ui: Ui) => {
 };
 
 /**
- * Writes `src/plugin-metadata.gen.ts` from the plugin's `package.json` and
- * `src/plugin-metadata.ts`, before tsdown and `tsc` resolve the import of it.
+ * Writes `src/manifest.gen.ts` from the plugin's `package.json` and
+ * `src/plugin-info.ts`, before tsdown and `tsc` resolve the import of it.
  */
-export const prepareMetadataStep = (project: Project, ui: Ui) => {
+export const prepareManifestStep = (project: Project, ui: Ui) => {
   if (!definesPlugin(project.root)) return;
 
   try {
-    writePluginMetadata(project.root);
+    writePluginManifest(project.root);
   } catch (error) {
     throw new ConfigError(errorMessage(error), { cause: error });
   }
-  ui.success("Plugin metadata generated");
+  ui.success("Plugin manifest generated");
 };
 
 /** Every file under `dir`, as measured output, for the compiler builds. */

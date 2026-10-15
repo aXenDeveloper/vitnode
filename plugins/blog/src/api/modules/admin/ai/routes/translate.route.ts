@@ -1,14 +1,12 @@
-import { buildRoute } from "@vitnode/core/api/lib/route";
 import { z } from "zod";
 
 import {
   TRANSLATE_FIELD_AI_ACTION,
   zodTranslateAiSchema,
 } from "@/api/ai/actions";
-import { CONFIG_PLUGIN } from "@/const";
+import { buildRoute } from "@/api/builders";
 
 export const translateAiAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "posts", permission: "can_edit" },
   route: {
     method: "post",

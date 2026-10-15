@@ -5,7 +5,7 @@ import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { PageTitle } from "@/components/ui/page-title";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { ClearCacheAction } from "@/views/admin/views/core/debug/actions/clear-cache/clear-cache";
 import { QueueViewContent } from "@/views/admin/views/core/debug/queue/queue-view-content";
 import { SystemLogsContent } from "@/views/admin/views/core/debug/system-logs/system-logs-content";
@@ -59,7 +59,7 @@ export const AdminDebugRouteContent = ({
           <AdminPermissionGate
             module={DEBUG_MODULE}
             permission="can_clear_cache"
-            plugin={CONFIG_PLUGIN.pluginId}
+            plugin={manifest.id}
           >
             <ClearCacheAction onClearCache={onClearCache} />
           </AdminPermissionGate>

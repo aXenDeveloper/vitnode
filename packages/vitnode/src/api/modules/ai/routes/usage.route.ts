@@ -1,9 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { loadUserAiUsage } from "@/api/lib/ai/usage-summary";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const zodAiUserUsage = z.object({
   actions: z.array(
@@ -37,7 +36,6 @@ export const zodAiUserUsage = z.object({
 });
 
 export const aiUsageRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

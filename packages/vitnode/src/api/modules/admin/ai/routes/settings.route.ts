@@ -1,15 +1,13 @@
+import { buildRoute } from "@/api/builders";
 import { formatDecimal, formatDecimalOrNull } from "@/api/lib/ai/decimal";
 import {
   AI_POINTS_CONVERSION,
   AI_POINTS_CONVERSION_VERSION,
 } from "@/api/lib/ai/ledger";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { zodAiSettingsResponse } from "../schemas";
 
 export const getAiSettingsAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",

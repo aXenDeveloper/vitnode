@@ -2,12 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_ai_runs } from "@/database/ai";
 
 export const aiFeedbackRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Record whether you accepted an AI suggestion.",

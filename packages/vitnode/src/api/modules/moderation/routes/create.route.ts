@@ -2,11 +2,10 @@ import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { buildRoute } from "@/api/builders";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import { findReportTarget } from "@/api/lib/moderation/registry";
 import { sealReportSnapshot } from "@/api/lib/moderation/snapshot";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_moderation_reports } from "@/database/moderation";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
 
@@ -50,7 +49,6 @@ const createBody = z
   );
 
 export const createReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/reports",

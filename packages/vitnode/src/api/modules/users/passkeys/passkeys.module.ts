@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { passkeyAdminSignInOptionsRoute } from "./routes/admin-sign-in-options.route";
 import { passkeyAdminSignInVerifyRoute } from "./routes/admin-sign-in-verify.route";
@@ -12,7 +11,6 @@ import { passkeyRegistrationVerifyRoute } from "./routes/registration-verify.rou
 import { renamePasskeyRoute } from "./routes/rename.route";
 
 export const passkeysUserModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "passkeys",
   routes: [
     listPasskeysRoute,

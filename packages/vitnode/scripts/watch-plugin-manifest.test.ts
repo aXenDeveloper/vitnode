@@ -11,12 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PLUGIN_INFO_PATH,
-  PLUGIN_METADATA_PATH,
-} from "../src/framework/plugin-metadata/generate.js";
+  PLUGIN_MANIFEST_PATH,
+} from "../src/framework/plugin-manifest/generate.js";
 import {
-  watchPluginMetadata,
-  writePluginMetadata,
-} from "./write-plugin-metadata.js";
+  watchPluginManifest,
+  writePluginManifest,
+} from "./write-plugin-manifest.js";
 
 // Real `fs.watchFile` polling (every 300ms), so this lives in INTEGRATION.
 
@@ -38,15 +38,15 @@ const settle = async () =>
 const watch = async () => {
   const onChange = vi.fn();
   const onError = vi.fn();
-  const { inputs } = writePluginMetadata(root);
-  ({ close } = watchPluginMetadata({ inputs, onChange, onError, root }));
+  const { inputs } = writePluginManifest(root);
+  ({ close } = watchPluginManifest({ inputs, onChange, onError, root }));
   await settle();
 
   return { onChange, onError };
 };
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "vitnode-plugin-metadata-watch-"));
+  root = mkdtempSync(join(tmpdir(), "vitnode-plugin-manifest-watch-"));
   mkdirSync(join(root, "src"));
   write("package.json", JSON.stringify(BLOG));
 });
@@ -56,15 +56,15 @@ afterEach(() => {
   rmSync(root, { force: true, recursive: true });
 });
 
-describe("watchPluginMetadata", () => {
-  it("regenerates when package.json changes and when src/plugin-metadata.ts comes and goes", async () => {
+describe("watchPluginManifest", () => {
+  it("regenerates when package.json changes and when src/plugin-info.ts comes and goes", async () => {
     const { onChange, onError } = await watch();
-    const importsInfo = () => read(PLUGIN_METADATA_PATH).includes("pluginInfo");
+    const importsInfo = () => read(PLUGIN_MANIFEST_PATH).includes("pluginInfo");
 
     write("package.json", JSON.stringify({ ...BLOG, version: "2.0.0" }));
     await vi.waitFor(
       () => {
-        expect(read(PLUGIN_METADATA_PATH)).toContain('"2.0.0"');
+        expect(read(PLUGIN_MANIFEST_PATH)).toContain('"2.0.0"');
       },
       { timeout: 5000 },
     );
@@ -93,7 +93,7 @@ describe("watchPluginMetadata", () => {
 
   it("reports a broken edit, keeps the last file, and recovers", async () => {
     const { onChange, onError } = await watch();
-    const metadata = read(PLUGIN_METADATA_PATH);
+    const metadata = read(PLUGIN_MANIFEST_PATH);
 
     write("package.json", "{ broken");
     await vi.waitFor(
@@ -102,14 +102,14 @@ describe("watchPluginMetadata", () => {
       },
       { timeout: 5000 },
     );
-    expect(read(PLUGIN_METADATA_PATH)).toBe(metadata);
+    expect(read(PLUGIN_MANIFEST_PATH)).toBe(metadata);
     expect(onChange).not.toHaveBeenCalled();
     await settle();
 
     write("package.json", JSON.stringify({ ...BLOG, version: "2.0.0" }));
     await vi.waitFor(
       () => {
-        expect(read(PLUGIN_METADATA_PATH)).toContain('"2.0.0"');
+        expect(read(PLUGIN_MANIFEST_PATH)).toContain('"2.0.0"');
       },
       { timeout: 5000 },
     );

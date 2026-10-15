@@ -132,11 +132,11 @@ The table gets a `parent` column with a foreign key to `forum_comments.id` and a
 ```ts title="plugins/forum/src/pages/thread-data.ts"
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 export const fetchTopicThread = async (topicId: number, after?: string) => {
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/comments",
     path: "/thread",

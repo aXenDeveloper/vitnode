@@ -16,13 +16,20 @@ Every snippet is copied from `plugins/example`, with unrelated content types tri
 
 ## Before you begin
 
-You need a plugin that your app already loads, with `src/config.api.ts`, `src/config.tsx` and a `src/const.ts` that exports the plugin id:
+You need a plugin that your app already loads, with `src/config.api.ts`, `src/config.tsx` and `src/api/builders.ts`, which binds the API and Content Engine builders to your plugin, so none of them needs a plugin id:
 
-```ts title="plugins/example/src/const.ts"
-export const CONFIG_PLUGIN = { pluginId: "@vitnode/example" as const };
+```ts title="plugins/example/src/api/builders.ts"
+import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+import { bindContentPlugin } from "@vitnode/core/content/server";
+
+import { manifest } from "@/manifest.gen";
+
+export const { buildModule, buildRoute } = bindApiPlugin(manifest);
+export const { buildContentAdminModule, buildContentPublicModule } =
+  bindContentPlugin(manifest);
 ```
 
-[Create a plugin](/docs/dev/plugins/create) generates all three. You also need a running PostgreSQL database and an AdminCP account.
+`src/manifest.gen.ts` is written by `vitnode build` and `vitnode dev` from your `package.json`, and `manifest.id` is the plugin id. [Create a plugin](/docs/dev/plugins/create) generates all of these. You also need a running PostgreSQL database and an AdminCP account.
 
 <Steps>
 
@@ -87,19 +94,14 @@ Export the table. Drizzle Kit finds tables by reading the exports of your plugin
 Create an `admin` module and pass the model to `buildContentAdminModule`:
 
 ```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module";
-import { buildContentAdminModule } from "@vitnode/core/content/server";
-
-import { CONFIG_PLUGIN } from "@/const";
+import { buildContentAdminModule, buildModule } from "@/api/builders";
 import { categoryContent } from "@/database/categories";
 
 export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [],
   modules: [
     buildContentAdminModule({
-      pluginId: CONFIG_PLUGIN.pluginId,
       contentTypes: [categoryContent],
     }),
   ],
@@ -113,7 +115,7 @@ import { adminModule } from "@/api/modules/admin/admin.module"; // [!code ++]
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     modules: [adminModule], // [!code highlight]
   });
 ```
@@ -133,11 +135,11 @@ Create `src/admin/nav.tsx` with the sidebar link:
 ```tsx title="plugins/example/src/admin/nav.tsx"
 import { FolderIcon } from "lucide-react";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { categoryContentType } from "@/content/category";
+import { manifest } from "@/manifest.gen";
 
 export const adminNav = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   contentTypes: [{ definition: categoryContentType, icon: <FolderIcon /> }],
 };
 ```

@@ -107,41 +107,6 @@ export const LogoVitNode = ({
   );
 };
 
-/**
- * VitNode's mark, at whichever of its two sizes the viewport has room for.
- *
- * One component rather than a `className` every header picks for itself, because
- * the choice is not a size - it is *which mark*. The wordmark is 136px wide and
- * the bar it sits in also holds the language switcher, the theme switcher and
- * the visitor's avatar; below `sm` those leave it about 110px, so the wordmark
- * either overflows the bar or has to be hidden, and hiding it is the one answer
- * that is not allowed - a site with no mark on a phone reads as a broken header
- * rather than a compact one. The hexagon says the same thing in 32px.
- *
- * ## Both are in the DOM, and only one is in the accessibility tree
- *
- * `hidden` is `display: none`, which removes an element from the accessibility
- * tree as well as from the layout - so at any width exactly one `Logo VitNode`
- * is exposed, and the link wrapping this has one accessible name rather than
- * two. That is worth stating because the obvious alternative - `opacity-0`, or
- * `sr-only` on the one that is not showing - would leave both, and a screen
- * reader would announce the mark twice.
- *
- * Takes no props on purpose. It is a brand lockup, not a styled primitive: an
- * application whose mark is not VitNode's passes its own element to the header's
- * `logo` slot, and one that wants VitNode's at some other size renders
- * {@link LogoVitNode} directly.
- */
 export const LogoVitNodeBrand = () => (
-  <>
-    <LogoVitNode
-      className="hidden w-34 sm:block"
-      idPrefix="vitnode-brand-wide"
-    />
-    <LogoVitNode
-      className="size-8 sm:hidden"
-      idPrefix="vitnode-brand-compact"
-      small
-    />
-  </>
+  <LogoVitNode className="w-34" idPrefix="vitnode-brand" />
 );

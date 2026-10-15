@@ -8,9 +8,9 @@ import type {
 } from "@/views/admin/table/params";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
@@ -120,7 +120,7 @@ export const fetchAdminUsersPage: AdminUsersPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/users",
@@ -204,7 +204,7 @@ export const searchAdminUsersInBrowser: AdminUserSearchOptions =
   async search => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { query: { first: String(ADMIN_USER_SEARCH_LIMIT), search } },
         method: "get",
         module: "admin/users",

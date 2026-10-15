@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
-import { buildRoute } from "../../../lib/route";
 import {
   dateOrUndefined,
   positiveIntListOrUndefined,
@@ -11,7 +10,6 @@ import {
 } from "./search.route";
 
 export const facetsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

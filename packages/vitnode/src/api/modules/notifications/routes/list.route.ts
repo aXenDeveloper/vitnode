@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { listNotifications } from "@/api/models/notifications/inbox";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   requireNotificationUser,
@@ -11,7 +10,6 @@ import {
 } from "../schema";
 
 export const listNotificationsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

@@ -12,8 +12,6 @@ import {
   readTableSearch,
   withTableSearch,
 } from "@/components/table/url-state";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import type {
@@ -32,17 +30,17 @@ const PluginVersion = ({ version }: { version: null | string }) => {
   const t = useTranslations("admin.system.plugins");
 
   if (version === null) {
-    return <Badge variant="outline">{t("version_unknown")}</Badge>;
+    return (
+      <span className="text-muted-foreground text-sm">
+        {t("version_unknown")}
+      </span>
+    );
   }
 
-  return (
-    <Badge className="font-mono" variant="secondary">
-      {version}
-    </Badge>
-  );
+  return <span className="font-mono text-sm">{version}</span>;
 };
 
-const PluginRow = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
+const PluginCell = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
   const t = useTranslations("admin.system.plugins");
   const { api, frontend } = plugin.registrations;
 
@@ -50,10 +48,7 @@ const PluginRow = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
     <div className="flex items-start gap-3">
       <PluginIcon icon={plugin.icon} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-medium text-pretty">{plugin.title}</span>
-          <PluginVersion version={plugin.version} />
-        </div>
+        <span className="font-medium text-pretty">{plugin.title}</span>
         {plugin.title === plugin.id ? null : (
           <span className="text-muted-foreground font-mono text-xs break-all">
             {plugin.id}
@@ -76,23 +71,6 @@ const PluginRow = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
         ) : null}
       </div>
     </div>
-  );
-};
-
-const PluginsSummary = ({ core, count }: { core: string; count: number }) => {
-  const t = useTranslations("admin.system.plugins");
-
-  return (
-    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div className="bg-card text-card-foreground ring-foreground/10 flex flex-col gap-1 rounded-xl px-4 py-3 shadow-xs ring-1">
-        <dt className="text-muted-foreground text-sm">{t("core")}</dt>
-        <dd className="font-mono text-lg font-semibold">{core}</dd>
-      </div>
-      <div className="bg-card text-card-foreground ring-foreground/10 flex flex-col gap-1 rounded-xl px-4 py-3 shadow-xs ring-1">
-        <dt className="text-muted-foreground text-sm">{t("count_label")}</dt>
-        <dd className="text-lg font-semibold tabular-nums">{count}</dd>
-      </div>
-    </dl>
   );
 };
 
@@ -125,17 +103,21 @@ export const PluginsContent = ({ data }: PluginsContentProps) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <PluginsSummary core={data.core.version} count={data.plugins.length} />
-
-      {data.frontendInventory ? null : (
-        <Alert variant="info">
-          <AlertTitle>{t("frontend_unknown.title")}</AlertTitle>
-          <AlertDescription>{t("frontend_unknown.desc")}</AlertDescription>
-        </Alert>
-      )}
-
       <DataTableNavigationProvider value={navigation}>
         <ContentDataTable
+          columns={[
+            {
+              id: "plugin",
+              header: t("list.plugin"),
+              className: "w-full whitespace-normal",
+              cell: ({ row }) => <PluginCell plugin={row} />,
+            },
+            {
+              id: "version",
+              header: t("list.version"),
+              cell: ({ row }) => <PluginVersion version={row.version} />,
+            },
+          ]}
           customNoResults={
             data.plugins.length === 0
               ? { description: t("empty.desc"), title: t("empty.title") }
@@ -172,7 +154,6 @@ export const PluginsContent = ({ data }: PluginsContentProps) => {
             totalCount: rows.length,
             totalPages,
           }}
-          renderRow={({ row }) => <PluginRow plugin={row} />}
           search
           searchPlaceholder={t("search")}
         />

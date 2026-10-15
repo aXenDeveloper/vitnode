@@ -1,6 +1,4 @@
-import { buildModule } from "@vitnode/core/api/lib/module";
-
-import { CONFIG_PLUGIN } from "@/const";
+import { buildModule } from "@/api/builders";
 
 import {
   forumStatsRoute,
@@ -9,7 +7,6 @@ import {
 } from "./stats.routes";
 
 export const forumModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "forum",
   routes: [forumStatsRoute, topicStatsRoute, topicSlugRoute],
 });

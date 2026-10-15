@@ -6,8 +6,8 @@ import type {
   AdminTableParams,
 } from "@/views/admin/table/params";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
@@ -46,7 +46,7 @@ export type CronPageFetcher = (params: CronParams) => Promise<CronPage>;
 
 export const fetchCronPage: CronPageFetcher = async params => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/advanced/cron",
@@ -97,7 +97,7 @@ export interface CronHealth {
 
 export const fetchCronHealth = async (): Promise<CronHealth> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/advanced/cron",
     path: "/health",

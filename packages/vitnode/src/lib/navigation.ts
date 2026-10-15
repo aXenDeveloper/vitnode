@@ -1,5 +1,4 @@
-import { CONFIG_PLUGIN } from "@/config";
-
+import { manifest } from "@/manifest";
 export const NAVIGATION_KINDS = ["preset", "custom"] as const;
 export type NavigationKind = (typeof NAVIGATION_KINDS)[number];
 
@@ -62,7 +61,7 @@ export interface PublicNavigationNode extends PublicNavigationItem {
 const CORE_NAVIGATION_NAMESPACE = "core.navigation";
 
 export const navigationMessagesNamespace = (pluginId: string): string =>
-  pluginId === CONFIG_PLUGIN.pluginId
+  pluginId === manifest.id
     ? CORE_NAVIGATION_NAMESPACE
     : `${pluginId}.navigation`;
 

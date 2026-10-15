@@ -1,21 +1,16 @@
-import { buildModule } from "@vitnode/core/api/lib/module";
-import { buildContentAdminModule } from "@vitnode/core/content/server";
-
+import { buildContentAdminModule, buildModule } from "@/api/builders";
 import { blogLegacyEventListeners } from "@/api/lib/events";
-import { CONFIG_PLUGIN } from "@/const";
 import { categoryContent } from "@/database/categories";
 import { postContent } from "@/database/posts";
 
 import { aiAdminModule } from "./ai/ai.admin.module";
 
 export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [],
   modules: [
     aiAdminModule,
     buildContentAdminModule({
-      pluginId: CONFIG_PLUGIN.pluginId,
       contentTypes: [categoryContent, postContent],
     }),
   ],

@@ -2,13 +2,12 @@ import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   core_ai_calls,
   core_ai_cost_adjustments,
@@ -60,7 +59,6 @@ const toRow = ({
 });
 
 export const listAiHistoryAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",
@@ -129,7 +127,6 @@ export const listAiHistoryAdminRoute = buildRoute({
 });
 
 export const showAiRunAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "ai", permission: "can_view" },
   route: {
     method: "get",

@@ -8,7 +8,7 @@ import {
 } from "@vitnode/core/lib/ai/assist-client";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 export class ArticleAiError extends Error {
   constructor(status: number) {
@@ -26,7 +26,7 @@ export const translateArticleText = async (body: {
   to: string;
 }): Promise<string> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "post",
     module: "admin/ai",
     path: "/translate",
@@ -51,7 +51,7 @@ export const translateArticleContent = async ({
   to: string;
 }): Promise<RichTextDocument> => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "post",
     module: "admin/ai",
     path: "/translate",
@@ -71,7 +71,7 @@ export const writeArticleExcerpt = async (input: {
 }): Promise<string> => {
   try {
     const { output } = await requestAiAssist({
-      action: `${CONFIG_PLUGIN.pluginId}:excerpt.generate`,
+      action: `${manifest.id}:excerpt.generate`,
       input,
     });
     if (typeof output !== "string") throw new ArticleAiError(502);

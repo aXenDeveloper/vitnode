@@ -3,11 +3,9 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { createHash } from "node:crypto";
 
+import { buildRoute } from "@/api/builders";
 import { resolveClientIp } from "@/api/lib/client-ip";
-import { CONFIG_PLUGIN } from "@/config";
 import { CONTENT_ID_KEY_LENGTH } from "@/content/const";
-
-import { buildRoute } from "../../../lib/route";
 
 const SEARCH_POPULARITY_REPEAT_WINDOW_SECONDS = 30 * 60;
 
@@ -19,7 +17,6 @@ const viewerKey = (c: Context): string => {
 };
 
 export const popularityRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

@@ -17,10 +17,10 @@ OpenAPI record travel together.
 
 ```ts title="plugins/site-notes/src/api/modules/notes/get.route.ts"
 import { z } from '@hono/zod-openapi'
-import { buildRoute } from '@vitnode/core/api/lib/route'
+
+import { buildRoute } from '@/api/builders'
 
 export const getNoteRoute = buildRoute({
-  pluginId: '@acme/site-notes',
   route: {
     method: 'get',
     path: '/{id}',
@@ -56,15 +56,15 @@ still authorizes server-side; a hidden button is merely good manners.
 
 ```ts title="plugins/site-notes/src/api/modules/notes/publish.route.ts"
 import { z } from '@hono/zod-openapi'
-import { buildRoute } from '@vitnode/core/api/lib/route'
+
+import { buildRoute } from '@/api/builders'
 
 export const publishNoteRoute = buildRoute({
-  // [!code ++:13]
+  // [!code ++:4]
   adminStaffPermission: {
     module: 'site_notes',
     permission: 'can_publish',
   },
-  pluginId: '@acme/site-notes',
   route: {
     method: 'post',
     path: '/{id}/publish',

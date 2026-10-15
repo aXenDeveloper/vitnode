@@ -15,10 +15,10 @@ import {
   resolveStaffPermissions,
 } from "@/api/lib/check-staff-permission";
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
+import { manifest } from "@/manifest";
 
 const STAFF_TYPES: PermissionStaffType[] = ["admin", "moderator"];
 
@@ -38,7 +38,7 @@ const forbidden = () => new HTTPException(403, { message: "Forbidden" });
 const assertCanEditAdmin = async (c: Context): Promise<void> => {
   await assertStaffPermission(c, {
     type: "admin",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     module: "users",
     permission: "can_edit_admin",
   });

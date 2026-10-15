@@ -3,10 +3,9 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import { buildRoute } from "@/api/builders";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { zodPublicPerson } from "@/api/lib/public-people";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import {
   CONTENT_SUBMISSION_DECISION_CODES,
   CONTENT_SUBMISSION_KINDS,
@@ -125,7 +124,6 @@ const reviewableSubmission = async (c: Context, id: number) => {
 };
 
 export const listApprovalsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/approvals",
@@ -163,7 +161,6 @@ export const listApprovalsRoute = buildRoute({
 });
 
 export const approvalFiltersRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/approvals/filters",
@@ -200,7 +197,6 @@ export const approvalFiltersRoute = buildRoute({
 });
 
 export const myApprovalsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/approvals/mine",
@@ -231,7 +227,6 @@ export const myApprovalsRoute = buildRoute({
 });
 
 export const showApprovalRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/approvals/{id}",
@@ -266,7 +261,6 @@ const decisionResponses = {
 };
 
 export const approveApprovalRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/approvals/{id}/approve",
@@ -296,7 +290,6 @@ export const approveApprovalRoute = buildRoute({
 });
 
 export const rejectApprovalRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/approvals/{id}/reject",

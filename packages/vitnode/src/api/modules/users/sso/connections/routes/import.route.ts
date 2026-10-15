@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 import { SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
 
 import { requireSignedInUser } from "../../../passkeys/failure";
@@ -18,7 +17,6 @@ import {
 const params = z.object({ providerId: zodSsoProviderIdParam });
 
 export const ssoImportPreviewRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:
@@ -56,7 +54,6 @@ export const zodSsoApplyImportSchema = z.object({
 });
 
 export const ssoApplyImportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:
@@ -98,7 +95,6 @@ export const ssoApplyImportRoute = buildRoute({
 });
 
 export const ssoDiscardImportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description: "Throw away the signed-in user's pending import preview.",

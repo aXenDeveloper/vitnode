@@ -25,8 +25,8 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { FORUM_COMMENT_MAX_DEPTH } from "@/content/comment";
+import { manifest } from "@/manifest.gen";
 
 import type { CommentComposerProps } from "./comment-composer";
 import type { ThreadComment, ThreadPage, ThreadTreeNode } from "./thread-data";
@@ -69,7 +69,7 @@ const useCommentEditor = () => {
 
   return async (commentId: number) => {
     const res = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/comments",
       path: "/{id}/edit",

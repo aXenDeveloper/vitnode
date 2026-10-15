@@ -11,6 +11,7 @@ import {
   testPostContentType,
   testTopicContentType,
 } from "@/tests/content-fixtures";
+import { testManifest } from "@/tests/manifest";
 
 import { fetcher } from "./index";
 
@@ -106,7 +107,7 @@ const topicContent = createContentModel(testTopicContentType);
 
 const notesApiPlugin = () =>
   buildApiPlugin({
-    pluginId: PLUGIN_ID,
+    manifest: testManifest(PLUGIN_ID),
     modules: [
       notesModule,
       buildContentPublicModule({

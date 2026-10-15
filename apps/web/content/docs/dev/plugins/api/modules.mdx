@@ -23,12 +23,24 @@ place to describe them.
 
 ### Define one plugin endpoint
 
+Route and module files import their builders from the plugin's own
+`src/api/builders.ts`, which binds them to the generated `manifest`. That is
+where the plugin id comes from, so no route or module spells it:
+
+```ts title="plugins/site-notes/src/api/builders.ts"
+import { bindApiPlugin } from '@vitnode/core/api/lib/bind-api-plugin'
+
+import { manifest } from '@/manifest.gen'
+
+export const { buildModule, buildRoute } = bindApiPlugin(manifest)
+```
+
 ```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
 import { z } from '@hono/zod-openapi'
-import { buildRoute } from '@vitnode/core/api/lib/route'
+
+import { buildRoute } from '@/api/builders'
 
 export const listNotesRoute = buildRoute({
-  pluginId: '@acme/site-notes',
   route: {
     method: 'get',
     path: '/',
@@ -54,13 +66,12 @@ export const listNotesRoute = buildRoute({
 ### Group it and export the plugin API
 
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
-import { buildModule } from '@vitnode/core/api/lib/module'
+import { buildModule } from '@/api/builders'
 
 import { listNotesRoute } from './list.route'
 
 export const notesModule = buildModule({
   name: 'notes',
-  pluginId: '@acme/site-notes',
   routes: [listNotesRoute], // [!code ++]
 })
 ```
@@ -69,11 +80,12 @@ export const notesModule = buildModule({
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
 import { notesModule } from './api/modules/notes/notes.module'
+import { manifest } from './manifest.gen'
 
 export const siteNotesApiPlugin = () =>
   buildApiPlugin({
+    manifest,
     modules: [notesModule], // [!code ++]
-    pluginId: '@acme/site-notes',
   })
 ```
 
@@ -101,7 +113,7 @@ import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
 export const siteNotesApiPlugin = () =>
-  buildApiPlugin({ modules: [notesModule], pluginId: '@acme/site-notes' })
+  buildApiPlugin({ manifest, modules: [notesModule] })
 
 // [!code ++:3]
 export type VitNodeApiPlugin = ApiPluginContract<

@@ -1,17 +1,14 @@
 import { inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { loadCronHealth } from "@/api/modules/cron/helpers/load-cron-health";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_queue } from "@/database/queue";
 import { getQueueStatus } from "@/lib/api/get-queue-status";
 import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
 
-import { buildRoute } from "../../../../lib/route";
-
 export const integrationsDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_view" },
   route: {
     method: "get",

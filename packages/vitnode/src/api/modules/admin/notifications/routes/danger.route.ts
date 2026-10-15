@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   cancelQueuedNotificationEmails,
   deleteAllNotifications,
@@ -9,7 +9,6 @@ import {
   resetMemberNotificationPreferences,
   resumeNotifications,
 } from "@/api/models/notifications/danger";
-import { CONFIG_PLUGIN } from "@/config";
 
 const canManageNotifications = {
   module: "notifications",
@@ -23,7 +22,6 @@ const dangerResponses = <T extends z.ZodType>(schema: T, description: string) =>
   }) as const;
 
 export const pauseNotificationsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
@@ -40,7 +38,6 @@ export const pauseNotificationsRoute = buildRoute({
 });
 
 export const resumeNotificationsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
@@ -56,7 +53,6 @@ export const resumeNotificationsRoute = buildRoute({
 });
 
 export const cancelQueuedNotificationEmailsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
@@ -72,7 +68,6 @@ export const cancelQueuedNotificationEmailsRoute = buildRoute({
 });
 
 export const markEverythingReadRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
@@ -88,7 +83,6 @@ export const markEverythingReadRoute = buildRoute({
 });
 
 export const deleteAllNotificationsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: canManageNotifications,
   route: {
     method: "post",
@@ -104,7 +98,6 @@ export const deleteAllNotificationsRoute = buildRoute({
 });
 
 export const resetMemberNotificationPreferencesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: canManageNotifications,
   route: {
     method: "post",

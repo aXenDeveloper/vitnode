@@ -3,8 +3,8 @@ import type { Context } from "hono";
 import type { NavigationText } from "@/lib/navigation";
 
 import { saveLanguageWords } from "@/api/lib/save-language-words";
-import { CONFIG_PLUGIN } from "@/config";
 import { NAVIGATION_TABLE_NAME, NAVIGATION_WORDS } from "@/lib/navigation";
+import { manifest } from "@/manifest";
 
 const nonEmpty = (values: readonly NavigationText[]): NavigationText[] =>
   values
@@ -28,7 +28,7 @@ export const saveNavigationWords = async (
   if (title !== undefined) {
     await saveLanguageWords(c, {
       itemId,
-      pluginCode: CONFIG_PLUGIN.pluginId,
+      pluginCode: manifest.id,
       tableName: NAVIGATION_TABLE_NAME,
       values: nonEmpty(title),
       variable: NAVIGATION_WORDS.title,
@@ -38,7 +38,7 @@ export const saveNavigationWords = async (
   if (description !== undefined) {
     await saveLanguageWords(c, {
       itemId,
-      pluginCode: CONFIG_PLUGIN.pluginId,
+      pluginCode: manifest.id,
       tableName: NAVIGATION_TABLE_NAME,
       values: nonEmpty(description),
       variable: NAVIGATION_WORDS.description,

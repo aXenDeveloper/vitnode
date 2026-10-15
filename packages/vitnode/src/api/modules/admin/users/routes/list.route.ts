@@ -2,15 +2,14 @@ import { z } from "@hono/zod-openapi";
 import { eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import { buildRoute } from "@/api/builders";
 import { resolveRoleNames } from "@/api/lib/resolve-role-names";
-import { buildRoute } from "@/api/lib/route";
 import { storageUrlOf } from "@/api/lib/storage-url";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
@@ -18,7 +17,6 @@ import { core_users, core_users_secondary_roles } from "@/database/users";
 const avatarFile = alias(core_files, "user_avatar_file");
 
 export const listUsersAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",

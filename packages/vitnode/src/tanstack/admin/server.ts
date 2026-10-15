@@ -1,6 +1,6 @@
+import { manifest } from "@/manifest";
 import "@tanstack/react-start/server-only";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcher } from "@/tanstack/fetcher/server";
 
 import { readAdminSessionThrough } from "./session-read";
@@ -8,7 +8,7 @@ import { readAdminSessionThrough } from "./session-read";
 export const readAdminSessionOnApi = async () =>
   await readAdminSessionThrough(async () => {
     const response = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "admin",
       path: "/session",

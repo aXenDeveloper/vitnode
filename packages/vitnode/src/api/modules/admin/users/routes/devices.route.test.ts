@@ -5,12 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
-import { buildModule } from "@/api/lib/module";
+import { buildModule } from "@/api/builders";
 import {
   adminSessionCacheKey,
   sessionCacheKey,
 } from "@/api/models/session-cache";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
@@ -139,7 +138,6 @@ const harness = async (editor: PermissionsStaffArgs[]) => {
     "/",
     buildModule({
       name: "users",
-      pluginId: CONFIG_PLUGIN.pluginId,
       routes: [
         listUserDevicesAdminRoute,
         revokeUserDevicesAdminRoute,

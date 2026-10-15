@@ -1,6 +1,6 @@
 import type { NotificationStateMessage } from "@/lib/notifications/types";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import { createWebSocketChannel } from "./types";
 
@@ -19,7 +19,7 @@ export const notificationsChannel = createWebSocketChannel<
 >({
   id: "inbox",
   module: "notifications",
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
 });
 
 export const notificationsStateChannel = createWebSocketChannel<
@@ -28,5 +28,5 @@ export const notificationsStateChannel = createWebSocketChannel<
 >({
   id: "state",
   module: "notifications",
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
 });

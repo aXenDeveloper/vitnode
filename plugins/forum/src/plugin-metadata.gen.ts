@@ -7,12 +7,10 @@
 // icon in `src/plugin-metadata.ts`. Register `pluginMetadata` as `metadata`
 // in both `buildPlugin` and `buildApiPlugin`.
 
-import { pluginInfo } from "./plugin-metadata"
-
 export const pluginMetadata = {
   id: "@vitnode/forum",
-  title: pluginInfo.title ?? "@vitnode/forum",
-  icon: pluginInfo.icon ?? null,
+  title: "@vitnode/forum",
+  icon: null,
   description: "Community forum for VitNode: structured forums and nested threads, built on the Content Engine.",
   version: "2.0.0-canary.13",
 } as const

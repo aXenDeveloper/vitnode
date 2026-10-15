@@ -1,14 +1,12 @@
 import { HTTPException } from "hono/http-exception";
 
+import { buildRoute } from "@/api/builders";
 import {
   resolvePersonalInfoPolicy,
   zodPersonalInfoPolicy,
 } from "@/api/lib/personal-info-policy";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const mePolicyRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

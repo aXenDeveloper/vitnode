@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { buildInstalledPluginRegistry } from "@/api/lib/installed-plugins";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { createTestCache } from "@/tests/cache";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
@@ -17,10 +17,12 @@ const ADMIN = { id: 1, roleId: 1 };
 const installedPlugins = buildInstalledPluginRegistry({
   api: [
     {
-      metadata: {
+      manifest: {
+        author: null,
         description: "Posts and categories",
         icon: "newspaper",
         id: "@acme/blog",
+        license: null,
         title: "Blog",
         version: "2.0.0",
       },
@@ -30,15 +32,17 @@ const installedPlugins = buildInstalledPluginRegistry({
   frontend: [
     {
       id: "@acme/blog",
-      metadata: {
+      manifest: {
+        author: null,
         description: "Posts and categories",
         icon: "newspaper",
         id: "@acme/blog",
+        license: null,
         title: "Blog",
         version: "1.0.0",
       },
     },
-    { id: "@acme/analytics", metadata: null },
+    { id: "@acme/analytics", manifest: null },
   ],
 });
 
@@ -66,7 +70,7 @@ describe("GET /admin/plugins", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      core: { version: CONFIG_PLUGIN.version },
+      core: { version: manifest.version },
       frontendInventory: true,
       plugins: installedPlugins.plugins,
     });

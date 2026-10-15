@@ -2,20 +2,18 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   resolveUserImagePolicy,
   setUserImage,
   zodUserImageKind,
 } from "@/api/lib/user-images";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
 export const uploadUserImageAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "post",

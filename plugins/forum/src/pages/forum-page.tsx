@@ -32,7 +32,7 @@ import { Fragment } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { TopicRow, TopicStats } from "./forum-data";
 import type { ForumSearch } from "./forum-links";
@@ -65,7 +65,7 @@ const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
       const filters = { forum: String(request.forumId) };
 
       const list = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "content/topics",
         path: "/",

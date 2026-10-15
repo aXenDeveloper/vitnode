@@ -1,13 +1,11 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { getStaffFlags } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
 import { getNotificationState } from "@/api/models/notifications/inbox";
 import { zodNotificationState } from "@/api/modules/notifications/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Verify session",

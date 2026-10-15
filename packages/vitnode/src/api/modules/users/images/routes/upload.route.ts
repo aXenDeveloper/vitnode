@@ -1,17 +1,15 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   resolveUserImagePolicy,
   setUserImage,
   zodUserImageKind,
 } from "@/api/lib/user-images";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const uploadUserImageRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

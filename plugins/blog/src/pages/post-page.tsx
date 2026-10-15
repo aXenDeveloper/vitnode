@@ -21,8 +21,8 @@ import { useRecordView } from "@vitnode/core/tanstack/search";
 import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blogPostContentType } from "@/content/post";
+import { manifest } from "@/manifest.gen";
 
 import { blogPostQueryOptions } from "./post-query";
 
@@ -78,7 +78,7 @@ const BlogPostPage = ({
             <ReportButton
               className="text-muted-foreground"
               locale={metadata.locale}
-              pluginId={CONFIG_PLUGIN.pluginId}
+              pluginId={manifest.id}
               requestedLocale={metadata.requestedLocale}
               targetId={metadata.itemId}
               targetType={blogPostContentType.id}

@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { EmailVerificationModel } from "@/api/models/email-verification";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const zodVerifyEmailSchema = z.object({
   token: z
@@ -14,7 +13,6 @@ export const zodVerifyEmailSchema = z.object({
 });
 
 export const verifyEmailRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Confirm an email address with the link sent at sign-up",

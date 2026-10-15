@@ -76,11 +76,11 @@ Create a helper that reads every board. The list comes back in tree order, flat,
 ```ts title="plugins/example/src/pages/boards-data.ts"
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 export const fetchBoards = async () => {
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/boards",
     path: "/",
@@ -255,7 +255,7 @@ import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { BoardSearch } from "./board-search";
 
@@ -268,7 +268,7 @@ const zodDiscussionRow = z.object({
 
 const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
   const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/boards",
     path: "/{idOrSlug}",
@@ -290,7 +290,7 @@ const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
   };
 
   const list = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/discussions",
     path: "/",
@@ -431,7 +431,7 @@ const onSubmit: AutoFormOnSubmit<DiscussionCreateFormSchema> = async (
   form,
 ) => {
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "post",
     module: "content/discussions",
     path: "/",

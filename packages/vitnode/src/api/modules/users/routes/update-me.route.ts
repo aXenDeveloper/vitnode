@@ -2,11 +2,10 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { buildRoute } from "@/api/builders";
 import { resolvePersonalInfoPolicy } from "@/api/lib/personal-info-policy";
-import { buildRoute } from "@/api/lib/route";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 import {
   personalInformationChanges,
@@ -54,7 +53,6 @@ export const zodPersonalInformation = z.object({
 });
 
 export const updateMeRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "patch",
     description: "Update the signed-in user's own personal information.",

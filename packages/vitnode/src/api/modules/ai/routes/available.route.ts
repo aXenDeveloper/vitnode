@@ -1,11 +1,9 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { availableAiActions } from "@/api/lib/ai/available-actions";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const availableAiActionsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "The AI actions you may start.",

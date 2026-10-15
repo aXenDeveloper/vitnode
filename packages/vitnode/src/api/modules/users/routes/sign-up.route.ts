@@ -1,12 +1,11 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { describeError } from "@/api/lib/error-details";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
-import { buildRoute } from "@/api/lib/route";
 import { EmailVerificationModel } from "@/api/models/email-verification";
 import { PasswordModel } from "@/api/models/password";
 import { UserModel } from "@/api/models/user";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { SessionModel } from "../../../models/session";
 import {
@@ -36,7 +35,6 @@ export const zodSignUpSchema = z.object({
 });
 
 export const signUpRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Create a new user",

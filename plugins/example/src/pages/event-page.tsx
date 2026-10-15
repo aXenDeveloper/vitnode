@@ -9,7 +9,7 @@ import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { ContentArticle } from "./content-article";
 
@@ -31,7 +31,7 @@ const loadEvent = async ({
   slug: string;
 }) => {
   const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/events",
     path: "/{slug}",

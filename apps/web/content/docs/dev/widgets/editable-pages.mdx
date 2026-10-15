@@ -94,7 +94,7 @@ The definition module is a plain value with **no third-party import anywhere in 
 
 ```ts title="plugins/example/src/config.api.ts"
 buildApiPlugin({
-  pluginId: CONFIG_PLUGIN.pluginId,
+  manifest,
   // [!code ++:4]
   editablePages: [settingsPage],
   permissionStaff: {

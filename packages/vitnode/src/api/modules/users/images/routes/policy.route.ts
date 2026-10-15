@@ -1,14 +1,12 @@
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   resolveUserImagePolicy,
   zodUserImagePolicy,
 } from "@/api/lib/user-images";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const userImagePolicyRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

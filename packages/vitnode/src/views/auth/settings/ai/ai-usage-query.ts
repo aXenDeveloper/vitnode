@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export const AI_USAGE_NOTICES = [
@@ -70,7 +70,7 @@ export type AiUsageFetcher = () => Promise<AiUsage>;
 
 export const fetchAiUsage: AiUsageFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "ai",
     path: "/usage",
@@ -95,7 +95,7 @@ export type AiHistoryFetcher = (
 
 export const fetchAiHistory: AiHistoryFetcher = async (before, filter = {}) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: {
       query: {
         ...filter,

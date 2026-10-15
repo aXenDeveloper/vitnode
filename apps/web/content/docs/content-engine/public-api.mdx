@@ -67,18 +67,17 @@ export const articleContentType = defineContentType({
 Add `buildContentPublicModule` to the plugin's API config. The example plugin passes all five content models; one without `publicApi` is skipped:
 
 ```ts title="plugins/example/src/config.api.ts"
-import { buildContentPublicModule } from "@vitnode/core/content/server"; // [!code ++]
+import { buildContentPublicModule } from "@/api/builders"; // [!code ++]
 
 import { articleContent } from "@/database/articles"; // [!code ++]
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     modules: [
       adminModule,
-      // [!code ++:4]
+      // [!code ++:3]
       buildContentPublicModule({
-        pluginId: CONFIG_PLUGIN.pluginId,
         contentTypes: [articleContent],
       }),
     ],

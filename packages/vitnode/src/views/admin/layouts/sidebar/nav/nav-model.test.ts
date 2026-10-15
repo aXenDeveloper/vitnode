@@ -60,11 +60,11 @@ describe("the core group", () => {
     expect(hrefs(nav)).toEqual([
       "/admin/core/",
       "/admin/core/system",
-      "/admin/core/system/integrations",
-      "/admin/core/system/navigation",
-      "/admin/core/system/files",
-      "/admin/core/system/notifications",
       "/admin/core/system/plugins",
+      "/admin/core/system/integrations",
+      "/admin/core/system/files",
+      "/admin/core/system/navigation",
+      "/admin/core/system/notifications",
       "/admin/core/users",
       "/admin/core/users",
       "/admin/core/users/roles",
@@ -138,7 +138,7 @@ describe("the core group", () => {
     expect(core.title).toBe("admin.global.nav.core");
     expect(core.items[0].title).toBe("admin.global.nav.dashboard");
     expect(core.items[1].items?.[0].title).toBe(
-      "admin.global.nav.system.integrations",
+      "admin.global.nav.system.plugins",
     );
   });
 });

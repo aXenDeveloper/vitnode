@@ -27,7 +27,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import {
   DiscussionForm,
@@ -44,7 +44,7 @@ const loadEditableDiscussion = async (param: string) => {
   }
 
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/discussions",
     path: "/{id}/edit",
@@ -97,7 +97,7 @@ const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
     form,
   ) => {
     const res = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "patch",
       module: "content/discussions",
       path: "/{id}",

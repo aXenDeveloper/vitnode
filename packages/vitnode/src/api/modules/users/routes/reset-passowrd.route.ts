@@ -3,11 +3,10 @@ import { HTTPException } from "hono/http-exception";
 import { createTranslator } from "use-intl";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
-import { buildRoute } from "@/api/lib/route";
 import { matchesEmail, pickAccountForEmail } from "@/api/lib/user-email-lookup";
 import { ForgotPasswordTokenModel } from "@/api/models/password";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 import ResetPasswordEmailTemplate from "@/emails/reset-password";
 import { CONFIG } from "@/lib/config";
@@ -15,7 +14,6 @@ import { CONFIG } from "@/lib/config";
 import { USER_EMAIL_MAX_LENGTH } from "../credential-limits";
 
 export const resetPasswordRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Request a password reset",

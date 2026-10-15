@@ -40,10 +40,10 @@ Make sure your `package.json` has a `description` next to its `name` and `versio
 
 ### Set the title and icon
 
-Create `src/plugin-metadata.ts` with the title and a [Lucide icon](https://lucide.dev/icons) name:
+Create `src/plugin-info.ts` with the title and a [Lucide icon](https://lucide.dev/icons) name:
 
-```ts title="src/plugin-metadata.ts"
-import type { PluginInfo } from '@vitnode/core/lib/plugin-metadata'
+```ts title="src/plugin-info.ts"
+import type { PluginInfo } from '@vitnode/core/lib/plugin-manifest'
 
 export const pluginInfo: PluginInfo = {
   title: 'Site Notes',
@@ -56,22 +56,19 @@ Plugins created with the generator already have this file, with the `puzzle` ico
   </Step>
   <Step>
 
-### Register the generated metadata
+### Register the generated manifest
 
-`vitnode build` writes `src/plugin-metadata.gen.ts`. It holds the `name`, `version` and `description` from `package.json` and imports the title and icon from `src/plugin-metadata.ts`. Pass it to both registrations:
+`vitnode build` writes `src/manifest.gen.ts`. It holds the `name`, `version`, `description`, `author` and `license` from `package.json` and imports the title and icon from `src/plugin-info.ts`. It is also the single source of the plugin id (`manifest.id`), so nothing else spells the id by hand. Pass it to both registrations:
 
 ```tsx title="src/config.tsx"
 import { buildPlugin } from '@vitnode/core/lib/plugin'
 
-import { CONFIG_PLUGIN } from '@/const'
-
-import { pluginMetadata } from './plugin-metadata.gen'
+import { manifest } from './manifest.gen'
 import { routes } from './routes'
 
 export const siteNotesPlugin = () =>
   buildPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    metadata: pluginMetadata,
+    manifest,
     routes,
   })
 ```
@@ -79,13 +76,11 @@ export const siteNotesPlugin = () =>
 ```ts title="src/config.api.ts"
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
-import { CONFIG_PLUGIN } from '@/const'
-import { pluginMetadata } from '@/plugin-metadata.gen'
+import { manifest } from '@/manifest.gen'
 
 export const siteNotesApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    metadata: pluginMetadata,
+    manifest,
     modules: [],
   })
 ```
@@ -112,27 +107,27 @@ Restart your app, sign in to the AdminCP and open **System → Plugins**. Your p
 
 ## Where each value comes from
 
-| Value       | Source                              | Required | Default        |
-| ----------- | ----------------------------------- | -------- | -------------- |
-| ID          | `name` in `package.json`            | Yes      | -              |
-| Version     | `version` in `package.json`         | No       | Unknown        |
-| Description | `description` in `package.json`     | No       | No description |
-| Title       | `title` in `src/plugin-metadata.ts` | No       | The ID         |
-| Icon        | `icon` in `src/plugin-metadata.ts`  | No       | Puzzle icon    |
+| Value       | Source                          | Required | Default        |
+| ----------- | ------------------------------- | -------- | -------------- |
+| ID          | `name` in `package.json`        | Yes      | -              |
+| Version     | `version` in `package.json`     | No       | Unknown        |
+| Description | `description` in `package.json` | No       | No description |
+| Title       | `title` in `src/plugin-info.ts` | No       | The ID         |
+| Icon        | `icon` in `src/plugin-info.ts`  | No       | Puzzle icon    |
 
-The ID must equal the `pluginId` you register. Title and description are plain text, shown as written in every language. The icon is a Lucide icon name in kebab-case, such as `newspaper` or `messages-square`. `buildPlugin()` and `buildApiPlugin()` throw at startup for anything else, and an unknown name falls back to the puzzle icon. Because an icon is just a name, the API returns it too, so plugins registered only in the API show their own icon as well.
+The ID is the plugin id: `buildPlugin()` and `buildApiPlugin()` read it from `manifest.id`. Title and description are plain text, shown as written in every language. The icon is a Lucide icon name in kebab-case, such as `newspaper` or `messages-square`. `buildPlugin()` and `buildApiPlugin()` throw at startup for anything else, and an unknown name falls back to the puzzle icon. Because an icon is just a name, the API returns it too, so plugins registered only in the API show their own icon as well.
 
-## When the metadata is regenerated
+## When the manifest is regenerated
 
 - `vitnode build` regenerates the file before every build, so a published package always carries its real version.
-- `vitnode dev` regenerates it whenever `package.json` changes, or `src/plugin-metadata.ts` is created or deleted. Edits inside `src/plugin-metadata.ts` need no regeneration: the generated file imports it. The file is only rewritten when its content changes, so adding a dependency rebuilds nothing.
+- `vitnode dev` regenerates it whenever `package.json` changes, or `src/plugin-info.ts` is created or deleted. Edits inside `src/plugin-info.ts` need no regeneration: the generated file imports it. The file is only rewritten when its content changes, so adding a dependency rebuilds nothing.
 - A broken `package.json` edit is reported in the terminal and the last good file stays in place.
 
 The app picks up a new plugin, a removed one or a new version after it is rebuilt and restarted. Nothing is stored in the database.
 
 ## Frontend and API inventory
 
-A plugin can be registered in `vitnode.config.ts` (frontend), in `vitnode.api.config.ts` (API), or both. The catalog lists each plugin ID once. The API cannot see the frontend config, so the web build hands it over: the Vite plugin writes `src/plugin-inventory.gen.ts`, plain metadata with no plugin code, and you pass it to the API config:
+A plugin can be registered in `vitnode.config.ts` (frontend), in `vitnode.api.config.ts` (API), or both. The catalog lists each plugin ID once. The API cannot see the frontend config, so the web build hands it over: the Vite plugin writes `src/plugin-inventory.gen.ts`, a plain list of `{ id, manifest }` entries with no plugin code, and you pass it to the API config:
 
 ```ts title="src/vitnode.api.config.ts"
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
@@ -156,9 +151,9 @@ A side that reports no version is unknown, not a mismatch.
 
 ## Older plugins
 
-Plugins registered without `metadata` keep working. The catalog lists them by plugin ID, with the default icon, "Unknown version" and "No description provided." A plugin without `src/plugin-metadata.ts` gets its ID as the title and the default icon. Add either when convenient.
+`buildPlugin()` and `buildApiPlugin()` take the plugin id from `manifest`, so an older plugin that still passes `pluginId` needs `src/manifest.gen.ts` first: run `vitnode build` or `vitnode dev` once, then pass `manifest` instead. A plugin without `src/plugin-info.ts` gets its ID as the title and the default icon. Add it when convenient.
 
-Passing the metadata of another package throws at startup: `buildPlugin()` and `buildApiPlugin()` check that `metadata.id` equals `pluginId`.
+A frontend inventory entry carrying the manifest of another package throws at startup: the API checks that `manifest.id` equals the entry's `id`.
 
 ## Who can see the catalog
 

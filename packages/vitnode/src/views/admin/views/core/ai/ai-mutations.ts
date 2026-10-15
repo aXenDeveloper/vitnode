@@ -5,8 +5,8 @@ import type {
   zodAiSettings,
 } from "@/api/modules/admin/ai/schemas";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
@@ -43,7 +43,7 @@ export const updateAdminAiSettings = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "put",
         module: "admin/ai",
@@ -60,7 +60,7 @@ export const updateAdminAiAction = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "put",
         module: "admin/ai",
@@ -77,7 +77,7 @@ export const updateAdminAiRoleAccess = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "put",
         module: "admin/ai",
@@ -94,7 +94,7 @@ export const updateAdminAiUserOverride = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "put",
         module: "admin/ai",
@@ -111,7 +111,7 @@ export const deleteAdminAiUserOverride = async (
     parse: ok,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { query: { userId } },
         method: "delete",
         module: "admin/ai",

@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { TopicEditSearch } from "./forum-links";
 import type { TopicFormValues } from "./topic-form";
@@ -70,7 +70,7 @@ const loadEditableTopic = async (param: string) => {
   }
 
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/topics",
     path: "/{id}/edit",
@@ -209,7 +209,7 @@ const TopicEditForm = ({
 
   const onSubmit: AutoFormOnSubmit<TopicFormSchema> = async (values, form) => {
     const res = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "patch",
       module: "content/topics",
       path: "/{id}",

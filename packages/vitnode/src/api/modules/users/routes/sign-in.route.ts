@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
-import { buildRoute } from "@/api/lib/route";
 import {
   EMAIL_NOT_VERIFIED,
   mustVerifyEmail,
@@ -9,7 +9,6 @@ import {
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { UserModel } from "@/api/models/user";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   USER_EMAIL_MAX_LENGTH,
@@ -29,7 +28,6 @@ export const zodSignInSchema = z.object({
 });
 
 export const signInRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Sign in with email and password",

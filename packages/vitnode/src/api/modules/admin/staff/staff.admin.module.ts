@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { listAdminsStaffAdminRoute } from "./routes/admins.route";
 import { createStaffAdminRoute } from "./routes/create.route";
@@ -11,7 +10,6 @@ import { showPermissionsStaffAdminRoute } from "./routes/show-permissions.route"
 import { updatePermissionsStaffAdminRoute } from "./routes/update-permissions.route";
 
 export const staffAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "staff",
   routes: [
     listModeratorsStaffAdminRoute,

@@ -1,11 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
+import { manifest } from "@/manifest";
 
 import { resolveStaffEdges } from "../lib/resolve-staff-edges";
 import {
@@ -21,7 +21,6 @@ const tableByType = {
 } as const;
 
 export const showPermissionsStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:
@@ -61,7 +60,7 @@ export const showPermissionsStaffAdminRoute = buildRoute({
     const { type, id } = c.req.valid("param");
     await assertStaffPermission(c, {
       type: "admin",
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       module: staffPermissionModuleByType[type],
       permission: "can_edit",
     });

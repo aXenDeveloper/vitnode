@@ -16,6 +16,7 @@ import {
 } from "@/framework/vite/plugin-routes";
 import { definePluginRoutes, lazy, page } from "@/routing/tree";
 import { testDeliveredPostContentType } from "@/tests/content-fixtures";
+import { testManifest } from "@/tests/manifest";
 
 import {
   assertPluginContentModules,
@@ -130,7 +131,7 @@ const webBuild = async (
 
 const publishingPlugin = () =>
   buildApiPlugin({
-    pluginId: PLUGIN_ID,
+    manifest: testManifest(PLUGIN_ID),
     modules: [
       buildContentPublicModule({
         pluginId: PLUGIN_ID,
@@ -248,7 +249,7 @@ describe("a plugin's public content URLs, from web build to API boot", () => {
     expect(() =>
       assertPluginContentModules({
         loader: packageContentModules(appRoot),
-        plugins: [buildApiPlugin({ pluginId: PLUGIN_ID })],
+        plugins: [buildApiPlugin({ manifest: testManifest(PLUGIN_ID) })],
       }),
     ).not.toThrow();
   });

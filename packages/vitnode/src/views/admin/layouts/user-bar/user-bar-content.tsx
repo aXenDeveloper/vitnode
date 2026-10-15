@@ -28,8 +28,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { UserMenuIdentity } from "@/components/user-menu-identity";
-import { CONFIG_PLUGIN } from "@/config";
 import { VITNODE_ISSUES_URL, VITNODE_WEBSITE_URL } from "@/lib/docs-links";
+import { manifest } from "@/manifest";
 
 export interface AdminUserBarUser {
   avatarColor: string;
@@ -50,7 +50,7 @@ export const UserBarAdminContent = ({
   const t = useTranslations("admin.global.nav.user_bar");
   const { isMobile } = useSidebar();
   const canViewDebug = useAdminStaffPermission({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     module: "debug",
     permission: "can_view",
   });

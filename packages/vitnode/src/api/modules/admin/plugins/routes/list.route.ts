@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
+import { manifest } from "@/manifest";
 
 const registrationSchema = z
   .object({
@@ -11,7 +11,6 @@ const registrationSchema = z
   .nullable();
 
 export const listPluginsAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "plugins", permission: "can_view" },
   route: {
     method: "get",
@@ -53,7 +52,7 @@ export const listPluginsAdminRoute = buildRoute({
     const { frontendInventory, plugins } = c.get("core").installedPlugins;
 
     return c.json({
-      core: { version: CONFIG_PLUGIN.version },
+      core: { version: manifest.version },
       frontendInventory,
       plugins,
     });

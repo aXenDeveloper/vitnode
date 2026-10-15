@@ -12,9 +12,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   PLUGIN_INFO_PATH,
-  PLUGIN_METADATA_PATH,
-} from "../src/framework/plugin-metadata/generate.js";
-import { definesPlugin, writePluginMetadata } from "./write-plugin-metadata.js";
+  PLUGIN_MANIFEST_PATH,
+} from "../src/framework/plugin-manifest/generate.js";
+import { definesPlugin, writePluginManifest } from "./write-plugin-manifest.js";
 
 const dirs: string[] = [];
 
@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 const tempDir = () => {
-  const dir = mkdtempSync(join(tmpdir(), "vitnode-plugin-metadata-"));
+  const dir = mkdtempSync(join(tmpdir(), "vitnode-plugin-manifest-"));
   dirs.push(dir);
 
   return dir;
@@ -60,26 +60,26 @@ const BLOG = { description: "Posts", name: "@acme/blog", version: "1.0.0" };
 
 /** What the generated module exports, evaluated for real. */
 const generated = async (root: string): Promise<unknown> => {
-  const module = (await import(join(root, PLUGIN_METADATA_PATH))) as {
-    pluginMetadata: unknown;
+  const module = (await import(join(root, PLUGIN_MANIFEST_PATH))) as {
+    manifest: unknown;
   };
 
-  return module.pluginMetadata;
+  return module.manifest;
 };
 
-describe("writePluginMetadata", () => {
-  it("writes the metadata, and watches src/plugin-metadata.ts before it exists", () => {
+describe("writePluginManifest", () => {
+  it("writes the manifest, and watches src/plugin-info.ts before it exists", () => {
     const root = pluginAt(BLOG);
 
-    expect(writePluginMetadata(root)).toEqual({
+    expect(writePluginManifest(root)).toEqual({
       changed: true,
       inputs: [join(root, "package.json"), join(root, PLUGIN_INFO_PATH)],
     });
-    expect(existsSync(join(root, PLUGIN_METADATA_PATH))).toBe(true);
+    expect(existsSync(join(root, PLUGIN_MANIFEST_PATH))).toBe(true);
   });
 
   it.each([
-    ["no src/plugin-metadata.ts", undefined, "@acme/blog", null],
+    ["no src/plugin-info.ts", undefined, "@acme/blog", null],
     ["an empty plugin info", {}, "@acme/blog", null],
     [
       "a title and an icon",
@@ -91,12 +91,14 @@ describe("writePluginMetadata", () => {
     const root = pluginAt(BLOG);
     if (info) writeInfo(root, info);
 
-    writePluginMetadata(root);
+    writePluginManifest(root);
 
     expect(await generated(root)).toEqual({
+      author: null,
       description: "Posts",
       icon,
       id: "@acme/blog",
+      license: null,
       title,
       version: "1.0.0",
     });
@@ -111,7 +113,7 @@ describe("writePluginMetadata", () => {
       false,
     ],
     [
-      "a title edited in src/plugin-metadata.ts",
+      "a title edited in src/plugin-info.ts",
       (root: string) => {
         writeInfo(root, { title: "Journal" });
       },
@@ -125,7 +127,7 @@ describe("writePluginMetadata", () => {
       true,
     ],
     [
-      "src/plugin-metadata.ts disappearing",
+      "src/plugin-info.ts disappearing",
       (root: string) => {
         rmSync(join(root, PLUGIN_INFO_PATH));
       },
@@ -134,31 +136,31 @@ describe("writePluginMetadata", () => {
   ])("after %s, reports changed: %s", (_, edit, changed) => {
     const root = pluginAt(BLOG);
     writeInfo(root, { title: "Blog" });
-    writePluginMetadata(root);
-    const before = readFileSync(join(root, PLUGIN_METADATA_PATH), "utf8");
+    writePluginManifest(root);
+    const before = readFileSync(join(root, PLUGIN_MANIFEST_PATH), "utf8");
 
     edit(root);
 
-    expect(writePluginMetadata(root).changed).toBe(changed);
+    expect(writePluginManifest(root).changed).toBe(changed);
     expect(
-      readFileSync(join(root, PLUGIN_METADATA_PATH), "utf8") !== before,
+      readFileSync(join(root, PLUGIN_MANIFEST_PATH), "utf8") !== before,
     ).toBe(changed);
   });
 
-  it("reports src/plugin-metadata.ts appearing as a change", () => {
+  it("reports src/plugin-info.ts appearing as a change", () => {
     const root = pluginAt(BLOG);
-    writePluginMetadata(root);
+    writePluginManifest(root);
 
     writeInfo(root, { icon: "newspaper" });
 
-    expect(writePluginMetadata(root).changed).toBe(true);
+    expect(writePluginManifest(root).changed).toBe(true);
   });
 
   it("refuses a package without a name and writes nothing", () => {
     const root = pluginAt({ version: "1.0.0" });
 
-    expect(() => writePluginMetadata(root)).toThrow(/has no `name`/);
-    expect(existsSync(join(root, PLUGIN_METADATA_PATH))).toBe(false);
+    expect(() => writePluginManifest(root)).toThrow(/has no `name`/);
+    expect(existsSync(join(root, PLUGIN_MANIFEST_PATH))).toBe(false);
   });
 });
 

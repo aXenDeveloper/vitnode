@@ -1,6 +1,6 @@
-import { CONFIG_PLUGIN } from "@/config";
 import coreMessages from "@/locales";
 import coreApiMessages from "@/locales/api";
+import { manifest } from "@/manifest";
 
 import type {
   AppMessagesMap,
@@ -71,7 +71,7 @@ const buildSources = ({
   scope: string;
 }): MessagesSource[] =>
   [
-    { id: CONFIG_PLUGIN.pluginId, messages: coreBarrel },
+    { id: manifest.id, messages: coreBarrel },
     ...plugins.map(plugin => ({
       id: plugin.pluginId,
       messages: plugin.messages,

@@ -1,6 +1,6 @@
 import { defineEditablePage } from "@vitnode/core/content/editor";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import {
   PAGE_BLOCKS_ALLOWED,
@@ -165,7 +165,7 @@ export const mayEditSettingsPage = ({
   root ||
   permissions.some(
     entry =>
-      entry.plugin === CONFIG_PLUGIN.pluginId &&
+      entry.plugin === manifest.id &&
       entry.module === EXAMPLE_WIDGETS_PERMISSION.module &&
       entry.permission === EXAMPLE_WIDGETS_PERMISSION.permission,
   );

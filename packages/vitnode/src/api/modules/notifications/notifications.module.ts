@@ -1,6 +1,5 @@
-import { buildModule } from "@/api/lib/module";
+import { buildModule } from "@/api/builders";
 import { coreNotificationTypes } from "@/api/lib/notifications/core-types";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { listNotificationsRoute } from "./routes/list.route";
 import {
@@ -23,7 +22,6 @@ import {
 } from "./tasks/notification-tasks";
 
 export const notificationsModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "notifications",
   routes: [
     listNotificationsRoute,

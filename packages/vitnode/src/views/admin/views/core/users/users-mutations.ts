@@ -1,8 +1,8 @@
 import type { UserImageKind } from "@/lib/user-images";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { readApiErrorMessage } from "@/lib/read-api-error";
+import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
@@ -41,7 +41,7 @@ export const updateAdminUser = async (
     parse: async response => (await response.json()) as AdminUserUpdated,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body, params: { id: String(id) } },
         method: "patch",
         module: "admin/users",
@@ -70,7 +70,7 @@ export const verifyAdminUserEmail = async (
     parse: async response => (await response.json()) as AdminUserVerified,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id: String(id) } },
         method: "post",
         module: "admin/users",
@@ -99,7 +99,7 @@ export const createAdminUser = async (
     parse: async response => (await response.json()) as AdminUserCreated,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "post",
         module: "admin/users",
@@ -146,7 +146,7 @@ export const uploadAdminUserImage = async (
   formData.append("file", file);
 
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id: String(id), kind } },
     formData,
     method: "post",
@@ -170,7 +170,7 @@ export const removeAdminUserImage = async (
   kind: UserImageKind,
 ): Promise<void> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id: String(id), kind } },
     method: "delete",
     module: "admin/users",

@@ -3,8 +3,8 @@ import type {
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
@@ -26,7 +26,7 @@ export const createStaffEntry = async ({
     parse: async response => (await response.json()) as { id: number },
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { roleId, userId }, params: { type } },
         method: "post",
         module: "admin/staff",
@@ -62,7 +62,7 @@ export const updateStaffPermissions = async ({
       },
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           body: { permissions, unrestricted },
           params: { id, type },
@@ -87,7 +87,7 @@ export const deleteStaffEntry = async ({
     parse: () => true as const,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id: String(id), type } },
         method: "delete",
         module: "admin/staff",

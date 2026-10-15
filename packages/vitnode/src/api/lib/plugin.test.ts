@@ -8,6 +8,7 @@ import {
   testDeliveredPostContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
+import { testManifest } from "@/tests/manifest";
 
 import type { SearchIndexer } from "../models/search";
 
@@ -32,7 +33,7 @@ const adminModule = buildModule({
 describe("buildApiPlugin content types", () => {
   it("collects content types from nested modules", () => {
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [adminModule],
     });
 
@@ -44,7 +45,7 @@ describe("buildApiPlugin content types", () => {
 
   it("derives staff permissions for each collected content type", () => {
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [adminModule],
     });
 
@@ -59,7 +60,7 @@ describe("buildApiPlugin content types", () => {
 
   it("keeps hand-declared permissions and other modules intact", () => {
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [adminModule],
       permissionStaff: {
         admin: { article: ["can_view"], posts: ["can_view"] },
@@ -74,7 +75,7 @@ describe("buildApiPlugin content types", () => {
 
   it("leaves permissionStaff untouched for a plugin with no content types", () => {
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [],
     });
 
@@ -91,7 +92,10 @@ describe("buildApiPlugin content types", () => {
     });
 
     expect(() =>
-      buildApiPlugin({ pluginId: "@vitnode/example", modules: [duplicate] }),
+      buildApiPlugin({
+        manifest: testManifest("@vitnode/example"),
+        modules: [duplicate],
+      }),
     ).toThrow(/Duplicate content type id/);
   });
 });
@@ -111,7 +115,7 @@ describe("buildApiPlugin search indexers", () => {
     });
 
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [
         buildModule({
           pluginId: "@vitnode/example",
@@ -129,7 +133,7 @@ describe("buildApiPlugin search indexers", () => {
 
   it("merges root-level indexers with collected ones", () => {
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [
         buildModule({
           pluginId: "@vitnode/example",
@@ -149,7 +153,7 @@ describe("buildApiPlugin search indexers", () => {
 
   it("leaves a plugin with no indexers alone", () => {
     const plugin = buildApiPlugin({
-      pluginId: "@vitnode/example",
+      manifest: testManifest("@vitnode/example"),
       modules: [adminModule],
     });
 
@@ -159,7 +163,7 @@ describe("buildApiPlugin search indexers", () => {
   it("rejects the same item type registered twice", () => {
     expect(() =>
       buildApiPlugin({
-        pluginId: "@vitnode/example",
+        manifest: testManifest("@vitnode/example"),
         modules: [
           buildModule({
             pluginId: "@vitnode/example",
@@ -180,13 +184,13 @@ describe("validateSearchIndexers", () => {
     // stamps on a legacy document.
     const collected = [
       ...(buildApiPlugin({
-        pluginId: "@vitnode/example",
+        manifest: testManifest("@vitnode/example"),
         searchIndexers: [indexer("test.article")],
       }).searchIndexers ?? []),
     ].map(item => ({ ...item, pluginId: "@vitnode/example" }));
     const other = [
       ...(buildApiPlugin({
-        pluginId: "@vitnode/blog",
+        manifest: testManifest("@vitnode/blog"),
         searchIndexers: [indexer("blog_post")],
       }).searchIndexers ?? []),
     ].map(item => ({ ...item, pluginId: "@vitnode/blog" }));
@@ -238,7 +242,7 @@ describe("buildApiPlugin public content URLs", () => {
 
   it("reports every content type that publishes a URL, however it is exposed", () => {
     const plugin = buildApiPlugin({
-      pluginId: PLUGIN_ID,
+      manifest: testManifest(PLUGIN_ID),
       modules: [searchableAdmin, deliveredPublic],
     });
 
@@ -250,27 +254,10 @@ describe("buildApiPlugin public content URLs", () => {
 
   it("reports nothing for content without delivery or search", () => {
     expect(
-      buildApiPlugin({ pluginId: PLUGIN_ID, modules: [adminModule] })
-        .publicContentTypes,
-    ).toEqual([]);
-  });
-});
-
-describe("buildApiPlugin metadata", () => {
-  it("refuses metadata generated for another package", () => {
-    expect(() =>
       buildApiPlugin({
-        metadata: {
-          description: null,
-          icon: null,
-          id: "@vitnode/blog",
-          title: "Blog",
-          version: "1.0.0",
-        },
-        pluginId: "@vitnode/example",
-      }),
-    ).toThrow(
-      /^\[VitNode plugin metadata\] buildApiPlugin\(\) registers the plugin "@vitnode\/example" with the metadata of "@vitnode\/blog"/,
-    );
+        manifest: testManifest(PLUGIN_ID),
+        modules: [adminModule],
+      }).publicContentTypes,
+    ).toEqual([]);
   });
 });

@@ -26,7 +26,7 @@ import { Fragment } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { BoardSearch } from "./board-search";
 
@@ -45,7 +45,7 @@ const zodDiscussionRow = z.object({
 
 const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
   const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/boards",
     path: "/{idOrSlug}",
@@ -66,7 +66,7 @@ const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
   };
 
   const list = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/discussions",
     path: "/",

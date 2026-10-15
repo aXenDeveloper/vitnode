@@ -8,9 +8,9 @@ import type { Project } from "../project/project";
 import { writePluginApiRegistry } from "../../write-plugin-api-registry";
 import {
   definesPlugin,
-  watchPluginMetadata,
-  writePluginMetadata,
-} from "../../write-plugin-metadata";
+  watchPluginManifest,
+  writePluginManifest,
+} from "../../write-plugin-manifest";
 import { createDatabaseServices } from "../db/database";
 import { prepareDevelopmentDatabase } from "../db/prepare";
 import { openUrl } from "../dev/open-url";
@@ -50,23 +50,23 @@ const ownsDatabase = (project: Project) =>
   project.drizzleConfig !== null && project.hasApi;
 
 /**
- * Writes the plugin's metadata modules, then keeps them in step with
+ * Writes the plugin's manifest module, then keeps them in step with
  * `package.json` and the icon. A broken edit is reported and the last good
  * files stay, so the watchers keep running while it is fixed.
  */
-const watchMetadata = (root: string, ui: CommandContext["ui"]) => {
+const watchManifest = (root: string, ui: CommandContext["ui"]) => {
   let inputs: string[];
   try {
-    inputs = writePluginMetadata(root).inputs;
+    inputs = writePluginManifest(root).inputs;
   } catch (error) {
     throw new ConfigError(errorMessage(error), { cause: error });
   }
-  ui.success("Plugin metadata generated");
+  ui.success("Plugin manifest generated");
 
-  return watchPluginMetadata({
+  return watchPluginManifest({
     inputs,
     onChange: () => {
-      ui.success("Plugin metadata regenerated from package.json");
+      ui.success("Plugin manifest regenerated from package.json");
     },
     onError: error => {
       ui.error(errorMessage(error));
@@ -98,8 +98,8 @@ export const runDevCommand = async (
     resolveFromProject(project.root, "tsdown");
     if (writePluginApiRegistry(project.root))
       ui.success("API registry generated");
-    const metadata = definesPlugin(project.root)
-      ? watchMetadata(project.root, ui)
+    const manifest = definesPlugin(project.root)
+      ? watchManifest(project.root, ui)
       : null;
     ui.info(
       "Watching sources - apps using this plugin reload as dist/ changes",
@@ -116,7 +116,7 @@ export const runDevCommand = async (
         ui,
       });
     } finally {
-      metadata?.close();
+      manifest?.close();
     }
   }
 

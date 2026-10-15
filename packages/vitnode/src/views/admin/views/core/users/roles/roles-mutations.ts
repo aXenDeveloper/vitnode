@@ -2,8 +2,8 @@ import type { z } from "zod";
 
 import type { zodCreateRoleAdminSchema } from "@/api/modules/admin/roles/routes/create.route";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,
@@ -19,7 +19,7 @@ export const createAdminRole = async (
     parse: async response => (await response.json()) as { id: number },
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body },
         method: "post",
         module: "admin/roles",
@@ -37,7 +37,7 @@ export const updateAdminRole = async (
     parse: () => true as const,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body, params: { id: String(id) } },
         method: "patch",
         module: "admin/roles",
@@ -67,7 +67,7 @@ export const deleteAdminRole = async (args: {
     parse: () => true as const,
     request: async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: deleteAdminRoleArgs(args),
         method: "delete",
         module: "admin/roles",

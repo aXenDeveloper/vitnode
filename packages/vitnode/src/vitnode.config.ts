@@ -25,7 +25,7 @@ import type {
 } from "./lib/i18n/types";
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { BuildPluginReturn } from "./lib/plugin";
-import type { FrontendPluginInventory } from "./lib/plugin-metadata";
+import type { FrontendPluginInventory } from "./lib/plugin-manifest";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
 import type { PageCacheConfig } from "./page-cache/config";
 

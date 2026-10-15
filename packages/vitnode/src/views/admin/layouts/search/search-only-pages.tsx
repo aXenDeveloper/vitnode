@@ -5,7 +5,7 @@ import type { StaffPermissionSet } from "@/api/lib/permission-staff";
 import type { AdminNavTranslator } from "@/views/admin/layouts/sidebar/nav/nav-model";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import type { AdminSearchNavItem } from "./flatten-nav";
 
@@ -42,7 +42,7 @@ export const adminSearchOnlyItems = ({
   return pages
     .filter(page =>
       hasStaffPermission(permissions, {
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         ...page.permission,
       }),
     )

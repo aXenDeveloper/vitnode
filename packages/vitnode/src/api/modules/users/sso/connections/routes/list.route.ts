@@ -1,6 +1,5 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { requireSignedInUser } from "../../../passkeys/failure";
 import { ssoConnectionFailure } from "../failure";
@@ -10,7 +9,6 @@ import {
 } from "../schema";
 
 export const listSsoConnectionsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

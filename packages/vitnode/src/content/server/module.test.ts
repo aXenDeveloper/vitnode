@@ -5,6 +5,7 @@ import {
   testPostContentType,
   testSearchablePostContentType,
 } from "@/tests/content-fixtures";
+import { testManifest } from "@/tests/manifest";
 
 import { buildApiPlugin } from "../../api/lib/plugin";
 import { createContentModel } from "./model";
@@ -43,7 +44,7 @@ describe("buildContentAdminModule search indexers", () => {
     expect(generated).toBeDefined();
 
     const plugin = buildApiPlugin({
-      pluginId: PLUGIN_ID,
+      manifest: testManifest(PLUGIN_ID),
       modules: [adminModule([searchablePosts])],
     });
 
@@ -54,7 +55,7 @@ describe("buildContentAdminModule search indexers", () => {
 
   it("keeps a manual indexer alongside a generated one", () => {
     const plugin = buildApiPlugin({
-      pluginId: PLUGIN_ID,
+      manifest: testManifest(PLUGIN_ID),
       modules: [adminModule([categories, posts, searchablePosts])],
       searchIndexers: [
         {
@@ -74,7 +75,7 @@ describe("buildContentAdminModule search indexers", () => {
   it("rejects a manual indexer that collides with a generated one", () => {
     expect(() =>
       buildApiPlugin({
-        pluginId: PLUGIN_ID,
+        manifest: testManifest(PLUGIN_ID),
         modules: [adminModule([searchablePosts])],
         searchIndexers: [
           {
@@ -89,7 +90,7 @@ describe("buildContentAdminModule search indexers", () => {
 
   it("reaches the plugin through the nested module tree", () => {
     const plugin = buildApiPlugin({
-      pluginId: PLUGIN_ID,
+      manifest: testManifest(PLUGIN_ID),
       modules: [adminModule([categories, posts, searchablePosts])],
     });
 

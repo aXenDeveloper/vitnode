@@ -9,7 +9,7 @@ import {
   EMPTY_STAFF_PERMISSION_SET,
   hasStaffPermission,
 } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 export const ADMIN_SESSION_QUERY_KEY = ["vitnode", "admin-session"] as const;
 
@@ -111,7 +111,7 @@ export const hasAdminPermission = <TSession extends { permissions: unknown }>(
   {
     module,
     permission,
-    plugin = CONFIG_PLUGIN.pluginId,
+    plugin = manifest.id,
   }: Omit<PermissionsStaffArgs, "plugin"> & { plugin?: string },
 ): boolean =>
   hasStaffPermission(adminPermissionsOf(access), {

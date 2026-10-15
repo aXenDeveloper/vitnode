@@ -3,13 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  pluginApiBuildersTemplate,
   pluginApiConfigTemplate,
   pluginApiModuleTemplate,
   pluginApiModuleTestTemplate,
   pluginApiRouteTemplate,
   pluginApiVariableName,
   pluginConfigTemplate,
-  pluginConstTemplate,
   pluginGlobalTypesTemplate,
   pluginMessagesTemplate,
   pluginPackageExports,
@@ -94,14 +94,14 @@ describe("the generated route tree", () => {
       match => match[1],
     );
 
-    expect(imports).toEqual(["@vitnode/core/routing", "./const"]);
+    expect(imports).toEqual(["@vitnode/core/routing", "./manifest.gen"]);
     expect(imports).not.toContain("./pages/home-page");
     expect(routes).toContain("lazy(() => import(");
   });
 
   /**
    * The namespace is built by the *generated* plugin at runtime, from its own
-   * `CONFIG_PLUGIN`. Written into a template literal inside a template literal,
+   * manifest. Written into a template literal inside a template literal,
    * so its backticks and `${}` have to survive generation rather than be
    * evaluated by it - the difference between a plugin that compiles and one
    * whose `routes.ts` says `messages: [".home"]`.
@@ -109,7 +109,7 @@ describe("the generated route tree", () => {
   it("leaves the message namespace for the generated plugin to build", () => {
     const routes = pluginRoutesTemplate("@acme/blog");
 
-    expect(routes).toContain("messages: [`${CONFIG_PLUGIN.pluginId}.home`],");
+    expect(routes).toContain("messages: [`${manifest.id}.home`],");
     expect(routes).not.toContain("@acme/blog.home");
   });
 
@@ -145,7 +145,7 @@ describe("the generated route module", () => {
       "@vitnode/core/routing",
       "@vitnode/core/tanstack/fetcher",
       "use-intl",
-      "@/const",
+      "@/manifest.gen",
     ]);
     expect(imports).not.toContain("@tanstack/react-router");
   });
@@ -205,11 +205,11 @@ describe("the generated config", () => {
     expect(config).toContain("routes,");
   });
 
-  it("names the plugin through the one constant that holds its id", () => {
+  it("names the plugin through its generated manifest", () => {
     const config = pluginConfigTemplate("@acme/blog");
 
-    expect(config).toContain('import { CONFIG_PLUGIN } from "@/const";');
-    expect(config).toContain("pluginId: CONFIG_PLUGIN.pluginId,");
+    expect(config).toContain('import { manifest } from "./manifest.gen";');
+    expect(config).toContain("manifest,");
     expect(config).not.toContain('"@acme/blog"');
   });
 
@@ -220,21 +220,20 @@ describe("the generated config", () => {
   });
 });
 
-describe("the generated constant", () => {
-  it("holds the plugin's id as a literal, which the fetcher infers from", () => {
-    const constants = pluginConstTemplate("@acme/blog");
-
-    expect(constants).toContain('pluginId: "@acme/blog" as const,');
+describe("the generated builders", () => {
+  it("binds the API builders to the generated manifest", () => {
+    expect(pluginApiBuildersTemplate()).toContain(
+      "export const { buildModule, buildRoute } = bindApiPlugin(manifest);",
+    );
   });
 
-  it("is the only generated file that spells the plugin's id out", () => {
+  it("leaves the plugin's id to the generated manifest", () => {
     const files = pluginRouteScaffold("@acme/blog");
 
     Object.entries(files)
       .filter(
         ([file]) =>
           file !== "global.d.ts" &&
-          file !== "src/const.ts" &&
           file !== "src/locales/en.json" &&
           file !== "src/pages/home-page.tsx" &&
           file !== "src/routes.ts",
@@ -422,7 +421,7 @@ describe("the scaffold as a whole", () => {
       "src/api/modules/hello/hello.route.ts",
     );
     expect(Object.keys(files)).toContain("src/config.api.ts");
-    expect(Object.keys(files)).toContain("src/const.ts");
+    expect(Object.keys(files)).toContain("src/api/builders.ts");
     expect(Object.keys(files)).toContain("global.d.ts");
     expect(Object.keys(files)).not.toContain("src/api/client.ts");
   });
@@ -485,9 +484,7 @@ describe("the generated endpoint test", () => {
     expect(test).toContain('helloModule.hono.request("/")');
     expect(test).toContain('message: "Hello from @acme/blog!"');
     // The same greeting the route answers with.
-    expect(pluginApiRouteTemplate()).toContain(
-      "Hello from ${CONFIG_PLUGIN.pluginId}!",
-    );
+    expect(pluginApiRouteTemplate()).toContain("Hello from ${manifest.id}!");
   });
 });
 

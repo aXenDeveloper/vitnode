@@ -1,5 +1,5 @@
 export {
   generatePluginInventorySource,
-  PLUGIN_METADATA_SUBPATH,
+  PLUGIN_MANIFEST_SUBPATH,
   pluginInventoryFromLoadedConfig,
 } from "./generate.js";

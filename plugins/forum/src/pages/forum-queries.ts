@@ -8,7 +8,7 @@ import {
 } from "@vitnode/core/lib/query-freshness";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { ForumSearch } from "./forum-links";
 
@@ -23,7 +23,7 @@ export const FORUM_ACTIVITY_STALE_TIME = OPERATIONAL_STALE_TIME;
 
 export const PENDING_STALE_TIME = OPERATIONAL_STALE_TIME;
 
-const all = [CONFIG_PLUGIN.pluginId] as const;
+const all = [manifest.id] as const;
 const commentLinks = [...all, "comment-link"] as const;
 const submissions = [...all, "pending"] as const;
 const topicDetails = [...all, "topic"] as const;
@@ -71,7 +71,7 @@ export const forumQueryOptions = (idOrSlug: string) =>
     meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const res = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "content/forums",
         path: "/{idOrSlug}",

@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { requireSignedInUser } from "../../../passkeys/failure";
 import { ssoConnectionFailure } from "../failure";
@@ -25,7 +24,6 @@ export const zodSsoPreferencesSchema = z.object({
 });
 
 export const ssoPreferencesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "put",
     description:

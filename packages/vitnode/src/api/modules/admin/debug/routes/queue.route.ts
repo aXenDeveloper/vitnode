@@ -1,8 +1,7 @@
 import { asc, desc, inArray, sql } from "drizzle-orm";
 import z from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_queue } from "@/database/queue";
 
 const QUEUE_STATUSES = [
@@ -13,7 +12,6 @@ const QUEUE_STATUSES = [
 ] as const;
 
 export const queueDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "debug", permission: "can_view" },
   route: {
     method: "get",

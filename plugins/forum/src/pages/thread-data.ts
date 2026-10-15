@@ -2,7 +2,7 @@ import { zodRichTextDocument } from "@vitnode/core/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { zodPerson } from "./forum-data";
 
@@ -68,7 +68,7 @@ export const fetchThreadPage = async ({
   topicId: number;
 }): Promise<null | ThreadPage> => {
   const res = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/comments",
     path: "/thread",

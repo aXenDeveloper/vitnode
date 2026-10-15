@@ -1,4 +1,4 @@
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import { createAuthOperations } from "./transport-operations";
@@ -13,7 +13,7 @@ import { createAuthOperations } from "./transport-operations";
 const operations = createAuthOperations({
   changePasswordFromReset: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: data },
       method: "post",
       module: "users",
@@ -22,7 +22,7 @@ const operations = createAuthOperations({
 
   completeSso: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: {
         params: { providerId: data.providerId },
         query: { code: data.code, state: data.state },
@@ -34,7 +34,7 @@ const operations = createAuthOperations({
 
   finishAdminPasskeySignIn: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: data },
       method: "post",
       module: "users/passkeys",
@@ -43,7 +43,7 @@ const operations = createAuthOperations({
 
   finishPasskeySignIn: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: data },
       method: "post",
       module: "users/passkeys",
@@ -52,7 +52,7 @@ const operations = createAuthOperations({
 
   linkSso: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: {
         body: { password: data.password, token: data.token },
         params: { providerId: data.providerId },
@@ -64,7 +64,7 @@ const operations = createAuthOperations({
 
   readSession: async () =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "users",
       path: "/session",
@@ -72,7 +72,7 @@ const operations = createAuthOperations({
 
   requestPasswordReset: async ({ captchaToken, email }) =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       captchaToken,
       args: { body: { email } },
       method: "post",
@@ -82,7 +82,7 @@ const operations = createAuthOperations({
 
   resendEmailVerification: async ({ captchaToken, email }) =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       captchaToken,
       args: { body: { email } },
       method: "post",
@@ -92,7 +92,7 @@ const operations = createAuthOperations({
 
   signIn: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: data },
       method: "post",
       module: "users",
@@ -101,7 +101,7 @@ const operations = createAuthOperations({
 
   signOut: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { isAdmin: data.isAdmin ?? false } },
       method: "delete",
       module: "users",
@@ -110,7 +110,7 @@ const operations = createAuthOperations({
 
   signUp: async ({ captchaToken, ...body }) =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       captchaToken,
       args: { body },
       method: "post",
@@ -120,7 +120,7 @@ const operations = createAuthOperations({
 
   startAdminPasskeySignIn: async () =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "post",
       module: "users/passkeys",
       path: "/admin-sign-in/options",
@@ -128,7 +128,7 @@ const operations = createAuthOperations({
 
   startPasskeySignIn: async () =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "post",
       module: "users/passkeys",
       path: "/sign-in/options",
@@ -136,7 +136,7 @@ const operations = createAuthOperations({
 
   startSso: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { params: { providerId: data.providerId } },
       method: "post",
       module: "users/sso",
@@ -145,7 +145,7 @@ const operations = createAuthOperations({
 
   verifyEmail: async data =>
     await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: data },
       method: "post",
       module: "users",

@@ -1,13 +1,12 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
-import { buildRoute } from "@/api/lib/route";
 import {
   getNotificationStats,
   NOTIFICATION_STATS_RANGES,
 } from "@/api/models/notifications/stats";
-import { CONFIG_PLUGIN } from "@/config";
 
 const zodTotals = z.object({
   events: z.number(),
@@ -17,7 +16,6 @@ const zodTotals = z.object({
 });
 
 export const getNotificationStatsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "notifications", permission: "can_view" },
   route: {
     method: "get",

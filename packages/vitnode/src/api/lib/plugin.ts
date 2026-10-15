@@ -9,7 +9,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { NavigationPresetDeclaration } from "@/lib/navigation";
-import type { PluginMetadata } from "@/lib/plugin-metadata";
+import type { PluginManifest } from "@/lib/plugin-manifest";
 
 import { BlockError } from "@/blocks/errors";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/content/registry";
 import { contentDefinitionOf } from "@/content/server/model";
 import { contentReportTarget } from "@/content/server/report-target";
-import { assertPluginMetadata } from "@/lib/plugin-metadata";
+import { assertPluginManifest } from "@/lib/plugin-manifest";
 
 import type { SearchIndexer } from "../models/search";
 import type { AnyAiActionDefinition } from "./ai/action";
@@ -65,9 +65,8 @@ export interface BuildPluginApiReturn<
   editablePages?: AnyEditablePageDefinition[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
+  manifest?: PluginManifest<P>;
   messages?: LocaleMessagesMap;
-  /** What the AdminCP plugin catalog lists - see `buildApiPlugin({ metadata })`. */
-  metadata?: PluginMetadata;
   moderation?: Required<ModerationPluginConfig>;
   modules: Modules;
   navigation?: NavigationPresetDeclaration[];
@@ -93,9 +92,8 @@ export function buildApiPlugin<
   aiActions,
   blocks,
   editablePages,
-  pluginId,
+  manifest,
   messages,
-  metadata,
   moderation,
   modules = [] as unknown as Modules,
   navigation,
@@ -106,24 +104,19 @@ export function buildApiPlugin<
   aiActions?: AnyAiActionDefinition[];
   blocks?: BlockPluginSource;
   editablePages?: AnyEditablePageDefinition[];
+  manifest: PluginManifest<P>;
   messages?: LocaleMessagesMap;
-  /**
-   * `pluginMetadata` from the plugin's generated `src/plugin-metadata.gen.ts`:
-   * the title, icon, description and installed version AdminCP → System →
-   * Plugins lists. Without it the plugin is listed by id with an unknown version.
-   */
-  metadata?: PluginMetadata;
   moderation?: ModerationPluginConfig;
   modules?: Modules;
   navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
   permissionStaff?: PermissionStaffConfig;
-  pluginId: P;
   searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn<P, Modules> {
+  const pluginId = manifest.id;
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
-  assertPluginMetadata(pluginId, metadata, "buildApiPlugin()");
+  assertPluginManifest(pluginId, manifest, "buildApiPlugin()");
 
   if (blocks && blocks.pluginId !== pluginId) {
     throw new BlockError(
@@ -233,8 +226,8 @@ export function buildApiPlugin<
     aiActions,
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
+    manifest,
     messages,
-    metadata,
     modules,
     navigation,
     hono,

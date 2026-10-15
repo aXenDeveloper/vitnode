@@ -160,7 +160,7 @@ what [the AdminCP plugin catalog](/docs/dev/plugins/catalog) lists.
 <Callout type="warn" title="Build-time cost">
   Your Vite build executes this file with `jiti` on every regeneration pass to
   discover the plugin list. Running a plugin's registration graph in Node
-  measures ~340ms per pass against ~6ms for `buildPlugin({pluginId})`, which is
+  measures ~340ms per pass against ~6ms for `buildPlugin({ manifest })`, which is
   the minimum a TanStack host needs - worth knowing if a large plugin set makes
   the dev watcher feel slow.
 </Callout>

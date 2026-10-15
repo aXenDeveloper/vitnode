@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
-import { buildRoute } from "../../../lib/route";
 import { zodPaginationQuery } from "../../../lib/with-pagination";
 
 const zodSearchPageInfo = z.object({
@@ -113,7 +112,6 @@ export const zodSearchResultSchema = z.object({
 });
 
 export const searchRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Search and browse indexed community content.",

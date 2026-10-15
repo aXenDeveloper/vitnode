@@ -42,12 +42,12 @@ VitNode uses the [Vercel AI SDK](https://ai-sdk.dev). Resolve a model from `c.ge
 Generate text in a Hono API route:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/summarize.route.ts"
-import { buildRoute } from '@vitnode/core/api/lib/route'
 import { generateText } from 'ai'
 import { z } from 'zod'
 
+import { buildRoute } from '@/api/builders'
+
 export const summarizeRoute = buildRoute({
-  pluginId: 'blog',
   route: {
     method: 'post',
     path: '/summarize',

@@ -10,7 +10,7 @@ import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { ContentArticle } from "./content-article";
 
@@ -36,7 +36,7 @@ const loadAdvancedArticle = async ({
 }) => {
   const [resolution, detail] = await Promise.all([
     fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/advanced-articles",
       path: "/delivery/resolve/{slug}",
@@ -46,7 +46,7 @@ const loadAdvancedArticle = async ({
       },
     }),
     fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/advanced-articles",
       path: "/{slug}",

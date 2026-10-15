@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { useForumRejection } from "./forum-errors";
 
@@ -70,7 +70,7 @@ const CommentComposer = (props: CommentComposerProps) => {
   const onSubmit: AutoFormOnSubmit<CommentSchema> = async ({ body }, form) => {
     if (props.mode === "edit") {
       const res = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "patch",
         module: "content/comments",
         path: "/{id}",
@@ -99,7 +99,7 @@ const CommentComposer = (props: CommentComposerProps) => {
     }
 
     const res = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "post",
       module: "content/comments",
       path: "/",

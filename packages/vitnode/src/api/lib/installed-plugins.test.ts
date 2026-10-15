@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import type { PluginMetadata } from "@/lib/plugin-metadata";
+import type { PluginManifest } from "@/lib/plugin-manifest";
 
 import { buildInstalledPluginRegistry } from "./installed-plugins";
 
-const metadata = (
+const manifest = (
   id: string,
-  overrides: Partial<PluginMetadata> = {},
-): PluginMetadata => ({
+  overrides: Partial<PluginManifest> = {},
+): PluginManifest => ({
+  author: null,
   description: `${id} description`,
   icon: null,
   id,
+  license: null,
   title: `${id} title`,
   version: "1.0.0",
   ...overrides,
@@ -20,14 +22,14 @@ describe("buildInstalledPluginRegistry", () => {
   it("lists each plugin once, sorted by id, without core", () => {
     const registry = buildInstalledPluginRegistry({
       api: [
-        { metadata: metadata("@acme/shop"), pluginId: "@acme/shop" },
+        { manifest: manifest("@acme/shop"), pluginId: "@acme/shop" },
         { pluginId: "@vitnode/core" },
-        { metadata: metadata("@acme/blog"), pluginId: "@acme/blog" },
+        { manifest: manifest("@acme/blog"), pluginId: "@acme/blog" },
       ],
       frontend: [
-        { id: "@vitnode/core", metadata: null },
-        { id: "@acme/blog", metadata: metadata("@acme/blog") },
-        { id: "@acme/analytics", metadata: metadata("@acme/analytics") },
+        { id: "@vitnode/core", manifest: null },
+        { id: "@acme/blog", manifest: manifest("@acme/blog") },
+        { id: "@acme/analytics", manifest: manifest("@acme/analytics") },
       ],
     });
 
@@ -40,8 +42,8 @@ describe("buildInstalledPluginRegistry", () => {
 
   it("merges both registrations of a plugin", () => {
     const [plugin] = buildInstalledPluginRegistry({
-      api: [{ metadata: metadata("@acme/blog"), pluginId: "@acme/blog" }],
-      frontend: [{ id: "@acme/blog", metadata: metadata("@acme/blog") }],
+      api: [{ manifest: manifest("@acme/blog"), pluginId: "@acme/blog" }],
+      frontend: [{ id: "@acme/blog", manifest: manifest("@acme/blog") }],
     }).plugins;
 
     expect(plugin).toEqual({
@@ -79,14 +81,14 @@ describe("buildInstalledPluginRegistry", () => {
       const [plugin] = buildInstalledPluginRegistry({
         api: [
           {
-            metadata: metadata("@acme/blog", { version: apiVersion }),
+            manifest: manifest("@acme/blog", { version: apiVersion }),
             pluginId: "@acme/blog",
           },
         ],
         frontend: [
           {
             id: "@acme/blog",
-            metadata: metadata("@acme/blog", { version: frontendVersion }),
+            manifest: manifest("@acme/blog", { version: frontendVersion }),
           },
         ],
       }).plugins;
@@ -100,18 +102,18 @@ describe("buildInstalledPluginRegistry", () => {
 
   it.each([
     [
-      "the API's metadata first",
-      metadata("@acme/blog", { icon: "rss" }),
+      "the API's manifest first",
+      manifest("@acme/blog", { icon: "rss" }),
       "rss",
     ],
-    ["the frontend's when the API has no metadata", undefined, "newspaper"],
+    ["the frontend's when the API has no manifest", undefined, "newspaper"],
   ])("takes the icon from %s", (_, apiMetadata, icon) => {
     const [plugin] = buildInstalledPluginRegistry({
-      api: [{ metadata: apiMetadata, pluginId: "@acme/blog" }],
+      api: [{ manifest: apiMetadata, pluginId: "@acme/blog" }],
       frontend: [
         {
           id: "@acme/blog",
-          metadata: metadata("@acme/blog", { icon: "newspaper" }),
+          manifest: manifest("@acme/blog", { icon: "newspaper" }),
         },
       ],
     }).plugins;
@@ -119,10 +121,10 @@ describe("buildInstalledPluginRegistry", () => {
     expect(plugin?.icon).toBe(icon);
   });
 
-  it("treats a side without metadata as unknown, not a mismatch", () => {
+  it("treats a side without manifest as unknown, not a mismatch", () => {
     const [plugin] = buildInstalledPluginRegistry({
       api: [{ pluginId: "@acme/blog" }],
-      frontend: [{ id: "@acme/blog", metadata: metadata("@acme/blog") }],
+      frontend: [{ id: "@acme/blog", manifest: manifest("@acme/blog") }],
     }).plugins;
 
     expect(plugin?.registrations).toEqual({
@@ -133,10 +135,10 @@ describe("buildInstalledPluginRegistry", () => {
     expect(plugin?.versionMismatch).toBe(false);
   });
 
-  it("lists a plugin with no metadata anywhere by its id", () => {
+  it("lists a plugin with no manifest anywhere by its id", () => {
     const [plugin] = buildInstalledPluginRegistry({
       api: [],
-      frontend: [{ id: "@acme/blog", metadata: null }],
+      frontend: [{ id: "@acme/blog", manifest: null }],
     }).plugins;
 
     expect(plugin).toEqual({
@@ -163,8 +165,8 @@ describe("buildInstalledPluginRegistry", () => {
       {
         api: [],
         frontend: [
-          { id: "@acme/blog", metadata: null },
-          { id: "@acme/blog", metadata: null },
+          { id: "@acme/blog", manifest: null },
+          { id: "@acme/blog", manifest: null },
         ],
       },
     ],
@@ -174,12 +176,12 @@ describe("buildInstalledPluginRegistry", () => {
     );
   });
 
-  it("refuses metadata registered under another plugin's id", () => {
+  it("refuses manifest registered under another plugin's id", () => {
     expect(() =>
       buildInstalledPluginRegistry({
         api: [],
-        frontend: [{ id: "@acme/shop", metadata: metadata("@acme/blog") }],
+        frontend: [{ id: "@acme/shop", manifest: manifest("@acme/blog") }],
       }),
-    ).toThrow(/\[VitNode plugin metadata\]/);
+    ).toThrow(/\[VitNode plugin manifest\]/);
   });
 });

@@ -8,7 +8,7 @@ import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { commentAnchorId, topicHref } from "./forum-links";
 import {
@@ -25,7 +25,7 @@ const commentLinkQueryOptions = (slug: string) =>
     meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const comment = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "content/comments",
         path: "/{slug}",
@@ -40,7 +40,7 @@ const commentLinkQueryOptions = (slug: string) =>
       const record = zodCommentLink.parse(await comment.json());
 
       const topic = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         method: "get",
         module: "forum",
         path: "/topics/{id}/slug",

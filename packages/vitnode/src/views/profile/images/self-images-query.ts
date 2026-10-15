@@ -2,10 +2,10 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { UserImageKind, UserImagePolicy } from "@/lib/user-images";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import { readApiErrorMessage } from "@/lib/read-api-error";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import { PROFILE_QUERY_ROOT } from "../profile-query";
@@ -14,7 +14,7 @@ export type UserImagePolicyFetcher = () => Promise<UserImagePolicy>;
 
 export const fetchUserImagePolicy: UserImagePolicyFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "users/images",
     path: "/policy",
@@ -67,7 +67,7 @@ export const uploadOwnUserImage = async (
   formData.append("file", file);
 
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { kind } },
     formData,
     method: "post",
@@ -89,7 +89,7 @@ export const removeOwnUserImage = async (
   kind: UserImageKind,
 ): Promise<void> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { kind } },
     method: "delete",
     module: "users/images",

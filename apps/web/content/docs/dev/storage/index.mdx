@@ -31,10 +31,10 @@ Handle uploads in a Hono route using `c.get("storage").upload()`:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/upload-cover.route.ts"
 import { z } from "@hono/zod-openapi"
-import { buildRoute } from "@vitnode/core/api/lib/route"
+
+import { buildRoute } from "@/api/builders"
 
 export const uploadCoverRoute = buildRoute({
-  pluginId: "blog",
   route: {
     method: "post",
     path: "/cover",

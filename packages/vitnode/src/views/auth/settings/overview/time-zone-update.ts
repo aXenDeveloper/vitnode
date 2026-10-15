@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 export interface UpdateTimeZoneResult {
   data?: true;
@@ -13,7 +13,7 @@ export type UpdateTimeZone = (
 export const updateTimeZoneInBrowser: UpdateTimeZone = async timeZone => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { timeZone } },
       method: "put",
       module: "users",

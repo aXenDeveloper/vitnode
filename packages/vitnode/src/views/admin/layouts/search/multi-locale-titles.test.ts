@@ -1,9 +1,9 @@
 import { createTranslator } from "use-intl";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { loadMessages, resetMessagesCache } from "@/lib/i18n/load-messages";
 import { buildMessagesSources } from "@/lib/i18n/sources";
+import { manifest } from "@/manifest";
 
 import { buildSearchText, matchesAdminNavItem } from "./flatten-nav";
 
@@ -14,7 +14,7 @@ const buildTranslator = async (locale: string) => {
     sources: buildMessagesSources({
       appMessages: {
         pl: {
-          [CONFIG_PLUGIN.pluginId]: async () =>
+          [manifest.id]: async () =>
             Promise.resolve({
               default: {
                 admin: {

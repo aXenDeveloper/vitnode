@@ -109,11 +109,10 @@ import { discussionContent } from "@/database/discussions"; // [!code ++]
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     modules: [
       adminModule,
       buildContentPublicModule({
-        pluginId: CONFIG_PLUGIN.pluginId,
         contentTypes: [articleContent, discussionContent], // [!code highlight]
       }),
     ],

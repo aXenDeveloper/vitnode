@@ -34,7 +34,7 @@ export const cleanupCron = buildCron({
 Attach the cron job to a module in `src/api/modules/`:
 
 ```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
-import { buildModule } from '@vitnode/core/api/lib/module'
+import { buildModule } from '@/api/builders'
 import { cleanupCron } from '../../cron/cleanup.cron'
 
 export const postsModule = buildModule({

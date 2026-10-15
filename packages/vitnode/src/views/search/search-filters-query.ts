@@ -1,7 +1,7 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import type { SearchFeedParams } from "./search-feed-query";
@@ -38,7 +38,7 @@ export const searchFacetsQueryOptions = ({
     placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { query },
         method: "get",
         module: "search",
@@ -64,7 +64,7 @@ export const searchAuthorsQueryOptions = ({ term }: { term: string }) =>
     placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const response = await fetcher({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { query: term ? { search: term } : {} },
         method: "get",
         module: "search",

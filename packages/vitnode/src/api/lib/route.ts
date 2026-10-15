@@ -57,25 +57,33 @@ export const findAdminRoutesWithoutStaffPermission = (hono: {
     .sort();
 };
 
+export type BuildRouteConfig<P extends string> = Omit<RouteConfig, "path"> & {
+  path: P;
+  withCaptcha?: boolean;
+};
+
+export interface BuildRouteOptions<
+  P extends string,
+  R extends BuildRouteConfig<P>,
+> {
+  adminStaffPermission?: AdminStaffPermission;
+  handler: RouteHandler<R & { path: P }, EnvVitNode>;
+  hook?: RouteValidationHook;
+  route: R;
+}
+
 export const buildRoute = <
   Plugin extends string,
   P extends string,
-  R extends Omit<RouteConfig, "path"> & {
-    path: P;
-    withCaptcha?: boolean;
-  },
+  R extends BuildRouteConfig<P>,
 >({
   route,
   handler,
   hook,
   pluginId,
   adminStaffPermission,
-}: {
-  adminStaffPermission?: AdminStaffPermission;
-  handler: RouteHandler<R & { path: P }, EnvVitNode>;
-  hook?: RouteValidationHook;
+}: BuildRouteOptions<P, R> & {
   pluginId: Plugin;
-  route: R;
 }): Route<Plugin, R & { path: P }> => {
   const tags = [pluginTag(pluginId), ...(route.tags ?? [])];
 

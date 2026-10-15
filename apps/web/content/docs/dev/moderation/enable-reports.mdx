@@ -83,7 +83,7 @@ import { ReportButton } from "@vitnode/core/tanstack/moderation";
 {!metadata.hidden && metadata.itemId !== null ? (
   <ReportButton
     locale={metadata.locale}
-    pluginId={CONFIG_PLUGIN.pluginId}
+    pluginId={manifest.id}
     requestedLocale={metadata.requestedLocale}
     targetId={metadata.itemId}
     targetType={blogPostContentType.id}

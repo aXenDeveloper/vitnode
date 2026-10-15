@@ -1,11 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { ssoConnectionFailure } from "@/api/modules/users/sso/connections/failure";
 import { zodSsoPreferencesSchema } from "@/api/modules/users/sso/connections/routes/preferences.route";
 import { zodSsoConnectionErrorSchema } from "@/api/modules/users/sso/connections/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -22,7 +21,6 @@ const ssoErrorResponse = (description: string) => ({
 });
 
 export const updateUserSsoPreferencesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "put",

@@ -46,7 +46,7 @@ import { aiActionRef } from '@vitnode/core/api/lib/ai/registry'
 import { checkStaffPermission } from '@vitnode/core/api/lib/check-staff-permission'
 import { z } from 'zod'
 
-import { CONFIG_PLUGIN } from '@/const'
+import { manifest } from '@/manifest.gen'
 
 export const zodSummarizeTopicSchema = z.object({
   title: z.string().trim().min(1).max(255),
@@ -80,7 +80,7 @@ export const summarizeTopicAiAction = defineAiAction({
   authorize: async ({ c }) =>
     await checkStaffPermission(c, {
       type: 'admin',
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       module: 'topics',
       permission: 'can_view',
     }),
@@ -89,7 +89,7 @@ export const summarizeTopicAiAction = defineAiAction({
 export const forumAiActions = [summarizeTopicAiAction]
 
 export const SUMMARIZE_TOPIC_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   summarizeTopicAiAction,
 )
 ```
@@ -133,11 +133,11 @@ import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
 import { forumAiActions } from '@/api/ai/actions'
 import { adminModule } from '@/api/modules/admin/admin.module'
-import { CONFIG_PLUGIN } from '@/const'
+import { manifest } from '@/manifest.gen'
 
 export const forumApiPlugin = () =>
   buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
+    manifest,
     aiActions: forumAiActions, // [!code ++]
     modules: [adminModule],
   })
@@ -150,17 +150,15 @@ export const forumApiPlugin = () =>
 ### Run it from a route
 
 ```ts title="plugins/forum/src/api/modules/admin/ai/routes/summarize.route.ts"
-import { buildRoute } from '@vitnode/core/api/lib/route'
 import { z } from 'zod'
 
 import {
   SUMMARIZE_TOPIC_AI_ACTION,
   zodSummarizeTopicSchema,
 } from '@/api/ai/actions'
-import { CONFIG_PLUGIN } from '@/const'
+import { buildRoute } from '@/api/builders'
 
 export const summarizeTopicRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: 'topics', permission: 'can_view' },
   route: {
     method: 'post',
@@ -277,7 +275,7 @@ export const suggestTagsAiAction = defineAiAction({
 })
 
 export const TOPIC_TAGS_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   suggestTagsAiAction,
 )
 ```

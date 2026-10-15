@@ -17,9 +17,11 @@ VitNode separates staff into two groups: **Moderators** and **Administrators**. 
 ```ts title="plugins/blog/src/config.api.ts"
 import { buildApiPlugin } from "@vitnode/core/api/lib/plugin"
 
+import { manifest } from "@/manifest.gen"
+
 export const blogApiPlugin = () =>
   buildApiPlugin({
-    pluginId: "@vitnode/blog",
+    manifest,
     // [!code ++:8]
     permissionStaff: {
       admin: {
@@ -38,7 +40,6 @@ Add `adminStaffPermission` to automatically return `403 Forbidden` if unauthoriz
 
 ```ts title="plugins/blog/src/api/modules/admin/posts/routes/delete.route.ts"
 export const deletePostRoute = buildRoute({
-  pluginId: "@vitnode/blog",
   // [!code ++:1]
   adminStaffPermission: { module: "posts", permission: "can_delete" },
   route: {

@@ -3,8 +3,8 @@ import type {
   NotificationState,
 } from "@/lib/notifications/types";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import { NotificationsRequestError } from "./notifications-query";
 
@@ -20,7 +20,7 @@ export const markNotificationReadInBrowser = async ({
   throughSeq?: number;
 }): Promise<NotificationState> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { body: { throughSeq }, params: { id } },
     method: "post",
     module: "notifications",
@@ -36,7 +36,7 @@ export const markNotificationUnreadInBrowser = async ({
   id: number;
 }): Promise<NotificationState> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "post",
     module: "notifications",
@@ -52,7 +52,7 @@ export const archiveNotificationInBrowser = async ({
   id: number;
 }): Promise<NotificationState> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id } },
     method: "post",
     module: "notifications",
@@ -68,7 +68,7 @@ export const markAllNotificationsReadInBrowser = async ({
   category?: string;
 } = {}): Promise<NotificationState & { marked: number }> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { body: { category } },
     method: "post",
     module: "notifications",
@@ -93,7 +93,7 @@ export const updateNotificationPreferencesInBrowser = async (
   body: UpdateNotificationPreferencesBody,
 ): Promise<void> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { body },
     method: "put",
     module: "notifications",

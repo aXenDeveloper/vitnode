@@ -89,7 +89,7 @@ Register it in `config.api.ts`:
 ```ts title="plugins/blog/src/config.api.ts"
 export const blogApiPlugin = () =>
   buildApiPlugin({
-    pluginId: 'blog',
+    manifest,
     searchIndexers: [postSearchIndexer], // [!code ++]
   })
 ```

@@ -1,5 +1,6 @@
-import "@tanstack/react-start/server-only";
 import type { AbstractIntlMessages } from "use-intl";
+
+import "@tanstack/react-start/server-only";
 
 import type {
   AppMessagesMap,
@@ -8,10 +9,10 @@ import type {
 } from "@/lib/i18n/types";
 import type { VitNodeServerConfig } from "@/vitnode.config";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { loadMessages } from "@/lib/i18n/load-messages";
 import { pickMessages } from "@/lib/i18n/pick-messages";
 import { buildAppMessagesSources } from "@/lib/i18n/sources";
+import { manifest } from "@/manifest";
 
 import type { IntlMessages } from "./runtime";
 
@@ -33,8 +34,8 @@ export const buildBundledMessagesSources = ({
 }: BundledMessagesOptions): MessagesSource[] =>
   [
     {
-      id: CONFIG_PLUGIN.pluginId,
-      messages: packageMessages[CONFIG_PLUGIN.pluginId],
+      id: manifest.id,
+      messages: packageMessages[manifest.id],
     },
     ...plugins.map(({ pluginId }) => ({
       id: pluginId,

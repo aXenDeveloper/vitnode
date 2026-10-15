@@ -8,7 +8,7 @@ import { RECORD_STALE_TIME } from "@vitnode/core/lib/query-freshness";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 const POST_STALE_TIME = RECORD_STALE_TIME;
 
@@ -20,7 +20,7 @@ const zodBlogPost = z.object({
   title: z.string(),
 });
 
-const all = [CONFIG_PLUGIN.pluginId] as const;
+const all = [manifest.id] as const;
 
 export const blogQueryKeys = {
   all,
@@ -37,7 +37,7 @@ const fetchBlogPost = async ({
 }) => {
   const [resolution, detail] = await Promise.all([
     fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/blog",
       path: "/delivery/resolve/{slug}",
@@ -47,7 +47,7 @@ const fetchBlogPost = async ({
       },
     }),
     fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "get",
       module: "content/blog",
       path: "/{slug}",

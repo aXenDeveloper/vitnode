@@ -2,8 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { SsoProfileField } from "@/lib/sso-profile";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface SsoConnection {
@@ -75,7 +75,7 @@ export const isSsoConnectionsRequestError = (
 
 export const fetchSsoConnections: SsoConnectionsFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "users/sso/connections",
     path: "/",
@@ -92,7 +92,7 @@ export const fetchSsoImportPreview: SsoImportPreviewFetcher = async ({
   providerId,
 }) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { providerId: encodeURIComponent(providerId) } },
     method: "get",
     module: "users/sso/connections",

@@ -2,15 +2,13 @@ import { and, asc, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_files, core_files_alt } from "@/database/files";
 import { core_languages } from "@/database/languages";
 
 const zodAltPolicy = z.enum(["automatic", "manual", "disabled"]);
 
 export const getFileAltAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_view" },
   route: {
     method: "get",
@@ -86,7 +84,6 @@ export const getFileAltAdminRoute = buildRoute({
 });
 
 export const updateFileAltAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_edit_alt" },
   route: {
     method: "put",
@@ -160,7 +157,6 @@ export const updateFileAltAdminRoute = buildRoute({
 });
 
 export const deleteFileAltAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_edit_alt" },
   route: {
     method: "delete",
@@ -205,7 +201,6 @@ export const deleteFileAltAdminRoute = buildRoute({
 });
 
 export const updateFileAltPolicyAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "files", permission: "can_edit_alt" },
   route: {
     method: "put",

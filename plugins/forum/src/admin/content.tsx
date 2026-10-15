@@ -1,10 +1,10 @@
 import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { forumForumsNav } from "./nav";
 
 export const adminContent = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   containers: [forumForumsNav],
 } satisfies ContentFrontendPluginSource;

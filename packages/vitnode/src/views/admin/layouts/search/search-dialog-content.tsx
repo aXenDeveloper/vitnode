@@ -16,7 +16,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import type { AdminSearchNavItem } from "./flatten-nav";
 import type { AdminUserSearch } from "./search-users";
@@ -100,7 +100,7 @@ export const SearchAdminDialogContent = ({
   );
 
   const canViewUsers = useAdminStaffPermission({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     module: "users",
     permission: "can_view",
   });

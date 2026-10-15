@@ -6,7 +6,7 @@ import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import { ContentArticle } from "./content-article";
 
@@ -24,7 +24,7 @@ const loadLocalizedArticle = async ({
   slug: string;
 }) => {
   const detail = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "content/localized-articles",
     path: "/{slug}",

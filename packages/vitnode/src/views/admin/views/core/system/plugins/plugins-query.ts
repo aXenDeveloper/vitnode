@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
@@ -32,7 +32,7 @@ export type InstalledPluginsFetcher = () => Promise<AdminInstalledPlugins>;
 
 export const fetchInstalledPlugins: InstalledPluginsFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/plugins",
     path: "/",

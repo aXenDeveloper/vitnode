@@ -1,16 +1,15 @@
 import { z } from "@hono/zod-openapi";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_languages_words } from "@/database/languages";
 import { core_navigation } from "@/database/navigation";
 import { NAVIGATION_TABLE_NAME, NAVIGATION_WORDS } from "@/lib/navigation";
+import { manifest } from "@/manifest";
 
 import { expireNavigationCache } from "../lib/cache";
 
 export const deleteNavigationAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "navigation", permission: "can_delete" },
   route: {
     method: "delete",
@@ -91,7 +90,7 @@ export const deleteNavigationAdminRoute = buildRoute({
         .delete(core_languages_words)
         .where(
           and(
-            eq(core_languages_words.pluginCode, CONFIG_PLUGIN.pluginId),
+            eq(core_languages_words.pluginCode, manifest.id),
             eq(core_languages_words.tableName, NAVIGATION_TABLE_NAME),
             inArray(core_languages_words.variable, [
               NAVIGATION_WORDS.title,

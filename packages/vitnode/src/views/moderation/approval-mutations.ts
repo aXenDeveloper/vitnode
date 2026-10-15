@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 const DECISION_FAILURES = [
   "decided",
@@ -59,7 +59,7 @@ export const approveSubmission = async ({ id }: { id: number }) =>
   await settle(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id } },
         method: "post",
         module: "moderation",
@@ -78,7 +78,7 @@ export const rejectSubmission = async ({
   await settle(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { reason }, params: { id } },
         method: "post",
         module: "moderation",

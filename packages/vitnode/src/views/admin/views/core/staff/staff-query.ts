@@ -13,6 +13,7 @@ import type {
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { StaffCatalog } from "@/views/admin/views/core/staff/staff-model";
 
+import { manifest } from "@/manifest";
 import {
   AdminRequestError,
   describeAdminParams,
@@ -51,7 +52,6 @@ export {
   adminStaffPermissions,
   staffPermissionModuleFor,
 } from "@/views/admin/views/core/shared/admin-permissions";
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { fetcher } from "@/tanstack/fetcher";
 
@@ -96,7 +96,7 @@ export const fetchAdminStaffPage: AdminStaffPageFetcher = async (
   { signal } = {},
 ) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/staff",
@@ -159,7 +159,7 @@ export type AdminStaffCatalogFetcher = () => Promise<StaffCatalog>;
 
 export const fetchAdminStaffCatalog: AdminStaffCatalogFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/staff",
     path: "/permission-catalog",
@@ -217,7 +217,7 @@ export const fetchAdminStaffEntry: AdminStaffEntryFetcher = async (
   id,
 ) => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { id, type } },
     method: "get",
     module: "admin/staff",

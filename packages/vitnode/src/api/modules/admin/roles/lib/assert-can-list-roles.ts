@@ -4,7 +4,7 @@ import { HTTPException } from "hono/http-exception";
 
 import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
 import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 const ROLE_LIST_READERS = [
   { module: "roles", permission: "can_view" },
@@ -22,7 +22,7 @@ export const assertCanListRoles = async (c: Context): Promise<void> => {
   const permissions = await resolveStaffPermissions(c, { type: "admin", user });
   const allowed = ROLE_LIST_READERS.some(reader =>
     hasStaffPermission(permissions, {
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       ...reader,
     }),
   );

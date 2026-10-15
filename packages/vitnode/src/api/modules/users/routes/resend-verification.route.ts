@@ -1,19 +1,17 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { matchesEmail, pickAccountForEmail } from "@/api/lib/user-email-lookup";
 import {
   EmailVerificationModel,
   isEmailVerificationRequired,
 } from "@/api/models/email-verification";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
 import { USER_EMAIL_MAX_LENGTH } from "../credential-limits";
 
 export const resendVerificationRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

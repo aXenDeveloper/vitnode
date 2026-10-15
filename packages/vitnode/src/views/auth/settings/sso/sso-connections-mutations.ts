@@ -1,7 +1,7 @@
 import type { SsoConnectionIntent, SsoProfileField } from "@/lib/sso-profile";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 import type { SsoProfileSources } from "./sso-connections-query";
 
@@ -61,7 +61,7 @@ export const startSsoConnectionInBrowser: StartSsoConnection = async ({
 }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { fields, intent }, params: providerParam(providerId) },
       method: "post",
       module: "users/sso/connections",
@@ -121,7 +121,7 @@ export const completeSsoConnectionInBrowser = async ({
 }): Promise<CompleteSsoConnectionResult> => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { code, state }, params: providerParam(providerId) },
       method: "post",
       module: "users/sso/connections",
@@ -163,7 +163,7 @@ export const disconnectSsoConnectionInBrowser: DisconnectSsoConnection =
   async ({ providerId }) => {
     try {
       const response = await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: providerParam(providerId) },
         method: "delete",
         module: "users/sso/connections",
@@ -196,7 +196,7 @@ export const saveSsoPreferencesInBrowser: SaveSsoPreferences = async ({
 }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { sources, sync } },
       method: "put",
       module: "users/sso/connections",
@@ -244,7 +244,7 @@ export const applySsoImportInBrowser: ApplySsoImport = async ({
 }) => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { body: { fields }, params: providerParam(providerId) },
       method: "post",
       module: "users/sso/connections",
@@ -278,7 +278,7 @@ export const discardSsoImportInBrowser: DiscardSsoImport = async ({
 }) => {
   try {
     await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { params: providerParam(providerId) },
       method: "delete",
       module: "users/sso/connections",

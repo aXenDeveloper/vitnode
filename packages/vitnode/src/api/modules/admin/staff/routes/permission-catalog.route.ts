@@ -1,7 +1,6 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 const permissionStaffModulesSchema = z.record(
   z.string(),
@@ -21,7 +20,6 @@ const scopeFamilySchema = z.object({
 });
 
 export const permissionCatalogStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

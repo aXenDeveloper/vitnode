@@ -1,11 +1,10 @@
 import { z } from "@hono/zod-openapi";
 import { and, count, eq, inArray } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { assertCanAssignPrimaryRole } from "@/api/modules/admin/users/lib/assert-edit-user-permission";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
@@ -13,7 +12,6 @@ import { core_users, core_users_secondary_roles } from "@/database/users";
 import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
 
 export const deleteRoleAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "roles", permission: "can_delete" },
   route: {
     method: "delete",

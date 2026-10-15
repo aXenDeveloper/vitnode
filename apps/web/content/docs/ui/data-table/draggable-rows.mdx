@@ -114,7 +114,6 @@ always need a staff permission.
 
 ```ts title="plugins/tasks/src/api/modules/admin/tasks/routes/reorder.route.ts"
 export const reorderTasksRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   // [!code ++]
   adminStaffPermission: { module: 'tasks', permission: 'can_reorder' },
   route: {

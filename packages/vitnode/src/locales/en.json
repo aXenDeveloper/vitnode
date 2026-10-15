@@ -3718,16 +3718,14 @@
       "plugins": {
         "title": "Plugins",
         "desc": "Every plugin this application is configured with, and the version it runs.",
-        "core": "VitNode core",
-        "count_label": "Installed plugins",
         "search": "Search plugins...",
+        "list": {
+          "plugin": "Plugin",
+          "version": "Version"
+        },
         "version_unknown": "Unknown version",
         "no_description": "No description provided.",
         "mismatch": "Version mismatch: the web app runs {frontend}, the API runs {api}. Rebuild and redeploy both so they match.",
-        "frontend_unknown": {
-          "title": "Showing API plugins only",
-          "desc": "This API wasn't given the web build's plugin inventory, so plugins registered only in vitnode.config.ts aren't listed and versions can't be compared. Pass frontendPlugins to buildApiConfig to include them."
-        },
         "empty": {
           "title": "No plugins installed",
           "desc": "Add a plugin to vitnode.config.ts or vitnode.api.config.ts and it shows up here after the next build."

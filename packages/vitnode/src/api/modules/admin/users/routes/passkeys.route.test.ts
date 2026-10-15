@@ -6,9 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
-import { buildModule } from "@/api/lib/module";
+import { buildModule } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
@@ -142,7 +141,6 @@ const harness = async ({
     "/",
     buildModule({
       name: "users",
-      pluginId: CONFIG_PLUGIN.pluginId,
       routes: [
         listUserPasskeysAdminRoute,
         renameUserPasskeyAdminRoute,

@@ -7,12 +7,10 @@
 // icon in `src/plugin-metadata.ts`. Register `pluginMetadata` as `metadata`
 // in both `buildPlugin` and `buildApiPlugin`.
 
-import { pluginInfo } from "./plugin-metadata"
-
 export const pluginMetadata = {
   id: "@vitnode/blog",
-  title: pluginInfo.title ?? "@vitnode/blog",
-  icon: pluginInfo.icon ?? null,
+  title: "@vitnode/blog",
+  icon: null,
   description: "Blog plugin for VitNode, providing a blogging platform on Hono.js.",
   version: "2.0.0-canary.13",
 } as const

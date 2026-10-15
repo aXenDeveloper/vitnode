@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { defineEditablePage } from "@/content/editor";
+import { manifest } from "@/manifest";
 
 export const SETTINGS_PAGE_ID = "core:settings";
 
@@ -16,7 +16,7 @@ export const settingsPage = defineEditablePage({
   permission: {
     module: "widgets",
     permission: "can_edit",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
   },
 
   zones: {

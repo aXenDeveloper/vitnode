@@ -1,15 +1,13 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   queueNotificationTestEmail,
   reconcileNotifications,
 } from "@/api/models/notifications/admin";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const sendNotificationTestEmailRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "notifications", permission: "can_manage" },
   route: {
     method: "post",
@@ -38,7 +36,6 @@ export const sendNotificationTestEmailRoute = buildRoute({
 });
 
 export const reconcileNotificationCountsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "notifications", permission: "can_manage" },
   route: {
     method: "post",

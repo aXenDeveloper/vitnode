@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_navigation } from "@/database/navigation";
 
 import { expireNavigationCache } from "../lib/cache";
@@ -20,7 +19,6 @@ const REORDER_ERRORS = {
 } as const;
 
 export const reorderNavigationAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "navigation", permission: "can_edit" },
   route: {
     method: "post",

@@ -1,13 +1,14 @@
 import type {
   FrontendPluginInventoryEntry,
-  PluginMetadata,
-} from "../../lib/plugin-metadata.js";
+  PluginAuthor,
+  PluginManifest,
+} from "../../lib/plugin-manifest.js";
 
-import { assertPluginMetadata } from "../../lib/plugin-metadata.js";
+import { assertPluginManifest } from "../../lib/plugin-manifest.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "../plugin-routes/diagnostics.js";
 
-/** Where the plugin metadata a configured plugin registers comes from. */
-export const PLUGIN_METADATA_SUBPATH = "plugin-metadata.gen";
+/** Where the manifest a configured plugin registers comes from. */
+export const PLUGIN_MANIFEST_SUBPATH = "manifest.gen";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -15,11 +16,17 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNullableString = (value: unknown): value is null | string =>
   value === null || typeof value === "string";
 
-const metadataFrom = (
+const isAuthor = (value: unknown): value is PluginAuthor =>
+  isRecord(value) &&
+  typeof value.name === "string" &&
+  isNullableString(value.email) &&
+  isNullableString(value.url);
+
+const manifestFrom = (
   value: unknown,
   pluginId: string,
   where: string,
-): null | PluginMetadata => {
+): null | PluginManifest => {
   if (value === undefined) return null;
 
   if (
@@ -28,28 +35,43 @@ const metadataFrom = (
     typeof value.title !== "string" ||
     !isNullableString(value.icon) ||
     !isNullableString(value.description) ||
-    !isNullableString(value.version)
+    !isNullableString(value.version) ||
+    !(value.license === undefined || isNullableString(value.license)) ||
+    !(
+      value.author === undefined ||
+      value.author === null ||
+      isAuthor(value.author)
+    )
   ) {
     throw new Error(
-      `${ERROR_PREFIX} ${where} is not plugin metadata. Pass \`pluginMetadata\` from the plugin's generated \`src/plugin-metadata.gen.ts\`.`,
+      `${ERROR_PREFIX} ${where} is not a plugin manifest. Pass \`manifest\` from the plugin's generated \`src/manifest.gen.ts\`.`,
     );
   }
 
-  const metadata: PluginMetadata = {
+  const manifest: PluginManifest = {
+    author:
+      value.author === undefined || value.author === null
+        ? null
+        : {
+            email: value.author.email,
+            name: value.author.name,
+            url: value.author.url,
+          },
     description: value.description,
     icon: value.icon,
     id: value.id,
+    license: value.license ?? null,
     title: value.title,
     version: value.version,
   };
-  assertPluginMetadata(pluginId, metadata, where);
+  assertPluginManifest(pluginId, manifest, where);
 
-  return metadata;
+  return manifest;
 };
 
 /**
  * Every plugin the app's loaded `vitnode.config.ts` registers, with the
- * metadata its registration carries - and nothing else from it.
+ * manifest its registration carries - and nothing else from it.
  */
 export const pluginInventoryFromLoadedConfig = (
   plugins: readonly unknown[],
@@ -61,10 +83,10 @@ export const pluginInventoryFromLoadedConfig = (
     return [
       {
         id: plugin.pluginId,
-        metadata: metadataFrom(
-          plugin.metadata,
+        manifest: manifestFrom(
+          plugin.manifest,
           plugin.pluginId,
-          `\`vitNodeConfig.plugins[${String(index)}].metadata\` in ${source}`,
+          `\`vitNodeConfig.plugins[${String(index)}].manifest\` in ${source}`,
         ),
       },
     ];
@@ -76,7 +98,7 @@ const HEADER = `/* oxlint-disable */
 //
 // It is rewritten by the \`vitnode:plugin-routes\` Vite plugin on every
 // \`vite dev\` and \`vite build\`, from the plugins configured in
-// \`src/vitnode.config.ts\` and the package metadata each one registers.
+// \`src/vitnode.config.ts\` and the manifest each one registers.
 //
 // Plain data and nothing else: no plugin code is imported, so the API can read
 // it without loading the frontend. Pass it to
@@ -90,17 +112,27 @@ const HEADER = `/* oxlint-disable */
 const literal = (value: null | string): string =>
   value === null ? "null" : JSON.stringify(value);
 
-const entrySource = ({ id, metadata }: FrontendPluginInventoryEntry): string =>
-  metadata === null
-    ? `  { id: ${literal(id)}, metadata: null },\n`
+const entrySource = ({ id, manifest }: FrontendPluginInventoryEntry): string =>
+  manifest === null
+    ? `  { id: ${literal(id)}, manifest: null },\n`
     : `  {
     id: ${literal(id)},
-    metadata: {
-      id: ${literal(metadata.id)},
-      title: ${literal(metadata.title)},
-      icon: ${literal(metadata.icon)},
-      description: ${literal(metadata.description)},
-      version: ${literal(metadata.version)},
+    manifest: {
+      id: ${literal(manifest.id)},
+      title: ${literal(manifest.title)},
+      icon: ${literal(manifest.icon)},
+      description: ${literal(manifest.description)},
+      author: ${
+        manifest.author === null
+          ? "null"
+          : `{
+        name: ${literal(manifest.author.name)},
+        email: ${literal(manifest.author.email)},
+        url: ${literal(manifest.author.url)},
+      }`
+      },
+      license: ${literal(manifest.license)},
+      version: ${literal(manifest.version)},
     },
   },
 `;
@@ -113,7 +145,7 @@ export const generatePluginInventorySource = (
   );
 
   return `${HEADER}
-import type { FrontendPluginInventory } from '@vitnode/core/lib/plugin-metadata'
+import type { FrontendPluginInventory } from '@vitnode/core/lib/plugin-manifest'
 
 export const frontendPlugins: FrontendPluginInventory = [
 ${sorted.map(entrySource).join("")}]

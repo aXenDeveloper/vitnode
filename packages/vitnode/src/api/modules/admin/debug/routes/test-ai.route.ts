@@ -2,8 +2,7 @@ import { streamText } from "ai";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 export const zodTestAiSchema = z.object({
   // A configured model id (see `ai.models`). Omit for the default (first) model.
@@ -12,7 +11,6 @@ export const zodTestAiSchema = z.object({
 });
 
 export const testAiDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "system", permission: "can_test_ai" },
   route: {
     method: "post",

@@ -47,7 +47,7 @@ export const welcomeListener = buildEventListener({
 Register the listener in your module's `events` array:
 
 ```ts title="plugins/shop/src/api/modules/orders/orders.module.ts"
-import { buildModule } from "@vitnode/core/api/lib/module"
+import { buildModule } from "@/api/builders"
 import { welcomeListener } from "../../lib/events"
 
 export const ordersModule = buildModule({

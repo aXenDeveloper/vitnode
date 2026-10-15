@@ -1,8 +1,8 @@
 import type { RichTextDocument } from "@/content/rich-text/document";
 import type { ModerationReportReason } from "@/lib/moderation/const";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 const REPORTED_FAILURES = [
   "already_claimed",
@@ -83,7 +83,7 @@ export const createReport = async (input: CreateReportInput) =>
   await settle<{ id: number }>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: input },
         method: "post",
         module: "moderation",
@@ -109,7 +109,7 @@ export const claimReport = async ({
   await settle<ReportState>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { expectedVersion }, params: { id } },
         method: "post",
         module: "moderation",
@@ -131,7 +131,7 @@ export const assignReport = async ({
   await settle<ReportState>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { assigneeId, expectedVersion }, params: { id } },
         method: "post",
         module: "moderation",
@@ -151,7 +151,7 @@ export const addReportNote = async ({
   await settle<{ ok: boolean }>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { body }, params: { id } },
         method: "post",
         module: "moderation",
@@ -173,7 +173,7 @@ export const editReportNote = async ({
   await settle<{ ok: boolean }>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { body }, params: { id, noteId } },
         method: "post",
         module: "moderation",
@@ -193,7 +193,7 @@ export const deleteReportNote = async ({
   await settle<{ ok: boolean }>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { params: { id, noteId } },
         method: "post",
         module: "moderation",
@@ -217,7 +217,7 @@ export const resolveReport = async ({
   await settle<ReportState>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: {
           body: {
             expectedVersion,
@@ -246,7 +246,7 @@ export const reopenReport = async ({
   await settle<ReportState>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { expectedVersion, reason }, params: { id } },
         method: "post",
         module: "moderation",
@@ -268,7 +268,7 @@ export const runReportAction = async ({
   await settle<ReportState & { changed: boolean }>(
     async () =>
       await fetcherClient({
-        plugin: CONFIG_PLUGIN.pluginId,
+        plugin: manifest.id,
         args: { body: { expectedVersion }, params: { action, id } },
         method: "post",
         module: "moderation",

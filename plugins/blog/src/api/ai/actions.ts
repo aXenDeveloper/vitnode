@@ -15,7 +15,7 @@ import {
   excerptSource,
   unquote,
 } from "@/api/lib/ai-writing";
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 const zodLocale = z.string().min(2).max(16);
 
@@ -55,7 +55,7 @@ const canEditPosts = async ({
   await checkStaffPermission(c, {
     module: "posts",
     permission: "can_edit",
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     type: "admin",
   });
 
@@ -192,14 +192,11 @@ export const blogAiActions = [
 ];
 
 export const TRANSLATE_FIELD_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   translateFieldAiAction,
 );
 export const ARTICLE_REVIEW_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
+  manifest.id,
   articleReviewAiAction,
 );
-export const EXCERPT_AI_ACTION = aiActionRef(
-  CONFIG_PLUGIN.pluginId,
-  excerptAiAction,
-);
+export const EXCERPT_AI_ACTION = aiActionRef(manifest.id, excerptAiAction);

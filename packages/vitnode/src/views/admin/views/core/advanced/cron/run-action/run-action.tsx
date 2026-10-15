@@ -6,7 +6,7 @@ import { useTranslations } from "use-intl";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { CONFIG_PLUGIN } from "@/config";
+import { manifest } from "@/manifest";
 
 import type { RunCron } from "./run-cron";
 
@@ -20,7 +20,7 @@ export const RunActionCronTable = ({
   const t = useTranslations("admin.advanced.cron.list.actions.runNow");
   const tError = useTranslations("core.global.errors");
   const canRun = useAdminStaffPermission({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     module: "cron",
     permission: "can_run",
   });

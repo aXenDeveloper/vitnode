@@ -2,8 +2,8 @@ import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
 
 import { FolderTreeIcon } from "lucide-react";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { forumContainers } from "@/content/forums";
+import { manifest } from "@/manifest.gen";
 
 export const forumForumsNav = {
   definition: forumContainers,
@@ -11,6 +11,6 @@ export const forumForumsNav = {
 };
 
 export const adminNav = {
-  pluginId: CONFIG_PLUGIN.pluginId,
+  pluginId: manifest.id,
   containers: [forumForumsNav],
 } satisfies AdminNavPluginSource;

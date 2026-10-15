@@ -1,13 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { removeUserImage, zodUserImageKind } from "@/api/lib/user-images";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const deleteUserImageRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description: "Remove the signed-in user's avatar or cover.",

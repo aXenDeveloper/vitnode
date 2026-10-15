@@ -1,7 +1,6 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 import {
   readNavigationRecords,
@@ -10,7 +9,6 @@ import {
 import { zodAdminNavigationItemSchema } from "../lib/schema";
 
 export const listNavigationAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "navigation", permission: "can_view" },
   route: {
     method: "get",

@@ -150,7 +150,7 @@ In a page loader, pass the route's locale through. This is the example plugin's 
 
 ```ts title="plugins/example/src/pages/localized-article-page.tsx"
 const detail = await fetcher({
-  plugin: CONFIG_PLUGIN.pluginId,
+  plugin: manifest.id,
   method: "get",
   module: "content/localized-articles",
   path: "/{slug}",

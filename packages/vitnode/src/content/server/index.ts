@@ -35,6 +35,7 @@ export type {
   ContentContainerUsageCheck,
 } from "../containers/server/service";
 export { CONTENT_SYSTEM_ACTOR, resolveContentActor } from "./actor";
+export { bindContentPlugin } from "./bind-content-plugin";
 export {
   buildContentColumn,
   buildEditorialColumns,

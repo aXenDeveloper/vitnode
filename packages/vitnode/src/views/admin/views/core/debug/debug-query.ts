@@ -7,8 +7,8 @@ import type {
 } from "@/views/admin/table/params";
 import type { QueueStatus } from "@/views/admin/views/core/advanced/queue/queue-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
@@ -53,7 +53,7 @@ export type DebugLogsPageFetcher = (
 /** One page of the log, over whichever transport the host hands in. */
 export const fetchDebugLogsPage: DebugLogsPageFetcher = async params => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/debug",
@@ -125,7 +125,7 @@ export type DebugQueueFetcher = () => Promise<DebugQueueSnapshot>;
 /** The snapshot, over whichever transport the host hands in. */
 export const fetchDebugQueue: DebugQueueFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "admin/debug",
     path: "/queue",

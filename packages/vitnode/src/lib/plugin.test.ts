@@ -1,38 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import type { PluginMetadata } from "./plugin-metadata";
+import type { PluginManifest } from "./plugin-manifest";
 
 import { buildPlugin } from "./plugin";
 
-const BLOG: PluginMetadata = {
+const BLOG: PluginManifest<"@acme/blog"> = {
+  author: null,
   description: null,
   icon: "newspaper",
   id: "@acme/blog",
+  license: null,
   title: "Blog",
   version: "1.0.0",
 };
 
-describe("buildPlugin metadata", () => {
-  it("accepts its own metadata with a Lucide icon name", () => {
-    expect(
-      buildPlugin({ metadata: BLOG, pluginId: "@acme/blog" }).metadata,
-    ).toBe(BLOG);
+describe("buildPlugin manifest", () => {
+  it("takes its plugin id from the manifest", () => {
+    const plugin = buildPlugin({ manifest: BLOG });
+
+    expect(plugin.pluginId).toBe("@acme/blog");
+    expect(plugin.manifest).toBe(BLOG);
   });
 
-  it.each([
-    [
-      "metadata generated for another package",
-      "@acme/shop",
-      BLOG,
-      /^\[VitNode plugin metadata\] buildPlugin\(\) registers the plugin "@acme\/shop" with the metadata of "@acme\/blog"/,
-    ],
-    [
-      "an icon that is not a Lucide icon name",
-      "@acme/blog",
-      { ...BLOG, icon: "./assets/icon.svg" },
-      /^\[VitNode plugin metadata\] buildPlugin\(\) gives the plugin "@acme\/blog" the icon "\.\/assets\/icon\.svg"/,
-    ],
-  ])("refuses %s", (_, pluginId, metadata, error) => {
-    expect(() => buildPlugin({ metadata, pluginId })).toThrow(error);
+  it("refuses an icon that is not a Lucide icon name", () => {
+    expect(() =>
+      buildPlugin({ manifest: { ...BLOG, icon: "./assets/icon.svg" } }),
+    ).toThrow(
+      /^\[VitNode plugin manifest\] buildPlugin\(\) gives the plugin "@acme\/blog" the icon "\.\/assets\/icon\.svg"/,
+    );
   });
 });

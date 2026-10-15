@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { advancedAdminModule } from "./advanced/advanced.admin.module";
 import { aiAdminModule } from "./ai/ai.admin.module";
@@ -16,7 +15,6 @@ import { staffAdminModule } from "./staff/staff.admin.module";
 import { usersAdminModule } from "./users/users.admin.module";
 
 export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [sessionAdminRoute, sendNotificationRoute],
   modules: [

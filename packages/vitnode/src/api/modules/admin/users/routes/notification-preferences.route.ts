@@ -1,7 +1,6 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { getNotificationPreferences } from "@/api/models/notifications/preferences";
 import { zodNotificationPreferences } from "@/api/modules/notifications/routes/preferences.route";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   findTargetUserId,
@@ -10,7 +9,6 @@ import {
 } from "../lib/target-user";
 
 export const listUserNotificationPreferencesAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",

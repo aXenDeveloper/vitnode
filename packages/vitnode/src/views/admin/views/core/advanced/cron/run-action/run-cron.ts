@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 export type RunCronResult = undefined | { error?: string };
 
@@ -8,7 +8,7 @@ export type RunCron = (id: number) => Promise<RunCronResult>;
 export const runCronInBrowser: RunCron = async id => {
   try {
     const response = await fetcherClient({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       args: { params: { id: String(id) } },
       method: "post",
       module: "admin/advanced/cron",

@@ -1,10 +1,9 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
-import { buildRoute } from "@/api/lib/route";
 import { SessionModel } from "@/api/models/session";
 import { SSOModel } from "@/api/models/sso";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { USER_PASSWORD_MAX_LENGTH } from "../../credential-limits";
 
@@ -18,7 +17,6 @@ export const zodSsoLinkSchema = z.object({
 });
 
 export const linkRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description:

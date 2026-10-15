@@ -1,9 +1,8 @@
 import { z } from "@hono/zod-openapi";
 import { asc, eq } from "drizzle-orm";
 
+import { buildRoute } from "@/api/builders";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_moderation_report_events } from "@/database/moderation";
 import {
   MODERATION_PERMISSIONS,
@@ -88,7 +87,6 @@ const detailSchema = z.object({
 });
 
 export const showReportRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/reports/{id}",

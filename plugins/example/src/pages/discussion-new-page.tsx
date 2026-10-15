@@ -21,7 +21,7 @@ import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { CONFIG_PLUGIN } from "@/const";
+import { manifest } from "@/manifest.gen";
 
 import type { DiscussionNewSearch } from "./discussion-search";
 
@@ -75,7 +75,7 @@ const DiscussionNewPage = ({
     form,
   ) => {
     const res = await fetcher({
-      plugin: CONFIG_PLUGIN.pluginId,
+      plugin: manifest.id,
       method: "post",
       module: "content/discussions",
       path: "/",

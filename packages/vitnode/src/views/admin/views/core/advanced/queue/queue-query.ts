@@ -6,8 +6,8 @@ import type {
   AdminTableParams,
 } from "@/views/admin/table/params";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,
@@ -60,7 +60,7 @@ export type QueuePageFetcher = (params: QueueParams) => Promise<QueuePage>;
 /** One page, over whichever transport the host hands in. */
 export const fetchQueuePage: QueuePageFetcher = async params => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { query: params },
     method: "get",
     module: "admin/advanced/queue",

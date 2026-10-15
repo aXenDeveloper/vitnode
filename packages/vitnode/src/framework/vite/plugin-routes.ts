@@ -14,7 +14,7 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { FrontendPluginInventoryEntry } from "../../lib/plugin-metadata";
+import type { FrontendPluginInventoryEntry } from "../../lib/plugin-manifest";
 import type { ResolvedPageCacheConfig } from "../../page-cache/config";
 import type { ResolvedPageCacheRoute } from "../../page-cache/resolve";
 import type { ResolvedAdminNavModule } from "../admin-nav";
@@ -48,7 +48,7 @@ import {
 } from "../package-messages";
 import {
   generatePluginInventorySource,
-  PLUGIN_METADATA_SUBPATH,
+  PLUGIN_MANIFEST_SUBPATH,
   pluginInventoryFromLoadedConfig,
 } from "../plugin-inventory";
 import {
@@ -539,11 +539,11 @@ const discover = async (
     resolvePackageFile,
   );
   // Watched only: the inventory is read from the loaded config, and a plugin's
-  // rebuilt metadata module is what changes it while the dev server runs.
-  const pluginMetadata = readOptionalPluginModules<{
+  // rebuilt manifest module is what changes it while the dev server runs.
+  const pluginManifests = readOptionalPluginModules<{
     pluginId: string;
     specifier: string;
-  }>(pluginIds, PLUGIN_METADATA_SUBPATH, resolvePackageFile);
+  }>(pluginIds, PLUGIN_MANIFEST_SUBPATH, resolvePackageFile);
   const remainingPluginIds = pluginIds.filter(
     id => !pluginWidgets.modules.some(m => m.pluginId === id),
   );
@@ -565,7 +565,7 @@ const discover = async (
     ...coreBlocks.watch,
     ...pluginBlocks.watch,
     ...contentModules.map(({ file }) => file),
-    ...pluginMetadata.watch,
+    ...pluginManifests.watch,
   ];
 
   onLoaded?.(watch);

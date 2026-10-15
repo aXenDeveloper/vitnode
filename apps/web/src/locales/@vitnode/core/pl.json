@@ -855,16 +855,14 @@
         }
       },
       "plugins": {
-        "core": "Rdzeń VitNode",
-        "count_label": "Zainstalowane wtyczki",
         "desc": "Wszystkie wtyczki skonfigurowane w tej aplikacji i wersje, których używa.",
         "empty": {
           "desc": "Dodaj wtyczkę do vitnode.config.ts lub vitnode.api.config.ts, a pojawi się tutaj po następnym buildzie.",
           "title": "Brak zainstalowanych wtyczek"
         },
-        "frontend_unknown": {
-          "desc": "To API nie otrzymało inwentarza wtyczek z buildu aplikacji webowej, więc wtyczki zarejestrowane tylko w vitnode.config.ts nie są widoczne, a wersji nie da się porównać. Przekaż frontendPlugins do buildApiConfig, aby je uwzględnić.",
-          "title": "Widoczne są tylko wtyczki API"
+        "list": {
+          "plugin": "Wtyczka",
+          "version": "Wersja"
         },
         "mismatch": "Niezgodne wersje: aplikacja webowa używa {frontend}, a API {api}. Przebuduj i wdróż oba tak, aby były zgodne.",
         "no_description": "Brak opisu.",

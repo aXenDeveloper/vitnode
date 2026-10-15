@@ -1,12 +1,10 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { loadCronHealth } from "@/api/modules/cron/helpers/load-cron-health";
-import { CONFIG_PLUGIN } from "@/config";
 import { isCronSecretRejected } from "@/lib/config";
 
 export const getCronHealthRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "cron", permission: "can_view" },
   route: {
     method: "get",

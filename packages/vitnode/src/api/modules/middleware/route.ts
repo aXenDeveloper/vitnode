@@ -1,13 +1,12 @@
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { AI_MODEL_CAPABILITIES } from "@/api/lib/ai/capabilities";
-import { buildRoute } from "@/api/lib/route";
 import { loadPublicNavigationMenus } from "@/api/modules/admin/navigation/lib/cache";
 import {
   zodPublicNavigationItemSchema,
   zodPublicNavigationNodeSchema,
 } from "@/api/modules/admin/navigation/lib/schema";
-import { CONFIG_PLUGIN } from "@/config";
 
 import { loadNavigationIcons, zodLucideIconSchema } from "./navigation-icons";
 
@@ -46,7 +45,6 @@ export const routeMiddlewareSchema = z.object({
 });
 
 export const routeMiddleware = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     path: "/",
     method: "get",

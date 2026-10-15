@@ -2,8 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { RoleNameEntry } from "@/components/role-name";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export const MAX_NAME_CODE_LENGTH = 255;
@@ -59,7 +59,7 @@ export const isProfileNotFound = (error: unknown): boolean =>
 
 export const fetchUserProfile: UserProfileFetcher = async nameCode => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: { params: { nameCode: encodeURIComponent(nameCode) } },
     method: "get",
     module: "users",

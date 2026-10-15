@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
+import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 /** Which icon a row gets, and the only three values the API will send. */
@@ -51,7 +51,7 @@ export const isDevicesRequestError = (
 
 export const fetchDevices: DevicesFetcher = async () => {
   const response = await fetcher({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     method: "get",
     module: "users",
     path: "/devices",

@@ -1,5 +1,5 @@
-import { CONFIG_PLUGIN } from "@/config";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { manifest } from "@/manifest";
 
 export const AI_CLIENT_ERROR_CODES = [
   "AI_ACTION_DISABLED",
@@ -71,7 +71,7 @@ export const requestAiAssist = async ({
   sourceFingerprint?: string;
 }): Promise<{ output: unknown; runId: number }> => {
   const response = await fetcherClient({
-    plugin: CONFIG_PLUGIN.pluginId,
+    plugin: manifest.id,
     args: {
       body: {
         action,
@@ -106,14 +106,14 @@ export const sendAiFeedback = async ({
   const feedback =
     scope === "admin"
       ? fetcherClient({
-          plugin: CONFIG_PLUGIN.pluginId,
+          plugin: manifest.id,
           args,
           method: "post",
           module: "admin/ai",
           path: "/assist/runs/{id}/feedback",
         })
       : fetcherClient({
-          plugin: CONFIG_PLUGIN.pluginId,
+          plugin: manifest.id,
           args,
           method: "post",
           module: "ai",

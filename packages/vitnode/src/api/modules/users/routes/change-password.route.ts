@@ -2,11 +2,10 @@ import { and, eq, gt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { buildRoute } from "@/api/builders";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
-import { buildRoute } from "@/api/lib/route";
 import { ForgotPasswordTokenModel, PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 
 import { USER_PASSWORD_MAX_LENGTH } from "../credential-limits";
@@ -20,7 +19,6 @@ export const zodChangePasswordSchema = z.object({
 });
 
 export const changePasswordRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Change user password",

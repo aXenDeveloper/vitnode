@@ -1,11 +1,10 @@
 import { z } from "zod";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
 } from "@/api/models/notifications/preferences";
-import { CONFIG_PLUGIN } from "@/config";
 
 import {
   requireNotificationUser,
@@ -38,7 +37,6 @@ export const zodNotificationPreferences = z.object({
 });
 
 export const getNotificationPreferencesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:
@@ -78,7 +76,6 @@ export const zodUpdateNotificationPreferences = z.object({
 });
 
 export const updateNotificationPreferencesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "put",
     description:

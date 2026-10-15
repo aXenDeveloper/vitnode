@@ -1,16 +1,14 @@
 import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { zodSearchResultSchema } from "@/api/modules/search/routes/search.route";
 import {
   searchTimeline,
   zodSearchTimelineQuery,
   zodSearchTimelineUserId,
 } from "@/api/modules/search/routes/timeline.route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const timelineUserAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",

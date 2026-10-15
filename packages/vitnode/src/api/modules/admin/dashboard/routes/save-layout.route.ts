@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 
 import {
   mergeLayoutForSave,
@@ -13,7 +12,6 @@ import {
 export const zodSaveDashboardLayoutSchema = zodDashboardLayout;
 
 export const saveDashboardLayoutAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "dashboard", permission: "can_edit" },
   route: {
     method: "put",

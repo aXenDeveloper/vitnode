@@ -1,5 +1,4 @@
-import { buildModule } from "@/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildModule } from "@/api/builders";
 
 import { aiQueueCron, altDetectCron } from "./cron/alt.cron";
 import { aiMaintenanceCron } from "./cron/maintenance.cron";
@@ -12,7 +11,6 @@ import { aiUsageRoute } from "./routes/usage.route";
 import { altGenerateQueueTask } from "./tasks/alt-generate.task";
 
 export const aiModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "ai",
   routes: [
     aiUsageRoute,

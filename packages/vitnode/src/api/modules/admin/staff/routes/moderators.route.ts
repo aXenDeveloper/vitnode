@@ -1,13 +1,11 @@
-import { buildRoute } from "@/api/lib/route";
+import { buildRoute } from "@/api/builders";
 import { withPagination } from "@/api/lib/with-pagination";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_moderators_permissions } from "@/database/moderators";
 
 import { resolveStaffEdges } from "../lib/resolve-staff-edges";
 import { staffListAdminQuery, staffListAdminSchema } from "../lib/schema";
 
 export const listModeratorsStaffAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "staff_moderators", permission: "can_view" },
   route: {
     method: "get",

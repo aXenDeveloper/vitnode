@@ -33,11 +33,10 @@ export const reactions = camelCase.table.withRLS("reactions", (t) => ({
 Access the typed Drizzle instance using `c.get("db")`:
 
 ```ts title="plugins/reactions/src/api/modules/reactions/routes/get.route.ts"
-import { buildRoute } from "@vitnode/core/api/lib/route"
+import { buildRoute } from "@/api/builders"
 import { reactions } from "@/database/reactions"
 
 export const getReactionsRoute = buildRoute({
-  pluginId: "reactions",
   route: {
     method: "get",
     path: "/",

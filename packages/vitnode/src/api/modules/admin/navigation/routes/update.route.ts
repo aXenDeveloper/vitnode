@@ -1,8 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
-import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { core_navigation } from "@/database/navigation";
 import { isValidNavigationHref } from "@/lib/navigation";
 
@@ -27,7 +26,6 @@ import {
 const errorSchema = z.object({ error: z.string() });
 
 export const updateNavigationAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   adminStaffPermission: { module: "navigation", permission: "can_edit" },
   route: {
     method: "patch",

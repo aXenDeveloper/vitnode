@@ -4,10 +4,9 @@ import { z } from "@hono/zod-openapi";
 
 import type { SearchHiddenAccess } from "@/api/models/search";
 
-import { CONFIG_PLUGIN } from "@/config";
+import { buildRoute } from "@/api/builders";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
-import { buildRoute } from "../../../lib/route";
 import { zodPaginationQuery } from "../../../lib/with-pagination";
 import { positiveIntOrUndefined, zodSearchResultSchema } from "./search.route";
 
@@ -45,7 +44,6 @@ export const searchTimeline = async (
   });
 
 export const timelineRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description:

@@ -1,13 +1,11 @@
 import { z } from "@hono/zod-openapi";
 
+import { buildRoute } from "@/api/builders";
 import { resolveUserRoles, userRoleSchema } from "@/api/lib/resolve-user-roles";
-import { buildRoute } from "@/api/lib/route";
 import { UserModel } from "@/api/models/user";
-import { CONFIG_PLUGIN } from "@/config";
 import { displayNameOf } from "@/lib/user-personal-information";
 
 export const profileRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Public profile of a user, looked up by their URL name",

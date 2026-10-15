@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { pluginMetadataFromManifest } from "./generate.js";
+import { pluginManifestFromPackageJson } from "./generate.js";
 
 const SOURCE = "package.json";
 
-describe("pluginMetadataFromManifest", () => {
+describe("pluginManifestFromPackageJson", () => {
   it("reads the package fields, trimmed, and ignores everything else", () => {
     expect(
-      pluginMetadataFromManifest(
+      pluginManifestFromPackageJson(
         {
           description: "  Posts and categories  ",
           name: "@acme/blog",
@@ -17,8 +17,10 @@ describe("pluginMetadataFromManifest", () => {
         SOURCE,
       ),
     ).toEqual({
+      author: null,
       description: "Posts and categories",
       id: "@acme/blog",
+      license: null,
       version: "1.2.0",
     });
   });
@@ -28,9 +30,11 @@ describe("pluginMetadataFromManifest", () => {
     ["blank", { description: " ", name: "@acme/blog", version: "" }],
     ["null", { description: null, name: "@acme/blog", version: null }],
   ])("reads %s optional fields as unknown", (_, manifest) => {
-    expect(pluginMetadataFromManifest(manifest, SOURCE)).toEqual({
+    expect(pluginManifestFromPackageJson(manifest, SOURCE)).toEqual({
+      author: null,
       description: null,
       id: "@acme/blog",
+      license: null,
       version: null,
     });
   });
@@ -50,12 +54,14 @@ describe("pluginMetadataFromManifest", () => {
       /`description`.*has to be a string/,
     ],
   ])("rejects %s", (_, manifest, error) => {
-    expect(() => pluginMetadataFromManifest(manifest, SOURCE)).toThrow(error);
+    expect(() => pluginManifestFromPackageJson(manifest, SOURCE)).toThrow(
+      error,
+    );
   });
 
-  it("names the file and the metadata prefix in its errors", () => {
+  it("names the file and the manifest prefix in its errors", () => {
     expect(() =>
-      pluginMetadataFromManifest({}, "plugins/blog/package.json"),
-    ).toThrow(/^\[VitNode plugin metadata\] plugins\/blog\/package.json/);
+      pluginManifestFromPackageJson({}, "plugins/blog/package.json"),
+    ).toThrow(/^\[VitNode plugin manifest\] plugins\/blog\/package.json/);
   });
 });
