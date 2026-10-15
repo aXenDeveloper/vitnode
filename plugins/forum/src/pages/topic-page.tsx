@@ -14,6 +14,7 @@ import {
   richTextToPlainText,
   zodRichTextDocument,
 } from "@vitnode/core/content";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
@@ -83,6 +84,7 @@ const absoluteUrl = (path: string, base: string): string => {
 /** One topic by slug, `null` when there is none for this visitor. */
 const topicQueryOptions = (slug: string) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const res = await fetcher({
         plugin: CONFIG_PLUGIN.pluginId,

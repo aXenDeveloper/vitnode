@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { queryOptions } from "@tanstack/react-query";
 import { redirect } from "@tanstack/react-router";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
@@ -22,6 +23,7 @@ const zodCommentLink = z.object({ slug: z.string(), topic: zodRelationId });
 /** Where a comment lives: its topic's slug and its own, `null` when there is none for this visitor. */
 const commentLinkQueryOptions = (slug: string) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const comment = await fetcher({
         plugin: CONFIG_PLUGIN.pluginId,

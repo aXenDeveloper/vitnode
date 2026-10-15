@@ -3,6 +3,7 @@ import {
   zodContentFileDescriptor,
   zodRichTextDocument,
 } from "@vitnode/core/content";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { RECORD_STALE_TIME } from "@vitnode/core/lib/query-freshness";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
@@ -87,6 +88,7 @@ export const blogPostQueryOptions = (request: {
   slug: string;
 }) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => await fetchBlogPost(request),
     queryKey: blogQueryKeys.post(request),
     staleTime: ({ state }) =>

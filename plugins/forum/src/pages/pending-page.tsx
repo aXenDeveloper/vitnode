@@ -11,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import {
   type AuthenticatedRouteLoadContext,
@@ -62,6 +63,7 @@ const pendingQueryOptions = ({
   userId: number;
 }) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const res = await fetcher({
         plugin: "@vitnode/core",

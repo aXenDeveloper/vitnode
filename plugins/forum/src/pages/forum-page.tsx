@@ -17,6 +17,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
@@ -57,6 +58,7 @@ const PAGE_SIZE = 25;
 /** One page of a forum's topics, newest first, with each topic's comment stats. */
 const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       // Spread rather than written inline: the generated list query types its
       // filters loosely, so an inline key reads as an excess property.

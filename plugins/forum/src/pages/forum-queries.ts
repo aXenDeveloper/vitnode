@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { queryOptions } from "@tanstack/react-query";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import {
   OPERATIONAL_STALE_TIME,
   RECORD_STALE_TIME,
@@ -61,6 +62,7 @@ export const isSharedResponse = (res: Response): boolean =>
 
 export const forumsQueryOptions = () =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: fetchForums,
     queryKey: forumQueryKeys.forums(),
     staleTime: FORUM_TREE_STALE_TIME,
@@ -68,6 +70,7 @@ export const forumsQueryOptions = () =>
 
 export const forumStatsQueryOptions = () =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: fetchForumStats,
     queryKey: forumQueryKeys.forumStats(),
     staleTime: FORUM_ACTIVITY_STALE_TIME,
@@ -76,6 +79,7 @@ export const forumStatsQueryOptions = () =>
 /** One forum with its ancestors and children, by id or slug; `null` when there is none. */
 export const forumQueryOptions = (idOrSlug: string) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
       const res = await fetcher({
         plugin: CONFIG_PLUGIN.pluginId,
@@ -98,6 +102,7 @@ export const forumQueryOptions = (idOrSlug: string) =>
 /** The first page of a topic's thread - what the topic page renders on arrival. */
 export const threadQueryOptions = (topicId: number) =>
   queryOptions({
+    meta: LOADER_DATA_QUERY_META,
     queryFn: async () => await fetchThreadPage({ topicId }),
     queryKey: forumQueryKeys.thread(topicId),
     staleTime: FORUM_ACTIVITY_STALE_TIME,
