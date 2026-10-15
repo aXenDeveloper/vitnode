@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type AutoFormOnSubmit,
   setFormFieldError,
@@ -15,6 +16,7 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink, useHrefNavigate } from "@vitnode/core/tanstack/link";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
@@ -26,7 +28,7 @@ import type { TopicNewSearch } from "./forum-links";
 
 import { useForumRejection } from "./forum-errors";
 import { FORUM_HREF, topicEditHref, topicHref } from "./forum-links";
-import { forumsQueryOptions } from "./forum-queries";
+import { forumsQueryOptions, invalidateForumTopics } from "./forum-queries";
 import { ForumShell } from "./forum-ui";
 import {
   TOPIC_FORM_FIELDS,
@@ -68,6 +70,8 @@ const TopicNewPage = ({
   const tErrors = useTranslations("@vitnode/forum.forums.errors");
   const rejectTopic = useForumRejection(TOPIC_FORM_FIELDS);
   const [isLeaving, setIsLeaving] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useHrefNavigate();
 
   const onSubmit: AutoFormOnSubmit<TopicCreateFormSchema> = async (
     { forum, ...values },
@@ -84,8 +88,8 @@ const TopicNewPage = ({
     if (res.status === 201) {
       const record = await res.json();
       setIsLeaving(true);
-
-      window.location.assign(
+      await invalidateForumTopics(queryClient);
+      await navigate(
         record.approval?.status === "pending" || record.slug === null
           ? topicEditHref(record.id, { submitted: true })
           : topicHref(record.slug, { created: true }),
@@ -115,12 +119,12 @@ const TopicNewPage = ({
             <EmptyDescription>{t("new.no_forums.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={FORUM_HREF}
             >
               {t("new.no_forums.action")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (

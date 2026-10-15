@@ -7,6 +7,7 @@ import {
 } from "@vitnode/core/routing";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { PencilIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -91,19 +92,19 @@ const DiscussionPage = ({
         <nav aria-label={t("board")}>
           <ol className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm leading-relaxed">
             <li>
-              <a className="hover:text-foreground" href={BOARDS_HREF}>
+              <HrefLink className="hover:text-foreground" href={BOARDS_HREF}>
                 {t("boards")}
-              </a>
+              </HrefLink>
             </li>
             {item.boardTrail.map(board => (
               <li className="flex items-center gap-2" key={board.id}>
                 <span aria-hidden="true">/</span>
-                <a
+                <HrefLink
                   className="hover:text-foreground"
                   href={boardHref(board.slug)}
                 >
                   {board.name}
-                </a>
+                </HrefLink>
               </li>
             ))}
           </ol>
@@ -111,19 +112,19 @@ const DiscussionPage = ({
       ) : null}
 
       <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
-        <a
+        <HrefLink
           className={buttonVariants({ variant: "outline" })}
           href={discussionEditHref(item.id)}
         >
           <PencilIcon aria-hidden="true" />
           {t("edit")}
-        </a>
-        <a
+        </HrefLink>
+        <HrefLink
           className={buttonVariants({ variant: "ghost" })}
           href={discussionNewHref(item.board)}
         >
           {t("new")}
-        </a>
+        </HrefLink>
       </nav>
 
       <RichTextContent

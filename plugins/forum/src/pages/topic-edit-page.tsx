@@ -21,6 +21,7 @@ import {
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import {
   ClockIcon,
   HourglassIcon,
@@ -176,9 +177,9 @@ const ApprovalNotice = ({
         <AlertTitle>{t("pending_create.title")}</AlertTitle>
         <AlertDescription>
           {t("pending_create.desc")}{" "}
-          <a className="font-medium underline" href={FORUM_PENDING_HREF}>
+          <HrefLink className="font-medium underline" href={FORUM_PENDING_HREF}>
             {t("pending_create.link")}
-          </a>
+          </HrefLink>
         </AlertDescription>
       </Alert>
     );
@@ -291,7 +292,7 @@ const TopicEditForm = ({
       />
 
       {current.slug !== null && current.status === "published" ? (
-        <a
+        <HrefLink
           className={buttonVariants({
             className: "self-start",
             variant: "link",
@@ -299,7 +300,7 @@ const TopicEditForm = ({
           href={topicHref(current.slug)}
         >
           {t("edit.view")}
-        </a>
+        </HrefLink>
       ) : null}
     </>
   );
@@ -316,12 +317,12 @@ const TopicEditPage = ({
     return (
       <RefusedState
         action={
-          <a
+          <HrefLink
             className={buttonVariants()}
             href={loginHref(topicEditHref(loaderData.id))}
           >
             {t("state.unauthenticated.action")}
-          </a>
+          </HrefLink>
         }
         description={t("state.unauthenticated.desc")}
         icon={<LogInIcon aria-hidden="true" />}
@@ -341,12 +342,12 @@ const TopicEditPage = ({
     return (
       <RefusedState
         action={
-          <a
+          <HrefLink
             className={buttonVariants({ variant: "outline" })}
             href={FORUM_HREF}
           >
             {t("state.back")}
-          </a>
+          </HrefLink>
         }
         description={t(`state.${key}.desc`)}
         icon={

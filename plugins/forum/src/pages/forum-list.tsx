@@ -1,5 +1,6 @@
 import type { ContentContainerTreeNode } from "@vitnode/core/content";
 
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { useFormatter, useTranslations } from "use-intl";
 
 import type { Forum, ForumStats } from "./forum-data";
@@ -24,12 +25,12 @@ const ForumRow = ({
         <ForumIcon icon={forum.metadata.icon} />
         <div className="flex min-w-0 flex-col gap-1">
           <h3 className="text-foreground font-semibold text-balance">
-            <a
+            <HrefLink
               className="focus-visible:ring-ring rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
               href={forumHref(forum.slug)}
             >
               {forum.name}
-            </a>
+            </HrefLink>
           </h3>
           {forum.metadata.description ? (
             <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
@@ -58,12 +59,12 @@ const ForumRow = ({
         {latest ? (
           <>
             <span className="text-muted-foreground">{t("latest")}</span>
-            <a
+            <HrefLink
               className="text-foreground truncate font-medium hover:underline"
               href={topicHref(latest.slug)}
             >
               {latest.title}
-            </a>
+            </HrefLink>
             {latest.publishedAt ? (
               <span className="text-muted-foreground">
                 <TimeAgo date={latest.publishedAt} />

@@ -20,6 +20,7 @@ import {
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import {
   MessageSquareIcon,
@@ -142,12 +143,12 @@ const ForumNotFound = () => {
           <EmptyDescription>{t("desc")}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <a
+          <HrefLink
             className={buttonVariants({ variant: "outline" })}
             href={FORUM_HREF}
           >
             {t("back")}
-          </a>
+          </HrefLink>
         </EmptyContent>
       </Empty>
     </div>
@@ -177,7 +178,7 @@ export const route = defineRoute<ForumPageData, ForumSearch>({
     group: ({ loaderData }) => (
       <>
         <BreadcrumbItem>
-          <BreadcrumbLink href={FORUM_HREF}>
+          <BreadcrumbLink render={<HrefLink href={FORUM_HREF} />}>
             <ForumsCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -185,7 +186,9 @@ export const route = defineRoute<ForumPageData, ForumSearch>({
           <Fragment key={ancestor.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={forumHref(ancestor.slug)}>
+              <BreadcrumbLink
+                render={<HrefLink href={forumHref(ancestor.slug)} />}
+              >
                 {ancestor.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -217,12 +220,12 @@ const TopicListRow = ({
       <PersonAvatar person={topic.author} size={40} />
       <div className="flex min-w-0 flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-6">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <a
+          <HrefLink
             className="text-foreground font-medium text-balance hover:underline"
             href={topicHref(topic.slug)}
           >
             {topic.title}
-          </a>
+          </HrefLink>
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
             <PersonName person={topic.author} />
             {topic.publishedAt ? (
@@ -270,10 +273,13 @@ const ForumPage = ({
   return (
     <ForumShell
       actions={
-        <a className={buttonVariants()} href={topicNewHref(container.id)}>
+        <HrefLink
+          className={buttonVariants()}
+          href={topicNewHref(container.id)}
+        >
           <PenSquareIcon aria-hidden="true" />
           {t("new_topic")}
-        </a>
+        </HrefLink>
       }
       description={container.metadata.description}
       title={
@@ -320,12 +326,12 @@ const ForumPage = ({
               <EmptyDescription>{t("empty_forum.desc")}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={topicNewHref(container.id)}
               >
                 {t("new_topic")}
-              </a>
+              </HrefLink>
             </EmptyContent>
           </Empty>
         ) : (
@@ -346,20 +352,20 @@ const ForumPage = ({
             className="flex flex-wrap items-center gap-2"
           >
             {isFirstPage ? null : (
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={forumHref(container.slug)}
               >
                 {t("newest")}
-              </a>
+              </HrefLink>
             )}
             {nextCursor === null ? null : (
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={forumHref(container.slug, { cursor: nextCursor })}
               >
                 {t("older")}
-              </a>
+              </HrefLink>
             )}
           </nav>
         )}

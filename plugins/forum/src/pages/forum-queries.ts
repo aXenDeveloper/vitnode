@@ -121,7 +121,7 @@ export const invalidateForumComments = async (
   ]);
 };
 
-/** After a topic is edited: the topic under any slug, everything that shows its title or links to its slug, and the author's submissions. */
+/** After a topic is created or edited: the topic under any slug, everything that shows its title or links to its slug, and the author's submissions. */
 export const invalidateForumTopics = async (
   queryClient: QueryClient,
 ): Promise<void> => {

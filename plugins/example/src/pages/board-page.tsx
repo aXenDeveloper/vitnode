@@ -20,6 +20,7 @@ import {
 } from "@vitnode/core/routing";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { MessagesSquareIcon, SearchXIcon } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslations } from "use-intl";
@@ -108,12 +109,12 @@ const BoardNotFound = () => {
           <EmptyDescription>{t("desc")}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <a
+          <HrefLink
             className={buttonVariants({ variant: "outline" })}
             href={BOARDS_HREF}
           >
             {t("back")}
-          </a>
+          </HrefLink>
         </EmptyContent>
       </Empty>
     </div>
@@ -138,7 +139,7 @@ export const route = definePluginRoute<BoardPageData, BoardSearch>({
     group: ({ loaderData }) => (
       <>
         <BreadcrumbItem>
-          <BreadcrumbLink href={BOARDS_HREF}>
+          <BreadcrumbLink render={<HrefLink href={BOARDS_HREF} />}>
             <BoardsCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -146,7 +147,9 @@ export const route = definePluginRoute<BoardPageData, BoardSearch>({
           <Fragment key={ancestor.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={boardHref(ancestor.slug)}>
+              <BreadcrumbLink
+                render={<HrefLink href={boardHref(ancestor.slug)} />}
+              >
                 {ancestor.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -185,12 +188,12 @@ const BoardPage = ({
           ) : null}
         </div>
 
-        <a
+        <HrefLink
           className={buttonVariants({ className: "self-start" })}
           href={discussionNewHref(container.id)}
         >
           {t("new_discussion")}
-        </a>
+        </HrefLink>
       </header>
 
       {children.length > 0 ? (
@@ -232,12 +235,12 @@ const BoardPage = ({
               <EmptyDescription>{t("empty_board.desc")}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={discussionNewHref(container.id)}
               >
                 {t("new_discussion")}
-              </a>
+              </HrefLink>
             </EmptyContent>
           </Empty>
         ) : (
@@ -249,12 +252,12 @@ const BoardPage = ({
                     {discussion.title}
                   </span>
                 ) : (
-                  <a
+                  <HrefLink
                     className="text-foreground font-medium text-balance hover:underline"
                     href={discussionHref(discussion.slug)}
                   >
                     {discussion.title}
-                  </a>
+                  </HrefLink>
                 )}
                 {discussion.publishedAt ? (
                   <time
@@ -275,20 +278,20 @@ const BoardPage = ({
             className="flex flex-wrap items-center gap-2"
           >
             {isFirstPage ? null : (
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={boardHref(container.slug)}
               >
                 {t("newest")}
-              </a>
+              </HrefLink>
             )}
             {nextCursor === null ? null : (
-              <a
+              <HrefLink
                 className={buttonVariants({ variant: "outline" })}
                 href={boardHref(container.slug, { cursor: nextCursor })}
               >
                 {t("older")}
-              </a>
+              </HrefLink>
             )}
           </nav>
         )}

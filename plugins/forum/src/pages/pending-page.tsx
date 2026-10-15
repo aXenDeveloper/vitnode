@@ -13,6 +13,7 @@ import {
 } from "@vitnode/core/components/ui/empty";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import {
   type AuthenticatedRouteLoadContext,
   defineAuthenticatedRoute,
@@ -147,12 +148,12 @@ const SubmissionRow = ({ item }: { item: Submission }) => {
       </div>
 
       {isTopic ? (
-        <a
+        <HrefLink
           className="text-foreground font-medium text-balance hover:underline"
           href={topicEditHref(item.itemId)}
         >
           {title}
-        </a>
+        </HrefLink>
       ) : (
         <span className="text-foreground font-medium text-balance">
           {title}
@@ -166,12 +167,12 @@ const SubmissionRow = ({ item }: { item: Submission }) => {
         {item.container ? (
           <>
             <span aria-hidden="true">·</span>
-            <a
+            <HrefLink
               className="hover:underline"
               href={forumHref(item.container.slug)}
             >
               {item.container.name}
-            </a>
+            </HrefLink>
           </>
         ) : null}
       </p>
@@ -202,12 +203,12 @@ const PendingPage = ({
             <EmptyDescription>{t("empty.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={FORUM_HREF}
             >
               {t("empty.action")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (
@@ -224,20 +225,20 @@ const PendingPage = ({
           className="flex flex-wrap items-center gap-2"
         >
           {page > 1 ? (
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={pendingHref(page - 1)}
             >
               {t("newer")}
-            </a>
+            </HrefLink>
           ) : null}
           {page < pageCount ? (
-            <a
+            <HrefLink
               className={buttonVariants({ variant: "outline" })}
               href={pendingHref(page + 1)}
             >
               {t("older")}
-            </a>
+            </HrefLink>
           ) : null}
         </nav>
       ) : null}

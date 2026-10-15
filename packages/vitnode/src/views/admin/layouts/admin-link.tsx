@@ -1,17 +1,10 @@
-import { Link } from "@tanstack/react-router";
+import { HrefLink, type HrefLinkProps } from "@/tanstack/link";
 
-import { isExternalHref } from "./normalize-url";
+export type AdminLinkProps = Omit<HrefLinkProps, "activeOptions">;
 
-export interface AdminLinkProps extends Omit<
-  React.ComponentProps<"a">,
-  "href"
-> {
-  href: string;
-}
+/** The router's prefix match, as the AdminCP navigation has always had it. */
+const PREFIX_MATCH = { exact: false };
 
-export const AdminLink = ({ href, ...props }: AdminLinkProps) =>
-  isExternalHref(href) ? (
-    <a href={href} {...props} />
-  ) : (
-    <Link {...props} to={href} />
-  );
+export const AdminLink = (props: AdminLinkProps) => (
+  <HrefLink {...props} activeOptions={PREFIX_MATCH} />
+);

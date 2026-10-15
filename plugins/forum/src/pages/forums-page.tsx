@@ -11,6 +11,7 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { contentContainerTree } from "@vitnode/core/content";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { MessagesSquareIcon, PenSquareIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -57,10 +58,10 @@ const ForumsPage = ({ loaderData }: PluginRoutePageProps<ForumsPageData>) => {
     <ForumShell
       actions={
         loaderData.tree.length > 0 ? (
-          <a className={buttonVariants()} href={topicNewHref()}>
+          <HrefLink className={buttonVariants()} href={topicNewHref()}>
             <PenSquareIcon aria-hidden="true" />
             {t("new_topic")}
-          </a>
+          </HrefLink>
         ) : null
       }
       description={t("desc")}
@@ -76,9 +77,12 @@ const ForumsPage = ({ loaderData }: PluginRoutePageProps<ForumsPageData>) => {
             <EmptyDescription>{t("empty.desc")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <a className={buttonVariants({ variant: "outline" })} href="/">
+            <HrefLink
+              className={buttonVariants({ variant: "outline" })}
+              href="/"
+            >
               {t("empty.home")}
-            </a>
+            </HrefLink>
           </EmptyContent>
         </Empty>
       ) : (

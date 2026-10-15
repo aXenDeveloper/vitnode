@@ -18,6 +18,7 @@ import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
@@ -180,7 +181,7 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
     group: ({ loaderData }) => (
       <>
         <BreadcrumbItem>
-          <BreadcrumbLink href={FORUM_HREF}>
+          <BreadcrumbLink render={<HrefLink href={FORUM_HREF} />}>
             <ForumsCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -188,7 +189,9 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
           <Fragment key={forum.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={forumHref(forum.slug)}>
+              <BreadcrumbLink
+                render={<HrefLink href={forumHref(forum.slug)} />}
+              >
                 {forum.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -220,13 +223,13 @@ const TopicOwnerActions = ({
   }
 
   return (
-    <a
+    <HrefLink
       className={buttonVariants({ size: "sm", variant: "outline" })}
       href={topicEditHref(topicId)}
     >
       <PencilIcon aria-hidden="true" />
       {t("edit")}
-    </a>
+    </HrefLink>
   );
 };
 
@@ -304,12 +307,12 @@ const TopicPage = ({
       <article className="flex flex-col gap-6">
         <header className="flex flex-col gap-4">
           {forum ? (
-            <a
+            <HrefLink
               className="text-primary self-start text-sm font-medium hover:underline"
               href={forumHref(forum.slug)}
             >
               {forum.name}
-            </a>
+            </HrefLink>
           ) : null}
 
           <h1 className="text-foreground text-3xl font-semibold tracking-tight text-balance md:text-4xl">
@@ -331,12 +334,12 @@ const TopicPage = ({
             <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
               <TopicOwnerActions author={topic.author} topicId={topic.id} />
               {forum ? (
-                <a
+                <HrefLink
                   className={buttonVariants({ size: "sm", variant: "ghost" })}
                   href={topicNewHref(forum.id)}
                 >
                   {t("new")}
-                </a>
+                </HrefLink>
               ) : null}
             </nav>
           </div>

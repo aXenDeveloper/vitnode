@@ -11,6 +11,7 @@ import {
 import { zodRichTextDocument } from "@vitnode/core/content";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
@@ -142,13 +143,13 @@ const CommentBody = ({
         <span aria-hidden="true" className="text-muted-foreground">
           ·
         </span>
-        <a
+        <HrefLink
           className="text-muted-foreground hover:text-foreground hover:underline"
           href={`${topicHref(actions.topicSlug)}#${commentAnchorId(comment.slug)}`}
         >
           <TimeAgo date={comment.publishedAt ?? comment.createdAt} />
           <span className="sr-only"> {t("permalink")}</span>
-        </a>
+        </HrefLink>
         {edited ? (
           <span className="text-muted-foreground">({t("edited_label")})</span>
         ) : null}
@@ -423,12 +424,12 @@ export const ForumThread = ({
         ) : currentUserId === null ? (
           <p className="text-muted-foreground leading-relaxed text-pretty">
             {t("compose.guest")}{" "}
-            <a
+            <HrefLink
               className={buttonVariants({ size: "sm", variant: "outline" })}
               href={loginHref(topicHref(topicSlug))}
             >
               {t("compose.sign_in")}
-            </a>
+            </HrefLink>
           </p>
         ) : (
           <LazyCommentComposer
