@@ -113,7 +113,7 @@ const ExportLink = () => (
 )
 ```
 
-`preload={false}` stops this link from preloading. `preloadDelay={500}` waits longer for this link only. A link cannot make a `preload: false` route run its loader early.
+`preload={false}` stops this link from preloading. `preloadDelay={500}` waits longer for this link only. In a plugin page, [`HrefLink`](/docs/dev/routing/navigation#link-from-a-plugin-page) takes the same two props. A link cannot make a `preload: false` route run its loader early.
 
 ## When to turn it off
 

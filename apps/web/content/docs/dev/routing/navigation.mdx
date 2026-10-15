@@ -102,16 +102,47 @@ const CatalogPage = ({
 export default CatalogPage
 ```
 
-## Plugin route modules
+## Link from a plugin page
 
-A plugin route should not import the host router. Use its `navigate` prop for
-same-page filters, sort order, and pagination. For links to another internal
-screen, let the host render a link component; a plain `<a>` is for another
-origin only.
+A plugin page cannot use the router's typed `to`, because the host's route tree
+does not know plugin URLs at compile time. Use `HrefLink` from
+`@vitnode/core/tanstack/link` instead. It takes the same href string you would
+put on an `<a>`, query and hash included, and renders a router link:
+
+```tsx title="plugins/catalog/src/pages/catalog-list.tsx"
+import { HrefLink } from '@vitnode/core/tanstack/link'
+
+export const CatalogItemLink = ({ slug }: { slug: string }) => (
+  <HrefLink href={`/catalog/${encodeURIComponent(slug)}?tab=reviews`}>
+    Reviews
+  </HrefLink>
+)
+```
+
+The link navigates without a full page load, [preloads](/docs/dev/routing/preloading)
+after a 250 ms hover, and gets the visitor's locale prefix from the router.
+Write the href without a locale prefix. An absolute URL such as
+`https://example.com` renders a plain `<a>`. `aria-current="page"` is set only
+when the href matches the current URL exactly, query and hash included.
+
+To navigate from code after a form is saved, use `useHrefNavigate`:
+
+```tsx title="plugins/catalog/src/pages/catalog-new-page.tsx"
+import { useHrefNavigate } from '@vitnode/core/tanstack/link'
+
+const navigate = useHrefNavigate()
+
+// after a successful save:
+await navigate(`/catalog/${encodeURIComponent(item.slug)}`)
+```
+
+Invalidate the queries the save changed before you navigate, so the next page's
+loader reads fresh data. For filters, sorting and pagination on the page already
+being viewed, use the page's own `navigate` prop shown above.
 
 <Callout type="info" title="Keep plugins portable">
-  `navigate` only changes this plugin page's query string. That small boundary
-  is intentional—and saves future hosts from router spaghetti.
+  Plugin pages never import the host's route tree. `HrefLink` and `navigate`
+  work with any host, which saves future hosts from router spaghetti.
 </Callout>
 
 ## Next
