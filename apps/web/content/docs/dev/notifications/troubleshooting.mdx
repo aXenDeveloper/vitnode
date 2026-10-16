@@ -17,7 +17,7 @@ A publishing request starts delivery right after its response. Everything else i
 
 1. **The cron adapter is not calling the queue worker.** In development there is no `CRON_SECRET`, so queued tasks wait until you run them. See [Cron](/docs/dev/cron).
 2. **Notifications are paused.** The AdminCP notifications screen shows a **Notifications are paused** banner. See [Use the Settings sheet](/docs/dev/notifications/admincp#use-the-settings-sheet).
-3. **The delivery task failed.** **AdminCP → Advanced → Queue** lists failed `notifications-fanout` tasks with the error.
+3. **The delivery task failed.** **Debug Panel → Queue** in the AdminCP (`/admin/core/debug/queue`) lists failed `notifications-fanout` tasks with their last error. Filter by the **Failed** status to find them.
 4. **The member never gets it.** The actor is skipped unless you pass `allowSelf: true`, and members who turned the type off or fail your `access` check get nothing. See [Choose the recipients](/docs/dev/notifications/publishing#choose-the-recipients).
 
 ## Emails are not sending

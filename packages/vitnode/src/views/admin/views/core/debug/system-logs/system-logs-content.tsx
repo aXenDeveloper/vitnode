@@ -6,7 +6,6 @@ import { ContentDataTable } from "@/components/table/content";
 import type { DebugLogRow, DebugLogsPage } from "../debug-query";
 
 import { MoreActionSystemLogs } from "./actions/more/more";
-import { BadgeStatus } from "./badges/badge-status";
 import { BadgeTypeLog } from "./badges/badge-type-log";
 
 /** How much of a log line is shown before it is cut. */
@@ -27,12 +26,6 @@ export const SystemLogsContent = ({ data }: { data: DebugLogsPage }) => {
           accessorKey: "type",
           header: t("type"),
           cell: ({ row }) => <BadgeTypeLog type={row.type} />,
-        },
-        {
-          accessorKey: "statusCode",
-          header: t("status_code"),
-          className: "w-26",
-          cell: ({ row }) => <BadgeStatus statusCode={row.statusCode} />,
         },
         {
           accessorKey: "createdAt",

@@ -126,8 +126,6 @@
         "timeline": "Timeline"
       },
       "admin": {
-        "title": "Search",
-        "desc": "Content discovery engine and index status.",
         "healthy": "Healthy",
         "unhealthy": "Unavailable",
         "never": "Never",
@@ -2686,7 +2684,8 @@
           "debug": "Debug Panel",
           "website": "VitNode Website",
           "report_issue": "Report an Issue",
-          "log_out": "Log Out"
+          "log_out": "Log Out",
+          "debug_status": "{count, plural, one {# issue needs attention} other {# issues need attention}}"
         },
         "system": {
           "title": "System",
@@ -2696,17 +2695,15 @@
           "notifications": "Notifications",
           "plugins": "Plugins"
         },
-        "advanced": {
-          "title": "Advanced",
-          "cron": "Cron Jobs",
-          "queue": "Queue Tasks",
-          "search": "Search"
-        },
         "ai": {
           "title": "Artificial Intelligence (AI)",
           "overview": "Overview",
-          "actions": "Actions",
-          "history": "History"
+          "actions": "Actions"
+        },
+        "debug": {
+          "cron": "Cron jobs",
+          "queue": "Queue tasks",
+          "search": "Search index"
         }
       },
       "search": {
@@ -2728,24 +2725,18 @@
     },
     "advanced": {
       "cron": {
-        "title": "Cron Jobs",
-        "desc": "Manage and monitor scheduled tasks.",
         "list": {
           "name": "Name",
           "status": {
-            "title": "Status",
             "on_schedule": "On schedule",
             "overdue": "Overdue",
             "waiting": "Waiting for first run"
           },
           "plugin": "Plugin",
-          "schedule": "Schedule",
           "lastRun": {
-            "title": "Last Run",
             "never": "Never"
           },
           "nextRun": {
-            "title": "Next Run",
             "never": "Never"
           },
           "actions": {
@@ -2754,7 +2745,12 @@
               "success": "Cron job executed successfully."
             }
           },
-          "search": "Search jobs…"
+          "search": "Search jobs…",
+          "time": {
+            "title": "Time",
+            "last": "Last <date></date>",
+            "next": "Next <date></date>"
+          }
         },
         "health": {
           "stale": {
@@ -2782,8 +2778,6 @@
         }
       },
       "queue": {
-        "title": "Queue Tasks",
-        "desc": "Monitor background tasks queued for processing by the cron worker.",
         "list": {
           "name": "Task",
           "queue": "Queue",
@@ -3749,7 +3743,7 @@
             "button": "Check for updates",
             "success": {
               "title": "Update check finished",
-              "desc": "{updates, plural, =0 {No updates} one {# update} other {# updates}} and {advisories, plural, =0 {no security advisories} one {# security advisory} other {# security advisories}} found."
+              "desc": "{updates, plural, =0 {No updates} one {# update} other {# updates}} and {securityUpdates, plural, =0 {no security updates} one {# security update} other {# security updates}} found."
             },
             "partial": {
               "title": "Some update sources could not be read",
@@ -3777,7 +3771,7 @@
             "never": "The daily check runs with the cron scheduler. Press Check for updates to run it now.",
             "disabled": "Update checks are turned off for this installation.",
             "channel": "Channel: {channel} (set in the API config)",
-            "info": "Update information is informational only: nothing is installed or changed. No advisory listed is not proof that a version is secure."
+            "info": "Update information is informational only: nothing is installed or changed. No security update listed is not proof that a version is secure."
           },
           "status": {
             "not_checked": "Not checked yet",
@@ -3815,18 +3809,12 @@
             "unsupported_schema": "the update manifest uses a format this VitNode does not support ({detail})."
           },
           "security": {
-            "label": "Security advisories",
-            "title": "Security advisory {id} - {severity} severity",
+            "label": "Security updates",
+            "title": "Security update {id}",
             "affects": "Affects the installed {versions} (range {range}).",
             "fixed": "Fixed in {version}.",
             "no_fix": "No fixed version has been published yet.",
-            "details": "Advisory details"
-          },
-          "severity": {
-            "low": "low",
-            "moderate": "moderate",
-            "high": "high",
-            "critical": "critical"
+            "details": "Details"
           },
           "channel": {
             "stable": "stable",
@@ -3843,22 +3831,138 @@
     },
     "debug": {
       "title": "Debug Panel",
-      "desc": "Check logs, errors, and other debug information.",
-      "queue": {
-        "title": "Queue Tasks",
-        "empty": "No active queue tasks.",
-        "counts": {
-          "pending": "Pending",
-          "processing": "Processing",
-          "completed": "Completed",
-          "failed": "Failed"
+      "desc": "Check the health of your install, its logs and its background work.",
+      "unavailable": "This section could not be loaded. Try again in a moment.",
+      "nav": {
+        "label": "Debug Panel sections",
+        "menu": "Section",
+        "systems": "Systems",
+        "diagnostics": "Diagnostics",
+        "overview": "Overview",
+        "vitnode": "VitNode",
+        "plugins": "Plugins",
+        "cron": "Cron & queue",
+        "cache": "Cache",
+        "search": "Search",
+        "services": "Services",
+        "logs": "Log explorer",
+        "queue": "Queue",
+        "ai": "AI logs"
+      },
+      "tone": {
+        "critical": "Critical",
+        "warn": "Needs attention",
+        "ok": "Healthy",
+        "off": "Off"
+      },
+      "overview": {
+        "attention": "{count, plural, one {# thing needs attention} other {# things need attention}}",
+        "healthy": "Everything looks healthy",
+        "summary": "{critical, plural, =0 {No critical issues} one {# critical issue} other {# critical issues}} · {warnings, plural, =0 {no warnings} one {# warning} other {# warnings}}",
+        "recheck": "Check again",
+        "systems": {
+          "title": "Systems",
+          "desc": "Everything VitNode checked on this install."
+        }
+      },
+      "diagnostics": {
+        "logs": "Every warning and error the API recorded, newest first.",
+        "queue": "Background tasks and what happened to them.",
+        "ai": "Every AI request, with its model, status and cost."
+      },
+      "security": {
+        "alert": {
+          "title": "Security update available: VitNode {version}",
+          "desc": "VitNode {version} is affected. Update as soon as you can.",
+          "review": "Review update"
         },
-        "list": {
-          "name": "Task",
-          "queue": "Queue",
-          "status": "Status",
-          "attempts": "Attempts",
-          "availableAt": "Available At"
+        "panel": {
+          "title": "Security update available",
+          "desc": "VitNode {version} is affected. Update to {fixed} as soon as you can.",
+          "desc_no_fix": "VitNode {version} is affected. No fixed version has been published yet.",
+          "details": "Details",
+          "version": "Version",
+          "released": "released <date></date>",
+          "release_notes": "Release notes"
+        }
+      },
+      "sections": {
+        "vitnode": {
+          "version": "Version",
+          "channel": "Update channel",
+          "auto": "Automatic",
+          "last_checked": "Last update check",
+          "never": "Never"
+        },
+        "cache": {
+          "engine": "Engine",
+          "redis": "Redis",
+          "memory": "In memory",
+          "cross_instance": "Realtime across instances",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "services": {
+          "active": "Active",
+          "not_configured": "Not configured",
+          "set_up": "Set up"
+        }
+      },
+      "health": {
+        "vitnode": {
+          "subtitle": "Version {version}",
+          "security_update": "Security update: VitNode {version}",
+          "update_available": "VitNode {version} is available",
+          "source_unreachable": "The update source could not be read",
+          "not_checked": "Updates have not been checked yet",
+          "up_to_date": "Running the latest version ({version})"
+        },
+        "plugins": {
+          "subtitle": "{count, plural, one {# plugin installed} other {# plugins installed}}",
+          "ok": "{count, plural, one {The plugin is up to date} other {All # plugins are up to date}}",
+          "problem": {
+            "security_update": "Security update",
+            "version_mismatch": "API and web versions differ",
+            "update_available": "Update to {version}",
+            "source_unreachable": "Update source unreachable"
+          },
+          "summary": {
+            "security_update": "{count, plural, one {# plugin needs a security update} other {# plugins need a security update}}",
+            "version_mismatch": "{count, plural, one {# plugin runs different API and web versions} other {# plugins run different API and web versions}}",
+            "update_available": "{count, plural, one {# plugin update available} other {# plugin updates available}}",
+            "source_unreachable": "{count, plural, one {# plugin update source is unreachable} other {# plugin update sources are unreachable}}"
+          }
+        },
+        "cron": {
+          "subtitle_adapter": "Runs in-process",
+          "subtitle_external": "Triggered from outside",
+          "insecure_secret": "CRON_SECRET is missing or a built-in default, so cron runs are refused",
+          "stopped": "The scheduler stopped running",
+          "overdue": "{count, plural, one {# cron job is overdue} other {# cron jobs are overdue}}",
+          "failed_tasks": "{count, plural, one {# queue task failed} other {# queue tasks failed}}",
+          "ok": "{count, plural, one {# cron job on schedule} other {# cron jobs on schedule}}"
+        },
+        "cache": {
+          "subtitle_redis": "Redis",
+          "subtitle_memory": "In memory",
+          "redis_down": "Redis is unreachable",
+          "redis_connected": "Redis connected",
+          "memory": "Redis is not configured, so the cache lives in memory"
+        },
+        "search": {
+          "subtitle": "Engine: {engine}",
+          "engine_down": "The {engine} search engine is not responding",
+          "incomplete": "{count, plural, one {# collection is incomplete} other {# collections are incomplete}}",
+          "sync_errors": "{count, plural, one {# recent sync error} other {# recent sync errors}}",
+          "ok": "{count, plural, one {# item indexed} other {# items indexed}}"
+        },
+        "services": {
+          "subtitle": "{active} of {total} configured",
+          "email": "Email",
+          "storage": "File storage",
+          "ai": "AI models",
+          "captcha": "Captcha",
+          "websocket": "WebSocket"
         }
       },
       "actions": {
@@ -3871,7 +3975,6 @@
         }
       },
       "logs": {
-        "title": "System Logs",
         "created_at": "Created At",
         "plugin": "Plugin",
         "content": "Content",
@@ -3881,7 +3984,6 @@
           "error": "Error",
           "debug": "Debug"
         },
-        "status_code": "Status Code",
         "more": {
           "title": "More Details",
           "desc": "Log ID: <logId></logId>",
@@ -4262,8 +4364,6 @@
         "plugin": "Plugin"
       },
       "history": {
-        "title": "AI history",
-        "desc": "Every AI operation: who ran it, which model answered and what it cost.",
         "charged_reservation": "Charged {amount} (reserved)",
         "filters": {
           "all": "All",

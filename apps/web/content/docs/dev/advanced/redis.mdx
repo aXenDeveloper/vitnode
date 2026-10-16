@@ -75,11 +75,11 @@ See [Cache API data](/docs/dev/cache/api) for invalidation and the full method l
 
 ---
 
-## Verifying Redis in AdminCP
+## Check Redis in the AdminCP
 
-{/* Image prompt: VitNode AdminCP System -> Diagnostics screen at /admin/core/advanced/debug. System health card shows Redis status "Connected" with latency graph, memory usage, and ping metrics. Dark theme, 1440x900. */}
+{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/cache with the "Cache" section open. Engine "Redis" with a green "Redis connected" status, "Realtime across instances: Yes", and a "Clear cache" button. Dark theme, 1440x900. */}
 
-Check Redis connection health anytime under **Core → Advanced → Debug** (`/admin/core/advanced/debug`).
+Open **Debug Panel → Cache** in the AdminCP (`/admin/core/debug/cache`). It shows whether Redis is connected, unreachable or not configured (then the cache lives in memory), and whether realtime events reach every instance. An unreachable Redis also shows up on the Debug Panel's **Overview**.
 
 ## Learn More
 

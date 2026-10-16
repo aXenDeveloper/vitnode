@@ -34,11 +34,10 @@ const component = (
   versions,
 });
 
-const ADVISORY = {
+const SECURITY_UPDATE = {
   affected: "<1.1.0",
   fixed: "1.1.0",
   id: "ACME-1",
-  severity: "high" as const,
   url: "https://acme.example.com/advisories/1",
 };
 
@@ -49,7 +48,7 @@ const acmeManifest = (
     ids.map(id => [
       id,
       {
-        advisories: [ADVISORY],
+        securityUpdates: [SECURITY_UPDATE],
         channels: { stable: "1.1.0" },
         releases: { "1.1.0": {} },
       },
@@ -61,7 +60,7 @@ const acmeManifest = (
 const coreManifest: UpdateManifest = {
   packages: {
     "@vitnode/core": {
-      advisories: [],
+      securityUpdates: [],
       channels: { stable: "2.0.0" },
       releases: { "2.0.0": {} },
     },
@@ -133,7 +132,7 @@ describe("checkForUpdates", () => {
 
     expect(fetchSource).toHaveBeenCalledTimes(1);
     expect(summary).toEqual({
-      advisories: 1,
+      securityUpdates: 1,
       components: 2,
       failedSources: 0,
       sources: 1,
@@ -142,12 +141,15 @@ describe("checkForUpdates", () => {
     expect(result("@acme/blog")).toMatchObject({
       lastError: null,
       lastSuccessAt: T1,
-      result: { advisories: [{ id: "ACME-1" }], status: "update_available" },
+      result: {
+        securityUpdates: [{ id: "ACME-1" }],
+        status: "update_available",
+      },
       sourceUrl: ACME,
       versions: ["1.0.0"],
     });
     expect(result("@acme/forum")).toMatchObject({
-      result: { advisories: [], status: "up_to_date" },
+      result: { securityUpdates: [], status: "up_to_date" },
     });
   });
 
@@ -228,7 +230,10 @@ describe("checkForUpdates", () => {
       lastAttemptAt: T2,
       lastError: error,
       lastSuccessAt: T1,
-      result: { advisories: [{ id: "ACME-1" }], status: "update_available" },
+      result: {
+        securityUpdates: [{ id: "ACME-1" }],
+        status: "update_available",
+      },
     });
     expect(source(ACME)).toMatchObject({
       document: { packages: { "@acme/blog": {} } },
@@ -255,7 +260,7 @@ describe("checkForUpdates", () => {
     expect(result("@acme/blog")).toMatchObject({
       lastError: null,
       lastSuccessAt: T2,
-      result: { advisories: [], status: "up_to_date" },
+      result: { securityUpdates: [], status: "up_to_date" },
       versions: ["1.1.0"],
     });
   });

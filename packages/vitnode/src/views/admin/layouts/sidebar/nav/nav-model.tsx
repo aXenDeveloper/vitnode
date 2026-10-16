@@ -6,7 +6,6 @@ import {
   ShieldUserIcon,
   SparklesIcon,
   UsersRoundIcon,
-  WrenchIcon,
 } from "lucide-react";
 
 import type {
@@ -249,33 +248,6 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.ai.actions"),
           href: "/admin/core/ai/actions",
           permission: core("ai"),
-        },
-        {
-          title: key("admin.global.nav.ai.history"),
-          href: "/admin/core/ai/history",
-          permission: core("ai"),
-        },
-      ],
-    },
-    {
-      href: "/admin/core/advanced",
-      title: key("admin.global.nav.advanced.title"),
-      icon: <WrenchIcon />,
-      items: [
-        {
-          title: key("admin.global.nav.advanced.search"),
-          href: "/admin/core/advanced/search",
-          permission: core("system"),
-        },
-        {
-          title: key("admin.global.nav.advanced.cron"),
-          href: "/admin/core/advanced/cron",
-          permission: core("cron"),
-        },
-        {
-          title: key("admin.global.nav.advanced.queue"),
-          href: "/admin/core/advanced/queue",
-          permission: core("queue"),
         },
       ],
     },

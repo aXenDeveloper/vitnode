@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
@@ -8,6 +9,10 @@ import { useSignOutAction } from "../auth/actions";
 import { LanguageSwitcher } from "../layout/language-switcher";
 import { useAdminUser } from "./permissions";
 import { removeAdminIdentityQueries } from "./queries";
+
+const DebugStatus = React.lazy(async () =>
+  import("./debug/status").then(module => ({ default: module.DebugStatus })),
+);
 
 export const AdminUserBar = () => {
   const user = useAdminUser();
@@ -33,6 +38,11 @@ export const AdminUserBar = () => {
 
   return (
     <UserBarAdminContent
+      debugStatus={
+        <React.Suspense fallback={null}>
+          <DebugStatus />
+        </React.Suspense>
+      }
       languageSwitcher={<LanguageSwitcher />}
       onSignOut={handleSignOut}
       user={user}

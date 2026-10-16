@@ -4,7 +4,7 @@ import { cn } from "cn";
 import { ClipboardCheckIcon, FlagIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import { SideNavCard, SideNavLink, SideNavList } from "@/components/side-nav";
+import { SideNav, SideNavLink, SideNavList } from "@/components/side-nav";
 
 import {
   modcpApprovalsQueryOptions,
@@ -106,7 +106,7 @@ export const ModcpNavContent = ({ pathname }: { pathname: string }) => {
         </ul>
       </nav>
 
-      <SideNavCard aria-label={t("title")} className="max-md:hidden">
+      <SideNav aria-label={t("title")} className="max-md:hidden">
         <SideNavList>
           {MODCP_NAV_ITEMS.map(item => (
             <SideNavLink
@@ -119,7 +119,7 @@ export const ModcpNavContent = ({ pathname }: { pathname: string }) => {
             />
           ))}
         </SideNavList>
-      </SideNavCard>
+      </SideNav>
     </>
   );
 };

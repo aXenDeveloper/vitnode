@@ -12,7 +12,7 @@ export const pluginUpdatesAdminRoute = buildRoute({
   route: {
     method: "get",
     description:
-      "Stored update and security-advisory results for core and every installed plugin. Never contacts a publisher.",
+      "Stored update and security-update results for core and every installed plugin. Never contacts a publisher.",
     path: "/updates",
     responses: {
       200: {

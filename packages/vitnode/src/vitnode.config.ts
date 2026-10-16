@@ -160,7 +160,7 @@ export interface VitNodeApiConfig {
     };
   };
   /**
-   * Update and security-advisory checks for core and plugins, shown in
+   * Update and security-update checks for core and plugins, shown in
    * AdminCP → System → Plugins. They read public JSON manifests once a day and
    * never install anything.
    */

@@ -1,7 +1,6 @@
 import { gt, lte, rcompare, satisfies, valid } from "semver";
 
 import type {
-  AdvisorySeverity,
   UpdateChannel,
   UpdatePackage,
   UpdateRelease,
@@ -30,25 +29,23 @@ export interface UpdateReleaseInfo {
   version: string;
 }
 
-export interface UpdateAdvisoryFinding {
+export interface SecurityUpdateFinding {
   affected: string;
   fixed: null | string;
   id: string;
-  severity: AdvisorySeverity;
-  summary: null | string;
   url: string;
   /** The installed versions inside `affected` - the API's, the web app's, or both. */
   versions: string[];
 }
 
 export interface UpdateEvaluation {
-  advisories: UpdateAdvisoryFinding[];
   /** The newest release on the channel that declares it works with the running core, when `latest` does not. */
   alternative: null | UpdateReleaseInfo;
   channel: null | UpdateChannel;
   /** Of `latest` with the running core. `null` for core itself and when there is no newer release. */
   compatibility: null | UpdateCompatibility;
   latest: null | UpdateReleaseInfo;
+  securityUpdates: SecurityUpdateFinding[];
   status: UpdateStatus;
 }
 
@@ -133,24 +130,22 @@ const compatibleAlternative = (
   return null;
 };
 
-const advisoryFindings = (
+const securityUpdateFindings = (
   entry: undefined | UpdatePackage,
   versions: readonly string[],
-): UpdateAdvisoryFinding[] =>
-  (entry?.advisories ?? []).flatMap(advisory => {
+): SecurityUpdateFinding[] =>
+  (entry?.securityUpdates ?? []).flatMap(securityUpdate => {
     const affected = versions.filter(version =>
-      versionInRange(version, advisory.affected),
+      versionInRange(version, securityUpdate.affected),
     );
     if (affected.length === 0) return [];
 
     return [
       {
-        affected: advisory.affected,
-        fixed: advisory.fixed ?? null,
-        id: advisory.id,
-        severity: advisory.severity,
-        summary: advisory.summary ?? null,
-        url: advisory.url,
+        affected: securityUpdate.affected,
+        fixed: securityUpdate.fixed ?? null,
+        id: securityUpdate.id,
+        url: securityUpdate.url,
         versions: affected,
       },
     ];
@@ -174,11 +169,11 @@ export const evaluateUpdate = ({
   const [newest] = [...installed.versions].sort(rcompare);
   const channel =
     channelOverride ?? (newest === undefined ? null : channelOfVersion(newest));
-  // Advisories never depend on channels or releases: a vulnerable build is
+  // Security updates never depend on channels or releases: a vulnerable build is
   // reported even when its publisher stopped shipping that channel.
-  const advisories = advisoryFindings(entry, installed.versions);
+  const securityUpdates = securityUpdateFindings(entry, installed.versions);
   const base = {
-    advisories,
+    securityUpdates,
     alternative: null,
     channel,
     compatibility: null,

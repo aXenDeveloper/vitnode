@@ -4,7 +4,7 @@ import { runUpdateCheckFor } from "@/api/lib/updates/context";
 export const checkUpdatesCron = buildCron({
   name: "check_updates",
   description:
-    "Check core and plugins for updates and security advisories in their public update manifests",
+    "Check core and plugins for updates and security updates in their public update manifests",
   // Daily at 03:17 in the API server's time zone. A new job has never run, so
   // the first scheduler tick after it is registered runs the first check.
   schedule: "17 3 * * *",

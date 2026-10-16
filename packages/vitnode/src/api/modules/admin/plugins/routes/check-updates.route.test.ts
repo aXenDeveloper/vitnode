@@ -79,7 +79,7 @@ describe("POST /admin/plugins/updates/check", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      advisories: 0,
+      securityUpdates: 0,
       components: 0,
       failedSources: 0,
       sources: 0,

@@ -16,7 +16,7 @@ import catalog from './admin-plugins-catalog.webp'
   withoutBackground
 />
 
-The catalog reports what is installed. It also shows available updates and security advisories for core and for plugins that declare an update source - see [Update checks](/docs/dev/updates). It never installs or removes plugins, or switches them on and off.
+The catalog reports what is installed. It also shows available updates and security updates for core and for plugins that declare an update source - see [Update checks](/docs/dev/updates). It never installs or removes plugins, or switches them on and off.
 
 ## Add your plugin to the catalog
 
@@ -157,7 +157,7 @@ A frontend inventory entry carrying the manifest of another package throws at st
 
 ## Update and security information
 
-Add `vitnode.updates.url` to your plugin's `package.json` and the catalog row also shows new releases and security advisories. Setup is covered in [Publish updates for your plugin](/docs/dev/updates/plugin-authors); what administrators see is in [Check for updates in the AdminCP](/docs/dev/updates/admin).
+Add `vitnode.updates.url` to your plugin's `package.json` and the catalog row also shows new releases and security updates. Setup is covered in [Publish updates for your plugin](/docs/dev/updates/plugin-authors); what administrators see is in [Check for updates in the AdminCP](/docs/dev/updates/admin).
 
 ## Who can see the catalog
 

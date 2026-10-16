@@ -4,16 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import type { AdminComponentUpdate } from "./plugin-updates-query";
 
-import { PluginUpdateStatus, SecurityAdvisories } from "./plugin-update-status";
+import { PluginUpdateStatus, SecurityUpdates } from "./plugin-update-status";
 
 const T = "admin.system.plugins.updates";
 
-const ADVISORY = {
+const SECURITY_UPDATE = {
   affected: "<1.1.0",
   fixed: "1.1.0",
   id: "ACME-1",
-  severity: "critical" as const,
-  summary: "Stored XSS in post titles",
   url: "https://acme.example.com/advisories/1",
   versions: ["1.0.0"],
 };
@@ -27,7 +25,7 @@ const update = (
   lastError: null,
   lastSuccessAt: "2026-10-15T03:00:00.000Z",
   result: {
-    advisories: [],
+    securityUpdates: [],
     alternative: null,
     channel: "stable",
     compatibility: "compatible",
@@ -58,16 +56,17 @@ const renderStatus = (value: AdminComponentUpdate, enabled = true) =>
     <PluginUpdateStatus coreVersion="2.0.0" enabled={enabled} update={value} />,
   );
 
-describe("SecurityAdvisories", () => {
-  it("lists each advisory with its title, summary and an https link", () => {
+describe("SecurityUpdates", () => {
+  it("lists each securityUpdate with its title and an https link", () => {
     renderWithIntl(
-      <SecurityAdvisories update={update({}, { advisories: [ADVISORY] })} />,
+      <SecurityUpdates
+        update={update({}, { securityUpdates: [SECURITY_UPDATE] })}
+      />,
     );
 
     const list = screen.getByRole("list", { name: `${T}.security.label` });
     const item = within(list).getByRole("listitem");
     expect(within(item).getByText(`${T}.security.title`)).toBeTruthy();
-    expect(within(item).getByText("Stored XSS in post titles")).toBeTruthy();
     expect(
       within(item)
         .getByRole("link", { name: `${T}.security.details` })
@@ -81,8 +80,8 @@ describe("SecurityAdvisories", () => {
     "not a url",
   ])("does not link to %s", url => {
     renderWithIntl(
-      <SecurityAdvisories
-        update={update({}, { advisories: [{ ...ADVISORY, url }] })}
+      <SecurityUpdates
+        update={update({}, { securityUpdates: [{ ...SECURITY_UPDATE, url }] })}
       />,
     );
 
@@ -92,18 +91,19 @@ describe("SecurityAdvisories", () => {
 
   it("says when no fix is available yet", () => {
     renderWithIntl(
-      <SecurityAdvisories
-        update={update({}, { advisories: [{ ...ADVISORY, fixed: null }] })}
+      <SecurityUpdates
+        update={update(
+          {},
+          { securityUpdates: [{ ...SECURITY_UPDATE, fixed: null }] },
+        )}
       />,
     );
 
     expect(screen.getByText(new RegExp(`${T}.security.no_fix`))).toBeTruthy();
   });
 
-  it("renders nothing without advisories", () => {
-    const { container } = renderWithIntl(
-      <SecurityAdvisories update={update()} />,
-    );
+  it("renders nothing without securityUpdates", () => {
+    const { container } = renderWithIntl(<SecurityUpdates update={update()} />);
 
     expect(container.childElementCount).toBe(0);
   });

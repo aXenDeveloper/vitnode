@@ -48,8 +48,8 @@ export const pluginUpdatesQueryOptions = () =>
 
 export type CheckPluginUpdatesResult =
   | {
-      advisories: number;
       failedSources: number;
+      securityUpdates: number;
       status: "completed";
       updates: number;
     }

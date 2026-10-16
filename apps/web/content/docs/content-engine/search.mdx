@@ -65,13 +65,13 @@ Every field except `authorField` must be in `publicApi.fields`. Otherwise a resu
 
 ### Index the records you already have
 
-New writes are indexed from now on, but records saved before the `search` block existed are not. Open **AdminCP → Advanced → Search** (`/admin/core/advanced/search`), type `example.article` into **Search collections…**, and click **Reindex** on that row. **Rebuild index** at the top rebuilds every collection.
+New writes are indexed from now on, but records saved before the `search` block existed are not. Open **Debug Panel → Search** in the AdminCP (`/admin/core/debug/search`), type `example.article` into **Search collections…**, and click **Reindex** on that row. **Rebuild index** at the top rebuilds every collection.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={searchAdmincpCollection}
-  alt="The AdminCP Search screen filtered to example.article, showing one indexed collection with 3 of 3 items, 100% coverage and a Reindex button"
+  alt="The Debug Panel Search section filtered to example.article, showing one indexed collection with 3 of 3 items, 100% coverage and a Reindex button"
 />
 
 Both buttons need the **Rebuild and clear the search index** staff permission (`system` → `can_manage_search`). A rebuild clears the collection and refills it in pages of 200 records. It is a queued job, so it only runs while [cron](/docs/dev/cron) is running.
@@ -156,7 +156,7 @@ The two records then stay in step:
 - The document stores the related record as its container: `containerType` is the target's content type id and `containerId` its record id.
 - When the related record's search title changes, or it is published, unpublished, hidden or unhidden, every record that borrows its title is re-indexed. Deleting it removes their documents.
 
-Records saved before you turned this on need a **Reindex** of the collection, or **Rebuild index** in **AdminCP → Advanced → Search**.
+Records saved before you turned this on need a **Reindex** of the collection, or **Rebuild index** in **Debug Panel → Search** (`/admin/core/debug/search`).
 
 ## Say where a record lives
 

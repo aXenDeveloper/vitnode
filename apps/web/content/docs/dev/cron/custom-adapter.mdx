@@ -165,9 +165,9 @@ npm run dev
 
 </Tabs>
 
-Open `/admin/core/advanced/cron` and watch the `process-queue` row - it is
-scheduled `* * * * *`, so a healthy adapter keeps its **Last Run** under a minute
-old. If it stays on _Never_, your `schedule()` ran but your tick is not landing:
+Open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`) and watch the
+`process-queue` row - it is scheduled `* * * * *`, so a healthy adapter keeps its
+last run under a minute old. If the **Time** column keeps saying _Last Never_, your `schedule()` ran but your tick is not landing:
 check the origin, then the secret, then whether the API can reach itself.
 
 </Step>

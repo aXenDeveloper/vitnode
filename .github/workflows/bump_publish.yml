@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    # Shared with the advisories workflow: one writer of updates.json at a time.
+    # Shared with the security updates workflow: one writer of updates.json at a time.
     concurrency:
       group: vitnode-update-manifest
       cancel-in-progress: false

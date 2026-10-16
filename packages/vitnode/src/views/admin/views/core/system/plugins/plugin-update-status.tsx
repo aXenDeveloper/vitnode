@@ -56,7 +56,7 @@ const ExternalLink = ({
 /** Which registration runs each version, for "1.0.0 (web app)". */
 export type VersionSides = Record<string, ("api" | "frontend")[]>;
 
-export const SecurityAdvisories = ({
+export const SecurityUpdates = ({
   sides,
   update,
 }: {
@@ -64,8 +64,8 @@ export const SecurityAdvisories = ({
   update: AdminComponentUpdate | undefined;
 }) => {
   const t = useTranslations("admin.system.plugins");
-  const advisories = update?.result?.advisories ?? [];
-  if (advisories.length === 0) return null;
+  const securityUpdates = update?.result?.securityUpdates ?? [];
+  if (securityUpdates.length === 0) return null;
 
   const describeVersions = (versions: readonly string[]): string =>
     versions
@@ -86,10 +86,10 @@ export const SecurityAdvisories = ({
       aria-label={t("updates.security.label")}
       className="flex flex-col gap-2"
     >
-      {advisories.map(advisory => (
+      {securityUpdates.map(securityUpdate => (
         <li
           className="border-destructive/30 bg-destructive/5 text-foreground flex items-start gap-2.5 rounded-lg border px-3 py-2 text-sm leading-relaxed"
-          key={advisory.id}
+          key={securityUpdate.id}
         >
           <ShieldAlertIcon
             aria-hidden
@@ -97,26 +97,20 @@ export const SecurityAdvisories = ({
           />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="text-destructive font-medium text-pretty">
-              {t("updates.security.title", {
-                id: advisory.id,
-                severity: t(`updates.severity.${advisory.severity}`),
-              })}
+              {t("updates.security.title", { id: securityUpdate.id })}
             </p>
             <p className="text-pretty">
               {t("updates.security.affects", {
-                range: advisory.affected,
-                versions: describeVersions(advisory.versions),
+                range: securityUpdate.affected,
+                versions: describeVersions(securityUpdate.versions),
               })}{" "}
-              {advisory.fixed === null
+              {securityUpdate.fixed === null
                 ? t("updates.security.no_fix")
-                : t("updates.security.fixed", { version: advisory.fixed })}
+                : t("updates.security.fixed", {
+                    version: securityUpdate.fixed,
+                  })}
             </p>
-            {advisory.summary === null ? null : (
-              <p className="text-muted-foreground text-pretty break-words">
-                {advisory.summary}
-              </p>
-            )}
-            <ExternalLink href={advisory.url}>
+            <ExternalLink href={securityUpdate.url}>
               {t("updates.security.details")}
             </ExternalLink>
           </div>
@@ -277,7 +271,7 @@ const ResultLines = ({
 
 /**
  * Update availability, compatibility and check health - each its own line.
- * Security findings are rendered apart, by `SecurityAdvisories`, and never
+ * Security findings are rendered apart, by `SecurityUpdates`, and never
  * folded into "update available".
  */
 export const PluginUpdateStatus = ({

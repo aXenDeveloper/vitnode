@@ -1,5 +1,4 @@
 export { AdminAiActionsRouteContent } from "./actions-screen";
-export { AdminAiHistoryRouteContent } from "./history-screen";
 export { AdminAiOverviewRouteContent } from "./overview-screen";
 export {
   adminAiActionsQuery,
@@ -14,15 +13,10 @@ export {
   useAdminAiMutations,
 } from "./query";
 export type { AdminAiMutations } from "./query";
-export type {
-  AdminAiHistoryRouteData,
-  AdminAiOverviewRouteData,
-  AdminAiRouteData,
-} from "./route";
+export type { AdminAiOverviewRouteData, AdminAiRouteData } from "./route";
 export {
   ADMIN_AI_NAMESPACES,
   loadAdminAiActionsRoute,
-  loadAdminAiHistoryRoute,
   loadAdminAiOverviewRoute,
 } from "./route";
 export type {

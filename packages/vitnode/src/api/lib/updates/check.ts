@@ -34,9 +34,9 @@ export type FetchUpdateSource = (
 ) => Promise<UpdateSourceFetchResult>;
 
 export interface UpdateCheckSummary {
-  advisories: number;
   components: number;
   failedSources: number;
+  securityUpdates: number;
   sources: number;
   updates: number;
 }
@@ -230,7 +230,7 @@ export const checkForUpdates = async ({
   });
 
   const summary: UpdateCheckSummary = {
-    advisories: 0,
+    securityUpdates: 0,
     components: checked.length,
     failedSources: [...outcomes.values()].filter(
       outcome => outcome.error !== null,
@@ -273,7 +273,7 @@ export const checkForUpdates = async ({
       installed: component,
       isCore: component.kind === "core",
     });
-    summary.advisories += result.advisories.length;
+    summary.securityUpdates += result.securityUpdates.length;
     if (result.status === "update_available") summary.updates += 1;
 
     const values = {

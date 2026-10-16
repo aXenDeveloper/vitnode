@@ -22,12 +22,11 @@ const T2 = new Date("2026-10-15T03:00:00Z");
 const MANIFEST: UpdateManifest = {
   packages: {
     "@acme/blog": {
-      advisories: [
+      securityUpdates: [
         {
           affected: "<1.1.0",
           fixed: "1.1.0",
           id: "ACME-1",
-          severity: "high",
           url: "https://acme.example.com/advisories/1",
         },
       ],
@@ -104,7 +103,7 @@ describe("loadUpdatesOverview", () => {
         lastError: null,
         lastSuccessAt: T1,
         result: expect.objectContaining({
-          advisories: [expect.objectContaining({ id: "ACME-1" })],
+          securityUpdates: [expect.objectContaining({ id: "ACME-1" })],
           status: "update_available",
         }) as unknown,
         sourceUrl: ACME,
@@ -123,7 +122,7 @@ describe("loadUpdatesOverview", () => {
 
     expect(state).toMatchObject({
       lastSuccessAt: T1,
-      result: { advisories: [], status: "up_to_date" },
+      result: { securityUpdates: [], status: "up_to_date" },
       stale: true,
       state: "checked",
     });
@@ -180,7 +179,7 @@ describe("loadUpdatesOverview", () => {
       lastAttemptAt: T2,
       lastError: { code: "timeout" },
       lastSuccessAt: T1,
-      result: { advisories: [{ id: "ACME-1" }] },
+      result: { securityUpdates: [{ id: "ACME-1" }] },
       stale: false,
       state: "checked",
     });

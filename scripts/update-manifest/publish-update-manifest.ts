@@ -17,10 +17,10 @@ import type {
 } from "../../packages/vitnode/scripts/update-manifest/merge.ts";
 
 import {
-  applyAdvisories,
+  applySecurityUpdates,
   channelForReleaseType,
   mergeRelease,
-  parseAdvisoriesInput,
+  parseSecurityUpdatesInput,
   readPublishedManifest,
   requiresCoreFrom,
   serializeUpdateManifest,
@@ -31,8 +31,8 @@ import {
  * served at https://raw.githubusercontent.com/<repo>/update-manifest/updates.json.
  *
  *   release     after a successful npm publish: adds the published versions
- *   advisories  replaces the advisories with `security/advisories.json`
- *   check       validates `security/advisories.json` and exits
+ *   security-updates  replaces the security updates with `security/security-updates.json`
+ *   check       validates `security/security-updates.json` and exits
  *
  * Every write fetches the branch, merges, and pushes; a push that loses a race
  * is retried from a fresh fetch, so concurrent runs cannot overwrite each other.
@@ -40,7 +40,7 @@ import {
 
 const BRANCH = process.env.UPDATE_MANIFEST_BRANCH ?? "update-manifest";
 const FILE = "updates.json";
-const ADVISORIES_FILE = join("security", "advisories.json");
+const SECURITY_UPDATES_FILE = join("security", "security-updates.json");
 const MAX_PUSH_ATTEMPTS = 5;
 const CORE_ID = "@vitnode/core";
 
@@ -253,16 +253,20 @@ const publishToBranch = ({
   );
 };
 
-const readAdvisories = () =>
-  parseAdvisoriesInput(readFileSync(join(workspace, ADVISORIES_FILE), "utf8"));
+const readSecurityUpdates = () =>
+  parseSecurityUpdatesInput(
+    readFileSync(join(workspace, SECURITY_UPDATES_FILE), "utf8"),
+  );
 
 const main = () => {
   const mode = process.argv[2];
 
   if (mode === "check") {
-    const input = readAdvisories();
-    const count = Object.values(input.advisories).flat().length;
-    console.log(`${ADVISORIES_FILE} is valid (${String(count)} advisories).`);
+    const input = readSecurityUpdates();
+    const count = Object.values(input.securityUpdates).flat().length;
+    console.log(
+      `${SECURITY_UPDATES_FILE} is valid (${String(count)} security updates).`,
+    );
 
     return;
   }
@@ -271,13 +275,13 @@ const main = () => {
   const token = requireEnv("GITHUB_TOKEN");
   const feedUrl = `https://raw.githubusercontent.com/${repository}/${BRANCH}/${FILE}`;
 
-  if (mode === "advisories") {
-    const input = readAdvisories();
+  if (mode === "security-updates") {
+    const input = readSecurityUpdates();
     publishToBranch({
-      message: "chore: update security advisories",
+      message: "chore: update security updates",
       repository,
       token,
-      update: manifest => applyAdvisories(manifest, input),
+      update: manifest => applySecurityUpdates(manifest, input),
     });
 
     return;
@@ -319,7 +323,7 @@ const main = () => {
   }
 
   throw new Error(
-    "Usage: publish-update-manifest.ts <release | advisories | check>",
+    "Usage: publish-update-manifest.ts <release | security-updates | check>",
   );
 };
 

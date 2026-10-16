@@ -5,7 +5,7 @@ import { DateFormat } from "@/components/date-format";
 
 import type { AdminPluginUpdates } from "./plugin-updates-query";
 
-import { PluginUpdateStatus, SecurityAdvisories } from "./plugin-update-status";
+import { PluginUpdateStatus, SecurityUpdates } from "./plugin-update-status";
 
 const lastCheckedOf = (updates: AdminPluginUpdates): null | string =>
   [updates.core, ...updates.plugins]
@@ -35,7 +35,7 @@ const CheckSummary = ({ updates }: { updates: AdminPluginUpdates }) => {
 
 /**
  * Core's own row, kept apart from the plugins: its version, its update status
- * and any advisory against it, plus when everything was last checked.
+ * and any securityUpdate against it, plus when everything was last checked.
  */
 export const CoreUpdateCard = ({
   updates,
@@ -82,7 +82,7 @@ export const CoreUpdateCard = ({
         </div>
       </div>
 
-      <SecurityAdvisories update={updates?.core} />
+      <SecurityUpdates update={updates?.core} />
 
       {updates === undefined ? null : (
         <div className="text-muted-foreground border-border flex flex-col gap-1 border-t pt-3 text-sm leading-relaxed">

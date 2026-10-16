@@ -1,0 +1,48 @@
+---
+title: Publish a security update
+description: Add a security update to an update manifest so VitNode installations running an affected version see a red warning in the AdminCP, with or without a fixed version.
+icon: ShieldAlert
+---
+
+A security update in your update manifest turns every affected installation's catalog row red within a day - or right away when an administrator presses **Check for updates**. VitNode compares each installed version, API and web app separately, with the security update's `affected` range.
+
+## Add a security update
+
+Add an entry to the package's `securityUpdates` array:
+
+```json title="updates.json"
+{
+  "id": "NOTES-2026-001",
+  "affected": ">=2.0.0 <2.1.3",
+  "fixed": "2.1.3",
+  "url": "https://github.com/acme/site-notes/security/advisories/GHSA-xxxx-xxxx-xxxx"
+}
+```
+
+Write `id`, `affected` and `url` every time. There are no severity levels or summaries: a security update is a security update, and the details live on the page `url` points to. Add `fixed` once a release contains the fix; installations then read _Fixed in 2.1.3_. The example is illustrative, not a real vulnerability.
+
+Security updates do not depend on channels or releases. An installation is warned even when its channel has no newer release, and even when you no longer publish that channel at all.
+
+## Announce a vulnerability without a fix
+
+Publish the security update without `fixed`. Affected installations see _No fixed version has been published yet_. Put mitigation steps on the security update page, such as disabling a feature. When the fix ships, add `fixed` - and widen or narrow `affected` if the release that fixes it changes the picture.
+
+## How affected ranges match prereleases
+
+Ranges are matched with prereleases included, by SemVer order:
+
+| Installed        | `affected: ">=2.0.0 <2.1.3"` | Why                                                 |
+| ---------------- | ---------------------------- | --------------------------------------------------- |
+| `2.1.0`          | affected                     | Inside the range.                                   |
+| `2.1.0-canary.4` | affected                     | `2.1.0-canary.4` sorts between `2.0.0` and `2.1.3`. |
+| `2.1.3-canary.1` | affected                     | A prerelease of `2.1.3` sorts before `2.1.3`.       |
+| `2.1.3`          | not affected                 | The upper bound is exclusive.                       |
+| `2.0.0-rc.1`     | not affected                 | Prereleases of `2.0.0` sort before `2.0.0`.         |
+
+If the fix already landed in `2.1.3-canary.2`, say so in the range: `">=2.0.0 <2.1.3-canary.2"`. When in doubt, keep a prerelease inside the range - a false warning is cheaper than a missed one.
+
+## What a warning does not mean
+
+A warning means the publisher listed that version. No warning is not proof that a version is secure, and VitNode does not scan your plugins' own dependencies. A patch release without a security update is not shown as a security release.
+
+For VitNode's own packages, security updates are maintained in `security/security-updates.json` in the VitNode repository; see [Official release feed](/docs/dev/updates/official-releases#add-an-security update-to-the-official-feed).

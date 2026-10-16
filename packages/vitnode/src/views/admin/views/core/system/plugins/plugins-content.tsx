@@ -27,7 +27,7 @@ import type {
 
 import { PluginIcon } from "./plugin-icon";
 import { matchesPluginSearch } from "./plugin-search";
-import { PluginUpdateStatus, SecurityAdvisories } from "./plugin-update-status";
+import { PluginUpdateStatus, SecurityUpdates } from "./plugin-update-status";
 
 export interface PluginsContentProps {
   data: AdminInstalledPlugins;
@@ -102,7 +102,7 @@ const PluginCell = ({
             {t("mismatch", { api: api.version, frontend: frontend.version })}
           </p>
         ) : null}
-        <SecurityAdvisories sides={versionSidesOf(plugin)} update={update} />
+        <SecurityUpdates sides={versionSidesOf(plugin)} update={update} />
         {/* Narrow screens: the version column has no room for this. */}
         <div className="md:hidden">
           <PluginUpdateStatus

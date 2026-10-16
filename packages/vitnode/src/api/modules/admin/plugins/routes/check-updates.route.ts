@@ -16,7 +16,7 @@ export const checkPluginUpdatesAdminRoute = buildRoute({
   route: {
     method: "post",
     description:
-      "Check core and every installed plugin for updates and security advisories now. Shares its lease with the daily cron job.",
+      "Check core and every installed plugin for updates and security updates now. Shares its lease with the daily cron job.",
     path: "/updates/check",
     responses: {
       200: {
@@ -28,7 +28,7 @@ export const checkPluginUpdatesAdminRoute = buildRoute({
               failedSources: z.number(),
               components: z.number(),
               updates: z.number(),
-              advisories: z.number(),
+              securityUpdates: z.number(),
             }),
           },
         },

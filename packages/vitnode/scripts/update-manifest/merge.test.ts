@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { UpdateManifest } from "../../src/lib/updates/manifest";
 
 import {
-  applyAdvisories,
+  applySecurityUpdates,
   emptyUpdateManifest,
   mergeRelease,
-  parseAdvisoriesInput,
+  parseSecurityUpdatesInput,
   readPublishedManifest,
   requiresCoreFrom,
   serializeUpdateManifest,
@@ -17,11 +17,10 @@ const RELEASE = {
   url: "https://github.com/acme/vitnode/releases/tag/v2.1.0",
 };
 
-const ADVISORY = {
+const SECURITY_UPDATE = {
   affected: "<2.1.0",
   fixed: "2.1.0",
   id: "VN-2026-001",
-  severity: "high" as const,
   url: "https://github.com/acme/vitnode/security/advisories/1",
 };
 
@@ -40,12 +39,12 @@ describe("mergeRelease", () => {
       ]).packages,
     ).toEqual({
       "@vitnode/blog": {
-        advisories: [],
+        securityUpdates: [],
         channels: { stable: "2.1.0" },
         releases: { "2.1.0": { ...RELEASE, requiresCore: "^2.1.0" } },
       },
       "@vitnode/core": {
-        advisories: [],
+        securityUpdates: [],
         channels: { stable: "2.1.0" },
         releases: { "2.1.0": RELEASE },
       },
@@ -103,16 +102,16 @@ describe("mergeRelease", () => {
     });
   });
 
-  it("leaves other packages, channels and advisories untouched", () => {
+  it("leaves other packages, channels and securityUpdates untouched", () => {
     const before: UpdateManifest = {
       packages: {
         "@acme/other": {
-          advisories: [],
+          securityUpdates: [],
           channels: { stable: "1.0.0" },
           releases: { "1.0.0": {} },
         },
         "@vitnode/core": {
-          advisories: [ADVISORY],
+          securityUpdates: [SECURITY_UPDATE],
           channels: { canary: "2.1.0-canary.1", stable: "2.0.0" },
           releases: { "2.0.0": {}, "2.1.0-canary.1": {} },
         },
@@ -130,7 +129,7 @@ describe("mergeRelease", () => {
       before.packages["@acme/other"],
     );
     expect(merged.packages["@vitnode/core"]).toMatchObject({
-      advisories: [ADVISORY],
+      securityUpdates: [SECURITY_UPDATE],
       channels: { canary: "2.1.0-canary.2", stable: "2.0.0" },
     });
   });
@@ -173,41 +172,43 @@ describe("readPublishedManifest", () => {
   });
 });
 
-describe("applyAdvisories", () => {
-  it("gives each package exactly the advisories the file lists, and keeps releases", () => {
+describe("applySecurityUpdates", () => {
+  it("gives each package exactly the securityUpdates the file lists, and keeps releases", () => {
     const published = stable(emptyUpdateManifest(), [
       { id: "@vitnode/blog", version: "2.1.0" },
       { id: "@vitnode/core", version: "2.1.0" },
     ]);
-    const withOld = applyAdvisories(published, {
-      advisories: { "@vitnode/blog": [ADVISORY] },
+    const withOld = applySecurityUpdates(published, {
+      securityUpdates: { "@vitnode/blog": [SECURITY_UPDATE] },
       schemaVersion: 1,
     });
 
-    const next = applyAdvisories(withOld, {
-      advisories: { "@vitnode/core": [ADVISORY] },
+    const next = applySecurityUpdates(withOld, {
+      securityUpdates: { "@vitnode/core": [SECURITY_UPDATE] },
       schemaVersion: 1,
     });
 
     expect(next.packages["@vitnode/blog"]).toMatchObject({
-      advisories: [],
+      securityUpdates: [],
       channels: { stable: "2.1.0" },
     });
-    expect(next.packages["@vitnode/core"]?.advisories).toEqual([ADVISORY]);
+    expect(next.packages["@vitnode/core"]?.securityUpdates).toEqual([
+      SECURITY_UPDATE,
+    ]);
   });
 });
 
-describe("parseAdvisoriesInput", () => {
-  it("reads the maintained advisories file", () => {
+describe("parseSecurityUpdatesInput", () => {
+  it("reads the maintained security updates file", () => {
     expect(
-      parseAdvisoriesInput(
+      parseSecurityUpdatesInput(
         JSON.stringify({
-          advisories: { "@vitnode/core": [ADVISORY] },
+          securityUpdates: { "@vitnode/core": [SECURITY_UPDATE] },
           schemaVersion: 1,
         }),
       ),
     ).toEqual({
-      advisories: { "@vitnode/core": [ADVISORY] },
+      securityUpdates: { "@vitnode/core": [SECURITY_UPDATE] },
       schemaVersion: 1,
     });
   });
@@ -215,15 +216,17 @@ describe("parseAdvisoriesInput", () => {
   it.each([
     ["text that is not JSON", "[", /not JSON/],
     [
-      "an advisory linking over http",
+      "a security update linking over http",
       JSON.stringify({
-        advisories: { "@vitnode/core": [{ ...ADVISORY, url: "http://x.io" }] },
+        securityUpdates: {
+          "@vitnode/core": [{ ...SECURITY_UPDATE, url: "http://x.io" }],
+        },
         schemaVersion: 1,
       }),
-      /invalid: advisories\.@vitnode\/core\.0\.url/,
+      /invalid: securityUpdates\.@vitnode\/core\.0\.url/,
     ],
   ])("rejects %s", (_, text, error) => {
-    expect(() => parseAdvisoriesInput(text)).toThrow(error);
+    expect(() => parseSecurityUpdatesInput(text)).toThrow(error);
   });
 });
 

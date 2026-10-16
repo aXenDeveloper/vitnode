@@ -8,18 +8,10 @@ export const UPDATE_MANIFEST_SCHEMA_VERSION = 1;
 export const UPDATE_CHANNELS = ["stable", "rc", "canary"] as const;
 export type UpdateChannel = (typeof UPDATE_CHANNELS)[number];
 
-export const ADVISORY_SEVERITIES = [
-  "low",
-  "moderate",
-  "high",
-  "critical",
-] as const;
-export type AdvisorySeverity = (typeof ADVISORY_SEVERITIES)[number];
-
 // npm package names: optional `@scope/`, lowercase, URL-safe, at most 214 chars.
 const PACKAGE_ID = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
 
-const ADVISORY_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/;
+const SECURITY_UPDATE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/;
 
 export const isPackageId = (value: string): boolean =>
   value.length <= 214 && PACKAGE_ID.test(value);
@@ -50,19 +42,17 @@ export const updateReleaseSchema = z.strictObject({
   url: httpsUrl.optional(),
 });
 
-export const updateAdvisorySchema = z.strictObject({
-  id: z.string().regex(ADVISORY_ID, {
+export const securityUpdateSchema = z.strictObject({
+  id: z.string().regex(SECURITY_UPDATE_ID, {
     message: "Expected letters, digits, '.', '_', ':' or '-' (max 100)",
   }),
-  severity: z.enum(ADVISORY_SEVERITIES),
   affected: range,
   fixed: version.optional(),
   url: httpsUrl,
-  summary: z.string().trim().min(1).max(500).optional(),
 });
 
 const MAX_RELEASES = 2000;
-const MAX_ADVISORIES = 500;
+const MAX_SECURITY_UPDATES = 500;
 const MAX_PACKAGES = 500;
 
 export const updatePackageSchema = z
@@ -74,7 +64,10 @@ export const updatePackageSchema = z
       .refine(releases => Object.keys(releases).length <= MAX_RELEASES, {
         message: `At most ${MAX_RELEASES} releases per package`,
       }),
-    advisories: z.array(updateAdvisorySchema).max(MAX_ADVISORIES).default([]),
+    securityUpdates: z
+      .array(securityUpdateSchema)
+      .max(MAX_SECURITY_UPDATES)
+      .default([]),
   })
   .superRefine((entry, ctx) => {
     for (const channel of UPDATE_CHANNELS) {
@@ -98,15 +91,15 @@ export const updatePackageSchema = z
     }
 
     const ids = new Set<string>();
-    entry.advisories.forEach((advisory, index) => {
-      if (ids.has(advisory.id)) {
+    entry.securityUpdates.forEach((securityUpdate, index) => {
+      if (ids.has(securityUpdate.id)) {
         ctx.addIssue({
           code: "custom",
-          message: `Advisory id "${advisory.id}" is listed twice`,
-          path: ["advisories", index, "id"],
+          message: `Security update id "${securityUpdate.id}" is listed twice`,
+          path: ["securityUpdates", index, "id"],
         });
       }
-      ids.add(advisory.id);
+      ids.add(securityUpdate.id);
     });
   });
 
@@ -125,7 +118,7 @@ export const updateManifestSchema = z.strictObject({
 });
 
 export type UpdateRelease = z.infer<typeof updateReleaseSchema>;
-export type UpdateAdvisory = z.infer<typeof updateAdvisorySchema>;
+export type SecurityUpdate = z.infer<typeof securityUpdateSchema>;
 export type UpdatePackage = z.infer<typeof updatePackageSchema>;
 export type UpdateManifest = z.infer<typeof updateManifestSchema>;
 
@@ -203,7 +196,7 @@ export const channelOfVersion = (value: string): null | UpdateChannel => {
 };
 
 /**
- * Advisory ranges are matched with prereleases included: `2.1.3-canary.1`
+ * Security update ranges are matched with prereleases included: `2.1.3-canary.1`
  * comes before `2.1.3`, so it is inside `<2.1.3`. Without this, `semver`
  * would leave every prerelease out of an ordinary range and a canary build
  * of a vulnerable line would never be warned about.

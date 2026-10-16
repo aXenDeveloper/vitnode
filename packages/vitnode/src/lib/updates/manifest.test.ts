@@ -6,11 +6,10 @@ import {
   versionInRange,
 } from "./manifest";
 
-const ADVISORY = {
+const SECURITY_UPDATE = {
   affected: "<1.2.1",
   fixed: "1.2.1",
   id: "VN-2026-001",
-  severity: "high",
   url: "https://example.com/advisories/VN-2026-001",
 };
 
@@ -24,7 +23,7 @@ describe("parseUpdateManifest", () => {
     const result = parseUpdateManifest({
       packages: {
         "@acme/blog": {
-          advisories: [ADVISORY],
+          securityUpdates: [SECURITY_UPDATE],
           channels: { canary: "1.3.0-canary.2", stable: "1.2.1" },
           releases: {
             "1.2.1": { requiresCore: "^2.0.0" },
@@ -40,14 +39,14 @@ describe("parseUpdateManifest", () => {
       manifest: {
         packages: {
           "@acme/blog": {
-            advisories: [ADVISORY],
+            securityUpdates: [SECURITY_UPDATE],
             channels: { canary: "1.3.0-canary.2", stable: "1.2.1" },
             releases: {
               "1.2.1": { requiresCore: "^2.0.0" },
               "1.3.0-canary.2": {},
             },
           },
-          "@acme/shop": { advisories: [], channels: {}, releases: {} },
+          "@acme/shop": { securityUpdates: [], channels: {}, releases: {} },
         },
         schemaVersion: 1,
       },
@@ -88,18 +87,20 @@ describe("parseUpdateManifest", () => {
       }),
     ],
     [
-      "the same advisory twice",
-      manifestWith({ advisories: [ADVISORY, ADVISORY] }),
+      "the same securityUpdate twice",
+      manifestWith({ securityUpdates: [SECURITY_UPDATE, SECURITY_UPDATE] }),
     ],
     [
-      "an advisory linking over http",
+      "a security update linking over http",
       manifestWith({
-        advisories: [{ ...ADVISORY, url: "http://example.com/a" }],
+        securityUpdates: [{ ...SECURITY_UPDATE, url: "http://example.com/a" }],
       }),
     ],
     [
-      "an advisory with no valid range",
-      manifestWith({ advisories: [{ ...ADVISORY, affected: "soon" }] }),
+      "a security update with no valid range",
+      manifestWith({
+        securityUpdates: [{ ...SECURITY_UPDATE, affected: "soon" }],
+      }),
     ],
     [
       "a release keyed by a non-SemVer version",

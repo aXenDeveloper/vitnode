@@ -13,15 +13,15 @@ import {
   isPackageId,
   isStrictVersion,
   parseUpdateManifest,
+  securityUpdateSchema,
   UPDATE_MANIFEST_SCHEMA_VERSION,
-  updateAdvisorySchema,
 } from "../../src/lib/updates/manifest";
 
 /**
  * The pure half of publishing VitNode's own update manifest: everything that
  * decides what the JSON says, with no git, GitHub or npm in sight. The release
- * workflow feeds it what it published; the advisories workflow feeds it the
- * maintained advisory list.
+ * workflow feeds it what it published; the security updates workflow feeds it the
+ * maintained security update list.
  */
 
 const ERROR_PREFIX = "[update manifest]";
@@ -104,7 +104,7 @@ const assertValid = (manifest: UpdateManifest): UpdateManifest => {
 };
 
 const emptyPackage = (): UpdatePackage => ({
-  advisories: [],
+  securityUpdates: [],
   channels: {},
   releases: {},
 });
@@ -131,7 +131,7 @@ export interface GitHubReleaseMetadata {
  *   changes nothing else.
  * - Without a GitHub Release, `publishedAt` and `url` are left out - never
  *   invented.
- * - Other packages, channels, releases and every advisory are untouched.
+ * - Other packages, channels, releases and every security update are untouched.
  */
 export const mergeRelease = (
   manifest: UpdateManifest,
@@ -185,28 +185,30 @@ export const mergeRelease = (
   return assertValid(next);
 };
 
-export const advisoriesInputSchema = z.strictObject({
+export const securityUpdatesInputSchema = z.strictObject({
   schemaVersion: z.literal(UPDATE_MANIFEST_SCHEMA_VERSION),
-  advisories: z.record(
+  securityUpdates: z.record(
     z.string().refine(isPackageId, { message: "Expected an npm package name" }),
-    z.array(updateAdvisorySchema),
+    z.array(securityUpdateSchema),
   ),
 });
 
-export type AdvisoriesInput = z.infer<typeof advisoriesInputSchema>;
+export type SecurityUpdatesInput = z.infer<typeof securityUpdatesInputSchema>;
 
-export const parseAdvisoriesInput = (text: string): AdvisoriesInput => {
+export const parseSecurityUpdatesInput = (
+  text: string,
+): SecurityUpdatesInput => {
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
-    throw new Error(`${ERROR_PREFIX} The advisories file is not JSON.`);
+    throw new Error(`${ERROR_PREFIX} The security updates file is not JSON.`);
   }
 
-  const parsed = advisoriesInputSchema.safeParse(value);
+  const parsed = securityUpdatesInputSchema.safeParse(value);
   if (!parsed.success) {
     throw new Error(
-      `${ERROR_PREFIX} The advisories file is invalid: ${parsed.error.issues
+      `${ERROR_PREFIX} The security updates file is invalid: ${parsed.error.issues
         .slice(0, 5)
         .map(issue => `${issue.path.join(".")}: ${issue.message}`)
         .join("; ")}`,
@@ -217,20 +219,20 @@ export const parseAdvisoriesInput = (text: string): AdvisoriesInput => {
 };
 
 /**
- * The maintained advisories file is the whole truth about advisories: each
+ * The maintained security updates file is the whole truth about security updates: each
  * package gets exactly the list it declares, and a package it does not list has
  * none. Releases and channels are untouched.
  */
-export const applyAdvisories = (
+export const applySecurityUpdates = (
   manifest: UpdateManifest,
-  input: AdvisoriesInput,
+  input: SecurityUpdatesInput,
 ): UpdateManifest => {
   const next: UpdateManifest = structuredClone(manifest);
 
-  for (const entry of Object.values(next.packages)) entry.advisories = [];
-  for (const [id, advisories] of Object.entries(input.advisories)) {
+  for (const entry of Object.values(next.packages)) entry.securityUpdates = [];
+  for (const [id, securityUpdates] of Object.entries(input.securityUpdates)) {
     const entry = next.packages[id] ?? emptyPackage();
-    entry.advisories = advisories;
+    entry.securityUpdates = securityUpdates;
     next.packages[id] = entry;
   }
 

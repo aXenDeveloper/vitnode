@@ -13,37 +13,61 @@ deployment, which is exactly when you need to.
 
 | Symptom                                     | Look here                                                 |
 | ------------------------------------------- | --------------------------------------------------------- |
-| A request 500s in production                | [Debug Panel](#the-debug-panel) → System Logs             |
+| A request 500s in production                | [Debug Panel](#the-debug-panel) → Log explorer            |
 | A screen shows data that has moved on       | [Query devtools](#devtools-in-development) → find the key |
 | A route loaded the wrong thing              | [Router devtools](#devtools-in-development) → loader data |
 | A page feels slow to type in or scroll      | [React Scan](#react-scan) → count the re-renders          |
-| A service looks configured but does nothing | **Core → System → Integrations** in the AdminCP           |
-| A background job never ran                  | [Debug Panel](#the-debug-panel) → Queue Tasks             |
+| A service looks configured but does nothing | [Debug Panel](#the-debug-panel) → Services                |
+| A background job never ran                  | [Debug Panel](#the-debug-panel) → Cron & queue, Queue     |
 
 ## The Debug Panel
 
-`/admin/core/debug`, and the quickest way in is the avatar menu in the top-right
-of the AdminCP: **Debug Panel**. It is also the one AdminCP screen with no
-sidebar entry, so that menu (or the admin search) is how you get there.
+The Debug Panel lives at `/admin/core/debug`. Open it from **Debug Panel** in
+your avatar menu, or type "Debug Panel" into the ⌘K admin search. When something
+needs attention, that menu item shows an amber warning icon - or a red error
+icon if anything is critical - so you know to look before anyone files a bug.
 
-Three sections, top to bottom:
+It works like a settings page: a side menu on the left (a **Section** drawer on
+phones) and one section on the right. Every section has its own URL, such as
+`/admin/core/debug/cron`, so you can bookmark it or paste it to a teammate.
 
-| Section         | What it shows                                                                                                                                                          |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Clear Cache** | A button, top-right. Marks every cached query stale and re-runs every matched route loader.                                                                            |
-| **Queue Tasks** | Four counters - pending, processing, completed, failed - and a table of what is pending or processing right now, with its attempt count and when it is next available. |
-| **System Logs** | Every line anything wrote with `c.get('log')`, newest first, sortable by type, plugin or date.                                                                         |
+{/* Image prompt: A screenshot of the VitNode AdminCP Debug Panel at /admin/core/debug - a side menu on the left with Overview, a "Systems" group (VitNode, Plugins, Cron & queue, Cache, Search, Services) and a "Diagnostics" group (Log explorer, Queue, AI logs); on the right the Overview section with a list of two rows that need attention, a "Check again" button, and a "Systems" list with a "Clear cache" button. Dark theme, 1440x900. */}
 
-{/* Image prompt: A screenshot of the VitNode AdminCP Debug Panel at /admin/core/debug - heading "Debug Panel" with a "Clear Cache" button, below it a row of four queue counters (Pending, Processing, Completed, Failed), and below that the System Logs table with Plugin, Type, Status Code, Created At and Content columns, one row carrying a red "Error" badge. Dark theme, 1440x900. */}
+| Section                        | What it shows                                                                                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**                   | A red alert when your VitNode version has a security update, everything that needs attention (click a row to jump to its section) with **Check again**, and a **Systems** list with **Clear cache**. |
+| **VitNode** (`/debug/vitnode`)   | The running version, the update channel, the last update check and **Check for updates**. A red panel with the fixed version and release notes when a security update applies.                       |
+| **Plugins** (`/debug/plugins`)   | Every installed plugin with its version, plus a warning when it needs a security update, runs different API and web versions, has an update, or its update source is unreachable.                    |
+| **Cron & queue** (`/debug/cron`) | The scheduler status card and the cron jobs table. See [Cron jobs](/docs/dev/cron#manage-cron-jobs-in-the-debug-panel).                                                                              |
+| **Cache** (`/debug/cache`)       | Whether Redis is connected, unreachable or not configured (in memory), whether realtime works across instances, and **Clear cache**.                                                                 |
+| **Search** (`/debug/search`)     | Index status, the engine, recent sync errors and every collection with **Reindex**. See [Search](/docs/dev/search#manage-the-search-index-in-the-debug-panel).                                       |
+| **Services** (`/debug/services`) | Email, file storage, AI models, captcha and WebSocket - each active or not configured. Active ones have a test button, inactive ones a **Set up** link to the docs.                                  |
+| **Log explorer** (`/debug/logs`) | Every line anything wrote with `c.get('log')`, newest first, sortable by type, plugin or date.                                                                                                       |
+| **Queue** (`/debug/queue`)       | Background tasks with their status, attempts and last error, filterable by status. See [Queue tasks](/docs/dev/advanced/queue).                                                                      |
+| **AI logs** (`/debug/ai`)        | Every AI request: action, status, origin, model, cost and points, with filters.                                                                                                                                                |
 
-Click any log row for the full record: the log id, the request method and path,
-the status code, the IP address, the user agent, the user who caused it (linked
-straight to their AdminCP profile) and the untruncated message. That detail
-dialog is usually the whole debugging session.
+**Clear cache** marks every cached query in the AdminCP stale and re-runs every
+matched route loader.
 
-The screen is gated on the `debug` staff module - `can_view` to open it,
-`can_clear_cache` for the button - and Hono re-checks that on every request, so
-hiding the menu entry is a courtesy rather than the boundary. See
+Click any row in **Log explorer** for the full record: the log id, the request
+method and path, the status code, the IP address, the user agent, the user who
+caused it (linked straight to their AdminCP profile) and the untruncated
+message. That detail dialog is usually the whole debugging session.
+
+Opening the panel needs `debug → can_view`, and **Clear cache** needs
+`debug → can_clear_cache`. Each section also asks for its own permission and is
+hidden without it:
+
+| Section                 | Permission           |
+| ----------------------- | -------------------- |
+| VitNode, Plugins        | `plugins → can_view` |
+| Cron & queue            | `cron → can_view`    |
+| Cache, Search, Services | `system → can_view`  |
+| Queue                   | `queue → can_view`   |
+| AI logs                 | `ai → can_view`      |
+
+Hono re-checks every permission on each request, so hiding a section is a
+courtesy rather than the boundary. See
 [staff permissions](/docs/dev/working-with-users/staff-permissions).
 
 <Callout

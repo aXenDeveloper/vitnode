@@ -1,19 +1,19 @@
-name: Publish security advisories
+name: Publish security updates
 
 on:
   pull_request:
     paths:
-      - "security/advisories.json"
+      - "security/security-updates.json"
   push:
     branches:
       - canary
     paths:
-      - "security/advisories.json"
+      - "security/security-updates.json"
   workflow_dispatch:
 
 jobs:
-  advisories:
-    name: "Validate and publish advisories"
+  security-updates:
+    name: "Validate and publish security updates"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,11 +40,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate security/advisories.json
+      - name: Validate security/security-updates.json
         run: pnpm run release:update-manifest check
 
-      - name: Publish advisories to updates.json
+      - name: Publish security updates to updates.json
         if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/canary' }}
-        run: pnpm run release:update-manifest advisories
+        run: pnpm run release:update-manifest security-updates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

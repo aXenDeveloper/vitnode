@@ -3,11 +3,6 @@ export {
   searchIndexQuery,
   useSearchIndexActions,
 } from "./query";
-export type { AdminSearchIndexRouteData } from "./route";
-export {
-  ADMIN_SEARCH_INDEX_NAMESPACES,
-  loadAdminSearchIndexRoute,
-} from "./route";
 export type {
   SearchIndexRouteSearch,
   UncheckedSearchIndexSearch,
@@ -17,8 +12,6 @@ export {
   searchIndexSearchFrom,
   searchIndexSearchParams,
 } from "./route-search";
-export type { AdminSearchIndexRouteProps } from "./screen";
-export { AdminSearchIndexRouteContent } from "./screen";
 
 export type {
   ClearSearchCollection,

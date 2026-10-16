@@ -1,10 +1,10 @@
 ---
 title: Update checks
-description: How VitNode tells administrators about new versions and security advisories for core and plugins, using public JSON manifests checked once a day.
+description: How VitNode tells administrators about new versions and security updates for core and plugins, using public JSON manifests checked once a day.
 icon: RefreshCw
 ---
 
-VitNode checks once a day whether a newer version of core or any installed plugin is published, and whether the version you run is affected by a published security advisory. The results appear in **AdminCP → System → Plugins**.
+VitNode checks once a day whether a newer version of core or any installed plugin is published, and whether the version you run is affected by a published security update. The results appear in **AdminCP → System → Plugins**.
 
 Each package says where its **update manifest** lives - a public JSON file on GitHub Raw or any other HTTPS host. VitNode reads those files from the server. It does not ask npm, and it does not install, download or change anything.
 
@@ -15,11 +15,11 @@ Each package says where its **update manifest** lives - a public JSON file on Gi
 | See updates and security warnings, run a check, choose a channel        | [Check for updates in the AdminCP](/docs/dev/updates/admin)          |
 | Make your own plugin report updates                                     | [Publish updates for your plugin](/docs/dev/updates/plugin-authors)  |
 | Look up every field of the JSON format                                  | [Update manifest reference](/docs/dev/updates/manifest)              |
-| Warn installations about a vulnerability                                | [Publish a security advisory](/docs/dev/updates/security-advisories) |
+| Warn installations about a vulnerability                                | [Publish a security update](/docs/dev/updates/security-updates) |
 | Understand how VitNode's own release workflow updates the official feed | [Official release feed](/docs/dev/updates/official-releases)         |
 
 ## What the checks can and cannot tell you
 
 - **Informational only.** A check never installs an update or edits your dependencies. You upgrade the way you always do, then rebuild and redeploy.
 - **Only what publishers declare.** A package without an update source shows _Update checking unavailable_. Private and local plugins work exactly as before.
-- **Not a vulnerability scanner.** A security warning means a publisher listed your installed version in an advisory. No warning is not proof a version is secure, and dependencies of your plugins are not checked at all. Keep using `pnpm audit` or your usual scanner for those.
+- **Not a vulnerability scanner.** A security warning means a publisher listed your installed version in a security update. No warning is not proof a version is secure, and dependencies of your plugins are not checked at all. Keep using `pnpm audit` or your usual scanner for those.

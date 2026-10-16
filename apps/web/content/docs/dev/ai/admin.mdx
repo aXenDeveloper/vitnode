@@ -17,7 +17,7 @@ The AdminCP **Artificial Intelligence (AI)** section (`/admin/core/ai`) is where
 | Overview                                 | `/admin/core/ai`               | Spend against the budget, a forecast, trends and breakdowns. |
 | Settings sheet                           | `/admin/core/ai?settings=open` | Global switch, budgets, rate limits, retention, ALT text.    |
 | Actions                                  | `/admin/core/ai/actions`       | Every registered AI feature: switch, model, limits.          |
-| History                                  | `/admin/core/ai/history`       | Every run: who, which model, tokens and cost.                |
+| Debug Panel → AI logs                    | `/admin/core/debug/ai`         | Every run: who, which model, tokens and cost.                |
 | Roles → Artificial intelligence (AI) tab | `/admin/core/users/roles`      | A role's AI permissions, monthly points and daily limits.    |
 | User → AI card                           | `/admin/core/users/{id}`       | One member's exception: blocked, unlimited or own points.    |
 | AI usage                                 | `/settings/ai` (member)        | A member's own points and what each AI feature cost them.    |
@@ -162,9 +162,9 @@ A member with several roles gets the **largest** allowance (never the sum), the 
 
 The **AI access** card on a member's AdminCP page (**Users → a member**) gives them their own rule, ahead of their roles: **Block AI features**, **Unlimited points**, or a personal monthly allowance. It replaces what their roles give until you remove it.
 
-## History
+## AI logs
 
-**Artificial Intelligence (AI) → History** lists every run with its action, status, origin (Members or Background jobs), model, cost and points. Filter by status, origin, action or model. **Details** shows:
+**Debug Panel → AI logs** (`/admin/core/debug/ai`) lists every run with its action, status, origin (Members or Background jobs), model, cost and points. Filter by status, origin, action or model. **Details** shows:
 
 - tokens in and out, cost, cost source and what was charged or reserved;
 - every provider call, with retries and fallbacks listed as separate calls;
@@ -172,7 +172,7 @@ The **AI access** card on a member's AdminCP page (**Users → a member**) gives
 - whether an editor accepted the suggestion (tracking only, never billing).
 
 <Callout type="info" title="Prompts and outputs are never stored">
-  History records what a run took and what it cost. It never keeps the prompt,
+  The AI logs record what a run took and what it cost. It never keeps the prompt,
   the input text or the generated text. The same is true on the member's page.
 </Callout>
 

@@ -1,6 +1,6 @@
 ---
 title: Official release feed
-description: How VitNode's release workflow publishes the official update manifest after npm publication, where publishedAt comes from, and how reruns and advisories are handled.
+description: How VitNode's release workflow publishes the official update manifest after npm publication, where publishedAt comes from, and how reruns and security updates are handled.
 icon: Workflow
 ---
 
@@ -27,18 +27,17 @@ The **Bump and Publish npm packages** workflow has a **Publish update manifest**
 - **If npm publishing fails**, the job does not run. Fix the cause and re-run the workflow in `publish` mode.
 - **If only the manifest job fails**, use **Re-run failed jobs**: it publishes the same commit again.
 
-## Add an advisory to the official feed
+## Add a security update to the official feed
 
-Advisories are not part of releases. Edit `security/advisories.json` in a pull request:
+Security updates are not part of releases. Edit `security/security-updates.json` in a pull request:
 
-```json title="security/advisories.json"
+```json title="security/security-updates.json"
 {
   "schemaVersion": 1,
-  "advisories": {
+  "securityUpdates": {
     "@vitnode/blog": [
       {
         "id": "VITNODE-BLOG-2026-001",
-        "severity": "high",
         "affected": ">=2.0.0 <2.1.3",
         "fixed": "2.1.3",
         "url": "https://github.com/aXenDeveloper/vitnode/security/advisories/GHSA-xxxx-xxxx-xxxx"
@@ -48,8 +47,8 @@ Advisories are not part of releases. Edit `security/advisories.json` in a pull r
 }
 ```
 
-The **Publish security advisories** workflow validates the file on the pull request. After it merges into `canary`, the workflow replaces the advisories in `updates.json` with exactly what the file lists; releases and channels stay untouched. The example above is illustrative - only real advisories belong in that file. Writing ranges is covered in [Publish a security advisory](/docs/dev/updates/security-advisories).
+The **Publish security updates** workflow validates the file on the pull request. After it merges into `canary`, the workflow replaces the security updates in `updates.json` with exactly what the file lists; releases and channels stay untouched. The example above is illustrative - only real security updates belong in that file. Writing ranges is covered in [Publish a security update](/docs/dev/updates/security-updates).
 
 ## Check the result
 
-After a release or an advisory change, open the feed URL above. Within a few minutes of GitHub's cache, it shows the new version under `channels` and its entry under `releases`.
+After a release or a security update change, open the feed URL above. Within a few minutes of GitHub's cache, it shows the new version under `channels` and its entry under `releases`.

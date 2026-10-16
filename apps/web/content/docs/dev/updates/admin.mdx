@@ -1,6 +1,6 @@
 ---
 title: Check for updates in the AdminCP
-description: Where VitNode shows available updates and security advisories, how the daily check and the Check for updates button work, and what each status means.
+description: Where VitNode shows available updates and security updates, how the daily check and the Check for updates button work, and what each status means.
 icon: ShieldCheck
 ---
 
@@ -8,15 +8,15 @@ import { ImgDocs } from '@/components/fumadocs/img'
 
 import pluginUpdates from './admin-plugin-updates.webp'
 
-**AdminCP → System → Plugins** shows, next to every installed version, whether a newer release is published and whether a security advisory affects it. Core gets its own card above the plugin list.
+**AdminCP → System → Plugins** shows, next to every installed version, whether a newer release is published and whether a security update affects it. Core gets its own card above the plugin list.
 
 <ImgDocs
   src={pluginUpdates}
-  alt="System → Plugins page: the VitNode core card shows an available canary update with its release date and release notes link; the Blog row shows a red security advisory box with a shield icon, an available update that requires a newer core, and the Example row shows that update checking is unavailable"
+  alt="System → Plugins page: the VitNode core card shows an available canary update with its release date and release notes link; the Blog row shows a red security update box with a shield icon, an available update that requires a newer core, and the Example row shows that update checking is unavailable"
   withoutBackground
 />
 
-The advisory in the screenshot is illustrative demo data.
+The security update in the screenshot is illustrative demo data.
 
 ## Before you begin
 
@@ -57,9 +57,9 @@ When the web app and the API run different versions of a plugin, the existing mi
 
 ## Security warnings
 
-A red **Security advisory** box with a shield icon appears when a version you run is inside an advisory's affected range. It names the advisory, its severity, the affected version - with _(API)_ or _(web app)_ when they differ - and either _Fixed in 2.1.3_ or _No fixed version has been published yet_. **Advisory details** opens the publisher's page.
+A red **Security update** box with a shield icon appears when a version you run is inside a security update's affected range. It names the security update, the affected version - with _(API)_ or _(web app)_ when they differ - and either _Fixed in 2.1.3_ or _No fixed version has been published yet_. **Details** opens the publisher's page.
 
-Advisories are checked even when your channel has no newer release. A patch release on its own is never shown as a security fix; only a matching advisory is.
+Security updates are checked even when your channel has no newer release. A patch release on its own is never shown as a security fix; only a matching security update is.
 
 ## Choose a channel
 
@@ -78,4 +78,4 @@ An install without outbound network access can switch checks off with `updates: 
 
 ## Check the result
 
-Open **System → Plugins** and press **Check for updates**. A toast reports how many updates and advisories were found, and the core card shows _Last checked_ with the current time.
+Open **System → Plugins** and press **Check for updates**. A toast reports how many updates and security updates were found, and the core card shows _Last checked_ with the current time.

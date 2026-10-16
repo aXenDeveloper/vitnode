@@ -73,11 +73,6 @@ export const CronTableContent = ({
           ),
         },
         {
-          id: "status",
-          header: t("list.status.title"),
-          cell: ({ row }) => <CronStatusBadge status={jobStatus(row)} />,
-        },
-        {
           accessorKey: "pluginId",
           header: t("list.plugin"),
           cell: ({ row }) => (
@@ -90,37 +85,37 @@ export const CronTableContent = ({
           ),
         },
         {
-          accessorKey: "schedule",
-          header: t("list.schedule"),
-          cell: ({ row }) => (
-            <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs whitespace-nowrap">
-              {row.schedule}
-            </code>
-          ),
-        },
-        {
-          accessorKey: "lastRun",
-          header: t("list.lastRun.title"),
-          cell: ({ row }) =>
-            row.lastRun ? (
-              <DateFormat date={row.lastRun} />
-            ) : (
-              <span className="text-muted-foreground italic">
-                {t("list.lastRun.never")}
-              </span>
-            ),
-        },
-        {
           accessorKey: "nextRun",
-          header: t("list.nextRun.title"),
-          cell: ({ row }) =>
-            row.nextRun ? (
-              <DateFormat date={row.nextRun} showFullDate />
-            ) : (
-              <span className="text-muted-foreground italic">
-                {t("list.nextRun.never")}
+          header: t("list.time.title"),
+          cell: ({ row }) => (
+            <div className="flex flex-col gap-1 text-sm">
+              <span className="flex flex-wrap items-center gap-2">
+                <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs whitespace-nowrap">
+                  {row.schedule}
+                </code>
+                <CronStatusBadge status={jobStatus(row)} />
               </span>
-            ),
+              <span className="text-muted-foreground tabular-nums">
+                {t.rich("list.time.last", {
+                  date: () =>
+                    row.lastRun ? (
+                      <DateFormat date={row.lastRun} />
+                    ) : (
+                      t("list.lastRun.never")
+                    ),
+                })}
+                {" · "}
+                {t.rich("list.time.next", {
+                  date: () =>
+                    row.nextRun ? (
+                      <DateFormat date={row.nextRun} />
+                    ) : (
+                      t("list.nextRun.never")
+                    ),
+                })}
+              </span>
+            </div>
+          ),
         },
         {
           id: "actions",
@@ -132,10 +127,10 @@ export const CronTableContent = ({
       edges={data.edges}
       id="cron-table"
       order={{
-        columns: ["lastRun", "createdAt", "nextRun"],
+        columns: ["nextRun"],
         defaultOrder: {
-          column: "lastRun",
-          order: "desc",
+          column: "nextRun",
+          order: "asc",
         },
       }}
       pageInfo={data.pageInfo}

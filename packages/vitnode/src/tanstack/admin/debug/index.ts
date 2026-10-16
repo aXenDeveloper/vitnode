@@ -1,20 +1,63 @@
+export { AdminDebugBreadcrumbContent } from "./breadcrumb";
+export { AdminDebugLayoutContent } from "./layout";
 export {
   clearAdminCache,
   debugLogsQuery,
   debugQueueQuery,
+  debugSourceQueries,
   useClearAdminCache,
+  useDebugSources,
+  useRecheckDebugSources,
+  warmDebugSources,
 } from "./query";
-export type { AdminDebugRouteData } from "./route";
-export { ADMIN_DEBUG_NAMESPACES, loadAdminDebugRoute } from "./route";
-export type { DebugRouteSearch, UncheckedDebugSearch } from "./route-search";
+export type { AdminDebugLayoutData } from "./route";
 export {
+  ADMIN_DEBUG_NAMESPACES,
+  debugAiRoute,
+  debugCacheRoute,
+  debugCronRoute,
+  debugLogsRoute,
+  debugOverviewRoute,
+  debugPluginsRoute,
+  debugQueueRoute,
+  debugSearchRoute,
+  debugServicesRoute,
+  debugVitnodeRoute,
+  loadAdminDebugLayout,
+} from "./route";
+export type { DebugLogsRouteSearch, DebugTab } from "./route-search";
+export {
+  DEBUG_PATH,
+  DEBUG_TABS,
+  debugCronParams,
   debugLogsRouteParams,
-  debugSearchFrom,
-  debugSearchParams,
-  normalizeDebugRouteSearch,
+  debugLogsSearchFrom,
+  debugLogsSearchParams,
+  debugTabFromPath,
+  debugTabPath,
+  normalizeDebugLogsSearch,
 } from "./route-search";
-export type { AdminDebugRouteProps } from "./screen";
-export { AdminDebugRouteContent } from "./screen";
+export {
+  DebugCacheTab,
+  DebugOverviewTab,
+  DebugPluginsTab,
+  DebugServicesTab,
+  DebugVitnodeTab,
+} from "./sections";
+export {
+  DebugAiTab,
+  DebugCronTab,
+  DebugLogsTab,
+  DebugQueueTab,
+  DebugSearchTab,
+} from "./tables";
+export type { DebugSystemTab } from "./tabs";
+export {
+  DEBUG_DIAGNOSTIC_TABS,
+  DEBUG_SYSTEM_TABS,
+  DEBUG_TAB_PERMISSION,
+  visibleDebugTabs,
+} from "./tabs";
 
 export type {
   DebugLogRow,

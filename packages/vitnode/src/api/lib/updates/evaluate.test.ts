@@ -5,7 +5,7 @@ import type { UpdateChannel, UpdatePackage } from "@/lib/updates/manifest";
 import { evaluateUpdate, normalizeInstalledVersions } from "./evaluate";
 
 const ENTRY: UpdatePackage = {
-  advisories: [],
+  securityUpdates: [],
   channels: { canary: "2.2.0-canary.3", rc: "2.2.0-rc.1", stable: "2.1.0" },
   releases: {
     "2.0.1": { requiresCore: "^1.0.0" },
@@ -21,11 +21,10 @@ const ENTRY: UpdatePackage = {
   },
 };
 
-const ADVISORY = {
+const SECURITY_UPDATE = {
   affected: "<2.0.3",
   fixed: "2.0.3",
   id: "VN-2026-001",
-  severity: "critical" as const,
   url: "https://example.com/advisories/VN-2026-001",
 };
 
@@ -101,7 +100,7 @@ describe("evaluateUpdate", () => {
 
   it("is up to date on the channel target, with its release details", () => {
     expect(evaluate(["2.1.0"])).toEqual({
-      advisories: [],
+      securityUpdates: [],
       alternative: null,
       channel: "stable",
       compatibility: null,
@@ -144,21 +143,20 @@ describe("evaluateUpdate", () => {
     expect(evaluate(["2.1.0", "2.0.0"]).status).toBe("update_available");
   });
 
-  describe("advisories", () => {
-    const withAdvisories = (
-      advisories: UpdatePackage["advisories"],
-    ): UpdatePackage => ({ ...ENTRY, advisories });
+  describe("securityUpdates", () => {
+    const withSecurityUpdates = (
+      securityUpdates: UpdatePackage["securityUpdates"],
+    ): UpdatePackage => ({ ...ENTRY, securityUpdates });
 
-    it("reports a matching advisory with the affected versions", () => {
+    it("reports a matching securityUpdate with the affected versions", () => {
       expect(
-        evaluate(["2.0.1"], { entry: withAdvisories([ADVISORY]) }).advisories,
+        evaluate(["2.0.1"], { entry: withSecurityUpdates([SECURITY_UPDATE]) })
+          .securityUpdates,
       ).toEqual([
         {
           affected: "<2.0.3",
           fixed: "2.0.3",
           id: "VN-2026-001",
-          severity: "critical",
-          summary: null,
           url: "https://example.com/advisories/VN-2026-001",
           versions: ["2.0.1"],
         },
@@ -167,55 +165,57 @@ describe("evaluateUpdate", () => {
 
     it("reports a vulnerable web app even when the API runs an unaffected version", () => {
       const result = evaluate(["2.1.0", "2.0.1"], {
-        entry: withAdvisories([ADVISORY]),
+        entry: withSecurityUpdates([SECURITY_UPDATE]),
       });
 
-      expect(result.advisories).toMatchObject([{ versions: ["2.0.1"] }]);
+      expect(result.securityUpdates).toMatchObject([{ versions: ["2.0.1"] }]);
     });
 
     it("reports a vulnerable API even when the web app runs an unaffected version", () => {
       const result = evaluate(["2.0.1", "2.0.3"], {
-        entry: withAdvisories([ADVISORY]),
+        entry: withSecurityUpdates([SECURITY_UPDATE]),
       });
 
-      expect(result.advisories).toMatchObject([{ versions: ["2.0.1"] }]);
+      expect(result.securityUpdates).toMatchObject([{ versions: ["2.0.1"] }]);
     });
 
     it("matches prereleases inside the affected range", () => {
       expect(
-        evaluate(["2.0.3-canary.1"], { entry: withAdvisories([ADVISORY]) })
-          .advisories,
+        evaluate(["2.0.3-canary.1"], {
+          entry: withSecurityUpdates([SECURITY_UPDATE]),
+        }).securityUpdates,
       ).toHaveLength(1);
     });
 
-    it("reports an advisory with no fix yet", () => {
-      const { fixed: _, ...unfixed } = ADVISORY;
+    it("reports a security update with no fix yet", () => {
+      const { fixed: _, ...unfixed } = SECURITY_UPDATE;
 
       expect(
         evaluate(["2.1.0"], {
-          entry: withAdvisories([{ ...unfixed, affected: "<=2.1.0" }]),
+          entry: withSecurityUpdates([{ ...unfixed, affected: "<=2.1.0" }]),
         }),
       ).toMatchObject({
-        advisories: [{ fixed: null, versions: ["2.1.0"] }],
+        securityUpdates: [{ fixed: null, versions: ["2.1.0"] }],
         status: "up_to_date",
       });
     });
 
-    it("leaves out an advisory no installed version is affected by", () => {
+    it("leaves out a security update no installed version is affected by", () => {
       expect(
-        evaluate(["2.0.3"], { entry: withAdvisories([ADVISORY]) }).advisories,
+        evaluate(["2.0.3"], { entry: withSecurityUpdates([SECURITY_UPDATE]) })
+          .securityUpdates,
       ).toEqual([]);
     });
 
-    it("reports advisories whatever the channel says", () => {
+    it("reports securityUpdates whatever the channel says", () => {
       const entry: UpdatePackage = {
-        advisories: [{ ...ADVISORY, affected: "<3.0.0" }],
+        securityUpdates: [{ ...SECURITY_UPDATE, affected: "<3.0.0" }],
         channels: {},
         releases: {},
       };
 
       expect(evaluate(["2.2.0-beta.1"], { entry })).toMatchObject({
-        advisories: [{ id: "VN-2026-001" }],
+        securityUpdates: [{ id: "VN-2026-001" }],
         status: "unknown_channel",
       });
     });
@@ -223,7 +223,7 @@ describe("evaluateUpdate", () => {
 
   describe("compatibility with the running core", () => {
     const stableAt = (target: string, release: object): UpdatePackage => ({
-      advisories: [],
+      securityUpdates: [],
       channels: { stable: target },
       releases: { [target]: release },
     });

@@ -1,8 +1,5 @@
 import type { PluginRouteTranslator } from "@/routing";
-import type {
-  AiHistoryParams,
-  AiOverviewSearch,
-} from "@/views/admin/views/core/ai/ai-query";
+import type { AiOverviewSearch } from "@/views/admin/views/core/ai/ai-query";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { ADMIN_AI_PERMISSIONS } from "@/views/admin/views/core/ai/ai-permissions";
@@ -16,7 +13,6 @@ import { adminIdentityOf } from "../identity";
 import { requireAdminPermission } from "../screen";
 import {
   adminAiActionsQuery,
-  adminAiHistoryQuery,
   adminAiModelsQuery,
   adminAiOverviewQuery,
   adminAiSettingsQuery,
@@ -36,10 +32,6 @@ export interface AdminAiRouteData {
 
 export interface AdminAiOverviewRouteData extends AdminAiRouteData {
   search: AiOverviewSearch;
-}
-
-export interface AdminAiHistoryRouteData extends AdminAiRouteData {
-  params: AiHistoryParams;
 }
 
 type AdminAiLoaderContext = AdminScreenContext & { t: PluginRouteTranslator };
@@ -115,33 +107,5 @@ export const loadAdminAiActionsRoute = async (
     adminUserId,
     description: context.t("admin.ai.actions.desc"),
     title: context.t("admin.ai.actions.title"),
-  };
-};
-
-export const loadAdminAiHistoryRoute = async (
-  context: AdminAiLoaderContext & { params: AiHistoryParams },
-): Promise<AdminAiHistoryRouteData> => {
-  const adminUserId = enter(context);
-
-  await Promise.all([
-    context.queryClient.query({
-      ...adminAiHistoryQuery({ adminUserId, params: context.params }),
-      ...STATIC,
-    }),
-    context.queryClient.query({
-      ...adminAiActionsQuery({ adminUserId }),
-      ...STATIC,
-    }),
-    context.queryClient.query({
-      ...adminAiModelsQuery({ adminUserId }),
-      ...STATIC,
-    }),
-  ]);
-
-  return {
-    adminUserId,
-    description: context.t("admin.ai.history.desc"),
-    params: context.params,
-    title: context.t("admin.ai.history.title"),
   };
 };

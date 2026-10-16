@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ComponentUpdateState } from "@/api/lib/updates/status";
 
-import { ADVISORY_SEVERITIES, UPDATE_CHANNELS } from "@/lib/updates/manifest";
+import { UPDATE_CHANNELS } from "@/lib/updates/manifest";
 
 const releaseSchema = z.object({
   version: z.string(),
@@ -37,14 +37,12 @@ export const componentUpdateSchema = z.object({
         .enum(["compatible", "incompatible", "unknown"])
         .nullable(),
       alternative: releaseSchema.nullable(),
-      advisories: z.array(
+      securityUpdates: z.array(
         z.object({
           id: z.string(),
-          severity: z.enum(ADVISORY_SEVERITIES),
           affected: z.string(),
           fixed: z.string().nullable(),
           url: z.string(),
-          summary: z.string().nullable(),
           versions: z.array(z.string()),
         }),
       ),

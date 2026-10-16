@@ -39,7 +39,7 @@ export const CheckUpdatesButton = ({
         } else {
           toast.success(t("success.title"), {
             description: t("success.desc", {
-              advisories: result.advisories,
+              securityUpdates: result.securityUpdates,
               updates: result.updates,
             }),
           });
