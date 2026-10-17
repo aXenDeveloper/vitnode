@@ -59,14 +59,15 @@ const originsFor = (c: Context): string[] =>
  * Tells external front ends that a write expired some content cache tags, by
  * POSTing the request to `{origin}/api/vitnode/content/revalidate` on every
  * origin in the install's `content.revalidateOrigins`. Server-only; the
- * engine calls it for background mutations (schedules, visibility changes)
- * that have no front-end request to revalidate through.
+ * engine calls it after a scheduled publish/unpublish runs and after a
+ * hide/unhide that changes public reachability.
  *
- * Best effort and never throws: each origin gets two attempts, authenticated
- * with `CRON_SECRET` as a bearer token and a timestamp header. Nothing is sent
- * when the write expired no tags, no origin is configured, or `CRON_SECRET`
- * is unset or the default. Outside development, only `https` origins (or
- * `http` on localhost) are notified.
+ * Best effort and never throws: each origin gets two attempts (a `403` is not
+ * retried), authenticated with `CRON_SECRET` as a bearer token and a timestamp
+ * header. Nothing is sent when the write expired no tags, no origin is
+ * configured, or `CRON_SECRET` is unset, or still the default outside
+ * development. Outside development, only `https` origins (or `http` on
+ * localhost) are notified.
  */
 export const dispatchContentRevalidation = async (
   c: Context,

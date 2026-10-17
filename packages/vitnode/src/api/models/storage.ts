@@ -56,7 +56,7 @@ export interface StorageUploadResult {
 
 /** An uploaded file, as {@link StorageModel.upload} recorded it. */
 export interface StorageFileUploadResult extends StorageUploadResult {
-  /** Pixel size for images sharp could read; `null` otherwise. */
+  /** Pixel size when `storage.image` processing read the image; `null` otherwise. */
   dimensions: null | { height: number; width: number };
   /** The `core_files` row id - what content file fields reference. */
   id: number;
@@ -265,8 +265,8 @@ const imageEncodeFailure = ({
  * Stores files through the configured storage adapter and records each one in
  * `core_files`, read in a route as `c.get("storage")`.
  *
- * Every method throws `HTTPException(500)` when no storage adapter is
- * configured.
+ * Every method except `deleteFile` throws `HTTPException(500)` when no
+ * storage adapter is configured.
  */
 export class StorageModel {
   constructor(c: Context) {

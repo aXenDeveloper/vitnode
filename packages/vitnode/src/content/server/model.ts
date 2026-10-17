@@ -70,7 +70,7 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     | undefined;
 
   /**
-   * Versioned writes with revisions, publish/unpublish, previews and schedules.
+   * Versioned writes with revisions, publish/unpublish and schedules.
    * Needs `editorial`.
    */
   editorialService:
@@ -177,8 +177,9 @@ export const findContentModel = (
  * @param options.references Target columns of `field.relation()` fields, as
  * thunks, so the foreign key can point at a table defined in another file.
  * Self-relations need none.
- * @param options.moderationScope A column that scopes moderator permissions,
- * e.g. the category or container a record belongs to.
+ * @param options.moderationScope `{ column, family }`: the column whose value
+ * scopes moderator permissions, e.g. the category or container a record
+ * belongs to.
  *
  * @example
  * ```ts

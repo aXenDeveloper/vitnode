@@ -11,8 +11,8 @@ import type {
 import { NOTIFICATION_EMAIL_MODES } from "@/lib/notifications/types";
 
 /**
- * One inbox item as plain text. Core strips markup, collapses whitespace and
- * cuts each string at 500 characters.
+ * One inbox item as plain text. Core removes control characters, collapses
+ * whitespace and cuts each string at 500 characters; it does not strip HTML.
  */
 export interface NotificationPresentation {
   body?: string;
@@ -41,11 +41,11 @@ export interface NotificationActorPreview {
 export interface NotificationPresentArgs<TData> {
   /** Distinct people across every notification grouped into the item. */
   actorCount: number;
-  /** Up to 3 people who caused the item, newest first. */
+  /** Up to 3 people who caused the item, newest first; in emails, only that event's actor. */
   actors: NotificationActorPreview[];
   /** The stored data, migrated and parsed with the current `schema`. */
   data: TData;
-  /** Notifications grouped into the item; always 1 without `grouping`. */
+  /** Notifications grouped into the item; always 1 without `grouping` and in emails. */
   eventCount: number;
   locale: string;
   subject: NotificationSubject | null;
@@ -66,8 +66,8 @@ export interface NotificationAccessArgs<TData> {
  */
 export interface NotificationGroupingConfig<TData> {
   /**
-   * The group key; defaults to the subject. A notification without a subject,
-   * or a key of `null`, is never grouped. Cut at 200 characters.
+   * The group key; defaults to the subject (no subject means no grouping). A
+   * `null` or empty key is never grouped. Cut at 200 characters.
    */
   key?: (args: {
     data: TData;

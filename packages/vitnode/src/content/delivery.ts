@@ -779,8 +779,8 @@ const parseLegacyDeliveryPath = (
 
 /**
  * The inverse of {@link contentDeliveryPublicUrl}: splits a public path into
- * its locale and slug. `null` when the path does not match the content type's
- * delivery route.
+ * its locale and slug. `null` when the path matches neither the content type's
+ * delivery route nor the legacy `/{locale}/{publicApi.path}/{slug}` form.
  */
 export const parseContentDeliveryPath = (
   definition: AnyContentTypeDefinition,

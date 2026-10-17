@@ -176,8 +176,9 @@ export const ContentFormStatus = () => {
 };
 
 /**
- * The form's submit buttons - "Save draft" and "Publish" when creating a
- * record with publication, one submit button (`submitLabel`) otherwise - after
+ * The form's submit buttons - "Save draft", plus "Publish" when the user may
+ * publish, when creating a record with publication; one submit button
+ * (`submitLabel`) otherwise - after
  * any `children` and an optional cancel link. When editing, the visibility and
  * publication toggles render beside it unless turned off.
  */

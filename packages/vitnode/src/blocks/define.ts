@@ -19,7 +19,7 @@ export interface DefineBlockArgs<
   TFields extends BlockFieldMap,
   TVariant extends string = string,
 > {
-  /** Renders one instance; `data` has already been parsed against `fields`. */
+  /** Renders one instance; `data` is as stored - validated on write and shape-checked before render. */
   component: BlockComponent<BlockData<TFields>, TVariant>;
   /** Variant used when an instance stores none. Must be one of `variants`. */
   defaultVariant?: NoInfer<TVariant>;
@@ -27,8 +27,9 @@ export interface DefineBlockArgs<
   description?: string;
   /**
    * Content Engine fields (`field.text()`, `field.enum()`, ...) the data is
-   * validated and edited with. File, relation, user, repeatable, slug and
-   * nested blocks fields are refused, and fields are never localized.
+   * validated and edited with. Only boolean, dateTime, enum, group, number,
+   * text and textarea fields are accepted, at least one, and fields are never
+   * localized.
    */
   fields: TFields;
   /** Icon component (not an element) for the editor; defaults to a generic widget icon. */

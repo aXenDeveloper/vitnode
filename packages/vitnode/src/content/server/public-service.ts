@@ -93,7 +93,8 @@ export interface ContentPublicFindManyArgs<
  *
  * Every read returns the {@link ContentPublicSelect} projection - only the
  * `publicApi.fields` allowlist ever leaves the database - and only records that
- * are published, with `publishedAt` in the past, and not hidden.
+ * are published, with `publishedAt` in the past, and not hidden (unless
+ * `hidden: true` asks for hidden ones).
  */
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */

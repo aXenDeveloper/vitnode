@@ -1017,7 +1017,7 @@ export interface ContentReportsConfig<TField extends string = string> {
    * Fields copied into the report when it is filed, so moderators see what was
    * reported even after an edit. Self-contained kinds only (text, textarea,
    * rich text, slug, number, boolean, enum, date, file). Defaults to the public
-   * text, textarea, rich text, enum and file fields.
+   * text, textarea, rich text, enum and file fields other than the title field.
    */
   snapshotFields?: TField[];
   /**

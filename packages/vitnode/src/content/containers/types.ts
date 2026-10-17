@@ -50,7 +50,10 @@ export interface ContentContainerPublicApiInput<
   TField extends string = string,
   TPath extends string = string,
 > {
-  /** Metadata fields exposed publicly, besides name and slug. Defaults to none. */
+  /**
+   * Metadata fields exposed publicly, besides the built-in columns (id,
+   * parent, name, slug, position, timestamps). Defaults to none.
+   */
   fields?: readonly TField[];
   /** The public module segment, e.g. `"forums"`. */
   path: TPath;

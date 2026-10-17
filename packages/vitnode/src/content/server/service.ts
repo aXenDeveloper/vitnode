@@ -261,9 +261,10 @@ export interface ContentPublicationMethods<TDefinition> {
  *
  * Validates input against the generated schemas and writes the base table,
  * its junction and child tables. It is deliberately low level: it emits no
- * events, records no revisions and expires no caches. The generated routes
- * follow a write with `contentPlainWriteEffects` / `contentEditorialEffects`;
- * custom write paths should do the same, or use `model.editorialService`.
+ * events, records no revisions and expires no caches - and neither does
+ * `model.editorialService`. Custom write paths must follow up the way the
+ * generated routes do: `emitContentEvent`, or `contentPlainWriteEffects` /
+ * `contentEditorialEffects` after an `editorialService` write.
  *
  * Publication, visibility and duplication methods exist only when the
  * definition enables them.

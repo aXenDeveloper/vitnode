@@ -165,7 +165,7 @@ const assertIndexable = (
  * Universal and side-effect free: import the result from browser and server
  * code alike. It returns the **resolved** definition - every option normalised
  * and defaulted, plus the generated Zod schemas - which the server turns into
- * tables (`contentTable()`), a model (`createContentModel()`) and generated API
+ * tables (`createContentTable()`), a model (`createContentModel()`) and generated API
  * modules, and the AdminCP turns into list and form screens.
  *
  * Mistakes are reported twice: option combinations that cannot work (a preview
@@ -377,7 +377,8 @@ export const defineContentType = <
   /**
    * Lets users report records to moderators. Needs `publicApi`. `true` uses
    * `admin.titleField` (when public) as the report title and snapshots the
-   * public text, rich text, enum and file fields.
+   * public text, textarea, rich text, enum and file fields other than the
+   * title field.
    */
   reports?: ContentReportsInput<keyof TFields & string>;
 

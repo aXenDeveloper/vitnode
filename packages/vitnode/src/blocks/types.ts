@@ -32,7 +32,7 @@ export interface BlockComponentProps<
 > {
   /** The instance's own stable id, not the widget's type. */
   blockId: string;
-  /** Parsed against the widget's fields, defaults applied. */
+  /** The stored data: validated when saved, shape-checked before render. Defaults are applied at write time only. */
   data: TData;
   /** Position among its siblings. */
   index: number;
@@ -172,8 +172,9 @@ export interface BlockRenderFallbackProps {
 }
 
 /**
- * When rendering enforces a zone's allowlist and warns about drift. Data is
- * always validated on write, never here.
+ * Whether rendering enforces a zone's allowlist and logs warnings. A data
+ * shape check and skipping unknown types or variants always apply; full
+ * validation happens on write.
  */
 export type BlockValidationMode = "always" | "development" | "never";
 

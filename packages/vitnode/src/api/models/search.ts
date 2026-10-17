@@ -56,8 +56,9 @@ export interface SearchDocument {
   /** A `core_files` id shown as the hit's image. */
   imageId?: null | number;
   /**
-   * Hidden from the public, but still found by its authors and by viewers with
-   * moderator access to its item type. Defaults to `false`.
+   * With `isPublic: false`, still lets its authors and viewers with moderator
+   * access to its item type find it. Hides nothing on its own. Defaults to
+   * `false`.
    */
   isHidden?: boolean;
   /** Found by everyone. Defaults to `true`; `false` hides it from ordinary searches. */

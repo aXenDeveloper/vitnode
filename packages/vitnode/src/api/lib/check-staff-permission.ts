@@ -161,7 +161,7 @@ const findStaffUser = async (
 };
 
 /**
- * Whether the user holds any admin or moderator entry of `type`. Pass
+ * Whether the user holds any staff entry of `type`, or a root role. Pass
  * `live: true` to bypass the cache, e.g. right after changing staff entries.
  */
 export const isStaff = async (

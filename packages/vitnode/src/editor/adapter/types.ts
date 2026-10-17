@@ -22,8 +22,9 @@ export interface VisualEditorSaveResult {
 
 /**
  * Throw an object of this shape from `save` to show `refusal` to the editor
- * instead of a generic error; `conflict: true` reports that someone else saved
- * first. The editor keeps the unsaved changes either way.
+ * instead of a generic error. With `conflict: true` the editor shows its own
+ * someone-saved-first message instead of `refusal`. The editor keeps the
+ * unsaved changes either way.
  */
 export interface VisualEditorSaveRefusal {
   conflict?: boolean;

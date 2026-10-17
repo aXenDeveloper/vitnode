@@ -53,7 +53,8 @@ export interface CronJobConfig extends BuildCronReturn {
  * On each tick the runner executes every job whose `schedule` has come due
  * since its last successful run; due jobs run concurrently. For heavy or
  * retryable work, have the job dispatch queue tasks instead of doing the work
- * itself.
+ * itself. A job runs inside core's cron request, so `c.get("plugin")` is
+ * `@vitnode/core`: pass your plugin's id to `dispatch` explicitly.
  *
  * @example
  * ```ts
@@ -64,7 +65,9 @@ export interface CronJobConfig extends BuildCronReturn {
  *   description: "Delete abandoned drafts",
  *   schedule: "0 3 * * *",
  *   handler: async c => {
- *     await c.get("queue").dispatch({ name: "clean-drafts" });
+ *     await c
+ *       .get("queue")
+ *       .dispatch({ name: "clean-drafts", pluginId: "@acme/blog" });
  *   },
  * });
  * ```
@@ -103,11 +106,12 @@ const reportFailedCronTick = (reason: string) => {
 
 /**
  * One cron tick: `POST`s the API's own `/api/@vitnode/core/cron` endpoint,
- * authenticated with the `CRON_SECRET` environment variable. Call it from a
+ * authenticated with the `CRON_SECRET` environment variable (which falls back
+ * to a development-only default that production refuses). Call it from a
  * {@link CronAdapter}'s timer.
  *
- * Never throws - a failed request or non-2xx response is written to
- * `console.error`.
+ * Never throws once the API URL is valid - a failed request or non-2xx
+ * response is written to `console.error`.
  */
 export const handleCronJobs = async () => {
   const url = new URL("/api/@vitnode/core/cron", CONFIG.api.origin);

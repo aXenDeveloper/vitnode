@@ -24,8 +24,11 @@ const localeParts = (locale: string | undefined): string[] => {
  * Cache tags for a content type's public reads. Pure strings
  * (`content:{contentTypeId}:{kind}[:{locale}][:{key}]`, clamped with a
  * fingerprint when too long), safe on any runtime. Tag a cached read with the
- * matching builder; the engine expires the same tags after every write via
- * `contentInvalidationTags`. Pass `locale` only for a localized content type.
+ * matching builder. `contentInvalidationTags` lists the tags one write
+ * expires; the engine sends that input to `content.revalidateOrigins` after
+ * scheduled publishes and hide/unhide. Its own page cache expires only the
+ * locale-less list and item tags. Pass `locale` only for a localized content
+ * type.
  */
 
 /** Every public list page of a content type, in one locale. */
@@ -78,8 +81,9 @@ export const contentContainerTag = (definitionId: string): string =>
   tag(definitionId, "containers");
 
 /**
- * How a front end should expire tags: `immediate` drops them now,
- * `stale-while-revalidate` serves the old value while it refetches.
+ * A hint for the receiving front end on how to expire tags: `immediate` drops
+ * them now, `stale-while-revalidate` serves the old value while it refetches.
+ * The engine currently always sends `immediate`.
  */
 export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
 

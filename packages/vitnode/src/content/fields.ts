@@ -34,9 +34,12 @@ interface SharedArgs<
   TRequired extends boolean = false,
   TNullable extends boolean = false,
 > {
-  /** Free text or an i18n key shown under the field in the AdminCP and in OpenAPI. */
+  /** Help text shown as-is under a group or repeatable field in the AdminCP form. */
   description?: string;
-  /** The column accepts `NULL` and `null` is a valid value. Defaults to `false`. */
+  /**
+   * The column accepts `NULL` and `null` is a valid value. Defaults to `false`
+   * (`true` for a single `field.file()` / `field.user()`).
+   */
   nullable?: TNullable;
   /**
    * The value must be present in a create payload. Defaults to `false`; the
@@ -77,7 +80,10 @@ const text = <
       ai?: ContentFieldAiAssist;
       /** Column default, used when a create payload leaves the field out. */
       defaultValue?: TDefault;
-      /** `varchar` length and validation limit. Defaults to 255. */
+      /**
+       * `varchar` length and validation limit. The column defaults to 255;
+       * nothing is validated unless set.
+       */
       maxLength?: number;
       minLength?: number;
       /** Adds a unique index on the column. */
@@ -479,7 +485,7 @@ const container = <
 /**
  * Field builders for the `fields` map of `defineContentType()`.
  *
- * Each builder returns a plain, JSON-shaped descriptor. Its literal options
+ * Each builder returns a plain descriptor object. Its literal options
  * (`required`, `nullable`, `localized`, `multiple`, ...) drive the inferred
  * create, update, select and public types; `defineContentType` validates the
  * combination at runtime and generates the columns, schemas and AdminCP inputs.
