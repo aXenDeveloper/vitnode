@@ -49,6 +49,16 @@ import { applyModuleTags } from "./openapi-tags";
 
 export type { ApiPluginContract };
 
+/**
+ * A plugin's API half, as {@link buildApiPlugin} returns it and an app's
+ * `buildApiConfig({ plugins })` mounts it at `/{pluginId}` under the API's
+ * base path (`/api` in the starter apps).
+ *
+ * Everything the modules declared is already collected and validated here:
+ * content types, models and containers from the whole module tree; cron jobs,
+ * event listeners, queue tasks and WebSockets from top-level modules only, each
+ * stamped with the module that declared it.
+ */
 export interface BuildPluginApiReturn<
   P extends string = string,
   Modules extends readonly BaseBuildModuleReturn<P>[] =
@@ -62,15 +72,21 @@ export interface BuildPluginApiReturn<
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   editablePages?: AnyEditablePageDefinition[];
   events?: Omit<EventListenerConfig, "pluginId">[];
+  /** Every module's routes, each module mounted at `/{module.name}`. */
   hono: OpenAPIHono;
   manifest?: PluginManifest<P>;
   messages?: LocaleMessagesMap;
+  /** Declared targets and scopes, plus one report target per content model with reports enabled. */
   moderation?: Required<ModerationPluginConfig>;
+  /** The module tuple as passed in; the fetcher's types resolve calls through it. */
   modules: Modules;
   notificationTypes?: AnyNotificationTypeDefinition[];
   openApiTags?: string[];
+  /** The declared permissions, plus the ones content types, containers and report targets add. */
   permissionStaff?: PermissionStaffConfig;
+  /** The plugin's npm package name, taken from `manifest.id`. */
   pluginId: P;
+  /** Content types the plugin serves public URLs for. */
   publicContentTypes?: AnyContentTypeDefinition[];
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
   searchIndexers?: SearchIndexer[];
@@ -82,6 +98,43 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
   readonly BaseBuildModuleReturn[]
 >;
 
+/**
+ * Declares a plugin's API half: its Hono modules plus everything they bring -
+ * content types, cron jobs, events, queues, notifications, WebSockets, staff
+ * permissions. Its frontend half is `buildPlugin` from
+ * `@vitnode/core/lib/plugin`; both take the plugin's generated manifest, whose
+ * `id` (the package name) keys every registration.
+ *
+ * Server-only. Call it from the plugin's `src/config.api.ts`, which an app
+ * imports in its `vitnode.api.config.ts` and nowhere a browser bundle reaches.
+ *
+ * Staff permissions: every content type adds `can_view`, `can_create`,
+ * `can_edit` and `can_delete` under its permission module, every content
+ * container and report target adds its own entries, unless `permissionStaff`
+ * already declares that module.
+ *
+ * @throws When `manifest` is malformed; when `blocks` belongs to another
+ * plugin; when content types, containers, editable pages, AI actions, search
+ * indexers or notification types are invalid or collide. In development, also
+ * when no installed package's `package.json` has the plugin id as its name.
+ *
+ * @example
+ * ```ts
+ * // src/config.api.ts
+ * import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+ *
+ * import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+ *
+ * import { postsModule } from "@/api/modules/posts/posts.module";
+ * import { manifest } from "@/manifest.gen";
+ *
+ * export const blogApiPlugin = () =>
+ *   buildApiPlugin({ manifest, modules: [postsModule] });
+ *
+ * // What the fetcher's registry reads to type calls to this plugin.
+ * export type VitNodeApiPlugin = ApiPluginContract<ReturnType<typeof blogApiPlugin>>;
+ * ```
+ */
 export function buildApiPlugin<
   const P extends string,
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
@@ -97,15 +150,28 @@ export function buildApiPlugin<
   permissionStaff,
   searchIndexers,
 }: {
+  /** AI actions admins can run, e.g. from an editor. */
   aiActions?: AnyAiActionDefinition[];
+  /** The object the plugin's own widgets (`blocks`) module exports; its `pluginId` must match. */
   blocks?: BlockPluginSource;
+  /** Pages built from widgets that admins edit in place. Page ids must be unique within the plugin. */
   editablePages?: AnyEditablePageDefinition[];
+  /** The plugin's generated manifest (`src/manifest.gen.ts`). */
   manifest: PluginManifest<P>;
+  /**
+   * Lazy loaders for the plugin's server-side messages (emails, notifications),
+   * keyed by locale code. Separate from the frontend tree `buildPlugin` takes.
+   */
   messages?: LocaleMessagesMap;
+  /** Report targets and moderation scopes beyond those content models add. */
   moderation?: ModerationPluginConfig;
+  /** Top-level modules, each mounted at `/{pluginId}/{name}` under the API's base path. */
   modules?: Modules;
+  /** Notification types in addition to those modules declare. */
   notificationTypes?: AnyNotificationTypeDefinition[];
+  /** Staff permissions the plugin's routes check, grouped by permission module. */
   permissionStaff?: PermissionStaffConfig;
+  /** Search indexers in addition to those modules declare. */
   searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn<P, Modules> {
   const pluginId = manifest.id;

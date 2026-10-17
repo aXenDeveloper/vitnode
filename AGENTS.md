@@ -81,6 +81,11 @@ import { Activity } from "react";
 - Document every new feature. Keep it simple, SEO-friendly, and understandable at any skill level.
 - Friendly and lightly funny tone - don't overdo it.
 - Skip big comments; code is self-documenting.
+- Developer-facing APIs in feature code (exports of `@vitnode/core` and plugins that app or plugin authors call) need concise English JSDoc on the original declaration:
+  - Say what it is for, plus constraints, side effects, runtime (server-only, browser-only or universal) and `@throws` only when they are real and non-obvious.
+  - Document configuration properties one by one, including non-obvious defaults and constraints.
+  - Give major entry points a minimal `@example` with real imports.
+  - A behavior change updates the JSDoc in the same change. Keep tutorials in the MDX docs.
 - Request images with a comment: `// Image prompt: {here_prompt_to_generate_image}`
 - Put install commands in tabbed code blocks with correct syntax highlighting:
 

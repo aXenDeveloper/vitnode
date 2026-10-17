@@ -2,6 +2,11 @@ import { createContentModel } from "@vitnode/core/content/server";
 
 import { blogCategoryContentType } from "@/content/category";
 
+/**
+ * The server-side model of {@link blogCategoryContentType}: its Drizzle tables
+ * and `categoryContent.service(c)` for reads and writes inside a request.
+ * Server-only - import it from API code, never from a page.
+ */
 export const categoryContent = createContentModel(blogCategoryContentType);
 
 // Two exports for a localized content type, not one. Drizzle Kit discovers each

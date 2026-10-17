@@ -1,5 +1,10 @@
 import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
 
+/**
+ * The blog's public pages. `/blog/:slug` serves the article's
+ * `search.pathTemplate` (`/blog/{slug}`); the web build fails if that URL has no
+ * matching page.
+ */
 export const routes = definePluginRoutes([
   page("/blog/:slug", {
     // Published articles read the same for everybody, so their HTML is reused

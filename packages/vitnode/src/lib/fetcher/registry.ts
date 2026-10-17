@@ -14,6 +14,10 @@ import type { VitNodeApiPlugin } from "@/api/plugin";
  * models, the listeners, the queues and the search indexers a plugin also
  * carries are runtime concerns, and resolving them here would make every
  * keystroke in a `fetcher` call pay for them.
+ *
+ * A plugin's own pages can call its API before any app configures it:
+ * `vitnode build` and `vitnode dev` write the plugin's entry into its
+ * `types/api-registry.gen.d.ts`, which stays out of the published package.
  */
 export interface ApiPluginRegistry {
   "@vitnode/core": VitNodeApiPlugin;

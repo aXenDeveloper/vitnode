@@ -24,13 +24,28 @@ export type {
   ResponseFor,
 } from "./fetcher/types";
 
+/** What a browser call accepts besides the route and `args`. */
 export type FetcherClientOptions = Omit<
   FetcherRequestOptions,
   "additionalHeaders" | "origin"
 > & {
+  /** Sent as `x-vitnode-captcha-token`, for routes built with `withCaptcha`. */
   captchaToken?: string;
 };
 
+/**
+ * The browser primitive the universal `fetcher` is built on, framework-neutral.
+ * Use it only in code that never renders on a server; anything rendered by
+ * TanStack Start uses `fetcher` from `@vitnode/core/tanstack/fetcher`.
+ *
+ * Sends `credentials: "include"` (the API may live on another origin) and
+ * dispatches a `vitnode:rate-limit` window event on a `429`.
+ *
+ * Resolves with the `Response` for any status below 500 - check `res.ok` or
+ * `res.status` before reading the body; a `4xx` is also logged to the console.
+ * Rejects on a `500` (with the response body in the message) and on network
+ * failure.
+ */
 export async function fetcherClient<
   P extends RegisteredPluginId,
   M extends string,

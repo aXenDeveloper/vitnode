@@ -1,5 +1,16 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
+/**
+ * The blog category (`blog.category`, table `blog_categories`): a localized
+ * name, with `en` as the fallback translation, and a shared colour.
+ *
+ * Deliberately minimal - no publication lifecycle and no `publicApi`, so
+ * categories are managed only in the AdminCP (in dialogs) and reach readers
+ * only through an article's `categoryId`.
+ *
+ * Browser-safe: the server model is `categoryContent` in
+ * `@vitnode/blog/database/categories`.
+ */
 export const blogCategoryContentType = defineContentType({
   id: "blog.category",
   tableName: "blog_categories",
