@@ -25,6 +25,7 @@ export const isLocalizedContentField = (
 ): boolean => fieldValue.localized === true;
 
 export interface ContentFieldPartition {
+  /** To-many relations, users and files, and repeatables: stored in generated junction or child tables. */
   collectionFields: ContentFieldMap;
   /** Fields stored in the translation table, one row per language. */
   localizedFields: ContentFieldMap;
@@ -32,6 +33,7 @@ export interface ContentFieldPartition {
   sharedFields: ContentFieldMap;
 }
 
+/** Splits a field map by where each field is stored: base table, translation table, or a side table. */
 export const partitionContentFields = (
   fields: ContentFieldMap,
 ): ContentFieldPartition => {

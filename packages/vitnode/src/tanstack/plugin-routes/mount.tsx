@@ -50,9 +50,15 @@ export type PluginRoutePageHead = (
   options: RouteHeadOptions,
 ) => RouteHeadResult;
 
+/** The route each area's pages hang from - usually the app's layout (shell) routes. */
 export type PluginRouteAreaRoutes = Partial<Record<PluginRouteArea, AnyRoute>>;
 
 export interface PluginRoutesMountOptions {
+  /**
+   * Where each area's routes are mounted, e.g. `main` under the main layout and
+   * `admin` under the AdminCP shell. When omitted, `main` and `blank` routes
+   * hang from the tree's root; when given, an area left out is not mounted.
+   */
   mountUnder?: PluginRouteAreaRoutes;
   /**
    * Optional, and only for an application that formats its titles differently:
@@ -334,6 +340,24 @@ const mountPluginSubtree = (
  * through the same registry a plugin does, so an application no longer composes
  * `withCoreRootRoutes(withCoreAdminRoutes(withCoreMainRoutes(…)))` around it
  * and can no longer get that nesting wrong.
+ *
+ * @throws When a plugin route claims a URL the app's own file routes already
+ * answer, or a nested route's parent is missing.
+ *
+ * @example
+ * ```ts
+ * // src/router.tsx
+ * import { pluginRouteSpecs, withVitNodeRoutes } from "@vitnode/core/tanstack/plugin-routes";
+ *
+ * import { pluginRouteSources } from "./plugin-routes.gen";
+ * import { Route as adminShellRoute } from "./routes/_admin";
+ * import { Route as mainShellRoute } from "./routes/_main";
+ * import { routeTree as fileRouteTree } from "./routeTree.gen";
+ *
+ * const routeTree = withVitNodeRoutes(fileRouteTree, pluginRouteSpecs(pluginRouteSources), {
+ *   mountUnder: { admin: adminShellRoute, blank: fileRouteTree, main: mainShellRoute },
+ * });
+ * ```
  */
 export const withVitNodeRoutes = <TRouteTree extends AnyRoute>(
   routeTree: TRouteTree,

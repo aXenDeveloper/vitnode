@@ -324,6 +324,33 @@ const buildSchemas = (
   };
 };
 
+/**
+ * Declares a collection of containers - forums, boards, categories - that
+ * records of other content types are filed into with `field.container()`.
+ * Containers are stored in core tables, so a collection needs no table of its
+ * own; it adds AdminCP screens, optional nesting and ordering, a public API,
+ * and per-container publishing policies. Universal.
+ *
+ * Register it on the server with `buildContentAdminModule({ containers })` /
+ * `buildContentPublicModule({ containers })`, and in the AdminCP with
+ * `buildPlugin({ containers })`.
+ *
+ * @throws A `ContentEngineError` at import time for an invalid id, a field
+ * kind containers cannot store, or an invalid option.
+ *
+ * @example
+ * ```ts
+ * import { defineContentContainer, field } from "@vitnode/core/content";
+ *
+ * export const forumContainers = defineContentContainer({
+ *   id: "forum.forums",
+ *   fields: { description: field.textarea({ maxLength: 500, nullable: true }) },
+ *   hierarchy: { maxDepth: 4 },
+ *   publicApi: { path: "forums", fields: ["description"] },
+ *   admin: { path: "forum/forums" },
+ * });
+ * ```
+ */
 export const defineContentContainer = <
   const TId extends string,
   const TFields extends ContentContainerFieldMap = Record<never, never>,

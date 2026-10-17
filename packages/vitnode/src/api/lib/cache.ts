@@ -10,6 +10,25 @@ export type CacheClient = RedisClientType;
 const CACHE_PREFIX = "vitnode:cache:";
 const SYSTEM_NAMESPACE = "__system__";
 
+/**
+ * Server-side domain cache, read in a route as `c.get("cache")`. Values are
+ * stored as JSON, so dates come back as strings.
+ *
+ * Backed by Redis when the API config has `redis` (the starter apps pass
+ * `REDIS_URL`); without it every method is a safe no-op - reads miss, writes
+ * vanish. Redis errors are swallowed too: caching never fails a request.
+ *
+ * Keys are prefixed with the current plugin (`vitnode:cache:{pluginId}:`), so
+ * plugins cannot read or clobber each other's keys. The `*System` methods use a
+ * shared framework namespace instead.
+ *
+ * @example
+ * ```ts
+ * const stats = await c.get("cache").remember("stats", 300, async () => countPosts(c));
+ * // after a write:
+ * await c.get("cache").delete("stats");
+ * ```
+ */
 export class CacheModel {
   constructor(client: CacheClient | null, c: Context) {
     this.c = c;
@@ -148,6 +167,7 @@ export class CacheModel {
     return this.readKey<T>(this.key(key));
   }
 
+  /** {@link get} in the framework system namespace, shared by every plugin. */
   async getSystem<T>(key: string): Promise<null | T> {
     return this.readKey<T>(this.systemKey(key));
   }
@@ -168,6 +188,12 @@ export class CacheModel {
     await this.removeKeys([this.systemKey(`lock:${key}`)]);
   }
 
+  /**
+   * Returns the cached value, or runs `loader`, caches its result for
+   * `ttlSeconds` and returns it. A `null` result is never served from the
+   * cache, so a loader answering `null` runs every time. Without Redis it
+   * always runs `loader`.
+   */
   async remember<T>(
     key: string,
     ttlSeconds: number,
@@ -182,10 +208,15 @@ export class CacheModel {
     return value;
   }
 
+  /**
+   * Store a JSON value. Omit `ttlSeconds` (or pass `0`) to keep it until
+   * deleted. No-op without Redis or on error.
+   */
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     await this.writeKey(this.key(key), value, ttlSeconds);
   }
 
+  /** {@link set} in the framework system namespace, shared by every plugin. */
   async setSystem<T>(
     key: string,
     value: T,
@@ -194,6 +225,7 @@ export class CacheModel {
     await this.writeKey(this.systemKey(key), value, ttlSeconds);
   }
 
+  /** Whether Redis is configured, and whether it answers a `PING` right now. */
   async status(): Promise<{ configured: boolean; connected: boolean }> {
     if (!this.client) return { configured: false, connected: false };
 

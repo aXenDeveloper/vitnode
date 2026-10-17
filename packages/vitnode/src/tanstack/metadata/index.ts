@@ -28,22 +28,30 @@ export interface RouteOpenGraph {
   /** The `<meta property="og:description">`. */
   description?: string;
 
+  /** The `<meta property="og:title">`, used as is - no site-name suffix. */
   title?: string;
   /** `article` for a document, `website` for a landing page. */
   type?: RouteOpenGraphType;
 }
 
+/** What a page puts in its `<head>`. Every field is optional and emits nothing when unset. */
 export interface RouteHeadOptions {
+  /**
+   * The page's internal path per locale. With `locale`, emits the canonical
+   * link and `hreflang` alternates (see `localeAlternateLinks`).
+   */
   alternates?: LocaleAlternates;
   /** The `<meta name="description">`, when the page has one. */
   description?: string;
 
+  /** The locale being rendered; required for `alternates` to emit anything. */
   locale?: string;
 
   openGraph?: RouteOpenGraph;
 
+  /** The `<meta name="robots">`. A deeper route's value replaces its parent's. */
   robots?: RouteRobots;
-  /** The page's own title, already translated. */
+  /** The page's own title, already translated. The site name is appended (`Title - Site`). */
   title?: string;
 }
 
@@ -52,6 +60,7 @@ export type RouteHeadMeta =
   | { content: string; property: string }
   | { title: string };
 
+/** A TanStack Router `head` return value. */
 export interface RouteHeadResult {
   links?: RouteHeadLink[];
   meta: RouteHeadMeta[];
@@ -93,6 +102,7 @@ const routeMeta = (
     : []),
 ];
 
+/** {@link pageHead} with explicit site metadata, for code that runs before the config is registered. */
 export const routeHead = (
   metadata: VitNodeMetadata,
   {
@@ -112,10 +122,31 @@ export const routeHead = (
   };
 };
 
+/** Binds {@link routeHead} to one site's metadata. */
 export const createRouteHead =
   (metadata: VitNodeMetadata) =>
   (options: RouteHeadOptions = {}) =>
     routeHead(metadata, options);
 
+/**
+ * A route's `head` from translated page data: title (suffixed with the site
+ * name from `buildConfig({ metadata })`), description, robots, Open Graph and
+ * locale alternates. Universal; use it in a route's `head`, written after
+ * `loader` so `loaderData` is typed.
+ *
+ * @throws When the VitNode config has not been registered with `buildConfig`.
+ *
+ * @example
+ * ```ts
+ * import { pageHead } from "@vitnode/core/tanstack/metadata";
+ *
+ * head: ({ loaderData }) =>
+ *   pageHead({
+ *     title: loaderData?.title,
+ *     description: loaderData?.description,
+ *     robots: loaderData ? "index, follow" : "noindex, nofollow",
+ *   }),
+ * ```
+ */
 export const pageHead = (options: RouteHeadOptions = {}): RouteHeadResult =>
   routeHead(getVitNodeConfig().metadata, options);
