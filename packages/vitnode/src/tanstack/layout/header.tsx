@@ -65,7 +65,7 @@ const headerNavTranslator = (
 /**
  * The site header: logo, the configured `navigation.header` links (labels
  * translated from their message keys), search, notifications and the mobile
- * bottom bar. Most apps render {@link MainHeader}, which adds the user menu.
+ * bottom bar. Most apps render `MainHeader`, which adds the user menu.
  */
 export const Header = ({
   firstSearchSourceId,

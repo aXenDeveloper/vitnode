@@ -138,5 +138,10 @@ const DeferredScripts = () => {
   );
 };
 
+/**
+ * The root document's scripts, in place of TanStack Router's `<Scripts />`. In
+ * production the app's module scripts and preloads load after the first
+ * contentful paint (or within three seconds), so they never delay it.
+ */
 export const DocumentScripts = () =>
   process.env.NODE_ENV === "production" ? <DeferredScripts /> : <Scripts />;

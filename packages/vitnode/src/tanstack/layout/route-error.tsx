@@ -21,6 +21,10 @@ const DevErrorDetails = ({ error }: { error: unknown }) => (
   </>
 );
 
+/**
+ * The router's `defaultErrorComponent`: the 500 page, plus - in development
+ * only - an overlay with the error's details.
+ */
 export const RouteErrorPage = ({
   actions,
   error,
