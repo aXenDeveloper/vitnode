@@ -176,6 +176,15 @@ const ReorderableBodyDataTable = <T extends DataTableTMin>({
   );
 };
 
+/**
+ * A server-paginated data table driven by the URL: sorting, cursor paging,
+ * search and filters are read from and written to the query string through
+ * the enclosing `DataTableNavigationProvider`, so the route's loader fetches
+ * each page. Optional row selection with bulk actions, expandable and
+ * reorderable rows, and grouping.
+ *
+ * Pass the API's `edges` and `pageInfo` for the current page.
+ */
 export function ContentDataTable<T extends DataTableTMin>({
   bulkActions,
   columns = [],
