@@ -35,6 +35,7 @@ export interface UserDetailProps {
   onUpdateRoles: UpdateAdminUserRoles;
   onUploadImage: UploadAdminUserImage;
   onVerifyEmail: VerifyAdminUserEmail;
+  presence?: React.ReactNode;
   searchRoles: AdminRoleSearch;
   security: React.ReactNode;
   timeline: React.ReactNode;
@@ -52,6 +53,7 @@ export const UserDetailContent = ({
   onUpdateRoles,
   onUploadImage,
   onVerifyEmail,
+  presence,
   searchRoles,
   security,
   timeline,
@@ -73,6 +75,7 @@ export const UserDetailContent = ({
           onVerifyEmail={onVerifyEmail}
           user={user}
         />
+        {presence}
         <UserPersonalCard canEdit={canEdit} onUpdate={onUpdate} user={user} />
         <UserPreferencesCard
           canEdit={canEdit}

@@ -112,6 +112,7 @@ export interface EnvVariablesVitNode {
       emailVerified: boolean;
       firstName: null | string;
       headline: null | string;
+      hideOnlineStatus: boolean;
       id: number;
       language: string;
       lastName: null | string;
@@ -220,6 +221,7 @@ export interface EnvVariablesVitNode {
     emailVerified: boolean;
     firstName: null | string;
     headline: null | string;
+    hideOnlineStatus: boolean;
     id: number;
     language: string;
     lastName: null | string;

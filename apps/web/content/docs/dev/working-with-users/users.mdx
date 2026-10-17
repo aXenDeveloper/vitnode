@@ -109,6 +109,8 @@ The canonical user table contains:
 | `language`      | `varchar(32)`  | Preferred UI locale (defaults to `en`)                |
 | `timeZone`      | `varchar(64)`  | IANA time zone, set by the user (nullable)            |
 | `emailVerified` | `boolean`      | Verification status                                   |
+| `lastSeenAt`    | `timestamp`    | Last activity, set by the [presence](/docs/dev/working-with-users/presence) heartbeat (nullable) |
+| `hideOnlineStatus` | `boolean`  | **Browse anonymously** - hide presence from other members |
 
 Every user payload the API hands out - the session, the public profile, the
 AdminCP list and detail, search hit authors - carries the two images resolved
@@ -159,6 +161,14 @@ Notification digests go out in this time zone, and the session carries it, so
 The body is `{ timeZone: string | null }`. An unknown name answers `400`.
 Saving invalidates the cached session and emits
 [`user.updated`](/docs/dev/events/built-in-events).
+
+### Online status
+
+The **Privacy** group on the same page holds **Browse anonymously**. Turned on,
+other members see **Activity hidden** instead of the member's online status and
+last activity, while staff with `users:can_view_hidden_presence` still see it.
+[User Presence](/docs/dev/working-with-users/presence) covers how online status
+is tracked.
 
 ### Which name the public sees
 
@@ -271,6 +281,8 @@ A few rules differ from the member's own settings:
 - **Sync now isn't offered.** It needs the member to sign in with the provider themselves.
 
 Every write needs `users:can_edit`, plus `users:can_edit_admin` when the target is staff. Reads need `users:can_view`.
+
+The read-only **Presence** card shows whether the member is online, their last activity and whether they [browse anonymously](/docs/dev/working-with-users/presence#browse-anonymously).
 
 | Method   | Path                                                                | Does                                                 |
 | :------- | :------------------------------------------------------------------ | :--------------------------------------------------- |

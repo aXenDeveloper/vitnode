@@ -105,6 +105,30 @@ export class CacheModel {
     }
   }
 
+  /**
+   * How many unexpired leases each lease set in the system namespace holds, in
+   * the order asked - one round trip however many keys. `null` without Redis or
+   * on an error, which callers must not read as "none".
+   */
+  async countLeases(keys: string[]): Promise<null | number[]> {
+    if (!this.client) return null;
+    if (keys.length === 0) return [];
+
+    try {
+      const now = Date.now();
+      const client = this.client;
+
+      // Issued in one tick, so node-redis sends them as a single pipeline.
+      return await Promise.all(
+        keys.map(
+          async key => await client.zCount(this.systemKey(key), now, "+inf"),
+        ),
+      );
+    } catch {
+      return null;
+    }
+  }
+
   /** Remove one or more keys. No-op without Redis. */
   async delete(key: string | string[]): Promise<void> {
     const keys = (Array.isArray(key) ? key : [key]).map(k => this.key(k));
@@ -163,6 +187,22 @@ export class CacheModel {
     }
   }
 
+  /** Whether a Redis client is configured at all, connected or not. */
+  isConfigured(): boolean {
+    return this.client !== null;
+  }
+
+  /** Drop members from a lease set in the system namespace. No-op without Redis. */
+  async releaseLeases(key: string, members: string[]): Promise<void> {
+    if (!this.client || members.length === 0) return;
+
+    try {
+      await this.client.zRem(this.systemKey(key), members);
+    } catch {
+      /* the lease expires on its own */
+    }
+  }
+
   /** Release a lock taken with {@link acquireLock}. No-op without Redis. */
   async releaseLock(key: string): Promise<void> {
     await this.removeKeys([this.systemKey(`lock:${key}`)]);
@@ -180,6 +220,39 @@ export class CacheModel {
     await this.set(key, value, ttlSeconds);
 
     return value;
+  }
+
+  /**
+   * Renew one member's lease in a lease set in the system namespace - a sorted
+   * set scored by expiry, so every member expires on its own and concurrent
+   * renewals of different members never overwrite each other. Expired members
+   * are swept on the way, and the key itself outlives its newest lease by
+   * nothing. `false` without Redis or on an error.
+   */
+  async renewLease(
+    key: string,
+    member: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    if (!this.client) return false;
+
+    try {
+      const now = Date.now();
+      const fullKey = this.systemKey(key);
+
+      await Promise.all([
+        this.client.zAdd(fullKey, {
+          score: now + ttlSeconds * 1000,
+          value: member,
+        }),
+        this.client.zRemRangeByScore(fullKey, "-inf", now),
+        this.client.expire(fullKey, ttlSeconds),
+      ]);
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {

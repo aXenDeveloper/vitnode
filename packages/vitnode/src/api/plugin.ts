@@ -54,7 +54,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
   ],
   permissionStaff: {
     moderator: {
-      users: ["can_edit"],
+      users: ["can_edit", "can_view_hidden_presence"],
       widgets: ["can_edit"],
     },
     admin: {
@@ -67,6 +67,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_create", dependsOn: ["can_view"] },
         { permission: "can_edit", dependsOn: ["can_view"] },
         { permission: "can_edit_admin", dependsOn: ["can_view"] },
+        { permission: "can_view_hidden_presence", dependsOn: ["can_view"] },
       ],
       roles: [
         "can_view",
