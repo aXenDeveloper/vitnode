@@ -16,10 +16,14 @@ import type {
 
 import { evaluateUpdate } from "./evaluate";
 import { fetchUpdateSource, UpdateSourceError } from "./fetch-source";
+import { startUpdateCheckHeartbeat } from "./heartbeat";
 import {
   acquireUpdateCheckLease,
   releaseUpdateCheckLease,
   type UpdateCheckLease,
+  UpdateCheckLeaseLostError,
+  type UpdateCheckTx,
+  withUpdateCheckLease,
 } from "./lock";
 
 type Db = ReturnType<typeof drizzle>;
@@ -30,7 +34,7 @@ const MAX_ERROR_DETAIL = 300;
 
 export type FetchUpdateSource = (
   url: string,
-  options: Pick<FetchUpdateSourceOptions, "validators">,
+  options: Pick<FetchUpdateSourceOptions, "signal" | "validators">,
 ) => Promise<UpdateSourceFetchResult>;
 
 export interface UpdateCheckSummary {
@@ -68,25 +72,49 @@ const pick = (
   schemaVersion: manifest.schemaVersion,
 });
 
-const mapLimited = async <T, R>(
+/**
+ * At most `limit` at a time. The caller's signal, or the first failure, stops
+ * the rest: nothing new starts, running work sees its signal aborted, and every
+ * worker has settled before this returns or throws.
+ */
+const mapLimited = async <T>(
   items: readonly T[],
   limit: number,
-  run: (item: T) => Promise<R>,
-): Promise<R[]> => {
-  const results: R[] = Array.from({ length: items.length });
+  signal: AbortSignal,
+  run: (item: T, signal: AbortSignal) => Promise<void>,
+): Promise<void> => {
+  const failed = new AbortController();
+  const scoped = AbortSignal.any([signal, failed.signal]);
   let next = 0;
   const worker = async () => {
     while (next < items.length) {
-      const index = next++;
-      results[index] = await run(items[index]);
+      scoped.throwIfAborted();
+      const item = items[next++];
+      try {
+        await run(item, scoped);
+      } catch (error) {
+        failed.abort(error);
+        throw error;
+      }
     }
   };
-  await Promise.all(
+
+  const settled = await Promise.allSettled(
     Array.from({ length: Math.min(limit, items.length) }, worker),
   );
-
-  return results;
+  signal.throwIfAborted();
+  const failure = settled.find(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  if (failure) throw failure.reason;
 };
+
+/** Where a check runs and how it learns it lost the lease. */
+export interface UpdateCheckLeaseScope {
+  owner: string;
+  /** Aborted with an `UpdateCheckLeaseLostError` once the lease can no longer be confirmed. */
+  signal: AbortSignal;
+}
 
 /**
  * The one check behind the daily cron job and the AdminCP button. Fetches every
@@ -94,6 +122,13 @@ const mapLimited = async <T, R>(
  * it and stores the outcome. A source that fails keeps its last valid copy -
  * and every finding computed from it - and only records the failure, so one
  * unreachable publisher neither blocks the others nor turns into "up to date".
+ *
+ * Every write goes through the lease fence in its own short transaction - one
+ * per source, holding the source and the results computed from it, then one for
+ * the clean-up - and never spans a network request. Once the lease is lost the
+ * check stops: requests in flight are aborted, queued ones never start, and
+ * nothing more is stored. A cancelled request is not a publisher failure, so
+ * the stored data stays exactly as the last committed write left it.
  */
 export const checkForUpdates = async ({
   channelOverride,
@@ -101,6 +136,7 @@ export const checkForUpdates = async ({
   coreVersion,
   db,
   fetchSource = async (url, options) => await fetchUpdateSource(url, options),
+  lease,
   now = new Date(),
 }: {
   channelOverride: null | UpdateChannel;
@@ -108,21 +144,31 @@ export const checkForUpdates = async ({
   coreVersion: null | string;
   db: Db;
   fetchSource?: FetchUpdateSource;
+  lease: UpdateCheckLeaseScope;
   now?: Date;
 }): Promise<UpdateCheckSummary> => {
+  const write = async (
+    signal: AbortSignal,
+    run: (tx: UpdateCheckTx) => Promise<void>,
+  ) => {
+    signal.throwIfAborted();
+    await withUpdateCheckLease(db, lease.owner, run);
+  };
+
   const checked = components.filter(
     (component): component is UpdateComponent & { sourceUrl: string } =>
       component.sourceUrl !== null,
   );
-  const bySource = new Map<string, string[]>();
+  const bySource = new Map<string, (typeof checked)[number][]>();
   for (const component of checked) {
     bySource.set(component.sourceUrl, [
       ...(bySource.get(component.sourceUrl) ?? []),
-      component.id,
+      component,
     ]);
   }
   const urls = [...bySource.keys()];
 
+  lease.signal.throwIfAborted();
   const stored = new Map(
     urls.length === 0
       ? []
@@ -134,183 +180,209 @@ export const checkForUpdates = async ({
         ).map(row => [row.url, row]),
   );
 
-  const outcomes = new Map<string, SourceOutcome>();
-  await mapLimited(urls, SOURCE_CONCURRENCY, async url => {
-    const previous = stored.get(url);
-    const ids = bySource.get(url) ?? [];
-    // A 304 can only stand in for a copy that is stored and still covers every
-    // package asked about now; otherwise ask for the full document.
-    const reusable =
-      previous?.document !== null &&
-      previous?.document !== undefined &&
-      ids.every(id => Object.hasOwn(previous.document?.packages ?? {}, id))
-        ? previous.document
-        : null;
-
-    let outcome: SourceOutcome;
-    let validators: null | {
-      etag: null | string;
-      lastModified: null | string;
-    } = null;
-    try {
-      const response = await fetchSource(url, {
-        validators:
-          reusable === null || (!previous?.etag && !previous?.lastModified)
-            ? null
-            : {
-                etag: previous?.etag ?? null,
-                lastModified: previous?.lastModified ?? null,
-              },
-      });
-
-      if (response.kind === "not_modified") {
-        outcome =
-          reusable === null
-            ? {
-                document: previous?.document ?? null,
-                error: { code: "http_error", detail: "unexpected 304" },
-              }
-            : { document: reusable, error: null };
-        validators = {
-          etag: previous?.etag ?? null,
-          lastModified: previous?.lastModified ?? null,
-        };
-      } else {
-        const parsed = parseUpdateManifest(response.body);
-        if (parsed.ok) {
-          outcome = {
-            document: pick(parsed.manifest, ids),
-            error: null,
-          };
-          validators = {
-            etag: response.etag,
-            lastModified: response.lastModified,
-          };
-        } else {
-          outcome = {
-            document: previous?.document ?? null,
-            error: {
-              code:
-                parsed.reason === "unsupported_schema"
-                  ? "unsupported_schema"
-                  : "invalid_manifest",
-              detail: parsed.error.slice(0, MAX_ERROR_DETAIL),
-            },
-          };
-        }
-      }
-    } catch (error) {
-      outcome = { document: previous?.document ?? null, error: errorOf(error) };
-    }
-
-    outcomes.set(url, outcome);
-
-    if (outcome.error === null) {
-      const values = {
-        document: outcome.document,
-        etag: validators?.etag ?? null,
-        lastAttemptAt: now,
-        lastError: null,
-        lastModified: validators?.lastModified ?? null,
-        lastSuccessAt: now,
-      };
-      await db
-        .insert(core_update_sources)
-        .values({ url, ...values })
-        .onConflictDoUpdate({ set: values, target: core_update_sources.url });
-    } else {
-      await db
-        .insert(core_update_sources)
-        .values({ lastAttemptAt: now, lastError: outcome.error, url })
-        .onConflictDoUpdate({
-          set: { lastAttemptAt: now, lastError: outcome.error },
-          target: core_update_sources.url,
-        });
-    }
-  });
-
   const summary: UpdateCheckSummary = {
     securityUpdates: 0,
     components: checked.length,
-    failedSources: [...outcomes.values()].filter(
-      outcome => outcome.error !== null,
-    ).length,
+    failedSources: 0,
     sources: urls.length,
     updates: 0,
   };
 
-  for (const component of checked) {
-    const outcome = outcomes.get(component.sourceUrl);
-    if (outcome === undefined) continue;
+  await mapLimited(
+    urls,
+    SOURCE_CONCURRENCY,
+    lease.signal,
+    async (url, signal) => {
+      const previous = stored.get(url);
+      const members = bySource.get(url) ?? [];
+      const ids = members.map(component => component.id);
+      // A 304 can only stand in for a copy that is stored and still covers every
+      // package asked about now; otherwise ask for the full document.
+      const reusable =
+        previous?.document !== null &&
+        previous?.document !== undefined &&
+        ids.every(id => Object.hasOwn(previous.document?.packages ?? {}, id))
+          ? previous.document
+          : null;
 
-    if (outcome.error !== null) {
-      // The failure is recorded; what was found before - and the versions it
-      // was found for - stays exactly as it was.
-      await db
-        .insert(core_update_results)
-        .values({
-          channel: null,
-          componentId: component.id,
-          coreVersion,
-          hasUnknownVersion: component.hasUnknownVersion,
-          lastAttemptAt: now,
-          lastError: outcome.error,
-          result: null,
-          sourceUrl: component.sourceUrl,
-          versions: component.versions,
-        })
-        .onConflictDoUpdate({
-          set: { lastAttemptAt: now, lastError: outcome.error },
-          target: core_update_results.componentId,
+      let outcome: SourceOutcome;
+      let validators: null | {
+        etag: null | string;
+        lastModified: null | string;
+      } = null;
+      try {
+        const response = await fetchSource(url, {
+          signal,
+          validators:
+            reusable === null || (!previous?.etag && !previous?.lastModified)
+              ? null
+              : {
+                  etag: previous?.etag ?? null,
+                  lastModified: previous?.lastModified ?? null,
+                },
         });
-      continue;
-    }
 
-    const result = evaluateUpdate({
-      channelOverride,
-      coreVersion,
-      entry: outcome.document.packages[component.id],
-      installed: component,
-      isCore: component.kind === "core",
-    });
-    summary.securityUpdates += result.securityUpdates.length;
-    if (result.status === "update_available") summary.updates += 1;
+        if (response.kind === "not_modified") {
+          outcome =
+            reusable === null
+              ? {
+                  document: previous?.document ?? null,
+                  error: { code: "http_error", detail: "unexpected 304" },
+                }
+              : { document: reusable, error: null };
+          validators = {
+            etag: previous?.etag ?? null,
+            lastModified: previous?.lastModified ?? null,
+          };
+        } else {
+          const parsed = parseUpdateManifest(response.body);
+          if (parsed.ok) {
+            outcome = {
+              document: pick(parsed.manifest, ids),
+              error: null,
+            };
+            validators = {
+              etag: response.etag,
+              lastModified: response.lastModified,
+            };
+          } else {
+            outcome = {
+              document: previous?.document ?? null,
+              error: {
+                code:
+                  parsed.reason === "unsupported_schema"
+                    ? "unsupported_schema"
+                    : "invalid_manifest",
+                detail: parsed.error.slice(0, MAX_ERROR_DETAIL),
+              },
+            };
+          }
+        }
+      } catch (error) {
+        // Cancelled, not failed: nothing about this source is recorded.
+        signal.throwIfAborted();
+        outcome = {
+          document: previous?.document ?? null,
+          error: errorOf(error),
+        };
+      }
 
-    const values = {
-      channel: result.channel,
-      coreVersion,
-      hasUnknownVersion: component.hasUnknownVersion,
-      lastAttemptAt: now,
-      lastError: null,
-      lastSuccessAt: now,
-      result,
-      sourceUrl: component.sourceUrl,
-      versions: component.versions,
-    };
-    await db
-      .insert(core_update_results)
-      .values({ componentId: component.id, ...values })
-      .onConflictDoUpdate({
-        set: values,
-        target: core_update_results.componentId,
+      signal.throwIfAborted();
+      const { document, error } = outcome;
+      const evaluated =
+        error === null
+          ? members.map(component => ({
+              component,
+              result: evaluateUpdate({
+                channelOverride,
+                coreVersion,
+                entry: document.packages[component.id],
+                installed: component,
+                isCore: component.kind === "core",
+              }),
+            }))
+          : [];
+
+      // The source and every result computed from it commit together, or not at all.
+      await write(signal, async tx => {
+        if (error === null) {
+          const values = {
+            document,
+            etag: validators?.etag ?? null,
+            lastAttemptAt: now,
+            lastError: null,
+            lastModified: validators?.lastModified ?? null,
+            lastSuccessAt: now,
+          };
+          await tx
+            .insert(core_update_sources)
+            .values({ url, ...values })
+            .onConflictDoUpdate({
+              set: values,
+              target: core_update_sources.url,
+            });
+        } else {
+          await tx
+            .insert(core_update_sources)
+            .values({ lastAttemptAt: now, lastError: error, url })
+            .onConflictDoUpdate({
+              set: { lastAttemptAt: now, lastError: error },
+              target: core_update_sources.url,
+            });
+
+          // The failure is recorded; what was found before - and the versions it
+          // was found for - stays exactly as it was.
+          for (const component of members) {
+            await tx
+              .insert(core_update_results)
+              .values({
+                channel: null,
+                componentId: component.id,
+                coreVersion,
+                hasUnknownVersion: component.hasUnknownVersion,
+                lastAttemptAt: now,
+                lastError: error,
+                result: null,
+                sourceUrl: component.sourceUrl,
+                versions: component.versions,
+              })
+              .onConflictDoUpdate({
+                set: { lastAttemptAt: now, lastError: error },
+                target: core_update_results.componentId,
+              });
+          }
+        }
+
+        for (const { component, result } of evaluated) {
+          const values = {
+            channel: result.channel,
+            coreVersion,
+            hasUnknownVersion: component.hasUnknownVersion,
+            lastAttemptAt: now,
+            lastError: null,
+            lastSuccessAt: now,
+            result,
+            sourceUrl: component.sourceUrl,
+            versions: component.versions,
+          };
+          await tx
+            .insert(core_update_results)
+            .values({ componentId: component.id, ...values })
+            .onConflictDoUpdate({
+              set: values,
+              target: core_update_results.componentId,
+            });
+        }
       });
-  }
+
+      // Counted only once stored, never for work this run could not commit.
+      if (error !== null) summary.failedSources += 1;
+      for (const { result } of evaluated) {
+        summary.securityUpdates += result.securityUpdates.length;
+        if (result.status === "update_available") summary.updates += 1;
+      }
+    },
+  );
 
   // Removed plugins, and plugins that dropped their update source, leave no
   // result behind; neither does a source nothing points to any more.
   const checkedIds = checked.map(component => component.id);
-  await db
-    .delete(core_update_results)
-    .where(
-      checkedIds.length === 0
-        ? undefined
-        : notInArray(core_update_results.componentId, checkedIds),
-    );
-  await db
-    .delete(core_update_sources)
-    .where(
-      urls.length === 0 ? undefined : notInArray(core_update_sources.url, urls),
-    );
+  await write(lease.signal, async tx => {
+    await tx
+      .delete(core_update_results)
+      .where(
+        checkedIds.length === 0
+          ? undefined
+          : notInArray(core_update_results.componentId, checkedIds),
+      );
+    await tx
+      .delete(core_update_sources)
+      .where(
+        urls.length === 0
+          ? undefined
+          : notInArray(core_update_sources.url, urls),
+      );
+  });
 
   return summary;
 };
@@ -321,19 +393,23 @@ export type LockedUpdateCheck =
       retryAfterSeconds: number;
       status: "busy";
     }
-  | { status: "completed"; summary: UpdateCheckSummary };
+  | { status: "completed"; summary: UpdateCheckSummary }
+  /** The lease could not be confirmed mid-check, so the check stopped. What it committed before stays; nothing after. */
+  | { status: "lease_lost" };
 
-/** Takes the shared lease, runs the check and always gives the lease back. */
+/**
+ * The whole lease lifecycle, the same for the cron job and the button: take
+ * the lease, keep renewing it, check, stop the heartbeat and wait for it, then
+ * give the lease back - which only happens while it is still this run's.
+ */
 export const runLockedUpdateCheck = async ({
   manual,
   ...options
-}: Parameters<typeof checkForUpdates>[0] & {
+}: Omit<Parameters<typeof checkForUpdates>[0], "lease"> & {
   manual: boolean;
 }): Promise<LockedUpdateCheck> => {
-  const lease = await acquireUpdateCheckLease(options.db, {
-    manual,
-    now: options.now,
-  });
+  const confirmedAt = Date.now();
+  const lease = await acquireUpdateCheckLease(options.db, { manual });
   if (!lease.acquired) {
     return {
       reason: lease.reason,
@@ -342,9 +418,28 @@ export const runLockedUpdateCheck = async ({
     };
   }
 
+  const heartbeat = startUpdateCheckHeartbeat({
+    confirmedAt,
+    db: options.db,
+    owner: lease.owner,
+  });
   try {
-    return { status: "completed", summary: await checkForUpdates(options) };
+    return {
+      status: "completed",
+      summary: await checkForUpdates({
+        ...options,
+        lease: { owner: lease.owner, signal: heartbeat.signal },
+      }),
+    };
+  } catch (error) {
+    if (error instanceof UpdateCheckLeaseLostError) {
+      return { status: "lease_lost" };
+    }
+    throw error;
   } finally {
-    await releaseUpdateCheckLease(options.db, lease.owner);
+    await heartbeat.stop();
+    // A failure here must not hide the check's own outcome; an unreleased lease
+    // simply runs out within UPDATE_CHECK_LEASE_MS.
+    await releaseUpdateCheckLease(options.db, lease.owner).catch(() => false);
   }
 };

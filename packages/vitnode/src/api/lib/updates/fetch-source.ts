@@ -183,7 +183,11 @@ const readCapped = async (
 const transportFailure = (
   error: unknown,
   signal: AbortSignal,
-): UpdateSourceError => {
+  cancel: AbortSignal | undefined,
+): unknown => {
+  // The caller gave up on the check - not something the publisher did, so the
+  // caller's own reason goes back instead of a failure it would record.
+  if (cancel?.aborted) return cancel.reason;
   if (error instanceof UpdateSourceError) return error;
   if (signal.aborted) return new UpdateSourceError("timeout");
   if (
@@ -211,6 +215,8 @@ export interface FetchUpdateSourceOptions {
   maxBytes?: number;
   maxRedirects?: number;
   resolveHost?: ResolveUpdateHost;
+  /** Aborting it stops the request and rejects with the signal's own reason, never an {@link UpdateSourceError}. */
+  signal?: AbortSignal;
   timeoutMs?: number;
   transport?: UpdateSourceTransport;
   /** Sent as `If-None-Match` / `If-Modified-Since`. Only pass them when a validated copy is stored. */
@@ -223,12 +229,16 @@ export const fetchUpdateSource = async (
     maxBytes = UPDATE_SOURCE_MAX_BYTES,
     maxRedirects = DEFAULT_MAX_REDIRECTS,
     resolveHost = resolveHostAddresses,
+    signal: cancel,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     transport = httpsUpdateSourceTransport,
     validators = null,
   }: FetchUpdateSourceOptions = {},
 ): Promise<UpdateSourceFetchResult> => {
-  const signal = AbortSignal.timeout(timeoutMs);
+  cancel?.throwIfAborted();
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const signal =
+    cancel === undefined ? timeout : AbortSignal.any([timeout, cancel]);
   const headers: Record<string, string> = {
     accept: "application/json",
     "user-agent": "VitNode update check",
@@ -242,7 +252,7 @@ export const fetchUpdateSource = async (
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     await assertFetchableUrl(url, resolveHost);
-    if (signal.aborted) throw new UpdateSourceError("timeout");
+    if (signal.aborted) throw transportFailure(null, signal, cancel);
 
     let response: UpdateSourceTransportResponse;
     try {
@@ -252,7 +262,7 @@ export const fetchUpdateSource = async (
         signal,
       });
     } catch (error) {
-      throw transportFailure(error, signal);
+      throw transportFailure(error, signal, cancel);
     }
 
     if (response.status === 304) {
@@ -291,7 +301,7 @@ export const fetchUpdateSource = async (
       bytes = await readCapped(response.body, maxBytes);
     } catch (error) {
       response.destroy();
-      throw transportFailure(error, signal);
+      throw transportFailure(error, signal, cancel);
     }
 
     let body: unknown;

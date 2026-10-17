@@ -28,6 +28,12 @@ import type { AdminNavItem, AdminNavSubItem } from "./nav-model";
 
 import { AdminLink } from "../../admin-link";
 import { navItemActivity } from "./nav-active";
+import {
+  NavBadge,
+  NavBadgeDot,
+  sumAdminNavBadges,
+  useAdminNavBadges,
+} from "./nav-badges";
 
 export interface ItemNavAdminContentProps extends AdminNavItem {
   pathname: string;
@@ -52,6 +58,7 @@ export const ItemNavAdminContent = ({
     href,
     items,
   });
+  const badges = useAdminNavBadges();
 
   const [open, setOpen] = useState(hasActiveChild);
 
@@ -66,12 +73,31 @@ export const ItemNavAdminContent = ({
     if (isMobile) toggleSidebar();
   };
 
+  const isIconOnly = state === "collapsed" && !isMobile;
+  // A parent stands in for its sub-items' badges while they are out of sight.
+  const badge = items.length
+    ? isIconOnly || !open
+      ? sumAdminNavBadges(
+          badges,
+          items.map(item => item.href),
+        )
+      : undefined
+    : badges[href];
+
   const content = (
     <>
-      {icon ?? <MenuIcon />}
+      {isIconOnly && badge ? (
+        <span className="relative flex shrink-0 [&>svg]:size-4">
+          {icon ?? <MenuIcon />}
+          <NavBadgeDot badge={badge} />
+        </span>
+      ) : (
+        (icon ?? <MenuIcon />)
+      )}
       <span className="min-w-0 truncate" title={title}>
         {title}
       </span>
+      {isIconOnly ? null : <NavBadge badge={badge} />}
     </>
   );
 
@@ -95,7 +121,7 @@ export const ItemNavAdminContent = ({
     );
   }
 
-  if (state === "collapsed" && !isMobile) {
+  if (isIconOnly) {
     return (
       <SidebarMenuItem>
         <DropdownMenu>
@@ -126,6 +152,7 @@ export const ItemNavAdminContent = ({
                 }
               >
                 {item.title}
+                <NavBadge badge={badges[item.href]} />
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -150,7 +177,12 @@ export const ItemNavAdminContent = ({
         }
       >
         {content}
-        <ChevronRight className="ml-auto transition-transform duration-200 group-data-panel-open/collapsible:rotate-90" />
+        <ChevronRight
+          className={cn(
+            "transition-transform duration-200 group-data-panel-open/collapsible:rotate-90",
+            !badge && "ms-auto",
+          )}
+        />
       </CollapsibleTrigger>
 
       <CollapsibleContent
@@ -174,6 +206,7 @@ export const ItemNavAdminContent = ({
                 <span className="min-w-0 truncate" title={item.title}>
                   {item.title}
                 </span>
+                <NavBadge badge={badges[item.href]} />
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
           ))}

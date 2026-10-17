@@ -1,0 +1,61 @@
+---
+title: How update checks share one lease
+description: How VitNode keeps the daily and manual update checks exclusive across API instances with a renewable database lease, cancels a check that loses it, and fences every write so a stale owner cannot overwrite newer results.
+icon: Lock
+---
+
+Every update check - the daily cron job and the **Check for updates** button - runs through one function, `runLockedUpdateCheck` in `@vitnode/core`. It takes a database lease first, so only one check runs at a time across all API instances. This page explains how that lease is kept, what happens when it is lost, and why an old owner can never write after a new one took over.
+
+## The lease lifecycle
+
+The lease is the single row `check` in `core_update_lock`. A check always goes through these steps, in order:
+
+1. **Acquire** the lease for 5 minutes. A manual check must also be past the two-minute cooldown, stamped in the same transaction.
+2. **Start the heartbeat**, which renews the lease about once a minute.
+3. **Run the check.**
+4. **Stop the heartbeat** and wait for a renewal that is still on its way.
+5. **Release** the lease, but only if it still belongs to this run.
+
+The heartbeat never overlaps itself: the next renewal is scheduled only after the previous one answered. A renewal only succeeds for the current owner while its lease has not expired, so an owner that let its lease run out cannot bring it back.
+
+All expiry decisions use the database clock (`clock_timestamp()` in UTC), never the API server's. Two instances with skewed clocks still agree on who holds the lease.
+
+## Recovery after a crash
+
+An instance that dies mid-check stops renewing. Its lease runs out at most five minutes after its last renewal, and the next daily run or manual check takes it over. The crashed owner cannot release, renew or write after that, even if it comes back to life.
+
+## Cancellation after the lease is lost
+
+The heartbeat aborts the check's `AbortSignal` with an `UpdateCheckLeaseLostError` when ownership cannot be confirmed:
+
+- a renewal answers that the lease is gone,
+- a renewal fails, for example because the database is unreachable,
+- or no renewal confirmed the lease before it could have expired.
+
+The signal reaches `fetchUpdateSource`. Requests in flight are aborted, queued sources never start, and nothing more is evaluated or stored. A cancelled request is not a publisher failure: the source keeps its last valid document and no error is recorded for it. Every started request is awaited before the check returns, and the heartbeat timers are cleared.
+
+`runLockedUpdateCheck` then returns `{ status: "lease_lost" }`. The cron job logs a warning, and `POST /api/@vitnode/core/admin/plugins/updates/check` answers `409` with `"status": "interrupted"`.
+
+## Fenced writes
+
+Renewing alone is not enough. A process paused by a long garbage collection or a slow network can wake up after its lease expired and another instance took over. Every write a check makes therefore goes through `withUpdateCheckLease`:
+
+```ts title="packages/vitnode/src/api/lib/updates/check.ts"
+await withUpdateCheckLease(db, lease.owner, async tx => {
+  // write the source document and the results computed from it
+});
+```
+
+It opens a short transaction, takes `pg_advisory_xact_lock` on the lease name, locks the lease row with `SELECT ... FOR UPDATE`, and checks that the owner matches and the lease has not expired by the database clock. Only then does it run the writes, and it commits while still holding both locks. Otherwise it throws `UpdateCheckLeaseLostError` and writes nothing.
+
+Acquire, renew and release take the same two locks. So a new owner cannot take the lease between an old owner's ownership check and its commit: the takeover waits for that transaction, and the old owner's next write sees the new owner and is refused. This covers the source documents and HTTP validators, the results, recorded failures and the clean-up of removed plugins.
+
+The row lock also holds off an instance still running the previous release during a rolling deploy, since its lease statement locks the same row.
+
+<Callout type="warn" title="Never hold the fence around a network request">
+  `withUpdateCheckLease` holds the lease lock until the callback returns. Fetch first, then write. A check writes one transaction per source - the source and its results commit together - and one more for the clean-up.
+</Callout>
+
+## The summary behind the AdminCP alerts
+
+`GET /api/@vitnode/core/admin/plugins/updates/summary` feeds the [navigation count, security banner and dashboard widget](/docs/dev/updates/alerts). It needs `plugins.can_view` and reads stored results only - the same `loadUpdatesOverview` the catalog uses, condensed by `summarizeUpdates`. Core and each plugin count as one component. `oldestSuccessAt` is the oldest successful result among packages with an update source, and `null` while any of them has none. The web app reads it through one shared query, `useAdminUpdateSummary`.

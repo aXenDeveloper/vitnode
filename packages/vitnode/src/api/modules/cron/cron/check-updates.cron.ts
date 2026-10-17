@@ -13,6 +13,16 @@ export const checkUpdatesCron = buildCron({
 
     const outcome = await runUpdateCheckFor(c, { manual: false });
 
+    if (outcome.status === "lease_lost") {
+      await c
+        .get("log")
+        .warn(
+          "Update check stopped: this instance could not confirm it still holds the update check lease. Results stored before that are kept; the next run checks again.",
+        );
+
+      return;
+    }
+
     if (outcome.status !== "completed") {
       // Someone pressed "Check for updates" a moment ago; that run covers this one.
       return;

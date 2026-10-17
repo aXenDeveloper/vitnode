@@ -5,10 +5,13 @@
   "pages": [
     "index",
     "admin",
+    "alerts",
     "---Publish updates---",
     "plugin-authors",
     "manifest",
     "security-updates",
-    "official-releases"
+    "official-releases",
+    "---How it works---",
+    "lease"
   ]
 }

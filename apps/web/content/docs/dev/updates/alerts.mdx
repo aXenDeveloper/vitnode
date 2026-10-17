@@ -1,0 +1,80 @@
+---
+title: Update alerts in the AdminCP
+description: The update count next to System → Plugins, the security banner on every AdminCP page and the System updates dashboard widget - what each number means, how fresh it is and who sees it.
+icon: BellRing
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+
+import updateAlerts from './admin-update-alerts.webp'
+
+You do not have to open **System → Plugins** to notice an update. VitNode shows the results of the [update checks](/docs/dev/updates/admin) in three more places across the AdminCP: a count in the navigation, a security banner and a dashboard widget. All three read the results already stored by the last check. Opening them never contacts a publisher and never starts a check.
+
+<ImgDocs
+  src={updateAlerts}
+  alt="AdminCP dashboard: a red banner reads Security updates affect 1 component with a Review updates link, the System item in the sidebar shows a count of 2, and the System updates widget shows core 2.0.0-canary.13 with 2.0.0-canary.14 available, 1 plugin update and 1 package affected by security updates"
+  withoutBackground
+/>
+
+The versions and the security update in the screenshot are illustrative demo data.
+
+## Who sees the alerts
+
+Staff with **Plugins → View installed plugins and their versions** (`plugins.can_view`) see all three. Everyone else sees none of them, and their browser never asks for the data. Running a check still needs `plugins.can_check_updates` and stays a button on the Plugins page.
+
+## The count next to System → Plugins
+
+A number next to **System → Plugins** tells you how many packages have a newer release on their channel. Core counts as one package and every plugin counts once, even when its API and web app are registered separately. It is the same number of _Update available_ rows the Plugins page shows.
+
+- The count only appears when it is above zero. While the data loads, or if it cannot be loaded, the menu looks exactly as before.
+- Security updates do not add to the count. They have their own banner.
+- When the **System** group is folded, the count moves to the **System** item. In the collapsed icon sidebar a small dot marks the icon, and the count sits next to **Plugins** in the menu that opens.
+
+## The security banner
+
+When a security update affects something you run, a red line appears at the top of every AdminCP page:
+
+> Security updates affect 2 components. **Review updates**
+
+**Review updates** opens System → Plugins, where each affected row names the security update and its fix. Each component counts once, however many security updates match it. The banner has no close button on purpose: it disappears on its own once no evaluated finding applies to what you run - after you upgrade and redeploy, or after a check finds the publisher changed the affected range.
+
+A publisher that cannot be reached never clears a warning. VitNode keeps the last known findings and adds _Based on the last known results_ to the banner, so an outage at the publisher never looks like a fix.
+
+## The System updates widget
+
+The **System updates** widget is on the dashboard by default for staff who can view plugins. You can remove it or add it back from **Edit layout**, like any other widget. It shows:
+
+| Field                        | Meaning                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| VitNode core                 | The core version you run, and the newer core release on your channel when one is known.         |
+| Plugin updates               | Plugins with a newer release on their channel. Core is not included here.                       |
+| Affected by security updates | Packages, core included, that a security update affects.                                         |
+
+Before anything was checked, the numbers show a dash and _Unknown_ instead of `0`. _Everything is up to date._ only appears when every installed package was checked, none has an update or a security warning, and no check failed. Otherwise the widget says how many packages could not be confirmed, for example because they declare no update source.
+
+### Freshness labels
+
+The first line of the widget says how far you can trust the numbers:
+
+| Label                                               | What it means                                                                                                  |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Every update source checked successfully 3 hours ago | The oldest stored result is that recent, so every package was checked at least that recently.                  |
+| Checking for updates now...                         | A check is running. The widget, the count and the banner refresh every 15 seconds until it finishes.          |
+| The check 5 minutes ago failed for 1 package        | A source could not be read. The numbers include the last known results for it.                                 |
+| Not checked for this deployment yet                 | You redeployed, upgraded core or changed channel. Results are recomputed from the stored manifests until the next check. |
+| Not checked yet                                     | No check has run. The daily check runs overnight, or press **Check for updates** on the Plugins page.          |
+| Update checks are turned off for this installation. | The API config sets `updates.enabled` to `false`.                                                              |
+
+The time is the **oldest** successful result, not the newest. One package checked a minute ago does not prove the others were.
+
+## When update checks are turned off
+
+With `updates: { enabled: false }` in the API config, nothing is checked. The navigation count and the banner stay hidden, and the widget only says that checks are turned off. Nothing stored earlier is shown as current.
+
+## How fresh the alerts are
+
+The alerts share one request per browser tab. It is refreshed when it is older than a minute and you come back to the tab, after **Check for updates** finishes, and every 15 seconds while a check is running. There is no other polling.
+
+## Check the result
+
+Press **Check for updates** on **System → Plugins**. When it finishes, the count next to **Plugins**, the banner and the widget update together without reloading the page.

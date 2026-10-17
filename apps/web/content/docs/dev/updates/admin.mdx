@@ -32,11 +32,13 @@ Each run fetches every distinct manifest once, even when several plugins share i
 
 Staff with **Plugins → Check for plugin and core updates now** (`plugins.can_check_updates`) see a **Check for updates** button. It runs the same check as the cron job and refreshes the page when it finishes.
 
-- Only one check runs at a time across all API instances. A second click while one runs says _A check is already running_.
+- Only one check runs at a time across all API instances, and the daily check shares the same lease. A second click while one runs says _A check is already running_.
+- A long check keeps its lease by renewing it every minute. If an API instance crashes mid-check, its lease runs out within five minutes and the next check takes over.
+- If the server running a check can no longer confirm it holds the lease, the check stops and says _The check stopped before it finished_. Results stored before that are kept; press the button again a moment later.
 - A manual check can run once every two minutes. A click inside that window says how many seconds to wait.
-- The endpoint is `POST /api/@vitnode/core/admin/plugins/updates/check`; it answers `409` while a check runs and `429` during the cooldown.
+- The endpoint is `POST /api/@vitnode/core/admin/plugins/updates/check`. It answers `409` while a check runs (`"status": "running"`) or when the check was interrupted (`"status": "interrupted"`), and `429` during the cooldown.
 
-Viewing the results only needs **Plugins → View installed plugins and their versions** (`plugins.can_view`).
+Viewing the results only needs **Plugins → View installed plugins and their versions** (`plugins.can_view`). The same permission shows the [update count, security banner and System updates widget](/docs/dev/updates/alerts) everywhere else in the AdminCP. How the lease keeps checks exclusive is explained in [How update checks share one lease](/docs/dev/updates/lease).
 
 ## Read the results
 

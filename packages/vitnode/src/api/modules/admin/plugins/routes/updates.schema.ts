@@ -69,3 +69,24 @@ export const serializeComponentUpdate = (
   lastAttemptAt: iso(state.lastAttemptAt),
   lastSuccessAt: iso(state.lastSuccessAt),
 });
+
+export const updatesSummarySchema = z.object({
+  enabled: z.boolean(),
+  running: z.boolean(),
+  totalComponents: z.number(),
+  checkedComponents: z.number(),
+  updatesAvailable: z.number(),
+  pluginUpdatesAvailable: z.number(),
+  affectedComponents: z.number(),
+  unconfirmedComponents: z.number(),
+  notCheckedComponents: z.number(),
+  failedComponents: z.number(),
+  stale: z.boolean(),
+  oldestSuccessAt: z.string().nullable(),
+  lastAttemptAt: z.string().nullable(),
+  core: z.object({
+    version: z.string().nullable(),
+    latestVersion: z.string().nullable(),
+    state: z.enum(["checked", "not_checked", "unavailable"]),
+  }),
+});

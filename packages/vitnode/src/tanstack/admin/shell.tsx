@@ -11,8 +11,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavSidebarAdminContent } from "@/views/admin/layouts/sidebar/nav/nav-content";
+import { AdminUpdateNavBadges } from "@/views/admin/layouts/sidebar/nav/update-nav-badges";
 import { SidebarAdminContent } from "@/views/admin/layouts/sidebar/sidebar-content";
 import { AdminSidebarToggle } from "@/views/admin/layouts/sidebar/sidebar-toggle";
+import { AdminUpdateSecurityBanner } from "@/views/admin/layouts/update-security-banner";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { RouteGuardPending } from "../pending/guard-pending";
@@ -77,7 +79,9 @@ const AdminShellFrame = ({
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <SidebarAdminContent userBar={<AdminUserBar />}>
-        <NavSidebarAdminContent nav={nav} pathname={pathname} />
+        <AdminUpdateNavBadges>
+          <NavSidebarAdminContent nav={nav} pathname={pathname} />
+        </AdminUpdateNavBadges>
       </SidebarAdminContent>
 
       <SidebarInset className="transition-[margin] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] [--admin-aside-width:clamp(18rem,26vw,24rem)] motion-reduce:transition-none md:has-data-[admin-aside=open]:me-[calc(var(--admin-aside-width)+1rem)]">
@@ -89,6 +93,8 @@ const AdminShellFrame = ({
             <AdminSearch onNavigate={onNavigate} searchUsers={searchUsers} />
           </div>
         </header>
+
+        <AdminUpdateSecurityBanner />
 
         {children}
       </SidebarInset>

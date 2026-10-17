@@ -4,7 +4,7 @@ import { buildRoute } from "@/api/builders";
 import { runUpdateCheckFor } from "@/api/lib/updates/context";
 
 const busySchema = z.object({
-  status: z.enum(["cooldown", "disabled", "running"]),
+  status: z.enum(["cooldown", "disabled", "interrupted", "running"]),
   retryAfterSeconds: z.number().nullable(),
 });
 
@@ -37,7 +37,8 @@ export const checkPluginUpdatesAdminRoute = buildRoute({
       403: { description: "Access Denied" },
       409: {
         content: { "application/json": { schema: busySchema } },
-        description: "A check is already running, or checks are turned off",
+        description:
+          "A check is already running, checks are turned off, or the check stopped because this instance lost its lease",
       },
       429: {
         content: { "application/json": { schema: busySchema } },
@@ -57,6 +58,13 @@ export const checkPluginUpdatesAdminRoute = buildRoute({
 
     if (outcome.status === "completed") {
       return c.json({ ...outcome.summary, status: "completed" as const }, 200);
+    }
+
+    if (outcome.status === "lease_lost") {
+      return c.json(
+        { retryAfterSeconds: null, status: "interrupted" as const },
+        409,
+      );
     }
 
     c.header("Retry-After", String(outcome.retryAfterSeconds));

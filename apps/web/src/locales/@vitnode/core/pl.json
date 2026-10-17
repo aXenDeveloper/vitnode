@@ -220,7 +220,35 @@
           "width": "Szerokość"
         },
         "status_clean": "Brak zmian",
-        "status_unsaved": "Niezapisane zmiany"
+        "status_unsaved": "Niezapisane zmiany",
+        "system-updates": {
+          "title": "Aktualizacje systemu",
+          "desc": "Wersja rdzenia, dostępne aktualizacje i ostrzeżenia bezpieczeństwa z zapisanych sprawdzeń aktualizacji.",
+          "core": {
+            "label": "Rdzeń VitNode",
+            "unknown": "Nowsza wersja nieznana",
+            "none": "Brak znanej nowszej wersji",
+            "available": "Dostępna wersja {version}"
+          },
+          "plugin_updates": "Aktualizacje wtyczek",
+          "affected": "Objęte aktualizacjami bezpieczeństwa",
+          "unknown": "Nieznane",
+          "up_to_date": "Wszystko jest aktualne.",
+          "unconfirmed": "Nie udało się potwierdzić aktualności {count, plural, one {# pakietu} other {# pakietów}} - szczegóły na stronie Wtyczki.",
+          "load_error": "Nie udało się wczytać podsumowania aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",
+          "view_plugins": "Zobacz wtyczki",
+          "freshness": {
+            "disabled": "Sprawdzanie aktualizacji jest wyłączone w tej instalacji.",
+            "running": "Trwa sprawdzanie aktualizacji...",
+            "not_checked": "Jeszcze nie sprawdzono. Codzienne sprawdzanie odbywa się w nocy; możesz też uruchomić je na stronie Wtyczki.",
+            "unavailable": "Żaden zainstalowany pakiet nie deklaruje źródła aktualizacji.",
+            "failed": "Ostatnie sprawdzenie nie powiodło się dla {count, plural, one {# pakietu} other {# pakietów}}. Pokazujemy ostatnie znane wyniki.",
+            "failed_at": "Sprawdzenie <date></date> nie powiodło się dla {count, plural, one {# pakietu} other {# pakietów}}. Pokazujemy ostatnie znane wyniki.",
+            "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki są przeliczane z zapisanych danych wydawców.",
+            "incomplete": "Jeszcze nie sprawdzono: {count, plural, one {# pakiet} few {# pakiety} other {# pakietów}}.",
+            "checked": "Wszystkie źródła aktualizacji sprawdzono pomyślnie <date></date>"
+          }
+        }
       }
     },
     "debug": {
@@ -458,6 +486,14 @@
         "tabs_closed": {
           "title": "Zaloguj się ponownie",
           "desc": "Wszystkie karty panelu administracyjnego zostały zamknięte, więc dla bezpieczeństwa wylogowaliśmy Cię."
+        }
+      },
+      "updates": {
+        "nav_badge": "{count, plural, one {# dostępna aktualizacja} few {# dostępne aktualizacje} other {# dostępnych aktualizacji}}",
+        "security_banner": {
+          "title": "Aktualizacje bezpieczeństwa dotyczą {count, plural, one {# komponentu} other {# komponentów}}.",
+          "last_known": "Na podstawie ostatnich znanych wyników - najnowsze sprawdzenie nie mogło ich potwierdzić.",
+          "review": "Przejrzyj aktualizacje"
         }
       }
     },
@@ -1045,6 +1081,10 @@
             "error": {
               "title": "Nie udało się rozpocząć sprawdzania",
               "desc": "API nie odpowiedziało. Spróbuj ponownie za chwilę."
+            },
+            "interrupted": {
+              "title": "Sprawdzanie zatrzymało się przed końcem",
+              "desc": "Ten serwer nie mógł potwierdzić, że nadal ma blokadę sprawdzania aktualizacji, więc przerwał pracę, zamiast ryzykować kolizję z innym sprawdzaniem. Zapisane wcześniej wyniki zostają - spróbuj ponownie za chwilę."
             }
           },
           "status": {

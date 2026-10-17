@@ -2662,6 +2662,34 @@
         "select": "Select {title}",
         "properties": {
           "title": "{title} properties"
+        },
+        "system-updates": {
+          "title": "System updates",
+          "desc": "Core version, available updates and security warnings from the stored update checks.",
+          "core": {
+            "label": "VitNode core",
+            "unknown": "Newer release unknown",
+            "none": "No newer release known",
+            "available": "{version} available"
+          },
+          "plugin_updates": "Plugin updates",
+          "affected": "Affected by security updates",
+          "unknown": "Unknown",
+          "up_to_date": "Everything is up to date.",
+          "unconfirmed": "{count, plural, one {# package} other {# packages}} could not be confirmed as up to date - the Plugins page says why.",
+          "load_error": "Could not load the update summary. The Plugins page still shows every result.",
+          "view_plugins": "View plugins",
+          "freshness": {
+            "disabled": "Update checks are turned off for this installation.",
+            "running": "Checking for updates now...",
+            "not_checked": "Not checked yet. The daily check runs overnight, or start one on the Plugins page.",
+            "unavailable": "No installed package declares an update source.",
+            "failed": "The last check failed for {count, plural, one {# package} other {# packages}}. Showing the last known results.",
+            "failed_at": "The check <date></date> failed for {count, plural, one {# package} other {# packages}}. Showing the last known results.",
+            "stale": "Not checked for this deployment yet - results are recomputed from stored publisher data.",
+            "incomplete": "{count, plural, one {# package has} other {# packages have}} not been checked yet.",
+            "checked": "Every update source checked successfully <date></date>"
+          }
         }
       }
     },
@@ -2720,6 +2748,14 @@
         "tabs_closed": {
           "title": "Please sign in again",
           "desc": "All AdminCP tabs were closed, so we signed you out to keep your account safe."
+        }
+      },
+      "updates": {
+        "nav_badge": "{count, plural, one {# update available} other {# updates available}}",
+        "security_banner": {
+          "title": "Security updates affect {count, plural, one {# component} other {# components}}.",
+          "last_known": "Based on the last known results - the latest check could not confirm them.",
+          "review": "Review updates"
         }
       }
     },
@@ -3791,6 +3827,10 @@
             "error": {
               "title": "The check could not be started",
               "desc": "The API did not answer. Try again in a moment."
+            },
+            "interrupted": {
+              "title": "The check stopped before it finished",
+              "desc": "This server could not confirm it still holds the update check lease, so it stopped instead of risking a clash with another check. Results stored before that are kept - try again in a moment."
             }
           },
           "status": {
