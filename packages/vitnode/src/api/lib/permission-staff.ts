@@ -40,9 +40,10 @@ export type PermissionStaffModules = Record<string, PermissionStaffEntry[]>;
  * The staff permissions a plugin declares in `buildApiPlugin({ permissionStaff })`,
  * grouped by staff type and then by module.
  *
- * Core adds `can_view`/`can_create`/`can_edit`/`can_delete` for each content
- * type and container collection, unless the plugin declares that module
- * itself. Enforce an admin permission with `adminStaffPermission` in
+ * Core adds the generated content permissions (at least
+ * `can_view`/`can_create`/`can_edit`/`can_delete`) for each content type and
+ * container collection, plus report-target permissions, unless the plugin
+ * declares that module itself. Enforce an admin permission with `adminStaffPermission` in
  * `buildRoute`, or any permission with `assertStaffPermission`.
  *
  * @example

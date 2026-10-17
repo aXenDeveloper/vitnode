@@ -40,11 +40,15 @@ export class NotificationsModel {
 
   /**
    * Stores a notification event and queues delivery to its recipients. With
-   * recipients, delivery also starts right after the response is sent; the
-   * queue worker covers anything that does not finish then.
+   * recipients, delivery also starts once the handler returns, without
+   * delaying the response; the queue worker covers anything that does not
+   * finish then. Invalid recipient ids (and the actor, unless `allowSelf`) are
+   * dropped silently.
    *
-   * @throws NotificationPublishError When the type is not registered, `data`
-   * fails the schema, or the key, subject or recipients are invalid.
+   * @throws NotificationPublishError When the type is not registered or passed
+   * as a definition other than the registered one, `data` fails the schema,
+   * the idempotency key or subject is invalid, there are more than 100000
+   * recipients, or the same event is being published concurrently.
    *
    * @example
    * ```ts

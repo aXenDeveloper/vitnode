@@ -45,10 +45,11 @@ export const readRequestHost: LocaleHostReader = createIsomorphicFn()
   .client(() => browserHostOf(globalThis.location));
 
 /**
- * The locale a request renders in, from its public pathname (the locale
- * prefix), the host (a locale's own domain) and, where neither decides, the
- * locale cookie. Universal: reads the request on the server and
- * `document`/`location` in the browser.
+ * The locale a request renders in. On a public path: the locale prefix, else
+ * the host's domain default, else the default locale. Only on paths without a
+ * locale (`/admin`, `/api`) do the locale cookie and `Accept-Language` decide.
+ * Universal: reads the request on the server and `document`/`location` in the
+ * browser.
  *
  * @throws When `configureIntl` has not run yet.
  */

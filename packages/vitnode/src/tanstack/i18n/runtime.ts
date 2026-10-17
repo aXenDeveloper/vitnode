@@ -30,7 +30,10 @@ export type HostIntlProvider = React.ComponentType<{
 }>;
 
 export interface ConfigureIntlOptions {
-  /** Called from every client and server render that needs messages. */
+  /**
+   * The TanStack Query fetcher for messages, run on the server and in the
+   * browser when a locale and namespace set is not cached yet.
+   */
   fetchMessages: IntlMessagesFetcher;
   /** The host's own `IntlProvider`. See {@link HostIntlProvider}. */
   hostIntlProvider?: HostIntlProvider;

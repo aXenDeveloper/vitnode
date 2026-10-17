@@ -12,8 +12,9 @@ import { authTransport } from "./transport";
 const SESSION_STALE_TIME = 30_000;
 
 /**
- * The current visitor's session as a TanStack Query: user (or `null`),
- * permissions-relevant flags and session data. Fresh for 30 seconds, never
+ * The current visitor's session as a TanStack Query: `{ user }`, the signed-in
+ * user (with `isAdmin`, `isModerator` and notification state) or `null` for a
+ * guest. Fresh for 30 seconds, never
  * retried. Use it to warm the session in a loader; read it in components with
  * {@link useSessionQuery}.
  */

@@ -33,7 +33,7 @@ interface EmailModelSendArgsWithEmail {
 export interface EmailApiPlugin {
   /**
    * Sends one rendered email. Throw to fail the send: an email sent through
-   * `EmailModel.send` is retried by its queue task. `idempotencyKey`, when a
+   * `EmailModel.send` is retried by its queue task when that task runs. `idempotencyKey`, when a
    * caller of `deliver` passes one, should reach providers that support it.
    */
   sendEmail: (args: {
@@ -191,8 +191,10 @@ export class EmailModel {
   }
 
   /**
-   * Renders the email now and sends it in the background, through the
-   * `send-email` queue task - the request does not wait for the provider.
+   * Renders the email now and dispatches a `send-email` queue task - the
+   * request does not wait for the provider. The task is queued under the
+   * request's plugin (`c.get("plugin")`); core registers the `send-email`
+   * handler under `@vitnode/core`.
    *
    * @throws `HTTPException(500)` when no email adapter is configured, and
    * `HTTPException(400)` when there is no recipient address.

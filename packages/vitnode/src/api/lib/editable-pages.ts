@@ -22,8 +22,9 @@ export interface RegisteredEditablePage {
 
 /**
  * Thrown at API startup when an editable page is misconfigured: no
- * `permission`, a duplicate page id, or a permission no installed plugin
- * declares.
+ * `permission`, a duplicate page id, or a permission its owning plugin
+ * (`permission.plugin`, defaulting to the registering plugin) does not
+ * declare in `permissionStaff.moderator`.
  */
 export class EditablePageRegistryError extends Error {
   constructor(message: string) {
@@ -84,7 +85,8 @@ export const validateEditablePages = (
 
 /**
  * Checks, once every plugin is loaded, that each page's moderator permission is
- * declared in some plugin's `permissionStaff.moderator`.
+ * declared in its owning plugin's `permissionStaff.moderator` (`permission.plugin`,
+ * defaulting to the plugin that registers the page).
  *
  * @throws {EditablePageRegistryError} When the owning plugin is not installed
  * or does not declare the permission.

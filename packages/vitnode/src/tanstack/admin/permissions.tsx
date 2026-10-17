@@ -30,7 +30,7 @@ export const AdminPermissionsProvider = ({
   );
 };
 
-/** The AdminCP access state: granted with a session, or why not. Suspends until known. */
+/** The AdminCP access state: `granted` with the admin session, or `denied`. Suspends until known. */
 export const useAdminAccess = (): AdminAccessState =>
   useAdminSessionQuery().data;
 

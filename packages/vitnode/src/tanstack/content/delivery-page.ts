@@ -14,7 +14,7 @@ export interface ContentDeliveryPageAlternate {
 
 /** The SEO data a Content Engine delivery answer carries for one page. */
 export interface ContentDeliveryPageMetadata {
-  /** The page in every other locale it is published in. */
+  /** The page in every locale it is published in, the current one included. */
   alternates: readonly ContentDeliveryPageAlternate[];
   canonicalInternalPath: null | string;
   /** The locale the content was resolved in, which may be a fallback locale. */

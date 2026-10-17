@@ -101,7 +101,7 @@ interface AiActionDefinitionBase<
   permission: AiPermissionDescriptor | string;
   /** Whole number of 1 or more, stored with every run. Bump it when the prompt changes meaningfully. */
   promptVersion: number;
-  /** Model capabilities the action needs; at least `"text"`, plus `"structured-output"` for `output: "object"`. */
+  /** Model capabilities the action needs: at least one (normally `"text"`), plus `"structured-output"` for `output: "object"`. */
   requiredCapabilities: readonly AiModelCapability[];
   /** Message key of a short name for the AdminCP and member settings. */
   title: string;
