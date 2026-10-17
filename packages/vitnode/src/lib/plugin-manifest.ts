@@ -4,6 +4,7 @@ import { updateSourceUrlProblem } from "./updates/source-url";
 export interface PluginInfo {
   icon?: string;
   title?: string;
+  updates?: PluginUpdateSource;
 }
 
 export interface PluginAuthor {
@@ -12,7 +13,6 @@ export interface PluginAuthor {
   url: null | string;
 }
 
-/** `vitnode.updates` in a plugin's package.json: where its public update manifest lives. */
 export interface PluginUpdateSource {
   url: string;
 }
@@ -55,7 +55,7 @@ export const assertPluginManifest = (
     const problem = updateSourceUrlProblem(updatesUrl);
     if (problem !== null) {
       throw new Error(
-        `${PLUGIN_MANIFEST_ERROR_PREFIX} ${where} gives the plugin "${pluginId}" the update source ${JSON.stringify(updatesUrl)}, which ${problem}. Set \`vitnode.updates.url\` in the plugin's package.json.`,
+        `${PLUGIN_MANIFEST_ERROR_PREFIX} ${where} gives the plugin "${pluginId}" the update source ${JSON.stringify(updatesUrl)}, which ${problem}. Set \`updates.url\` in the plugin's \`src/plugin-info.ts\`.`,
       );
     }
   }

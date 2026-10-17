@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import type { UpdateManifest } from "../../packages/vitnode/src/lib/updates/manifest.ts";
 import type {
@@ -77,10 +78,23 @@ const run = (
 
 interface WorkspacePackage {
   dependencies: Record<string, string>;
+  dir: string;
   name: string;
-  updatesUrl: null | string;
   version: null | string;
 }
+
+const MANIFEST_FILES = ["src/manifest.gen.ts", "src/manifest.ts"];
+
+const updatesUrlOf = async (dir: string): Promise<null | string> => {
+  const file = MANIFEST_FILES.map(name => join(dir, name)).find(existsSync);
+  if (file === undefined) return null;
+
+  const { manifest } = (await import(pathToFileURL(file).href)) as {
+    manifest?: { updates?: null | { url?: string } };
+  };
+
+  return manifest?.updates?.url ?? null;
+};
 
 const readWorkspacePackages = (): Map<string, WorkspacePackage> => {
   const packages = new Map<string, WorkspacePackage>();
@@ -98,14 +112,13 @@ const readWorkspacePackages = (): Map<string, WorkspacePackage> => {
         name?: string;
         peerDependencies?: Record<string, string>;
         version?: string;
-        vitnode?: { updates?: { url?: string } };
       };
       if (!json.name) continue;
 
       packages.set(json.name, {
         dependencies: { ...json.peerDependencies, ...json.dependencies },
+        dir: join(root, dir),
         name: json.name,
-        updatesUrl: json.vitnode?.updates?.url ?? null,
         version: json.version ?? null,
       });
     }
@@ -148,15 +161,20 @@ const githubReleaseFor = (
  * published but declares another update source - or none - is not ours to
  * advertise here.
  */
-const publishedPackages = (feedUrl: string): PublishedPackage[] => {
+const publishedPackages = async (
+  feedUrl: string,
+): Promise<PublishedPackage[]> => {
   const names = requireEnv("PUBLISHED_PACKAGES").split(/\s+/).filter(Boolean);
   const workspacePackages = readWorkspacePackages();
   const coreVersion = workspacePackages.get(CORE_ID)?.version ?? null;
 
-  return names.flatMap(name => {
+  const packages: PublishedPackage[] = [];
+  for (const name of names) {
     const pkg = workspacePackages.get(name);
     if (!pkg) throw new Error(`${name} is not a package in this workspace.`);
-    if (pkg.updatesUrl?.toLowerCase() !== feedUrl.toLowerCase()) return [];
+
+    const updatesUrl = await updatesUrlOf(pkg.dir);
+    if (updatesUrl?.toLowerCase() !== feedUrl.toLowerCase()) continue;
     if (!pkg.version) throw new Error(`${name} has no version.`);
 
     const requiresCore =
@@ -164,8 +182,10 @@ const publishedPackages = (feedUrl: string): PublishedPackage[] => {
         ? undefined
         : requiresCoreFrom(pkg.dependencies[CORE_ID], coreVersion);
 
-    return [{ id: name, requiresCore, version: pkg.version }];
-  });
+    packages.push({ id: name, requiresCore, version: pkg.version });
+  }
+
+  return packages;
 };
 
 const publishToBranch = ({
@@ -258,7 +278,7 @@ const readSecurityUpdates = () =>
     readFileSync(join(workspace, SECURITY_UPDATES_FILE), "utf8"),
   );
 
-const main = () => {
+const main = async () => {
   const mode = process.argv[2];
 
   if (mode === "check") {
@@ -289,7 +309,7 @@ const main = () => {
 
   if (mode === "release") {
     const channel = channelForReleaseType(requireEnv("RELEASE_TYPE"));
-    const packages = publishedPackages(feedUrl);
+    const packages = await publishedPackages(feedUrl);
     if (packages.length === 0) {
       console.log("No published package points at this update manifest.");
 
@@ -327,9 +347,7 @@ const main = () => {
   );
 };
 
-try {
-  main();
-} catch (error) {
+main().catch((error: unknown) => {
   console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
-}
+});

@@ -11,7 +11,7 @@ VitNode core and the official plugins read the feed at `https://raw.githubuserco
 The **Bump and Publish npm packages** workflow has a **Publish update manifest** job. It runs only in the `bump_and_publish` and `publish` modes, and only after the publish job succeeds - a `bump` run publishes nothing, so it advertises nothing.
 
 1. It checks out the exact commit that was published.
-2. From `PUBLISHED_PACKAGES` - the same list the publish steps use - it keeps the packages whose `package.json` declares this feed as `vitnode.updates.url` (today `@vitnode/core` and `@vitnode/blog`).
+2. From `PUBLISHED_PACKAGES` - the same list the publish steps use - it keeps the packages whose manifest points at this feed as `updates.url` - `src/plugin-info.ts` for a plugin, `src/manifest.ts` for core (today `@vitnode/core` and `@vitnode/blog`).
 3. It reads each version from `package.json`. A plugin's `@vitnode/core` dependency becomes the release's `requiresCore`, resolving `workspace:*` the way pnpm does on publish.
 4. It adds the releases and moves only the channel of this run: **canary**, **release-candidate** (`rc`) or **stable**. A channel never moves backwards.
 5. It commits `updates.json` to the `update-manifest` branch. That branch exists only for the feed, so it outlives release branches.

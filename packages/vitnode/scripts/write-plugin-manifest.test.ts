@@ -40,7 +40,7 @@ const writeManifest = (root: string, manifest: Record<string, unknown>) => {
   write(root, "package.json", JSON.stringify(manifest, null, 2));
 };
 
-const writeInfo = (root: string, info: Record<string, string>) => {
+const writeInfo = (root: string, info: Record<string, unknown>) => {
   write(
     root,
     PLUGIN_INFO_PATH,
@@ -104,11 +104,9 @@ describe("writePluginManifest", () => {
     });
   });
 
-  it("writes the update source declared in package.json", async () => {
-    const root = pluginAt({
-      ...BLOG,
-      vitnode: { updates: { url: "https://example.com/updates.json" } },
-    });
+  it("takes the update source from src/plugin-info.ts", async () => {
+    const root = pluginAt(BLOG);
+    writeInfo(root, { updates: { url: "https://example.com/updates.json" } });
 
     writePluginManifest(root);
 
@@ -136,16 +134,6 @@ describe("writePluginManifest", () => {
       "a new version",
       (root: string) => {
         writeManifest(root, { ...BLOG, version: "1.1.0" });
-      },
-      true,
-    ],
-    [
-      "a new update source",
-      (root: string) => {
-        writeManifest(root, {
-          ...BLOG,
-          vitnode: { updates: { url: "https://example.com/updates.json" } },
-        });
       },
       true,
     ],

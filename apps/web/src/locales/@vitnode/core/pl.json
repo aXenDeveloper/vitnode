@@ -984,10 +984,6 @@
         "search": "Szukaj wtyczek...",
         "title": "Wtyczki",
         "version_unknown": "Nieznana wersja",
-        "inventory_missing": {
-          "title": "Widoczne są tylko wtyczki API",
-          "desc": "API nie otrzymało inwentarza wtyczek aplikacji webowej, więc wtyczki działające tylko w przeglądarce nie są wymienione, a wersje frontendu nie są porównywane. Przekaż frontendPlugins do buildApiConfig, aby zobaczyć obie strony."
-        },
         "core": {
           "title": "Rdzeń VitNode",
           "version": "Zainstalowana wersja <mono>{version}</mono>"
@@ -1022,10 +1018,8 @@
           },
           "summary": {
             "last_checked": "Ostatnio sprawdzono <date></date>",
-            "never": "Codzienne sprawdzanie uruchamia harmonogram cron. Kliknij Sprawdź aktualizacje, aby uruchomić je teraz.",
             "disabled": "Sprawdzanie aktualizacji jest wyłączone w tej instalacji.",
-            "channel": "Kanał: {channel} (ustawiony w konfiguracji API)",
-            "info": "Informacje o aktualizacjach mają charakter wyłącznie informacyjny: nic nie jest instalowane ani zmieniane. Brak aktualizacji bezpieczeństwa nie dowodzi, że wersja jest bezpieczna."
+            "channel": "Kanał: {channel} (ustawiony w konfiguracji API)"
           },
           "status": {
             "not_checked": "Jeszcze nie sprawdzono",

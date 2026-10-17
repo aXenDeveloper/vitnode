@@ -21,7 +21,6 @@ describe("pluginManifestFromPackageJson", () => {
       description: "Posts and categories",
       id: "@acme/blog",
       license: null,
-      updates: null,
       version: "1.2.0",
     });
   });
@@ -36,7 +35,6 @@ describe("pluginManifestFromPackageJson", () => {
       description: null,
       id: "@acme/blog",
       license: null,
-      updates: null,
       version: null,
     });
   });
@@ -59,35 +57,6 @@ describe("pluginManifestFromPackageJson", () => {
     expect(() => pluginManifestFromPackageJson(manifest, SOURCE)).toThrow(
       error,
     );
-  });
-
-  it("reads the update source from `vitnode.updates.url`, trimmed", () => {
-    expect(
-      pluginManifestFromPackageJson(
-        {
-          name: "@acme/blog",
-          vitnode: {
-            updates: { url: " https://example.com/acme/updates.json " },
-          },
-        },
-        SOURCE,
-      ).updates,
-    ).toEqual({ url: "https://example.com/acme/updates.json" });
-  });
-
-  it.each([
-    ["a non-object `vitnode`", "plugin", /`vitnode` in package\.json/],
-    ["no url", { updates: {} }, /`vitnode\.updates` in package\.json/],
-    ["a non-string url", { updates: { url: 1 } }, /`vitnode\.updates`/],
-    [
-      "a url carrying a token",
-      { updates: { url: "https://example.com/updates.json?token=secret" } },
-      /`vitnode\.updates\.url` in package\.json cannot carry a query string/,
-    ],
-  ])("rejects an update source with %s", (_, vitnode, error) => {
-    expect(() =>
-      pluginManifestFromPackageJson({ name: "@acme/blog", vitnode }, SOURCE),
-    ).toThrow(error);
   });
 
   it("names the file and the manifest prefix in its errors", () => {

@@ -16,13 +16,17 @@ const lastCheckedOf = (updates: AdminPluginUpdates): null | string =>
       null,
     );
 
-const CheckSummary = ({ updates }: { updates: AdminPluginUpdates }) => {
+const CheckSummary = ({
+  lastChecked,
+  updates,
+}: {
+  lastChecked: null | string;
+  updates: AdminPluginUpdates;
+}) => {
   const t = useTranslations("admin.system.plugins.updates");
 
   if (!updates.enabled) return <>{t("summary.disabled")}</>;
-
-  const lastChecked = lastCheckedOf(updates);
-  if (lastChecked === null) return <>{t("summary.never")}</>;
+  if (lastChecked === null) return null;
 
   return (
     <>
@@ -30,6 +34,31 @@ const CheckSummary = ({ updates }: { updates: AdminPluginUpdates }) => {
         date: () => <DateFormat date={lastChecked} />,
       })}
     </>
+  );
+};
+
+const CheckFooter = ({ updates }: { updates: AdminPluginUpdates }) => {
+  const t = useTranslations("admin.system.plugins");
+  const lastChecked = lastCheckedOf(updates);
+  const hasSummary = !updates.enabled || lastChecked !== null;
+
+  if (!hasSummary && updates.channelOverride === null) return null;
+
+  return (
+    <div className="text-muted-foreground border-border flex flex-col gap-1 border-t pt-3 text-sm leading-relaxed">
+      {hasSummary ? (
+        <p className="text-pretty">
+          <CheckSummary lastChecked={lastChecked} updates={updates} />
+        </p>
+      ) : null}
+      {updates.channelOverride === null ? null : (
+        <p>
+          {t("updates.summary.channel", {
+            channel: t(`updates.channel.${updates.channelOverride}`),
+          })}
+        </p>
+      )}
+    </div>
   );
 };
 
@@ -84,21 +113,7 @@ export const CoreUpdateCard = ({
 
       <SecurityUpdates update={updates?.core} />
 
-      {updates === undefined ? null : (
-        <div className="text-muted-foreground border-border flex flex-col gap-1 border-t pt-3 text-sm leading-relaxed">
-          <p className="text-pretty">
-            <CheckSummary updates={updates} />
-          </p>
-          {updates.channelOverride === null ? null : (
-            <p>
-              {t("updates.summary.channel", {
-                channel: t(`updates.channel.${updates.channelOverride}`),
-              })}
-            </p>
-          )}
-          <p className="text-pretty">{t("updates.summary.info")}</p>
-        </div>
-      )}
+      {updates === undefined ? null : <CheckFooter updates={updates} />}
     </section>
   );
 };

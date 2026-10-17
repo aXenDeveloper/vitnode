@@ -12,7 +12,6 @@ import {
   readTableSearch,
   withTableSearch,
 } from "@/components/table/url-state";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 import type { VersionSides } from "./plugin-update-status";
@@ -148,14 +147,6 @@ export const PluginsContent = ({ data, updates }: PluginsContentProps) => {
 
   return (
     <DataTableNavigationProvider value={navigation}>
-      {data.frontendInventory ? null : (
-        <Alert className="mb-4" variant="info">
-          <AlertTitle>{t("inventory_missing.title")}</AlertTitle>
-          <AlertDescription className="leading-relaxed text-pretty">
-            {t("inventory_missing.desc")}
-          </AlertDescription>
-        </Alert>
-      )}
       <ContentDataTable
         columns={[
           {

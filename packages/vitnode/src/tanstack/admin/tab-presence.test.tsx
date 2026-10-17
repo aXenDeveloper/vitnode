@@ -69,7 +69,7 @@ describe("isAdminSessionStillInUse", () => {
   it("is in use while a quiet background tab still answers", async () => {
     localStorage.setItem(
       ADMIN_TAB_HEARTBEAT_KEY,
-      String(Date.now() - 10 * 60_000),
+      String(Date.now() - ADMIN_TAB_HEARTBEAT_FRESH_MS - 60_000),
     );
     const stop = answerAdminTabPings();
 
@@ -80,7 +80,7 @@ describe("isAdminSessionStillInUse", () => {
   it("is abandoned once every AdminCP tab was closed", async () => {
     localStorage.setItem(
       ADMIN_TAB_HEARTBEAT_KEY,
-      String(Date.now() - 10 * 60_000),
+      String(Date.now() - ADMIN_TAB_HEARTBEAT_FRESH_MS - 60_000),
     );
 
     await expect(isAdminSessionStillInUse()).resolves.toBe(false);

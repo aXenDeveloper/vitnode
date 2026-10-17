@@ -1,28 +1,28 @@
 ---
 title: Publish updates for your plugin
-description: Declare an update source in your plugin's package.json and host a small JSON manifest so VitNode installations see your new releases and security updates.
+description: Declare an update source in your plugin's src/plugin-info.ts and host a small JSON manifest so VitNode installations see your new releases and security updates.
 icon: Upload
 ---
 
-Add one field to your plugin's `package.json` and publish a JSON file next to your code. Every installation of your plugin then shows your new releases and security updates in **AdminCP → System → Plugins**.
+Add one field to your plugin's `src/plugin-info.ts` and publish a JSON file next to your code. Every installation of your plugin then shows your new releases and security updates in **AdminCP → System → Plugins**.
 
 <Steps>
   <Step>
 
 ### Declare the update source
 
-Add `vitnode.updates.url` to the plugin's `package.json`:
+Add `updates.url` to the plugin's `src/plugin-info.ts`, next to its title and icon:
 
-```json title="plugins/site-notes/package.json"
-{
-  "name": "@acme/site-notes",
-  "version": "1.2.0",
-  "vitnode": {
-    "updates": {
-      "url": "https://raw.githubusercontent.com/acme/site-notes/main/updates.json"
-    }
-  }
-}
+```ts title="plugins/site-notes/src/plugin-info.ts"
+import type { PluginInfo } from "@vitnode/core/lib/plugin-manifest";
+
+export const pluginInfo: PluginInfo = {
+  title: "Site Notes",
+  icon: "sticky-note",
+  updates: {
+    url: "https://raw.githubusercontent.com/acme/site-notes/main/updates.json",
+  },
+};
 ```
 
 The URL has to be `https://`, without a user name, password, query string or fragment. It ends up in browser-visible metadata, so it must never carry a token.
@@ -32,7 +32,7 @@ The URL has to be `https://`, without a user name, password, query string or fra
 
 ### Rebuild the plugin
 
-Run `vitnode build` (or keep `vitnode dev` running). The URL is written into `src/manifest.gen.ts` as `updates`, next to the version, so both the API and the web app's plugin inventory know where to look.
+Run `vitnode build` (or keep `vitnode dev` running). `src/manifest.gen.ts` picks the URL up from `pluginInfo` as `updates`, next to the version, so both the API and the web app's plugin inventory know where to look.
 
   </Step>
   <Step>
@@ -96,4 +96,4 @@ Any other HTTPS host works too, as long as it is publicly reachable on port 443.
 
 ## Private and local plugins
 
-Leave `vitnode.updates` out. The plugin works as before, and the catalog shows _Update checking unavailable_ for it. Nothing is sent anywhere for a plugin without an update source.
+Leave `updates` out of `src/plugin-info.ts`. The plugin works as before, and the catalog shows _Update checking unavailable_ for it. Nothing is sent anywhere for a plugin without an update source.

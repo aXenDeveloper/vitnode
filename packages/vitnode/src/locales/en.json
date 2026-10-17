@@ -3730,10 +3730,6 @@
           "desc": "Try the plugin's name, its package ID or a word from its description.",
           "clear": "Clear search"
         },
-        "inventory_missing": {
-          "title": "Showing the API's plugins only",
-          "desc": "This API was not given the web app's plugin inventory, so plugins that run only in the browser are not listed and frontend versions are not compared. Pass frontendPlugins to buildApiConfig to see both."
-        },
         "core": {
           "title": "VitNode core",
           "version": "Installed version <mono>{version}</mono>"
@@ -3768,10 +3764,8 @@
           },
           "summary": {
             "last_checked": "Last checked <date></date>",
-            "never": "The daily check runs with the cron scheduler. Press Check for updates to run it now.",
             "disabled": "Update checks are turned off for this installation.",
-            "channel": "Channel: {channel} (set in the API config)",
-            "info": "Update information is informational only: nothing is installed or changed. No security update listed is not proof that a version is secure."
+            "channel": "Channel: {channel} (set in the API config)"
           },
           "status": {
             "not_checked": "Not checked yet",
