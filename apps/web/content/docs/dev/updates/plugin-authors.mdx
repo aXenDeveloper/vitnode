@@ -1,0 +1,99 @@
+---
+title: Publish updates for your plugin
+description: Declare an update source in your plugin's src/plugin-info.ts and host a small JSON manifest so VitNode installations see your new releases and security updates.
+icon: Upload
+---
+
+Add one field to your plugin's `src/plugin-info.ts` and publish a JSON file next to your code. Every installation of your plugin then shows your new releases and security updates in **AdminCP → System → Plugins**.
+
+<Steps>
+  <Step>
+
+### Declare the update source
+
+Add `updates.url` to the plugin's `src/plugin-info.ts`, next to its title and icon:
+
+```ts title="plugins/site-notes/src/plugin-info.ts"
+import type { PluginInfo } from "@vitnode/core/lib/plugin-manifest";
+
+export const pluginInfo: PluginInfo = {
+  title: "Site Notes",
+  icon: "sticky-note",
+  updates: {
+    url: "https://raw.githubusercontent.com/acme/site-notes/main/updates.json",
+  },
+};
+```
+
+The URL has to be `https://`, without a user name, password, query string or fragment. It ends up in browser-visible metadata, so it must never carry a token.
+
+  </Step>
+  <Step>
+
+### Rebuild the plugin
+
+Run `vitnode build` (or keep `vitnode dev` running). `src/manifest.gen.ts` picks the URL up from `pluginInfo` as `updates`, next to the version, so both the API and the web app's plugin inventory know where to look.
+
+  </Step>
+  <Step>
+
+### Publish the manifest
+
+Commit `updates.json` to the branch the URL points at. The smallest useful file names your package, a channel and that release:
+
+```json title="updates.json"
+{
+  "schemaVersion": 1,
+  "packages": {
+    "@acme/site-notes": {
+      "channels": { "stable": "1.2.0" },
+      "releases": {
+        "1.2.0": {
+          "publishedAt": "2026-10-01T12:00:00Z",
+          "requiresCore": ">=2.0.0 <3.0.0",
+          "url": "https://github.com/acme/site-notes/releases/tag/v1.2.0"
+        }
+      }
+    }
+  }
+}
+```
+
+The package key must equal the `name` in `package.json`. `publishedAt`, `requiresCore` and `url` are optional; without `requiresCore` installations see _Compatibility unknown_. Every field is described in the [manifest reference](/docs/dev/updates/manifest).
+
+  </Step>
+</Steps>
+
+## Check the result
+
+Install the plugin in an app, open **System → Plugins** and press **Check for updates**. With the plugin at `1.1.0` the row says _Update available: 1.2.0_; at `1.2.0` it says _Up to date_.
+
+## Several packages, one manifest
+
+A publisher with several plugins can keep one file. Point every plugin at the same URL and list each package under `packages`. VitNode downloads a shared file once per check.
+
+```json title="updates.json"
+{
+  "schemaVersion": 1,
+  "packages": {
+    "@acme/site-notes": {
+      "channels": { "stable": "1.2.0" },
+      "releases": { "1.2.0": {} }
+    },
+    "@acme/polls": {
+      "channels": { "stable": "0.4.1", "canary": "0.5.0-canary.2" },
+      "releases": { "0.4.1": {}, "0.5.0-canary.2": {} }
+    }
+  }
+}
+```
+
+## Hosting on GitHub Raw
+
+`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/updates.json` works well: it is public, served over HTTPS and supports `ETag`, so an unchanged file costs a `304 Not Modified`. Raw files are cached for a few minutes, so a fresh release can take that long to appear. Keep the file on a branch that is never deleted. VitNode's own feed lives on a dedicated branch for that reason.
+
+Any other HTTPS host works too, as long as it is publicly reachable on port 443. Redirects are followed up to three times, only to other public HTTPS addresses.
+
+## Private and local plugins
+
+Leave `updates` out of `src/plugin-info.ts`. The plugin works as before, and the catalog shows _Update checking unavailable_ for it. Nothing is sent anywhere for a plugin without an update source.

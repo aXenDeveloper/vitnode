@@ -5,21 +5,24 @@ import {
   normalizeAiOverviewSearch,
 } from "./tanstack/admin/ai/route-search";
 import { contentListRouteSearch } from "./tanstack/admin/content/route-search";
-import { ADMIN_CRON_NAMESPACES } from "./tanstack/admin/cron/route";
 import { normalizeCronRouteSearch } from "./tanstack/admin/cron/route-search";
+import {
+  DebugFramePending,
+  DebugLayoutPending,
+  DebugOverviewPending,
+  DebugTablePending,
+} from "./tanstack/admin/debug/pending";
 import { ADMIN_DEBUG_NAMESPACES } from "./tanstack/admin/debug/route";
-import { normalizeDebugRouteSearch } from "./tanstack/admin/debug/route-search";
+import { normalizeDebugLogsSearch } from "./tanstack/admin/debug/route-search";
 import { ADMIN_FILES_NAMESPACES } from "./tanstack/admin/files/route";
 import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-search";
 import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
 import { ADMIN_NAVIGATION_NAMESPACES } from "./tanstack/admin/navigation/route";
 import { ADMIN_NOTIFICATIONS_NAMESPACES } from "./tanstack/admin/notifications/route";
 import { ADMIN_PLUGINS_NAMESPACES } from "./tanstack/admin/plugins/route";
-import { ADMIN_QUEUE_NAMESPACES } from "./tanstack/admin/queue/route";
 import { normalizeQueueRouteSearch } from "./tanstack/admin/queue/route-search";
 import { ADMIN_ROLES_NAMESPACES } from "./tanstack/admin/roles/route";
 import { normalizeRolesRouteSearch } from "./tanstack/admin/roles/route-search";
-import { ADMIN_SEARCH_INDEX_NAMESPACES } from "./tanstack/admin/search-index/route";
 import { normalizeSearchIndexRouteSearch } from "./tanstack/admin/search-index/route-search";
 import { ADMIN_SIGN_IN_NAMESPACES } from "./tanstack/admin/sign-in-route";
 import { normalizeAdminSignInSearch } from "./tanstack/admin/sign-in-search";
@@ -265,44 +268,58 @@ export const routes = defineRoutes([
     pendingComponent: TablePendingSkeleton,
   }),
 
-  page("/admin/core/ai/history", {
+  layout("/admin/core/debug", {
     area: "admin",
-    component: lazy(() => import("./pages/admin/ai/history")),
-    messages: ADMIN_AI_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
-    search: normalizeAiHistoryRouteSearch,
-  }),
-
-  page("/admin/core/advanced/cron", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/advanced/cron")),
-    messages: ADMIN_CRON_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
-    search: normalizeCronRouteSearch,
-  }),
-
-  page("/admin/core/advanced/queue", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/advanced/queue")),
-    messages: ADMIN_QUEUE_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
-    search: normalizeQueueRouteSearch,
-  }),
-
-  page("/admin/core/advanced/search", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/advanced/search")),
-    messages: ADMIN_SEARCH_INDEX_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
-    search: normalizeSearchIndexRouteSearch,
-  }),
-
-  page("/admin/core/debug", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/debug")),
+    component: lazy(() => import("./pages/admin/debug/layout")),
     messages: ADMIN_DEBUG_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
-    search: normalizeDebugRouteSearch,
+    pendingComponent: DebugLayoutPending,
+    children: [
+      index({
+        component: lazy(() => import("./pages/admin/debug/index")),
+        pendingComponent: DebugOverviewPending,
+      }),
+      page("vitnode", {
+        component: lazy(() => import("./pages/admin/debug/vitnode")),
+        pendingComponent: DebugFramePending,
+      }),
+      page("plugins", {
+        component: lazy(() => import("./pages/admin/debug/plugins")),
+        pendingComponent: DebugFramePending,
+      }),
+      page("cron", {
+        component: lazy(() => import("./pages/admin/debug/cron")),
+        pendingComponent: DebugTablePending,
+        search: normalizeCronRouteSearch,
+      }),
+      page("cache", {
+        component: lazy(() => import("./pages/admin/debug/cache")),
+        pendingComponent: DebugFramePending,
+      }),
+      page("search", {
+        component: lazy(() => import("./pages/admin/debug/search")),
+        pendingComponent: DebugTablePending,
+        search: normalizeSearchIndexRouteSearch,
+      }),
+      page("services", {
+        component: lazy(() => import("./pages/admin/debug/services")),
+        pendingComponent: DebugFramePending,
+      }),
+      page("logs", {
+        component: lazy(() => import("./pages/admin/debug/logs")),
+        pendingComponent: DebugTablePending,
+        search: normalizeDebugLogsSearch,
+      }),
+      page("queue", {
+        component: lazy(() => import("./pages/admin/debug/queue")),
+        pendingComponent: DebugTablePending,
+        search: normalizeQueueRouteSearch,
+      }),
+      page("ai", {
+        component: lazy(() => import("./pages/admin/debug/ai")),
+        pendingComponent: DebugTablePending,
+        search: normalizeAiHistoryRouteSearch,
+      }),
+    ],
   }),
 
   page("/admin/core/system/navigation", {

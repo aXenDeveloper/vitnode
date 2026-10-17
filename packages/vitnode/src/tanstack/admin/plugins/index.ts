@@ -2,6 +2,14 @@ export type { AdminPluginsRouteData } from "./route";
 export { ADMIN_PLUGINS_NAMESPACES, loadAdminPluginsRoute } from "./route";
 export { AdminPluginsRouteContent } from "./screen";
 export type {
+  AdminComponentUpdate,
+  AdminPluginUpdates,
+} from "@/views/admin/views/core/system/plugins/plugin-updates-query";
+export {
+  pluginUpdatesQueryKey,
+  pluginUpdatesQueryOptions,
+} from "@/views/admin/views/core/system/plugins/plugin-updates-query";
+export type {
   AdminInstalledPlugin,
   AdminInstalledPlugins,
 } from "@/views/admin/views/core/system/plugins/plugins-query";

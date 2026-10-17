@@ -31,6 +31,7 @@ export const frontendPlugins: FrontendPluginInventory = [
       },
       license: "MIT",
       version: "2.0.0-canary.13",
+      updates: { url: "https://raw.githubusercontent.com/aXenDeveloper/vitnode/update-manifest/updates.json" },
     },
   },
   {
@@ -47,6 +48,7 @@ export const frontendPlugins: FrontendPluginInventory = [
       },
       license: "MIT",
       version: "2.0.0-canary.13",
+      updates: null,
     },
   },
   {
@@ -63,6 +65,7 @@ export const frontendPlugins: FrontendPluginInventory = [
       },
       license: "MIT",
       version: "2.0.0-canary.13",
+      updates: null,
     },
   },
 ]

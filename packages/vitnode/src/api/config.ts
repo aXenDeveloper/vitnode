@@ -199,6 +199,7 @@ export function VitNodeAPI({
       notifications: vitNodeApiConfig.notifications,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,
+      updates: vitNodeApiConfig.updates,
       users: vitNodeApiConfig.users,
       plugins,
       cacheClient: redisClient,

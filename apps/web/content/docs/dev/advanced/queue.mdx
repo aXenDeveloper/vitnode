@@ -101,13 +101,13 @@ A task still `processing` after 15 minutes (`QUEUE_STALE_PROCESSING_MINUTES`) be
 
 ---
 
-## AdminCP Queue Monitor
+## Inspect tasks in the Debug Panel
 
-{/* Image prompt: VitNode AdminCP Queue Management screen at /admin/core/advanced/queue. Table displaying queued jobs with status badges (pending, processing, completed, failed), attempts count, payload JSON preview, and a retry action button. Dark theme, 1440x900. */}
+{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/queue with the "Queue" section open in the side menu. Table of queue tasks with columns Task, Queue, Status (pending, processing, completed, failed badges), Attempts, Available At, Created At and Last Error, plus a Status filter above it. Dark theme, 1440x900. */}
 
-Inspect and debug tasks at **Core → Advanced → Queue** (`/admin/core/advanced/queue`):
-- Monitor pending, active, and failed jobs in real time.
-- View failure error traces and retry failed tasks with one click.
+Open **Debug Panel → Queue** in the AdminCP (`/admin/core/debug/queue`), or type "Queue tasks" into the ⌘K admin search. The table lists every task with its queue, status, attempts, when it is next available, when it was created and its last error. Filter by status to find the failed ones.
+
+The section is read-only. A failed task stays failed, so fix the cause and dispatch it again from your code. Viewing it needs the `queue → can_view` staff permission.
 
 ---
 

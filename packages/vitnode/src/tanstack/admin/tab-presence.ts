@@ -4,7 +4,7 @@ export const ADMIN_TAB_CHANNEL = "vitnode:admin-tabs";
 
 export const ADMIN_TAB_HEARTBEAT_INTERVAL_MS = 5_000;
 
-export const ADMIN_TAB_HEARTBEAT_FRESH_MS = 15_000;
+export const ADMIN_TAB_HEARTBEAT_FRESH_MS = 60 * 60_000;
 
 export const ADMIN_TAB_PING_TIMEOUT_MS = 750;
 

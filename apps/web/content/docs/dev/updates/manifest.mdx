@@ -1,0 +1,82 @@
+---
+title: Update manifest reference
+description: Every field of the VitNode update manifest JSON - packages, channels, releases and security updates - with validation rules and how versions are compared.
+icon: FileCode
+---
+
+An update manifest is one public JSON file per publisher. It can describe any number of packages. VitNode validates it completely before using any of it; an invalid or unsupported file is reported as a failed check, and the last valid copy keeps being used.
+
+## Shape
+
+```json title="updates.json"
+{
+  "schemaVersion": 1,
+  "packages": {
+    "@acme/site-notes": {
+      "channels": {
+        "stable": "2.1.3",
+        "canary": "2.2.0-canary.4"
+      },
+      "releases": {
+        "2.1.3": {
+          "publishedAt": "2026-10-15T12:00:00Z",
+          "requiresCore": ">=2.1.0 <3.0.0",
+          "url": "https://github.com/acme/site-notes/releases/tag/v2.1.3"
+        },
+        "2.2.0-canary.4": {}
+      },
+      "securityUpdates": [
+        {
+          "id": "NOTES-2026-001",
+          "affected": ">=2.0.0 <2.1.3",
+          "fixed": "2.1.3",
+          "url": "https://github.com/acme/site-notes/security/advisories/GHSA-xxxx-xxxx-xxxx"
+        }
+      ]
+    }
+  }
+}
+```
+
+The values above are illustrative, not a real release or vulnerability.
+
+## Top level
+
+| Name            | Type   | Required | Description                                                                                                     |
+| --------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | `1`    | Yes      | Format version. Any other value fails with _uses a format this VitNode does not support_.                       |
+| `packages`      | object | Yes      | Keyed by npm package name - the plugin's manifest ID. At most 500 packages. Unknown keys anywhere are rejected. |
+
+## Package
+
+| Name         | Type   | Required | Default | Description                                                                                                                                                                    |
+| ------------ | ------ | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `channels`   | object | No       | `{}`    | `stable`, `rc` and/or `canary`, each a version. Every one must have an entry in `releases`. `stable` cannot be a prerelease. A package does not have to publish every channel. |
+| `releases`   | object | No       | `{}`    | Keyed by exact SemVer version. At most 2000.                                                                                                                                   |
+| `securityUpdates` | array  | No       | `[]`    | Independent of channels and releases. At most 500, with unique `id`s.                                                                                                          |
+
+## Release
+
+| Name           | Type           | Required | Description                                                                                 |
+| -------------- | -------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `publishedAt`  | ISO 8601 date  | No       | Shown as _released ..._. Informational only.                                                |
+| `requiresCore` | SemVer range   | No       | The `@vitnode/core` versions this release supports. Missing means compatibility is unknown. |
+| `url`          | `https://` URL | No       | Shown as **Release notes**.                                                                 |
+
+## Security update
+
+| Name       | Type           | Required | Description                                                  |
+| ---------- | -------------- | -------- | ------------------------------------------------------------ |
+| `id`       | string         | Yes      | Letters, digits, `.`, `_`, `:` or `-`, up to 100 characters. |
+| `affected` | SemVer range   | Yes      | Installed versions inside this range get the red warning.    |
+| `fixed`    | SemVer version | No       | Leave it out when no fix exists yet.                         |
+| `url`      | `https://` URL | Yes      | Shown as **Details**.                               |
+
+Every security update is a security update - there are no severity levels. Explain the issue on the security update page; links are treated as untrusted, and only `https://` links become clickable.
+
+## How versions are compared
+
+- Comparisons use SemVer, not string order: `2.10.0` is newer than `2.9.0`, and `2.1.0-canary.4` is older than `2.1.0`.
+- The selected channel is the installation's `updates.channel`, or else the channel of the installed version. An installed version newer than the channel's target is never offered a "downgrade".
+- `requiresCore` is checked against the running core version. When the channel's newest release needs a newer core, VitNode names the newest release on the same channel that is newer than yours and explicitly declares support for your core, if one is listed.
+- Security update ranges include prereleases: see [how ranges match prereleases](/docs/dev/updates/security-updates#how-affected-ranges-match-prereleases).

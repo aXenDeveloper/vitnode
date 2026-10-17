@@ -16,7 +16,7 @@ import catalog from './admin-plugins-catalog.webp'
   withoutBackground
 />
 
-The catalog only reports what is installed. It does not check for updates, install or remove plugins, or switch them on and off. One thing at a time.
+The catalog reports what is installed. It also shows available updates and security updates for core and for plugins that declare an update source - see [Update checks](/docs/dev/updates). It never installs or removes plugins, or switches them on and off.
 
 ## Add your plugin to the catalog
 
@@ -155,6 +155,10 @@ A side that reports no version is unknown, not a mismatch.
 
 A frontend inventory entry carrying the manifest of another package throws at startup: the API checks that `manifest.id` equals the entry's `id`.
 
+## Update and security information
+
+Add `updates.url` to your plugin's `src/plugin-info.ts` and the catalog row also shows new releases and security updates. Setup is covered in [Publish updates for your plugin](/docs/dev/updates/plugin-authors); what administrators see is in [Check for updates in the AdminCP](/docs/dev/updates/admin).
+
 ## Who can see the catalog
 
-The page and its endpoint, `GET /api/@vitnode/core/admin/plugins`, require the **Plugins → View installed plugins and their versions** permission (`plugins.can_view` in the `@vitnode/core` module). Staff without it don't see the link, get a not-found page on a direct visit, and a `403` from the API. Root administrators have it automatically.
+The page and its endpoint, `GET /api/@vitnode/core/admin/plugins`, require the **Plugins → View installed plugins and their versions** permission (`plugins.can_view` in the `@vitnode/core` module). Staff without it don't see the link, get a not-found page on a direct visit, and a `403` from the API. Root administrators have it automatically. The **Check for updates** button additionally needs `plugins.can_check_updates`.

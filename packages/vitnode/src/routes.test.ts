@@ -107,9 +107,11 @@ describe("core's route tree", () => {
 
     for (const path of [
       "/admin/core/ai",
-      "/admin/core/ai/history",
-      "/admin/core/advanced/cron",
-      "/admin/core/advanced/queue",
+      "/admin/core/debug/ai",
+      "/admin/core/debug/cron",
+      "/admin/core/debug/logs",
+      "/admin/core/debug/queue",
+      "/admin/core/debug/search",
       "/admin/core/system/files",
       "/admin/core/users",
       "/admin/core/users/roles",

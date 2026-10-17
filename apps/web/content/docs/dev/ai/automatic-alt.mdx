@@ -202,7 +202,7 @@ curl -X POST https://example.com/api/@vitnode/core/cron \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Set a real `CRON_SECRET`. Each call runs every job whose schedule came due since its last run. A slower tick still runs the hourly sweep; it just works the queue less often (2 images per tick). Check **Last Run** at `/admin/core/advanced/cron`. See [Cron over REST](/docs/dev/cron/rest-api) and [Node CRON adapter](/docs/dev/cron/node-cron).
+Set a real `CRON_SECRET`. Each call runs every job whose schedule came due since its last run. A slower tick still runs the hourly sweep; it just works the queue less often (2 images per tick). Check the last run in the **Time** column of **Debug Panel → Cron & queue** (`/admin/core/debug/cron`). See [Cron over REST](/docs/dev/cron/rest-api) and [Node CRON adapter](/docs/dev/cron/node-cron).
 
 ## Edit ALT text through the API
 

@@ -93,13 +93,14 @@ npm run dev
 
 ### Verify the first tick
 
-Open `/admin/core/advanced/cron` and watch the `clean` row - core's hourly
-session cleanup, which every installation has. Within a minute of the restart
-**Last Run** stops saying _Never_ and **Next Run** fills in.
+Open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`) and watch the
+`clean` row - core's hourly session cleanup, which every installation has.
+Within a minute of the restart its **Time** column stops saying _Last Never_ and
+the next run fills in.
 
 Nothing else needs to happen for the clock to be proven: `process-queue` runs
-every minute, so its **Last Run** should never be more than a minute old while
-the adapter is alive.
+every minute, so its last run should never be more than a minute old while the
+adapter is alive.
 
 </Step>
 </Steps>
@@ -148,8 +149,8 @@ Three consequences worth writing down:
   `http://localhost:3000`. This repo's standalone API listens on **8000** -
   which is exactly why `apps/api/.env.example` sets the variable - so leaving it
   unset sends every tick to port 3000, where the web app lives. Symptom: the
-  scheduler is configured, the boot log is clean, and **Last Run** stays _Never_
-  forever.
+  scheduler is configured, the boot log is clean, and the **Time** column keeps
+  saying _Last Never_ forever.
 </Callout>
 
 <Callout type="warn" title="A rejected tick leaves no trace">
@@ -158,8 +159,8 @@ Three consequences worth writing down:
   before the logger even exists, and a mismatched secret raises an
   `HTTPException` that the API's error handler returns without logging. So the
   failure you are most likely to hit writes nothing to the console and nothing
-  to the [Debug Panel](/docs/dev/debugging/logging). The AdminCP's **Last Run**
-  column is the health check.
+  to the [Debug Panel](/docs/dev/debugging/logging). The last run in the
+  **Time** column of **Debug Panel → Cron & queue** is the health check.
 </Callout>
 
 <Callout type="warn" title="Every instance runs its own timer">

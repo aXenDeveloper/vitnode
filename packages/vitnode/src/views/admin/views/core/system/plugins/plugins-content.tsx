@@ -14,6 +14,11 @@ import {
 } from "@/components/table/url-state";
 import { Button } from "@/components/ui/button";
 
+import type { VersionSides } from "./plugin-update-status";
+import type {
+  AdminComponentUpdate,
+  AdminPluginUpdates,
+} from "./plugin-updates-query";
 import type {
   AdminInstalledPlugin,
   AdminInstalledPlugins,
@@ -21,10 +26,27 @@ import type {
 
 import { PluginIcon } from "./plugin-icon";
 import { matchesPluginSearch } from "./plugin-search";
+import { PluginUpdateStatus, SecurityUpdates } from "./plugin-update-status";
 
 export interface PluginsContentProps {
   data: AdminInstalledPlugins;
+  /** Stored update results. Left out, the catalog lists versions only. */
+  updates?: AdminPluginUpdates;
 }
+
+/** Only worth naming the side when the API and the web app run different versions. */
+const versionSidesOf = (plugin: AdminInstalledPlugin): VersionSides => {
+  if (!plugin.versionMismatch) return {};
+
+  const sides: VersionSides = {};
+  const { api, frontend } = plugin.registrations;
+  if (api?.version) sides[api.version] = [...(sides[api.version] ?? []), "api"];
+  if (frontend?.version) {
+    sides[frontend.version] = [...(sides[frontend.version] ?? []), "frontend"];
+  }
+
+  return sides;
+};
 
 const PluginVersion = ({ version }: { version: null | string }) => {
   const t = useTranslations("admin.system.plugins");
@@ -40,7 +62,17 @@ const PluginVersion = ({ version }: { version: null | string }) => {
   return <span className="font-mono text-sm">{version}</span>;
 };
 
-const PluginCell = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
+const PluginCell = ({
+  coreVersion,
+  enabled,
+  plugin,
+  update,
+}: {
+  coreVersion: string;
+  enabled: boolean;
+  plugin: AdminInstalledPlugin;
+  update: AdminComponentUpdate | undefined;
+}) => {
   const t = useTranslations("admin.system.plugins");
   const { api, frontend } = plugin.registrations;
 
@@ -69,12 +101,21 @@ const PluginCell = ({ plugin }: { plugin: AdminInstalledPlugin }) => {
             {t("mismatch", { api: api.version, frontend: frontend.version })}
           </p>
         ) : null}
+        <SecurityUpdates sides={versionSidesOf(plugin)} update={update} />
+        {/* Narrow screens: the version column has no room for this. */}
+        <div className="md:hidden">
+          <PluginUpdateStatus
+            coreVersion={coreVersion}
+            enabled={enabled}
+            update={update}
+          />
+        </div>
       </div>
     </div>
   );
 };
 
-export const PluginsContent = ({ data }: PluginsContentProps) => {
+export const PluginsContent = ({ data, updates }: PluginsContentProps) => {
   const t = useTranslations("admin.system.plugins");
   const [searchParams, setSearchParams] = React.useState(
     () => new URLSearchParams(),
@@ -100,6 +141,9 @@ export const PluginsContent = ({ data }: PluginsContentProps) => {
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+  const updateById = new Map(
+    (updates?.plugins ?? []).map(update => [update.id, update]),
+  );
 
   return (
     <DataTableNavigationProvider value={navigation}>
@@ -109,12 +153,31 @@ export const PluginsContent = ({ data }: PluginsContentProps) => {
             id: "plugin",
             header: t("list.plugin"),
             className: "w-full whitespace-normal",
-            cell: ({ row }) => <PluginCell plugin={row} />,
+            cell: ({ row }) => (
+              <PluginCell
+                coreVersion={data.core.version}
+                enabled={updates?.enabled ?? true}
+                plugin={row}
+                update={updateById.get(row.id)}
+              />
+            ),
           },
           {
             id: "version",
             header: t("list.version"),
-            cell: ({ row }) => <PluginVersion version={row.version} />,
+            className: "whitespace-normal md:min-w-64",
+            cell: ({ row }) => (
+              <div className="flex flex-col gap-1">
+                <PluginVersion version={row.version} />
+                <div className="hidden md:block">
+                  <PluginUpdateStatus
+                    coreVersion={data.core.version}
+                    enabled={updates?.enabled ?? true}
+                    update={updateById.get(row.id)}
+                  />
+                </div>
+              </div>
+            ),
           },
         ]}
         customNoResults={

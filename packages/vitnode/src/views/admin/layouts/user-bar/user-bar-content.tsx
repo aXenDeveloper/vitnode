@@ -39,10 +39,12 @@ export interface AdminUserBarUser {
 }
 
 export const UserBarAdminContent = ({
+  debugStatus,
   languageSwitcher,
   onSignOut,
   user,
 }: {
+  debugStatus?: React.ReactNode;
   languageSwitcher?: React.ReactNode;
   onSignOut: () => Promise<void> | void;
   user: AdminUserBarUser;
@@ -69,7 +71,10 @@ export const UserBarAdminContent = ({
             }
           >
             <UserMenuIdentity user={user} />
-            <ChevronsUpDownIcon className="ms-auto" />
+            <span className="ms-auto flex shrink-0 items-center gap-2">
+              {canViewDebug ? debugStatus : null}
+              <ChevronsUpDownIcon />
+            </span>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
@@ -92,6 +97,7 @@ export const UserBarAdminContent = ({
                 <DropdownMenuItem render={<Link to="/admin/core/debug" />}>
                   <BugIcon />
                   {t("debug")}
+                  {debugStatus}
                 </DropdownMenuItem>
               )}
             </DropdownMenuGroup>

@@ -8,6 +8,7 @@ import type { RegisteredContentModel } from "@/content/server/model";
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { NavigationPreset } from "@/lib/navigation";
+import type { UpdateChannel } from "@/lib/updates/manifest";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
@@ -44,6 +45,7 @@ import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
+import { manifest as coreManifest } from "@/manifest";
 import { realtime } from "@/ws/registry";
 
 import type { AiActionRegistry } from "../lib/ai/registry";
@@ -57,6 +59,7 @@ import type { NotificationRegistry } from "../lib/notifications/registry";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
+import type { UpdateComponent } from "../lib/updates/components";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { EventsApiPlugin } from "../models/events";
 import type {
@@ -85,6 +88,8 @@ import { resolveNotificationWorkerSettings } from "../lib/notifications/preferen
 import { createNotificationRegistry } from "../lib/notifications/registry";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
+import { collectUpdateComponents } from "../lib/updates/components";
+import { resolveUpdatesConfig } from "../lib/updates/config";
 
 declare module "hono" {
   // oxlint-disable-next-line typescript/no-empty-object-type
@@ -182,6 +187,13 @@ export interface EnvVariablesVitNode {
     search: { adapter: SearchProviderApiPlugin };
     searchIndexers: SearchIndexerConfig[];
     storage?: VitNodeApiConfig["storage"];
+    /** Core and every catalog plugin, with the update source and versions to check. */
+    updates: {
+      channelOverride: null | UpdateChannel;
+      components: UpdateComponent[];
+      coreVersion: null | string;
+      enabled: boolean;
+    };
     webSockets: WebSocketConfig[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
@@ -237,6 +249,7 @@ export const globalMiddleware = ({
   notifications,
   search,
   storage,
+  updates,
   users,
   cacheClient,
 }: Pick<
@@ -255,6 +268,7 @@ export const globalMiddleware = ({
   | "plugins"
   | "search"
   | "storage"
+  | "updates"
   | "users"
 > &
   Pick<VitNodeConfig, "metadata"> & {
@@ -268,6 +282,17 @@ export const globalMiddleware = ({
     api: plugins,
     frontend: frontendPlugins,
   });
+  const updatesConfig = resolveUpdatesConfig(updates);
+  const updatesMetadata = {
+    ...updatesConfig,
+    components: collectUpdateComponents({
+      api: plugins,
+      core: coreManifest,
+      frontend: frontendPlugins,
+      registry: installedPlugins,
+    }),
+    coreVersion: coreManifest.version,
+  };
 
   // Resolved once at boot: the packages installed here can't change per
   // request. With no `i18n` block the locale list is whatever the installed
@@ -533,6 +558,7 @@ export const globalMiddleware = ({
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       installedPlugins,
+      updates: updatesMetadata,
       cron: cronMetadata,
       editablePages: editablePagesMetadata,
       queue: queueMetadata,

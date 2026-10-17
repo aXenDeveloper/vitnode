@@ -40,7 +40,7 @@ const writeManifest = (root: string, manifest: Record<string, unknown>) => {
   write(root, "package.json", JSON.stringify(manifest, null, 2));
 };
 
-const writeInfo = (root: string, info: Record<string, string>) => {
+const writeInfo = (root: string, info: Record<string, unknown>) => {
   write(
     root,
     PLUGIN_INFO_PATH,
@@ -99,7 +99,19 @@ describe("writePluginManifest", () => {
       id: "@acme/blog",
       license: null,
       title,
+      updates: null,
       version: "1.0.0",
+    });
+  });
+
+  it("takes the update source from src/plugin-info.ts", async () => {
+    const root = pluginAt(BLOG);
+    writeInfo(root, { updates: { url: "https://example.com/updates.json" } });
+
+    writePluginManifest(root);
+
+    expect(await generated(root)).toMatchObject({
+      updates: { url: "https://example.com/updates.json" },
     });
   });
 

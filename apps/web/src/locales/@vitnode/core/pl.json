@@ -64,7 +64,6 @@
   "admin": {
     "advanced": {
       "cron": {
-        "desc": "Zarządzaj i monitoruj zaplanowane zadania.",
         "health": {
           "facts": {
             "jobs": "Zadania",
@@ -97,28 +96,27 @@
             }
           },
           "lastRun": {
-            "never": "Nigdy",
-            "title": "Ostatnie uruchomienie"
+            "never": "Nigdy"
           },
           "name": "Nazwa",
           "nextRun": {
-            "never": "Nigdy",
-            "title": "Następne uruchomienie"
+            "never": "Nigdy"
           },
           "plugin": "Wtyczka",
-          "schedule": "Harmonogram",
           "search": "Szukaj zadań…",
           "status": {
             "on_schedule": "Zgodnie z harmonogramem",
             "overdue": "Zaległe",
-            "title": "Status",
             "waiting": "Czeka na pierwsze uruchomienie"
+          },
+          "time": {
+            "title": "Czas",
+            "last": "Ostatnio <date></date>",
+            "next": "Następnie <date></date>"
           }
-        },
-        "title": "Zadania cron"
+        }
       },
       "queue": {
-        "desc": "Monitoruj zadania w tle oczekujące na przetworzenie przez proces cron.",
         "list": {
           "attempts": "Próby",
           "availableAt": "Dostępne od",
@@ -134,8 +132,7 @@
           "failed": "Nieudane",
           "pending": "Oczekujące",
           "processing": "Przetwarzanie"
-        },
-        "title": "Zadania w kolejce"
+        }
       }
     },
     "dashboard": {
@@ -227,6 +224,141 @@
       }
     },
     "debug": {
+      "title": "Panel debugowania",
+      "desc": "Sprawdź stan instalacji, jej logi i pracę w tle.",
+      "unavailable": "Nie udało się wczytać tej sekcji. Spróbuj ponownie za chwilę.",
+      "nav": {
+        "label": "Sekcje panelu debugowania",
+        "menu": "Sekcja",
+        "systems": "Systemy",
+        "diagnostics": "Diagnostyka",
+        "overview": "Przegląd",
+        "vitnode": "VitNode",
+        "plugins": "Wtyczki",
+        "cron": "Cron i kolejka",
+        "cache": "Pamięć podręczna",
+        "search": "Wyszukiwanie",
+        "services": "Usługi",
+        "logs": "Przeglądarka logów",
+        "queue": "Kolejka",
+        "ai": "Logi AI"
+      },
+      "tone": {
+        "critical": "Krytyczne",
+        "warn": "Wymaga uwagi",
+        "ok": "Sprawne",
+        "off": "Wyłączone"
+      },
+      "overview": {
+        "attention": "{count, plural, one {# rzecz wymaga uwagi} few {# rzeczy wymagają uwagi} many {# rzeczy wymaga uwagi} other {# rzeczy wymaga uwagi}}",
+        "healthy": "Wszystko działa poprawnie",
+        "summary": "{critical, plural, =0 {Brak problemów krytycznych} one {# problem krytyczny} few {# problemy krytyczne} many {# problemów krytycznych} other {# problemów krytycznych}} · {warnings, plural, =0 {brak ostrzeżeń} one {# ostrzeżenie} few {# ostrzeżenia} many {# ostrzeżeń} other {# ostrzeżeń}}",
+        "recheck": "Sprawdź ponownie",
+        "systems": {
+          "title": "Systemy",
+          "desc": "Wszystko, co VitNode sprawdził w tej instalacji."
+        }
+      },
+      "diagnostics": {
+        "logs": "Każde ostrzeżenie i błąd zapisane przez API, od najnowszych.",
+        "queue": "Zadania w tle i to, co się z nimi stało.",
+        "ai": "Każde zapytanie do AI z modelem, statusem i kosztem."
+      },
+      "security": {
+        "alert": {
+          "title": "Dostępna aktualizacja bezpieczeństwa: VitNode {version}",
+          "desc": "Problem dotyczy VitNode {version}. Zaktualizuj jak najszybciej.",
+          "review": "Zobacz aktualizację"
+        },
+        "panel": {
+          "title": "Dostępna aktualizacja bezpieczeństwa",
+          "desc": "Problem dotyczy VitNode {version}. Zaktualizuj do {fixed} jak najszybciej.",
+          "desc_no_fix": "Problem dotyczy VitNode {version}. Poprawiona wersja nie została jeszcze opublikowana.",
+          "details": "Szczegóły",
+          "version": "Wersja",
+          "released": "wydano <date></date>",
+          "release_notes": "Informacje o wydaniu"
+        }
+      },
+      "sections": {
+        "vitnode": {
+          "version": "Wersja",
+          "channel": "Kanał aktualizacji",
+          "auto": "Automatyczny",
+          "last_checked": "Ostatnie sprawdzenie aktualizacji",
+          "never": "Nigdy"
+        },
+        "cache": {
+          "engine": "Silnik",
+          "redis": "Redis",
+          "memory": "W pamięci",
+          "cross_instance": "Czas rzeczywisty między instancjami",
+          "yes": "Tak",
+          "no": "Nie"
+        },
+        "services": {
+          "active": "Aktywna",
+          "not_configured": "Nieskonfigurowana",
+          "set_up": "Skonfiguruj"
+        }
+      },
+      "health": {
+        "vitnode": {
+          "subtitle": "Wersja {version}",
+          "security_update": "Aktualizacja bezpieczeństwa: VitNode {version}",
+          "update_available": "Dostępny VitNode {version}",
+          "source_unreachable": "Nie udało się odczytać źródła aktualizacji",
+          "not_checked": "Aktualizacje nie zostały jeszcze sprawdzone",
+          "up_to_date": "Działa najnowsza wersja ({version})"
+        },
+        "plugins": {
+          "subtitle": "{count, plural, one {# zainstalowana wtyczka} few {# zainstalowane wtyczki} many {# zainstalowanych wtyczek} other {# zainstalowanych wtyczek}}",
+          "ok": "{count, plural, one {Wtyczka jest aktualna} few {Wszystkie # wtyczki są aktualne} many {Wszystkie # wtyczek jest aktualnych} other {Wszystkie # wtyczek jest aktualnych}}",
+          "problem": {
+            "security_update": "Aktualizacja bezpieczeństwa",
+            "version_mismatch": "Wersje API i web się różnią",
+            "update_available": "Aktualizacja do {version}",
+            "source_unreachable": "Źródło aktualizacji niedostępne"
+          },
+          "summary": {
+            "security_update": "{count, plural, one {# wtyczka wymaga aktualizacji bezpieczeństwa} few {# wtyczki wymagają aktualizacji bezpieczeństwa} many {# wtyczek wymaga aktualizacji bezpieczeństwa} other {# wtyczek wymaga aktualizacji bezpieczeństwa}}",
+            "version_mismatch": "{count, plural, one {# wtyczka ma różne wersje API i web} few {# wtyczki mają różne wersje API i web} many {# wtyczek ma różne wersje API i web} other {# wtyczek ma różne wersje API i web}}",
+            "update_available": "{count, plural, one {Dostępna # aktualizacja wtyczki} few {Dostępne # aktualizacje wtyczek} many {Dostępnych # aktualizacji wtyczek} other {Dostępnych # aktualizacji wtyczek}}",
+            "source_unreachable": "{count, plural, one {# źródło aktualizacji wtyczki jest niedostępne} few {# źródła aktualizacji wtyczek są niedostępne} many {# źródeł aktualizacji wtyczek jest niedostępnych} other {# źródeł aktualizacji wtyczek jest niedostępnych}}"
+          }
+        },
+        "cron": {
+          "subtitle_adapter": "Działa w procesie",
+          "subtitle_external": "Uruchamiany z zewnątrz",
+          "insecure_secret": "CRON_SECRET nie jest ustawiony lub ma wartość domyślną, więc uruchomienia cron są odrzucane",
+          "stopped": "Harmonogram przestał działać",
+          "overdue": "{count, plural, one {# zadanie cron jest opóźnione} few {# zadania cron są opóźnione} many {# zadań cron jest opóźnionych} other {# zadań cron jest opóźnionych}}",
+          "failed_tasks": "{count, plural, one {# zadanie w kolejce zakończyło się błędem} few {# zadania w kolejce zakończyły się błędem} many {# zadań w kolejce zakończyło się błędem} other {# zadań w kolejce zakończyło się błędem}}",
+          "ok": "{count, plural, one {# zadanie cron zgodnie z harmonogramem} few {# zadania cron zgodnie z harmonogramem} many {# zadań cron zgodnie z harmonogramem} other {# zadań cron zgodnie z harmonogramem}}"
+        },
+        "cache": {
+          "subtitle_redis": "Redis",
+          "subtitle_memory": "W pamięci",
+          "redis_down": "Redis jest niedostępny",
+          "redis_connected": "Połączono z Redis",
+          "memory": "Redis nie jest skonfigurowany, więc pamięć podręczna działa w pamięci"
+        },
+        "search": {
+          "subtitle": "Silnik: {engine}",
+          "engine_down": "Silnik wyszukiwania {engine} nie odpowiada",
+          "incomplete": "{count, plural, one {# kolekcja jest niekompletna} few {# kolekcje są niekompletne} many {# kolekcji jest niekompletnych} other {# kolekcji jest niekompletnych}}",
+          "sync_errors": "{count, plural, one {# niedawny błąd synchronizacji} few {# niedawne błędy synchronizacji} many {# niedawnych błędów synchronizacji} other {# niedawnych błędów synchronizacji}}",
+          "ok": "{count, plural, one {# zaindeksowany element} few {# zaindeksowane elementy} many {# zaindeksowanych elementów} other {# zaindeksowanych elementów}}"
+        },
+        "services": {
+          "subtitle": "Skonfigurowano {active} z {total}",
+          "email": "E-mail",
+          "storage": "Przechowywanie plików",
+          "ai": "Modele AI",
+          "captcha": "Captcha",
+          "websocket": "WebSocket"
+        }
+      },
       "actions": {
         "clear_cache": {
           "confirm": "Tak, wyczyść pamięć podręczną",
@@ -236,7 +368,6 @@
           "title": "Czy na pewno chcesz wyczyścić pamięć podręczną?"
         }
       },
-      "desc": "Sprawdzaj logi, błędy i inne informacje debugowania.",
       "logs": {
         "content": "Treść",
         "created_at": "Utworzono",
@@ -265,42 +396,16 @@
           "title": "Więcej szczegółów"
         },
         "plugin": "Wtyczka",
-        "status_code": "Kod statusu",
-        "title": "Logi systemowe",
         "type": "Typ",
         "types": {
           "debug": "Debug",
           "error": "Błąd",
           "warn": "Ostrzeżenie"
         }
-      },
-      "queue": {
-        "counts": {
-          "completed": "Ukończone",
-          "failed": "Nieudane",
-          "pending": "Oczekujące",
-          "processing": "Przetwarzanie"
-        },
-        "empty": "Brak aktywnych zadań w kolejce.",
-        "list": {
-          "attempts": "Próby",
-          "availableAt": "Dostępne od",
-          "name": "Zadanie",
-          "queue": "Kolejka",
-          "status": "Status"
-        },
-        "title": "Zadania w kolejce"
-      },
-      "title": "Panel debugowania"
+      }
     },
     "global": {
       "nav": {
-        "advanced": {
-          "cron": "Zadania cron",
-          "queue": "Zadania w kolejce",
-          "search": "Szukaj",
-          "title": "Zaawansowane"
-        },
         "core": "Rdzeń",
         "dashboard": "Pulpit",
         "staff": {
@@ -320,7 +425,8 @@
           "home_page": "Strona główna",
           "log_out": "Wyloguj się",
           "report_issue": "Zgłoś problem",
-          "website": "Strona VitNode"
+          "website": "Strona VitNode",
+          "debug_status": "{count, plural, one {# problem wymaga uwagi} few {# problemy wymagają uwagi} many {# problemów wymaga uwagi} other {# problemów wymaga uwagi}}"
         },
         "users": {
           "list": "Lista użytkowników",
@@ -330,8 +436,12 @@
         "ai": {
           "title": "Sztuczna Inteligencja (AI)",
           "overview": "Przegląd",
-          "actions": "Akcje",
-          "history": "Historia"
+          "actions": "Akcje"
+        },
+        "debug": {
+          "cron": "Zadania cron",
+          "queue": "Zadania w kolejce",
+          "search": "Indeks wyszukiwania"
         }
       },
       "search": {
@@ -873,7 +983,98 @@
         },
         "search": "Szukaj wtyczek...",
         "title": "Wtyczki",
-        "version_unknown": "Nieznana wersja"
+        "version_unknown": "Nieznana wersja",
+        "core": {
+          "title": "Rdzeń VitNode",
+          "version": "Zainstalowana wersja <mono>{version}</mono>"
+        },
+        "updates": {
+          "check": {
+            "button": "Sprawdź aktualizacje",
+            "success": {
+              "title": "Sprawdzanie aktualizacji zakończone",
+              "desc": "Znaleziono {updates, plural, =0 {0 aktualizacji} one {# aktualizację} few {# aktualizacje} many {# aktualizacji} other {# aktualizacji}} i {securityUpdates, plural, =0 {0 aktualizacji bezpieczeństwa} one {# aktualizację bezpieczeństwa} few {# aktualizacje bezpieczeństwa} many {# aktualizacji bezpieczeństwa} other {# aktualizacji bezpieczeństwa}}."
+            },
+            "partial": {
+              "title": "Nie udało się odczytać niektórych źródeł aktualizacji",
+              "desc": "Liczba nieudanych źródeł: {count}. Wcześniejsze wyniki dla nich zostały zachowane."
+            },
+            "running": {
+              "title": "Sprawdzanie już trwa",
+              "desc": "Trwa inne sprawdzanie - codzienne albo uruchomione przez kogoś innego. Jego wyniki pojawią się tutaj po zakończeniu."
+            },
+            "cooldown": {
+              "title": "Sprawdzono przed chwilą",
+              "desc": "Spróbuj ponownie za {seconds} s."
+            },
+            "disabled": {
+              "title": "Sprawdzanie aktualizacji jest wyłączone",
+              "desc": "Ta instalacja ustawia updates.enabled na false w konfiguracji API."
+            },
+            "error": {
+              "title": "Nie udało się rozpocząć sprawdzania",
+              "desc": "API nie odpowiedziało. Spróbuj ponownie za chwilę."
+            }
+          },
+          "summary": {
+            "last_checked": "Ostatnio sprawdzono <date></date>",
+            "disabled": "Sprawdzanie aktualizacji jest wyłączone w tej instalacji.",
+            "channel": "Kanał: {channel} (ustawiony w konfiguracji API)"
+          },
+          "status": {
+            "not_checked": "Jeszcze nie sprawdzono",
+            "unavailable": "Sprawdzanie aktualizacji niedostępne",
+            "disabled": "Sprawdzanie aktualizacji jest wyłączone",
+            "up_to_date": "Aktualna",
+            "update_available": "Dostępna aktualizacja: {version}",
+            "package_missing": "Brak w manifeście aktualizacji wydawcy",
+            "channel_missing": "Brak opublikowanych wydań na kanale {channel}",
+            "unknown_channel": "Zainstalowana wersja nie należy do żadnego znanego kanału. Ustaw updates.channel w konfiguracji API, aby go wybrać.",
+            "version_unknown": "Nieznana zainstalowana wersja - nie można potwierdzić, że jest aktualna"
+          },
+          "released": "wydana <date></date>",
+          "release_notes": "Informacje o wydaniu",
+          "compatibility": {
+            "compatible": "Wydawca deklaruje obsługę rdzenia {range}.",
+            "incompatible": "Wymaga nowszego rdzenia ({range}); ta instalacja używa {core}.",
+            "unknown": "Zgodność z Twoją wersją rdzenia jest nieznana - wydawca jej nie zadeklarował.",
+            "alternative": "{version} to najnowsze wydanie na tym kanale, które deklaruje obsługę Twojego rdzenia."
+          },
+          "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki pochodzą z danych wydawcy pobranych <date></date>.",
+          "failed": "Ostatnie sprawdzanie nie powiodło się: {reason}",
+          "failed_with_previous": "Ostatnie sprawdzanie nie powiodło się: {reason} Widoczny jest ostatni udany wynik z <date></date>.",
+          "checked_at": "Sprawdzono <date></date>",
+          "error": {
+            "blocked_address": "źródło aktualizacji wskazuje na adres prywatny lub lokalny.",
+            "http_error": "źródło aktualizacji odpowiedziało kodem HTTP {detail}.",
+            "invalid_json": "źródło aktualizacji nie jest poprawnym JSON-em.",
+            "invalid_manifest": "manifest aktualizacji jest nieprawidłowy ({detail}).",
+            "invalid_url": "adres źródła aktualizacji jest niedozwolony ({detail}).",
+            "network": "nie udało się połączyć ze źródłem aktualizacji.",
+            "timeout": "źródło aktualizacji nie odpowiedziało na czas.",
+            "too_large": "manifest aktualizacji jest większy niż 1 MB.",
+            "too_many_redirects": "źródło aktualizacji przekierowało zbyt wiele razy.",
+            "unsupported_schema": "manifest aktualizacji używa formatu nieobsługiwanego przez tę wersję VitNode ({detail})."
+          },
+          "security": {
+            "label": "Aktualizacje bezpieczeństwa",
+            "title": "Aktualizacja bezpieczeństwa {id}",
+            "affects": "Dotyczy zainstalowanej wersji {versions} (zakres {range}).",
+            "fixed": "Naprawiono w {version}.",
+            "no_fix": "Poprawiona wersja nie została jeszcze opublikowana.",
+            "details": "Szczegóły"
+          },
+          "channel": {
+            "stable": "stabilny",
+            "rc": "kandydat do wydania",
+            "canary": "canary"
+          },
+          "side": {
+            "api": "API",
+            "frontend": "aplikacja webowa"
+          },
+          "version_on_side": "{version} ({side})"
+        }
       }
     },
     "user": {
@@ -1406,8 +1607,6 @@
         "plugin": "Wtyczka"
       },
       "history": {
-        "title": "Historia AI",
-        "desc": "Każda operacja AI: kto ją uruchomił, który model odpowiedział i ile to kosztowało.",
         "charged_reservation": "Pobrano {amount} (rezerwacja)",
         "filters": {
           "all": "Wszystkie",
@@ -2752,7 +2951,6 @@
           "dismiss": "Odrzuć",
           "title": "Zadania w tle wymagają skonfigurowanego adaptera cron"
         },
-        "desc": "Silnik wyszukiwania treści i status indeksu.",
         "healthy": "Działa",
         "never": "Nigdy",
         "rebuild": "Przebuduj indeks",
@@ -2771,7 +2969,6 @@
           "statusHealthy": "Wszystkie systemy działają poprawnie",
           "statusUnhealthy": "Wyszukiwarka niedostępna"
         },
-        "title": "Szukaj",
         "unhealthy": "Niedostępny"
       },
       "desc": "Przeszukaj wszystko w społeczności.",
@@ -2928,5 +3125,6 @@
         "description": "Przeredagowuje zaznaczony tekst: skraca, poprawia, upraszcza albo zmienia ton."
       }
     }
-  }
+  },
+  "@vitnode/core:plugins:can_check_updates": "Sprawdzanie aktualizacji wtyczek i rdzenia na żądanie"
 }

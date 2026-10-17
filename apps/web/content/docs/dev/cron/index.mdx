@@ -75,14 +75,14 @@ curl -X POST https://your-domain.com/api/@vitnode/core/cron   -H "Authorization:
 
 ---
 
-## AdminCP Management
+## Manage cron jobs in the Debug Panel
 
-{/* Image prompt: VitNode AdminCP Cron management page at /admin/core/advanced/cron. Data table displaying scheduled jobs with columns: Name, Schedule, Status, Last Run, Next Run, and an action button "Run Now". Dark theme, 1440x900. */}
+{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/cron with the "Cron & queue" section open in the side menu. A green "All jobs on schedule" scheduler card with last run, next run and job count, and below it a cron jobs table with a search box and columns Name, Plugin and Time (schedule, "On schedule" badge, "Last … · Next …"), plus a play button per row. Dark theme, 1440x900. */}
 
-Manage and inspect cron jobs in the AdminCP at **Core → Advanced → Cron Jobs** (`/admin/core/advanced/cron`):
+Open **Debug Panel → Cron & queue** in the AdminCP (`/admin/core/debug/cron`), or type "Cron jobs" into the ⌘K admin search. Viewing it needs the `cron → can_view` staff permission.
 
-- View status, schedules, and last execution logs.
-- Click **Run Now** to execute any job manually on demand.
+- The table lists every job with its **Name**, **Plugin** and **Time**: the schedule, a status badge, and the last and next run. It is sorted by next run, with a search box to find a job.
+- The play button on a row (**Run Job Now**) runs that job on demand. It needs the `cron → can_run` permission.
 
 ### Health warnings
 
@@ -90,7 +90,7 @@ Cron fails quietly by nature: nobody notices a job that didn't run. So VitNode w
 
 A job is **overdue** when its next scheduled run is more than 15 minutes in the past. Never-run jobs count from the moment they were registered.
 
-The scheduler card at the top of the page sums it up:
+The scheduler card at the top of the section sums it up:
 
 | What you see | What it means |
 | --- | --- |
@@ -100,7 +100,7 @@ The scheduler card at the top of the page sums it up:
 
 Next to it you get the last run, the next run and how many jobs are registered. The table below lists every job with an **Overdue**, **On schedule** or **Waiting for first run** status.
 
-The same check powers the **Cron Jobs** and **Queue Tasks** cards at **Core → System → Integrations**.
+The same check powers the Debug Panel **Overview** and the **Cron Jobs** and **Queue Tasks** cards at **Core → System → Integrations**.
 
 ---
 

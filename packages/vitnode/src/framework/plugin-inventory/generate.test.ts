@@ -22,6 +22,8 @@ const BLOG_MANIFEST = {
   version: "1.0.0",
 };
 
+const WITH_UPDATES = { ...BLOG_MANIFEST, updates: null };
+
 describe("pluginInventoryFromLoadedConfig", () => {
   it("lists each registration with its manifest, or null without one", () => {
     expect(
@@ -33,9 +35,20 @@ describe("pluginInventoryFromLoadedConfig", () => {
         SOURCE,
       ),
     ).toEqual([
-      { id: "@acme/blog", manifest: BLOG_MANIFEST },
+      { id: "@acme/blog", manifest: WITH_UPDATES },
       { id: "@acme/shop", manifest: null },
     ]);
+  });
+
+  it("keeps the update source of a manifest that declares one", () => {
+    const updates = { url: "https://example.com/updates.json" };
+
+    expect(
+      pluginInventoryFromLoadedConfig(
+        [{ manifest: { ...BLOG_MANIFEST, updates }, pluginId: "@acme/blog" }],
+        SOURCE,
+      ),
+    ).toEqual([{ id: "@acme/blog", manifest: { ...BLOG_MANIFEST, updates } }]);
   });
 
   it.each([
@@ -44,6 +57,7 @@ describe("pluginInventoryFromLoadedConfig", () => {
     ["a missing icon", { ...BLOG_MANIFEST, icon: undefined }],
     ["a numeric version", { ...BLOG_MANIFEST, version: 1 }],
     ["an undefined description", { ...BLOG_MANIFEST, description: undefined }],
+    ["an update source without a url", { ...BLOG_MANIFEST, updates: {} }],
   ])("rejects manifest that is %s", (_, manifest) => {
     expect(() =>
       pluginInventoryFromLoadedConfig(
@@ -63,12 +77,32 @@ describe("pluginInventoryFromLoadedConfig", () => {
       /registers the plugin "@acme\/shop" with the manifest of "@acme\/blog"/,
     );
   });
+
+  it.each([
+    ["an http update source", "http://example.com/updates.json"],
+    ["an update source with a token", "https://example.com/u.json?token=1"],
+  ])("rejects manifest with %s", (_, url) => {
+    expect(() =>
+      pluginInventoryFromLoadedConfig(
+        [
+          {
+            manifest: { ...BLOG_MANIFEST, updates: { url } },
+            pluginId: "@acme/blog",
+          },
+        ],
+        SOURCE,
+      ),
+    ).toThrow(/gives the plugin "@acme\/blog" the update source/);
+  });
 });
 
 describe("generatePluginInventorySource", () => {
   const blog: FrontendPluginInventoryEntry = {
     id: "@acme/blog",
-    manifest: BLOG_MANIFEST,
+    manifest: {
+      ...BLOG_MANIFEST,
+      updates: { url: "https://example.com/updates.json" },
+    },
   };
   const shop: FrontendPluginInventoryEntry = {
     id: "@acme/shop",
@@ -76,7 +110,7 @@ describe("generatePluginInventorySource", () => {
   };
   const forum: FrontendPluginInventoryEntry = {
     id: "@acme/forum",
-    manifest: { ...BLOG_MANIFEST, icon: null, id: "@acme/forum" },
+    manifest: { ...WITH_UPDATES, icon: null, id: "@acme/forum" },
   };
 
   it("writes the same bytes whatever order the plugins are configured in", () => {

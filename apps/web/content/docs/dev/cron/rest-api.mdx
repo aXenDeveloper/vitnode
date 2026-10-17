@@ -111,10 +111,11 @@ daily jobs honest and a poor way to drain a queue.
 ### Verify it from the AdminCP
 
 Send the request by hand once. A `200` with a job count means the endpoint
-accepted you; open `/admin/core/advanced/cron` and the rows you expected to run
-now show a **Last Run** of a moment ago.
+accepted you; open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`)
+and the rows you expected to run now show a last run of a moment ago in the
+**Time** column.
 
-Then leave the scheduler to it and check back. **Last Run** drifting behind a
+Then leave the scheduler to it and check back. A last run drifting behind a
 job's schedule is the symptom of a tick that is not arriving, and it is the only
 signal that reflects an external scheduler - see the gotcha about the
 Integrations screen below.
@@ -169,8 +170,8 @@ Integrations screen below.
   registers a `cron` adapter - it is reading the config, not counting ticks.
   Tick from outside and that card stays grey however healthy the schedule is,
   and the queue card with it, because the queue's status is derived from cron's.
-  The honest signal for an external scheduler is the **Last Run** column on
-  `/admin/core/advanced/cron`.
+  The honest signal for an external scheduler is the last run in the **Time**
+  column of **Debug Panel → Cron & queue** (`/admin/core/debug/cron`).
 </Callout>
 
 <Callout

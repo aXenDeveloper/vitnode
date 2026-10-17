@@ -26,6 +26,11 @@ export class VersionManager {
   async init(): Promise<void> {
     if (this.env.GITHUB_OPTION_MODE === "publish") {
       console.log("Skipping version bump in publish mode");
+      // The release steps and the update manifest still need the tag of what
+      // is about to be published.
+      this.exposeNewVersion(
+        `${CONFIG.TAG_PREFIX}${this.getCurrentVersion()}${CONFIG.TAG_SUFFIX}`,
+      );
       return;
     }
 

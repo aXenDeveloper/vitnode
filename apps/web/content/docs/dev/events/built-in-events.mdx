@@ -1128,7 +1128,7 @@ Interactive routes ignore that result on purpose, because the mutation succeeded
 either way. Background work usually should not: the scheduled-effects task
 inspects `failures` and retries the whole delivery when it is non-empty.
 
-{/* Image prompt: A screenshot of the VitNode AdminCP debug panel at /admin/core/debug, dark theme, 1440x900, showing one red "error" log row whose content is the JSON line [content-effects] {"action":"published","contentTypeId":"blog.post","delivered":1,"eventId":"6f1c...","failures":[{"error":"fetch failed","listener":"@acme/shop:orders:mirror-post"}],"itemId":42}. */}
+{/* Image prompt: A screenshot of the VitNode AdminCP Debug Panel at /admin/core/debug/logs (Log explorer section), dark theme, 1440x900, showing one red "error" log row whose content is the JSON line [content-effects] {"action":"published","contentTypeId":"blog.post","delivered":1,"eventId":"6f1c...","failures":[{"error":"fetch failed","listener":"@acme/shop:orders:mirror-post"}],"itemId":42}. */}
 
 <Callout type="warn" title="The generated routes emit, the services do not">
   A generated route emits one lifecycle event per successful mutation, after the

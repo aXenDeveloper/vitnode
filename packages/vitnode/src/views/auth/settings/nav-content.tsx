@@ -11,7 +11,7 @@ import {
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { SideNavCard, SideNavLink, SideNavList } from "@/components/side-nav";
+import { SideNav, SideNavLink, SideNavList } from "@/components/side-nav";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -122,9 +122,9 @@ const SettingsNavCard = ({
   const t = useTranslations("core.auth.settings");
 
   return (
-    <SideNavCard aria-label={t("title")} className="max-md:hidden">
+    <SideNav aria-label={t("title")} className="max-md:hidden">
       <SettingsNavList items={items} pathname={pathname} />
-    </SideNavCard>
+    </SideNav>
   );
 };
 

@@ -218,14 +218,18 @@ A document you index yourself with `c.get('search').index()` keeps its `url` exa
 
 ---
 
-## AdminCP Search Management
+## Manage the search index in the Debug Panel
 
-{/* Image prompt: VitNode AdminCP Search settings screen at /admin/core/advanced/search. Dashboard displaying search index statistics, engine status (PostgreSQL / Elasticsearch), registered item types with indexed document counts, and a "Rebuild Index" button. Dark theme, 1440x900. */}
+{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/search with the "Search" section open in the side menu. Header with a "Rebuild index" button, a row of stat cards (status, engine PostgreSQL, indexed items, last indexed), and a collections table with a search box, indexed counts and a "Reindex" button per row. Dark theme, 1440x900. */}
 
-Manage search status at **Core → Advanced → Search** (`/admin/core/advanced/search`):
+Open **Debug Panel → Search** in the AdminCP (`/admin/core/debug/search`), or type "Search index" into the ⌘K admin search:
 
-- View indexed record counts across all collections.
-- Trigger background rebuilds of specific collections or the entire site.
+- The stat cards show the index status, the engine, how many items are indexed and when the last one was indexed. Recent sync errors appear below them.
+- The collections table lists indexed counts per collection, with a search box to find one.
+- **Reindex** rebuilds one collection, and **Rebuild index** in the header rebuilds all of them.
+- **Remove documents** shows up instead of **Reindex** on a collection with no rebuild indexer. It clears that collection's documents, and live plugin writes may add them back.
+
+Opening the section needs `system → can_view`. The rebuild, reindex and remove buttons need `system → can_manage_search`.
 
 A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is running. Until then it waits in the queue, patient but unproductive.
 

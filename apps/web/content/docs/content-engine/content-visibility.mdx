@@ -141,7 +141,7 @@ The route tells whose record it is by its `id`, so `id` must be in `publicApi.fi
 Everyone else, signed in or not, still gets a `404`. Old slugs never redirect to a hidden record, and the list, sitemap and `hreflang` alternates leave it out for everybody.
 
 <Callout type="info">
-Search learns that a record is hidden when it is hidden or unhidden. Records hidden before you updated VitNode show up for their authors and editors only after a reindex: **AdminCP → Advanced → Search**, then **Reindex** on the collection, such as `blog.post`. See [Search](/docs/content-engine/search).
+Search learns that a record is hidden when it is hidden or unhidden. Records hidden before you updated VitNode show up for their authors and editors only after a reindex: **Debug Panel → Search** (`/admin/core/debug/search`), then **Reindex** on the collection, such as `blog.post`. See [Search](/docs/content-engine/search).
 </Callout>
 
 Hiding changes nothing else. `status` and `publishedAt` stay as they are, so unhiding a published record puts it back with its original date. Publishing, unpublishing and scheduled publishes never change visibility, so publishing a hidden record keeps it off the site until someone unhides it. Restoring a revision never changes visibility either.

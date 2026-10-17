@@ -19,6 +19,19 @@ export const ADMIN_USER_PERMISSIONS = {
   view: core("users", "can_view"),
 } as const;
 
+export const ADMIN_DEBUG_PERMISSIONS = {
+  ai: core("ai", "can_view"),
+  clearCache: core("debug", "can_clear_cache"),
+  cron: core("cron", "can_view"),
+  plugins: core("plugins", "can_view"),
+  queue: core("queue", "can_view"),
+  system: core("system", "can_view"),
+  testAi: core("system", "can_test_ai"),
+  testEmail: core("system", "can_send_test_email"),
+  testStorage: core("system", "can_test_storage"),
+  view: core("debug", "can_view"),
+} as const;
+
 export const ADMIN_SEARCH_PERMISSIONS = {
   manage: core("system", "can_manage_search"),
 } as const;

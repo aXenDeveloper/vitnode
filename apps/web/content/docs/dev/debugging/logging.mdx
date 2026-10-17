@@ -29,9 +29,9 @@ export const refundOrderRoute = buildRoute({
 })
 ```
 
-Open the **Debug Panel** from the AdminCP avatar menu and the line is in
-**System Logs**, with the plugin, the path, the status code and the signed-in
-user already attached.
+Open **Debug Panel → Log explorer** in the AdminCP
+(`/admin/core/debug/logs`) and the line is there, with the plugin, the path,
+the status code and the signed-in user already attached.
 
 ## The three levels
 
@@ -87,8 +87,8 @@ path just makes the table harder to scan.
 
 Three ways, in descending order of convenience:
 
-1. **The Debug Panel** at `/admin/core/debug` - sortable by type, plugin or
-   date, with a detail dialog per row.
+1. **Debug Panel → Log explorer** at `/admin/core/debug/logs` - sortable by
+   type, plugin or date, with a detail dialog per row.
 2. **The server console** - the same lines, live, prefixed
    `[VitNode] Error (@your/plugin):`.
 3. **The API**, if you want to build your own view:
