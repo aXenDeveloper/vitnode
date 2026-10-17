@@ -6,7 +6,9 @@ import {
   ThemeLayoutContent,
 } from '@vitnode/core/tanstack/layout'
 
+import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 import { SiteFooter } from '@/site/marketing/footer'
+import marketingCss from '@/site/marketing/marketing.css?url'
 
 const MainLayout = () => (
   <>
@@ -19,5 +21,10 @@ const MainLayout = () => (
 
 export const Route = createFileRoute('/_main')({
   loader: async ({ context }) => await loadMainShell(context),
+  // Marketing-only keyframes and layouts stay out of the global stylesheet,
+  // so admin and docs never download them.
+  head: () => ({
+    links: [{ href: withoutHmrTimestamp(marketingCss), rel: 'stylesheet' }],
+  }),
   component: MainLayout,
 })

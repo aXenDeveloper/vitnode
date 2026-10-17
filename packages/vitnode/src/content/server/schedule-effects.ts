@@ -142,11 +142,14 @@ export const runContentScheduleEffects = async (
     return { status: "unregistered" };
   }
 
+  const isPublic = isContentRowPublic(row);
+
   const outcome: ContentEditorialOutcome<AnyContentTypeDefinition> = {
     changed: true,
     changedFields: payload.changedFields,
     operation: payload.operation,
     previousSlug: payload.previousSlug,
+    publicState: { isPublic, wasPublic: payload.wasPublic },
     restoredFromRevisionId: null,
     revisionId: payload.revisionId,
     row: row as never,
@@ -177,8 +180,6 @@ export const runContentScheduleEffects = async (
   const currentSlug = definition.publicApi.enabled
     ? row[definition.publicApi.slugField]
     : undefined;
-
-  const isPublic = isContentRowPublic(row);
 
   const revalidation = await dispatchContentRevalidation(c, {
     contentTypeId: definition.id,

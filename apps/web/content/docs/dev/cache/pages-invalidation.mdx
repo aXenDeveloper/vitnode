@@ -47,7 +47,7 @@ Every content write announces itself after its database transaction has committe
 
 A hard invalidation also covers a render that started before the change and finishes after it: that render is sent to the visitor who asked, but not stored. After a slug change, the old address answers with its `308` redirect straight away.
 
-Invalidation is per record, not per language. Editing the Polish translation also refreshes the English page, which lists the Polish one in its `hreflang` links anyway. Scheduled publication and creating a draft are announced too, but a draft that nobody can see changes no page.
+Invalidation is per record, not per language. Editing the Polish translation also refreshes the English page, which lists the Polish one in its `hreflang` links anyway. Scheduled publication and creating a draft are announced too, but a draft that nobody can see changes no page - so creating, autosaving, editing or deleting a record that was never public (and still isn't) invalidates nothing at all. Your blog's front page stays warm while someone polishes tomorrow's post.
 
 Data your page reads from your own API routes is invalidated only if you label it. Call `setPageCacheTags(c, [tag])` in the route and `invalidatePageCacheTags([tag], { mode })` after the write. See the [reference](/docs/dev/cache/pages-reference#label-and-invalidate-your-own-data). Anything unlabelled, such as settings, shows up when the TTL ends.
 

@@ -2,7 +2,7 @@ import type { Context } from "hono";
 
 import { and, eq, gte, sql } from "drizzle-orm";
 
-import type { AiLedger, AiUserPolicy } from "./ledger";
+import type { AiLedger } from "./ledger";
 
 import { core_ai_budget_periods, core_ai_runs } from "../../../database/ai";
 import { AI_USAGE_WARNING_SHARE } from "../../../lib/ai/usage-tone";
@@ -85,26 +85,19 @@ export const loadUserAiUsage = async (
       );
     }
   }
-  const policies = new Map<string, AiUserPolicy>(
-    await Promise.all(
-      [...permissionDefaults].map(
-        async ([permissionKey, defaultGranted]) =>
-          [
-            permissionKey,
-            await ledger.resolveUserPolicy({
-              defaultGranted,
-              permissionKey,
-              userId,
-            }),
-          ] as const,
-      ),
+  const policies = await ledger.resolveUserPolicies({
+    permissions: [...permissionDefaults].map(
+      ([permissionKey, defaultGranted]) => ({ defaultGranted, permissionKey }),
     ),
-  );
+    settings,
+    userId,
+  });
   const allowance =
     [...policies.values()][0] ??
     (await ledger.resolveUserPolicy({
       defaultGranted: false,
       permissionKey: "",
+      settings,
       userId,
     }));
 
@@ -150,16 +143,27 @@ export const loadUserAiUsage = async (
 
     return policy?.granted ? [{ action, policy }] : [];
   });
-  const actionUsages = await Promise.all(
-    grantedActions.map(async ({ action, policy }) => {
-      const [daily, actionSettings] = await Promise.all([
-        readRow(db, userDailyScope(userId, action.permissionKey), day.start),
-        ledger.loadActionSettings(action.key),
-      ]);
-
-      return { action, actionSettings, daily, policy };
-    }),
-  );
+  const [settingsByAction, dailyRows] = await Promise.all([
+    ledger.loadActionSettingsMany(
+      grantedActions.map(({ action }) => action.key),
+    ),
+    Promise.all(
+      grantedActions.map(
+        async ({ action }) =>
+          await readRow(
+            db,
+            userDailyScope(userId, action.permissionKey),
+            day.start,
+          ),
+      ),
+    ),
+  ]);
+  const actionUsages = grantedActions.map(({ action, policy }, index) => ({
+    action,
+    actionSettings: settingsByAction.get(action.key) ?? null,
+    daily: dailyRows[index],
+    policy,
+  }));
   const actions: AiUserActionUsage[] = [];
   for (const { action, actionSettings, daily, policy } of actionUsages) {
     if (actionSettings?.enabled === false) continue;

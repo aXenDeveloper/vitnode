@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import { useVisualEditor } from "../context";
+import { useVisualEditorActions } from "../context";
 import { LabelledControl } from "./labelled-control";
 import {
   VARIANT_CLEAR_VALUE,
@@ -32,7 +32,7 @@ export const BlockVariantControl = ({
 }): null | ReactElement => {
   const t = useTranslations("core.editor");
   const tGlobal = useTranslations("core.global");
-  const { dispatch } = useVisualEditor();
+  const { dispatch } = useVisualEditorActions();
   const spec = variantControlSpec(definition, variant);
 
   if (!spec.visible) return null;

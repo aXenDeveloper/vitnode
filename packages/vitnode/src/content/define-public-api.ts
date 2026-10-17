@@ -105,9 +105,13 @@ const resolvePublicPeople = (
   }
 
   const names = people.map(String);
-  const duplicate = names.find(
-    (name, position) => names.indexOf(name) !== position,
-  );
+  const seen = new Set<string>();
+  const duplicate = names.find(name => {
+    if (seen.has(name)) return true;
+    seen.add(name);
+
+    return false;
+  });
   if (duplicate !== undefined) {
     throw new ContentEngineError(
       `publicApi.people lists "${duplicate}" twice.`,
@@ -153,6 +157,51 @@ const resolvePublicPeople = (
         { contentTypeId: id },
       );
     }
+  }
+
+  return names;
+};
+
+/**
+ * `publicApi.listFields`, checked: a non-empty, duplicate-free subset of the
+ * exposed fields. `undefined` when the list carries everything `fields` does.
+ */
+const resolvePublicListFields = (
+  id: string,
+  exposed: readonly string[],
+  listFields: readonly string[] | undefined,
+): string[] | undefined => {
+  if (listFields === undefined) return undefined;
+
+  const names = listFields.map(String);
+  if (names.length === 0) {
+    throw new ContentEngineError(
+      "publicApi.listFields is empty. Leave it out to list every exposed field, or name the ones a list row needs.",
+      { contentTypeId: id },
+    );
+  }
+
+  const seen = new Set<string>();
+  const duplicate = names.find(name => {
+    if (seen.has(name)) return true;
+    seen.add(name);
+
+    return false;
+  });
+  if (duplicate !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.listFields lists "${duplicate}" twice.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const exposedSet = new Set<string>(exposed);
+  const missing = names.find(name => !exposedSet.has(name));
+  if (missing !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.listFields includes "${missing}", which is not in publicApi.fields. A list row can only carry fields the detail response already publishes.`,
+      { contentTypeId: id },
+    );
   }
 
   return names;
@@ -284,6 +333,8 @@ export const resolvePublicApi = <TField extends string>(
     }
   };
 
+  const listFields = resolvePublicListFields(id, exposed, publicApi.listFields);
+
   const searchableFields = (publicApi.searchableFields ?? []).map(String);
   assertExposed("publicApi.searchableFields", searchableFields);
   const notSearchable = searchableFields.find(name => {
@@ -402,6 +453,7 @@ export const resolvePublicApi = <TField extends string>(
     enabled: true,
     fields: exposed,
     filterableFields,
+    ...(listFields ? { listFields } : {}),
     orderableFields,
     path: publicApi.path,
     people: resolvePublicPeople(id, fields, publicApi.people, {

@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 
 import { cn } from "cn";
 import { BanIcon, PlusIcon } from "lucide-react";
-import { createElement, Fragment, useEffect, useMemo } from "react";
+import { createElement, Fragment, memo, useEffect, useMemo } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,14 @@ import type {
   BlockRegistry,
   ContentNode,
 } from "../../blocks/types";
-import type { EditorZoneMount } from "../state/types";
+import type { EditorZoneMount, EditorZoneState } from "../state/types";
 import type { ZoneDropTone } from "./drop-state";
 
 import { isBlockAreaInstance } from "../../blocks/area";
 import { resolveBlockRegistry } from "../../blocks/registry";
 import { ContentRenderer } from "../../blocks/renderer";
 import { EditableBlockShell } from "../block-shell/block-shell";
-import { useVisualEditor } from "../context";
+import { useVisualEditor, useVisualEditorActions } from "../context";
 import { ContainerSortable } from "../dnd/container-sortable";
 import { useZoneDroppable } from "../dnd/use-container-droppable";
 import {
@@ -29,6 +29,7 @@ import {
   zoneBlockCount,
   zoneRootNodeCount,
 } from "../state/bounds";
+import { sameNodeRef } from "../state/reducer";
 import { EditableAreaFrame } from "./area-frame";
 import { EditableBlockBody } from "./block-body";
 import { classifyZoneEntries } from "./classify";
@@ -54,32 +55,43 @@ const HIGHLIGHTED_TONES: ReadonlySet<ZoneDropTone> = new Set([
   "targeting",
 ]);
 
-const EditableBlock = ({
-  areaId,
-  index,
-  instance,
-  registry,
-  zoneId,
-}: {
-  areaId: null | string;
-  index: number;
-  instance: AnyBlockInstance;
-  registry: BlockRegistry | undefined;
-  zoneId: string;
-}): ReactElement => {
-  const entry = registry?.get(instance.type);
+const EditableBlock = memo(
+  ({
+    areaId,
+    arriving,
+    index,
+    instance,
+    registry,
+    selected,
+    zone,
+    zoneId,
+  }: {
+    areaId: null | string;
+    arriving: boolean;
+    index: number;
+    instance: AnyBlockInstance;
+    registry: BlockRegistry | undefined;
+    selected: boolean;
+    zone: EditorZoneState | undefined;
+    zoneId: string;
+  }): ReactElement => {
+    const entry = registry?.get(instance.type);
 
-  return (
-    <EditableBlockShell
-      areaId={areaId}
-      index={index}
-      instance={instance}
-      zoneId={zoneId}
-    >
-      <EditableBlockBody entry={entry} index={index} instance={instance} />
-    </EditableBlockShell>
-  );
-};
+    return (
+      <EditableBlockShell
+        areaId={areaId}
+        arriving={arriving}
+        index={index}
+        instance={instance}
+        selected={selected}
+        zone={zone}
+        zoneId={zoneId}
+      >
+        <EditableBlockBody entry={entry} index={index} instance={instance} />
+      </EditableBlockShell>
+    );
+  },
+);
 
 export const EditableZone = ({
   mount,
@@ -87,8 +99,8 @@ export const EditableZone = ({
   mount: ContentZoneMount;
 }): null | ReactElement => {
   const t = useTranslations("core.editor");
-  const { dispatch, insertTarget, preview, setInsertTarget, setPanel, state } =
-    useVisualEditor();
+  const { arrivingNodeId, insertTarget, preview, state } = useVisualEditor();
+  const { dispatch, setInsertTarget, setPanel } = useVisualEditorActions();
   const { active, over, rejection, setNodeRef } = useZoneDroppable({
     zoneId: mount.id,
   });
@@ -150,6 +162,8 @@ export const EditableZone = ({
     over,
   );
   const highlighted = HIGHLIGHTED_TONES.has(tone);
+  const isSelected = (areaId: null | string, nodeId: string): boolean =>
+    sameNodeRef(state.selected, { areaId, kind: "block", nodeId, zoneId: id });
   const full =
     !fitsZoneMax(mount.max, zoneBlockCount(nodes) + 1) ||
     !fitsRootNodeCap(zoneRootNodeCount(nodes) + 1);
@@ -280,9 +294,12 @@ export const EditableZone = ({
                           />
                           <EditableBlock
                             areaId={node.id}
+                            arriving={arrivingNodeId === child.id}
                             index={childIndex}
                             instance={child}
                             registry={registry}
+                            selected={isSelected(node.id, child.id)}
+                            zone={zone}
                             zoneId={mount.id}
                           />
                           <EditorDropSlot
@@ -298,9 +315,12 @@ export const EditableZone = ({
                 ) : (
                   <EditableBlock
                     areaId={null}
+                    arriving={arrivingNodeId === node.id}
                     index={index}
                     instance={node}
                     registry={registry}
+                    selected={isSelected(null, node.id)}
+                    zone={zone}
                     zoneId={mount.id}
                   />
                 )}

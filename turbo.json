@@ -41,8 +41,11 @@
     },
     "build:scripts": {
       "dependsOn": ["^build:scripts"],
-      "cache": false,
       "outputs": ["dist/**"]
+    },
+    "@vitnode/core#build:scripts": {
+      "dependsOn": ["^build:scripts"],
+      "outputs": ["dist/scripts/**"]
     },
     "dev": {
       "cache": false,

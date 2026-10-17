@@ -2,7 +2,7 @@ import type { StorageInterface } from "ocache";
 
 import { createMemoryStorage } from "ocache";
 
-import type { CacheClient } from "../api/lib/cache";
+import type { CacheClient, CacheConfig } from "../api/lib/cache";
 import type { PageCacheStorageKind } from "./config";
 
 import { createCacheClient } from "../api/lib/cache-client";
@@ -78,9 +78,14 @@ const redisStorage = (
   },
 });
 
-/** Shared by every instance and survives restarts. */
-export const createRedisPageCacheStore = (url: string): PageCacheStore => {
-  const client = createCacheClient({ url });
+/**
+ * Shared by every instance and survives restarts. Pass the process's existing
+ * Redis client when there is one - a second client is a second connection.
+ */
+export const createRedisPageCacheStore = (
+  redis: CacheClient | CacheConfig,
+): PageCacheStore => {
+  const client = "sendCommand" in redis ? redis : createCacheClient(redis);
   if (client === null) throw new Error("Redis client could not be created.");
 
   return {
@@ -127,17 +132,32 @@ export const resetPageCacheStore = (): void => {
   delete (globalThis as RuntimeHolder)[RUNTIME_KEY];
 };
 
-/** The store for a storage kind, or `null` when it cannot be used here. */
+/**
+ * The store for a storage kind, or `null` when it cannot be used here.
+ * `client` is the process's Redis client, reused when given; otherwise one is
+ * opened from `REDIS_URL` and `REDIS_PASSWORD`, the same variables the API's
+ * `redis` config reads.
+ */
 export const pageCacheStoreFor = (
   kind: PageCacheStorageKind,
-  env: Record<string, string | undefined> = process.env,
+  {
+    client,
+    env = process.env,
+  }: {
+    client?: CacheClient | null;
+    env?: Record<string, string | undefined>;
+  } = {},
 ): null | PageCacheStore => {
   if (kind === "memory") return createMemoryPageCacheStore();
+  if (client) return createRedisPageCacheStore(client);
 
   const url = env.REDIS_URL;
   if (!url) return null;
 
-  return createRedisPageCacheStore(url);
+  return createRedisPageCacheStore({
+    password: env.REDIS_PASSWORD,
+    url,
+  });
 };
 
 const tagKey = (tag: string, mode: PageCacheInvalidationMode): string =>

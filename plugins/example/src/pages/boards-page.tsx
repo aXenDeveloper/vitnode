@@ -1,3 +1,5 @@
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
   Empty,
@@ -8,20 +10,20 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { contentContainerTree } from "@vitnode/core/content";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { HrefLink } from "@vitnode/core/tanstack/link";
+import {
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { FolderTreeIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { BoardTree } from "./board-tree";
-import { fetchBoards } from "./boards-data";
 import { discussionNewHref } from "./discussion-search";
+import { boardsQueryOptions } from "./example-queries";
 
-const loadBoards = async () => ({
-  tree: contentContainerTree(await fetchBoards()),
+const loadBoards = async (queryClient: RouteLoadContext["queryClient"]) => ({
+  tree: contentContainerTree(await queryClient.query(boardsQueryOptions())),
 });
 
 type BoardsPageData = Awaited<ReturnType<typeof loadBoards>>;
@@ -32,8 +34,8 @@ const BoardsBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<BoardsPageData>({
-  load: loadBoards,
+export const route = defineRoute<BoardsPageData>({
+  load: async ({ context }) => await loadBoards(context.queryClient),
 
   head: ({ t }) => ({
     description: t("@vitnode/example.boards.desc"),

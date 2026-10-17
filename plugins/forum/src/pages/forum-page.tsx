@@ -34,17 +34,17 @@ import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
 
-import type { TopicRow, TopicStats } from "./forum-data";
+import type { TopicListRowData } from "./forum-data";
 import type { ForumSearch } from "./forum-links";
 
-import { fetchTopicStats, indexBy, zodTopicRow } from "./forum-data";
+import { indexBy, zodTopicListRow } from "./forum-data";
 import { FORUM_HREF, forumHref, topicHref, topicNewHref } from "./forum-links";
 import { ForumList } from "./forum-list";
 import {
   FORUM_ACTIVITY_STALE_TIME,
   forumQueryKeys,
-  forumQueryOptions,
   forumStatsQueryOptions,
+  queryForum,
 } from "./forum-queries";
 import {
   ForumIcon,
@@ -60,19 +60,15 @@ const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
-      // Spread rather than written inline: the generated list query types its
-      // filters loosely, so an inline key reads as an excess property.
-      const filters = { forum: String(request.forumId) };
-
       const list = await fetcher({
         plugin: manifest.id,
         method: "get",
-        module: "content/topics",
-        path: "/",
+        module: "forum",
+        path: "/topics",
         args: {
           query: {
-            ...filters,
             first: String(PAGE_SIZE),
+            forumId: request.forumId,
             ...(request.cursor ? { cursor: request.cursor } : {}),
           },
         },
@@ -81,12 +77,10 @@ const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
       if (list.status !== 200) throw new Error("Loading the topics failed.");
 
       const { edges, pageInfo } = await list.json();
-      const topics = z.array(zodTopicRow).parse(edges);
 
       return {
         nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
-        topicStats: await fetchTopicStats(topics.map(topic => topic.id)),
-        topics,
+        topics: z.array(zodTopicListRow).parse(edges),
       };
     },
     queryKey: forumQueryKeys.topicList(request),
@@ -99,10 +93,10 @@ const loadForum = async (
   { cursor }: ForumSearch,
 ) => {
   const { ancestors, children, container } = contentPageItem(
-    await queryClient.query(forumQueryOptions(slug)),
+    await queryForum(queryClient, slug),
   );
 
-  const [{ nextCursor, topicStats, topics }, forumStats] = await Promise.all([
+  const [{ nextCursor, topics }, forumStats] = await Promise.all([
     queryClient.query(
       forumTopicsQueryOptions({
         forumId: container.id,
@@ -121,7 +115,6 @@ const loadForum = async (
     forumStats,
     isFirstPage: cursor === undefined,
     nextCursor,
-    topicStats,
     topics,
   };
 };
@@ -204,15 +197,8 @@ export const route = defineRoute<ForumPageData, ForumSearch>({
   notFound: ForumNotFound,
 });
 
-const TopicListRow = ({
-  stats,
-  topic,
-}: {
-  stats: TopicStats | undefined;
-  topic: TopicRow;
-}) => {
+const TopicListRow = ({ topic }: { topic: TopicListRowData }) => {
   const t = useTranslations("@vitnode/forum.forums");
-  const commentCount = stats?.commentCount ?? 0;
 
   return (
     <li className="flex items-start gap-3 p-4">
@@ -240,12 +226,12 @@ const TopicListRow = ({
           <span className="flex items-center gap-1.5">
             <MessageSquareIcon aria-hidden="true" className="size-4" />
             <span className="tabular-nums">
-              {t("comment_count", { count: commentCount })}
+              {t("comment_count", { count: topic.commentCount })}
             </span>
           </span>
-          {stats?.lastCommentAt ? (
+          {topic.lastCommentAt ? (
             <span className="sr-only md:not-sr-only">
-              {t("last_comment")} <TimeAgo date={stats.lastCommentAt} />
+              {t("last_comment")} <TimeAgo date={topic.lastCommentAt} />
             </span>
           ) : null}
         </p>
@@ -258,16 +244,8 @@ const ForumPage = ({
   loaderData,
 }: PluginRoutePageProps<ForumPageData, ForumSearch>) => {
   const t = useTranslations("@vitnode/forum.forums");
-  const {
-    children,
-    container,
-    forumStats,
-    isFirstPage,
-    nextCursor,
-    topicStats,
-    topics,
-  } = loaderData;
-  const statsOfTopic = indexBy(topicStats, item => item.topicId);
+  const { children, container, forumStats, isFirstPage, nextCursor, topics } =
+    loaderData;
 
   return (
     <ForumShell
@@ -336,11 +314,7 @@ const ForumPage = ({
         ) : (
           <ul className="bg-card flex flex-col divide-y rounded-xl border">
             {topics.map(topic => (
-              <TopicListRow
-                key={topic.id}
-                stats={statsOfTopic.get(topic.id)}
-                topic={topic}
-              />
+              <TopicListRow key={topic.id} topic={topic} />
             ))}
           </ul>
         )}

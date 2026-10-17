@@ -208,16 +208,19 @@ describe("ContentLiveRichTextEditor", () => {
     await waitFor(() => {
       expect(screen.getByRole("textbox").textContent).toBe("From the record");
     });
-    expect(onChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        content: [
-          expect.objectContaining({
-            content: [{ text: "From the record", type: "text" }],
-            type: "paragraph",
-          }),
-        ],
-      }),
-    );
+    // The editor hands its value up on a short debounce.
+    await waitFor(() => {
+      expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          content: [
+            expect.objectContaining({
+              content: [{ text: "From the record", type: "text" }],
+              type: "paragraph",
+            }),
+          ],
+        }),
+      );
+    });
     expect(serverCopy().getXmlFragment("default").toJSON()).toContain(
       "From the record",
     );
@@ -248,15 +251,17 @@ describe("ContentLiveRichTextEditor", () => {
     await waitFor(() => {
       expect(screen.getByRole("textbox").textContent).toBe("Hello from Anna");
     });
-    expect(onChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        content: [
-          expect.objectContaining({
-            content: [{ text: "Hello from Anna", type: "text" }],
-          }),
-        ],
-      }),
-    );
+    await waitFor(() => {
+      expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          content: [
+            expect.objectContaining({
+              content: [{ text: "Hello from Anna", type: "text" }],
+            }),
+          ],
+        }),
+      );
+    });
   });
 
   it("lets code outside replace the document through the shared editor", async () => {

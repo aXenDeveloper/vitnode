@@ -4,6 +4,16 @@ import { HTTPException } from "hono/http-exception";
 
 import type { VitNodeApiConfig } from "../../vitnode.config";
 
+// A provider that hangs would otherwise hold the request (and its connection)
+// open indefinitely. Five seconds is generous for a single verification call.
+const CAPTCHA_VERIFY_TIMEOUT_MS = 5000;
+
+interface CaptchaVerification {
+  "error-codes"?: string[];
+  score: number;
+  success: boolean;
+}
+
 const getResFromReCaptcha = async ({
   token,
   userIp,
@@ -12,7 +22,7 @@ const getResFromReCaptcha = async ({
   captchaConfig: NonNullable<Pick<VitNodeApiConfig, "captcha">["captcha"]>;
   token: string;
   userIp: string;
-}): Promise<{ "error-codes"?: string[]; score: number; success: boolean }> => {
+}): Promise<CaptchaVerification> => {
   // An install that configured a captcha but no secret key cannot verify
   // anything. Said here rather than left to the provider to reject a malformed
   // request: the answer is the same either way, but only one of them is a
@@ -35,6 +45,7 @@ const getResFromReCaptcha = async ({
         headers: {
           "Content-Type": "application/json",
         },
+        signal: AbortSignal.timeout(CAPTCHA_VERIFY_TIMEOUT_MS),
       },
     );
 
@@ -65,6 +76,7 @@ const getResFromReCaptcha = async ({
         response: token,
         remoteip: userIp,
       }),
+      signal: AbortSignal.timeout(CAPTCHA_VERIFY_TIMEOUT_MS),
     });
 
     const data: {
@@ -102,11 +114,17 @@ export const captchaMiddleware = () => {
       });
     }
 
+    // Fails closed: a timeout, a network error or an unparseable answer from
+    // the provider is a failed verification, never a pass.
     const res = await getResFromReCaptcha({
       token,
       userIp: c.get("ipAddress"),
       captchaConfig,
-    });
+    }).catch((): CaptchaVerification => ({
+      success: false,
+      score: 0,
+      "error-codes": ["verification-unavailable"],
+    }));
 
     if (!res.success || res.score < 0.5) {
       throw new HTTPException(400, {

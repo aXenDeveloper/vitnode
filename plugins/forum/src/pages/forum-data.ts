@@ -49,46 +49,21 @@ export interface ForumStats {
   topicCount: number;
 }
 
-export const fetchTopicStats = async (
-  ids: readonly number[],
-): Promise<TopicStats[]> => {
-  const unique = [...new Set(ids)].slice(0, 50);
-  if (unique.length === 0) return [];
-
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "forum",
-    path: "/stats/topics",
-    args: { query: { ids: unique.join(",") } },
-  });
-
-  if (res.status !== 200) return [];
-
-  const { items } = await res.json();
-
-  return items;
-};
-
-export interface TopicStats {
-  commentCount: number;
-  lastCommentAt: null | string;
-  topicId: number;
-}
-
 export const zodPerson = zodContentPublicPerson.nullable().catch(null);
 
 export type ForumPerson = z.infer<typeof zodPerson>;
 
-export const zodTopicRow = z.object({
+export const zodTopicListRow = z.object({
   author: zodPerson,
+  commentCount: z.number(),
   id: z.number(),
+  lastCommentAt: z.string().nullable(),
   publishedAt: z.string().nullable(),
   slug: z.string(),
   title: z.string(),
 });
 
-export type TopicRow = z.infer<typeof zodTopicRow>;
+export type TopicListRowData = z.infer<typeof zodTopicListRow>;
 
 export const indexBy = <TItem, TKey>(
   items: readonly TItem[],

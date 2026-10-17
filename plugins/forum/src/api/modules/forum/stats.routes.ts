@@ -1,4 +1,5 @@
 import type { PgColumn } from "drizzle-orm/pg-core";
+import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
 import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
@@ -12,8 +13,10 @@ import {
 } from "@vitnode/core/content/server";
 import { and, count, desc, eq, inArray, max } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { createHash } from "node:crypto";
 
 import { buildRoute } from "@/api/builders";
+import { rememberForumStats } from "@/api/lib/stats-cache";
 import { forumContainers } from "@/content/forums";
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
@@ -31,7 +34,7 @@ const publicComment = () =>
     publicationColumns(commentContent.definition, commentColumns),
   );
 
-const iso = (value: Date | null | string | undefined): null | string =>
+export const iso = (value: Date | null | string | undefined): null | string =>
   value === null || value === undefined ? null : new Date(value).toISOString();
 
 const statsTags = (): string[] => [
@@ -79,30 +82,49 @@ export const forumStatsRoute = buildRoute({
     const topics = topicContent.table;
     const comments = commentContent.table;
 
-    const [topicCounts, commentCounts, latest] = await Promise.all([
-      db
-        .select({ forumId: topics.forum, value: count() })
-        .from(topics)
-        .where(publicTopic())
-        .groupBy(topics.forum),
-      db
-        .select({ forumId: topics.forum, value: count() })
-        .from(comments)
-        .innerJoin(topics, eq(comments.topic, topics.id))
-        .where(and(publicComment(), publicTopic()))
-        .groupBy(topics.forum),
-      db
-        .selectDistinctOn([topics.forum], {
-          forumId: topics.forum,
-          id: topics.id,
-          publishedAt: topics.publishedAt,
-          slug: topics.slug,
-          title: topics.title,
-        })
-        .from(topics)
-        .where(publicTopic())
-        .orderBy(topics.forum, desc(topics.publishedAt), desc(topics.id)),
-    ]);
+    // Three whole-table aggregates, read by every forum index visit - cached
+    // until a forum write moves the generation.
+    const { commentCounts, latest, topicCounts } = await rememberForumStats(
+      c,
+      "forums",
+      async () => {
+        const [topicCounts, commentCounts, latest] = await Promise.all([
+          db
+            .select({ forumId: topics.forum, value: count() })
+            .from(topics)
+            .where(publicTopic())
+            .groupBy(topics.forum),
+          db
+            .select({ forumId: topics.forum, value: count() })
+            .from(comments)
+            .innerJoin(topics, eq(comments.topic, topics.id))
+            .where(and(publicComment(), publicTopic()))
+            .groupBy(topics.forum),
+          db
+            .selectDistinctOn([topics.forum], {
+              forumId: topics.forum,
+              id: topics.id,
+              publishedAt: topics.publishedAt,
+              slug: topics.slug,
+              title: topics.title,
+            })
+            .from(topics)
+            .where(publicTopic())
+            .orderBy(topics.forum, desc(topics.publishedAt), desc(topics.id)),
+        ]);
+
+        // Dates are serialized here so a cache hit and a miss hand the
+        // mapper below the same shape.
+        return {
+          commentCounts,
+          latest: latest.map(row => ({
+            ...row,
+            publishedAt: iso(row.publishedAt),
+          })),
+          topicCounts,
+        };
+      },
+    );
 
     const commentCountOf = new Map(
       commentCounts.map(row => [row.forumId, row.value]),
@@ -121,7 +143,7 @@ export const forumStatsRoute = buildRoute({
             latestTopic: newest
               ? {
                   id: newest.id,
-                  publishedAt: iso(newest.publishedAt),
+                  publishedAt: newest.publishedAt,
                   slug: newest.slug,
                   title: newest.title,
                 }
@@ -135,6 +157,53 @@ export const forumStatsRoute = buildRoute({
     );
   },
 });
+
+interface TopicStatsItem {
+  commentCount: number;
+  lastCommentAt: null | string;
+  topicId: number;
+}
+
+/**
+ * Public comment count and last public comment time for each of `ids` that has
+ * any, cached per id set: a forum page asks for the same page of topics far
+ * more often than any of them gains a comment.
+ */
+export const loadTopicStats = async (
+  c: Context,
+  ids: readonly number[],
+): Promise<TopicStatsItem[]> => {
+  const unique = [...new Set(ids)]
+    .filter(id => Number.isSafeInteger(id))
+    .toSorted((a, b) => a - b);
+  if (unique.length === 0) return [];
+
+  const comments = commentContent.table;
+  const topics = topicContent.table;
+  const key = createHash("sha256").update(unique.join(",")).digest("base64url");
+
+  return await rememberForumStats(c, `topics:${key}`, async () => {
+    const rows = await c
+      .get("db")
+      .select({
+        lastCommentAt: max(comments.publishedAt),
+        topicId: comments.topic,
+        value: count(),
+      })
+      .from(comments)
+      .innerJoin(topics, eq(comments.topic, topics.id))
+      .where(
+        and(inArray(comments.topic, unique), publicComment(), publicTopic()),
+      )
+      .groupBy(comments.topic);
+
+    return rows.map(row => ({
+      lastCommentAt: iso(row.lastCommentAt),
+      commentCount: row.value,
+      topicId: row.topicId,
+    }));
+  });
+};
 
 const TOPIC_IDS = new RegExp(
   `^[1-9]\\d{0,15}(,[1-9]\\d{0,15}){0,${FORUM_STATS_MAX_TOPICS - 1}}$`,
@@ -167,41 +236,12 @@ export const topicStatsRoute = buildRoute({
     },
   },
   handler: async c => {
-    const ids = [
-      ...new Set(c.req.valid("query").ids.split(",").map(Number)),
-    ].filter(id => Number.isSafeInteger(id));
-    const comments = commentContent.table;
-    const topics = topicContent.table;
-
-    const rows =
-      ids.length === 0
-        ? []
-        : await c
-            .get("db")
-            .select({
-              lastCommentAt: max(comments.publishedAt),
-              topicId: comments.topic,
-              value: count(),
-            })
-            .from(comments)
-            .innerJoin(topics, eq(comments.topic, topics.id))
-            .where(
-              and(inArray(comments.topic, ids), publicComment(), publicTopic()),
-            )
-            .groupBy(comments.topic);
+    const ids = c.req.valid("query").ids.split(",").map(Number);
+    const items = await loadTopicStats(c, ids);
 
     setPageCacheTags(c, statsTags());
 
-    return c.json(
-      {
-        items: rows.map(row => ({
-          lastCommentAt: iso(row.lastCommentAt),
-          commentCount: row.value,
-          topicId: row.topicId,
-        })),
-      },
-      200,
-    );
+    return c.json({ items }, 200);
   },
 });
 

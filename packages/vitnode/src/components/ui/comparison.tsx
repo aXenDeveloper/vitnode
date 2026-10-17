@@ -50,12 +50,16 @@ function Comparison({
 }) {
   const t = useTranslations("core.global");
   const position = useMotionValue(clampPosition(defaultPosition));
-  const [valueNow, setValueNow] = React.useState(() => position.get());
+  // Only the rounded value reaches the DOM (aria-valuenow), so a drag
+  // re-renders once per whole percent instead of on every pointer move.
+  const [rounded, setRounded] = React.useState(() =>
+    Math.round(position.get()),
+  );
   const [isDragging, setIsDragging] = React.useState(false);
   const shouldReduceMotion = useReducedMotion();
 
   const commit = (next: number) => {
-    setValueNow(next);
+    setRounded(Math.round(next));
     onPositionChange?.(next);
   };
 
@@ -84,7 +88,6 @@ function Comparison({
     () => ({ mode, position }),
     [mode, position],
   );
-  const rounded = Math.round(valueNow);
 
   return (
     <MotionFeatures>

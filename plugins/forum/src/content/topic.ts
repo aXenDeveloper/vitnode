@@ -32,6 +32,16 @@ export const topicContentType = defineContentType({
       "createdAt",
       "updatedAt",
     ],
+    // A topic list never renders the body, and it is the heaviest column.
+    listFields: [
+      "id",
+      "title",
+      "slug",
+      "forum",
+      "publishedAt",
+      "createdAt",
+      "updatedAt",
+    ],
     filterableFields: ["forum"],
     orderableFields: ["publishedAt", "updatedAt"],
     people: ["author"],

@@ -24,7 +24,7 @@ import type {
 } from "./shared";
 
 import { dispatchEmailDrain } from "./email-queue";
-import { checkNotificationAccess } from "./render";
+import { checkNotificationAccess, notificationEventColumns } from "./render";
 import {
   getNotificationRegistry,
   getNotificationWorkers,
@@ -111,18 +111,18 @@ interface Candidates {
   userIds: number[];
 }
 
+const parseIdList = (value: string): number[] =>
+  value === "" ? [] : value.split(",").map(Number);
+
 const nextCandidates = (
-  event: NotificationEventRow,
-  batchSize: number,
+  event: Pick<NotificationEventRow, "recipientCursor">,
+  { recipientCount, slice }: { recipientCount: number; slice: string },
 ): Candidates => {
-  const userIds = event.recipientIds.slice(
-    event.recipientCursor,
-    event.recipientCursor + batchSize,
-  );
+  const userIds = parseIdList(slice);
   const recipientCursor = event.recipientCursor + userIds.length;
 
   return {
-    done: recipientCursor >= event.recipientIds.length,
+    done: recipientCursor >= recipientCount,
     recipientCursor,
     userIds,
   };
@@ -184,15 +184,31 @@ const processBatch = async (
   eventId: number,
   settings: NotificationSettingsSnapshot,
 ): Promise<BatchResult> => {
-  const [event] = await tx
-    .select()
+  const { fanoutBatchSize } = getNotificationWorkers(c);
+  const { recipientCursor, recipientIds } = core_notification_events;
+  // Only this batch's slice of `recipientIds` (up to 100k ids) leaves the
+  // database, so a large audience costs linear, not quadratic, transfer. Arrays
+  // are 1-based and the bounds inclusive: `[cursor + 1 : cursor + size]` is
+  // exactly JS `slice(cursor, cursor + size)`, clamped at the end the same way.
+  // `array_to_string` hands it over as text, sidestepping driver array parsing.
+  const [row] = await tx
+    .select({
+      event: notificationEventColumns,
+      recipientCount: sql<number>`cardinality(${recipientIds})`.mapWith(Number),
+      slice: sql<string>`array_to_string(${recipientIds}[(${recipientCursor} + 1):(${recipientCursor} + ${fanoutBatchSize}::integer)], ',')`,
+    })
     .from(core_notification_events)
     .where(eq(core_notification_events.id, eventId))
     .for("update");
 
-  if (!event || event.status === "completed" || event.status === "failed") {
+  if (
+    !row ||
+    row.event.status === "completed" ||
+    row.event.status === "failed"
+  ) {
     return { delivered: 0, done: true, states: [] };
   }
+  const { event } = row;
 
   const registered = getNotificationRegistry(c).get(event.type);
   if (registered?.pluginId !== event.pluginId) {
@@ -213,10 +229,7 @@ const processBatch = async (
     return { delivered: 0, done: true, states: [] };
   }
 
-  const candidates = nextCandidates(
-    event,
-    getNotificationWorkers(c).fanoutBatchSize,
-  );
+  const candidates = nextCandidates(event, row);
   const eligible = await filterRecipients({
     c,
     candidates: candidates.userIds,

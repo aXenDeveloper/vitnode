@@ -116,8 +116,11 @@ const BlogPostPage = ({
             }).alt
           }
           className="bg-muted aspect-video w-full rounded-lg object-cover"
+          decoding="async"
           fetchPriority="high"
           height={item.coverImage.height}
+          // The article column: `max-w-3xl` less its `px-4` gutters.
+          sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)"
           src={item.coverImage.url}
           width={item.coverImage.width}
         />

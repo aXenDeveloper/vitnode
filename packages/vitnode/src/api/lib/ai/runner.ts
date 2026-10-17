@@ -527,6 +527,7 @@ export class AiRunner {
       policy = await this.ledger.resolveUserPolicy({
         defaultGranted: definition.permission.defaultGranted,
         permissionKey: action.permissionKey,
+        settings,
         userId: actor.userId,
       });
       if (!policy.granted) {

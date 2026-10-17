@@ -64,7 +64,7 @@ For a proposal, `values` is still the live record and `approval.values` holds wh
 
 `GET /{id}/edit` returns the record's latest submission when it is pending, or rejected and not replaced yet, so the author's edit page can say "waiting for a moderator" or show the reason. The shape is `zodContentApprovalState` from `@vitnode/core/content`.
 
-To list everything an author sent, call the core moderation module. It returns pending, approved and rejected submissions, newest first, for the signed-in member:
+To list everything an author sent, call the core moderation module. It returns pending, approved and rejected submissions, newest first, for the signed-in member. Pass `pluginId` to keep only your plugin's submissions - the filter runs before the page is cut, so every page is full and `total` counts only yours:
 
 ```ts title="plugins/forum/src/pages/my-submissions-data.ts"
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
@@ -75,7 +75,7 @@ export const fetchMySubmissions = async (page: number) => {
     method: "get",
     module: "moderation",
     path: "/approvals/mine",
-    args: { query: { page } },
+    args: { query: { page, pluginId: "@vitnode/forum" } },
   });
   if (!res.ok) throw new Error("Could not load your submissions.");
 

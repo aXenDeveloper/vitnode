@@ -86,7 +86,7 @@ export const IntegrationCard = ({
                 aria-hidden
                 className={cn(
                   "size-1.5 rounded-full bg-current",
-                  isActive && "animate-pulse",
+                  isActive && "animate-pulse motion-reduce:animate-none",
                 )}
               />
               {statusLabel}

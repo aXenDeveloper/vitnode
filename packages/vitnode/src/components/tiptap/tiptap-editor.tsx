@@ -57,6 +57,14 @@ const textboxAttributesOf = ({
   ...(invalid === true || invalid === "true" ? { "aria-invalid": "true" } : {}),
 });
 
+// Serializing the whole document on every transaction is the expensive part of
+// typing in a long post, so the value is handed up at most this often. Blur,
+// the form's submit, Escape and unmount flush it, so nothing typed is lost.
+const ON_CHANGE_DELAY_MS = 200;
+
+const EDITOR_CLASS =
+  "max-w-full min-h-40 py-4 ps-5 pe-4 text-base focus:outline-none md:text-sm";
+
 export const TipTapEditor = (props: TipTapEditorProps) => {
   const {
     "aria-describedby": describedBy,
@@ -71,48 +79,91 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
     onChange: _onChange,
     onBlur,
     onEditor,
+    onKeyDownCapture,
     ...rest
   } = props;
   const t = useTranslations("core.global.editor");
   const { emojis } = useEditorConfig();
   const emojiItems = React.useMemo(() => editorEmojiItems(emojis), [emojis]);
-  const editor = useEditor({
-    extensions: [
+  const placeholderText = placeholder ?? t("placeholder");
+  const invalid = rest["aria-invalid"];
+
+  // Stable options keep `useEditor` from calling `setOptions` on every render.
+  const allExtensions = React.useMemo(
+    () => [
       ...createTipTapExtensions({
         customEmojis: emojis,
-        placeholder: placeholder ?? t("placeholder"),
+        placeholder: placeholderText,
         undoRedo,
       }),
       ...(extensions ?? []),
     ],
-    editorProps: {
+    [emojis, extensions, placeholderText, undoRedo],
+  );
+  const editorProps = React.useMemo(
+    () => ({
       attributes: {
-        class:
-          "max-w-full min-h-40 py-4 ps-5 pe-4 text-base focus:outline-none md:text-sm",
+        class: EDITOR_CLASS,
         role: "textbox",
         "aria-multiline": "true",
-        ...textboxAttributesOf({
-          describedBy,
-          invalid: rest["aria-invalid"],
-          labelledBy,
-        }),
+        ...textboxAttributesOf({ describedBy, invalid, labelledBy }),
       },
-    },
-    content:
-      props.format === "json" ? (props.value ?? null) : (props.value ?? ""),
+    }),
+    [describedBy, invalid, labelledBy],
+  );
+  // The editor only reads its content when it is created; later values are
+  // its own output echoed back, so they must not count as an option change.
+  const [initialContent] = React.useState(() =>
+    props.format === "json" ? (props.value ?? null) : (props.value ?? ""),
+  );
+
+  const pendingChangeRef = React.useRef<(() => void) | null>(null);
+  const changeTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const flushChange = React.useCallback(() => {
+    clearTimeout(changeTimerRef.current);
+    const pending = pendingChangeRef.current;
+    pendingChangeRef.current = null;
+    pending?.();
+  }, []);
+
+  const editor = useEditor({
+    extensions: allExtensions,
+    editorProps,
+    content: initialContent,
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
-      if (props.format === "json") {
-        props.onChange?.(
-          toRichTextDocument(currentEditor.getJSON(), emojiItems),
-        );
-
-        return;
-      }
-
-      props.onChange?.(currentEditor.getHTML());
+      // Captures this render's `onChange`, so a flush on unmount still writes
+      // to the field (or language) the text was typed into.
+      pendingChangeRef.current =
+        props.format === "json"
+          ? () => {
+              props.onChange?.(
+                toRichTextDocument(currentEditor.getJSON(), emojiItems),
+              );
+            }
+          : () => {
+              props.onChange?.(currentEditor.getHTML());
+            };
+      clearTimeout(changeTimerRef.current);
+      changeTimerRef.current = setTimeout(flushChange, ON_CHANGE_DELAY_MS);
     },
   });
+
+  React.useEffect(() => flushChange, [flushChange]);
+
+  React.useEffect(() => {
+    if (!editor) return;
+    const form = editor.view.dom.closest("form");
+    if (!form) return;
+
+    // Capture on the form itself runs before React's delegated `onSubmit`,
+    // so a Mod+Enter submit straight from the editor sends the latest text.
+    form.addEventListener("submit", flushChange, true);
+
+    return () => {
+      form.removeEventListener("submit", flushChange, true);
+    };
+  }, [editor, flushChange]);
 
   const announceEditor = React.useEffectEvent((next: Editor | null) => {
     onEditor?.(next);
@@ -135,7 +186,16 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
         { "max-h-80 overflow-hidden overflow-y-auto": !disableScroll },
         className,
       )}
-      onBlur={onBlur}
+      onBlur={event => {
+        flushChange();
+        onBlur?.(event);
+      }}
+      onKeyDownCapture={event => {
+        // A dialog closes on Escape: hand the text up first so its
+        // unsaved-changes guard sees it.
+        if (event.key === "Escape") flushChange();
+        onKeyDownCapture?.(event);
+      }}
       {...rest}
     >
       <TipTapToolbar editor={editor} />

@@ -1,11 +1,37 @@
 import type { Context } from "hono";
 
+import type { EventListenerConfig } from "@/api/lib/events";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type {
   EventEmitResult,
   EventEnvelope,
   EventsApiPlugin,
 } from "@/api/models/events";
+
+// Indexed once per listener list - which is built at boot - so an emit is a map
+// lookup.
+const listenerIndexes = new WeakMap<
+  readonly EventListenerConfig[],
+  Map<string, EventListenerConfig[]>
+>();
+
+const listenersOf = (
+  all: readonly EventListenerConfig[],
+  event: string,
+): readonly EventListenerConfig[] => {
+  let index = listenerIndexes.get(all);
+  if (!index) {
+    index = new Map();
+    for (const listener of all) {
+      const bucket = index.get(listener.event);
+      if (bucket) bucket.push(listener);
+      else index.set(listener.event, [listener]);
+    }
+    listenerIndexes.set(all, index);
+  }
+
+  return index.get(event) ?? [];
+};
 
 export const LocalEventsAdapter = (): EventsApiPlugin => ({
   name: "local",
@@ -14,9 +40,11 @@ export const LocalEventsAdapter = (): EventsApiPlugin => ({
     c: Context,
     envelope: EventEnvelope,
   ): Promise<EventEmitResult> => {
-    const listeners = c
-      .get("core")
-      .events.listeners.filter(listener => listener.event === envelope.name);
+    // Run one after another, in registration order.
+    const listeners = listenersOf(
+      c.get("core").events.listeners,
+      envelope.name,
+    );
 
     const failures: EventEmitResult["failures"] = [];
     let delivered = 0;

@@ -163,6 +163,8 @@ export const core_ai_runs = camelCase.table.withRLS(
   }),
   t => [
     index("core_ai_runs_user_created_idx").on(t.userId, t.createdAt),
+    // The member's own history pages by `id` (its `before` cursor).
+    index("core_ai_runs_user_id_idx").on(t.userId, t.id),
     index("core_ai_runs_created_idx").on(t.createdAt, t.id),
     index("core_ai_runs_action_created_idx").on(t.actionKey, t.createdAt),
     index("core_ai_runs_status_idx").on(t.status, t.leaseExpiresAt),

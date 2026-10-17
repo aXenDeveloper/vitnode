@@ -76,14 +76,14 @@ export const vitNodeConfig = buildConfig({
 })
 ```
 
-| Storage    | Where entries live                     | Use it when                                                                                            |
-| ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `"memory"` | Inside each server process (default)   | You run one server process. A restart empties the cache, and each process would keep its own copy.     |
-| `"redis"`  | The Redis at the `REDIS_URL` variable  | You run more than one instance. All of them share entries, and an invalidation reaches every instance. |
+| Storage    | Where entries live                    | Use it when                                                                                            |
+| ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `"memory"` | Inside each server process (default)  | You run one server process. A restart empties the cache, and each process would keep its own copy.     |
+| `"redis"`  | The Redis at the `REDIS_URL` variable | You run more than one instance. All of them share entries, and an invalidation reaches every instance. |
 
 `routes` keys are canonical route paths, the same spelling the route was declared with. A policy replaces the plugin's, `false` turns caching off for that route, and you can also opt in one of your app's own route files. A key that matches no page route fails the build. `enabled: false` turns the whole cache off.
 
-The Redis URL stays in the runtime environment and never ends up in the build. If `storage` is `"redis"` and `REDIS_URL` is missing, the server logs an error and serves pages without caching them.
+The Redis URL - and `REDIS_PASSWORD`, if your Redis wants one - stays in the runtime environment and never ends up in the build. If `storage` is `"redis"` and `REDIS_URL` is missing, the server logs an error and serves pages without caching them.
 
 </Step>
 <Step>

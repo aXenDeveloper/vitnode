@@ -49,6 +49,14 @@ const clientAnswering = (
 
   return {
     queryClient: {
+      // An anonymous visitor the shell has already read.
+      getQueryData: () => ({ user: null }),
+      // Never settles: the loader must not wait for the timeline.
+      infiniteQuery: async ({ queryKey }: { queryKey: readonly unknown[] }) => {
+        requested.push([...queryKey]);
+
+        return await new Promise(() => undefined);
+      },
       query: async ({ queryKey }: { queryKey: readonly unknown[] }) => {
         requested.push([...queryKey]);
 
@@ -61,7 +69,12 @@ const clientAnswering = (
 
 const load = async (nameCode: string, answer: () => Promise<UserProfile>) => {
   const { queryClient, requested } = clientAnswering(answer);
-  const data = await loadProfileRoute({ nameCode, queryClient, t });
+  const data = await loadProfileRoute({
+    locale: "en",
+    nameCode,
+    queryClient,
+    t,
+  });
 
   return { data, requested };
 };
@@ -75,7 +88,7 @@ describe("a handle that cannot be a profile", () => {
       );
 
       await expect(
-        loadProfileRoute({ nameCode, queryClient, t }),
+        loadProfileRoute({ locale: "en", nameCode, queryClient, t }),
       ).rejects.toSatisfy(isNotFound);
       expect(requested).toEqual([]);
     },
@@ -89,7 +102,7 @@ describe("a profile the API does not have", () => {
     );
 
     await expect(
-      loadProfileRoute({ nameCode: "nobody", queryClient, t }),
+      loadProfileRoute({ locale: "en", nameCode: "nobody", queryClient, t }),
     ).rejects.toSatisfy(isNotFound);
   });
 
@@ -102,7 +115,7 @@ describe("a profile the API does not have", () => {
       );
 
       await expect(
-        loadProfileRoute({ nameCode: "aXen", queryClient, t }),
+        loadProfileRoute({ locale: "en", nameCode: "aXen", queryClient, t }),
       ).rejects.toBe(error);
     },
   );
@@ -110,17 +123,20 @@ describe("a profile the API does not have", () => {
 
 describe("a profile that exists", () => {
   /**
-   * One read, not two: the route's strings are declared in `routes.tsx` and
-   * warmed by the runtime before this runs, so the loader fetches the profile
-   * and nothing else.
+   * The route's strings are declared in `routes.tsx` and warmed by the runtime
+   * before this runs, so the loader waits for the profile only. The timeline
+   * is started for the screen's key and left to stream in.
    */
-  it("fetches the profile and nothing else", async () => {
+  it("waits for the profile and only starts the timeline", async () => {
     const { requested } = await load(
       "aXen",
       async () => await Promise.resolve(profile),
     );
 
-    expect(requested).toEqual([["vitnode", "profile", "aXen"]]);
+    expect(requested).toEqual([
+      ["vitnode", "profile", "aXen"],
+      ["search", "timeline", "public", null, 1, "en"],
+    ]);
   });
 
   it("titles the page after the member, as the API spells them", async () => {

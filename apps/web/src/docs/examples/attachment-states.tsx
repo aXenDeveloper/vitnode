@@ -33,7 +33,14 @@ export default function AttachmentStatesExample() {
 
       <Attachment state="uploading">
         <AttachmentMedia variant="image">
-          <img alt="" src={adminDashboardLight} />
+          <img
+            alt=""
+            decoding="async"
+            height={433}
+            loading="lazy"
+            src={adminDashboardLight}
+            width={800}
+          />
         </AttachmentMedia>
         <AttachmentContent>
           <AttachmentTitle>community-banner.webp</AttachmentTitle>

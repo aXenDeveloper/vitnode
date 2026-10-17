@@ -1,3 +1,5 @@
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import {
   type AutoFormOnSubmit,
   setFormFieldError,
@@ -11,12 +13,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink, useHrefNavigate } from "@vitnode/core/tanstack/link";
+import {
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { FolderTreeIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
@@ -26,7 +28,6 @@ import { manifest } from "@/manifest.gen";
 import type { DiscussionNewSearch } from "./discussion-search";
 
 import { BOARDS_HREF } from "./board-search";
-import { fetchBoards } from "./boards-data";
 import {
   DiscussionCreateForm,
   type DiscussionCreateFormSchema,
@@ -34,9 +35,10 @@ import {
 } from "./discussion-form";
 import { discussionEditHref, discussionHref } from "./discussion-search";
 import { DiscussionShell } from "./discussion-shell";
+import { boardsQueryOptions } from "./example-queries";
 
-const loadBoardOptions = async () =>
-  (await fetchBoards()).map(board => ({
+const loadBoardOptions = async (queryClient: RouteLoadContext["queryClient"]) =>
+  (await queryClient.query(boardsQueryOptions())).map(board => ({
     label: `${"— ".repeat(board.depth - 1)}${board.name}`,
     value: String(board.id),
   }));
@@ -49,8 +51,8 @@ const DiscussionNewBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<DiscussionNewData, DiscussionNewSearch>({
-  load: loadBoardOptions,
+export const route = defineRoute<DiscussionNewData, DiscussionNewSearch>({
+  load: async ({ context }) => await loadBoardOptions(context.queryClient),
 
   head: ({ t }) => ({
     description: t("@vitnode/example.discussions.new.desc"),

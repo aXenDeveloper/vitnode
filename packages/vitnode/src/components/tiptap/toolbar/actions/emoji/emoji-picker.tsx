@@ -98,7 +98,14 @@ export const EmojiPicker = ({ onSelect }: { onSelect: () => void }) => {
                   className="flex size-7 shrink-0 items-center justify-center text-2xl leading-none"
                 >
                   {customSrc ? (
-                    <img alt="" className="h-6 w-auto" src={customSrc} />
+                    <img
+                      alt=""
+                      className="h-6 w-auto"
+                      decoding="async"
+                      height={24}
+                      src={customSrc}
+                      width={24}
+                    />
                   ) : (
                     previewedEmoji.emoji
                   )}

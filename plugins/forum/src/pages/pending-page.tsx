@@ -70,7 +70,7 @@ const pendingQueryOptions = ({
         method: "get",
         module: "moderation",
         path: "/approvals/mine",
-        args: { query: { page, pageSize: PAGE_SIZE } },
+        args: { query: { page, pageSize: PAGE_SIZE, pluginId: manifest.id } },
       });
 
       if (res.status !== 200) {
@@ -80,11 +80,9 @@ const pendingQueryOptions = ({
       const data = await res.json();
 
       return {
-        // The queue is every plugin's; this page is the forum's corner of it.
-        items: z
-          .array(zodSubmission)
-          .parse(data.items)
-          .filter(item => item.pluginId === manifest.id),
+        // The queue is every plugin's; the route cuts this page from the
+        // forum's corner of it, so pages and the total are the forum's own.
+        items: z.array(zodSubmission).parse(data.items),
         page: data.page,
         pageCount: Math.max(1, Math.ceil(data.total / data.pageSize)),
       };

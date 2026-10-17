@@ -20,7 +20,15 @@ import {
   PencilIcon,
   ReplyIcon,
 } from "lucide-react";
-import { Activity, lazy, Suspense, useState } from "react";
+import {
+  Activity,
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -43,7 +51,14 @@ import {
   THREAD_PAGE_SIZE,
 } from "./thread-data";
 
-const CommentComposer = lazy(async () => await import("./comment-composer"));
+const loadCommentComposer = async () => await import("./comment-composer");
+
+const CommentComposer = lazy(loadCommentComposer);
+
+/** Starts the editor chunk on intent, so a click rarely waits for it. */
+const preloadCommentComposer = () => {
+  void loadCommentComposer();
+};
 
 const ComposerFallback = () => (
   <div
@@ -157,6 +172,7 @@ const CommentBody = ({
 
       {editing ? (
         <LazyCommentComposer
+          autoFocus
           commentId={comment.id}
           defaultBody={editing.body}
           expectedVersion={editing.version}
@@ -185,6 +201,8 @@ const CommentBody = ({
               onClick={() => {
                 setMode(mode === "reply" ? "idle" : "reply");
               }}
+              onFocus={preloadCommentComposer}
+              onPointerEnter={preloadCommentComposer}
               size="sm"
               variant="ghost"
             >
@@ -201,6 +219,8 @@ const CommentBody = ({
                 setIsOpeningEditor(false);
                 if (editable) setEditing(editable);
               }}
+              onFocus={preloadCommentComposer}
+              onPointerEnter={preloadCommentComposer}
               size="sm"
               variant="ghost"
             >
@@ -213,6 +233,7 @@ const CommentBody = ({
 
       {mode === "reply" ? (
         <LazyCommentComposer
+          autoFocus
           label={t("form.answer_label", {
             name: comment.author?.name ?? t("someone"),
           })}
@@ -232,72 +253,83 @@ const CommentBody = ({
   );
 };
 
-const ThreadNodeView = ({
-  actions,
-  node,
-}: {
-  actions: ThreadActions;
-  node: ThreadTreeNode;
-}) => {
-  const t = useTranslations("@vitnode/forum.comments");
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const hidden = countDescendants(node);
-  const childrenId = `comment-children-${node.id}`;
+// Memoized so a parent re-render that leaves the tree alone - the session
+// resolving, "load more" spinning, the composer opening - skips every comment.
+const ThreadNodeView = memo(
+  ({
+    actions,
+    descendants,
+    node,
+  }: {
+    actions: ThreadActions;
+    descendants: ReadonlyMap<number, number>;
+    node: ThreadTreeNode;
+  }) => {
+    const t = useTranslations("@vitnode/forum.comments");
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const hidden = descendants.get(node.id) ?? 0;
+    const childrenId = `comment-children-${node.id}`;
 
-  return (
-    <li
-      className="flex scroll-mt-24 flex-col gap-3"
-      id={node.record ? commentAnchorId(node.record.slug) : undefined}
-    >
-      {node.record ? (
-        <CommentBody actions={actions} comment={node.record} node={node} />
-      ) : (
-        <p className="text-muted-foreground text-sm leading-relaxed italic">
-          {t("removed")}
-        </p>
-      )}
+    return (
+      <li
+        className="flex scroll-mt-24 flex-col gap-3"
+        id={node.record ? commentAnchorId(node.record.slug) : undefined}
+      >
+        {node.record ? (
+          <CommentBody actions={actions} comment={node.record} node={node} />
+        ) : (
+          <p className="text-muted-foreground text-sm leading-relaxed italic">
+            {t("removed")}
+          </p>
+        )}
 
-      {node.children.length > 0 ? (
-        <>
-          <Button
-            aria-controls={childrenId}
-            aria-expanded={!isCollapsed}
-            className="self-start"
-            onClick={() => {
-              setIsCollapsed(!isCollapsed);
-            }}
-            size="sm"
-            variant="link"
-          >
-            {isCollapsed ? (
-              <ChevronRightIcon aria-hidden="true" />
-            ) : (
-              <ChevronDownIcon aria-hidden="true" />
-            )}
-            {isCollapsed
-              ? t("show_answers", { count: hidden })
-              : t("hide_answers", { count: hidden })}
-          </Button>
-          <Activity mode={isCollapsed ? "hidden" : "visible"}>
-            <ol
-              className={cn(
-                "flex flex-col gap-6 border-l-2",
-                // Deep threads stop indenting on small screens, so a comment six
-                // levels down still has room for its text.
-                node.depth >= 3 ? "pl-2 md:pl-6" : "pl-3 md:pl-6",
-              )}
-              id={childrenId}
+        {node.children.length > 0 ? (
+          <>
+            <Button
+              aria-controls={childrenId}
+              aria-expanded={!isCollapsed}
+              className="self-start"
+              onClick={() => {
+                setIsCollapsed(!isCollapsed);
+              }}
+              size="sm"
+              variant="link"
             >
-              {node.children.map(child => (
-                <ThreadNodeView actions={actions} key={child.id} node={child} />
-              ))}
-            </ol>
-          </Activity>
-        </>
-      ) : null}
-    </li>
-  );
-};
+              {isCollapsed ? (
+                <ChevronRightIcon aria-hidden="true" />
+              ) : (
+                <ChevronDownIcon aria-hidden="true" />
+              )}
+              {isCollapsed
+                ? t("show_answers", { count: hidden })
+                : t("hide_answers", { count: hidden })}
+            </Button>
+            <Activity mode={isCollapsed ? "hidden" : "visible"}>
+              <ol
+                className={cn(
+                  "flex flex-col gap-6 border-l-2",
+                  // Deep threads stop indenting on small screens, so a comment six
+                  // levels down still has room for its text.
+                  node.depth >= 3 ? "pl-2 md:pl-6" : "pl-3 md:pl-6",
+                )}
+                id={childrenId}
+              >
+                {node.children.map(child => (
+                  <ThreadNodeView
+                    actions={actions}
+                    descendants={descendants}
+                    key={child.id}
+                    node={child}
+                  />
+                ))}
+              </ol>
+            </Activity>
+          </>
+        ) : null}
+      </li>
+    );
+  },
+);
 
 export const ForumThread = ({
   initial,
@@ -315,10 +347,14 @@ export const ForumThread = ({
   const [pages, setPages] = useState<ThreadPage[]>([initial]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [composerKey, setComposerKey] = useState(0);
+  const [composer, setComposer] = useState<"closed" | "open" | "opening">(
+    "closed",
+  );
 
   const last = pages.at(-1) ?? initial;
-  const items = pages.flatMap(page => page.items);
-  const tree = buildThreadTree(items);
+  const items = useMemo(() => pages.flatMap(page => page.items), [pages]);
+  const tree = useMemo(() => buildThreadTree(items), [items]);
+  const descendants = useMemo(() => countDescendants(tree), [tree]);
   const commentCount = last.commentCount;
 
   const loadMore = async () => {
@@ -339,7 +375,7 @@ export const ForumThread = ({
     }
   };
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     const loaded = items.filter(item => item.depth === 1).length;
     try {
       const fresh = await fetchThreadPage({
@@ -357,18 +393,26 @@ export const ForumThread = ({
         description: t("load_failed.desc"),
       });
     }
-  };
+  }, [items, t, topicId]);
 
-  const actions: ThreadActions = {
-    canComment: currentUserId !== null,
-    currentUserId,
-    onChanged: ({ pending }) => {
+  const onChanged = useCallback(
+    ({ pending }: { pending: boolean }) => {
       void invalidateForumComments(queryClient, topicId);
       if (!pending) void refresh();
     },
-    topicId,
-    topicSlug,
-  };
+    [queryClient, refresh, topicId],
+  );
+
+  const actions = useMemo<ThreadActions>(
+    () => ({
+      canComment: currentUserId !== null,
+      currentUserId,
+      onChanged,
+      topicId,
+      topicSlug,
+    }),
+    [currentUserId, onChanged, topicId, topicSlug],
+  );
 
   return (
     <section aria-labelledby="forum-comments" className="flex flex-col gap-6">
@@ -393,7 +437,12 @@ export const ForumThread = ({
       ) : (
         <ol className="flex flex-col gap-6">
           {tree.map(node => (
-            <ThreadNodeView actions={actions} key={node.id} node={node} />
+            <ThreadNodeView
+              actions={actions}
+              descendants={descendants}
+              key={node.id}
+              node={node}
+            />
           ))}
         </ol>
       )}
@@ -431,14 +480,34 @@ export const ForumThread = ({
               {t("compose.sign_in")}
             </HrefLink>
           </p>
+        ) : composer === "closed" ? (
+          // The editor is a heavy chunk most readers never need, so it waits
+          // for intent: hovering or focusing this starts the download, and a
+          // click swaps it in with the caret already inside.
+          <Button
+            className="text-muted-foreground h-auto justify-start py-3 font-normal"
+            onClick={() => {
+              setComposer("opening");
+            }}
+            onFocus={preloadCommentComposer}
+            onPointerEnter={preloadCommentComposer}
+            variant="outline"
+          >
+            <PencilIcon aria-hidden="true" />
+            {t("compose.open")}
+          </Button>
         ) : (
           <LazyCommentComposer
+            // Only the reader's own click moves focus; the fresh, empty editor
+            // that replaces a posted comment leaves focus alone.
+            autoFocus={composer === "opening"}
             key={composerKey}
             label={t("form.body_label")}
             mode="create"
             onDone={outcome => {
+              setComposer("open");
               setComposerKey(composerKey + 1);
-              actions.onChanged(outcome);
+              onChanged(outcome);
             }}
             parentId={null}
             topicId={topicId}

@@ -8,11 +8,11 @@ import type { VisualEditorContextValue } from "../context";
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
 import { field } from "../../content/fields";
-import { VisualEditorContext } from "../context";
 import {
   initialVisualEditorState,
   visualEditorReducer,
 } from "../state/reducer";
+import { VisualEditorProvider } from "../provider";
 import { EditorSidebar } from "./sidebar";
 
 const heroFields = { headline: field.text({ required: true }) };
@@ -109,9 +109,9 @@ const Harness = (): ReactElement => {
   } as unknown as VisualEditorContextValue;
 
   return (
-    <VisualEditorContext value={value}>
+    <VisualEditorProvider value={value}>
       <EditorSidebar closing={false} preview={preview} />
-    </VisualEditorContext>
+    </VisualEditorProvider>
   );
 };
 

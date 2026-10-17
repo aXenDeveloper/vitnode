@@ -77,8 +77,8 @@ export function VitNodeAPI({
 }) {
   // Shared Redis client, created once at boot. Reused by the rate limiter
   // (which runs before the request context exists), the realtime pub/sub bridge,
-  // and the per-request cache exposed as `c.get("cache")`. Safe no-op when
-  // `redis` is unset.
+  // and the per-request cache exposed as `c.get("cache")`. Without `redis` the
+  // cache falls back to a small in-process store; see `MemoryCacheStore`.
   const redisClient = createCacheClient(vitNodeApiConfig.redis);
 
   // Bridge realtime (WebSocket) messages across instances via Redis pub/sub, so
@@ -88,7 +88,9 @@ export function VitNodeAPI({
   // A separate API process writes page invalidations to the web app's Redis.
   // Inside the web app the server entry has registered the store already.
   if (vitNodeApiConfig.pageCache && pageCacheRuntime() === undefined) {
-    const store = pageCacheStoreFor(vitNodeApiConfig.pageCache.storage);
+    const store = pageCacheStoreFor(vitNodeApiConfig.pageCache.storage, {
+      client: redisClient,
+    });
 
     if (store === null) {
       // oxlint-disable-next-line no-console
@@ -122,15 +124,32 @@ export function VitNodeAPI({
   const docsEnabled = vitNodeApiConfig.docs?.enabled ?? CONFIG.node_development;
 
   if (docsEnabled) {
-    app.doc("/swagger/doc", {
-      openapi: "3.0.0",
-      info: {
-        version: manifest.version,
-        title: "VitNode API",
-      },
-      tags: plugins.flatMap(
-        plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
-      ),
+    // `app.doc` regenerates the whole document - every route's schema - on each
+    // request. The routes are fixed once the plugins are mounted, so it is built
+    // on the first request (the plugins mount below, after this line) and the
+    // serialized JSON is served from then on.
+    let openApiJson: string | undefined;
+    app.get("/swagger/doc", c => {
+      try {
+        openApiJson ??= JSON.stringify(
+          app.getOpenAPIDocument({
+            openapi: "3.0.0",
+            info: {
+              version: manifest.version,
+              title: "VitNode API",
+            },
+            tags: plugins.flatMap(
+              plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
+            ),
+          }),
+        );
+
+        return c.body(openApiJson, 200, {
+          "Content-Type": "application/json",
+        });
+      } catch (error) {
+        return c.json({ error: describeError(error) }, 500);
+      }
     });
   }
 

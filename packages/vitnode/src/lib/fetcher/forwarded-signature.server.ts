@@ -14,8 +14,20 @@ export const resolveForwardedIpSecret = (): string | undefined => {
   return INSECURE_CRON_SECRETS.includes(secret) ? undefined : secret;
 };
 
-const signingKey = (secret: string): Buffer =>
-  createHmac("sha256", secret).update(SIGNING_KEY_CONTEXT).digest();
+// Derived once per secret rather than on every signed or verified request -
+// every SSR API call does both. Keyed so a rotated `CRON_SECRET` still wins.
+let cachedSigningKey: undefined | { key: Buffer; secret: string };
+
+const signingKey = (secret: string): Buffer => {
+  if (cachedSigningKey?.secret !== secret) {
+    cachedSigningKey = {
+      key: createHmac("sha256", secret).update(SIGNING_KEY_CONTEXT).digest(),
+      secret,
+    };
+  }
+
+  return cachedSigningKey.key;
+};
 
 const digest = ({
   forwardedFor,

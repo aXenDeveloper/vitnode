@@ -83,7 +83,7 @@ export const searchStatusDebugAdminRoute = buildRoute({
     // `pluginId` comes along so a collection whose indexer is gone can still name
     // its owner. An item type has one owner, so the aggregate is a formality -
     // `max` picks deterministically if rows ever disagree mid-rebuild.
-    const indexedByType = await db
+    const indexedByTypeQuery = db
       .select({
         itemType: core_search_index.itemType,
         documents: count(),
@@ -94,13 +94,11 @@ export const searchStatusDebugAdminRoute = buildRoute({
       .from(core_search_index)
       .groupBy(core_search_index.itemType);
 
-    const statsByType = new Map(indexedByType.map(row => [row.itemType, row]));
-
     // Per language, so a rebuild that stopped halfway through one locale is
     // visible as that locale rather than as a slightly-low total. The
     // language-agnostic rows (`""`) are dropped: they are not a language, and
     // listing them as one would put an unnamed row in every collection.
-    const byLanguage = await db
+    const byLanguageQuery = db
       .select({
         itemType: core_search_index.itemType,
         documents: count(),
@@ -112,24 +110,10 @@ export const searchStatusDebugAdminRoute = buildRoute({
       .groupBy(core_search_index.itemType, core_search_index.languageCode)
       .orderBy(desc(count()));
 
-    const languagesByType = new Map<
-      string,
-      { documents: number; languageCode: string; lastIndexedAt: Date | null }[]
-    >();
-    for (const row of byLanguage) {
-      const entries = languagesByType.get(row.itemType) ?? [];
-      entries.push({
-        documents: row.documents,
-        languageCode: row.languageCode,
-        lastIndexedAt: row.lastIndexedAt,
-      });
-      languagesByType.set(row.itemType, entries);
-    }
-
     // Newest first, and bounded: this is a "what went wrong lately" panel, not a
     // log viewer. `LIKE 'prefix%'` needs no escaping - the prefix contains
     // neither `%` nor `_`.
-    const syncErrors = await db
+    const syncErrorsQuery = db
       .select({
         id: core_logs.id,
         pluginId: core_logs.pluginId,
@@ -145,6 +129,28 @@ export const searchStatusDebugAdminRoute = buildRoute({
       )
       .orderBy(desc(core_logs.id))
       .limit(SYNC_ERROR_LIMIT);
+
+    const [indexedByType, byLanguage, syncErrors] = await Promise.all([
+      indexedByTypeQuery,
+      byLanguageQuery,
+      syncErrorsQuery,
+    ]);
+
+    const statsByType = new Map(indexedByType.map(row => [row.itemType, row]));
+
+    const languagesByType = new Map<
+      string,
+      { documents: number; languageCode: string; lastIndexedAt: Date | null }[]
+    >();
+    for (const row of byLanguage) {
+      const entries = languagesByType.get(row.itemType) ?? [];
+      entries.push({
+        documents: row.documents,
+        languageCode: row.languageCode,
+        lastIndexedAt: row.lastIndexedAt,
+      });
+      languagesByType.set(row.itemType, entries);
+    }
 
     // Start from every registered indexer so a collection with nothing indexed
     // yet still appears; then fold in any indexed type without a live indexer.

@@ -2,7 +2,11 @@ import type { Context, ContextVariableMap } from "hono";
 import type React from "react";
 
 import { HTTPException } from "hono/http-exception";
-import { render } from "react-email";
+import { render, toPlainText } from "react-email";
+
+import type { EnvVitNode } from "@/api/middlewares/global.middleware";
+
+import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
 
 import type { DefaultTemplateEmailProps } from "../../emails/default-template";
 
@@ -70,6 +74,7 @@ export class EmailModel {
   }
 
   protected readonly c: Context;
+  private readonly queued: number[] = [];
 
   private requireProvider() {
     const provider = this.c.get("core").email?.adapter;
@@ -126,14 +131,18 @@ export class EmailModel {
       });
     }
 
+    // One React render: the plain-text part is the same conversion `render`
+    // runs for `{ plainText: true }`, applied to the HTML we already have.
+    const renderedHtml = await render(htmlContent);
+
     return {
       to: emailTo,
       subject:
         typeof subject === "function"
           ? subject({ i18n: { locale, messages } })
           : subject,
-      html: await render(htmlContent),
-      text: await render(htmlContent, { plainText: true }),
+      html: renderedHtml,
+      text: toPlainText(renderedHtml),
       replyTo,
     };
   }
@@ -157,12 +166,34 @@ export class EmailModel {
     return sendResult ?? {};
   }
 
+  /**
+   * Deliver what this request queued right after the response, so a
+   * verification or password-reset email doesn't wait for the next queue
+   * cron tick. The queue row stays the durable fallback if this run fails.
+   */
+  flushAfterResponse(): void {
+    const ids = this.queued.splice(0);
+    if (ids.length === 0) return;
+
+    void processQueueTasksByIds(this.c as Context<EnvVitNode>, ids).catch(
+      async (error: unknown) => {
+        await this.c
+          .get("log")
+          .warn(
+            `[Email] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
+          );
+      },
+    );
+  }
+
   async send(args: EmailModelSendArgs): Promise<void> {
     this.requireProvider();
     const email = await this.build(args);
 
-    await this.c.get("queue").dispatch({
+    const { id } = await this.c.get("queue").dispatch({
       name: "send-email",
+      // The task is core's even when a plugin route sends the email.
+      pluginId: "@vitnode/core",
       payload: {
         to: email.to,
         subject: email.subject,
@@ -171,5 +202,6 @@ export class EmailModel {
         ...(email.replyTo ? { replyTo: email.replyTo } : {}),
       },
     });
+    if (id !== null) this.queued.push(id);
   }
 }

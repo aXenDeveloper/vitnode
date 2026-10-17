@@ -448,7 +448,11 @@ export const findContentSubmission = async (
 export const listAuthorContentSubmissions = async (
   c: Context,
   authorId: number,
-  { page, pageSize }: { page: number; pageSize: number },
+  {
+    page,
+    pageSize,
+    pluginId,
+  }: { page: number; pageSize: number; pluginId?: string },
 ): Promise<{ items: ContentSubmissionListItem[]; total: number }> => {
   const where = and(
     eq(core_content_submissions.authorId, authorId),
@@ -457,6 +461,11 @@ export const listAuthorContentSubmissions = async (
       "approved",
       "rejected",
     ]),
+    // In SQL rather than after the page is cut, so a plugin's own page of the
+    // list is a full page and its total counts only its submissions.
+    pluginId === undefined
+      ? undefined
+      : eq(core_content_submissions.pluginId, pluginId),
   );
   const [[total], rows] = await Promise.all([
     c

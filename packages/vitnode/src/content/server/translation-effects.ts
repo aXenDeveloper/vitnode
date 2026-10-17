@@ -5,9 +5,11 @@ import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliveryEffectsResult } from "./delivery-effects";
 import type { AnyContentModel } from "./model";
+import type { ContentPublicState } from "./page-cache";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
+import { isContentPubliclyVisible } from "../cache";
 import { contentDeliveryEffects } from "./delivery-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
@@ -63,6 +65,38 @@ const payloadFor = (
   }
 };
 
+/**
+ * Whether this language was public on either side of the mutation, judged by
+ * the translation alone. The record's own state is not consulted, so a `true`
+ * may be generous - but a `false` is exact, which is all a draft translation's
+ * edit needs to expire no cached page. Only publish and unpublish move status.
+ */
+const publicStateFor = (
+  definition: AnyContentTypeDefinition,
+  outcome: ContentTranslationEditorialOutcome<AnyContentTypeDefinition>,
+): ContentPublicState | undefined => {
+  if (!definition.publication.enabled) return undefined;
+
+  const row = outcome.row as { publishedAt?: Date | null; status?: string };
+  const visible = (status: string | undefined): boolean =>
+    isContentPubliclyVisible({ publishedAt: row.publishedAt, status });
+  const now = visible(row.status);
+
+  switch (outcome.operation) {
+    case "create":
+      return { isPublic: now, wasPublic: false };
+    case "delete":
+      return { isPublic: false, wasPublic: now };
+    case "publish":
+      // Guarded on the status it flips: it can only have found a draft.
+      return { isPublic: now, wasPublic: false };
+    case "unpublish":
+      return { isPublic: now, wasPublic: visible("published") };
+    default:
+      return { isPublic: now, wasPublic: now };
+  }
+};
+
 export interface ContentTranslationEffectsOptions {
   model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
@@ -96,7 +130,7 @@ export const contentTranslationEffects = async (
     payloadFor(outcome) as never,
     // The plugin that owns the content type, not whichever module happens to be
     // handling the request.
-    { pluginId },
+    { pluginId, publicState: publicStateFor(definition, outcome) },
   );
 
   // Same rule as the base effects: the transaction is closed, so a listener that

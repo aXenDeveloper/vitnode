@@ -1,5 +1,7 @@
+import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
+import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { RegisteredContentType } from "@/content/registry";
@@ -50,7 +52,7 @@ const createContext = (
 ) => {
   const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
   const values = vi.fn<
-    (row: { content: string; isPublic: boolean; pluginId: string }) => {
+    (rows: { content: string; isPublic: boolean; pluginId: string }[]) => {
       onConflictDoUpdate: typeof onConflictDoUpdate;
     }
   >(() => ({ onConflictDoUpdate }));
@@ -89,7 +91,7 @@ describe("SearchModel", () => {
     await new SearchModel(c).index(doc);
 
     expect(insert).toHaveBeenCalledWith(core_search_index);
-    const row = values.mock.calls[0][0];
+    const row = values.mock.calls[0][0][0];
     expect(row.content).toBe("Hello world");
     expect(row.pluginId).toBe("core");
     expect(row.isPublic).toBe(true);
@@ -118,7 +120,7 @@ describe("SearchModel", () => {
 
       await new SearchModel(c).index({ ...doc, pluginId: "@vitnode/example" });
 
-      expect(values.mock.calls[0][0].pluginId).toBe("@vitnode/example");
+      expect(values.mock.calls[0][0][0].pluginId).toBe("@vitnode/example");
       expect(provider.index).toHaveBeenCalledWith(
         c,
         expect.objectContaining({ pluginId: "@vitnode/example" }),
@@ -131,7 +133,7 @@ describe("SearchModel", () => {
 
       await new SearchModel(c).index(doc);
 
-      expect(values.mock.calls[0][0].pluginId).toBe("@vitnode/example");
+      expect(values.mock.calls[0][0][0].pluginId).toBe("@vitnode/example");
       expect(provider.index).toHaveBeenCalledWith(
         c,
         expect.objectContaining({ pluginId: "@vitnode/example" }),
@@ -146,7 +148,7 @@ describe("SearchModel", () => {
 
       await new SearchModel(c).index({ ...doc, pluginId: "   " });
 
-      expect(values.mock.calls[0][0].pluginId).toBe("@vitnode/example");
+      expect(values.mock.calls[0][0][0].pluginId).toBe("@vitnode/example");
     });
 
     it("falls back to core for a blank owner outside a plugin request", async () => {
@@ -155,7 +157,7 @@ describe("SearchModel", () => {
 
       await new SearchModel(c).index({ ...doc, pluginId: "" });
 
-      expect(values.mock.calls[0][0].pluginId).toBe("core");
+      expect(values.mock.calls[0][0][0].pluginId).toBe("core");
     });
 
     it("falls back to core outside a plugin request", async () => {
@@ -164,7 +166,7 @@ describe("SearchModel", () => {
 
       await new SearchModel(c).index(doc);
 
-      expect(values.mock.calls[0][0].pluginId).toBe("core");
+      expect(values.mock.calls[0][0][0].pluginId).toBe("core");
     });
 
     it("resolves every document in a bulk write", async () => {
@@ -178,7 +180,9 @@ describe("SearchModel", () => {
         { ...doc, itemId: 3 },
       ]);
 
-      expect(values.mock.calls.map(call => call[0].pluginId)).toEqual([
+      // One multi-row upsert for the whole batch.
+      expect(values).toHaveBeenCalledTimes(1);
+      expect(values.mock.calls[0][0].map(row => row.pluginId)).toEqual([
         "@vitnode/example",
         "@vitnode/blog",
         "@vitnode/core",
@@ -199,9 +203,12 @@ describe("SearchModel", () => {
       await new SearchModel(c).index(doc);
 
       const { onConflictDoUpdate } = values.mock.results[0].value;
-      expect(onConflictDoUpdate.mock.calls[0][0].set).toMatchObject({
-        pluginId: "@vitnode/example",
-      });
+      const { set } = onConflictDoUpdate.mock.calls[0][0] as {
+        set: { pluginId: SQL };
+      };
+      expect(new PgDialect().sqlToQuery(set.pluginId).sql).toBe(
+        'excluded."pluginId"',
+      );
     });
   });
 
@@ -507,7 +514,7 @@ describe("item ids under every strategy", () => {
       title: "Event",
     });
 
-    expect(values.mock.calls[0][0]).toMatchObject({ itemId: BEYOND_SAFE });
+    expect(values.mock.calls[0][0][0]).toMatchObject({ itemId: BEYOND_SAFE });
     expect(provider.index).toHaveBeenCalledWith(
       c,
       expect.objectContaining({ itemId: BEYOND_SAFE }),

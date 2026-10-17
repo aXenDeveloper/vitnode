@@ -27,7 +27,8 @@ export const core_files = camelCase.table.withRLS(
     createdAt: t.timestamp().notNull().defaultNow(),
   }),
   t => [
-    index("core_files_user_id_idx").on(t.userId),
+    // A member's file list: filtered by owner, newest first by default.
+    index("core_files_user_created_at_id_idx").on(t.userId, t.createdAt, t.id),
     index("core_files_created_at_id_idx").on(t.createdAt, t.id),
   ],
 );

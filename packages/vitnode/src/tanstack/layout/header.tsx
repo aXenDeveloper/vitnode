@@ -23,7 +23,7 @@ import {
   DEFERRED_MIDDLEWARE_CONFIG,
   middlewareConfigQueryOptions,
 } from "../auth/middleware-config";
-import { prefetchSession } from "../auth/session-query";
+import { loadSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { NotificationsBell } from "../notifications/bell";
@@ -157,6 +157,6 @@ export const loadMainShell = async (
       ...middlewareConfigQueryOptions(),
       staleTime: "static",
     }),
-    prefetchSession(context.queryClient),
+    loadSession(context.queryClient),
   ]);
 };

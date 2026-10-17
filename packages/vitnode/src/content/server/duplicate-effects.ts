@@ -13,6 +13,7 @@ import { contentEditorialEffects } from "./editorial-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 import { contentDefinitionOf } from "./model";
+import { contentPublicStateOf } from "./page-cache";
 import { plainOutcome } from "./route-helpers";
 import {
   contentSearchAdvancedValues,
@@ -69,7 +70,7 @@ export const contentDuplicateEffects = async (
       definition,
       "created",
       { contentId, duplicatedFromId: sourceId },
-      { pluginId },
+      { pluginId, publicState: contentPublicStateOf(definition, null, row) },
     );
     await reportContentEventFailures(c, {
       action: "created",
@@ -116,7 +117,7 @@ export const contentDuplicateEffects = async (
       contentTypeId: definition.id,
       sourceId,
     },
-    { pluginId },
+    { pluginId, publicState: contentPublicStateOf(definition, null, row) },
   );
   await reportContentEventFailures(c, {
     action: "duplicated",

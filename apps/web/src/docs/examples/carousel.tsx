@@ -109,7 +109,7 @@ export default function CarouselExample() {
             >
               <span
                 className={cn(
-                  'h-2 rounded-full transition-all motion-reduce:transition-none',
+                  'h-2 rounded-full transition-[width,background-color] motion-reduce:transition-none',
                   index === current
                     ? 'bg-primary w-4'
                     : 'bg-muted-foreground/40 w-2',

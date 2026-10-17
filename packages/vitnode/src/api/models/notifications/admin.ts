@@ -25,10 +25,13 @@ import { reconcileNotificationCounts, UNREAD_SQL } from "./inbox";
 import { translateOr } from "./preferences";
 import { createTranslatorCache } from "./render";
 import {
+  expireNotificationOverviewTotals,
   getNotificationRegistry,
   getNotificationWorkers,
   isEmailConfigured,
   loadNotificationSettings,
+  NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY,
+  NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS,
   NOTIFICATIONS_PLUGIN_ID,
   typeSettingsKey,
 } from "./shared";
@@ -39,6 +42,49 @@ const countBy = <K extends string>(rows: { count: number; key: K }[]) => {
 
   return counts;
 };
+
+interface NotificationOverviewTotals {
+  customizedMembers: number;
+  inboxItems: number;
+  unreadItems: number;
+}
+
+const loadOverviewTotals = async (
+  c: NotificationsContext,
+): Promise<NotificationOverviewTotals> =>
+  await c
+    .get("cache")
+    .remember(
+      NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY,
+      NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS,
+      async () => {
+        const db = c.get("db");
+        // Unread comes from the per-member counters every inbox write keeps
+        // under the member's lock (and `reconcileNotifications` repairs), so it
+        // is one pass over members rather than a filtered pass over every item.
+        const [[inbox], [members]] = await Promise.all([
+          db.select({ items: count() }).from(core_notifications),
+          db
+            .select({
+              customized:
+                sql<number>`count(*) filter (where ${core_notification_user_state.preferences} <> '{}'::jsonb)`.mapWith(
+                  Number,
+                ),
+              unread:
+                sql<number>`coalesce(sum(${core_notification_user_state.unreadCount}), 0)`.mapWith(
+                  Number,
+                ),
+            })
+            .from(core_notification_user_state),
+        ]);
+
+        return {
+          customizedMembers: members.customized,
+          inboxItems: inbox.items,
+          unreadItems: members.unread,
+        };
+      },
+    );
 
 export const getNotificationsOverview = async (c: NotificationsContext) => {
   const db = c.get("db");
@@ -53,8 +99,7 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
     eventRows,
     [oldestPending],
     cronHealth,
-    [inbox],
-    [members],
+    totals,
   ] = await Promise.all([
     loadNotificationSettings(db),
     createTranslatorCache(c)(c.get("admin")?.user.language),
@@ -88,26 +133,15 @@ export const getNotificationsOverview = async (c: NotificationsContext) => {
       .orderBy(core_notification_events.createdAt)
       .limit(1),
     loadCronHealth(db),
-    db
-      .select({
-        items: count(),
-        unread: sql<number>`count(*) filter (where ${UNREAD_SQL})`.mapWith(
-          Number,
-        ),
-      })
-      .from(core_notifications),
-    db
-      .select({ customized: count() })
-      .from(core_notification_user_state)
-      .where(sql`${core_notification_user_state.preferences} <> '{}'::jsonb`),
+    loadOverviewTotals(c),
   ]);
 
   return {
     counts: {
-      customizedMembers: members.customized,
-      inboxItems: inbox.items,
+      customizedMembers: totals.customizedMembers,
+      inboxItems: totals.inboxItems,
       queuedEmails: countBy(deliveryRows).pending ?? 0,
-      unreadItems: inbox.unread,
+      unreadItems: totals.unreadItems,
     },
     email: {
       adapterConfigured: !!core.email?.adapter,
@@ -369,6 +403,7 @@ export const reconcileNotifications = async (
     c,
     mismatches.map(row => row.userId),
   );
+  await expireNotificationOverviewTotals(c);
 
   return { corrected, mismatched: mismatches.length };
 };

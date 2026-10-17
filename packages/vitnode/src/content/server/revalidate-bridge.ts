@@ -86,25 +86,31 @@ export const dispatchContentRevalidation = async (
   }
 
   const body = JSON.stringify(input);
-  let delivered = 0;
 
   // One origin failing must not stop the others: they are separate deployments
   // with separate caches, and a stale page on one is not a reason for a stale
-  // page on all of them.
-  for (const origin of origins) {
-    if (!isSafeOrigin(origin)) {
-      warnOnce(
-        c,
-        `origin:${origin}`,
-        `Not notifying ${origin}: content.revalidateOrigins must use https (plain http only for localhost), because the request carries CRON_SECRET.`,
-      );
-      continue;
-    }
+  // page on all of them. Posted side by side, so a slow origin and its retry
+  // delay the request once rather than once per origin.
+  const results = await Promise.all(
+    origins.map(async origin => {
+      if (!isSafeOrigin(origin)) {
+        warnOnce(
+          c,
+          `origin:${origin}`,
+          `Not notifying ${origin}: content.revalidateOrigins must use https (plain http only for localhost), because the request carries CRON_SECRET.`,
+        );
 
-    if (await post(c, origin, body, secret)) delivered += 1;
-  }
+        return false;
+      }
 
-  return { attempted: origins.length, delivered };
+      return await post(c, origin, body, secret);
+    }),
+  );
+
+  return {
+    attempted: origins.length,
+    delivered: results.filter(Boolean).length,
+  };
 };
 
 const post = async (

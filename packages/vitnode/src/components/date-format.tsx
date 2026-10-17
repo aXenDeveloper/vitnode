@@ -37,7 +37,7 @@ export const DateFormat = ({
   if (now.getTime() - dateToFormat.getTime() < 604800000) {
     return (
       <TooltipWithContent text={fullDate}>
-        <span suppressHydrationWarning>
+        <span className="tabular-nums" suppressHydrationWarning>
           {format.relativeTime(dateToFormat, now)}
         </span>
       </TooltipWithContent>

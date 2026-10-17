@@ -16,7 +16,14 @@ export default function AttachmentExample() {
     <div className="not-prose flex w-full justify-center">
       <Attachment>
         <AttachmentMedia variant="image">
-          <img alt="" src={adminDashboardLight} />
+          <img
+            alt=""
+            decoding="async"
+            height={433}
+            loading="lazy"
+            src={adminDashboardLight}
+            width={800}
+          />
         </AttachmentMedia>
         <AttachmentContent>
           <AttachmentTitle>dashboard-screenshot.webp</AttachmentTitle>

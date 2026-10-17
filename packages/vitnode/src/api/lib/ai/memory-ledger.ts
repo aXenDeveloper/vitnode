@@ -112,6 +112,20 @@ export class MemoryAiLedger implements AiLedger {
     });
   }
 
+  async loadActionSettingsMany(
+    actionKeys: string[],
+  ): Promise<Map<string, AiActionSettings>> {
+    const entries = await Promise.all(
+      actionKeys.map(
+        async key => [key, await this.loadActionSettings(key)] as const,
+      ),
+    );
+
+    return new Map(
+      entries.flatMap(([key, settings]) => (settings ? [[key, settings]] : [])),
+    );
+  }
+
   async loadSettings(): Promise<AiSettingsSnapshot> {
     return Promise.resolve(this.settings);
   }
@@ -234,6 +248,23 @@ export class MemoryAiLedger implements AiLedger {
     this.holds.set(id, holds);
 
     return Promise.resolve({ ok: true, runId: id });
+  }
+
+  async resolveUserPolicies({
+    permissions,
+    userId,
+  }: {
+    permissions: { defaultGranted: boolean; permissionKey: string }[];
+    userId: number;
+  }): Promise<Map<string, AiUserPolicy>> {
+    return Promise.resolve(
+      new Map(
+        permissions.map(({ permissionKey }) => [
+          permissionKey,
+          this.policy({ permissionKey, userId }),
+        ]),
+      ),
+    );
   }
 
   async resolveUserPolicy({

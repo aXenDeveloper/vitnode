@@ -150,69 +150,65 @@ export const listRolesAdminRoute = buildRoute({
     });
 
     const roleIds = data.edges.map(role => role.id);
-    const names = roleIds.length
-      ? await c
-          .get("db")
-          .select({
-            itemId: core_languages_words.itemId,
-            languageCode: core_languages_words.languageCode,
-            value: core_languages_words.value,
-          })
-          .from(core_languages_words)
-          .where(
-            and(
-              eq(core_languages_words.tableName, "core_roles"),
-              eq(core_languages_words.variable, "name"),
-              eq(core_languages_words.pluginCode, "core"),
-              inArray(core_languages_words.itemId, roleIds),
-            ),
-          )
-      : [];
-    const primaryCounts = roleIds.length
-      ? await c
-          .get("db")
-          .select({
-            roleId: core_users.roleId,
-            total: count(),
-          })
-          .from(core_users)
-          .where(inArray(core_users.roleId, roleIds))
-          .groupBy(core_users.roleId)
-      : [];
-    const secondaryCounts = roleIds.length
-      ? await c
-          .get("db")
-          .select({
-            roleId: core_users_secondary_roles.roleId,
-            total: count(),
-          })
-          .from(core_users_secondary_roles)
-          .innerJoin(
-            core_users,
-            eq(core_users.id, core_users_secondary_roles.userId),
-          )
-          .where(
-            and(
-              inArray(core_users_secondary_roles.roleId, roleIds),
-              ne(core_users.roleId, core_users_secondary_roles.roleId),
-            ),
-          )
-          .groupBy(core_users_secondary_roles.roleId)
-      : [];
-    const [adminEntryRoles, moderatorEntryRoles] = roleIds.length
+    const db = c.get("db");
+    const [
+      names,
+      primaryCounts,
+      secondaryCounts,
+      adminEntryRoles,
+      moderatorEntryRoles,
+    ] = roleIds.length
       ? await Promise.all([
-          c
-            .get("db")
+          db
+            .select({
+              itemId: core_languages_words.itemId,
+              languageCode: core_languages_words.languageCode,
+              value: core_languages_words.value,
+            })
+            .from(core_languages_words)
+            .where(
+              and(
+                eq(core_languages_words.tableName, "core_roles"),
+                eq(core_languages_words.variable, "name"),
+                eq(core_languages_words.pluginCode, "core"),
+                inArray(core_languages_words.itemId, roleIds),
+              ),
+            ),
+          db
+            .select({
+              roleId: core_users.roleId,
+              total: count(),
+            })
+            .from(core_users)
+            .where(inArray(core_users.roleId, roleIds))
+            .groupBy(core_users.roleId),
+          db
+            .select({
+              roleId: core_users_secondary_roles.roleId,
+              total: count(),
+            })
+            .from(core_users_secondary_roles)
+            .innerJoin(
+              core_users,
+              eq(core_users.id, core_users_secondary_roles.userId),
+            )
+            .where(
+              and(
+                inArray(core_users_secondary_roles.roleId, roleIds),
+                ne(core_users.roleId, core_users_secondary_roles.roleId),
+              ),
+            )
+            .groupBy(core_users_secondary_roles.roleId),
+          db
             .selectDistinct({ roleId: core_admin_permissions.roleId })
             .from(core_admin_permissions)
             .where(inArray(core_admin_permissions.roleId, roleIds)),
-          c
-            .get("db")
+          db
             .selectDistinct({ roleId: core_moderators_permissions.roleId })
             .from(core_moderators_permissions)
             .where(inArray(core_moderators_permissions.roleId, roleIds)),
         ])
-      : [[], []];
+      : [[], [], [], [], []];
     const adminRoleIds = new Set<null | number>([
       ...data.edges.filter(role => role.root).map(role => role.id),
       ...adminEntryRoles.map(row => row.roleId),

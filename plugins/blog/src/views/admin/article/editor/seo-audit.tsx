@@ -37,10 +37,10 @@ const LengthMeter = ({ max, value }: { max: number; value: string }) => (
   <div aria-hidden className="bg-muted h-1 flex-1 overflow-hidden rounded-full">
     <div
       className={cn(
-        "h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none",
+        "h-full w-full transition-[scale] duration-200 ease-out motion-reduce:transition-none ltr:origin-left rtl:origin-right",
         value.length > max ? "bg-warn" : "bg-success",
       )}
-      style={{ width: `${Math.min(value.length / max, 1) * 100}%` }}
+      style={{ scale: `${Math.min(value.length / max, 1)} 1` }}
     />
   </div>
 );

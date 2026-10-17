@@ -46,13 +46,25 @@ const storedDataIssue = (
   return parsed.success ? null : blockDataIssues(parsed.error);
 };
 
-export const checkStoredBlock = (
-  entry: RegisteredBlock | undefined,
-  instance: AnyBlockInstance,
-  dataCheck: StoredDataCheck = "shape",
-): StoredBlockCheck => {
-  if (!entry) return { issue: { kind: "unknown-type" }, kind: "issue" };
+interface CachedCheck {
+  check: StoredBlockCheck;
+  dataCheck: StoredDataCheck;
+  entry: RegisteredBlock;
+}
 
+/**
+ * Instances are immutable - the editor's reducer replaces an edited one and
+ * keeps the rest by identity - so a check is cached per instance. Every block
+ * shell, the save guard and the remove guard ask on each render; without this
+ * each keystroke would re-run the schema parse for every block on the page.
+ */
+const checkCache = new WeakMap<AnyBlockInstance, CachedCheck[]>();
+
+const runStoredBlockCheck = (
+  entry: RegisteredBlock,
+  instance: AnyBlockInstance,
+  dataCheck: StoredDataCheck,
+): StoredBlockCheck => {
   const resolution = resolveBlockVariant(entry.definition, instance.variant);
   if (resolution.kind === "unknown") {
     return {
@@ -66,6 +78,26 @@ export const checkStoredBlock = (
   return detail === null
     ? { entry, kind: "ready", variant: resolution.variant }
     : { issue: { detail, kind: "invalid-data" }, kind: "issue" };
+};
+
+export const checkStoredBlock = (
+  entry: RegisteredBlock | undefined,
+  instance: AnyBlockInstance,
+  dataCheck: StoredDataCheck = "shape",
+): StoredBlockCheck => {
+  if (!entry) return { issue: { kind: "unknown-type" }, kind: "issue" };
+
+  const cached = checkCache.get(instance);
+  const hit = cached?.find(
+    item => item.entry === entry && item.dataCheck === dataCheck,
+  );
+  if (hit) return hit.check;
+
+  const check = runStoredBlockCheck(entry, instance, dataCheck);
+  const fresh = (cached ?? []).filter(item => item.dataCheck !== dataCheck);
+  checkCache.set(instance, [...fresh, { check, dataCheck, entry }]);
+
+  return check;
 };
 
 export const editableBlockIssue = ({

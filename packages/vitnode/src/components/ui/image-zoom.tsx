@@ -33,14 +33,21 @@ const measureZoom = (image: HTMLImageElement) => {
 function ImageZoom({
   alt,
   className,
+  height,
   imageClassName,
+  loading,
   src,
+  width,
   zoomSrc,
 }: {
   alt: string;
   className?: string;
+  // Intrinsic size of `src`; reserves the box before the image loads (no CLS).
+  height?: number;
   imageClassName?: string;
+  loading?: "eager" | "lazy";
   src: string;
+  width?: number;
   zoomSrc?: string;
 }) {
   const t = useTranslations("core.global");
@@ -102,8 +109,12 @@ function ImageZoom({
           <img
             alt={alt}
             className={cn(zoom && "invisible", imageClassName)}
+            decoding="async"
+            height={height}
+            loading={loading}
             ref={thumbRef}
             src={src}
+            width={width}
           />
         </DialogPrimitive.Trigger>
 

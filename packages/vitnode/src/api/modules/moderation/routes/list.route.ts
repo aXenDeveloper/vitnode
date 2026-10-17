@@ -119,30 +119,32 @@ export const listReportsRoute = buildRoute({
         .offset((page - 1) * pageSize),
     ]);
 
-    const related = rows.length
-      ? await c
-          .get("db")
-          .select({
-            pluginId: table.pluginId,
-            targetId: table.targetId,
-            targetType: table.targetType,
-            value: count(),
-          })
-          .from(table)
-          .where(
-            and(
-              viewableReportsCondition(c, moderator.set),
-              reportTargetTriplets(rows),
-            ),
-          )
-          .groupBy(table.pluginId, table.targetType, table.targetId)
-      : [];
+    const [related, people] = await Promise.all([
+      rows.length
+        ? c
+            .get("db")
+            .select({
+              pluginId: table.pluginId,
+              targetId: table.targetId,
+              targetType: table.targetType,
+              value: count(),
+            })
+            .from(table)
+            .where(
+              and(
+                viewableReportsCondition(c, moderator.set),
+                reportTargetTriplets(rows),
+              ),
+            )
+            .groupBy(table.pluginId, table.targetType, table.targetId)
+        : [],
+      loadReportPeople(
+        c,
+        rows.map(row => row.assigneeId),
+      ),
+    ]);
 
     const registry = c.get("core").moderation;
-    const people = await loadReportPeople(
-      c,
-      rows.map(row => row.assigneeId),
-    );
 
     return c.json(
       {

@@ -25,6 +25,43 @@ const leadAuthorId = sql<null | number>`${core_search_index.authorIds}[1]`;
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
+// Without a term every consumer shows the head of `content` as a short snippet,
+// so a page of whole articles is not worth shipping. With one, the snippet is
+// cut around the first match, which can sit anywhere - so content stays whole.
+const CONTENT_EXCERPT_LENGTH = 1000;
+
+/**
+ * The rows after the cursor in `(createdAt, id)` order - the order the page is
+ * sorted by. The cursor is a row id, so the boundary's `createdAt` is read
+ * back from that row, as `::text` to keep its microseconds.
+ * A cursor whose row has since gone falls back to the id alone.
+ */
+const keysetAfter = async (
+  c: Context,
+  cursor: number,
+  oldest: boolean,
+): Promise<SQL> => {
+  const [boundary] = await c
+    .get("db")
+    .select({ createdAt: sql<string>`${core_search_index.createdAt}::text` })
+    .from(core_search_index)
+    .where(eq(core_search_index.id, cursor))
+    .limit(1);
+  if (!boundary) {
+    return oldest
+      ? gt(core_search_index.id, cursor)
+      : lt(core_search_index.id, cursor);
+  }
+
+  const at = sql`${boundary.createdAt}::timestamp`;
+  const row = sql`(${core_search_index.createdAt}, ${core_search_index.id})`;
+
+  // The plain range is redundant with the row comparison; it is there so the
+  // planner can start from the `createdAt` index.
+  return oldest
+    ? sql`(${core_search_index.createdAt} >= ${at} AND ${row} > (${at}, ${cursor}::integer))`
+    : sql`(${core_search_index.createdAt} <= ${at} AND ${row} < (${at}, ${cursor}::integer))`;
+};
 
 export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   name: "postgres",
@@ -47,6 +84,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   index: async () => {},
   bulkIndex: async () => {},
   delete: async () => {},
+  deleteMany: async () => {},
   clear: async () => {},
 
   ping: async c => {
@@ -103,19 +141,16 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     if (useRelevance) {
       orderBy.push(sql`${rankExpr} DESC`, desc(core_search_index.id));
       offset = cursorValue ?? 0;
-    } else if (params.sort === "oldest") {
-      orderBy.push(asc(core_search_index.createdAt), asc(core_search_index.id));
-      if (cursorValue) {
-        const cond = gt(core_search_index.id, cursorValue);
-        where = where ? and(where, cond) : cond;
-      }
     } else {
+      const oldest = params.sort === "oldest";
       orderBy.push(
-        desc(core_search_index.createdAt),
-        desc(core_search_index.id),
+        oldest
+          ? asc(core_search_index.createdAt)
+          : desc(core_search_index.createdAt),
+        oldest ? asc(core_search_index.id) : desc(core_search_index.id),
       );
       if (cursorValue) {
-        const cond = lt(core_search_index.id, cursorValue);
+        const cond = await keysetAfter(c, cursorValue, oldest);
         where = where ? and(where, cond) : cond;
       }
     }
@@ -130,7 +165,9 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         authorId: leadAuthorId,
         authorIds: core_search_index.authorIds,
         title: core_search_index.title,
-        content: core_search_index.content,
+        content: term
+          ? core_search_index.content
+          : sql<string>`left(${core_search_index.content}, ${CONTENT_EXCERPT_LENGTH}::integer)`,
         containerType: core_search_index.containerType,
         containerId: core_search_index.containerId,
         url: core_search_index.url,

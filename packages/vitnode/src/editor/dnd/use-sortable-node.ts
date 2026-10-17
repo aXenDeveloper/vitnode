@@ -7,7 +7,7 @@ import { useReducedMotion } from "motion/react";
 import type { EditorNodeRef } from "../state/types";
 
 import { DRAG_SHIFT_TRANSITION } from "../../lib/dnd/drag-motion";
-import { useVisualEditor } from "../context";
+import { useVisualEditorPreview } from "../context";
 import { nodeDraggableId } from "./resolve-drop";
 
 export interface SortableNode {
@@ -29,7 +29,7 @@ export const useSortableNode = ({
   nodeRef: EditorNodeRef;
   type: string | undefined;
 }): SortableNode => {
-  const { preview } = useVisualEditor();
+  const preview = useVisualEditorPreview();
   const reduceMotion = useReducedMotion();
 
   const {

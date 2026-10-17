@@ -91,6 +91,10 @@ export const riskyTask = buildQueueTask({
 | Each next failure | Doubles, capped at 1 hour |
 | Final failure | Marked as `failed` in `core_queue` |
 
+### How the Worker Drains the Queue
+
+Each `process-queue` tick claims 25 tasks at a time and runs up to 5 of them at once, then claims the next 25 - until the queue is empty or about 45 seconds have passed. Handlers share one tick, so make them safe to run side by side. Finished tasks stay in `core_queue` for 7 days; the hourly `clean` job removes older ones in small batches.
+
 ### Stale Tasks Are Reclaimed
 
 A task still `processing` after 15 minutes (`QUEUE_STALE_PROCESSING_MINUTES`) belonged to a worker that died mid-run. The queue worker puts it back to `pending`, or marks it `failed` if it has used every attempt, so a crash never strands a task forever.

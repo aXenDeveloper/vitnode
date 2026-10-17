@@ -1,7 +1,14 @@
 import type z from "zod";
 
 import { CopyIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
-import { Fragment, type ReactElement, useEffect, useState } from "react";
+import {
+  Fragment,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslations } from "use-intl";
 
 import type {
@@ -13,13 +20,16 @@ import type {
 import type { EditorNodeRef } from "../state/types";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
-import { AutoForm } from "../../components/form/auto-form";
+import {
+  AutoForm,
+  type ItemAutoFormComponentProps,
+} from "../../components/form/auto-form";
 import { Button } from "../../components/ui/button";
 import { useFormApi } from "../../components/ui/form";
 import { TooltipWithContent } from "../../components/ui/tooltip";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
 import { BlockGlyph } from "../block-picker/block-glyph";
-import { useVisualEditor } from "../context";
+import { useVisualEditor, useVisualEditorActions } from "../context";
 import { blockInstanceIssue } from "../instance/defaults";
 import {
   EditorPanelBack,
@@ -57,7 +67,7 @@ const BlockDataSync = ({
   onSent: (patch: BlockUnknownData, removed: readonly string[]) => void;
   target: EditorNodeRef;
 }) => {
-  const { dispatch } = useVisualEditor();
+  const { dispatch } = useVisualEditorActions();
   const { form } = useFormApi();
 
   useEffect(() => {
@@ -122,18 +132,24 @@ const BlockPropertiesForm = ({
     buildFormSchemaFromSpec(blockFormSpec(entry), base),
   );
 
-  return (
-    <AutoForm
-      fields={specs.map(spec => ({
+  const fields = useMemo(
+    () =>
+      specs.map(spec => ({
         id: spec.name,
-        component: props => (
+        component: (props: ItemAutoFormComponentProps) => (
           <BlockPropertyField
             descriptor={entry.definition.fields[spec.name]}
             spec={spec}
             {...props}
           />
         ),
-      }))}
+      })),
+    [entry.definition.fields, specs],
+  );
+
+  return (
+    <AutoForm
+      fields={fields}
       formSchema={formSchema}
       layout={rendered => (
         <div className="flex flex-col gap-6">
@@ -167,6 +183,19 @@ const BlockPropertiesPanelContent = ({
 
   const [sent, setSent] = useState<BlockUnknownData>(instance.data);
   const [baseline, setBaseline] = useState(0);
+  // Stable, so the form's data sync keeps one store subscription instead of
+  // resubscribing on every keystroke.
+  const onSent = useCallback(
+    (patch: BlockUnknownData, removed: readonly string[]) => {
+      setSent(current => {
+        const next: BlockUnknownData = { ...current, ...patch };
+        for (const name of removed) delete next[name];
+
+        return next;
+      });
+    },
+    [],
+  );
 
   if (!sameValue(sent, instance.data)) {
     setSent(instance.data);
@@ -272,14 +301,7 @@ const BlockPropertiesPanelContent = ({
             entry={entry}
             instance={instance}
             key={`${target.zoneId}/${target.nodeId}/${baseline}`}
-            onSent={(patch, removed) => {
-              setSent(current => {
-                const next: BlockUnknownData = { ...current, ...patch };
-                for (const name of removed) delete next[name];
-
-                return next;
-              });
-            }}
+            onSent={onSent}
             target={target}
           />
         ) : null}

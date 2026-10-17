@@ -78,3 +78,19 @@ export const prefetchSession = async (
 ): Promise<void> => {
   await queryClient.query(sessionQueryOptions()).catch(() => undefined);
 };
+
+// A navigation only blocks on the session when there is nothing to render the
+// header with (SSR, first load) or the entry was invalidated (sign-in/out).
+// Otherwise a stale read refreshes in the background instead of holding the
+// route behind a round trip every 30s.
+export const loadSession = async (queryClient: QueryClient): Promise<void> => {
+  const state = queryClient.getQueryState(SESSION_QUERY_KEY);
+
+  if (state?.data === undefined || state.isInvalidated) {
+    await prefetchSession(queryClient);
+
+    return;
+  }
+
+  void prefetchSession(queryClient);
+};
