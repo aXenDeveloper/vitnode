@@ -122,6 +122,7 @@ const ContentFormPublicationToggle = () => {
   );
 };
 
+/** Renders one field's generated (or registered custom) input where a custom layout places it. */
 export const ContentFormField = ({ name }: { name: string }) => {
   const { fields, markRendered } = useContentForm();
 
@@ -130,6 +131,10 @@ export const ContentFormField = ({ name }: { name: string }) => {
   return <>{fields[name] ?? null}</>;
 };
 
+/**
+ * Renders every form field, in order, except those in `exclude` - typically
+ * the ones a custom layout already placed with `<ContentFormField>`.
+ */
 export const ContentFormRemainingFields = ({
   exclude = [],
 }: {
@@ -150,6 +155,7 @@ export const ContentFormRemainingFields = ({
   );
 };
 
+/** The record's publication (and hidden) status. Renders nothing on create or without `publication`. */
 export const ContentFormStatus = () => {
   const { mode, publication, skeleton, visibility } = useContentForm();
 
@@ -169,6 +175,12 @@ export const ContentFormStatus = () => {
   );
 };
 
+/**
+ * The form's submit buttons - "Save draft" and "Publish" when creating a
+ * record with publication, one submit button (`submitLabel`) otherwise - after
+ * any `children` and an optional cancel link. When editing, the visibility and
+ * publication toggles render beside it unless turned off.
+ */
 export const ContentFormActions = ({
   cancelHref,
   children,

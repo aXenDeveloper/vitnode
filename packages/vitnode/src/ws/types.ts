@@ -1,8 +1,14 @@
+/** The JSON frame exchanged in both directions over the shared connection. */
 export interface VitNodeWSMessage<TData = unknown> {
   data: TData;
   id: string;
 }
 
+/**
+ * A socket's public id plus its message types: `Send` is what the browser
+ * sends, `Receive` what the server pushes. Create one with
+ * {@link createWebSocketChannel}.
+ */
 export interface VitNodeWSChannel<Send = unknown, Receive = unknown> {
   /**
    * Phantom field - never present at runtime. It only exists to carry the

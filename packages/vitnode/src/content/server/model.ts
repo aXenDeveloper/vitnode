@@ -46,18 +46,33 @@ export interface ContentModerationScope<TColumn extends string = string> {
   family: string;
 }
 
+/**
+ * The server-side half of a content type: its Drizzle tables and the services
+ * that read and write them. Built by {@link createContentModel}; server-only.
+ *
+ * Every service is a factory taking the request's Hono context, so it runs on
+ * that request's database handle. Services for options the definition did not
+ * enable are `undefined`.
+ */
 export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
+  /** Reads and writes of to-many relations and repeatable rows. */
   advanced: ContentAdvancedStore;
 
+  /** Generated junction and repeatable child tables. Export them for Drizzle Kit. */
   advancedTables: ContentAdvancedTables;
   /** Column name -> Drizzle column, for filters, ordering and custom queries. */
   columns: Record<ContentColumnName<TDefinition>, PgColumn>;
   definition: TDefinition;
 
+  /** Canonical URLs, redirects, alternates and sitemap entries. Needs `delivery`. */
   deliveryService:
     | ((c: Context, options: { pluginId: string }) => ContentDeliveryService)
     | undefined;
 
+  /**
+   * Versioned writes with revisions, publish/unpublish, previews and schedules.
+   * Needs `editorial`.
+   */
   editorialService:
     | ((
         c: Context,
@@ -67,6 +82,7 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
 
   localization: ResolvedContentLocalizationConfig;
 
+  /** Reads and writes a record together with one language's translation. Needs `localization`. */
   localizedService:
     | ((
         c: Context,
@@ -75,6 +91,7 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     | undefined;
 
   moderationScope: ContentModerationScope | null;
+  /** Public, allowlisted reads of published records. Needs `publicApi`. */
   publicService:
     | ((c: Context) => ContentPublicService<TDefinition>)
     | undefined;
@@ -93,6 +110,7 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     PgColumn
   >;
 
+  /** Editorial operations on one translation. Needs `editorial` and `localization`. */
   translationEditorialService:
     | ((
         c: Context,
@@ -102,10 +120,12 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   /** The per-language schemas, or `null`. Mirrored off `schemas.translation`. */
   translationSchemas: ContentTranslationSchemas<TDefinition> | null;
 
+  /** Raw access to translation rows. Needs `localization`. */
   translationService:
     | ((c: Context) => ContentTranslationModel<TDefinition>)
     | undefined;
 
+  /** The generated `<tableName>_translations` table, or `null`. Export it for Drizzle Kit. */
   translationTable: ContentTranslationTableFor<TDefinition> | null;
 }
 
@@ -147,6 +167,35 @@ export const findContentModel = (
 ): RegisteredContentModel | undefined =>
   models.find(entry => entry.model.definition.id === contentTypeId);
 
+/**
+ * Builds the {@link ContentModel} of a content type: generates its Drizzle
+ * tables and wires its services. Call it once per content type in the plugin's
+ * `src/database/*.ts` and export every table it generates, so Drizzle Kit can
+ * discover them. Server-only.
+ *
+ * @param definition The result of `defineContentType()`.
+ * @param options.references Target columns of `field.relation()` fields, as
+ * thunks, so the foreign key can point at a table defined in another file.
+ * Self-relations need none.
+ * @param options.moderationScope A column that scopes moderator permissions,
+ * e.g. the category or container a record belongs to.
+ *
+ * @example
+ * ```ts
+ * import { createContentModel } from "@vitnode/core/content/server";
+ *
+ * import { blogPostContentType } from "@/content/post";
+ *
+ * import { blog_categories } from "./categories";
+ *
+ * export const postContent = createContentModel(blogPostContentType, {
+ *   references: { categoryId: () => blog_categories.id },
+ * });
+ *
+ * export const blog_posts = postContent.table;
+ * export const blog_posts_translations = postContent.translationTable;
+ * ```
+ */
 export const createContentModel = <
   TDefinition extends AnyContentTypeDefinition,
 >(

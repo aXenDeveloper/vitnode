@@ -20,6 +20,15 @@ const localeParts = (locale: string | undefined): string[] => {
   return normalized === "" ? [] : [normalized];
 };
 
+/*
+ * Cache tags for a content type's public reads. Pure strings
+ * (`content:{contentTypeId}:{kind}[:{locale}][:{key}]`, clamped with a
+ * fingerprint when too long), safe on any runtime. Tag a cached read with the
+ * matching builder; the engine expires the same tags after every write via
+ * `contentInvalidationTags`. Pass `locale` only for a localized content type.
+ */
+
+/** Every public list page of a content type, in one locale. */
 export const contentPublicListTag = (
   contentTypeId: string,
   locale?: string,
@@ -33,12 +42,14 @@ export const contentPublicItemTag = (
 ): string =>
   tag(contentTypeId, "item", ...localeParts(locale), contentIdKey(id));
 
+/** One row, by slug, in one locale. Expired for both the old and new slug on a slug change. */
 export const contentPublicSlugTag = (
   contentTypeId: string,
   slug: string,
   locale?: string,
 ): string => tag(contentTypeId, "slug", ...localeParts(locale), slug);
 
+/** A record's delivery resolution (canonical URL, alternates, SEO), in one locale. */
 export const contentDeliveryTag = (
   contentTypeId: string,
   id: ContentId,
@@ -46,20 +57,30 @@ export const contentDeliveryTag = (
 ): string =>
   tag(contentTypeId, "delivery", ...localeParts(locale), contentIdKey(id));
 
+/** The redirect resolution of one historical slug, in one locale. */
 export const contentDeliveryRedirectTag = (
   contentTypeId: string,
   slug: string,
   locale?: string,
 ): string => tag(contentTypeId, "redirect", ...localeParts(locale), slug);
 
+/**
+ * One locale's sitemap file. Without `locale` it is the sitemap index of a
+ * localized content type, or the only sitemap file of one that is not.
+ */
 export const contentDeliverySitemapTag = (
   contentTypeId: string,
   locale?: string,
 ): string => tag(contentTypeId, "sitemap", ...localeParts(locale));
 
+/** Every public read of a content container definition's containers. */
 export const contentContainerTag = (definitionId: string): string =>
   tag(definitionId, "containers");
 
+/**
+ * How a front end should expire tags: `immediate` drops them now,
+ * `stale-while-revalidate` serves the old value while it refetches.
+ */
 export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
 
 export interface ContentLocaleInvalidation {
@@ -80,6 +101,7 @@ export interface ContentSitemapChange {
   indexChanged: boolean;
 }
 
+/** What one write did to a record's public reachability, for {@link contentInvalidationTags}. */
 export interface ContentInvalidationInput {
   contentTypeId: string;
   delivery?: ContentDeliveryInvalidation;
@@ -106,6 +128,12 @@ const slugTags = (
     .filter(slug => slug !== "")
     .map(slug => contentPublicSlugTag(contentTypeId, slug, locale));
 
+/**
+ * The cache tags one write expires. Nothing when the record was neither public
+ * before nor after the write; otherwise the list, item and slug tags (per
+ * locale when `locales` is given) plus the delivery tags when `delivery` is
+ * set.
+ */
 export const contentInvalidationTags = ({
   contentTypeId,
   delivery,

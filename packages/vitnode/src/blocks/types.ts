@@ -11,26 +11,34 @@ import type {
 
 export type BlockFieldMap = Record<string, { kind: string }>;
 
+/** A widget's data type, inferred from its field map. */
 export type BlockData<TFields> = ContentValuesOf<TFields>;
 
 export type BlockUnknownData = Record<string, unknown>;
 
 export interface BlockVariantDefinition<TId extends string = string> {
   description?: string;
+  /** Lowercase letters, digits and single hyphens. Stored in every instance that picks it, so keep it stable. */
   id: TId;
   label?: string;
 }
 
 export type AnyBlockVariantDefinition = BlockVariantDefinition;
 
+/** Props of a widget's component. */
 export interface BlockComponentProps<
   TData = BlockUnknownData,
   TVariant extends string = string,
 > {
+  /** The instance's own stable id, not the widget's type. */
   blockId: string;
+  /** Parsed against the widget's fields, defaults applied. */
   data: TData;
+  /** Position among its siblings. */
   index: number;
+  /** The qualified widget id, e.g. `"example:callout"`. */
   type: string;
+  /** The look this instance picked, resolved against the declared variants; `undefined` for a widget with none. */
   variant?: TVariant;
 }
 
@@ -58,6 +66,7 @@ export interface BlockDefinition<
 
 export type AnyBlockDefinition = BlockDefinition;
 
+/** One stored widget: `{ id, type, data, variant? }`. Create one with `createWidgetInstance`. */
 export interface BlockInstance<
   TType extends string = string,
   TData = BlockUnknownData,
@@ -102,6 +111,7 @@ export interface BlockAreaStoredLayout extends Omit<
   marginY?: AreaStoredSpacing;
 }
 
+/** A layout area grouping widgets in a grid, stored next to widget instances. */
 export interface BlockAreaInstance {
   children: readonly AnyBlockInstance[];
   id: string;
@@ -113,10 +123,23 @@ export type ContentNode = AnyBlockInstance | BlockAreaInstance;
 
 export type BlockAllowedEntry = string;
 
+/**
+ * Which widgets a zone accepts: `"*"` for all, or a list of qualified ids
+ * (`"blog:latest-posts"`) and namespace wildcards (`"blog:*"`).
+ */
 export type BlockAllowedSpec = "*" | readonly BlockAllowedEntry[];
 
+/**
+ * A plugin's widgets, passed to `buildApiPlugin({ blocks })` and collected
+ * into the app's generated registry. Export it from a module of its own so
+ * the API and the browser register the same object.
+ */
 export interface BlockPluginSource {
   blocks?: readonly AnyBlockDefinition[];
+  /**
+   * Overrides the id prefix, which defaults to the last segment of `pluginId`
+   * (`@vitnode/blog` -> `blog`). Only needed when two plugins' names end the same.
+   */
   namespace?: string;
   pluginId: string;
 }
@@ -128,6 +151,7 @@ export interface RegisteredBlock {
   type: string;
 }
 
+/** Every installed widget by qualified id. Built by `createWidgetRegistry`. */
 export interface BlockRegistry {
   all: () => readonly RegisteredBlock[];
   byNamespace: (namespace: string) => readonly RegisteredBlock[];
@@ -147,6 +171,10 @@ export interface BlockRenderFallbackProps {
   reason: BlockRenderFallbackReason;
 }
 
+/**
+ * When rendering enforces a zone's allowlist and warns about drift. Data is
+ * always validated on write, never here.
+ */
 export type BlockValidationMode = "always" | "development" | "never";
 
 export type BlockRenderFallback = (

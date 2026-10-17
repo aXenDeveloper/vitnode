@@ -25,15 +25,31 @@ import { EditablePageContext } from "./page-context";
 import { adoptedZones, layoutKey, layoutZones } from "./page-layout";
 
 export interface EditablePageProps {
+  /** Where **Save** goes, e.g. one from `createContentEditorAdapter`. */
   adapter?: VisualEditorAdapter;
+  /**
+   * Mounts the editor runtime and offers **Edit widgets** in the user menu.
+   * UI only - the save route checks the page's permission again.
+   */
   canEdit?: boolean;
   children: ReactNode;
+  /** The effective layout from the page-layout API; zones it lacks fall back to the declared defaults. */
   layout?: EditablePageLayoutPayload | null;
+  /** Called by **Finish editing**, after the unsaved-changes prompt. */
   onExit?: () => void;
+  /** Open in edit mode on arrival (`?edit=true`). Ignored unless `canEdit`. */
   openEditing?: boolean;
+  /** The page from `defineEditablePage`. */
   page: AnyEditablePageDefinition;
 }
 
+/**
+ * Wraps the `ContentZone`s of a page declared with `defineEditablePage`, so
+ * they render the stored layout and can be rearranged in the Visual Editor.
+ * After a save it adopts the canonical zones the server returned.
+ *
+ * @throws {ContentEngineError} When `layout` belongs to a different page id.
+ */
 export const EditablePage = ({
   adapter,
   canEdit,

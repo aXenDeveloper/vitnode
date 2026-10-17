@@ -13,18 +13,37 @@ import { BLOCK_VARIANT_ID_MAX_LENGTH, BLOCK_VARIANT_PATTERN } from "./const";
 import { BlockError } from "./errors";
 import { assertBlockName } from "./namespace";
 
+/** What {@link defineBlock} (exported as `defineWidget`) takes. */
 export interface DefineBlockArgs<
   TId extends string,
   TFields extends BlockFieldMap,
   TVariant extends string = string,
 > {
+  /** Renders one instance; `data` has already been parsed against `fields`. */
   component: BlockComponent<BlockData<TFields>, TVariant>;
+  /** Variant used when an instance stores none. Must be one of `variants`. */
   defaultVariant?: NoInfer<TVariant>;
+  /** Shown in the Visual Editor's catalogue. */
   description?: string;
+  /**
+   * Content Engine fields (`field.text()`, `field.enum()`, ...) the data is
+   * validated and edited with. File, relation, user, repeatable, slug and
+   * nested blocks fields are refused, and fields are never localized.
+   */
   fields: TFields;
+  /** Icon component (not an element) for the editor; defaults to a generic widget icon. */
   icon?: BlockIcon;
+  /**
+   * Name without a namespace, e.g. `"callout"`. The registry prefixes the
+   * plugin's namespace, so it is stored as `example:callout`.
+   */
   id: TId;
+  /** Display name in the editor. */
   name?: string;
+  /**
+   * Alternative looks for the same data. The chosen id is stored beside the
+   * instance's data, and the editor shows a picker for it.
+   */
   variants?: readonly BlockVariantDefinition<TVariant>[];
 }
 
@@ -83,6 +102,39 @@ const assertBlockVariants = (
   }
 };
 
+/**
+ * Declares a widget: an id, Content Engine fields and one React component. The
+ * data type is inferred from `fields` (`WidgetData<typeof fields>`).
+ *
+ * Universal and validation-free at render time - the data schema is derived
+ * on demand by `parseWidgetData` / `widgetDataSchema`. List the definition in
+ * the plugin's widgets source and pass that to `buildApiPlugin({ blocks })`.
+ *
+ * @throws {BlockError} For an invalid or namespaced `id`, an unsupported
+ * field kind, invalid or duplicate variant ids, an empty `variants`, or a
+ * `defaultVariant` that is not declared.
+ *
+ * @example
+ * ```tsx
+ * import { field } from "@vitnode/core/content";
+ * import { defineWidget, type WidgetComponentProps, type WidgetData } from "@vitnode/core/widgets";
+ *
+ * const calloutFields = {
+ *   title: field.text({ required: true, maxLength: 120 }),
+ * };
+ *
+ * const Callout = ({ data }: WidgetComponentProps<WidgetData<typeof calloutFields>>) => (
+ *   <aside>{data.title}</aside>
+ * );
+ *
+ * export const calloutWidget = defineWidget({
+ *   id: "callout",
+ *   name: "Callout",
+ *   fields: calloutFields,
+ *   component: Callout,
+ * });
+ * ```
+ */
 export const defineBlock = <
   const TFields extends BlockFieldMap,
   TId extends string = string,

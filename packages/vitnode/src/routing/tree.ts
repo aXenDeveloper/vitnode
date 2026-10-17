@@ -13,6 +13,15 @@ export interface PluginRouteLazyComponent<TModule = unknown> {
   readonly load: () => Promise<TModule>;
 }
 
+/**
+ * Marks a route's page module as lazily loaded, so it gets its own chunk.
+ * Every `component` must be wrapped in it.
+ *
+ * @example
+ * ```ts
+ * component: lazy(() => import("./pages/post-page")),
+ * ```
+ */
 export const lazy = <TModule>(
   load: () => Promise<TModule>,
 ): PluginRouteLazyComponent<TModule> => ({
@@ -46,6 +55,11 @@ interface PluginRouteDeclarationShared<TModule> {
   component:
     | '`component` must be lazy(() => import("./pages/my-page")): a component imported into routes.ts is in the initial bundle, so its page cannot be split into a chunk of its own.'
     | PluginRouteLazyComponent<TModule>;
+  /**
+   * Translation namespaces the route renders, as dotted paths into the
+   * plugin's message tree (e.g. `"@vitnode/blog.post"`), so only those strings
+   * are downloaded.
+   */
   messages?: readonly string[];
   /**
    * Drawn while this route loads.
@@ -55,7 +69,18 @@ interface PluginRouteDeclarationShared<TModule> {
    * bundle, and a heavy one is worth a second thought.
    */
   pendingComponent?: React.FunctionComponent;
+  /**
+   * `false` stops hovering a link from running this route's loader early.
+   * Children of a `layout()` inherit it.
+   */
   preload?: boolean;
+  /**
+   * Who may open the route, checked before its chunk downloads:
+   * `"authenticated"` redirects guests to `/login`, `"guest"` redirects
+   * signed-in users away, `"admin-guest"` sends staff with an AdminCP session
+   * into the AdminCP. Not allowed under `area: "admin"`, and a route with
+   * `requires` cannot be cached.
+   */
   requires?: PluginRouteRequirement;
 }
 
@@ -71,6 +96,11 @@ export type PluginRouteComponent<TModule = unknown> =
 export interface PluginRoutePageOptions<
   TModule,
 > extends PluginRouteDeclarationShared<TModule> {
+  /**
+   * The shell the page renders in: `"main"` (default, the public layout),
+   * `"blank"` (no chrome) or `"admin"` (AdminCP, behind the staff session).
+   * Top-level routes only - nested routes use their layout's.
+   */
   area?: PluginRouteArea;
   /**
    * Reuse this page's server-rendered HTML for every visitor, in seconds:
@@ -80,6 +110,10 @@ export interface PluginRoutePageOptions<
    * what is safe to share.
    */
   cache?: PageCacheSetting;
+  /**
+   * Parses the URL's query string before the page chunk loads; its return
+   * type is the page's `search` prop.
+   */
   search?: PluginRouteSearchSchema<TModule>;
 }
 
@@ -94,7 +128,9 @@ export interface PluginRouteIndexOptions<
 export interface PluginRouteLayoutOptions<
   TModule,
 > extends PluginRouteDeclarationShared<TModule> {
+  /** See {@link PluginRoutePageOptions.area}. */
   area?: PluginRouteArea;
+  /** Routes rendered inside this layout; paths are relative to it. */
   children: readonly PluginRouteDeclaration[];
 }
 
@@ -114,6 +150,7 @@ export interface PluginRouteDeclaration {
   readonly search: unknown;
 }
 
+/** A plugin's route tree, as exported from its `src/routes.ts`. */
 export type PluginRoutes = readonly PluginRouteDeclaration[];
 
 export interface PluginRouteDeclarationSource {
@@ -162,6 +199,10 @@ const declaration = (
   search: options.search,
 });
 
+/**
+ * A page at `path`. Use `:name` for a dynamic segment (`/blog/:slug`) and
+ * `*` for a trailing splat.
+ */
 export const page = <TModule>(
   path: string,
   options: PluginRoutePageOptions<TModule>,
@@ -173,6 +214,7 @@ export const page = <TModule>(
     path,
   });
 
+/** The page rendered at its parent `layout()`'s own path. */
 export const index = <TModule>(
   options: PluginRouteIndexOptions<TModule>,
 ): PluginRouteDeclaration =>
@@ -183,6 +225,7 @@ export const index = <TModule>(
     path: null,
   });
 
+/** A shared UI frame around `children`, rendered for every route under `path`. */
 export const layout = <TModule>(
   path: string,
   options: PluginRouteLayoutOptions<TModule>,
@@ -194,6 +237,26 @@ export const layout = <TModule>(
     path,
   });
 
+/**
+ * Declares the URLs a plugin owns, exported as `routes` from its
+ * `src/routes.ts`. The host app turns the tree into lazy TanStack Start
+ * routes; pages never import a router themselves.
+ *
+ * @throws Error When `routes` is not an array or an entry was not built
+ * with `page()`, `layout()` or `index()`.
+ *
+ * @example
+ * ```ts
+ * import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
+ *
+ * export const routes = definePluginRoutes([
+ *   page("/blog/:slug", {
+ *     component: lazy(() => import("./pages/post-page")),
+ *     messages: ["@vitnode/blog.post"],
+ *   }),
+ * ]);
+ * ```
+ */
 export const definePluginRoutes = (routes: PluginRoutes): PluginRoutes => {
   if (!Array.isArray(routes)) {
     throw new Error(

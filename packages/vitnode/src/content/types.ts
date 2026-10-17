@@ -51,6 +51,7 @@ export type ContentTranslationSystemField =
 export type ContentPublicationStatus =
   (typeof CONTENT_PUBLICATION_STATUSES)[number];
 
+/** Postgres `ON DELETE` behaviour of a reference column when its target row is deleted. */
 export type ContentOnDelete = "cascade" | "restrict" | "set null";
 
 /** Flattens intersections so editor tooltips show the real shape. */
@@ -66,9 +67,13 @@ export type Prettify<T> = { [K in keyof T]: T[K] } & {};
 // derived from them.
 // ---------------------------------------------------------------------------
 
+/** Lets a registered AI action suggest a field's value in the AdminCP form. */
 export interface ContentFieldAiAssist {
+  /** The AI action's `{pluginId}:{actionId}` key, e.g. `"@vitnode/blog:excerpt.generate"`. */
   action: `${string}:${string}`;
+  /** The result is offered to the editor as a suggestion to accept. */
   mode: "suggestion";
+  /** Fields of the same record whose current values are sent to the action. */
   sourceFields: readonly string[];
 }
 
@@ -79,6 +84,7 @@ export interface ContentFieldShared<
   /** Free text or an i18n key surfaced in AdminCP and OpenAPI. */
   description?: string;
 
+  /** Value lives in the translation table, one per language. See `localization`. */
   localized?: boolean;
   /** Column accepts NULL, and `null` is a legal value. */
   nullable: TNullable;
@@ -720,7 +726,9 @@ export interface ContentAdminListConfig<
     | ContentDisplayColumn<TFields, TPublication, TEditorial>
     | ContentReferenceListFieldKeys<TFields>
   )[];
+  /** Direction of the initial sort. */
   defaultOrder?: "asc" | "desc";
+  /** Column of the initial sort. */
   defaultOrderBy?: ContentAddressableColumn<TFields, TPublication, TEditorial>;
   /**
    * Allowlist for `orderBy`. System columns - and the publication columns when
@@ -732,6 +740,7 @@ export interface ContentAdminListConfig<
    * localized field matches its value in any language.
    */
   searchableFields?: ScalarDisplayFieldKeys<TFields>[];
+  /** A single `field.file()` used as each row's thumbnail in the list. */
   thumbnailField?: ContentSingleFileFieldKeys<TFields>;
 }
 
@@ -816,7 +825,9 @@ export interface ContentAdminConfig<
     fields?: (keyof TFields)[];
     sections?: ContentAdminFormSection<TFields>[];
   };
+  /** Columns, ordering and search of the generated list screen. */
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
+  /** Show the content type in the AdminCP sidebar. Defaults to `true`. */
   navigation?: boolean;
   /**
    * Where the generated screens live under `/admin/content/`. Defaults to the id
@@ -911,10 +922,12 @@ export interface ContentIndexInput<
 > {
   /** Defaults to `<table>_<columns>_idx`, or `_key` when unique. */
   name?: string;
+  /** Indexed columns, in order: shared fields, group leaf paths, system and option columns. */
   on: [
     ContentIndexColumn<TFields, TPublication, TEditorial>,
     ...ContentIndexColumn<TFields, TPublication, TEditorial>[],
   ];
+  /** Creates a unique index. Defaults to `false`. */
   unique?: boolean;
 }
 
@@ -998,11 +1011,23 @@ type ContentVisibilityColumns<TDefinition> = TDefinition extends {
   ? { hiddenAt: Date | null; hiddenBy: null | number }
   : Record<never, never>;
 
+/** Options for `reports`. Every field named here must be a field of the content type. */
 export interface ContentReportsConfig<TField extends string = string> {
+  /**
+   * Fields copied into the report when it is filed, so moderators see what was
+   * reported even after an edit. Self-contained kinds only (text, textarea,
+   * rich text, slug, number, boolean, enum, date, file). Defaults to the public
+   * text, textarea, rich text, enum and file fields.
+   */
   snapshotFields?: TField[];
+  /**
+   * A text, textarea or slug field used as the report's title. Defaults to
+   * `admin.titleField` when it is public, otherwise none.
+   */
   titleField?: TField;
 }
 
+/** `true` for the defaults, an options object, or `false`/omitted to disable reporting. */
 export type ContentReportsInput<TField extends string = string> =
   | boolean
   | ContentReportsConfig<TField>;
@@ -1032,6 +1057,11 @@ export interface ResolvedContentReportsConfig<
 }
 
 export interface ContentDuplicationConfig {
+  /**
+   * Append a translated "(Copy)" to the copy's title. Applied by default when
+   * `admin.titleField` is a text field; `true` makes that a requirement and
+   * `false` turns it off.
+   */
   titleSuffix?: boolean;
 }
 
@@ -1109,6 +1139,7 @@ export interface ContentPublicApiConfig<
   TPath extends string = string,
   TPeople extends string = string,
 > {
+  /** Direction of the list route's default order. */
   defaultOrder?: "asc" | "desc";
   /** Defaults to `publishedAt`. Must be orderable. */
   defaultOrderBy?: "publishedAt" | TField;
@@ -1183,26 +1214,44 @@ export type ContentPublicOwnershipField<TFields> = string &
       : never;
   }[keyof TFields];
 
+/** The generated public create route. */
 export interface ContentPublicWriteCreateConfig<
   TField extends string = string,
 > {
+  /** Require a captcha token on create. Defaults to `false`. */
   captcha?: boolean;
+  /** The fields a visitor may send. Anything else in the payload is rejected. */
   fields: readonly [TField, ...TField[]];
+  /** Status a publicly created record starts in. Defaults to `"draft"`. */
   status?: ContentPublicationStatus;
 }
 
+/** The generated public update route. */
 export interface ContentPublicWriteUpdateConfig<
   TField extends string = string,
 > {
+  /** The fields a visitor may change. Container fields cannot be moved here. */
   fields: readonly [TField, ...TField[]];
+  /**
+   * Owners may edit their own records. Defaults to `true`. Moderators with the
+   * content type's `can_edit` moderator permission may edit any record.
+   */
   own?: boolean;
 }
 
+/**
+ * Public writing for signed-in users. At least one of `create` and `update`
+ * is required; there is no public delete.
+ */
 export interface ContentPublicWriteConfig<
   TField extends string = string,
   TOwner extends string = string,
 > {
   create?: ContentPublicWriteCreateConfig<TField>;
+  /**
+   * A single, shared `field.user()` holding the record's owner. The server
+   * sets it from the session on create; it is never read from the payload.
+   */
   ownership: { field: TOwner };
   update?: ContentPublicWriteUpdateConfig<TField>;
 }
@@ -1429,13 +1478,25 @@ export interface ContentSearchConfig<
   TText extends string = string,
   TAuthor extends string = string,
 > {
+  /** A top-level `field.user()` credited as the result's author. */
   authorField?: TAuthor;
   /** Concatenated into the indexed body, in order. At least one. */
   contentFields: readonly [TText, ...TText[]];
+  /**
+   * The record this one belongs to in results - a `field.container()` (needs a
+   * `pathTemplate`) or a to-one `field.relation()` (must not have one).
+   * Defaults to the relation `titleField` borrows its title from, if any.
+   */
   context?: ContentSearchContextInput;
   /** Prepended to the indexed body so it shows up in result excerpts. */
   descriptionField?: TDescription;
+  /** A shared, single `field.file()` in `publicApi.fields`, shown beside the result. */
   imageField?: string;
+  /**
+   * The result's URL, relative to the site root, with exactly one `{slug}`
+   * placeholder, e.g. `/blog/{slug}`. The locale prefix is added by the i18n
+   * routing, not the template.
+   */
   pathTemplate: string;
   /** The result heading. Weighted above the body by the index. */
   titleField: TTitle;
@@ -1623,10 +1684,21 @@ export interface ContentDeliveryConfig<
   TDescription extends string = string,
   TNoIndex extends string = string,
 > {
+  /** Emit an `x-default` alternate. Needs `localization`. */
   hreflang?: ContentDeliveryHreflangConfig;
+  /**
+   * The canonical page route, with exactly one `:slug` parameter. Defaults to
+   * `/{publicApi.path}/:slug`. Cannot start with `/admin` or `/api`.
+   */
   path?: string;
+  /**
+   * Remember every slug a record was publicly reachable under and redirect
+   * old URLs (308). Needs `editorial`. Defaults to `false`.
+   */
   redirects?: TEditorialEnabled extends true ? boolean : false;
+  /** Which public fields fill `<title>`, the description and Open Graph tags. */
   seo?: ContentDeliverySeoConfig<TTitle, TDescription, TNoIndex>;
+  /** List published records in the sitemap. Needs `publication`. Off unless set. */
   sitemap?: boolean | ContentDeliverySitemapConfig;
 }
 
@@ -1695,17 +1767,28 @@ export interface ContentEditorialPreviewConfig {
   /** How long a link stays valid. 1-1440 minutes, defaults to 15. */
   expiresInMinutes?: number;
 
+  /**
+   * The frontend page that renders a preview, relative to the site root, with
+   * exactly one `{token}` placeholder, e.g. `/blog/preview/{token}`.
+   */
   pathTemplate?: string;
 }
 
+/** Options for `editorial`. `true` is the same as `{}`. */
 export interface ContentEditorialConfig<
   TPublicEnabled extends boolean = boolean,
   TPublication extends boolean = boolean,
 > {
+  /**
+   * Signed, expiring links that show a draft's public projection. Needs
+   * `publicApi`. Off unless set.
+   */
   preview?: TPublicEnabled extends true
     ? boolean | ContentEditorialPreviewConfig
     : false;
+  /** Revision history kept per record. Always on with `editorial`. */
   revisions?: ContentEditorialRevisionsConfig;
+  /** Schedule a publish or unpublish for later. Needs `publication`. Defaults to `false`. */
   scheduling?: TPublication extends true ? boolean : false;
 }
 
@@ -1758,9 +1841,19 @@ type ContentEditorialColumns<TDefinition> = TDefinition extends {
 export type ContentLocalizationFallback =
   (typeof CONTENT_LOCALIZATION_FALLBACKS)[number];
 
+/** Options for `localization`. Enabling it requires at least one `localized: true` field. */
 export interface ContentLocalizationConfig {
+  /**
+   * The locale code (e.g. `"en"`, `"pt-BR"`) every record is first created in.
+   * Must exist in `core_languages` on the installation.
+   */
   defaultLocale: string;
 
+  /**
+   * What a public read returns for a language with no translation of its own:
+   * `"none"` (default) returns nothing, `"default"` serves the default locale's
+   * translation and reports the served `locale` in the response.
+   */
   fallback?: ContentLocalizationFallback;
 }
 
@@ -1912,6 +2005,14 @@ export interface ContentLeafColumn {
   path: string;
 }
 
+/**
+ * A **resolved** content type, as returned by `defineContentType()`.
+ *
+ * Every option is normalised (`enabled` flags, defaults filled in) and the
+ * generic parameters carry what was enabled, so services, routes and inferred
+ * row types (`ContentSelect`, `ContentPublicSelect`, ...) can tell at compile
+ * time which columns and capabilities exist. Not meant to be written by hand.
+ */
 export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
@@ -2035,6 +2136,14 @@ type ContentBindSelfRelations<TFields, TStrategy extends ContentIdStrategy> = {
     : TFields[K];
 };
 
+/**
+ * One base-table row as the admin service returns it: every shared column
+ * field, the system columns, and the columns enabled options add (`status`,
+ * `publishedAt`, `version`, `hiddenAt`, ...).
+ *
+ * Localized values live in translation rows, and to-many relations and
+ * repeatables in {@link ContentAdvancedValues}, so neither is here.
+ */
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
     ContentPublicationColumns<TDefinition> &
@@ -2045,6 +2154,7 @@ export type ContentSelect<TDefinition> = Prettify<
     } & { createdAt: Date; id: ContentIdOf<TDefinition>; updatedAt: Date }
 >;
 
+/** A single record's admin read: {@link ContentSelect} plus its to-many relations and repeatables. */
 export type ContentDetail<TDefinition> = Prettify<
   ContentAdvancedValues<TDefinition> & ContentSelect<TDefinition>
 >;
@@ -2052,6 +2162,7 @@ export type ContentDetail<TDefinition> = Prettify<
 /** The base-table half of a create payload. See {@link ContentSharedValues}. */
 export type ContentCreateInput<TDefinition> = ContentSharedValues<TDefinition>;
 
+/** A partial update of the base-table (shared) fields. Every property is optional. */
 export type ContentUpdateInput<TDefinition> = Prettify<{
   [K in SharedFieldKeys<ContentFieldsOf<TDefinition>>]?: ContentFieldPatch<
     ContentFieldsOf<TDefinition>[K]
@@ -2110,6 +2221,10 @@ type ContentCollectionFilters<TDefinition, TName extends PropertyKey> = {
   >;
 };
 
+/**
+ * Admin list filters: equality on filterable shared fields, `{ contains }` on
+ * to-many relations, plus `status` and `visibility` when those options are on.
+ */
 export type ContentFilterInput<TDefinition> = Partial<
   ContentCollectionFilters<
     TDefinition,
@@ -2370,11 +2485,13 @@ export type ContentPublicUpdateFieldName<TDefinition> = TDefinition extends {
   ? TField
   : never;
 
+/** The `values` a visitor may send to the public create route: only `publicWrite.create.fields`. */
 export type ContentPublicCreateInput<TDefinition> = CreateValuesOf<
   ContentFieldsOf<TDefinition>,
   ContentPublicCreateFieldName<TDefinition> & keyof ContentFieldsOf<TDefinition>
 >;
 
+/** The `values` a visitor may send to the public update route: only `publicWrite.update.fields`. */
 export type ContentPublicUpdateInput<TDefinition> = Prettify<{
   [
     K in ContentPublicUpdateFieldName<TDefinition> &
@@ -2386,6 +2503,7 @@ export interface ContentPublicCreateBody<TDefinition> {
   values: ContentPublicCreateInput<TDefinition>;
 }
 
+/** Public update body. With `editorial`, `expectedVersion` guards against overwriting a newer edit. */
 export type ContentPublicUpdateBody<TDefinition> = Prettify<
   (TDefinition extends { editorial: { enabled: true } }
     ? { expectedVersion: number }
@@ -2394,6 +2512,7 @@ export type ContentPublicUpdateBody<TDefinition> = Prettify<
   }
 >;
 
+/** What the public write routes return to the record's author. */
 export type ContentPublicWriteRecord<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> & {
     /**

@@ -246,7 +246,16 @@ export const publishToInstances = (topic: string, data: unknown): void => {
   publish({ data, id: topic, type: "instance" });
 };
 
+/**
+ * Server push to browsers over the shared WebSocket, available as
+ * `c.get("realtime")` in API handlers.
+ *
+ * Delivery is best effort and fire-and-forget: clients that are not connected
+ * miss the message. Without Redis (`REDIS_URL`) only clients connected to the
+ * current instance receive it; with Redis it is relayed to every instance.
+ */
 export interface VitNodeRealtime {
+  /** Push a payload to every open connection. */
   broadcast: <Receive>(
     channel: VitNodeWSChannel<unknown, Receive>,
     data: Receive,
@@ -260,6 +269,7 @@ export interface VitNodeRealtime {
     channel: VitNodeWSChannel<unknown, Receive>,
     data: Receive,
   ) => void;
+  /** Push a payload to the connections that joined `room`. */
   toRoom: <Receive>(
     room: string,
     channel: VitNodeWSChannel<unknown, Receive>,

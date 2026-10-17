@@ -12,6 +12,7 @@ export const buildBlockDataSchema = (
   fields: ContentFieldMap,
 ): z.ZodObject<z.ZodRawShape> => contentFieldValuesObject(fields);
 
+/** The Zod object for a widget's data, built from its fields once and cached per definition. */
 export const blockDataSchema = (
   definition: AnyBlockDefinition,
 ): z.ZodObject<z.ZodRawShape> => {
@@ -39,6 +40,12 @@ export const safeParseBlockData = (
 ): z.ZodSafeParseResult<unknown> =>
   blockDataSchema(definition).safeParse(value);
 
+/**
+ * Validates widget data and applies defaults - for seeds, migrations and
+ * importers; the Content Engine already does this on every write.
+ *
+ * @throws {BlockError} Naming the failing fields.
+ */
 export const parseBlockData = <TFields extends ContentFieldMap>(
   definition: BlockDefinition<string, TFields>,
   value: unknown,

@@ -1,6 +1,11 @@
 import type { ContentIdOf } from "./ids";
 import type { ContentFieldName, ContentLocalizedFieldName } from "./types";
 
+/**
+ * The last segment of a content event name, `content.{contentTypeId}.{action}`.
+ * Which actions a content type emits depends on the options it enables - see
+ * {@link ContentEventsFor}.
+ */
 export type ContentEventAction =
   | "created"
   | "deleted"
@@ -22,52 +27,67 @@ export type ContentEventAction =
   | "unpublished"
   | "updated";
 
+/** Payload of `content.{id}.created`. */
 export interface ContentCreatedPayload<TId = number> {
   contentId: TId;
 }
 
+/** Payload of `content.{id}.created` on a content type with `duplication`. */
 export interface ContentDuplicableCreatedPayload<TId = number> {
   contentId: TId;
+  /** The source record, when the new record is a duplicate. */
   duplicatedFromId?: TId;
 }
 
+/** Payload of `content.{id}.duplicated`. */
 export interface ContentDuplicatedPayload<TId = number> {
   actorUserId: null | number;
+  /** The new copy. */
   contentId: TId;
   contentTypeId: string;
+  /** The record that was copied. */
   sourceId: TId;
 }
 
+/** Payload of `content.{id}.hidden` (needs `visibility`). */
 export interface ContentHiddenPayload<TId = number> {
   actorUserId: null | number;
   contentId: TId;
   hiddenAt: Date;
 }
 
+/** Payload of `content.{id}.unhidden` (needs `visibility`). */
 export interface ContentUnhiddenPayload<TId = number> {
   actorUserId: null | number;
   contentId: TId;
 }
 
+/** Payload of `content.{id}.deleted`. */
 export interface ContentDeletedPayload<TId = number> {
   contentId: TId;
 }
 
+/** Payload of `content.{id}.updated`, a change to the record's shared fields. */
 export interface ContentUpdatedPayload<TDefinition> {
+  /** Shared fields whose value changed. Translation changes have their own events. */
   changedFields: ContentFieldName<TDefinition>[];
   contentId: ContentIdOf<TDefinition>;
 }
 
+/** Payload of `content.{id}.published` (needs `publication`). */
 export interface ContentPublishedPayload<TId = number> {
   contentId: TId;
   /** When the row was published for the *first* time; never rewritten. */
   publishedAt: Date;
 
+  /** Who booked the schedule, when a schedule fired it. */
   scheduledBy?: null | number;
 
+  /** The schedule that fired it, and the idempotency key for retries. */
   scheduleId?: number;
 }
 
+/** Payload of `content.{id}.unpublished` (needs `publication`). */
 export interface ContentUnpublishedPayload<TId = number> {
   contentId: TId;
   /** As on `published`: who scheduled it, when a schedule fired it. */
@@ -76,6 +96,7 @@ export interface ContentUnpublishedPayload<TId = number> {
   scheduleId?: number;
 }
 
+/** Payload of `content.{id}.restored` - a revision restored (needs `editorial`). */
 export interface ContentRestoredPayload<TDefinition> {
   changedFields: ContentFieldName<TDefinition>[];
   contentId: ContentIdOf<TDefinition>;
@@ -86,6 +107,7 @@ export interface ContentRestoredPayload<TDefinition> {
   version: number;
 }
 
+/** Payload of `content.{id}.scheduled` (needs `editorial.scheduling`). */
 export interface ContentScheduledPayload<TId = number> {
   action: "publish" | "unpublish";
   /** The staff member who booked it. */
@@ -95,6 +117,7 @@ export interface ContentScheduledPayload<TId = number> {
   scheduleId: number;
 }
 
+/** Payload of `content.{id}.schedule_cancelled` (needs `editorial.scheduling`). */
 export interface ContentScheduleCancelledPayload<TId = number> {
   action: "publish" | "unpublish";
   actorUserId: null | number;
@@ -391,6 +414,7 @@ export type ContentEventsFor<TDefinition extends { id: string }> =
       ContentUpdatedPayload<TDefinition>
     >;
 
+/** Builds a content event name, `content.{contentTypeId}.{action}`, as a literal type. */
 export const contentEventName = <
   TId extends string,
   TAction extends ContentEventAction,

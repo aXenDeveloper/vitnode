@@ -3,6 +3,7 @@ import React from "react";
 
 import { useFormApi } from "@/components/ui/form";
 
+/** The form's current values, re-rendering on every change. */
 export const useContentFormValues = (): Record<string, unknown> => {
   const { form } = useFormApi();
 
@@ -12,6 +13,7 @@ export const useContentFormValues = (): Record<string, unknown> => {
   );
 };
 
+/** Returns a stable `(name, value) => void` that sets one form field's value. */
 export const useSetContentFormValue = () => {
   const { form } = useFormApi();
 

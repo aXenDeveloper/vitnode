@@ -79,5 +79,10 @@ const renderNode = (node: RichTextNode, depth: number): string => {
   return element ? renderElement(element, inner) : inner;
 };
 
+/**
+ * Renders a rich-text document to an HTML string, e.g. for emails or RSS.
+ * Text and attribute values are escaped, URLs and styles are sanitised, and
+ * nodes or marks without a known element render only their children.
+ */
 export const richTextToHtml = (doc: null | RichTextNode | undefined): string =>
   doc && typeof doc === "object" ? renderNode(doc, 0) : "";

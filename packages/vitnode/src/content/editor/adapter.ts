@@ -11,6 +11,10 @@ import { ContentEngineError } from "../errors";
 const quoted = (values: readonly string[]): string =>
   values.map(value => JSON.stringify(value)).join(", ");
 
+/**
+ * A save the visual editor should report to the user instead of treating as a
+ * crash. `conflict` marks a save refused because the layout changed meanwhile.
+ */
 export class EditablePageSaveRefused extends ContentEngineError {
   constructor(
     refusal: string,
@@ -27,6 +31,14 @@ export class EditablePageSaveRefused extends ContentEngineError {
   readonly refusal: string;
 }
 
+/**
+ * Adapts an editable page to the visual editor: on save it sends only the
+ * changed zones the page declares (with what they held before) to your `save`
+ * callback, and hands the stored zones back to the editor.
+ *
+ * Saving an undeclared zone throws {@link EditablePageSaveRefused} before
+ * anything is sent.
+ */
 export const createContentEditorAdapter = ({
   page,
   save,

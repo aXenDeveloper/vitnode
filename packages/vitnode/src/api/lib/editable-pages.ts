@@ -20,6 +20,11 @@ export interface RegisteredEditablePage {
   pluginId: string;
 }
 
+/**
+ * Thrown at API startup when an editable page is misconfigured: no
+ * `permission`, a duplicate page id, or a permission no installed plugin
+ * declares.
+ */
 export class EditablePageRegistryError extends Error {
   constructor(message: string) {
     super(message);
@@ -27,6 +32,7 @@ export class EditablePageRegistryError extends Error {
   }
 }
 
+/** Pairs a page with the plugin registering it and resolves its permission's `plugin`. */
 export const registerEditablePage = (
   page: AnyEditablePageDefinition,
   pluginId: string,
@@ -76,6 +82,13 @@ export const validateEditablePages = (
   return [...byId.values()];
 };
 
+/**
+ * Checks, once every plugin is loaded, that each page's moderator permission is
+ * declared in some plugin's `permissionStaff.moderator`.
+ *
+ * @throws {EditablePageRegistryError} When the owning plugin is not installed
+ * or does not declare the permission.
+ */
 export const assertEditablePagePermissionsGrantable = ({
   pages,
   permissionStaff,

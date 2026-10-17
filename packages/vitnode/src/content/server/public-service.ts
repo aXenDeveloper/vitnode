@@ -47,14 +47,24 @@ import {
 export { nestContentPublicRow } from "./public-row-hydration";
 
 export interface ContentPublicReadOptions {
+  /** Language to read, on a localized content type. Defaults to `localization.defaultLocale`. */
   locale?: string;
 }
 
 export interface ContentPublicItemReadOptions extends ContentPublicReadOptions {
+  /**
+   * Read a published record a moderator has *hidden*, instead of a visible
+   * one. Defaults to `false`.
+   */
   hidden?: boolean;
 }
 
 export interface ContentPublicSlugReadOptions extends ContentPublicItemReadOptions {
+  /**
+   * On a localized content type with `fallback: "default"`, also match the
+   * slug of the default-language translation when the requested language has
+   * none.
+   */
   fallback?: boolean;
 }
 
@@ -77,6 +87,14 @@ export interface ContentPublicFindManyArgs<
   };
 }
 
+/**
+ * Public reads of one content type, from `model.publicService(c)`.
+ * Server-only.
+ *
+ * Every read returns the {@link ContentPublicSelect} projection - only the
+ * `publicApi.fields` allowlist ever leaves the database - and only records that
+ * are published, with `publishedAt` in the past, and not hidden.
+ */
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
   findById: (
@@ -84,10 +102,12 @@ export interface ContentPublicService<TDefinition> {
     options?: ContentPublicItemReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
 
+  /** The published record answering to `slug`, or `null`. */
   findBySlug: (
     slug: string,
     options?: ContentPublicSlugReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
+  /** One page of published records, filtered and ordered within the public allowlists. */
   findMany: (args?: ContentPublicFindManyArgs<TDefinition>) => Promise<{
     edges: ContentPublicListRow<TDefinition>[];
     pageInfo: ContentPageInfo;

@@ -34,6 +34,7 @@ export interface AiActionPublicMetadata {
   title: string;
 }
 
+/** The canonical `<pluginId>:<localId>` key core stores settings, limits and history under. */
 export const aiActionKey = (pluginId: string, localId: string): AiActionKey =>
   `${pluginId}:${localId}`;
 
@@ -41,6 +42,10 @@ export type TypedAiActionKey<Input, Output> = AiActionKey & {
   readonly __aiAction?: { input: Input; output: Output };
 };
 
+/**
+ * The canonical `<pluginId>:<id>` key of an action, typed with its input and
+ * output so `c.get("ai").run({ action })` checks `input` and infers `output`.
+ */
 export const aiActionRef = <Definition extends AnyAiActionDefinition>(
   pluginId: string,
   definition: Definition,

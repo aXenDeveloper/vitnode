@@ -31,6 +31,10 @@ const isPending = (
 ): value is Promise<StaffPermissionSet> =>
   typeof (value as Partial<Promise<StaffPermissionSet>>).then === "function";
 
+/**
+ * The current admin's staff permission set from the AdminCP layout. Suspends
+ * while it loads. For hiding UI only - the API enforces permissions itself.
+ */
 export const useAdminStaffPermissions = (): StaffPermissionSet => {
   const value = React.use(AdminStaffPermissionContext);
 
@@ -61,6 +65,18 @@ const AdminStaffPermissionGateResolved = ({
   return <>{allowed ? children : fallback}</>;
 };
 
+/**
+ * Renders `children` only when the current admin holds the permission,
+ * otherwise `fallback` (also shown while permissions load). UI only - guard
+ * the matching API route with `adminStaffPermission` as well.
+ *
+ * @example
+ * ```tsx
+ * <AdminStaffPermissionGate plugin="@vitnode/blog" module="posts" permission="can_delete">
+ *   <DeletePostButton />
+ * </AdminStaffPermissionGate>
+ * ```
+ */
 export const AdminStaffPermissionGate = ({
   children,
   fallback = null,

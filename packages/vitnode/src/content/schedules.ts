@@ -37,6 +37,12 @@ export interface ContentScheduleTimingInput {
   scheduledFor: Date;
 }
 
+/**
+ * Validates a new schedule's time against the clock and the record's pending
+ * schedules. `null` when it is acceptable; otherwise the error code:
+ * `CONTENT_SCHEDULE_IN_PAST` (more than a short tolerance before `now`) or
+ * `CONTENT_SCHEDULE_ORDER` (an unpublish at or before a pending publish).
+ */
 export const contentScheduleTimingError = ({
   action,
   now,
