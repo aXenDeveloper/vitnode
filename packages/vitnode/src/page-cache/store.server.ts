@@ -17,6 +17,7 @@ import { createCacheClient } from "../api/lib/cache-client";
  */
 export type PageCacheInvalidationMode = "hard" | "soft";
 
+/** `not-configured` when this process serves no page cache, so there was nothing to invalidate. */
 export type PageCacheInvalidationResult =
   | { error: unknown; status: "failed" }
   | { status: "done" }

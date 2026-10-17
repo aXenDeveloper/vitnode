@@ -46,10 +46,10 @@ type IsomorphicFetcher = (request: never) => Promise<Response>;
  * server-only options - `allowSaveCookies`, `additionalHeaders`, `origin` - use
  * the fetcher from `@vitnode/core/tanstack/fetcher/server`.
  *
- * Resolves with the `Response` for any status below 500 - check `res.ok` or
- * `res.status` before reading the body; a `4xx` is also logged to the console.
- * Rejects on a `500` (with the response body in the message) and on network
- * failure.
+ * Resolves with the `Response` for every status except `500` - check `res.ok`
+ * or `res.status` before reading the body; any other `4xx` or `5xx` is also
+ * logged to the console. Rejects on a `500` (with the response body in the
+ * message) and on network failure.
  *
  * @example
  * ```ts
@@ -75,8 +75,9 @@ export const fetcher = createIsomorphicFn()
  * a content type's public routes (`module: "content/<publicApi.path>"`) - uses
  * the typed {@link fetcher}.
  *
- * Same transport and failure behavior as {@link fetcher}; `pluginId`, `module`,
- * `path`, `params`, `query` and `body` are passed as they are.
+ * Same transport and status handling as {@link fetcher}, except that a browser
+ * `429` dispatches no `vitnode:rate-limit` event. `pluginId`, `module`, `path`,
+ * `params`, `query` and `body` are passed as they are.
  */
 export const rawFetcher = createIsomorphicFn()
   .server(serverRawFetcher)

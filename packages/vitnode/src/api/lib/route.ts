@@ -46,8 +46,8 @@ const unwrapHandler = (handler: unknown): unknown =>
 
 /**
  * Every route under an `admin` path segment without an `adminStaffPermission`
- * guard, as sorted `METHOD /path` labels. Core's test suite uses it to keep its
- * admin API from shipping an unguarded route.
+ * guard, as sorted `METHOD /path` labels. Use it in a test (core and the
+ * bundled plugins do) to keep an admin API from shipping an unguarded route.
  */
 export const findAdminRoutesWithoutStaffPermission = (hono: {
   routes: readonly MountedRoute[];

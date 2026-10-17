@@ -21,9 +21,11 @@ type AutoFormNumberProps = ItemAutoFormComponentProps &
     "children" | "defaultValue" | "id" | "name" | "onValueChange" | "value"
   > & {
     placeholder?: string;
+    /** Shown after the input, e.g. `MB` or `days`. */
     unitLabel?: React.ReactNode;
   };
 
+/** A number input with steppers for an `AutoForm` number field. Spread the props `AutoForm` passes and add a `label`. */
 export const AutoFormNumber = ({
   className,
   description,

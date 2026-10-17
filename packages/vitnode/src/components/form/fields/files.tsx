@@ -35,18 +35,27 @@ import {
 export interface AutoFormFilesProps extends ItemAutoFormComponentProps {
   allowedExtensions?: readonly string[];
   allowedMimeTypes?: readonly string[];
+  /** The stored files the field's initial ids point at, so they can be shown. */
   files?: AutoFormFileValue[];
   label?: React.ReactNode;
+  /** The largest accepted file, in bytes. */
   maxBytes: number;
   maxItems: number;
+  /** Defaults to `0`. */
   minItems?: number;
+  /** Uploads one picked file and resolves with the stored file. Up to six run at once. */
   onUpload: (
     file: File,
     options: FileUploadOptions,
   ) => Promise<AutoFormFileValue>;
+  /** Lets the user reorder the files; the order is kept in the value. Defaults to `true`. */
   ordered?: boolean;
 }
 
+/**
+ * A multi-file upload for an `AutoForm` field that stores an array of file
+ * ids. Picked files upload right away through `onUpload`.
+ */
 export const AutoFormFiles = ({
   allowedExtensions,
   allowedMimeTypes,

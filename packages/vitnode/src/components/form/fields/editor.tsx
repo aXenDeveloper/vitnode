@@ -40,7 +40,13 @@ const useEditorLabelledBy = (label: React.ReactNode): string | undefined => {
 
 type AutoFormEditorProps = ItemAutoFormComponentProps &
   TipTapEditorBaseProps & {
+    /**
+     * What the field stores: an HTML string (`html`) or a Tiptap JSON document
+     * (`json`, required for rich text in the Content Engine and for
+     * collaborative editing). Defaults to `html`.
+     */
     format?: "html" | "json";
+    /** Edits one document per enabled language. */
     multiLang?: boolean;
   };
 
@@ -196,6 +202,12 @@ const MultiLangJsonEditor = ({
   );
 };
 
+/**
+ * The rich-text editor (Tiptap) as an `AutoForm` field. Spread the props `AutoForm` passes and add a `label`.
+ *
+ * Inside a collaborative editing context, a `json` field edits the shared
+ * document instead of a local one.
+ */
 export const AutoFormEditor = ({
   label,
   labelRight,

@@ -39,15 +39,24 @@ const RoleLabel = ({
 /** What the role field takes. `search` is the whole of its host coupling. */
 export type AutoFormRolesProps = ItemAutoFormComponentProps & {
   disabled?: boolean;
+  /** Roles that cannot be picked, by id. */
   excludeIds?: number[];
+  /** Stores an array of role ids instead of one id. Defaults to `false`. */
   multiple?: boolean;
   placeholder?: string;
 
+  /** Finds roles for the typed text. */
   search: RoleSearch;
   searchPlaceholder?: string;
+  /** The roles the field's initial ids belong to, so they show names before any search. */
   selected?: RoleOption[];
 };
 
+/**
+ * A role picker for an `AutoForm` field that stores a role id (or `null`), or
+ * an array of ids with `multiple`. Spread the props `AutoForm` passes and add a
+ * `label`.
+ */
 export const AutoFormRoles = ({
   description,
   disabled,

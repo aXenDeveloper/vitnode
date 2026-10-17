@@ -131,8 +131,8 @@ export type FetcherServerOptions = FetcherRequestOptions & {
  * relay, cron and jobs, calls that carry upstream secrets or target another
  * origin. Importing it into a browser bundle fails the build.
  *
- * Resolves with the `Response` for any status below 500 and rejects on a `500`
- * or a network failure, like the universal fetcher.
+ * Resolves with the `Response` for every status except `500` and rejects on a
+ * `500` or a network failure, like the universal fetcher.
  *
  * @example
  * ```ts

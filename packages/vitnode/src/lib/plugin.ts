@@ -341,8 +341,9 @@ export interface BuildPluginReturn<P extends string = string> {
   manifest?: PluginManifest<P>;
   /**
    * Lazy loaders for the plugin's frontend messages, keyed by locale code -
-   * usually the plugin's `src/locales` barrel. Merged into the app's messages
-   * under the plugin id, so `{pluginId}.admin...` keys resolve.
+   * usually the plugin's `src/locales` barrel. Deep-merged into the app's
+   * messages as they are, so each file nests its keys under the plugin id
+   * itself. Bundled apps load `localeFiles` instead.
    */
   messages?: LocaleMessagesMap;
   /** The plugin's npm package name, taken from `manifest.id`. */
@@ -352,7 +353,7 @@ export interface BuildPluginReturn<P extends string = string> {
   routes?: PluginRoutes;
 }
 
-/** What {@link buildPlugin} accepts: everything it returns, with `manifest` required. */
+/** What {@link buildPlugin} accepts: everything it returns except `pluginId`, with `manifest` required. */
 export type BuildPluginOptions<P extends string> = Omit<
   BuildPluginReturn<P>,
   "manifest" | "pluginId"

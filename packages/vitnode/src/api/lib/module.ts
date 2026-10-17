@@ -76,7 +76,10 @@ export interface BuildModuleOptions<
   name: M;
   /** Notification types this module registers. Collected from any depth. */
   notificationTypes?: AnyNotificationTypeDefinition[];
-  /** Content types this module serves public URLs for. Collected from any depth. */
+  /**
+   * Content types handed to this module's public API; the plugin keeps those
+   * that declare public URLs. Collected from any depth.
+   */
   publicContentTypes?: AnyContentTypeDefinition[];
   /** Background queue tasks. Only read from a plugin's top-level modules. */
   queueTasks?: BuildQueueTaskReturn[];

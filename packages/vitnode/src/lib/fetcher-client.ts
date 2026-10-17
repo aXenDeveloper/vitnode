@@ -41,10 +41,10 @@ export type FetcherClientOptions = Omit<
  * Sends `credentials: "include"` (the API may live on another origin) and
  * dispatches a `vitnode:rate-limit` window event on a `429`.
  *
- * Resolves with the `Response` for any status below 500 - check `res.ok` or
- * `res.status` before reading the body; a `4xx` is also logged to the console.
- * Rejects on a `500` (with the response body in the message) and on network
- * failure.
+ * Resolves with the `Response` for every status except `500` - check `res.ok`
+ * or `res.status` before reading the body; any other `4xx` or `5xx` is also
+ * logged to the console. Rejects on a `500` (with the response body in the
+ * message) and on network failure.
  */
 export async function fetcherClient<
   P extends RegisteredPluginId,

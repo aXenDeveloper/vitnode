@@ -82,6 +82,10 @@ const MultiLangTextarea = ({
   );
 };
 
+/**
+ * A multi-line text input for an `AutoForm` string field, with the schema's
+ * length limits. Supports `multiLang`. Spread the props `AutoForm` passes and add a `label`.
+ */
 export const AutoFormTextarea = ({
   label,
   description,

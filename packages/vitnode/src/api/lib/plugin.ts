@@ -50,9 +50,9 @@ import { applyModuleTags } from "./openapi-tags";
 export type { ApiPluginContract };
 
 /**
- * A plugin's API half, as {@link buildApiPlugin} returns it and an app's
- * `buildApiConfig({ plugins })` mounts it at `/{pluginId}` under the API's
- * base path (`/api` in the starter apps).
+ * A plugin's API half, as {@link buildApiPlugin} returns it. An app lists it in
+ * `buildApiConfig({ plugins })` and `VitNodeAPI` mounts it at `/{pluginId}`
+ * under the API's base path (`/api` in the starter apps).
  *
  * Everything the modules declared is already collected and validated here:
  * content types, models and containers from the whole module tree; cron jobs,
@@ -76,7 +76,10 @@ export interface BuildPluginApiReturn<
   hono: OpenAPIHono;
   manifest?: PluginManifest<P>;
   messages?: LocaleMessagesMap;
-  /** Declared targets and scopes, plus one report target per content model with reports enabled. */
+  /**
+   * Declared targets and scopes, plus one report target per content model with
+   * reports enabled and one scope per content container with policies enabled.
+   */
   moderation?: Required<ModerationPluginConfig>;
   /** The module tuple as passed in; the fetcher's types resolve calls through it. */
   modules: Modules;
@@ -109,9 +112,10 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
  * imports in its `vitnode.api.config.ts` and nowhere a browser bundle reaches.
  *
  * Staff permissions: every content type adds `can_view`, `can_create`,
- * `can_edit` and `can_delete` under its permission module, every content
- * container and report target adds its own entries, unless `permissionStaff`
- * already declares that module.
+ * `can_edit` and `can_delete` (plus `can_publish`, `can_hide` and
+ * `can_restore` when publication, visibility or editorial is on) under its
+ * permission module, and every content container and report target adds its
+ * own entries, unless `permissionStaff` already declares that module.
  *
  * @throws When `manifest` is malformed; when `blocks` belongs to another
  * plugin; when content types, containers, editable pages, AI actions, search
@@ -150,7 +154,10 @@ export function buildApiPlugin<
   permissionStaff,
   searchIndexers,
 }: {
-  /** AI actions admins can run, e.g. from an editor. */
+  /**
+   * Managed AI actions the plugin runs with `c.get("ai").run()` or
+   * `runAsSystem()`; admins configure them and grant their permission per role.
+   */
   aiActions?: AnyAiActionDefinition[];
   /** The object the plugin's own widgets (`blocks`) module exports; its `pluginId` must match. */
   blocks?: BlockPluginSource;

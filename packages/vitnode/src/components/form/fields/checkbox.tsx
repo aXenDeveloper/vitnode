@@ -7,6 +7,7 @@ import { FormControl, FormMessage } from "../../ui/form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
+/** A checkbox for an `AutoForm` boolean field. Spread the props `AutoForm` passes and add a `label`. */
 export const AutoFormCheckbox = ({
   label,
   labelRight,

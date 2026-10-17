@@ -21,7 +21,8 @@ import { manifest } from "@/manifest.gen";
  *   generates from the article's `publicApi`. Categories have no `publicApi`,
  *   so they are not exposed publicly.
  *
- * The blog's AI actions (excerpt and translation) are registered here too.
+ * The blog's AI actions (field translation, excerpt and article review) are
+ * registered here too.
  *
  * @example
  * ```ts

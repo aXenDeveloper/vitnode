@@ -14,9 +14,15 @@ import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { useDialog } from "./dialog";
 import { FieldError } from "./field";
 
+/**
+ * When a field's validation errors become visible: after blur (`onTouched`,
+ * `onBlur`), after the first change (`onChange`, `all`) or only after a submit
+ * (`onSubmit`). After any submit attempt every error is shown.
+ */
 export type FormMode = "all" | "onBlur" | "onChange" | "onSubmit" | "onTouched";
 
 export interface FormSubmitMeta {
+  /** The `value` of the submit button that was clicked, if it has one. */
   intent?: string;
 }
 
@@ -24,10 +30,12 @@ export interface FormFieldChangeEvent {
   target: { checked?: boolean; type?: string; value?: unknown };
 }
 
+/** One field's value and handlers, as a field component receives them. */
 export interface FormFieldApi<TValue = unknown> {
   disabled?: boolean;
   name: string;
   onBlur: () => void;
+  /** Takes the new value, or an input's change event (a checkbox's `checked` is read). */
   onChange: (change: FormFieldChangeEvent | TValue) => void;
   value: TValue;
 }
@@ -164,6 +172,16 @@ const submitIntentOf = (
     : undefined;
 };
 
+/**
+ * Shows an error on one field after a submit - typically a server answer such
+ * as "this title is taken". It stays until the field's value changes, and the
+ * field is focused unless `shouldFocus` is `false`.
+ *
+ * @example
+ * ```ts
+ * if (res.status === 409) setFormFieldError(form, "title", t("errors.unique"));
+ * ```
+ */
 const setFormFieldError = (
   form: AnyFormApi,
   name: string,
@@ -193,6 +211,13 @@ const removeFormFieldValue = (
   void form.removeFieldValue(name as never, index);
 };
 
+/**
+ * The `<form>` behind `AutoForm`, for a form built on a TanStack Form instance
+ * directly. Prefer `AutoForm`.
+ *
+ * Unless `disableBeforeUnload` is set, leaving the page with unsaved changes
+ * asks for confirmation, and an enclosing `Dialog` asks before closing.
+ */
 function Form({
   children,
   className,

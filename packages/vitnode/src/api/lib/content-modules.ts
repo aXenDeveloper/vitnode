@@ -10,11 +10,23 @@ import {
   ContentUrlError,
 } from "@/content/public-urls";
 
+/**
+ * Where an API process finds each plugin's browser-safe `{pluginId}/content`
+ * module - the one exporting `contentTypes` - to check it against the content
+ * types the plugin's API publishes.
+ */
 export interface ContentModuleLoader {
+  /** Where modules are looked up, for error messages. */
   describe: string;
+  /** The plugin's content module, or `undefined` when there is none. */
   load: (pluginId: string) => unknown;
 }
 
+/**
+ * A {@link ContentModuleLoader} over the app's generated
+ * `src/content-modules.gen.ts` - what `buildApiConfig({ contentModules })`
+ * receives in an app whose API runs inside the web build.
+ */
 export const generatedContentModules = (
   modules: Readonly<Record<string, unknown>>,
 ): ContentModuleLoader => ({
@@ -36,6 +48,14 @@ const errorCode = (error: unknown): string | undefined =>
     ? error.code
     : undefined;
 
+/**
+ * A {@link ContentModuleLoader} that resolves `{pluginId}/content` from the
+ * packages installed under `root` (the working directory by default) - the
+ * fallback for a standalone API without generated content modules. Server-only.
+ *
+ * @throws When the module resolves but this Node.js cannot `require()` an ES
+ * module (before 22.12, or with top-level `await` in it).
+ */
 export const packageContentModules = (
   root: string = process.cwd(),
 ): ContentModuleLoader => {
@@ -68,6 +88,14 @@ export const packageContentModules = (
   };
 };
 
+/**
+ * Checks, at API startup, that every plugin publishing content types with
+ * public URLs also exports exactly those definitions from its `./content`
+ * module - which is how the web build verifies a page serves each URL.
+ *
+ * @throws A `ContentUrlError` when a plugin's content module is missing, or
+ * omits or disagrees with a published content type.
+ */
 export const assertPluginContentModules = ({
   loader,
   plugins,

@@ -16,6 +16,10 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
+/**
+ * A dropdown for an `AutoForm` enum field: the options are the schema's
+ * `z.enum()` values. Spread the props `AutoForm` passes and add a `label`.
+ */
 export const AutoFormSelect = ({
   label,
   field,
@@ -33,6 +37,7 @@ export const AutoFormSelect = ({
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Select>, "value"> & {
+    /** Display labels for the enum values; a value without one shows as is. */
     labels?: { label: string; value: string }[];
     placeholder?: string;
   }) => {

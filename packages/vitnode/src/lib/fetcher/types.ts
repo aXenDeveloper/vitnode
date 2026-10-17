@@ -223,8 +223,8 @@ export type BuildArgsType<RouteCfg> = OptionalQueryArgs<RouteCfg> & {
 
 /**
  * The `args` of a call: required when the route declares a body, params or a
- * required query, optional when its only input is an optional query, and
- * absent otherwise.
+ * query - with only an optional query, `args` is still required but its
+ * `query` may be left out - and absent otherwise.
  */
 export type FetcherArgs<RouteCfg> = keyof BuildArgsType<RouteCfg> extends never
   ? { args?: undefined }
@@ -337,8 +337,8 @@ export interface FetcherRequestOptions {
   origin?: string;
   /**
    * For cursor-paginated routes: fills `query.first` with `10` unless
-   * `first` or `last` is set, and `query.search` with `""` unless set.
-   * Defaults to `false`.
+   * `first` or `last` is set, and `query.search` with `""` unless set. Only
+   * applies when the call passes a `query`. Defaults to `false`.
    */
   withPagination?: boolean;
 }

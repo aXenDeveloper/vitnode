@@ -27,15 +27,22 @@ import { dashboardLayoutQuery, useDashboardActions } from "./query";
 import { ADMIN_DASHBOARD_NAMESPACES } from "./route";
 import { coreDashboardBrowserWidgets } from "./widgets";
 
+/** One plugin's dashboard widgets, keyed by the plugin that declared them. */
 export interface DashboardPluginWidgets {
   pluginId: string;
   widgets: AdminDashboardWidget[];
 }
 
 export interface AdminDashboardRouteProps extends AdminDashboardRouteData {
+  /** Plugin widgets to offer next to core's. Defaults to none. */
   pluginWidgets?: DashboardPluginWidgets[];
 }
 
+/**
+ * The AdminCP dashboard screen: the admin's widget board, saved per admin,
+ * with core's widgets plus `pluginWidgets`. Widgets the admin lacks the
+ * permission for are left out.
+ */
 export const AdminDashboardRouteContent = ({
   pluginWidgets = [],
   vitnodeVersion,

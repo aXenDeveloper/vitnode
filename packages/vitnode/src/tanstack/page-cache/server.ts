@@ -93,8 +93,9 @@ export type PageCacheRender = (
 export interface PageCacheHandlerOptions<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
-  /** `pageCacheBuildId` from `src/page-cache.gen.ts`. */
+  /** `pageCacheBuildId` from `src/page-cache.gen.ts`; a new build never serves an old build's pages. */
   buildId: string;
+  /** The app's `vitNodeConfig`; `pageCache` and `i18n` are read from it. */
   config: VitNodeConfig<AppLocales>;
   /** Overrides the production-only default. For tests. */
   enabled?: boolean;
@@ -427,6 +428,12 @@ export interface StartServerEntry {
 }
 
 /**
+ * Wraps the TanStack Start server entry with VitNode's shared HTML page cache
+ * (see `createPageCacheHandler` for which requests are cached and when a
+ * render is stored). Only routes with a policy in `routes` - e.g. a plugin
+ * `page()`'s `cache` option - are cached, only in production, and not when
+ * `pageCache.enabled` is `false`. Server-only.
+ *
  * The host app's `src/server.ts`:
  *
  * ```ts

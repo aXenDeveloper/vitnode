@@ -17,7 +17,10 @@ export interface RawApiFetchArgs {
 
   options?: Omit<RequestInit, "body" | "headers" | "method">;
 
-  /** The API's origin. Defaults to the configured API origin (`VITNODE_API_URL`). */
+  /**
+   * The API's origin. Defaults to `VITNODE_API_URL`, else the page's origin in
+   * a browser, else `http://localhost:3000`.
+   */
   origin?: string;
   /** Substituted into `{name}` placeholders in `path`. */
   params?: Record<string, unknown>;
@@ -91,10 +94,10 @@ export const buildApiUrl = ({
  * Content Engine wraps it with content-type schemas - both get the same
  * request behaviour without a second implementation.
  *
- * Resolves with the `Response` for any status below 500 - check `res.ok` or
- * `res.status` before reading the body; a `4xx` is also logged to the console.
- * Rejects on a `500` (with the response body in the message) and on network
- * failure.
+ * Resolves with the `Response` for every status except `500` - check `res.ok`
+ * or `res.status` before reading the body; any other `4xx` or `5xx` is also
+ * logged to the console. Rejects on a `500` (with the response body in the
+ * message) and on network failure.
  */
 export const rawApiFetch = async ({
   additionalHeaders = {},

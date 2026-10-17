@@ -23,6 +23,21 @@ import { pageWidgetsRegistry } from "./registry";
  * Core owns the two routes a page layout is read and written through, so it
  * owns talking to them: a page wraps its zones in this and declares nothing
  * else - no query, no adapter, no permission check of its own.
+ *
+ * Staff holding the page definition's permission get an edit mode; everyone
+ * else sees the saved widgets. Warm its data with `loadPageWidgets` in the
+ * route's loader. The page must also be registered on the API
+ * (`buildApiPlugin({ editablePages })`).
+ *
+ * @example
+ * ```tsx
+ * import { PageWidgets, PageWidgetsZone } from "@vitnode/core/tanstack/widgets";
+ *
+ * <PageWidgets page={blogHomePage}>
+ *   <PageWidgetsZone id="sidebar" />
+ *   <PostList />
+ * </PageWidgets>;
+ * ```
  */
 export const PageWidgets = ({
   children,
@@ -88,6 +103,7 @@ export const PageWidgetsZone = ({
   id,
 }: {
   className?: string;
+  /** One of the zone ids the page definition declares. */
   id: string;
 }) => (
   <ContentZone className={className} id={id} registry={pageWidgetsRegistry()} />

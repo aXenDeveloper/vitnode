@@ -28,6 +28,7 @@ export interface PageCacheConfig {
    * route or one of the app's own. `false` turns caching off for that route.
    */
   routes?: Readonly<Record<string, PageCacheSetting>>;
+  /** Where cached pages live. Defaults to `"memory"`. */
   storage?: PageCacheStorageKind;
 }
 
