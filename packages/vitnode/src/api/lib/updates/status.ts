@@ -53,16 +53,14 @@ export const loadUpdatesOverview = async ({
   coreVersion,
   db,
   enabled,
-  now = new Date(),
 }: {
   channelOverride: null | UpdateChannel;
   components: readonly UpdateComponent[];
   coreVersion: null | string;
   db: Db;
   enabled: boolean;
-  now?: Date;
 }): Promise<UpdatesOverview> => {
-  const lock = await readUpdateCheckLock(db, now);
+  const lock = await readUpdateCheckLock(db);
   const unavailable = (component: UpdateComponent): ComponentUpdateState => ({
     id: component.id,
     lastAttemptAt: null,
@@ -147,5 +145,77 @@ export const loadUpdatesOverview = async ({
     enabled,
     lastManualAt: lock.lastManualAt,
     running: lock.running,
+  };
+};
+
+export interface UpdatesSummary {
+  affectedComponents: number;
+  checkedComponents: number;
+  core: { latestVersion: null | string };
+  enabled: boolean;
+  failedComponents: number;
+  lastAttemptAt: Date | null;
+  notCheckedComponents: number;
+  oldestSuccessAt: Date | null;
+  pluginUpdatesAvailable: number;
+  running: boolean;
+  stale: boolean;
+  unconfirmedComponents: number;
+  updatesAvailable: number;
+}
+
+const isUpdateAvailable = (component: ComponentUpdateState): boolean =>
+  component.result?.status === "update_available";
+
+export const summarizeUpdates = (overview: UpdatesOverview): UpdatesSummary => {
+  const { components } = overview;
+  const [core, ...plugins] = components;
+  const checkable = components.filter(
+    component => component.state !== "unavailable",
+  );
+  const successes = checkable.flatMap(component =>
+    component.lastSuccessAt === null ? [] : [component.lastSuccessAt],
+  );
+  const attempts = components.flatMap(component =>
+    component.lastAttemptAt === null ? [] : [component.lastAttemptAt],
+  );
+
+  return {
+    affectedComponents: components.filter(
+      component => (component.result?.securityUpdates.length ?? 0) > 0,
+    ).length,
+    checkedComponents: components.filter(
+      component => component.state === "checked",
+    ).length,
+    core: {
+      latestVersion:
+        core !== undefined && isUpdateAvailable(core)
+          ? (core.result?.latest?.version ?? null)
+          : null,
+    },
+    enabled: overview.enabled,
+    failedComponents: components.filter(
+      component => component.lastError !== null,
+    ).length,
+    lastAttemptAt:
+      attempts.length === 0
+        ? null
+        : new Date(Math.max(...attempts.map(date => date.getTime()))),
+    notCheckedComponents: components.filter(
+      component => component.state === "not_checked",
+    ).length,
+    oldestSuccessAt:
+      successes.length === 0 || successes.length !== checkable.length
+        ? null
+        : new Date(Math.min(...successes.map(date => date.getTime()))),
+    pluginUpdatesAvailable: plugins.filter(isUpdateAvailable).length,
+    running: overview.running,
+    stale: components.some(component => component.stale),
+    unconfirmedComponents: components.filter(
+      component =>
+        component.result?.status !== "up_to_date" &&
+        component.result?.status !== "update_available",
+    ).length,
+    updatesAvailable: components.filter(isUpdateAvailable).length,
   };
 };

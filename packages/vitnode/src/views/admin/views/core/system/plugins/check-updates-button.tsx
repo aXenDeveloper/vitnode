@@ -60,6 +60,15 @@ export const CheckUpdatesButton = ({
         toast.error(t("disabled.title"), { description: t("disabled.desc") });
 
         return;
+      case "interrupted":
+        await queryClient.invalidateQueries({
+          queryKey: pluginUpdatesQueryKey,
+        });
+        toast.warning(t("interrupted.title"), {
+          description: t("interrupted.desc"),
+        });
+
+        return;
       case "running":
         await queryClient.invalidateQueries({
           queryKey: pluginUpdatesQueryKey,

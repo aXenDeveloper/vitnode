@@ -2662,6 +2662,39 @@
         "select": "Select {title}",
         "properties": {
           "title": "{title} properties"
+        },
+        "system-updates": {
+          "title": "System updates",
+          "desc": "Core version, available updates and security warnings from the stored update checks.",
+          "rows": {
+            "status": "Status",
+            "core": "VitNode",
+            "plugin_updates": "Plugin updates",
+            "security": "Security",
+            "last_checked": "Last checked"
+          },
+          "status": {
+            "security": "Security fix needed",
+            "updates": "Updates available",
+            "up_to_date": "Up to date",
+            "unconfirmed": "{count, plural, one {# package not confirmed} other {# packages not confirmed}}",
+            "running": "Checking...",
+            "not_checked": "Not checked yet",
+            "unavailable": "No update sources",
+            "disabled": "Checks turned off"
+          },
+          "core_update": "update to {version} available",
+          "security_affected": "{count, plural, one {# package} other {# packages}}",
+          "security_none": "None",
+          "last_checked": {
+            "running": "In progress",
+            "failed": "Failed <date></date>",
+            "stale": "Out of date",
+            "never": "Never"
+          },
+          "unknown": "Unknown",
+          "load_error": "Could not load the update summary. The Plugins page still shows every result.",
+          "view_plugins": "View plugins"
         }
       }
     },
@@ -2720,6 +2753,22 @@
         "tabs_closed": {
           "title": "Please sign in again",
           "desc": "All AdminCP tabs were closed, so we signed you out to keep your account safe."
+        }
+      },
+      "updates": {
+        "nav_badge": "{count, plural, one {# update available} other {# updates available}}",
+        "security_pill": {
+          "label": "{count, plural, one {# security update} other {# security updates}}",
+          "title": "{count, plural, one {# update} other {# updates}}",
+          "checked": "Checked <date></date>",
+          "security": "Security fixes",
+          "other": "Other updates",
+          "more": "and {count} more",
+          "entry_label": "{title}, update to {version}",
+          "core": "VitNode",
+          "last_known": "Based on the last known results - the latest check could not confirm them.",
+          "load_error": "Could not load the update list. The Plugins page still shows every result.",
+          "open_plugins": "Open Plugins"
         }
       }
     },
@@ -3791,6 +3840,10 @@
             "error": {
               "title": "The check could not be started",
               "desc": "The API did not answer. Try again in a moment."
+            },
+            "interrupted": {
+              "title": "The check stopped before it finished",
+              "desc": "This server could not confirm it still holds the update check lease, so it stopped instead of risking a clash with another check. Results stored before that are kept - try again in a moment."
             }
           },
           "status": {
@@ -3814,7 +3867,6 @@
           "stale": "Not checked for this deployment yet - showing results from publisher data fetched <date></date>.",
           "failed": "Last check failed: {reason}",
           "failed_with_previous": "Last check failed: {reason} Showing the last successful result, from <date></date>.",
-          "checked_at": "Checked <date></date>",
           "error": {
             "blocked_address": "the update source points to a private or local address.",
             "http_error": "the update source answered HTTP {detail}.",

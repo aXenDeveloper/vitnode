@@ -38,6 +38,7 @@ const INTEGRATION = [
   "scripts/cli/commands/start.test.ts",
   "scripts/cli/dev/package-watch.test.ts",
   "scripts/watch-plugin-manifest.test.ts",
+  "src/api/lib/updates/lock.postgres.test.ts",
 ];
 
 export default defineConfig({

@@ -158,6 +158,8 @@ const core = (
   plugin: manifest.id,
 });
 
+export const ADMIN_PLUGINS_HREF = "/admin/core/system/plugins";
+
 /** Core's own group, before the permission filter. */
 const coreNavGroup = (): AdminNavGroupDeclaration => ({
   id: "core",
@@ -175,7 +177,7 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
       items: [
         {
           title: key("admin.global.nav.system.plugins"),
-          href: "/admin/core/system/plugins",
+          href: ADMIN_PLUGINS_HREF,
           permission: core("plugins"),
         },
         {

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { unstableChannelLabel, unstableChannelOf } from "./unstable-channel";
 
-export const UnstableChannelTag = ({ version }: { version: null | string }) => {
+const UnstableChannelTag = ({ version }: { version: string }) => {
   const t = useTranslations("admin.system.plugins.unstable");
   const channel = unstableChannelOf(version);
   if (channel === null) return null;
@@ -15,7 +15,7 @@ export const UnstableChannelTag = ({ version }: { version: null | string }) => {
 
   return (
     <Badge
-      className="bg-warn/10 text-warn dark:bg-warn/20 h-4.5 gap-1 px-1.5 text-[11px]"
+      className="bg-warn/10 text-warn dark:bg-warn/20 h-4.5 gap-1 px-1.5"
       title={t("hint", { channel: label })}
       variant="outline"
     >

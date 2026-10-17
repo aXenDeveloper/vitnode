@@ -1,5 +1,6 @@
 import type {
   FrontendPluginInventory,
+  PluginAuthor,
   PluginManifest,
 } from "@/lib/plugin-manifest";
 
@@ -10,10 +11,7 @@ export interface InstalledPluginRegistration {
   version: null | string;
 }
 
-export interface InstalledPluginAuthor {
-  name: string;
-  url: null | string;
-}
+export type InstalledPluginAuthor = Pick<PluginAuthor, "name" | "url">;
 
 export interface InstalledPlugin {
   author: InstalledPluginAuthor | null;

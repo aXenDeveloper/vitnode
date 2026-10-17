@@ -211,6 +211,7 @@ export interface FetchUpdateSourceOptions {
   maxBytes?: number;
   maxRedirects?: number;
   resolveHost?: ResolveUpdateHost;
+  signal?: AbortSignal;
   timeoutMs?: number;
   transport?: UpdateSourceTransport;
   /** Sent as `If-None-Match` / `If-Modified-Since`. Only pass them when a validated copy is stored. */
@@ -223,12 +224,16 @@ export const fetchUpdateSource = async (
     maxBytes = UPDATE_SOURCE_MAX_BYTES,
     maxRedirects = DEFAULT_MAX_REDIRECTS,
     resolveHost = resolveHostAddresses,
+    signal: cancel,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     transport = httpsUpdateSourceTransport,
     validators = null,
   }: FetchUpdateSourceOptions = {},
 ): Promise<UpdateSourceFetchResult> => {
-  const signal = AbortSignal.timeout(timeoutMs);
+  cancel?.throwIfAborted();
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const signal =
+    cancel === undefined ? timeout : AbortSignal.any([timeout, cancel]);
   const headers: Record<string, string> = {
     accept: "application/json",
     "user-agent": "VitNode update check",
@@ -242,7 +247,10 @@ export const fetchUpdateSource = async (
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     await assertFetchableUrl(url, resolveHost);
-    if (signal.aborted) throw new UpdateSourceError("timeout");
+    if (signal.aborted) {
+      cancel?.throwIfAborted();
+      throw new UpdateSourceError("timeout");
+    }
 
     let response: UpdateSourceTransportResponse;
     try {
@@ -252,6 +260,7 @@ export const fetchUpdateSource = async (
         signal,
       });
     } catch (error) {
+      cancel?.throwIfAborted();
       throw transportFailure(error, signal);
     }
 
@@ -291,6 +300,7 @@ export const fetchUpdateSource = async (
       bytes = await readCapped(response.body, maxBytes);
     } catch (error) {
       response.destroy();
+      cancel?.throwIfAborted();
       throw transportFailure(error, signal);
     }
 

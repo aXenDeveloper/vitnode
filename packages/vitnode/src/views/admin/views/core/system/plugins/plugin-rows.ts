@@ -1,8 +1,30 @@
-import type { PluginRow } from "./plugin-list";
-import type { AdminPluginUpdates } from "./plugin-updates-query";
-import type { AdminInstalledPlugins } from "./plugins-query";
+import type { PluginTone } from "./plugin-tone";
+import type {
+  AdminComponentUpdate,
+  AdminPluginUpdates,
+} from "./plugin-updates-query";
+import type {
+  AdminInstalledPlugin,
+  AdminInstalledPlugins,
+  AdminPluginAuthor,
+} from "./plugins-query";
 
 import { pluginToneOf } from "./plugin-tone";
+
+export interface PluginRow {
+  author: AdminPluginAuthor | null;
+  description: null | string;
+  icon: null | string;
+  id: string;
+  kind: "core" | "plugin";
+  license: null | string;
+  registrations: AdminInstalledPlugin["registrations"] | null;
+  title: string;
+  tone: null | PluginTone;
+  update: AdminComponentUpdate | undefined;
+  version: null | string;
+  versionMismatch: boolean;
+}
 
 export const pluginRowsOf = ({
   core,

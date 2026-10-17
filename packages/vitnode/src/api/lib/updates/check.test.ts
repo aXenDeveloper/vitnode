@@ -1,10 +1,14 @@
 import type { drizzle } from "drizzle-orm/postgres-js";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { UpdateManifest } from "@/lib/updates/manifest";
 
-import { core_update_results, core_update_sources } from "@/database/updates";
+import {
+  core_update_lock,
+  core_update_results,
+  core_update_sources,
+} from "@/database/updates";
 import { createMemoryDb } from "@/tests/memory-db";
 
 import type { FetchUpdateSource } from "./check";
@@ -12,7 +16,13 @@ import type { UpdateComponent } from "./components";
 
 import { checkForUpdates, runLockedUpdateCheck } from "./check";
 import { UpdateSourceError } from "./fetch-source";
-import { acquireUpdateCheckLease, readUpdateCheckLock } from "./lock";
+import {
+  acquireUpdateCheckLease,
+  readUpdateCheckLock,
+  releaseUpdateCheckLease,
+  UPDATE_CHECK_LEASE_MS,
+  UpdateCheckLeaseLostError,
+} from "./lock";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -96,9 +106,13 @@ const sources = (
     );
   });
 
-const setup = () => {
+const OWNER = "run";
+
+const setup = async () => {
   const memory = createMemoryDb();
   const db = memory.db as unknown as Db;
+  await acquireUpdateCheckLease(db, { manual: false, owner: OWNER });
+  const lost = new AbortController();
   const check = async (
     components: UpdateComponent[],
     fetchSource: FetchUpdateSource,
@@ -110,14 +124,19 @@ const setup = () => {
       coreVersion: "2.0.0",
       db,
       fetchSource,
+      lease: { owner: OWNER, signal: lost.signal },
       now,
     });
   const result = (id: string) =>
     memory.rows(core_update_results).find(row => row.componentId === id);
   const source = (url: string) =>
     memory.rows(core_update_sources).find(row => row.url === url);
+  const stored = () => ({
+    results: memory.rows(core_update_results),
+    sources: memory.rows(core_update_sources),
+  });
 
-  return { check, db, memory, result, source };
+  return { check, db, lost, memory, result, source, stored };
 };
 
 const BLOG = component("@acme/blog", ACME);
@@ -125,7 +144,7 @@ const FORUM = component("@acme/forum", ACME, ["1.1.0"]);
 
 describe("checkForUpdates", () => {
   it("fetches a source shared by several plugins once, and evaluates each", async () => {
-    const { check, result } = setup();
+    const { check, result } = await setup();
     const fetchSource = sources({ [ACME]: fetched(acmeManifest()) });
 
     const summary = await check([BLOG, FORUM], fetchSource);
@@ -154,7 +173,7 @@ describe("checkForUpdates", () => {
   });
 
   it("stores only the packages this install checks", async () => {
-    const { check, source } = setup();
+    const { check, source } = await setup();
 
     await check([BLOG], sources({ [ACME]: fetched(acmeManifest(), '"v1"') }));
 
@@ -166,7 +185,7 @@ describe("checkForUpdates", () => {
   });
 
   it("skips a component without an update source", async () => {
-    const { check, result } = setup();
+    const { check, result } = await setup();
     const fetchSource = sources({});
 
     await expect(
@@ -177,7 +196,7 @@ describe("checkForUpdates", () => {
   });
 
   it("keeps one failing source from affecting the others", async () => {
-    const { check, result } = setup();
+    const { check, result } = await setup();
     const core = component("@vitnode/core", CORE, ["1.9.0"]);
 
     const summary = await check(
@@ -221,7 +240,7 @@ describe("checkForUpdates", () => {
       { code: "unsupported_schema" },
     ],
   ])("keeps the previous findings through %s", async (_, answer, error) => {
-    const { check, result, source } = setup();
+    const { check, result, source } = await setup();
     await check([BLOG], sources({ [ACME]: fetched(acmeManifest()) }), T1);
 
     await check([BLOG], sources({ [ACME]: answer }), T2);
@@ -244,7 +263,7 @@ describe("checkForUpdates", () => {
   });
 
   it("answers a 304 from the stored copy, evaluated for what runs now", async () => {
-    const { check, result } = setup();
+    const { check, result } = await setup();
     await check(
       [BLOG],
       sources({ [ACME]: fetched(acmeManifest(), '"v1"') }),
@@ -255,6 +274,7 @@ describe("checkForUpdates", () => {
     await check([component("@acme/blog", ACME, ["1.1.0"])], fetchSource, T2);
 
     expect(fetchSource).toHaveBeenCalledWith(ACME, {
+      signal: expect.any(AbortSignal) as unknown,
       validators: { etag: '"v1"', lastModified: null },
     });
     expect(result("@acme/blog")).toMatchObject({
@@ -266,7 +286,7 @@ describe("checkForUpdates", () => {
   });
 
   it("asks for the full document when the stored copy does not cover a new plugin", async () => {
-    const { check, result } = setup();
+    const { check, result } = await setup();
     await check(
       [BLOG],
       sources({ [ACME]: fetched(acmeManifest(), '"v1"') }),
@@ -276,7 +296,10 @@ describe("checkForUpdates", () => {
 
     await check([BLOG, FORUM], fetchSource, T2);
 
-    expect(fetchSource).toHaveBeenCalledWith(ACME, { validators: null });
+    expect(fetchSource).toHaveBeenCalledWith(ACME, {
+      signal: expect.any(AbortSignal) as unknown,
+      validators: null,
+    });
     expect(result("@acme/forum")).toMatchObject({
       lastError: { code: "http_error" },
       result: null,
@@ -284,7 +307,7 @@ describe("checkForUpdates", () => {
   });
 
   it("forgets removed plugins and sources nothing points to", async () => {
-    const { check, memory } = setup();
+    const { check, memory } = await setup();
     const core = component("@vitnode/core", CORE, ["2.0.0"]);
     await check(
       [core, BLOG],
@@ -306,7 +329,7 @@ describe("checkForUpdates", () => {
   });
 
   it("forgets everything when nothing has an update source any more", async () => {
-    const { check, memory } = setup();
+    const { check, memory } = await setup();
     await check([BLOG], sources({ [ACME]: fetched(acmeManifest()) }), T1);
 
     await check([component("@acme/blog", null)], sources({}), T2);
@@ -314,6 +337,89 @@ describe("checkForUpdates", () => {
     expect(memory.rows(core_update_results)).toEqual([]);
     expect(memory.rows(core_update_sources)).toEqual([]);
   });
+});
+
+const untilAborted: FetchUpdateSource = async (_, { signal }) =>
+  await new Promise((_resolve, reject) => {
+    signal?.addEventListener("abort", () => {
+      reject(signal.reason as Error);
+    });
+  });
+
+describe("checkForUpdates once the lease is lost", () => {
+  const url = (index: number) => `https://p${index}.example.com/updates.json`;
+
+  it("aborts requests in flight, never starts queued ones, and stores nothing", async () => {
+    const { check, lost, stored } = await setup();
+    await check([BLOG], sources({ [ACME]: fetched(acmeManifest()) }));
+    const before = stored();
+    const signals: AbortSignal[] = [];
+    let answerLate: (
+      value: Awaited<ReturnType<FetchUpdateSource>>,
+    ) => void = () => undefined;
+    const fetchSource = vi.fn<FetchUpdateSource>(async (requested, options) => {
+      if (options.signal) signals.push(options.signal);
+      if (requested === ACME) {
+        return await new Promise(resolve => {
+          answerLate = resolve;
+        });
+      }
+
+      return await untilAborted(requested, options);
+    });
+    const running = check(
+      [
+        BLOG,
+        ...[1, 2, 3, 4, 5].map(index => component(`@p/${index}`, url(index))),
+      ],
+      fetchSource,
+      T2,
+    );
+    let settled = false;
+    void running.catch(() => undefined).finally(() => (settled = true));
+    await vi.waitFor(() => {
+      expect(signals).toHaveLength(4);
+    });
+
+    lost.abort(new UpdateCheckLeaseLostError());
+    await new Promise(resolve => setImmediate(resolve));
+    expect(signals.every(signal => signal.aborted)).toBe(true);
+    expect(settled).toBe(false);
+    answerLate(fetched(acmeManifest(), '"v2"'));
+
+    await expect(running).rejects.toBeInstanceOf(UpdateCheckLeaseLostError);
+    expect(fetchSource).toHaveBeenCalledTimes(4);
+    expect(stored()).toEqual(before);
+  });
+
+  it.each([
+    [
+      "a fresh copy of a source",
+      [BLOG],
+      sources({ [ACME]: fetched(acmeManifest(["@acme/blog"]), '"v2"') }),
+    ],
+    [
+      "a failed request",
+      [BLOG],
+      sources({ [ACME]: new UpdateSourceError("timeout") }),
+    ],
+    ["the clean-up", [component("@acme/blog", null)], sources({})],
+  ])(
+    "refuses %s from a run whose lease was taken over before it noticed",
+    async (_, components, fetchSource) => {
+      const { check, db, memory, stored } = await setup();
+      await check([BLOG], sources({ [ACME]: fetched(acmeManifest()) }));
+      const before = stored();
+      await releaseUpdateCheckLease(db, OWNER);
+      await acquireUpdateCheckLease(db, { manual: false, owner: "other" });
+
+      await expect(check(components, fetchSource, T2)).rejects.toBeInstanceOf(
+        UpdateCheckLeaseLostError,
+      );
+      expect(stored()).toEqual(before);
+      expect(memory.rows(core_update_lock)).toMatchObject([{ owner: "other" }]);
+    },
+  );
 });
 
 describe("runLockedUpdateCheck", () => {
@@ -326,13 +432,19 @@ describe("runLockedUpdateCheck", () => {
     now: T1,
   });
 
+  const unleased = () => {
+    const memory = createMemoryDb();
+
+    return { db: memory.db as unknown as Db, memory };
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("does not check while another instance holds the lease", async () => {
-    const { db } = setup();
-    await acquireUpdateCheckLease(db, {
-      manual: false,
-      now: T1,
-      owner: "other",
-    });
+    const { db } = unleased();
+    await acquireUpdateCheckLease(db, { manual: false, owner: "other" });
     const fetchSource = sources({});
 
     await expect(
@@ -342,13 +454,28 @@ describe("runLockedUpdateCheck", () => {
   });
 
   it("gives the lease back after the check, even when it throws", async () => {
-    const { db } = setup();
+    const { db } = unleased();
     const failingDb = new Proxy(db, {
       get: (target, property, receiver) =>
-        property === "delete"
-          ? () => {
-              throw new Error("database went away");
-            }
+        property === "transaction"
+          ? async (run: (tx: unknown) => Promise<unknown>) =>
+              await target.transaction(
+                async tx =>
+                  await run(
+                    new Proxy(tx, {
+                      get: (inner, name, innerReceiver) =>
+                        name === "delete"
+                          ? () => {
+                              throw new Error("database went away");
+                            }
+                          : (Reflect.get(
+                              inner,
+                              name,
+                              innerReceiver,
+                            ) as unknown),
+                    }),
+                  ),
+              )
           : (Reflect.get(target, property, receiver) as unknown),
     });
 
@@ -358,13 +485,13 @@ describe("runLockedUpdateCheck", () => {
         manual: false,
       }),
     ).rejects.toThrow("database went away");
-    await expect(readUpdateCheckLock(db, T1)).resolves.toMatchObject({
+    await expect(readUpdateCheckLock(db)).resolves.toMatchObject({
       running: false,
     });
   });
 
   it("returns the summary of a completed check", async () => {
-    const { db } = setup();
+    const { db } = unleased();
 
     await expect(
       runLockedUpdateCheck({
@@ -375,5 +502,86 @@ describe("runLockedUpdateCheck", () => {
       status: "completed",
       summary: { sources: 1, updates: 1 },
     });
+  });
+
+  it("keeps a check that outlasts the first lease protected by renewing it", async () => {
+    vi.useFakeTimers({ now: T1 });
+    const { db, memory } = unleased();
+    let answer: (value: Awaited<ReturnType<FetchUpdateSource>>) => void = () =>
+      undefined;
+    const fetchSource = vi.fn<FetchUpdateSource>(
+      async () =>
+        await new Promise(resolve => {
+          answer = resolve;
+        }),
+    );
+    const running = runLockedUpdateCheck({
+      ...options(db, fetchSource),
+      manual: false,
+    });
+
+    await vi.advanceTimersByTimeAsync(UPDATE_CHECK_LEASE_MS + 60_000);
+    await expect(
+      acquireUpdateCheckLease(db, { manual: false, owner: "other" }),
+    ).resolves.toMatchObject({ acquired: false, reason: "running" });
+
+    answer(fetched(acmeManifest()));
+    await expect(running).resolves.toMatchObject({ status: "completed" });
+    expect(memory.rows(core_update_results)).toHaveLength(1);
+    await expect(readUpdateCheckLock(db)).resolves.toMatchObject({
+      running: false,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("stops when a renewal fails, keeping what it stored before", async () => {
+    vi.useFakeTimers({ now: T1 });
+    const { db, memory } = unleased();
+    let offline = false;
+    const flakyDb = new Proxy(db, {
+      get: (target, property, receiver) =>
+        property === "transaction" && offline
+          ? async () => await Promise.reject(new Error("connection reset"))
+          : (Reflect.get(target, property, receiver) as unknown),
+    });
+    const fetchSource = vi.fn<FetchUpdateSource>(untilAborted);
+    const running = runLockedUpdateCheck({
+      ...options(flakyDb, fetchSource),
+      manual: false,
+    });
+    await vi.waitFor(() => {
+      expect(fetchSource).toHaveBeenCalled();
+    });
+
+    offline = true;
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    await expect(running).resolves.toEqual({ status: "lease_lost" });
+    expect(fetchSource.mock.calls[0]?.[1].signal?.aborted).toBe(true);
+    expect(memory.rows(core_update_results)).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("stops once another instance holds the lease, and leaves that lease alone", async () => {
+    vi.useFakeTimers({ now: T1 });
+    const { db, memory } = unleased();
+    const fetchSource = vi.fn<FetchUpdateSource>(untilAborted);
+    const running = runLockedUpdateCheck({
+      ...options(db, fetchSource),
+      manual: false,
+    });
+    await vi.waitFor(() => {
+      expect(fetchSource).toHaveBeenCalled();
+    });
+
+    const [{ owner }] = memory.rows(core_update_lock) as [{ owner: string }];
+    await releaseUpdateCheckLease(db, owner);
+    await acquireUpdateCheckLease(db, { manual: false, owner: "other" });
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    await expect(running).resolves.toEqual({ status: "lease_lost" });
+    expect(memory.rows(core_update_lock)).toMatchObject([{ owner: "other" }]);
+    expect(memory.rows(core_update_results)).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

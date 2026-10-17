@@ -201,7 +201,7 @@ const ResultLines = ({
         </Line>
       );
     case "update_available": {
-      const latest = result.latest;
+      const { alternative, latest } = result;
       if (latest === null) return null;
 
       return (
@@ -246,22 +246,22 @@ const ResultLines = ({
               {t("updates.compatibility.unknown")}
             </Line>
           ) : null}
-          {result.alternative === null ? null : (
+          {alternative === null ? null : (
             <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 ps-5.5 text-sm leading-relaxed">
               <span className="inline-flex flex-wrap items-center gap-1.5">
                 {t.rich("updates.compatibility.alternative", {
                   version: () => (
                     <PluginVersion
                       className="text-foreground"
-                      version={result.alternative?.version ?? null}
+                      version={alternative.version}
                     />
                   ),
                 })}
               </span>
-              {safeHttpsHref(result.alternative.url) === null ? null : (
+              {safeHttpsHref(alternative.url) === null ? null : (
                 <>
                   <span aria-hidden>·</span>
-                  <ExternalLink href={result.alternative.url}>
+                  <ExternalLink href={alternative.url}>
                     {t("updates.release_notes")}
                   </ExternalLink>
                 </>
@@ -288,13 +288,10 @@ const ResultLines = ({
 export const PluginUpdateStatus = ({
   coreVersion,
   enabled,
-  showCheckedAt = true,
   update,
 }: {
   coreVersion: string;
   enabled: boolean;
-  /** Off where the same date is already shown nearby. */
-  showCheckedAt?: boolean;
   update: AdminComponentUpdate | undefined;
 }) => {
   const t = useTranslations("admin.system.plugins");
@@ -345,18 +342,6 @@ export const PluginUpdateStatus = ({
             : t("updates.failed", { reason })}
         </Line>
       )}
-
-      {showCheckedAt &&
-      update.state === "checked" &&
-      !update.stale &&
-      lastError === null &&
-      update.lastSuccessAt !== null ? (
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          {t.rich("updates.checked_at", {
-            date: () => <DateFormat date={update.lastSuccessAt ?? ""} />,
-          })}
-        </p>
-      ) : null}
     </div>
   );
 };

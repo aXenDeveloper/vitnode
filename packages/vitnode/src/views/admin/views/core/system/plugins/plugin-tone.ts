@@ -1,17 +1,64 @@
+import type { LucideIcon } from "lucide-react";
+
+import {
+  ArrowUpCircleIcon,
+  CircleCheckIcon,
+  CircleDashedIcon,
+  CircleHelpIcon,
+  CircleOffIcon,
+  ShieldAlertIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+
 import type { AdminComponentUpdate } from "./plugin-updates-query";
 
-export const PLUGIN_TONES = [
-  "security",
-  "error",
-  "update",
-  "unknown",
-  "pending",
-  "ok",
-  "off",
-  "disabled",
-] as const;
+export type PluginTone =
+  | "disabled"
+  | "error"
+  | "off"
+  | "ok"
+  | "pending"
+  | "security"
+  | "unknown"
+  | "update";
 
-export type PluginTone = (typeof PLUGIN_TONES)[number];
+export const PLUGIN_TONE_STYLE: Record<
+  PluginTone,
+  { className: string; icon: LucideIcon }
+> = {
+  security: {
+    icon: ShieldAlertIcon,
+    className: "bg-destructive/10 text-destructive dark:bg-destructive/20",
+  },
+  error: {
+    icon: TriangleAlertIcon,
+    className: "bg-warn/10 text-warn dark:bg-warn/20",
+  },
+  update: {
+    icon: ArrowUpCircleIcon,
+    className: "bg-primary/10 text-primary dark:bg-primary/20",
+  },
+  unknown: {
+    icon: CircleHelpIcon,
+    className: "bg-muted text-muted-foreground",
+  },
+  pending: {
+    icon: CircleDashedIcon,
+    className: "bg-muted text-muted-foreground",
+  },
+  ok: {
+    icon: CircleCheckIcon,
+    className: "bg-success/10 text-success dark:bg-success/20",
+  },
+  off: {
+    icon: CircleOffIcon,
+    className: "bg-muted text-muted-foreground",
+  },
+  disabled: {
+    icon: CircleOffIcon,
+    className: "bg-muted text-muted-foreground",
+  },
+};
 
 export const pluginToneOf = (
   update: AdminComponentUpdate | undefined,

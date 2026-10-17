@@ -55,7 +55,7 @@ export type CheckPluginUpdatesResult =
     }
   | {
       retryAfterSeconds: null | number;
-      status: "cooldown" | "disabled" | "running";
+      status: "cooldown" | "disabled" | "interrupted" | "running";
     }
   | { status: "error" };
 

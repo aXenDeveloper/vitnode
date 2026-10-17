@@ -220,7 +220,40 @@
           "width": "Szerokość"
         },
         "status_clean": "Brak zmian",
-        "status_unsaved": "Niezapisane zmiany"
+        "status_unsaved": "Niezapisane zmiany",
+        "system-updates": {
+          "title": "Aktualizacje systemu",
+          "desc": "Wersja rdzenia, dostępne aktualizacje i ostrzeżenia bezpieczeństwa z zapisanych sprawdzeń aktualizacji.",
+          "rows": {
+            "status": "Stan",
+            "core": "VitNode",
+            "plugin_updates": "Aktualizacje wtyczek",
+            "security": "Bezpieczeństwo",
+            "last_checked": "Ostatnie sprawdzenie"
+          },
+          "status": {
+            "security": "Wymagana poprawka bezpieczeństwa",
+            "updates": "Dostępne aktualizacje",
+            "up_to_date": "Wszystko aktualne",
+            "unconfirmed": "{count, plural, one {# pakiet niepotwierdzony} few {# pakiety niepotwierdzone} other {# pakietów niepotwierdzonych}}",
+            "running": "Trwa sprawdzanie...",
+            "not_checked": "Jeszcze nie sprawdzono",
+            "unavailable": "Brak źródeł aktualizacji",
+            "disabled": "Sprawdzanie wyłączone"
+          },
+          "core_update": "dostępna aktualizacja do {version}",
+          "security_affected": "{count, plural, one {# pakiet} few {# pakiety} other {# pakietów}}",
+          "security_none": "Brak",
+          "last_checked": {
+            "running": "W toku",
+            "failed": "Niepowodzenie <date></date>",
+            "stale": "Nieaktualne",
+            "never": "Nigdy"
+          },
+          "unknown": "Nieznane",
+          "load_error": "Nie udało się wczytać podsumowania aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",
+          "view_plugins": "Zobacz wtyczki"
+        }
       }
     },
     "debug": {
@@ -458,6 +491,22 @@
         "tabs_closed": {
           "title": "Zaloguj się ponownie",
           "desc": "Wszystkie karty panelu administracyjnego zostały zamknięte, więc dla bezpieczeństwa wylogowaliśmy Cię."
+        }
+      },
+      "updates": {
+        "nav_badge": "{count, plural, one {# dostępna aktualizacja} few {# dostępne aktualizacje} other {# dostępnych aktualizacji}}",
+        "security_pill": {
+          "label": "{count, plural, one {# aktualizacja bezpieczeństwa} few {# aktualizacje bezpieczeństwa} other {# aktualizacji bezpieczeństwa}}",
+          "title": "{count, plural, one {# aktualizacja} few {# aktualizacje} other {# aktualizacji}}",
+          "checked": "Sprawdzono <date></date>",
+          "security": "Poprawki bezpieczeństwa",
+          "other": "Pozostałe aktualizacje",
+          "more": "i {count} więcej",
+          "entry_label": "{title}, aktualizacja do {version}",
+          "core": "VitNode",
+          "last_known": "Na podstawie ostatnich znanych wyników - najnowsze sprawdzenie nie mogło ich potwierdzić.",
+          "load_error": "Nie udało się wczytać listy aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",
+          "open_plugins": "Otwórz Wtyczki"
         }
       }
     },
@@ -1045,6 +1094,10 @@
             "error": {
               "title": "Nie udało się rozpocząć sprawdzania",
               "desc": "API nie odpowiedziało. Spróbuj ponownie za chwilę."
+            },
+            "interrupted": {
+              "title": "Sprawdzanie zatrzymało się przed końcem",
+              "desc": "Ten serwer nie mógł potwierdzić, że nadal ma blokadę sprawdzania aktualizacji, więc przerwał pracę, zamiast ryzykować kolizję z innym sprawdzaniem. Zapisane wcześniej wyniki zostają - spróbuj ponownie za chwilę."
             }
           },
           "status": {
@@ -1068,7 +1121,6 @@
           "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki pochodzą z danych wydawcy pobranych <date></date>.",
           "failed": "Ostatnie sprawdzanie nie powiodło się: {reason}",
           "failed_with_previous": "Ostatnie sprawdzanie nie powiodło się: {reason} Widoczny jest ostatni udany wynik z <date></date>.",
-          "checked_at": "Sprawdzono <date></date>",
           "error": {
             "blocked_address": "źródło aktualizacji wskazuje na adres prywatny lub lokalny.",
             "http_error": "źródło aktualizacji odpowiedziało kodem HTTP {detail}.",

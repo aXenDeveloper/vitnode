@@ -1,15 +1,5 @@
 import { cn } from "cn";
-import {
-  ArrowUpCircleIcon,
-  ChevronDownIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleHelpIcon,
-  CircleOffIcon,
-  PackageIcon,
-  ShieldAlertIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
+import { ChevronDownIcon, PackageIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
@@ -27,11 +17,11 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 
+import type { PluginRow } from "./plugin-rows";
 import type { PluginTone } from "./plugin-tone";
-import type { AdminComponentUpdate } from "./plugin-updates-query";
-import type { AdminInstalledPlugin, AdminPluginAuthor } from "./plugins-query";
 
 import { PluginIcon } from "./plugin-icon";
+import { PLUGIN_TONE_STYLE } from "./plugin-tone";
 import {
   ExternalLink,
   PluginUpdateStatus,
@@ -41,59 +31,9 @@ import {
 } from "./plugin-update-status";
 import { PluginVersion } from "./plugin-version";
 
-export interface PluginRow {
-  author: AdminPluginAuthor | null;
-  description: null | string;
-  icon: null | string;
-  id: string;
-  kind: "core" | "plugin";
-  license: null | string;
-  registrations: AdminInstalledPlugin["registrations"] | null;
-  title: string;
-  tone: null | PluginTone;
-  update: AdminComponentUpdate | undefined;
-  version: null | string;
-  versionMismatch: boolean;
-}
-
-const TONE_BADGE = {
-  security: {
-    icon: ShieldAlertIcon,
-    className: "bg-destructive/10 text-destructive dark:bg-destructive/20",
-  },
-  error: {
-    icon: TriangleAlertIcon,
-    className: "bg-warn/10 text-warn dark:bg-warn/20",
-  },
-  update: {
-    icon: ArrowUpCircleIcon,
-    className: "bg-primary/10 text-primary dark:bg-primary/20",
-  },
-  unknown: {
-    icon: CircleHelpIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-  pending: {
-    icon: CircleDashedIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-  ok: {
-    icon: CircleCheckIcon,
-    className: "bg-success/10 text-success dark:bg-success/20",
-  },
-  off: {
-    icon: CircleOffIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-  disabled: {
-    icon: CircleOffIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-} as const;
-
 const StatusBadge = ({ tone }: { tone: PluginTone }) => {
   const t = useTranslations("admin.system.plugins.badge");
-  const { className, icon: Icon } = TONE_BADGE[tone];
+  const { className, icon: Icon } = PLUGIN_TONE_STYLE[tone];
 
   return (
     <Badge className={cn("gap-1", className)} variant="secondary">
@@ -221,36 +161,34 @@ const Panel = ({
 }) => {
   const t = useTranslations("admin.system.plugins");
   const { api, frontend } = row.registrations ?? { api: null, frontend: null };
-  const showMismatch =
-    row.versionMismatch && !!api?.version && !!frontend?.version;
+  const mismatch =
+    row.versionMismatch && api?.version && frontend?.version
+      ? { api: api.version, frontend: frontend.version }
+      : null;
   const showSecurity = (row.update?.result?.securityUpdates.length ?? 0) > 0;
   const showStatus =
     row.update !== undefined &&
     (!enabled || row.update.state !== "unavailable");
-  const hasStatus = showMismatch || showSecurity || showStatus;
+  const hasStatus = mismatch !== null || showSecurity || showStatus;
 
   return (
     <div className="bg-muted/50 ring-foreground/5 flex flex-col gap-5 rounded-lg p-5 ring-1">
       {hasStatus ? (
         <div className="flex flex-col gap-3">
-          {showMismatch ? (
+          {mismatch === null ? null : (
             <p className="text-warn flex items-start gap-1.5 text-sm leading-relaxed text-pretty">
               <TriangleAlertIcon
                 aria-hidden
                 className="mt-0.5 size-4 shrink-0"
               />
-              {t("mismatch", {
-                api: api?.version ?? "",
-                frontend: frontend?.version ?? "",
-              })}
+              {t("mismatch", mismatch)}
             </p>
-          ) : null}
+          )}
           <SecurityUpdates sides={versionSidesOf(row)} update={row.update} />
           {showStatus ? (
             <PluginUpdateStatus
               coreVersion={coreVersion}
               enabled={enabled}
-              showCheckedAt={false}
               update={row.update}
             />
           ) : null}
@@ -341,7 +279,9 @@ export const PluginList = ({
           {t("title")}
         </FrameTitle>
         <FrameDescription>
-          {t("desc", { count: rows.length - 1 })}
+          {t("desc", {
+            count: rows.filter(row => row.kind === "plugin").length,
+          })}
         </FrameDescription>
       </FrameHeader>
       <FramePanel render={<ul />}>

@@ -10,6 +10,7 @@ import {
   acquireUpdateCheckLease,
   releaseUpdateCheckLease,
 } from "@/api/lib/updates/lock";
+import { core_update_lock } from "@/database/updates";
 import { createTestCache } from "@/tests/cache";
 import { createMemoryDb } from "@/tests/memory-db";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
@@ -34,11 +35,16 @@ const checkAs = async (
   {
     enabled = true,
     prepare,
-  }: { enabled?: boolean; prepare?: (db: Db) => Promise<void> } = {},
+    wrap = db => db,
+  }: {
+    enabled?: boolean;
+    prepare?: (db: Db) => Promise<void>;
+    wrap?: (db: Db) => Db;
+  } = {},
 ) => {
   const cache = createTestCache();
   await grantStaffPermissions(cache, { permissions, userId: ADMIN.id });
-  const db = createMemoryDb().db as unknown as Db;
+  const db = wrap(createMemoryDb().db as unknown as Db);
   await prepare?.(db);
 
   const app = new OpenAPIHono();
@@ -122,6 +128,41 @@ describe("POST /admin/plugins/updates/check", () => {
     expect(response.status).toBe(status);
     expect(await response.json()).toMatchObject({ status: body });
     expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
+  });
+
+  it("answers 409 when the check lost its lease midway", async () => {
+    const takenOverMidCheck = (db: Db): Db => {
+      let transactions = 0;
+
+      return new Proxy(db, {
+        get: (target, property, receiver) =>
+          property === "transaction"
+            ? async (...args: Parameters<Db["transaction"]>) => {
+                transactions += 1;
+                if (transactions === 2) {
+                  const [lease] = await target
+                    .select({ owner: core_update_lock.owner })
+                    .from(core_update_lock);
+                  await releaseUpdateCheckLease(target, lease?.owner ?? "");
+                  await acquireUpdateCheckLease(target, {
+                    manual: false,
+                    owner: "other",
+                  });
+                }
+
+                return await target.transaction(...args);
+              }
+            : (Reflect.get(target, property, receiver) as unknown),
+      });
+    };
+
+    const response = await checkAs(CAN_CHECK, { wrap: takenOverMidCheck });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      retryAfterSeconds: null,
+      status: "interrupted",
+    });
   });
 
   it("answers 409 while update checks are turned off", async () => {
