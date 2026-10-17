@@ -3713,30 +3713,61 @@
       "plugins": {
         "title": "Plugins",
         "desc": "Every plugin this application is configured with, and the version it runs.",
-        "search": "Search plugins...",
-        "list": {
-          "plugin": "Plugin",
-          "version": "Version"
-        },
         "version_unknown": "Unknown version",
-        "no_description": "No description provided.",
         "mismatch": "Version mismatch: the web app runs {frontend}, the API runs {api}. Rebuild and redeploy both so they match.",
-        "empty": {
-          "title": "No plugins installed",
-          "desc": "Add a plugin to vitnode.config.ts or vitnode.api.config.ts and it shows up here after the next build."
-        },
-        "no_results": {
-          "title": "No plugins match your search",
-          "desc": "Try the plugin's name, its package ID or a word from its description.",
-          "clear": "Clear search"
-        },
         "core": {
-          "title": "VitNode core",
-          "version": "Installed version <mono>{version}</mono>"
+          "title": "VitNode",
+          "desc": "The core every plugin runs on.",
+          "badge": "Core"
+        },
+        "installed": {
+          "title": "Installed",
+          "desc": "VitNode and {count, plural, =0 {no plugins} one {# plugin} other {# plugins}}. Open a row for its details."
+        },
+        "status": {
+          "security_title": "{count, plural, one {# security update affects} other {# security updates affect}} this install",
+          "security_fixed": "fixed in {version}.",
+          "security_no_fix": "no fixed version published yet.",
+          "error_title": "Couldn't check {failed} of {total, plural, one {# component} other {# components}}",
+          "error_desc": "The update sources for {names} did not answer. Results below are the last ones that came through.",
+          "update_title": "{count, plural, one {# update} other {# updates}} available",
+          "ok_title": "Everything is up to date",
+          "pending_title": "Not checked yet",
+          "disabled_title": "Update checks are turned off",
+          "unavailable_title": "Update status unavailable",
+          "unavailable_desc": "The update results could not be loaded. The list below still shows what is installed.",
+          "checked": "Checked <date></date>.",
+          "channel": "Channel: {channel} (set in the API config)."
+        },
+        "badge": {
+          "security": "Security update",
+          "error": "Check failed",
+          "update": "Update available",
+          "unknown": "Status unknown",
+          "pending": "Not checked yet",
+          "ok": "Up to date",
+          "off": "No update source",
+          "disabled": "Checks turned off"
+        },
+        "facts": {
+          "author": "Author",
+          "website": "Website",
+          "license": "License",
+          "channel": "Channel",
+          "last_check": "Last good check",
+          "source": "Update source",
+          "none": "None",
+          "never": "Never",
+          "not_specified": "Not specified"
+        },
+        "unstable": {
+          "hint": "{channel} is an unstable channel: expect breaking changes. Not recommended for production.",
+          "sr": ", unstable"
         },
         "updates": {
           "check": {
             "button": "Check for updates",
+            "retry": "Try again",
             "success": {
               "title": "Update check finished",
               "desc": "{updates, plural, =0 {No updates} one {# update} other {# updates}} and {securityUpdates, plural, =0 {no security updates} one {# security update} other {# security updates}} found."
@@ -3762,17 +3793,12 @@
               "desc": "The API did not answer. Try again in a moment."
             }
           },
-          "summary": {
-            "last_checked": "Last checked <date></date>",
-            "disabled": "Update checks are turned off for this installation.",
-            "channel": "Channel: {channel} (set in the API config)"
-          },
           "status": {
             "not_checked": "Not checked yet",
             "unavailable": "Update checking unavailable",
             "disabled": "Update checks are turned off",
-            "up_to_date": "Up to date",
-            "update_available": "Update available: {version}",
+            "up_to_date": "Newest release on the {channel} channel.",
+            "update_available": "Update to <version></version>",
             "package_missing": "Not listed in its publisher's update manifest",
             "channel_missing": "No {channel} releases published",
             "unknown_channel": "The installed version is on no known channel. Set updates.channel in the API config to choose one.",
@@ -3781,10 +3807,9 @@
           "released": "released <date></date>",
           "release_notes": "Release notes",
           "compatibility": {
-            "compatible": "Its publisher lists core {range} as supported.",
             "incompatible": "Requires a newer core ({range}); this installation runs {core}.",
             "unknown": "Compatibility with your core version is unknown - the publisher did not declare it.",
-            "alternative": "{version} is the newest release on this channel that declares support for your core."
+            "alternative": "<version></version> works with your core."
           },
           "stale": "Not checked for this deployment yet - showing results from publisher data fetched <date></date>.",
           "failed": "Last check failed: {reason}",

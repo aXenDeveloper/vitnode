@@ -21,5 +21,5 @@ Each package says where its **update manifest** lives - a public JSON file on Gi
 ## What the checks can and cannot tell you
 
 - **Informational only.** A check never installs an update or edits your dependencies. You upgrade the way you always do, then rebuild and redeploy.
-- **Only what publishers declare.** A package without an update source shows _Update checking unavailable_. Private and local plugins work exactly as before.
+- **Only what publishers declare.** A package without an update source shows a _No update source_ badge. Private and local plugins work exactly as before.
 - **Not a vulnerability scanner.** A security warning means a publisher listed your installed version in a security update. No warning is not proof a version is secure, and dependencies of your plugins are not checked at all. Keep using `pnpm audit` or your usual scanner for those.

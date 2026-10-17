@@ -965,32 +965,63 @@
         }
       },
       "plugins": {
-        "desc": "Wszystkie wtyczki skonfigurowane w tej aplikacji i wersje, których używa.",
-        "empty": {
-          "desc": "Dodaj wtyczkę do vitnode.config.ts lub vitnode.api.config.ts, a pojawi się tutaj po następnym buildzie.",
-          "title": "Brak zainstalowanych wtyczek"
-        },
-        "list": {
-          "plugin": "Wtyczka",
-          "version": "Wersja"
-        },
-        "mismatch": "Niezgodne wersje: aplikacja webowa używa {frontend}, a API {api}. Przebuduj i wdróż oba tak, aby były zgodne.",
-        "no_description": "Brak opisu.",
-        "no_results": {
-          "clear": "Wyczyść wyszukiwanie",
-          "desc": "Spróbuj nazwy wtyczki, jej ID pakietu lub słowa z opisu.",
-          "title": "Żadna wtyczka nie pasuje do wyszukiwania"
-        },
-        "search": "Szukaj wtyczek...",
         "title": "Wtyczki",
+        "desc": "Wszystkie wtyczki skonfigurowane w tej aplikacji i wersje, których używa.",
         "version_unknown": "Nieznana wersja",
+        "mismatch": "Niezgodne wersje: aplikacja webowa używa {frontend}, a API {api}. Przebuduj i wdróż oba tak, aby były zgodne.",
         "core": {
-          "title": "Rdzeń VitNode",
-          "version": "Zainstalowana wersja <mono>{version}</mono>"
+          "title": "VitNode",
+          "desc": "Rdzeń, na którym działa każda wtyczka.",
+          "badge": "Rdzeń"
+        },
+        "installed": {
+          "title": "Zainstalowane",
+          "desc": "VitNode i {count, plural, =0 {brak wtyczek} one {# wtyczka} few {# wtyczki} many {# wtyczek} other {# wtyczki}}. Rozwiń wiersz, aby zobaczyć szczegóły."
+        },
+        "status": {
+          "security_title": "{count, plural, one {# aktualizacja bezpieczeństwa dotyczy} few {# aktualizacje bezpieczeństwa dotyczą} many {# aktualizacji bezpieczeństwa dotyczy} other {# aktualizacji bezpieczeństwa dotyczy}} tej instalacji",
+          "security_fixed": "naprawione w {version}.",
+          "security_no_fix": "poprawiona wersja nie została jeszcze opublikowana.",
+          "error_title": "Nie udało się sprawdzić {failed} z {total, plural, one {# komponentu} few {# komponentów} many {# komponentów} other {# komponentu}}",
+          "error_desc": "Źródła aktualizacji dla: {names} nie odpowiedziały. Poniżej widać ostatnie wyniki, które udało się pobrać.",
+          "update_title": "{count, plural, one {Dostępna # aktualizacja} few {Dostępne # aktualizacje} many {Dostępnych # aktualizacji} other {Dostępne # aktualizacji}}",
+          "ok_title": "Wszystko jest aktualne",
+          "pending_title": "Jeszcze nie sprawdzono",
+          "disabled_title": "Sprawdzanie aktualizacji jest wyłączone",
+          "unavailable_title": "Stan aktualizacji niedostępny",
+          "unavailable_desc": "Nie udało się wczytać wyników aktualizacji. Poniższa lista nadal pokazuje, co jest zainstalowane.",
+          "checked": "Sprawdzono <date></date>.",
+          "channel": "Kanał: {channel} (ustawiony w konfiguracji API)."
+        },
+        "badge": {
+          "security": "Aktualizacja bezpieczeństwa",
+          "error": "Błąd sprawdzania",
+          "update": "Dostępna aktualizacja",
+          "unknown": "Stan nieznany",
+          "pending": "Jeszcze nie sprawdzono",
+          "ok": "Aktualna",
+          "off": "Brak źródła aktualizacji",
+          "disabled": "Sprawdzanie wyłączone"
+        },
+        "facts": {
+          "author": "Autor",
+          "website": "Strona",
+          "license": "Licencja",
+          "channel": "Kanał",
+          "last_check": "Ostatnie udane sprawdzenie",
+          "source": "Źródło aktualizacji",
+          "none": "Brak",
+          "never": "Nigdy",
+          "not_specified": "Nie podano"
+        },
+        "unstable": {
+          "hint": "{channel} to niestabilny kanał: spodziewaj się zmian łamiących zgodność. Niezalecany na produkcji.",
+          "sr": ", niestabilna"
         },
         "updates": {
           "check": {
             "button": "Sprawdź aktualizacje",
+            "retry": "Spróbuj ponownie",
             "success": {
               "title": "Sprawdzanie aktualizacji zakończone",
               "desc": "Znaleziono {updates, plural, =0 {0 aktualizacji} one {# aktualizację} few {# aktualizacje} many {# aktualizacji} other {# aktualizacji}} i {securityUpdates, plural, =0 {0 aktualizacji bezpieczeństwa} one {# aktualizację bezpieczeństwa} few {# aktualizacje bezpieczeństwa} many {# aktualizacji bezpieczeństwa} other {# aktualizacji bezpieczeństwa}}."
@@ -1016,17 +1047,12 @@
               "desc": "API nie odpowiedziało. Spróbuj ponownie za chwilę."
             }
           },
-          "summary": {
-            "last_checked": "Ostatnio sprawdzono <date></date>",
-            "disabled": "Sprawdzanie aktualizacji jest wyłączone w tej instalacji.",
-            "channel": "Kanał: {channel} (ustawiony w konfiguracji API)"
-          },
           "status": {
             "not_checked": "Jeszcze nie sprawdzono",
             "unavailable": "Sprawdzanie aktualizacji niedostępne",
             "disabled": "Sprawdzanie aktualizacji jest wyłączone",
-            "up_to_date": "Aktualna",
-            "update_available": "Dostępna aktualizacja: {version}",
+            "up_to_date": "Najnowsze wydanie na kanale {channel}.",
+            "update_available": "Aktualizacja do <version></version>",
             "package_missing": "Brak w manifeście aktualizacji wydawcy",
             "channel_missing": "Brak opublikowanych wydań na kanale {channel}",
             "unknown_channel": "Zainstalowana wersja nie należy do żadnego znanego kanału. Ustaw updates.channel w konfiguracji API, aby go wybrać.",
@@ -1035,10 +1061,9 @@
           "released": "wydana <date></date>",
           "release_notes": "Informacje o wydaniu",
           "compatibility": {
-            "compatible": "Wydawca deklaruje obsługę rdzenia {range}.",
             "incompatible": "Wymaga nowszego rdzenia ({range}); ta instalacja używa {core}.",
             "unknown": "Zgodność z Twoją wersją rdzenia jest nieznana - wydawca jej nie zadeklarował.",
-            "alternative": "{version} to najnowsze wydanie na tym kanale, które deklaruje obsługę Twojego rdzenia."
+            "alternative": "<version></version> działa z Twoim rdzeniem."
           },
           "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki pochodzą z danych wydawcy pobranych <date></date>.",
           "failed": "Ostatnie sprawdzanie nie powiodło się: {reason}",

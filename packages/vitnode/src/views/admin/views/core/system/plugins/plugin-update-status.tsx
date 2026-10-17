@@ -16,6 +16,8 @@ import { DateFormat } from "@/components/date-format";
 
 import type { AdminComponentUpdate } from "./plugin-updates-query";
 
+import { PluginVersion } from "./plugin-version";
+
 /**
  * Publisher data is untrusted: a link is only rendered when it is an absolute
  * https:// URL, whatever the API already checked.
@@ -30,7 +32,7 @@ export const safeHttpsHref = (value: null | string): null | string => {
   }
 };
 
-const ExternalLink = ({
+export const ExternalLink = ({
   children,
   href,
 }: {
@@ -84,36 +86,31 @@ export const SecurityUpdates = ({
   return (
     <ul
       aria-label={t("updates.security.label")}
-      className="flex flex-col gap-2"
+      className="flex flex-col gap-1.5"
     >
       {securityUpdates.map(securityUpdate => (
         <li
-          className="border-destructive/30 bg-destructive/5 text-foreground flex items-start gap-2.5 rounded-lg border px-3 py-2 text-sm leading-relaxed"
+          className="text-destructive flex items-start gap-1.5 text-sm leading-relaxed"
           key={securityUpdate.id}
         >
-          <ShieldAlertIcon
-            aria-hidden
-            className="text-destructive mt-0.5 size-4 shrink-0"
-          />
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-destructive font-medium text-pretty">
+          <ShieldAlertIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <p className="min-w-0 text-pretty">
+            <span className="font-medium">
               {t("updates.security.title", { id: securityUpdate.id })}
-            </p>
-            <p className="text-pretty">
-              {t("updates.security.affects", {
-                range: securityUpdate.affected,
-                versions: describeVersions(securityUpdate.versions),
-              })}{" "}
-              {securityUpdate.fixed === null
-                ? t("updates.security.no_fix")
-                : t("updates.security.fixed", {
-                    version: securityUpdate.fixed,
-                  })}
-            </p>
+            </span>{" "}
+            {t("updates.security.affects", {
+              range: securityUpdate.affected,
+              versions: describeVersions(securityUpdate.versions),
+            })}{" "}
+            {securityUpdate.fixed === null
+              ? t("updates.security.no_fix")
+              : t("updates.security.fixed", {
+                  version: securityUpdate.fixed,
+                })}{" "}
             <ExternalLink href={securityUpdate.url}>
               {t("updates.security.details")}
             </ExternalLink>
-          </div>
+          </p>
         </li>
       ))}
     </ul>
@@ -198,7 +195,9 @@ const ResultLines = ({
     case "up_to_date":
       return (
         <Line icon={CircleCheckIcon} tone="success">
-          {t("updates.status.up_to_date")}
+          {t("updates.status.up_to_date", {
+            channel: t(`updates.channel.${result.channel ?? "stable"}`),
+          })}
         </Line>
       );
     case "update_available": {
@@ -208,24 +207,31 @@ const ResultLines = ({
       return (
         <>
           <Line icon={ArrowUpCircleIcon} tone="primary">
-            <span className="font-medium">
-              {t("updates.status.update_available", {
-                version: latest.version,
-              })}
-            </span>
-            {latest.publishedAt === null ? null : (
-              <span className="text-muted-foreground">
-                {" "}
-                {t.rich("updates.released", {
-                  date: () => (
-                    <DateFormat date={latest.publishedAt ?? ""} showFullDate />
-                  ),
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <span className="inline-flex flex-wrap items-center gap-1.5 font-medium">
+                {t.rich("updates.status.update_available", {
+                  version: () => <PluginVersion version={latest.version} />,
                 })}
               </span>
-            )}{" "}
-            <ExternalLink href={latest.url}>
-              {t("updates.release_notes")}
-            </ExternalLink>
+              {latest.publishedAt === null ? null : (
+                <span className="text-muted-foreground">
+                  ·{" "}
+                  {t.rich("updates.released", {
+                    date: () => <DateFormat date={latest.publishedAt ?? ""} />,
+                  })}
+                </span>
+              )}
+              {safeHttpsHref(latest.url) === null ? null : (
+                <>
+                  <span aria-hidden className="text-muted-foreground">
+                    ·
+                  </span>
+                  <ExternalLink href={latest.url}>
+                    {t("updates.release_notes")}
+                  </ExternalLink>
+                </>
+              )}
+            </span>
           </Line>
           {result.compatibility === "incompatible" ? (
             <Line icon={TriangleAlertIcon} tone="warn">
@@ -240,22 +246,27 @@ const ResultLines = ({
               {t("updates.compatibility.unknown")}
             </Line>
           ) : null}
-          {result.compatibility === "compatible" ? (
-            <Line icon={CircleCheckIcon}>
-              {t("updates.compatibility.compatible", {
-                range: latest.requiresCore ?? "",
-              })}
-            </Line>
-          ) : null}
           {result.alternative === null ? null : (
-            <Line icon={ArrowUpCircleIcon}>
-              {t("updates.compatibility.alternative", {
-                version: result.alternative.version,
-              })}{" "}
-              <ExternalLink href={result.alternative.url}>
-                {t("updates.release_notes")}
-              </ExternalLink>
-            </Line>
+            <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 ps-5.5 text-sm leading-relaxed">
+              <span className="inline-flex flex-wrap items-center gap-1.5">
+                {t.rich("updates.compatibility.alternative", {
+                  version: () => (
+                    <PluginVersion
+                      className="text-foreground"
+                      version={result.alternative?.version ?? null}
+                    />
+                  ),
+                })}
+              </span>
+              {safeHttpsHref(result.alternative.url) === null ? null : (
+                <>
+                  <span aria-hidden>·</span>
+                  <ExternalLink href={result.alternative.url}>
+                    {t("updates.release_notes")}
+                  </ExternalLink>
+                </>
+              )}
+            </p>
           )}
         </>
       );

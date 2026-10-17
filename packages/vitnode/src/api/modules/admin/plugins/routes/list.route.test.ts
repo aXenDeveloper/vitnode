@@ -70,7 +70,11 @@ describe("GET /admin/plugins", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      core: { version: manifest.version },
+      core: {
+        author: { name: manifest.author.name, url: manifest.author.url },
+        license: manifest.license,
+        version: manifest.version,
+      },
       frontendInventory: true,
       plugins: installedPlugins.plugins,
     });

@@ -47,9 +47,11 @@ describe("buildInstalledPluginRegistry", () => {
     }).plugins;
 
     expect(plugin).toEqual({
+      author: null,
       description: "@acme/blog description",
       icon: null,
       id: "@acme/blog",
+      license: null,
       registrations: {
         api: { version: "1.0.0" },
         frontend: { version: "1.0.0" },
@@ -142,9 +144,11 @@ describe("buildInstalledPluginRegistry", () => {
     }).plugins;
 
     expect(plugin).toEqual({
+      author: null,
       description: null,
       icon: null,
       id: "@acme/blog",
+      license: null,
       registrations: { api: null, frontend: { version: null } },
       title: "@acme/blog",
       version: null,

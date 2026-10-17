@@ -1,11 +1,19 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { authorOf } from "@/api/lib/installed-plugins";
 import { manifest } from "@/manifest";
 
 const registrationSchema = z
   .object({
     version: z.string().nullable(),
+  })
+  .nullable();
+
+const authorSchema = z
+  .object({
+    name: z.string(),
+    url: z.string().nullable(),
   })
   .nullable();
 
@@ -21,7 +29,11 @@ export const listPluginsAdminRoute = buildRoute({
         content: {
           "application/json": {
             schema: z.object({
-              core: z.object({ version: z.string() }),
+              core: z.object({
+                author: authorSchema,
+                license: z.string().nullable(),
+                version: z.string(),
+              }),
               frontendInventory: z.boolean(),
               plugins: z.array(
                 z.object({
@@ -29,6 +41,8 @@ export const listPluginsAdminRoute = buildRoute({
                   title: z.string(),
                   icon: z.string().nullable(),
                   description: z.string().nullable(),
+                  author: authorSchema,
+                  license: z.string().nullable(),
                   version: z.string().nullable(),
                   versionMismatch: z.boolean(),
                   registrations: z.object({
@@ -49,7 +63,11 @@ export const listPluginsAdminRoute = buildRoute({
     const { frontendInventory, plugins } = c.get("core").installedPlugins;
 
     return c.json({
-      core: { version: manifest.version },
+      core: {
+        author: authorOf(manifest),
+        license: manifest.license,
+        version: manifest.version,
+      },
       frontendInventory,
       plugins,
     });

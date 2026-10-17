@@ -10,10 +10,17 @@ export interface InstalledPluginRegistration {
   version: null | string;
 }
 
+export interface InstalledPluginAuthor {
+  name: string;
+  url: null | string;
+}
+
 export interface InstalledPlugin {
+  author: InstalledPluginAuthor | null;
   description: null | string;
   icon: null | string;
   id: string;
+  license: null | string;
   registrations: {
     api: InstalledPluginRegistration | null;
     frontend: InstalledPluginRegistration | null;
@@ -56,6 +63,13 @@ const byId = (
   return map;
 };
 
+export const authorOf = (
+  manifest: null | Pick<PluginManifest, "author">,
+): InstalledPluginAuthor | null =>
+  manifest?.author
+    ? { name: manifest.author.name, url: manifest.author.url ?? null }
+    : null;
+
 const registrationOf = (
   registration: Registration | undefined,
 ): InstalledPluginRegistration | null =>
@@ -91,9 +105,11 @@ export const buildInstalledPluginRegistry = ({
       const manifest = fromApi?.manifest ?? fromFrontend?.manifest ?? null;
 
       return {
+        author: authorOf(manifest),
         description: manifest?.description ?? null,
         icon: manifest?.icon ?? null,
         id,
+        license: manifest?.license ?? null,
         registrations: {
           api: registrationOf(fromApi),
           frontend: registrationOf(fromFrontend),

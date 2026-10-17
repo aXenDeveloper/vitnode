@@ -14,8 +14,10 @@ import { pluginUpdatesQueryKey } from "./plugin-updates-query";
 
 export const CheckUpdatesButton = ({
   onCheck,
+  retry = false,
 }: {
   onCheck: CheckPluginUpdates;
+  retry?: boolean;
 }) => {
   const t = useTranslations("admin.system.plugins.updates.check");
   const queryClient = useQueryClient();
@@ -76,7 +78,7 @@ export const CheckUpdatesButton = ({
     <form action={formAction}>
       <Button isLoading={isPending} type="submit" variant="outline">
         <RefreshCwIcon aria-hidden />
-        {t("button")}
+        {retry ? t("retry") : t("button")}
       </Button>
     </form>
   );

@@ -9,10 +9,17 @@ export interface AdminPluginRegistration {
   version: null | string;
 }
 
+export interface AdminPluginAuthor {
+  name: string;
+  url: null | string;
+}
+
 export interface AdminInstalledPlugin {
+  author: AdminPluginAuthor | null;
   description: null | string;
   icon: null | string;
   id: string;
+  license: null | string;
   registrations: {
     api: AdminPluginRegistration | null;
     frontend: AdminPluginRegistration | null;
@@ -23,7 +30,11 @@ export interface AdminInstalledPlugin {
 }
 
 export interface AdminInstalledPlugins {
-  core: { version: string };
+  core: {
+    author: AdminPluginAuthor | null;
+    license: null | string;
+    version: string;
+  };
   frontendInventory: boolean;
   plugins: AdminInstalledPlugin[];
 }
