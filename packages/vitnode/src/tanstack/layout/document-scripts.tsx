@@ -24,20 +24,41 @@ const modulePreloadHref = (tag: RouterManagedTag) =>
     : undefined;
 
 const loadAfterFirstPaint = (entries: string[], preloads: string[]) => {
+  let isLoaded = false;
   const load = () => {
-    for (const href of preloads) {
-      const link = document.createElement("link");
-      link.rel = "modulepreload";
-      link.href = href;
-      document.head.append(link);
-    }
+    if (isLoaded) return;
+    isLoaded = true;
 
-    for (const src of entries) {
-      const script = document.createElement("script");
-      script.type = "module";
-      script.src = src;
-      document.body.append(script);
-    }
+    const batchSize = 40;
+    const appendFrom = (start: number) => {
+      const batch = document.createDocumentFragment();
+
+      for (const href of preloads.slice(start, start + batchSize)) {
+        const link = document.createElement("link");
+        link.rel = "modulepreload";
+        link.href = href;
+        batch.append(link);
+      }
+
+      document.head.append(batch);
+
+      if (start + batchSize < preloads.length) {
+        setTimeout(() => {
+          appendFrom(start + batchSize);
+        }, 0);
+
+        return;
+      }
+
+      for (const src of entries) {
+        const script = document.createElement("script");
+        script.type = "module";
+        script.src = src;
+        document.body.append(script);
+      }
+    };
+
+    appendFrom(0);
   };
 
   if (document.visibilityState === "hidden") {
@@ -46,9 +67,25 @@ const loadAfterFirstPaint = (entries: string[], preloads: string[]) => {
     return;
   }
 
-  requestAnimationFrame(() => {
+  if (
+    typeof PerformanceObserver !== "function" ||
+    !PerformanceObserver.supportedEntryTypes.includes("paint")
+  ) {
+    requestAnimationFrame(() => {
+      setTimeout(load, 0);
+    });
+
+    return;
+  }
+
+  new PerformanceObserver((list, observer) => {
+    if (list.getEntriesByName("first-contentful-paint").length === 0) return;
+
+    observer.disconnect();
     setTimeout(load, 0);
-  });
+  }).observe({ buffered: true, type: "paint" });
+  document.addEventListener("visibilitychange", load, { once: true });
+  setTimeout(load, 3000);
 };
 
 const loaderSource = (entries: string[], preloads: string[]) =>

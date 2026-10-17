@@ -239,16 +239,21 @@ const useVisibleNavCount = (navigation: HeaderNavItem[]) => {
       element?.getBoundingClientRect().width ?? 0;
 
     const update = () => {
-      setVisibleCount(
-        visibleHeaderNavCount({
-          availableWidth: container.clientWidth,
-          gap: Number.parseFloat(getComputedStyle(measure).columnGap) || 0,
-          itemWidths: [...measure.querySelectorAll(MEASURE_ITEM_SELECTOR)].map(
-            widthOf,
-          ),
-          moreWidth: widthOf(measure.querySelector(MEASURE_MORE_SELECTOR)),
-        }),
-      );
+      const availableWidth = container.clientWidth;
+      if (availableWidth === 0) return;
+
+      const count = visibleHeaderNavCount({
+        availableWidth,
+        gap: Number.parseFloat(getComputedStyle(measure).columnGap) || 0,
+        itemWidths: [...measure.querySelectorAll(MEASURE_ITEM_SELECTOR)].map(
+          widthOf,
+        ),
+        moreWidth: widthOf(measure.querySelector(MEASURE_MORE_SELECTOR)),
+      });
+
+      React.startTransition(() => {
+        setVisibleCount(count);
+      });
     };
 
     const resize = new ResizeObserver(update);

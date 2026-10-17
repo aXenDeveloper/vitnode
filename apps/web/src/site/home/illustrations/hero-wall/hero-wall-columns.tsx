@@ -68,11 +68,17 @@ const slide = (index: number) => {
   return `translateY(calc(var(--progress, 0) * ${direction * 14}% + ${offset}%))`
 }
 
-const useMountedColumnCount = () => {
+const SLOT_COUNT =
+  COLUMNS.length * Math.max(...COLUMNS.map(({ screens }) => screens.length))
+
+const slotOf = (columnIndex: number, screenIndex: number) =>
+  screenIndex * COLUMNS.length + columnIndex
+
+const useMountedSlotCount = () => {
   const [count, setCount] = useState(1)
 
   useEffect(() => {
-    if (count >= COLUMNS.length) return
+    if (count >= SLOT_COUNT) return
 
     return whenIdle(() => {
       setCount(count + 1)
@@ -83,7 +89,7 @@ const useMountedColumnCount = () => {
 }
 
 export const HeroWallColumns = () => {
-  const mountedCount = useMountedColumnCount()
+  const mountedCount = useMountedSlotCount()
 
   return (
     <div
@@ -93,25 +99,26 @@ export const HeroWallColumns = () => {
           'translate(-50%, -50%) rotateX(50deg) rotateZ(-30deg) scale(var(--wall-scale))',
       }}
     >
-      {COLUMNS.map(({ key, screens }, index) => (
+      {COLUMNS.map(({ key, screens }, columnIndex) => (
         <div
-          className="mk-wall-column will-change-transform"
+          className="mk-wall-column flex flex-col gap-8 will-change-transform"
           key={key}
-          style={{ transform: slide(index) }}
+          style={{ transform: slide(columnIndex) }}
         >
-          {index < mountedCount ? (
-            <div className="mk-wall-fade flex flex-col gap-8">
-              {screens.map(({ key: screenKey, Screen }) => (
-                <div
-                  className="bg-card overflow-hidden rounded-2xl border shadow-xl"
-                  key={screenKey}
-                >
-                  <Screen />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-130 w-240 border border-transparent" />
+          {screens.map(({ key: screenKey, Screen }, screenIndex) =>
+            slotOf(columnIndex, screenIndex) < mountedCount ? (
+              <div
+                className="mk-wall-fade bg-card overflow-hidden rounded-2xl border shadow-xl"
+                key={screenKey}
+              >
+                <Screen />
+              </div>
+            ) : (
+              <div
+                className="h-130 w-240 border border-transparent"
+                key={screenKey}
+              />
+            ),
           )}
         </div>
       ))}

@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import React from "react";
 
 import type { SessionApi } from "./session-api";
 import type { AuthState } from "./state";
@@ -18,7 +19,42 @@ export const sessionQueryOptions = () =>
     staleTime: SESSION_STALE_TIME,
   });
 
-export const useSessionQuery = () => useQuery(sessionQueryOptions());
+export interface SessionQueryView {
+  data: SessionApi | undefined;
+  isError: boolean;
+  isPending: boolean;
+}
+
+const renderedSessions = new WeakMap<QueryClient, SessionQueryView>();
+
+const renderedSessionOf = (queryClient: QueryClient): SessionQueryView => {
+  const rendered = renderedSessions.get(queryClient);
+  if (rendered) return rendered;
+
+  const state = queryClient.getQueryState(sessionQueryOptions().queryKey);
+  const view = {
+    data: state?.data,
+    isError: state?.status === "error",
+    isPending: !state || state.status === "pending",
+  };
+  renderedSessions.set(queryClient, view);
+
+  return view;
+};
+
+const subscribeToNothing = () => () => undefined;
+
+export const useSessionQuery = (): SessionQueryView => {
+  const queryClient = useQueryClient();
+  const { data, isError, isPending } = useQuery(sessionQueryOptions());
+  const rendered = React.useSyncExternalStore(
+    subscribeToNothing,
+    () => null,
+    () => renderedSessionOf(queryClient),
+  );
+
+  return rendered ?? { data, isError, isPending };
+};
 
 export const ensureAuthState = async (
   queryClient: QueryClient,

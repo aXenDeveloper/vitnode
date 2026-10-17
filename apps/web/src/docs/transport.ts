@@ -3,6 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getBreadcrumbItems } from 'fumadocs-core/breadcrumb'
 import { z } from 'zod'
 
+import { loadDocsPageTreeIcons } from './icons.server'
 import { docsGithubUrl, encodeMarkdownUrl } from './shared'
 import { source } from './source.server'
 
@@ -36,5 +37,13 @@ export const getDocsPage = createServerFn({ method: 'GET' })
 export type DocsPageData = Awaited<ReturnType<typeof getDocsPage>>
 
 export const getDocsPageTree = createServerFn({ method: 'GET' }).handler(
-  async () => await source.serializePageTree(source.getPageTree()),
+  async () => {
+    const tree = source.getPageTree()
+    const [pageTree, icons] = await Promise.all([
+      source.serializePageTree(tree),
+      loadDocsPageTreeIcons(tree),
+    ])
+
+    return { icons, pageTree }
+  },
 )
