@@ -36,7 +36,7 @@ import { pageWidgetsRegistry } from "./registry";
  *
  * // Placeholder names: register the same definition on the API.
  * export const examplePage = defineEditablePage({
- *   id: "@acme/example:home",
+ *   id: "example:home",
  *   permission: { module: "widgets", permission: "can_edit" },
  *   zones: { sidebar: { max: 10 } },
  * });
