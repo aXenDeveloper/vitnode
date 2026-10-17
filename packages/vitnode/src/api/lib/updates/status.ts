@@ -160,6 +160,7 @@ export interface UpdatesSummary {
   pluginUpdatesAvailable: number;
   running: boolean;
   stale: boolean;
+  totalComponents: number;
   unconfirmedComponents: number;
   updatesAvailable: number;
 }
@@ -211,6 +212,7 @@ export const summarizeUpdates = (overview: UpdatesOverview): UpdatesSummary => {
     pluginUpdatesAvailable: plugins.filter(isUpdateAvailable).length,
     running: overview.running,
     stale: components.some(component => component.stale),
+    totalComponents: components.length,
     unconfirmedComponents: components.filter(
       component =>
         component.result?.status !== "up_to_date" &&

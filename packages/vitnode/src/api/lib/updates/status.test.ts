@@ -315,6 +315,7 @@ describe("summarizeUpdates", () => {
       checkedComponents: 4,
       core: { latestVersion: "2.1.0" },
       pluginUpdatesAvailable: 2,
+      totalComponents: 4,
       unconfirmedComponents: 0,
       updatesAvailable: 3,
     });
@@ -354,6 +355,7 @@ describe("summarizeUpdates", () => {
       notCheckedComponents: 1,
       oldestSuccessAt: null,
       stale: true,
+      totalComponents: 6,
       unconfirmedComponents: 3,
     });
   });

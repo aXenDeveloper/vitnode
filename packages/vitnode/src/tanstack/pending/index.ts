@@ -1,4 +1,8 @@
-export { GuardedOutlet, RouteGuardPending } from "./guard-pending";
+export {
+  GuardedOutlet,
+  PendingOutlet,
+  RouteGuardPending,
+} from "./guard-pending";
 export {
   RoutePendingSkeleton,
   RoutePendingSpinner,

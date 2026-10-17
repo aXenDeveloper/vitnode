@@ -2665,32 +2665,67 @@
         },
         "system-updates": {
           "title": "System updates",
-          "desc": "Core version, available updates and security warnings from the stored update checks.",
+          "desc": "Newer releases and security fixes for VitNode and your plugins.",
           "rows": {
-            "status": "Status",
             "core": "VitNode",
             "plugin_updates": "Plugin updates",
-            "security": "Security",
-            "last_checked": "Last checked"
+            "security": "Security fixes",
+            "no_info": "No update info"
           },
-          "status": {
-            "security": "Security fix needed",
-            "updates": "Updates available",
-            "up_to_date": "Up to date",
-            "unconfirmed": "{count, plural, one {# package not confirmed} other {# packages not confirmed}}",
-            "running": "Checking...",
-            "not_checked": "Not checked yet",
-            "unavailable": "No update sources",
-            "disabled": "Checks turned off"
+          "verdict": {
+            "security": {
+              "title": "Security fix needed",
+              "desc": "{count, plural, one {# package has a known security issue that a newer release fixes. Update as soon as you can.} other {# packages have known security issues that a newer release fixes. Update as soon as you can.}}"
+            },
+            "updates": {
+              "title": "Updates available",
+              "desc": "{count, plural, one {# newer release is ready to install.} other {# newer releases are ready to install.}}"
+            },
+            "up_to_date": {
+              "title": "Everything is up to date",
+              "desc": "{count, plural, one {Your package runs its newest release.} other {All # packages run their newest release.}}"
+            },
+            "unconfirmed": {
+              "title": "No updates found",
+              "desc": "{verified} of {total} packages are up to date. {count, plural, one {The other one publishes no update info, so VitNode can't check it.} other {The other # publish no update info, so VitNode can't check them.}}"
+            },
+            "no_info": {
+              "title": "Can't check for updates",
+              "desc": "{count, plural, one {Your package publishes no update info, so VitNode can't tell whether a newer version exists.} other {None of your # packages publishes update info, so VitNode can't tell whether newer versions exist.}}"
+            },
+            "unavailable": {
+              "title": "Can't check for updates",
+              "desc": "{count, plural, one {Your package publishes no update info, so VitNode can't tell whether a newer version exists.} other {None of your # packages publishes update info, so VitNode can't tell whether newer versions exist.}}"
+            },
+            "running": {
+              "title": "Checking for updates...",
+              "desc": "Results show up here when the check finishes."
+            },
+            "not_checked": {
+              "title": "Not checked yet",
+              "desc": "VitNode checks once a day. To check right now, open Plugins."
+            },
+            "disabled": {
+              "title": "Update checks are off",
+              "desc": "This site sets updates.enabled to false in its API config, so nothing is checked."
+            }
           },
           "core_update": "update to {version} available",
-          "security_affected": "{count, plural, one {# package} other {# packages}}",
-          "security_none": "None",
-          "last_checked": {
-            "running": "In progress",
-            "failed": "Failed <date></date>",
-            "stale": "Out of date",
-            "never": "Never"
+          "plugin_updates": {
+            "none": "None",
+            "available": "{count} available"
+          },
+          "security": {
+            "affected": "{count, plural, one {Needed for # package} other {Needed for # packages}}",
+            "none": "None found"
+          },
+          "no_info_count": "{total, plural, one {{count} of # package} other {{count} of # packages}}",
+          "checked": {
+            "running": "Checking now...",
+            "failed": "Last check failed <date></date>",
+            "stale": "Checked <date></date>, needs a recheck",
+            "never": "Never checked",
+            "at": "Checked <date></date>"
           },
           "unknown": "Unknown",
           "load_error": "Could not load the update summary. The Plugins page still shows every result.",

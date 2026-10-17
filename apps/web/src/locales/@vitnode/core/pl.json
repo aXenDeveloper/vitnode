@@ -223,32 +223,67 @@
         "status_unsaved": "Niezapisane zmiany",
         "system-updates": {
           "title": "Aktualizacje systemu",
-          "desc": "Wersja rdzenia, dostępne aktualizacje i ostrzeżenia bezpieczeństwa z zapisanych sprawdzeń aktualizacji.",
+          "desc": "Nowsze wydania i poprawki bezpieczeństwa dla VitNode i Twoich wtyczek.",
           "rows": {
-            "status": "Stan",
             "core": "VitNode",
             "plugin_updates": "Aktualizacje wtyczek",
-            "security": "Bezpieczeństwo",
-            "last_checked": "Ostatnie sprawdzenie"
+            "security": "Poprawki bezpieczeństwa",
+            "no_info": "Brak informacji"
           },
-          "status": {
-            "security": "Wymagana poprawka bezpieczeństwa",
-            "updates": "Dostępne aktualizacje",
-            "up_to_date": "Wszystko aktualne",
-            "unconfirmed": "{count, plural, one {# pakiet niepotwierdzony} few {# pakiety niepotwierdzone} other {# pakietów niepotwierdzonych}}",
-            "running": "Trwa sprawdzanie...",
-            "not_checked": "Jeszcze nie sprawdzono",
-            "unavailable": "Brak źródeł aktualizacji",
-            "disabled": "Sprawdzanie wyłączone"
+          "verdict": {
+            "security": {
+              "title": "Wymagana poprawka bezpieczeństwa",
+              "desc": "{count, plural, one {# pakiet ma znany problem bezpieczeństwa naprawiony w nowszym wydaniu. Zaktualizuj go jak najszybciej.} few {# pakiety mają znane problemy bezpieczeństwa naprawione w nowszym wydaniu. Zaktualizuj je jak najszybciej.} other {# pakietów ma znane problemy bezpieczeństwa naprawione w nowszym wydaniu. Zaktualizuj je jak najszybciej.}}"
+            },
+            "updates": {
+              "title": "Dostępne aktualizacje",
+              "desc": "{count, plural, one {# nowsze wydanie czeka na instalację.} few {# nowsze wydania czekają na instalację.} other {# nowszych wydań czeka na instalację.}}"
+            },
+            "up_to_date": {
+              "title": "Wszystko jest aktualne",
+              "desc": "{count, plural, one {Twój pakiet ma najnowsze wydanie.} other {Wszystkie pakiety ({count}) mają najnowsze wydania.}}"
+            },
+            "unconfirmed": {
+              "title": "Nie znaleziono aktualizacji",
+              "desc": "Aktualne pakiety: {verified} z {total}. {count, plural, one {Pozostały nie publikuje informacji o aktualizacjach, więc VitNode nie może go sprawdzić.} other {Pozostałe ({count}) nie publikują informacji o aktualizacjach, więc VitNode nie może ich sprawdzić.}}"
+            },
+            "no_info": {
+              "title": "Nie można sprawdzić aktualizacji",
+              "desc": "{count, plural, one {Twój pakiet nie publikuje informacji o aktualizacjach, więc VitNode nie wie, czy istnieje nowsza wersja.} other {Żaden z Twoich pakietów ({count}) nie publikuje informacji o aktualizacjach, więc VitNode nie wie, czy istnieją nowsze wersje.}}"
+            },
+            "unavailable": {
+              "title": "Nie można sprawdzić aktualizacji",
+              "desc": "{count, plural, one {Twój pakiet nie publikuje informacji o aktualizacjach, więc VitNode nie wie, czy istnieje nowsza wersja.} other {Żaden z Twoich pakietów ({count}) nie publikuje informacji o aktualizacjach, więc VitNode nie wie, czy istnieją nowsze wersje.}}"
+            },
+            "running": {
+              "title": "Trwa sprawdzanie aktualizacji...",
+              "desc": "Wyniki pojawią się tutaj po zakończeniu sprawdzania."
+            },
+            "not_checked": {
+              "title": "Jeszcze nie sprawdzono",
+              "desc": "VitNode sprawdza aktualizacje raz dziennie. Aby sprawdzić teraz, otwórz Wtyczki."
+            },
+            "disabled": {
+              "title": "Sprawdzanie aktualizacji jest wyłączone",
+              "desc": "Ta strona ustawia updates.enabled na false w konfiguracji API, więc nic nie jest sprawdzane."
+            }
           },
           "core_update": "dostępna aktualizacja do {version}",
-          "security_affected": "{count, plural, one {# pakiet} few {# pakiety} other {# pakietów}}",
-          "security_none": "Brak",
-          "last_checked": {
-            "running": "W toku",
-            "failed": "Niepowodzenie <date></date>",
-            "stale": "Nieaktualne",
-            "never": "Nigdy"
+          "plugin_updates": {
+            "none": "Brak",
+            "available": "Dostępne: {count}"
+          },
+          "security": {
+            "affected": "{count, plural, one {Potrzebna dla # pakietu} other {Potrzebna dla # pakietów}}",
+            "none": "Nie znaleziono"
+          },
+          "no_info_count": "{total, plural, one {{count} z # pakietu} other {{count} z # pakietów}}",
+          "checked": {
+            "running": "Trwa sprawdzanie...",
+            "failed": "Ostatnie sprawdzenie nie powiodło się <date></date>",
+            "stale": "Sprawdzono <date></date>, wymaga ponownego sprawdzenia",
+            "never": "Nigdy nie sprawdzono",
+            "at": "Sprawdzono <date></date>"
           },
           "unknown": "Nieznane",
           "load_error": "Nie udało się wczytać podsumowania aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",

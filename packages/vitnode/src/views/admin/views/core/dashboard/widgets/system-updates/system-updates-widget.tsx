@@ -1,6 +1,12 @@
 import { cn } from "cn";
 import {
   ArrowRightIcon,
+  ArrowUpCircleIcon,
+  CircleCheckIcon,
+  CircleHelpIcon,
+  CircleOffIcon,
+  ClockIcon,
+  LoaderCircleIcon,
   ShieldAlertIcon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -23,21 +29,28 @@ import {
   updateStatusOf,
 } from "./update-status";
 
+const STATUS_ICON: Record<UpdateStatus, React.ElementType> = {
+  disabled: CircleOffIcon,
+  no_info: CircleHelpIcon,
+  not_checked: ClockIcon,
+  running: LoaderCircleIcon,
+  security: ShieldAlertIcon,
+  unavailable: CircleHelpIcon,
+  unconfirmed: CircleCheckIcon,
+  up_to_date: CircleCheckIcon,
+  updates: ArrowUpCircleIcon,
+};
+
 const STATUS_TONE: Record<UpdateStatus, string> = {
   disabled: "text-muted-foreground",
+  no_info: "text-muted-foreground",
   not_checked: "text-muted-foreground",
   running: "text-muted-foreground",
   security: "text-destructive",
   unavailable: "text-muted-foreground",
-  unconfirmed: "text-muted-foreground",
+  unconfirmed: "text-success",
   up_to_date: "text-success",
   updates: "text-primary",
-};
-
-const STATUS_TEXT_TONE: Partial<Record<UpdateStatus, string>> = {
-  security: STATUS_TONE.security,
-  up_to_date: STATUS_TONE.up_to_date,
-  updates: STATUS_TONE.updates,
 };
 
 const Row = ({
@@ -59,27 +72,75 @@ const Unknown = () => {
   const t = useTranslations("admin.dashboard.widgets.system-updates");
 
   return (
-    <>
-      <span aria-hidden>-</span>
-      <span className="sr-only">{t("unknown")}</span>
-    </>
+    <span className="text-muted-foreground font-normal">{t("unknown")}</span>
   );
 };
 
 const Warning = ({ children }: { children: React.ReactNode }) => (
   <span className="text-warn inline-flex items-center gap-1">
     <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
-    {children}
+    <span>{children}</span>
   </span>
 );
 
-const LastChecked = ({ summary }: { summary: AdminUpdateSummary }) => {
+const Verdict = ({
+  status,
+  summary,
+}: {
+  status: UpdateStatus;
+  summary: AdminUpdateSummary;
+}) => {
   const t = useTranslations(
-    "admin.dashboard.widgets.system-updates.last_checked",
+    "admin.dashboard.widgets.system-updates.verdict",
   );
-  const date = (value: string) => () => <DateFormat date={value} />;
+  const Icon = STATUS_ICON[status];
+  const unconfirmed = summary.unconfirmedComponents;
+  const count: Record<UpdateStatus, number> = {
+    disabled: 0,
+    no_info: summary.totalComponents,
+    not_checked: 0,
+    running: 0,
+    security: summary.affectedComponents,
+    unavailable: summary.totalComponents,
+    unconfirmed,
+    up_to_date: summary.totalComponents,
+    updates: summary.updatesAvailable,
+  };
 
-  if (!summary.enabled) return <Unknown />;
+  return (
+    <div className="flex items-start gap-3">
+      <Icon
+        aria-hidden
+        className={cn(
+          "mt-0.5 size-5 shrink-0",
+          STATUS_TONE[status],
+          status === "running" && "motion-safe:animate-spin",
+        )}
+      />
+      <div aria-live="polite" className="flex min-w-0 flex-col gap-1">
+        <p className="font-medium text-balance">{t(`${status}.title`)}</p>
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {t(`${status}.desc`, {
+            count: count[status],
+            total: summary.totalComponents,
+            verified: summary.totalComponents - unconfirmed,
+          })}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const Checked = ({
+  summary,
+}: {
+  summary: AdminUpdateSummary;
+}): React.ReactNode => {
+  const t = useTranslations("admin.dashboard.widgets.system-updates.checked");
+  const date = (value: string) => () => <DateFormat date={value} />;
+  const checkedAt = summary.oldestSuccessAt ?? summary.lastAttemptAt;
+
+  if (!summary.enabled) return null;
   if (summary.running) return t("running");
   if (summary.failedComponents > 0 && summary.lastAttemptAt !== null) {
     return (
@@ -88,11 +149,12 @@ const LastChecked = ({ summary }: { summary: AdminUpdateSummary }) => {
       </Warning>
     );
   }
-  if (summary.stale) return <Warning>{t("stale")}</Warning>;
+  if (checkedAt === null) return t("never");
+  if (summary.stale) {
+    return <Warning>{t.rich("stale", { date: date(checkedAt) })}</Warning>;
+  }
 
-  const checkedAt = summary.oldestSuccessAt ?? summary.lastAttemptAt;
-
-  return checkedAt === null ? t("never") : <DateFormat date={checkedAt} />;
+  return t.rich("at", { date: date(checkedAt) });
 };
 
 export const SystemUpdatesWidget = () => {
@@ -117,22 +179,14 @@ export const SystemUpdatesWidget = () => {
 
   const status = updateStatusOf(data);
   const known = isKnownUpdateStatus(status);
+  const verified = known
+    ? data.totalComponents - data.unconfirmedComponents
+    : 0;
 
   return (
-    <div className="flex h-full flex-col gap-2">
-      <dl className="divide-border flex flex-col divide-y">
-        <Row label={t("rows.status")}>
-          <span
-            aria-hidden
-            className={cn(
-              "size-2 rounded-full bg-current",
-              STATUS_TONE[status],
-            )}
-          />
-          <span aria-live="polite" className={STATUS_TEXT_TONE[status]}>
-            {t(`status.${status}`, { count: data.unconfirmedComponents })}
-          </span>
-        </Row>
+    <div className="flex h-full flex-col gap-4">
+      <Verdict status={status} summary={data} />
+      <dl className="divide-border flex flex-col divide-y border-t">
         <Row label={t("rows.core")}>
           {data.core.version === null ? (
             <Unknown />
@@ -151,26 +205,44 @@ export const SystemUpdatesWidget = () => {
           ) : null}
         </Row>
         <Row label={t("rows.plugin_updates")}>
-          {known ? data.pluginUpdatesAvailable : <Unknown />}
+          {verified === 0 ? (
+            <Unknown />
+          ) : data.pluginUpdatesAvailable > 0 ? (
+            <span className="text-primary">
+              {t("plugin_updates.available", {
+                count: data.pluginUpdatesAvailable,
+              })}
+            </span>
+          ) : (
+            t("plugin_updates.none")
+          )}
         </Row>
         <Row label={t("rows.security")}>
-          {!known ? (
+          {verified === 0 ? (
             <Unknown />
           ) : data.affectedComponents > 0 ? (
             <span className="text-destructive inline-flex items-center gap-1">
               <ShieldAlertIcon aria-hidden className="size-4 shrink-0" />
-              {t("security_affected", { count: data.affectedComponents })}
+              {t("security.affected", { count: data.affectedComponents })}
             </span>
           ) : (
-            t("security_none")
+            t("security.none")
           )}
         </Row>
-        <Row label={t("rows.last_checked")}>
-          <LastChecked summary={data} />
-        </Row>
+        {known && data.unconfirmedComponents > 0 ? (
+          <Row label={t("rows.no_info")}>
+            {t("no_info_count", {
+              count: data.unconfirmedComponents,
+              total: data.totalComponents,
+            })}
+          </Row>
+        ) : null}
       </dl>
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
         <ViewPlugins />
+        <span className="text-muted-foreground text-sm">
+          <Checked summary={data} />
+        </span>
       </div>
     </div>
   );

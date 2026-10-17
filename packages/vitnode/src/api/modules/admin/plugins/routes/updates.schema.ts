@@ -74,6 +74,7 @@ export const serializeComponentUpdate = (
 export const updatesSummarySchema = z.object({
   enabled: z.boolean(),
   running: z.boolean(),
+  totalComponents: z.number(),
   checkedComponents: z.number(),
   updatesAvailable: z.number(),
   pluginUpdatesAvailable: z.number(),

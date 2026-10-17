@@ -59,7 +59,7 @@ describe("SystemUpdatesWidget", () => {
       }),
       2,
     ],
-    ["checks are turned off", summary({ enabled: false }), 3],
+    ["checks are turned off", summary({ enabled: false }), 2],
   ])(
     "shows the counts as unknown, never 0, while %s",
     async (_, data, unknown) => {
@@ -67,7 +67,7 @@ describe("SystemUpdatesWidget", () => {
 
       expect(screen.getAllByText(`${T}.unknown`)).toHaveLength(unknown);
       expect(screen.queryByText("0")).toBeNull();
-      expect(screen.queryByText(`${T}.security_none`)).toBeNull();
+      expect(screen.queryByText(`${T}.security.none`)).toBeNull();
     },
   );
 
@@ -80,9 +80,9 @@ describe("SystemUpdatesWidget", () => {
       }),
     );
 
-    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.getByText(`${T}.plugin_updates.available`)).toBeTruthy();
     expect(screen.getByText(`${T}.core_update`)).toBeTruthy();
-    expect(screen.getByText(`${T}.security_affected`)).toBeTruthy();
+    expect(screen.getByText(`${T}.security.affected`)).toBeTruthy();
     expect(screen.queryByText(`${T}.unknown`)).toBeNull();
   });
 

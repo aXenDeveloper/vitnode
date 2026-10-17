@@ -227,6 +227,84 @@
             "user": "Użytkownik"
           }
         }
+      },
+      "bento": {
+        "eyebrow": "W zestawie",
+        "title": "Wszystko, czego potrzebuje społeczność.",
+        "content": {
+          "title": "Jeden plik, cała funkcja",
+          "desc": "Tabele, typowane API i ekrany AdminCP z jednej definicji.",
+          "features": {
+            "admin": "Ekrany AdminCP",
+            "api": "Typowane API",
+            "database": "Tabela w bazie",
+            "publishing": "Szkice i publikacja",
+            "revisions": "Rewizje",
+            "scheduling": "Harmonogram",
+            "translations": "Tłumaczenia",
+            "search": "Wyszukiwarka",
+            "live": "Wspólna edycja",
+            "comments": "Komentarze",
+            "reactions": "Reakcje",
+            "followers": "Obserwujący"
+          }
+        },
+        "notifications": {
+          "title": "Wiadomości, które same trafiają do ludzi",
+          "desc": "Skrzynka, licznik na żywo i podsumowania e-mailem.",
+          "mark_all": "Oznacz wszystkie jako przeczytane",
+          "items": {
+            "reply": {
+              "title": "Kuba odpowiedział w Twoim temacie",
+              "sub": "w „Zdjęcia z letniego spotkania”"
+            },
+            "live": {
+              "title": "Twój artykuł jest opublikowany",
+              "sub": "Podsumowanie letniego spotkania"
+            },
+            "comment": {
+              "title": "Ola dodała komentarz",
+              "sub": "„Wpisz mnie na przyszły rok!”"
+            },
+            "report": {
+              "title": "Moderator zamknął Twoje zgłoszenie",
+              "sub": "Zgłoszenie #128 · treść ukryta"
+            }
+          }
+        },
+        "live": {
+          "title": "Piszcie razem w czasie rzeczywistym",
+          "desc": "Tekst sformatowany przyjmuje kilka kursorów naraz, a każda zmiana zapisuje się sama.",
+          "saving": "Zapisywanie…",
+          "saved": "Zapisano",
+          "first": "Czterdziestu dwóch członków spotkało się na",
+          "selected": "dachu",
+          "first_end": ".",
+          "ola": " Pizza skończyła się przed ósmą.",
+          "second": "W przyszłym roku rezerwujemy",
+          "kuba": " większą salę i dwa piece więcej."
+        },
+        "ai": {
+          "title": "AI, które odwala nudną robotę",
+          "desc": "Teksty ALT i tłumaczenia, dowolny dostawca, w ramach budżetu.",
+          "provider": "Dowolny dostawca",
+          "alt": "Tekst ALT",
+          "budget": "{percent}% budżetu"
+        },
+        "search": {
+          "title": "Znalezione, zanim skończysz pisać",
+          "desc": "Podpowiedzi zmieniają się z każdym klawiszem, ułożone według tego, co ludzie czytają.",
+          "tab": "Tab",
+          "queries": "s|sp|spr|sp|spo|spot",
+          "suggestions": {
+            "recap": "Spotkanie letnie 2026",
+            "photos": "Spotkanie — zdjęcia",
+            "moderators": "Spotkaj moderatorów",
+            "rules": "Społeczność — zasady",
+            "events": "Sport i rekreacja",
+            "library": "Sprzedam rower"
+          }
+        }
       }
     },
     "search": {

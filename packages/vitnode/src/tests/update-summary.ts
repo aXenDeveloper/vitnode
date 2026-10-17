@@ -14,6 +14,7 @@ export const updateSummary = (
   pluginUpdatesAvailable: 0,
   running: false,
   stale: false,
+  totalComponents: 3,
   unconfirmedComponents: 0,
   updatesAvailable: 0,
   ...overrides,

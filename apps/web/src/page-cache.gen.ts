@@ -47,6 +47,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/admin/core/users' },
   { path: '/forum/create/topic' },
   { path: '/forum/me/pending' },
+  { path: '/admin/proto/system-updates' },
   { path: '/forum/topics/:id/edit' },
   { path: '/example/guide/:topic' },
   { path: '/forum/comments/:slug' },

@@ -7,10 +7,17 @@ import {
 import { contentListRouteSearch } from "./tanstack/admin/content/route-search";
 import { normalizeCronRouteSearch } from "./tanstack/admin/cron/route-search";
 import {
-  DebugFramePending,
+  DebugAiPending,
+  DebugCachePending,
+  DebugCronPending,
   DebugLayoutPending,
+  DebugLogsPending,
   DebugOverviewPending,
-  DebugTablePending,
+  DebugPluginsPending,
+  DebugQueuePending,
+  DebugSearchPending,
+  DebugServicesPending,
+  DebugVitnodePending,
 } from "./tanstack/admin/debug/pending";
 import { ADMIN_DEBUG_NAMESPACES } from "./tanstack/admin/debug/route";
 import { normalizeDebugLogsSearch } from "./tanstack/admin/debug/route-search";
@@ -280,43 +287,43 @@ export const routes = defineRoutes([
       }),
       page("vitnode", {
         component: lazy(() => import("./pages/admin/debug/vitnode")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugVitnodePending,
       }),
       page("plugins", {
         component: lazy(() => import("./pages/admin/debug/plugins")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugPluginsPending,
       }),
       page("cron", {
         component: lazy(() => import("./pages/admin/debug/cron")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugCronPending,
         search: normalizeCronRouteSearch,
       }),
       page("cache", {
         component: lazy(() => import("./pages/admin/debug/cache")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugCachePending,
       }),
       page("search", {
         component: lazy(() => import("./pages/admin/debug/search")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugSearchPending,
         search: normalizeSearchIndexRouteSearch,
       }),
       page("services", {
         component: lazy(() => import("./pages/admin/debug/services")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugServicesPending,
       }),
       page("logs", {
         component: lazy(() => import("./pages/admin/debug/logs")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugLogsPending,
         search: normalizeDebugLogsSearch,
       }),
       page("queue", {
         component: lazy(() => import("./pages/admin/debug/queue")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugQueuePending,
         search: normalizeQueueRouteSearch,
       }),
       page("ai", {
         component: lazy(() => import("./pages/admin/debug/ai")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugAiPending,
         search: normalizeAiHistoryRouteSearch,
       }),
     ],

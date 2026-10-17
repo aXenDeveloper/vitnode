@@ -45,7 +45,7 @@ export const SideNavGroup = ({
   children: React.ReactNode;
   title?: string;
 }) => (
-  <div className="mt-6 flex flex-col first:mt-0">
+  <div className="mt-6 flex flex-col first-of-type:mt-0">
     {title ? (
       <p className="text-muted-foreground mb-1.5 px-2.5 text-xs font-medium">
         {title}
