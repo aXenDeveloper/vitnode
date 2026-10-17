@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { MiddlewareConfigState } from "../auth/middleware-config";
 
+import { buildConfig } from "../../vitnode.config";
 import {
   DEFERRED_MIDDLEWARE_CONFIG,
   knownMiddlewareConfig,
@@ -12,6 +13,12 @@ import {
 import { setAuthTransport } from "../auth/transport";
 import { intlQueryOptions } from "../i18n/query";
 import { loadMainShell } from "./header";
+
+buildConfig({
+  i18n: { defaultLocale: "en", locales: [{ code: "en", name: "English" }] },
+  metadata: { title: "VitNode" },
+  plugins: [],
+});
 
 let sessionReads = 0;
 
@@ -43,10 +50,7 @@ setAuthTransport({
 
 const KNOWN_CONFIG = knownMiddlewareConfig({
   ai: { models: [] },
-  bottomBar: [],
-  icons: {},
   isEmail: false,
-  navigation: [],
   passkeys: false,
   password: true,
   sso: [],

@@ -1,4 +1,5 @@
 import { buildConfig } from "@vitnode/core/vitnode.config";
+import { CompassIcon, SearchIcon } from "lucide-react";
 
 export const vitNodeConfig = buildConfig({
   debug: false,
@@ -10,6 +11,12 @@ export const vitNodeConfig = buildConfig({
   metadata: {
     shortTitle: "VitNode",
     title: "VitNode",
+  },
+  navigation: {
+    header: [
+      { href: "/discover", icon: CompassIcon, title: "app.menu.discover" },
+      { href: "/search", icon: SearchIcon, title: "app.menu.search" },
+    ],
   },
   plugins: [],
   theme: {

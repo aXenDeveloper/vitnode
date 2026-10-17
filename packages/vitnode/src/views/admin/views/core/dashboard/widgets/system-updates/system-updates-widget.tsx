@@ -90,9 +90,7 @@ const Verdict = ({
   status: UpdateStatus;
   summary: AdminUpdateSummary;
 }) => {
-  const t = useTranslations(
-    "admin.dashboard.widgets.system-updates.verdict",
-  );
+  const t = useTranslations("admin.dashboard.widgets.system-updates.verdict");
   const Icon = STATUS_ICON[status];
   const unconfirmed = summary.unconfirmedComponents;
   const count: Record<UpdateStatus, number> = {

@@ -309,6 +309,17 @@
     },
     "search": {
       "docs": "Dokumentacja"
+    },
+    "menu": {
+      "docs": "Dokumentacja",
+      "plugins": "Wtyczki",
+      "community": "Społeczność",
+      "forum": "Forum",
+      "discover": "Odkrywaj",
+      "discover_description": "Najnowsze wpisy z całej strony.",
+      "browse": "Przeglądaj",
+      "browse_description": "Lista ze stronicowaniem z przykładowej wtyczki.",
+      "search": "Szukaj"
     }
   }
 }

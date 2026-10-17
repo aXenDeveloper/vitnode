@@ -1,6 +1,6 @@
 ---
 title: Mobile Navigation
-description: How VitNode's menus behave on phones - a floating bottom bar of up to three links you pick in the AdminCP plus a Menu tab for the rest, and a side drawer behind the user button for the account.
+description: How VitNode's menus behave on phones - a floating bottom bar of up to three links from vitnode.config.ts plus a Menu tab for the rest, and a side drawer behind the user button for the account.
 icon: Smartphone
 ---
 
@@ -10,29 +10,42 @@ On a phone, the desktop header's navigation has nowhere to go. So below the
 already knows from native apps - and everything else lives in a **side drawer**
 behind the user button at the top.
 
-Both are managed in the AdminCP, no code or config required.
+Both menus come from the `navigation` option in `src/vitnode.config.ts`. See
+[Main Navigation](/docs/dev/navigation) for the item options.
 
 {/* Image prompt: A phone-sized light-mode screenshot of a community site. At the bottom floats a white, fully rounded bar with a soft shadow and four equal tabs - "Home", "Discover", "Search" and a hamburger "Menu" tab, with icons above small labels, the active "Search" tab tinted blue on a light gray pill. Top right in the header sits a small round user avatar. Neutral grays, blue accent, 390x844. */}
 
-## Two menus, one screen
+## Two menus, one config
 
-Open **AdminCP → System → Navigation**. It has two tabs, named after where the
-menu sits rather than the device, because a tablet is happy with the header:
+| Key               | Where visitors see it                                                   | Holds                                              |
+| :---------------- | :---------------------------------------------------------------------- | :------------------------------------------------- |
+| `header`          | In the header on tablets and desktops, and in the side drawer on phones | Any number of items, with dropdowns one level deep |
+| `mobileBottomBar` | Pinned to the bottom of the screen, on phones only                      | Up to three links, no dropdowns, plus a Menu tab   |
 
-| Tab            | Where visitors see it                                                   | Holds                                              |
-| :------------- | :---------------------------------------------------------------------- | :------------------------------------------------- |
-| **Header**     | In the header on tablets and desktops, and in the side drawer on phones | Any number of items, with dropdowns one level deep |
-| **Bottom bar** | Pinned to the bottom of the screen, on phones only                      | Up to three links, no dropdowns, plus a Menu tab   |
+A page can sit in both menus at once - Search in the header _and_ in the bottom
+bar is a perfectly normal choice.
 
-Each tab works the same way: **Add link** opens the same picker (a page one of
-your plugins provides, or a custom link), rows drag to reorder, and the row menu
-has Edit, Move up, Move down and Remove. A page can sit in both menus at once -
-Search in the header _and_ in the bottom bar is a perfectly normal choice.
+```ts title="src/vitnode.config.ts"
+import { CompassIcon, MessagesSquareIcon, SearchIcon } from 'lucide-react'
 
-Once the bottom bar holds three links, **Add link** switches off until you remove
-one.
+export const vitNodeConfig = buildConfig({
+  // ...
+  navigation: {
+    header: [
+      // ...
+    ],
+    // [!code ++:5]
+    mobileBottomBar: [
+      { href: '/forum', icon: MessagesSquareIcon, title: 'app.menu.forum' },
+      { href: '/discover', icon: CompassIcon, title: 'app.menu.discover' },
+      { href: '/search', icon: SearchIcon, title: 'app.menu.search' },
+    ],
+  },
+})
+```
 
-{/* Image prompt: A light-mode AdminCP screenshot of the Navigation page. Under the title, a segmented tab control reads "Header | Bottom bar" with "Bottom bar" selected and a hint beside it: "Up to three links at the bottom of the screen on phones, plus a Menu tab with the rest of the header menu." Below, one rounded card headed "3 of 3 links" lists Home, Discover and Search as compact rows with drag handles. The "Add link" button top right is disabled. Neutral grays, blue accent, 1440x900. */}
+A fourth link stops the app at startup with a `[VitNode navigation]` error, so
+the bar never silently drops one.
 
 ## The bottom bar
 
@@ -46,16 +59,16 @@ rest of the Header menu - everything the bar does not already show, dropdowns
 included. On a page that lives in there, the Menu tab is the one lit. If the bar
 already covers every header link, the Menu tab steps aside.
 
-An empty bottom bar is not drawn at all. That is the default on a fresh
-install, so phones start with just the header and its side drawer until you add
-a link.
+An empty bottom bar is not drawn at all. That is the default when
+`navigation.mobileBottomBar` is missing, so phones start with just the header and its
+side drawer until you add a link.
 
 <Callout type="info" title="Give every link an icon and a short label">
   At 320px each of the four tabs gets about 72px, which fits one word like
   "Discover" or "Settings" - longer labels are cut off with an ellipsis. A link
-  without an icon shows the first letter of its label instead. Titles are per
-  item, so the header can say "Community highlights" while the bottom bar says
-  "Discover".
+  without an icon shows the first letter of its label instead. The two menus
+  are separate lists, so a bottom bar link can point at a shorter message key
+  than the same page in the header.
 </Callout>
 
 ## The side drawer
@@ -80,16 +93,9 @@ Desktop is untouched: the same button still opens the usual dropdown there.
 
 ## For developers
 
-- **API.** Both menus live in `core_navigation`; a `location` column says which
-  (`header` or `bottom_bar`). The admin routes under `admin/navigation` take an
-  optional `location` on `/create` and `/reorder` and default to the header, so
-  older clients keep working. The bottom bar refuses a parent (`400`) and a
-  fourth link (`409`).
-- **Public data.** The middleware response carries the bottom bar next to the
-  header menu as a flat `bottomBar` array, cached separately and expired
-  together with it.
-- **Events.** `navigation.reordered` includes `location`. See
-  [Built-in events](/docs/dev/events/built-in-events).
+- **No API involved.** The header reads both menus from the config in the
+  browser and on the server, so they render with the page, prerendered pages
+  included.
 - **Room at the bottom.** While the bar is on screen, the page gets extra
   bottom padding so it never covers your footer.
 - **Notches and home indicators.** The bar sits above the iPhone home indicator
@@ -102,6 +108,5 @@ Desktop is untouched: the same button still opens the usual dropdown there.
 ```
 
 - **Translations.** The drawer's own words - "Menu", "Navigation", "Account" -
-  live under `core.global.mobile_nav`; the AdminCP tab labels under
-  `admin.navigation.tabs`. See [Languages & Localization](/docs/dev/i18n) to
-  translate them.
+  live under `core.global.mobile_nav`. See [Languages & Localization](/docs/dev/i18n)
+  to translate them. Link titles are message keys from your own locale files.

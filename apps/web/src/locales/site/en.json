@@ -309,6 +309,17 @@
     },
     "search": {
       "docs": "Documentation"
+    },
+    "menu": {
+      "docs": "Docs",
+      "plugins": "Plugins",
+      "community": "Community",
+      "forum": "Forum",
+      "discover": "Discover",
+      "discover_description": "Fresh posts from every corner of the site.",
+      "browse": "Browse",
+      "browse_description": "A paginated list, shipped by the example plugin.",
+      "search": "Search"
     }
   }
 }

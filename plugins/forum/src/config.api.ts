@@ -13,7 +13,6 @@ import { manifest } from "@/manifest.gen";
 export const forumApiPlugin = () =>
   buildApiPlugin({
     manifest,
-    navigation: [{ href: "/forum", icon: "messages-square", id: "forum" }],
     modules: [
       adminModule,
       forumModule,

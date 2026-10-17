@@ -9,19 +9,17 @@ import {
 import type { HeaderNavItem } from "./header-nav";
 
 import { HEADER_HREF } from "./header-nav";
-import { HeaderNavMenu, HeaderNavSkeleton } from "./header-nav-menu";
+import { HeaderNavMenu } from "./header-nav-menu";
 
 export interface HeaderLayoutContentProps extends Omit<
   React.ComponentProps<"header">,
   "children"
 > {
-  isNavigationPending?: boolean;
   leading?: React.ReactNode;
   logo: React.ReactNode;
   mobileUser?: React.ReactNode;
   moreNavigationLabel: string;
   navigation: HeaderNavItem[];
-  navigationLoadingLabel: string;
   notifications?: React.ReactNode;
   search?: React.ReactNode;
   user?: React.ReactNode;
@@ -46,13 +44,11 @@ const HEADER_VARIANT_CLASS_NAMES: Record<
 
 export const HeaderLayoutContent = ({
   className,
-  isNavigationPending = false,
   leading,
   logo,
   mobileUser,
   moreNavigationLabel,
   navigation,
-  navigationLoadingLabel,
   notifications,
   search,
   user,
@@ -80,14 +76,10 @@ export const HeaderLayoutContent = ({
         className="ms-4 hidden min-w-0 flex-1 sm:flex"
         style={{ viewTransitionName: HEADER_VIEW_TRANSITION_NAMES.navigation }}
       >
-        {isNavigationPending ? (
-          <HeaderNavSkeleton label={navigationLoadingLabel} />
-        ) : (
-          <HeaderNavMenu
-            moreLabel={moreNavigationLabel}
-            navigation={navigation}
-          />
-        )}
+        <HeaderNavMenu
+          moreLabel={moreNavigationLabel}
+          navigation={navigation}
+        />
       </div>
 
       <div

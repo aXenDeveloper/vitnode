@@ -12,6 +12,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { HouseIcon } from "lucide-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HeaderNavChildItem, HeaderNavItem } from "../header-nav";
@@ -19,7 +20,7 @@ import type { HeaderNavChildItem, HeaderNavItem } from "../header-nav";
 import { MobileNavBar } from "./mobile-nav-bar";
 
 const items: HeaderNavChildItem[] = [
-  { href: "/", icon: "emoji:🏠", id: "1", label: "Home" },
+  { href: "/", icon: HouseIcon, id: "1", label: "Home" },
   { href: "/blog", id: "2", label: "Blog" },
 ];
 

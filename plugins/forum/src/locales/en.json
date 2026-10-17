@@ -1,12 +1,6 @@
 {
   "@vitnode/forum": {
     "title": "Forum",
-    "navigation": {
-      "forum": {
-        "title": "Forum",
-        "description": "Topics, comments and the occasional heated debate about tabs versus spaces."
-      }
-    },
     "containers": {
       "forums": {
         "label": "{count, plural, one {Forum} other {Forums}}",

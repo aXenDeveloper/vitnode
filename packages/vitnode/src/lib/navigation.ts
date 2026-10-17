@@ -1,94 +1,40 @@
-import { manifest } from "@/manifest";
-export const NAVIGATION_KINDS = ["preset", "custom"] as const;
-export type NavigationKind = (typeof NAVIGATION_KINDS)[number];
+import type React from "react";
 
-export const NAVIGATION_LOCATIONS = ["header", "bottom_bar"] as const;
-export type NavigationLocation = (typeof NAVIGATION_LOCATIONS)[number];
+import {
+  MAX_NAMESPACES,
+  namespaceProblem,
+  normalizeNamespaceList,
+} from "../routing/namespaces";
 
 export const NAVIGATION_BOTTOM_BAR_MAX_ITEMS = 3;
 
-export const NAVIGATION_TABLE_NAME = "core_navigation";
-
-export const NAVIGATION_WORDS = {
-  description: "description",
-  title: "title",
-} as const;
-
-export const NAVIGATION_TITLE_MAX_LENGTH = 100;
-export const NAVIGATION_DESCRIPTION_MAX_LENGTH = 255;
 export const NAVIGATION_HREF_MAX_LENGTH = 2048;
-export const NAVIGATION_PRESET_ID_MAX_LENGTH = 120;
-export const NAVIGATION_PRESET_ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
-export const NAVIGATION_MAX_DEPTH = 1;
 
-export interface NavigationPresetDeclaration {
+export type NavigationIcon = React.ComponentType<{ className?: string }>;
+
+export interface NavigationLinkConfig {
+  description?: string;
   href: string;
-  icon?: string;
-  id: string;
+  icon?: NavigationIcon;
   isOpenInNewTab?: boolean;
+  title: string;
 }
 
-export interface NavigationPreset extends Omit<
-  NavigationPresetDeclaration,
-  "icon" | "isOpenInNewTab"
-> {
-  icon: null | string;
-  isOpenInNewTab: boolean;
-  pluginId: string;
+export interface NavigationHeaderItemConfig extends NavigationLinkConfig {
+  items?: NavigationLinkConfig[];
 }
 
-export interface NavigationText {
-  languageCode: string;
-  value: string;
+export interface NavigationConfig {
+  header?: NavigationHeaderItemConfig[];
+  mobileBottomBar?: NavigationLinkConfig[];
 }
 
-export interface PublicNavigationItem {
-  description: NavigationText[];
-  href: string;
-  icon: null | string;
-  id: number;
-  isOpenInNewTab: boolean;
-  kind: NavigationKind;
-  pluginId: null | string;
-  presetId: null | string;
-  title: NavigationText[];
+export class NavigationConfigError extends Error {
+  constructor(message: string) {
+    super(`[VitNode navigation] ${message}`);
+    this.name = "NavigationConfigError";
+  }
 }
-
-export interface PublicNavigationNode extends PublicNavigationItem {
-  items: PublicNavigationItem[];
-}
-
-const CORE_NAVIGATION_NAMESPACE = "core.navigation";
-
-export const navigationMessagesNamespace = (pluginId: string): string =>
-  pluginId === manifest.id
-    ? CORE_NAVIGATION_NAMESPACE
-    : `${pluginId}.navigation`;
-
-export const navigationPresetMessageKeys = (presetId: string) => ({
-  description: `${presetId}.description`,
-  title: `${presetId}.title`,
-});
-
-const PRESET_KEY_SEPARATOR = "::";
-
-export const navigationPresetKey = (
-  pluginId: string,
-  presetId: string,
-): string => `${pluginId}${PRESET_KEY_SEPARATOR}${presetId}`;
-
-export const parseNavigationPresetKey = (
-  key: string,
-): null | { pluginId: string; presetId: string } => {
-  const separatorAt = key.lastIndexOf(PRESET_KEY_SEPARATOR);
-  if (separatorAt <= 0) return null;
-
-  const pluginId = key.slice(0, separatorAt);
-  const presetId = key.slice(separatorAt + PRESET_KEY_SEPARATOR.length);
-  if (!pluginId || !presetId) return null;
-
-  return { pluginId, presetId };
-};
 
 export const isExternalNavigationHref = (href: string): boolean =>
   href.startsWith("//") || /^[a-z][a-z0-9+.-]*:/i.test(href);
@@ -101,100 +47,84 @@ export const isValidNavigationHref = (href: string): boolean => {
 
   if (trimmed.startsWith("/")) return !trimmed.startsWith("//");
 
-  // https only: a menu item is a link the whole site hands out, and sending
-  // readers to a plaintext address is not something an admin should be able to
-  // do by typing one character less.
   return /^https:\/\/[^/?#]+/i.test(trimmed);
 };
 
-const firstNonEmpty = (values: readonly NavigationText[]): string =>
-  values.find(item => item.value.trim().length > 0)?.value.trim() ?? "";
+export const navigationMessageNamespace = (key: unknown): null | string => {
+  if (typeof key !== "string") return null;
 
-export const resolveNavigationText = ({
-  fallback,
-  locale,
-  values,
-}: {
-  fallback?: string;
-  locale: string;
-  values: readonly NavigationText[];
-}): string => {
-  const own = values.find(item => item.languageCode === locale)?.value.trim();
-  if (own) return own;
+  const separatorAt = key.lastIndexOf(".");
+  if (separatorAt <= 0 || separatorAt === key.length - 1) return null;
 
-  const preset = fallback?.trim();
-  if (preset) return preset;
+  const namespace = key.slice(0, separatorAt);
 
-  return firstNonEmpty(values);
+  return namespaceProblem(namespace) === null ? namespace : null;
 };
 
-export type NavigationTranslate = (
-  namespace: string,
-  key: string,
-) => string | undefined;
-
-export interface NavigationLabelSource {
-  description: readonly NavigationText[];
-  kind: NavigationKind;
-  pluginId: null | string;
-  presetId: null | string;
-  title: readonly NavigationText[];
-}
-
-const presetDefaults = (
-  item: Pick<NavigationLabelSource, "kind" | "pluginId" | "presetId">,
-  translate: NavigationTranslate,
-): { description?: string; title?: string } => {
-  if (item.kind !== "preset" || !item.pluginId || !item.presetId) return {};
-
-  const namespace = navigationMessagesNamespace(item.pluginId);
-  const keys = navigationPresetMessageKeys(item.presetId);
-
-  return {
-    description: translate(namespace, keys.description),
-    title: translate(namespace, keys.title),
-  };
-};
-
-export const navigationItemLabels = ({
-  item,
-  locale,
-  translate,
-}: {
-  item: NavigationLabelSource;
-  locale: string;
-  translate: NavigationTranslate;
-}): { description: string; title: string } => {
-  const defaults = presetDefaults(item, translate);
-
-  return {
-    description: resolveNavigationText({
-      fallback: defaults.description,
-      locale,
-      values: item.description,
-    }),
-    title: resolveNavigationText({
-      fallback: defaults.title,
-      locale,
-      values: item.title,
-    }),
-  };
-};
-
-interface NavigationNamespaceSource {
-  items?: readonly NavigationNamespaceSource[];
-  kind: NavigationKind;
-  pluginId: null | string;
-}
-
-const namespacesOf = (item: NavigationNamespaceSource): string[] => [
-  ...(item.kind === "preset" && item.pluginId
-    ? [navigationMessagesNamespace(item.pluginId)]
-    : []),
-  ...(item.items ?? []).flatMap(namespacesOf),
+const messageKeysOf = (link: NavigationLinkConfig): string[] => [
+  link.title,
+  ...(link.description === undefined ? [] : [link.description]),
 ];
 
-export const navigationNamespaces = (
-  items: readonly NavigationNamespaceSource[],
+const navigationLinksOf = (
+  navigation: NavigationConfig | undefined,
+): NavigationLinkConfig[] => [
+  ...(navigation?.header ?? []).flatMap(item => [item, ...(item.items ?? [])]),
+  ...(navigation?.mobileBottomBar ?? []),
+];
+
+export const navigationMessageNamespaces = (
+  navigation: NavigationConfig | undefined,
 ): string[] =>
-  [...new Set(items.flatMap(namespacesOf))].sort((a, b) => a.localeCompare(b));
+  normalizeNamespaceList(
+    navigationLinksOf(navigation)
+      .flatMap(messageKeysOf)
+      .flatMap(key => navigationMessageNamespace(key) ?? []),
+  );
+
+const assertNavigationLink = (
+  link: NavigationLinkConfig,
+  where: string,
+): void => {
+  if (!isValidNavigationHref(link.href)) {
+    throw new NavigationConfigError(
+      `The ${where} item ${JSON.stringify(link.href)} needs an href that starts with "/" or "https://".`,
+    );
+  }
+
+  for (const key of messageKeysOf(link)) {
+    if (navigationMessageNamespace(key) === null) {
+      throw new NavigationConfigError(
+        `The ${where} item "${link.href}" has the title or description ${JSON.stringify(key)}. Both are message keys: a namespace and a name joined by ".", such as "site.menu.docs".`,
+      );
+    }
+  }
+};
+
+export const assertNavigationConfig = (
+  navigation: NavigationConfig | undefined,
+): void => {
+  for (const item of navigation?.header ?? []) {
+    assertNavigationLink(item, "header");
+
+    for (const child of item.items ?? []) {
+      assertNavigationLink(child, "header dropdown");
+    }
+  }
+
+  const bottomBar = navigation?.mobileBottomBar ?? [];
+  if (bottomBar.length > NAVIGATION_BOTTOM_BAR_MAX_ITEMS) {
+    throw new NavigationConfigError(
+      `The mobile bottom bar holds up to ${String(NAVIGATION_BOTTOM_BAR_MAX_ITEMS)} links, and ${String(bottomBar.length)} are configured.`,
+    );
+  }
+
+  for (const item of bottomBar) assertNavigationLink(item, "bottom bar");
+
+  const namespaces = navigationMessageNamespaces(navigation);
+  if (namespaces.length > MAX_NAMESPACES) {
+    throw new NavigationConfigError(
+      `The menus read ${String(namespaces.length)} message namespaces, and at most ${String(MAX_NAMESPACES)} load at once. Keep the menu's keys under one namespace, such as "site.menu".`,
+    );
+  }
+};

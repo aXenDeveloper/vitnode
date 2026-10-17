@@ -15,11 +15,6 @@
   "@vitnode/core:files:can_delete": "Usuwanie plików",
   "@vitnode/core:files:can_download": "Pobieranie plików",
   "@vitnode/core:files:can_view": "Wyświetlanie przesłanych plików",
-  "@vitnode/core:navigation": "Nawigacja",
-  "@vitnode/core:navigation:can_create": "Dodawanie pozycji menu głównego",
-  "@vitnode/core:navigation:can_delete": "Usuwanie pozycji menu głównego",
-  "@vitnode/core:navigation:can_edit": "Edytowanie i zmiana kolejności pozycji menu głównego",
-  "@vitnode/core:navigation:can_view": "Wyświetlanie menu głównego",
   "@vitnode/core:notifications": "Powiadomienia",
   "@vitnode/core:notifications:can_edit": "Edycja ustawień powiadomień",
   "@vitnode/core:notifications:can_manage": "Testowe e-maile, czyszczenie i strefa zagrożenia: wstrzymanie, anulowanie e-maili, oznaczanie jako przeczytane, usuwanie i reset preferencji",
@@ -484,7 +479,6 @@
         "system": {
           "files": "Pliki",
           "integrations": "Integracje",
-          "navigation": "Nawigacja",
           "plugins": "Wtyczki",
           "title": "System"
         },
@@ -543,117 +537,6 @@
           "load_error": "Nie udało się wczytać listy aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",
           "open_plugins": "Otwórz Wtyczki"
         }
-      }
-    },
-    "navigation": {
-      "create": {
-        "back": "Wybierz coś innego",
-        "childTitle": "Dodaj stronę do „{name}”",
-        "desc": "Wybierz stronę, którą udostępnia wtyczka, albo podlinkuj dowolny adres.",
-        "fromPlugin": "{placement} Strona z {plugin}.",
-        "inDropdown": "Wyświetlana w rozwijanym menu „{name}”.",
-        "inHeader": "Wyświetlana w pasku nagłówka.",
-        "presets": "Strony z Twoich wtyczek",
-        "submit": "Dodaj do menu",
-        "success": "Pozycja menu dodana",
-        "successDesc": "„{name}” jest już w menu głównym.",
-        "title": "Dodaj pozycję menu",
-        "bottomBarTitle": "Dodaj link",
-        "bottomBarFull": "Dolny pasek mieści {max} linki. Usuń jeden, aby dodać kolejny.",
-        "inBottomBar": "Wyświetlany w dolnym pasku na telefonach.",
-        "successDescBottomBar": "„{name}” jest teraz w dolnym pasku."
-      },
-      "delete": {
-        "cancel": "Anuluj",
-        "confirm": "Usuń",
-        "desc": "Usunąć „{name}” z menu głównego? Odwiedzający od razu przestaną ją widzieć. Możesz dodać ją ponownie później.",
-        "descWithChildren": "Usunąć „{name}” z menu głównego? {count, plural, one {Jej podpozycja trafi} few {Jej # podpozycje trafią} other {Jej # podpozycji trafi}} na najwyższy poziom.",
-        "success": "Pozycja menu usunięta",
-        "successDesc": "„{name}” nie jest już w menu głównym.",
-        "title": "Usuń pozycję menu"
-      },
-      "edit": {
-        "submit": "Zapisz zmiany",
-        "success": "Pozycja menu zaktualizowana",
-        "successDesc": "Zmiany w „{name}” są już widoczne.",
-        "title": "Edytuj pozycję menu"
-      },
-      "errors": {
-        "hrefInvalid": "Zacznij od / lub https://",
-        "presetTaken": "Ta strona jest już w menu.",
-        "titleRequired": "Nadaj pozycji tytuł w co najmniej jednym języku.",
-        "bottomBarConflict": "Ta strona jest już w dolnym pasku albo pasek jest pełny."
-      },
-      "form": {
-        "description": "Opis",
-        "descriptionDesc": "Wyświetlany pod tytułem, gdy pozycja jest w rozwijanym menu.",
-        "href": "Adres URL",
-        "hrefPlaceholder": "/discover lub https://example.com",
-        "icon": "Ikona",
-        "iconPlaceholder": "Bez ikony",
-        "kind": {
-          "custom": "Własny link",
-          "customDesc": "Dowolny adres, w tej witrynie lub poza nią."
-        },
-        "openInNewTab": "Otwieraj w nowej karcie",
-        "openInNewTabDesc": "Przydatne dla linków prowadzących poza witrynę.",
-        "parent": "Umiejscowienie",
-        "parentDesc": "Pozycje najwyższego poziomu są w pasku nagłówka. Pozycje umieszczone w innej pojawiają się w jej rozwijanym menu.",
-        "parentInside": "W „{name}”",
-        "parentLocked": "Zawiera {count, plural, one {# podpozycję} few {# podpozycje} other {# podpozycji}}, więc zostaje na najwyższym poziomie. Menu ma dwa poziomy.",
-        "parentRoot": "Najwyższy poziom",
-        "preset": "Strona",
-        "presetEmpty": "Każda gotowa strona jest już w menu.",
-        "presetLocked": "Gotowa pozycja zachowuje stronę wskazaną przez wtyczkę. Zmień tytuł, opis lub sposób otwierania.",
-        "presetMissing": "Wtyczka nie jest zainstalowana",
-        "preview": "Jak widzą to odwiedzający",
-        "previewUntitled": "Pozycja bez tytułu",
-        "sections": {
-          "destination": "Cel",
-          "label": "Etykieta",
-          "position": "Położenie"
-        },
-        "title": "Tytuł"
-      },
-      "list": {
-        "actions": "Więcej akcji: {name}",
-        "addChild": "Dodaj podpozycję",
-        "collapseAll": "Zwiń wszystko",
-        "custom": "Własny link",
-        "delete": "Usuń",
-        "desc": "Wybierz, do czego prowadzą Twoje menu i w jakiej kolejności. Zmiany działają od razu.",
-        "dragHandle": "Przeciągnij, aby przenieść {name}",
-        "edit": "Edytuj",
-        "expandAll": "Rozwiń wszystko",
-        "hideChildren": "Ukryj, co jest w „{name}”",
-        "label": "Pozycje menu",
-        "missing": "Wtyczka odpowiadająca za tę pozycję nie jest już zainstalowana, więc menu ją pomija.",
-        "moveDown": "Przenieś niżej",
-        "moveInside": "Przenieś do…",
-        "moveToTop": "Przenieś na najwyższy poziom",
-        "moveUp": "Przenieś wyżej",
-        "noResults": {
-          "description": "Dodaj gotową stronę lub własny link, a pojawi się w nagłówku.",
-          "title": "Menu główne jest puste"
-        },
-        "opensInNewTab": "Otwiera się w nowej karcie",
-        "pluginMissing": "Brak wtyczki",
-        "reorderSuccess": "Kolejność menu zapisana",
-        "reorderSuccessDesc": "Odwiedzający zobaczą nową kolejność przy następnym wczytaniu menu.",
-        "showChildren": "Pokaż, co jest w „{name}”",
-        "summary": "{header} w nagłówku · {dropdowns} w rozwijanych menu",
-        "bottomBarSummary": "{count} z {max} linków",
-        "bottomBarEmpty": {
-          "title": "Dolny pasek jest pusty",
-          "description": "Dodaj do {max} linków, a telefony pokażą je w pasku na dole ekranu. Pusty pasek w ogóle się nie wyświetla."
-        }
-      },
-      "tabs": {
-        "label": "Menu",
-        "header": "Nagłówek",
-        "bottomBar": "Dolny pasek",
-        "headerDesc": "W nagłówku na tabletach i komputerach, a na telefonach w menu bocznym.",
-        "bottomBarDesc": "Do trzech linków na dole ekranu na telefonach oraz karta Menu z resztą menu nagłówka."
       }
     },
     "role": {
@@ -2980,16 +2863,6 @@
         }
       },
       "unsaved_changes": "Niezapisane zmiany"
-    },
-    "navigation": {
-      "discover": {
-        "description": "Najnowsze wpisy od wszystkich tutaj.",
-        "title": "Odkrywaj"
-      },
-      "search": {
-        "description": "Znajdź członków, wpisy i strony.",
-        "title": "Szukaj"
-      }
     },
     "profile": {
       "about": "O użytkowniku",

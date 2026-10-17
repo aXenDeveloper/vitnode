@@ -7,7 +7,6 @@ import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
-import type { NavigationPreset } from "@/lib/navigation";
 import type { UpdateChannel } from "@/lib/updates/manifest";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
@@ -83,7 +82,6 @@ import {
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
 import { validateModerationRegistry } from "../lib/moderation/registry";
-import { collectNavigationPresets } from "../lib/navigation-presets";
 import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
@@ -175,8 +173,6 @@ export interface EnvVariablesVitNode {
       title: string;
     };
     moderation: ModerationRegistry;
-    /** Every prebuilt main-menu item the installed plugins offer. */
-    navigation: NavigationPreset[];
     notifications?: NotificationRegistry;
     notificationWorkers?: NotificationWorkerSettings;
     permissionStaff: PermissionStaffCatalogEntry[];
@@ -447,9 +443,6 @@ export const globalMiddleware = ({
   assertContentAiActions(contentTypesMetadata, aiActionsMetadata);
   assertAiModelPricing(ai?.models ?? []);
 
-  const navigationMetadata: NavigationPreset[] =
-    collectNavigationPresets(plugins);
-
   const notificationsMetadata = createNotificationRegistry(
     plugins.flatMap(plugin =>
       (plugin.notificationTypes ?? []).map(definition => ({
@@ -565,7 +558,6 @@ export const globalMiddleware = ({
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
       moderation: moderationMetadata,
-      navigation: navigationMetadata,
       notifications: notificationsMetadata,
       notificationWorkers,
       contentContainers: contentContainersMetadata,

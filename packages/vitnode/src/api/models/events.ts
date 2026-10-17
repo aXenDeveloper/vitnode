@@ -2,7 +2,6 @@ import type { Context } from "hono";
 
 import { randomUUID } from "node:crypto";
 
-import type { NavigationLocation } from "@/lib/navigation";
 import type { SsoProfileField } from "@/lib/sso-profile";
 
 import type { EventListenerConfig } from "../lib/events";
@@ -100,19 +99,6 @@ export interface VitNodeEvents {
   "moderation.report.resolved": {
     reportId: number;
     resolution: string;
-  };
-  "navigation.created": {
-    navigationId: number;
-  };
-  "navigation.deleted": {
-    navigationId: number;
-  };
-  "navigation.reordered": {
-    items: { children: number[]; id: number }[];
-    location: NavigationLocation;
-  };
-  "navigation.updated": {
-    navigationId: number;
   };
   "notifications.deleted_all": {
     items: number;

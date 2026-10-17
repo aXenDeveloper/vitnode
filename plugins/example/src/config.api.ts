@@ -27,7 +27,6 @@ export const exampleApiPlugin = () =>
     aiActions: [articleExcerptAiAction],
     blocks: widgets,
     editablePages: [settingsPage],
-    navigation: [{ href: "/example/browse", icon: "list", id: "browse" }],
     moderation: { scopes: [exampleCategoryScope] },
     permissionStaff: {
       moderator: {

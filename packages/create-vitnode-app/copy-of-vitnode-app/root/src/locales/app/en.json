@@ -37,6 +37,10 @@
       "powered_by": "Powered by <link>VitNode</link>",
       "docs": "Docs",
       "sponsor": "Sponsor"
+    },
+    "menu": {
+      "discover": "Discover",
+      "search": "Search"
     }
   }
 }

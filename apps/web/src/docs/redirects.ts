@@ -13,6 +13,7 @@ const RENAMED_PAGES: Readonly<Record<string, string>> = {
   'content-engine/publication-and-editorial': 'content-engine/editorial',
   'content-engine/relations-and-advanced-modeling': 'content-engine/relations',
   'content-engine/services-and-api': 'content-engine/services',
+  'dev/plugins/navigation': 'dev/navigation',
 }
 
 export const movedDocsPath = (splat: string): string | undefined => {
