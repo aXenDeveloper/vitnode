@@ -1,5 +1,6 @@
 import {
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -10,7 +11,9 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { buttonVariants } from "@/components/ui/button";
+import { UserPresenceStatus } from "@/components/user-presence-status";
 import { USER_HEADER_HREF } from "@/views/layouts/theme/header/user/user-header-model";
+import { userPresenceQueryOptions } from "@/views/presence/presence-query";
 import { ProfileContent } from "@/views/profile/profile-content";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 import { profileTimelineQueryOptions } from "@/views/profile/profile-timeline-query";
@@ -39,6 +42,33 @@ const EditProfileAction = () => {
       <UserRoundPenIcon aria-hidden="true" />
       {t("editProfile")}
     </Link>
+  );
+};
+
+const ProfilePresence = ({
+  userId,
+  viewerId,
+  viewerKnown,
+}: {
+  userId: number;
+  viewerId: null | number;
+  viewerKnown: boolean;
+}) => {
+  const t = useTranslations("core.profile");
+  // Browser-only, keyed by viewer: it never lands in SSR output or the page
+  // cache, and waits for the session so a guest's answer isn't fetched first.
+  const { data } = useQuery({
+    ...userPresenceQueryOptions({ userId, viewerId }),
+    enabled: viewerKnown,
+  });
+
+  if (!data) return null;
+
+  return (
+    <p className="flex items-center" data-slot="profile-presence">
+      <span className="sr-only">{t("presence")}: </span>
+      <UserPresenceStatus presence={data} variant="full" />
+    </p>
   );
 };
 
@@ -71,7 +101,7 @@ const ProfileTimeline = ({
 
 const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
   const { data: user } = useSuspenseQuery(userProfileQuery(nameCode));
-  const { data: session } = useSessionQuery();
+  const { data: session, isPending: isSessionPending } = useSessionQuery();
   const queryClient = useQueryClient();
   const viewerId = session?.user?.id ?? null;
   const isOwner = viewerId === user.id;
@@ -88,6 +118,13 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
     <ProfileContent
       action={isOwner ? <EditProfileAction /> : null}
       editor={editor}
+      presence={
+        <ProfilePresence
+          userId={user.id}
+          viewerId={viewerId}
+          viewerKnown={!isSessionPending}
+        />
+      }
       user={user}
     >
       <ProfileTimeline userId={user.id} viewerId={viewerId} />

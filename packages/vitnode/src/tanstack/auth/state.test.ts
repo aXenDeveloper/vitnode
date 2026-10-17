@@ -33,6 +33,7 @@ const userFixture = (overrides: Partial<AuthUser> = {}): AuthUser => ({
   newsletter: false,
   notifications: { revision: 0, unread: 0 },
   roleId: 1,
+  hideOnlineStatus: false,
   showRealName: false,
   timeZone: null,
   ...overrides,

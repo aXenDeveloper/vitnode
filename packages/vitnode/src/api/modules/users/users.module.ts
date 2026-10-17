@@ -7,6 +7,10 @@ import { changePasswordRoute } from "./routes/change-password.route";
 import { listDevicesRoute } from "./routes/devices.route";
 import { mePolicyRoute } from "./routes/me-policy.route";
 import { permissionsRoute } from "./routes/permissions.route";
+import { presenceBatchRoute } from "./routes/presence-batch.route";
+import { presenceHeartbeatRoute } from "./routes/presence-heartbeat.route";
+import { presenceRoute } from "./routes/presence.route";
+import { updateMyPrivacyRoute } from "./routes/privacy.route";
 import { profileRoute } from "./routes/profile.route";
 import { resendVerificationRoute } from "./routes/resend-verification.route";
 import { resetPasswordRoute } from "./routes/reset-passowrd.route";
@@ -38,6 +42,10 @@ export const usersModule = buildModule({
     mePolicyRoute,
     updateMeRoute,
     updateMyTimeZoneRoute,
+    updateMyPrivacyRoute,
+    presenceHeartbeatRoute,
+    presenceBatchRoute,
+    presenceRoute,
   ],
   modules: [
     ssoUserModule,

@@ -11,6 +11,7 @@ import { deleteUserPasskeyAdminRoute } from "./routes/passkey-delete.route";
 import { renameUserPasskeyAdminRoute } from "./routes/passkey-rename.route";
 import { listUserPasskeysAdminRoute } from "./routes/passkeys.route";
 import { setPasswordUserAdminRoute } from "./routes/password.route";
+import { presenceUserAdminRoute } from "./routes/presence.route";
 import { revokeUserDeviceAdminRoute } from "./routes/revoke-device.route";
 import { revokeUserDevicesAdminRoute } from "./routes/revoke-devices.route";
 import { showUserAdminRoute } from "./routes/show.route";
@@ -27,6 +28,7 @@ export const usersAdminModule = buildModule({
     listUsersAdminRoute,
     createUserAdminRoute,
     showUserAdminRoute,
+    presenceUserAdminRoute,
     timelineUserAdminRoute,
     updateUserAdminRoute,
     verifyEmailUserAdminRoute,

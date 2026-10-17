@@ -9,6 +9,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { UpdatePersonalInformation } from "@/views/auth/settings/overview/personal-update";
+import type { UpdatePrivacy } from "@/views/auth/settings/overview/privacy-update";
 import type { UpdateTimeZone } from "@/views/auth/settings/overview/time-zone-update";
 
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,11 @@ import {
 } from "@/views/auth/settings/ai/ai-usage-query";
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
+import { PrivacySettings } from "@/views/auth/settings/overview/privacy-settings";
+import { updatePrivacyInBrowser } from "@/views/auth/settings/overview/privacy-update";
 import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
+import { PRESENCE_QUERY_ROOT } from "@/views/presence/presence-query";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 
 import { useMiddlewareConfigQuery } from "../auth/middleware-config";
@@ -129,6 +133,21 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
     [queryClient],
   );
 
+  const onPrivacyUpdate: UpdatePrivacy = React.useCallback(
+    async input => {
+      const result = await updatePrivacyInBrowser(input);
+      if (result.data) {
+        await Promise.all([
+          invalidateSession(queryClient),
+          queryClient.invalidateQueries({ queryKey: PRESENCE_QUERY_ROOT }),
+        ]);
+      }
+
+      return result;
+    },
+    [queryClient],
+  );
+
   if (!session.user) return null;
 
   return (
@@ -139,6 +158,12 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
       onTimeZoneUpdate={onTimeZoneUpdate}
       onUpdate={onUpdate}
       personalFields={policy.fields}
+      privacy={
+        <PrivacySettings
+          hideOnlineStatus={session.user.hideOnlineStatus}
+          onUpdate={onPrivacyUpdate}
+        />
+      }
       user={{
         ...profile,
         headline: session.user.headline,
