@@ -2,7 +2,6 @@
   "site": {
     "home": {
       "hero": {
-        "canary": "VitNode 2.0 is an early canary",
         "description": "Publish content, bring members together and build the features your community needs on an open-source platform you control.",
         "explore": "Explore what you can build",
         "see_product": "See the product",

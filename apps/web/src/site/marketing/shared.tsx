@@ -1,7 +1,7 @@
 import { createLink, Link } from '@tanstack/react-router'
 import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { cn } from 'cn'
-import { ArrowRight, Bird } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 import { REPOSITORY_URL } from './links'
 
@@ -207,10 +207,6 @@ export const CanaryNotice = () => (
       'flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6',
     )}
   >
-    <span className="bg-primary/10 text-primary flex size-12 shrink-0 items-center justify-center rounded-2xl">
-      <Bird aria-hidden className="size-6" />
-    </span>
-
     <div className="flex flex-1 flex-col gap-1">
       <p className="text-lg font-semibold tracking-tight">
         Very early. Very canary. Still a bit fluffy.

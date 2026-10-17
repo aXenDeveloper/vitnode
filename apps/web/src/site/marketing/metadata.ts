@@ -98,7 +98,7 @@ const structuredData = (page: MarketingPageMeta, url: string) => ({
             itemOffered: { '@id': softwareNode['@id'] },
             price: '0',
             priceCurrency: 'USD',
-            url: `${url}#pricing`,
+            url,
           },
         ]
       : []),

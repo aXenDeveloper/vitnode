@@ -3,6 +3,7 @@ import type { Plugin } from "vite";
 import type { VitNodeEnvOptions } from "./env";
 import type { VitNodePluginRoutesOptions } from "./plugin-routes";
 
+import { vitNodeDevError } from "./dev-error";
 import { vitNodeEnv } from "./env";
 import { vitNodeOptimizeDeps } from "./optimize-deps";
 import { vitNodePluginRoutes } from "./plugin-routes";
@@ -22,4 +23,5 @@ export const vitnode = ({
   vitNodeSsrExternals({ appRoot }),
   vitNodeTailwindSources({ appRoot }),
   vitNodePluginRoutes({ appRoot, hostRoutesDir }),
+  vitNodeDevError(),
 ];
