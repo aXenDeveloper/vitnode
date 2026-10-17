@@ -45,7 +45,13 @@ The AdminCP and search always show `name`, because staff need the name the accou
 
 With `users.personalInformation.headline` set to `false` (see [below](#turn-fields-off-for-the-whole-install)), the route returns `headline: null` for everyone, so turning the field off removes it from public profiles without touching what members wrote.
 
+Next to the username the header shows the member's online status - **Online now**, **Last seen 5 minutes ago** or **Activity hidden**. It is fetched in the browser on its own, so the profile itself stays cacheable; [User Presence](/docs/dev/working-with-users/presence) covers how it works.
+
 The **Edit profile** button is the header's action slot and shows only on the account's own profile. A host that renders `ProfileContent` itself can pass any `action`: a follow button, a message link, or nothing.
+
+## Browse anonymously
+
+The **Privacy** group on **Settings → Overview** holds **Browse anonymously**. Turned on, other members see **Activity hidden** instead of the member's online status and last activity, while staff with `users:can_view_hidden_presence` still see it. See [User Presence](/docs/dev/working-with-users/presence#browse-anonymously).
 
 ## Who may edit
 

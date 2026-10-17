@@ -105,7 +105,7 @@ which core never emits, fires **after** the write it describes has committed.
 | Event                          | Payload                                   | Fires when                                                                                                               |
 | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `user.created`                 | `{ userId, email, name, emailVerified }`  | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                                                |
-| `user.updated`                 | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile or time zone in **Settings → Overview**             |
+| `user.updated`                 | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile, time zone or **Browse anonymously** in **Settings → Overview** |
 | `user.deleted`                 | `{ userId, email }`                       | Never - the name is declared for plugins, core has no deletion flow                                                      |
 | `user.email.verified`          | `{ userId, email }`                       | An address is [confirmed](/docs/dev/working-with-users/email-verification) - by its link, a completed reset, or by staff  |
 | `user.password.updated`        | `{ userId }`                              | A password is set - by a member completing a reset, or by staff on the AdminCP user page                                 |
@@ -166,7 +166,8 @@ task under that plugin rather than under core.
 
 Emitted by the AdminCP user `PATCH` after it commits - profile fields (email,
 name, name code) and/or role assignments - and when a member saves their own
-profile fields or time zone. The payload carries the user's **current** values.
+profile fields, time zone or **Browse anonymously** setting. The payload carries
+the user's **current** values.
 
 <TypeTable
   type={{

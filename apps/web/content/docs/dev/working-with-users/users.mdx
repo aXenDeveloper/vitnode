@@ -114,6 +114,8 @@ Users live in the `core_users` table. These are the fields `c.get("user")` and t
 | `language`      | `varchar(32)`  | Preferred UI locale (defaults to `en`)                 |
 | `timeZone`      | `varchar(64)`  | IANA time zone (nullable)                              |
 | `createdAt`     | `timestamp`    | When the account was created                           |
+| `lastSeenAt`    | `timestamp`    | Last activity, set by the [presence](/docs/dev/working-with-users/presence) heartbeat (nullable) |
+| `hideOnlineStatus` | `boolean`  | **Browse anonymously** - hide presence from other members |
 
 Every user payload the API hands out (the session, the public profile, the AdminCP list and detail, search hit authors) carries the two images as URLs, `avatarUrl` and `coverUrl`, instead of the file ids. Both are `null` until someone uploads an image. The `Avatar` component then draws a letter avatar from the first character of `nameCode`, never of the displayed name, so a member who switches to showing their real name keeps the same face everywhere.
 

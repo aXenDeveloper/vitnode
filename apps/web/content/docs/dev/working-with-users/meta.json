@@ -10,6 +10,8 @@
     "email-verification",
     "roles",
     "staff-permissions",
+    "presence",
+    "presence-in-plugins",
     "..."
   ]
 }
