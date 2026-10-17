@@ -105,7 +105,7 @@ export interface StorageApiPlugin {
   getUrl: (key: string) => string;
   /**
    * Reads an object's bytes, or `null` when missing. Optional: without it,
-   * reads fetch {@link getUrl}.
+   * reads fetch `getUrl`.
    */
   read?: (
     key: string,
@@ -401,7 +401,7 @@ export class StorageModel {
 
   /**
    * Deletes the stored object only, leaving any `core_files` row. To remove an
-   * uploaded file, use {@link deleteFile}.
+   * uploaded file, use {@link StorageModel.deleteFile}.
    */
   async delete(key: string): Promise<void> {
     await this.requireProvider().delete(key);

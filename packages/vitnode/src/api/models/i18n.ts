@@ -22,7 +22,7 @@ export class I18nModel {
 
   protected readonly c: Context;
 
-  /** The merged messages of core, every plugin and the app for a locale (see {@link resolveLocale}). */
+  /** The merged messages of core, every plugin and the app for a locale (see {@link I18nModel.resolveLocale}). */
   async getMessages(locale?: string): Promise<Messages> {
     const core = this.c.get("core");
 
@@ -34,12 +34,13 @@ export class I18nModel {
   }
 
   /**
-   * A `use-intl` translator for a locale (see {@link resolveLocale}).
+   * A `use-intl` translator for a locale (see {@link I18nModel.resolveLocale}).
    *
    * @example
    * ```ts
-   * const t = await c.get("i18n").getTranslator(user.language);
-   * const subject = t("@vitnode/blog.emails.new_comment.subject");
+   * const i18n = c.get("i18n");
+   * // The recipient's language, not the request's.
+   * const t = await i18n.getTranslator(i18n.resolveSupportedLocale(recipient.language));
    * ```
    */
   async getTranslator(locale?: string): Promise<Translator> {

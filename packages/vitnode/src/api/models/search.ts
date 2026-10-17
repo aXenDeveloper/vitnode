@@ -708,7 +708,7 @@ export class SearchModel {
     });
   }
 
-  /** {@link index} for many documents at once. */
+  /** {@link SearchModel.index} for many documents at once. */
   async bulkIndex(docs: SearchDocument[]): Promise<void> {
     const clean = docs.map(doc =>
       this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),

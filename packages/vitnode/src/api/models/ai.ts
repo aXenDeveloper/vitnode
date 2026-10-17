@@ -91,9 +91,9 @@ const toModelId = (model: string | { modelId: string }): string =>
 /**
  * The installation's AI registry, read in a route as `c.get("ai")`.
  *
- * Two ways to use it: resolve a model with {@link model} and call the Vercel
- * AI SDK yourself, or run a registered AI action with {@link run} or
- * {@link stream}, which also checks the action's permissions, enforces budgets
+ * Two ways to use it: resolve a model with {@link AIModel.model} and call the Vercel
+ * AI SDK yourself, or run a registered AI action with {@link AIModel.run} or
+ * {@link AIModel.stream}, which also checks the action's permissions, enforces budgets
  * and records usage.
  *
  * Model lookups throw `HTTPException(500)` when no model (or no model with
@@ -264,7 +264,7 @@ export class AIModel {
     return await this.runner().run(request);
   }
   /**
-   * {@link run} without a user, for jobs and other background work. Only for
+   * {@link AIModel.run} without a user, for jobs and other background work. Only for
    * actions whose `actors` include `system`; usage is recorded against no user.
    */
   async runAsSystem<Input, Output>(
@@ -276,7 +276,7 @@ export class AIModel {
   }
 
   /**
-   * {@link run}, streaming the text as it arrives. Only for actions with text
+   * {@link AIModel.run}, streaming the text as it arrives. Only for actions with text
    * output; `result` settles once the stream ends.
    */
   async stream<Input, Output>(

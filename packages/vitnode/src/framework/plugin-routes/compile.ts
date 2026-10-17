@@ -12,10 +12,13 @@ import { generatePluginRoutesSource } from "./generate.js";
 import { assertNoHostRouteCollision } from "./host-routes.js";
 import { assertLocaleRoutePaths } from "./locale-route-paths.js";
 
+/** One configured plugin, as the route compiler reads it. */
 export interface PluginRouteCompilerSource {
   pluginId: string;
+  /** The plugin's `routes` declaration, as `buildPlugin` received it. */
   routes?: unknown;
 
+  /** The import specifier of the plugin's routes module, written into the generated file. */
   routesSpecifier?: string;
 }
 
@@ -31,12 +34,24 @@ export interface CompiledPluginRoutes {
 }
 
 export interface CompilePluginRoutesOptions {
+  /** Plugins' public content URLs, each of which must be served by a page. */
   contentUrls?: readonly ContentUrlSource[];
+  /** The app's own routes, which plugin routes must not collide with. */
   hostRoutes?: readonly HostRoutePath[];
+  /** The app's `i18n` config, to validate translated route paths against. */
   i18n?: LocaleRoutePathsConfig;
   sources: readonly PluginRouteCompilerSource[];
 }
 
+/**
+ * Compiles every configured plugin's routes into one manifest and the source
+ * of the app's `src/plugin-routes.gen.ts`. Build tooling: the VitNode Vite
+ * plugin and CLI call it; apps and plugins do not.
+ *
+ * @throws When a plugin's routes are invalid or collide with each other or the
+ * app's routes, when translated route paths are invalid, or when a public
+ * content URL has no page. Errors name the plugin's routes module.
+ */
 export const compilePluginRoutes = ({
   contentUrls = [],
   hostRoutes = [],

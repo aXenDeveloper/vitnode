@@ -167,7 +167,7 @@ export class CacheModel {
     return this.readKey<T>(this.key(key));
   }
 
-  /** {@link get} in the framework system namespace, shared by every plugin. */
+  /** {@link CacheModel.get} in the framework system namespace, shared by every plugin. */
   async getSystem<T>(key: string): Promise<null | T> {
     return this.readKey<T>(this.systemKey(key));
   }
@@ -216,7 +216,7 @@ export class CacheModel {
     await this.writeKey(this.key(key), value, ttlSeconds);
   }
 
-  /** {@link set} in the framework system namespace, shared by every plugin. */
+  /** {@link CacheModel.set} in the framework system namespace, shared by every plugin. */
   async setSystem<T>(
     key: string,
     value: T,

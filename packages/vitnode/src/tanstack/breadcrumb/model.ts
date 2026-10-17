@@ -6,6 +6,7 @@ declare module "@tanstack/react-router" {
   }
 }
 
+/** What a breadcrumb component receives: its route match's data. */
 export interface RouteBreadcrumbProps {
   loaderData: unknown;
   params: Readonly<Record<string, string>>;
@@ -14,25 +15,52 @@ export interface RouteBreadcrumbProps {
   search: unknown;
 }
 
+/** A crumb component that renders several `<BreadcrumbItem>`s itself. Create it with {@link breadcrumbGroup}. */
 export interface RouteBreadcrumbGroup {
   group: React.ComponentType<RouteBreadcrumbProps>;
 }
 
+/**
+ * What a route declares as `staticData.breadcrumb`: a node (`<span>Docs</span>`),
+ * a component reading the match (`({ loaderData }) => ...`), a group, or `false`
+ * for no crumb.
+ */
 export type RouteBreadcrumbDeclaration =
   | false
   | React.ComponentType<RouteBreadcrumbProps>
   | React.ReactNode
   | RouteBreadcrumbGroup;
 
+/** A crumb only known later (e.g. registered by a lazily loaded module). Create it with {@link breadcrumbDeferred}. */
 export interface RouteBreadcrumbDeferred {
   resolve: () => RouteBreadcrumbDeclaration | undefined;
   subscribe: (listener: () => void) => () => void;
 }
 
+/**
+ * A route's breadcrumb, set as `staticData.breadcrumb` in its route options.
+ * Each matched route that declares one contributes a crumb linking to its own
+ * URL; the last one is the current page. A crumb that renders strings needs
+ * its own `RouteMessages`.
+ *
+ * @example
+ * ```tsx
+ * export const Route = createFileRoute("/_main/solutions/")({
+ *   staticData: {
+ *     breadcrumb: (
+ *       <RouteMessages namespaces={["core.global", "app.solutions"]}>
+ *         <SolutionsCrumb />
+ *       </RouteMessages>
+ *     ),
+ *   },
+ * });
+ * ```
+ */
 export type RouteBreadcrumb =
   | RouteBreadcrumbDeclaration
   | RouteBreadcrumbDeferred;
 
+/** Declares a crumb resolved later; the trail re-renders when `subscribe` reports a change. */
 export const breadcrumbDeferred = (
   resolve: RouteBreadcrumbDeferred["resolve"],
   subscribe: RouteBreadcrumbDeferred["subscribe"],
@@ -87,6 +115,7 @@ const propsFor = (match: BreadcrumbMatch): RouteBreadcrumbProps => ({
   search: match.search,
 });
 
+/** The trail for a list of route matches, outermost first - the pure half of {@link useBreadcrumbTrail}. */
 export const breadcrumbTrail = (
   matches: readonly BreadcrumbMatch[],
 ): BreadcrumbTrailEntry[] => {
@@ -157,6 +186,7 @@ const deferredCrumbs = (
 const resolutionOf = (deferred: readonly RouteBreadcrumbDeferred[]): string =>
   deferred.map(entry => (entry.resolve() === undefined ? "-" : "+")).join("");
 
+/** The breadcrumb trail of the current matches, kept in sync with deferred crumbs. */
 export const useBreadcrumbTrail = (
   matches: readonly BreadcrumbMatch[],
 ): BreadcrumbTrailEntry[] => {
