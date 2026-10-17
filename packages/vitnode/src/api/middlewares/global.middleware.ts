@@ -100,8 +100,9 @@ export interface EnvVitNode extends Env {
 }
 
 /**
- * What a route handler reads with `c.get(...)`. The global middleware sets all
- * of them on every API request, before any plugin route runs; they are also
+ * What a route handler reads with `c.get(...)`. All are set before the route
+ * runs: the global middleware sets most of them, `buildRoute` sets `plugin`,
+ * and the admin middleware fills `admin` on `/admin/` paths. They are also
  * typed on Hono's own `Context` through `ContextVariableMap`.
  *
  * The models (`ai`, `cache`, `email`, ...) are per-request objects bound to the
@@ -236,8 +237,9 @@ export interface EnvVariablesVitNode {
   /** Server-side translations, for output with no UI such as emails: see {@link I18nModel}. */
   i18n: I18nModel;
   /**
-   * The client's IP: from a signed forwarded header (server-side fetcher calls)
-   * or the trusted proxy hops, else `127.0.0.1` when unknown.
+   * The client's IP: from a signed forwarded header (server-side fetcher
+   * calls), else the socket address (or the `x-forwarded-for` hop behind
+   * `VITNODE_TRUSTED_PROXY_HOPS` proxies), else `127.0.0.1`.
    */
   ipAddress: string;
   /**
@@ -288,7 +290,7 @@ export interface EnvVariablesVitNode {
 
 /**
  * Validates every registration once, then sets the {@link EnvVariablesVitNode}
- * variables on each request. Mounted by `buildApiConfig`; plugins never call it.
+ * variables on each request. Mounted by `VitNodeAPI`; plugins never call it.
  *
  * @throws At startup, when the plugins' registrations are invalid or collide
  * (content types, containers, editable pages, AI actions, search indexers,
@@ -654,7 +656,7 @@ export const globalMiddleware = ({
 };
 
 /**
- * Requires a valid admin session and sets `admin`. `buildApiConfig` runs it for
+ * Requires a valid admin session and sets `admin`. `VitNodeAPI` runs it for
  * every path containing `/admin/`; a passive request (`?passive=true`) reads
  * the session without extending it.
  *

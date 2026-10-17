@@ -31,12 +31,21 @@ import { pageWidgetsRegistry } from "./registry";
  *
  * @example
  * ```tsx
+ * import { defineEditablePage } from "@vitnode/core/content/editor";
  * import { PageWidgets, PageWidgetsZone } from "@vitnode/core/tanstack/widgets";
  *
- * <PageWidgets page={blogHomePage}>
- *   <PageWidgetsZone id="sidebar" />
- *   <PostList />
- * </PageWidgets>;
+ * // Placeholder names: register the same definition on the API.
+ * export const examplePage = defineEditablePage({
+ *   id: "@acme/example:home",
+ *   permission: { module: "widgets", permission: "can_edit" },
+ *   zones: { sidebar: { max: 10 } },
+ * });
+ *
+ * export const ExampleHome = () => (
+ *   <PageWidgets page={examplePage}>
+ *     <PageWidgetsZone id="sidebar" />
+ *   </PageWidgets>
+ * );
  * ```
  */
 export const PageWidgets = ({

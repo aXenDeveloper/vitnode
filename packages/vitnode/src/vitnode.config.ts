@@ -173,8 +173,10 @@ export interface VitNodeApiConfig {
    */
   contentModules?: Readonly<Record<string, unknown>>;
   /**
-   * Runs scheduled jobs on an external scheduler (e.g. `@vitnode/node-cron`).
-   * Its `schedule()` is called once at startup.
+   * Runs the registered cron jobs on an in-process scheduler (e.g.
+   * `@vitnode/node-cron`, ticking every minute). Its `schedule()` is called
+   * once at startup; without it, jobs run only when the cron endpoint is
+   * called externally.
    */
   cron?: CronAdapter;
   /** The Drizzle database, available to routes as `c.get("db")`. */
@@ -246,9 +248,10 @@ export interface VitNodeApiConfig {
   /** The installed plugins' API halves, each a plugin's `buildApiPlugin()` result. Core is added automatically. */
   plugins: BuildPluginApiReturn[];
   /**
-   * Request limits per category (`safety`, `read`, `write`, `auth`,
-   * `contentWrite`), counted per signed-in user (`perUser`, default `true`)
-   * or per IP. Stored in Redis when `redis` is set, in memory otherwise.
+   * Request limits per category. `safety` and `auth` are always counted per
+   * IP; `read`, `write` and `contentWrite` are counted per signed-in user when
+   * `perUser` is on (the default), else per IP. Stored in Redis when `redis`
+   * is set, in memory otherwise.
    */
   rateLimiter?: RateLimiterConfig;
 
@@ -394,11 +397,15 @@ export const getVitNodeConfig = (): VitNodeConfig => {
  * ```ts
  * // src/vitnode.api.config.ts
  * import { blogApiPlugin } from "@vitnode/blog/config.api";
+ * import { coreRelations } from "@vitnode/core/database/relations";
  * import { buildApiConfig } from "@vitnode/core/vitnode.config";
  * import { drizzle } from "drizzle-orm/postgres-js";
  *
  * export const vitNodeApiConfig = buildApiConfig({
- *   dbProvider: drizzle(process.env.POSTGRES_URL ?? ""),
+ *   dbProvider: drizzle({
+ *     connection: process.env.POSTGRES_URL ?? "",
+ *     relations: coreRelations,
+ *   }),
  *   metadata: { title: "My community" },
  *   plugins: [blogApiPlugin()],
  * });

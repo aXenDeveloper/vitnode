@@ -431,7 +431,7 @@ export interface StartServerEntry {
  * Wraps the TanStack Start server entry with VitNode's shared HTML page cache
  * (see `createPageCacheHandler` for which requests are cached and when a
  * render is stored). Only routes with a policy in `routes` - e.g. a plugin
- * `page()`'s `cache` option - are cached, only in production, and not when
+ * `page()`'s `cache` option - are cached, only outside development, and not when
  * `pageCache.enabled` is `false`. Server-only.
  *
  * The host app's `src/server.ts`:

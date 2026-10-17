@@ -45,7 +45,7 @@ const PROCESSABLE_IMAGE_MIME_TYPES = new Set([
 export interface StorageUploadArgs {
   body: Buffer;
   contentType?: string;
-  /** The full object key, e.g. `2026/07/avatars/photo-1a2b.webp`, already unique. */
+  /** The full object key, e.g. `2026/07/avatars/{uuid}.webp`, already unique. */
   key: string;
 }
 

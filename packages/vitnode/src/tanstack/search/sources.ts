@@ -37,13 +37,13 @@ export interface SearchSource {
   icon: LucideIcon;
   /** Unique across sources; part of the query key. */
   id: string;
-  /** The translation key of the group heading, from `namespace`. */
+  /** The full message key of the group heading (e.g. `site.search.docs`), which must live in `namespace`. */
   labelKey: string;
   /** The message namespace the dialog loads for `labelKey`. */
   namespace: string;
   /**
    * Returns results for a term. Runs in the browser while the dialog suggests
-   * (cached for a minute per locale and term, never retried); a rejection
+   * (fresh for a minute per locale and term, never retried); a rejection
    * leaves the group empty.
    */
   search: (query: SearchSourceQuery) => Promise<SearchSourceItem[]>;

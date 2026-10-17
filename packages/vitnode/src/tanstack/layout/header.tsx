@@ -146,8 +146,9 @@ const loadNavigationMessages = async ({
 /**
  * The main layout route's loader: warms the header's navigation messages, the
  * deployment configuration and the session so the shell renders without
- * waterfalls. During a shared (prerendered or page-cached) render it skips the
- * per-visitor data and loads only the messages.
+ * waterfalls. During a shared (prerendered or page-cached) render it loads only
+ * the navigation messages: it skips the session and puts a deferred placeholder
+ * in place of the deployment configuration.
  *
  * @example
  * ```ts

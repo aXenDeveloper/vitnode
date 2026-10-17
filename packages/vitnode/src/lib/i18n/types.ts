@@ -51,7 +51,7 @@ export interface LocaleConfig {
 
 /** A host that serves its own locales, e.g. `https://vitnode.pl` for Polish. */
 export interface LocaleDomainConfig<TLocale extends string = string> {
-  /** The locale this host serves without a prefix. */
+  /** The host's default locale, unprefixed under `localePrefix: "as-needed"`. */
   defaultLocale: TLocale;
   /** Every locale the host serves. Defaults to `[defaultLocale]`. */
   locales?: TLocale[];

@@ -21,8 +21,9 @@ const browserOrigin = (): string | undefined => {
 /**
  * Deployment settings read from environment variables. Each getter reads
  * `process.env` on every access, so values set after import still apply.
- * Universal: in the browser only `VITNODE_API_URL` and `VITNODE_WEB_URL` are
- * defined (by the VitNode Vite plugin).
+ * Universal: in the browser only `VITNODE_API_URL`, `VITNODE_WEB_URL` and any
+ * `clientEnv` keys (defined by the VitNode Vite plugin), plus `NODE_ENV`
+ * (replaced by Vite), are defined.
  */
 export const CONFIG = {
   /**

@@ -24,7 +24,7 @@ const hrefDestination = (href: string, parseSearch: SearchParser) => {
 export interface HrefLinkProps extends Omit<React.ComponentProps<"a">, "href"> {
   /**
    * When the link counts as active (`data-status="active"`). Defaults to an
-   * exact match of path and hash. Ignored for external links.
+   * exact match of path, search and hash. Ignored for external links.
    */
   activeOptions?: ActiveOptions;
   /**

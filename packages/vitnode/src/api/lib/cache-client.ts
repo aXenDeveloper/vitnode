@@ -6,7 +6,7 @@ import type { CacheClient, CacheConfig } from "./cache";
  * Creates the Redis client the cache, rate limiter and WebSocket pub/sub share,
  * or `null` without a config. Connects in the background and keeps retrying;
  * until it is ready, commands fail fast and callers treat Redis as absent.
- * Called by `buildApiConfig` from its `redis` option.
+ * Called once by `VitNodeAPI` with the API config's `redis` option.
  */
 export const createCacheClient = (config?: CacheConfig): CacheClient | null => {
   if (!config) return null;

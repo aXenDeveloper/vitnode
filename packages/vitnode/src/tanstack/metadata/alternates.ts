@@ -75,7 +75,8 @@ const absoluteHref = (
  * The canonical link and `hreflang` alternates of a page that exists in several
  * locales, as absolute URLs with each locale's prefix or domain applied: a
  * `canonical` for `locale` (the default locale's URL when `locale` has none),
- * one `alternate` per locale, and `x-default` pointing at the default locale.
+ * one `alternate` per locale, and `x-default` pointing at the default locale
+ * when it is one of them.
  *
  * Unsupported locales and paths that are not internal (`/...`) are skipped;
  * returns `[]` when nothing is left. Universal.

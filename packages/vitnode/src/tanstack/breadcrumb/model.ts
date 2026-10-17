@@ -45,14 +45,17 @@ export interface RouteBreadcrumbDeferred {
  *
  * @example
  * ```tsx
+ * // src/site/solutions/breadcrumb.tsx
+ * export const SolutionsBreadcrumb = () => (
+ *   <RouteMessages>
+ *     <span>Solutions</span>
+ *   </RouteMessages>
+ * );
+ *
+ * // src/routes/_main/solutions/index.tsx
  * export const Route = createFileRoute("/_main/solutions/")({
- *   staticData: {
- *     breadcrumb: (
- *       <RouteMessages namespaces={["core.global", "app.solutions"]}>
- *         <SolutionsCrumb />
- *       </RouteMessages>
- *     ),
- *   },
+ *   staticData: { breadcrumb: <SolutionsBreadcrumb /> },
+ *   component: SolutionsIndexPage,
  * });
  * ```
  */
@@ -60,7 +63,11 @@ export type RouteBreadcrumb =
   | RouteBreadcrumbDeclaration
   | RouteBreadcrumbDeferred;
 
-/** Declares a crumb resolved later; the trail re-renders when `subscribe` reports a change. */
+/**
+ * Declares a crumb resolved later. The trail re-renders when `subscribe`
+ * reports that `resolve` started (or stopped) returning a crumb - not when an
+ * already resolved crumb changes.
+ */
 export const breadcrumbDeferred = (
   resolve: RouteBreadcrumbDeferred["resolve"],
   subscribe: RouteBreadcrumbDeferred["subscribe"],

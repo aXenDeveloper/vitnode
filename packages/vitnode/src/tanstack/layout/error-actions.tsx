@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 
-/** "Go back" and "Back home" buttons for the `actions` slot of the error pages. */
+/** "Go back" and "Back to home" buttons for the `actions` slot of the error pages. */
 export const ErrorActions = () => {
   const router = useRouter();
   const t = useTranslations("core.global");

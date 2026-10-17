@@ -10,7 +10,7 @@ import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 
-/** The deployment's public configuration: enabled sign-in methods, SSO providers, email and AI availability. */
+/** The deployment's public configuration: enabled sign-in methods, SSO providers, email and AI availability, and the captcha provider. */
 export type MiddlewareConfig = z.infer<typeof routeMiddlewareSchema>;
 
 export interface MiddlewareConfigState extends MiddlewareConfig {
