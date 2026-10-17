@@ -296,6 +296,32 @@ describe("fetchUpdateSource", () => {
     ).rejects.toMatchObject({ reason: "timeout" });
   });
 
+  it("gives the caller's own reason back when the caller cancels, not a publisher failure", async () => {
+    const cancel = new AbortController();
+    const reason = new Error("lease lost");
+    const transport: UpdateSourceTransport = async (_, { signal }) =>
+      await new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          reject(new Error("aborted"));
+        });
+        cancel.abort(reason);
+      });
+
+    await expect(
+      fetchWith(URL_OK, transport, { signal: cancel.signal }),
+    ).rejects.toBe(reason);
+  });
+
+  it("never contacts a publisher for a check already cancelled", async () => {
+    const { requests, transport } = scripted(json(MANIFEST));
+    const reason = new Error("lease lost");
+
+    await expect(
+      fetchWith(URL_OK, transport, { signal: AbortSignal.abort(reason) }),
+    ).rejects.toBe(reason);
+    expect(requests).toEqual([]);
+  });
+
   it.each([
     [
       "a connection the connect-time lookup blocked",

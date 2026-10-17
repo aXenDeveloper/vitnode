@@ -1,17 +1,19 @@
 import type { drizzle } from "drizzle-orm/postgres-js";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { UpdateChannel, UpdateManifest } from "@/lib/updates/manifest";
 
 import { createMemoryDb } from "@/tests/memory-db";
 
 import type { UpdateComponent } from "./components";
+import type { UpdateEvaluation } from "./evaluate";
+import type { ComponentUpdateState, UpdatesOverview } from "./status";
 
 import { checkForUpdates } from "./check";
 import { UpdateSourceError } from "./fetch-source";
-import { acquireUpdateCheckLease } from "./lock";
-import { loadUpdatesOverview } from "./status";
+import { acquireUpdateCheckLease, releaseUpdateCheckLease } from "./lock";
+import { loadUpdatesOverview, summarizeUpdates } from "./status";
 
 type Db = ReturnType<typeof drizzle>;
 
@@ -46,14 +48,29 @@ const blog = (overrides: Partial<UpdateComponent> = {}): UpdateComponent => ({
   ...overrides,
 });
 
+const OWNER = "check";
+
+/** Runs one check the way the locked run does: under the lease, then gives it back. */
+const leased = async (
+  db: Db,
+  options: Omit<Parameters<typeof checkForUpdates>[0], "db" | "lease">,
+) => {
+  await acquireUpdateCheckLease(db, { manual: false, owner: OWNER });
+  await checkForUpdates({
+    ...options,
+    db,
+    lease: { owner: OWNER, signal: new AbortController().signal },
+  });
+  await releaseUpdateCheckLease(db, OWNER);
+};
+
 /** A database holding one successful check of `blog()` on core 2.0.0. */
 const checked = async () => {
   const db = createMemoryDb().db as unknown as Db;
-  await checkForUpdates({
+  await leased(db, {
     channelOverride: null,
     components: [blog()],
     coreVersion: "2.0.0",
-    db,
     fetchSource: async () =>
       await Promise.resolve({
         body: MANIFEST,
@@ -87,10 +104,13 @@ const overview = async (
     coreVersion,
     db,
     enabled,
-    now: T2,
   });
 
 describe("loadUpdatesOverview", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows the stored result while nothing changed", async () => {
     const db = await checked();
 
@@ -163,11 +183,10 @@ describe("loadUpdatesOverview", () => {
 
   it("keeps the previous result next to a failed check", async () => {
     const db = await checked();
-    await checkForUpdates({
+    await leased(db, {
       channelOverride: null,
       components: [blog()],
       coreVersion: "2.0.0",
-      db,
       fetchSource: async () =>
         await Promise.reject(new UpdateSourceError("timeout")),
       now: T2,
@@ -214,11 +233,160 @@ describe("loadUpdatesOverview", () => {
 
   it("reports a running check and the last manual one", async () => {
     const db = await checked();
-    await acquireUpdateCheckLease(db, { manual: true, now: T2, owner: "a" });
+    vi.useFakeTimers({ now: T2, toFake: ["Date"] });
+    await acquireUpdateCheckLease(db, { manual: true, owner: "a" });
 
     await expect(overview(db)).resolves.toMatchObject({
       lastManualAt: T2,
       running: true,
+    });
+  });
+});
+
+describe("summarizeUpdates", () => {
+  const advisory = (id: string) => ({
+    affected: "<9.0.0",
+    fixed: "9.0.0",
+    id,
+    url: `https://example.com/advisories/${id}`,
+    versions: ["1.0.0"],
+  });
+
+  const evaluation = (
+    status: UpdateEvaluation["status"],
+    securityUpdates: UpdateEvaluation["securityUpdates"] = [],
+    latest: null | string = status === "update_available" ? "9.0.0" : null,
+  ): UpdateEvaluation => ({
+    alternative: null,
+    channel: "stable",
+    compatibility: null,
+    latest:
+      latest === null
+        ? null
+        : { publishedAt: null, requiresCore: null, url: null, version: latest },
+    securityUpdates,
+    status,
+  });
+
+  const state = (
+    id: string,
+    overrides: Partial<ComponentUpdateState> = {},
+  ): ComponentUpdateState => ({
+    id,
+    lastAttemptAt: T1,
+    lastError: null,
+    lastSuccessAt: T1,
+    result: evaluation("up_to_date"),
+    sourceUrl: ACME,
+    stale: false,
+    state: "checked",
+    ...overrides,
+  });
+
+  const summarize = (
+    components: ComponentUpdateState[],
+    overrides: Partial<UpdatesOverview> = {},
+  ) =>
+    summarizeUpdates({
+      channelOverride: null,
+      components,
+      enabled: true,
+      lastManualAt: null,
+      running: false,
+      ...overrides,
+    });
+
+  it("counts each component once, whatever it has to report", () => {
+    const summary = summarize([
+      state("@vitnode/core", {
+        result: evaluation("update_available", [advisory("CORE-1")], "2.1.0"),
+      }),
+      state("@acme/blog", {
+        result: evaluation("update_available", [
+          advisory("ACME-1"),
+          advisory("ACME-2"),
+        ]),
+      }),
+      state("@acme/forum", { result: evaluation("update_available") }),
+      state("@acme/wiki"),
+    ]);
+
+    expect(summary).toMatchObject({
+      affectedComponents: 2,
+      checkedComponents: 4,
+      core: { latestVersion: "2.1.0", state: "checked" },
+      pluginUpdatesAvailable: 2,
+      totalComponents: 4,
+      unconfirmedComponents: 0,
+      updatesAvailable: 3,
+    });
+  });
+
+  it("tells a stale, failed or never checked component from a confirmed one", () => {
+    const summary = summarize([
+      state("@vitnode/core", { lastAttemptAt: T2 }),
+      state("@acme/blog", {
+        lastAttemptAt: T2,
+        lastError: { code: "timeout", detail: null },
+        result: evaluation("update_available", [advisory("ACME-1")]),
+      }),
+      state("@acme/forum", { stale: true }),
+      state("@acme/wiki", {
+        lastAttemptAt: null,
+        lastSuccessAt: null,
+        result: null,
+        state: "not_checked",
+      }),
+      state("@acme/local", {
+        lastAttemptAt: null,
+        lastSuccessAt: null,
+        result: null,
+        sourceUrl: null,
+        state: "unavailable",
+      }),
+      state("@acme/odd", { result: evaluation("version_unknown") }),
+    ]);
+
+    expect(summary).toMatchObject({
+      // A failed check keeps its earlier finding.
+      affectedComponents: 1,
+      checkedComponents: 4,
+      core: { latestVersion: null },
+      failedComponents: 1,
+      lastAttemptAt: T2,
+      notCheckedComponents: 1,
+      oldestSuccessAt: null,
+      stale: true,
+      unconfirmedComponents: 3,
+    });
+  });
+
+  it("dates the summary by the oldest success once every checkable component has one", () => {
+    const summary = summarize([
+      state("@vitnode/core", { lastSuccessAt: T2 }),
+      state("@acme/blog", { lastSuccessAt: T1 }),
+      state("@acme/local", {
+        lastSuccessAt: null,
+        result: null,
+        state: "unavailable",
+      }),
+    ]);
+
+    expect(summary.oldestSuccessAt).toEqual(T1);
+  });
+
+  it("reports checks turned off and a check in progress as they are", () => {
+    expect(
+      summarize(
+        [state("@vitnode/core", { result: null, state: "unavailable" })],
+        { enabled: false, running: true },
+      ),
+    ).toMatchObject({
+      checkedComponents: 0,
+      core: { latestVersion: null, state: "unavailable" },
+      enabled: false,
+      running: true,
+      updatesAvailable: 0,
     });
   });
 });

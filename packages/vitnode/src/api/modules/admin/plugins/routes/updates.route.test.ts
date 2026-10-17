@@ -8,6 +8,10 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { UpdateComponent } from "@/api/lib/updates/components";
 
 import { checkForUpdates } from "@/api/lib/updates/check";
+import {
+  acquireUpdateCheckLease,
+  releaseUpdateCheckLease,
+} from "@/api/lib/updates/lock";
 import { createTestCache } from "@/tests/cache";
 import { createMemoryDb } from "@/tests/memory-db";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
@@ -41,6 +45,7 @@ const requestAs = async (permissions: PermissionsStaffArgs[]) => {
   const cache = createTestCache();
   await grantStaffPermissions(cache, { permissions, userId: ADMIN.id });
   const db = createMemoryDb().db as unknown as Db;
+  await acquireUpdateCheckLease(db, { manual: false, owner: "cron" });
   await checkForUpdates({
     channelOverride: null,
     components: COMPONENTS,
@@ -61,8 +66,10 @@ const requestAs = async (permissions: PermissionsStaffArgs[]) => {
         kind: "fetched" as const,
         lastModified: null,
       }),
+    lease: { owner: "cron", signal: new AbortController().signal },
     now: CHECKED_AT,
   });
+  await releaseUpdateCheckLease(db, "cron");
 
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {

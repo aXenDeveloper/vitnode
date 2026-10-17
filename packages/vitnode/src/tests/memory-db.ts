@@ -527,7 +527,16 @@ const call = (
   }
   if (node.args === "*") return unsupported(`${node.name}(*)`);
   const args = node.args.map(argument => evaluate(argument, scope, group));
-  if (node.name === "now" && args.length === 0) return new Date();
+  if (
+    (node.name === "now" || node.name === "clock_timestamp") &&
+    args.length === 0
+  ) {
+    return new Date();
+  }
+  // Dates here are already absolute instants, so shifting them to UTC changes nothing.
+  if (node.name === "timezone" && args.length === 2) {
+    return args[1] instanceof Date ? args[1] : unsupported("timezone()");
+  }
   if (node.name === "lower") {
     return isMissing(args[0]) ? null : textOf(args[0]).toLowerCase();
   }

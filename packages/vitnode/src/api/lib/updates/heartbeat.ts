@@ -99,8 +99,18 @@ export const startUpdateCheckHeartbeat = ({
     stop: async () => {
       stopped = true;
       clearTimeout(beatTimer);
+      // A renewal on its way is waited for until the deadline gives up on it,
+      // so one that never answers cannot hang the caller. It never rejects, and
+      // after the release it could only come back `lost`.
+      if (!controller.signal.aborted) {
+        const aborted = new Promise<void>(resolve => {
+          controller.signal.addEventListener("abort", () => resolve(), {
+            once: true,
+          });
+        });
+        await Promise.race([pending, aborted]);
+      }
       clearTimeout(deadlineTimer);
-      await pending;
     },
   };
 };
