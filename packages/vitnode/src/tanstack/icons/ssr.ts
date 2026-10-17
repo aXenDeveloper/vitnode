@@ -41,6 +41,14 @@ const iconsRenderedBy = async (
     router.serverSsr.onCleanup(settle);
   });
 
+/**
+ * Makes icons rendered by name (dynamic Lucide icons, e.g. a plugin's or a
+ * search result's) appear in the server HTML and hydrate without a flash: the
+ * server records which icons a render used and sends them with the dehydrated
+ * router state, and the client seeds its registry from it. Call it once in
+ * `getRouter()`, after creating the router; it wraps the router's existing
+ * `dehydrate`/`hydrate`.
+ */
 export const setupLucideIconSsr = ({ router }: { router: AnyRouter }): void => {
   const collector = createLucideIconCollector();
 

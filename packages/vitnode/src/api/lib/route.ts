@@ -89,9 +89,9 @@ export interface BuildRouteOptions<
   R extends BuildRouteConfig<P>,
 > {
   /**
-   * Requires a signed-in admin with this staff permission; anyone else gets
-   * `403`. Every route under an `admin` module must set it: nothing else
-   * guards admin routes.
+   * Requires an admin with this staff permission; anyone else gets `403`.
+   * Paths containing `/admin/` already require an admin session, but this is
+   * the only per-permission check, so every admin route should set it.
    */
   adminStaffPermission?: AdminStaffPermission;
   /** The Hono handler, typed from `route`: `c.req.valid(...)` and `c.json(...)` follow its schemas. */

@@ -106,6 +106,7 @@ export const adminPermissionsOf = <TSession extends { permissions: unknown }>(
     ? (access.session.permissions as StaffPermissionSet)
     : EMPTY_STAFF_PERMISSION_SET;
 
+/** Whether an admin access state grants one permission. `plugin` defaults to `@vitnode/core`. */
 export const hasAdminPermission = <TSession extends { permissions: unknown }>(
   access: AdminAccess<TSession>,
   {

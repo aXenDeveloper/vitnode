@@ -62,14 +62,22 @@ const headerNavTranslator = (
   };
 };
 
+/**
+ * The site header: logo, the configured `navigation.header` links (labels
+ * translated from their message keys), search, notifications and the mobile
+ * bottom bar. Most apps render {@link MainHeader}, which adds the user menu.
+ */
 export const Header = ({
   firstSearchSourceId,
   leading,
   user,
   variant,
 }: {
+  /** The search source whose results the dialog lists first. */
   firstSearchSourceId?: string;
+  /** Rendered before the logo, e.g. a sidebar toggle. */
   leading?: React.ReactNode;
+  /** The signed-in user's menu slot. */
   user?: React.ReactNode;
   variant?: HeaderVariant;
 }) => {
@@ -135,6 +143,21 @@ const loadNavigationMessages = async ({
   });
 };
 
+/**
+ * The main layout route's loader: warms the header's navigation messages, the
+ * deployment configuration and the session so the shell renders without
+ * waterfalls. During a shared (prerendered or page-cached) render it skips the
+ * per-visitor data and loads only the messages.
+ *
+ * @example
+ * ```ts
+ * // src/routes/_main.tsx
+ * export const Route = createFileRoute("/_main")({
+ *   loader: async ({ context }) => await loadMainShell(context),
+ *   component: MainLayout,
+ * });
+ * ```
+ */
 export const loadMainShell = async (
   context: { locale: string; queryClient: QueryClient },
   {

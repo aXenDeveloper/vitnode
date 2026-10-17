@@ -64,6 +64,29 @@ interface CSRFOptions {
   origin?: IsAllowedOriginHandler | string | string[];
 }
 
+/**
+ * Mounts VitNode on a Hono app: security headers, CORS, CSRF, the body limit,
+ * rate limiting, the per-request context (`c.get("db")`, `c.get("cache")` and
+ * friends), core and every plugin at `/{pluginId}`, cron registration, and an
+ * error handler that hides details outside development. Call it once at
+ * startup; it returns the same `app`.
+ *
+ * Server-only. Give `app` its base path (`/api`) before calling it.
+ *
+ * @throws At startup when the configuration is invalid - plugin content
+ * modules, colliding registrations, misconfigured passkeys or locale domains.
+ *
+ * @example
+ * ```ts
+ * import { OpenAPIHono } from "@hono/zod-openapi";
+ * import { VitNodeAPI } from "@vitnode/core/api/config";
+ *
+ * import { vitNodeApiConfig } from "./vitnode.api.config";
+ *
+ * const app = new OpenAPIHono().basePath("/api");
+ * VitNodeAPI({ app, vitNodeApiConfig });
+ * ```
+ */
 export function VitNodeAPI({
   app,
   cors: corsOptions,
@@ -71,7 +94,9 @@ export function VitNodeAPI({
   vitNodeApiConfig,
 }: {
   app: OpenAPIHono<Env, Schema, string>;
+  /** Replaces the default CORS policy: credentials from `VITNODE_WEB_URL` only. */
   cors?: CORSOptions;
+  /** Replaces the default CSRF check: requests from `VITNODE_WEB_URL` or the API's own origin. */
   csrf?: CSRFOptions;
   vitNodeApiConfig: VitNodeApiConfig;
 }) {
