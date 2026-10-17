@@ -39,10 +39,7 @@ describe("loadMiddlewareConfig", () => {
   it("serves a known configuration from the cache", async () => {
     const known = knownMiddlewareConfig({
       ai: { models: [] },
-      bottomBar: [],
-      icons: {},
       isEmail: true,
-      navigation: [],
       passkeys: false,
       password: true,
       sso: [],
@@ -76,10 +73,7 @@ describe("middlewareConfigQueryOptions", () => {
       isStale(
         knownMiddlewareConfig({
           ai: { models: [] },
-          bottomBar: [],
-          icons: {},
           isEmail: true,
-          navigation: [],
           passkeys: false,
           password: true,
           sso: [],

@@ -8,10 +8,7 @@ const config = (
   overrides: Partial<MiddlewareConfig> = {},
 ): MiddlewareConfig => ({
   ai: { models: [] },
-  bottomBar: [],
-  icons: {},
   isEmail: true,
-  navigation: [],
   passkeys: true,
   password: true,
   sso: [],

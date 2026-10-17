@@ -4,6 +4,7 @@ import type { AdminUpdateSummary } from "@/views/admin/views/core/system/plugins
 
 export type UpdateStatus =
   | "disabled"
+  | "no_info"
   | "not_checked"
   | "running"
   | "security"
@@ -20,6 +21,9 @@ export const updateStatusOf = (summary: AdminUpdateSummary): UpdateStatus => {
   }
   if (summary.affectedComponents > 0) return "security";
   if (summary.updatesAvailable > 0) return "updates";
+  if (summary.unconfirmedComponents >= summary.totalComponents) {
+    return "no_info";
+  }
   if (summary.unconfirmedComponents > 0) return "unconfirmed";
 
   return "up_to_date";
@@ -28,6 +32,7 @@ export const updateStatusOf = (summary: AdminUpdateSummary): UpdateStatus => {
 export const isKnownUpdateStatus = (status: UpdateStatus): boolean =>
   status === "security" ||
   status === "updates" ||
+  status === "no_info" ||
   status === "unconfirmed" ||
   status === "up_to_date";
 

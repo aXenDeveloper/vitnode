@@ -7,10 +7,10 @@ icon: Settings
 A VitNode app has two configuration files, and the line between them is one
 question: **may a browser hold this?**
 
-| File                           | Holds                                                       | Reached by                                       |
-| :----------------------------- | :---------------------------------------------------------- | :----------------------------------------------- |
-| `src/vitnode.config.ts`        | locales, metadata, logo, theme, `debug`, enabled plugin ids | the browser, the server, **and your Vite build** |
-| `src/vitnode.server.config.ts` | message loaders                                             | the server only                                  |
+| File                           | Holds                                                              | Reached by                                       |
+| :----------------------------- | :----------------------------------------------------------------- | :----------------------------------------------- |
+| `src/vitnode.config.ts`        | locales, metadata, logo, menus, theme, `debug`, enabled plugin ids | the browser, the server, **and your Vite build** |
+| `src/vitnode.server.config.ts` | message loaders                                                    | the server only                                  |
 
 ---
 
@@ -97,6 +97,28 @@ export const vitNodeConfig = buildConfig({
 Pass the component itself, not `<Logo />`. Keep it lean: your Vite build
 executes this file too, so a logo that imports half your UI makes every
 regeneration pass slower.
+
+### Navigation
+
+`navigation` holds the header menu and the phone bottom bar. Each link is an
+`href`, a `title` message key and an optional icon component:
+
+```ts title="src/vitnode.config.ts"
+import { CompassIcon } from 'lucide-react'
+
+export const vitNodeConfig = buildConfig({
+  // ...
+  navigation: {
+    header: [{ href: '/discover', icon: CompassIcon, title: 'app.menu.discover' }],
+    mobileBottomBar: [
+      { href: '/discover', icon: CompassIcon, title: 'app.menu.discover' },
+    ],
+  },
+})
+```
+
+See [Main Navigation](/docs/dev/navigation) for dropdowns, translations and
+the checks that run at startup.
 
 ### View transitions
 

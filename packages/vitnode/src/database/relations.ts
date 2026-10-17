@@ -12,7 +12,6 @@ import * as languages from "./languages";
 import * as logs from "./logs";
 import * as moderation from "./moderation";
 import * as moderators from "./moderators";
-import * as navigation from "./navigation";
 import * as notifications from "./notifications";
 import * as passkeys from "./passkeys";
 import * as queue from "./queue";
@@ -35,7 +34,6 @@ export const coreSchema = {
   ...logs,
   ...moderation,
   ...moderators,
-  ...navigation,
   ...notifications,
   ...passkeys,
   ...queue,

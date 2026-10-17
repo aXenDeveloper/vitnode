@@ -2,5 +2,5 @@
   "title": "Debugging",
   "description": "Read what your app is actually doing",
   "icon": "Bug",
-  "pages": ["index", "logging"]
+  "pages": ["index", "error-page", "logging"]
 }

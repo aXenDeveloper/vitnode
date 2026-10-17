@@ -180,6 +180,11 @@
       "types": "./dist/src/framework/content-registry/index.d.ts",
       "default": "./dist/src/framework/content-registry/index.js"
     },
+    "./framework/dev-error": {
+      "import": "./dist/src/framework/dev-error/index.js",
+      "types": "./dist/src/framework/dev-error/index.d.ts",
+      "default": "./dist/src/framework/dev-error/index.js"
+    },
     "./framework/package-messages": {
       "import": "./dist/src/framework/package-messages/index.js",
       "types": "./dist/src/framework/package-messages/index.d.ts",

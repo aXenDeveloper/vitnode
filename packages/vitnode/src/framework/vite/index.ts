@@ -1,3 +1,4 @@
+export { vitNodeDevError } from "./dev-error";
 export type { VitNodeEnvOptions } from "./env";
 export { vitNodeEnv } from "./env";
 export { vitNodeOptimizeDeps } from "./optimize-deps";

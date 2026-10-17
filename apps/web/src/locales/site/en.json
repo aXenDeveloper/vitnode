@@ -2,7 +2,6 @@
   "site": {
     "home": {
       "hero": {
-        "canary": "VitNode 2.0 is an early canary",
         "description": "Publish content, bring members together and build the features your community needs on an open-source platform you control.",
         "explore": "Explore what you can build",
         "see_product": "See the product",
@@ -227,10 +226,99 @@
             "user": "User"
           }
         }
+      },
+      "bento": {
+        "eyebrow": "Built in",
+        "title": "Everything a community needs.",
+        "content": {
+          "title": "One file, a whole feature",
+          "desc": "Tables, typed API and AdminCP screens from one definition.",
+          "features": {
+            "admin": "AdminCP screens",
+            "api": "Typed API",
+            "database": "Database table",
+            "publishing": "Drafts and publishing",
+            "revisions": "Revisions",
+            "scheduling": "Scheduling",
+            "translations": "Translations",
+            "search": "Site search",
+            "live": "Live editing",
+            "comments": "Comments",
+            "reactions": "Reactions",
+            "followers": "Followers"
+          }
+        },
+        "notifications": {
+          "title": "News that finds its people",
+          "desc": "An inbox, a live count and email digests.",
+          "mark_all": "Mark all as read",
+          "items": {
+            "reply": {
+              "title": "Kuba replied to your topic",
+              "sub": "on “Summer meetup photos”"
+            },
+            "live": {
+              "title": "Your article is live",
+              "sub": "Our summer meetup recap"
+            },
+            "comment": {
+              "title": "Ola commented",
+              "sub": "“Count me in for next year!”"
+            },
+            "report": {
+              "title": "A moderator closed your report",
+              "sub": "Report #128 · content hidden"
+            }
+          }
+        },
+        "live": {
+          "title": "Write together in real time",
+          "desc": "Rich text takes several cursors at once, and every change saves itself.",
+          "saving": "Saving…",
+          "saved": "Saved",
+          "first": "Forty-two members met on the",
+          "selected": "rooftop",
+          "first_end": ".",
+          "ola": " The pizza ran out by eight.",
+          "second": "Next year we are booking",
+          "kuba": " a bigger venue and two more ovens."
+        },
+        "ai": {
+          "title": "AI that does the chores",
+          "desc": "ALT text and translations, any provider, on a budget.",
+          "provider": "Any provider",
+          "alt": "ALT text",
+          "budget": "{percent}% of budget"
+        },
+        "search": {
+          "title": "Found before you finish typing",
+          "desc": "Suggestions update on every key, ranked by what people read.",
+          "tab": "Tab",
+          "queries": "m|me|mem|me|mee|meet",
+          "suggestions": {
+            "recap": "Meetup recap 2026",
+            "photos": "Meetup photos",
+            "moderators": "Meet the moderators",
+            "rules": "Membership rules",
+            "events": "Mentoring evenings",
+            "library": "Media library tips"
+          }
+        }
       }
     },
     "search": {
       "docs": "Documentation"
+    },
+    "menu": {
+      "docs": "Docs",
+      "plugins": "Plugins",
+      "community": "Community",
+      "forum": "Forum",
+      "discover": "Discover",
+      "discover_description": "Fresh posts from every corner of the site.",
+      "browse": "Browse",
+      "browse_description": "A paginated list, shipped by the example plugin.",
+      "search": "Search"
     }
   }
 }

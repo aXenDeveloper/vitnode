@@ -16,6 +16,7 @@ describe("updateStatusOf", () => {
     ["security", summary({ affectedComponents: 1, updatesAvailable: 2 })],
     ["updates", summary({ unconfirmedComponents: 1, updatesAvailable: 2 })],
     ["unconfirmed", summary({ unconfirmedComponents: 1 })],
+    ["no_info", summary({ unconfirmedComponents: 3 })],
     ["up_to_date", summary()],
   ])("returns %s", (status, data) => {
     expect(updateStatusOf(data)).toBe(status);

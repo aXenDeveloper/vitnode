@@ -8,7 +8,6 @@ import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
-import type { NavigationPresetDeclaration } from "@/lib/navigation";
 import type { PluginManifest } from "@/lib/plugin-manifest";
 
 import { BlockError } from "@/blocks/errors";
@@ -45,7 +44,6 @@ import { collectAiActions } from "./ai/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { withModerationPermissions } from "./moderation/registry";
-import { collectNavigationPresets } from "./navigation-presets";
 import { validateNotificationTypes } from "./notifications/registry";
 import { applyModuleTags } from "./openapi-tags";
 
@@ -69,7 +67,6 @@ export interface BuildPluginApiReturn<
   messages?: LocaleMessagesMap;
   moderation?: Required<ModerationPluginConfig>;
   modules: Modules;
-  navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
   openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
@@ -96,7 +93,6 @@ export function buildApiPlugin<
   messages,
   moderation,
   modules = [] as unknown as Modules,
-  navigation,
   notificationTypes,
   permissionStaff,
   searchIndexers,
@@ -108,7 +104,6 @@ export function buildApiPlugin<
   messages?: LocaleMessagesMap;
   moderation?: ModerationPluginConfig;
   modules?: Modules;
-  navigation?: NavigationPresetDeclaration[];
   notificationTypes?: AnyNotificationTypeDefinition[];
   permissionStaff?: PermissionStaffConfig;
   searchIndexers?: SearchIndexer[];
@@ -130,8 +125,6 @@ export function buildApiPlugin<
   const registeredPages: RegisteredEditablePage[] = validateEditablePages(
     (editablePages ?? []).map(page => registerEditablePage(page, pluginId)),
   );
-
-  collectNavigationPresets([{ navigation, pluginId }]);
 
   collectAiActions([{ aiActions, pluginId }]);
 
@@ -229,7 +222,6 @@ export function buildApiPlugin<
     manifest,
     messages,
     modules,
-    navigation,
     hono,
     openApiTags: [...new Set(openApiTags)],
     contentContainers: registeredContainers,

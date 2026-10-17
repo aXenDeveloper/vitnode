@@ -111,7 +111,7 @@ The prerendered page answers with an `etag` and a `last-modified` date. The serv
 A prerendered file is shared by every visitor and built without your API, so VitNode leaves out anything that comes from the database or belongs to one visitor. Your build does not need a database.
 
 - **The user menu loads in the browser.** The main layout skips reading the session while prerendering. The header ships with a placeholder where the avatar goes, and the browser fills it in once the page loads - the same thing a server-rendered page shows for a split second.
-- **The header navigation loads in the browser.** The links you edit in **AdminCP → System → Navigation** are not part of the file. The header shows a placeholder in their place, the browser asks the API for the links once the page loads, and a change shows up right away, without a rebuild.
+- **The header navigation is part of the file.** The menu comes from [`navigation` in `vitnode.config.ts`](/docs/dev/navigation), not from the API, so the prerendered header already has its links. Changing the menu means a new build.
 - **The language choice is stored by the browser.** A visit to `/pl/...` normally sets the locale cookie in the server's response. A static file has no such response, so VitNode sets the same cookie from the browser when the page loads.
 
 ## Pages you should not prerender

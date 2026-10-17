@@ -2,13 +2,6 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { AI_MODEL_CAPABILITIES } from "@/api/lib/ai/capabilities";
-import { loadPublicNavigationMenus } from "@/api/modules/admin/navigation/lib/cache";
-import {
-  zodPublicNavigationItemSchema,
-  zodPublicNavigationNodeSchema,
-} from "@/api/modules/admin/navigation/lib/schema";
-
-import { loadNavigationIcons, zodLucideIconSchema } from "./navigation-icons";
 
 export const routeMiddlewareSchema = z.object({
   ai: z.object({
@@ -33,9 +26,6 @@ export const routeMiddlewareSchema = z.object({
   isEmail: z.boolean(),
   passkeys: z.boolean(),
   password: z.boolean(),
-  navigation: z.array(zodPublicNavigationNodeSchema),
-  bottomBar: z.array(zodPublicNavigationItemSchema),
-  icons: z.record(z.string(), zodLucideIconSchema),
   captcha: z
     .object({
       siteKey: z.string(),
@@ -60,9 +50,8 @@ export const routeMiddleware = buildRoute({
       },
     },
   },
-  handler: async c => {
+  handler: c => {
     const sso = c.get("core").authorization.ssoAdapters;
-    const { bottomBar, navigation } = await loadPublicNavigationMenus(c);
 
     return c.json(
       {
@@ -70,9 +59,6 @@ export const routeMiddleware = buildRoute({
         isEmail: !!c.get("core").email?.adapter,
         passkeys: c.get("core").authorization.passkeys.enabled,
         password: c.get("core").authorization.password.enabled,
-        navigation,
-        bottomBar,
-        icons: await loadNavigationIcons({ bottomBar, navigation }),
         sso: sso.map(s => ({
           id: s.id,
           name: s.name,

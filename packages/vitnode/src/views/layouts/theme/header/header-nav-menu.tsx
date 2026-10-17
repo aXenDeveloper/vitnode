@@ -3,7 +3,8 @@ import { cn } from "cn";
 import { ChevronDownIcon } from "lucide-react";
 import React from "react";
 
-import { EmojiIcon } from "@/components/ui/emoji-icon";
+import type { NavigationIcon } from "@/lib/navigation";
+
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -13,8 +14,6 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Skeleton } from "@/components/ui/skeleton";
-import { parseEmojiIcon } from "@/lib/emoji-icon";
 import { isExternalNavigationHref } from "@/lib/navigation";
 
 import type { HeaderNavChildItem, HeaderNavItem } from "./header-nav";
@@ -67,11 +66,11 @@ const isChevronClick = (event: React.MouseEvent<HTMLElement>): boolean => {
 
 const NavIcon = ({
   className,
-  icon,
+  icon: Icon,
 }: {
   className?: string;
-  icon: string | undefined;
-}) => <EmojiIcon className={className} value={parseEmojiIcon(icon)} />;
+  icon: NavigationIcon | undefined;
+}) => (Icon ? <Icon className={className} /> : null);
 
 const HeaderNavDropdownLink = ({ item }: { item: HeaderNavChildItem }) => {
   const isActive = useIsNavHrefActive();
@@ -208,7 +207,7 @@ const MeasuredNavLabel = ({
   label,
 }: {
   hasDropdown: boolean;
-  icon?: string;
+  icon?: NavigationIcon;
   label: string;
 }) => (
   <span className={cn(navigationMenuTriggerStyle(), "gap-2")}>
@@ -240,16 +239,21 @@ const useVisibleNavCount = (navigation: HeaderNavItem[]) => {
       element?.getBoundingClientRect().width ?? 0;
 
     const update = () => {
-      setVisibleCount(
-        visibleHeaderNavCount({
-          availableWidth: container.clientWidth,
-          gap: Number.parseFloat(getComputedStyle(measure).columnGap) || 0,
-          itemWidths: [...measure.querySelectorAll(MEASURE_ITEM_SELECTOR)].map(
-            widthOf,
-          ),
-          moreWidth: widthOf(measure.querySelector(MEASURE_MORE_SELECTOR)),
-        }),
-      );
+      const availableWidth = container.clientWidth;
+      if (availableWidth === 0) return;
+
+      const count = visibleHeaderNavCount({
+        availableWidth,
+        gap: Number.parseFloat(getComputedStyle(measure).columnGap) || 0,
+        itemWidths: [...measure.querySelectorAll(MEASURE_ITEM_SELECTOR)].map(
+          widthOf,
+        ),
+        moreWidth: widthOf(measure.querySelector(MEASURE_MORE_SELECTOR)),
+      });
+
+      React.startTransition(() => {
+        setVisibleCount(count);
+      });
     };
 
     const resize = new ResizeObserver(update);
@@ -323,27 +327,3 @@ export const HeaderNavMenu = ({
     </div>
   );
 };
-
-const NAV_SKELETON_WIDTHS = ["w-20", "w-24", "w-16"] as const;
-
-export const HeaderNavSkeleton = ({
-  className,
-  label,
-}: {
-  className?: string;
-  label: string;
-}) => (
-  <div
-    aria-busy="true"
-    className={cn(
-      "hidden min-w-0 flex-1 items-center gap-1 sm:flex",
-      className,
-    )}
-    role="status"
-  >
-    <span className="sr-only">{label}</span>
-    {NAV_SKELETON_WIDTHS.map(width => (
-      <Skeleton className={cn("h-9", width)} key={width} />
-    ))}
-  </div>
-);

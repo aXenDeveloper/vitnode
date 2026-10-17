@@ -18,14 +18,6 @@ const server = serve(
     hostname: process.env.HOST,
     port: Number(process.env.PORT ?? 8000),
   },
-  info => {
-    const initMessage = "\x1b[34m[VitNode]\x1b[0m";
-
-    // oxlint-disable-next-line no-console
-    console.log(
-      `${initMessage} API server is running on http://localhost:${info.port}`,
-    );
-  },
 );
 
 export default server;

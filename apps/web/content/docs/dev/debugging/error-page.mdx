@@ -1,0 +1,128 @@
+---
+title: Error Page
+description: What VitNode shows when a request or a route crashes on the dev server, and how to add "Ways to fix this" hints to your own errors.
+icon: OctagonAlert
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import errorPage from './error-page.webp'
+
+When a request crashes on the server while you run `vite dev`, VitNode answers
+with its own error page instead of a raw stack trace. It shows the error, the
+line that threw it, suggested fixes when the error has them, and the call stack.
+You don't configure anything: the `vitnode()` Vite plugin turns it on for the
+dev server.
+
+<ImgDocs
+  src={errorPage}
+  alt="VitNode dev error page for a NavigationConfigError: badges for the error name and 500, the error message as the title, a code frame from navigation.ts with the throwing line highlighted, and two Ways to fix this cards, Use a message key and Run the type check, each with a Copy prompt button"
+  withoutBackground
+/>
+
+## What the page shows
+
+| Part             | What it gives you                                                                                                             |
+| :--------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| Header           | Where it failed, the error name, the status code, the message, and the request                                                |
+| Code frame       | Five lines on each side of the first line in your code, with a caret under the column. The icon opens the file in your editor |
+| Ways to fix this | Suggestions the error carries, each with a snippet and a **Copy prompt** button for your AI assistant                         |
+| Call stack       | Your frames first, each one opens in your editor. Frames from `node_modules` and Node stay folded until you show them         |
+
+The copy icon in the header copies the error and its stack trace. The page
+follows your system theme, and the moon icon switches it.
+
+## When it appears
+
+The page replaces Nitro's built-in error page in development only. Anything
+else keeps Nitro's normal behavior:
+
+- `vite build` never includes the handler, so production errors are unchanged.
+- Requests that don't accept `text/html`, like `fetch` calls from your code, still get JSON.
+- Errors you throw on purpose with a status below 500, such as a 404, pass through untouched.
+
+An error thrown while the app's server entry first loads, before any request
+reaches it, still shows Nitro's own page, because VitNode's code isn't running
+yet.
+
+## Route errors
+
+A loader or component that throws doesn't reach Nitro: TanStack Router catches
+it and renders the route's error component. Use `RouteErrorPage` as the
+router's `defaultErrorComponent` and the same page opens as an overlay on top
+of your 500 page:
+
+```tsx title="src/router.tsx"
+import { ErrorActions, RouteErrorPage } from '@vitnode/core/tanstack/layout'
+
+const router = createTanStackRouter({
+  // ...
+  defaultErrorComponent: ({ error }) => (
+    <RouteErrorPage actions={<ErrorActions />} error={error} />
+  ),
+})
+```
+
+The bar above the card says **on the server** when the error happened during
+server rendering, and **in the browser** when it happened after a client-side
+navigation.
+Browser frames are mapped back to your source files too. Press <kbd>Esc</kbd>
+or the close icon to see the 500 page underneath.
+
+In production, `RouteErrorPage` renders only the 500 page. No stack trace,
+file path or source line ever leaves the server.
+
+## Add hints to your own errors
+
+Any error with a `hints` array gets a **Ways to fix this** section. Implement
+`DevErrorWithHints` on your error class and pass the hints in:
+
+```ts title="src/payments/errors.ts"
+import type {
+  DevErrorHint,
+  DevErrorWithHints,
+} from '@vitnode/core/framework/dev-error'
+
+const MISSING_KEY_HINTS: DevErrorHint[] = [
+  {
+    title: 'Set the API key',
+    description:
+      'Add your Stripe secret key to .env, then restart the dev server.',
+    snippet: 'STRIPE_SECRET_KEY=sk_test_...',
+  },
+]
+
+export class PaymentsConfigError extends Error implements DevErrorWithHints {
+  readonly hints: readonly DevErrorHint[]
+
+  constructor(message: string, hints = MISSING_KEY_HINTS) {
+    super(message)
+    this.name = 'PaymentsConfigError'
+    this.hints = hints
+  }
+}
+```
+
+Each hint takes these fields:
+
+| Name          | Type     | Required | Description                                     |
+| :------------ | :------- | :------- | :---------------------------------------------- |
+| `title`       | `string` | Yes      | The fix, as an action: "Set the API key"        |
+| `description` | `string` | Yes      | One sentence on why the fix works               |
+| `snippet`     | `string` | No       | Code or a command to copy, shown under the text |
+
+Hints are plain English text, not message keys: the page is a developer tool
+that only exists on your machine. Three hints fit side by side. Keep them to the
+fixes that actually solve the error.
+
+VitNode's own config errors already carry hints. A navigation item with a
+title that isn't a message key, for example, suggests using a key such as
+`site.menu.docs` and running the type check.
+
+## Check the result
+
+Throw your error from a route loader, then open that page in the browser while
+`vite dev` runs. The **Ways to fix this** section lists your hints, and
+**Copy prompt** puts the error, the stack and the hint on your clipboard.
+
+Next, see [Logging](/docs/dev/debugging/logging) for errors that happen in
+production.

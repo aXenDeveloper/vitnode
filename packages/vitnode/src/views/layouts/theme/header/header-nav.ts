@@ -1,10 +1,8 @@
 import type {
-  NavigationTranslate,
-  PublicNavigationItem,
-  PublicNavigationNode,
+  NavigationHeaderItemConfig,
+  NavigationIcon,
+  NavigationLinkConfig,
 } from "@/lib/navigation";
-
-import { navigationItemLabels, navigationNamespaces } from "@/lib/navigation";
 
 export const HEADER_HREF = {
   home: "/",
@@ -13,7 +11,7 @@ export const HEADER_HREF = {
 export interface HeaderNavChildItem {
   description?: string;
   href: string;
-  icon?: string;
+  icon?: NavigationIcon;
   id: string;
   isOpenInNewTab?: boolean;
   label: string;
@@ -23,60 +21,42 @@ export interface HeaderNavItem extends HeaderNavChildItem {
   items?: HeaderNavChildItem[];
 }
 
-export type HeaderNavTranslate = NavigationTranslate;
+export type HeaderNavTranslate = (key: string) => string | undefined;
 
 const headerNavChildFrom = (
-  item: PublicNavigationItem,
-  locale: string,
+  link: NavigationLinkConfig,
+  id: string,
   translate: HeaderNavTranslate,
-): HeaderNavChildItem | null => {
-  const { description, title } = navigationItemLabels({
-    item,
-    locale,
-    translate,
-  });
-  if (!title) return null;
+): HeaderNavChildItem => {
+  const description =
+    link.description === undefined ? undefined : translate(link.description);
 
   return {
-    href: item.href,
-    id: String(item.id),
-    label: title,
+    href: link.href,
+    id,
+    label: translate(link.title) ?? link.title,
     ...(description ? { description } : {}),
-    ...(item.icon ? { icon: item.icon } : {}),
-    ...(item.isOpenInNewTab ? { isOpenInNewTab: true } : {}),
+    ...(link.icon ? { icon: link.icon } : {}),
+    ...(link.isOpenInNewTab ? { isOpenInNewTab: true } : {}),
   };
 };
 
 export const headerNavItemsFrom = ({
   items,
-  locale,
   translate,
 }: {
-  items: readonly PublicNavigationNode[];
-  locale: string;
+  items: readonly NavigationHeaderItemConfig[] | undefined;
   translate: HeaderNavTranslate;
 }): HeaderNavItem[] =>
-  items.flatMap(node => {
-    const entry = headerNavChildFrom(node, locale, translate);
-    if (!entry) return [];
+  (items ?? []).map((item, index) => {
+    const id = String(index);
+    const entry = headerNavChildFrom(item, id, translate);
+    const children = (item.items ?? []).map((child, childIndex) =>
+      headerNavChildFrom(child, `${id}.${String(childIndex)}`, translate),
+    );
 
-    const children = node.items.flatMap(child => {
-      const childEntry = headerNavChildFrom(child, locale, translate);
-
-      return childEntry ? [childEntry] : [];
-    });
-
-    return [children.length > 0 ? { ...entry, items: children } : entry];
+    return children.length > 0 ? { ...entry, items: children } : entry;
   });
-
-export const headerNavNamespaces = (
-  items: readonly PublicNavigationNode[],
-  fallback: string,
-): string[] => {
-  const namespaces = navigationNamespaces(items);
-
-  return namespaces.length > 0 ? namespaces : [fallback];
-};
 
 export const visibleHeaderNavCount = ({
   availableWidth,

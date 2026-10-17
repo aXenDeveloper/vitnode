@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { cn } from 'cn'
-import { ArrowRight, Bird, Bot, CodeXml, Scale } from 'lucide-react'
+import { ArrowRight, Bot, CodeXml, Scale } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 
 import { HeroWall } from '@/site/home/illustrations/hero-wall/hero-wall'
@@ -23,11 +23,6 @@ export const HeroSection = () => {
     >
       <div className="container mx-auto grid items-center gap-10 px-4 pt-16 sm:px-6 sm:pt-24 lg:grid-cols-2 lg:gap-6 lg:py-16">
         <div className="relative z-10 flex flex-col gap-6">
-          <p className="bg-primary/10 text-primary inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold">
-            <Bird aria-hidden className="size-3.5 shrink-0" />
-            {t('canary')}
-          </p>
-
           <h1
             className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl"
             id="hero-title"
@@ -57,7 +52,7 @@ export const HeroSection = () => {
                 buttonVariants({ size: 'lg', variant: 'outline' }),
                 BUTTON,
               )}
-              href="#admincp"
+              href="#features"
             >
               {t('see_product')}
             </a>

@@ -12,6 +12,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { HouseIcon } from "lucide-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EditWidgetsControl } from "@/blocks/edit-widgets-context";
@@ -25,7 +26,7 @@ import type { UserHeaderState } from "../user/user-header-model";
 import { MobileUserMenuContent } from "./mobile-user-menu";
 
 const navigation: HeaderNavItem[] = [
-  { href: "/", icon: "emoji:🏠", id: "1", label: "Home" },
+  { href: "/", icon: HouseIcon, id: "1", label: "Home" },
   { href: "/search", id: "2", label: "Search" },
   {
     href: "/community",

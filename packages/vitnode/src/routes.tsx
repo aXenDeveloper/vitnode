@@ -7,17 +7,23 @@ import {
 import { contentListRouteSearch } from "./tanstack/admin/content/route-search";
 import { normalizeCronRouteSearch } from "./tanstack/admin/cron/route-search";
 import {
-  DebugFramePending,
+  DebugAiPending,
+  DebugCachePending,
+  DebugCronPending,
   DebugLayoutPending,
+  DebugLogsPending,
   DebugOverviewPending,
-  DebugTablePending,
+  DebugPluginsPending,
+  DebugQueuePending,
+  DebugSearchPending,
+  DebugServicesPending,
+  DebugVitnodePending,
 } from "./tanstack/admin/debug/pending";
 import { ADMIN_DEBUG_NAMESPACES } from "./tanstack/admin/debug/route";
 import { normalizeDebugLogsSearch } from "./tanstack/admin/debug/route-search";
 import { ADMIN_FILES_NAMESPACES } from "./tanstack/admin/files/route";
 import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-search";
 import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
-import { ADMIN_NAVIGATION_NAMESPACES } from "./tanstack/admin/navigation/route";
 import { ADMIN_NOTIFICATIONS_NAMESPACES } from "./tanstack/admin/notifications/route";
 import { ADMIN_PLUGINS_NAMESPACES } from "./tanstack/admin/plugins/route";
 import { normalizeQueueRouteSearch } from "./tanstack/admin/queue/route-search";
@@ -280,53 +286,46 @@ export const routes = defineRoutes([
       }),
       page("vitnode", {
         component: lazy(() => import("./pages/admin/debug/vitnode")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugVitnodePending,
       }),
       page("plugins", {
         component: lazy(() => import("./pages/admin/debug/plugins")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugPluginsPending,
       }),
       page("cron", {
         component: lazy(() => import("./pages/admin/debug/cron")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugCronPending,
         search: normalizeCronRouteSearch,
       }),
       page("cache", {
         component: lazy(() => import("./pages/admin/debug/cache")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugCachePending,
       }),
       page("search", {
         component: lazy(() => import("./pages/admin/debug/search")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugSearchPending,
         search: normalizeSearchIndexRouteSearch,
       }),
       page("services", {
         component: lazy(() => import("./pages/admin/debug/services")),
-        pendingComponent: DebugFramePending,
+        pendingComponent: DebugServicesPending,
       }),
       page("logs", {
         component: lazy(() => import("./pages/admin/debug/logs")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugLogsPending,
         search: normalizeDebugLogsSearch,
       }),
       page("queue", {
         component: lazy(() => import("./pages/admin/debug/queue")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugQueuePending,
         search: normalizeQueueRouteSearch,
       }),
       page("ai", {
         component: lazy(() => import("./pages/admin/debug/ai")),
-        pendingComponent: DebugTablePending,
+        pendingComponent: DebugAiPending,
         search: normalizeAiHistoryRouteSearch,
       }),
     ],
-  }),
-
-  page("/admin/core/system/navigation", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/system/navigation")),
-    messages: ADMIN_NAVIGATION_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
   }),
 
   page("/admin/core/system/files", {

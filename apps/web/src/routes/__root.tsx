@@ -19,6 +19,7 @@ import {
 
 import type { Locale } from '@/vitnode.config'
 
+import { isDocsRouteId, STYLESHEET_ORDER_ANCHOR } from '@/docs/stylesheet'
 import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 import { vitNodeConfig } from '@/vitnode.config'
 
@@ -41,9 +42,11 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       staleTime: 'static',
     })
   },
-  head: () => ({
+  head: ({ matches }) => ({
     links: [
-      { href: withoutHmrTimestamp(appCss), rel: 'stylesheet' },
+      ...(matches.some(({ routeId }) => isDocsRouteId(routeId))
+        ? []
+        : [{ href: withoutHmrTimestamp(appCss), rel: 'stylesheet' }]),
 
       {
         href: '/favicon.ico',
@@ -80,6 +83,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html dir="ltr" lang={locale} suppressHydrationWarning>
       <head>
+        <style href={STYLESHEET_ORDER_ANCHOR} precedence="default" />
         <DocumentHead />
         <ThemeScript {...theme} />
       </head>

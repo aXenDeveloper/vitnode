@@ -6,9 +6,9 @@ import { createVitNodeQueryClient } from "@vitnode/core/lib/query-client";
 import { createLocaleRewrite } from "@vitnode/core/tanstack/i18n";
 import { setupLucideIconSsr } from "@vitnode/core/tanstack/icons";
 import {
-  Error500Page,
   ErrorActions,
   NotFound,
+  RouteErrorPage,
 } from "@vitnode/core/tanstack/layout";
 import { RoutePendingSpinner } from "@vitnode/core/tanstack/pending";
 import {
@@ -64,7 +64,9 @@ export function getRouter() {
     routeTree,
     scrollRestoration: true,
     defaultNotFoundComponent: () => <NotFound actions={<ErrorActions />} />,
-    defaultErrorComponent: () => <Error500Page actions={<ErrorActions />} />,
+    defaultErrorComponent: ({ error }) => (
+      <RouteErrorPage actions={<ErrorActions />} error={error} />
+    ),
   });
 
   holder.current = router;

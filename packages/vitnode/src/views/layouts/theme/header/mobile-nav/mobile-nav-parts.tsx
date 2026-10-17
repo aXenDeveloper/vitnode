@@ -2,24 +2,22 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import React from "react";
 
-import { EmojiIcon } from "@/components/ui/emoji-icon";
-import { parseEmojiIcon } from "@/lib/emoji-icon";
+import type { NavigationIcon } from "@/lib/navigation";
+
 import { isExternalNavigationHref } from "@/lib/navigation";
 
 import type { HeaderNavChildItem } from "../header-nav";
 
 export const MobileNavIcon = ({
   className,
-  icon,
+  icon: Icon,
   label,
 }: {
   className?: string;
-  icon: string | undefined;
+  icon: NavigationIcon | undefined;
   label: string;
 }) => {
-  const parsed = parseEmojiIcon(icon);
-
-  if (parsed) return <EmojiIcon className={className} value={parsed} />;
+  if (Icon) return <Icon className={className} />;
 
   return (
     <span

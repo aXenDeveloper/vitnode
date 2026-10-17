@@ -24,11 +24,14 @@ import type {
   VitNodeI18nConfig,
 } from "./lib/i18n/types";
 import type { VitNodeMetadata } from "./lib/metadata";
+import type { NavigationConfig } from "./lib/navigation";
 import type { BuildPluginReturn } from "./lib/plugin";
 import type { FrontendPluginInventory } from "./lib/plugin-manifest";
 import type { UpdateChannel } from "./lib/updates/manifest";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
 import type { PageCacheConfig } from "./page-cache/config";
+
+import { assertNavigationConfig } from "./lib/navigation";
 
 export type { LocaleConfig };
 
@@ -41,6 +44,7 @@ export interface VitNodeConfig<
   i18n: VitNodeI18nConfig<AppLocales>;
   logo?: VitNodeLogo;
   metadata: VitNodeMetadata;
+  navigation?: NavigationConfig;
   /**
    * The server-rendered HTML cache: where it is stored, and per-route
    * overrides of the policies plugins declare. See `PageCacheConfig`.
@@ -193,6 +197,8 @@ let registeredVitNodeConfig: undefined | VitNodeConfig;
 export function buildConfig<const AppLocales extends LocaleConfig[]>(
   args: VitNodeConfig<AppLocales>,
 ): VitNodeConfig<AppLocales> {
+  assertNavigationConfig(args.navigation);
+
   const config = {
     ...args,
     i18n: {

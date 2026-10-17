@@ -1,9 +1,4 @@
-import {
-  Outlet,
-  useLoaderData,
-  useNavigate,
-  useParams,
-} from "@tanstack/react-router";
+import { useLoaderData, useNavigate, useParams } from "@tanstack/react-router";
 import { createElement, Suspense, useCallback } from "react";
 
 import type {
@@ -21,6 +16,7 @@ import type { PluginRouteModuleRef } from "./module-ref";
 
 import { breadcrumbDeferred } from "../breadcrumb/model";
 import { RouteMessages } from "../i18n/route-messages";
+import { PendingOutlet } from "../pending/guard-pending";
 import {
   pluginRouteLoaderData,
   pluginRoutePageProps,
@@ -99,7 +95,7 @@ export const pluginLayoutComponent = (
       createElement(Layout, {
         ...usePluginRoutePageProps(),
         // oxlint-disable-next-line @eslint-react/jsx-no-children-prop
-        children: <Outlet />,
+        children: <PendingOutlet />,
       }),
     );
   };
