@@ -59,7 +59,7 @@ export interface AutoFormArrayProps extends ItemAutoFormComponentProps {
   itemParams?: InputParams;
   /** Overrides the schema's `.max()`; Add is disabled at the limit. */
   maxItems?: number;
-  /** Overrides the schema's `.min()`; Remove is disabled at the limit. */
+  /** Overrides the schema's `.min()`; Remove buttons are hidden at the limit. */
   minItems?: number;
   /** Defaults to `true`. */
   showRemoveButton?: boolean;

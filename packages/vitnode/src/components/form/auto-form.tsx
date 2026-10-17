@@ -112,7 +112,7 @@ export interface ItemAutoFormComponentProps {
   labelRight?: React.ReactNode;
   /** Edit one value per enabled language. Supported by `AutoFormInput`, `AutoFormTextarea` and `AutoFormEditor`. */
   multiLang?: boolean;
-  /** Constraints `AutoForm` reads from the field's Zod schema. */
+  /** Constraints read from the field's Zod schema, plus the field's `aria-invalid` state. */
   otherProps: {
     ["aria-invalid"]?: boolean;
     clearsToEmpty?: boolean;
@@ -157,7 +157,7 @@ const usesFormValues = <T extends z.ZodObject<z.ZodRawShape>>(
   typeof item.hidden === "function" ||
   (item.children?.some(child => usesFormValues(child)) ?? false);
 
-/** Renders one field's `component` with its props. Used by `AutoForm` and content form layouts. */
+/** Renders one field's `component` with its props. Used by `AutoForm` and `AutoFormArray`. */
 export const AutoFormFieldSlot = ({
   component,
   ...props
@@ -350,8 +350,9 @@ const emptySubmitMeta: FormSubmitMeta = {};
  *   when errors become visible. A failed submit reveals every error, switches
  *   to the first tab with one, focuses it and shakes the invalid fields.
  * - Inside a `Dialog` it renders a footer with Cancel and Submit, and the dialog
- *   asks before closing with unsaved changes. Leaving the page with unsaved
- *   changes asks too.
+ *   asks before closing with unsaved changes. Closing or reloading the tab with
+ *   unsaved changes asks too (browser `beforeunload`); in-app navigation is not
+ *   blocked.
  * - With `layout`, no submit button is rendered: add `AutoFormSubmitButton`, or
  *   `AutoFormSheetFooter` in a sheet.
  *
@@ -395,14 +396,17 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   ...props
 }: Omit<React.ComponentProps<"form">, "onSubmit"> & {
   /**
-   * Lets a submit with invalid values start, so the invalid fields are
-   * revealed and focused; `onSubmit` still never runs with them. Defaults to
-   * `true`.
+   * Passed to TanStack Form. With `true` (the default) every submit re-runs
+   * the schema before deciding; with `false` a submit of a form already known
+   * to be invalid skips straight to revealing the errors. Invalid fields are
+   * revealed and focused either way, and `onSubmit` never runs with invalid
+   * values.
    */
   canSubmitWhenInvalid?: boolean;
   /**
-   * The app's captcha config, from the middleware API. When set, the submit
-   * button waits for the captcha to load and `onSubmit` gets a token.
+   * The app's captcha config, from the middleware API. When set, the built-in
+   * submit button stays disabled until the captcha loads and `onSubmit` gets a
+   * token.
    */
   captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   /** Which component renders each schema key, in display order. */
@@ -416,7 +420,7 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   layout?: (renderedFields: Record<string, React.ReactNode>) => React.ReactNode;
   /**
    * When a field's errors become visible: after blur (`onTouched`, `onBlur`),
-   * after the first change (`onChange`, `all`) or only after a submit
+   * after the first change or blur (`onChange`, `all`) or only after a submit
    * (`onSubmit`). Every error shows after a submit. Defaults to `onTouched`.
    */
   mode?: FormMode;

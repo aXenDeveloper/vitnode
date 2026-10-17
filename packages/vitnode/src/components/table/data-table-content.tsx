@@ -97,7 +97,10 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
     renderRow?: (data: { allData: T[]; row: T }) => React.ReactNode;
     /** Lets rows be dragged into a new order. */
     reorderable?: ReorderableDataTable<T>;
-    /** Makes a whole row clickable (and Enter/Space-activatable); clicks on controls inside it are ignored. */
+    /**
+     * Makes a whole row clickable (and Enter/Space-activatable); clicks on
+     * controls inside it are ignored. Ignored when `bulkActions` is set.
+     */
     rowOpens?: (row: T) => void;
     /** Shows a search box in the toolbar, kept in the URL. */
     search?: boolean;

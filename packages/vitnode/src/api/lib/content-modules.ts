@@ -23,9 +23,9 @@ export interface ContentModuleLoader {
 }
 
 /**
- * A {@link ContentModuleLoader} over the app's generated
- * `src/content-modules.gen.ts` - what `buildApiConfig({ contentModules })`
- * receives in an app whose API runs inside the web build.
+ * A {@link ContentModuleLoader} that wraps the `contentModules` record (the
+ * app's generated `src/content-modules.gen.ts`) passed to `buildApiConfig`, in
+ * an app whose API runs inside the web build. `VitNodeAPI` applies it.
  */
 export const generatedContentModules = (
   modules: Readonly<Record<string, unknown>>,
@@ -53,8 +53,9 @@ const errorCode = (error: unknown): string | undefined =>
  * packages installed under `root` (the working directory by default) - the
  * fallback for a standalone API without generated content modules. Server-only.
  *
- * @throws When the module resolves but this Node.js cannot `require()` an ES
- * module (before 22.12, or with top-level `await` in it).
+ * Its `load` throws a `ContentUrlError` when the module resolves but this
+ * Node.js cannot `require()` it (before 22.12, or with top-level `await`), and
+ * rethrows any other error the module raises while loading.
  */
 export const packageContentModules = (
   root: string = process.cwd(),
@@ -90,11 +91,13 @@ export const packageContentModules = (
 
 /**
  * Checks, at API startup, that every plugin publishing content types with
- * public URLs also exports exactly those definitions from its `./content`
- * module - which is how the web build verifies a page serves each URL.
+ * public URLs also exports those content types, with the same public URLs,
+ * from its `./content` module - which is how the web build verifies a page
+ * serves each URL. Extra exported types are allowed.
  *
- * @throws A `ContentUrlError` when a plugin's content module is missing, or
- * omits or disagrees with a published content type.
+ * @throws A `ContentUrlError` when a plugin's content module is missing, has
+ * no valid `contentTypes` export, or omits a published type or exports it with
+ * different URLs. Loader errors propagate.
  */
 export const assertPluginContentModules = ({
   loader,

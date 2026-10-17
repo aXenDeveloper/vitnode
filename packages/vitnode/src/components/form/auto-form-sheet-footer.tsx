@@ -17,6 +17,7 @@ import { SheetClose } from "../ui/sheet";
  * @example
  * ```tsx
  * <AutoForm
+ *   className="flex min-h-0 flex-1 flex-col gap-0"
  *   fields={fields}
  *   formSchema={formSchema}
  *   onSubmit={onSubmit}

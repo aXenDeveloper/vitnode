@@ -16,7 +16,7 @@ import { FieldError } from "./field";
 
 /**
  * When a field's validation errors become visible: after blur (`onTouched`,
- * `onBlur`), after the first change (`onChange`, `all`) or only after a submit
+ * `onBlur`), after the first change or blur (`onChange`, `all`) or only after a submit
  * (`onSubmit`). After any submit attempt every error is shown.
  */
 export type FormMode = "all" | "onBlur" | "onChange" | "onSubmit" | "onTouched";
@@ -215,8 +215,9 @@ const removeFormFieldValue = (
  * The `<form>` behind `AutoForm`, for a form built on a TanStack Form instance
  * directly. Prefer `AutoForm`.
  *
- * Unless `disableBeforeUnload` is set, leaving the page with unsaved changes
- * asks for confirmation, and an enclosing `Dialog` asks before closing.
+ * Unless `disableBeforeUnload` is set, closing or reloading the tab with
+ * unsaved changes asks for confirmation (browser `beforeunload`; in-app
+ * navigation is not blocked), and an enclosing `Dialog` asks before closing.
  */
 function Form({
   children,

@@ -17,7 +17,7 @@ export const ContentConfirmAction = ({
   onSubmit: (props: { onClose: () => void }) => Promise<void> | void;
   /** Defaults to `destructive`. */
   submitVariant?: React.ComponentProps<typeof Button>["variant"];
-  /** The confirm button's label. Defaults to a translated "Confirm". */
+  /** The confirm button's label. Defaults to a translated "Yes, confirm". */
   textSubmit?: string;
 }) => {
   const t = useTranslations("core.global.confirm_action");
