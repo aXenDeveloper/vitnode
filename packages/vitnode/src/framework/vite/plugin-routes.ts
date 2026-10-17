@@ -91,8 +91,15 @@ const ERROR_PREFIX = "[VitNode plugin routes]";
 const DEFAULT_HOST_ROUTES_DIR = join("src", "routes");
 
 export interface VitNodePluginRoutesOptions {
+  /** The app's root directory, where `src/vitnode.config.ts` lives. */
   appRoot: string;
 
+  /**
+   * Where the app's own route files are, relative to `appRoot`, so plugin
+   * routes can be checked against them for collisions. Defaults to the
+   * `routesDirectory` in `tsr.config.json`, else `src/routes`; `null` skips the
+   * checks.
+   */
   hostRoutesDir?: null | string;
 }
 

@@ -35,6 +35,11 @@ const withNitroDevError = (): UserConfig => {
   return config as UserConfig;
 };
 
+/**
+ * In `vite dev`, registers Nitro handlers that answer unhandled server errors
+ * in HTML requests with VitNode's development error page, including any hints
+ * the error carries. Does nothing in a build.
+ */
 export const vitNodeDevError = (): Plugin => ({
   config: (_userConfig, { command }) =>
     command === "serve" ? withNitroDevError() : undefined,

@@ -44,6 +44,14 @@ export const readRequestHost: LocaleHostReader = createIsomorphicFn()
   })
   .client(() => browserHostOf(globalThis.location));
 
+/**
+ * The locale a request renders in, from its public pathname (the locale
+ * prefix), the host (a locale's own domain) and, where neither decides, the
+ * locale cookie. Universal: reads the request on the server and
+ * `document`/`location` in the browser.
+ *
+ * @throws When `configureIntl` has not run yet.
+ */
 export const resolveLocale = <TLocale extends string = string>(
   publicPathname: string,
   { readHost = readRequestHost }: LocaleHostOptions = {},
@@ -60,12 +68,17 @@ export const resolveLocale = <TLocale extends string = string>(
   }) as TLocale;
 };
 
+/** The pathname of a public href - prefix included, search and hash dropped. */
 export const publicPathnameOf = ({
   publicHref,
 }: {
   publicHref: string;
 }): string => new URL(publicHref, RELATIVE_BASE).pathname;
 
+/**
+ * An internal href in `locale`'s public form - with its prefix, or as an
+ * absolute URL when the locale lives on another domain.
+ */
 export const localizeHref = (
   href: string,
   locale: string,

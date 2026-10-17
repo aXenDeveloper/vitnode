@@ -57,7 +57,7 @@ export interface PluginRoutesMountOptions {
   /**
    * Where each area's routes are mounted, e.g. `main` under the main layout and
    * `admin` under the AdminCP shell. When omitted, `main` and `blank` routes
-   * hang from the tree's root; when given, an area left out is not mounted.
+   * hang from the tree's root; when given, a route in an area left out throws.
    */
   mountUnder?: PluginRouteAreaRoutes;
   /**
@@ -341,8 +341,8 @@ const mountPluginSubtree = (
  * `withCoreRootRoutes(withCoreAdminRoutes(withCoreMainRoutes(…)))` around it
  * and can no longer get that nesting wrong.
  *
- * @throws When a plugin route claims a URL the app's own file routes already
- * answer, or a nested route's parent is missing.
+ * @throws When a route's area has no mount point, or a plugin route claims a
+ * URL the app's own file routes already answer.
  *
  * @example
  * ```ts

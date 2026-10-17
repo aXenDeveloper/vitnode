@@ -228,6 +228,43 @@ export type PaginationCursorColumn = PgColumn<
   PgColumnBaseConfig<PaginationIdentifierDataType>
 >;
 
+/**
+ * Pages a Drizzle query by cursor (`first`/`last` + `cursor`) or by page
+ * number (`page`), and returns `{ edges, pageInfo }` ready for a list route.
+ * Server-only.
+ *
+ * Rows are ordered by `orderBy.column` with `primaryCursor` as the tiebreaker,
+ * so pages never skip or repeat rows. Page size defaults to 50 and is capped at
+ * 100. With `search`, `params.query.search` filters to rows where any of those
+ * columns contains the term (case-insensitive).
+ *
+ * Validate the query with {@link zodPaginationQuery} and describe the response
+ * with {@link zodPaginationPageInfo}.
+ *
+ * @throws `HTTPException(400)` for invalid or conflicting paging params, a
+ * tampered or stale cursor, a `primaryCursor` that is not an integer, bigint
+ * or UUID column, or an order column that cannot be paged.
+ *
+ * @example
+ * ```ts
+ * const { edges, pageInfo } = await withPagination({
+ *   c,
+ *   params: { query: c.req.valid("query") },
+ *   table: core_logs,
+ *   primaryCursor: core_logs.id,
+ *   orderBy: { column: core_logs.createdAt, order: "desc" },
+ *   query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
+ *     await c
+ *       .get("db")
+ *       .select({ ...cursorSelection, id: core_logs.id, content: core_logs.content })
+ *       .from(core_logs)
+ *       .where(where)
+ *       .orderBy(orderBy)
+ *       .limit(limit)
+ *       .offset(offset),
+ * });
+ * ```
+ */
 export async function withPagination<
   QueryMin extends Record<string, unknown>,
   T extends TableConfig,
@@ -242,6 +279,7 @@ export async function withPagination<
   c,
 }: {
   c: Context;
+  /** The sort column (a column of `table`) and direction. */
   orderBy: {
     column: PgColumn;
     order: "asc" | "desc";
@@ -255,7 +293,12 @@ export async function withPagination<
       search?: string;
     };
   };
+  /** The table's unique id column, the ordering's tiebreaker. */
   primaryCursor: PaginationCursorColumn;
+  /**
+   * Runs the page query with the `where`, `orderBy`, `limit` and `offset` it is
+   * given - `limit` is one more than the page size, to detect a next page.
+   */
   query: (args: {
     /**
      * Spread this into the projection: `.select({ ...fields, ...cursorSelection })`.
@@ -270,8 +313,11 @@ export async function withPagination<
     orderBy: SQL;
     where: SQL | undefined;
   }) => Promise<QueryMin[]>;
+  /** Text columns `params.query.search` is matched against. */
   search?: T["columns"][keyof T["columns"]][];
+  /** The table being paged, for the total count and the cursor columns. */
   table: Omit<PgTableWithColumns<T>, "enableRLS">;
+  /** Your own filter, applied to the page and to `totalCount`. */
   where?: SQL;
 }): Promise<{
   edges: Omit<QueryMin, typeof PAGINATION_CURSOR_FIELD>[];
@@ -519,6 +565,7 @@ const zodPageSize = z
   .refine(value => Number(value) >= 1, "Must be greater than zero.")
   .refine(value => Number.isSafeInteger(Number(value)), "Too large.");
 
+/** The `pageInfo` a {@link withPagination} list route returns, for its response schema. */
 export const zodPaginationPageInfo = z.object({
   totalCount: z.number(),
   totalPages: z.number(),
@@ -535,6 +582,11 @@ export const zodPaginationPageInfo = z.object({
   endCursor: z.string().nullable(),
 });
 
+/**
+ * The paging query params {@link withPagination} reads - `cursor`, `first`,
+ * `last`, `page` - for a list route's request schema. Extend it with your own
+ * filters, sort options and `search`.
+ */
 export const zodPaginationQuery = z
   .object({
     cursor: z

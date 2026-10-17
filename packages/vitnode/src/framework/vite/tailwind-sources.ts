@@ -15,7 +15,9 @@ const TAILWIND_IMPORT = /@import\s+["']tailwindcss["']/;
 
 const RELATIVE_IMPORT = /@import\s+(?:url\()?["'](\.[^"']*)["']/g;
 
+/** Options of {@link vitNodeTailwindSources}. Everything but `appRoot` is a test seam. */
 export interface VitNodeTailwindSourcesOptions {
+  /** The app's root directory, where `src/vitnode.config.ts` lives. */
   appRoot: string;
 
   readBuildOutput?: (appRoot: string, packageName: string) => null | string;
@@ -76,6 +78,11 @@ const buildsTailwind = (
 const sourceDirective = (directory: string): string =>
   `@source "${directory.replaceAll("\\", "/")}/${SCANNED_FILES}";`;
 
+/**
+ * Adds an `@source` for the built output of `@vitnode/core` and every
+ * configured plugin to each stylesheet that imports Tailwind, so the classes
+ * those packages use are generated without listing them by hand.
+ */
 export const vitNodeTailwindSources = ({
   appRoot,
   readBuildOutput = buildOutputOf,
