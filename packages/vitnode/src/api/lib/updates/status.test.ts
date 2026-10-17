@@ -50,7 +50,6 @@ const blog = (overrides: Partial<UpdateComponent> = {}): UpdateComponent => ({
 
 const OWNER = "check";
 
-/** Runs one check the way the locked run does: under the lease, then gives it back. */
 const leased = async (
   db: Db,
   options: Omit<Parameters<typeof checkForUpdates>[0], "db" | "lease">,
@@ -314,9 +313,8 @@ describe("summarizeUpdates", () => {
     expect(summary).toMatchObject({
       affectedComponents: 2,
       checkedComponents: 4,
-      core: { latestVersion: "2.1.0", state: "checked" },
+      core: { latestVersion: "2.1.0" },
       pluginUpdatesAvailable: 2,
-      totalComponents: 4,
       unconfirmedComponents: 0,
       updatesAvailable: 3,
     });
@@ -348,7 +346,6 @@ describe("summarizeUpdates", () => {
     ]);
 
     expect(summary).toMatchObject({
-      // A failed check keeps its earlier finding.
       affectedComponents: 1,
       checkedComponents: 4,
       core: { latestVersion: null },
@@ -373,20 +370,5 @@ describe("summarizeUpdates", () => {
     ]);
 
     expect(summary.oldestSuccessAt).toEqual(T1);
-  });
-
-  it("reports checks turned off and a check in progress as they are", () => {
-    expect(
-      summarize(
-        [state("@vitnode/core", { result: null, state: "unavailable" })],
-        { enabled: false, running: true },
-      ),
-    ).toMatchObject({
-      checkedComponents: 0,
-      core: { latestVersion: null, state: "unavailable" },
-      enabled: false,
-      running: true,
-      updatesAvailable: 0,
-    });
   });
 });

@@ -158,7 +158,6 @@ const core = (
   plugin: manifest.id,
 });
 
-/** System → Plugins, which also carries the update count. */
 export const ADMIN_PLUGINS_HREF = "/admin/core/system/plugins";
 
 /** Core's own group, before the permission filter. */

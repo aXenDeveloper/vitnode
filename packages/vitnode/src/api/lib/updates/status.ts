@@ -148,42 +148,19 @@ export const loadUpdatesOverview = async ({
   };
 };
 
-/**
- * The few numbers every AdminCP surface shares - the navigation count, the
- * security banner, the dashboard widget - read off the same overview the
- * catalog shows, so they cannot disagree with it. Core counts as one
- * component and every plugin as one, whatever registrations it has.
- */
 export interface UpdatesSummary {
-  /** Components (core and plugins) a security update affects, each counted once. */
   affectedComponents: number;
-  /** Components with a result - fresh, stale or kept from before a failed check. */
   checkedComponents: number;
-  core: {
-    /** The newer core release on its channel; `null` when there is none, or none is known. */
-    latestVersion: null | string;
-    state: ComponentUpdateState["state"];
-  };
+  core: { latestVersion: null | string };
   enabled: boolean;
-  /** Components whose last check failed. Their earlier result, if any, still counts. */
   failedComponents: number;
-  /** The newest check attempt of any component, failed or not. */
   lastAttemptAt: Date | null;
-  /** Components with an update source that no check has covered yet. */
   notCheckedComponents: number;
-  /**
-   * Every component with an update source has a result at least this recent:
-   * the oldest of their last successful checks. `null` while any has none.
-   */
   oldestSuccessAt: Date | null;
   pluginUpdatesAvailable: number;
   running: boolean;
-  /** Some result was not checked for what runs now and is recomputed from stored publisher data. */
   stale: boolean;
-  totalComponents: number;
-  /** Components not known to be up to date or outdated: no update source, not checked, or a status that cannot tell. */
   unconfirmedComponents: number;
-  /** Components with a newer release on their channel - core included. */
   updatesAvailable: number;
 }
 
@@ -196,7 +173,9 @@ export const summarizeUpdates = (overview: UpdatesOverview): UpdatesSummary => {
   const checkable = components.filter(
     component => component.state !== "unavailable",
   );
-  const successes = checkable.map(component => component.lastSuccessAt);
+  const successes = checkable.flatMap(component =>
+    component.lastSuccessAt === null ? [] : [component.lastSuccessAt],
+  );
   const attempts = components.flatMap(component =>
     component.lastAttemptAt === null ? [] : [component.lastAttemptAt],
   );
@@ -213,7 +192,6 @@ export const summarizeUpdates = (overview: UpdatesOverview): UpdatesSummary => {
         core !== undefined && isUpdateAvailable(core)
           ? (core.result?.latest?.version ?? null)
           : null,
-      state: core?.state ?? "unavailable",
     },
     enabled: overview.enabled,
     failedComponents: components.filter(
@@ -227,15 +205,12 @@ export const summarizeUpdates = (overview: UpdatesOverview): UpdatesSummary => {
       component => component.state === "not_checked",
     ).length,
     oldestSuccessAt:
-      successes.length === 0 || successes.includes(null)
+      successes.length === 0 || successes.length !== checkable.length
         ? null
-        : new Date(
-            Math.min(...successes.map(date => date?.getTime() ?? Infinity)),
-          ),
+        : new Date(Math.min(...successes.map(date => date.getTime()))),
     pluginUpdatesAvailable: plugins.filter(isUpdateAvailable).length,
     running: overview.running,
     stale: components.some(component => component.stale),
-    totalComponents: components.length,
     unconfirmedComponents: components.filter(
       component =>
         component.result?.status !== "up_to_date" &&

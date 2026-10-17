@@ -5,9 +5,7 @@ const LABELS: Record<string, string> = {
   rc: "RC",
 };
 
-export const unstableChannelOf = (version: null | string): null | string => {
-  if (version === null) return null;
-
+export const unstableChannelOf = (version: string): null | string => {
   const [tag] = prerelease(version) ?? [];
   if (tag === undefined) return null;
   if (typeof tag === "number") return "prerelease";

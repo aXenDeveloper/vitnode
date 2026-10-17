@@ -1,7 +1,5 @@
-import { cn } from "cn";
 import React from "react";
 
-/** A count next to a navigation item, with what it counts for screen readers. */
 export interface AdminNavBadge {
   count: number;
   label: string;
@@ -13,7 +11,6 @@ const NO_BADGES: AdminNavBadges = {};
 
 const AdminNavBadgesContext = React.createContext<AdminNavBadges>(NO_BADGES);
 
-/** Badges keyed by the `href` of the item they belong to. */
 export const AdminNavBadgesProvider = ({
   children,
   value,
@@ -25,7 +22,6 @@ export const AdminNavBadgesProvider = ({
 export const useAdminNavBadges = (): AdminNavBadges =>
   React.use(AdminNavBadgesContext);
 
-/** What a parent shows while its sub-items are out of sight. */
 export const sumAdminNavBadges = (
   badges: AdminNavBadges,
   hrefs: readonly string[],
@@ -43,26 +39,14 @@ export const sumAdminNavBadges = (
   };
 };
 
-export const NavBadge = ({
-  badge,
-  className,
-}: {
-  badge: AdminNavBadge | undefined;
-  className?: string;
-}) =>
+export const NavBadge = ({ badge }: { badge: AdminNavBadge | undefined }) =>
   badge === undefined ? null : (
-    <span
-      className={cn(
-        "bg-primary text-primary-foreground ms-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-medium tabular-nums",
-        className,
-      )}
-    >
+    <span className="bg-primary text-primary-foreground ms-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-medium tabular-nums">
       <span aria-hidden>{badge.count}</span>
       <span className="sr-only">{badge.label}</span>
     </span>
   );
 
-/** The collapsed sidebar's icon-only button has no room for a number. */
 export const NavBadgeDot = ({ badge }: { badge: AdminNavBadge }) => (
   <>
     <span

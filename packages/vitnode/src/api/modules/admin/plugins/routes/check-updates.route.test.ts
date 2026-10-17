@@ -131,7 +131,6 @@ describe("POST /admin/plugins/updates/check", () => {
   });
 
   it("answers 409 when the check lost its lease midway", async () => {
-    // Another instance takes the lease over right before the check's first write.
     const takenOverMidCheck = (db: Db): Db => {
       let transactions = 0;
 

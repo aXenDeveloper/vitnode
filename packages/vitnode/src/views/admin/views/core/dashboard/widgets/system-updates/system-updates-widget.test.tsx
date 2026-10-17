@@ -19,9 +19,9 @@ import { SystemUpdatesWidget } from "./system-updates-widget";
 
 const T = "admin.dashboard.widgets.system-updates";
 
-const renderWidget = async (data: AdminUpdateSummary) => {
+const renderWidget = async (data?: AdminUpdateSummary) => {
   const queryClient = new QueryClient();
-  queryClient.setQueryData(updateSummaryQueryKey, data);
+  if (data !== undefined) queryClient.setQueryData(updateSummaryQueryKey, data);
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ["/admin"] }),
     routeTree: createRootRoute({ component: SystemUpdatesWidget }),
@@ -39,15 +39,6 @@ const renderWidget = async (data: AdminUpdateSummary) => {
   await screen.findByText(`${T}.view_plugins`);
 };
 
-const NOT_CHECKED = summary({
-  checkedComponents: 0,
-  core: { latestVersion: null, state: "not_checked", version: "2.0.0" },
-  lastAttemptAt: null,
-  notCheckedComponents: 3,
-  oldestSuccessAt: null,
-  unconfirmedComponents: 3,
-});
-
 describe("SystemUpdatesWidget", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn<typeof fetch>());
@@ -58,42 +49,46 @@ describe("SystemUpdatesWidget", () => {
   });
 
   it.each([
-    ["nothing was checked yet", NOT_CHECKED, `${T}.freshness.not_checked`],
     [
-      "checks are turned off",
-      summary({ enabled: false }),
-      `${T}.freshness.disabled`,
+      "nothing was checked yet",
+      summary({
+        checkedComponents: 0,
+        lastAttemptAt: null,
+        notCheckedComponents: 3,
+        oldestSuccessAt: null,
+      }),
+      2,
     ],
+    ["checks are turned off", summary({ enabled: false }), 3],
   ])(
     "shows the counts as unknown, never 0, while %s",
-    async (_, data, status) => {
+    async (_, data, unknown) => {
       await renderWidget(data);
 
-      expect(screen.getByText(status)).toBeTruthy();
-      expect(screen.getAllByText(`${T}.unknown`)).toHaveLength(2);
+      expect(screen.getAllByText(`${T}.unknown`)).toHaveLength(unknown);
       expect(screen.queryByText("0")).toBeNull();
-      expect(screen.queryByText(`${T}.up_to_date`)).toBeNull();
+      expect(screen.queryByText(`${T}.security_none`)).toBeNull();
     },
   );
 
-  it("calls everything up to date only once every component is confirmed", async () => {
-    await renderWidget(summary());
+  it("shows the checked counts and the newer core version", async () => {
+    await renderWidget(
+      summary({
+        affectedComponents: 1,
+        core: { latestVersion: "2.1.0", version: "2.0.0" },
+        pluginUpdatesAvailable: 2,
+      }),
+    );
 
-    expect(screen.getByText(`${T}.freshness.checked`)).toBeTruthy();
-    expect(screen.getByText(`${T}.up_to_date`)).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.getByText(`${T}.core_update`)).toBeTruthy();
+    expect(screen.getByText(`${T}.security_affected`)).toBeTruthy();
+    expect(screen.queryByText(`${T}.unknown`)).toBeNull();
   });
 
-  it.each([
-    ["a result is stale", { stale: true }],
-    ["a check failed", { failedComponents: 1 }],
-    ["a component cannot be confirmed", { unconfirmedComponents: 1 }],
-    ["a security update applies", { affectedComponents: 1 }],
-  ])(
-    "does not call it up to date when %s",
-    async (_, overrides: Partial<AdminUpdateSummary>) => {
-      await renderWidget(summary(overrides));
+  it("points to the plugins page when the summary cannot load", async () => {
+    await renderWidget();
 
-      expect(screen.queryByText(`${T}.up_to_date`)).toBeNull();
-    },
-  );
+    expect(await screen.findByText(`${T}.load_error`)).toBeTruthy();
+  });
 });

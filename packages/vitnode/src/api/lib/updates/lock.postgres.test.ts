@@ -37,12 +37,7 @@ const MIGRATION = resolve(
   "../../../../../../apps/api/migrations/20261015193600_add_core_update_checks/migration.sql",
 );
 
-/**
- * `postgres://user@host:port/db`, or a unix socket directory given as
- * `postgres://user@/db?host=/tmp&port=5432`.
- */
 const connectionOptions = (raw: string) => {
-  // An empty host is how a socket URL is usually written, and `URL` rejects it.
   const url = new URL(raw.replace(/@\//, "@localhost/"));
   const param = (name: string) => url.searchParams.get(name);
 
@@ -88,7 +83,6 @@ const answer =
 const fetched = (stable: string, etag: string) =>
   answer({ body: manifest(stable), etag, kind: "fetched", lastModified: null });
 
-/** Resolves once `check` holds, polling the database every few milliseconds. */
 const until = async (check: () => Promise<boolean>, timeoutMs = 2000) => {
   const deadline = Date.now() + timeoutMs;
   while (!(await check())) {
@@ -251,10 +245,8 @@ describe.skipIf(!URL_ENV)("update check lease on PostgreSQL", () => {
       await writing;
     }).then(() => events.push("a committed"));
     let takeover: ReturnType<typeof acquireUpdateCheckLease> | undefined;
-    // A failed assertion must not leave a's transaction open for the next test.
     try {
       await inside;
-      // Let a's lease run out by the database clock while its write is still open.
       await until(async () => {
         const rows = await db.execute<{ expired: boolean }>(
           sql`select "expiresAt" <= timezone('utc', clock_timestamp()) as expired from core_update_lock`,
@@ -286,7 +278,6 @@ describe.skipIf(!URL_ENV)("update check lease on PostgreSQL", () => {
     await expect(takeover).resolves.toEqual({ acquired: true, owner: "b" });
     expect(events).toEqual(["a committed", "b acquired"]);
 
-    // What a committed while it held the lease stays; nothing after.
     await expect(
       withUpdateCheckLease(db, "a", async tx => {
         await tx.delete(core_update_sources);

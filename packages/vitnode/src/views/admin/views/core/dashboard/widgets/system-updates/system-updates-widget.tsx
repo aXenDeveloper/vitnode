@@ -1,11 +1,7 @@
 import { cn } from "cn";
 import {
   ArrowRightIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleOffIcon,
-  ClockAlertIcon,
-  LoaderCircleIcon,
+  ShieldAlertIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -18,118 +14,42 @@ import {
   useAdminUpdateSummary,
 } from "@/views/admin/views/core/system/plugins/update-summary-query";
 
+import type { UpdateStatus } from "./update-status";
+
 import { WidgetContentSkeleton } from "../../grid/widget-skeleton";
+import {
+  compactVersion,
+  isKnownUpdateStatus,
+  updateStatusOf,
+} from "./update-status";
 
-const TONE = {
-  destructive: "text-destructive",
-  muted: "text-muted-foreground",
-  success: "text-success",
-  warn: "text-warn",
-} as const;
-
-type Tone = keyof typeof TONE;
-
-const StatusLine = ({
-  children,
-  icon: Icon,
-  spin,
-  tone,
-}: {
-  children: React.ReactNode;
-  icon: React.ComponentType<{ "aria-hidden"?: boolean; className?: string }>;
-  spin?: boolean;
-  tone: Tone;
-}) => (
-  <p className="flex items-start gap-2 text-sm leading-relaxed">
-    <Icon
-      aria-hidden
-      className={cn(
-        "mt-0.5 size-4 shrink-0",
-        TONE[tone],
-        spin && "animate-spin",
-      )}
-    />
-    <span className="text-pretty">{children}</span>
-  </p>
-);
-
-/** How fresh the numbers are - the first thing to read before trusting them. */
-const Freshness = ({ summary }: { summary: AdminUpdateSummary }) => {
-  const t = useTranslations("admin.dashboard.widgets.system-updates.freshness");
-  const date = (value: string) => () => <DateFormat date={value} />;
-
-  if (!summary.enabled) {
-    return (
-      <StatusLine icon={CircleOffIcon} tone="muted">
-        {t("disabled")}
-      </StatusLine>
-    );
-  }
-  if (summary.running) {
-    return (
-      <StatusLine icon={LoaderCircleIcon} spin tone="muted">
-        {t("running")}
-      </StatusLine>
-    );
-  }
-  if (summary.checkedComponents === 0) {
-    return (
-      <StatusLine icon={CircleDashedIcon} tone="muted">
-        {summary.notCheckedComponents > 0 ? t("not_checked") : t("unavailable")}
-      </StatusLine>
-    );
-  }
-  if (summary.failedComponents > 0) {
-    return (
-      <StatusLine icon={TriangleAlertIcon} tone="warn">
-        {summary.lastAttemptAt === null
-          ? t("failed", { count: summary.failedComponents })
-          : t.rich("failed_at", {
-              count: summary.failedComponents,
-              date: date(summary.lastAttemptAt),
-            })}
-      </StatusLine>
-    );
-  }
-  if (summary.stale) {
-    return (
-      <StatusLine icon={ClockAlertIcon} tone="warn">
-        {t("stale")}
-      </StatusLine>
-    );
-  }
-  if (summary.oldestSuccessAt === null) {
-    return (
-      <StatusLine icon={CircleDashedIcon} tone="muted">
-        {t("incomplete", { count: summary.notCheckedComponents })}
-      </StatusLine>
-    );
-  }
-
-  return (
-    <StatusLine icon={CircleCheckIcon} tone="success">
-      {t.rich("checked", { date: date(summary.oldestSuccessAt) })}
-    </StatusLine>
-  );
+const STATUS_TONE: Record<UpdateStatus, string> = {
+  disabled: "text-muted-foreground",
+  not_checked: "text-muted-foreground",
+  running: "text-muted-foreground",
+  security: "text-destructive",
+  unavailable: "text-muted-foreground",
+  unconfirmed: "text-muted-foreground",
+  up_to_date: "text-success",
+  updates: "text-primary",
 };
 
-const Stat = ({
+const STATUS_TEXT_TONE: Partial<Record<UpdateStatus, string>> = {
+  security: STATUS_TONE.security,
+  up_to_date: STATUS_TONE.up_to_date,
+  updates: STATUS_TONE.updates,
+};
+
+const Row = ({
   children,
   label,
-  tone,
 }: {
   children: React.ReactNode;
   label: string;
-  tone?: Tone;
 }) => (
-  <div className="bg-muted/50 flex min-w-0 flex-col gap-1 rounded-lg p-3">
-    <dt className="text-muted-foreground text-xs leading-relaxed">{label}</dt>
-    <dd
-      className={cn(
-        "flex min-w-0 flex-col text-lg font-semibold tabular-nums",
-        tone && TONE[tone],
-      )}
-    >
+  <div className="flex items-center justify-between gap-4 py-2">
+    <dt className="text-muted-foreground shrink-0 text-sm">{label}</dt>
+    <dd className="flex min-w-0 items-center justify-end gap-1.5 text-end text-sm font-medium tabular-nums">
       {children}
     </dd>
   </div>
@@ -146,11 +66,35 @@ const Unknown = () => {
   );
 };
 
-/**
- * Core's version and what the stored update checks know about core and
- * plugins. Reads the summary every AdminCP surface shares; it never starts a
- * check - that stays a button on the Plugins page.
- */
+const Warning = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-warn inline-flex items-center gap-1">
+    <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
+    {children}
+  </span>
+);
+
+const LastChecked = ({ summary }: { summary: AdminUpdateSummary }) => {
+  const t = useTranslations(
+    "admin.dashboard.widgets.system-updates.last_checked",
+  );
+  const date = (value: string) => () => <DateFormat date={value} />;
+
+  if (!summary.enabled) return <Unknown />;
+  if (summary.running) return t("running");
+  if (summary.failedComponents > 0 && summary.lastAttemptAt !== null) {
+    return (
+      <Warning>
+        {t.rich("failed", { date: date(summary.lastAttemptAt) })}
+      </Warning>
+    );
+  }
+  if (summary.stale) return <Warning>{t("stale")}</Warning>;
+
+  const checkedAt = summary.oldestSuccessAt ?? summary.lastAttemptAt;
+
+  return checkedAt === null ? t("never") : <DateFormat date={checkedAt} />;
+};
+
 export const SystemUpdatesWidget = () => {
   const t = useTranslations("admin.dashboard.widgets.system-updates");
   const { data, isError } = useAdminUpdateSummary();
@@ -158,66 +102,76 @@ export const SystemUpdatesWidget = () => {
   if (isError) {
     return (
       <div className="flex flex-col gap-3">
-        <StatusLine icon={TriangleAlertIcon} tone="warn">
-          {t("load_error")}
-        </StatusLine>
+        <p className="flex items-start gap-2 text-sm leading-relaxed">
+          <TriangleAlertIcon
+            aria-hidden
+            className="text-warn mt-0.5 size-4 shrink-0"
+          />
+          <span className="text-pretty">{t("load_error")}</span>
+        </p>
         <ViewPlugins />
       </div>
     );
   }
   if (data === undefined) return <WidgetContentSkeleton />;
 
-  // Before anything was checked a count of 0 would read as "nothing to do".
-  const known = data.enabled && data.checkedComponents > 0;
-  const upToDate =
-    known &&
-    data.updatesAvailable === 0 &&
-    data.affectedComponents === 0 &&
-    data.unconfirmedComponents === 0 &&
-    data.failedComponents === 0 &&
-    !data.stale;
+  const status = updateStatusOf(data);
+  const known = isKnownUpdateStatus(status);
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div aria-live="polite">
-        <Freshness summary={data} />
-      </div>
-
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Stat label={t("core.label")}>
-          <span className="truncate font-mono text-base">
-            {data.core.version ?? <Unknown />}
+    <div className="flex h-full flex-col gap-2">
+      <dl className="divide-border flex flex-col divide-y">
+        <Row label={t("rows.status")}>
+          <span
+            aria-hidden
+            className={cn(
+              "size-2 rounded-full bg-current",
+              STATUS_TONE[status],
+            )}
+          />
+          <span aria-live="polite" className={STATUS_TEXT_TONE[status]}>
+            {t(`status.${status}`, { count: data.unconfirmedComponents })}
           </span>
-          <span className="text-muted-foreground text-xs leading-relaxed font-normal text-pretty">
-            {!known || data.core.state !== "checked"
-              ? t("core.unknown")
-              : data.core.latestVersion === null
-                ? t("core.none")
-                : t("core.available", { version: data.core.latestVersion })}
-          </span>
-        </Stat>
-        <Stat label={t("plugin_updates")}>
+        </Row>
+        <Row label={t("rows.core")}>
+          {data.core.version === null ? (
+            <Unknown />
+          ) : (
+            <span className="truncate font-mono">{data.core.version}</span>
+          )}
+          {known && data.core.latestVersion !== null ? (
+            <span className="text-primary shrink-0 font-mono">
+              <span aria-hidden>
+                → {compactVersion(data.core.version, data.core.latestVersion)}
+              </span>
+              <span className="sr-only">
+                {t("core_update", { version: data.core.latestVersion })}
+              </span>
+            </span>
+          ) : null}
+        </Row>
+        <Row label={t("rows.plugin_updates")}>
           {known ? data.pluginUpdatesAvailable : <Unknown />}
-        </Stat>
-        <Stat
-          label={t("affected")}
-          tone={
-            known && data.affectedComponents > 0 ? "destructive" : undefined
-          }
-        >
-          {known ? data.affectedComponents : <Unknown />}
-        </Stat>
+        </Row>
+        <Row label={t("rows.security")}>
+          {!known ? (
+            <Unknown />
+          ) : data.affectedComponents > 0 ? (
+            <span className="text-destructive inline-flex items-center gap-1">
+              <ShieldAlertIcon aria-hidden className="size-4 shrink-0" />
+              {t("security_affected", { count: data.affectedComponents })}
+            </span>
+          ) : (
+            t("security_none")
+          )}
+        </Row>
+        <Row label={t("rows.last_checked")}>
+          <LastChecked summary={data} />
+        </Row>
       </dl>
-
-      {known && (upToDate || data.unconfirmedComponents > 0) ? (
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {upToDate
-            ? t("up_to_date")
-            : t("unconfirmed", { count: data.unconfirmedComponents })}
-        </p>
-      ) : null}
-
-      <ViewPlugins />
+      <div className="mt-auto">
+        <ViewPlugins />
+      </div>
     </div>
   );
 };
@@ -227,7 +181,7 @@ const ViewPlugins = () => {
 
   return (
     <AdminLink
-      className="text-primary mt-auto inline-flex items-center gap-1 self-start text-sm font-medium underline-offset-4 hover:underline"
+      className="text-primary inline-flex items-center gap-1 self-start text-sm font-medium underline-offset-4 hover:underline"
       href={ADMIN_PLUGINS_HREF}
     >
       {t("view_plugins")}

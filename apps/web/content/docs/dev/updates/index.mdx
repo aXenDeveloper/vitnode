@@ -4,7 +4,7 @@ description: How VitNode tells administrators about new versions and security up
 icon: RefreshCw
 ---
 
-VitNode checks once a day whether a newer version of core or any installed plugin is published, and whether the version you run is affected by a published security update. The results appear in **AdminCP → System → Plugins**, as a count next to that menu item, as a security banner across the AdminCP and in the **System updates** dashboard widget.
+VitNode checks once a day whether a newer version of core or any installed plugin is published, and whether the version you run is affected by a published security update. The results appear in **AdminCP → System → Plugins**, as a count next to that menu item, as a security alert in the AdminCP header and in the **System updates** dashboard widget.
 
 Each package says where its **update manifest** lives - a public JSON file on GitHub Raw or any other HTTPS host. VitNode reads those files from the server. It does not ask npm, and it does not install, download or change anything.
 
@@ -13,7 +13,7 @@ Each package says where its **update manifest** lives - a public JSON file on Gi
 | You want to...                                                          | Read                                                                 |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | See updates and security warnings, run a check, choose a channel        | [Check for updates in the AdminCP](/docs/dev/updates/admin)          |
-| Understand the update count, security banner and dashboard widget      | [Update alerts in the AdminCP](/docs/dev/updates/alerts)             |
+| Understand the update count, security alert and dashboard widget       | [Update alerts in the AdminCP](/docs/dev/updates/alerts)             |
 | Learn how checks stay exclusive across API instances                    | [How update checks share one lease](/docs/dev/updates/lease)         |
 | Make your own plugin report updates                                     | [Publish updates for your plugin](/docs/dev/updates/plugin-authors)  |
 | Look up every field of the JSON format                                  | [Update manifest reference](/docs/dev/updates/manifest)              |

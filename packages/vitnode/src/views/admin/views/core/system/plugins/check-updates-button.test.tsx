@@ -13,7 +13,6 @@ import {
   useAdminUpdateSummary,
 } from "./update-summary-query";
 
-/** Stands in for the navigation badge, the banner and the widget: any reader of the summary. */
 const SummaryReader = () => {
   useAdminUpdateSummary();
 

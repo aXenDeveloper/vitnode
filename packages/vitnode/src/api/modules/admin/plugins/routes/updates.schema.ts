@@ -60,7 +60,8 @@ export const updatesOverviewSchema = z.object({
   plugins: z.array(componentUpdateSchema),
 });
 
-const iso = (date: Date | null): null | string => date?.toISOString() ?? null;
+export const iso = (date: Date | null): null | string =>
+  date?.toISOString() ?? null;
 
 export const serializeComponentUpdate = (
   state: ComponentUpdateState,
@@ -73,7 +74,6 @@ export const serializeComponentUpdate = (
 export const updatesSummarySchema = z.object({
   enabled: z.boolean(),
   running: z.boolean(),
-  totalComponents: z.number(),
   checkedComponents: z.number(),
   updatesAvailable: z.number(),
   pluginUpdatesAvailable: z.number(),
@@ -87,6 +87,5 @@ export const updatesSummarySchema = z.object({
   core: z.object({
     version: z.string().nullable(),
     latestVersion: z.string().nullable(),
-    state: z.enum(["checked", "not_checked", "unavailable"]),
   }),
 });

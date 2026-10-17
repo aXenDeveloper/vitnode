@@ -5,18 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UpdateCheckLeaseRenewal } from "./lock";
 
 import { startUpdateCheckHeartbeat } from "./heartbeat";
-import { UpdateCheckLeaseLostError } from "./lock";
+import {
+  UPDATE_CHECK_LEASE_MS,
+  UPDATE_CHECK_RENEW_INTERVAL_MS,
+  UpdateCheckLeaseLostError,
+} from "./lock";
 
 type Db = ReturnType<typeof drizzle>;
 
-const INTERVAL = 60_000;
-const LEASE = 5 * 60_000;
-const RENEWED: UpdateCheckLeaseRenewal = {
-  expiresAt: new Date(0),
-  status: "renewed",
-};
+const INTERVAL = UPDATE_CHECK_RENEW_INTERVAL_MS;
+const LEASE = UPDATE_CHECK_LEASE_MS;
+const RENEWED: UpdateCheckLeaseRenewal = { status: "renewed" };
 
-/** A renewal the test answers by hand. */
 const deferred = () => {
   let answer: (renewal: UpdateCheckLeaseRenewal) => void = () => undefined;
   const promise = new Promise<UpdateCheckLeaseRenewal>(resolve => {
@@ -32,8 +32,6 @@ const start = (
   startUpdateCheckHeartbeat({
     confirmedAt: Date.now(),
     db: {} as Db,
-    intervalMs: INTERVAL,
-    leaseMs: LEASE,
     owner: "a",
     renew,
   });
@@ -54,7 +52,7 @@ describe("startUpdateCheckHeartbeat", () => {
     await vi.advanceTimersByTimeAsync(2 * LEASE);
 
     expect(renew).toHaveBeenCalledTimes((2 * LEASE) / INTERVAL);
-    expect(renew).toHaveBeenCalledWith({}, "a", { leaseMs: LEASE });
+    expect(renew).toHaveBeenCalledWith({}, "a");
     expect(heartbeat.signal.aborted).toBe(false);
     await heartbeat.stop();
   });
@@ -116,13 +114,11 @@ describe("startUpdateCheckHeartbeat", () => {
       .mockReturnValueOnce(hung.promise);
     const heartbeat = start(renew);
 
-    // Confirmed by the renewal sent at 60 s, so it holds until 60 s + LEASE.
     await vi.advanceTimersByTimeAsync(INTERVAL + LEASE - 1);
     expect(heartbeat.signal.aborted).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(heartbeat.signal.reason).toBeInstanceOf(UpdateCheckLeaseLostError);
 
-    // A late answer does not bring it back.
     hung.answer(RENEWED);
     await heartbeat.stop();
     expect(vi.getTimerCount()).toBe(0);

@@ -38,7 +38,7 @@ Staff with **Plugins → Check for plugin and core updates now** (`plugins.can_c
 - A manual check can run once every two minutes. A click inside that window says how many seconds to wait.
 - The endpoint is `POST /api/@vitnode/core/admin/plugins/updates/check`. It answers `409` while a check runs (`"status": "running"`) or when the check was interrupted (`"status": "interrupted"`), and `429` during the cooldown.
 
-Viewing the results only needs **Plugins → View installed plugins and their versions** (`plugins.can_view`). The same permission shows the [update count, security banner and System updates widget](/docs/dev/updates/alerts) everywhere else in the AdminCP. How the lease keeps checks exclusive is explained in [How update checks share one lease](/docs/dev/updates/lease).
+Viewing the results only needs **Plugins → View installed plugins and their versions** (`plugins.can_view`). The same permission shows the [update count, security alert and System updates widget](/docs/dev/updates/alerts) everywhere else in the AdminCP. How the lease keeps checks exclusive is explained in [How update checks share one lease](/docs/dev/updates/lease).
 
 ## Read the results
 

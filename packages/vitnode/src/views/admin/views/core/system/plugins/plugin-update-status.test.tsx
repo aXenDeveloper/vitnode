@@ -146,7 +146,6 @@ describe("PluginUpdateStatus", () => {
 
     expect(screen.getByText(`${T}.status.update_available`)).toBeTruthy();
     expect(screen.getByText(`${T}.failed_with_previous`)).toBeTruthy();
-    expect(screen.queryByText(`${T}.checked_at`)).toBeNull();
   });
 
   it("reports a check that failed before anything was found", () => {
@@ -167,13 +166,6 @@ describe("PluginUpdateStatus", () => {
     renderStatus(update({ stale: true }));
 
     expect(screen.getByText(`${T}.stale`)).toBeTruthy();
-    expect(screen.queryByText(`${T}.checked_at`)).toBeNull();
-  });
-
-  it("says when the last check is current", () => {
-    renderStatus(update());
-
-    expect(screen.getByText(`${T}.checked_at`)).toBeTruthy();
   });
 
   it.each([

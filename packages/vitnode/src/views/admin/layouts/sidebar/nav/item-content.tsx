@@ -74,7 +74,6 @@ export const ItemNavAdminContent = ({
   };
 
   const isIconOnly = state === "collapsed" && !isMobile;
-  // A parent stands in for its sub-items' badges while they are out of sight.
   const badge = items.length
     ? isIconOnly || !open
       ? sumAdminNavBadges(

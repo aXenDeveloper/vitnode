@@ -8,11 +8,6 @@ import type { AdminNavBadges } from "./nav-badges";
 import { AdminNavBadgesProvider } from "./nav-badges";
 import { ADMIN_PLUGINS_HREF } from "./nav-model";
 
-/**
- * Puts the number of available updates next to System → Plugins. Nothing
- * while the summary loads, fails, or has nothing to count - the item itself
- * never changes.
- */
 export const AdminUpdateNavBadges = ({
   children,
 }: {

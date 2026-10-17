@@ -224,30 +224,35 @@
         "system-updates": {
           "title": "Aktualizacje systemu",
           "desc": "Wersja rdzenia, dostępne aktualizacje i ostrzeżenia bezpieczeństwa z zapisanych sprawdzeń aktualizacji.",
-          "core": {
-            "label": "Rdzeń VitNode",
-            "unknown": "Nowsza wersja nieznana",
-            "none": "Brak znanej nowszej wersji",
-            "available": "Dostępna wersja {version}"
+          "rows": {
+            "status": "Stan",
+            "core": "VitNode",
+            "plugin_updates": "Aktualizacje wtyczek",
+            "security": "Bezpieczeństwo",
+            "last_checked": "Ostatnie sprawdzenie"
           },
-          "plugin_updates": "Aktualizacje wtyczek",
-          "affected": "Objęte aktualizacjami bezpieczeństwa",
+          "status": {
+            "security": "Wymagana poprawka bezpieczeństwa",
+            "updates": "Dostępne aktualizacje",
+            "up_to_date": "Wszystko aktualne",
+            "unconfirmed": "{count, plural, one {# pakiet niepotwierdzony} few {# pakiety niepotwierdzone} other {# pakietów niepotwierdzonych}}",
+            "running": "Trwa sprawdzanie...",
+            "not_checked": "Jeszcze nie sprawdzono",
+            "unavailable": "Brak źródeł aktualizacji",
+            "disabled": "Sprawdzanie wyłączone"
+          },
+          "core_update": "dostępna aktualizacja do {version}",
+          "security_affected": "{count, plural, one {# pakiet} few {# pakiety} other {# pakietów}}",
+          "security_none": "Brak",
+          "last_checked": {
+            "running": "W toku",
+            "failed": "Niepowodzenie <date></date>",
+            "stale": "Nieaktualne",
+            "never": "Nigdy"
+          },
           "unknown": "Nieznane",
-          "up_to_date": "Wszystko jest aktualne.",
-          "unconfirmed": "Nie udało się potwierdzić aktualności {count, plural, one {# pakietu} other {# pakietów}} - szczegóły na stronie Wtyczki.",
           "load_error": "Nie udało się wczytać podsumowania aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",
-          "view_plugins": "Zobacz wtyczki",
-          "freshness": {
-            "disabled": "Sprawdzanie aktualizacji jest wyłączone w tej instalacji.",
-            "running": "Trwa sprawdzanie aktualizacji...",
-            "not_checked": "Jeszcze nie sprawdzono. Codzienne sprawdzanie odbywa się w nocy; możesz też uruchomić je na stronie Wtyczki.",
-            "unavailable": "Żaden zainstalowany pakiet nie deklaruje źródła aktualizacji.",
-            "failed": "Ostatnie sprawdzenie nie powiodło się dla {count, plural, one {# pakietu} other {# pakietów}}. Pokazujemy ostatnie znane wyniki.",
-            "failed_at": "Sprawdzenie <date></date> nie powiodło się dla {count, plural, one {# pakietu} other {# pakietów}}. Pokazujemy ostatnie znane wyniki.",
-            "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki są przeliczane z zapisanych danych wydawców.",
-            "incomplete": "Jeszcze nie sprawdzono: {count, plural, one {# pakiet} few {# pakiety} other {# pakietów}}.",
-            "checked": "Wszystkie źródła aktualizacji sprawdzono pomyślnie <date></date>"
-          }
+          "view_plugins": "Zobacz wtyczki"
         }
       }
     },
@@ -490,10 +495,18 @@
       },
       "updates": {
         "nav_badge": "{count, plural, one {# dostępna aktualizacja} few {# dostępne aktualizacje} other {# dostępnych aktualizacji}}",
-        "security_banner": {
-          "title": "Aktualizacje bezpieczeństwa dotyczą {count, plural, one {# komponentu} other {# komponentów}}.",
+        "security_pill": {
+          "label": "{count, plural, one {# aktualizacja bezpieczeństwa} few {# aktualizacje bezpieczeństwa} other {# aktualizacji bezpieczeństwa}}",
+          "title": "{count, plural, one {# aktualizacja} few {# aktualizacje} other {# aktualizacji}}",
+          "checked": "Sprawdzono <date></date>",
+          "security": "Poprawki bezpieczeństwa",
+          "other": "Pozostałe aktualizacje",
+          "more": "i {count} więcej",
+          "entry_label": "{title}, aktualizacja do {version}",
+          "core": "VitNode",
           "last_known": "Na podstawie ostatnich znanych wyników - najnowsze sprawdzenie nie mogło ich potwierdzić.",
-          "review": "Przejrzyj aktualizacje"
+          "load_error": "Nie udało się wczytać listy aktualizacji. Strona Wtyczki nadal pokazuje wszystkie wyniki.",
+          "open_plugins": "Otwórz Wtyczki"
         }
       }
     },
@@ -1108,7 +1121,6 @@
           "stale": "Jeszcze nie sprawdzono dla tego wdrożenia - wyniki pochodzą z danych wydawcy pobranych <date></date>.",
           "failed": "Ostatnie sprawdzanie nie powiodło się: {reason}",
           "failed_with_previous": "Ostatnie sprawdzanie nie powiodło się: {reason} Widoczny jest ostatni udany wynik z <date></date>.",
-          "checked_at": "Sprawdzono <date></date>",
           "error": {
             "blocked_address": "źródło aktualizacji wskazuje na adres prywatny lub lokalny.",
             "http_error": "źródło aktualizacji odpowiedziało kodem HTTP {detail}.",

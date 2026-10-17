@@ -183,11 +183,7 @@ const readCapped = async (
 const transportFailure = (
   error: unknown,
   signal: AbortSignal,
-  cancel: AbortSignal | undefined,
-): unknown => {
-  // The caller gave up on the check - not something the publisher did, so the
-  // caller's own reason goes back instead of a failure it would record.
-  if (cancel?.aborted) return cancel.reason;
+): UpdateSourceError => {
   if (error instanceof UpdateSourceError) return error;
   if (signal.aborted) return new UpdateSourceError("timeout");
   if (
@@ -215,7 +211,6 @@ export interface FetchUpdateSourceOptions {
   maxBytes?: number;
   maxRedirects?: number;
   resolveHost?: ResolveUpdateHost;
-  /** Aborting it stops the request and rejects with the signal's own reason, never an {@link UpdateSourceError}. */
   signal?: AbortSignal;
   timeoutMs?: number;
   transport?: UpdateSourceTransport;
@@ -252,7 +247,10 @@ export const fetchUpdateSource = async (
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     await assertFetchableUrl(url, resolveHost);
-    if (signal.aborted) throw transportFailure(null, signal, cancel);
+    if (signal.aborted) {
+      cancel?.throwIfAborted();
+      throw new UpdateSourceError("timeout");
+    }
 
     let response: UpdateSourceTransportResponse;
     try {
@@ -262,7 +260,8 @@ export const fetchUpdateSource = async (
         signal,
       });
     } catch (error) {
-      throw transportFailure(error, signal, cancel);
+      cancel?.throwIfAborted();
+      throw transportFailure(error, signal);
     }
 
     if (response.status === 304) {
@@ -301,7 +300,8 @@ export const fetchUpdateSource = async (
       bytes = await readCapped(response.body, maxBytes);
     } catch (error) {
       response.destroy();
-      throw transportFailure(error, signal, cancel);
+      cancel?.throwIfAborted();
+      throw transportFailure(error, signal);
     }
 
     let body: unknown;

@@ -72,11 +72,6 @@ const pick = (
   schemaVersion: manifest.schemaVersion,
 });
 
-/**
- * At most `limit` at a time. The caller's signal, or the first failure, stops
- * the rest: nothing new starts, running work sees its signal aborted, and every
- * worker has settled before this returns or throws.
- */
 const mapLimited = async <T>(
   items: readonly T[],
   limit: number,
@@ -109,10 +104,8 @@ const mapLimited = async <T>(
   if (failure) throw failure.reason;
 };
 
-/** Where a check runs and how it learns it lost the lease. */
-export interface UpdateCheckLeaseScope {
+interface UpdateCheckLeaseScope {
   owner: string;
-  /** Aborted with an `UpdateCheckLeaseLostError` once the lease can no longer be confirmed. */
   signal: AbortSignal;
 }
 
@@ -122,13 +115,6 @@ export interface UpdateCheckLeaseScope {
  * it and stores the outcome. A source that fails keeps its last valid copy -
  * and every finding computed from it - and only records the failure, so one
  * unreachable publisher neither blocks the others nor turns into "up to date".
- *
- * Every write goes through the lease fence in its own short transaction - one
- * per source, holding the source and the results computed from it, then one for
- * the clean-up - and never spans a network request. Once the lease is lost the
- * check stops: requests in flight are aborted, queued ones never start, and
- * nothing more is stored. A cancelled request is not a publisher failure, so
- * the stored data stays exactly as the last committed write left it.
  */
 export const checkForUpdates = async ({
   channelOverride,
@@ -196,8 +182,6 @@ export const checkForUpdates = async ({
       const previous = stored.get(url);
       const members = bySource.get(url) ?? [];
       const ids = members.map(component => component.id);
-      // A 304 can only stand in for a copy that is stored and still covers every
-      // package asked about now; otherwise ask for the full document.
       const reusable =
         previous?.document !== null &&
         previous?.document !== undefined &&
@@ -259,7 +243,6 @@ export const checkForUpdates = async ({
           }
         }
       } catch (error) {
-        // Cancelled, not failed: nothing about this source is recorded.
         signal.throwIfAborted();
         outcome = {
           document: previous?.document ?? null,
@@ -267,7 +250,6 @@ export const checkForUpdates = async ({
         };
       }
 
-      signal.throwIfAborted();
       const { document, error } = outcome;
       const evaluated =
         error === null
@@ -283,7 +265,6 @@ export const checkForUpdates = async ({
             }))
           : [];
 
-      // The source and every result computed from it commit together, or not at all.
       await write(signal, async tx => {
         if (error === null) {
           const values = {
@@ -310,8 +291,6 @@ export const checkForUpdates = async ({
               target: core_update_sources.url,
             });
 
-          // The failure is recorded; what was found before - and the versions it
-          // was found for - stays exactly as it was.
           for (const component of members) {
             await tx
               .insert(core_update_results)
@@ -355,7 +334,6 @@ export const checkForUpdates = async ({
         }
       });
 
-      // Counted only once stored, never for work this run could not commit.
       if (error !== null) summary.failedSources += 1;
       for (const { result } of evaluated) {
         summary.securityUpdates += result.securityUpdates.length;
@@ -394,14 +372,8 @@ export type LockedUpdateCheck =
       status: "busy";
     }
   | { status: "completed"; summary: UpdateCheckSummary }
-  /** The lease could not be confirmed mid-check, so the check stopped. What it committed before stays; nothing after. */
   | { status: "lease_lost" };
 
-/**
- * The whole lease lifecycle, the same for the cron job and the button: take
- * the lease, keep renewing it, check, stop the heartbeat and wait for it, then
- * give the lease back - which only happens while it is still this run's.
- */
 export const runLockedUpdateCheck = async ({
   manual,
   ...options
@@ -438,8 +410,6 @@ export const runLockedUpdateCheck = async ({
     throw error;
   } finally {
     await heartbeat.stop();
-    // A failure here must not hide the check's own outcome; an unreleased lease
-    // simply runs out within UPDATE_CHECK_LEASE_MS.
     await releaseUpdateCheckLease(options.db, lease.owner).catch(() => false);
   }
 };

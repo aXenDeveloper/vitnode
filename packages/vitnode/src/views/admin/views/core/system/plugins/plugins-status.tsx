@@ -1,64 +1,20 @@
 import { cn } from "cn";
-import {
-  ArrowUpCircleIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleOffIcon,
-  ShieldAlertIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
 import { useFormatter, useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 
-import type { PluginRow } from "./plugin-list";
+import type { PluginRow } from "./plugin-rows";
+import type { PluginTone } from "./plugin-tone";
 import type {
   AdminPluginUpdates,
   CheckPluginUpdates,
 } from "./plugin-updates-query";
 
 import { CheckUpdatesButton } from "./check-updates-button";
+import { PLUGIN_TONE_STYLE } from "./plugin-tone";
 import { ExternalLink } from "./plugin-update-status";
 
-type StatusKind =
-  | "disabled"
-  | "error"
-  | "ok"
-  | "pending"
-  | "security"
-  | "unavailable"
-  | "update";
-
-const KIND_ICON = {
-  disabled: {
-    icon: CircleOffIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-  error: {
-    icon: TriangleAlertIcon,
-    className: "bg-warn/10 text-warn dark:bg-warn/20",
-  },
-  ok: {
-    icon: CircleCheckIcon,
-    className: "bg-success/10 text-success dark:bg-success/20",
-  },
-  pending: {
-    icon: CircleDashedIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-  security: {
-    icon: ShieldAlertIcon,
-    className: "bg-destructive/10 text-destructive dark:bg-destructive/20",
-  },
-  unavailable: {
-    icon: CircleOffIcon,
-    className: "bg-muted text-muted-foreground",
-  },
-  update: {
-    icon: ArrowUpCircleIcon,
-    className: "bg-primary/10 text-primary dark:bg-primary/20",
-  },
-} as const;
+type StatusKind = "unavailable" | Exclude<PluginTone, "off" | "unknown">;
 
 const statusKindOf = (
   rows: PluginRow[],
@@ -141,9 +97,11 @@ const StatusBody = ({
     return (
       <p className="text-pretty">
         {format.list(
-          available.map(
-            row => `${row.title} ${row.update?.result?.latest?.version ?? ""}`,
-          ),
+          available.map(row => {
+            const latest = row.update?.result?.latest;
+
+            return latest ? `${row.title} ${latest.version}` : row.title;
+          }),
         )}
       </p>
     );
@@ -183,7 +141,8 @@ export const PluginsStatus = ({
 }) => {
   const t = useTranslations("admin.system.plugins.status");
   const kind = statusKindOf(rows, updates);
-  const { className, icon: Icon } = KIND_ICON[kind];
+  const { className, icon: Icon } =
+    PLUGIN_TONE_STYLE[kind === "unavailable" ? "off" : kind];
   const securityCount = rows.reduce(
     (sum, row) => sum + (row.update?.result?.securityUpdates.length ?? 0),
     0,

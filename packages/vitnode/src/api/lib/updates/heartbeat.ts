@@ -9,32 +9,19 @@ import {
 
 type Db = ReturnType<typeof drizzle>;
 
-export interface UpdateCheckHeartbeat {
-  /** Aborted with an {@link UpdateCheckLeaseLostError} once ownership can no longer be confirmed. */
+interface UpdateCheckHeartbeat {
   signal: AbortSignal;
-  /** Stops renewing and waits for a renewal already on its way. Never throws. */
   stop: () => Promise<void>;
 }
 
-/**
- * Renews the lease about once a minute while a check runs. One renewal at a
- * time: the next is only scheduled after the previous one answered. A renewal
- * that says `lost`, fails, or does not answer before the lease could have run
- * out stops the check - it never keeps going on ownership it cannot confirm.
- */
 export const startUpdateCheckHeartbeat = ({
   confirmedAt,
   db,
-  intervalMs = UPDATE_CHECK_RENEW_INTERVAL_MS,
-  leaseMs = UPDATE_CHECK_LEASE_MS,
   owner,
   renew = renewUpdateCheckLease,
 }: {
-  /** `Date.now()` from just before the lease was taken: it runs at least `leaseMs` from then. */
   confirmedAt: number;
   db: Db;
-  intervalMs?: number;
-  leaseMs?: number;
   owner: string;
   renew?: typeof renewUpdateCheckLease;
 }): UpdateCheckHeartbeat => {
@@ -55,20 +42,18 @@ export const startUpdateCheckHeartbeat = ({
     );
   };
 
-  // Measured on this instance's own clock from when the renewal was sent, which
-  // is never later than when the database stamped it.
   const armDeadline = (from: number) => {
     clearTimeout(deadlineTimer);
     deadlineTimer = setTimeout(
       () => lose(),
-      Math.max(0, from + leaseMs - Date.now()),
+      Math.max(0, from + UPDATE_CHECK_LEASE_MS - Date.now()),
     );
   };
 
   const beat = async () => {
     const sentAt = Date.now();
     try {
-      const renewal = await renew(db, owner, { leaseMs });
+      const renewal = await renew(db, owner);
       if (renewal.status === "lost") {
         lose();
 
@@ -88,7 +73,7 @@ export const startUpdateCheckHeartbeat = ({
   const schedule = () => {
     beatTimer = setTimeout(() => {
       pending = beat();
-    }, intervalMs);
+    }, UPDATE_CHECK_RENEW_INTERVAL_MS);
   };
 
   armDeadline(confirmedAt);
@@ -99,9 +84,6 @@ export const startUpdateCheckHeartbeat = ({
     stop: async () => {
       stopped = true;
       clearTimeout(beatTimer);
-      // A renewal on its way is waited for until the deadline gives up on it,
-      // so one that never answers cannot hang the caller. It never rejects, and
-      // after the release it could only come back `lost`.
       if (!controller.signal.aborted) {
         const aborted = new Promise<void>(resolve => {
           controller.signal.addEventListener("abort", () => resolve(), {

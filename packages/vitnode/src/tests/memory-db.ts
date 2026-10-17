@@ -533,7 +533,6 @@ const call = (
   ) {
     return new Date();
   }
-  // Dates here are already absolute instants, so shifting them to UTC changes nothing.
   if (node.name === "timezone" && args.length === 2) {
     return args[1] instanceof Date ? args[1] : unsupported("timezone()");
   }

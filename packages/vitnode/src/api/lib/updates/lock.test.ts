@@ -21,7 +21,6 @@ type Db = ReturnType<typeof drizzle>;
 const T0 = new Date("2026-10-15T12:00:00Z");
 const at = (ms: number) => new Date(T0.getTime() + ms);
 
-/** The memory database reads `clock_timestamp()` off `Date`, so this moves its clock. */
 const clockAt = (ms: number) => {
   vi.setSystemTime(at(ms));
 };
@@ -145,11 +144,9 @@ describe("renewUpdateCheckLease", () => {
 
     clockAt(UPDATE_CHECK_LEASE_MS - 1000);
     await expect(renewUpdateCheckLease(db, "a")).resolves.toEqual({
-      expiresAt: at(2 * UPDATE_CHECK_LEASE_MS - 1000),
       status: "renewed",
     });
 
-    // Past the first lease's end, still held thanks to the renewal.
     clockAt(UPDATE_CHECK_LEASE_MS + 1000);
     await expect(take(db, "b")).resolves.toMatchObject({
       acquired: false,

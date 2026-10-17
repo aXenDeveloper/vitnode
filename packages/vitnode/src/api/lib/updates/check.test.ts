@@ -108,7 +108,6 @@ const sources = (
 
 const OWNER = "run";
 
-/** A database whose lease `OWNER` holds; `lost` stands in for its heartbeat. */
 const setup = async () => {
   const memory = createMemoryDb();
   const db = memory.db as unknown as Db;
@@ -340,7 +339,6 @@ describe("checkForUpdates", () => {
   });
 });
 
-/** A request that only ends when the check gives up on it. */
 const untilAborted: FetchUpdateSource = async (_, { signal }) =>
   await new Promise((_resolve, reject) => {
     signal?.addEventListener("abort", () => {
@@ -361,7 +359,6 @@ describe("checkForUpdates once the lease is lost", () => {
     ) => void = () => undefined;
     const fetchSource = vi.fn<FetchUpdateSource>(async (requested, options) => {
       if (options.signal) signals.push(options.signal);
-      // One publisher ignores the cancellation and answers anyway.
       if (requested === ACME) {
         return await new Promise(resolve => {
           answerLate = resolve;
@@ -387,13 +384,11 @@ describe("checkForUpdates once the lease is lost", () => {
     lost.abort(new UpdateCheckLeaseLostError());
     await new Promise(resolve => setImmediate(resolve));
     expect(signals.every(signal => signal.aborted)).toBe(true);
-    // Every worker settles before the check gives up - including the late one.
     expect(settled).toBe(false);
     answerLate(fetched(acmeManifest(), '"v2"'));
 
     await expect(running).rejects.toBeInstanceOf(UpdateCheckLeaseLostError);
     expect(fetchSource).toHaveBeenCalledTimes(4);
-    // Cancelled is not failed: the last good copy and its findings stay as they were.
     expect(stored()).toEqual(before);
   });
 

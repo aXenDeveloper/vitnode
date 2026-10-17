@@ -14,7 +14,7 @@ import { NavSidebarAdminContent } from "@/views/admin/layouts/sidebar/nav/nav-co
 import { AdminUpdateNavBadges } from "@/views/admin/layouts/sidebar/nav/update-nav-badges";
 import { SidebarAdminContent } from "@/views/admin/layouts/sidebar/sidebar-content";
 import { AdminSidebarToggle } from "@/views/admin/layouts/sidebar/sidebar-toggle";
-import { AdminUpdateSecurityBanner } from "@/views/admin/layouts/update-security-banner";
+import { AdminUpdateSecurityPill } from "@/views/admin/layouts/update-security-pill";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { RouteGuardPending } from "../pending/guard-pending";
@@ -90,11 +90,10 @@ const AdminShellFrame = ({
           <div className="min-w-0 flex-1">{breadcrumb}</div>
 
           <div className="ml-auto flex shrink-0 items-center justify-center gap-2 px-2">
+            <AdminUpdateSecurityPill />
             <AdminSearch onNavigate={onNavigate} searchUsers={searchUsers} />
           </div>
         </header>
-
-        <AdminUpdateSecurityBanner />
 
         {children}
       </SidebarInset>

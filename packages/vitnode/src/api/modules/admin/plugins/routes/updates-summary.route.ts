@@ -4,14 +4,14 @@ import {
   summarizeUpdates,
 } from "@/api/lib/updates/status";
 
-import { updatesSummarySchema } from "./updates.schema";
+import { iso, updatesSummarySchema } from "./updates.schema";
 
 export const pluginUpdatesSummaryAdminRoute = buildRoute({
   adminStaffPermission: { module: "plugins", permission: "can_view" },
   route: {
     method: "get",
     description:
-      "Counts behind the AdminCP update badge, security banner and dashboard widget, from stored results only. Never contacts a publisher or starts a check.",
+      "Counts behind the AdminCP update badge, security pill and dashboard widget, from stored results only. Never contacts a publisher or starts a check.",
     path: "/updates/summary",
     responses: {
       200: {
@@ -38,8 +38,8 @@ export const pluginUpdatesSummaryAdminRoute = buildRoute({
       {
         ...summary,
         core: { ...summary.core, version: coreVersion },
-        lastAttemptAt: summary.lastAttemptAt?.toISOString() ?? null,
-        oldestSuccessAt: summary.oldestSuccessAt?.toISOString() ?? null,
+        lastAttemptAt: iso(summary.lastAttemptAt),
+        oldestSuccessAt: iso(summary.oldestSuccessAt),
       },
       200,
     );
