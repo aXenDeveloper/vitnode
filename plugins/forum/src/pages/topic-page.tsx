@@ -44,8 +44,8 @@ import {
 } from "./forum-links";
 import {
   forumQueryKeys,
-  forumQueryOptions,
   isSharedResponse,
+  queryForum,
   threadQueryOptions,
   TOPIC_STALE_TIME,
 } from "./forum-queries";
@@ -117,7 +117,7 @@ const loadTopic = async (
   );
 
   const [forum, thread] = await Promise.all([
-    queryClient.query(forumQueryOptions(String(topic.forum))).catch(() => null),
+    queryForum(queryClient, String(topic.forum)).catch(() => null),
     queryClient.query(threadQueryOptions(topic.id)),
   ]);
 

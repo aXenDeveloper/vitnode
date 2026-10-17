@@ -121,8 +121,11 @@ export const contentContainerAncestors = <TRow extends ContentContainerTreeRow>(
   return ancestors;
 };
 
+/** All a parent/child walk reads off a row. */
+type ContentContainerLinkRow = Pick<ContentContainerTreeRow, "id" | "parentId">;
+
 const childIdsByParent = (
-  rows: readonly ContentContainerTreeRow[],
+  rows: readonly ContentContainerLinkRow[],
 ): Map<number, number[]> => {
   const children = new Map<number, number[]>();
   for (const row of rows) {
@@ -134,7 +137,7 @@ const childIdsByParent = (
 };
 
 export const contentContainerSubtreeIds = (
-  rows: readonly ContentContainerTreeRow[],
+  rows: readonly ContentContainerLinkRow[],
   id: number,
 ): Set<number> => {
   const children = childIdsByParent(rows);

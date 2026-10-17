@@ -21,6 +21,8 @@ export const discussionContentType = defineContentType({
   publicApi: {
     path: "discussions",
     fields: ["id", "title", "slug", "body", "board", "publishedAt"],
+    // A board's discussion list shows titles and dates, never the body.
+    listFields: ["id", "title", "slug", "board", "publishedAt"],
     filterableFields: ["board"],
   },
 

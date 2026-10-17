@@ -214,7 +214,8 @@
       "compose": {
         "title": "Join the conversation",
         "guest": "You need an account to comment.",
-        "sign_in": "Sign in to comment"
+        "sign_in": "Sign in to comment",
+        "open": "Write a comment…"
       },
       "form": {
         "body_label": "Your comment",

@@ -6,7 +6,12 @@ import { deepMerge } from "./deep-merge";
 const messagesCache = new Map<string, Promise<Messages>>();
 const warned = new Set<string>();
 
-const cacheEnabled = (): boolean => process.env.NODE_ENV === "production";
+// Off only where files change under a running process. Keyed on "not
+// development" like the page cache, so a server started without NODE_ENV (a
+// plain `node dist/index.js`) still caches. Tests reuse source ids with
+// different fixtures, so they read fresh too.
+const cacheEnabled = (): boolean =>
+  process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test";
 
 const warnOnce = (key: string, message: string) => {
   if (warned.has(key)) return;
@@ -115,9 +120,10 @@ const buildMessages = async ({
  * locale underneath as a per-key fallback.
  *
  * Sources are applied in order - core, then each plugin, then app overrides -
- * so later ones win. The result is memoised per locale in production (emails and
- * pages hit the cache instead of re-reading every locale file); in development
- * the cache is off so edits to a locale file show up on the next request.
+ * so later ones win. The result is memoised per locale outside development
+ * (emails and pages hit the cache instead of re-reading every locale file); in
+ * development the cache is off so edits to a locale file show up on the next
+ * request.
  */
 export const loadMessages = async ({
   defaultLocale,

@@ -2,7 +2,9 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
+import type { QueueModel } from "../../api/models/queue";
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
@@ -20,7 +22,7 @@ import {
 } from "../search";
 import { listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
-import { contentDefinitionOf } from "./model";
+import { contentDefinitionOf, findContentModel } from "./model";
 import {
   contentSearchDocument,
   contentTranslationSearchDocument,
@@ -191,6 +193,26 @@ export const syncContentSearch = async (
 
 const CONTENT_SEARCH_DEPENDENT_PAGE_SIZE = 200;
 
+/** Deletes in flight at once, so a page of them cannot drain the pool. */
+const CONTENT_SEARCH_DELETE_CONCURRENCY = 10;
+
+/** Finishes a dependent reindex too big for the request that started it. */
+export const CONTENT_QUEUE_TASK_SEARCH_DEPENDENTS = "content-search-dependents";
+
+export const contentSearchDependentsPayloadSchema = z.object({
+  /** The dependent's cursor: the last id the request already reindexed. */
+  after: z.union([z.number().int(), z.string().min(1)]),
+  /** The record whose title or URL the dependents carry. */
+  contentTypeId: z.string().min(1),
+  dependentTypeId: z.string().min(1),
+  field: z.string().min(1),
+  itemId: z.union([z.number().int(), z.string().min(1)]),
+});
+
+type ContentSearchDependentsPayload = z.infer<
+  typeof contentSearchDependentsPayloadSchema
+>;
+
 const dependentSyncOf = (
   definition: AnyContentTypeDefinition,
   { changed, changedFields, operation }: ContentSearchSyncInput,
@@ -212,14 +234,26 @@ const reindexContentSearchDependent = async (
   c: Context,
   { model, pluginId }: RegisteredContentModel,
   {
+    after: start,
     context,
+    defer,
     field,
     value,
-  }: { context: ContentSearchContext; field: string; value: ContentId },
+  }: {
+    after?: ContentId;
+    context: ContentSearchContext;
+    /**
+     * Hands the rest to the queue once the first page is written. Without it the
+     * whole relation is walked here.
+     */
+    defer?: (after: ContentId) => Promise<void>;
+    field: string;
+    value: ContentId;
+  },
 ): Promise<void> => {
   const dependent = contentDefinitionOf(model);
   const indexer = createContentSearchIndexer(model, { pluginId });
-  let after: ContentId | undefined;
+  let after = start;
 
   for (;;) {
     const page = await indexer.loadByRelation(c, {
@@ -233,8 +267,16 @@ const reindexContentSearchDependent = async (
     if (page.documents.length > 0) {
       await c.get("search").bulkIndex(page.documents);
     }
-    for (const id of page.unindexed) {
-      await c.get("search").delete(dependent.id, id);
+    for (
+      let index = 0;
+      index < page.unindexed.length;
+      index += CONTENT_SEARCH_DELETE_CONCURRENCY
+    ) {
+      await Promise.all(
+        page.unindexed
+          .slice(index, index + CONTENT_SEARCH_DELETE_CONCURRENCY)
+          .map(async id => await c.get("search").delete(dependent.id, id)),
+      );
     }
 
     const read = page.documents.length + page.unindexed.length;
@@ -242,7 +284,50 @@ const reindexContentSearchDependent = async (
       return;
     }
     after = page.lastId;
+
+    if (defer) {
+      await defer(after);
+
+      return;
+    }
   }
+};
+
+/**
+ * The queue's half of a dependent reindex: the pages after the one the write's
+ * own request already wrote.
+ *
+ * The record is read back rather than carried in the payload, so a title edited
+ * again before the queue drains is indexed as it is now, not as it was.
+ */
+export const runContentSearchDependentsTask = async (
+  c: Context,
+  payload: ContentSearchDependentsPayload,
+): Promise<void> => {
+  const models = c.get("core")?.contentModels ?? [];
+  const parent = findContentModel(models, payload.contentTypeId);
+  const dependent = findContentModel(models, payload.dependentTypeId);
+  // A plugin removed since the write: nothing left to index, or to index with.
+  if (!parent || !dependent) return;
+
+  const definition = contentDefinitionOf(parent.model);
+  const itemId = parseContentId(definition.idStrategy, payload.itemId);
+  const after = parseContentId(
+    contentDefinitionOf(dependent.model).idStrategy,
+    payload.after,
+  );
+  if (itemId === null || after === null) return;
+
+  // Deleted since: its delete already removed every dependent's document.
+  const row = await parent.model.service(c).findById(itemId);
+  if (!row) return;
+
+  await reindexContentSearchDependent(c, dependent, {
+    after,
+    context: toRelatedSearchContext(definition, row, contentLocaleRouting(c)),
+    field: payload.field,
+    value: itemId,
+  });
 };
 
 const syncContentSearchDependents = async (
@@ -286,12 +371,37 @@ const syncContentSearchDependents = async (
           continue;
         }
 
+        // Absent outside a full request - a test, a script - which keeps the
+        // whole walk inline.
+        const queue = c.get("queue") as QueueModel | undefined;
+
+        // The first page is written here, so a record with a handful of
+        // comments is consistent the moment the edit returns. Thousands of them
+        // are the queue's job, not the editor's request.
         await reindexContentSearchDependent(c, entry, {
           context: toRelatedSearchContext(
             definition,
             input.row,
             contentLocaleRouting(c),
           ),
+          ...(queue
+            ? {
+                defer: async after => {
+                  await queue.dispatch({
+                    name: CONTENT_QUEUE_TASK_SEARCH_DEPENDENTS,
+                    payload: {
+                      after,
+                      contentTypeId: definition.id,
+                      dependentTypeId: dependent.id,
+                      field,
+                      itemId,
+                    } satisfies ContentSearchDependentsPayload,
+                    // Core owns the handler, whichever plugin's request this is.
+                    pluginId: "@vitnode/core",
+                  });
+                },
+              }
+            : {}),
           field,
           value: itemId,
         });
@@ -508,15 +618,13 @@ export const syncContentLocalizedSearch = async (
   const translations = await readTranslations(c, model, itemId);
   const wanted = input.locale?.trim().toLowerCase();
 
-  const outcomes: ContentSearchSyncOutcome[] = [];
-
-  for (const translation of translations) {
+  const planned = translations.flatMap(translation => {
     const locale = localeOf.get(translation.languageId);
     // A translation whose language row has been deleted has no locale to index
     // under. Its document is unreachable rather than wrong, and a rebuild is what
     // removes it - inventing a code here would create a document nothing queries.
-    if (locale === undefined) continue;
-    if (wanted !== undefined && locale.toLowerCase() !== wanted) continue;
+    if (locale === undefined) return [];
+    if (wanted !== undefined && locale.toLowerCase() !== wanted) return [];
 
     const document = contentTranslationSearchDocument(
       definition,
@@ -532,10 +640,47 @@ export const syncContentLocalizedSearch = async (
       { pluginId: input.pluginId, routing: contentLocaleRouting(c) },
     );
 
+    return [{ document, locale }];
+  });
+
+  const documents = planned.flatMap(({ document }) =>
+    document ? [document] : [],
+  );
+  // One write for every language at once. Not for a record that hangs off
+  // another one: `index` is what notices a new comment and credits its parent,
+  // and a bulk write would skip that.
+  const batch =
+    documents.length > 1 &&
+    contentSearchContextSource(definition)?.kind !== "relation"
+      ? await write(c, definition, {
+          action: "upsert",
+          documentId: contentSearchDocumentId(definition, itemId),
+          input,
+          itemId,
+          run: async () => {
+            await c.get("search").bulkIndex(documents);
+          },
+        })
+      : null;
+
+  const outcomes: ContentSearchSyncOutcome[] = [];
+
+  for (const { document, locale } of planned) {
+    const documentId = contentSearchDocumentId(definition, itemId, locale);
+
+    if (document && batch) {
+      outcomes.push({
+        action: "upsert",
+        documentId,
+        ...(batch.error ? { error: batch.error } : {}),
+      });
+      continue;
+    }
+
     outcomes.push(
       await write(c, definition, {
         action: document ? "upsert" : "delete",
-        documentId: contentSearchDocumentId(definition, itemId, locale),
+        documentId,
         input,
         itemId,
         run: async () => {

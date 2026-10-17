@@ -308,25 +308,39 @@ export class PostgresAiLedger implements AiLedger {
   async loadActionSettings(
     actionKey: string,
   ): Promise<AiActionSettings | null> {
-    const [row] = await this.db
+    return (
+      (await this.loadActionSettingsMany([actionKey])).get(actionKey) ?? null
+    );
+  }
+
+  async loadActionSettingsMany(
+    actionKeys: string[],
+  ): Promise<Map<string, AiActionSettings>> {
+    const keys = [...new Set(actionKeys)];
+    if (keys.length === 0) return new Map();
+
+    const rows = await this.db
       .select()
       .from(core_ai_action_settings)
-      .where(eq(core_ai_action_settings.actionKey, actionKey))
-      .limit(1);
-    if (!row) return null;
+      .where(inArray(core_ai_action_settings.actionKey, keys));
 
-    return {
-      dailyLimit: row.dailyLimit,
-      enabled: row.enabled,
-      fallbackModelId: row.fallbackModelId,
-      instructions: row.instructions,
-      maxInputCharacters: row.maxInputCharacters,
-      maxOutputTokens: row.maxOutputTokens,
-      maxRetries: row.maxRetries,
-      maxSteps: row.maxSteps,
-      modelId: row.modelId,
-      timeoutMs: row.timeoutMs,
-    };
+    return new Map(
+      rows.map(row => [
+        row.actionKey,
+        {
+          dailyLimit: row.dailyLimit,
+          enabled: row.enabled,
+          fallbackModelId: row.fallbackModelId,
+          instructions: row.instructions,
+          maxInputCharacters: row.maxInputCharacters,
+          maxOutputTokens: row.maxOutputTokens,
+          maxRetries: row.maxRetries,
+          maxSteps: row.maxSteps,
+          modelId: row.modelId,
+          timeoutMs: row.timeoutMs,
+        },
+      ]),
+    );
   }
 
   async loadSettings(): Promise<AiSettingsSnapshot> {
@@ -382,45 +396,66 @@ export class PostgresAiLedger implements AiLedger {
     }
   }
 
-  async resolveUserPolicy({
-    defaultGranted,
-    permissionKey,
+  async resolveUserPolicies({
+    permissions: requested,
+    settings: loadedSettings,
     userId,
   }: {
-    defaultGranted: boolean;
-    permissionKey: string;
+    permissions: { defaultGranted: boolean; permissionKey: string }[];
+    settings?: AiSettingsSnapshot;
     userId: number;
-  }): Promise<AiUserPolicy> {
-    const [user] = await this.db
-      .select({ roleId: core_users.roleId })
+  }): Promise<Map<string, AiUserPolicy>> {
+    // The primary role and every secondary role in one round trip.
+    const userRoles = await this.db
+      .select({
+        roleId: core_users.roleId,
+        secondaryRoleId: core_users_secondary_roles.roleId,
+      })
       .from(core_users)
-      .where(eq(core_users.id, userId))
-      .limit(1);
-    if (!user) return { dailyLimit: null, granted: false, monthlyPoints: 0n };
+      .leftJoin(
+        core_users_secondary_roles,
+        eq(core_users_secondary_roles.userId, core_users.id),
+      )
+      .where(eq(core_users.id, userId));
+    if (userRoles.length === 0) {
+      return new Map(
+        requested.map(({ permissionKey }) => [
+          permissionKey,
+          { dailyLimit: null, granted: false, monthlyPoints: 0n },
+        ]),
+      );
+    }
 
-    const secondary = await this.db
-      .select({ roleId: core_users_secondary_roles.roleId })
-      .from(core_users_secondary_roles)
-      .where(eq(core_users_secondary_roles.userId, userId));
     const roleIds = [
-      ...new Set([user.roleId, ...secondary.map(r => r.roleId)]),
+      ...new Set(
+        userRoles.flatMap(row =>
+          row.secondaryRoleId === null
+            ? [row.roleId]
+            : [row.roleId, row.secondaryRoleId],
+        ),
+      ),
+    ];
+    const permissionKeys = [
+      ...new Set(requested.map(item => item.permissionKey)),
     ];
 
-    const [roles, permissions, policies, [override], settings] =
+    const [roles, permissionRows, policies, [override], settings] =
       await Promise.all([
         this.db
           .select({ id: core_roles.id, root: core_roles.root })
           .from(core_roles)
           .where(inArray(core_roles.id, roleIds)),
-        this.db
-          .select()
-          .from(core_ai_role_permissions)
-          .where(
-            and(
-              inArray(core_ai_role_permissions.roleId, roleIds),
-              eq(core_ai_role_permissions.permission, permissionKey),
-            ),
-          ),
+        permissionKeys.length === 0
+          ? []
+          : this.db
+              .select()
+              .from(core_ai_role_permissions)
+              .where(
+                and(
+                  inArray(core_ai_role_permissions.roleId, roleIds),
+                  inArray(core_ai_role_permissions.permission, permissionKeys),
+                ),
+              ),
         this.db
           .select()
           .from(core_ai_role_policies)
@@ -430,29 +465,66 @@ export class PostgresAiLedger implements AiLedger {
           .from(core_ai_user_overrides)
           .where(eq(core_ai_user_overrides.userId, userId))
           .limit(1),
-        this.loadSettings(),
+        loadedSettings ?? this.loadSettings(),
       ]);
 
-    return resolvePolicy({
-      defaultGranted,
-      defaultMonthlyPoints: settings.defaultMonthlyPoints,
-      override: override
-        ? {
-            blocked: override.blocked,
-            monthlyPoints: parseDecimalOrNull(override.monthlyPoints),
-            unlimited: override.unlimited,
-          }
-        : null,
-      permissions: permissions.map(row => ({
-        dailyLimit: row.dailyLimit,
-        granted: row.granted,
-      })),
-      policies: policies.map(row => ({
-        monthlyPoints: parseDecimalOrNull(row.monthlyPoints),
-        unlimited: row.unlimited,
-      })),
-      root: roles.some(role => role.root),
+    const root = roles.some(role => role.root);
+    const parsedOverride = override
+      ? {
+          blocked: override.blocked,
+          monthlyPoints: parseDecimalOrNull(override.monthlyPoints),
+          unlimited: override.unlimited,
+        }
+      : null;
+    const parsedPolicies = policies.map(row => ({
+      monthlyPoints: parseDecimalOrNull(row.monthlyPoints),
+      unlimited: row.unlimited,
+    }));
+
+    return new Map(
+      requested.map(({ defaultGranted, permissionKey }) => [
+        permissionKey,
+        resolvePolicy({
+          defaultGranted,
+          defaultMonthlyPoints: settings.defaultMonthlyPoints,
+          override: parsedOverride,
+          permissions: permissionRows
+            .filter(row => row.permission === permissionKey)
+            .map(row => ({
+              dailyLimit: row.dailyLimit,
+              granted: row.granted,
+            })),
+          policies: parsedPolicies,
+          root,
+        }),
+      ]),
+    );
+  }
+
+  async resolveUserPolicy({
+    defaultGranted,
+    permissionKey,
+    settings,
+    userId,
+  }: {
+    defaultGranted: boolean;
+    permissionKey: string;
+    settings?: AiSettingsSnapshot;
+    userId: number;
+  }): Promise<AiUserPolicy> {
+    const policies = await this.resolveUserPolicies({
+      permissions: [{ defaultGranted, permissionKey }],
+      settings,
+      userId,
     });
+
+    return (
+      policies.get(permissionKey) ?? {
+        dailyLimit: null,
+        granted: false,
+        monthlyPoints: 0n,
+      }
+    );
   }
 
   async settle(

@@ -619,24 +619,28 @@ export const createContentAdvancedStore = <
       }
       if (itemIds.length === 0) return result;
 
-      for (const field of wanted) {
-        if (tables.junctions[field]) {
-          const rows = await readJunction(field, itemIds, database);
+      // One statement per field, side by side: each writes only its own key.
+      await Promise.all(
+        wanted.map(async field => {
+          if (tables.junctions[field]) {
+            const rows = await readJunction(field, itemIds, database);
+            for (const [itemKey, list] of rows) {
+              const entry = byKey.get(itemKey);
+              if (!entry) continue;
+              entry[field] = list.map(row => row.relatedItemId);
+            }
+
+            return;
+          }
+
+          const rows = await readChildren(field, itemIds, database);
           for (const [itemKey, list] of rows) {
             const entry = byKey.get(itemKey);
             if (!entry) continue;
-            entry[field] = list.map(row => row.relatedItemId);
+            entry[field] = list;
           }
-          continue;
-        }
-
-        const rows = await readChildren(field, itemIds, database);
-        for (const [itemKey, list] of rows) {
-          const entry = byKey.get(itemKey);
-          if (!entry) continue;
-          entry[field] = list;
-        }
-      }
+        }),
+      );
 
       return result;
     },

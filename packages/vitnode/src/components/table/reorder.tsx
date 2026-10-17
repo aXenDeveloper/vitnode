@@ -25,87 +25,25 @@ import { cn } from "cn";
 import { GripVerticalIcon } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import React from "react";
-import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { DataTableRowId, DataTableTMin } from "./data-table-content";
+import type {
+  DataTableProps,
+  DataTableRowId,
+  DataTableTMin,
+} from "./data-table-content";
+import type { ReorderableDataTable } from "./row-order";
 
 import { Button } from "../ui/button";
-import { moveRowId, type ReorderDetailsDataTable } from "./reorder-state";
+import { ROW_GROUP_CLASS, SortableRowHandleContext } from "./reorder-handle";
+import { isTableInStoredOrder } from "./reorder-state";
 
-type RowIdOf<T> = T extends { id: infer TId } ? TId : DataTableRowId;
-
-export interface ReorderableDataTable<T> {
-  disabled?: boolean;
-  getRowLabel?: (row: T) => string;
-  onReorder: (
-    ids: RowIdOf<T>[],
-    details: ReorderDetailsDataTable,
-  ) => Promise<void> | void;
-}
-
-interface RowOrderOverride {
-  ids: DataTableRowId[];
-  key: string;
-}
-
-export const useRowOrderDataTable = <T extends DataTableTMin>({
-  edges,
-  onReorder,
-}: {
-  edges: T[];
-  onReorder?: ReorderableDataTable<T>["onReorder"];
-}) => {
-  const t = useTranslations("core.global.data_table");
-  const serverIds = edges.map(row => row.id);
-  const serverKey = serverIds.join(",");
-  const [override, setOverride] = React.useState<null | RowOrderOverride>(null);
-  const unfailedAttemptsRef = React.useRef<RowOrderOverride[]>([]);
-  const ids = override?.key === serverKey ? override.ids : serverIds;
-  const byId = new Map(edges.map(row => [row.id, row]));
-  const rows = ids.flatMap(id => {
-    const row = byId.get(id);
-
-    return row ? [row] : [];
-  });
-
-  const reorder = (activeId: DataTableRowId, overId: DataTableRowId) => {
-    const move = moveRowId(ids, activeId, overId);
-    if (!move || !onReorder) return;
-
-    const attempt: RowOrderOverride = { ids: move.ids, key: serverKey };
-    unfailedAttemptsRef.current = [...unfailedAttemptsRef.current, attempt];
-    setOverride(attempt);
-
-    const persist = async () => {
-      try {
-        await onReorder(move.ids as RowIdOf<T>[], {
-          activeId: move.activeId,
-          from: move.from,
-          overId: move.overId,
-          to: move.to,
-        });
-        const position = unfailedAttemptsRef.current.indexOf(attempt);
-        if (position > 0) {
-          unfailedAttemptsRef.current =
-            unfailedAttemptsRef.current.slice(position);
-        }
-      } catch {
-        unfailedAttemptsRef.current = unfailedAttemptsRef.current.filter(
-          pending => pending !== attempt,
-        );
-        setOverride(unfailedAttemptsRef.current.at(-1) ?? null);
-        toast.error(t("reorder_failed"), {
-          description: t("reorder_failed_desc"),
-        });
-      }
-    };
-
-    void persist();
-  };
-
-  return { reorder, rows };
-};
+/**
+ * Everything that needs dnd-kit lives in this module, which the table loads
+ * lazily and only when `reorderable` is set.
+ */
+export type { ReorderableDataTable } from "./row-order";
+export { useRowOrderDataTable } from "./row-order";
 
 const SETTLE_DURATION = 200;
 const SETTLE_EASING = "cubic-bezier(0.25, 1, 0.5, 1)";
@@ -113,10 +51,6 @@ const SETTLE_EASING = "cubic-bezier(0.25, 1, 0.5, 1)";
 const subscribeToNothing = () => () => undefined;
 const getAnnouncementContainer = () => document.body;
 const getNoAnnouncementContainer = () => null;
-
-const SortableRowHandleContext = React.createContext<null | React.ReactElement>(
-  null,
-);
 
 export function ReorderProviderDataTable({
   children,
@@ -277,10 +211,10 @@ export function SortableRowGroupDataTable({
   );
 
   return (
-    <SortableRowHandleContext.Provider value={handle}>
+    <SortableRowHandleContext value={handle}>
       <tbody
         className={cn(
-          "[&:last-child>tr:last-child]:border-0 [&:last-child>tr:last-child>td]:border-b-0 [&>tr>td]:border-b",
+          ROW_GROUP_CLASS,
           isDragging &&
             "bg-card ring-foreground/10 relative z-10 shadow-lg ring-1 motion-safe:scale-101",
         )}
@@ -291,16 +225,57 @@ export function SortableRowGroupDataTable({
       >
         {children}
       </tbody>
-    </SortableRowHandleContext.Provider>
+    </SortableRowHandleContext>
   );
 }
 
-export function ReorderHeaderDataTable() {
-  const t = useTranslations("core.global.data_table");
+export const ReorderableBodyDataTable = <T extends DataTableTMin>({
+  filters,
+  order,
+  renderRow,
+  reorder,
+  reorderable,
+  rows,
+  searchParams,
+}: Pick<DataTableProps<T>, "filters" | "order"> & {
+  renderRow: (row: T) => React.ReactNode;
+  reorder: (activeId: DataTableRowId, overId: DataTableRowId) => void;
+  reorderable: ReorderableDataTable<T>;
+  rows: T[];
+  searchParams: URLSearchParams;
+}) => {
+  const isReorderDisabled =
+    reorderable.disabled === true ||
+    !isTableInStoredOrder(searchParams, {
+      defaultOrder: {
+        column: String(order.defaultOrder.column),
+        order: order.defaultOrder.order,
+      },
+      filterIds: filters?.map(filter => filter.id) ?? [],
+    });
+  const rowLabelOf = (id: DataTableRowId) => {
+    const row = rows.find(item => item.id === id);
 
-  return <span className="sr-only">{t("reorder_column")}</span>;
-}
+    return row ? reorderable.getRowLabel?.(row) : undefined;
+  };
 
-export function ReorderHandleDataTable() {
-  return <>{React.use(SortableRowHandleContext)}</>;
-}
+  return (
+    <ReorderProviderDataTable
+      ids={rows.map(row => row.id)}
+      labelOf={rowLabelOf}
+      onMove={reorder}
+    >
+      {rows.map((row, index) => (
+        <SortableRowGroupDataTable
+          disabled={isReorderDisabled}
+          id={row.id}
+          key={row.id}
+          label={reorderable.getRowLabel?.(row)}
+          position={index + 1}
+        >
+          {renderRow(row)}
+        </SortableRowGroupDataTable>
+      ))}
+    </ReorderProviderDataTable>
+  );
+};

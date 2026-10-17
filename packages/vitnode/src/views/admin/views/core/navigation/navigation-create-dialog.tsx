@@ -66,7 +66,7 @@ export interface NavigationCreateDialogProps {
 }
 
 const tileClassName =
-  "hover:bg-muted/60 focus-visible:ring-ring/50 flex min-w-0 cursor-pointer items-start gap-3 rounded-lg border p-3 text-start outline-none transition duration-150 ease-out focus-visible:ring-3 active:scale-96 motion-reduce:transition-none";
+  "hover:bg-muted/60 focus-visible:ring-ring/50 flex min-w-0 cursor-pointer items-start gap-3 rounded-lg border p-3 text-start outline-none transition-[background-color,scale] duration-150 ease-out focus-visible:ring-3 active:scale-96 motion-reduce:transition-none";
 
 const NavigationCreateChoiceStep = ({
   items,

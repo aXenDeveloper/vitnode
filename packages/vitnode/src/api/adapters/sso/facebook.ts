@@ -9,6 +9,9 @@ import { getRedirectUri } from "@/api/models/sso";
 
 import { FACEBOOK_ICON } from "./icons";
 
+// A provider that stops answering would otherwise hang the sign-in request.
+const PROVIDER_TIMEOUT_MS = 10_000;
+
 export const FACEBOOK_GRAPH_VERSION = "v26.0";
 
 const FACEBOOK_USER_FIELDS =
@@ -61,7 +64,9 @@ export const FacebookSSOApiPlugin = ({
       url.searchParams.set("redirect_uri", redirectUri);
       url.searchParams.set("client_id", clientId);
       url.searchParams.set("client_secret", clientSecret);
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), {
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+      });
       if (!res.ok) {
         throw new HTTPException(
           +res.status.toString() as ContentfulStatusCode,
@@ -87,7 +92,9 @@ export const FacebookSSOApiPlugin = ({
       );
       url.searchParams.set("fields", FACEBOOK_USER_FIELDS);
       url.searchParams.set("access_token", access_token);
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), {
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+      });
       if (!res.ok) {
         throw new HTTPException(
           +res.status.toString() as ContentfulStatusCode,

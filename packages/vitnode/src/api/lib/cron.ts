@@ -52,6 +52,12 @@ const reportFailedCronTick = (reason: string) => {
   );
 };
 
+// Just under the 1-minute tick. The API keeps running jobs after we stop
+// waiting (each run is claimed in the database), so giving up here only frees
+// the ticker - with `noOverlap` a hung request would otherwise stall every
+// later tick.
+const CRON_TICK_TIMEOUT_MS = 55_000;
+
 export const handleCronJobs = async () => {
   const url = new URL("/api/@vitnode/core/cron", CONFIG.api.origin);
   const headers: HeadersInit = {
@@ -66,12 +72,16 @@ export const handleCronJobs = async () => {
     const response = await fetch(url.toString(), {
       method: "POST",
       headers,
+      signal: AbortSignal.timeout(CRON_TICK_TIMEOUT_MS),
     });
 
     if (!response.ok) {
       reportFailedCronTick(`${response.status} ${await response.text()}`);
     }
   } catch (error) {
+    // Slow jobs, not a failure: the API is still working through them.
+    if (error instanceof Error && error.name === "TimeoutError") return;
+
     reportFailedCronTick(
       error instanceof Error ? error.message : String(error),
     );

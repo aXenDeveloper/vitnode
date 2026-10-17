@@ -8,6 +8,53 @@ import type { AnyContentTypeDefinition } from "../types";
 
 import { invalidatePageCacheTags } from "../../page-cache/store.server";
 import { contentPublicItemTag, contentPublicListTag } from "../cache";
+import { bumpContentPublicGeneration } from "./public-cache";
+import { isContentBaseRowPublic } from "./visibility";
+
+/**
+ * Whether the record was publicly readable before and after one write.
+ *
+ * Travels beside the event rather than in its payload, so listeners see the same
+ * minimal payloads as ever. Absent means "unknown", which is treated as public:
+ * a skipped invalidation serves a stale page, a needless one costs a render.
+ */
+export interface ContentPublicState {
+  isPublic: boolean;
+  wasPublic: boolean;
+}
+
+/**
+ * {@link ContentPublicState} for a write that cannot move publication itself - a
+ * create, an edit, a delete - read off the rows on either side of it (`null` for
+ * the side where the record does not exist).
+ *
+ * `undefined` without `publication` - such a type's fields may well be called
+ * `status`, and the predicate must not read a user's column as a publish flag -
+ * and for a row that does not carry its publication columns, which would
+ * otherwise read as a draft.
+ */
+export const contentPublicStateOf = (
+  definition: AnyContentTypeDefinition,
+  before: null | object,
+  after: null | object,
+): ContentPublicState | undefined => {
+  if (!definition.publication.enabled) return undefined;
+  if (!carriesPublication(before) || !carriesPublication(after)) {
+    return undefined;
+  }
+
+  return {
+    isPublic:
+      after !== null &&
+      isContentBaseRowPublic(after as Record<string, unknown>),
+    wasPublic:
+      before !== null &&
+      isContentBaseRowPublic(before as Record<string, unknown>),
+  };
+};
+
+const carriesPublication = (row: null | object): boolean =>
+  row === null || ("status" in row && "publishedAt" in row);
 
 /**
  * What a public read of one record depends on, for the HTML cache.
@@ -70,8 +117,14 @@ export const contentPageInvalidationMode = (
   definition: AnyContentTypeDefinition,
   action: ContentEventAction,
   payload: Record<string, unknown>,
+  publicState?: ContentPublicState,
 ): null | PageCacheInvalidationMode => {
   if (PRIVATE_ACTIONS.has(action)) return null;
+  // The same rule as `contentInvalidationTags`: a record that was never public
+  // and still is not - a draft being autosaved - is on no cached page.
+  if (publicState && !publicState.wasPublic && !publicState.isPublic) {
+    return null;
+  }
   if (HARD_ACTIONS.has(action) || slugChanged(definition, payload)) {
     return "hard";
   }
@@ -103,29 +156,61 @@ export const invalidateContentPages = async (
   definition: AnyContentTypeDefinition,
   action: ContentEventAction,
   payload: Record<string, unknown>,
+  publicState?: ContentPublicState,
 ): Promise<EventEmitFailure | null> => {
-  const mode = contentPageInvalidationMode(definition, action, payload);
+  const mode = contentPageInvalidationMode(
+    definition,
+    action,
+    payload,
+    publicState,
+  );
   if (mode === null) return null;
 
-  const result = await invalidatePageCacheTags(
-    [
-      ...contentRecordPageCacheTags(definition, recordIdOf(payload)),
-      ...contentListPageCacheTags(definition),
-    ],
-    { mode },
-  );
+  // The API's own cached public reads go with the pages, on the same rule. This
+  // runs from `emitContentEvent`, after the write committed - a bump before the
+  // commit would let a reader store the old row under the new generation.
+  const [result, generation] = await Promise.all([
+    invalidatePageCacheTags(
+      [
+        ...contentRecordPageCacheTags(definition, recordIdOf(payload)),
+        ...contentListPageCacheTags(definition),
+      ],
+      { mode },
+    ),
+    bumpContentPublicGeneration(c, definition.id).then(
+      () => null,
+      (error: unknown) => error,
+    ),
+  ]);
+
+  if (generation !== null) {
+    const error =
+      generation instanceof Error ? generation.message : "unknown error";
+
+    await logFailure(
+      c,
+      `[content-public-cache] ${definition.id} ${action}: cached public reads could not be expired (${error}). They are served until they expire.`,
+    );
+
+    if (result.status !== "failed") {
+      return {
+        error,
+        listener: "invalidate",
+        module: "content-public-cache",
+        pluginId: "@vitnode/core",
+      };
+    }
+  }
+
   if (result.status !== "failed") return null;
 
   const error =
     result.error instanceof Error ? result.error.message : "unknown error";
-  const message = `[page-cache] ${definition.id} ${action}: cached pages could not be invalidated (${error}). This server stops serving cached pages until they expire; other servers sharing the cache keep theirs.`;
 
-  try {
-    await c.get("log").error(message);
-  } catch {
-    // oxlint-disable-next-line no-console
-    console.error(`[VitNode] ${message}`);
-  }
+  await logFailure(
+    c,
+    `[page-cache] ${definition.id} ${action}: cached pages could not be invalidated (${error}). This server stops serving cached pages until they expire; other servers sharing the cache keep theirs.`,
+  );
 
   return {
     error,
@@ -133,4 +218,13 @@ export const invalidateContentPages = async (
     module: "page-cache",
     pluginId: "@vitnode/core",
   };
+};
+
+const logFailure = async (c: Context, message: string): Promise<void> => {
+  try {
+    await c.get("log").error(message);
+  } catch {
+    // oxlint-disable-next-line no-console
+    console.error(`[VitNode] ${message}`);
+  }
 };

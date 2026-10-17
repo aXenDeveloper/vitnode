@@ -13,8 +13,67 @@ const EPOCH_KEY = "staff-permissions:epoch";
 
 export const STAFF_TYPES = ["admin", "moderator"] as const;
 
-const readEpoch = async (c: Context): Promise<string> =>
+interface RequestStaffMemo {
+  epoch?: Promise<string>;
+  sets: Map<string, ResolvedStaffPermissionSet>;
+}
+
+// Per request, keyed by the Hono context so it dies with the request. Live
+// (database) and cached answers are kept apart: a live check only reuses a live
+// answer, and the route guard - which has always read the cache - only reuses a
+// cached one, so neither changes which source a check trusts. Cleared
+// by every invalidation below, so a request that changes permissions and then
+// checks them again sees the change.
+const requestMemos = new WeakMap<Context, RequestStaffMemo>();
+
+const memoOf = (c: Context): RequestStaffMemo => {
+  let memo = requestMemos.get(c);
+  if (!memo) {
+    memo = { sets: new Map() };
+    requestMemos.set(c, memo);
+  }
+
+  return memo;
+};
+
+const memoKey = (
+  { type, userId }: { type: PermissionStaffType; userId: number },
+  live: boolean,
+): string => `${live ? "live" : "cached"}:${type}:${userId}`;
+
+/**
+ * The set this request already resolved from the same source, or `null`. With
+ * `live`, only a set read from the database during this request; without, only
+ * one served from the cross-request cache.
+ */
+export const readRequestStaffPermissions = (
+  c: Context,
+  args: { type: PermissionStaffType; userId: number },
+  { live = false }: { live?: boolean } = {},
+): null | ResolvedStaffPermissionSet => {
+  return requestMemos.get(c)?.sets.get(memoKey(args, live)) ?? null;
+};
+
+export const rememberRequestStaffPermissions = (
+  c: Context,
+  args: { type: PermissionStaffType; userId: number },
+  set: ResolvedStaffPermissionSet,
+  { live }: { live: boolean },
+): void => {
+  memoOf(c).sets.set(memoKey(args, live), set);
+};
+
+const fetchEpoch = async (c: Context): Promise<string> =>
   (await c.get("cache").getSystem<string>(EPOCH_KEY)) ?? "0";
+
+// The memo holds the promise, set before awaiting, so an invalidation that
+// lands while the read is in flight clears it and the next read starts over.
+const readEpoch = async (c: Context): Promise<string> => {
+  const memo = memoOf(c);
+  memo.epoch ??= fetchEpoch(c);
+
+  return await memo.epoch;
+};
 
 const permissionsKey = (
   epoch: string,
@@ -69,16 +128,12 @@ export const readStaffPermissionsOfUser = async (
   userId: number,
 ): Promise<CachedStaffPermissionsOfUser> => {
   const epoch = await readEpoch(c);
-  const readType = async (type: PermissionStaffType) =>
-    await c
-      .get("cache")
-      .getSystem<ResolvedStaffPermissionSet>(
-        permissionsKey(epoch, { type, userId }),
-      );
-  const [admin, moderator] = await Promise.all([
-    readType("admin"),
-    readType("moderator"),
-  ]);
+  const [admin = null, moderator = null] = await c
+    .get("cache")
+    .getSystemMany<ResolvedStaffPermissionSet>([
+      permissionsKey(epoch, { type: "admin", userId }),
+      permissionsKey(epoch, { type: "moderator", userId }),
+    ]);
 
   return {
     sets: { admin, moderator },
@@ -106,6 +161,9 @@ export const readStaffPermissionsOfUser = async (
 export const invalidateAllStaffPermissions = async (
   c: Context,
 ): Promise<void> => {
+  const memo = memoOf(c);
+  memo.epoch = undefined;
+  memo.sets.clear();
   await c.get("cache").setSystem(EPOCH_KEY, randomUUID());
 };
 
@@ -120,7 +178,15 @@ export const invalidateStaffPermissionsForUser = async (
   c: Context,
   userId: number,
 ): Promise<void> => {
-  const epoch = await readEpoch(c);
+  const memo = memoOf(c);
+  for (const type of STAFF_TYPES) {
+    memo.sets.delete(memoKey({ type, userId }, true));
+    memo.sets.delete(memoKey({ type, userId }, false));
+  }
+  // Read fresh, not from the memo: deleting under a generation another request
+  // has since moved past would leave the live entries in place.
+  memo.epoch = fetchEpoch(c);
+  const epoch = await memo.epoch;
 
   await c
     .get("cache")

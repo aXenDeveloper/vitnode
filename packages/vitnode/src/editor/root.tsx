@@ -23,9 +23,9 @@ import { useEditWidgets } from "../blocks/edit-widgets-context";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
 import { isSaveConflict, saveRefusalOf } from "./adapter/refusal";
 import { buildInvalidSnapshot, buildSaveInput } from "./adapter/save-input";
-import { VisualEditorContext } from "./context";
 import { EditorDndProvider } from "./dnd/provider";
 import { createBlockInstanceFor } from "./instance/defaults";
+import { VisualEditorProvider } from "./provider";
 import { EditorMessages } from "./runtime/editor-messages";
 import { LeaveConfirmDialog } from "./runtime/leave-confirm-dialog";
 import { UnsavedChangesGuard } from "./runtime/unsaved-guard";
@@ -340,7 +340,7 @@ const EditorShell = ({
   );
 
   return (
-    <VisualEditorContext value={editor}>
+    <VisualEditorProvider value={editor}>
       <EditorDndProvider>
         {outlets.map(outlet =>
           createPortal(
@@ -371,7 +371,7 @@ const EditorShell = ({
         open={leaving}
         saveStatus={saveStatus}
       />
-    </VisualEditorContext>
+    </VisualEditorProvider>
   );
 };
 

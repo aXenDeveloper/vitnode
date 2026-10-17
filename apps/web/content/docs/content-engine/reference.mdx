@@ -11,26 +11,26 @@ icon: BookOpen
 This is `example.article` from the example plugin, trimmed to the options most content types start with:
 
 ```ts title="plugins/example/src/content/article.ts"
-import { defineContentType, field } from "@vitnode/core/content";
+import { defineContentType, field } from '@vitnode/core/content'
 
 export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+  id: 'example.article',
+  tableName: 'example_articles',
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    slug: field.slug({ source: "title" }),
+    slug: field.slug({ source: 'title' }),
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
   },
   publication: true,
   publicApi: {
-    path: "articles",
-    fields: ["title", "slug", "excerpt", "publishedAt"],
+    path: 'articles',
+    fields: ['title', 'slug', 'excerpt', 'publishedAt'],
   },
   admin: {
-    path: "example/articles",
-    titleField: "title",
+    path: 'example/articles',
+    titleField: 'title',
   },
-});
+})
 ```
 
 ## When options are checked
@@ -153,7 +153,8 @@ Generates read-only routes at `/api/{pluginId}/content/{path}` that return publi
 | `orderableFields`  | field names         | No       | `[]`            | Accepted by `?orderBy=`. `publishedAt` is always added                                                                                                      |
 | `defaultOrderBy`   | field name          | No       | `"publishedAt"` | Must be orderable                                                                                                                                           |
 | `defaultOrder`     | `"asc"` \| `"desc"` | No       | `"desc"`        |                                                                                                                                                             |
-| `people`           | user field names    | No       | `[]`            | Single, shared `field.user()` fields returned as a public person summary. Not listed in `fields`                                                           |
+| `people`           | user field names    | No       | `[]`            | Single, shared `field.user()` fields returned as a public person summary. Not listed in `fields`                                                            |
+| `listFields`       | field names         | No       | `fields`        | What each list row carries. A subset of `fields`, no duplicates. The detail route still returns every field in `fields`                                     |
 
 What `fields` accepts:
 
@@ -163,6 +164,8 @@ What `fields` accepts:
 - Not `status` (every public row is published), and not `field.user()`, so an author is never published by accident.
 
 `people` is the explicit opt-in for a user. Each named field comes back under its own name as `{ id, name, nameCode, avatarColor, avatarUrl, role: { color, prefix } }`, or `null` when nobody is set or the account was deleted. The summaries for a whole page are loaded in one query. `people` refuses a field that is not a `field.user()`, a `multiple: true` or localized user field, and a name listed twice.
+
+`listFields` keeps a public list light: leave a long `body` or a gallery to the detail route, and the list neither selects nor loads them. The list row's TypeScript type is still the full detail shape, so a field you left out is simply missing at runtime. `people` are always included.
 
 `searchableFields`, `filterableFields` and `orderableFields` must all be in `fields`. Repeatable leaves fit none of them. `orderableFields` also refuses file fields, to-many relations and localized fields.
 
@@ -267,15 +270,15 @@ localization: {
 
 Keeps published records in the [site search index](/docs/dev/search). Drafts never show up in public results. Guide: [Search](/docs/content-engine/search).
 
-| Name               | Type        | Required | Description                                                                                                                           |
-| ------------------ | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `titleField`       | field name  | Yes      | The result heading. A text field that is not nullable, or a to-one, non-nullable relation to another searchable content type that lends its title. [Guide](/docs/content-engine/search#borrow-the-title-from-a-related-record) |
-| `contentFields`    | field names | Yes      | The indexed body, at least one, no duplicates. Text, textarea, richText or slug. Repeatable leaves such as `"faq.answer"` are allowed |
-| `pathTemplate`     | `string`    | Yes      | The result URL. Starts with `/`, contains `{slug}` exactly once, at most 512 characters                                               |
-| `descriptionField` | field name  | No       | Shown in result excerpts. Text, textarea or richText                                                                                  |
-| `authorField`      | field name  | No       | A top-level `field.user()` credited in the index. It does not have to be public                                                       |
-| `imageField`       | field name  | No       | A shared single `field.file()` shown as the result image. Must be in `publicApi.fields`                                               |
-| `context`          | `{ field, pathTemplate? }` | No | What the record belongs to, for feed sentences. A `field.container()` with a `pathTemplate`, or a to-one relation to a searchable content type. Defaults to the `titleField` relation. [Guide](/docs/content-engine/search#say-where-a-record-lives) |
+| Name               | Type                       | Required | Description                                                                                                                                                                                                                                          |
+| ------------------ | -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `titleField`       | field name                 | Yes      | The result heading. A text field that is not nullable, or a to-one, non-nullable relation to another searchable content type that lends its title. [Guide](/docs/content-engine/search#borrow-the-title-from-a-related-record)                       |
+| `contentFields`    | field names                | Yes      | The indexed body, at least one, no duplicates. Text, textarea, richText or slug. Repeatable leaves such as `"faq.answer"` are allowed                                                                                                                |
+| `pathTemplate`     | `string`                   | Yes      | The result URL. Starts with `/`, contains `{slug}` exactly once, at most 512 characters                                                                                                                                                              |
+| `descriptionField` | field name                 | No       | Shown in result excerpts. Text, textarea or richText                                                                                                                                                                                                 |
+| `authorField`      | field name                 | No       | A top-level `field.user()` credited in the index. It does not have to be public                                                                                                                                                                      |
+| `imageField`       | field name                 | No       | A shared single `field.file()` shown as the result image. Must be in `publicApi.fields`                                                                                                                                                              |
+| `context`          | `{ field, pathTemplate? }` | No       | What the record belongs to, for feed sentences. A `field.container()` with a `pathTemplate`, or a to-one relation to a searchable content type. Defaults to the `titleField` relation. [Guide](/docs/content-engine/search#say-where-a-record-lives) |
 
 Every field except `authorField` must be in `publicApi.fields`, or a result snippet would leak a private value. Leave the language out of `pathTemplate`, because your [i18n settings](/docs/dev/i18n) add the locale prefix.
 
@@ -315,24 +318,24 @@ Makes records of one content type answer each other under a root record, like fo
 thread: { parent: "parent", root: "topic", maxDepth: 6 },
 ```
 
-| Name       | Type       | Required | Default | Description                                                                   |
-| ---------- | ---------- | -------- | ------- | ----------------------------------------------------------------------------- |
+| Name       | Type       | Required | Default | Description                                                                    |
+| ---------- | ---------- | -------- | ------- | ------------------------------------------------------------------------------ |
 | `parent`   | field name | Yes      |         | A to-one, nullable `field.relation({ self: true })`: the record being answered |
-| `root`     | field name | Yes      |         | A required, to-one `field.relation({ target })` to another content type       |
-| `maxDepth` | `number`   | No       | `8`     | Deepest level a record may sit at, from 1 (a flat list) to 32                 |
+| `root`     | field name | Yes      |         | A required, to-one `field.relation({ target })` to another content type        |
+| `maxDepth` | `number`   | No       | `8`     | Deepest level a record may sit at, from 1 (a flat list) to 32                  |
 
 Both fields must be in `publicApi.fields` and neither may be in `publicWrite.update.fields`. `thread` is not available on a localized content type yet.
 
-| Cause                                       | Message starts with                                                         |
-| ------------------------------------------- | --------------------------------------------------------------------------- |
-| `parent` is not a to-one self relation      | `thread.parent "x" must be a to-one`                                        |
-| `parent` is not nullable                    | `thread.parent "x" must be nullable`                                        |
-| `root` is not a required to-one relation    | `thread.root "x" must be a required, to-one`                                |
-| `maxDepth` out of range                     | `thread.maxDepth must be a whole number from 1 to 32.`                      |
-| No `publicApi`                              | ``thread needs `publicApi`: the thread route``                                               |
-| `parent` or `root` not in `publicApi.fields` | `thread uses "x", so list it in`                                           |
-| `parent` or `root` in `update.fields`       | `publicWrite.update.fields includes "x".`                                   |
-| A localized content type                    | `thread is not available on a localized content type yet`                   |
+| Cause                                        | Message starts with                                       |
+| -------------------------------------------- | --------------------------------------------------------- |
+| `parent` is not a to-one self relation       | `thread.parent "x" must be a to-one`                      |
+| `parent` is not nullable                     | `thread.parent "x" must be nullable`                      |
+| `root` is not a required to-one relation     | `thread.root "x" must be a required, to-one`              |
+| `maxDepth` out of range                      | `thread.maxDepth must be a whole number from 1 to 32.`    |
+| No `publicApi`                               | ``thread needs `publicApi`: the thread route``            |
+| `parent` or `root` not in `publicApi.fields` | `thread uses "x", so list it in`                          |
+| `parent` or `root` in `update.fields`        | `publicWrite.update.fields includes "x".`                 |
+| A localized content type                     | `thread is not available on a localized content type yet` |
 
 ## `duplication`
 
@@ -426,7 +429,7 @@ Each row is a rule `defineContentType` enforces, with the start of the message i
 | `publicApi.defaultOrderBy`                                          | An orderable field                                       | `publicApi.defaultOrderBy is "x", which is not in publicApi.orderableFields.`                              |
 | `publicApi.searchableFields`, `filterableFields`, `orderableFields` | The field in `publicApi.fields`                          | `publicApi.searchableFields includes "x", which is not in publicApi.fields.`                               |
 | `publicApi.people`                                                  | A single, shared `field.user()`                          | `publicApi.people includes "x", which is a "text" field.`                                                  |
-| `thread`                                                            | `publicApi`, with `parent` and `root` in its fields      | ``thread needs `publicApi`: the thread route``                                                                              |
+| `thread`                                                            | `publicApi`, with `parent` and `root` in its fields      | ``thread needs `publicApi`: the thread route``                                                             |
 
 ### Unique across content types
 

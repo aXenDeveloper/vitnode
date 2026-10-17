@@ -1,13 +1,15 @@
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import { zodRichTextDocument } from "@vitnode/core/content";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
+import {
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { PencilIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -21,6 +23,7 @@ import type { DiscussionSearch } from "./discussion-search";
 import { boardHref, BOARDS_HREF } from "./board-search";
 import { ContentArticle } from "./content-article";
 import { discussionEditHref, discussionNewHref } from "./discussion-search";
+import { queryBoard } from "./example-queries";
 
 const zodDiscussion = z.object({
   board: z.number(),
@@ -30,7 +33,10 @@ const zodDiscussion = z.object({
   title: z.string(),
 });
 
-const loadDiscussion = async (slug: string) => {
+const loadDiscussion = async (
+  queryClient: RouteLoadContext["queryClient"],
+  slug: string,
+) => {
   const detail = await fetcher({
     plugin: manifest.id,
     method: "get",
@@ -43,25 +49,22 @@ const loadDiscussion = async (slug: string) => {
     detail.status === 200 ? zodDiscussion.parse(await detail.json()) : null,
   );
 
-  const board = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/boards",
-    path: "/{idOrSlug}",
-    args: { params: { idOrSlug: String(item.board) } },
-  });
+  // Needs `item.board`, so it cannot start any sooner - but it is the same
+  // cached entry the board page reads, so moving between the two is free.
+  const board = await queryBoard(queryClient, String(item.board)).catch(
+    () => null,
+  );
 
-  if (board.status !== 200) return { ...item, boardTrail: [] };
+  if (!board) return { ...item, boardTrail: [] };
 
-  const { ancestors, container } = await board.json();
-
-  return { ...item, boardTrail: [...ancestors, container] };
+  return { ...item, boardTrail: [...board.ancestors, board.container] };
 };
 
 type DiscussionPageData = Awaited<ReturnType<typeof loadDiscussion>>;
 
-export const route = definePluginRoute<DiscussionPageData, DiscussionSearch>({
-  load: async ({ params }) => await loadDiscussion(params.slug),
+export const route = defineRoute<DiscussionPageData, DiscussionSearch>({
+  load: async ({ context, params }) =>
+    await loadDiscussion(context.queryClient, params.slug),
 
   head: ({ loaderData }) => ({ title: loaderData?.title }),
 

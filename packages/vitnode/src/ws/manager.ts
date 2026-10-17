@@ -13,7 +13,19 @@ type CrossTabMessage =
 
 const LEADER_LOCK = "vitnode-ws-leader";
 const CHANNEL_NAME = "vitnode-ws";
-const RECONNECT_DELAY = 2000;
+const RECONNECT_BASE_DELAY = 1000;
+const RECONNECT_MAX_DELAY = 30_000;
+
+// Exponential backoff with "equal jitter": after a server restart every tab of
+// every visitor would otherwise reconnect in the same instant, forever.
+const reconnectDelay = (attempt: number): number => {
+  const ceiling = Math.min(
+    RECONNECT_MAX_DELAY,
+    RECONNECT_BASE_DELAY * 2 ** attempt,
+  );
+
+  return ceiling / 2 + Math.random() * (ceiling / 2);
+};
 
 export interface WebSocketManagerOptions {
   /** Called once per logical server message, in every tab. */
@@ -42,6 +54,7 @@ export const createWebSocketManager = ({
   let readyState = 0; // WebSocket.CONNECTING
   let releaseLeadership: (() => void) | undefined;
   let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
+  let reconnectAttempt = 0;
   const outgoingQueue: VitNodeWSMessage[] = [];
 
   const channel =
@@ -86,6 +99,7 @@ export const createWebSocketManager = ({
     socket = ws;
 
     ws.onopen = () => {
+      reconnectAttempt = 0;
       setReadyState(ws.readyState);
       post({ payload: ws.readyState, type: "ready-state" });
       outgoingQueue
@@ -112,7 +126,10 @@ export const createWebSocketManager = ({
       post({ payload: ws.readyState, type: "ready-state" });
       socket = null;
       if (!isDestroyed && isLeader) {
-        reconnectTimeout = setTimeout(openSocket, RECONNECT_DELAY);
+        reconnectTimeout = setTimeout(
+          openSocket,
+          reconnectDelay(reconnectAttempt++),
+        );
       }
     };
   };

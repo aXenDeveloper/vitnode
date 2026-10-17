@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import type { EditorZoneInvalidEntry } from "../state/types";
 
-import { useVisualEditor } from "../context";
+import { useVisualEditorActions } from "../context";
 import { describeInvalidEntry } from "./classify";
 
 export interface InvalidZoneEntriesProps {
@@ -20,7 +20,7 @@ export const InvalidZoneEntries = ({
   zoneId,
 }: InvalidZoneEntriesProps): ReactElement => {
   const t = useTranslations("core.editor");
-  const { dispatch } = useVisualEditor();
+  const { dispatch } = useVisualEditorActions();
 
   return (
     <div className="border-destructive/60 bg-destructive/5 flex flex-col gap-3 rounded-md border border-dashed p-4">

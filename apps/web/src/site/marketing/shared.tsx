@@ -192,7 +192,7 @@ export const CanaryPill = ({ className }: { className?: string }) => (
     )}
   >
     <span aria-hidden className="relative flex size-2">
-      <span className="bg-primary absolute inline-flex size-full animate-ping rounded-full opacity-75" />
+      <span className="bg-primary absolute inline-flex size-full animate-ping rounded-full opacity-75 motion-reduce:animate-none" />
       <span className="bg-primary relative inline-flex size-2 rounded-full" />
     </span>
     VitNode 2.0 · Canary · very early build

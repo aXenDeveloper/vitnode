@@ -21,8 +21,10 @@ import {
   mergeStaffPermissionGrants,
 } from "./staff-permission";
 import {
+  readRequestStaffPermissions,
   readStaffPermissions,
   readStaffPermissionsOfUser,
+  rememberRequestStaffPermissions,
   STAFF_TYPES,
   writeStaffPermissions,
 } from "./staff-permission-cache";
@@ -106,19 +108,29 @@ const toStaffPermissionSet = (
   return { root: false, permissions, staff: entries.length > 0 };
 };
 
+const loadStaffPermissionsForRoles = async (
+  c: Context,
+  args: { roleIds: number[]; type: PermissionStaffType; userId: number },
+): Promise<ResolvedStaffPermissionSet> => {
+  // Both at once: the entries query is wasted for a root user, but a root user
+  // is the rare case and the two round trips no longer queue behind each other.
+  const [root, entries] = await Promise.all([
+    hasRootRole(c, args.roleIds),
+    findStaffEntries(c, args),
+  ]);
+
+  return root ? rootStaffPermissions() : toStaffPermissionSet(c, entries);
+};
+
 const loadStaffPermissions = async (
   c: Context,
   { type, user }: { type: PermissionStaffType; user: StaffUser },
-): Promise<ResolvedStaffPermissionSet> => {
-  const roleIds = await getUserRoleIds(c, user);
-
-  if (await hasRootRole(c, roleIds)) return rootStaffPermissions();
-
-  return toStaffPermissionSet(
-    c,
-    await findStaffEntries(c, { roleIds, type, userId: user.id }),
-  );
-};
+): Promise<ResolvedStaffPermissionSet> =>
+  await loadStaffPermissionsForRoles(c, {
+    roleIds: await getUserRoleIds(c, user),
+    type,
+    userId: user.id,
+  });
 
 const loadAndCacheStaffPermissions = async (
   c: Context,
@@ -137,24 +149,54 @@ const loadAndCacheStaffPermissions = async (
 export const resolveStaffPermissions = async (
   c: Context,
   { type, user }: { type: PermissionStaffType; user: StaffUser },
-): Promise<ResolvedStaffPermissionSet> =>
-  (await readStaffPermissions(c, { type, userId: user.id })) ??
-  (await loadAndCacheStaffPermissions(c, { type, user }));
+): Promise<ResolvedStaffPermissionSet> => {
+  const args = { type, userId: user.id };
+  const remembered = readRequestStaffPermissions(c, args);
+  if (remembered) return remembered;
 
-const findStaffUser = async (
-  c: Context,
-  userId: number,
-): Promise<null | StaffUser> => {
-  const [user] = await c
-    .get("db")
-    .select({ id: core_users.id, roleId: core_users.roleId })
-    .from(core_users)
-    .where(eq(core_users.id, userId))
-    .limit(1);
+  const resolved =
+    (await readStaffPermissions(c, args)) ??
+    (await loadAndCacheStaffPermissions(c, { type, user }));
+  rememberRequestStaffPermissions(c, args, resolved, { live: false });
 
-  return user ?? null;
+  return resolved;
 };
 
+/** The user's role ids - primary and secondary - in one query, or `null`. */
+const findStaffUserRoleIds = async (
+  c: Context,
+  userId: number,
+): Promise<null | number[]> => {
+  const rows = await c
+    .get("db")
+    .select({
+      roleId: core_users.roleId,
+      secondaryRoleId: core_users_secondary_roles.roleId,
+    })
+    .from(core_users)
+    .leftJoin(
+      core_users_secondary_roles,
+      eq(core_users_secondary_roles.userId, core_users.id),
+    )
+    .where(eq(core_users.id, userId));
+
+  const [first] = rows;
+  if (!first) return null;
+
+  const roleIds = new Set([first.roleId]);
+  for (const { secondaryRoleId } of rows) {
+    if (typeof secondaryRoleId === "number") roleIds.add(secondaryRoleId);
+  }
+
+  return [...roleIds];
+};
+
+/**
+ * Whether the user is staff of `type`. With `live`, reads the database and
+ * ignores the cross-request cache - the session checks use it so a revoked
+ * admin loses access at once. Either way the answer is remembered for the rest
+ * of the request, so a second check from the same source does not repeat it.
+ */
 export const isStaff = async (
   c: Context,
   {
@@ -163,15 +205,29 @@ export const isStaff = async (
     userId,
   }: { live?: boolean; type: PermissionStaffType; userId: number },
 ): Promise<boolean> => {
-  const cached = live ? null : await readStaffPermissions(c, { type, userId });
-  if (cached) return cached.staff;
+  const args = { type, userId };
+  const remembered = readRequestStaffPermissions(c, args, { live });
+  if (remembered) return remembered.staff;
 
-  const user = await findStaffUser(c, userId);
-  if (!user) return false;
+  if (!live) {
+    const cached = await readStaffPermissions(c, args);
+    if (cached) {
+      rememberRequestStaffPermissions(c, args, cached, { live: false });
 
-  const resolved = live
-    ? await loadStaffPermissions(c, { type, user })
-    : await loadAndCacheStaffPermissions(c, { type, user });
+      return cached.staff;
+    }
+  }
+
+  const roleIds = await findStaffUserRoleIds(c, userId);
+  if (!roleIds) return false;
+
+  const resolved = await loadStaffPermissionsForRoles(c, {
+    roleIds,
+    type,
+    userId,
+  });
+  if (!live) await writeStaffPermissions(c, args, resolved);
+  rememberRequestStaffPermissions(c, args, resolved, { live: true });
 
   return resolved.staff;
 };

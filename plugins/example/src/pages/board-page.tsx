@@ -1,3 +1,5 @@
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import { DateFormat } from "@vitnode/core/components/date-format";
 import {
   BreadcrumbItem,
@@ -14,13 +16,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
+import {
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { MessagesSquareIcon, SearchXIcon } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslations } from "use-intl";
@@ -33,6 +35,7 @@ import type { BoardSearch } from "./board-search";
 import { boardHref, BOARDS_HREF } from "./board-search";
 import { BoardColorDot, BoardTree } from "./board-tree";
 import { discussionHref, discussionNewHref } from "./discussion-search";
+import { cachedBoardId, queryBoard } from "./example-queries";
 
 const PAGE_SIZE = 20;
 
@@ -43,25 +46,9 @@ const zodDiscussionRow = z.object({
   title: z.string(),
 });
 
-const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
-  const detail = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/boards",
-    path: "/{idOrSlug}",
-    args: { params: { idOrSlug: encodeURIComponent(idOrSlug) } },
-  });
-
-  if (detail.status !== 200 && detail.status !== 404) {
-    throw new Error("Loading the board failed.");
-  }
-
-  const { ancestors, children, container } = contentPageItem(
-    detail.status === 200 ? await detail.json() : null,
-  );
-
+const fetchDiscussions = async (boardId: number, cursor?: string) => {
   const filters = {
-    board: String(container.id),
+    board: String(boardId),
     includeDescendants: "true",
   };
 
@@ -84,12 +71,39 @@ const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
   const { edges, pageInfo } = await list.json();
 
   return {
+    discussions: z.array(zodDiscussionRow).parse(edges),
+    nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
+  };
+};
+
+const loadBoard = async (
+  queryClient: RouteLoadContext["queryClient"],
+  idOrSlug: string,
+  { cursor }: BoardSearch,
+) => {
+  // The list needs the board's id. When the boards index already cached it,
+  // both requests go out together instead of one after the other.
+  const knownId = cachedBoardId(queryClient, idOrSlug);
+  const [board, early] = await Promise.all([
+    queryBoard(queryClient, idOrSlug),
+    // A stale id (the board was moved or deleted since) is not this page's
+    // error: the board read below decides, and the list is fetched again.
+    knownId === null
+      ? null
+      : fetchDiscussions(knownId, cursor).catch(() => null),
+  ]);
+  const { ancestors, children, container } = contentPageItem(board);
+  const page =
+    early && knownId === container.id
+      ? early
+      : await fetchDiscussions(container.id, cursor);
+
+  return {
     ancestors,
     children,
     container,
-    discussions: z.array(zodDiscussionRow).parse(edges),
+    ...page,
     isFirstPage: cursor === undefined,
-    nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
   };
 };
 
@@ -127,8 +141,9 @@ const BoardsCrumb = () => {
   return <>{t("title")}</>;
 };
 
-export const route = definePluginRoute<BoardPageData, BoardSearch>({
-  load: async ({ params, search }) => await loadBoard(params.slug, search),
+export const route = defineRoute<BoardPageData, BoardSearch>({
+  load: async ({ context, params, search }) =>
+    await loadBoard(context.queryClient, params.slug, search),
 
   head: ({ loaderData }) => ({
     description: loaderData?.container.metadata.description ?? undefined,

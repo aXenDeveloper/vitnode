@@ -121,12 +121,25 @@ export interface AiLedger {
   beginCall: (call: AiCallStart) => Promise<number>;
   finishCall: (callId: number, call: AiCallFinish) => Promise<void>;
   loadActionSettings: (actionKey: string) => Promise<AiActionSettings | null>;
+  /** Settings for many actions in one read; actions without a row are absent. */
+  loadActionSettingsMany: (
+    actionKeys: string[],
+  ) => Promise<Map<string, AiActionSettings>>;
   loadSettings: () => Promise<AiSettingsSnapshot>;
   markRunning: (runId: number, leaseExpiresAt: Date) => Promise<void>;
   reserve: (request: AiReservationRequest) => Promise<AiReservationResult>;
+  /** One user's policy for many permissions, sharing the role lookups. */
+  resolveUserPolicies: (args: {
+    permissions: { defaultGranted: boolean; permissionKey: string }[];
+    /** Already-loaded settings, to skip reading them again. */
+    settings?: AiSettingsSnapshot;
+    userId: number;
+  }) => Promise<Map<string, AiUserPolicy>>;
   resolveUserPolicy: (args: {
     defaultGranted: boolean;
     permissionKey: string;
+    /** Already-loaded settings, to skip reading them again. */
+    settings?: AiSettingsSnapshot;
     userId: number;
   }) => Promise<AiUserPolicy>;
   settle: (

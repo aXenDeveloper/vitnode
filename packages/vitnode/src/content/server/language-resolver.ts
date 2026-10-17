@@ -6,6 +6,7 @@ import type { ContentDatabase } from "./service";
 
 import { core_languages } from "../../database/languages";
 import { ContentEngineError, ContentLanguageError } from "../errors";
+import { contentCacheOf } from "./public-cache";
 
 export interface ContentLanguage {
   /** `core_languages.id`. The foreign key a translation row actually holds. */
@@ -29,19 +30,61 @@ const disabledLocales = (c: Context): ReadonlySet<string> => {
   );
 };
 
-const load = async (
+/**
+ * How long the languages table is shared across requests. Short, because the
+ * only thing that writes it is `db:prepare`, which runs outside any request and
+ * so has no way to expire a cache entry.
+ */
+const LANGUAGES_CACHE_TTL_SECONDS = 30;
+const LANGUAGES_CACHE_KEY = "content:languages";
+
+interface LanguageRow {
+  code: string;
+  id: number;
+  isDefault: boolean;
+}
+
+const readRows = async (
   c: Context,
   tx?: ContentDatabase,
-): Promise<ContentLanguage[]> => {
-  const disabled = disabledLocales(c);
-
-  const rows = await contentDatabase(c, tx)
+): Promise<LanguageRow[]> =>
+  await contentDatabase(c, tx)
     .select({
       code: core_languages.code,
       id: core_languages.id,
       isDefault: core_languages.default,
     })
     .from(core_languages);
+
+/**
+ * The raw rows, shared across requests through the cache. A read inside a
+ * transaction skips it: that caller asked for the transaction's view.
+ */
+const readCachedRows = async (
+  c: Context,
+  tx?: ContentDatabase,
+): Promise<LanguageRow[]> => {
+  const cache = tx ? undefined : contentCacheOf(c);
+  if (!cache) return await readRows(c, tx);
+
+  const cached = await cache.getSystem<LanguageRow[]>(LANGUAGES_CACHE_KEY);
+  if (cached) return cached;
+
+  const rows = await readRows(c);
+  await cache.setSystem(LANGUAGES_CACHE_KEY, rows, LANGUAGES_CACHE_TTL_SECONDS);
+
+  return rows;
+};
+
+const load = async (
+  c: Context,
+  tx?: ContentDatabase,
+): Promise<ContentLanguage[]> => {
+  const disabled = disabledLocales(c);
+
+  // Cached as rows, never as `ContentLanguage`: `isEnabled` comes from this
+  // app's config, which the cache entry must not freeze.
+  const rows = await readCachedRows(c, tx);
 
   return rows.map(row => ({
     id: row.id,

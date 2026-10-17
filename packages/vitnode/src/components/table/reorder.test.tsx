@@ -303,13 +303,13 @@ describe("ContentDataTable reorderable rows", () => {
     expect(screen.getAllByRole("columnheader")).toHaveLength(1);
   });
 
-  it("gives every row a sortable handle in the first column", () => {
+  it("gives every row a sortable handle in the first column", async () => {
     renderTable({
       bulkActions: <span>Bulk</span>,
       reorderable: { getRowLabel: row => row.title, onReorder: vi.fn() },
     });
 
-    const handles = screen.getAllByRole("button", { name: handleLabel });
+    const handles = await screen.findAllByRole("button", { name: handleLabel });
     expect(handles).toHaveLength(3);
     expect(handles[0].getAttribute("aria-roledescription")).toBe("sortable");
 
@@ -331,13 +331,13 @@ describe("ContentDataTable reorderable rows", () => {
     expect(within(group as HTMLElement).getByText("Fix bug")).toBeTruthy();
   });
 
-  it("locks the handles while the view is searched", () => {
+  it("locks the handles while the view is searched", async () => {
     renderTable({
       reorderable: { onReorder: vi.fn() },
       search: "search=bug",
     });
 
-    for (const handle of screen.getAllByRole("button", {
+    for (const handle of await screen.findAllByRole("button", {
       name: handleLabel,
     })) {
       expect(handle.getAttribute("aria-disabled")).toBe("true");
@@ -354,7 +354,9 @@ describe("ContentDataTable reorderable rows", () => {
     const onReorder = vi.fn();
     renderTable({ reorderable: { onReorder } });
 
-    const [first] = screen.getAllByRole("button", { name: handleLabel });
+    const [first] = await screen.findAllByRole("button", {
+      name: handleLabel,
+    });
     first.focus();
     fireEvent.keyDown(first, { code: "Space", key: " " });
     await act(async () => {

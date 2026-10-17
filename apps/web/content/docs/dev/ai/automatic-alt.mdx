@@ -81,7 +81,7 @@ Nothing happens until the host runs VitNode's cron. See [Running the cron](#runn
 2. **Sweep.** The `ai-alt-detect` cron (hourly) looks for images still missing ALT in a configured language and queues them.
 3. **Work.** The `ai-queue` cron (every minute) takes up to **2** queued images and describes them.
 4. **Describe once.** The image gets one base description in English, per file fingerprint.
-5. **Translate.** Each missing language gets a translation of that base description. English uses it as-is.
+5. **Translate.** Each missing language gets a translation of that base description, two at a time. English uses it as-is.
 6. **Write.** Each language goes to `core_files_alt`, but only if no person wrote it and the file is still the same version.
 7. **Notify.** `files.alt.updated` is emitted with the languages that were written.
 
@@ -117,7 +117,7 @@ Queuing is deduplicated: a file that is already pending or processing in the que
 
 ### Budget waits are not failures
 
-When the site budget, the background jobs budget or the global switch stops a run, the task is **deferred**, not failed. It goes back to `pending` without spending a retry, with the file's state set to `waiting_budget`. It wakes at the start of the next budget month or in one hour, whichever comes first. Raise the budget mid-month and work resumes within the hour.
+When the site budget, the background jobs budget or the global switch stops a run, the task is **deferred**, not failed. The same goes for a full house of background AI slots (`systemConcurrency`): the task simply tries again a minute later. It goes back to `pending` without spending a retry, with the file's state set to `waiting_budget`. It wakes at the start of the next budget month or in one hour, whichever comes first. Raise the budget mid-month and work resumes within the hour.
 
 Other failures (provider error, invalid output, timeout) use the normal queue retries: 3 attempts, then the file's state is `failed`. The next sweep wrap queues it again.
 

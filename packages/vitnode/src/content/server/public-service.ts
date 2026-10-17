@@ -52,6 +52,13 @@ export interface ContentPublicReadOptions {
 
 export interface ContentPublicItemReadOptions extends ContentPublicReadOptions {
   hidden?: boolean;
+  /**
+   * Only these exposed fields, and no `publicApi.people` - for an internal
+   * caller that reads a handful of keys, such as delivery metadata or an
+   * existence check. A name outside `publicApi.fields` is ignored, so this can
+   * never widen the projection. The return type does not narrow with it.
+   */
+  select?: readonly string[];
 }
 
 export interface ContentPublicSlugReadOptions extends ContentPublicItemReadOptions {
@@ -102,10 +109,48 @@ export interface ContentPublicService<TDefinition> {
   ) => Promise<ContentPublicSelect<TDefinition>[]>;
 }
 
+/**
+ * Which exposed fields and people one read projects.
+ *
+ * The detail response is every `publicApi.fields` entry; a list row may be a
+ * subset of it (`publicApi.listFields`), and an internal read a smaller one
+ * still. Always a subset: nothing here can name a field the allowlist does not.
+ */
+export interface ContentPublicProjection {
+  fields: readonly string[];
+  people: readonly string[];
+}
+
+export const contentPublicDetailProjection = (
+  definition: AnyContentTypeDefinition,
+): ContentPublicProjection => ({
+  fields: definition.publicApi.fields,
+  people: definition.publicApi.people,
+});
+
+export const contentPublicListProjection = (
+  definition: AnyContentTypeDefinition,
+): ContentPublicProjection => ({
+  fields: definition.publicApi.listFields ?? definition.publicApi.fields,
+  people: definition.publicApi.people,
+});
+
+/** The projection {@link ContentPublicItemReadOptions.select} asks for. */
+export const contentPublicSelectProjection = (
+  definition: AnyContentTypeDefinition,
+  select: readonly string[],
+): ContentPublicProjection => ({
+  fields: definition.publicApi.fields.filter(name => select.includes(name)),
+  people: [],
+});
+
 export const createContentPublicProjector = <
   TDefinition extends AnyContentTypeDefinition,
 >(
   definition: TDefinition,
+  projection: ContentPublicProjection = contentPublicDetailProjection(
+    definition,
+  ),
 ): ((row: Record<string, unknown>) => ContentPublicSelect<TDefinition>) => {
   const publicApi = definition.publicApi;
 
@@ -116,8 +161,8 @@ export const createContentPublicProjector = <
     );
   }
 
-  const exposed = publicApi.fields;
-  const { people } = publicApi;
+  const exposed = projection.fields;
+  const { people } = projection;
   const exposesId = exposed.includes("id");
   const flat = exposed.filter(name => splitContentFieldPath(name) === null);
   // A `user` field is never exposable, so this is only ever relations.
@@ -209,15 +254,16 @@ const pick = (
 export const contentPublicSelection = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
+  projection: ContentPublicProjection = contentPublicDetailProjection(
+    definition,
+  ),
 ): Record<string, PgColumn> => ({
   id: columns.id,
   // The user ids behind `publicApi.people`; the hydrator swaps each for a
   // public summary and the projector never lets a bare id through.
+  ...Object.fromEntries(projection.people.map(name => [name, columns[name]])),
   ...Object.fromEntries(
-    definition.publicApi.people.map(name => [name, columns[name]]),
-  ),
-  ...Object.fromEntries(
-    definition.publicApi.fields
+    projection.fields
       // A collection has no column, and a repeatable leaf is a column on a
       // child table - both are batch-loaded after the page is fetched. A group
       // leaf *is* a column, and `contentTableColumns` registers it under its
@@ -238,9 +284,10 @@ export const contentPublicSelection = (
 
 export const contentPublicCollectionFields = (
   definition: AnyContentTypeDefinition,
+  fields: readonly string[] = definition.publicApi.fields,
 ): string[] => {
   const named = new Set(
-    definition.publicApi.fields.map(name => {
+    fields.map(name => {
       const path = splitContentFieldPath(name);
 
       return path ? path[0] : name;
@@ -305,35 +352,49 @@ export const createContentPublicService = <
   const searchColumns = publicApi.searchableFields.map(name => columns[name]);
   const orderable = publicOrderableColumns(definition);
 
-  const selection = (): Record<string, PgColumn> =>
-    contentPublicSelection(definition, columns);
-
-  const project = createContentPublicProjector(definition);
-  // Loaded only when the allowlist actually exposes one, so a public list joins
-  // no junction and no child table unless a public response is made of them.
-  const publicCollections = contentPublicCollectionFields(definition);
-
-  const withCollections = createContentPublicRowHydrator({
-    advanced,
-    c,
-    definition,
-    publicCollections,
+  /**
+   * Everything one projection needs, built once: the `SELECT`, the hydrator and
+   * the projector. Collections load only when the projection exposes one, so a
+   * public list joins no junction and no child table unless a public response
+   * is made of them.
+   */
+  const reader = (projection: ContentPublicProjection) => ({
+    hydrate: createContentPublicRowHydrator({
+      advanced,
+      c,
+      definition,
+      people: projection.people,
+      publicCollections: contentPublicCollectionFields(
+        definition,
+        projection.fields,
+      ),
+    }),
+    project: createContentPublicProjector(definition, projection),
+    selection: contentPublicSelection(definition, columns, projection),
   });
+
+  const detail = reader(contentPublicDetailProjection(definition));
+  const list = publicApi.listFields
+    ? reader(contentPublicListProjection(definition))
+    : detail;
 
   const readOne = async (
     condition: SQL,
     options: ContentPublicItemReadOptions = {},
   ): Promise<ContentPublicSelect<TDefinition> | null> => {
+    const { hydrate, project, selection } = options.select
+      ? reader(contentPublicSelectProjection(definition, options.select))
+      : detail;
     const [row] = await c
       .get("db")
-      .select(selection())
+      .select({ ...selection })
       .from(table)
       .where(and(contentPublicReadCondition(published, options), condition))
       .limit(1);
 
     if (!row) return null;
 
-    const [projected] = await withCollections([row]);
+    const [projected] = await hydrate([row]);
 
     return project(projected);
   };
@@ -350,13 +411,13 @@ export const createContentPublicService = <
 
       const rows = await c
         .get("db")
-        .select(selection())
+        .select({ ...detail.selection })
         .from(table)
         .where(
           and(publishedCondition(published), inArray(primaryCursor, [...ids])),
         );
 
-      return (await withCollections(rows)).map(project);
+      return (await detail.hydrate(rows)).map(detail.project);
     },
 
     findMany: async ({ filters = {}, orderBy, query = {} } = {}) => {
@@ -412,7 +473,7 @@ export const createContentPublicService = <
             // The cursor value is projected by this statement and stripped from
             // the row before `project` ever sees it, so the public allowlist is
             // unchanged: it is pagination's own column, not a field.
-            .select({ ...selection(), ...cursorSelection })
+            .select({ ...list.selection, ...cursorSelection })
             .from(table)
             .where(where)
             .orderBy(order)
@@ -425,7 +486,7 @@ export const createContentPublicService = <
       });
 
       return {
-        edges: (await withCollections(data.edges)).map(project),
+        edges: (await list.hydrate(data.edges)).map(list.project),
         pageInfo: data.pageInfo,
       };
     },

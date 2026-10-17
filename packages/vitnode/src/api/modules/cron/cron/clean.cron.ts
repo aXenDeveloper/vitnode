@@ -5,6 +5,7 @@ import { eq, lt, notExists, sql } from "drizzle-orm";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { buildCron } from "@/api/lib/cron";
+import { deleteExpiredQueueTasks } from "@/api/modules/queue/helpers/process-queue-tasks";
 import { core_admin_sessions } from "@/database/admins";
 import {
   core_sessions,
@@ -36,7 +37,7 @@ export const isOrphanedDevice = (
 
 export const cleanCron = buildCron({
   name: "clean",
-  description: "Clean up expired sessions and tokens",
+  description: "Clean up expired sessions, tokens and finished queue tasks",
   // Run every 1 hour
   schedule: "0 * * * *",
   handler: async c => {
@@ -61,5 +62,8 @@ export const cleanCron = buildCron({
         .delete(core_users_confirm_emails)
         .where(lt(core_users_confirm_emails.expiresAt, new Date()));
     });
+
+    // Outside the transaction: each batch commits on its own.
+    await deleteExpiredQueueTasks(c);
   },
 });

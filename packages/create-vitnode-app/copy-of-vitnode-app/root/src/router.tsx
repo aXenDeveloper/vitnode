@@ -52,9 +52,9 @@ export function getRouter() {
     context: { queryClient },
     defaultPendingComponent: RoutePendingSpinner,
     defaultPendingMs: 150,
-    defaultPendingMinMs: 300,
+    defaultPendingMinMs: 200,
     defaultPreload: "intent",
-    defaultPreloadDelay: 250,
+    defaultPreloadDelay: 75,
     defaultPreloadStaleTime: 0,
     defaultViewTransition: navigationViewTransition(
       vitNodeConfig.viewTransitions,

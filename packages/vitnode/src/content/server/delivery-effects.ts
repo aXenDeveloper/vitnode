@@ -21,6 +21,13 @@ export const contentDeliveryEffects = async (
 ): Promise<ContentDeliveryEffectsResult> => {
   const events: EventEmitResult[] = [];
 
+  // `contentChanged` is "public before or after", so its absence proves a draft's
+  // slug moved - no cached page ever showed it.
+  const publicState =
+    delivery?.sitemap.contentChanged === false
+      ? { isPublic: false, wasPublic: false }
+      : undefined;
+
   const announce = async (
     action: "delivery_redirect_created" | "delivery_slug_changed",
     payload: Record<string, unknown>,
@@ -31,7 +38,7 @@ export const contentDeliveryEffects = async (
       definition,
       action,
       payload as never,
-      { pluginId },
+      { pluginId, publicState },
     );
 
     events.push(event);

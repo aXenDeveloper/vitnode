@@ -7,6 +7,7 @@ import type {
   DataTableRowId,
   DataTableTMin,
 } from "./data-table-content";
+import type { ReorderableBodyDataTable as ReorderableBodyDataTableType } from "./reorder";
 
 import { Table, TableBody } from "../ui/table";
 import { TooltipGroup } from "../ui/tooltip";
@@ -22,13 +23,11 @@ import { GroupHeadingRowDataTable, groupRowsDataTable } from "./group";
 import { useDataTableUrl } from "./navigation";
 import { PaginationDataTable } from "./pagination";
 import {
+  ReorderFallbackBodyDataTable,
   ReorderHandleDataTable,
   ReorderHeaderDataTable,
-  ReorderProviderDataTable,
-  SortableRowGroupDataTable,
-  useRowOrderDataTable,
-} from "./reorder";
-import { isTableInStoredOrder } from "./reorder-state";
+} from "./reorder-handle";
+import { useRowOrderDataTable } from "./row-order";
 import { SearchDataTable } from "./search";
 import {
   BulkActionsDataTable,
@@ -125,56 +124,12 @@ const ToolbarDataTable = ({
   );
 };
 
-const ReorderableBodyDataTable = <T extends DataTableTMin>({
-  filters,
-  order,
-  renderRow,
-  reorder,
-  reorderable,
-  rows,
-  searchParams,
-}: Pick<DataTableProps<T>, "filters" | "order"> & {
-  renderRow: (row: T) => React.ReactNode;
-  reorder: (activeId: DataTableRowId, overId: DataTableRowId) => void;
-  reorderable: NonNullable<DataTableProps<T>["reorderable"]>;
-  rows: T[];
-  searchParams: URLSearchParams;
-}) => {
-  const isReorderDisabled =
-    reorderable.disabled === true ||
-    !isTableInStoredOrder(searchParams, {
-      defaultOrder: {
-        column: String(order.defaultOrder.column),
-        order: order.defaultOrder.order,
-      },
-      filterIds: filters?.map(filter => filter.id) ?? [],
-    });
-  const rowLabelOf = (id: DataTableRowId) => {
-    const row = rows.find(item => item.id === id);
-
-    return row ? reorderable.getRowLabel?.(row) : undefined;
-  };
-
-  return (
-    <ReorderProviderDataTable
-      ids={rows.map(row => row.id)}
-      labelOf={rowLabelOf}
-      onMove={reorder}
-    >
-      {rows.map((row, index) => (
-        <SortableRowGroupDataTable
-          disabled={isReorderDisabled}
-          id={row.id}
-          key={row.id}
-          label={reorderable.getRowLabel?.(row)}
-          position={index + 1}
-        >
-          {renderRow(row)}
-        </SortableRowGroupDataTable>
-      ))}
-    </ReorderProviderDataTable>
-  );
-};
+// dnd-kit is only downloaded by tables that can actually be reordered.
+const ReorderableBodyDataTable = React.lazy(async () =>
+  import("./reorder").then(module => ({
+    default: module.ReorderableBodyDataTable,
+  })),
+) as unknown as typeof ReorderableBodyDataTableType;
 
 export function ContentDataTable<T extends DataTableTMin>({
   bulkActions,
@@ -200,7 +155,8 @@ export function ContentDataTable<T extends DataTableTMin>({
     edges,
     onReorder: reorderable?.onReorder,
   });
-  const rowIds = rows.map(row => row.id);
+  // Memoized on the rows so the selection context does not change every render.
+  const rowIds = React.useMemo(() => rows.map(row => row.id), [rows]);
   const expansion = useRowExpansionDataTable({
     defaultExpanded: expandable?.defaultExpanded,
     rowIds,
@@ -252,15 +208,21 @@ export function ContentDataTable<T extends DataTableTMin>({
 
     if (reorderable) {
       return (
-        <ReorderableBodyDataTable
-          filters={filters}
-          order={order}
-          renderRow={renderRow}
-          reorder={reorder}
-          reorderable={reorderable}
-          rows={rows}
-          searchParams={searchParams}
-        />
+        <React.Suspense
+          fallback={
+            <ReorderFallbackBodyDataTable renderRow={renderRow} rows={rows} />
+          }
+        >
+          <ReorderableBodyDataTable
+            filters={filters}
+            order={order}
+            renderRow={renderRow}
+            reorder={reorder}
+            reorderable={reorderable}
+            rows={rows}
+            searchParams={searchParams}
+          />
+        </React.Suspense>
       );
     }
 

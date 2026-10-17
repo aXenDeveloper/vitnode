@@ -121,6 +121,8 @@ describe("invalidateContentAfterWrite", () => {
     expect(calls).toEqual([
       { key: contentOptionsQueryRoot("blog.post"), type: "remove" },
       { key: contentItemQueryRoot("blog.post", 7), type: "invalidate" },
+      // Off-screen pages dropped, the one on screen refetched.
+      { key: contentListQueryRoot("blog.post"), type: "remove" },
       { key: contentListQueryRoot("blog.post"), type: "invalidate" },
       { key: SEARCH_QUERY_ROOT, type: "invalidate" },
     ]);
@@ -167,6 +169,8 @@ describe("invalidateContentAfterWrite", () => {
 
     expect(calls).toEqual([
       { key: contentOptionsQueryRoot("blog.post"), type: "remove" },
+      // Off-screen pages dropped, the one on screen refetched.
+      { key: contentListQueryRoot("blog.post"), type: "remove" },
       { key: contentListQueryRoot("blog.post"), type: "invalidate" },
       { key: SEARCH_QUERY_ROOT, type: "invalidate" },
     ]);

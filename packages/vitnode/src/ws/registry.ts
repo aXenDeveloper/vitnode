@@ -5,6 +5,10 @@ import type { CacheClient } from "@/api/lib/cache";
 import type { VitNodeWSChannel, VitNodeWSMessage } from "./types";
 
 const connections = new Map<WSContext, null | number>();
+// Reverse indexes, so per-user sends and closing a socket touch only what
+// belongs to that user/socket instead of scanning every connection or room.
+const connectionsByUser = new Map<number, Set<WSContext>>();
+const roomsBySocket = new Map<WSContext, Set<string>>();
 
 const rooms = new Map<string, Map<WSContext, Set<string>>>();
 
@@ -25,27 +29,53 @@ export const markWebSocketEnabled = (): void => {
 /** Whether the app mounted the WebSocket `/ws` handler. */
 export const isWebSocketEnabled = (): boolean => webSocketEnabled;
 
-const sendTo = (ws: WSContext, id: string, data: unknown): void => {
+const encode = (id: string, data: unknown): string =>
+  JSON.stringify({ data, id } satisfies VitNodeWSMessage);
+
+const sendRaw = (ws: WSContext, raw: string): void => {
   try {
-    ws.send(JSON.stringify({ data, id } satisfies VitNodeWSMessage));
+    ws.send(raw);
   } catch (_error) {
     wsRegistry.remove(ws);
   }
 };
 
+// A failed send removes that socket mid-loop, which Map/Set iteration allows.
+const sendRawToAll = (sockets: Iterable<WSContext>, raw: string): void => {
+  for (const ws of sockets) sendRaw(ws, raw);
+};
+
+const unindexUser = (ws: WSContext, userId: null | number | undefined) => {
+  if (userId === null || userId === undefined) return;
+  const sockets = connectionsByUser.get(userId);
+  if (!sockets) return;
+  sockets.delete(ws);
+  if (sockets.size === 0) connectionsByUser.delete(userId);
+};
+
 export const wsRegistry = {
   add: (ws: WSContext, userId: null | number): void => {
+    unindexUser(ws, connections.get(ws));
     connections.set(ws, userId);
+    if (userId === null) return;
+
+    const sockets = connectionsByUser.get(userId) ?? new Set<WSContext>();
+    connectionsByUser.set(userId, sockets);
+    sockets.add(ws);
   },
   /** Send `{ id, data }` to every open connection. */
   broadcast: (id: string, data: unknown): void => {
-    connections.forEach((_userId, ws) => sendTo(ws, id, data));
+    if (connections.size === 0) return;
+    sendRawToAll(connections.keys(), encode(id, data));
   },
   join: (ws: WSContext, room: string, memberId: string): boolean => {
     const sockets = rooms.get(room) ?? new Map<WSContext, Set<string>>();
     rooms.set(room, sockets);
     const members = sockets.get(ws) ?? new Set<string>();
     sockets.set(ws, members);
+    const joined = roomsBySocket.get(ws) ?? new Set<string>();
+    roomsBySocket.set(ws, joined);
+    joined.add(room);
 
     if (members.has(memberId)) return false;
     members.add(memberId);
@@ -57,7 +87,12 @@ export const wsRegistry = {
     const members = sockets?.get(ws);
     if (!sockets || !members?.delete(memberId)) return false;
 
-    if (members.size === 0) sockets.delete(ws);
+    if (members.size === 0) {
+      sockets.delete(ws);
+      const joined = roomsBySocket.get(ws);
+      joined?.delete(room);
+      if (joined?.size === 0) roomsBySocket.delete(ws);
+    }
     if (sockets.size === 0) rooms.delete(room);
 
     return true;
@@ -74,12 +109,18 @@ export const wsRegistry = {
     };
   },
   remove: (ws: WSContext): void => {
+    unindexUser(ws, connections.get(ws));
     connections.delete(ws);
 
+    const joined = roomsBySocket.get(ws);
+    roomsBySocket.delete(ws);
+    if (!joined) return;
+
     const left: { memberId: string; room: string }[] = [];
-    rooms.forEach((sockets, room) => {
-      const members = sockets.get(ws);
-      if (!members) return;
+    joined.forEach(room => {
+      const sockets = rooms.get(room);
+      const members = sockets?.get(ws);
+      if (!sockets || !members) return;
 
       members.forEach(memberId => left.push({ memberId, room }));
       sockets.delete(ws);
@@ -97,16 +138,17 @@ export const wsRegistry = {
       }
     });
   },
-  roomsOf: (ws: WSContext): string[] =>
-    [...rooms].filter(([, sockets]) => sockets.has(ws)).map(([room]) => room),
+  roomsOf: (ws: WSContext): string[] => [...(roomsBySocket.get(ws) ?? [])],
   toRoom: (room: string, id: string, data: unknown): void => {
-    rooms.get(room)?.forEach((_members, ws) => sendTo(ws, id, data));
+    const sockets = rooms.get(room);
+    if (!sockets || sockets.size === 0) return;
+    sendRawToAll(sockets.keys(), encode(id, data));
   },
   /** Send `{ id, data }` only to the connections owned by `userId`. */
   sendToUser: (userId: number, id: string, data: unknown): void => {
-    connections.forEach((connectionUserId, ws) => {
-      if (connectionUserId === userId) sendTo(ws, id, data);
-    });
+    const sockets = connectionsByUser.get(userId);
+    if (!sockets || sockets.size === 0) return;
+    sendRawToAll(sockets, encode(id, data));
   },
 };
 
@@ -131,7 +173,7 @@ interface RealtimePubSubMessage {
   id: string;
   origin: string;
   room?: string;
-  type: "broadcast" | "instance" | "room" | "sendToUser";
+  type: "broadcast" | "instance" | "room" | "sendToUser" | "sendToUsers";
   userId?: number;
 }
 
@@ -143,6 +185,18 @@ const deliverLocally = (message: RealtimePubSubMessage): void => {
     typeof message.userId === "number"
   ) {
     wsRegistry.sendToUser(message.userId, message.id, message.data);
+  } else if (message.type === "sendToUsers" && Array.isArray(message.data)) {
+    for (const entry of message.data as unknown[]) {
+      if (
+        typeof entry === "object" &&
+        entry !== null &&
+        "userId" in entry &&
+        typeof entry.userId === "number" &&
+        "data" in entry
+      ) {
+        wsRegistry.sendToUser(entry.userId, message.id, entry.data);
+      }
+    }
   } else if (message.type === "room" && typeof message.room === "string") {
     wsRegistry.toRoom(message.room, message.id, message.data);
   }
@@ -260,6 +314,15 @@ export interface VitNodeRealtime {
     channel: VitNodeWSChannel<unknown, Receive>,
     data: Receive,
   ) => void;
+  /**
+   * Push a different payload to each of many users on one channel. Same as
+   * calling `sendToUser` in a loop, but other instances get it as a single
+   * pub/sub message instead of one per user.
+   */
+  sendToUsers: <Receive>(
+    channel: VitNodeWSChannel<unknown, Receive>,
+    messages: Iterable<{ data: Receive; userId: number }>,
+  ) => void;
   toRoom: <Receive>(
     room: string,
     channel: VitNodeWSChannel<unknown, Receive>,
@@ -275,6 +338,15 @@ export const realtime: VitNodeRealtime = {
   sendToUser: (userId, channel, data) => {
     wsRegistry.sendToUser(userId, channel.id, data);
     publish({ data, id: channel.id, type: "sendToUser", userId });
+  },
+  sendToUsers: (channel, messages) => {
+    const batch = [...messages];
+    if (batch.length === 0) return;
+
+    for (const { data, userId } of batch) {
+      wsRegistry.sendToUser(userId, channel.id, data);
+    }
+    publish({ data: batch, id: channel.id, type: "sendToUsers" });
   },
   toRoom: (room, channel, data) => {
     wsRegistry.toRoom(room, channel.id, data);

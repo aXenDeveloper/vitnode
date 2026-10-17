@@ -95,7 +95,7 @@ export const HeroWallColumns = () => {
     >
       {COLUMNS.map(({ key, screens }, index) => (
         <div
-          className="mk-wall-column will-change-transform"
+          className="mk-wall-column"
           key={key}
           style={{ transform: slide(index) }}
         >

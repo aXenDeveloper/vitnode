@@ -68,6 +68,8 @@ export const core_moderation_reports = camelCase.table.withRLS(
       t.targetId,
     ),
     index("core_moderation_reports_status_idx").on(t.status, t.createdAt),
+    // The "all" queue has no status to lead with.
+    index("core_moderation_reports_created_at_id_idx").on(t.createdAt, t.id),
     index("core_moderation_reports_assignee_idx").on(t.assigneeId),
     index("core_moderation_reports_reporter_idx").on(t.reporterId, t.createdAt),
     index("core_moderation_reports_scope_idx").on(t.scopeFamily, t.scopeId),

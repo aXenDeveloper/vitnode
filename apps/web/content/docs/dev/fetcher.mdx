@@ -277,6 +277,16 @@ VitNode provides standard stale times in `@vitnode/core/lib/query-freshness`:
   server fetchers should never reach client bundles.
 </Callout>
 
+### SSR skips the network when the API lives next door
+
+When your app mounts the API in its own process (the default single app does,
+via `configureInProcessApi` from
+`@vitnode/core/lib/fetcher/in-process-api.server`), server-side calls hand the
+request straight to it - no HTTP round trip, no trip through your proxy or
+CDN, same cookies, headers and signed visitor IP. Set `VITNODE_API_URL` to a
+different origin, or pass `origin` on a call, and the request goes over the
+network as before.
+
 ## Browser-only requests with fetcherClient
 
 For client code that **never** executes on the server—such as browser event listeners, interactive dialogs, or framework-neutral utilities—call `fetcherClient` from `@vitnode/core/lib/fetcher-client`:

@@ -15,10 +15,26 @@ export default function ComparisonExample() {
         className="aspect-video rounded-lg border"
       >
         <ComparisonItem position="left">
-          <img alt="" draggable={false} src={adminDashboardLight} />
+          <img
+            alt=""
+            decoding="async"
+            draggable={false}
+            height={433}
+            loading="lazy"
+            src={adminDashboardLight}
+            width={800}
+          />
         </ComparisonItem>
         <ComparisonItem position="right">
-          <img alt="" draggable={false} src={adminDashboardDark} />
+          <img
+            alt=""
+            decoding="async"
+            draggable={false}
+            height={433}
+            loading="lazy"
+            src={adminDashboardDark}
+            width={800}
+          />
         </ComparisonItem>
         <ComparisonHandle />
       </Comparison>

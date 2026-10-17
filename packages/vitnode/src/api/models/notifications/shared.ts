@@ -70,6 +70,19 @@ export const loadNotificationSettings = async (
   return { global: normalizeGlobalSettings(global), policies };
 };
 
+// The overview's totals scan whole tables, and an AdminCP tab left open polls
+// them. A minute of staleness is fine for a dashboard; the bulk actions that
+// change them by a lot expire the entry so their result shows at once.
+export const NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY =
+  "notifications:overview:totals";
+export const NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS = 60;
+
+export const expireNotificationOverviewTotals = async (
+  c: NotificationsContext,
+): Promise<void> => {
+  await c.get("cache").delete(NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY);
+};
+
 export const getNotificationWorkers = (
   c: NotificationsContext,
 ): NotificationWorkerSettings =>
@@ -82,8 +95,9 @@ export const sendNotificationStates = (
   c: NotificationsContext,
   states: Iterable<NotificationStateMessage & { userId: number }>,
 ): void => {
-  const realtime = c.get("realtime");
-  for (const { userId, ...message } of states) {
-    realtime.sendToUser(userId, notificationsStateChannel, message);
-  }
+  // One pub/sub publish for the whole batch instead of one per user.
+  c.get("realtime").sendToUsers(
+    notificationsStateChannel,
+    Array.from(states, ({ userId, ...data }) => ({ data, userId })),
+  );
 };

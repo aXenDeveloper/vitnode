@@ -72,7 +72,8 @@ REDIS_PASSWORD=change_me_redis_password
 ### Where the API lives
 
 A **Single App** answers `/api/*` itself, so leave `VITNODE_API_URL` unset.
-The server takes the API origin off the request being rendered and the browser
+Server-side calls (the session read, every loader) go straight to the API in the
+same process - no HTTP round trip through your proxy or CDN - and the browser
 falls back to the origin the page was served from, so the same build is correct
 on every hostname you point at it.
 
@@ -94,20 +95,46 @@ production at the visitor's own machine.
 
 ## Reverse Proxy (Nginx Configuration)
 
-Proxy traffic to VitNode while forwarding client headers and supporting WebSocket upgrades:
+Proxy traffic to VitNode while forwarding client headers, keeping connections to the app open between requests, and upgrading only the requests that ask for a WebSocket:
 
 ```nginx title="/etc/nginx/sites-available/vitnode.conf"
+# "upgrade" for WebSocket handshakes, and an empty Connection header for
+# everything else so the upstream connection stays in the keepalive pool.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      '';
+}
+
+upstream vitnode {
+    server 127.0.0.1:3000;
+    keepalive 32;
+}
+
 server {
     listen 80;
     server_name example.com;
 
+    # Compress HTML and API responses. Static assets already ship as .br/.gz
+    # from the build, and nginx never re-compresses a compressed response.
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/xml application/manifest+json image/svg+xml;
+
+    # Brotli needs the ngx_brotli module. Uncomment if your nginx has it.
+    # brotli on;
+    # brotli_comp_level 5;
+    # brotli_types text/plain text/css text/xml application/json application/javascript application/xml application/manifest+json image/svg+xml;
+
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://vitnode;
         proxy_http_version 1.1;
 
         # WebSocket support
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
 
         # Forwarded identity
         proxy_set_header Host $host;
@@ -117,6 +144,12 @@ server {
     }
 }
 ```
+
+`keepalive 32` plus an empty `Connection` header reuses connections to the app instead of opening a fresh one for every request. Sending `Connection "upgrade"` on every request, as many copy-paste configs do, quietly turns that off.
+
+In a split deployment, `apps/api` gzips its own JSON responses, so the same config works in front of it too.
+
+Hashed files under `/assets/` already leave the app with `Cache-Control: public, max-age=31536000, immutable`, so there is nothing to add for them here.
 
 Keep `proxy_set_header Host $host;`. VitNode picks a [language domain](/docs/dev/i18n/localized-urls#behind-a-proxy) from the `Host` header and deliberately ignores `X-Forwarded-Host`, which any visitor can send.
 

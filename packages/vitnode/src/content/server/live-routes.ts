@@ -66,6 +66,22 @@ export const buildContentLiveRoutes = <
   };
   const localized = definition.localization.enabled;
 
+  // Built once per field, on first use, rather than on every draft keystroke.
+  type FieldSchema = ReturnType<typeof contentFieldUpdateSchema>;
+  const fieldSchemas = new Map<ContentFieldMap, Map<string, FieldSchema>>();
+  const fieldSchema = (scope: ContentFieldMap, field: string): FieldSchema => {
+    let byField = fieldSchemas.get(scope);
+    if (!byField) {
+      byField = new Map();
+      fieldSchemas.set(scope, byField);
+    }
+    if (!byField.has(field)) {
+      byField.set(field, contentFieldUpdateSchema(scope, field));
+    }
+
+    return byField.get(field);
+  };
+
   const params = definition.schemas.params;
   const notFound = { description: `${name} not found` };
 
@@ -296,9 +312,7 @@ export const buildContentLiveRoutes = <
       const values: Record<string, unknown> = {};
       const invalid: string[] = [];
       for (const field of names) {
-        const parsed = contentFieldUpdateSchema(scope, field)?.safeParse(
-          body.values[field],
-        );
+        const parsed = fieldSchema(scope, field)?.safeParse(body.values[field]);
         if (parsed?.success) values[field] = parsed.data;
         else invalid.push(field);
       }

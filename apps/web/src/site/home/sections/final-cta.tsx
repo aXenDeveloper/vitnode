@@ -16,7 +16,7 @@ export const FinalCtaSection = () => (
     >
       <div
         aria-hidden
-        className="mk-anim-drift bg-primary/25 absolute -bottom-32 left-1/2 -z-10 size-96 -translate-x-1/2 rounded-full blur-3xl"
+        className="mk-anim-drift from-primary/25 absolute -bottom-48 left-1/2 -z-10 size-128 -translate-x-1/2 bg-radial from-25% to-transparent to-70%"
       />
 
       <span className="bg-primary/15 text-primary flex size-12 items-center justify-center rounded-2xl">

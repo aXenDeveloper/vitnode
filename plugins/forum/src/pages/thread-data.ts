@@ -111,8 +111,24 @@ export const buildThreadTree = (
   return roots;
 };
 
-export const countDescendants = (node: ThreadTreeNode): number =>
-  node.children.reduce(
-    (total, child) => total + 1 + countDescendants(child),
-    0,
-  );
+/**
+ * Every node's descendant count, keyed by id, in one walk of the tree - each
+ * node used to recount its whole subtree on every render, which made a deep
+ * thread quadratic.
+ */
+export const countDescendants = (
+  roots: readonly ThreadTreeNode[],
+): ReadonlyMap<number, number> => {
+  const counts = new Map<number, number>();
+  const visit = (node: ThreadTreeNode): number => {
+    let total = 0;
+    for (const child of node.children) total += 1 + visit(child);
+    counts.set(node.id, total);
+
+    return total;
+  };
+
+  for (const root of roots) visit(root);
+
+  return counts;
+};

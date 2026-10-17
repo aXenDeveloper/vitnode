@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
@@ -48,6 +48,13 @@ export const runCronRoute = buildRoute({
         cronFromDb,
       );
 
+      const cronFromDbMap = new Map(
+        cronFromDb.map(dbJob => [
+          `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,
+          dbJob,
+        ]),
+      );
+
       if (newJobs.length > 0) {
         try {
           const newJobsValues = newJobs.map(job => ({
@@ -60,7 +67,16 @@ export const runCronRoute = buildRoute({
             schedule: job.schedule,
           }));
 
-          await db.insert(core_cron).values(newJobsValues);
+          const inserted = await db
+            .insert(core_cron)
+            .values(newJobsValues)
+            .returning();
+          for (const dbJob of inserted) {
+            cronFromDbMap.set(
+              `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,
+              dbJob,
+            );
+          }
         } catch (error) {
           await c.get("log").error(`Error inserting new cron jobs: ${error}`);
         }
@@ -73,29 +89,35 @@ export const runCronRoute = buildRoute({
       }
 
       if (jobsToExecute.length > 0) {
-        const cronFromDbMap = new Map(
-          cronFromDb.map(dbJob => [
-            `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,
-            dbJob,
-          ]),
-        );
-
         const executionPromises = jobsToExecute.map(async job => {
+          const dbJob = cronFromDbMap.get(
+            `${job.pluginId}:${job.module}:${job.name}`,
+          );
+
+          // Every instance's ticker hits this route each minute. Claim the run
+          // first (compare-and-set on the `lastRun` we read) so exactly one
+          // instance executes a due job; the others see 0 rows and skip it.
+          if (dbJob) {
+            const [claimed] = await db
+              .update(core_cron)
+              .set({
+                lastRun: now,
+                nextRun: getNextCronRunDate(job.schedule, now),
+              })
+              .where(
+                and(
+                  eq(core_cron.id, dbJob.id),
+                  dbJob.lastRun
+                    ? eq(core_cron.lastRun, dbJob.lastRun)
+                    : isNull(core_cron.lastRun),
+                ),
+              )
+              .returning({ id: core_cron.id });
+            if (!claimed) return { success: false, jobName: job.name };
+          }
+
           try {
             await job.handler(c);
-
-            const jobKey = `${job.pluginId}:${job.module}:${job.name}`;
-            const dbJob = cronFromDbMap.get(jobKey);
-
-            if (dbJob) {
-              await db
-                .update(core_cron)
-                .set({
-                  lastRun: now,
-                  nextRun: getNextCronRunDate(job.schedule, now),
-                })
-                .where(eq(core_cron.id, dbJob.id));
-            }
 
             return { success: true, jobName: job.name };
           } catch (error) {
@@ -104,6 +126,18 @@ export const runCronRoute = buildRoute({
               .error(
                 `Error executing cron job "${job.pluginId}:${job.module}:${job.name}": ${error}`,
               );
+
+            // Hand the claim back so a failed job is retried on the next tick,
+            // as it was before runs were claimed up front.
+            if (dbJob) {
+              await db
+                .update(core_cron)
+                .set({ lastRun: dbJob.lastRun, nextRun: dbJob.nextRun })
+                .where(
+                  and(eq(core_cron.id, dbJob.id), eq(core_cron.lastRun, now)),
+                )
+                .catch(() => undefined);
+            }
 
             return { success: false, jobName: job.name, error };
           }

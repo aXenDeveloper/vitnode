@@ -316,6 +316,7 @@ const CONFIG_CODES = new Set([
 ]);
 
 export const ALT_RETRY_AFTER_MS = 24 * 3_600_000;
+const ALT_TRANSLATE_CONCURRENCY = 2;
 
 export const processAltForFile = async (
   c: Context<EnvVitNode>,
@@ -437,8 +438,7 @@ export const processAltForFile = async (
         .returning();
     }
 
-    const written: string[] = [];
-    for (const languageCode of missing) {
+    const describeIn = async (languageCode: string): Promise<boolean> => {
       let text = analysis.description;
       let runId = analysis.runId;
       if (languageCode !== ALT_BASE_LANGUAGE) {
@@ -452,19 +452,59 @@ export const processAltForFile = async (
         runId = translated.runId;
       }
       if (
-        await writeAiAlt(db, { fileId, fingerprint, languageCode, runId, text })
+        !(await writeAiAlt(db, {
+          fileId,
+          fingerprint,
+          languageCode,
+          runId,
+          text,
+        }))
       ) {
-        written.push(languageCode);
-        await c
-          .get("events")
-          ?.emit("files.alt.updated", {
-            fileId,
-            languageCodes: [languageCode],
-            origin: "ai",
-          })
-          .catch(() => undefined);
+        return false;
       }
-    }
+      await c
+        .get("events")
+        ?.emit("files.alt.updated", {
+          fileId,
+          languageCodes: [languageCode],
+          origin: "ai",
+        })
+        .catch(() => undefined);
+
+      return true;
+    };
+
+    // A few translations at once. Each run still reserves its budget under
+    // row locks, so concurrency can't overspend; staying within
+    // `systemConcurrency` keeps the runs from tripping the throttle. Like the
+    // old loop, the first failure stops new languages from starting.
+    const writtenCodes = new Set<string>();
+    const failures: unknown[] = [];
+    let next = 0;
+    const worker = async () => {
+      while (failures.length === 0 && next < missing.length) {
+        const languageCode = missing[next++];
+        try {
+          if (await describeIn(languageCode)) writtenCodes.add(languageCode);
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+    };
+    await Promise.all(
+      Array.from(
+        {
+          length: Math.min(
+            ALT_TRANSLATE_CONCURRENCY,
+            Math.max(1, settings.systemConcurrency),
+            missing.length,
+          ),
+        },
+        worker,
+      ),
+    );
+    if (failures.length > 0) throw failures[0];
+    const written = missing.filter(code => writtenCodes.has(code));
 
     await setAltState(db, fileId, "completed");
 
@@ -474,6 +514,13 @@ export const processAltForFile = async (
       return await deferForBudget(db, fileId, settings);
     }
     if (error instanceof QueueDeferError) throw error;
+    if (isAiError(error) && error.code === "AI_CONCURRENCY_LIMITED") {
+      // Every system slot is busy: wait for one instead of failing the file.
+      throw new QueueDeferError(
+        new Date(Date.now() + 60_000),
+        "Waiting for a free AI slot",
+      );
+    }
     if (isAiError(error) && CONFIG_CODES.has(error.code)) {
       await setAltState(db, fileId, "failed", error.code);
 

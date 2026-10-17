@@ -278,6 +278,10 @@
   transform-origin: 0% 50%;
 }
 
+.mk-anim-orbit {
+  animation: mk-orbit 40s linear infinite;
+}
+
 .mk-anim-dash {
   stroke-dasharray: 6 10;
   animation: mk-dash 1.4s linear infinite;
@@ -427,6 +431,7 @@
       animation: mk-wall-rise linear both;
       animation-timeline: scroll(root block);
       animation-range: 0 max(90vh, 360px);
+      will-change: transform;
     }
 
     .mk-wall-column:nth-child(even) {
@@ -455,6 +460,10 @@
   100% {
     opacity: 0;
   }
+}
+
+.mk-anim-cycle-2 {
+  animation: mk-cycle-2 8s ease-in-out infinite;
 }
 
 .mk-anim-cycle-7 {

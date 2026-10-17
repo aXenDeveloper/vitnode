@@ -54,6 +54,7 @@ import {
 } from "./page-cache";
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
+import { rememberContentPublicRead } from "./public-cache";
 import { resolveContentPublicRowPeople } from "./public-row-hydration";
 import {
   contentPublicSelection,
@@ -393,18 +394,33 @@ export const buildContentPublicRoutes = <
       const resolved = await localeFor(c);
       if (!resolved) throw notFound();
 
-      const data = await service(c).findMany({
-        filters,
-        locale: resolved.locale,
-        // Both narrowings restate what the schemas just proved: `orderBy` came
-        // out of a literal enum built from `publicApi.orderableFields`, and
-        // `filters` out of a shape built from `publicApi.filterableFields`. The
-        // service re-checks both, since the type is not what protects the query.
-        orderBy: {
-          column: orderBy as ContentPublicOrderableFieldName<TDefinition>,
-          order,
+      // A published list is the same for every reader, so it is cached under
+      // everything that shapes it: the parsed query - never the raw string, so a
+      // tracking parameter does not fork the key - and the resolved locale.
+      const data = await rememberContentPublicRead(c, {
+        contentTypeId: definition.id,
+        key: {
+          filters,
+          locale: resolved.locale ?? null,
+          query: { cursor, first, last, order, orderBy, page, search },
+          route: "list",
+          source: resolved.source,
         },
-        query: { cursor, first, last, page, search },
+        load: async () =>
+          await service(c).findMany({
+            filters,
+            locale: resolved.locale,
+            // Both narrowings restate what the schemas just proved: `orderBy`
+            // came out of a literal enum built from `publicApi.orderableFields`,
+            // and `filters` out of a shape built from
+            // `publicApi.filterableFields`. The service re-checks both, since
+            // the type is not what protects the query.
+            orderBy: {
+              column: orderBy as ContentPublicOrderableFieldName<TDefinition>,
+              order,
+            },
+            query: { cursor, first, last, page, search },
+          }),
       });
 
       setPageCacheTags(c, [
@@ -573,10 +589,14 @@ export const buildContentPublicRoutes = <
         entry => entry.model.definition.id === target?.id,
       )?.model;
       const rootId = target ? parseContentId(target.idStrategy, root) : null;
+      // An existence check: `select: []` reads the same published, visible row
+      // without hydrating a single field of it.
       const rootRecord =
         rootId === null
           ? null
-          : await rootModel?.publicService?.(c).findById(rootId);
+          : await rootModel?.publicService?.(c).findById(rootId, {
+              select: [],
+            });
       if (!rootRecord || rootId === null) {
         throw new HTTPException(404, { message: "Thread not found." });
       }
@@ -636,9 +656,22 @@ export const buildContentPublicRoutes = <
       // A 403 would confirm the record exists, which is the one thing a draft
       // URL must not do - and so would a 404 that only some of them produced.
       const slug = c.req.param("slug");
-      const row = await service(c).findBySlug(slug, {
-        fallback: true,
-        locale: resolved.locale,
+      // Only the published read is cached - it is the same for every reader.
+      // The hidden fallback below depends on who is asking and never is.
+      const { row } = await rememberContentPublicRead(c, {
+        contentTypeId: definition.id,
+        key: {
+          locale: resolved.locale ?? null,
+          route: "detail",
+          slug,
+          source: resolved.source,
+        },
+        load: async () => ({
+          row: await service(c).findBySlug(slug, {
+            fallback: true,
+            locale: resolved.locale,
+          }),
+        }),
       });
       if (row) {
         setPageCacheTags(

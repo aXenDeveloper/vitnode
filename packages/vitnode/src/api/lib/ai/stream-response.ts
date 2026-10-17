@@ -6,6 +6,8 @@ import { isAiError } from "./errors";
 
 export const AI_NDJSON_HEADERS = {
   "Content-Type": "application/x-ndjson; charset=utf-8",
+  // nginx buffers proxied responses by default, which would hold the stream back.
+  "X-Accel-Buffering": "no",
 } as const;
 
 export const aiNdjsonStream = async (

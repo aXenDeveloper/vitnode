@@ -8,6 +8,7 @@ import type { ContentModel } from "./model";
 import { requireContentId } from "../ids";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
+import { contentPublicStateOf } from "./page-cache";
 import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
 
 /**
@@ -42,7 +43,7 @@ export const contentPlainWriteEffects = async <
       definition,
       "created",
       { contentId: id },
-      { pluginId },
+      { pluginId, publicState: contentPublicStateOf(definition, null, row) },
     );
   } else if (operation === "update" && changedFields.length > 0) {
     await emitContentEvent(
@@ -50,7 +51,8 @@ export const contentPlainWriteEffects = async <
       definition,
       "updated",
       { changedFields, contentId: id },
-      { pluginId },
+      // An edit cannot move publication, so the row after it says both.
+      { pluginId, publicState: contentPublicStateOf(definition, row, row) },
     );
   }
 
@@ -63,7 +65,14 @@ export const contentPlainWriteEffects = async <
       definition,
       "published",
       { contentId: id, publishedAt: row.publishedAt },
-      { pluginId },
+      {
+        pluginId,
+        publicState: contentPublicStateOf(
+          definition,
+          { ...row, status: "draft" },
+          row,
+        ),
+      },
     );
   }
 

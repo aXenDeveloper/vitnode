@@ -23,6 +23,8 @@ import { useForumRejection } from "./forum-errors";
 const COMMENT_FORM_FIELDS = ["body"] as const;
 
 export type CommentComposerProps = {
+  /** Puts the caret in the editor once it mounts - for a composer opened by a click. */
+  autoFocus?: boolean;
   label: string;
   onCancel?: () => void;
   onDone: (outcome: { pending: boolean }) => void;
@@ -49,7 +51,7 @@ const useCommentSchema = (defaultBody: RichTextDocument) => {
 type CommentSchema = ReturnType<typeof useCommentSchema>;
 
 const CommentComposer = (props: CommentComposerProps) => {
-  const { label, onCancel, onDone } = props;
+  const { autoFocus, label, onCancel, onDone } = props;
   const t = useTranslations("@vitnode/forum.comments");
   const rejectComment = useForumRejection(COMMENT_FORM_FIELDS);
   const formSchema = useCommentSchema(
@@ -129,7 +131,18 @@ const CommentComposer = (props: CommentComposerProps) => {
         {
           id: "body",
           component: fieldProps => (
-            <AutoFormEditor {...fieldProps} format="json" label={label} />
+            <AutoFormEditor
+              {...fieldProps}
+              format="json"
+              label={label}
+              onEditor={
+                autoFocus
+                  ? editor => {
+                      editor?.commands.focus("end");
+                    }
+                  : undefined
+              }
+            />
           ),
         },
       ]}

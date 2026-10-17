@@ -112,7 +112,15 @@ shape.
 
 The forum index, forum and topic pages are cached for a minute and refreshed in the
 background. Edit buttons and the comment box load in the browser, so every
-visitor gets the same cached page. Topic pages set a canonical URL and
+visitor gets the same cached page. The comment editor itself waits for a click on
+**Write a comment…**, so readers who only read never download it.
+
+Topic and comment counts are cached too when Redis is configured (`REDIS_URL`).
+Any new, published, hidden, moved or deleted topic or comment expires them on
+the spot, and a five-minute limit catches anything that changed behind the
+forum's back, such as a row edited by hand. Topic lists leave out the topic body,
+so `GET /api/@vitnode/forum/content/topics` returns titles, slugs and dates only -
+read one topic for its body. Topic pages set a canonical URL and
 `DiscussionForumPosting` structured data with the comment count.
 
 Topics also have [delivery](/docs/content-engine/seo): a renamed topic

@@ -1,5 +1,3 @@
-import { arrayMove } from "@dnd-kit/sortable";
-
 import type { DataTableRowId } from "./data-table-content";
 
 import { readTableOrder, readTableSearch, type TableOrder } from "./url-state";
@@ -15,6 +13,16 @@ export interface RowMoveDataTable extends ReorderDetailsDataTable {
   ids: DataTableRowId[];
 }
 
+// Local rather than dnd-kit's `arrayMove`, so a table that never reorders
+// does not pull `@dnd-kit/sortable` into its bundle.
+const arrayMove = <T>(items: readonly T[], from: number, to: number): T[] => {
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+
+  return next;
+};
+
 export const moveRowId = (
   ids: readonly DataTableRowId[],
   activeId: DataTableRowId,
@@ -28,7 +36,7 @@ export const moveRowId = (
   return {
     activeId,
     from,
-    ids: arrayMove([...ids], from, to),
+    ids: arrayMove(ids, from, to),
     overId,
     to,
   };

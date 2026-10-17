@@ -17,6 +17,7 @@ import type { LoadedSource } from "./crop-render";
 import type { ImageCrop } from "./use-image-crop";
 
 import {
+  clampOffset,
   clampZoom,
   displayedSize,
   MAX_ZOOM,
@@ -63,6 +64,9 @@ const useFrameSize = (
   return size;
 };
 
+const imageTransform = (offset: Offset) =>
+  `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`;
+
 const CIRCLE_MASK_PATH =
   "M0 0h100v100H0Z M50 0a50 50 0 1 0 0 100 50 50 0 1 0 0-100Z";
 
@@ -96,7 +100,14 @@ const CropStage = ({
 }) => {
   const t = useTranslations("core.global.image_crop");
   const frameRef = React.useRef<HTMLDivElement>(null);
-  const dragRef = React.useRef<null | { origin: Offset; start: Offset }>(null);
+  const imageRef = React.useRef<HTMLImageElement>(null);
+  // A drag moves the image straight through the DOM and commits the offset
+  // once on release, so the dialog does not re-render on every pointer move.
+  const dragRef = React.useRef<null | {
+    latest: Offset;
+    origin: Offset;
+    start: Offset;
+  }>(null);
 
   const frame = useFrameSize(frameRef, (from, to) => {
     onOffsetChange(current => rescaleOffset(current, from, to), to);
@@ -121,6 +132,15 @@ const CropStage = ({
 
   const nudge = (dx: number, dy: number) => {
     onOffsetChange(current => ({ x: current.x + dx, y: current.y + dy }));
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const active = dragRef.current;
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (active) onOffsetChange(() => active.latest);
   };
 
   return (
@@ -158,9 +178,11 @@ const CropStage = ({
             break;
         }
       }}
+      onPointerCancel={endDrag}
       onPointerDown={event => {
         event.currentTarget.setPointerCapture(event.pointerId);
         dragRef.current = {
+          latest: offset,
           origin: offset,
           start: { x: event.clientX, y: event.clientY },
         };
@@ -169,16 +191,20 @@ const CropStage = ({
         const active = dragRef.current;
         if (!active) return;
 
-        const next = {
-          x: active.origin.x + event.clientX - active.start.x,
-          y: active.origin.y + event.clientY - active.start.y,
-        };
-        onOffsetChange(() => next);
+        active.latest = clampOffset(
+          {
+            x: active.origin.x + event.clientX - active.start.x,
+            y: active.origin.y + event.clientY - active.start.y,
+          },
+          source.size,
+          frame,
+          zoom,
+        );
+        if (imageRef.current) {
+          imageRef.current.style.transform = imageTransform(active.latest);
+        }
       }}
-      onPointerUp={event => {
-        dragRef.current = null;
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }}
+      onPointerUp={endDrag}
       ref={frameRef}
       role="application"
       style={{
@@ -191,10 +217,11 @@ const CropStage = ({
         alt=""
         className="pointer-events-none absolute top-1/2 left-1/2 max-w-none"
         draggable={false}
+        ref={imageRef}
         src={source.url}
         style={{
           height: shown.height,
-          transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+          transform: imageTransform(offset),
           width: shown.width,
         }}
       />

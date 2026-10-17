@@ -5,7 +5,7 @@ import type { ExpandableDataTable } from "./expansion";
 import type { FilterDataTable } from "./filters";
 import type { GroupByDataTable } from "./group";
 import type { PaginationDataTable } from "./pagination";
-import type { ReorderableDataTable } from "./reorder";
+import type { ReorderableDataTable } from "./row-order";
 import type { SearchDataTable } from "./search";
 
 import { Skeleton } from "../ui/skeleton";

@@ -17,6 +17,7 @@ import { LocalEventsAdapter } from "@/api/adapters/events/local";
 import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { CacheModel } from "@/api/lib/cache";
+import { MemoryCacheStore } from "@/api/lib/cache-memory";
 import { AIModel } from "@/api/models/ai";
 import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
@@ -232,6 +233,8 @@ export interface EnvVariablesVitNode {
     timeZone: null | string;
   };
 }
+
+type CoreVariables = EnvVariablesVitNode["core"];
 
 export const globalMiddleware = ({
   ai,
@@ -496,30 +499,11 @@ export const globalMiddleware = ({
     ),
   });
 
-  return async (c: Context, next: Next) => {
-    if (!c.get("ipAddress")) {
-      c.set("ipAddress", resolveClientIp(c));
-    }
-    c.set("db", dbProvider);
-    c.set("ai", new AIModel(c));
-    c.set("cache", new CacheModel(cacheClient, c));
-    c.set("email", new EmailModel(c));
-    c.set("events", new EventsModel(c));
-    c.set("i18n", new I18nModel(c));
-    c.set("notifications", new NotificationsModel(c as Context<EnvVitNode>));
-    c.set("queue", new QueueModel(c));
-    c.set("search", new SearchModel(c));
-    c.set("storage", new StorageModel(c));
-    c.set("realtime", realtime);
-
-    // Resolved before `core` is set rather than per mint, so the integrations
-    // panel and the routes read the same value. Memoised, so this is one query
-    // on the first request of the process and nothing afterwards.
-    const contentPreviewSecret = hasPreviewableContentTypes
-      ? await ensureContentPreviewSecret(dbProvider)
-      : undefined;
-
-    c.set("core", {
+  // Everything in `core` but the two values below is fixed once the plugins are
+  // in, so it is built here once instead of on every request - adapters,
+  // nested config objects and all.
+  const staticCore: Omit<CoreVariables, "contentPreviewSecret" | "cronSecret"> =
+    {
       ai,
       aiActions: aiActionsMetadata,
       i18n: i18nMetadata,
@@ -553,8 +537,6 @@ export const globalMiddleware = ({
       personalInformationFields: resolvePersonalInformationFields(
         users?.personalInformation,
       ),
-      contentPreviewSecret,
-      cronSecret: CONFIG.cronJobSecret,
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       installedPlugins,
@@ -572,7 +554,55 @@ export const globalMiddleware = ({
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
-    });
+    };
+  let core: CoreVariables | undefined;
+
+  // Without Redis, sessions, devices and staff permissions would otherwise hit
+  // the database on every request. One store per app, shared by its requests.
+  const memoryCache = cacheClient ? null : new MemoryCacheStore();
+
+  // The preview secret is memoised after the first request and the cron secret
+  // is read from the environment, so in practice this hands every request the
+  // same object. It is shared, so nothing may mutate it.
+  const coreFor = (
+    contentPreviewSecret: string | undefined,
+    cronSecret: string,
+  ): CoreVariables => {
+    if (
+      !core ||
+      core.contentPreviewSecret !== contentPreviewSecret ||
+      core.cronSecret !== cronSecret
+    ) {
+      core = { ...staticCore, contentPreviewSecret, cronSecret };
+    }
+
+    return core;
+  };
+
+  return async (c: Context, next: Next) => {
+    if (!c.get("ipAddress")) {
+      c.set("ipAddress", resolveClientIp(c));
+    }
+    c.set("db", dbProvider);
+    c.set("ai", new AIModel(c));
+    c.set("cache", new CacheModel(cacheClient, c, memoryCache));
+    c.set("email", new EmailModel(c));
+    c.set("events", new EventsModel(c));
+    c.set("i18n", new I18nModel(c));
+    c.set("notifications", new NotificationsModel(c as Context<EnvVitNode>));
+    c.set("queue", new QueueModel(c));
+    c.set("search", new SearchModel(c));
+    c.set("storage", new StorageModel(c));
+    c.set("realtime", realtime);
+
+    // Resolved before `core` is set rather than per mint, so the integrations
+    // panel and the routes read the same value. Memoised, so this is one query
+    // on the first request of the process and nothing afterwards.
+    const contentPreviewSecret = hasPreviewableContentTypes
+      ? await ensureContentPreviewSecret(dbProvider)
+      : undefined;
+
+    c.set("core", coreFor(contentPreviewSecret, CONFIG.cronJobSecret));
 
     // Whether a localized content type's `defaultLocale` names a row in
     // `core_languages` is a fact about the *installation*, so it cannot be
@@ -593,6 +623,7 @@ export const globalMiddleware = ({
     await next();
 
     c.get("notifications").flushAfterResponse();
+    c.get("email").flushAfterResponse();
   };
 };
 

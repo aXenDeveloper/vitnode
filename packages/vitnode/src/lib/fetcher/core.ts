@@ -1,3 +1,4 @@
+import type { RawApiFetchTransportOptions } from "./raw";
 import type {
   FetcherCall,
   FetcherRequestOptions,
@@ -18,36 +19,40 @@ export async function coreFetcher<
   M extends string,
   Path extends string,
   Method extends string,
->({
-  additionalHeaders = {},
-  args,
-  formData,
-  method,
-  module,
-  options,
-  origin,
-  path,
-  plugin,
-  withPagination = false,
-}: FetcherCall<P, M, Path, Method, FetcherRequestOptions>): Promise<
-  ResponseFor<P, M, Path, Method>
-> {
-  const input = args as FetcherInput | undefined;
-
-  const response = await rawApiFetch({
-    additionalHeaders,
-    body: input?.body,
+>(
+  {
+    additionalHeaders = {},
+    args,
     formData,
     method,
     module,
     options,
     origin,
-    params: input?.params,
     path,
-    pluginId: plugin,
-    query: input?.query,
-    withPagination,
-  });
+    plugin,
+    withPagination = false,
+  }: FetcherCall<P, M, Path, Method, FetcherRequestOptions>,
+  transportOptions?: RawApiFetchTransportOptions,
+): Promise<ResponseFor<P, M, Path, Method>> {
+  const input = args as FetcherInput | undefined;
+
+  const response = await rawApiFetch(
+    {
+      additionalHeaders,
+      body: input?.body,
+      formData,
+      method,
+      module,
+      options,
+      origin,
+      params: input?.params,
+      path,
+      pluginId: plugin,
+      query: input?.query,
+      withPagination,
+    },
+    transportOptions,
+  );
 
   return response as ResponseFor<P, M, Path, Method>;
 }

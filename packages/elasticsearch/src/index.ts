@@ -14,6 +14,8 @@ const DEFAULT_INDEX = "vitnode";
 const DEFAULT_SIZE = 20;
 const MAX_SIZE = 100;
 const MAX_SEARCH_OFFSET = 10_000;
+// Terms per delete-by-query, well under the 65,536 `terms` default limit.
+const DELETE_MANY_CHUNK = 1000;
 
 const parseSearchOffset = (
   cursor: string | undefined,
@@ -361,8 +363,8 @@ export const ElasticsearchSearchAdapter = (
 
   return {
     name: "elasticsearch",
-    // `languageScopedDelete`: `delete` below filters the delete-by-query on
-    // `languageCode` when it is given one, so taking the Polish translation down
+    // `languageScopedDelete`: `delete` below removes only that language's
+    // document when it is given one, so taking the Polish translation down
     // leaves the English document in place.
     capabilities: {
       facets: true,
@@ -430,23 +432,26 @@ export const ElasticsearchSearchAdapter = (
       await getClient().bulk({ operations, refresh: false });
     },
 
-    // One document per language shares an (itemType, itemId), so remove every
-    // language variant with a query rather than a single id - unless the caller
-    // named one, which is how a single translation is taken down without
-    // touching the others.
+    // One document per language shares an (itemType, itemId), so removing
+    // every language variant takes a query. A named language is one known
+    // document id - a plain delete, no index scan; a missing one is fine.
     delete: async (_c, itemType, itemId, languageCode) => {
+      if (languageCode !== undefined) {
+        await getClient().delete(
+          { index, id: docId(itemType, itemId, languageCode) },
+          { ignore: [404] },
+        );
+
+        return;
+      }
+
       await ensureIndex();
       await getClient().deleteByQuery(
         {
           index,
           query: {
             bool: {
-              filter: [
-                { term: { itemType } },
-                ...(languageCode === undefined
-                  ? []
-                  : [{ term: { languageCode } }]),
-              ],
+              filter: [{ term: { itemType } }],
               minimum_should_match: 1,
               should: [
                 { term: { itemKey: itemKeyOf(itemId) } },
@@ -457,6 +462,35 @@ export const ElasticsearchSearchAdapter = (
         },
         { ignore: [404] },
       );
+    },
+
+    deleteMany: async (_c, itemType, itemIds) => {
+      if (itemIds.length === 0) return;
+      await ensureIndex();
+
+      for (let start = 0; start < itemIds.length; start += DELETE_MANY_CHUNK) {
+        const chunk = itemIds.slice(start, start + DELETE_MANY_CHUNK);
+        const numericIds = chunk.filter(id => typeof id === "number");
+
+        await getClient().deleteByQuery(
+          {
+            index,
+            query: {
+              bool: {
+                filter: [{ term: { itemType } }],
+                minimum_should_match: 1,
+                should: [
+                  { terms: { itemKey: chunk.map(itemKeyOf) } },
+                  ...(numericIds.length > 0
+                    ? [{ terms: { itemId: numericIds } }]
+                    : []),
+                ],
+              },
+            },
+          },
+          { ignore: [404] },
+        );
+      }
     },
 
     clear: async (_c, itemType) => {
@@ -488,7 +522,9 @@ export const ElasticsearchSearchAdapter = (
         index,
         from,
         size,
-        track_total_hits: true,
+        // Pages stop at `MAX_SEARCH_OFFSET` anyway, so counting past it is work
+        // nobody can use; beyond it the total reads as "at least" this many.
+        track_total_hits: MAX_SEARCH_OFFSET,
         query: buildQuery(params, options.ranking),
         sort: buildSort(params),
       });

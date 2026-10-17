@@ -125,12 +125,12 @@ Results sit on a timeline grouped by month and day, so you can tell at a glance 
 
 The same filters work in the public search API:
 
-| Parameter   | Example                     | What it does                                     |
-| ----------- | --------------------------- | ------------------------------------------------ |
-| `types`     | `forum.topic,forum.comment` | Only these content types                         |
-| `authorIds` | `1,7`                       | Written by any of these members (up to 20)       |
-| `from`      | `2026-10-01T00:00:00.000Z`  | Created at or after this moment                  |
-| `to`        | `2026-10-14T23:59:59.999Z`  | Created at or before this moment                 |
+| Parameter   | Example                     | What it does                               |
+| ----------- | --------------------------- | ------------------------------------------ |
+| `types`     | `forum.topic,forum.comment` | Only these content types                   |
+| `authorIds` | `1,7`                       | Written by any of these members (up to 20) |
+| `from`      | `2026-10-01T00:00:00.000Z`  | Created at or after this moment            |
+| `to`        | `2026-10-14T23:59:59.999Z`  | Created at or before this moment           |
 
 ```bash
 curl "http://localhost:3000/api/@vitnode/core/search?authorIds=1,7&from=2026-10-01T00:00:00.000Z"
@@ -143,6 +143,10 @@ Two small routes feed the sidebar:
 
 A search engine plugin that can count implements `countByType` and sets `capabilities.facets` to `true`. One that can't returns `types: null`, and the sidebar quietly drops the numbers. Engines should also honour `authorIds`, or the author filter will be more of a suggestion.
 
+Engines that can remove many documents at once can implement `deleteMany(c, itemType, itemIds)`. Deleting a container (say, a forum with all its topics) then costs one call instead of one per child. Skip it and VitNode politely calls `delete` for each item.
+
+Browsing without a search term (a timeline, `/discover`, or the API without `search`) returns the first 1,000 characters of each hit's `content` - plenty for the snippet under the title. Search with a term and you get the whole text, so the snippet can jump to the match.
+
 ---
 
 ## Member timelines
@@ -151,12 +155,12 @@ Every member gets a timeline: everything credited to them, newest first. It live
 
 Who sees what depends on who's looking:
 
-| Viewer | Published | Hidden | Drafts |
-| --- | --- | --- | --- |
-| Anyone, on `/search` and `/discover` | Yes | Only its authors and editors, with an eye-off icon | No |
-| Anyone, on a member's profile | Yes | Only its authors and editors, with an eye-off icon | No |
-| The member, on their own profile | Yes | Yes, with an eye-off icon | Yes, marked **Draft** |
-| Staff, on the AdminCP user page | Yes | Yes, with an eye-off icon | Yes, marked **Draft** |
+| Viewer                               | Published | Hidden                                             | Drafts                |
+| ------------------------------------ | --------- | -------------------------------------------------- | --------------------- |
+| Anyone, on `/search` and `/discover` | Yes       | Only its authors and editors, with an eye-off icon | No                    |
+| Anyone, on a member's profile        | Yes       | Only its authors and editors, with an eye-off icon | No                    |
+| The member, on their own profile     | Yes       | Yes, with an eye-off icon                          | Yes, marked **Draft** |
+| Staff, on the AdminCP user page      | Yes       | Yes, with an eye-off icon                          | Yes, marked **Draft** |
 
 The **Hidden** column follows [Who can still see it](/docs/content-engine/content-visibility#who-can-still-see-it). An editor is staff with `can_edit` on the content type.
 
@@ -192,9 +196,9 @@ The timelines come from two routes:
 
 `search.pathTemplate` is the English route of a result's page, with one `{slug}` placeholder. To turn search on for a content type, see [Content Engine search](/docs/content-engine/search). Leave the language out: VitNode adds the prefix, the domain and any translated segments from your app's [localized URL](/docs/dev/i18n/localized-urls) settings.
 
-| `pathTemplate`           | English result          | Polish result (`as-needed`) | Polish result (with `domains`)       |
-| :----------------------- | :---------------------- | :-------------------------- | :----------------------------------- |
-| `/blog/{slug}`           | `/blog/hello-world`     | `/pl/blog/witaj-swiecie`    | `https://vitnode.pl/blog/witaj-swiecie` |
+| `pathTemplate` | English result      | Polish result (`as-needed`) | Polish result (with `domains`)          |
+| :------------- | :------------------ | :-------------------------- | :-------------------------------------- |
+| `/blog/{slug}` | `/blog/hello-world` | `/pl/blog/witaj-swiecie`    | `https://vitnode.pl/blog/witaj-swiecie` |
 
 With `'/blog/:slug': '/wpisy/:slug'` in `routePaths.pl`, the Polish result becomes `/pl/wpisy/witaj-swiecie`.
 

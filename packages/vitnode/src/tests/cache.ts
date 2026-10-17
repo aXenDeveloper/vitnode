@@ -21,6 +21,8 @@ export const createTestCacheClient = (): CacheClient => {
     },
     exists: async (key: string) => Promise.resolve(store.has(key) ? 1 : 0),
     get: async (key: string) => Promise.resolve(store.get(key) ?? null),
+    mGet: async (keys: string[]) =>
+      Promise.resolve(keys.map(key => store.get(key) ?? null)),
     ping: async () => Promise.resolve("PONG"),
     set: async (key: string, value: string, options?: SetOptions) => {
       if (options?.condition === "NX" && store.has(key)) {

@@ -360,8 +360,6 @@ export async function withPagination<
       ? and(baseWhere, cursorWhere)
       : (baseWhere ?? cursorWhere);
 
-  const totalCount = await fetchTotalCount(c, table, baseWhere);
-
   /**
    * The cursor value, projected by the page query itself.
    *
@@ -378,16 +376,31 @@ export async function withPagination<
   };
 
   const pageSize = first ?? last ?? 50;
+  const limit = pageSize + 1;
+  const pageAt = async (offset: number) =>
+    await query({ cursorSelection, limit, offset, where, orderBy });
+
+  // The count and the page run side by side. A numbered page is read at the
+  // offset that was asked for, and read again only when the count says it is
+  // past the end and has to be clamped onto the last page.
+  const requestedOffset =
+    requestedPage === undefined ? 0 : (requestedPage - 1) * pageSize;
+  const [totalCount, speculativeEdges] = await Promise.all([
+    fetchTotalCount(c, table, baseWhere),
+    pageAt(requestedOffset),
+  ]);
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const currentPage =
     requestedPage === undefined
       ? null
       : Math.max(1, Math.min(requestedPage, totalPages || 1));
-  const offset = currentPage === null ? 0 : (currentPage - 1) * pageSize;
 
-  const limit = pageSize + 1;
-  const edges = await query({ cursorSelection, limit, offset, where, orderBy });
+  const edges =
+    currentPage === null || currentPage === requestedPage
+      ? speculativeEdges
+      : await pageAt((currentPage - 1) * pageSize);
 
   const requested = first ?? last ?? edges.length;
   const hasMore = edges.length > requested;

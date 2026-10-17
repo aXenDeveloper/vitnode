@@ -92,6 +92,10 @@ const disableTransitions = (): (() => void) => {
   };
 };
 
+// Hoisted so the default keeps one identity and the memoized callbacks and
+// context value below do not change on every render.
+const DEFAULT_THEMES = ["light", "dark"];
+
 /**
  * The theme, as React state: what it is set to, what that resolves to once the
  * system preference is known, and the class or attribute that puts it on
@@ -110,7 +114,7 @@ export const ThemeProvider = ({
   enableSystem = true,
   forcedTheme,
   storageKey = "theme",
-  themes = ["light", "dark"],
+  themes = DEFAULT_THEMES,
   value,
   defaultTheme = enableSystem ? "system" : "light",
 }: ThemeProviderProps) => {

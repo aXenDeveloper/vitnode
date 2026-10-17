@@ -18,7 +18,11 @@ export const aiQueueCron = buildCron({
   schedule: "* * * * *",
   handler: async c => {
     await processQueueTasks(c, {
+      // Paid model calls: keep the old pace of two tasks a minute, one at a
+      // time, instead of draining the queue like the default worker does.
       batchSize: 2,
+      concurrency: 1,
+      maxBatches: 1,
       lockKey: "queue:process:ai",
       queues: [ALT_QUEUE],
     });

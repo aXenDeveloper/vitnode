@@ -4,11 +4,11 @@ description: Cache slow database reads in a VitNode Hono route with c.get("cache
 icon: Server
 ---
 
-`c.get("cache")` stores values in Redis from inside a Hono route handler. Use it for reads that are slow and give the same answer to many visitors, such as counts over a large table or a computed summary. Without Redis, every call runs your loader directly, so the same code works with and without it.
+`c.get("cache")` stores values in Redis from inside a Hono route handler. Use it for reads that are slow and give the same answer to many visitors, such as counts over a large table or a computed summary. Without Redis, values live in a small in-memory store for at most 15 seconds, so the same code works with and without it.
 
 ## Before you begin
 
-Connect Redis in `vitnode.api.config.ts` as described in [Redis](/docs/dev/advanced/redis). You can write the code below without Redis, but nothing is cached until it is connected.
+Connect Redis in `vitnode.api.config.ts` as described in [Redis](/docs/dev/advanced/redis). You can write the code below without Redis, but each instance then keeps its own short-lived copy, and a `delete` on one instance never reaches the others.
 
 <Steps>
 <Step>

@@ -295,12 +295,7 @@ export const I18nVisual = () => (
       r={56}
       strokeWidth={1.5}
     />
-    <g
-      style={{
-        animation: 'mk-orbit 40s linear infinite',
-        transformOrigin: '104px 92px',
-      }}
-    >
+    <g className="mk-anim-orbit" style={{ transformOrigin: '104px 92px' }}>
       <ellipse
         className="stroke-primary/50"
         cx={104}
@@ -324,10 +319,8 @@ export const I18nVisual = () => (
       strokeWidth={1.5}
     />
     <g
-      style={{
-        animation: 'mk-orbit 9s linear infinite',
-        transformOrigin: '104px 92px',
-      }}
+      className="mk-anim-orbit"
+      style={{ animationDuration: '9s', transformOrigin: '104px 92px' }}
     >
       <circle className="fill-primary" cx={104} cy={22} r={5} />
     </g>
@@ -825,14 +818,11 @@ export const SearchVisual = () => (
           y={110 + index * 34}
         />
         <rect
-          className="fill-primary/15 stroke-primary"
+          className="mk-anim-cycle-2 fill-primary/15 stroke-primary"
           height={26}
           rx={8}
           strokeWidth={1.5}
-          style={{
-            animation: 'mk-cycle-2 8s ease-in-out infinite',
-            animationDelay: `${(index - 2) * 4}s`,
-          }}
+          style={{ animationDelay: `${(index - 2) * 4}s` }}
           width={100}
           x={430}
           y={110 + index * 34}

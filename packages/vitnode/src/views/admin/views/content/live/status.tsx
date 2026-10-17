@@ -27,6 +27,7 @@ const SavedAt = ({ savedAt }: { savedAt: string }) => {
     <>
       <time
         aria-hidden
+        className="tabular-nums"
         dateTime={savedAt}
         suppressHydrationWarning
         title={exact}

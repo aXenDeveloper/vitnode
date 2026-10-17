@@ -38,7 +38,10 @@ export const sendWelcomeRoute = buildRoute({
 ```
 
 `send()` renders the template and queues delivery. It keeps a successful API
-response quick even when the mail provider is having a moody afternoon.
+response quick even when the mail provider is having a moody afternoon. The
+queued email is handed to the provider right after the response goes out, so
+a sign-up or password-reset link doesn't wait for the next cron tick; if that
+attempt fails, the queue worker retries it as usual.
 
 </Step>
 </Steps>
