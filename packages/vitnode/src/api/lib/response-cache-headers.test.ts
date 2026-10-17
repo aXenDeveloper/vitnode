@@ -112,6 +112,8 @@ const isSharedCacheable = (value: string): boolean => {
 
 const DECLARED = {
   "api/modules/moderation/routes/approvals.routes.ts": ["private, no-store"],
+  // Presence depends on the viewer's permissions and changes every minute.
+  "api/modules/users/presence-schema.ts": ["private, no-store"],
   "content/server/delivery-routes.ts": ["private, no-store"],
   "content/server/public-routes.ts": ["private, no-store"],
   "content/server/public-write-routes.ts": ["private, no-store"],

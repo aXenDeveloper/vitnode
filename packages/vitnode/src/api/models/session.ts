@@ -15,6 +15,7 @@ import {
   type SessionUser,
 } from "./session-cache";
 import { UserModel } from "./user";
+import { UserPresenceModel } from "./user-presence";
 
 export class SessionModel {
   constructor(c: Context) {
@@ -75,7 +76,7 @@ export class SessionModel {
 
     const hashedToken = await hashSessionToken(token);
 
-    await this.c
+    const deleted = await this.c
       .get("db")
       .delete(core_sessions)
       // Harden the query to ensure a user can only delete their own device's session
@@ -84,11 +85,23 @@ export class SessionModel {
           eq(core_sessions.token, hashedToken),
           eq(core_sessions.deviceId, device.id),
         ),
-      );
+      )
+      .returning({ userId: core_sessions.userId });
 
     await this.c
       .get("cache")
       .deleteSystem(sessionCacheKey(hashedToken, device.id));
+
+    // Only this session goes offline; the member's other devices stay online.
+    await Promise.all(
+      deleted.map(
+        async ({ userId }) =>
+          await new UserPresenceModel(this.c).removeSessions({
+            tokenHashes: [hashedToken],
+            userId,
+          }),
+      ),
+    );
 
     deleteAuthCookie(this.c, this.c.get("core").authorization.cookieName);
   }

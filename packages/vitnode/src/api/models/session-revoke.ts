@@ -6,6 +6,7 @@ import { core_admin_sessions } from "@/database/admins";
 import { core_sessions } from "@/database/sessions";
 
 import { adminSessionCacheKey, sessionCacheKey } from "./session-cache";
+import { UserPresenceModel } from "./user-presence";
 
 export interface SessionScope {
   deviceId?: number;
@@ -116,6 +117,10 @@ export const revokeSessions = async (
   ]);
 
   await deleteSessionCacheKeys(c, { adminSessions, sessions });
+  await new UserPresenceModel(c).removeSessions({
+    tokenHashes: sessions.map(({ token }) => token),
+    userId: scope.userId,
+  });
   await c.get("events").emit("user.sessions.revoked", {
     deviceId: scope.deviceId ?? null,
     sessions: sessions.length + adminSessions.length,

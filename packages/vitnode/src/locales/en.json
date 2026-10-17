@@ -10,6 +10,7 @@
   "@vitnode/core:users:can_create": "Create users",
   "@vitnode/core:users:can_edit": "Edit users",
   "@vitnode/core:users:can_edit_admin": "Edit users with administrator permission",
+  "@vitnode/core:users:can_view_hidden_presence": "See the online status and last activity of members who browse anonymously",
   "@vitnode/core:roles": "Roles",
   "@vitnode/core:roles:can_view": "View roles list",
   "@vitnode/core:roles:can_create": "Create roles",
@@ -717,7 +718,15 @@
           }
         }
       },
-      "unsaved_changes": "Unsaved changes"
+      "unsaved_changes": "Unsaved changes",
+      "presence": {
+        "online": "Online",
+        "online_now": "Online now",
+        "offline": "Offline",
+        "last_seen": "Last seen {time}",
+        "hidden": "Activity hidden",
+        "status": "Online status"
+      }
     },
     "navigation": {
       "discover": {
@@ -773,7 +782,8 @@
           "uploaded": "Cover image updated.",
           "removed": "Cover image removed."
         }
-      }
+      },
+      "presence": "Online status"
     },
     "files": {
       "title": "My Files",
@@ -1047,7 +1057,14 @@
           "timeZoneAuto": "Automatic - from your language",
           "timeZoneAutoBadge": "Auto",
           "emailVerified": "Verified",
-          "timeZoneUseDevice": "Use this device's time zone ({timeZone})"
+          "timeZoneUseDevice": "Use this device's time zone ({timeZone})",
+          "privacyTitle": "Privacy",
+          "browseAnonymously": "Browse anonymously",
+          "browseAnonymouslyDesc": "Hide your online status and last activity from other members. Authorized staff members may still view your activity.",
+          "browseAnonymouslyOn": "You're browsing anonymously",
+          "browseAnonymouslyOnDesc": "Other members now see your activity as hidden.",
+          "browseAnonymouslyOff": "Your activity is visible again",
+          "browseAnonymouslyOffDesc": "Other members can see when you're online and when you were last active."
         },
         "devices": {
           "title": "Devices",
@@ -3070,6 +3087,16 @@
           "saved": "Notification preference saved",
           "savedDesc": "Applies to {name} only.",
           "loadError": "Notification preferences couldn't be loaded. Refresh to try again."
+        },
+        "presence": {
+          "title": "Presence",
+          "status": "Status",
+          "lastActivity": "Last activity",
+          "never": "No activity yet",
+          "visibility": "Presence visibility",
+          "visible": "Visible to members",
+          "hiddenFromPublic": "Hidden from members",
+          "unknown": "Hidden - you need permission to see it"
         }
       },
       "verify_email": {

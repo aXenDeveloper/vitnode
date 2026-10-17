@@ -54,6 +54,7 @@ const member = (id: number): NonNullable<ContextVariableMap["user"]> => ({
   newsletter: false,
   phone: null,
   roleId: 2,
+  hideOnlineStatus: false,
   showRealName: false,
   timeZone: null,
 });

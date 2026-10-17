@@ -26,6 +26,7 @@ const adminUser = {
   avatarColor: "000000",
   headline: null,
   phone: null,
+  hideOnlineStatus: false,
   showRealName: false,
   timeZone: null,
   firstName: null,
