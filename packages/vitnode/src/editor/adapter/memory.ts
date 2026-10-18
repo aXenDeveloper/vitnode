@@ -4,6 +4,13 @@ export interface MemoryVisualEditorAdapter extends VisualEditorAdapter {
   saves: readonly VisualEditorSaveInput[];
 }
 
+/**
+ * An adapter that only records each save in `saves` - for tests, demos and
+ * prototypes. Nothing is persisted.
+ *
+ * @param options.delay Milliseconds to wait before resolving, to simulate a request.
+ * @param options.onSave Called with each save input.
+ */
 export const createMemoryAdapter = ({
   delay = 0,
   onSave,

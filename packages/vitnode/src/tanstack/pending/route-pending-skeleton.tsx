@@ -3,10 +3,14 @@ import { cn } from "cn";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 
+/** Props shared by the route pending skeletons. */
 export interface RoutePendingSkeletonProps {
   className?: string;
+  /** Screen-reader status text. Defaults to `Loading`; pass a translated string when you have one. */
   label?: string;
+  /** How many placeholder rows, cards or fields to draw. Each skeleton has its own default. */
   rows?: number;
+  /** Draws a description line under the heading placeholder. Defaults to `true`. */
   withDescription?: boolean;
 }
 
@@ -46,6 +50,13 @@ export const PendingHeading = ({
 export const pendingRowKeys = (rows: number): number[] =>
   Array.from({ length: Math.max(rows, 0) }, (_, index) => index);
 
+/**
+ * A generic page placeholder - heading plus text blocks - announced to screen
+ * readers as busy. Use it as a route's `pendingComponent` (a plugin page's
+ * `pendingComponent`, or the router's default); pick the closer shape when one
+ * exists: `FeedPendingSkeleton`, `CardsPendingSkeleton`, `FormPendingSkeleton`,
+ * `TablePendingSkeleton`.
+ */
 export const RoutePendingSkeleton = ({
   className,
   label,
@@ -68,6 +79,7 @@ export const RoutePendingSkeleton = ({
   </PendingFrame>
 );
 
+/** A centered spinner, for pending states with no predictable layout - e.g. the router's `defaultPendingComponent`. */
 export const RoutePendingSpinner = ({
   className,
   label = "Loading",

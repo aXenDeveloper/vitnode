@@ -38,7 +38,7 @@ import { Activity } from "react";
 
 - `fetcher` from `@vitnode/core/tanstack/fetcher` is universal - one call, SSR and browser. Never hand-write `createIsomorphicFn().server(...).client(...)` for a fetch.
 - A call names the plugin, never an API module: `fetcher({ plugin: "@vitnode/core", method: "get", module: "users", path: "/devices" })`. `plugin`, `module` (any nesting depth, `admin/advanced/cron`), `path`, `method`, `args` and the response are all inferred from the plugin API registry; an invalid combination is a compile error at the offending property.
-- The registry is `ApiPluginRegistry` in `@vitnode/core/lib/fetcher/registry`. Core registers itself; an app's `src/api-registry.gen.ts` registers every configured plugin that exports `config.api`, with type-only imports; a plugin registers its own API in its `global.d.ts` so its pages can call it. Never import a plugin API factory as a value outside `vitnode.api.config.ts`.
+- The registry is `ApiPluginRegistry` in `@vitnode/core/lib/fetcher/registry`. Core registers itself; an app's `src/api-registry.gen.ts` registers every configured plugin that exports `config.api`, with type-only imports; `vitnode build`/`vitnode dev` write a plugin's own entry to its `types/api-registry.gen.d.ts` (kept out of the published package) so its pages can call it. Never import a plugin API factory as a value outside `vitnode.api.config.ts`.
 - `@vitnode/core/tanstack/fetcher/server` is for work that is genuinely server-only: server functions, `allowSaveCookies` cookie relay, cron/jobs, upstream secrets or a different `origin`. Same call shape, more options.
 - Shared `views/*` query modules call `fetcher` directly - no injected transport, no browser-only twin. `@vitnode/core/lib/fetcher-client` is the framework-neutral browser primitive the universal fetcher is built on, for code that never renders on a server.
 - Write the route inline at the call site - never build a request object elsewhere and pass it in.
@@ -81,6 +81,11 @@ import { Activity } from "react";
 - Document every new feature. Keep it simple, SEO-friendly, and understandable at any skill level.
 - Friendly and lightly funny tone - don't overdo it.
 - Skip big comments; code is self-documenting.
+- Developer-facing APIs in feature code (exports of `@vitnode/core` and plugins that app or plugin authors call) need concise English JSDoc on the original declaration:
+  - Say what it is for, plus constraints, side effects, runtime (server-only, browser-only or universal) and `@throws` only when they are real and non-obvious.
+  - Document configuration properties one by one, including non-obvious defaults and constraints.
+  - Give major entry points a minimal `@example` with real imports.
+  - A behavior change updates the JSDoc in the same change. Keep tutorials in the MDX docs.
 - Request images with a comment: `// Image prompt: {here_prompt_to_generate_image}`
 - Put install commands in tabbed code blocks with correct syntax highlighting:
 

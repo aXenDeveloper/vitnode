@@ -1,5 +1,9 @@
 import type React from "react";
 
+/**
+ * One option in a {@link Cascader}-style tree. An option with `children` is a
+ * branch that opens the next level; only leaves can be chosen.
+ */
 export interface CascaderOption {
   children?: CascaderOption[];
   disabled?: boolean;

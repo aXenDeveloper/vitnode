@@ -42,6 +42,7 @@ const subscribeToNothing = () => () => undefined;
 const getAnnouncementContainer = () => document.body;
 const getNoAnnouncementContainer = () => null;
 
+/** The drag-and-drop context for one page of sortable rows. */
 export function ReorderProviderDataTable({
   children,
   ids,
@@ -111,6 +112,7 @@ export function ReorderProviderDataTable({
   );
 }
 
+/** One sortable row (a `tbody`, so an expanded panel moves with it), providing its handle. */
 export function SortableRowGroupDataTable({
   children,
   disabled,

@@ -277,6 +277,10 @@ export interface ContentEditorialRepeatableMethods<TDefinition, TName> {
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
 
+/**
+ * Builds the editorial (versioned) write service. Plugins use the model's `editorialService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentEditorialService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

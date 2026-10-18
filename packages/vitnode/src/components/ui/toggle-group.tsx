@@ -38,6 +38,12 @@ const SelectionIndicator = ({ layoutId }: { layoutId: string }) => {
   );
 };
 
+/**
+ * A set of {@link ToggleGroupItem}s. Single-select by default, with an
+ * animated selection indicator; `multiple` allows several. `variant` and
+ * `size` apply to every item; `spacing` is the gap in spacing units (`0`, the
+ * default, joins the items into one control).
+ */
 function ToggleGroup({
   className,
   variant,
@@ -93,6 +99,10 @@ function ToggleGroup({
   );
 }
 
+/**
+ * One option in a {@link ToggleGroup}; the group's `variant` and `size` win
+ * over its own.
+ */
 function ToggleGroupItem({
   className,
   children,

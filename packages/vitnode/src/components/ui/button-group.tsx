@@ -5,6 +5,7 @@ import { cn } from "cn";
 
 import { Separator } from "@/components/ui/separator";
 
+/** The button group class names per `orientation`. */
 const buttonGroupVariants = cva(
   "group/button-group flex w-fit items-stretch *:data-[slot=button]:active:not-aria-[haspopup]:brightness-95 *:focus-visible:relative *:focus-visible:z-10 has-[>[data-slot=button-group]]:gap-2 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-e-md [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
   {
@@ -22,6 +23,10 @@ const buttonGroupVariants = cva(
   },
 );
 
+/**
+ * Joins buttons and inputs into one connected control, with `role="group"`.
+ * `orientation` defaults to `"horizontal"`.
+ */
 function ButtonGroup({
   className,
   orientation,
@@ -38,6 +43,10 @@ function ButtonGroup({
   );
 }
 
+/**
+ * A static text segment inside a {@link ButtonGroup}, rendered as a `div` (or
+ * your `render`).
+ */
 function ButtonGroupText({
   className,
   render,
@@ -61,6 +70,7 @@ function ButtonGroupText({
   });
 }
 
+/** A divider between segments of a {@link ButtonGroup}; vertical by default. */
 function ButtonGroupSeparator({
   className,
   orientation = "vertical",

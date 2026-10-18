@@ -49,8 +49,14 @@ const ALERT_VARIANTS: Record<
   },
 };
 
+/** The look and meaning of an {@link Alert}. */
 export type AlertVariant = keyof typeof ALERT_VARIANTS;
 
+/**
+ * A callout box for a message. `variant` (default `"default"`) sets its colors
+ * and icon; `warning` and `destructive` use `role="alert"`, the rest
+ * `role="status"`. `icon` replaces the variant's icon, and `null` hides it.
+ */
 function Alert({
   className,
   variant = "default",
@@ -98,6 +104,7 @@ function Alert({
   );
 }
 
+/** The alert's heading line. */
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -111,6 +118,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The alert's body text. */
 function AlertDescription({
   className,
   ...props
@@ -127,6 +135,10 @@ function AlertDescription({
   );
 }
 
+/**
+ * A control pinned to the alert's top-right (end) corner, such as a dismiss
+ * button.
+ */
 function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

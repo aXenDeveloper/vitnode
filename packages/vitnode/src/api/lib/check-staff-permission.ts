@@ -39,6 +39,10 @@ interface StaffUser {
   roleId: number;
 }
 
+/**
+ * Every role id a user has - the primary `roleId` plus secondary roles - with
+ * duplicates removed. Reads the database on each call.
+ */
 export const getUserRoleIds = async (
   c: Context,
   user: StaffUser,
@@ -146,6 +150,11 @@ const loadAndCacheStaffPermissions = async (
   return resolved;
 };
 
+/**
+ * The effective staff permission set of a user for one staff type, from the
+ * staff permission cache or, on a miss, from the database (then cached). Root
+ * roles and unrestricted entries resolve to `root: true`.
+ */
 export const resolveStaffPermissions = async (
   c: Context,
   { type, user }: { type: PermissionStaffType; user: StaffUser },
@@ -286,6 +295,7 @@ export const getStaffFlags = async (
   };
 };
 
+/** {@link checkStaffPermission} for an explicit user instead of the request's. */
 export const checkStaffPermissionOfUser = async (
   c: Context,
   user: StaffUser,
@@ -296,6 +306,15 @@ export const checkStaffPermissionOfUser = async (
   return hasStaffPermission(set, args);
 };
 
+/**
+ * Whether the current request's staff member holds a permission. `type:
+ * "admin"` checks the AdminCP session (`c.get("admin")`), `"moderator"` the
+ * signed-in user. Returns `false` when there is no such user.
+ *
+ * Pass `resource` to check a scoped grant for one resource. Without it, a
+ * grant scoped to selected resources does not count; one scoped to all
+ * resources of its family does.
+ */
 export const checkStaffPermission = async (
   c: Context,
   args: StaffPermissionCheck & { type: PermissionStaffType },
@@ -306,6 +325,21 @@ export const checkStaffPermission = async (
   return await checkStaffPermissionOfUser(c, user, args);
 };
 
+/**
+ * {@link checkStaffPermission}, throwing instead of returning `false`.
+ *
+ * @throws HTTPException 403 when the permission is missing.
+ *
+ * @example
+ * ```ts
+ * await assertStaffPermission(c, {
+ *   type: "admin",
+ *   plugin: "@vitnode/blog",
+ *   module: "posts",
+ *   permission: "can_delete",
+ * });
+ * ```
+ */
 export const assertStaffPermission = async (
   c: Context,
   args: StaffPermissionCheck & { type: PermissionStaffType },

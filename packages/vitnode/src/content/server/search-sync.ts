@@ -52,9 +52,12 @@ const isReachabilityOperation = (operation: ContentSearchOperation): boolean =>
   operation === "hide" ||
   operation === "unhide";
 
+/** What {@link syncContentSearch} needs to know about one committed write. */
 export interface ContentSearchSyncInput {
+  /** The record's advanced collection values, when the search document includes any. */
   advanced?: Record<string, unknown>;
 
+  /** `publish`, `unpublish`, `hide` and `unhide` only: `false` when nothing moved. */
   changed?: boolean;
   /**
    * `update` and `restore` only. A write that touched no indexed field changes
@@ -68,6 +71,7 @@ export interface ContentSearchSyncInput {
   row: object;
 }
 
+/** What the sync did to the record's search document. */
 export interface ContentSearchSyncOutcome {
   action: "delete" | "skip" | "upsert";
   /** `"example.article:7"` - for logs and diagnostics, never a storage key. */
@@ -103,6 +107,20 @@ const decide = (
     : "skip";
 };
 
+/**
+ * Brings one record's search document in line with a committed write on a
+ * non-localized content type: deletes it on `delete`, writes it on `create`,
+ * on a publication or visibility change that moved something, and on an
+ * update or restore that changed an indexed field, and otherwise skips. A row
+ * the document builder rejects has its document removed. Skips everything
+ * for a type without `search`.
+ *
+ * Search-engine errors are logged and returned on `error`, never thrown,
+ * because the write itself has already committed. Loading the related context
+ * reads the database, and that read can still throw. The effects helpers call
+ * it for you; call it directly only from a custom write path that does not
+ * use them.
+ */
 export const syncContentSearch = async (
   c: Context,
   definition: AnyContentTypeDefinition,
@@ -450,6 +468,7 @@ export const syncContentSearchContainerDependents = async (
   }
 };
 
+/** {@link ContentSearchSyncInput} for a localized content type. */
 export interface ContentLocalizedSearchSyncInput {
   /**
    * The record's shared advanced collections, when the content type indexes one.

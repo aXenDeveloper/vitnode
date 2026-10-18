@@ -28,6 +28,16 @@ const parseMessage = (raw: unknown): undefined | VitNodeWSMessage => {
   return undefined;
 };
 
+/**
+ * Builds the Hono `upgradeWebSocket` handler for the app's `/ws` route: tracks
+ * each connection with its signed-in user and routes incoming messages to the
+ * matching `buildWebSocket` handler by id.
+ *
+ * Server-only. Call it once where the API mounts WebSockets.
+ *
+ * @param createEvents Optional connection-level handlers. Their `onMessage`
+ * only receives messages that matched no registered socket.
+ */
 export function handleVitNodeWebSocket(
   createEvents?: (c: Context<EnvVitNode>) => Promise<WSEvents> | WSEvents,
 ) {

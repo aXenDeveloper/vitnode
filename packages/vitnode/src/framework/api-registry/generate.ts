@@ -2,6 +2,7 @@ import type { ResolvedApiPluginModule } from "./types.js";
 
 import { toSingleQuotedLiteral } from "../plugin-routes/resolve.js";
 
+/** The module whose `ApiPluginRegistry` interface the generated files augment. */
 export const API_REGISTRY_SPECIFIER = "@vitnode/core/lib/fetcher/registry";
 
 /** The one type every plugin's `config.api.ts` exports for this file to read. */
@@ -47,6 +48,11 @@ const entryLines = (modules: readonly ResolvedApiPluginModule[]): string =>
     )
     .join("\n");
 
+/**
+ * The source of an app's `src/api-registry.gen.ts`: one type-only registry
+ * entry per configured plugin with a `config.api` module, sorted by plugin id.
+ * Build tooling, called by the VitNode Vite plugin.
+ */
 export const generateApiRegistrySource = (
   modules: readonly ResolvedApiPluginModule[],
 ): string => {

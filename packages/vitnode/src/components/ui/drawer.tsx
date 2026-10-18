@@ -24,6 +24,10 @@ const asChildProps = (
     ? { render: children }
     : { children };
 
+/**
+ * A Base UI drawer that slides in from an edge and can be swiped closed.
+ * `direction` is `"bottom"` (default), `"top"`, `"left"` or `"right"`.
+ */
 function Drawer({
   direction = "bottom",
   ...props
@@ -38,6 +42,10 @@ function Drawer({
   );
 }
 
+/**
+ * The element that opens the drawer. `asChild` renders your child element as
+ * the trigger instead of a button.
+ */
 function DrawerTrigger({
   asChild,
   children,
@@ -56,6 +64,10 @@ function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props) {
   return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />;
 }
 
+/**
+ * An element that closes the drawer. `asChild` renders your child element
+ * instead of a button.
+ */
 function DrawerClose({
   asChild,
   children,
@@ -87,6 +99,10 @@ function DrawerOverlay({
   );
 }
 
+/**
+ * The drawer panel, rendered in a portal over a scrim, with a decorative drag
+ * handle.
+ */
 function DrawerContent({
   className,
   children,
@@ -119,6 +135,7 @@ function DrawerContent({
   );
 }
 
+/** Holds the title and description. */
 function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -132,6 +149,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** Holds the drawer's actions. */
 function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -142,6 +160,7 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The drawer's accessible title. */
 function DrawerTitle({ className, ...props }: DrawerPrimitive.Title.Props) {
   return (
     <DrawerPrimitive.Title
@@ -152,6 +171,7 @@ function DrawerTitle({ className, ...props }: DrawerPrimitive.Title.Props) {
   );
 }
 
+/** The drawer's accessible description. */
 function DrawerDescription({
   className,
   ...props

@@ -204,6 +204,24 @@ const resolveReference = (
   );
 };
 
+/**
+ * Builds a content type's Drizzle `pgTable` (with RLS enabled): the system
+ * columns (`id`, `createdAt`, `updatedAt`), the publication, editorial and
+ * visibility columns the definition enables, one column per shared scalar, to-one relation and group leaf
+ * (collections live in their own tables), and
+ * the definition's indexes. Localized fields live on the translation table
+ * instead ({@link createContentTranslationTable}).
+ *
+ * Usually called for you by `createContentModel`. Every relation except a
+ * self-relation needs a `references` thunk to its target's `id` (to-many ones
+ * for their junction table); file,
+ * user and container fields reference core's tables by themselves.
+ *
+ * @throws {ContentEngineError} When `definition` is missing (often a
+ * half-built plugin `dist` or a circular import), when a relation has no
+ * `references` entry, a self-relation has one, or `references` names a field
+ * that is not a relation.
+ */
 export const createContentTable = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -314,12 +332,22 @@ export const createContentTable = <
   return table as unknown as ContentTableFor<TDefinition>;
 };
 
+/**
+ * Resolves every foreign-key thunk on a content table now, so a broken
+ * reference fails here rather than at the first query.
+ * `buildContentAdminModule` calls it for every model it is given.
+ */
 export const assertContentReferences = (table: PgTable): void => {
   for (const foreignKey of getTableConfig(table).foreignKeys) {
     foreignKey.reference();
   }
 };
 
+/**
+ * Column name -> Drizzle column for a content table: the system,
+ * publication, editorial and visibility columns the definition enables, every
+ * shared field, and the non-localized advanced-field leaves (keyed by path).
+ */
 export const contentTableColumns = <
   TDefinition extends AnyContentTypeDefinition,
 >(

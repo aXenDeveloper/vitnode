@@ -23,6 +23,11 @@ export const findBlockVariant = (
 ): AnyBlockVariantDefinition | undefined =>
   blockVariants(definition).find(entry => entry.id === variant);
 
+/**
+ * Resolves an instance's stored variant against a widget definition: no
+ * variant gives the definition's `defaultVariant` (possibly `undefined`), a
+ * declared one is kept, and an undeclared one comes back as `kind: "unknown"`.
+ */
 export const resolveBlockVariant = (
   definition: AnyBlockDefinition,
   variant: string | undefined,

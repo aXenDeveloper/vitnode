@@ -431,6 +431,11 @@ export type ContentPublicWriteDenial =
   | "notFound"
   | "unauthenticated";
 
+/**
+ * A public write refused: `reason` is `unauthenticated`, `forbidden` or
+ * `notFound` (also used when `create`/`update` is switched off), and `issue` names a container rule
+ * (`edit_window_closed`, `moderators_only`) when one decided it.
+ */
 export class ContentPublicWriteDenied extends ContentEngineError {
   constructor({
     contentTypeId,

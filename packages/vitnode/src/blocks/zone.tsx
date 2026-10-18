@@ -21,18 +21,50 @@ import {
 import { ContentZoneOutlet } from "./zone-outlet";
 
 export interface ContentZoneProps {
+  /** What may be placed here. Under an editable page it may only narrow what the page allows. */
   allowedBlocks?: BlockAllowedSpec;
+  /** HTML element to wrap the widgets in; without `as` or `className` nothing is added. */
   as?: keyof JSX.IntrinsicElements;
+  /**
+   * The instances to render; `null` and `[]` render nothing. Left out under an
+   * `EditablePage`, the page's stored layout for this zone is used.
+   */
   blocks?: null | readonly unknown[];
+  /** Class for the wrapper; implies `as="div"`. */
   className?: string;
+  /** What to render for a widget that is skipped; defaults to a development-only notice. */
   fallback?: BlockRenderFallback;
+  /**
+   * Stable name of this place on the page: `:`-separated segments of
+   * lowercase letters, digits and single hyphens, up to 64 characters, e.g.
+   * `"settings:before-profile"`. Saved layouts address zones by it.
+   */
   id: string;
+  /** Editor bounds on the number of widgets; may only tighten an editable page's own. */
   max?: number;
   min?: number;
+  /** Defaults to the process default registry installed by `src/blocks.gen.ts`. */
   registry?: BlockRegistry;
+  /** Defaults to `"development"`. */
   validate?: BlockValidationMode;
 }
 
+/**
+ * A named place on a page where widgets render. Renders the instances it is
+ * given through `ContentRenderer`, makes no request, and adds no element
+ * unless `as` or `className` is set. In edit mode it registers itself with the
+ * Visual Editor instead.
+ *
+ * @throws {BlockError} On an invalid `id`, or when two zones with one id are
+ * mounted at the same time in edit mode.
+ *
+ * @example
+ * ```tsx
+ * import { ContentZone } from "@vitnode/core/widgets/zone";
+ *
+ * <ContentZone id="main" blocks={page.content} registry={blocksRegistry} />;
+ * ```
+ */
 export const ContentZone = ({
   allowedBlocks,
   as,

@@ -38,6 +38,10 @@ import { recordPageCacheApiResponse } from "@/page-cache/render-context.server";
 
 config({ quiet: true });
 
+/**
+ * The origin server-side API calls go to: `VITNODE_API_URL` when set (a
+ * separate API server), otherwise the origin of the request being handled.
+ */
 export const resolveApiOrigin = (): string => {
   // Through `CONFIG` rather than the variable directly, so the empty-value
   // throw stays in one place - see the `??` note there.
@@ -115,6 +119,11 @@ const withRequestSignal = (options: FetchOptions): FetchOptions => {
   };
 };
 
+/**
+ * The headers that make a server-side API call act for the current visitor:
+ * their cookie, user agent and IP (`x-forwarded-for`, signed when a forwarding
+ * secret is configured), plus the captcha token when given.
+ */
 export const getForwardedApiHeaders = ({
   captchaToken,
 }: { captchaToken?: string } = {}): Record<string, string> => {
@@ -141,6 +150,7 @@ export const getForwardedApiHeaders = ({
   };
 };
 
+/** Copies an API response's `Set-Cookie` headers onto the current SSR response. */
 export const saveApiCookies = (response: Response): void => {
   for (const { name, options, value } of parseSetCookies(
     response.headers.getSetCookie(),
@@ -149,6 +159,10 @@ export const saveApiCookies = (response: Response): void => {
   }
 };
 
+/**
+ * The server-only {@link fetcher} for untyped calls - generated Content Engine
+ * admin modules. Forwards the visitor's headers like the typed one.
+ */
 export const rawFetcher = async ({
   additionalHeaders,
   options,
@@ -169,11 +183,44 @@ export const rawFetcher = async ({
   return response;
 };
 
+/** What the server-only {@link fetcher} accepts besides the route and `args`. */
 export type FetcherServerOptions = FetcherRequestOptions & {
+  /**
+   * Relays the API's `Set-Cookie` headers to the visitor's browser on a `2xx`
+   * response - for sign-in, sign-out and other calls that change the session
+   * from a server function. Defaults to `false`.
+   */
   allowSaveCookies?: boolean;
+  /** Sent as `x-vitnode-captcha-token`, for routes built with `withCaptcha`. */
   captchaToken?: string;
 };
 
+/**
+ * The server-only twin of the universal `fetcher` from
+ * `@vitnode/core/tanstack/fetcher`: same call shape and inference, plus
+ * `allowSaveCookies`, `additionalHeaders` and `origin`.
+ *
+ * Use it only for work that is genuinely server-side: server functions, cookie
+ * relay, cron and jobs, calls that carry upstream secrets or target another
+ * origin. Importing it into a browser bundle fails the build.
+ *
+ * Resolves with the `Response` for every status except `500` and rejects on a
+ * `500` or a network failure, like the universal fetcher.
+ *
+ * @example
+ * ```ts
+ * import { fetcher } from "@vitnode/core/tanstack/fetcher/server";
+ *
+ * const res = await fetcher({
+ *   plugin: "@vitnode/core",
+ *   method: "delete",
+ *   module: "users",
+ *   path: "/sign_out",
+ *   args: { body: {} },
+ *   allowSaveCookies: true,
+ * });
+ * ```
+ */
 export async function fetcher<
   P extends RegisteredPluginId,
   M extends string,

@@ -95,6 +95,7 @@ export const isAreaLike = (value: unknown): boolean =>
   !Array.isArray(value) &&
   (value as Record<string, unknown>).kind === CONTENT_AREA_KIND;
 
+/** Whether a stored zone node is a layout Area (`kind: "area"` with an id, a valid layout and a children array) rather than a widget. */
 export const isBlockAreaInstance = (
   value: unknown,
 ): value is BlockAreaInstance => {
@@ -237,6 +238,10 @@ export const contentNodeKey = (node: unknown, index: number): string => {
 export const areaChildren = (node: ContentNode): readonly AnyBlockInstance[] =>
   isBlockAreaInstance(node) ? node.children : [];
 
+/**
+ * Every widget in a zone's nodes, with each Area replaced by its children -
+ * for counting, indexing or checking widgets regardless of layout.
+ */
 export const contentNodeBlocks = (
   nodes: readonly ContentNode[],
 ): readonly AnyBlockInstance[] =>

@@ -11,8 +11,11 @@ import { placeUploadedFile } from "./file-order";
 
 export const FILE_UPLOAD_CONCURRENCY = 6;
 
+/** What a file field passes to your upload function for each file. */
 export interface FileUploadOptions {
+  /** Report upload progress from `0` to `1`; values outside are clamped. */
   onProgress: (fraction: number) => void;
+  /** Aborted when the user cancels the upload; stop the request then. */
   signal: AbortSignal;
 }
 

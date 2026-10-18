@@ -157,6 +157,42 @@ const assertIndexable = (
   }
 };
 
+/**
+ * Declares a Content Engine content type: its fields, its storage and the
+ * capabilities (publication, localization, public API, editorial workflow,
+ * delivery, search, reports, ...) the engine generates for it.
+ *
+ * Universal and side-effect free: import the result from browser and server
+ * code alike. It returns the **resolved** definition - every option normalised
+ * and defaulted, plus the generated Zod schemas - which the server turns into
+ * tables (`createContentTable()`), a model (`createContentModel()`) and generated API
+ * modules, and the AdminCP turns into list and form screens.
+ *
+ * Mistakes are reported twice: option combinations that cannot work (a preview
+ * without a public API, scheduling without publication, a private field in
+ * search) are compile errors where the types can express them, and everything
+ * is checked again at runtime, so a JavaScript caller gets the same answer.
+ *
+ * @throws {ContentEngineError} When the definition is invalid - a malformed
+ * `id` or `tableName`, an empty `fields` map, an unknown or reserved field
+ * name, or an option whose requirements are not met. Thrown at import time.
+ *
+ * @example
+ * ```ts
+ * import { defineContentType, field } from "@vitnode/core/content";
+ *
+ * export const blogCategoryContentType = defineContentType({
+ *   id: "blog.category",
+ *   tableName: "blog_categories",
+ *   localization: { defaultLocale: "en", fallback: "default" },
+ *   fields: {
+ *     name: field.text({ localized: true, required: true, maxLength: 100 }),
+ *     color: field.text({ maxLength: 50, nullable: true }),
+ *   },
+ *   admin: { titleField: "name", list: { columns: ["name", "color"] } },
+ * });
+ * ```
+ */
 export const defineContentType = <
   TId extends string,
   TFields extends ContentFieldsConstraint<
@@ -247,29 +283,77 @@ export const defineContentType = <
   thread,
   visibility,
 }: {
+  /**
+   * How the generated AdminCP screens present the content type: list columns,
+   * form layout, dialog or page mode, title field, URL path and the staff
+   * permission module. Every property is optional.
+   */
   admin?: ContentAdminConfig<
     TFields,
     TPublication,
     ContentEditorialEnabled<TEditorial>
   >;
 
+  /**
+   * Public delivery: canonical URLs (`/{publicApi.path}/:slug` by default), SEO
+   * metadata, localized alternates, sitemap entries and, with `redirects`, slug
+   * history. Needs `publicApi`. `true` enables it with every default.
+   */
   delivery?: TDelivery;
 
+  /**
+   * Adds a "Duplicate" action that copies a record as a new draft. With
+   * `titleSuffix` (on by default when `admin.titleField` is a text field), the
+   * copy's title gets a translated "(Copy)" suffix.
+   */
   duplication?: TDuplication;
 
+  /**
+   * The editorial workflow: a `version` column for optimistic locking, revision
+   * history (`revisions.retention`, default 50), share-able draft previews
+   * (`preview`, needs `publicApi`) and scheduled publishing (`scheduling`,
+   * needs `publication`). `true` enables revisions with defaults only.
+   */
   editorial?: TEditorial;
+  /**
+   * The content type's own fields, built with `field.*`. At least one. System
+   * columns (`id`, `createdAt`, `updatedAt`, plus the ones each option adds)
+   * are generated and cannot be redeclared.
+   */
   fields: TFields;
+  /**
+   * Stable identifier, `plugin.entity` (lowercase, dot separated), e.g.
+   * `blog.post`. Used for events, cache tags, i18n keys and the permission
+   * module, so changing it is a breaking change.
+   */
   id: TId;
+  /** Primary key type: `"serial"` (default, a number), `"uuid"` or `"bigint"` (both strings). */
   idStrategy?: TIdStrategy;
+  /**
+   * Extra base-table indexes. Indexes for slugs, unique fields, relations and
+   * the enabled options are generated automatically; a declared index that
+   * duplicates one is merged. Localized fields cannot be indexed here.
+   */
   indexes?: ContentIndexInput<
     TFields,
     TPublication,
     ContentEditorialEnabled<TEditorial>
   >[];
 
+  /**
+   * Real-time collaborative editing in the AdminCP: field locks and a shared
+   * draft. Needs `editorial`. Defaults to `false`.
+   */
   liveEditing?: ContentEditorialEnabled<TEditorial> extends true
     ? boolean
     : false;
+  /**
+   * Enables per-language values for fields marked `localized: true`, stored in
+   * a generated `<tableName>_translations` table. `defaultLocale` is the
+   * language every record is first created in; `fallback: "default"` serves
+   * that language's translation publicly when the requested one is missing
+   * (default `"none"`: no fallback).
+   */
   localization?: TLocalization;
   /**
    * Opts into a generated read-only public API. Needs `publication` and exactly
@@ -278,18 +362,47 @@ export const defineContentType = <
   publicApi?:
     | ContentPublicApiConfig<TPublicField, TPublicPath, TPublicPeople>
     | false;
-  /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
+  /**
+   * Opts into the draft/published lifecycle: adds `status` and `publishedAt`,
+   * and only published records reach the public API. Defaults to `false`.
+   */
   publication?: TPublication;
+  /**
+   * Generated public create/update routes for signed-in users. Needs
+   * `publicApi` and a single, shared `field.user()` as `ownership.field`, which
+   * the server stamps from the session. `create.status` defaults to `"draft"`
+   * and `update.own` to `true`. Not available on localized content types.
+   */
   publicWrite?: TPublicWrite;
+  /**
+   * Lets users report records to moderators. Needs `publicApi`. `true` uses
+   * `admin.titleField` (when public) as the report title and snapshots the
+   * public text, textarea, rich text, enum and file fields other than the
+   * title field.
+   */
   reports?: ContentReportsInput<keyof TFields & string>;
 
+  /**
+   * Indexes published records into the site-wide search. Every indexed field
+   * must also be in `publicApi.fields`, and `pathTemplate` must contain one
+   * `{slug}` placeholder.
+   */
   search?: TSearch;
+  /**
+   * The base table's Postgres name: snake_case, starting with a letter, at
+   * most 63 characters. Generated child, junction and translation tables are
+   * named after it.
+   */
   tableName: string;
   /**
    * Records that answer each other under one root - forum replies under a
    * topic. Adds the public `GET /thread` route and server-side parent checks.
    */
   thread?: ContentThreadInput<keyof TFields & string> | false;
+  /**
+   * Lets moderators hide a record from the public site without unpublishing
+   * it (`hiddenAt`, `hiddenBy`). Needs `publication: true`. Defaults to `false`.
+   */
   visibility?: TVisibility;
 }): ContentTypeDefinition<
   TId,

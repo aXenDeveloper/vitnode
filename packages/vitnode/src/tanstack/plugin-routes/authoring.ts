@@ -50,6 +50,14 @@ export interface AdminRouteLoadContext extends RouteLoadContext {
 }
 
 /**
+ * Declares a plugin page's data and head: `load` runs as the route's loader
+ * (SSR and client navigation) and `head` builds its metadata. A page module
+ * exports it as `route`, next to its default-exported component, which
+ * receives the loaded data as `loaderData`.
+ *
+ * Use {@link defineAuthenticatedRoute} for a page declared with `requires`, and
+ * {@link defineAdminRoute} for one in the `admin` area.
+ *
  * `definePluginRoute`, with the context a mounted route actually gets.
  *
  * Three doors rather than one, because the difference between them is a promise
@@ -58,6 +66,26 @@ export interface AdminRouteLoadContext extends RouteLoadContext {
  * is in the `admin` area and renders inside the AdminCP shell. A route that made
  * neither declaration is handed neither, and asking for one is a type error
  * rather than an `undefined` at runtime.
+ *
+ * @example
+ * ```tsx
+ * import type { PluginRoutePageProps } from "@vitnode/core/routing";
+ *
+ * import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+ *
+ * const loadPost = async (slug: string) => ({ title: slug });
+ *
+ * export const route = defineRoute({
+ *   load: async ({ params }) => await loadPost(params.slug),
+ *   head: ({ loaderData }) => ({ title: loaderData?.title }),
+ * });
+ *
+ * const PostPage = ({ loaderData }: PluginRoutePageProps<Awaited<ReturnType<typeof loadPost>>>) => (
+ *   <h1>{loaderData.title}</h1>
+ * );
+ *
+ * export default PostPage;
+ * ```
  */
 export const defineRoute = <TData = never, TSearch = Record<string, never>>(
   options: AuthoredPluginRouteOptions<TData, TSearch, RouteLoadContext>,

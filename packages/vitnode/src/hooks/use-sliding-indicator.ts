@@ -1,10 +1,23 @@
 import React from "react";
 
+/** The attribute that marks each item the indicator can slide to, in order. */
 export const SLIDING_INDICATOR_ITEM = "data-sliding-indicator-item";
 
+/** Tailwind classes that animate the indicator's move; none under reduced motion. */
 export const slidingIndicatorTransitionClassName =
   "transition-[transform,width,height] duration-300 ease-fluid motion-reduce:transition-none";
 
+/**
+ * Moves a highlight element under the active item of a tab-like row. Put
+ * `containerRef` on the row, mark each item with the
+ * {@link SLIDING_INDICATOR_ITEM} attribute, and put `indicatorRef` on the
+ * indicator element. It is sized and positioned under the `activeIndex`-th
+ * marked item, follows container resizes, and is hidden (`opacity: 0`) when
+ * that item does not exist. `isReady` turns `true` after the first frame -
+ * add the transition classes only then, so the first placement doesn't
+ * animate. Browser-only work runs in effects, so it is safe to render on the
+ * server.
+ */
 export const useSlidingIndicator = <Container extends HTMLElement>(
   activeIndex: number,
 ) => {

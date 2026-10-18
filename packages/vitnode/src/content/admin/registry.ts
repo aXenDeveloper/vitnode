@@ -33,6 +33,7 @@ export interface ContentContainerFrontendRegistry {
   ) => RegisteredFrontendContentContainer | undefined;
 }
 
+/** Lookups over every content type the installed plugins register for the AdminCP. */
 export interface ContentFrontendRegistry {
   /** Every registration, sorted by content type id. */
   all: () => readonly RegisteredFrontendContentType[];
@@ -73,6 +74,14 @@ const buildContainerRegistry = (
   };
 };
 
+/**
+ * Collects the `contentTypes` and `containers` of every frontend plugin
+ * (`buildPlugin()`) into one registry. Called by the app's generated
+ * `src/content-registry.gen.ts`; plugin code rarely needs it.
+ *
+ * @throws A `ContentEngineError` when two content types clash - the same id,
+ * table, admin path or delivery path - as `validateContentTypes` reports.
+ */
 export const buildContentFrontendRegistry = (
   plugins: readonly ContentFrontendPluginSource[],
 ): ContentFrontendRegistry => {
@@ -111,6 +120,7 @@ export const CONTENT_FRONTEND_REGISTRY_MISSING =
 
 let registered: ContentFrontendRegistry | undefined;
 
+/** Installs the app-wide registry. Done by the generated `src/content-registry.gen.ts`. */
 export const setContentFrontendRegistry = (
   registry: ContentFrontendRegistry,
 ): void => {

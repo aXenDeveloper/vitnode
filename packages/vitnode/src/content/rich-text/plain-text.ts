@@ -45,6 +45,10 @@ const textOf = (node: RichTextNode, depth: number): string => {
     .join(ROW_TYPES.has(node.type) ? " " : "\n");
 };
 
+/**
+ * Flattens a rich-text document to plain text - block nodes on their own
+ * lines, emojis and mentions as text - for excerpts, search and meta tags.
+ */
 export const richTextToPlainText = (
   doc: null | RichTextNode | undefined,
 ): string => {

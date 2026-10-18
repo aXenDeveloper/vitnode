@@ -36,6 +36,18 @@ declare global {
   }
 }
 
+/**
+ * Captcha for a form that is not an `AutoForm` (which handles it already).
+ * Loads the configured provider's script and, for Turnstile, renders the
+ * widget into an element with `id="vitnode_captcha"` that the form must
+ * contain. Browser-only.
+ *
+ * @param captcha The `captcha` from `GET /api/@vitnode/core/middleware`;
+ * `undefined` when none is configured, which makes the hook a no-op.
+ * @returns `isReady` (enable submit), `getToken()` (send it as
+ * `captchaToken`; `""` without a captcha or on a reCAPTCHA error) and
+ * `onReset()` (call after each submit - a token is single-use).
+ */
 export const useCaptcha = (
   captcha: z.infer<typeof routeMiddlewareSchema>["captcha"],
 ) => {

@@ -38,6 +38,11 @@ export class AiRequestError extends Error {
   readonly status: number;
 }
 
+/**
+ * The AI error code of a thrown value: the `code` of an `AiRequestError`
+ * (what the AI client helpers throw), `"unknown"` for anything else. Use it in
+ * a `catch` to pick the message to show.
+ */
 export const aiErrorCodeOf = (error: unknown): AiClientErrorCode =>
   error instanceof AiRequestError ? error.code : "unknown";
 
@@ -59,15 +64,28 @@ export const readAiErrorCode = async (
   }
 };
 
+/**
+ * Runs an AI action once from the AdminCP and resolves with its whole output.
+ * Browser-only: it calls the `admin/ai` `/assist` route with the browser's
+ * session, so the signed-in admin's AI permissions apply. Each call sends a
+ * fresh idempotency key.
+ *
+ * @throws `AiRequestError` with the server's error code (`"unknown"` when the
+ * body has none) and the HTTP status, for any non-2xx response.
+ */
 export const requestAiAssist = async ({
   action,
   input,
   signal,
   sourceFingerprint,
 }: {
+  /** The qualified action key, e.g. `"@vitnode/blog:excerpt.generate"`. */
   action: string;
+  /** The action's input; validated on the server against the action's schema. */
   input: unknown;
+  /** Aborts the request. */
   signal?: AbortSignal;
+  /** Recorded with the run, e.g. a fingerprint of the source the output was made from. */
   sourceFingerprint?: string;
 }): Promise<{ output: unknown; runId: number }> => {
   const response = await fetcherClient({

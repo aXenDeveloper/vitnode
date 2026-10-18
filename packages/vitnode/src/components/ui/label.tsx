@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import React from "react";
 
+/** A styled `label` element; associate it with its control via `htmlFor`. */
 function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
     <label

@@ -34,6 +34,11 @@ const IndeterminateSweep = () => {
   );
 };
 
+/**
+ * A progress bar. `value` within `min` (0) and `max` (100); a `null` value
+ * shows an indeterminate sweep. Put {@link ProgressLabel} and
+ * {@link ProgressValue} inside as `children`; `indicatorClassName` styles the bar.
+ */
 function Progress({
   className,
   children,
@@ -89,6 +94,7 @@ function Progress({
   );
 }
 
+/** The bar's accessible label, shown above it. */
 function ProgressLabel({
   className,
   ...props
@@ -102,6 +108,7 @@ function ProgressLabel({
   );
 }
 
+/** The formatted value, shown above the bar at the end. */
 function ProgressValue({
   className,
   ...props

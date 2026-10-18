@@ -8,6 +8,10 @@ import { MotionFeatures } from "@/components/motion-features";
 
 const THUMB_SPRING = { type: "spring", duration: 0.3, bounce: 0 } as const;
 
+/**
+ * An on/off toggle (Base UI `Switch`) with an animated thumb. `size`:
+ * `default` or `sm`.
+ */
 function Switch({
   className,
   size = "default",

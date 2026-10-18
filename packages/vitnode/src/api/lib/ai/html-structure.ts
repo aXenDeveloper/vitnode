@@ -55,6 +55,16 @@ export class HtmlStructureError extends Error {
   }
 }
 
+/**
+ * Checks that a translated HTML string keeps the source's structure: the same
+ * tags in the same order, with the same attributes. Text and the `alt`,
+ * `aria-label`, `placeholder` and `title` attributes may differ; comments are
+ * ignored. Call it from an AI action's `parseText` so a translation that
+ * breaks markup or links fails the run.
+ *
+ * @throws {HtmlStructureError} With the first difference, when the structure
+ * changed.
+ */
 export const assertSameHtmlStructure = (
   source: string,
   translated: string,

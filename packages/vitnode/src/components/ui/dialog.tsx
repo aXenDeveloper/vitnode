@@ -30,10 +30,19 @@ const DialogContext = React.createContext<{
   setOpenAlertDialogBeforeClose: () => {},
 });
 
+/**
+ * The surrounding {@link Dialog}'s state: `open`, `setOpen`, and the unsaved-
+ * changes flag (`isDirty`, `setIsDirty`) that forms inside it set.
+ */
 const useDialog = () => React.use(DialogContext);
 
 const alwaysRestoreFocus = () => true;
 
+/**
+ * A Base UI modal dialog, controlled (`open`) or uncontrolled. While a form
+ * inside it reports unsaved changes, closing asks for confirmation first;
+ * clicks on a toast do not count as clicking outside.
+ */
 function Dialog({
   onOpenChange,
   open: openProp,
@@ -135,6 +144,7 @@ function Dialog({
   );
 }
 
+/** The element that opens the dialog. */
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
@@ -143,6 +153,7 @@ function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
+/** An element that closes the dialog. */
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
@@ -164,6 +175,11 @@ function DialogOverlay({
   );
 }
 
+/**
+ * The dialog panel, rendered in a portal over a scrim. `showCloseButton`
+ * (default `true`) adds an icon close button labelled with the translated
+ * "Close".
+ */
 function DialogContent({
   className,
   children,
@@ -208,6 +224,7 @@ function DialogContent({
   );
 }
 
+/** Holds the title and description. */
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -218,6 +235,10 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Holds the dialog's actions. `showCloseButton` (default `false`) adds an
+ * outline "Close" button.
+ */
 function DialogFooter({
   className,
   showCloseButton = false,
@@ -248,6 +269,7 @@ function DialogFooter({
   );
 }
 
+/** The dialog's accessible title. */
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
@@ -261,6 +283,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   );
 }
 
+/** The dialog's accessible description. */
 function DialogDescription({
   className,
   ...props

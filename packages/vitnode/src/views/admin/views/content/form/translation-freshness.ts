@@ -26,6 +26,20 @@ const recordsKey = (contentTypeId: string, itemId: ContentId) => [
   itemId,
 ];
 
+/**
+ * Tracks whether each translated field still matches its source-language
+ * text, for a localized content form. Must render inside the content form
+ * (it uses `useContentForm`). Records load for an existing item only.
+ *
+ * Returns:
+ * - `freshnessOf(locale)`: per field, `missing` (empty), `untracked` (no
+ *   record), `outdated` (the source text changed since), `edited` (changed
+ *   after it was translated) or `fresh`.
+ * - `outdatedFields(locale)` and `editedByPerson(locale, field)`.
+ * - `rememberAiTranslation(locale, field)` and `markReviewed(locale, fields)`:
+ *   queue a record; queued records are written after the form saves, one
+ *   request per locale.
+ */
 export const useTranslationFreshness = <Field extends string>({
   contentTypeId,
   fields,
@@ -34,9 +48,13 @@ export const useTranslationFreshness = <Field extends string>({
   values,
 }: {
   contentTypeId: string;
+  /** The localized fields to track. */
   fields: readonly Field[];
+  /** The record being edited; `undefined` while creating. */
   itemId: ContentId | undefined;
+  /** The source locale translations are compared against. */
   source: string;
+  /** The form's current values for `fields`. */
   values: Partial<Record<Field, unknown>>;
 }) => {
   const queryClient = useQueryClient();

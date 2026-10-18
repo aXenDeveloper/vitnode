@@ -5,6 +5,11 @@ import { core_logs } from "@/database/logs";
 
 type CoreLogsType = "debug" | "error" | "warn";
 
+/**
+ * `c.get("log")`: each method writes an entry to the `core_logs` table (shown
+ * in AdminCP debug logs) with the request's plugin, path, IP and user, and
+ * echoes it to the console.
+ */
 export interface LoggerMiddlewareType {
   debug: (content: string) => Promise<void>;
   error: (content: string) => Promise<void>;

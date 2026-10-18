@@ -21,14 +21,21 @@ type AutoFormNullableNumberProps = ItemAutoFormComponentProps &
     React.ComponentProps<typeof NumberField>,
     "children" | "defaultValue" | "id" | "name" | "onValueChange" | "value"
   > & {
+    /** Text between the input and the toggle, e.g. "or". */
     orLabel?: React.ReactNode;
     placeholder?: string;
     /** The number restored when the toggle is unchecked before anything was typed. */
     resumeValue?: number;
+    /** The checkbox that sets the value to `null`, e.g. "Unlimited". */
     toggleLabel: React.ReactNode;
+    /** Shown after the input, e.g. `MB` or `days`. */
     unitLabel?: React.ReactNode;
   };
 
+/**
+ * A number input with a checkbox that stores `null` instead - for a limit that
+ * can be switched off. Use with a `z.number().nullable()` field. Spread the props `AutoForm` passes and add a `label`.
+ */
 export const AutoFormNullableNumber = ({
   label,
   labelRight,

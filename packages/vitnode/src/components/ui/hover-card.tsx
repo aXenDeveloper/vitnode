@@ -2,12 +2,14 @@ import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card
 import { cn } from "cn";
 import React from "react";
 
+/** A Base UI preview card that opens while its trigger is hovered or focused. */
 function HoverCard({
   ...props
 }: React.ComponentProps<typeof PreviewCardPrimitive.Root>) {
   return <PreviewCardPrimitive.Root data-slot="hover-card" {...props} />;
 }
 
+/** The element that opens the card. */
 function HoverCardTrigger({
   ...props
 }: React.ComponentProps<typeof PreviewCardPrimitive.Trigger>) {
@@ -16,6 +18,10 @@ function HoverCardTrigger({
   );
 }
 
+/**
+ * The card popup, rendered in a portal; centered against the trigger by
+ * default.
+ */
 function HoverCardContent({
   className,
   side,

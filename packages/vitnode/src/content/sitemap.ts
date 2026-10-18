@@ -39,6 +39,11 @@ const absolute = (origin: string, path: string): null | string => {
 /** `priority` at the one precision the protocol illustrates, without a float tail. */
 const formatPriority = (priority: number): string => priority.toFixed(1);
 
+/**
+ * A `<urlset>` sitemap document from sitemap entries. Paths resolve against
+ * the entry's own `origin` or `origin`; an entry whose URL cannot be built is
+ * skipped. `changefreq` and `priority` are left out when `null`.
+ */
 export const contentSitemapXml = ({
   alternates,
   entries,

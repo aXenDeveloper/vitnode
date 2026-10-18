@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import * as React from "react";
 
+/** A vertical stack of chat {@link Message}s. */
 function MessageGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -11,6 +12,10 @@ function MessageGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * One chat message: avatar plus content. `align="end"` (default `"start"`)
+ * mirrors it for the current user's own messages.
+ */
 function Message({
   className,
   align = "start",
@@ -29,6 +34,7 @@ function Message({
   );
 }
 
+/** The author's avatar beside a {@link Message}. */
 function MessageAvatar({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -42,6 +48,7 @@ function MessageAvatar({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The bubbles or body of a {@link Message}. */
 function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -55,6 +62,7 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** Small muted line above the content, e.g. the author's name. */
 function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -68,6 +76,9 @@ function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Small muted line below the content, e.g. the time; aligned with the message.
+ */
 function MessageFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

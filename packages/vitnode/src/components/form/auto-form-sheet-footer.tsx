@@ -5,10 +5,38 @@ import { Button } from "../ui/button";
 import { useFormApi } from "../ui/form";
 import { SheetClose } from "../ui/sheet";
 
+/**
+ * The footer of an `AutoForm` in a `Sheet`: an "unsaved changes" note, Cancel
+ * (closes the sheet) and Submit. Render it from the form's `layout`, below a
+ * scrollable body.
+ *
+ * Submit stays disabled until a value differs from its default, and shows a
+ * spinner while submitting. Closing the sheet after a successful save is the
+ * caller's job.
+ *
+ * @example
+ * ```tsx
+ * <AutoForm
+ *   className="flex min-h-0 flex-1 flex-col gap-0"
+ *   fields={fields}
+ *   formSchema={formSchema}
+ *   onSubmit={onSubmit}
+ *   layout={rendered => (
+ *     <>
+ *       <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4">
+ *         {rendered.title}
+ *       </div>
+ *       <AutoFormSheetFooter submitLabel="Save" />
+ *     </>
+ *   )}
+ * />
+ * ```
+ */
 export const AutoFormSheetFooter = ({
   disabled = false,
   submitLabel,
 }: {
+  /** Disables Submit even with unsaved changes. Defaults to `false`. */
   disabled?: boolean;
   submitLabel: string;
 }) => {

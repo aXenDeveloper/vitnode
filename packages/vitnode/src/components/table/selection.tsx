@@ -15,13 +15,21 @@ import { SlidingNumber } from "../ui/sliding-number";
 import { TableRow } from "../ui/table";
 import { TooltipWithContent } from "../ui/tooltip";
 
+/**
+ * Row selection on the current page, from {@link useDataTableSelection}.
+ * Selection never spans pages: ids that leave the page are dropped.
+ */
 export interface SelectionDataTable {
+  /** Every row on the page is selected (and there is at least one). */
   allSelected: boolean;
   clear: () => void;
   isSelected: (id: DataTableRowId) => boolean;
+  /** The selected row ids. */
   selected: DataTableRowId[];
+  /** Some, but not all, rows are selected. */
   someSelected: boolean;
   toggle: (id: DataTableRowId) => void;
+  /** Selects every row on the page (`true`) or none (`false`). */
   toggleAll: (next: boolean) => void;
 }
 
@@ -33,6 +41,33 @@ const getPortalContainer = () => document.body;
 /** No DOM to portal into on the server, and the bar starts empty anyway. */
 const getNoPortalContainer = () => null;
 
+/**
+ * The table's row selection, for the buttons passed as `ContentDataTable`'s
+ * `bulkActions` - e.g. a delete action reading `selected`.
+ *
+ * @throws Outside a `ContentDataTable` that has `bulkActions`.
+ *
+ * @example
+ * ```tsx
+ * import { useDataTableSelection } from "@vitnode/core/components/table/selection";
+ * import { Button } from "@vitnode/core/components/ui/button";
+ *
+ * const DeleteSelected = ({ onDelete }: { onDelete: (ids: number[]) => void }) => {
+ *   const { clear, selected } = useDataTableSelection();
+ *
+ *   return (
+ *     <Button
+ *       onClick={() => {
+ *         onDelete(selected.filter(id => typeof id === "number"));
+ *         clear();
+ *       }}
+ *     >
+ *       Delete
+ *     </Button>
+ *   );
+ * };
+ * ```
+ */
 export const useDataTableSelection = (): SelectionDataTable => {
   const value = React.use(SelectionContext);
 
@@ -45,6 +80,7 @@ export const useDataTableSelection = (): SelectionDataTable => {
   return value;
 };
 
+/** Holds the selection for one page of rows. `ContentDataTable` mounts it for `bulkActions`. */
 export function SelectionProviderDataTable({
   children,
   rowIds,
@@ -92,6 +128,7 @@ export function SelectionProviderDataTable({
   );
 }
 
+/** The header checkbox: selects every row on the page, indeterminate when only some are. */
 export function SelectAllDataTable() {
   const t = useTranslations("core.global.data_table");
   const { allSelected, someSelected, toggleAll } = useDataTableSelection();
@@ -106,6 +143,7 @@ export function SelectAllDataTable() {
   );
 }
 
+/** One row's checkbox. */
 export function SelectRowDataTable({ id }: { id: DataTableRowId }) {
   const t = useTranslations("core.global.data_table");
   const { isSelected, toggle } = useDataTableSelection();
@@ -119,6 +157,7 @@ export function SelectRowDataTable({ id }: { id: DataTableRowId }) {
   );
 }
 
+/** A row marked `data-state="selected"` while it is selected. */
 export function RowSelectableDataTable({
   children,
   id,
@@ -135,6 +174,11 @@ export function RowSelectableDataTable({
   );
 }
 
+/**
+ * The floating bar at the bottom of the viewport while rows are selected: the
+ * count, `actions`, and a button that clears the selection. Rendered into
+ * `document.body`, and only in the browser.
+ */
 export function BulkActionsDataTable({
   actions,
 }: {

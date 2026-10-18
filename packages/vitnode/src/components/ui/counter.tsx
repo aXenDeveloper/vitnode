@@ -9,6 +9,12 @@ import { SlidingNumber } from "./sliding-number";
 const clampCounterValue = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
+/**
+ * A number with decrease and increase buttons (translated labels), controlled
+ * (`value`) or uncontrolled (`defaultValue`, default `0`). Each press moves by
+ * `step` (default `1`) within `min` and `max` (unbounded by default) and calls
+ * `onValueChange`.
+ */
 function Counter({
   className,
   defaultValue = 0,

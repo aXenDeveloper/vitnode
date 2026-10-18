@@ -2,6 +2,7 @@ import { Input as InputPrimitive } from "@base-ui/react/input";
 import { cn } from "cn";
 import React from "react";
 
+/** A Base UI text input with VitNode styling. */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <InputPrimitive

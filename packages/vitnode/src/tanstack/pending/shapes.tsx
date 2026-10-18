@@ -11,6 +11,7 @@ import {
   pendingRowKeys,
 } from "./route-pending-skeleton";
 
+/** Placeholder for a narrow list of posts or topics. Draws 3 rows by default. */
 export const FeedPendingSkeleton = ({
   className,
   label,
@@ -106,6 +107,7 @@ export const SearchPendingSkeleton = ({
   </PendingFrame>
 );
 
+/** Placeholder for a data table. Draws 6 rows by default. */
 export const TablePendingSkeleton = ({
   className,
   label,
@@ -152,6 +154,7 @@ export const TablePendingSkeleton = ({
   </PendingFrame>
 );
 
+/** Placeholder for a form in a card. Draws 4 fields by default. */
 export const FormPendingSkeleton = ({
   className,
   label,
@@ -180,6 +183,7 @@ export const FormPendingSkeleton = ({
   </PendingFrame>
 );
 
+/** Placeholder for a responsive card grid. Draws 6 cards by default. */
 export const CardsPendingSkeleton = ({
   className,
   label,

@@ -74,11 +74,26 @@ export const normalizeUsage = (
   };
 };
 
+/**
+ * Reads cost and request ids from one AI provider's response metadata, for the
+ * API config's `ai.providerAdapters`. Custom adapters are tried before the
+ * built-in AI Gateway and OpenRouter ones; the first whose `matches` returns
+ * `true` is used. A provider without one reports no cost, so `pricing`
+ * estimates it.
+ */
 export interface AiProviderAdapter {
+  /** A unique adapter id, e.g. `"gateway"`. */
   id: string;
+  /**
+   * Asks the provider for a call's billed amount later, during reconciliation
+   * of calls whose cost was estimated or unknown. `null` when not available.
+   */
   lookupCost?: (requestId: string) => Promise<Decimal | null>;
+  /** Whether this adapter handles a model, given its provider id: `"gateway"` for AI Gateway string ids, otherwise the SDK model's `provider`. */
   matches: (providerId: string) => boolean;
+  /** The cost the provider reported in the response metadata (see {@link decimalFromNumber}), or `null`. */
   reportedCost: (metadata: ProviderMetadata | undefined) => Decimal | null;
+  /** The provider's id for the call, used by `lookupCost`; `null` when there is none. */
   requestId: (args: {
     metadata: ProviderMetadata | undefined;
     responseId: string | undefined;

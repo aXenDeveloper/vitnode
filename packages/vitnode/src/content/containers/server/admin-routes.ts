@@ -26,6 +26,7 @@ import {
   createContentContainerService,
 } from "./service";
 
+/** The error body the container admin routes answer with. */
 export const zodContentContainerError = z.object({
   code: z.enum(CONTENT_CONTAINER_ERROR_CODES),
   message: z.string(),
@@ -78,6 +79,10 @@ const errorResponse = (description: string) => ({
   description,
 });
 
+/**
+ * The AdminCP routes of one content container type, mounted by
+ * `buildContentAdminModule`; plugins do not call this directly.
+ */
 export const buildContentContainerAdminRoutes = <
   TDefinition extends AnyContentContainerDefinition,
   P extends string,

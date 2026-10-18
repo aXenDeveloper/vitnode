@@ -22,11 +22,22 @@ type AutoFormInputOTPProps = ItemAutoFormComponentProps &
     React.ComponentProps<typeof InputOTP>,
     "children" | "maxLength" | "onChange" | "render" | "value"
   > & {
+    /**
+     * Slot counts per group, separated visually, e.g. `[3, 3]`. Defaults to
+     * two equal halves for an even length of 6 or more, else one group.
+     */
     groups?: number[];
+    /** Number of slots. Defaults to the schema's max length, else 6. */
     maxLength?: number;
+    /** Called after the form value changes. */
     onChange?: (value: string) => void;
   };
 
+/**
+ * A one-time-code input for an `AutoForm` string field: one box per
+ * character. `pattern` defaults to the schema's regex. Spread the props
+ * `AutoForm` passes and add a `label`.
+ */
 export const AutoFormInputOTP = ({
   label,
   labelRight,

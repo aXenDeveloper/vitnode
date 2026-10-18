@@ -11,6 +11,11 @@ export interface MultiLangValueItem<TValue = string> {
 
 export type MultiLangValue<TValue = string> = MultiLangValueItem<TValue>[];
 
+/**
+ * The Zod schema of a multi-language string: an array of
+ * `{ languageCode, value }`. Pair it with `multiLang` on `AutoFormInput`,
+ * `AutoFormTextarea` or `AutoFormEditor` to edit one value per language. `minLength` and `maxLength` apply to each value.
+ */
 export const multiLangValueSchema = ({
   maxLength,
   minLength,

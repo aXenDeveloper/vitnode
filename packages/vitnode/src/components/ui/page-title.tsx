@@ -29,6 +29,11 @@ interface PageTitleBaseProps {
 export type PageTitleProps = PageTitleBaseProps &
   (PageTitleH1Props | PageTitleH2Props);
 
+/**
+ * A page heading row: optional back link and subtitle, an `h1` (or `h2`),
+ * an optional `desc`, and action buttons (`children`) on the right, stacked
+ * on mobile. Pass exactly one of `h1` or `h2`.
+ */
 export const PageTitle = ({
   back,
   children,

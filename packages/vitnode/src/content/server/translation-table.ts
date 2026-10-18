@@ -27,6 +27,14 @@ import {
   buildTranslationSystemColumns,
 } from "./column-builders";
 
+/**
+ * Builds a localized content type's `<tableName>_translations` table: one row
+ * per record and language, holding the localized fields (plus their own
+ * publication columns when the type has `publication`). Usually called for
+ * you by `createContentModel`.
+ *
+ * @throws {ContentEngineError} When the content type has no `localization`.
+ */
 export const createContentTranslationTable = <
   TDefinition extends AnyContentTypeDefinition,
 >(

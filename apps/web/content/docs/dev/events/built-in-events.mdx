@@ -1292,7 +1292,7 @@ categories yet.
     },
     categoryId: {
       description:
-        "The post's first category. An article is in many categories now and this payload has room for one - watch content.blog.post.created for the whole set.",
+        "The post's first category. An article is in many categories now and this payload has room for one. content.blog.post.created only carries the contentId, so read the full set from the article's relations.",
       type: 'number',
     },
   }}

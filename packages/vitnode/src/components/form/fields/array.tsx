@@ -42,22 +42,34 @@ const reconcileRowKeys = (previous: number[], length: number): number[] => {
   ];
 };
 
+/** One input of every row in an {@link AutoFormArray}. */
 export interface AutoFormArrayField {
   className?: string;
   component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+  /** The key of the row object the input edits. */
   id: string;
 }
 
 export interface AutoFormArrayProps extends ItemAutoFormComponentProps {
+  /** Defaults to "Add Item" (not translated - pass your own). */
   addButtonLabel?: string;
   className?: string;
+  /** The inputs of each row, one per key of the array's item object. */
   fields: AutoFormArrayField[];
   itemParams?: InputParams;
+  /** Overrides the schema's `.max()`; Add is disabled at the limit. */
   maxItems?: number;
+  /** Overrides the schema's `.min()`; Remove buttons are hidden at the limit. */
   minItems?: number;
+  /** Defaults to `true`. */
   showRemoveButton?: boolean;
 }
 
+/**
+ * A repeatable group of inputs for an `AutoForm` field holding an array of
+ * objects (`z.array(z.object(...))`): one row per item, with Add and Remove
+ * buttons. A new row starts with every key `undefined`.
+ */
 export const AutoFormArray = ({
   label,
   field: parentField,

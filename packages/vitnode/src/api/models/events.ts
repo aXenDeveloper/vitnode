@@ -23,6 +23,21 @@ export interface ContentApprovalEventPayload {
   submissionId: number;
 }
 
+/**
+ * Every server-side event, mapped to its payload. Emitting and listening are
+ * type-checked against this map.
+ *
+ * A plugin adds its own events by augmenting the interface:
+ *
+ * @example
+ * ```ts
+ * declare module "@vitnode/core/api/models/events" {
+ *   interface VitNodeEvents {
+ *     "blog.post.created": { categoryId: number; postId: number };
+ *   }
+ * }
+ * ```
+ */
 export interface VitNodeEvents {
   "ai.run.completed": {
     actionKey: string;
@@ -209,22 +224,35 @@ export interface VitNodeEvents {
 
 export type VitNodeEventName = keyof VitNodeEvents;
 
+/**
+ * Who caused an event, resolved from the emitting request: the admin on an
+ * AdminCP route, else the signed-in user, else `system` (cron, queue tasks,
+ * guests).
+ */
 export interface EventActor {
   id?: number;
   type: "admin" | "system" | "user";
 }
 
+/** An emitted event with its metadata, passed to listeners and adapters. */
 export interface EventEnvelope<K extends VitNodeEventName = VitNodeEventName> {
+  /** Who caused the event. */
   actor: EventActor;
+  /** When `emit()` was called. */
   emittedAt: Date;
+  /** A random UUID, unique per emit; also returned in the result. */
   eventId: string;
+  /** The event name, e.g. `"role.created"`. */
   name: K;
+  /** The event's data, typed by its {@link VitNodeEvents} entry. */
   payload: VitNodeEvents[K];
   /** Plugin that emitted the event. */
   pluginId: string;
 }
 
+/** One listener (or the adapter itself) that failed to handle an event. */
 export interface EventEmitFailure {
+  /** The thrown error's message. */
   error: string;
   /** Listener `name` as declared in `buildEventListener`. */
   listener: string;
@@ -233,24 +261,44 @@ export interface EventEmitFailure {
   pluginId: string;
 }
 
+/** What `emit()` reports back about delivery. */
 export interface EventEmitResult {
   /** Listeners that ran successfully before `emit()` resolved. */
   delivered: number;
+  /** The emitted envelope's id. */
   eventId: string;
+  /** Listeners that threw. When the adapter itself throws, one entry with `module: "adapter"`. */
   failures: EventEmitFailure[];
 
+  /** `delivered` when listeners ran before `emit()` resolved (the local adapter); `queued` when an adapter hands the event off. */
   status: "delivered" | "queued";
 }
 
+/**
+ * Transport for events, set as `events.adapter` in the API config. Defaults to
+ * the in-process local adapter, which runs matching listeners sequentially
+ * inside the emitting request.
+ *
+ * A custom adapter may deliver elsewhere and report `status: "queued"`.
+ * Throwing from `publish` is caught by `emit()`, logged, and reported as a
+ * failure.
+ */
 export interface EventsApiPlugin {
+  /** Shown in logs and returned by `c.get("events").name()`, e.g. `"local"`. */
   name: string;
+  /** Delivers one event to its listeners (read them from `c.get("core").events.listeners`) or hands it off. */
   publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>;
 }
 
 export interface EventEmitOptions {
+  /**
+   * Plugin recorded as the emitter. Defaults to the plugin of the current
+   * route, then `@vitnode/core`.
+   */
   pluginId?: string;
 }
 
+/** Server-side events API, available as `c.get("events")` in API handlers. */
 export class EventsModel {
   constructor(c: Context) {
     this.c = c;
@@ -262,6 +310,19 @@ export class EventsModel {
     return this.c.get("core").events.adapter;
   }
 
+  /**
+   * Publishes an event to its listeners through the configured adapter.
+   *
+   * Never throws: listener and adapter errors are logged and returned in
+   * `failures`. With the local adapter the promise resolves after every
+   * listener has finished, so await it when listeners must run before the
+   * response, and keep listeners fast.
+   *
+   * @example
+   * ```ts
+   * await c.get("events").emit("role.created", { roleId: role.id });
+   * ```
+   */
   async emit<K extends VitNodeEventName>(
     name: K,
     payload: VitNodeEvents[K],
@@ -310,6 +371,7 @@ export class EventsModel {
     }
   }
 
+  /** Name of the configured adapter, e.g. `"local"`. */
   name(): string {
     return this.adapter().name;
   }

@@ -39,14 +39,9 @@ interface ClientResponse<
   url: string;
 }
 
+/** Every plugin id in the API registry: core plus the app's configured plugins. */
 export type RegisteredPluginId = Extract<keyof ApiPluginRegistry, string>;
 
-/**
- * Every endpoint one plugin serves, as one flat union.
- *
- * A plain lookup: the flattening happened once, in the plugin's own
- * `ApiPluginContract`, and the registry stores the result.
- */
 /**
  * The three things a call reads off a registry entry, each behind its own
  * inference so that reading one never resolves the others.
@@ -68,11 +63,18 @@ type ModulesOf<P extends RegisteredPluginId> = ApiPluginRegistry[P] extends {
   ? Modules
   : never;
 
+/**
+ * Every endpoint one plugin serves, as one flat union.
+ *
+ * A plain lookup: the flattening happened once, in the plugin's own
+ * `ApiPluginContract`, and the registry stores the result.
+ */
 export type PluginEndpoints<P extends RegisteredPluginId> =
   ApiPluginRegistry[P] extends { endpoints: infer E extends ApiEndpoint }
     ? E
     : never;
 
+/** Every endpoint of every registered plugin. */
 export type AllEndpoints = PluginEndpoints<RegisteredPluginId>;
 
 type ValidModule<P extends RegisteredPluginId, M extends string> =
@@ -219,6 +221,11 @@ export type BuildArgsType<RouteCfg> = OptionalQueryArgs<RouteCfg> & {
   ]: InferInputType<RouteCfg, K>;
 };
 
+/**
+ * The `args` of a call: required when the route declares a body, params or a
+ * query - with only an optional query, `args` is still required but its
+ * `query` may be left out - and absent otherwise.
+ */
 export type FetcherArgs<RouteCfg> = keyof BuildArgsType<RouteCfg> extends never
   ? { args?: undefined }
   : { args: BuildArgsType<RouteCfg> };
@@ -290,6 +297,10 @@ export type RouteOf<
   { route: { method: Method; path: Path } }
 >["route"];
 
+/**
+ * The typed `Response` of one call: a union with one member per status the
+ * route declares, so narrowing on `status` or `ok` narrows `json()`.
+ */
 export type ResponseFor<
   P extends RegisteredPluginId,
   M extends string,
@@ -324,6 +335,11 @@ export interface FetcherRequestOptions {
    * `RawApiFetchArgs["origin"]`.
    */
   origin?: string;
+  /**
+   * For cursor-paginated routes: fills `query.first` with `10` unless
+   * `first` or `last` is set, and `query.search` with `""` unless set. Only
+   * applies when the call passes a `query`. Defaults to `false`.
+   */
   withPagination?: boolean;
 }
 
@@ -344,7 +360,6 @@ export type FetcherCall<
   FetcherRoute<P, M, Path, Method> &
   Options;
 
-/** Every module path one plugin serves. */
 /**
  * Every module path one plugin serves.
  *

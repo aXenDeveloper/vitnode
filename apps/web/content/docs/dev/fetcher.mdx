@@ -100,7 +100,7 @@ The response is status-aware: `response.status` is typed as a union of declared 
 Each plugin exports a lightweight contract type from its `config.api.ts`:
 
 ```ts title="plugins/site-notes/src/config.api.ts"
-import type { ApiPluginContract } from '@vitnode/core/lib/fetcher'
+import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
 
 export type VitNodeApiPlugin = ApiPluginContract<
   ReturnType<typeof siteNotesApiPlugin>

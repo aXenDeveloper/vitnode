@@ -107,6 +107,7 @@ export const LogoVitNode = ({
   );
 };
 
+/** The VitNode logo at brand size - the default for `logo` in the frontend config. */
 export const LogoVitNodeBrand = () => (
   <LogoVitNode className="w-34" idPrefix="vitnode-brand" />
 );

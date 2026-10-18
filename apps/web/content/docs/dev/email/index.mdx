@@ -71,38 +71,44 @@ use this for every send.
 
 Configure your delivery transport in `apps/api/src/vitnode.api.config.ts`:
 
+Each provider ships as its own package. Install one, then pass it as `email.adapter` - the sender address belongs to the adapter.
+
 ### 1. Resend Adapter
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { ResendEmailAdapter } from '@vitnode/core/api/adapters/email/resend'
+import { ResendEmailAdapter } from '@vitnode/resend'
 
 export const vitNodeApiConfig = buildApiConfig({
   email: {
-    from: 'noreply@yourdomain.com',
     adapter: ResendEmailAdapter({
-      apiKey: process.env.RESEND_API_KEY!,
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.RESEND_FROM_EMAIL,
     }),
   },
 })
 ```
 
-### 2. SMTP Adapter
+See [Resend](/docs/dev/email/resend) for installation and setup.
+
+### 2. SMTP Adapter (Nodemailer)
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { SmtpEmailAdapter } from '@vitnode/core/api/adapters/email/smtp'
+import { NodemailerEmailAdapter } from '@vitnode/nodemailer'
 
 export const vitNodeApiConfig = buildApiConfig({
   email: {
-    from: 'noreply@yourdomain.com',
-    adapter: SmtpEmailAdapter({
-      host: process.env.SMTP_HOST!,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      user: process.env.SMTP_USER!,
-      password: process.env.SMTP_PASSWORD!,
+    adapter: NodemailerEmailAdapter({
+      from: process.env.NODE_MAILER_FROM,
+      host: process.env.NODE_MAILER_HOST,
+      port: Number(process.env.NODE_MAILER_PORT ?? 587),
+      user: process.env.NODE_MAILER_USER,
+      password: process.env.NODE_MAILER_PASSWORD,
     }),
   },
 })
 ```
+
+`port` defaults to `587` and `secure` to `false`. See [Nodemailer](/docs/dev/email/nodemailer) for installation and setup.
 
 ---
 

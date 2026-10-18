@@ -11,6 +11,10 @@ const indeterminatePath = "M5 12h14";
 const CHECK_SPRING = { type: "spring", duration: 0.35, bounce: 0 } as const;
 const UNCHECK_TRANSITION = { duration: 0.1, ease: "easeOut" } as const;
 
+/**
+ * A Base UI checkbox whose check (or indeterminate dash) draws itself in;
+ * instant under reduced motion.
+ */
 function Checkbox({
   className,
   ...props

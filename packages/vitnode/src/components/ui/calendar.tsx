@@ -18,6 +18,10 @@ import { useLocale, useTranslations } from "use-intl";
 import { type ButtonProps, buttonVariants } from "./button";
 import { getFirstDayOfWeek, toDateString } from "./calendar-utils";
 
+/**
+ * Props of {@link Calendar}: every `react-day-picker` `DayPicker` prop, plus
+ * the nav buttons' `buttonVariant`.
+ */
 type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: ButtonProps["variant"];
 };
@@ -72,6 +76,12 @@ const CalendarWeekNumber = ({
   </td>
 );
 
+/**
+ * A `react-day-picker` calendar styled for VitNode. Without a `locale` prop it
+ * follows the UI language: month captions are formatted in it, the week starts
+ * on its first day, and the accessibility labels are translated. Shows outside
+ * days by default; `buttonVariant` for the nav buttons defaults to `"ghost"`.
+ */
 const Calendar = ({
   className,
   classNames,
@@ -240,6 +250,10 @@ const Calendar = ({
   );
 };
 
+/**
+ * The button for one day, used by {@link Calendar}; it takes focus when the day
+ * is focused and exposes the selection and range state as `data-*` attributes.
+ */
 const CalendarDayButton = ({
   className,
   day,

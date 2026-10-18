@@ -7,6 +7,12 @@ interface UseIntersectionObserverOptions {
   threshold?: number | number[];
 }
 
+/**
+ * The latest `IntersectionObserverEntry` for `target`, e.g. to load more items
+ * when a sentinel scrolls into view. `undefined` until the first observation.
+ *
+ * @param options.freezeOnceVisible Stop observing after the first intersection.
+ */
 export function useIntersectionObserver(
   target: Element | null,
   {

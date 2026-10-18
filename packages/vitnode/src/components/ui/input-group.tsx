@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+/**
+ * Wraps an input with addons such as icons, text or buttons into one bordered
+ * control.
+ */
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -41,6 +45,11 @@ const inputGroupAddonVariants = cva(
   },
 );
 
+/**
+ * An icon, text or button beside or above the input. `align` is `"inline-
+ * start"` (default), `"inline-end"`, `"block-start"` or `"block-end"`. Clicking
+ * it focuses the input, except on a button.
+ */
 function InputGroupAddon({
   className,
   align = "inline-start",
@@ -82,6 +91,11 @@ const inputGroupButtonVariants = cva(
   },
 );
 
+/**
+ * A compact {@link Button} inside an {@link InputGroup}. `variant` defaults to
+ * `"ghost"` and `type` to `"button"`, so it never submits the form by
+ * accident. `size` is `xs` (default), `sm`, `icon-xs` or `icon-sm`.
+ */
 function InputGroupButton({
   className,
   type = "button",
@@ -103,6 +117,7 @@ function InputGroupButton({
   );
 }
 
+/** Static text inside the group, such as a unit or prefix. */
 function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -115,6 +130,7 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   );
 }
 
+/** The group's {@link Input}, styled to sit flush inside it. */
 function InputGroupInput({
   className,
   ...props
@@ -131,6 +147,7 @@ function InputGroupInput({
   );
 }
 
+/** The group's textarea, styled to sit flush inside it. */
 function InputGroupTextarea({
   className,
   ...props

@@ -66,6 +66,14 @@ export const pluginRouteSearchDeps = (
   );
 };
 
+/**
+ * Compiles the route declarations of core and every configured plugin - the
+ * app's generated `src/plugin-routes.gen.ts` - into the specs
+ * `withVitNodeRoutes` mounts: one per route, parents first, each with its lazy
+ * module, message namespaces, search validator and pending component.
+ *
+ * @throws When the declarations are invalid (see `PluginRouteError`).
+ */
 export const pluginRouteSpecs = (
   sources: readonly PluginRouteDeclarationSource[],
 ): PluginRouteSpec[] => {

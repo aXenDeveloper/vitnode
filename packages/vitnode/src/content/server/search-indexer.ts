@@ -171,6 +171,7 @@ const assertPublicationColumns = (
   }
 };
 
+/** A content type's search indexer, which loads its documents page by page for a rebuild. */
 export interface ContentSearchIndexer extends SearchIndexer {
   load: (
     c: Context,
@@ -198,6 +199,13 @@ export interface ContentSearchRelationIndexer extends ContentSearchIndexer {
   ) => Promise<ContentSearchRelationPage>;
 }
 
+/**
+ * The search indexer for a non-localized content type, used to rebuild its
+ * documents. `buildContentAdminModule` registers one for every model with
+ * `search`, so plugins rarely call this.
+ *
+ * @throws {ContentEngineError} When the content type has no `publication`.
+ */
 export const createContentSearchIndexer = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -346,6 +354,13 @@ export const createContentSearchIndexer = <
   };
 };
 
+/**
+ * {@link createContentSearchIndexer} for a localized content type: it pages
+ * over translations, one document per record and language.
+ *
+ * @throws {ContentEngineError} When the content type has no `localization` or
+ * no `publication`.
+ */
 export const createContentLocalizedSearchIndexer = <
   TDefinition extends AnyContentTypeDefinition,
 >(

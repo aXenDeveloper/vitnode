@@ -236,10 +236,18 @@ export const zodContentPublicWriteRejection = z.object({
   ),
 });
 
+/**
+ * The JSON body of a refused public write: `code` (one of the
+ * `CONTENT_PUBLIC_WRITE_CODES`), the content type and the field `issues`.
+ */
 export type ContentPublicWriteRejection = z.infer<
   typeof zodContentPublicWriteRejection
 >;
 
+/**
+ * Reads a refused public write's body. Takes the already-parsed JSON (not a
+ * string) and returns `null` for any other shape.
+ */
 export const parseContentPublicWriteRejection = (
   body: unknown,
 ): ContentPublicWriteRejection | null => {

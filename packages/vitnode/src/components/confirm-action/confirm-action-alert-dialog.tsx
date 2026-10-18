@@ -13,6 +13,27 @@ import {
 } from "../ui/alert-dialog";
 import { ContentConfirmAction } from "./content";
 
+/**
+ * Asks for confirmation before a destructive action, such as a delete. The
+ * `children` element opens it; omit it to control the dialog with `open` and
+ * `onOpenChange`.
+ *
+ * `onSubmit` runs as a form action, with the confirm button spinning until it
+ * settles; call its `onClose` to close the dialog after success. `title` and
+ * `description` default to a generic "Are you sure?" text.
+ *
+ * @example
+ * ```tsx
+ * <ConfirmActionAlertDialog
+ *   onSubmit={async ({ onClose }) => {
+ *     await deletePost(id);
+ *     onClose();
+ *   }}
+ * >
+ *   <Button variant="destructive">Delete</Button>
+ * </ConfirmActionAlertDialog>
+ * ```
+ */
 export const ConfirmActionAlertDialog = ({
   children,
   title,

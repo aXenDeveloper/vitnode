@@ -9,6 +9,11 @@ import { chartColorKeys } from "./chart-utils";
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
 
+/**
+ * Each series' label, icon and color, keyed by the series key. Give a `color`
+ * or a `theme` with a `light` and a `dark` color; each becomes the CSS variable
+ * `--color-<key>` inside the chart.
+ */
 export type ChartConfig = Record<
   string,
   (
@@ -58,6 +63,12 @@ const CHART_THEME = {
   "--ts-chart-tooltip-active-row-shadow": "none",
 } as React.CSSProperties;
 
+/**
+ * Wraps a `@tanstack/charts` chart: it applies the VitNode chart theme, defines
+ * a `--color-<key>` variable per {@link ChartConfig} entry that has a color,
+ * and provides the
+ * config to the tooltip and legend.
+ */
 function ChartContainer({
   id,
   className,
@@ -143,6 +154,12 @@ const formatValue = (value: unknown, locale: string) => {
   return typeof value === "string" ? value : "";
 };
 
+/**
+ * Tooltip body for a chart inside {@link ChartContainer}. Labels come from the
+ * config and values are formatted in the UI language. `indicator` is `"dot"`
+ * (default), `"line"` or `"dashed"`; `hideLabel` and `hideIndicator` default to
+ * `false`.
+ */
 function ChartTooltipContent({
   points,
   className,
@@ -298,6 +315,11 @@ function ChartTooltipContent({
   );
 }
 
+/**
+ * A legend for the series in the surrounding {@link ChartContainer}'s config
+ * that have a color, or only `keys` when given. Renders nothing when there are no series;
+ * `hideIcon` defaults to `false`.
+ */
 function ChartLegend({
   className,
   hideIcon = false,

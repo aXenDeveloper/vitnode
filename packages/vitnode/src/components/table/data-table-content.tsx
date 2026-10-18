@@ -36,12 +36,14 @@ export type AlignDataTable = "center" | "left" | "right";
 
 interface ColumnDefBase<T extends DataTableTMin> {
   align?: AlignDataTable;
+  /** Renders the cell. Defaults to the `accessorKey` value. */
   cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
   className?: string;
   header: React.ReactNode;
 }
 
 interface AccessorColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
+  /** The row key the column shows, and sorts by when listed in `order.columns`. */
   accessorKey: keyof T;
   id?: string;
 }
@@ -51,46 +53,63 @@ interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
   id: string;
 }
 
+/** One column of a `ContentDataTable`: bound to a row key, or a display column with its own `id`. */
 export type ColumnDef<T extends DataTableTMin> =
   | AccessorColumnDef<T>
   | DisplayColumnDef<T>;
 
+/** What `ContentDataTable` accepts. */
 export type DataTableProps<T extends DataTableTMin> = Omit<
   React.ComponentProps<typeof Table>,
   "columns"
 > &
   React.ComponentProps<typeof PaginationDataTable> &
   React.ComponentProps<typeof SearchDataTable> & {
+    /** Adds a checkbox per row and shows these actions while rows are selected. */
     bulkActions?: React.ReactNode;
     columns?: ColumnDef<T>[];
+    /** Replaces the default empty state. */
     customNoResults?: {
       description?: string;
       footer?: React.ReactNode;
       icon?: React.ReactNode;
       title?: string;
     };
+    /** The rows of the current page. */
     edges: T[];
     expandable?: ExpandableDataTable<T>;
+    /** Faceted filters in the toolbar, kept in the URL. */
     filters?: FilterDataTable[];
     groupBy?: GroupByDataTable<T>;
+    /** A band above the table, e.g. a count or an action button. */
     header?: React.ReactNode;
     id: string;
     order: {
+      /** The columns a header click sorts by. */
       columns?: (keyof T)[];
+      /** The sort used while the URL names none. */
       defaultOrder: {
         column: keyof T;
         order: "asc" | "desc";
       };
     };
+    /** Renders each row as one full-width cell instead of `columns`. */
     renderRow?: (data: { allData: T[]; row: T }) => React.ReactNode;
+    /** Lets rows be dragged into a new order. */
     reorderable?: ReorderableDataTable<T>;
+    /**
+     * Makes a whole row clickable (and Enter/Space-activatable); clicks on
+     * controls inside it are ignored. Ignored when `bulkActions` is set.
+     */
     rowOpens?: (row: T) => void;
+    /** Shows a search box in the toolbar, kept in the URL. */
     search?: boolean;
   };
 
 const SKELETON_HEAD_WIDTHS = ["w-24", "w-16", "w-20", "w-14"];
 const SKELETON_CELL_WIDTHS = ["w-full", "w-3/4", "w-1/2", "w-5/6", "w-2/3"];
 
+/** A loading placeholder shaped like a `ContentDataTable`, for `Suspense` fallbacks. */
 export const DataTableSkeleton = ({
   columns,
   header = false,

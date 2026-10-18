@@ -14,6 +14,10 @@ const subscribeNever = () => () => {};
 const getIsHydrated = () => true;
 const getIsHydratedOnServer = () => false;
 
+/**
+ * The Tiptap rich-text editor, loaded lazily and only in the browser; a
+ * skeleton shows during SSR and while it loads.
+ */
 export const Editor = (props: TipTapEditorProps) => {
   const isHydrated = React.useSyncExternalStore(
     subscribeNever,

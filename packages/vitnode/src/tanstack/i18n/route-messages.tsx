@@ -8,11 +8,31 @@ import { useLocale } from "./locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "./query";
 import { getIntlRuntime } from "./runtime";
 
+/**
+ * Provides translations for a subtree: loads the given message namespaces for
+ * the current locale (suspending until they arrive) and mounts `use-intl`'s
+ * provider with them, so `useTranslations` works below it.
+ *
+ * Plugin pages get their declared `messages` automatically; reach for this in
+ * the app's own routes, layouts and components that render outside one - a
+ * breadcrumb crumb with its own strings, for example. Warm the same namespaces
+ * in the route's loader with `intlQueryOptions` to avoid a waterfall.
+ *
+ * @example
+ * ```tsx
+ * import { RouteMessages } from "@vitnode/core/tanstack/i18n";
+ *
+ * <RouteMessages namespaces={["core.global", "@vitnode/blog.post"]}>
+ *   <PostTitle />
+ * </RouteMessages>;
+ * ```
+ */
 export const RouteMessages = ({
   children,
   namespaces = [GLOBAL_NAMESPACE],
 }: {
   children: React.ReactNode;
+  /** Message namespaces to load, e.g. `@vitnode/blog.post`. Defaults to `core.global`. */
   namespaces?: readonly string[];
 }) => {
   const locale = useLocale();

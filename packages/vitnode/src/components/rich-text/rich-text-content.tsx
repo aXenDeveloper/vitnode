@@ -36,8 +36,11 @@ export type RichTextMarkRenderer = (
 
 export interface RichTextContentProps {
   className?: string;
+  /** The document to render. Nothing renders for `null` or `undefined`. */
   content: null | RichTextDocument | undefined;
+  /** Custom renderers by mark type (e.g. `link`), replacing the built-in element. */
   marks?: Readonly<Record<string, RichTextMarkRenderer>>;
+  /** Custom renderers by node type (e.g. `image`), receiving the rendered children. */
   nodes?: Readonly<Record<string, RichTextNodeRenderer>>;
 }
 
@@ -138,6 +141,12 @@ const renderNode = (
   );
 };
 
+/**
+ * Renders a stored rich-text document as React elements, without an editor
+ * and without `dangerouslySetInnerHTML`. Built-in nodes and marks map to
+ * sanitised HTML elements; unknown ones render only their children unless
+ * `nodes` or `marks` supplies a renderer. Universal - works in SSR.
+ */
 export const RichTextContent = ({
   className,
   content,

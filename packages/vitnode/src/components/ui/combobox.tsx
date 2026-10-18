@@ -15,6 +15,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
+/** Base UI's combobox root: a text input that filters a list of options. */
 const Combobox = ComboboxPrimitive.Root;
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
@@ -54,6 +55,11 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
   );
 }
 
+/**
+ * The combobox's text input inside an input group. `showTrigger` (default
+ * `true`) adds a button that opens the list; `showClear` (default `false`) adds
+ * a clear button, which takes the trigger's place while there is a value.
+ */
 function ComboboxInput({
   className,
   children,
@@ -89,6 +95,10 @@ function ComboboxInput({
   );
 }
 
+/**
+ * The popup holding the option list, rendered in a portal; opens below and
+ * aligned to the start of the input by default.
+ */
 function ComboboxContent({
   className,
   side = "bottom",
@@ -126,6 +136,7 @@ function ComboboxContent({
   );
 }
 
+/** The scrolling list of options. */
 function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
     <ComboboxPrimitive.List
@@ -139,6 +150,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   );
 }
 
+/** One option, with a check mark while selected. */
 function ComboboxItem({
   className,
   children,
@@ -194,6 +206,7 @@ function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
   );
 }
 
+/** Shown when no option matches the input. */
 function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   return (
     <ComboboxPrimitive.Empty

@@ -2,6 +2,9 @@ import type * as React from "react";
 
 import { cn } from "cn";
 
+/**
+ * A multi-line text input that grows with its content (`field-sizing: content`).
+ */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea

@@ -14,6 +14,7 @@ export type ContentTranslationRevisionOperation =
 
 export type ContentActorType = (typeof CONTENT_ACTOR_TYPES)[number];
 
+/** Who made a content write, as recorded on its revision. `userId` is `null` for system writes. */
 export interface ContentActor {
   type: ContentActorType;
   userId: null | number;
@@ -28,6 +29,12 @@ export type ContentSnapshotValue =
   | Record<string, ContentSnapshotScalar>[]
   | RichTextDocument;
 
+/**
+ * The state of a record's shared fields - to-many relations and repeatables
+ * included - after one editorial write, as stored in a revision. Values are JSON-safe (dates as ISO strings). A
+ * localized content type keeps its translations' history in
+ * {@link ContentTranslationRevisionSnapshot} instead.
+ */
 export interface ContentRevisionSnapshot {
   contentTypeId: string;
   createdAt: string;
@@ -42,6 +49,7 @@ export interface ContentRevisionSnapshot {
   visibility?: { hiddenAt: null | string; hiddenBy: null | number };
 }
 
+/** The state of one translation after one editorial write. */
 export interface ContentTranslationRevisionSnapshot {
   contentTypeId: string;
   createdAt: string;
@@ -103,6 +111,10 @@ const sameSnapshotValue = (
   return JSON.stringify(before) === JSON.stringify(after);
 };
 
+/**
+ * The fields among `names` whose value differs between two snapshots. With no
+ * `before` (the first revision), every named field is listed.
+ */
 export const contentRevisionDiff = (
   names: readonly string[],
   before: ContentRevisionSnapshot | null,

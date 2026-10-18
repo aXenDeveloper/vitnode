@@ -17,23 +17,45 @@ export const NAVIGATION_HREF_MAX_LENGTH = 2048;
 
 export type NavigationIcon = React.ComponentType<{ className?: string }>;
 
+/** One link in the site's header or mobile bottom bar. */
 export interface NavigationLinkConfig {
+  /**
+   * A message key (`site.menu.discover_description`) shown under the title in
+   * a header dropdown. Must be `namespace.name`.
+   */
   description?: string;
+  /** A path on this site (`/docs`) or an `https://` URL, at most 2048 characters. */
   href: string;
   icon?: NavigationIcon;
+  /** Opens the link in a new tab, with `rel="noopener noreferrer"`. */
   isOpenInNewTab?: boolean;
+  /** A message key (`site.menu.docs`), never text. Must be `namespace.name`. */
   title: string;
 }
 
+/** A header link, optionally with a dropdown. */
 export interface NavigationHeaderItemConfig extends NavigationLinkConfig {
+  /** Dropdown links. The parent opens the dropdown on hover and follows its own `href` on click, except a click on its chevron. */
   items?: NavigationLinkConfig[];
 }
 
+/**
+ * The site's own menus, the frontend config's `navigation`. Checked by
+ * `buildConfig`, which throws a {@link NavigationConfigError} on an invalid
+ * href or message key, more than 3 bottom-bar links, or keys spread over more
+ * namespaces than one request can load.
+ */
 export interface NavigationConfig {
+  /** Links in the site header, in order. */
   header?: NavigationHeaderItemConfig[];
+  /** Up to 3 links in the bottom bar on small screens. */
   mobileBottomBar?: NavigationLinkConfig[];
 }
 
+/**
+ * Thrown by `buildConfig` for an invalid `navigation`. Carries `hints` that
+ * the development error overlay shows next to the message.
+ */
 export class NavigationConfigError extends Error implements DevErrorWithHints {
   constructor(message: string, hints: readonly DevErrorHint[]) {
     super(`[VitNode navigation] ${message}`);

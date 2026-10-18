@@ -180,6 +180,10 @@ const toNullableDate = (value: unknown): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+/**
+ * Builds raw access to a localized type's translation rows. Plugins use the model's `translationService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentTranslationModel = <
   TDefinition extends AnyContentTypeDefinition,
 >({

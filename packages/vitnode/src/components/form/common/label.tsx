@@ -4,6 +4,10 @@ import { useTranslations } from "use-intl";
 import { FieldLabel } from "@/components/ui/field";
 import { useFormField } from "@/components/ui/form";
 
+/**
+ * A form field's label, linked to the field's control by id. Render it inside
+ * a form field, above the control, in a custom field component.
+ */
 export const AutoFormLabel = ({
   children,
   labelRight,
@@ -11,7 +15,9 @@ export const AutoFormLabel = ({
   isOptional,
   ...props
 }: React.ComponentProps<typeof FieldLabel> & {
+  /** Appends the translated "optional" hint after the label. */
   isOptional?: boolean;
+  /** Content pushed to the end of the label row, e.g. a language switcher. */
   labelRight?: React.ReactNode;
 }) => {
   const t = useTranslations("core.global");

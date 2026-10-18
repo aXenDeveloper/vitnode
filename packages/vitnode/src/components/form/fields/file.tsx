@@ -37,11 +37,19 @@ export type { AutoFormFileValue } from "./file-shared";
 export type { FileUploadOptions } from "./file-upload-queue";
 
 export interface AutoFormFileProps extends ItemAutoFormComponentProps {
+  /** Files with other extensions are rejected before upload. */
   allowedExtensions?: readonly string[];
+  /** Files with other MIME types are rejected before upload. */
   allowedMimeTypes?: readonly string[];
+  /** The stored file the field's initial id points at, so it can be shown. */
   file?: AutoFormFileValue | null;
   label?: React.ReactNode;
+  /** The largest accepted file, in bytes. */
   maxBytes: number;
+  /**
+   * Uploads a picked file and resolves with the stored file; its `id` becomes
+   * the field value. Report progress and honour `signal` to support cancel.
+   */
   onUpload: (
     file: File,
     options: FileUploadOptions,
@@ -169,6 +177,11 @@ const useFileUpload = ({
   };
 };
 
+/**
+ * A single-file upload for an `AutoForm` field that stores a file id (or
+ * `null` after removal). The file is uploaded as soon as it is picked, through
+ * `onUpload`; the form only ever holds the id.
+ */
 export const AutoFormFile = ({
   allowedExtensions,
   allowedMimeTypes,

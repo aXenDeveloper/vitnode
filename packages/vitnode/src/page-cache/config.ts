@@ -17,17 +17,25 @@ export const PAGE_CACHE_STORAGE_KINDS: readonly PageCacheStorageKind[] = [
   "redis",
 ];
 
+/**
+ * The app's server-rendered HTML cache, `vitNodeConfig.pageCache`. Checked by
+ * the VitNode Vite plugin and by `withPageCache`; an invalid value throws a
+ * `PageCachePolicyError`.
+ */
 export interface PageCacheConfig {
   /**
-   * Turns the HTML cache off for the whole app. On by default in production;
-   * development never caches, so an edit always shows up on reload.
+   * `false` turns the HTML cache off for the whole app. Defaults to `true`;
+   * development never caches either way, so an edit always shows up on reload.
    */
   enabled?: boolean;
   /**
    * Overrides keyed by canonical route path - `"/blog/:slug"` - for a plugin's
-   * route or one of the app's own. `false` turns caching off for that route.
+   * route or one of the app's own: a policy (`{ maxAge, staleWhileRevalidate }`
+   * in whole seconds) replaces the route's own, and `false` turns caching off
+   * for that route. A path that names no page route of the app is an error.
    */
   routes?: Readonly<Record<string, PageCacheSetting>>;
+  /** Where cached pages live. Defaults to `"memory"`. */
   storage?: PageCacheStorageKind;
 }
 

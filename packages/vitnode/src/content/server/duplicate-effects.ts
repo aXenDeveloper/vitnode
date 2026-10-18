@@ -22,6 +22,7 @@ import {
 } from "./search-sync";
 import { contentTranslationEffects } from "./translation-effects";
 
+/** The result of a duplicate, from the editorial or the plain write path. */
 export type ContentDuplicateEffectsInput =
   | {
       kind: "editorial";
@@ -37,6 +38,12 @@ export interface ContentDuplicateEffectsOptions {
   pluginId: string;
 }
 
+/**
+ * The follow-up to a committed duplicate: the copy's create effects (its
+ * `created` event, its search documents and one translation event per copied
+ * translation), then the `duplicated` event. Listener failures are logged, not
+ * thrown. Server-only.
+ */
 export const contentDuplicateEffects = async (
   c: Context,
   model: AnyContentModel,

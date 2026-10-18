@@ -4,6 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import * as React from "react";
 
+/** Stacks chat bubbles in a column. */
 function BubbleGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -41,6 +42,11 @@ const bubbleVariants = cva(
   },
 );
 
+/**
+ * A chat message bubble. `variant` is `default`, `secondary`, `muted`,
+ * `tinted`, `outline`, `ghost` or `destructive` (default `"default"`); `align`
+ * (`"start"` by default, or `"end"`) sets which side it sits on.
+ */
 function Bubble({
   variant = "default",
   align = "start",
@@ -61,6 +67,7 @@ function Bubble({
   );
 }
 
+/** The bubble's message body, rendered as a `div` (or your `render`). */
 function BubbleContent({
   className,
   render,
@@ -104,6 +111,10 @@ const bubbleReactionsVariants = cva(
   },
 );
 
+/**
+ * Reactions pinned to the bubble's edge. `side` defaults to `"bottom"` (or
+ * `"top"`), `align` to `"end"` (or `"start"`).
+ */
 function BubbleReactions({
   side = "bottom",
   align = "end",

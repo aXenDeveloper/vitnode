@@ -11,6 +11,7 @@ export interface RichTextMark {
   type: string;
 }
 
+/** One node of a rich-text document, in the TipTap/ProseMirror JSON shape. */
 export interface RichTextNode {
   attrs?: RichTextAttrs;
   content?: RichTextNode[];
@@ -19,14 +20,18 @@ export interface RichTextNode {
   type: string;
 }
 
+/** The value of a `field.richText()`: a TipTap/ProseMirror JSON document rooted at `doc`. */
 export interface RichTextDocument extends RichTextNode {
+  /** Always `"doc"`, the root node type. */
   type: "doc";
 }
 
 export const RICH_TEXT_MAX_DEPTH = 64;
 
+/** Default size limit of a serialised document, in bytes (1 MiB). */
 export const RICH_TEXT_DEFAULT_MAX_BYTES = 1024 * 1024;
 
+/** Upper bound any `maxBytes` may raise the limit to, in bytes (16 MiB). */
 export const RICH_TEXT_ABSOLUTE_MAX_BYTES = 16 * 1024 * 1024;
 
 const RICH_TEXT_TYPE_PATTERN = /^[A-Za-z][\w-]{0,63}$/;
@@ -74,6 +79,10 @@ const zodDocumentShape = z.strictObject({
 const utf8Length = (value: string): number =>
   new TextEncoder().encode(value).length;
 
+/**
+ * Checks a document's nesting depth and serialised UTF-8 size. Returns the
+ * first problem as a message, or `null` when it is within limits.
+ */
 export const richTextLimitIssue = (
   value: unknown,
   {
@@ -114,11 +123,19 @@ export const richTextLimitIssue = (
 };
 
 export interface RichTextSchemaOptions {
+  /** Largest serialised document accepted, in bytes. Defaults to 1 MiB. */
   maxBytes?: number;
+  /** Deepest nesting accepted. Defaults to 64. */
   maxDepth?: number;
+  /** Reject an empty document (see {@link isRichTextEmpty}). Defaults to `false`. */
   required?: boolean;
 }
 
+/**
+ * A Zod schema for a rich-text document: checks the node shape (any
+ * well-formed node or mark type name is accepted), the size and the depth,
+ * and with `required` also that the document is not empty.
+ */
 export const createRichTextDocumentSchema = ({
   maxBytes = RICH_TEXT_DEFAULT_MAX_BYTES,
   maxDepth = RICH_TEXT_MAX_DEPTH,
@@ -142,6 +159,7 @@ export const createRichTextDocumentSchema = ({
     : schema;
 };
 
+/** {@link createRichTextDocumentSchema} with the default limits. */
 export const zodRichTextDocument = createRichTextDocumentSchema();
 
 export const isRichTextDocument = (value: unknown): value is RichTextDocument =>
@@ -151,6 +169,7 @@ export const isRichTextDocument = (value: unknown): value is RichTextDocument =>
   "type" in value &&
   value.type === "doc";
 
+/** A new document holding one empty paragraph. */
 export const emptyRichTextDocument = (): RichTextDocument => ({
   content: [{ type: "paragraph" }],
   type: "doc",
@@ -176,6 +195,7 @@ const STRUCTURAL_TYPES: ReadonlySet<string> = new Set([
   "taskList",
 ]);
 
+/** Whether a document has no visible content: only empty structural nodes and whitespace. */
 export const isRichTextEmpty = (
   doc: null | RichTextNode | undefined,
 ): boolean => {

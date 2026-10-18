@@ -42,17 +42,36 @@ export type { AnyFormFieldApi, FormFieldApi } from "../ui/form";
 export { setFormFieldError } from "../ui/form";
 
 interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
+  /**
+   * Nested fields, rendered and passed to this field's component as
+   * `children` - e.g. extra inputs inside a group.
+   */
   children?: ItemAutoFormProps<T>[];
+  /** Hides the field while it returns `true`; re-evaluated on every change. */
   hidden?: (values: z.input<T>) => boolean;
+  /** The `value` of the {@link AutoFormTab} the field shows in. Defaults to the first tab. */
   tab?: string;
 }
 
+/**
+ * One entry of `AutoForm`'s `fields`. Either a field rendered by `component`,
+ * or - without a component - a heading with a `label` and `description`.
+ *
+ * Either way, `id` must name a key of `formSchema` (a dotted path for a nested
+ * object, e.g. `seo.title`); an id the schema does not have renders nothing.
+ */
 type ItemAutoFormProps<
   T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>,
 > = ItemAutoFormSharedProps<T> &
   (
     | {
+        /**
+         * Renders the field, usually one of the `AutoForm*` field components
+         * from `@vitnode/core/components/form/fields/*` with the props spread
+         * in and a `label` added.
+         */
         component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+        /** The schema key the field edits. */
         id: string;
       }
     | {
@@ -63,19 +82,35 @@ type ItemAutoFormProps<
       }
   );
 
+/** One tab of a tabbed `AutoForm`. Fields pick a tab with their `tab`. */
 export interface AutoFormTab {
   label: React.ReactNode;
   value: string;
 }
 
+/**
+ * What `AutoForm` passes to a field's `component`. Spread it into an
+ * `AutoForm*` field component, or build a custom field on `field`.
+ */
 export interface ItemAutoFormComponentProps {
+  /** The rendered nested fields declared in the item's `children`. */
   children?: React.ReactNode;
+  /**
+   * Help text under the field. `AutoForm` fills it from the schema's
+   * description (`.describe()`); a component may override it.
+   */
   description?: React.ReactNode;
+  /** The field's value and change/blur handlers, bound to the form. */
   field: AnyFormFieldApi;
+  /** Constraints of an array field's items, read from the schema. */
   itemParams?: InputParams;
+  /** Not filled by `AutoForm`; pass it to the field component yourself. */
   label?: React.ReactNode;
+  /** Content shown at the right end of the label row. */
   labelRight?: React.ReactNode;
+  /** Edit one value per enabled language. Supported by `AutoFormInput`, `AutoFormTextarea` and `AutoFormEditor`. */
   multiLang?: boolean;
+  /** Constraints read from the field's Zod schema, plus the field's `aria-invalid` state. */
   otherProps: {
     ["aria-invalid"]?: boolean;
     clearsToEmpty?: boolean;
@@ -95,6 +130,10 @@ type AutoFormValidator<T extends z.ZodObject<z.ZodRawShape>> = StandardSchemaV1<
   z.output<T>
 >;
 
+/**
+ * The TanStack Form instance behind an `AutoForm`, as its `onSubmit` receives
+ * it - for `form.reset()`, or {@link setFormFieldError} after an API error.
+ */
 export type AutoFormApi<T extends z.ZodObject<z.ZodRawShape>> = FormApi<
   z.input<T>,
   AutoFormValidator<T>,
@@ -131,6 +170,7 @@ const hiddenIdsOf = <T extends z.ZodObject<z.ZodRawShape>>(
     })
     .join("\n");
 
+/** Renders one field's `component` with its props. Used by `AutoForm` and `AutoFormArray`. */
 export const AutoFormFieldSlot = ({
   component,
   ...props
@@ -175,6 +215,13 @@ type SubmitButtonProps =
       : never
     : never;
 
+/**
+ * A submit button for an `AutoForm` with a custom `layout`, which renders no
+ * button of its own. Shows a spinner while the form submits.
+ *
+ * Several buttons with different `intent` values can share one form: the
+ * clicked button's intent reaches `onSubmit` as `options.intent`.
+ */
 export const AutoFormSubmitButton = ({
   children,
   className,
@@ -203,6 +250,14 @@ export const AutoFormSubmitButton = ({
   );
 };
 
+/**
+ * `AutoForm`'s submit handler. Runs only with values that passed the schema,
+ * already parsed (Zod output, so transforms and defaults are applied).
+ *
+ * `options.captchaToken` is a fresh token when the form has `captcha`, `""`
+ * otherwise; pass it to the fetcher's `captchaToken`. `options.intent` is the
+ * `value` of the submit button that was clicked, if any.
+ */
 export type AutoFormOnSubmit<T extends z.ZodObject<z.ZodRawShape>> = (
   values: z.infer<T>,
   form: AutoFormApi<T>,
@@ -303,6 +358,49 @@ const fieldOtherProps = ({
 
 const emptySubmitMeta: FormSubmitMeta = {};
 
+/**
+ * A form generated from a Zod object schema: validation, default values,
+ * required markers, length limits and error display all come from the schema,
+ * and `fields` only says which component renders each key. The form to use for
+ * any form in VitNode and its plugins.
+ *
+ * - Defaults come from the schema's `.default()` values.
+ * - The schema validates on mount, on change and on submit; `mode` only decides
+ *   when errors become visible. A failed submit reveals every error, switches
+ *   to the first tab with one, focuses it and shakes the invalid fields.
+ * - Inside a `Dialog` it renders a footer with Cancel and Submit, and the dialog
+ *   asks before closing with unsaved changes. Closing or reloading the tab with
+ *   unsaved changes asks too (browser `beforeunload`); in-app navigation is not
+ *   blocked.
+ * - With `layout`, no submit button is rendered: add `AutoFormSubmitButton`, or
+ *   `AutoFormSheetFooter` in a sheet.
+ *
+ * Browser-only interaction, but safe to render during SSR.
+ *
+ * @example
+ * ```tsx
+ * import { AutoForm } from "@vitnode/core/components/form/auto-form";
+ * import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
+ * import { z } from "zod";
+ *
+ * const formSchema = z.object({ title: z.string().min(3).max(100) });
+ *
+ * export const TitleForm = () => (
+ *   <AutoForm
+ *     fields={[
+ *       {
+ *         id: "title",
+ *         component: props => <AutoFormInput {...props} label="Title" />,
+ *       },
+ *     ]}
+ *     formSchema={formSchema}
+ *     onSubmit={async values => {
+ *       // values.title is a string of 3-100 characters
+ *     }}
+ *   />
+ * );
+ * ```
+ */
 export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   formSchema,
   mode,
@@ -316,14 +414,39 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   children,
   ...props
 }: Omit<React.ComponentProps<"form">, "onSubmit"> & {
+  /**
+   * Passed to TanStack Form. With `true` (the default) every submit re-runs
+   * the schema before deciding; with `false` a submit of a form already known
+   * to be invalid skips straight to revealing the errors. Invalid fields are
+   * revealed and focused either way, and `onSubmit` never runs with invalid
+   * values.
+   */
   canSubmitWhenInvalid?: boolean;
+  /**
+   * The app's captcha config, from the middleware API. When set, the built-in
+   * submit button stays disabled until the captcha loads and `onSubmit` gets a
+   * token.
+   */
   captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
+  /** Which component renders each schema key, in display order. */
   fields: ItemAutoFormProps<T>[];
+  /** Validates the values, and supplies defaults and field constraints. */
   formSchema: T;
+  /**
+   * Places the rendered fields yourself; receives them keyed by `id`. Replaces
+   * the tabs and the built-in submit button.
+   */
   layout?: (renderedFields: Record<string, React.ReactNode>) => React.ReactNode;
+  /**
+   * When a field's errors become visible: after blur (`onTouched`, `onBlur`),
+   * after the first change or blur (`onChange`, `all`) or only after a submit
+   * (`onSubmit`). Every error shows after a submit. Defaults to `onTouched`.
+   */
   mode?: FormMode;
   onSubmit?: AutoFormOnSubmit<T>;
+  /** Props of the built-in submit button; `children` replaces its label. */
   submitButtonProps?: SubmitButtonProps;
+  /** Splits the fields into tabs; a tab with an error is marked. */
   tabs?: AutoFormTab[];
 }) {
   const {

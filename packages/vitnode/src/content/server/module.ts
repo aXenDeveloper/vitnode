@@ -11,6 +11,14 @@ import {
 } from "./search-indexer";
 import { assertContentReferences } from "./table";
 
+/**
+ * The generated AdminCP module, named `content`. Prefer the plugin-bound
+ * version from `bindContentPlugin()`.
+ *
+ * Resolves every relation's foreign key while building, so a reference whose
+ * target column is missing or has the wrong key type fails at boot rather than
+ * at the first query.
+ */
 export const buildContentAdminModule = <P extends string>({
   containers = [],
   contentTypes,

@@ -41,23 +41,34 @@ const PROCESSABLE_IMAGE_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
+/** One object for a storage adapter to write. */
 export interface StorageUploadArgs {
+  /** The file's bytes, after any image processing. */
   body: Buffer;
+  /** The MIME type to store with the object, when known. */
   contentType?: string;
+  /** The full object key, e.g. `2026/07/avatars/{uuid}.webp`, already unique. */
   key: string;
 }
 
+/** What a storage adapter's `upload` returns. */
 export interface StorageUploadResult {
+  /** The key the object was stored under, normally the one it was given. */
   key: string;
+  /** The object's public URL, usually `getUrl(key)`. */
   url: string;
 }
 
+/** An uploaded file, as {@link StorageModel.upload} recorded it. */
 export interface StorageFileUploadResult extends StorageUploadResult {
+  /** Pixel size when `storage.image` processing read the image; `null` otherwise. */
   dimensions: null | { height: number; width: number };
+  /** The `core_files` row id - what content file fields reference. */
   id: number;
   mimeType: null | string;
   /** The display name as stored, which a format conversion may have changed. */
   name: string;
+  /** Bytes stored, after any image processing. */
   size: number;
 }
 
@@ -65,6 +76,7 @@ export type { StorageFileInUseBody } from "@/lib/files/in-use";
 export { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 
 export interface StorageDeleteFileOptions {
+  /** Also drop pins held by retained content revisions. A live reference still refuses. */
   force?: boolean;
   /** Scopes the delete to one user's own uploads. */
   ownerId?: number;
@@ -79,29 +91,46 @@ const storageFileInUse = (body: Omit<StorageFileInUseBody, "code">) =>
   });
 
 /**
- * Present only on disk-backed adapters (e.g. Local). The Node entry point reads
- * it to mount `serveStatic` for the stored files. Cloud adapters omit it.
+ * Present only on disk-backed adapters (e.g. Local). The app's server entry
+ * reads it to mount `serveStatic` for the stored files; core mounts nothing by
+ * itself. Cloud adapters omit it.
  */
 export interface StorageStaticConfig {
+  /** The route pattern to mount, relative to the API app, e.g. `/uploads/*`. */
   mountPath: string;
+  /** The folder the files are served from, e.g. `./public/uploads`. */
   root: string;
+  /** Removed from the request path before looking the file up in `root`. */
   stripPrefix: string;
 }
 
+/**
+ * What a storage adapter implements (e.g. `@vitnode/s3`,
+ * `@vitnode/supabase-storage`); set it as the API config's `storage.adapter`.
+ */
 export interface StorageApiPlugin {
+  /** Removes a stored object. Core also calls it to clean up an upload whose `core_files` row could not be written. */
   delete: (key: string) => Promise<void>;
+  /** The public URL of a stored object. */
   getUrl: (key: string) => string;
+  /**
+   * Reads an object's bytes, or `null` when missing. Optional: without it,
+   * reads fetch `getUrl`.
+   */
   read?: (
     key: string,
     options: { maxBytes: number },
   ) => Promise<null | Uint8Array>;
+  /** How to serve stored files from disk; only for disk-backed adapters. */
   static?: StorageStaticConfig;
+  /** Writes one object under `args.key` and returns its key and public URL. */
   upload: (args: StorageUploadArgs) => Promise<StorageUploadResult>;
 }
 
 export interface StorageUploadOptions {
   /** Allowed MIME types (e.g. `["image/png", "image/jpeg"]`). Omit to allow any. */
   allowedMimeTypes?: string[];
+  /** The uploaded file, e.g. from `c.req.valid("form")`. */
   file: File;
   /** Sub-folder under the dated prefix, e.g. `avatars` -> `2026/07/avatars/…`. */
   folder: string;
@@ -110,6 +139,7 @@ export interface StorageUploadOptions {
   /** Extra data stored in the `core_files.metadata` JSON column. */
   metadata?: Record<string, unknown>;
 
+  /** The owner recorded on the file. Defaults to the signed-in admin or user; `null` for none. */
   userId?: null | number;
 }
 
@@ -243,6 +273,13 @@ const imageEncodeFailure = ({
   });
 };
 
+/**
+ * Stores files through the configured storage adapter and records each one in
+ * `core_files`, read in a route as `c.get("storage")`.
+ *
+ * Every method except `deleteFile` throws `HTTPException(500)` when no
+ * storage adapter is configured.
+ */
 export class StorageModel {
   constructor(c: Context) {
     this.c = c;
@@ -374,6 +411,10 @@ export class StorageModel {
     return provider;
   }
 
+  /**
+   * Deletes the stored object only, leaving any `core_files` row. To remove an
+   * uploaded file, use {@link StorageModel.deleteFile}.
+   */
   async delete(key: string): Promise<void> {
     await this.requireProvider().delete(key);
   }
@@ -478,10 +519,12 @@ export class StorageModel {
     await releaseUserImageHolders(this.c, deleted.holders);
   }
 
+  /** The public URL of a stored object. */
   getUrl(key: string): string {
     return this.requireProvider().getUrl(key);
   }
 
+  /** An object's bytes, or `null` when it is missing, unreadable or larger than `maxBytes`. */
   async readBytes(key: string, maxBytes: number): Promise<Buffer | null> {
     const provider = this.requireProvider();
     if (provider.read) {
@@ -517,6 +560,20 @@ export class StorageModel {
     return Buffer.concat(chunks);
   }
 
+  /**
+   * Validates, stores and records one uploaded file, owned by the current
+   * plugin and user.
+   *
+   * When the API config sets `storage.image`, JPEG, PNG, WebP, AVIF and TIFF
+   * images are re-encoded at its quality and, by default, converted to WebP;
+   * the key and name follow any new extension. SVG, GIF and other files are
+   * stored as they are. An AI alt-text job is queued for images when that
+   * feature is on.
+   *
+   * @throws `HTTPException(400)` when the file is over `maxBytes`, not an
+   * allowed type, or an image that does not match its declared type, cannot be
+   * decoded or exceeds `storage.image.maxPixels`.
+   */
   async upload({
     allowedMimeTypes,
     file,

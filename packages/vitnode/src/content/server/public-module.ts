@@ -52,6 +52,14 @@ export type ContentPublicModule<
   )[]
 >;
 
+/**
+ * The generated public module, named `content`, with one sub-module per
+ * content type (or container) that has `publicApi`, at its `publicApi.path`.
+ * Prefer the plugin-bound version from `bindContentPlugin()`.
+ *
+ * The return type carries every generated route, which is what lets
+ * `fetcher({ module: "content/blog", path: "/{slug}" })` infer its response.
+ */
 export const buildContentPublicModule = <
   const P extends string,
   const Models extends readonly AnyContentModel[],

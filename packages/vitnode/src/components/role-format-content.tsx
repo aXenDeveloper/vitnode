@@ -8,6 +8,11 @@ import type { RoleNameEntry } from "./role-name";
 import { resolveRoleName } from "./role-name";
 import { EmojiIcon } from "./ui/emoji-icon";
 
+/**
+ * A role's name in the current language (else its first name, else its id),
+ * in the role's color, after its emoji or icon prefix. Extra props go to the
+ * outer `<span>`.
+ */
 export const RoleFormatContent = ({
   className,
   role,

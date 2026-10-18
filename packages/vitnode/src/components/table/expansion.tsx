@@ -11,12 +11,20 @@ import { MotionFeatures } from "../motion-features";
 import { Button } from "../ui/button";
 import { TableCell, TableRow } from "../ui/table";
 
+/**
+ * Expandable rows: each row gets a toggle that opens a full-width panel below
+ * it. Rows that leave the page are collapsed.
+ */
 export interface ExpandableDataTable<T> {
+  /** Whether a row gets a toggle. Defaults to every row. */
   canExpand?: (row: T) => boolean;
+  /** Row ids open on first render. */
   defaultExpanded?: DataTableRowId[];
+  /** The panel's content, rendered only while the row is open. */
   render: (row: T) => React.ReactNode;
 }
 
+/** Which rows are open. Ids no longer on the page are dropped when it changes. */
 export const useRowExpansionDataTable = ({
   defaultExpanded,
   rowIds,
@@ -56,12 +64,14 @@ export const useRowExpansionDataTable = ({
   return { isExpanded, toggle };
 };
 
+/** The toggle column's header: a screen-reader-only label. */
 export function ExpandHeaderDataTable() {
   const t = useTranslations("core.global.data_table");
 
   return <span className="sr-only">{t("row_details")}</span>;
 }
 
+/** A row's open/close button, linked to its panel through `aria-controls`. */
 export function ExpandToggleDataTable({
   controls,
   expanded,
@@ -94,6 +104,7 @@ export function ExpandToggleDataTable({
   );
 }
 
+/** The full-width row holding an open panel; `id` is what the toggle controls. */
 export function ExpandedRowDataTable({
   children,
   colSpan,

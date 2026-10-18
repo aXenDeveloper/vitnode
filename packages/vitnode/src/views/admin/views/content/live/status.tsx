@@ -93,6 +93,12 @@ const AutosavedDraft = ({ savedAt }: { savedAt: null | string }) => {
   );
 };
 
+/**
+ * The live session's save state - saving, failed, an autosaved draft with a
+ * Discard button, or when it was last saved - as a `role="status"` line.
+ * Renders nothing outside a live editing session or before anything changes.
+ * Place it in a custom content form layout's header.
+ */
 export const ContentLiveStatus = ({ className }: { className?: string }) => {
   const t = useTranslations("core.content.live.status");
   const live = useContentLive();

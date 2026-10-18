@@ -90,6 +90,10 @@ export const contentPlainWriteEffects = async <
   });
 };
 
+/**
+ * Runs {@link contentEditorialEffects} for each outcome in order, skipping
+ * `null`s - for a write that produced several editorial outcomes.
+ */
 export const contentEditorialWriteEffects = async <
   TDefinition extends AnyContentTypeDefinition,
 >(

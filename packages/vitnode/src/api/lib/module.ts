@@ -17,6 +17,7 @@ export interface BuildModuleType<T extends Route, Plugin extends string> {
   routes: T;
 }
 
+/** A built module, as a parent module or `buildApiPlugin` receives it. */
 export interface BaseBuildModuleReturn<
   P extends string = string,
   M extends string = string,
@@ -49,27 +50,67 @@ export interface BuildModuleReturn<
   modules?: Modules;
 }
 
+/** What `buildModule` accepts. */
 export interface BuildModuleOptions<
   P extends string,
   M extends string,
   Routes extends Route<P>[],
   Modules extends BaseBuildModuleReturn<P>[],
 > {
+  /** Content containers this module registers. Collected from any depth. */
   contentContainers?: AnyContentContainerDefinition[];
+  /** Content models this module registers. Collected from any depth. */
   contentModels?: AnyContentModel[];
+  /** Content types this module registers. Collected from any depth. */
   contentTypes?: AnyContentTypeDefinition[];
+  /** Scheduled jobs. Only read from a plugin's top-level modules. */
   cronJobs?: BuildCronReturn[];
+  /** Event listeners. Only read from a plugin's top-level modules. */
   events?: BuildEventListenerReturn[];
+  /** Child modules, each mounted at `/{child.name}` below this one. */
   modules?: Modules;
+  /**
+   * The path segment the module is mounted at, and its part of the fetcher's
+   * `module` path (`admin/ai` for an `ai` module inside `admin`).
+   */
   name: M;
+  /** Notification types this module registers. Collected from any depth. */
   notificationTypes?: AnyNotificationTypeDefinition[];
+  /**
+   * Content types handed to this module's public API; the plugin keeps those
+   * that declare public URLs. Collected from any depth.
+   */
   publicContentTypes?: AnyContentTypeDefinition[];
+  /** Background queue tasks. Only read from a plugin's top-level modules. */
   queueTasks?: BuildQueueTaskReturn[];
+  /** Routes built with the plugin's bound `buildRoute`. Pass `[]` for a module with only children. */
   routes: Routes;
+  /** Search indexers this module registers. Collected from any depth. */
   searchIndexers?: SearchIndexer[];
+  /** WebSocket endpoints. Only read from a plugin's top-level modules. */
   webSockets?: BuildWebSocketReturn[];
 }
 
+/**
+ * Groups routes, child modules and what they register into one Hono
+ * sub-application. Plugins call the bound version from `bindApiPlugin`, which
+ * supplies `pluginId`.
+ *
+ * Mind the depth: content types, models, containers, notification types and
+ * search indexers are collected from the whole module tree, but cron jobs,
+ * events, queue tasks and WebSockets only from the modules passed to
+ * `buildApiPlugin` directly - declared on a nested module, they never run.
+ *
+ * @example
+ * ```ts
+ * import { buildModule } from "@/api/builders";
+ *
+ * export const postsModule = buildModule({
+ *   name: "posts",
+ *   routes: [listPostsRoute, showPostRoute],
+ * });
+ * ```
+ */
 export function buildModule<
   const P extends string,
   const M extends string,

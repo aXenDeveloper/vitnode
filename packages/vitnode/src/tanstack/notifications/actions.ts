@@ -22,6 +22,13 @@ import {
   patchCachedNotification,
 } from "./cache";
 
+/**
+ * Notification actions for a signed-in user - `archive`, `markAllRead`,
+ * `toggleRead` and `open` (marks it read if unread and, unless opened in a new
+ * tab, goes to its target). Each updates the
+ * cached lists optimistically; on failure it shows an error toast and
+ * refetches the real state.
+ */
 export const useNotificationActions = (userId: number) => {
   const queryClient = useQueryClient();
   const router = useRouter();

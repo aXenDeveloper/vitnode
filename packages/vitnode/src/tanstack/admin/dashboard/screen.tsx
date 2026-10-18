@@ -3,12 +3,13 @@ import { AlertTriangleIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { AdminDashboardWidget } from "@/lib/plugin";
+import type { AdminNavDashboardWidgets } from "@/views/admin/layouts/sidebar/nav/nav-model";
 import type { DashboardWidgetTranslator } from "@/views/admin/views/core/dashboard/widgets/resolve-widgets";
 
 import { Badge } from "@/components/ui/badge";
 import { PageTitle } from "@/components/ui/page-title";
 import { CONFIG } from "@/lib/config";
+import { fitNamespaceList } from "@/routing";
 import { DashboardBoardProvider } from "@/views/admin/views/core/dashboard/grid/board-provider";
 import { DashboardGrid } from "@/views/admin/views/core/dashboard/grid/dashboard-grid";
 import { DashboardEditActions } from "@/views/admin/views/core/dashboard/grid/edit-actions";
@@ -22,33 +23,59 @@ import type { AdminDashboardRouteData } from "./route";
 
 import { RouteMessages } from "../../i18n/route-messages";
 import { useAdminIdentity } from "../identity";
+import { useAdminDashboardPluginWidgets } from "../nav";
 import { useAdminPermissions } from "../permissions";
 import { dashboardLayoutQuery, useDashboardActions } from "./query";
 import { ADMIN_DASHBOARD_NAMESPACES } from "./route";
 import { coreDashboardBrowserWidgets } from "./widgets";
 
-export interface DashboardPluginWidgets {
-  pluginId: string;
-  widgets: AdminDashboardWidget[];
-}
+/** One plugin's dashboard widgets, keyed by the plugin that declared them. */
+export type DashboardPluginWidgets = AdminNavDashboardWidgets;
 
 export interface AdminDashboardRouteProps extends AdminDashboardRouteData {
+  /**
+   * Plugin widgets to offer next to core's. Defaults to the ones the AdminCP
+   * shell was given: each plugin's `adminNav.admin.dashboard.widgets`, from
+   * the app's generated `admin-nav.gen.ts`.
+   */
   pluginWidgets?: DashboardPluginWidgets[];
 }
 
+/**
+ * The AdminCP dashboard screen: the admin's widget board, saved per admin,
+ * with core's widgets plus the plugins'. Widgets the admin lacks the
+ * permission for are left out. Loads each widget plugin's `title` and
+ * `admin.dashboard.widgets` messages on top of the dashboard's own.
+ */
 export const AdminDashboardRouteContent = ({
-  pluginWidgets = [],
+  pluginWidgets,
   vitnodeVersion,
-}: AdminDashboardRouteProps) => (
-  <RouteMessages namespaces={ADMIN_DASHBOARD_NAMESPACES}>
-    <div className="p-6">
-      <AdminDashboardBoard
-        pluginWidgets={pluginWidgets}
-        vitnodeVersion={vitnodeVersion}
-      />
-    </div>
-  </RouteMessages>
-);
+}: AdminDashboardRouteProps) => {
+  const shellWidgets = useAdminDashboardPluginWidgets();
+  const widgets = pluginWidgets ?? shellWidgets;
+  const namespaces = React.useMemo(
+    () =>
+      fitNamespaceList([
+        ...ADMIN_DASHBOARD_NAMESPACES,
+        ...widgets.flatMap(({ pluginId }) => [
+          `${pluginId}.title`,
+          `${pluginId}.admin.dashboard.widgets`,
+        ]),
+      ]),
+    [widgets],
+  );
+
+  return (
+    <RouteMessages namespaces={namespaces}>
+      <div className="p-6">
+        <AdminDashboardBoard
+          pluginWidgets={widgets}
+          vitnodeVersion={vitnodeVersion}
+        />
+      </div>
+    </RouteMessages>
+  );
+};
 
 const AdminDashboardBoard = ({
   pluginWidgets,

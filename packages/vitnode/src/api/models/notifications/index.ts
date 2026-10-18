@@ -17,6 +17,7 @@ import { publishNotification } from "./publish";
 
 export type { PublishNotificationArgs, PublishNotificationResult };
 
+/** Server-side notifications API, available as `c.get("notifications")` in API handlers. */
 export class NotificationsModel {
   constructor(c: NotificationsContext) {
     this.c = c;
@@ -41,6 +42,29 @@ export class NotificationsModel {
     );
   }
 
+  /**
+   * Stores a notification event and queues delivery to its recipients. With
+   * recipients, delivery also starts once the handler returns, without
+   * delaying the response; the queue worker covers anything that does not
+   * finish then. Invalid recipient ids (and the actor, unless `allowSelf`) are
+   * dropped silently.
+   *
+   * @throws NotificationPublishError When the type is not registered or passed
+   * as a definition other than the registered one, `data` fails the schema,
+   * the idempotency key or subject is invalid, there are more than 100000
+   * recipients, or the same event is being published concurrently.
+   *
+   * @example
+   * ```ts
+   * await c.get("notifications").publish({
+   *   type: topicReplyNotification,
+   *   data: { topicId: topic.id, topicTitle: topic.title },
+   *   recipients: watcherIds,
+   *   subject: { type: "forum.topic", id: topic.id },
+   *   idempotencyKey: `reply:${reply.id}`,
+   * });
+   * ```
+   */
   async publish<TData>(
     args: PublishNotificationArgs<TData>,
   ): Promise<PublishNotificationResult> {
@@ -49,6 +73,12 @@ export class NotificationsModel {
     );
   }
 
+  /**
+   * Deletes inbox items about `subject` (optionally only one `type` or some
+   * `userIds`) and lowers unread counts in the same transaction.
+   *
+   * @returns How many items were deleted.
+   */
   async remove({
     subject,
     type,

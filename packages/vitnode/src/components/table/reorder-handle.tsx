@@ -9,12 +9,14 @@ export const SortableRowHandleContext =
 export const ROW_GROUP_CLASS =
   "[&:last-child>tr:last-child]:border-0 [&:last-child>tr:last-child>td]:border-b-0 [&>tr>td]:border-b";
 
+/** The handle column's header: a screen-reader-only label. */
 export function ReorderHeaderDataTable() {
   const t = useTranslations("core.global.data_table");
 
   return <span className="sr-only">{t("reorder_column")}</span>;
 }
 
+/** The current row's drag handle, from the nearest `SortableRowGroupDataTable`. */
 export function ReorderHandleDataTable() {
   return <>{React.use(SortableRowHandleContext)}</>;
 }

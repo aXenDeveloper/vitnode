@@ -148,6 +148,13 @@ export const adminRoleOptionsFrom = (
     .filter(role => !role.guest)
     .map(({ color, id, name, prefix }) => ({ color, id, name, prefix }));
 
+/**
+ * Searches roles for a role picker, from the browser with the admin's
+ * session (`admin/roles/list`). Leaves out the guest role. Resolves with the
+ * first 20 matches, or `[]` - never throws: an error response resolves with
+ * `[]`, and a thrown error (e.g. network) is also logged to the console.
+ * Browser-only.
+ */
 export const searchAdminRolesInBrowser: AdminRoleSearch = async search => {
   try {
     const response = await fetcherClient({

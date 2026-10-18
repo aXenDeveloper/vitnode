@@ -54,6 +54,13 @@ const subscribe = (onChange: () => void) => {
 
 const getServerSnapshot = () => null;
 
+/**
+ * State persisted as JSON in `localStorage` and kept in sync across hooks and
+ * tabs. Falls back to in-memory storage when `localStorage` is unavailable,
+ * and renders `defaultValue` on the server.
+ *
+ * @returns `[value, setValue, removeValue]`.
+ */
 export function useLocalStorage<T>(
   key: string,
   defaultValue: T,

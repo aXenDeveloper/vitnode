@@ -30,6 +30,12 @@ const quoted = (values: readonly string[]): string =>
 const isStringArray = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every(entry => typeof entry === "string");
 
+/**
+ * Checks an editable page id: `plugin:page` - two or more `:`-separated
+ * lowercase segments, e.g. `"example:settings"`.
+ *
+ * @throws A `ContentEngineError` for anything else.
+ */
 export const assertEditablePageId = (pageId: unknown): string => {
   if (
     typeof pageId !== "string" ||
@@ -273,6 +279,11 @@ const readZone = (
   return { allowed, default: shipped, max, min, zoneId };
 };
 
+/**
+ * One declared zone of a page.
+ *
+ * @throws A `ContentEngineError` when the page does not declare `zoneId`.
+ */
 export const editablePageZone = (
   page: AnyEditablePageDefinition,
   zoneId: string,
@@ -291,9 +302,36 @@ export const editablePageZone = (
   return found;
 };
 
+/**
+ * Declares a page whose block zones moderators arrange in the visual editor,
+ * while the rest of the page stays application code. Universal: use the same
+ * definition in the page component and in the API plugin's `editablePages`,
+ * which registers it for storage and permission checks.
+ *
+ * @throws A `ContentEngineError` at import time for an invalid id or
+ * permission, no zones, an invalid zone id, or a zone whose limits or
+ * `default` contradict each other.
+ *
+ * @example
+ * ```ts
+ * import { defineEditablePage } from "@vitnode/core/content/editor";
+ *
+ * export const settingsPage = defineEditablePage({
+ *   id: "example:settings",
+ *   permission: { module: "widgets", permission: "can_edit" },
+ *   zones: {
+ *     header: { max: 10 },
+ *     footer: { allowed: ["core:text"], max: 10 },
+ *   },
+ * });
+ * ```
+ */
 export const defineEditablePage = <const TZoneId extends string>(args: {
+  /** Stable `plugin:page` id. Stored layouts are keyed by it, so never change it. */
   id: string;
+  /** The moderator permission required to open the editor. */
   permission: EditablePagePermission;
+  /** At least one zone, keyed by zone id. */
   zones: Record<TZoneId, EditablePageZoneInput>;
 }): EditablePageDefinition<TZoneId> => {
   const pageId = assertEditablePageId(args.id);

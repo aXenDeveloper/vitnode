@@ -19,6 +19,7 @@ export type AiPrompt =
   | { prompt: string; system?: string };
 
 export interface AiPromptContext {
+  /** Extra guidance an admin set for this action in the AdminCP, or `null`. Append it to the system prompt. */
   instructions: null | string;
 }
 
@@ -29,18 +30,27 @@ export interface AiAuthorizeContext<Input> {
   userId: number;
 }
 
+/** The AI permission admins grant per role. Actions sharing a key share one switch and one daily counter. */
 export interface AiPermissionDescriptor {
+  /** Whether roles hold it until an admin changes it. */
   defaultGranted: boolean;
   key: string;
 }
 
+/** Per-action limits; admins can change them in the AdminCP. Ranges are in {@link AI_ACTION_LIMITS}. */
 export interface AiActionDefaults {
+  /** Runs per user per day for the action's permission; `null` (default) for no limit. */
   dailyLimit: null | number;
+  /** Images per run. Defaults to 1 with the `image-input` capability, else 0. */
   maxImages: number;
+  /** Input size, counted by `measureInput` or every string in the input. */
   maxInputCharacters: number;
   maxOutputTokens: number;
+  /** Provider retries. Defaults to 0. */
   maxRetries: number;
+  /** Tool-loop steps. Defaults to 1. */
   maxSteps: number;
+  /** Provider timeout in milliseconds. */
   timeoutMs: number;
 }
 
@@ -54,25 +64,46 @@ interface AiActionDefinitionBase<
   InputSchema extends z.ZodType,
   OutputSchema extends z.ZodType,
 > {
+  /**
+   * Who may run it: `user` through `c.get("ai").run()`, `system` through
+   * `runAsSystem()`. Defaults to `["user"]`.
+   */
   actors?: readonly AiActorType[];
+  /**
+   * Checks the caller may read the content the input refers to - the AI
+   * permission never replaces that. Required when `actors` includes `user`.
+   */
   authorize?(
     context: AiAuthorizeContext<z.output<InputSchema>>,
   ): boolean | Promise<boolean>;
+  /** Builds the prompt from the validated input. */
   buildPrompt(input: z.output<InputSchema>, context: AiPromptContext): AiPrompt;
   defaults: Partial<AiActionDefaults> &
     Pick<
       AiActionDefaults,
       "maxInputCharacters" | "maxOutputTokens" | "timeoutMs"
     >;
+  /** Message key of one sentence on what the action does. */
   description: string;
+  /** Lucide icon name in kebab case, e.g. `"languages"`. */
   icon?: string;
+  /**
+   * Lowercase, dot-separated id local to the plugin, e.g. `"excerpt.generate"`.
+   * Core stores it as `<pluginId>:<id>`.
+   */
   id: Id;
   inputSchema: InputSchema;
+  /** Characters counted against `maxInputCharacters`; by default every string in the input. */
   measureInput?(input: z.output<InputSchema>): number;
+  /** Validates the model's answer. */
   outputSchema: OutputSchema;
+  /** A permission key (not granted by default) or a full descriptor. */
   permission: AiPermissionDescriptor | string;
+  /** Whole number of 1 or more, stored with every run. Bump it when the prompt changes meaningfully. */
   promptVersion: number;
+  /** Model capabilities the action needs: at least one (normally `"text"`), plus `"structured-output"` for `output: "object"`. */
   requiredCapabilities: readonly AiModelCapability[];
+  /** Message key of a short name for the AdminCP and member settings. */
   title: string;
 }
 
@@ -82,6 +113,7 @@ export interface AiTextActionDefinition<
   OutputSchema extends z.ZodType,
 > extends AiActionDefinitionBase<Id, InputSchema, OutputSchema> {
   output: "text";
+  /** Turns the model's text into the value checked by `outputSchema`. */
   parseText(text: string, input: z.output<InputSchema>): z.input<OutputSchema>;
 }
 
@@ -95,6 +127,7 @@ export interface AiObjectActionDefinition<
 
 /* oxlint-enable typescript/method-signature-style */
 
+/** What a plugin passes to {@link defineAiAction}: a text action or a structured-object action. */
 export type AiActionDefinition<
   Id extends string = string,
   InputSchema extends z.ZodType = z.ZodType,
@@ -103,6 +136,7 @@ export type AiActionDefinition<
   | AiObjectActionDefinition<Id, InputSchema, OutputSchema>
   | AiTextActionDefinition<Id, InputSchema, OutputSchema>;
 
+/** An action after {@link defineAiAction} filled in `actors`, `defaults` and `permission`. */
 export type ResolvedAiActionDefinition<
   Id extends string = string,
   InputSchema extends z.ZodType = z.ZodType,
@@ -125,6 +159,7 @@ export type ResolvedAiActionDefinition<
 
 export type AnyAiActionDefinition = ResolvedAiActionDefinition;
 
+/** Thrown by {@link defineAiAction} when the module loads with an invalid definition. */
 export class AiActionDefinitionError extends Error {
   constructor(message: string) {
     super(message);
@@ -132,6 +167,7 @@ export class AiActionDefinitionError extends Error {
   }
 }
 
+/** Allowed range of each {@link AiActionDefaults} value. */
 export const AI_ACTION_LIMITS = {
   maxInputCharacters: { max: 1_000_000, min: 1 },
   maxOutputTokens: { max: 200_000, min: 1 },
@@ -162,6 +198,49 @@ const assertInRange = (
   }
 };
 
+/**
+ * Declares a managed AI feature. Register it in `buildApiPlugin({ aiActions })`
+ * and run it with `c.get("ai").run()`; core picks the model and enforces
+ * permissions, limits and budgets, and records every run.
+ *
+ * @throws {AiActionDefinitionError} For an invalid id, icon, permission key or
+ * `promptVersion`, an empty title or description, missing or unsupported
+ * capabilities, a default outside {@link AI_ACTION_LIMITS}, no actors, or a
+ * `user` action without `authorize`.
+ *
+ * @example
+ * ```ts
+ * import { defineAiAction } from "@vitnode/core/api/lib/ai/action";
+ * import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+ * import { z } from "zod";
+ *
+ * export const summarizeAiAction = defineAiAction({
+ *   id: "topic.summarize",
+ *   title: "ai_actions.@acme/forum.topic_summarize.title",
+ *   description: "ai_actions.@acme/forum.topic_summarize.description",
+ *   promptVersion: 1,
+ *   permission: "summarize",
+ *   requiredCapabilities: ["text"],
+ *   defaults: { maxInputCharacters: 50_000, maxOutputTokens: 300, timeoutMs: 30_000 },
+ *   inputSchema: z.object({ content: z.string().min(1) }),
+ *   output: "text",
+ *   outputSchema: z.string().min(1),
+ *   parseText: text => text.trim(),
+ *   buildPrompt: (input, { instructions }) => ({
+ *     system: ["Summarize in two sentences.", instructions].filter(Boolean).join("\n"),
+ *     prompt: input.content,
+ *   }),
+ *   // The AI permission never replaces access to the content itself.
+ *   authorize: async ({ c }) =>
+ *     await checkStaffPermission(c, {
+ *       type: "admin",
+ *       plugin: "@acme/forum",
+ *       module: "topics",
+ *       permission: "can_view",
+ *     }),
+ * });
+ * ```
+ */
 export function defineAiAction<
   const Id extends string,
   InputSchema extends z.ZodType,

@@ -9,11 +9,29 @@ import type {
 
 import { CONFIG } from "@/lib/config";
 
+/**
+ * Stores uploads on the API server's disk, under `public/uploads` in the
+ * process's working directory. For development and single-server installs; use
+ * a cloud adapter when the API runs on more than one machine or on an
+ * ephemeral filesystem.
+ *
+ * Files are served only once the app mounts `serveStatic` from the adapter's
+ * `static` descriptor in its server entry. Server-only.
+ *
+ * @example
+ * ```ts
+ * import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
+ *
+ * buildApiConfig({ storage: { adapter: LocalStorageAdapter() } });
+ * ```
+ */
 export const LocalStorageAdapter = ({
   baseUrl,
   publicPath = "/api/uploads",
 }: {
+  /** The origin public URLs start with. Defaults to the origin of `VITNODE_API_URL` (`http://localhost:3000` when unset). */
   baseUrl?: string;
+  /** The URL path files are served under. Defaults to `/api/uploads`. */
   publicPath?: string;
 } = {}): StorageApiPlugin => {
   // Static path segments (not a variable) so Next's file tracer can scope the

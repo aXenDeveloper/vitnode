@@ -2,6 +2,11 @@ import type { Context } from "hono";
 
 import type { ContentActor } from "../revisions";
 
+/**
+ * Who a Content Engine write is attributed to (in revisions, and the
+ * `actorUserId` of hide/unhide events): the
+ * AdminCP admin as `staff`, else the signed-in user as `api`, else `system`.
+ */
 export const resolveContentActor = (c: Context): ContentActor => {
   const admin = c.get("admin") as null | { user?: { id?: unknown } };
   const adminId = admin?.user?.id;

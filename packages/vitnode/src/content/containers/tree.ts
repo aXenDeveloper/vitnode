@@ -10,6 +10,7 @@ export interface ContentContainerTreeRow {
   position: number;
 }
 
+/** A row from {@link contentContainerTree}, with its nested `children`. */
 export type ContentContainerTreeNode<TRow> = TRow & {
   children: ContentContainerTreeNode<TRow>[];
 };
@@ -81,6 +82,11 @@ export const orderContentContainers = <TRow extends ContentContainerTreeRow>(
   return ordered;
 };
 
+/**
+ * Nests a flat list of rows with `id` and `parentId` into a tree, keeping the
+ * input order among siblings. A row whose parent is missing from the list
+ * becomes a root. Universal.
+ */
 export const contentContainerTree = <
   TRow extends { id: number; parentId: null | number },
 >(

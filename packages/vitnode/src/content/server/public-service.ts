@@ -47,10 +47,15 @@ import {
 export { nestContentPublicRow } from "./public-row-hydration";
 
 export interface ContentPublicReadOptions {
+  /** Language to read, on a localized content type. Defaults to `localization.defaultLocale`. */
   locale?: string;
 }
 
 export interface ContentPublicItemReadOptions extends ContentPublicReadOptions {
+  /**
+   * Read a published record a moderator has *hidden*, instead of a visible
+   * one. Defaults to `false`.
+   */
   hidden?: boolean;
   /**
    * Only these exposed fields, and no `publicApi.people` - for an internal
@@ -62,6 +67,11 @@ export interface ContentPublicItemReadOptions extends ContentPublicReadOptions {
 }
 
 export interface ContentPublicSlugReadOptions extends ContentPublicItemReadOptions {
+  /**
+   * On a localized content type with `fallback: "default"`, also match the
+   * slug of the default-language translation when the requested language has
+   * none.
+   */
   fallback?: boolean;
 }
 
@@ -84,6 +94,15 @@ export interface ContentPublicFindManyArgs<
   };
 }
 
+/**
+ * Public reads of one content type, from `model.publicService(c)`.
+ * Server-only.
+ *
+ * Every read returns the {@link ContentPublicSelect} projection - only the
+ * `publicApi.fields` allowlist ever leaves the database - and only records that
+ * are published, with `publishedAt` in the past, and not hidden (unless
+ * `hidden: true` asks for hidden ones).
+ */
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
   findById: (
@@ -91,10 +110,12 @@ export interface ContentPublicService<TDefinition> {
     options?: ContentPublicItemReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
 
+  /** The published record answering to `slug`, or `null`. */
   findBySlug: (
     slug: string,
     options?: ContentPublicSlugReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
+  /** One page of published records, filtered and ordered within the public allowlists. */
   findMany: (args?: ContentPublicFindManyArgs<TDefinition>) => Promise<{
     edges: ContentPublicListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
@@ -148,6 +169,15 @@ export const contentPublicSelectProjection = (
   };
 };
 
+/**
+ * The function that turns a selected row into a content type's public shape:
+ * only the fields and people `projection` names (by default every
+ * `publicApi.fields` and `publicApi.people` entry; to-one relations as `{ id }`,
+ * to-many as ids, people as hydrated summaries), never other columns. Resolve
+ * files before projecting.
+ *
+ * @throws {ContentEngineError} When the content type has no `publicApi`.
+ */
 export const createContentPublicProjector = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -255,6 +285,10 @@ const pick = (
 ): Record<string, unknown> =>
   Object.fromEntries(keys.map(key => [key, values[key] ?? null]));
 
+/**
+ * The columns a public read selects: `id`, the `publicApi.people` user ids
+ * (later swapped for public summaries) and the exposed field columns.
+ */
 export const contentPublicSelection = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
@@ -321,6 +355,10 @@ export const clampContentPublicPageSize = (
   return String(Math.min(parsed, CONTENT_PUBLIC_MAX_PAGE_SIZE));
 };
 
+/**
+ * Builds the public read service of a non-localized content type. Plugins use the model's `publicService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentPublicService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

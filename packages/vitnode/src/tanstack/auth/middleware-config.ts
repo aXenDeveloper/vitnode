@@ -10,10 +10,15 @@ import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 
+/** The deployment's public configuration: enabled sign-in methods, SSO providers, email and AI availability, and the captcha provider. */
 export type MiddlewareConfig = z.infer<typeof routeMiddlewareSchema>;
 
 export interface MiddlewareConfigState extends MiddlewareConfig {
   isDeferred: boolean;
+  /**
+   * `false` when the API could not be read; the other fields then hold safe
+   * defaults (password sign-in only) and the query refetches on the next mount.
+   */
   isKnown: boolean;
 }
 
@@ -61,6 +66,11 @@ const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
 /** Everything a middleware-configuration cache entry's key starts with. */
 const MIDDLEWARE_QUERY_KEY = ["vitnode", "middleware"] as const;
 
+/**
+ * The deployment configuration as a TanStack Query. A successful answer is
+ * cached for the life of the page; a failed one resolves to defaults with
+ * `isKnown: false` (it never rejects) and is retried on the next mount.
+ */
 export const middlewareConfigQueryOptions = () =>
   queryOptions({
     gcTime: Infinity,
@@ -70,6 +80,7 @@ export const middlewareConfigQueryOptions = () =>
     staleTime: query => (query.state.data?.isKnown ? Infinity : 0),
   });
 
+/** Loads the deployment configuration in a route loader, reusing a known answer. */
 export const loadMiddlewareConfig = async (
   queryClient: QueryClient,
 ): Promise<MiddlewareConfigState> =>
@@ -85,9 +96,16 @@ export class MiddlewareConfigUnknownError extends Error {
   }
 }
 
+/**
+ * The deployment configuration in a component - which sign-in methods and SSO
+ * providers exist, whether email or AI is set up. Suspends until loaded, so
+ * render it under a `Suspense` boundary or warm it with
+ * {@link loadMiddlewareConfig}.
+ */
 export const useMiddlewareConfigQuery = () =>
   useSuspenseQuery(middlewareConfigQueryOptions());
 
+/** Refetches the deployment configuration, e.g. after an admin changes it. */
 export const invalidateMiddlewareConfig = async (
   queryClient: QueryClient,
 ): Promise<void> =>
@@ -104,6 +122,7 @@ export interface AuthMethods {
   sso: SSOProvider[];
 }
 
+/** Which sign-in, sign-up and recovery methods the deployment offers. */
 export const authMethodsOf = (config: MiddlewareConfig): AuthMethods => {
   const sso = ssoProvidersOf(config);
 

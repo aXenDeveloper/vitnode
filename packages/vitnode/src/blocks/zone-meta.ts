@@ -18,11 +18,21 @@ import {
 import { BlockError } from "./errors";
 import { parseBlockId } from "./namespace";
 
+/**
+ * Whether a value is a usable zone id: `:`-separated segments of lowercase
+ * letters, digits and single hyphens, at most 64 characters (`"main"`,
+ * `"settings:before-profile"`).
+ */
 export const isContentZoneId = (value: unknown): value is string =>
   typeof value === "string" &&
   value.length <= CONTENT_ZONE_ID_MAX_LENGTH &&
   CONTENT_ZONE_ID_PATTERN.test(value);
 
+/**
+ * Returns `id` when it is a usable zone id.
+ *
+ * @throws {BlockError} When it is not (see {@link isContentZoneId}).
+ */
 export const assertContentZoneId = (id: string): string => {
   if (isContentZoneId(id)) return id;
 
@@ -31,6 +41,11 @@ export const assertContentZoneId = (id: string): string => {
   );
 };
 
+/**
+ * Splits a zone id at its last `:` into `scope` and `name` (`"settings:before-profile"`
+ * gives scope `settings`, name `before-profile`; an id without `:` has no
+ * scope). `null` for an invalid id.
+ */
 export const parseContentZoneId = (id: string): null | ParsedContentZoneId => {
   if (!isContentZoneId(id)) return null;
 
@@ -43,6 +58,13 @@ export const parseContentZoneId = (id: string): null | ParsedContentZoneId => {
 export const formatBlockAllowed = (allowed: BlockAllowedSpec): string =>
   allowed === BLOCK_WILDCARD ? BLOCK_WILDCARD : allowed.join(",");
 
+/**
+ * The DOM attributes that mark an element as a zone: `data-vitnode-zone`
+ * with the id, plus `data-vitnode-zone-allowed` (comma-separated, or `*`)
+ * when `allowedBlocks` is given.
+ *
+ * @throws {BlockError} When `id` is not a usable zone id.
+ */
 export const contentZoneAttributes = ({
   allowedBlocks,
   id,

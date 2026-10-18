@@ -168,7 +168,10 @@ const advancedForSearch = async (
 };
 
 /**
- * The five CRUD routes plus the picker-options route for one content type.
+ * The five CRUD routes plus the picker-options route for one content type,
+ * and every admin route its options add (revisions, schedules, translations,
+ * duplicates, uploads and more). `buildContentAdminModule` mounts them; plugins
+ * do not call this directly.
  *
  * Every route carries an explicit `adminStaffPermission`, and every path sits
  * under `/admin/` so the global admin session middleware runs - both are

@@ -10,6 +10,7 @@ export const CONTENT_DEFAULT_PUBLICATION_STATUS: ContentPublicationStatus =
 
 export type { ContentPublicationStatus };
 
+/** Reads a row's `status`, treating anything unrecognised as `"draft"`. */
 export const contentPublicationStatus = (
   value: unknown,
 ): ContentPublicationStatus =>
@@ -49,6 +50,7 @@ const UNPUBLISH: ContentPublicationTransition = {
   to: "draft",
 };
 
+/** The transition a publish toggle offers for a record in `value`'s status. */
 export const contentPublicationTransition = (
   value: unknown,
 ): ContentPublicationTransition =>

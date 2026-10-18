@@ -145,12 +145,21 @@ export interface PluginRouteOptions<
   parseSearch?: (input: unknown) => TSearch;
 }
 
+/**
+ * The props VitNode passes a plugin page's default export, typed from its
+ * route options: the loader's result, the URL params and the parsed search.
+ */
 export interface PluginRoutePageProps<
   TData = undefined,
   TSearch = Record<string, never>,
 > {
+  /** What the route's `load` returned; `undefined` without one. */
   loaderData: TData;
 
+  /**
+   * Navigates to this page with new search params (same path), e.g. after a filter
+   * changes. `resetScroll: false` keeps the scroll position.
+   */
   navigate: (options: {
     resetScroll?: boolean;
     search: TSearch;
@@ -158,6 +167,7 @@ export interface PluginRoutePageProps<
   /** The route's own dynamic segments, e.g. `{ slug: "hello" }`. */
   params: Readonly<Record<string, string>>;
 
+  /** The query string, as the route's `search` schema parsed it. */
   search: TSearch;
 }
 

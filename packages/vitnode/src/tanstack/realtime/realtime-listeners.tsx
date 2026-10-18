@@ -5,6 +5,11 @@ import { useSessionQuery } from "../auth/session-query";
 import { NotificationStateSync } from "../notifications/state-sync";
 import { socketUserIdFromSession } from "./session";
 
+/**
+ * Keeps the WebSocket connection's identity in step with the session and
+ * listens for notification events. Rendered by `VitNodeRootProviders`; mount
+ * it yourself only when not using those providers.
+ */
 export const RealtimeListeners = () => {
   const { data: session } = useSessionQuery();
 

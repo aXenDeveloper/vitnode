@@ -20,6 +20,7 @@ import { contentDefinitionOf } from "./model";
 import { contentPublicLocaleStates } from "./public-locales";
 import { dispatchContentRevalidation } from "./revalidate-bridge";
 
+/** {@link contentEditorialEffects}'s result plus how many revalidation origins were tried and reached. */
 export interface ContentVisibilityEffectsResult extends ContentEditorialEffectsResult {
   revalidation: { attempted: number; delivered: number };
 }
@@ -30,6 +31,12 @@ const NOTHING: ContentVisibilityEffectsResult = {
   search: null,
 };
 
+/**
+ * The revalidation request a hide or unhide sends to `content.revalidateOrigins`:
+ * the record, its slug, whether it was and is public, the locales whose
+ * public state changed, and the sitemap flags for a type with `delivery`.
+ * Always `mode: "immediate"`.
+ */
 export const contentVisibilityRevalidation = async (
   c: Context,
   model: AnyContentModel,
@@ -84,6 +91,12 @@ export const contentVisibilityRevalidation = async (
   };
 };
 
+/**
+ * The follow-up to a committed hide or unhide: {@link contentEditorialEffects},
+ * then a revalidation request (`dispatchContentRevalidation`) to the
+ * configured front-end origins. Does nothing when the outcome changed nothing
+ * or carries no visibility change.
+ */
 export const contentVisibilityEffects = async (
   c: Context,
   model: AnyContentModel,

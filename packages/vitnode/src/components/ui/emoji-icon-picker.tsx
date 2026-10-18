@@ -23,6 +23,12 @@ const EmojiIconPickerPanel = React.lazy(async () =>
   })),
 );
 
+/**
+ * An outline button that opens a picker for an emoji or a Lucide icon. Calls
+ * `onChange` with the picked value and closes; `allowRemove` adds a remove
+ * button that calls it with `undefined`. Shows `placeholder`, else the
+ * translated "Pick an emoji or icon", while empty.
+ */
 export const EmojiIconPicker = ({
   allow = EMOJI_ICON_PICKER_KINDS,
   allowRemove,

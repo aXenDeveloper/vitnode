@@ -7,6 +7,13 @@ import { AutoFormLabel } from "../common/label";
 
 type CascaderProps = React.ComponentProps<typeof Cascader>;
 
+/**
+ * A nested picker for an `AutoForm` string field: the admin drills through
+ * `options` and only a leaf (an option without children) can be chosen. Stores
+ * the leaf's `value`, or `undefined` when cleared; `showClear` defaults to
+ * whether the field is optional. Spread the props `AutoForm` passes and add a
+ * `label` and `options`.
+ */
 export const AutoFormCascader = ({
   label,
   labelRight,

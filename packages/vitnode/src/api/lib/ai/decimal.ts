@@ -30,6 +30,16 @@ export const parseDecimalOrNull = (
 ): Decimal | null =>
   value === null || value === undefined ? null : parseDecimal(value);
 
+/**
+ * Converts a JavaScript number to a {@link Decimal} (a `bigint` with 12
+ * fractional digits), rounded half away from zero at the 12th digit (after
+ * first rounding to 14 digits). Use it for costs
+ * a provider reports as a number, e.g. in an `AiProviderAdapter`'s
+ * `reportedCost`.
+ *
+ * @throws {DecimalParseError} When `value` is `NaN`, infinite, or has a
+ * magnitude of 1e21 or more.
+ */
 export const decimalFromNumber = (value: number): Decimal => {
   if (!Number.isFinite(value)) {
     throw new DecimalParseError(String(value));

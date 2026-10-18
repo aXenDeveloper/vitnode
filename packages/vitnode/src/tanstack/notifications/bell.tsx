@@ -45,6 +45,7 @@ const SignedInBell = ({
   );
 };
 
+/** The header's notifications bell and popover. Renders nothing for guests. */
 export const NotificationsBell = () => {
   const { data: session } = useSessionQuery();
   const user = session?.user;

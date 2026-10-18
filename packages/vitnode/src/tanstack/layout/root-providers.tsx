@@ -11,6 +11,12 @@ import { RouteMessages } from "../i18n/route-messages";
 import { lucideIconCollectorOf } from "../icons/ssr";
 import { RealtimeListeners } from "../realtime/realtime-listeners";
 
+/**
+ * Everything VitNode's UI needs above the app: `core.global` messages, theme,
+ * toaster, tooltips, languages, editor config and logo from `config`, the
+ * WebSocket connection with its realtime listeners, and SSR icon collection. Render it once in the root route's
+ * component, around the `<Outlet />`.
+ */
 export const VitNodeRootProviders = ({
   children,
   config,

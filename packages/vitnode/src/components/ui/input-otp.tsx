@@ -15,6 +15,11 @@ import { MotionFeatures } from "@/components/motion-features";
 const slotValueHidden = { opacity: 0, y: 8, scale: 0.8 };
 const slotValueVisible = { opacity: 1, y: 0, scale: 1 };
 
+/**
+ * A one-time-code input from `input-otp`. Pass `maxLength`, and `pattern` such
+ * as `REGEXP_ONLY_DIGITS` (also exported from this module) to restrict
+ * characters.
+ */
 function InputOTP({
   className,
   containerClassName,
@@ -36,6 +41,7 @@ function InputOTP({
   );
 }
 
+/** A row of {@link InputOTPSlot}s. */
 function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -46,6 +52,11 @@ function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * One character box of the code, for the slot at `index`; animates the typed
+ * character in (instantly under reduced motion) and shows a fake caret while
+ * active.
+ */
 function InputOTPSlot({
   index,
   className,
@@ -94,6 +105,7 @@ function InputOTPSlot({
   );
 }
 
+/** A decorative dash between groups, hidden from screen readers. */
 function InputOTPSeparator({
   className,
   ...props

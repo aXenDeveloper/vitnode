@@ -148,6 +148,11 @@ export const postcssBrowserEmptyImports = (): Rolldown.Plugin => ({
   },
 });
 
+/**
+ * In `vite dev`, pre-bundles the browser dependencies VitNode's components
+ * import, so the first page load does not trigger a dependency re-optimization
+ * and a full reload.
+ */
 export const vitNodeOptimizeDeps = (): Plugin => ({
   apply: "serve",
   config: userConfig => {

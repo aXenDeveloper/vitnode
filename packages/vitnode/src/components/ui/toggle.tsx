@@ -25,6 +25,10 @@ const toggleVariants = cva(
   },
 );
 
+/**
+ * A two-state button (Base UI `Toggle`). `variant`: `default` or `outline`;
+ * `size`: `sm`, `default` or `lg`.
+ */
 function Toggle({
   className,
   variant = "default",

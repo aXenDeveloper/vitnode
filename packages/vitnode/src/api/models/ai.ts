@@ -23,6 +23,7 @@ import {
   openRouterProviderAdapter,
 } from "../lib/ai/usage-cost";
 
+/** A run request whose `action` key carries its input and output types. */
 export type TypedAiRunRequest<Input, Output> = Omit<
   AiRunRequest,
   "action" | "input"
@@ -31,12 +32,19 @@ export type TypedAiRunRequest<Input, Output> = Omit<
   input: Input;
 };
 
+/** A language model the installation offers, in the API config's `ai.models`. */
 export interface AIModelDefinition {
+  /** What the model can do; AI actions needing a capability skip models without it. Defaults to `["text"]`. */
   capabilities?: AiModelCapability[];
+  /** Stable id actions and settings refer to. The first model is the default. */
   id: string;
+  /** Tokens one input image is estimated at when reserving budget. Defaults to `2000`. */
   imageInputTokens?: number;
+  /** A Vercel AI SDK language model, e.g. `openai("gpt-5-mini")`. */
   model: LanguageModel;
+  /** Display name in the AdminCP. */
   name: string;
+  /** Per-token prices: used to reserve budget before a run, and to cost it when the provider reports no cost. */
   pricing?: AiPricing;
 }
 
@@ -54,13 +62,16 @@ export interface AIImageModelDefinition {
   name: string;
 }
 
+/** The API config's `ai` option: the models AI features may use. */
 export interface AIConfig {
   /** Text embedding models, resolved with `c.get("ai").embeddingModel(id?)`. */
   embeddingModels?: AIEmbeddingModelDefinition[];
   /** Image models, resolved with `c.get("ai").imageModel(id?)`. */
   imageModels?: AIImageModelDefinition[];
 
+  /** Language models; the first is the default. */
   models: AIModelDefinition[];
+  /** Read provider-reported costs for providers beyond the built-in AI Gateway and OpenRouter ones. */
   providerAdapters?: AiProviderAdapter[];
 }
 
@@ -77,6 +88,26 @@ export interface AIPublicModel {
 const toModelId = (model: string | { modelId: string }): string =>
   typeof model === "string" ? model : model.modelId;
 
+/**
+ * The installation's AI registry, read in a route as `c.get("ai")`.
+ *
+ * Two ways to use it: resolve a model with {@link AIModel.model} and call the Vercel
+ * AI SDK yourself, or run a registered AI action with {@link AIModel.run} or
+ * {@link AIModel.stream}, which also checks the action's permissions, enforces budgets
+ * and records usage.
+ *
+ * Model lookups throw `HTTPException(500)` when no model (or no model with
+ * that id) is configured. Action runs throw `AiError`, an `HTTPException`
+ * whose JSON body carries a `code` such as `AI_UNAUTHORIZED`, `AI_DISABLED` or
+ * `AI_NOT_CONFIGURED`.
+ *
+ * @example
+ * ```ts
+ * import { generateText } from "ai";
+ *
+ * const { text } = await generateText({ model: c.get("ai").model(), prompt });
+ * ```
+ */
 export class AIModel {
   constructor(c: Context, { ledger }: { ledger?: AiLedger } = {}) {
     this.c = c;
@@ -115,16 +146,19 @@ export class AIModel {
     return this.runnerInstance;
   }
 
+  /** Every registered AI action. */
   actions(): AiActionRegistry {
     return this.c.get("core")?.aiActions ?? new AiActionRegistry([]);
   }
 
+  /** A model's capabilities; omit `id` for the default model. */
   capabilities(id?: string): AiModelCapability[] {
     const entry = this.definition(id);
 
     return [...(entry.capabilities ?? DEFAULT_AI_MODEL_CAPABILITIES)];
   }
 
+  /** A model's configured definition; omit `id` for the default (first) model. */
   definition(id?: string): AIModelDefinition {
     const { models } = this.config();
     const found = id ? models.find(entry => entry.id === id) : models[0];
@@ -159,6 +193,7 @@ export class AIModel {
     return found.model;
   }
 
+  /** The most a run could cost, in points and USD; `null` when the price is unknown. */
   async estimate(
     request: AiRunRequest,
   ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
@@ -187,6 +222,7 @@ export class AIModel {
     return found.model;
   }
 
+  /** Where runs and usage are recorded: Postgres unless the model was built with another ledger. */
   ledger(): AiLedger {
     return this.ledgerOverride ?? new PostgresAiLedger(this.c.get("db"));
   }
@@ -199,6 +235,7 @@ export class AIModel {
     return this.definition(id).model;
   }
 
+  /** The configured models as serializable info, safe to send to the browser. Empty when AI is off. */
   models(): AIPublicModel[] {
     const ai = this.c.get("core").ai;
 
@@ -210,6 +247,15 @@ export class AIModel {
       provider: providerIdOf(entry.model),
     }));
   }
+  /**
+   * Runs a registered AI action for the signed-in user (the admin on admin
+   * paths), validating its input and output, checking its permissions and
+   * budgets, and recording usage.
+   *
+   * @throws `AiError` with `AI_UNAUTHORIZED` for a guest or a user the action
+   * does not allow, or another code when the action is unknown, disabled,
+   * unconfigured, over budget or fails.
+   */
   async run<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,
   ): Promise<AiRunResult<Output>>;
@@ -217,6 +263,10 @@ export class AIModel {
   async run(request: AiRunRequest): Promise<AiRunResult<unknown>> {
     return await this.runner().run(request);
   }
+  /**
+   * {@link AIModel.run} without a user, for jobs and other background work. Only for
+   * actions whose `actors` include `system`; usage is recorded against no user.
+   */
   async runAsSystem<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,
   ): Promise<AiRunResult<Output>>;
@@ -225,6 +275,10 @@ export class AIModel {
     return await this.runner().runAsSystem(request);
   }
 
+  /**
+   * {@link AIModel.run}, streaming the text as it arrives. Only for actions with text
+   * output; `result` settles once the stream ends.
+   */
   async stream<Input, Output>(
     request: TypedAiRunRequest<Input, Output>,
   ): Promise<AiStreamResult<Output>>;

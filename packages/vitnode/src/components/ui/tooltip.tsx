@@ -21,10 +21,15 @@ function TooltipProvider({
   );
 }
 
+/**
+ * A tooltip (Base UI `Tooltip`). Opens after 200ms unless a
+ * `TooltipProvider` or the trigger sets another `delay`.
+ */
 function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
+/** The element that shows the {@link Tooltip} on hover or focus. */
 function TooltipTrigger({ delay, ...props }: TooltipPrimitive.Trigger.Props) {
   const providerDelay = React.use(TooltipDelayContext);
 
@@ -37,6 +42,10 @@ function TooltipTrigger({ delay, ...props }: TooltipPrimitive.Trigger.Props) {
   );
 }
 
+/**
+ * The tooltip bubble with an arrow, portaled. Defaults: above the trigger,
+ * centered, 8px away.
+ */
 function TooltipContent({
   className,
   side = "top",
@@ -75,6 +84,10 @@ function TooltipContent({
   );
 }
 
+/**
+ * A tooltip in one element: wraps `children` (the trigger) and shows `text`.
+ * Inside a {@link TooltipGroup} with no extra props, it joins the group.
+ */
 function TooltipWithContent({
   children,
   text,
@@ -107,6 +120,11 @@ const TooltipGroupContext = React.createContext<null | TooltipGroupHandle>(
 const GLIDE =
   "duration-300 ease-fluid data-instant:transition-none motion-reduce:transition-none";
 
+/**
+ * Shares one tooltip between many triggers, so it glides from one to the next
+ * instead of closing and reopening (e.g. a toolbar). Positioning defaults:
+ * above, centered, 8px away.
+ */
 function TooltipGroup({
   children,
   side = "top",
@@ -173,6 +191,10 @@ function useIsInTooltipGroup() {
   return React.use(TooltipGroupContext) !== null;
 }
 
+/**
+ * A trigger inside a {@link TooltipGroup}; `content` is what the shared
+ * tooltip shows for it.
+ */
 function TooltipGroupTrigger({
   content,
   delay,

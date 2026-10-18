@@ -91,8 +91,15 @@ const ERROR_PREFIX = "[VitNode plugin routes]";
 const DEFAULT_HOST_ROUTES_DIR = join("src", "routes");
 
 export interface VitNodePluginRoutesOptions {
+  /** The app's root directory, where `src/vitnode.config.ts` lives. */
   appRoot: string;
 
+  /**
+   * Where the app's own route files are, relative to `appRoot`. They are read
+   * so plugin routes can be checked for collisions with them and content URLs
+   * can count them as pages. Defaults to the `routesDirectory` in
+   * `tsr.config.json`, else `src/routes`; `null` reads none.
+   */
   hostRoutesDir?: null | string;
 }
 
@@ -737,6 +744,16 @@ const newBuildId = (): string =>
   process.env.VITNODE_BUILD_ID ??
   `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}`;
 
+/**
+ * Generates the app's `src/*.gen.ts` registries from the plugins configured in
+ * `src/vitnode.config.ts` - plugin routes, API registry, AdminCP navigation and
+ * content registry, widgets, package messages, page cache and plugin
+ * inventory - and regenerates them in `vite dev` when a plugin changes.
+ *
+ * Fails `vite dev` and `vite build` when plugin routes collide with each other
+ * or the app's routes, translated route paths are invalid, or a public content
+ * URL has no page.
+ */
 export const vitNodePluginRoutes = (
   options: VitNodePluginRoutesOptions,
 ): Plugin<VitNodePluginRoutesApi> => {

@@ -130,6 +130,10 @@ const localeOf = (
   return typeof row.locale === "string" ? row.locale : null;
 };
 
+/**
+ * Builds the delivery service (canonical URLs, redirects, alternates, sitemap). Plugins use the model's `deliveryService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentDeliveryService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

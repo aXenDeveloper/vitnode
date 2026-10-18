@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import React from "react";
 
+/** Tabbed content (Base UI `Tabs`); `orientation` defaults to `horizontal`. */
 function Tabs({
   className,
   orientation = "horizontal",
@@ -57,6 +58,10 @@ function TabsIndicator({
   );
 }
 
+/**
+ * The row of tab buttons with an animated indicator. `variant`: `default`
+ * (pill on a muted background) or `line` (underline).
+ */
 function TabsList({
   children,
   className,
@@ -77,6 +82,7 @@ function TabsList({
   );
 }
 
+/** One tab button. */
 function TabsTrigger({
   className,
   ...props
@@ -94,6 +100,10 @@ function TabsTrigger({
   );
 }
 
+/**
+ * Wraps the {@link TabsContent} panels and animates the height between tabs.
+ * Optional; without it, panels change height instantly.
+ */
 function TabsPanels({
   children,
   className,
@@ -156,6 +166,10 @@ function TabsPanels({
   );
 }
 
+/**
+ * One tab's panel. Slides in from the side it was activated from, unless the
+ * user prefers reduced motion.
+ */
 function TabsContent({
   className,
   ...props

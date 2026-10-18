@@ -23,6 +23,11 @@ import { listContentLanguages } from "./language-resolver";
 import { contentRecordPageCacheTags } from "./page-cache";
 import { contentIdentifier } from "./route-helpers";
 
+/**
+ * The public delivery routes of a content type with `delivery`:
+ * `/delivery/resolve/{slug}`, `/delivery/item/{id}` and `/delivery/sitemap`.
+ * Mounted with its public routes.
+ */
 export const buildContentDeliveryRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

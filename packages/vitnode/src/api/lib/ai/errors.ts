@@ -55,5 +55,22 @@ export class AiError extends HTTPException {
   readonly code: AiErrorCode;
 }
 
+/**
+ * Whether `error` is an {@link AiError} thrown by `c.get("ai")`, so its `code`
+ * (e.g. `"AI_BUDGET_EXHAUSTED"`) can be checked.
+ *
+ * @example
+ * ```ts
+ * import { isAiError } from "@vitnode/core/api/lib/ai/errors";
+ *
+ * // `TAGS_AI_ACTION`: a key from your `defineAiAction`; `input`: its input.
+ * try {
+ *   await c.get("ai").runAsSystem({ action: TAGS_AI_ACTION, input });
+ * } catch (error) {
+ *   if (isAiError(error) && error.code === "AI_BUDGET_EXHAUSTED") return;
+ *   throw error;
+ * }
+ * ```
+ */
 export const isAiError = (error: unknown): error is AiError =>
   error instanceof AiError;

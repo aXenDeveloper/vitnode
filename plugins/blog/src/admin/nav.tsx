@@ -18,6 +18,10 @@ export const blogCategoryNav = {
   icon: <ListIcon />,
 };
 
+/**
+ * The blog's AdminCP sidebar entries, loaded from `@vitnode/blog/admin/nav`
+ * into the app's generated `src/admin-nav.gen.ts`.
+ */
 export const adminNav = {
   pluginId: manifest.id,
   contentTypes: [blogPostNav, blogCategoryNav],

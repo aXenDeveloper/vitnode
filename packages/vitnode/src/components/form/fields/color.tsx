@@ -8,6 +8,12 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
+/**
+ * A color picker for an `AutoForm` string field. Stores a CSS color string -
+ * the picker writes `hsl(...)`, presets write their own value, and the text
+ * box accepts anything typed. Spread the props `AutoForm` passes and add a
+ * `label`.
+ */
 export const AutoFormColor = ({
   label,
   labelRight,

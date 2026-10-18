@@ -1,5 +1,11 @@
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
+/**
+ * One category's limit, passed to `rate-limiter-flexible`: `points` requests
+ * per `duration` seconds. A request over the limit gets `429` with
+ * `Retry-After` and `X-RateLimit-Category` headers (`OPTIONS` preflights are
+ * never refused). Off in development.
+ */
 export type RateLimiterCategoryOptions = Partial<
   Pick<
     IRateLimiterOptions,
@@ -11,10 +17,23 @@ export type RateLimiterCategoryOptions = Partial<
   >
 >;
 
+/**
+ * Request limits per category, the API config's `rateLimiter`. Each request
+ * counts against `safety` plus the categories its method and path fall in.
+ * Unset categories keep their defaults.
+ */
 export interface RateLimiterConfig {
+  /**
+   * POSTs to core's sign-in, sign-up, password, email verification and passkey
+   * sign-in routes. Always counted per IP. Defaults to 10 per 60 s.
+   */
   auth?: RateLimiterCategoryOptions;
   /** @deprecated Moved to `rateLimiter.safety.blockDuration`. */
   blockDuration?: number;
+  /**
+   * POST and PATCH requests to non-admin Content Engine routes (paths with
+   * `/content/` and no `/admin/`). Defaults to 20 per 60 s.
+   */
   contentWrite?: RateLimiterCategoryOptions;
   /** @deprecated Moved to `rateLimiter.safety.duration`. */
   duration?: number;
@@ -22,11 +41,22 @@ export interface RateLimiterConfig {
   execEvenly?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.execEvenlyMinDelayMs`. */
   execEvenlyMinDelayMs?: number;
+  /**
+   * Counts `read`, `write` and `contentWrite` per signed-in user instead of per
+   * IP for requests that carry a session cookie. `safety` and `auth` stay per
+   * IP. Defaults to `true`.
+   */
   perUser?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.points`. */
   points?: number;
+  /** `GET` and `HEAD` requests. Defaults to 300 per 60 s. */
   read?: RateLimiterCategoryOptions;
+  /**
+   * The cap on every request, counted per IP. Defaults to 1000 per 60 s (80
+   * per 60 s while the deprecated top-level options are used).
+   */
   safety?: RateLimiterCategoryOptions;
+  /** Every request other than `GET`, `HEAD` and `OPTIONS`. Defaults to 60 per 60 s. */
   write?: RateLimiterCategoryOptions;
 }
 
@@ -101,6 +131,11 @@ const resolveCategory = (
   return resolved;
 };
 
+/**
+ * Every category's limit, with defaults filled in.
+ *
+ * @throws When the deprecated top-level options and `safety` are both set.
+ */
 export const resolveRateLimiterConfig = (
   config: RateLimiterConfig | undefined,
 ): Record<RateLimiterCategory, ResolvedRateLimiterOptions> => {

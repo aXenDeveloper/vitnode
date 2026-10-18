@@ -2,6 +2,24 @@ import { defineContentType, field } from "@vitnode/core/content";
 
 import { blogCategoryContentType } from "./category";
 
+/**
+ * The blog article (`blog.post`, table `blog_posts`) - the blog's reference
+ * for a fully featured content type.
+ *
+ * - Localized title, slug, body, excerpt and cover alt text, falling back to
+ *   the `en` translation when a locale has none of its own. Categories,
+ *   authors and the cover image are shared across languages.
+ * - Draft/publish lifecycle with scheduling, revisions (20 kept per article),
+ *   30-minute preview links and live editing in the AdminCP.
+ * - Duplication, hiding (visibility) and user reports for moderation.
+ * - A public API at `content/blog`, site search, and delivery with SEO
+ *   metadata, sitemap and hreflang entries and redirects from retired slugs.
+ * - At least one category; a category that still has articles cannot be
+ *   deleted.
+ *
+ * Browser-safe: the server model that binds it to Drizzle is `postContent` in
+ * `@vitnode/blog/database/posts`.
+ */
 export const blogPostContentType = defineContentType({
   id: "blog.post",
   tableName: "blog_posts",
