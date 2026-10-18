@@ -200,6 +200,12 @@ export const adminUserOptionsFrom = (
     role: { color: role.color, prefix: role.prefix ?? null },
   }));
 
+/**
+ * Searches users for a user picker, from the browser with the admin's
+ * session (`admin/users/list`). Resolves with the first 20 matches, or `[]` -
+ * never throws: an error response resolves with `[]`, and a thrown error
+ * (e.g. network) is also logged to the console. Browser-only.
+ */
 export const searchAdminUsersInBrowser: AdminUserSearchOptions =
   async search => {
     try {

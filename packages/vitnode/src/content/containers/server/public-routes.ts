@@ -15,6 +15,10 @@ import { createContentContainerService } from "./service";
 
 const NUMERIC_ID = /^[1-9][0-9]{0,15}$/;
 
+/**
+ * The public routes of one content container type, mounted by
+ * `buildContentPublicModule`; plugins do not call this directly.
+ */
 export const buildContentContainerPublicRoutes = <
   TDefinition extends AnyContentContainerDefinition,
   P extends string,

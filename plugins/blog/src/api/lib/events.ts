@@ -10,31 +10,49 @@ import type { blogCategoryContentType } from "@/content/category";
 import { blogPostContentType } from "@/content/post";
 import { postContent } from "@/database/posts";
 
+// Types every `content.blog.post.*` / `content.blog.category.*` event the
+// Content Engine emits, plus the six older `blog.*` names re-emitted below.
 declare module "@vitnode/core/api/models/events" {
   interface VitNodeEvents
     extends
       ContentEventsFor<typeof blogCategoryContentType>,
       ContentEventsFor<typeof blogPostContentType> {
+    /** Compatibility name for `content.blog.category.created`. */
     "blog.category.created": {
       categoryId: number;
     };
+    /** Compatibility name for `content.blog.category.deleted`. */
     "blog.category.deleted": {
       categoryId: number;
-
+      /**
+       * Always empty: a category that still has articles cannot be deleted
+       * (`onDelete: "restrict"`), so a deletion never removes any.
+       */
       postIds: number[];
     };
+    /** Compatibility name for `content.blog.category.updated`. */
     "blog.category.updated": {
       categoryId: number;
     };
+    /**
+     * Compatibility name for `content.blog.post.created`. Skipped when no
+     * category can be read back for the article.
+     */
     "blog.post.created": {
+      /** The article's first category only, although it can have several. */
       categoryId: number;
       postId: number;
     };
-
+    /** Compatibility name for `content.blog.post.deleted`. */
     "blog.post.deleted": {
       postId: number;
     };
+    /**
+     * Compatibility name for `content.blog.post.updated`. Skipped when no
+     * category can be read back for the article.
+     */
     "blog.post.updated": {
+      /** The article's first category only, although it can have several. */
       categoryId: number;
       postId: number;
     };
@@ -130,6 +148,17 @@ export const legacyCategoryDeletedListener = buildEventListener({
   },
 });
 
+/**
+ * Listeners that re-emit the Content Engine's `content.blog.*` created, updated
+ * and deleted events under the blog's older `blog.*` names, so existing
+ * consumers keep working. Each runs as an ordinary listener of the `content.*`
+ * event, through the installation's events adapter. Prefer the `content.*`
+ * events for new code: they also cover publication, visibility, translations
+ * and the other lifecycle actions, which have no `blog.*` name.
+ *
+ * Registered on the blog's top-level `admin` module, because event listeners
+ * are only collected from top-level modules.
+ */
 export const blogLegacyEventListeners = [
   legacyCategoryCreatedListener,
   legacyCategoryDeletedListener,

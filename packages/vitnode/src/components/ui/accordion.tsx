@@ -3,6 +3,9 @@ import { cn } from "cn";
 import { ChevronDownIcon } from "lucide-react";
 import React from "react";
 
+/**
+ * A Base UI accordion of collapsible sections, laid out as a full-width column.
+ */
 function Accordion({
   className,
   ...props
@@ -16,6 +19,9 @@ function Accordion({
   );
 }
 
+/**
+ * One section of an {@link Accordion}; every item but the last gets a bottom border.
+ */
 function AccordionItem({
   className,
   ...props
@@ -29,6 +35,10 @@ function AccordionItem({
   );
 }
 
+/**
+ * The section's header button, with a chevron that rotates while the section is
+ * open.
+ */
 function AccordionTrigger({
   className,
   children,
@@ -54,6 +64,10 @@ function AccordionTrigger({
   );
 }
 
+/**
+ * The section's collapsible panel, which animates its height (only its opacity
+ * under reduced motion).
+ */
 function AccordionContent({
   className,
   children,

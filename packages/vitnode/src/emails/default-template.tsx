@@ -38,31 +38,61 @@ DefaultTemplateEmail.PreviewProps = {
   },
 } satisfies DefaultTemplateEmailProps & { children: React.ReactNode };
 
+/**
+ * What `c.get("email").send()` passes to an email's `content`, and what
+ * {@link DefaultTemplateEmail} reads. Spread them into the template unchanged.
+ */
 export interface DefaultTemplateEmailProps extends Pick<
   EmailModelSendArgs,
   "user"
 > {
+  /** The recipient's locale and its messages, for translating the email. */
   i18n: {
     locale: string;
     // oxlint-disable-next-line typescript/no-explicit-any
     messages: Record<string, any>;
   };
   templateProps: {
+    /** Extra elements for the email's `<head>`. */
     head?: React.ReactNode;
+    /** The header logo, from the API config's `email.logo`. Without `src`, `text` (or the site title) is shown as text. */
     logo?: {
       src?: string;
       text?: string;
     };
+    /** The site's title and URL, used in the header and the footer link. */
     metadata: {
       shortTitle?: string;
       title: string;
       url: string;
     };
+    /** The inbox preview line shown after the subject. */
     previewText?: string;
+    /** Extends the template's Tailwind config; `theme.extend.colors` overrides the built-in color tokens. */
     tailwindConfig?: TailwindConfig;
   };
 }
 
+/**
+ * VitNode's standard email layout: the site logo (or title), your content, and
+ * a footer linking to the site. It wraps everything in react-email's
+ * `<Tailwind>` with the color tokens (`bg-primary`, `text-muted-foreground`...)
+ * that `EmailButton` and `EmailCard` use. Rendered on the server by
+ * `c.get("email")`.
+ *
+ * @example
+ * ```tsx
+ * import DefaultTemplateEmail, {
+ *   type DefaultTemplateEmailProps,
+ * } from "@vitnode/core/emails/default-template";
+ *
+ * export const WelcomeEmail = (props: DefaultTemplateEmailProps) => (
+ *   <DefaultTemplateEmail {...props}>Welcome!</DefaultTemplateEmail>
+ * );
+ *
+ * await c.get("email").send({ user, subject: "Welcome", content: props => <WelcomeEmail {...props} /> });
+ * ```
+ */
 export default function DefaultTemplateEmail({
   children,
   i18n: { locale },

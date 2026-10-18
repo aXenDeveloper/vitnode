@@ -30,6 +30,11 @@ const measureZoom = (image: HTMLImageElement) => {
   return { origin: zoomOrigin(thumb, target), target };
 };
 
+/**
+ * An image that opens full screen when clicked, zooming from its place on the
+ * page; drag it away or use the close button (translated "Close") to dismiss.
+ * `zoomSrc` is an optional larger image for the zoomed view; `alt` is required.
+ */
 function ImageZoom({
   alt,
   className,

@@ -10,6 +10,11 @@ import { negotiateLocale } from "@/lib/i18n/negotiate-locale";
 
 export type Translator = ReturnType<typeof createTranslator>;
 
+/**
+ * Server-side translations, read in a route as `c.get("i18n")`. For output with
+ * no UI only, such as emails - API responses return i18n keys and let the web
+ * translate them.
+ */
 export class I18nModel {
   constructor(c: Context) {
     this.c = c;
@@ -17,6 +22,7 @@ export class I18nModel {
 
   protected readonly c: Context;
 
+  /** The merged messages of core, every plugin and the app for a locale (see {@link I18nModel.resolveLocale}). */
   async getMessages(locale?: string): Promise<Messages> {
     const core = this.c.get("core");
 
@@ -27,6 +33,16 @@ export class I18nModel {
     });
   }
 
+  /**
+   * A `use-intl` translator for a locale (see {@link I18nModel.resolveLocale}).
+   *
+   * @example
+   * ```ts
+   * const i18n = c.get("i18n");
+   * // The recipient's language, not the request's.
+   * const t = await i18n.getTranslator(i18n.resolveSupportedLocale(recipient.language));
+   * ```
+   */
   async getTranslator(locale?: string): Promise<Translator> {
     const resolved = this.resolveLocale(locale);
 
@@ -36,6 +52,10 @@ export class I18nModel {
     });
   }
 
+  /**
+   * The locale for this request: `explicit` when offered, else the signed-in
+   * user's language, else the best `Accept-Language` match, else the default.
+   */
   resolveLocale(explicit?: string): string {
     const supported = this.locales.map(locale => locale.code);
 
@@ -50,6 +70,10 @@ export class I18nModel {
     );
   }
 
+  /**
+   * `preferred` when offered, else the default locale - never the request's
+   * language. For output addressed to someone else, such as an email.
+   */
   resolveSupportedLocale(preferred?: string): string {
     const supported = this.locales.map(locale => locale.code);
 

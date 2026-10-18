@@ -5,9 +5,18 @@ import { loadEnv } from "vite";
 const CLIENT_ENV_KEYS = ["VITNODE_API_URL", "VITNODE_WEB_URL"] as const;
 
 export interface VitNodeEnvOptions {
+  /**
+   * More environment variables to expose to the browser as
+   * `process.env.NAME`, besides `VITNODE_API_URL` and `VITNODE_WEB_URL`. Their
+   * values end up in the client bundle - never list a secret.
+   */
   clientEnv?: readonly string[];
 }
 
+/**
+ * Loads the whole `.env` into `process.env` for the server (variables already
+ * set in the environment win) and defines the public keys for the browser.
+ */
 export const vitNodeEnv = ({
   clientEnv = [],
 }: VitNodeEnvOptions = {}): Plugin => {

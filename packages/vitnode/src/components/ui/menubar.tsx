@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import React from "react";
 
+/** A horizontal bar of menus, like a desktop app's File / Edit / View. */
 function Menubar({
   className,
   ...props
@@ -20,6 +21,7 @@ function Menubar({
   );
 }
 
+/** One menu in a {@link Menubar}: wraps its trigger and content. */
 function MenubarMenu({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Root>) {
@@ -46,6 +48,7 @@ function MenubarRadioGroup({
   );
 }
 
+/** The button that opens a {@link MenubarMenu}. */
 function MenubarTrigger({
   className,
   ...props
@@ -62,6 +65,9 @@ function MenubarTrigger({
   );
 }
 
+/**
+ * The menu's popup, portaled. Opens below the trigger, start-aligned, 8px away.
+ */
 function MenubarContent({
   className,
   align = "start",
@@ -98,6 +104,10 @@ function MenubarContent({
   );
 }
 
+/**
+ * A menu entry. `variant="destructive"` colors it for a dangerous action;
+ * `inset` indents it to line up with checkbox and radio items.
+ */
 function MenubarItem({
   className,
   inset,
@@ -205,6 +215,7 @@ function MenubarLabel({
   );
 }
 
+/** A line between groups of menu items. */
 function MenubarSeparator({
   className,
   ...props
@@ -218,6 +229,7 @@ function MenubarSeparator({
   );
 }
 
+/** A keyboard shortcut hint at the end of a {@link MenubarItem}. */
 function MenubarShortcut({
   className,
   ...props

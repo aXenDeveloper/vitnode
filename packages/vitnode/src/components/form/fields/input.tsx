@@ -83,6 +83,15 @@ const MultiLangInput = ({
   );
 };
 
+/**
+ * A single-line text input for an `AutoForm` string field. Length limits and
+ * `pattern` come from the schema; `type` comes from the schema (`email`
+ * format) or the key name (`password`). Other input props pass through.
+ * Spread the props `AutoForm` passes and add a `label`.
+ *
+ * With `multiLang`, edits one value per enabled language. Pass `children` to
+ * render them as addons inside an input group.
+ */
 export const AutoFormInput = ({
   label,
   labelRight,

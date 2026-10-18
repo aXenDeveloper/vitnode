@@ -18,6 +18,14 @@ import {
 const describe = (entry: RegisteredBlock): string =>
   `${entry.pluginId} -> ${entry.type}`;
 
+/**
+ * Builds a registry from every plugin's widgets, prefixing each id with its
+ * namespace. The app's generated `src/blocks.gen.ts` calls this and installs
+ * the result as the default.
+ *
+ * @throws {BlockError} When two plugins claim one namespace, one plugin uses
+ * two, or a qualified id is registered twice.
+ */
 export const createBlockRegistry = (
   sources: readonly BlockPluginSource[],
 ): BlockRegistry => {
@@ -85,6 +93,7 @@ export const createBlockRegistry = (
   };
 };
 
+/** Whether a qualified widget id matches an allowlist. */
 export const isBlockAllowed = (
   allowed: BlockAllowedSpec,
   type: string,
@@ -116,6 +125,11 @@ export const allowedBlocks = (
 
 let processDefault: BlockRegistry | undefined;
 
+/**
+ * Installs the process-wide registry used when none is passed explicitly.
+ *
+ * @returns A function restoring the previous default.
+ */
 export const setDefaultBlockRegistry = (
   registry: BlockRegistry | undefined,
 ): (() => void) => {
@@ -130,6 +144,11 @@ export const setDefaultBlockRegistry = (
 export const getDefaultBlockRegistry = (): BlockRegistry | undefined =>
   processDefault;
 
+/**
+ * The given registry, else the process default.
+ *
+ * @throws {BlockRegistryMissingError} When neither exists.
+ */
 export const resolveBlockRegistry = (
   registry?: BlockRegistry,
 ): BlockRegistry => {

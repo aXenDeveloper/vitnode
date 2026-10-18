@@ -52,45 +52,55 @@ await c.get('search').delete('article', article.id)
 
 ### Register a rebuild indexer
 
-To allow admins to re-index all historical content from the AdminCP, register a search indexer in your plugin's `config.api.ts`:
+To allow admins to re-index all historical content from the AdminCP, give your plugin a search indexer. It rebuilds one item type page by page: `load` returns the documents for up to `limit` source rows starting at `offset`, plus how many rows it read (`0` ends the rebuild). `count` is optional and powers the coverage report.
 
-```ts title="plugins/blog/src/api/indexers/post.indexer.ts"
-import { buildSearchIndexer } from '@vitnode/core/api/lib/search'
-import { blog_posts } from '@/database/posts'
+<Callout type="info" title="Content types index themselves">
+  A Content Engine type with `search` enabled gets its indexer automatically.
+  Write one only for data of your own.
+</Callout>
 
-export const postSearchIndexer = buildSearchIndexer({
-  itemType: 'article',
-  totalCount: async (c) => {
-    return await c.get('db').$count(blog_posts)
-  },
-  batch: async (c, { limit, offset }) => {
-    const posts = await c
+```ts title="plugins/recipes/src/api/indexers/recipe.indexer.ts"
+import type { SearchIndexer } from '@vitnode/core/api/models/search'
+
+import { asc } from 'drizzle-orm'
+
+import { recipes } from '@/database/recipes'
+
+export const recipeSearchIndexer: SearchIndexer = {
+  itemType: 'recipe',
+  count: async (c) => await c.get('db').$count(recipes),
+  load: async (c, offset, limit) => {
+    const rows = await c
       .get('db')
       .select()
-      .from(blog_posts)
+      .from(recipes)
+      .orderBy(asc(recipes.id))
       .limit(limit)
       .offset(offset)
 
-    return posts.map((post) => ({
-      itemType: 'article',
-      itemId: post.id,
-      title: post.title,
-      content: post.content,
-      url: `/articles/${post.slug}`,
-      authorIds: [post.authorId],
-      createdAt: post.createdAt,
-    }))
+    return {
+      documents: rows.map((recipe) => ({
+        itemType: 'recipe',
+        itemId: recipe.id,
+        title: recipe.title,
+        content: recipe.description,
+        url: `/recipes/${recipe.slug}`,
+        authorIds: [recipe.authorId],
+        createdAt: recipe.createdAt,
+      })),
+      itemsRead: rows.length,
+    }
   },
-})
+}
 ```
 
-Register it in `config.api.ts`:
+Register it in `config.api.ts` (a module's `searchIndexers` works too):
 
-```ts title="plugins/blog/src/config.api.ts"
-export const blogApiPlugin = () =>
+```ts title="plugins/recipes/src/config.api.ts"
+export const recipesApiPlugin = () =>
   buildApiPlugin({
     manifest,
-    searchIndexers: [postSearchIndexer], // [!code ++]
+    searchIndexers: [recipeSearchIndexer], // [!code ++]
   })
 ```
 

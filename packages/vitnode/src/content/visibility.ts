@@ -4,6 +4,7 @@ import type { ContentVisibilityFilter } from "./types";
 export type ContentVisibilityAction =
   (typeof CONTENT_VISIBILITY_ACTIONS)[number];
 
+/** Whether a moderator has hidden the record (`hiddenAt` is set). */
 export const isContentHidden = (row: { hiddenAt?: unknown }): boolean =>
   row.hiddenAt !== null && row.hiddenAt !== undefined && row.hiddenAt !== "";
 
@@ -25,6 +26,7 @@ const UNHIDE: ContentVisibilityTransition = {
   to: "visible",
 };
 
+/** The hide/unhide transition a moderator toggle offers for this row. */
 export const contentVisibilityTransition = (row: {
   hiddenAt?: unknown;
 }): ContentVisibilityTransition => (isContentHidden(row) ? UNHIDE : HIDE);

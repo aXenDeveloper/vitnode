@@ -18,6 +18,12 @@ const HslStringColorPicker = React.lazy(async () => ({
 
 const FALLBACK_PICKER_COLOR = "hsl(0, 0%, 0%)";
 
+/**
+ * An outline button that opens a color popover: preset swatches, a free HSL
+ * picker (loaded lazily) and a text input for any CSS color. Calls `onChange`
+ * with the new color string; `allowRemoveColor` adds a button that clears it to
+ * `""`. Shows `placeholder`, else the translated "Pick a color", while empty.
+ */
 export const ColorPicker = ({
   value = "",
   onChange,

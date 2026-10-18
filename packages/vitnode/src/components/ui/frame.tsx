@@ -3,6 +3,10 @@ import { useRender } from "@base-ui/react/use-render";
 import { cn } from "cn";
 import React from "react";
 
+/**
+ * A muted outer surface that frames one or more {@link FramePanel}s with a
+ * header and footer; renders a `div` (or your `render`).
+ */
 function Frame({
   className,
   render,
@@ -24,6 +28,7 @@ function Frame({
   });
 }
 
+/** The frame's top area for its title, description and action. */
 function FrameHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -37,6 +42,7 @@ function FrameHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The frame's heading. */
 function FrameTitle({
   className,
   render,
@@ -58,6 +64,7 @@ function FrameTitle({
   });
 }
 
+/** Secondary text under the title. */
 function FrameDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
@@ -71,6 +78,7 @@ function FrameDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
+/** A control in the header's end corner. */
 function FrameAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -84,6 +92,10 @@ function FrameAction({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * The raised card inside a {@link Frame}; its children are separated by
+ * borders, and `Item`s inside it lose their own borders.
+ */
 function FramePanel({
   className,
   render,
@@ -105,6 +117,7 @@ function FramePanel({
   });
 }
 
+/** The frame's bottom area. */
 function FrameFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

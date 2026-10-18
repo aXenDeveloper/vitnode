@@ -9,6 +9,10 @@ import { ClientButton } from "./button-client";
 const coarsePointerHitArea =
   "relative pointer-coarse:after:absolute pointer-coarse:after:top-1/2 pointer-coarse:after:left-1/2 pointer-coarse:after:size-11 pointer-coarse:after:-translate-1/2";
 
+/**
+ * The button class names per `variant` and `size`, for styling another element
+ * (such as a link) as a button.
+ */
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity,scale,filter] duration-150 ease-out outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:not-in-data-[slot=button-group]:scale-97 disabled:pointer-events-none disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer",
   {
@@ -55,6 +59,10 @@ const buttonVariants = cva(
   },
 );
 
+/**
+ * Props of {@link Button}. The icon sizes require an `aria-label`, since the
+ * button has no visible text.
+ */
 type ButtonProps = Omit<ButtonPrimitive.Props, "className"> &
   VariantProps<typeof buttonVariants> &
   (
@@ -66,6 +74,15 @@ type ButtonProps = Omit<ButtonPrimitive.Props, "className"> &
     isLoading?: boolean;
   };
 
+/**
+ * A Base UI button. `variant` is `default`, `outline`, `secondary`, `ghost`,
+ * `destructive`, `success`, `warning` or `link`; `size` is `default`, `xs`,
+ * `sm`, `lg` or an icon size (`icon`, `icon-xs`, `icon-sm`, `icon-lg`), both
+ * defaulting to `"default"`. `isLoading` disables it and swaps its content for
+ * a spinner, with a translated "Loading..." label; `disabledTooltip` explains
+ * why a disabled button is disabled and keeps it focusable. The `icon`,
+ * `icon-xs` and `icon-sm` sizes get a 44px touch target on coarse pointers.
+ */
 function Button(props: ButtonProps) {
   return <ClientButton {...props} />;
 }

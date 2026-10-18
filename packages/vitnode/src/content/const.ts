@@ -389,6 +389,7 @@ const sitemapChangeFrequencies: ReadonlySet<string> = new Set(
   CONTENT_SITEMAP_CHANGE_FREQUENCIES,
 );
 
+/** Whether a value is one of the seven sitemap `changefreq` values. */
 export const isContentSitemapChangeFrequency = (
   value: unknown,
 ): value is (typeof CONTENT_SITEMAP_CHANGE_FREQUENCIES)[number] =>

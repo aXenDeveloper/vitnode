@@ -11,6 +11,7 @@ import { BreadcrumbPendingSkeleton } from "../pending/shapes";
 import { routeBreadcrumbGroup } from "../plugin-routes/authoring";
 import { useAdminNav } from "./nav";
 
+/** The AdminCP breadcrumb of the current matches, or a skeleton while navigating. Rendered by the shell. */
 export const useAdminBreadcrumb = (): React.ReactNode => {
   const entries = useBreadcrumbTrail(useMatches());
   const isNavigating = useRouteNavigationPending(
@@ -24,6 +25,10 @@ export const useAdminBreadcrumb = (): React.ReactNode => {
   return <BreadcrumbTrailContent entries={entries} scrollable />;
 };
 
+/**
+ * An AdminCP trail for a path below `/admin`, labelled from the AdminCP
+ * navigation so it matches the sidebar.
+ */
 export const AdminBreadcrumb = ({
   labels,
   overrideLastLabel,
@@ -44,6 +49,14 @@ export const AdminBreadcrumb = ({
   />
 );
 
+/**
+ * {@link AdminBreadcrumb} as a route's `staticData.breadcrumb`.
+ *
+ * @example
+ * ```ts
+ * staticData: { breadcrumb: adminBreadcrumb({ segments: ["core", "users"] }) },
+ * ```
+ */
 export const adminBreadcrumb = <TData = unknown, TSearch = unknown>(
   props: Parameters<typeof AdminBreadcrumb>[0],
 ): PluginRouteBreadcrumbGroup<TData, TSearch> =>

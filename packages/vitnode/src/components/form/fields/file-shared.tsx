@@ -28,13 +28,24 @@ import { Spinner } from "@/components/ui/spinner";
 import { fileFormatLabels } from "@/lib/file-constraints";
 import { formatBytes } from "@/lib/format-bytes";
 
+/**
+ * A stored file as a file field shows it - what an upload resolves with and
+ * what `file`/`files` props pass in. The field's own value is only `id`.
+ */
 export interface AutoFormFileValue {
+  /** Image height in pixels, for the preview's layout. */
   height?: number;
+  /** The stored file's id; this becomes the field value. */
   id: number;
+  /** Decides whether the file is previewed as an image (`image/*`). */
   mimeType?: null | string;
+  /** The file name shown to the user. */
   name: string;
+  /** Size in bytes. */
   size: number;
+  /** Where the file can be loaded from; `""` shows no image preview. */
   url: string;
+  /** Image width in pixels, for the preview's layout. */
   width?: number;
 }
 

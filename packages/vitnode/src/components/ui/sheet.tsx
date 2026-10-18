@@ -7,14 +7,20 @@ import { useTranslations } from "use-intl";
 import { Button } from "@/components/ui/button";
 import { modalScrimClassName } from "@/components/ui/modal-scrim";
 
+/**
+ * A panel that slides in from a screen edge (Base UI `Dialog`). Use it for
+ * short settings; see `AutoFormSheetFooter` for a form footer.
+ */
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
 }
 
+/** The element that opens the {@link Sheet}. */
 function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
   return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
 
+/** A control that closes the {@link Sheet}. */
 function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
 }
@@ -37,6 +43,11 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   );
 }
 
+/**
+ * The sheet's panel with a backdrop. `side`: `right` (default), `left`, `top`
+ * or `bottom`. `showCloseButton` (default `true`) adds a close button with a
+ * translated label; `keepMounted` keeps it in the DOM while closed.
+ */
 function SheetContent({
   className,
   children,
@@ -89,6 +100,7 @@ function SheetContent({
   );
 }
 
+/** The top area for the title and description. */
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -99,6 +111,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The bottom area for actions, pinned to the end of the sheet. */
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -109,6 +122,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The sheet's accessible title. */
 function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
     <SheetPrimitive.Title
@@ -119,6 +133,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   );
 }
 
+/** The sheet's accessible description, muted. */
 function SheetDescription({
   className,
   ...props

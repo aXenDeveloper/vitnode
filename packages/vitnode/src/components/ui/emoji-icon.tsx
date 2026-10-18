@@ -4,6 +4,11 @@ import type { EmojiIconValue } from "@/lib/emoji-icon";
 
 import { DynamicIcon } from "./dynamic-icon";
 
+/**
+ * Renders an emoji-or-icon value at icon size: the emoji as text, or the Lucide
+ * icon via {@link DynamicIcon}. Renders nothing for an empty value. Decorative:
+ * the emoji is `aria-hidden`, and the icon is hidden by Lucide's default.
+ */
 export const EmojiIcon = ({
   className,
   value,

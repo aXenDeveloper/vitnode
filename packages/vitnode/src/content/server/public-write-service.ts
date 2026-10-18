@@ -147,6 +147,19 @@ export const resolveContentPublicationPolicy = async ({
   return { approval: true, policy, status: "draft" };
 };
 
+/**
+ * The service behind a content type's public-write routes, for a plugin's own
+ * write route with the same ownership, authorization and effects. Acts as the
+ * user session of `c`. `create` and `update` run the same write effects as the
+ * generated routes (events, search) after the commit; an owner's edit that
+ * needs review becomes a proposal and runs none of them. Server-only.
+ *
+ * @throws From its methods: `ContentPublicWriteDenied` for an unauthenticated,
+ * forbidden or missing request (also `notFound` when `create`/`update` is off,
+ * or `create` has no `ownerField`); `ContentPublicWriteInputError` for an
+ * invalid relation target or container placement; a `ZodError` for invalid
+ * values; `ContentVersionConflict` for a stale `expectedVersion`.
+ */
 export const createContentPublicWriteService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

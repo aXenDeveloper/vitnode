@@ -44,20 +44,37 @@ const SEARCH_TOP_AUTHORS_TTL_SECONDS = 5 * 60;
 // bind-parameter cap while still turning a rebuild page into one round trip.
 const BULK_UPSERT_CHUNK = 500;
 
+/**
+ * One searchable item (or one language of it), as an indexer or a write hands
+ * it to {@link SearchModel}.
+ */
 export interface SearchDocument {
+  /** Users credited for the item, for author filters and author hits. */
   authorIds?: readonly number[];
+  /** The forum, category or other container holding the item. */
   containerId?: number;
   containerType?: string;
+  /** Searchable body text. HTML is stripped before it is indexed. */
   content: string;
   createdAt: Date;
+  /** A `core_files` id shown as the hit's image. */
   imageId?: null | number;
+  /**
+   * With `isPublic: false`, still lets its authors and viewers with moderator
+   * access to its item type find it. Hides nothing on its own. Defaults to
+   * `false`.
+   */
   isHidden?: boolean;
+  /** Found by everyone. Defaults to `true`; `false` hides it from ordinary searches. */
   isPublic?: boolean;
+  /** The item's id; with `itemType` (and `languageCode`) it identifies the document. */
   itemId: ContentId;
+  /** The collection, e.g. a content type id. One indexer owns each item type. */
   itemType: string;
   // Locale of this projection. Multi-language content emits one document per
   // language; single-language content may leave it empty.
   languageCode?: string;
+  /** Extra data returned with the hit. */
   metadata?: Record<string, unknown>;
   // The plugin that owns this item. Omit it and {@link SearchModel} falls back
   // to the request's plugin - which is only right while the request *is* the
@@ -66,9 +83,11 @@ export interface SearchDocument {
   pluginId?: string;
   title: string;
   updatedAt?: Date;
+  /** Where the hit links to. */
   url?: string;
 }
 
+/** A search query: filters, sorting and cursor pagination. */
 export interface SearchQueryParams {
   authorId?: number;
   authorIds?: readonly number[];
@@ -77,7 +96,9 @@ export interface SearchQueryParams {
   dateFrom?: Date;
   dateTo?: Date;
   first?: number;
+  /** Lets this viewer also find hidden documents they wrote or moderate. */
   hiddenAccess?: SearchHiddenAccess;
+  /** Skips every visibility check - for admin and diagnostic reads only. */
   includePrivate?: boolean;
   itemTypes?: string[];
   // Restrict results to one locale (the viewer's). Rows with an empty
@@ -209,12 +230,27 @@ export type SearchIndexerLoadResult =
 
   LegacySearchIndexerPage | SearchIndexerPage;
 
+/**
+ * Rebuilds one item type's search documents from its source, page by page,
+ * when an admin reindexes it. Register it on a module's (or the plugin's)
+ * `searchIndexers`; live writes keep the index current in between with
+ * `c.get("search").index()` and `.delete()`.
+ *
+ * Content types with `search` enabled get one from the Content Engine; write
+ * one only for data of your own.
+ */
 export interface SearchIndexer {
   // Total number of source items available to index for this type. Powers the
   // admin coverage report (indexed vs. total). Omit when the source count is
   // unknown or expensive; coverage then falls back to the indexed count (100%).
   count?: (c: Context) => Promise<number>;
+  /** The collection this indexer owns. Two indexers for one item type fail at startup. */
   itemType: string;
+  /**
+   * Reads up to `limit` source rows starting at `offset` and returns their
+   * documents, plus how many source rows it read; `itemsRead: 0` ends the
+   * rebuild. The rebuild clears the item type first.
+   */
   load: (
     c: Context,
     offset: number,
@@ -375,6 +411,13 @@ const toRow = (doc: SearchDocument) => ({
   indexedAt: new Date(),
 });
 
+/**
+ * The search index, read in a route as `c.get("search")`.
+ *
+ * Every write goes to the canonical `core_search_index` table and is mirrored
+ * to the configured search adapter (Postgres by default), which answers
+ * queries.
+ */
 export class SearchModel {
   constructor(c: Context) {
     this.c = c;
@@ -695,6 +738,7 @@ export class SearchModel {
     });
   }
 
+  /** {@link SearchModel.index} for many documents at once. */
   async bulkIndex(docs: SearchDocument[]): Promise<void> {
     const clean = docs.map(doc =>
       this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),
@@ -704,6 +748,7 @@ export class SearchModel {
     await this.provider().bulkIndex(this.c, clean);
   }
 
+  /** Removes every document of one item type, or of all of them when omitted. */
   async clear(itemType?: string): Promise<void> {
     await this.c
       .get("db")
@@ -832,7 +877,10 @@ export class SearchModel {
       );
   }
 
-  /** Canonical projection lives in `core_search_index`; the provider mirrors it. */
+  /**
+   * Adds or replaces one document. Canonical projection lives in
+   * `core_search_index`; the provider mirrors it.
+   */
   async index(doc: SearchDocument): Promise<void> {
     const clean = this.resolveOwner({
       ...doc,
@@ -862,6 +910,7 @@ export class SearchModel {
     return this.provider().capabilities?.canonicalStorage === true;
   }
 
+  /** Whether the item has a public document in the index. */
   async isListed(itemType: string, itemId: string): Promise<boolean> {
     const [row] = await this.c
       .get("db")
@@ -916,6 +965,7 @@ export class SearchModel {
     await recordSearchPopularity(this.c, { itemId, itemType, signal });
   }
 
+  /** Runs a query on the search adapter and attaches each hit's authors and image. */
   async search(params: SearchQueryParams): Promise<SearchResult> {
     const result = await this.provider().search(
       this.c,

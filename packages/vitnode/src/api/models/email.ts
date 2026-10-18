@@ -31,7 +31,16 @@ interface EmailModelSendArgsWithEmail {
   user?: never;
 }
 
+/**
+ * What an email adapter implements (e.g. `@vitnode/nodemailer`,
+ * `@vitnode/resend`); set it as the API config's `email.adapter`.
+ */
 export interface EmailApiPlugin {
+  /**
+   * Sends one rendered email. Throw to fail the send: an email sent through
+   * `EmailModel.send` is retried by its queue task when that task runs. `idempotencyKey`, when a
+   * caller of `deliver` passes one, should reach providers that support it.
+   */
   sendEmail: (args: {
     html: string;
     idempotencyKey?: string;
@@ -48,7 +57,16 @@ export interface EmailSendResult {
   id?: string;
 }
 
+/**
+ * One email to send: to a user (in their own language) or to an address with
+ * an explicit `locale`.
+ */
 export type EmailModelSendArgs = {
+  /**
+   * Returns the email's React tree, called with the recipient's locale and
+   * messages plus the site's template props. Wrap it in `DefaultTemplateEmail`
+   * yourself to get the standard layout. Ignored when `html` is given.
+   */
   content: (
     props: Omit<DefaultTemplateEmailProps, "children"> &
       Pick<EmailModelSendArgs, "user">,
@@ -56,6 +74,7 @@ export type EmailModelSendArgs = {
   html?: string;
   locale?: string;
   replyTo?: string;
+  /** A string, or a function translating it with the recipient's locale and messages. */
   subject:
     | ((props: Pick<DefaultTemplateEmailProps, "i18n">) => string)
     | string;
@@ -69,6 +88,14 @@ export interface BuiltEmail {
   to: string;
 }
 
+/**
+ * Renders React Email templates and sends them through the configured email
+ * adapter, read in a route as `c.get("email")`.
+ *
+ * Emails are written in the recipient's language - the user's own, or the
+ * `locale` given - falling back to the default locale when it is not offered,
+ * never in the language of whoever triggered the send.
+ */
 export class EmailModel {
   constructor(c: Context) {
     this.c = c;
@@ -88,6 +115,11 @@ export class EmailModel {
     return provider;
   }
 
+  /**
+   * Renders an email to HTML and plain text without sending it.
+   *
+   * @throws `HTTPException(400)` when there is no recipient address.
+   */
   async build({
     html,
     replyTo,
@@ -148,6 +180,11 @@ export class EmailModel {
     };
   }
 
+  /**
+   * Sends an already built email right away, through the adapter.
+   *
+   * @throws `HTTPException(500)` when no email adapter is configured.
+   */
   async deliver(
     email: BuiltEmail,
     { idempotencyKey }: { idempotencyKey?: string } = {},
@@ -190,6 +227,15 @@ export class EmailModel {
     );
   }
 
+  /**
+   * Renders the email now and queues core's `send-email` task (always under
+   * `@vitnode/core`, so plugin routes work too) - the request does not wait
+   * for the provider. Delivery is attempted right after the response, and the
+   * queue retries it if that fails.
+   *
+   * @throws `HTTPException(500)` when no email adapter is configured, and
+   * `HTTPException(400)` when there is no recipient address.
+   */
   async send(args: EmailModelSendArgs): Promise<void> {
     this.requireProvider();
     const email = await this.build(args);

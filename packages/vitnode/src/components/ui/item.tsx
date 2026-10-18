@@ -6,6 +6,7 @@ import React from "react";
 
 import { Separator } from "@/components/ui/separator";
 
+/** A list of {@link Item}s (`role="list"`). */
 function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -20,6 +21,7 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** A divider between items. */
 function ItemSeparator({
   className,
   ...props
@@ -56,6 +58,12 @@ const itemVariants = cva(
   },
 );
 
+/**
+ * A row for one thing in a list, such as a setting, file or person; renders a
+ * `div` (or your `render`, e.g. a link). `variant` is `"default"`, `"outline"`
+ * or `"muted"`; `size` is `"default"`, `"sm"` or `"xs"`; both default to
+ * `"default"`.
+ */
 function Item({
   className,
   variant = "default",
@@ -98,6 +106,10 @@ const itemMediaVariants = cva(
   },
 );
 
+/**
+ * The item's leading icon or image. `variant` is `"default"`, `"icon"`,
+ * `"tile"` (a muted square) or `"image"`; defaults to `"default"`.
+ */
 function ItemMedia({
   className,
   variant = "default",
@@ -113,6 +125,7 @@ function ItemMedia({
   );
 }
 
+/** Holds the title and description. */
 function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -126,6 +139,7 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The item's main line. */
 function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -139,6 +153,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** Secondary text under the title. */
 function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
@@ -152,6 +167,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
+/** Buttons or controls at the item's end. */
 function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -162,6 +178,7 @@ function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** A full-width line above the item's main row. */
 function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -175,6 +192,7 @@ function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** A full-width line below the item's main row. */
 function ItemFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

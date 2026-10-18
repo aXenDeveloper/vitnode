@@ -22,6 +22,7 @@ interface ItemAutoFormRadioGroupLabelsProps {
   value: string;
 }
 
+/** Radio buttons for an `AutoForm` enum field, one per enum value. Spread the props `AutoForm` passes and add a `label`. */
 export const AutoFormRadioGroup = ({
   label,
   labelRight,
@@ -39,7 +40,9 @@ export const AutoFormRadioGroup = ({
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof RadioGroup>, "value"> & {
+    /** Labels, descriptions and disabled flags for the enum values. */
     labels?: ItemAutoFormRadioGroupLabelsProps[];
+    /** `blocks` renders each option as a selectable card. Defaults to `default`. */
     variant?: "blocks" | "default";
   }) => {
   const values: ItemAutoFormRadioGroupLabelsProps[] = enumValues.map(value => {

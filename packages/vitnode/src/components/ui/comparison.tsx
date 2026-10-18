@@ -36,6 +36,13 @@ const useComparison = () => {
   return context;
 };
 
+/**
+ * A before/after slider over two overlaid {@link ComparisonItem}s. `mode` is
+ * `"drag"` (default) or `"hover"`; `defaultPosition` is a percentage, default
+ * `50`. It is a keyboard slider: arrow keys move 5% (10% with Shift), and the
+ * label defaults to the translated "Comparison slider". `onPositionChange` gets
+ * the new percentage.
+ */
 function Comparison({
   "aria-label": ariaLabel,
   className,
@@ -144,6 +151,11 @@ function Comparison({
   );
 }
 
+/**
+ * One side of a {@link Comparison}, clipped at the current position. `position`
+ * is `"left"` or `"right"`. Hidden from screen readers, so describe the
+ * comparison in the slider's label.
+ */
 function ComparisonItem({
   className,
   position: side,
@@ -170,6 +182,7 @@ function ComparisonItem({
   );
 }
 
+/** The divider line and grip at the current position. */
 function ComparisonHandle({
   children,
   className,

@@ -89,6 +89,10 @@ const EMPTY_PAGE = {
   totalCount: 0,
 };
 
+/**
+ * Builds the public read service of a localized content type. Plugins use the model's `publicService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentLocalizedPublicService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

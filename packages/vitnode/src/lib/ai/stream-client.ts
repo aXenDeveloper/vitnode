@@ -7,8 +7,10 @@ import {
   toAiClientErrorCode,
 } from "./assist-client";
 
+/** Which AI routes a browser call uses: the AdminCP's (`admin`) or the public ones (`user`). */
 export type AiAssistScope = "admin" | "user";
 
+/** `admin` on a page under `/admin`, `user` elsewhere and on the server. */
 export const aiAssistScope = (): AiAssistScope =>
   typeof window !== "undefined" &&
   /^\/admin(\/|$)/.test(window.location.pathname)
@@ -21,6 +23,15 @@ export interface AiStreamSummary {
   runId: number;
 }
 
+/**
+ * Runs an AI action and streams its text output, calling `onDelta` with each
+ * chunk as it arrives. Resolves with the run's summary when the stream ends.
+ * Browser-only; text actions only. Each call sends a fresh idempotency key.
+ *
+ * @throws `AiRequestError` for a non-2xx response or missing body, for an
+ * error event inside the stream (with status `200`), and with
+ * `AI_PROVIDER_FAILED` when the stream ends without a summary.
+ */
 export const streamAiAction = async ({
   action,
   input,
@@ -28,10 +39,15 @@ export const streamAiAction = async ({
   scope,
   signal,
 }: {
+  /** The qualified action key, e.g. `"@vitnode/blog:excerpt.generate"`. */
   action: string;
+  /** The action's input; validated on the server. */
   input: unknown;
+  /** Called with each new chunk of text, in order. */
   onDelta: (delta: string) => void;
+  /** Which routes to call; {@link aiAssistScope} picks it from the current page. */
   scope: AiAssistScope;
+  /** Aborts the request and the stream. */
   signal?: AbortSignal;
 }): Promise<AiStreamSummary> => {
   const body = { action, idempotencyKey: crypto.randomUUID(), input };

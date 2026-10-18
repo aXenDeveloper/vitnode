@@ -97,12 +97,15 @@ const publicStateFor = (
   }
 };
 
+/** Options for {@link contentTranslationEffects}. */
 export interface ContentTranslationEffectsOptions {
+  /** The model, needed to re-index the translation's search document. */
   model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
   pluginId: string;
 }
 
+/** What {@link contentTranslationEffects} did; `event` is `null` when nothing changed. */
 export interface ContentTranslationEffectsResult {
   /**
    * The delivery events this translation mutation emitted, or `undefined` for a
@@ -115,6 +118,13 @@ export interface ContentTranslationEffectsResult {
   search?: ContentSearchSyncOutcome[];
 }
 
+/**
+ * The follow-up to a committed write on one translation: the content event,
+ * a log entry for failed listeners, the delivery events for a type with
+ * `delivery`, and - for a type with `search` when `model` is given and the
+ * record still exists - a re-index of that one locale's search document.
+ * Does nothing when `outcome.changed` is false. Server-only.
+ */
 export const contentTranslationEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,

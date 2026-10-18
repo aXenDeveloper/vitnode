@@ -8,9 +8,21 @@ import { moveRowId, type ReorderDetailsDataTable } from "./reorder-state";
 
 type RowIdOf<T> = T extends { id: infer TId } ? TId : DataTableRowId;
 
+/**
+ * Drag-to-reorder rows, by pointer, touch (press and hold) or keyboard, with
+ * screen-reader announcements. Dragging is turned off while the table is
+ * searched, filtered or sorted by anything but its `defaultOrder`.
+ */
 export interface ReorderableDataTable<T> {
+  /** Turns dragging off; the handles stay, disabled, with an explanation. */
   disabled?: boolean;
+  /** The row's name in the drag handle's label and in announcements. Defaults to its position. */
   getRowLabel?: (row: T) => string;
+  /**
+   * Saves the page's new order, given every row id on the page in that order.
+   * The table shows the new order at once; if this throws or rejects, it goes
+   * back and shows an error toast.
+   */
   onReorder: (
     ids: RowIdOf<T>[],
     details: ReorderDetailsDataTable,
@@ -22,6 +34,7 @@ interface RowOrderOverride {
   key: string;
 }
 
+/** The rows in their optimistic order, and the move that persists through `onReorder`. */
 export const useRowOrderDataTable = <T extends DataTableTMin>({
   edges,
   onReorder,

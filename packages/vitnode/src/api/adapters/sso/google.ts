@@ -12,11 +12,38 @@ import { GOOGLE_ICON } from "./icons";
 // A provider that stops answering would otherwise hang the sign-in request.
 const PROVIDER_TIMEOUT_MS = 10_000;
 
+/**
+ * Sign in with Google: an SSO adapter for the API config's
+ * `authorization.ssoAdapters`. Requests the `openid profile email` scopes and
+ * redirects back to `login/sso/google` under `VITNODE_WEB_URL` - register that URL
+ * as the OAuth redirect URI. Refuses (`400`) a Google account whose email is not verified. Supplies the avatar, first and last name for profile sync.
+ *
+ * Server-only.
+ *
+ * @example
+ * ```ts
+ * import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
+ *
+ * buildApiConfig({
+ *   authorization: {
+ *     ssoAdapters: [
+ *       GoogleSSOApiPlugin({
+ *         clientId: process.env.GOOGLE_CLIENT_ID,
+ *         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+ *       }),
+ *     ],
+ *   },
+ *   // ...
+ * });
+ * ```
+ */
 export const GoogleSSOApiPlugin = ({
   clientId,
   clientSecret,
 }: {
+  /** The OAuth client ID. `undefined` still registers the button, but signing in throws until it is set. */
   clientId: string | undefined;
+  /** The OAuth client secret. Needed to exchange the code; signing in throws without it. */
   clientSecret: string | undefined;
 }): SSOApiPlugin => {
   const id = "google";

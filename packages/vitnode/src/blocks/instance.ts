@@ -37,6 +37,7 @@ const encodeTime = (time: number): string => {
   return out;
 };
 
+/** A new time-sortable, ULID-style instance id. */
 export const createBlockInstanceId = (now = Date.now()): string => {
   const bytes = randomBytes(RANDOM_LENGTH);
   let random = "";
@@ -49,6 +50,7 @@ export const createBlockInstanceId = (now = Date.now()): string => {
 export const isBlockInstanceId = (value: unknown): value is string =>
   typeof value === "string" && BLOCK_INSTANCE_ID_PATTERN.test(value);
 
+/** A new instance with a fresh id. Pass the qualified `type`, e.g. `"example:callout"`. */
 export const createBlockInstance = <TType extends string, TData>(
   type: TType,
   data: TData,

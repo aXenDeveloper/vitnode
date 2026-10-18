@@ -103,10 +103,12 @@ import {
 /** Display labels for `user` and `relation` values, keyed by field name. */
 export type ContentLabels = Record<string, null | string>;
 
+/** A list row: the base-table row plus display labels for its reference fields. */
 export type ContentListRow<TDefinition> = ContentSelect<TDefinition> & {
   labels: ContentLabels;
 };
 
+/** Pagination metadata of a `findMany` page, cursor- or page-based. */
 export interface ContentPageInfo {
   count: number;
   currentPage: null | number;
@@ -145,6 +147,7 @@ export interface ContentServiceOptions {
   tx?: ContentDatabase;
 }
 
+/** A write's new row and the field paths whose value actually changed. */
 export interface ContentUpdateResult<TDefinition> {
   changedFields: ContentChangedPath<TDefinition>[];
   row: ContentSelect<TDefinition>;
@@ -253,6 +256,20 @@ export interface ContentPublicationMethods<TDefinition> {
   ) => Promise<ContentPublicationResult<TDefinition> | null>;
 }
 
+/**
+ * The typed repository of one content type, from `model.service(c)`.
+ * Server-only.
+ *
+ * Validates input against the generated schemas and writes the base table,
+ * its junction and child tables. It is deliberately low level: it emits no
+ * events, records no revisions and expires no caches - and neither does
+ * `model.editorialService`. Custom write paths must follow up the way the
+ * generated routes do: `emitContentEvent`, or `contentPlainWriteEffects` /
+ * `contentEditorialEffects` after an `editorialService` write.
+ *
+ * Publication, visibility and duplication methods exist only when the
+ * definition enables them.
+ */
 export type ContentService<TDefinition> = ContentServiceBase<TDefinition> &
   ContentVisibilityMembers<TDefinition, ContentVisibilityMethods<TDefinition>> &
   (TDefinition extends { duplication: { enabled: true } }
@@ -269,6 +286,7 @@ export interface ContentServiceBase<TDefinition> {
     options?: ContentServiceOptions,
   ) => Promise<ContentAdvancedValues<TDefinition>>;
 
+  /** Only the named to-many relations and repeatables of one record. */
   advancedFields: (
     id: ContentIdOf<TDefinition>,
     fields: readonly string[],
@@ -279,19 +297,23 @@ export interface ContentServiceBase<TDefinition> {
     values: ContentCreateInput<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition>>;
+  /** Deletes a record and returns the deleted row, or `null` when it did not exist. */
   delete: (
     id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
+  /** The base-table row, or `null`. */
   findById: (
     id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
 
+  /** The base-table row plus its to-many relations and repeatables, or `null`. */
   findDetail: (
     id: ContentIdOf<TDefinition>,
     options?: ContentServiceOptions,
   ) => Promise<ContentDetail<TDefinition> | null>;
+  /** One page of rows with labels, filtered, ordered and searched as the admin list is. */
   findMany: (args?: ContentFindManyArgs<TDefinition>) => Promise<{
     edges: ContentListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
@@ -302,12 +324,17 @@ export interface ContentServiceBase<TDefinition> {
     options?: ContentServiceOptions,
   ) => Promise<ContentListRow<TDefinition> | null>;
 
+  /**
+   * Picker options for a `relation` or `user` field: matching `search`, or the
+   * given `ids` when resolving current values.
+   */
   options: (
     field: ContentReferenceFieldName<TDefinition>,
     search?: string,
     ids?: readonly ContentId[],
   ) => Promise<{ color?: string; label: string; value: ContentId }[]>;
 
+  /** Typed operations on each to-many relation, keyed by field name. */
   relations: {
     [K in ContentRelationCollectionName<TDefinition>]: ContentRelationMethods<
       TDefinition,
@@ -451,6 +478,10 @@ const contentServiceShape = ({
   return shape;
 };
 
+/**
+ * Builds the typed repository behind `ContentModel.service`. Plugins use the model's `service` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

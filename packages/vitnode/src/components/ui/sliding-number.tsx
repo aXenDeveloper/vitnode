@@ -74,6 +74,11 @@ const DigitRoller = ({
   );
 };
 
+/**
+ * A number whose digits roll to the new value when `value` changes. Pass an
+ * `Intl.NumberFormat` as `formatter` for grouping, decimals or units. Jumps
+ * without animation when the user prefers reduced motion.
+ */
 function SlidingNumber({
   className,
   formatter,

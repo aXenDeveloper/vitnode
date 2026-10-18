@@ -6,6 +6,11 @@ import { useRouteNavigationPending } from "../pending/navigation-pending";
 import { BreadcrumbPendingSkeleton } from "../pending/shapes";
 import { useBreadcrumbTrail } from "./model";
 
+/**
+ * The site breadcrumb, built from the matched routes' `staticData.breadcrumb`.
+ * Renders nothing when no route declares one, and a skeleton while a
+ * navigation is pending. Rendered by the main layout.
+ */
 export const MainBreadcrumb = () => {
   const entries = useBreadcrumbTrail(useMatches());
   const isNavigating = useRouteNavigationPending(

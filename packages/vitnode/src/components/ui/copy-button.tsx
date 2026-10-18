@@ -22,9 +22,16 @@ type CopyButtonProps = Omit<
   VariantProps<typeof buttonVariants> & {
     children?: React.ReactNode;
     className?: string;
+    /**
+     * The text to copy, or a function returning it (possibly async). A function
+     * is called on click, with the button showing as busy until it resolves.
+     */
     content: (() => Promise<string> | string) | string;
+    /** Controls the copied state yourself. */
     copied?: boolean;
+    /** How long the copied state lasts, in milliseconds. Defaults to `2000`. */
     delay?: number;
+    /** Called when the copied state turns on or off. */
     onCopiedChange?: (copied: boolean) => void;
   };
 
@@ -100,6 +107,12 @@ const CopiedCheck = ({
   </svg>
 );
 
+/**
+ * A button styled like {@link Button} that copies `content` to the clipboard and swaps its icon
+ * for a check while copied. `variant` defaults to `"outline"`, and without
+ * children it is an icon button labelled with the translated "Copy" / "Copied",
+ * announced to screen readers. A failed copy shows an error toast.
+ */
 function CopyButton({
   "aria-label": ariaLabel,
   children,

@@ -28,11 +28,38 @@ const discordAvatarUrl = ({
   return `https://cdn.discordapp.com/avatars/${id}/${avatar}.png?size=512`;
 };
 
+/**
+ * Sign in with Discord: an SSO adapter for the API config's
+ * `authorization.ssoAdapters`. Requests the `identify email` scopes and
+ * redirects back to `login/sso/discord` under `VITNODE_WEB_URL` - register that URL
+ * as the OAuth redirect URI. Refuses (`400`) a Discord account whose email is not verified. Supplies the avatar for profile sync.
+ *
+ * Server-only.
+ *
+ * @example
+ * ```ts
+ * import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
+ *
+ * buildApiConfig({
+ *   authorization: {
+ *     ssoAdapters: [
+ *       DiscordSSOApiPlugin({
+ *         clientId: process.env.DISCORD_CLIENT_ID,
+ *         clientSecret: process.env.DISCORD_CLIENT_SECRET,
+ *       }),
+ *     ],
+ *   },
+ *   // ...
+ * });
+ * ```
+ */
 export const DiscordSSOApiPlugin = ({
   clientId = "",
   clientSecret = "",
 }: {
+  /** The OAuth client ID. `undefined` still registers the button, but signing in throws until it is set. */
   clientId: string | undefined;
+  /** The OAuth client secret. Needed to exchange the code; signing in throws without it. */
   clientSecret: string | undefined;
 }): SSOApiPlugin => {
   const id = "discord";

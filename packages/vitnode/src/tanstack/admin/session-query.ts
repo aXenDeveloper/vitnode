@@ -32,6 +32,13 @@ export const adminSessionQueryOptions = () =>
     staleTime: ADMIN_SESSION_STALE_TIME,
   });
 
+/**
+ * The admin session as a suspense query: `data` is `{ status: "granted",
+ * session }` or `{ status: "denied" }`, never empty, so the component
+ * suspends while it loads. Not retried; stale immediately (stale time 0), so
+ * an invalidation always refetches it. A session that cannot be read (not a denial) throws
+ * `AdminSessionUnavailableError` to the nearest error boundary.
+ */
 export const useAdminSessionQuery = () =>
   useSuspenseQuery(adminSessionQueryOptions());
 

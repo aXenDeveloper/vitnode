@@ -38,6 +38,7 @@ export type {
   MultiLangValueItem,
 } from "@/lib/helpers/multi-lang";
 
+/** A form field holding one value per language. */
 export interface MultiLangFieldProps {
   field: FormFieldApi<MultiLangValue | undefined>;
 }
@@ -72,6 +73,16 @@ const useMultiLangSelection = (
   };
 };
 
+/**
+ * Drives a custom multi-language text field: which language is shown, its
+ * text, and a setter that updates only that language's entry.
+ *
+ * It first shows the first language that already has text (`isFilled`,
+ * default: not blank), checking the UI locale, then the default language, then
+ * the rest; with none filled, the UI locale (or the first language). A pinned
+ * `MultiLangLanguageContext` language always wins. `canSelect` is `false` when
+ * pinned or when there is only one language.
+ */
 export const useMultiLangField = (
   field: MultiLangFieldProps["field"],
   { isFilled = hasText }: { isFilled?: (text: string) => boolean } = {},
@@ -95,6 +106,10 @@ export const useMultiLangField = (
   };
 };
 
+/**
+ * {@link useMultiLangField} for non-string values (e.g. a rich-text document):
+ * `isFilled` decides which languages count as having a value.
+ */
 export const useMultiLangValueField = <TValue,>(
   field: FormFieldApi<MultiLangValue<TValue> | undefined>,
   { isFilled }: { isFilled: (value: TValue | undefined) => boolean },
@@ -118,6 +133,7 @@ export const useMultiLangValueField = <TValue,>(
   };
 };
 
+/** The compact language switcher shown in a multi-language field's label row. */
 export const MultiLangSelect = ({
   languages,
   onSelect,
@@ -166,6 +182,10 @@ export const MultiLangSelect = ({
   );
 };
 
+/**
+ * A multi-language field's label row: the label, plus the language switcher
+ * when `canSelect`. Renders nothing without either.
+ */
 export const MultiLangLabel = ({
   canSelect,
   isOptional,

@@ -51,17 +51,41 @@ interface CascaderProps {
   "aria-invalid"?: boolean;
   "aria-labelledby"?: string;
   className?: string;
+  /** The selected leaf's `value` when uncontrolled. Defaults to `null`. */
   defaultValue?: null | string;
   disabled?: boolean;
+  /**
+   * Opens a branch on `"click"` (default) or `"hover"`; hover only applies to
+   * the columns layout.
+   */
   expandTrigger?: "click" | "hover";
   id?: string;
+  /**
+   * `"drill"` (default) shows one level at a time; `"columns"` shows every
+   * level side by side. Phones always use drill.
+   */
   layout?: "columns" | "drill";
+  /**
+   * Called with the chosen leaf's `value` (or `null` when cleared) and the path
+   * of options leading to it.
+   */
   onValueChange?: (value: null | string, path: CascaderOption[]) => void;
+  /** The option tree. */
   options: CascaderOption[];
+  /** Shown on the trigger while nothing is selected. */
   placeholder?: string;
+  /**
+   * Adds a search box that matches option labels across every level, ignoring
+   * accents. Defaults to `false`.
+   */
   searchable?: boolean;
+  /**
+   * Joins the labels of the selected path on the trigger. Defaults to `" / "`.
+   */
   separator?: string;
+  /** Shows a button that clears the selection. Defaults to `false`. */
   showClear?: boolean;
+  /** The selected leaf's `value` when controlled; `null` for none. */
   value?: null | string;
 }
 
@@ -569,6 +593,10 @@ const CascaderTrigger = ({
   );
 };
 
+/**
+ * A popover picker for one leaf in a tree of options, controlled (`value`) or
+ * uncontrolled (`defaultValue`).
+ */
 const Cascader = ({
   defaultValue = null,
   disabled = false,

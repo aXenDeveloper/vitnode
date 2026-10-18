@@ -16,6 +16,7 @@ import { AutoFormLabel } from "../common/label";
 
 const FIELDS_PANEL = "fields";
 
+/** A switch for an `AutoForm` boolean field. Spread the props `AutoForm` passes and add a `label`. */
 export const AutoFormSwitch = ({
   label,
   field,

@@ -8,6 +8,10 @@ export const EMOJI_PICKER_LIST_HEIGHT = 288;
 export const EMOJI_PICKER_INPUT_CLASS =
   "bg-muted text-foreground focus:ring-ring h-8 text-base focus:ring-2 md:text-sm";
 
+/**
+ * A searchable emoji grid. Calls `onSelect` with the picked emoji; `height` is
+ * the list height in pixels, default `288`.
+ */
 export const EmojiPicker = ({
   autoFocus,
   height = EMOJI_PICKER_LIST_HEIGHT,

@@ -1,5 +1,12 @@
 import React from "react";
 
+/**
+ * Asks the browser to confirm leaving the page, e.g. with unsaved changes.
+ *
+ * @param enabled `false` removes the listener; a function is called on every
+ * unload attempt to decide. Defaults to `true`.
+ * @param message Legacy custom text; most browsers show their own.
+ */
 export const useBeforeUnload = (
   enabled: (() => boolean) | boolean = true,
   message?: string,

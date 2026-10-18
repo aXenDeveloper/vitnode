@@ -57,11 +57,18 @@ const useActivity = () => {
   };
 };
 
+/**
+ * Avatars of the other people editing this record live, one per person, each
+ * with a tooltip saying what they are on (a field and language, or just
+ * viewing). Renders nothing outside a live editing session or when you are
+ * alone. Place it in a custom content form layout's header.
+ */
 export const ContentLivePresence = ({
   className,
   max = 5,
 }: {
   className?: string;
+  /** Avatars shown before the rest collapse into a `+N` count. Defaults to 5. */
   max?: number;
 }) => {
   const t = useTranslations("core.content.live.presence");

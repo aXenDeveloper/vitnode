@@ -1,7 +1,9 @@
+/** A parsed emoji-or-icon value: one emoji, or a Lucide icon name in kebab case. */
 export type EmojiIconValue =
   | { type: "emoji"; value: string }
   | { type: "icon"; value: string };
 
+/** The longest stored value (`emoji:…` / `icon:…`) {@link parseEmojiIcon} accepts. */
 export const EMOJI_ICON_MAX_LENGTH = 64;
 
 const LUCIDE_ICON_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -17,6 +19,11 @@ export const isSingleEmoji = (value: string): boolean => {
   return singleEmoji.test(value);
 };
 
+/**
+ * Reads a stored `emoji:🚀` or `icon:newspaper` string. Returns `undefined`
+ * for anything else: empty, longer than {@link EMOJI_ICON_MAX_LENGTH}, an
+ * unknown scheme, more than one emoji, or an icon name that is not kebab case.
+ */
 export const parseEmojiIcon = (
   raw: null | string | undefined,
 ): EmojiIconValue | undefined => {
@@ -42,6 +49,7 @@ export const parseEmojiIcon = (
   return undefined;
 };
 
+/** The stored string for a value - `emoji:…` or `icon:…` - or `""` for none. */
 export const serializeEmojiIcon = (
   value: EmojiIconValue | null | undefined,
 ): string => (value ? `${value.type}:${value.value}` : "");

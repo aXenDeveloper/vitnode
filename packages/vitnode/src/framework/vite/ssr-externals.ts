@@ -9,10 +9,16 @@ const ALWAYS_EXTERNAL = ["tslib"] as const;
 export const NITRO_TRACED_DEPENDENCIES = ["@simplewebauthn/server"] as const;
 
 export interface VitNodeSsrExternalsOptions {
+  /** The app's root directory, where `src/vitnode.config.ts` lives. */
   appRoot: string;
+  /** Reads the configured plugin ids. Defaults to reading the app's config; replaceable in tests. */
   readPluginIds?: (appRoot: string) => Promise<string[]>;
 }
 
+/**
+ * In a production build, keeps `@vitnode/core` and every configured plugin out
+ * of the server bundle, loaded from `node_modules` at runtime instead.
+ */
 export const vitNodeSsrExternals = ({
   appRoot,
   readPluginIds = configuredPluginIds,

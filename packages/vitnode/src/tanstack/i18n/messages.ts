@@ -70,6 +70,26 @@ const loaderOptionsFrom = (
       }
     : options;
 
+/**
+ * Builds the server-side loader `configureIntl`'s `fetchMessages` calls: it
+ * merges core's, each plugin's and the app's messages for a locale over the
+ * default locale (so a missing key falls back key by key) and returns only the
+ * requested namespaces. Merged trees are cached per process in production.
+ *
+ * Server-only - import it from `@vitnode/core/tanstack/i18n/server`. Pass the
+ * app's server config, or the sources explicitly.
+ *
+ * @example
+ * ```ts
+ * // src/server/messages.server.ts
+ * import "@tanstack/react-start/server-only";
+ * import { createIntlMessagesLoader } from "@vitnode/core/tanstack/i18n/server";
+ *
+ * import { vitNodeServerConfig } from "@/vitnode.server.config";
+ *
+ * export const loadIntlMessages = createIntlMessagesLoader(vitNodeServerConfig);
+ * ```
+ */
 export function createIntlMessagesLoader(
   options: IntlMessagesLoaderOptions | VitNodeServerConfig,
 ): IntlMessagesLoader {

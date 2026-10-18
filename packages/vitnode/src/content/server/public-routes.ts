@@ -67,6 +67,11 @@ import {
 } from "./revision-snapshot";
 import { readContentThread } from "./thread";
 
+/**
+ * The public routes of one content type: list and detail, plus preview,
+ * delivery, thread and public-write routes when the definition enables them.
+ * `buildContentPublicModule` mounts them; plugins do not call this directly.
+ */
 export const buildContentPublicRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

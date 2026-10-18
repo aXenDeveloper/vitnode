@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
+/** A `fieldset` grouping related fields. */
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
     <fieldset
@@ -18,6 +19,10 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   );
 }
 
+/**
+ * The fieldset's caption. `variant` is `"legend"` (default) or `"label"`, which
+ * styles it like a field label.
+ */
 function FieldLegend({
   className,
   variant = "legend",
@@ -36,6 +41,7 @@ function FieldLegend({
   );
 }
 
+/** Stacks fields with consistent spacing. */
 function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -67,6 +73,12 @@ const fieldVariants = cva(
   },
 );
 
+/**
+ * One form field (`role="group"`): its label, control, description and error.
+ * `orientation` is `"vertical"` (default), `"horizontal"` or `"responsive"`,
+ * which turns horizontal once the surrounding {@link FieldGroup} is at least
+ * 28rem (`@md` container) wide.
+ */
 function Field({
   className,
   orientation = "vertical",
@@ -83,6 +95,10 @@ function Field({
   );
 }
 
+/**
+ * Groups a field's label and description beside a control, e.g. next to a
+ * checkbox.
+ */
 function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -96,6 +112,7 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The field's label, a {@link Label}. */
 function FieldLabel({
   className,
   ...props
@@ -113,6 +130,7 @@ function FieldLabel({
   );
 }
 
+/** A label-styled title for a field whose control has its own label. */
 function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -126,6 +144,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** Help text under the field. */
 function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
@@ -141,6 +160,7 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
+/** A divider between fields, with optional centered text such as "or". */
 function FieldSeparator({
   children,
   className,
@@ -171,6 +191,11 @@ function FieldSeparator({
   );
 }
 
+/**
+ * The field's error, with `role="alert"`. Shows `children`, or the messages of
+ * `errors` (duplicates removed; several become a list); renders nothing without
+ * either.
+ */
 function FieldError({
   className,
   children,

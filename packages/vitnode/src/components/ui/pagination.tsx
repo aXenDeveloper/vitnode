@@ -11,6 +11,7 @@ import { useTranslations } from "use-intl";
 
 import { buttonVariants } from "@/components/ui/button";
 
+/** A `<nav>` for page links, with a translated `aria-label`. */
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   const t = useTranslations("core.global");
 
@@ -25,6 +26,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   );
 }
 
+/** The list of {@link PaginationItem}s. */
 function PaginationContent({
   className,
   ...props
@@ -38,6 +40,7 @@ function PaginationContent({
   );
 }
 
+/** One entry in the pagination list. */
 function PaginationItem({ ...props }: React.ComponentProps<"li">) {
   return <li data-slot="pagination-item" {...props} />;
 }
@@ -47,6 +50,10 @@ type PaginationLinkProps = Pick<VariantProps<typeof buttonVariants>, "size"> &
     isActive?: boolean;
   };
 
+/**
+ * A page link. `isActive` marks the current page (`aria-current="page"`,
+ * outline style); `size` defaults to `icon`.
+ */
 function PaginationLink({
   className,
   isActive,
@@ -68,6 +75,10 @@ function PaginationLink({
   );
 }
 
+/**
+ * A link to the previous page. The label hides on small screens; `text`
+ * replaces the translated "Previous".
+ */
 function PaginationPrevious({
   className,
   text,
@@ -88,6 +99,10 @@ function PaginationPrevious({
   );
 }
 
+/**
+ * A link to the next page. The label hides on small screens; `text` replaces
+ * the translated "Next".
+ */
 function PaginationNext({
   className,
   text,
@@ -108,6 +123,7 @@ function PaginationNext({
   );
 }
 
+/** A `…` gap between page links, with a translated screen-reader label. */
 function PaginationEllipsis({
   className,
   ...props

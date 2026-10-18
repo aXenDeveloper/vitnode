@@ -15,12 +15,15 @@ export interface EditorEmojiSection {
   label: string;
 }
 
+/** Editor settings, from the `editor` option of the app's `buildConfig`. */
 export interface VitNodeEditorConfig {
+  /** Custom emoji sections in the picker. Empty sections are dropped. */
   emojis?: EditorEmojiSection[];
 }
 
 const EditorConfigContext = React.createContext<VitNodeEditorConfig>({});
 
+/** Provides the app's {@link VitNodeEditorConfig} to every editor below it. */
 export const EditorConfigProvider = ({
   children,
   config = {},
@@ -36,5 +39,6 @@ export const EditorConfigProvider = ({
   return <EditorConfigContext value={value}>{children}</EditorConfigContext>;
 };
 
+/** The editor config from the nearest {@link EditorConfigProvider}; `{}` without one. */
 export const useEditorConfig = (): VitNodeEditorConfig =>
   React.use(EditorConfigContext);

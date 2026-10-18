@@ -2,6 +2,7 @@ import { useTranslations } from "use-intl";
 
 import { ErrorContent } from "@/views/error/error-content";
 
+/** The translated 404 page, e.g. the router's `defaultNotFoundComponent`. Needs `core.global` messages. */
 export const NotFound = ({ actions }: { actions?: React.ReactNode }) => {
   const t = useTranslations("core.global");
 
@@ -15,6 +16,7 @@ export const NotFound = ({ actions }: { actions?: React.ReactNode }) => {
   );
 };
 
+/** The translated 500 page. Needs `core.global` messages. */
 export const Error500Page = ({ actions }: { actions?: React.ReactNode }) => {
   const t = useTranslations("core.global");
 

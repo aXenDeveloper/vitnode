@@ -95,11 +95,39 @@ declare module "hono" {
   interface ContextVariableMap extends EnvVariablesVitNode {}
 }
 
+/** The Hono environment of every VitNode API route: see {@link EnvVariablesVitNode}. */
 export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
 }
 
+/**
+ * What a route handler reads with `c.get(...)`. All are set before the route
+ * runs: the global middleware sets most of them, `buildRoute` sets `plugin`,
+ * and the admin middleware fills `admin` on `/admin/` paths. They are also
+ * typed on Hono's own `Context` through `ContextVariableMap`.
+ *
+ * The models (`ai`, `cache`, `email`, ...) are per-request objects bound to the
+ * context, so they act for the current user and plugin.
+ *
+ * @example
+ * ```ts
+ * handler: async c => {
+ *   const user = c.get("user");
+ *   if (!user) throw new HTTPException(401);
+ *   const posts = await c.get("cache").remember("latest", 60, async () =>
+ *     c.get("db").select().from(blog_posts).limit(10),
+ *   );
+ *
+ *   return c.json({ posts }, 200);
+ * },
+ * ```
+ */
 export interface EnvVariablesVitNode {
+  /**
+   * The signed-in admin, on paths containing `/admin/` only - such a request
+   * without a valid admin session is answered `403` before the route runs.
+   * `null` everywhere else.
+   */
   admin: null | {
     user: {
       avatarColor: string;
@@ -123,9 +151,17 @@ export interface EnvVariablesVitNode {
       timeZone: null | string;
     };
   };
+  /** When the admin session expires; `null` outside `/admin/` paths. */
   adminSessionExpiresAt: Date | null;
+  /** The AI model registry and action runner: see {@link AIModel}. */
   ai: AIModel;
+  /** Plugin-scoped JSON cache, Redis-backed when the API config has `redis`, a no-op otherwise. */
   cache: CacheModel;
+  /**
+   * The resolved installation: the API config with its defaults applied, plus
+   * everything every plugin registered. Read-only, and mostly for core's own
+   * routes - prefer the models above.
+   */
   core: {
     ai?: VitNodeApiConfig["ai"];
     aiActions: AiActionRegistry;
@@ -193,20 +229,43 @@ export interface EnvVariablesVitNode {
     };
     webSockets: WebSocketConfig[];
   };
+  /** The Drizzle database from the API config's `dbProvider`. */
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
+  /** Renders and sends emails through the configured email adapter: see {@link EmailModel}. */
   email: EmailModel;
+  /** Emits events to registered listeners. */
   events: EventsModel;
+  /** Server-side translations, for output with no UI such as emails: see {@link I18nModel}. */
   i18n: I18nModel;
+  /**
+   * The client's IP: from a signed forwarded header (server-side fetcher
+   * calls), else the socket address (or the `x-forwarded-for` hop behind
+   * `VITNODE_TRUSTED_PROXY_HOPS` proxies), else `127.0.0.1`.
+   */
   ipAddress: string;
+  /**
+   * Writes a `debug`, `warn` or `error` entry to the `core_logs` table, with
+   * the request's plugin, path, IP and user, and echoes it to the console.
+   */
   log: LoggerMiddlewareType;
+  /** Creates and delivers user notifications. */
   notifications: NotificationsModel;
+  /**
+   * The plugin whose route is handling the request, set by every route built
+   * with `buildRoute`. Scopes `cache` keys and stored files to that plugin.
+   */
   plugin: {
     id: string;
   };
+  /** Dispatches background queue tasks. */
   queue: QueueModel;
+  /** Pushes payloads to open WebSocket connections, across instances when Redis is configured. */
   realtime: VitNodeRealtime;
+  /** Indexes and queries the search adapter: see {@link SearchModel}. */
   search: SearchModel;
+  /** Uploads, reads and deletes files through the storage adapter: see {@link StorageModel}. */
   storage: StorageModel;
+  /** The signed-in user from the session cookie, or `null` for a guest. */
   user: null | {
     avatarColor: string;
     avatarUrl: null | string;
@@ -232,6 +291,14 @@ export interface EnvVariablesVitNode {
 
 type CoreVariables = EnvVariablesVitNode["core"];
 
+/**
+ * Validates every registration once, then sets the {@link EnvVariablesVitNode}
+ * variables on each request. Mounted by `VitNodeAPI`; plugins never call it.
+ *
+ * @throws At startup, when the plugins' registrations are invalid or collide
+ * (content types, containers, editable pages, AI actions, search indexers,
+ * moderation targets and scopes).
+ */
 export const globalMiddleware = ({
   ai,
   authorization,
@@ -618,6 +685,13 @@ export const globalMiddleware = ({
   };
 };
 
+/**
+ * Requires a valid admin session and sets `admin`. `VitNodeAPI` runs it for
+ * every path containing `/admin/`; a passive request (`?passive=true`) reads
+ * the session without extending it.
+ *
+ * @throws `HTTPException(403)` without a valid admin session.
+ */
 export const globalAdminMiddleware = () => {
   return async (c: Context, next: Next) => {
     const session = await new SessionAdminModel(c).getSession({

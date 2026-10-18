@@ -3,12 +3,14 @@ import { cn } from "cn";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import React from "react";
 
+/** A Base UI menu opened by right-click or long-press on its trigger. */
 function ContextMenu({
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
 }
 
+/** The area that opens the menu. */
 function ContextMenuTrigger({
   className,
   ...props
@@ -57,6 +59,7 @@ function ContextMenuRadioGroup({
   );
 }
 
+/** The menu popup, rendered in a portal. */
 function ContextMenuContent({
   className,
   align = "start",
@@ -93,6 +96,10 @@ function ContextMenuContent({
   );
 }
 
+/**
+ * One action. `variant` is `"default"` or `"destructive"`; `inset` indents it
+ * to line up with items that have icons.
+ */
 function ContextMenuItem({
   className,
   inset,
@@ -260,6 +267,7 @@ function ContextMenuLabel({
   );
 }
 
+/** A divider between items. */
 function ContextMenuSeparator({
   className,
   ...props
@@ -273,6 +281,7 @@ function ContextMenuSeparator({
   );
 }
 
+/** A keyboard shortcut hint at the item's end. */
 function ContextMenuShortcut({
   className,
   ...props

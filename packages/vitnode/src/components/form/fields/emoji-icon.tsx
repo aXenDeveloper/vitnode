@@ -9,6 +9,11 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
+/**
+ * An emoji or Lucide icon picker for an `AutoForm` string field. Stores
+ * `emoji:<emoji>` or `icon:<lucide-name>`, or `""` when cleared. Spread the
+ * props `AutoForm` passes and add a `label`.
+ */
 export const AutoFormEmojiIcon = ({
   label,
   labelRight,

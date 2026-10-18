@@ -2,6 +2,10 @@ import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { cn } from "cn";
 import React from "react";
 
+/**
+ * A scroll container with a styled vertical scrollbar; content fades out at
+ * the scrolled edges.
+ */
 function ScrollArea({
   className,
   children,

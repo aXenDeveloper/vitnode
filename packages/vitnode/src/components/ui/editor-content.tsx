@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { sanitizeEditorHtml } from "@/lib/sanitize-editor-html";
 
+/** Renders stored editor HTML with the editor's styles, sanitized first. */
 export const EditorContent = ({ content }: { content: string }) => {
   // Sanitizing parses the whole document, so it runs once per content, not
   // once per parent render.

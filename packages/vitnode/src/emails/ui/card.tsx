@@ -1,6 +1,11 @@
 import { cn } from "cn";
 import { Section, Text } from "react-email";
 
+/**
+ * A bordered, rounded card for an email's message, with header, title,
+ * description, content and footer parts. Colors come from
+ * `DefaultTemplateEmail`, so use it inside that template.
+ */
 export const EmailCard = ({
   className,
   ...props
@@ -16,6 +21,7 @@ export const EmailCard = ({
   );
 };
 
+/** The card's top section, for the title and description. */
 export const EmailCardHeader = ({
   className,
   ...props
@@ -23,6 +29,7 @@ export const EmailCardHeader = ({
   return <Section className={cn("mb-6 px-6", className)} {...props} />;
 };
 
+/** The card's heading text. */
 export const EmailCardTitle = ({
   className,
   ...props
@@ -35,6 +42,7 @@ export const EmailCardTitle = ({
   );
 };
 
+/** Muted, smaller text under the title. */
 export const EmailCardDescription = ({
   className,
   ...props
@@ -47,6 +55,7 @@ export const EmailCardDescription = ({
   );
 };
 
+/** The card's main section. */
 export const EmailCardContent = ({
   className,
   ...props
@@ -54,6 +63,7 @@ export const EmailCardContent = ({
   return <Section className={cn("px-6", className)} {...props} />;
 };
 
+/** The card's bottom section, e.g. for a button. */
 export const EmailCardFooter = ({
   className,
   ...props

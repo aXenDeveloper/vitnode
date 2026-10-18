@@ -32,28 +32,52 @@ import {
 } from "./sso-link-token";
 import { UserModel } from "./user";
 
+/** The account an SSO provider returned, as an adapter's `fetchUser` maps it. */
 export interface SSOProviderUser {
+  /** Profile picture URL, for profile sync. */
   avatarUrl?: null | string;
+  /** The account's email. Matched against existing VitNode accounts on first sign-in. */
   email: string;
   firstName?: null | string;
+  /** The provider's stable account id, stored to recognise the account next time. */
   id: string;
   lastName?: null | string;
+  /** Becomes the new user's name (special characters removed) on sign-up. */
   username: string;
 }
 
+/**
+ * An SSO (OAuth) provider adapter, listed in the API config's
+ * `authorization.ssoAdapters`. Core's built-in adapters live in
+ * `@vitnode/core/api/adapters/sso/*`; a custom provider implements this shape.
+ *
+ * Sign-in flow: `getUrl` sends the browser to the provider, which redirects to
+ * {@link getRedirectUri} with a `code`; core verifies the `state` cookie, then
+ * calls `fetchToken` and `fetchUser`. An unknown account signs up, a known one
+ * signs in, and an email that matches an existing account asks for that
+ * account's password before linking. Server-only.
+ */
 export interface SSOApiPlugin {
+  /** The sign-in button's background color, e.g. `"#5865f2"`; the text color is picked for contrast. */
   brandColor?: string;
+  /** Exchanges the authorization code for an access token. Throw an `HTTPException` to fail the sign-in. */
   fetchToken: (
     code: string,
   ) => Promise<{ access_token: string; token_type: string }>;
+  /** Reads the provider account with the token. Throw an `HTTPException` (e.g. `400` for an unverified email) to refuse it. */
   fetchUser: (args: {
     access_token: string;
     token_type: string;
   }) => Promise<SSOProviderUser>;
+  /** The provider's authorization URL. Must pass `state` through unchanged and use {@link getRedirectUri} as the redirect URI. */
   getUrl: (props: { state: string }) => string;
+  /** The button's icon, as SVG markup. */
   icon?: string;
+  /** Unique provider id, used in URLs (`login/sso/{id}`) and to store linked accounts. */
   id: string;
+  /** The provider's display name, e.g. `"Google"`. */
   name: string;
+  /** Which profile fields `fetchUser` supplies, so users can sync them from this provider. Defaults to none. */
   profileFields?: readonly SsoProfileField[];
 }
 
@@ -66,6 +90,11 @@ export type SSOCallbackOutcome =
     }
   | { kind: "signed_in"; userId: number };
 
+/**
+ * The OAuth redirect URI for provider `code`: `login/sso/{code}` under
+ * `VITNODE_WEB_URL`. Register it with the provider, and send the same value
+ * from `getUrl` and `fetchToken`.
+ */
 export const getRedirectUri = (code: string) =>
   new URL(`${CONFIG.web.href}login/sso/${code}`).toString();
 

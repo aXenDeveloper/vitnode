@@ -9,10 +9,18 @@ import type { ContentDeliveryOutcome } from "./delivery-writes";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 
+/** The delivery events {@link contentDeliveryEffects} emitted. */
 export interface ContentDeliveryEffectsResult {
   events: EventEmitResult[];
 }
 
+/**
+ * Emits `delivery_slug_changed` when a write moved a record's canonical URL,
+ * and `delivery_redirect_created` when it also left a redirect from the old
+ * path. Emits nothing when the slug did not change or the engine could not
+ * build a canonical path. Listener failures are logged, not thrown.
+ * Called by the editorial and translation effects for types with `delivery`.
+ */
 export const contentDeliveryEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,
@@ -99,6 +107,11 @@ export const contentDeliveryEffects = async (
   return { events };
 };
 
+/**
+ * The delivery part of a revalidation request: always present for a type with
+ * `delivery` (a shared SEO field can change every locale's `<head>`), with the
+ * sitemap flags from the write's outcome. `undefined` without `delivery`.
+ */
 export const contentDeliveryInvalidation = (
   definition: AnyContentTypeDefinition,
   delivery: ContentDeliveryOutcome | undefined,

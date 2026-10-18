@@ -17,11 +17,38 @@ export const FACEBOOK_GRAPH_VERSION = "v26.0";
 const FACEBOOK_USER_FIELDS =
   "id,name,email,first_name,last_name,picture.width(512).height(512){url,is_silhouette}";
 
+/**
+ * Sign in with Facebook: an SSO adapter for the API config's
+ * `authorization.ssoAdapters`. Requests the `public_profile,email` scopes and
+ * redirects back to `login/sso/facebook` under `VITNODE_WEB_URL` - register that URL
+ * as the OAuth redirect URI. Supplies the avatar, first and last name for profile sync.
+ *
+ * Server-only.
+ *
+ * @example
+ * ```ts
+ * import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
+ *
+ * buildApiConfig({
+ *   authorization: {
+ *     ssoAdapters: [
+ *       FacebookSSOApiPlugin({
+ *         clientId: process.env.FACEBOOK_CLIENT_ID,
+ *         clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+ *       }),
+ *     ],
+ *   },
+ *   // ...
+ * });
+ * ```
+ */
 export const FacebookSSOApiPlugin = ({
   clientId,
   clientSecret,
 }: {
+  /** The OAuth client ID. `undefined` still registers the button, but signing in throws until it is set. */
   clientId: string | undefined;
+  /** The OAuth client secret. Needed to exchange the code; signing in throws without it. */
   clientSecret: string | undefined;
 }): SSOApiPlugin => {
   const id = "facebook";

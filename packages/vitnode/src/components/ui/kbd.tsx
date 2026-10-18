@@ -1,5 +1,6 @@
 import { cn } from "cn";
 
+/** A keyboard key, e.g. `Ctrl` or `K`, rendered as `kbd`. */
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <kbd
@@ -13,6 +14,7 @@ function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   );
 }
 
+/** Groups keys of one shortcut, e.g. `Ctrl` + `K`. */
 function KbdGroup({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <kbd

@@ -12,6 +12,7 @@ import type {
   PermissionsStaffArgs,
   StaffPermissionSet,
 } from "@/api/lib/permission-staff";
+import type { AdminDashboardWidget } from "@/lib/plugin";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
@@ -429,8 +430,16 @@ export const adminNavNamespaces = (
  * than as an error.
  */
 export interface AdminNavBundle {
+  /** Each plugin's dashboard widgets, in the order of `plugins` (sorted by plugin id in the generated `admin-nav.gen.ts`); plugins with none are left out. */
+  dashboardWidgets: AdminNavDashboardWidgets[];
   declarations: AdminNavGroupDeclaration[];
   namespaces: string[];
+}
+
+/** One plugin's dashboard widgets, keyed by the plugin that declared them. */
+export interface AdminNavDashboardWidgets {
+  pluginId: string;
+  widgets: AdminDashboardWidget[];
 }
 
 /**
@@ -446,7 +455,15 @@ export const adminNavBundle = (
 ): AdminNavBundle => {
   const declarations = adminNavDeclarations(vitNodeConfig);
 
-  return { declarations, namespaces: adminNavNamespaces(declarations) };
+  return {
+    dashboardWidgets: vitNodeConfig.plugins.flatMap(plugin => {
+      const widgets = plugin.admin?.dashboard?.widgets ?? [];
+
+      return widgets.length > 0 ? [{ pluginId: plugin.pluginId, widgets }] : [];
+    }),
+    declarations,
+    namespaces: adminNavNamespaces(declarations),
+  };
 };
 
 /**

@@ -14,9 +14,15 @@ import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { useDialog } from "./dialog";
 import { FieldError } from "./field";
 
+/**
+ * When a field's validation errors become visible: after blur (`onTouched`,
+ * `onBlur`), after the first change or blur (`onChange`, `all`) or only after a submit
+ * (`onSubmit`). After any submit attempt every error is shown.
+ */
 export type FormMode = "all" | "onBlur" | "onChange" | "onSubmit" | "onTouched";
 
 export interface FormSubmitMeta {
+  /** The `value` of the submit button that was clicked, if it has one. */
   intent?: string;
 }
 
@@ -24,10 +30,14 @@ export interface FormFieldChangeEvent {
   target: { checked?: boolean; type?: string; value?: unknown };
 }
 
+/** One field's value and handlers, as a field component receives them. */
 export interface FormFieldApi<TValue = unknown> {
   disabled?: boolean;
+  /** The field's key in the form values; also the base of its element ids. */
   name: string;
+  /** Marks the field blurred, which reveals its errors in the `onBlur` and `onTouched` modes. */
   onBlur: () => void;
+  /** Takes the new value, or an input's change event (a checkbox's `checked` is read). */
   onChange: (change: FormFieldChangeEvent | TValue) => void;
   value: TValue;
 }
@@ -164,6 +174,16 @@ const submitIntentOf = (
     : undefined;
 };
 
+/**
+ * Shows an error on one field after a submit - typically a server answer such
+ * as "this title is taken". It stays until the field's value changes, and the
+ * field is focused unless `shouldFocus` is `false`.
+ *
+ * @example
+ * ```ts
+ * if (res.status === 409) setFormFieldError(form, "title", t("errors.unique"));
+ * ```
+ */
 const setFormFieldError = (
   form: AnyFormApi,
   name: string,
@@ -193,6 +213,14 @@ const removeFormFieldValue = (
   void form.removeFieldValue(name as never, index);
 };
 
+/**
+ * The `<form>` behind `AutoForm`, for a form built on a TanStack Form instance
+ * directly. Prefer `AutoForm`.
+ *
+ * Unless `disableBeforeUnload` is set, closing or reloading the tab with
+ * unsaved changes asks for confirmation (browser `beforeunload`; in-app
+ * navigation is not blocked), and an enclosing `Dialog` asks before closing.
+ */
 function Form({
   children,
   className,
@@ -303,6 +331,11 @@ const useFormField = () => {
   };
 };
 
+/**
+ * Wraps a field's input (its single child element) and gives it the field's
+ * `id`, `aria-invalid` and `aria-describedby` (the description, plus the error
+ * message while one is shown). Use inside `FormField`.
+ */
 function FormControl({ children, ...props }: React.ComponentProps<"div">) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
@@ -322,6 +355,10 @@ function FormControl({ children, ...props }: React.ComponentProps<"div">) {
   });
 }
 
+/**
+ * The field's error messages, once the form's `mode` reveals them; renders
+ * nothing otherwise. Duplicate messages are shown once. Use inside `FormField`.
+ */
 function FormMessage(props: React.ComponentProps<typeof FieldError>) {
   const { errors, formMessageId } = useFormField();
 

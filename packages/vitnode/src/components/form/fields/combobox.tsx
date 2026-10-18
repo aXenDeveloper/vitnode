@@ -31,6 +31,7 @@ import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 import { groupComboboxItems } from "./combobox-groups";
 
+/** One option of an async combobox; the field stores the whole object. */
 export interface ComboboxAsyncItem {
   label: string;
   value: string;
@@ -44,7 +45,9 @@ export const COMBOBOX_INERT_QUERY_KEY = "combobox:no-fetcher";
 type AutoFormComboboxProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Combobox>, "items" | "value"> & {
     className?: string;
+    /** Display labels (and optional groups) for the schema's enum values. */
     labels?: ComboboxOption[];
+    /** With `multiple`, how many selected chips show before the rest collapse. */
     maxVisibleChips?: number;
     placeholder?: string;
     renderChip?: (item: ComboboxAsyncItem) => React.ReactNode;
@@ -52,8 +55,14 @@ type AutoFormComboboxProps = ItemAutoFormComponentProps &
     showClear?: boolean;
   } & (
     | {
+        /**
+         * Loads the options for the typed search (debounced by 500 ms). The
+         * field then stores {@link ComboboxAsyncItem} objects instead of enum
+         * strings.
+         */
         fetchData: ComboboxFetchData;
         id: string;
+        /** The TanStack Query key prefix; the search is appended to it. */
         queryKey: readonly unknown[];
         searchPlaceholder?: string;
       }
@@ -322,6 +331,13 @@ const toComboboxValue = <Value,>(
   return value;
 };
 
+/**
+ * A searchable select for an `AutoForm` field, single or `multiple`.
+ *
+ * Without `fetchData` the options are the schema's enum values, filtered in
+ * the browser. With `fetchData` they are loaded per search through TanStack
+ * Query. Spread the props `AutoForm` passes and add a `label`.
+ */
 export const AutoFormCombobox = ({
   label,
   field,

@@ -17,14 +17,30 @@ export interface ContentFormTranslationMeta {
   updatedAt?: null | string;
 }
 
+/**
+ * What a custom content form layout (`contentTypeAdmin({ forms })`) reads
+ * through {@link useContentForm}: the rendered field inputs, the form mode and
+ * the publication/visibility state of the record being edited.
+ */
 export interface ContentFormContextValue {
+  /** The content type's `localization.defaultLocale`, when localized. */
   defaultLocale?: null | string;
+  /** Every field the form renders, in order (`admin.form.fields` or sections). */
   fieldNames: string[];
+  /** The ready-to-render input of each field, by name. Prefer `<ContentFormField>`. */
   fields: Record<string, React.ReactNode>;
   files?: Record<string, ContentFileFieldValue | undefined>;
   header?: ContentFormHeaderValue;
   localizedFieldNames: string[];
+  /**
+   * Records that the layout placed the header. In development the form warns
+   * when a page-mode layout never renders `<ContentFormHeader>`.
+   */
   markHeaderRendered?: () => void;
+  /**
+   * Records that the layout placed a field. In development the form warns
+   * about fields no layout rendered. The provided primitives call it for you.
+   */
   markRendered?: (name: string) => void;
   mode: "create" | "edit";
   onSaved?: (
@@ -37,7 +53,9 @@ export interface ContentFormContextValue {
     status?: unknown;
     transition?: (action: "publish" | "unpublish") => Promise<boolean>;
   };
+  /** The content type's singular noun, already translated. */
   singular: string;
+  /** `true` while the layout renders as a loading placeholder. */
   skeleton?: boolean;
   title?: string;
   translations?: readonly ContentFormTranslationMeta[];
@@ -53,6 +71,12 @@ const ContentFormContext = React.createContext<ContentFormContextValue | null>(
   null,
 );
 
+/**
+ * The surrounding Content Engine form, for custom layouts and field components.
+ *
+ * @throws When called outside a Content Engine form layout. Use
+ * {@link useContentFormOptional} for components that also render elsewhere.
+ */
 export const useContentForm = (): ContentFormContextValue => {
   const value = React.use(ContentFormContext);
 
@@ -65,6 +89,7 @@ export const useContentForm = (): ContentFormContextValue => {
   return value;
 };
 
+/** Like {@link useContentForm}, but `null` outside a Content Engine form. */
 export const useContentFormOptional = (): ContentFormContextValue | null =>
   React.use(ContentFormContext);
 

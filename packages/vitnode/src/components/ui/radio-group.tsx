@@ -3,6 +3,7 @@ import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
 import { cn } from "cn";
 import React from "react";
 
+/** A group of radio buttons (Base UI `RadioGroup`). */
 function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
   return (
     <RadioGroupPrimitive
@@ -13,6 +14,7 @@ function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
   );
 }
 
+/** One radio button in a {@link RadioGroup}. */
 function RadioGroupItem({
   className,
   ...props

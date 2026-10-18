@@ -99,6 +99,10 @@ const Toaster = ({
   );
 };
 
+/**
+ * An avatar for a toast; without `src` it shows `fallback` or the first
+ * letter of `alt`.
+ */
 const ToastAvatar = ({
   alt,
   fallback,
@@ -122,6 +126,11 @@ interface ToastMessageAction {
   variant?: "default" | "outline" | "secondary";
 }
 
+/**
+ * Rich toast content: an avatar, a title with an optional `time`, an
+ * optional `description`, and action buttons. Render it with `toast.custom()`
+ * from `sonner`.
+ */
 const ToastMessage = ({
   actions = [],
   avatar,

@@ -28,6 +28,13 @@ const buttonVariants = cva(
   },
 );
 
+/**
+ * A link styled as a button for emails, built on react-email's `Button`. Pass
+ * `href` and children; `variant` (`default`, `destructive`, `destructiveGhost`,
+ * `outline`, `secondary`, `ghost`, `link`; default `default`) and `size`
+ * (`default`, `sm`, `lg`; default `default`) pick the style. Its colors come from `DefaultTemplateEmail`, so use it
+ * inside that template.
+ */
 export const EmailButton = ({
   className,
   variant,

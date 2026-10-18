@@ -11,17 +11,31 @@ type DatePickerProps = Omit<
   React.ComponentProps<"button">,
   "children" | "defaultValue" | "onChange" | "value"
 > & {
+  /** Adds a "Clear" button to the popover, shown while a date is set, that calls `onChange` with `undefined`. */
   allowClear?: boolean;
+  /** Extra props for the {@link Calendar} in the popover. */
   calendarProps?: Omit<
     Extract<CalendarProps, { mode: "single" }>,
     "mode" | "onSelect" | "selected"
   >;
+  /**
+   * How the trigger shows the date, in the UI language. Defaults to `{
+   * dateStyle: "long" }`.
+   */
   dateFormat?: Intl.DateTimeFormatOptions;
+  /** Called with the picked date; the popover closes. */
   onChange?: (date: Date | undefined) => void;
+  /** Shown while empty. Defaults to the translated "Pick a date". */
   placeholder?: string;
+  /** The selected date. */
   value?: Date;
 };
 
+/**
+ * An outline button that opens a {@link Calendar} for one date. Its `onBlur`
+ * fires only while the popover is closed, so opening the calendar does not
+ * count as leaving the field.
+ */
 const DatePicker = ({
   value,
   onChange,

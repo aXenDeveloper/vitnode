@@ -182,6 +182,19 @@ export const contentContainerInputRefusal = (
   message: zodErrorMessage(error),
 });
 
+/**
+ * The server service for one container collection: list, read, create,
+ * update, move and delete containers, and read or change their publishing
+ * policies. The AdminCP routes use it, and it emits the
+ * `content.container.*` events, so custom code calling it emits the same ones.
+ * Server-only.
+ *
+ * `usage` decides whether a container still holds content before a delete;
+ * it defaults to checking every content model that references this collection.
+ *
+ * @throws {ContentContainerError} With a `code` such as `notFound`,
+ * `slugTaken`, `hasContent` or `invalidMetadata`.
+ */
 export const createContentContainerService = <
   TDefinition extends AnyContentContainerDefinition,
 >(

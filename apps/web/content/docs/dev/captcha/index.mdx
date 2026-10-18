@@ -48,8 +48,8 @@ Enable captcha verification on any custom Hono endpoint with `withCaptcha: true`
 import { buildRoute } from "@/api/builders"
 
 export const createCommentRoute = buildRoute({
-  withCaptcha: true, // [!code ++]
   route: {
+    withCaptcha: true, // [!code ++]
     method: "post",
     path: "/",
     responses: { 201: { description: "Comment created" } },
@@ -64,35 +64,46 @@ export const createCommentRoute = buildRoute({
 
 ### 3. Render the Frontend Widget
 
-Include `<Captcha />` in your form and supply the received token to the fetcher:
+Pass the app's captcha config to `AutoForm`. It loads the widget, keeps the submit button disabled until the captcha is ready, and hands `onSubmit` a fresh token to forward as the fetcher's `captchaToken`:
 
 ```tsx title="plugins/blog/src/views/comment-form.tsx"
-import { Captcha } from "@vitnode/core/components/captcha"
+import { AutoForm } from "@vitnode/core/components/form/auto-form"
+import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea"
+import { useMiddlewareConfigQuery } from "@vitnode/core/tanstack/auth"
 import { fetcher } from "@vitnode/core/tanstack/fetcher"
+import { z } from "zod"
+
+const formSchema = z.object({ text: z.string().min(1) })
 
 export const CommentForm = () => {
-  const [captchaToken, setCaptchaToken] = React.useState<string>()
-
-  const handleSubmit = async () => {
-    await fetcher({
-      plugin: "@acme/blog",
-      method: "post",
-      module: "comments",
-      path: "/",
-      captchaToken, // [!code ++]
-      args: { body: { text: "Nice article!" } },
-    })
-  }
+  const { data: config } = useMiddlewareConfigQuery()
 
   return (
-    <form onSubmit={handleSubmit}>
-      <textarea />
-      <Captcha onVerify={setCaptchaToken} />
-      <button disabled={!captchaToken}>Submit Comment</button>
-    </form>
+    <AutoForm
+      captcha={config.captcha} // [!code ++]
+      fields={[
+        {
+          id: "text",
+          component: (props) => <AutoFormTextarea {...props} label="Comment" />,
+        },
+      ]}
+      formSchema={formSchema}
+      onSubmit={async (values, form, { captchaToken }) => {
+        await fetcher({
+          plugin: "@acme/blog",
+          method: "post",
+          module: "comments",
+          path: "/",
+          captchaToken, // [!code ++]
+          args: { body: values },
+        })
+      }}
+    />
   )
 }
 ```
+
+`useMiddlewareConfigQuery` suspends until the config loads, so render the form under a `Suspense` boundary. Outside `AutoForm`, use the `useCaptcha` hook from `@vitnode/core/hooks/use-captcha`: it returns `isReady`, `getToken()` and `onReset()`, and for Turnstile your form must contain an element with `id="vitnode_captcha"`.
 
 ---
 

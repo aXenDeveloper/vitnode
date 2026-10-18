@@ -3,6 +3,7 @@ import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import React from "react";
 
+/** A dropdown to pick one option (Base UI `Select`). */
 function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
@@ -22,12 +23,14 @@ function SelectGroup({
   );
 }
 
+/** Shows the selected option inside the trigger. */
 function SelectValue({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
+/** The button that opens the {@link Select}. `size`: `default` or `sm`. */
 function SelectTrigger({
   className,
   size = "default",
@@ -56,6 +59,10 @@ function SelectTrigger({
   );
 }
 
+/**
+ * The options popup, portaled. Defaults: below the trigger, start-aligned,
+ * 4px away, not aligned over the selected item (`alignItemWithTrigger: false`).
+ */
 function SelectContent({
   className,
   children,
@@ -117,6 +124,7 @@ function SelectLabel({
   );
 }
 
+/** One option, with a check mark when selected. */
 function SelectItem({
   className,
   children,

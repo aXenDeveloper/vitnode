@@ -462,6 +462,10 @@ export const resolveContentDelivery = ({
 // Canonical URLs
 // ---------------------------------------------------------------------------
 
+/**
+ * A record's route path with its slug filled into `delivery.path`, before any
+ * locale prefix. `null` when delivery is off or the slug is empty.
+ */
 export const contentDeliveryInternalPath = ({
   definition,
   slug,
@@ -483,6 +487,11 @@ export const contentDeliveryInternalPath = ({
     .join("/");
 };
 
+/**
+ * A record's canonical public URL, with the locale placed by the install's
+ * i18n routing (prefix, domain or translated route). `null` when there is no
+ * delivery path.
+ */
 export const contentDeliveryPublicUrl = ({
   definition,
   host,
@@ -509,6 +518,7 @@ export const contentDeliveryPublicUrl = ({
   });
 };
 
+/** The pathname of {@link contentDeliveryPublicUrl}, or `null`. */
 export const contentDeliveryPath = (args: {
   definition: AnyContentTypeDefinition;
   locale?: null | string;
@@ -550,6 +560,7 @@ export interface ContentDeliveryAlternate {
   path: string;
 }
 
+/** `hreflang` links for a record: one URL per published locale. */
 export interface ContentDeliveryHreflang {
   languages: Record<string, string>;
   /** Present only with `delivery.hreflang.xDefault` and a resolvable default. */
@@ -561,6 +572,11 @@ export const contentDeliveryAlternateHref = (
 ): string =>
   contentPublicHref({ origin: alternate.origin, pathname: alternate.path });
 
+/**
+ * Builds the `hreflang` map from a record's alternates, adding `x-default`
+ * (the default locale's URL) when `delivery.hreflang.xDefault` is set and that
+ * locale is among the alternates.
+ */
 export const contentDeliveryHreflang = ({
   alternates,
   definition,
@@ -599,6 +615,7 @@ const contentDeliveryLocalesMatch = (a: string, b: string): boolean =>
 // SEO projection
 // ---------------------------------------------------------------------------
 
+/** Resolved `<title>` and meta description text, or `null` per slot. */
 export interface ContentDeliverySeo {
   description: null | string;
   title: null | string;
@@ -628,6 +645,11 @@ const readSeoText = (
   return null;
 };
 
+/**
+ * Reads the SEO title and description from a public row using
+ * `delivery.seo`: the primary field, then its fallback field. Rich text is
+ * flattened to plain text; empty values count as missing.
+ */
 export const contentDeliverySeo = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -644,6 +666,10 @@ export const contentDeliverySeo = (
   };
 };
 
+/**
+ * Open Graph title and description, falling back to {@link contentDeliverySeo}
+ * per slot. `null` when `delivery.seo.openGraph` is not configured.
+ */
 export const contentDeliveryOpenGraph = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -661,6 +687,10 @@ export const contentDeliveryOpenGraph = (
   };
 };
 
+/**
+ * `robots` metadata from `delivery.seo.noIndexField`: `index: false` when the
+ * field is `true`. `null` when no such field is configured.
+ */
 export const contentDeliveryRobots = (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
@@ -747,6 +777,11 @@ const parseLegacyDeliveryPath = (
   };
 };
 
+/**
+ * The inverse of {@link contentDeliveryPublicUrl}: splits a public path into
+ * its locale and slug. `null` when the path matches neither the content type's
+ * delivery route nor the legacy `/{locale}/{publicApi.path}/{slug}` form.
+ */
 export const parseContentDeliveryPath = (
   definition: AnyContentTypeDefinition,
   path: string,

@@ -53,7 +53,13 @@ const unindexUser = (ws: WSContext, userId: null | number | undefined) => {
   if (sockets.size === 0) connectionsByUser.delete(userId);
 };
 
+/**
+ * This process's open WebSocket connections and rooms. Server-only. Every
+ * method acts on this instance only; for delivery across instances (via
+ * Redis) use `c.get("realtime")`. A socket whose send fails is removed.
+ */
 export const wsRegistry = {
+  /** Tracks a new connection and the signed-in user who owns it (`null` for a guest). */
   add: (ws: WSContext, userId: null | number): void => {
     unindexUser(ws, connections.get(ws));
     connections.set(ws, userId);
@@ -68,6 +74,10 @@ export const wsRegistry = {
     if (connections.size === 0) return;
     sendRawToAll(connections.keys(), encode(id, data));
   },
+  /**
+   * Adds `memberId` on this socket to `room`; `true` if it was not there yet.
+   * Check who may join before calling it - a room is only as private as that.
+   */
   join: (ws: WSContext, room: string, memberId: string): boolean => {
     const sockets = rooms.get(room) ?? new Map<WSContext, Set<string>>();
     rooms.set(room, sockets);
@@ -82,6 +92,7 @@ export const wsRegistry = {
 
     return true;
   },
+  /** Removes `memberId` on this socket from `room`; `true` if it was there. */
   leave: (ws: WSContext, room: string, memberId: string): boolean => {
     const sockets = rooms.get(room);
     const members = sockets?.get(ws);
@@ -97,10 +108,16 @@ export const wsRegistry = {
 
     return true;
   },
+  /** Every member of `room` on this instance, with its socket. */
   membersOf: (room: string): { memberId: string; ws: WSContext }[] =>
     [...(rooms.get(room) ?? new Map<WSContext, Set<string>>())].flatMap(
       ([ws, members]) => [...members].map(memberId => ({ memberId, ws })),
     ),
+  /**
+   * Runs `listener` when a socket that was in a room closes, with the rooms
+   * and members it left. Returns an unsubscribe function. Listener errors are
+   * logged, not thrown.
+   */
   onConnectionClose: (listener: ConnectionCloseListener): (() => void) => {
     closeListeners.add(listener);
 
@@ -108,6 +125,7 @@ export const wsRegistry = {
       closeListeners.delete(listener);
     };
   },
+  /** Forgets a closed connection and takes it out of every room. */
   remove: (ws: WSContext): void => {
     unindexUser(ws, connections.get(ws));
     connections.delete(ws);
@@ -138,7 +156,9 @@ export const wsRegistry = {
       }
     });
   },
+  /** The rooms one socket is in. */
   roomsOf: (ws: WSContext): string[] => [...(roomsBySocket.get(ws) ?? [])],
+  /** Send `{ id, data }` to every socket in `room` on this instance. */
   toRoom: (room: string, id: string, data: unknown): void => {
     const sockets = rooms.get(room);
     if (!sockets) return;
@@ -300,7 +320,16 @@ export const publishToInstances = (topic: string, data: unknown): void => {
   publish({ data, id: topic, type: "instance" });
 };
 
+/**
+ * Server push to browsers over the shared WebSocket, available as
+ * `c.get("realtime")` in API handlers.
+ *
+ * Delivery is best effort and fire-and-forget: clients that are not connected
+ * miss the message. Without Redis (`REDIS_URL`) only clients connected to the
+ * current instance receive it; with Redis it is relayed to every instance.
+ */
 export interface VitNodeRealtime {
+  /** Push a payload to every open connection. */
   broadcast: <Receive>(
     channel: VitNodeWSChannel<unknown, Receive>,
     data: Receive,
@@ -323,6 +352,7 @@ export interface VitNodeRealtime {
     channel: VitNodeWSChannel<unknown, Receive>,
     messages: Iterable<{ data: Receive; userId: number }>,
   ) => void;
+  /** Push a payload to the connections that joined `room`. */
   toRoom: <Receive>(
     room: string,
     channel: VitNodeWSChannel<unknown, Receive>,

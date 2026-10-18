@@ -9,6 +9,11 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
+/**
+ * A calendar picker for an `AutoForm` date field. Stores a local
+ * `YYYY-MM-DD` string, or `undefined` when cleared. Spread the props
+ * `AutoForm` passes and add a `label`.
+ */
 export const AutoFormDatePicker = ({
   label,
   labelRight,
@@ -26,6 +31,7 @@ export const AutoFormDatePicker = ({
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof DatePicker>, "onChange" | "value"> & {
+    /** Called after the form value changes, with the new `YYYY-MM-DD` string, or `undefined` when cleared. */
     onChange?: (value: string | undefined) => void;
   }) => (
   <>

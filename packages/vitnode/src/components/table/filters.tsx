@@ -21,20 +21,41 @@ import { Spinner } from "../ui/spinner";
 import { useDataTableUrl } from "./navigation";
 import { readTableFilter, withTableFilter } from "./url-state";
 
+/** One choice in a faceted filter. */
 export interface FilterOption {
+  /** Extra words the filter's search box matches, for static `options` only. */
   keywords?: string[];
+  /** What the option shows in the filter list. */
   label: React.ReactNode;
+  /** Written to the URL; matched by the search box for static `options`. */
   value: string;
 }
 
+/**
+ * A faceted filter in a data table's toolbar. The selection lives in the URL
+ * as `?{id}=a,b`, so the page's query reads it from there; changing it returns
+ * the table to the first page.
+ */
 export interface FilterDataTable {
+  /** The URL parameter the selected values are written to, comma-separated. */
   id: string;
+  /** The button's text and the search box's placeholder. */
   label: string;
+  /**
+   * Loads options from the server instead of `options`: called with `""` when
+   * the popover opens, then with the typed text after a 400 ms pause.
+   */
   onSearch?: (search: string) => Promise<FilterOption[]>;
+  /** A fixed list of choices, searched in the browser. Ignored with `onSearch`. */
   options?: FilterOption[];
+  /**
+   * Allows one value at a time and adds an "all" entry with this label that
+   * clears it. Picking the selected value again also clears it.
+   */
   single?: { allLabel: string };
 }
 
+/** The selection after toggling `value`; with `single`, at most that one value. */
 export const nextFilterSelection = (
   selected: readonly string[],
   value: string,
@@ -199,6 +220,7 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
   );
 }
 
+/** One filter button per entry; `ContentDataTable` renders it from its `filters` prop. */
 export function FiltersDataTable({ filters }: { filters: FilterDataTable[] }) {
   return (
     <>

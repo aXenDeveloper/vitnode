@@ -35,11 +35,14 @@ export type ContentContainerErrorCode =
   (typeof CONTENT_CONTAINER_ERROR_CODES)[number];
 
 export interface ContentContainerHierarchyInput {
+  /** Containers may nest under a parent. Defaults to `true`. */
   enabled?: boolean;
+  /** Deepest nesting level. Defaults to 5; `1` without a hierarchy. */
   maxDepth?: number;
 }
 
 export interface ContentContainerOrderingInput {
+  /** `"manual"` (default, drag to reorder) or `"alphabetical"`. */
   mode?: ContentContainerOrderingMode;
 }
 
@@ -47,13 +50,21 @@ export interface ContentContainerPublicApiInput<
   TField extends string = string,
   TPath extends string = string,
 > {
+  /**
+   * Metadata fields exposed publicly, besides the built-in columns (id,
+   * parent, name, slug, position, timestamps). Defaults to none.
+   */
   fields?: readonly TField[];
+  /** The public module segment, e.g. `"forums"`. */
   path: TPath;
 }
 
 export interface ContentContainerAdminInput {
+  /** Show the containers screen in the AdminCP sidebar. Defaults to `true`. */
   navigation?: boolean;
+  /** The AdminCP path under `/admin/content/`. Defaults to the id with dots as slashes. */
   path?: string;
+  /** Staff permission module. Defaults to the id in snake_case, e.g. `forum_forums`. */
   permissionModule?: string;
 }
 
@@ -77,6 +88,7 @@ export interface ContentContainerSchemas {
   update: z.ZodObject<z.ZodRawShape>;
 }
 
+/** A resolved container collection, returned by `defineContentContainer()`. */
 export interface ContentContainerDefinition<
   TId extends string = string,
   TFields extends ContentContainerFieldMap = ContentContainerFieldMap,

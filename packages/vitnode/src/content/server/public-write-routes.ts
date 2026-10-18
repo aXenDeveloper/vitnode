@@ -182,6 +182,11 @@ const rejection = (description: string) => ({
   description,
 });
 
+/**
+ * Every public-write route of one content type (create, the "may I edit"
+ * check, and update), whatever `publicWrite` enables. Use
+ * {@link contentPublicWriteRoutes} for only the enabled ones.
+ */
 export const buildContentPublicWriteRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,
@@ -349,6 +354,7 @@ type PublicWriteRoutes<
   P extends string,
 > = ReturnType<typeof buildContentPublicWriteRoutes<TDefinition, P>>;
 
+/** The public-write routes a definition's `publicWrite` enables, as a type. */
 export type ContentPublicWriteRoutesOf<
   TDefinition extends AnyContentTypeDefinition,
   P extends string,
@@ -362,6 +368,11 @@ export type ContentPublicWriteRoutesOf<
           | PublicWriteRoutes<TDefinition, P>["update"]
       : never);
 
+/**
+ * The public-write routes `publicWrite` enables: `create` when
+ * `publicWrite.create` is enabled, `editable` and `update` when
+ * `publicWrite.update` is. Empty without `publicWrite`. Mounted by the public routes.
+ */
 export const contentPublicWriteRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

@@ -9,7 +9,12 @@ export { defaultAdminTransport } from "./default-transport";
 export * from "./intl";
 export type { AdminNavModule } from "./layout-route";
 export { adminLayoutRoute } from "./layout-route";
-export { AdminNavProvider, useAdminNav, useAdminSearchNavItems } from "./nav";
+export {
+  AdminNavProvider,
+  useAdminDashboardPluginWidgets,
+  useAdminNav,
+  useAdminSearchNavItems,
+} from "./nav";
 export * from "./permissions";
 export { removeAdminIdentityQueries, removeAdminShellQueries } from "./queries";
 export * from "./return-to";
@@ -80,6 +85,7 @@ export type {
 export type {
   AdminNavBundle,
   AdminNavConfig,
+  AdminNavDashboardWidgets,
   AdminNavGroupDeclaration,
   AdminNavItem,
   AdminNavItemDeclaration,

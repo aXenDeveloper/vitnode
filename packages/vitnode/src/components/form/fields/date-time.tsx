@@ -19,6 +19,14 @@ const toInputValue = (value: unknown): string => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+/**
+ * A native `datetime-local` input for an `AutoForm` date-time field. Shows
+ * the value in the browser's time zone and stores it as an ISO string in UTC;
+ * clearing it stores `null` (`""` when `otherProps.clearsToEmpty` is set, as the Content Engine does for
+ * optional, non-nullable fields). Spread the
+ * props `AutoForm` passes and add a `label`; your own `onChange` and `onBlur`
+ * run after the form value updates.
+ */
 export const AutoFormDateTime = ({
   label,
   labelRight,
@@ -31,6 +39,8 @@ export const AutoFormDateTime = ({
   // oxlint-disable-next-line no-unused-vars
   multiLang,
   otherProps: { clearsToEmpty, isOptional },
+  onBlur,
+  onChange,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "type" | "value">) => {
@@ -48,7 +58,7 @@ export const AutoFormDateTime = ({
         <Input
           onBlur={event => {
             field.onBlur();
-            props.onBlur?.(event);
+            onBlur?.(event);
           }}
           onChange={event => {
             const { value } = event.target;
@@ -58,7 +68,7 @@ export const AutoFormDateTime = ({
                 ? date.toISOString()
                 : cleared,
             );
-            props.onChange?.(event);
+            onChange?.(event);
           }}
           type="datetime-local"
           value={toInputValue(field.value)}

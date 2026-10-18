@@ -55,6 +55,15 @@ interface ContentEventEmitter {
   ) => Promise<EventEmitResult>;
 }
 
+/**
+ * Emits `content.{definition.id}.{action}` on the request's event bus and then
+ * invalidates the cached pages that show the content type. Call it after the
+ * write's transaction has committed. The generated routes already emit every
+ * built-in event; use this from custom write paths. Server-only.
+ *
+ * @returns The event bus result, with a page-cache invalidation failure, if
+ * any, appended to `failures` rather than thrown.
+ */
 export const emitContentEvent = async (
   c: Context,
   definition: AnyContentTypeDefinition,

@@ -15,6 +15,10 @@ import {
   useIsInTooltipGroup,
 } from "./tooltip";
 
+/**
+ * A round user avatar. `size` is `"sm"`, `"default"` or `"lg"` (24, 32 and 40
+ * px); defaults to `"default"`.
+ */
 function Avatar({
   className,
   size = "default",
@@ -35,6 +39,7 @@ function Avatar({
   );
 }
 
+/** The avatar's image. */
 function AvatarImage({
   className,
   ...props
@@ -51,6 +56,7 @@ function AvatarImage({
   );
 }
 
+/** Shown while the image loads or when it fails, e.g. initials. */
 function AvatarFallback({
   className,
   ...props
@@ -67,6 +73,7 @@ function AvatarFallback({
   );
 }
 
+/** A small status dot on the avatar's edge. */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -83,6 +90,7 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   );
 }
 
+/** Overlapping avatars in a row, sharing one tooltip group. */
 function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <TooltipGroup>
@@ -104,6 +112,11 @@ const AVATAR_LIFT_TRANSITION = {
   bounce: 0.15,
 } as const;
 
+/**
+ * One avatar in an {@link AvatarGroup}. With a `label`, it becomes focusable
+ * and shows the label as a tooltip; it lifts on hover and focus unless reduced
+ * motion is on.
+ */
 function AvatarGroupItem({
   children,
   className,
@@ -154,6 +167,9 @@ function AvatarGroupItem({
   );
 }
 
+/**
+ * A "+N" bubble for the avatars a group leaves out, sized to match the group.
+ */
 function AvatarGroupCount({
   className,
   ...props

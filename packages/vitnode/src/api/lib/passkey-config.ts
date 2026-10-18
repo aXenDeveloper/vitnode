@@ -1,6 +1,21 @@
+/**
+ * Passkey (WebAuthn) settings, the API config's `authorization.passkeys` when
+ * it is an object (`true` uses every default). Checked at startup: a bad
+ * origin or RP ID throws.
+ */
 export interface PasskeysConfig {
+  /**
+   * Bare origins (`https://example.com`, no path) passkeys are accepted from.
+   * HTTPS only, except `localhost`. Defaults to the web origin
+   * (`VITNODE_WEB_URL`).
+   */
   origins?: string[];
+  /**
+   * The relying party ID: a lowercase domain (not an IP) that every origin's
+   * host equals or is a subdomain of. Defaults to the first origin's host.
+   */
   rpId?: string;
+  /** The name shown in the browser's passkey prompt. Defaults to `metadata.shortTitle ?? metadata.title`. */
   rpName?: string;
 }
 
@@ -77,6 +92,12 @@ export const passkeyConfigProblems = ({
   return problems;
 };
 
+/**
+ * The passkey settings with defaults filled in, or `enabled: false` when
+ * passkeys are off.
+ *
+ * @throws When the resolved origins or RP ID are invalid.
+ */
 export const resolvePasskeysConfig = ({
   config,
   rpNameFallback,

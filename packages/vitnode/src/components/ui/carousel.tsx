@@ -20,15 +20,24 @@ import {
   isRtlElement,
 } from "./carousel-utils";
 
+/** The Embla carousel API, received through {@link Carousel}'s `setApi`. */
 type CarouselApi = UseEmblaCarouselType[1];
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
 type CarouselOptions = UseCarouselParameters[0];
 type CarouselPlugin = UseCarouselParameters[1];
 
+/** Options of {@link Carousel}. */
 interface CarouselProps {
+  /** Embla options, e.g. `{ loop: true }`. */
   opts?: CarouselOptions;
+  /** Scroll axis. Defaults to `"horizontal"`. */
   orientation?: "horizontal" | "vertical";
+  /** Embla plugins, e.g. autoplay. */
   plugins?: CarouselPlugin;
+  /**
+   * Receives the Embla API once the carousel is ready, for driving it from
+   * outside.
+   */
   setApi?: (api: CarouselApi) => void;
 }
 
@@ -53,6 +62,11 @@ function useCarousel() {
   return context;
 }
 
+/**
+ * An Embla carousel region (`aria-roledescription="carousel"`). Arrow keys move
+ * between slides, respecting right-to-left layouts, except while typing in a
+ * field.
+ */
 function Carousel({
   orientation = "horizontal",
   opts,
@@ -159,6 +173,7 @@ function Carousel({
   );
 }
 
+/** The scrolling track that holds the slides. */
 function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
   const { carouselRef, orientation } = useCarousel();
 
@@ -180,6 +195,7 @@ function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** One slide (`aria-roledescription="slide"`). */
 function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
   const { orientation } = useCarousel();
 
@@ -198,6 +214,10 @@ function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Scrolls to the previous slide; disabled at the start. Labelled with the
+ * translated "Previous".
+ */
 function CarouselPrevious({
   className,
   variant = "outline",
@@ -233,6 +253,10 @@ function CarouselPrevious({
   );
 }
 
+/**
+ * Scrolls to the next slide; disabled at the end. Labelled with the translated
+ * "Next".
+ */
 function CarouselNext({
   className,
   variant = "outline",

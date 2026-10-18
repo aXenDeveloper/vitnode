@@ -16,6 +16,7 @@ const getSnapshot = () => window.matchMedia(MOBILE_QUERY).matches;
 
 const getServerSnapshot = () => false;
 
+/** Whether the viewport is narrower than 768px. Always `false` during SSR. */
 export function useIsMobile() {
   return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

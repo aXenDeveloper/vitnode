@@ -2,18 +2,23 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { cn } from "cn";
 import React from "react";
 
+/** A non-modal floating panel anchored to its trigger (Base UI `Popover`). */
 function Popover({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
+/** The element that opens the {@link Popover}. */
 function PopoverTrigger({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+/**
+ * The popover's panel, portaled. Defaults: below the trigger, centered, 4px away.
+ */
 function PopoverContent({
   className,
   side,
@@ -50,6 +55,7 @@ function PopoverContent({
   );
 }
 
+/** Groups a {@link PopoverTitle} and {@link PopoverDescription}. */
 function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -60,6 +66,7 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** The popover's accessible title. */
 function PopoverTitle({
   className,
   ...props
@@ -73,6 +80,7 @@ function PopoverTitle({
   );
 }
 
+/** The popover's accessible description, muted. */
 function PopoverDescription({
   className,
   ...props

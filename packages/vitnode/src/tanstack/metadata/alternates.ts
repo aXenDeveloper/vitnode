@@ -6,20 +6,29 @@ import { getIntlRuntime } from "../i18n/runtime";
 
 export const X_DEFAULT_HREFLANG = "x-default";
 
+/** A `<link>` a route's `head` emits. */
 export interface RouteHeadLink {
   href: string;
   hrefLang?: string;
   rel: "alternate" | "canonical";
 }
 
+/** A page's internal (unprefixed) path per locale code, e.g. `{ en: "/blog/hello" }`. */
 export type LocaleAlternates = Readonly<Record<string, string>>;
 
 interface LocaleAlternateLinksBase {
+  /** The locale being rendered; picks the canonical link. */
   locale: string;
+  /** Defaults to the app's configured locale routing. */
   localeRouting?: LocaleRouting;
+  /** Defaults to the configured web origin; a locale bound to its own domain uses that domain. */
   webOrigin?: string | URL;
 }
 
+/**
+ * Either explicit per-locale paths (`alternates`), or one `internalPathname`
+ * that exists in every locale (`locales`, defaulting to all configured ones).
+ */
 export type LocaleAlternateLinksOptions = LocaleAlternateLinksBase &
   (
     | { alternates: LocaleAlternates }
@@ -62,6 +71,16 @@ const absoluteHref = (
   }
 };
 
+/**
+ * The canonical link and `hreflang` alternates of a page that exists in several
+ * locales, as absolute URLs with each locale's prefix or domain applied: a
+ * `canonical` for `locale` (the default locale's URL when `locale` has none),
+ * one `alternate` per locale, and `x-default` pointing at the default locale
+ * when it is one of them.
+ *
+ * Unsupported locales and paths that are not internal (`/...`) are skipped;
+ * returns `[]` when nothing is left. Universal.
+ */
 export const localeAlternateLinks = (
   options: LocaleAlternateLinksOptions,
 ): RouteHeadLink[] => {

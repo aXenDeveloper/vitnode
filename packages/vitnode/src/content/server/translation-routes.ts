@@ -47,6 +47,10 @@ import {
 import { contentTranslationEffects } from "./translation-effects";
 import { withTranslationHttpErrors } from "./translation-http-errors";
 
+/**
+ * The admin routes for a localized content type's translations, mounted with
+ * the rest of its admin routes by `buildContentRoutes`.
+ */
 export const buildContentTranslationRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

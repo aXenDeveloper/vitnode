@@ -3,6 +3,7 @@ import { cn } from "cn";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import React from "react";
 
+/** A Base UI menu opened from a trigger button. */
 function DropdownMenu({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Root>) {
@@ -15,12 +16,17 @@ function DropdownMenuPortal({
   return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
 }
 
+/** The element that opens the menu. */
 function DropdownMenuTrigger({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Trigger>) {
   return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
+/**
+ * The menu popup, rendered in a portal; opens below the trigger, aligned to its
+ * start, by default.
+ */
 function DropdownMenuContent({
   className,
   side = "bottom",
@@ -63,6 +69,10 @@ function DropdownMenuGroup({
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
+/**
+ * One action. `variant` is `"default"` or `"destructive"`; `inset` indents it
+ * to line up with items that have icons.
+ */
 function DropdownMenuItem({
   className,
   inset,
@@ -161,6 +171,10 @@ function DropdownMenuRadioItem({
   );
 }
 
+/**
+ * A non-interactive heading for a group of items; `inset` indents it like an
+ * item with an icon.
+ */
 function DropdownMenuLabel({
   className,
   inset,
@@ -181,6 +195,7 @@ function DropdownMenuLabel({
   );
 }
 
+/** A divider between items. */
 function DropdownMenuSeparator({
   className,
   ...props
@@ -194,6 +209,7 @@ function DropdownMenuSeparator({
   );
 }
 
+/** A keyboard shortcut hint at the item's end. */
 function DropdownMenuShortcut({
   className,
   ...props

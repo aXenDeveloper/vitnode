@@ -33,6 +33,20 @@ export type AuthoredPluginRouteOptions<TData, TSearch, TContext> = Omit<
   ) => Promise<TData> | TData;
 };
 
+/**
+ * A page module's route options - `load`, `head`, `breadcrumb` and friends -
+ * exported as `route` next to the page's default component. Declare `load`
+ * before `head` so `head` and `breadcrumb` receive typed `loaderData`.
+ *
+ * @example
+ * ```ts
+ * import { definePluginRoute } from "@vitnode/core/routing";
+ *
+ * export const route = definePluginRoute({
+ *   head: ({ params }) => ({ title: params.slug }),
+ * });
+ * ```
+ */
 export const definePluginRoute = <
   TData = UnknownLoaderData,
   TSearch = Record<string, never>,

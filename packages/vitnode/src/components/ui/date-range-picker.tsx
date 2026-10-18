@@ -9,11 +9,16 @@ import { Button } from "./button";
 import { Calendar, type DateRange, type Matcher } from "./calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
+/** A date range; both ends are inclusive. */
 export interface DateRangeValue {
   from: Date;
   to: Date;
 }
 
+/**
+ * A one-click range such as "Last 7 days". `key` is yours, `label` is shown as
+ * is (translate it first).
+ */
 export interface DateRangePreset<TKey extends string = string> {
   key: TKey;
   label: string;
@@ -23,14 +28,29 @@ type DateRangePickerProps<TKey extends string> = Omit<
   React.ComponentProps<"button">,
   "children" | "defaultValue" | "onChange" | "value"
 > & {
+  /**
+   * The preset the current `value` came from; the trigger shows its label
+   * instead of the dates.
+   */
   activePreset?: null | TKey;
+  /** Popover alignment to the trigger. Defaults to `"end"`. */
   align?: "center" | "end" | "start";
+  /** Days that cannot be picked. */
   disabledDays?: Matcher | Matcher[];
+  /** The latest month the calendar can show. */
   endMonth?: Date;
+  /** Called with the new range when the user applies it. */
   onChange: (range: DateRangeValue) => void;
+  /**
+   * Called with a preset's `key` when it is picked; the popover closes. Set
+   * `value` from it yourself.
+   */
   onPresetSelect?: (preset: TKey) => void;
+  /** Preset ranges listed beside the calendar. */
   presets?: readonly DateRangePreset<TKey>[];
+  /** The earliest month the calendar can show. */
   startMonth?: Date;
+  /** The applied range. */
   value: DateRangeValue;
 };
 
@@ -44,6 +64,12 @@ const dayCount = ({ from, to }: DateRangeValue) =>
       86_400_000,
   ) + 1;
 
+/**
+ * An outline button that opens a range calendar with optional presets. The user
+ * picks a draft range and confirms it with "Apply range" (or discards it with Cancel);
+ * two months show side by side, one on phones. Dates are formatted in the UI
+ * language.
+ */
 const DateRangePicker = <TKey extends string>({
   activePreset,
   align = "end",

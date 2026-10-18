@@ -1,5 +1,8 @@
 import { cn } from "cn";
 
+/**
+ * A pulsing placeholder block for loading content; hidden from screen readers.
+ */
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

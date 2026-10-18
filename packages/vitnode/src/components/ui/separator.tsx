@@ -2,6 +2,7 @@ import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
 import { cn } from "cn";
 import React from "react";
 
+/** A thin divider line; `orientation` defaults to `horizontal`. */
 function Separator({
   className,
   orientation = "horizontal",

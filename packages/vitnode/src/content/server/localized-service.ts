@@ -45,6 +45,10 @@ export interface ContentLocalizedService<TDefinition> {
   ) => Promise<ContentLocalizedCreateResult<TDefinition>>;
 }
 
+/**
+ * Builds the service that reads and writes a record with one language's translation. Plugins use the model's `localizedService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentLocalizedService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

@@ -71,6 +71,11 @@ export const parseContentId = (
   return null;
 };
 
+/**
+ * Validates an id from a request, a job payload or a URL against a content
+ * type's `idStrategy`: a positive serial number, a bigint string or a UUID.
+ * `null` when it is not one.
+ */
 export const parseContentIdOf = <
   TDefinition extends { idStrategy: ContentIdStrategy },
 >(

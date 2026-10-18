@@ -24,9 +24,16 @@ import { BlockError } from "./errors";
 const EditorRoot = lazy(async () => await import("../editor/root"));
 
 export interface ContentEditorRuntimeProps {
+  /** Where **Save** sends the zones. Without one, Save shows an error toast and saves nothing. */
   adapter?: VisualEditorAdapter;
+  /** The page; every `ContentZone` inside it becomes editable while `enabled`. */
   children: ReactNode;
+  /**
+   * `false` renders only `children` (after a short closing transition); `true`
+   * lazy-loads and mounts the editor.
+   */
   enabled: boolean;
+  /** Called when the editor is closed (**Finish editing**), after its unsaved-changes prompt. */
   onExit?: () => void;
 }
 
@@ -37,6 +44,14 @@ const duplicateContentZone = (id: string): BlockError =>
     `Two \`<ContentZone id=${JSON.stringify(id)} />\` outlets are on the page at the same time. A zone id names one place on one page, and the editor stores, moves and saves blocks by it - with two of them it cannot tell which one a block belongs to, and saving would write one over the other. Give each zone its own id, or render only one of them.`,
   );
 
+/**
+ * The low-level Visual Editor host: wraps a page and, while `enabled`, turns
+ * its `ContentZone`s into editable outlets. For a host that owns edit mode and
+ * persistence itself; a declared editable page uses `EditablePage` instead.
+ *
+ * @throws {BlockError} When two `ContentZone`s with the same id are mounted
+ * at once while editing.
+ */
 export const ContentEditorRuntime = ({
   adapter,
   children,

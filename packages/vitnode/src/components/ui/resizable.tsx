@@ -1,6 +1,10 @@
 import { cn } from "cn";
 import * as ResizablePrimitive from "react-resizable-panels";
 
+/**
+ * A row or column of panels the user can resize by dragging
+ * (`react-resizable-panels`).
+ */
 function ResizablePanelGroup({
   className,
   ...props
@@ -17,10 +21,12 @@ function ResizablePanelGroup({
   );
 }
 
+/** One panel in a {@link ResizablePanelGroup}. */
 function ResizablePanel({ ...props }: ResizablePrimitive.PanelProps) {
   return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />;
 }
 
+/** The drag handle between two panels. `withHandle` shows a visible grip. */
 function ResizableHandle({
   withHandle,
   className,

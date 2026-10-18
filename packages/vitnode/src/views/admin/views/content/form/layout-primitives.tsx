@@ -8,6 +8,11 @@ import { ContentLivePresence } from "../live/presence";
 import { ContentLiveStatus } from "../live/status";
 import { useContentForm } from "./context";
 
+/**
+ * The page-mode heading with its back link and, during live editing, presence
+ * and autosave status. Required in a page-mode layout; renders nothing in a
+ * dialog.
+ */
 export const ContentFormHeader = ({
   children,
   className,
@@ -46,6 +51,7 @@ export const ContentFormHeader = ({
   );
 };
 
+/** A responsive two-column grid: main content, plus a 20rem sidebar from `lg` up. */
 export const ContentFormLayoutGrid = ({
   children,
   className,
@@ -62,6 +68,7 @@ export const ContentFormLayoutGrid = ({
   </div>
 );
 
+/** The main column of {@link ContentFormLayoutGrid}. */
 export const ContentFormMain = ({
   children,
   className,
@@ -72,6 +79,7 @@ export const ContentFormMain = ({
   </div>
 );
 
+/** The sidebar column of {@link ContentFormLayoutGrid}, sticky on large screens. */
 export const ContentFormSidebar = ({
   children,
   className,
@@ -85,6 +93,7 @@ export const ContentFormSidebar = ({
   </div>
 );
 
+/** A titled card grouping fields in a custom layout. */
 export const ContentFormSection = ({
   children,
   className,

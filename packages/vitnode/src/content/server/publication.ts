@@ -8,12 +8,32 @@ import type { ContentPublicationMethods, ContentService } from "./service";
 
 import { ContentEngineError } from "../errors";
 
+/**
+ * The columns the published predicates read. `hiddenAt` is present only when
+ * the content type has `visibility`.
+ */
 export interface PublicationColumns {
   hiddenAt?: PgColumn;
   publishedAt: PgColumn;
   status: PgColumn;
 }
 
+/**
+ * Picks the publication columns out of a model's column map, for building
+ * your own published-only queries with {@link publishedCondition}.
+ *
+ * @throws {ContentEngineError} When the content type has no `publication`, or
+ * has `visibility` but the column map has no `hiddenAt`.
+ *
+ * @example
+ * ```ts
+ * import { publicationColumns, publishedCondition } from "@vitnode/core/content/server";
+ *
+ * const isPublic = publishedCondition(
+ *   publicationColumns(topicContent.definition, topicContent.columns),
+ * );
+ * ```
+ */
 export const publicationColumns = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
@@ -39,6 +59,11 @@ export const publicationColumns = (
   return { hiddenAt, publishedAt, status };
 };
 
+/**
+ * The SQL condition for a publicly visible record: `status` is `published`,
+ * `publishedAt` is set and not in the future (database `now()`), and - when
+ * the type has visibility - `hiddenAt` is null.
+ */
 export const publishedCondition = (
   columns: PublicationColumns,
 ): SQL | undefined =>
@@ -59,12 +84,23 @@ const hiddenPublishedCondition = (
         isNotNull(columns.hiddenAt),
       );
 
+/**
+ * {@link publishedCondition}, or with `hidden: true` its opposite for hidden
+ * records: published rows whose `hiddenAt` is set (`false` without visibility).
+ */
 export const contentPublicReadCondition = (
   columns: PublicationColumns,
   { hidden = false }: { hidden?: boolean } = {},
 ): SQL | undefined =>
   hidden ? hiddenPublishedCondition(columns) : publishedCondition(columns);
 
+/**
+ * {@link publicationColumns} for a localized type's translation table, whose
+ * rows have their own `status` and `publishedAt`.
+ *
+ * @throws {ContentEngineError} Unless the type has both `localization` and
+ * `publication`.
+ */
 export const contentTranslationPublicationColumns = (
   definition: AnyContentTypeDefinition,
   translationColumns: Record<string, PgColumn>,
@@ -86,6 +122,10 @@ export const contentTranslationPublicationColumns = (
   return { publishedAt, status };
 };
 
+/**
+ * The published condition for a record and, when given, its translation: both
+ * must pass {@link publishedCondition}.
+ */
 export const contentPublicCondition = (
   base: PublicationColumns,
   translation?: PublicationColumns,
@@ -94,6 +134,11 @@ export const contentPublicCondition = (
     ? publishedCondition(base)
     : and(publishedCondition(base), publishedCondition(translation));
 
+/**
+ * Narrows a content service to its publish/unpublish methods.
+ *
+ * @throws {ContentEngineError} When the content type has no `publication`.
+ */
 export const publicationMethods = <
   TDefinition extends AnyContentTypeDefinition,
 >(

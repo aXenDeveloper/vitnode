@@ -6,8 +6,10 @@ const LAST = "last";
 const CURSOR = "cursor";
 const PAGE = "page";
 
+/** Rows per page while the URL names no `first` or `last`. */
 export const DEFAULT_TABLE_PAGE_SIZE = 10;
 
+/** Shorter search text is dropped from the URL instead of searched for. */
 export const MIN_TABLE_SEARCH_LENGTH = 3;
 
 export type TableOrderDirection = "asc" | "desc";
@@ -15,6 +17,7 @@ export type TableOrderDirection = "asc" | "desc";
 /** Whatever the caller has: a raw query string, or the params it parsed. */
 export type TableSearch = string | URLSearchParams;
 
+/** A sort: the column (the `orderBy` param) and its direction (`order`). */
 export interface TableOrder {
   column: string;
   order: TableOrderDirection;
@@ -31,6 +34,7 @@ const resetPagination = (params: URLSearchParams): void => {
   params.delete(PAGE);
 };
 
+/** Whether the URL is past the first page in cursor mode (`cursor` or `last` set). */
 export const hasTableCursor = (search: TableSearch): boolean => {
   const params = copy(search);
 
@@ -39,12 +43,18 @@ export const hasTableCursor = (search: TableSearch): boolean => {
   );
 };
 
+/** The page number in page-number mode; `1` when missing or invalid. */
 export const readTablePage = (search: TableSearch): number => {
   const page = Number(copy(search).get(PAGE));
 
   return Number.isInteger(page) && page > 0 ? page : 1;
 };
 
+/**
+ * Goes to `page` in page-number mode. Page 1 removes the parameter, and the
+ * `cursor` and `last` are dropped so the two modes never mix (`first` stays as
+ * the page size).
+ */
 export const withTablePageNumber = (
   search: TableSearch,
   page: number | string,
@@ -90,6 +100,7 @@ export const withTableOrder = (
   return params.toString();
 };
 
+/** A header click: `desc` when `column` is already sorted `asc`, otherwise `asc`. */
 export const toggleTableOrder = (
   search: TableSearch,
   { column, defaultOrder }: { column: string; defaultOrder: TableOrder },
@@ -111,6 +122,7 @@ export const readTablePageSize = (search: TableSearch): number => {
   return Number.isInteger(size) && size > 0 ? size : DEFAULT_TABLE_PAGE_SIZE;
 };
 
+/** Shows `pageSize` rows per page, back on the first page. */
 export const withTablePageSize = (
   search: TableSearch,
   pageSize: number | string,

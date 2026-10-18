@@ -6,24 +6,37 @@ import { stripHtml } from "@/lib/strip-html";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
+/** One translation of a delivered page, as an internal (unprefixed) path. */
 export interface ContentDeliveryPageAlternate {
   internalPath: string;
   locale: string;
 }
 
+/** The SEO data a Content Engine delivery answer carries for one page. */
 export interface ContentDeliveryPageMetadata {
+  /** The page in every locale it is published in, the current one included. */
   alternates: readonly ContentDeliveryPageAlternate[];
   canonicalInternalPath: null | string;
+  /** The locale the content was resolved in, which may be a fallback locale. */
   locale: null | string;
   robots: null | { follow: boolean; index: boolean };
+  /** SEO overrides; `description` may contain HTML. */
   seo: { description: null | string; title: null | string };
 }
 
+/** What resolving a public content URL answered: the page, a redirect, or nothing. */
 export type ContentDeliveryPageResolution =
   | (ContentDeliveryPageMetadata & { type: "content" })
   | { location: string; status: number; type: "redirect" }
   | { type: "not_found" };
 
+/**
+ * Returns `item`, or throws TanStack Router's `notFound()` when it is `null` or
+ * `undefined` - so a route `loader` that read a missing record renders the
+ * not-found page instead of an empty one.
+ *
+ * @throws TanStack Router's `notFound()` for a missing item.
+ */
 export const contentPageItem = <TItem>(
   item: null | TItem | undefined,
 ): TItem => {
@@ -33,6 +46,34 @@ export const contentPageItem = <TItem>(
   return item;
 };
 
+/**
+ * Turns a Content Engine delivery answer into a route loader result: follows a
+ * `redirect` (old slug, canonical locale path) with its status code, throws
+ * `notFound()` for `not_found` or a missing item, and otherwise returns the item
+ * with the page metadata for {@link contentDeliveryPageHead}.
+ *
+ * Call it in a `loader`, where TanStack Router handles the thrown redirect and
+ * not-found.
+ *
+ * @throws TanStack Router's `redirect()` or `notFound()`.
+ *
+ * @example
+ * ```ts
+ * import { contentDeliveryPage, contentDeliveryPageHead } from "@vitnode/core/tanstack/content";
+ * import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+ *
+ * export const route = defineRoute({
+ *   load: async ({ context, params }) =>
+ *     contentDeliveryPage(
+ *       await context.queryClient.query(
+ *         blogPostQueryOptions({ locale: context.locale, slug: params.slug }),
+ *       ),
+ *     ),
+ *   head: ({ loaderData }) =>
+ *     contentDeliveryPageHead(loaderData?.metadata, { title: loaderData?.item.title }),
+ * });
+ * ```
+ */
 export const contentDeliveryPage = <
   TResolution extends ContentDeliveryPageResolution,
   TItem,
@@ -92,6 +133,12 @@ const internalAlternates = (
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
+/**
+ * A plugin route's `head` for a delivered content page: the SEO title (or
+ * `title` as fallback), a plain-text description cut to 160 characters, the
+ * locale alternates, and `noindex, nofollow` when the page must not be
+ * indexed. Returns just `title` while there is no metadata yet.
+ */
 export const contentDeliveryPageHead = (
   metadata: ContentDeliveryPageMetadata | undefined,
   { title }: { title?: string } = {},

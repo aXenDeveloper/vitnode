@@ -16,8 +16,11 @@ import type {
 
 import { ModerationRegistryError } from "./scopes";
 
+/** The `moderation` option of `buildApiPlugin`. */
 export interface ModerationPluginConfig {
+  /** Custom report targets; content types with `reports` add theirs automatically. */
   reportTargets?: ModerationReportTargetDefinition[];
+  /** Scope families moderator permissions can be limited by. */
   scopes?: ModerationScopeDefinition[];
 }
 

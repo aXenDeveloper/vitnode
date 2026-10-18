@@ -3,6 +3,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
+/** A centered empty state, e.g. for a list with no items. */
 function Empty({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -16,6 +17,7 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/** Holds the media, title and description. */
 function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -41,6 +43,10 @@ const emptyMediaVariants = cva(
   },
 );
 
+/**
+ * An illustration or icon. `variant` is `"default"` or `"icon"`, which puts the
+ * icon in a muted tile; defaults to `"default"`.
+ */
 function EmptyMedia({
   className,
   variant = "default",
@@ -56,6 +62,7 @@ function EmptyMedia({
   );
 }
 
+/** The empty state's heading. */
 function EmptyTitle({
   className,
   render,
@@ -79,6 +86,7 @@ function EmptyTitle({
   });
 }
 
+/** Explains why it is empty or what to do next. */
 function EmptyDescription({
   className,
   ...props
@@ -95,6 +103,7 @@ function EmptyDescription({
   );
 }
 
+/** Actions, such as a create button. */
 function EmptyContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

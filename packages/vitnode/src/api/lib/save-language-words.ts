@@ -6,14 +6,39 @@ import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 
 import { core_languages_words } from "@/database/languages";
 
+/** Which field of which record a multi-language value belongs to, plus the value. */
 export interface SaveLanguageWordsArgs {
+  /** The record's id. */
   itemId: number;
+  /** The owning plugin's code, e.g. `"blog"`. */
   pluginCode: string;
+  /** The record's table, e.g. `"blog_categories"`. */
   tableName: string;
+  /** The `multiLang` field's value: one `{ languageCode, value }` per language. Empty or missing clears it. */
   values: MultiLangValue;
+  /** The field name, e.g. `"name"`. */
   variable: string;
 }
 
+/**
+ * Saves a multi-language field value (an `AutoForm` `multiLang` field) to
+ * `core_languages_words`, replacing every stored translation of that field in
+ * one transaction. Server-only; read the rows back by the same
+ * `(pluginCode, tableName, variable, itemId)` to prefill an edit form.
+ *
+ * @example
+ * ```ts
+ * import { saveLanguageWords } from "@vitnode/core/api/lib/save-language-words";
+ *
+ * await saveLanguageWords(c, {
+ *   pluginCode: "blog",
+ *   tableName: "blog_categories",
+ *   variable: "name",
+ *   itemId: category.id,
+ *   values: name,
+ * });
+ * ```
+ */
 // Write mirror of `resolveRoleNames`: persists a `multiLang` field value (the
 // `{ languageCode, value }[]` produced by the form) into `core_languages_words`.
 // The remaining columns - the `(pluginCode, tableName, variable, itemId)` tuple

@@ -13,6 +13,11 @@ export const fingerprint = (value: string): string => {
   return hash.toString(36).padStart(7, "0");
 };
 
+/**
+ * Returns `value` unchanged when it fits `maxLength`; otherwise truncates it
+ * and appends `_{fingerprint}` of the full value, so distinct long values stay
+ * distinct. Used for generated Postgres identifiers and cache tags.
+ */
 export const clampWithFingerprint = (
   value: string,
   maxLength: number,

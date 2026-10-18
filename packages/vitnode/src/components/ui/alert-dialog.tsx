@@ -14,8 +14,17 @@ const AlertDialogContext = React.createContext<{
   setOpen: () => {},
 });
 
+/**
+ * The surrounding {@link AlertDialog}'s `open` state and its `setOpen`, for
+ * closing the dialog from inside it, e.g. after an async confirm.
+ */
 const useAlertDialog = () => React.use(AlertDialogContext);
 
+/**
+ * A Base UI alert dialog for confirming a destructive or important action.
+ * Works controlled (`open`) or uncontrolled, and shares its state through
+ * {@link useAlertDialog}.
+ */
 function AlertDialog({
   onOpenChange,
   open: openProp,
@@ -51,6 +60,7 @@ function AlertDialog({
   );
 }
 
+/** The element that opens the dialog. */
 function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
   return (
     <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
@@ -80,6 +90,10 @@ function AlertDialogOverlay({
   );
 }
 
+/**
+ * The centered dialog panel, rendered in a portal over a scrim. `size` is
+ * `"default"` (max width `lg`) or `"sm"`; defaults to `"default"`.
+ */
 function AlertDialogContent({
   className,
   size = "default",
@@ -103,6 +117,7 @@ function AlertDialogContent({
   );
 }
 
+/** Holds the title, description and optional media. */
 function AlertDialogHeader({
   className,
   ...props
@@ -119,6 +134,7 @@ function AlertDialogHeader({
   );
 }
 
+/** Holds the cancel and action buttons. */
 function AlertDialogFooter({
   className,
   ...props
@@ -135,6 +151,7 @@ function AlertDialogFooter({
   );
 }
 
+/** An icon or image shown in the header. */
 function AlertDialogMedia({
   className,
   ...props
@@ -151,6 +168,7 @@ function AlertDialogMedia({
   );
 }
 
+/** The dialog's accessible title. */
 function AlertDialogTitle({
   className,
   ...props
@@ -167,6 +185,7 @@ function AlertDialogTitle({
   );
 }
 
+/** The dialog's accessible description. */
 function AlertDialogDescription({
   className,
   ...props
@@ -185,6 +204,10 @@ function AlertDialogDescription({
 
 type AlertDialogButtonSize = "default" | "lg" | "sm" | "xs";
 
+/**
+ * A {@link Button} that closes the dialog. `variant` and `size` default to
+ * `"default"`; the label defaults to the translated "Confirm".
+ */
 function AlertDialogAction({
   children,
   className,
@@ -209,6 +232,11 @@ function AlertDialogAction({
   );
 }
 
+/**
+ * A {@link Button} that closes the dialog without acting. `variant` defaults to
+ * `"outline"`, `size` to `"default"`; the label defaults to the translated
+ * "Cancel".
+ */
 function AlertDialogCancel({
   children,
   className,

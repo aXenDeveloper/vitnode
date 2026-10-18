@@ -19,14 +19,32 @@ import {
 
 const MAX_EXPLICIT_RECIPIENTS = 100_000;
 
+/** What `c.get("notifications").publish()` takes. */
 export interface PublishNotificationArgs<TData> {
+  /**
+   * Who caused it. Defaults to the request's admin or signed-in user; `null`
+   * for none. The actor is dropped from `recipients` unless `allowSelf`.
+   */
   actorId?: null | number;
   allowSelf?: boolean;
+  /** Validated against the type's `schema`. */
   data: NoInfer<TData>;
+  /**
+   * One key per real-world event, 1-255 characters. Publishing the same type
+   * with the same key again returns `duplicate: true` instead of notifying
+   * twice.
+   */
   idempotencyKey: string;
+  /**
+   * Candidate user ids, at most 100000. Core still drops deleted users,
+   * members who turned the type off and those `access` rejects.
+   */
   recipients?: readonly number[];
+  /** What the notification is about; used by `remove()`, grouping and `subjectType`. */
   subject?: NotificationSubject;
+  /** A transaction to publish in, so the event only exists if it commits. */
   tx?: NotificationsDb;
+  /** The registered definition (preferred, for typed `data`) or its id. */
   type: NotificationTypeDefinition<TData> | string;
 }
 
@@ -35,6 +53,7 @@ export interface PublishNotificationResult {
   eventId: number;
 }
 
+/** Thrown by `publish()` for invalid input; see {@link PublishNotificationArgs}. */
 export class NotificationPublishError extends Error {
   constructor(message: string) {
     super(`[Notifications] ${message}`);

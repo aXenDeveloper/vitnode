@@ -36,6 +36,11 @@ const TranslatedSpinner = (props: SpinnerProps) => {
   return <SpinnerIcon aria-label={t("loading")} {...props} />;
 };
 
+/**
+ * An animated loading icon with `role="status"`. Gets a translated
+ * "Loading..." label unless you pass `aria-label` or `aria-hidden`. `size`: `sm`,
+ * `default` (default), `lg` or `xl`.
+ */
 function Spinner(props: SpinnerProps) {
   const isLabelled =
     props["aria-label"] !== undefined ||

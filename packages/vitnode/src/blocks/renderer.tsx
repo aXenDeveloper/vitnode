@@ -243,13 +243,34 @@ const renderNode = ({
 };
 
 export interface ContentRendererProps {
+  /** The zone's allowlist. A stored widget it does not allow is skipped, but only when `validate` diagnoses. */
   allowed?: BlockAllowedSpec;
+  /** The zone's stored nodes (widgets and Areas). Nothing renders when empty or missing. */
   blocks?: null | readonly unknown[] | undefined;
+  /**
+   * Renders a skipped widget (unknown type or variant, mismatched data, not
+   * allowed). Defaults to a notice in development and nothing in production.
+   */
   fallback?: BlockRenderFallback;
+  /** The widget registry to look types up in. Defaults to the process-wide registry. */
   registry?: BlockRegistry;
+  /**
+   * Whether the zone allowlist is enforced and data mismatches are logged
+   * (`"always"`, `"development"`, `"never"`). Defaults to `"development"`.
+   * Other warnings log in development regardless, and nothing logs in
+   * production.
+   */
   validate?: BlockValidationMode;
 }
 
+/**
+ * Renders a zone's stored widgets and layout Areas read-only, looking each
+ * widget up in the registry. Universal; data is not re-validated here - only a
+ * structural check against the widget's current fields runs before render.
+ *
+ * @throws {BlockRegistryMissingError} When no `registry` is passed and no
+ * process-wide registry is installed.
+ */
 export const ContentRenderer = ({
   allowed,
   blocks,

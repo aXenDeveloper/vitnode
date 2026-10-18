@@ -320,7 +320,13 @@ export const packageTsdownConfig = ({
   dts:
     output === "javascript"
       ? false
-      : { eager: true, emitDtsOnly: output === "declarations" },
+      : {
+          // The shared tsconfig sets `removeComments`, which would strip the
+          // JSDoc an IDE shows on hover from every published declaration.
+          compilerOptions: { removeComments: false },
+          eager: true,
+          emitDtsOnly: output === "declarations",
+        },
   entry: listPackageEntries(root),
   fixedExtension: false,
   format: "esm",

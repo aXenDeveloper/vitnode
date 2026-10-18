@@ -24,6 +24,12 @@ const attachmentVariants = cva(
   },
 );
 
+/**
+ * A card for one attached file. `state` (default `"done"`) styles it - dashed
+ * while `idle`, red on `error`; `size` is `"default"`, `"sm"` or `"xs"`
+ * (default `"default"`); `orientation` is `"horizontal"` (default) or
+ * `"vertical"`.
+ */
 function Attachment({
   className,
   state = "done",
@@ -62,6 +68,10 @@ const attachmentMediaVariants = cva(
   },
 );
 
+/**
+ * The file's icon or thumbnail. `variant` is `"icon"` (default) or `"image"`,
+ * which dims the image until the upload is done.
+ */
 function AttachmentMedia({
   className,
   variant = "icon",
@@ -77,6 +87,7 @@ function AttachmentMedia({
   );
 }
 
+/** Holds the title and description. */
 function AttachmentContent({
   className,
   ...props
@@ -106,6 +117,10 @@ const splitFileName = (name: string): [string, string] => {
   return [name.slice(0, dot), name.slice(dot)];
 };
 
+/**
+ * The file name. A string keeps its extension visible while the name truncates,
+ * and the full name becomes the `title` tooltip.
+ */
 function AttachmentTitle({
   children,
   className,
@@ -130,6 +145,7 @@ function AttachmentTitle({
   );
 }
 
+/** Secondary text, such as the file size or upload progress. */
 function AttachmentDescription({
   className,
   ...props
@@ -147,6 +163,7 @@ function AttachmentDescription({
   );
 }
 
+/** Holds the attachment's action buttons. */
 function AttachmentActions({
   className,
   ...props
@@ -163,6 +180,10 @@ function AttachmentActions({
   );
 }
 
+/**
+ * A small ghost icon {@link Button} for one action (size `"icon-xs"` by
+ * default). Has a generic `aria-label`; pass your own describing the action.
+ */
 function AttachmentAction({
   className,
   variant,
@@ -181,6 +202,10 @@ function AttachmentAction({
   );
 }
 
+/**
+ * An invisible button over the whole card that makes it clickable
+ * (`type="button"` unless you `render` something else).
+ */
 function AttachmentTrigger({
   className,
   render,
@@ -203,6 +228,7 @@ function AttachmentTrigger({
   });
 }
 
+/** A horizontally scrolling, snapping row of attachments. */
 function AttachmentGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

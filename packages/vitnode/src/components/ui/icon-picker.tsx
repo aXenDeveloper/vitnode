@@ -220,6 +220,11 @@ const IconGrid = ({
   );
 };
 
+/**
+ * A searchable, virtualized grid of Lucide icons with arrow-key navigation.
+ * Calls `onSelect` with the picked icon's name; `height` is the grid height in
+ * pixels, default `288`.
+ */
 export const IconPicker = ({
   autoFocus,
   height = 288,

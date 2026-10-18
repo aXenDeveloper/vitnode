@@ -97,20 +97,30 @@ const payloadFor = (
   }
 };
 
+/** Options for {@link contentEditorialEffects}. */
 export interface ContentEditorialEffectsOptions {
+  /**
+   * The model, needed to re-index a localized type (every locale's document)
+   * and to read the collection values a search document includes.
+   */
   model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
   pluginId: string;
 
+  /** The user who scheduled the change, for a write run by the scheduler. */
   scheduledBy?: null | number;
 
+  /** The schedule that ran, for a write run by the scheduler. */
   scheduleId?: number;
 }
 
+/** What {@link contentEditorialEffects} did; `event` is `null` when nothing changed. */
 export interface ContentEditorialEffectsResult {
+  /** The delivery events, for a content type with `delivery`. */
   delivery?: ContentDeliveryEffectsResult;
 
   event: EventEmitResult | null;
+  /** The search sync outcome; `null` when nothing changed, or for a localized type with `search` (see `searchByLocale`). */
   search: ContentSearchSyncOutcome | null;
   /**
    * One outcome per language, for a localized content type. Empty for every
@@ -119,6 +129,17 @@ export interface ContentEditorialEffectsResult {
   searchByLocale?: ContentSearchSyncOutcome[];
 }
 
+/**
+ * The follow-up to a committed write made through the editorial service: the
+ * content event (via `emitContentEvent`, which also expires the engine's
+ * page-cache tags), a log entry for any listener that failed, the delivery
+ * events for a slug change or redirect, and the search re-index. Server-only.
+ *
+ * The generated routes call it after every editorial write; a custom write
+ * path through `model.editorialService` must call it too, since the service
+ * itself emits nothing. Does nothing when `outcome.changed` is false. Listener
+ * failures are logged, never thrown - the write has already committed.
+ */
 export const contentEditorialEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,

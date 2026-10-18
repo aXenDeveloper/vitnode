@@ -7,8 +7,8 @@ icon: LayoutDashboard
 import { BarChart3Icon, Settings2Icon } from 'lucide-react'
 
 Dashboard widgets are **AdminCP plugin extensions**. Define the component and
-register it in the same plugin factory that owns the feature; the host dashboard
-then discovers it automatically.
+list it on the plugin's `adminNav` export, next to its sidebar entries; the
+AdminCP dashboard then discovers it automatically.
 
 {/* Image prompt: VitNode AdminCP dashboard with a “Site notes” statistics widget in a draggable grid. Show the widget panel, the corner resize bracket on each card, and the settings gear. Dark theme, 1600x900. */}
 
@@ -33,39 +33,66 @@ export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => (
   </Step>
   <Step>
 
-### Register it in the existing plugin factory
+### Register it on the plugin's `adminNav`
 
-```tsx title="plugins/site-notes/src/config.tsx"
+Add it to the `adminNav` your plugin exports from its `admin/nav` module (the
+same object that holds its [sidebar entries](/docs/dev/plugins/admin)). VitNode
+collects every plugin's `adminNav` into the app's generated `admin-nav.gen.ts`,
+and the AdminCP shell hands the widgets to the dashboard.
+
+```tsx title="plugins/site-notes/src/admin/nav.tsx"
+import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
+
 import { BarChart3Icon } from 'lucide-react'
 
-import { StatsWidget } from './views/admin/widgets/stats-widget'
+import { manifest } from '@/manifest.gen'
+import { StatsWidget } from '@/views/admin/widgets/stats-widget'
 
-export const siteNotesPlugin = () =>
-  buildPlugin({
-    admin: {
-      dashboard: {
-        widgets: [
-          // [!code ++:9]
-          {
-            component: StatsWidget,
-            defaultEnabled: true,
-            defaultRows: 1,
-            defaultSpan: 1,
-            icon: <BarChart3Icon />,
-            id: 'stats',
-          },
-        ],
-      },
+export const adminNav = {
+  pluginId: manifest.id,
+  admin: {
+    dashboard: {
+      widgets: [
+        // [!code ++:8]
+        {
+          component: StatsWidget,
+          defaultEnabled: true,
+          defaultRows: 1,
+          defaultSpan: 1,
+          icon: <BarChart3Icon />,
+          id: 'stats',
+        },
+      ],
     },
-    messages,
-    pluginId: '@acme/site-notes',
-    routes,
-  })
+  },
+} satisfies AdminNavPluginSource
 ```
 
 The full widget id is namespaced by the plugin, so `stats` will not collide with
 another plugin’s idea of a stats card. A good thing—statistics are dramatic
 enough already.
+
+  </Step>
+  <Step>
+
+### Name it
+
+The widget's title comes from your plugin's frontend messages, under
+`admin.dashboard.widgets.{id}`. A `desc` is optional and shows in the widget panel.
+
+```json title="plugins/site-notes/src/locales/en.json"
+{
+  "@acme/site-notes": {
+    "admin": {
+      "dashboard": {
+        "widgets": {
+          "stats": { "title": "Note stats", "desc": "How many notes are live." }
+        }
+      }
+    }
+  }
+}
+```
 
   </Step>
   <Step>
@@ -76,7 +103,7 @@ Add `permission` to hide a widget from staff who should not see it. Add
 `settingsComponent` when administrators need to save preferences; both stay in
 the plugin alongside the widget.
 
-```tsx title="plugins/site-notes/src/config.tsx"
+```tsx title="plugins/site-notes/src/admin/nav.tsx"
 {
   component: StatsWidget,
   // [!code ++:4]

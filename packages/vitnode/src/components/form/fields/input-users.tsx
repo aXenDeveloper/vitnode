@@ -92,6 +92,10 @@ export const UserOptionRow = ({
   </div>
 );
 
+/**
+ * A user picker for an `AutoForm` field that stores a user id (or `null`).
+ * Spread the props `AutoForm` passes and add a `label`.
+ */
 export const AutoFormUser = ({
   clearable = false,
   description,
@@ -111,12 +115,15 @@ export const AutoFormUser = ({
   selected,
 }: ItemAutoFormComponentProps & {
   className?: string;
+  /** Adds a button that sets the field back to `null`. */
   clearable?: boolean;
   disabled?: boolean;
   placeholder?: string;
 
+  /** Finds users for the typed text. */
   search: (value: string) => Promise<UserOption[]>;
   searchPlaceholder?: string;
+  /** The user the field's initial id belongs to, so it shows a name before any search. */
   selected?: null | PartialUserOption;
 }) => {
   const t = useTranslations("core.global");

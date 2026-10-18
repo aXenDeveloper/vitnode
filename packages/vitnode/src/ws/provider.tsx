@@ -41,6 +41,14 @@ const shouldConnectWebSocket = (): boolean =>
   CONFIG.api.pathname !== CONFIG.web.pathname ||
   CONFIG.api.port !== CONFIG.web.port;
 
+/**
+ * Owns the browser's single WebSocket connection to `/api/ws` for
+ * `useVitNodeWebSocket` hooks below it. Tabs share one socket
+ * (one tab holds it and relays for the others) and it reconnects after a drop.
+ *
+ * It does not connect when the API is served from the same path and port as
+ * the web app.
+ */
 export const VitNodeWebSocketProvider = ({
   children,
 }: {

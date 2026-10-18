@@ -16,6 +16,14 @@ import { BlogCategoryColorField } from "@/views/admin/category/color-field";
 
 import { blogCategoryNav, blogPostNav } from "./nav";
 
+/**
+ * The blog's AdminCP content screens, loaded from `@vitnode/blog/admin/content`
+ * into the app's generated `src/content-registry.gen.ts`.
+ *
+ * Articles swap the generated inputs for the Tiptap editor and the AI-assisted
+ * text fields, and share one custom layout between create and edit.
+ * Categories get a colour picker and a colour swatch column.
+ */
 export const adminContent = {
   pluginId: manifest.id,
   contentTypes: [

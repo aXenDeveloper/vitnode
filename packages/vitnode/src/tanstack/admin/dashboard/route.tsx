@@ -20,6 +20,7 @@ export interface AdminDashboardRouteData {
   vitnodeVersion?: string;
 }
 
+/** The dashboard route's loader: warms its messages and the admin's saved layout, and returns the running version. */
 export const loadAdminDashboardRoute = async ({
   adminAccess,
   locale,

@@ -34,6 +34,10 @@ const ColorPresetSwatch = ({ preset }: { preset: ColorPreset }) => {
   );
 };
 
+/**
+ * A radio grid of VitNode's preset colors, each labelled with its translated
+ * name. Calls `onChange` with the chosen preset's color value.
+ */
 export const ColorPresetPicker = ({
   value = "",
   onChange,

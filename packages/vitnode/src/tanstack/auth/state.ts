@@ -2,6 +2,7 @@ import type { SessionApi } from "./session-api";
 
 export type AuthUser = NonNullable<SessionApi["user"]>;
 
+/** The visitor, narrowed by `isAuthenticated`: a signed-in user, or a guest with `user: null`. */
 export type AuthState =
   | {
       isAdmin: boolean;
@@ -18,6 +19,7 @@ export type AuthState =
 
 export const SESSION_QUERY_KEY = ["vitnode", "session"] as const;
 
+/** Narrows a session answer to an {@link AuthState}. */
 export const authStateFromSession = (session: SessionApi): AuthState => {
   const { user } = session;
 

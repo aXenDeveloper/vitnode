@@ -1,8 +1,10 @@
 import { CONFIG } from "../config";
 import { buildSearchParams } from "./helpers";
 
+/** An untyped API call: the URL parts and the request, with nothing inferred. */
 export interface RawApiFetchArgs {
   additionalHeaders?: HeadersInit;
+  /** Sent as JSON, with a JSON `Content-Type`. Ignored when `formData` is set. */
   body?: unknown;
   /**
    * Raw `multipart/form-data` body. When set the JSON `Content-Type` is
@@ -15,13 +17,21 @@ export interface RawApiFetchArgs {
 
   options?: Omit<RequestInit, "body" | "headers" | "method">;
 
+  /**
+   * The API's origin. Defaults to `VITNODE_API_URL`, else the page's origin in
+   * a browser, else `http://localhost:3000`.
+   */
   origin?: string;
+  /** Substituted into `{name}` placeholders in `path`. */
   params?: Record<string, unknown>;
   /** Route path within the module, e.g. `/` or `/{id}`. */
   path: string;
   pluginId: string;
+  /** Inserted between the plugin id and the module in the URL. */
   prefixPath?: string;
+  /** The search params; `undefined` values are left out. */
   query?: Record<string, string | string[] | undefined>;
+  /** Adds cursor-pagination defaults to `query`: see `FetcherRequestOptions`. */
   withPagination?: boolean;
 }
 
@@ -31,6 +41,7 @@ export interface RawApiFetchArgs {
  */
 export type ApiTransport = (request: Request) => Promise<Response>;
 
+/** The URL of an API call: `{origin}/api/{pluginId}{prefixPath}/{module}{path}?{query}`. */
 export const buildApiUrl = ({
   module,
   origin,
@@ -88,6 +99,11 @@ export const buildApiUrl = ({
  * `coreFetcher` wraps this with the route-literal type inference, and the
  * Content Engine wraps it with content-type schemas - both get the same
  * request behaviour without a second implementation.
+ *
+ * Resolves with the `Response` for every status except `500` - check `res.ok`
+ * or `res.status` before reading the body; any other `4xx` or `5xx` is also
+ * logged to the console. Rejects on a `500` (with the response body in the
+ * message) and on network failure.
  */
 export const rawApiFetch = async (
   {

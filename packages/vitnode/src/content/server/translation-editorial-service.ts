@@ -144,6 +144,10 @@ export interface ContentRevisionDetailForLocale extends ContentRevisionMeta {
   snapshot: ContentTranslationRevisionSnapshot;
 }
 
+/**
+ * Builds the editorial service for one translation. Plugins use the model's `translationEditorialService` factory instead,
+ * which passes the right tables and columns.
+ */
 export const createContentTranslationEditorialService = <
   TDefinition extends AnyContentTypeDefinition,
 >({

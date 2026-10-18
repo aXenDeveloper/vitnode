@@ -48,7 +48,10 @@ export const AdminShellContent = ({
     <RouteMessages namespaces={namespaces}>
       <AdminPermissionsProvider>
         <AdminSessionGuard />
-        <AdminNavProvider declarations={nav?.declarations}>
+        <AdminNavProvider
+          dashboardWidgets={nav?.dashboardWidgets}
+          declarations={nav?.declarations}
+        >
           <AdminShellFrame onNavigate={onNavigate} searchUsers={searchUsers}>
             <RouteGuardPending>
               <Outlet />

@@ -7,6 +7,7 @@ import type { VisualEditorSaveInput } from "./types";
 
 import { changedZoneIds } from "../state/reducer";
 
+/** Builds the save payload from editor state: every zone, the changed ids and their baselines. */
 export const buildSaveInput = (
   state: VisualEditorState,
 ): VisualEditorSaveInput => {

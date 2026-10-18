@@ -1,9 +1,24 @@
 import { isLucideIconName } from "./emoji-icon";
 import { updateSourceUrlProblem } from "./updates/source-url";
 
+/**
+ * The parts of a plugin's manifest its package.json cannot express. A plugin
+ * exports it as `pluginInfo` from `src/plugin-info.ts`; `vitnode build` and
+ * `vitnode dev` merge it into the generated `src/manifest.gen.ts`.
+ *
+ * @example
+ * ```ts
+ * import type { PluginInfo } from "@vitnode/core/lib/plugin-manifest";
+ *
+ * export const pluginInfo: PluginInfo = { title: "Blog", icon: "newspaper" };
+ * ```
+ */
 export interface PluginInfo {
+  /** A Lucide icon name in kebab case, e.g. `newspaper`, shown in the AdminCP. */
   icon?: string;
+  /** The plugin's display name. Defaults to the package name. */
   title?: string;
+  /** Where the AdminCP checks for newer versions of the plugin. */
   updates?: PluginUpdateSource;
 }
 
@@ -14,13 +29,24 @@ export interface PluginAuthor {
 }
 
 export interface PluginUpdateSource {
+  /** An absolute `https://` URL of a public update manifest, without credentials, query or fragment. */
   url: string;
 }
 
+/**
+ * A plugin's identity, generated into `src/manifest.gen.ts` from its
+ * package.json (`name`, `version`, `description`, `author`, `license`) and
+ * {@link PluginInfo}. Never written by hand.
+ *
+ * Pass the same object to `buildPlugin`, `buildApiPlugin` and `bindApiPlugin`:
+ * its `id` is the plugin id every frontend and API registration is keyed by.
+ */
 export interface PluginManifest<Id extends string = string> {
   author: null | PluginAuthor;
   description: null | string;
+  /** A Lucide icon name, or `null` for the default icon. */
   icon: null | string;
+  /** The package name, e.g. `@vitnode/blog`. */
   id: Id;
   license: null | string;
   title: string;
@@ -31,6 +57,13 @@ export interface PluginManifest<Id extends string = string> {
 
 export const PLUGIN_MANIFEST_ERROR_PREFIX = "[VitNode plugin manifest]";
 
+/**
+ * Checks a manifest passed to a plugin factory; `where` names the factory in
+ * the error. A missing manifest passes.
+ *
+ * @throws When the manifest's `id` is not `pluginId`, its icon is not a Lucide
+ * icon name, or its update source URL is not a valid public `https://` URL.
+ */
 export const assertPluginManifest = (
   pluginId: string,
   manifest: Pick<PluginManifest, "icon" | "id" | "updates"> | undefined,

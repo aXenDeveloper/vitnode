@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 
+/** A `cmdk` command menu: a filterable list of actions. */
 function Command({
   className,
   ...props
@@ -28,6 +29,11 @@ function Command({
   );
 }
 
+/**
+ * A {@link Command} inside a dialog, e.g. a command palette. `title` and
+ * `description` are read by screen readers only and default to English text, so
+ * pass translated ones; `showCloseButton` defaults to `false`.
+ */
 function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
@@ -60,6 +66,7 @@ function CommandDialog({
   );
 }
 
+/** The search input that filters the menu, with a search icon. */
 function CommandInput({
   className,
   ...props
@@ -83,6 +90,7 @@ function CommandInput({
   );
 }
 
+/** The scrolling list of groups and items. */
 function CommandList({
   className,
   ...props
@@ -99,6 +107,7 @@ function CommandList({
   );
 }
 
+/** Shown when nothing matches the search. */
 function CommandEmpty({
   className,
   ...props
@@ -112,6 +121,7 @@ function CommandEmpty({
   );
 }
 
+/** A titled group of items (`heading`). */
 function CommandGroup({
   className,
   ...props
@@ -128,6 +138,7 @@ function CommandGroup({
   );
 }
 
+/** A divider between groups. */
 function CommandSeparator({
   className,
   ...props
@@ -141,6 +152,10 @@ function CommandSeparator({
   );
 }
 
+/**
+ * One action; shows a check mark while `data-checked` is true, unless it has a
+ * shortcut.
+ */
 function CommandItem({
   className,
   children,
@@ -161,6 +176,7 @@ function CommandItem({
   );
 }
 
+/** A keyboard shortcut hint at the item's end. */
 function CommandShortcut({
   className,
   ...props

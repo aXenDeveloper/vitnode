@@ -47,6 +47,11 @@ const HeadContentWithoutPreloads = () => {
   );
 };
 
+/**
+ * The root document's `<head>` tags, in place of TanStack Router's
+ * `<HeadContent />`. In production it leaves out module preloads, which
+ * `DocumentScripts` adds after first paint.
+ */
 export const DocumentHead = () =>
   process.env.NODE_ENV === "production" ? (
     <HeadContentWithoutPreloads />

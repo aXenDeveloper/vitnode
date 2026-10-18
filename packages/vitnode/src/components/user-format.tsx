@@ -5,9 +5,11 @@ import { parseEmojiIcon } from "@/lib/emoji-icon";
 
 import { EmojiIcon } from "./ui/emoji-icon";
 
+/** The path of a user's public profile page. */
 export const userProfileHref = (nameCode: string): string =>
   `/users/${encodeURIComponent(nameCode)}`;
 
+/** A user's display name, optionally styled by their role and linked to their profile. */
 export const UserFormat = ({
   user,
   format,
@@ -16,7 +18,9 @@ export const UserFormat = ({
   style,
   ...props
 }: React.ComponentProps<"span"> & {
+  /** Colors the name and adds the role's prefix icon. */
   format?: boolean;
+  /** Links to the profile page; needs `user.nameCode`. */
   link?: boolean;
   user: {
     name: string;
