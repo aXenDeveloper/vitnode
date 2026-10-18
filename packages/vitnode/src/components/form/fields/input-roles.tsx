@@ -74,6 +74,7 @@ export const AutoFormRoles = ({
   search,
   searchPlaceholder,
   selected = [],
+  tip,
 }: AutoFormRolesProps) => {
   const t = useTranslations("core.global");
   const locale = useLocale();
@@ -102,7 +103,11 @@ export const AutoFormRoles = ({
   };
 
   const label_ = !!label && (
-    <AutoFormLabel isOptional={otherProps.isOptional} labelRight={labelRight}>
+    <AutoFormLabel
+      isOptional={otherProps.isOptional}
+      labelRight={labelRight}
+      tip={tip}
+    >
       {label}
     </AutoFormLabel>
   );

@@ -70,6 +70,7 @@ export const AutoFormFiles = ({
   onUpload,
   ordered = true,
   otherProps: { isOptional },
+  tip,
   // Only the language-aware inputs implement this - dropped here so it never
   // lands on the DOM element below. A file is never localized.
   // oxlint-disable-next-line no-unused-vars
@@ -263,7 +264,11 @@ export const AutoFormFiles = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

@@ -193,6 +193,7 @@ export const AutoFormFile = ({
   maxBytes,
   onUpload,
   otherProps: { isOptional },
+  tip,
   // Only the language-aware inputs implement this - dropped here so it never
   // lands on the DOM element below. A file is never localized.
   // oxlint-disable-next-line no-unused-vars
@@ -249,6 +250,8 @@ export const AutoFormFile = ({
           className={cn(cover && "sr-only")}
           isOptional={isOptional}
           labelRight={labelRight}
+          // A cover hides the label visually; a lone help icon would read as noise.
+          tip={cover ? undefined : tip}
         >
           {label}
         </AutoFormLabel>

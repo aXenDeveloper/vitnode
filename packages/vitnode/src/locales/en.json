@@ -450,6 +450,7 @@
       "submit": "Submit",
       "cancel": "Cancel",
       "optional": "Optional",
+      "field_tip": "More information",
       "loading": "Loading...",
       "or": "or",
       "back_home": "Back to home",

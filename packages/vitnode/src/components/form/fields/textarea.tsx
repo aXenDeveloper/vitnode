@@ -26,6 +26,7 @@ const MultiLangTextarea = ({
   label,
   labelRight,
   description,
+  tip,
   isOptional,
   field,
   itemParams,
@@ -57,6 +58,7 @@ const MultiLangTextarea = ({
         languages={languages}
         onSelect={setSelected}
         selected={selected}
+        tip={tip}
       />
 
       <FormControl>
@@ -90,6 +92,7 @@ export const AutoFormTextarea = ({
   label,
   description,
   labelRight,
+  tip,
   otherProps,
   field,
   itemParams,
@@ -106,6 +109,7 @@ export const AutoFormTextarea = ({
         itemParams={itemParams}
         label={label}
         labelRight={labelRight}
+        tip={tip}
         {...props}
       />
     );
@@ -116,7 +120,11 @@ export const AutoFormTextarea = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

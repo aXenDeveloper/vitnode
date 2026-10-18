@@ -22,6 +22,7 @@ import {
 } from "@/lib/helpers/multi-lang";
 
 import { AutoFormLabel } from "../common/label";
+import { hasTipContent } from "../common/tip";
 import { useMultiLangDefaultLanguage } from "./multi-lang-default-language";
 import {
   MultiLangSelectedContext,
@@ -183,8 +184,9 @@ export const MultiLangSelect = ({
 };
 
 /**
- * A multi-language field's label row: the label, plus the language switcher
- * when `canSelect`. Renders nothing without either.
+ * A multi-language field's label row: the label (with its `tip`), plus the
+ * language switcher when `canSelect`. Renders nothing without either. The tip
+ * is one per field, not per language - pass it in the UI language.
  */
 export const MultiLangLabel = ({
   canSelect,
@@ -194,19 +196,21 @@ export const MultiLangLabel = ({
   languages,
   onSelect,
   selected,
+  tip,
 }: React.ComponentProps<typeof MultiLangSelect> & {
   canSelect: boolean;
   isOptional?: boolean;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
+  tip?: React.ReactNode;
 }) => {
   if (!label && !canSelect) return null;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 *:data-[slot=auto-form-label-row]:flex-1">
       {!!label && (
         <AutoFormLabel
-          className="flex-1"
+          className={hasTipContent(tip) ? undefined : "flex-1"}
           isOptional={isOptional}
           labelRight={
             labelRight ? (
@@ -215,6 +219,7 @@ export const MultiLangLabel = ({
               </MultiLangSelectedContext>
             ) : undefined
           }
+          tip={tip}
         >
           {label}
         </AutoFormLabel>

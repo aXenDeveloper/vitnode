@@ -18,6 +18,7 @@ export const AutoFormColor = ({
   label,
   labelRight,
   description,
+  tip,
   otherProps: { isOptional },
   field,
   // oxlint-disable-next-line no-unused-vars
@@ -32,7 +33,11 @@ export const AutoFormColor = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

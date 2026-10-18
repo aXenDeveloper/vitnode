@@ -25,6 +25,7 @@ import {
   useFormField,
 } from "../../ui/form";
 import { AutoFormFieldSlot } from "../auto-form";
+import { AutoFormTip, hasTipContent } from "../common/tip";
 
 const reconcileRowKeys = (previous: number[], length: number): number[] => {
   if (previous.length >= length) {
@@ -82,8 +83,11 @@ export const AutoFormArray = ({
   className,
   itemParams,
   otherProps,
+  tip,
 }: AutoFormArrayProps) => {
   const { form } = useFormApi();
+  const legendId = React.useId();
+  const withTip = !!label && hasTipContent(tip);
   const { errors } = useFormField();
   const t = useTranslations("core.global");
   const id = parentField.name;
@@ -113,8 +117,20 @@ export const AutoFormArray = ({
   const canAdd = !maxItems || length < maxItems;
 
   return (
-    <FieldSet className={cn("gap-4", className)}>
-      {!!label && <FieldLegend variant="label">{label}</FieldLegend>}
+    <FieldSet
+      // The legend also holds the help button; name the group by its text only.
+      aria-labelledby={withTip ? legendId : undefined}
+      className={cn("gap-4", className)}
+    >
+      {!!label &&
+        (withTip ? (
+          <FieldLegend className="flex items-center gap-2" variant="label">
+            <span id={legendId}>{label}</span>
+            <AutoFormTip labelId={legendId}>{tip}</AutoFormTip>
+          </FieldLegend>
+        ) : (
+          <FieldLegend variant="label">{label}</FieldLegend>
+        ))}
       {!!description && <FieldDescription>{description}</FieldDescription>}
 
       <FieldGroup className="gap-4">

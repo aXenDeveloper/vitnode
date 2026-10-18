@@ -22,6 +22,7 @@ const MultiLangInput = ({
   label,
   labelRight,
   description,
+  tip,
   isOptional,
   field,
   itemParams,
@@ -55,6 +56,7 @@ const MultiLangInput = ({
         languages={languages}
         onSelect={setSelected}
         selected={selected}
+        tip={tip}
       />
 
       <FormControl>
@@ -96,6 +98,7 @@ export const AutoFormInput = ({
   label,
   labelRight,
   description,
+  tip,
   otherProps,
   field,
   itemParams,
@@ -112,6 +115,7 @@ export const AutoFormInput = ({
         itemParams={itemParams}
         label={label}
         labelRight={labelRight}
+        tip={tip}
         {...props}
       />
     );
@@ -122,7 +126,11 @@ export const AutoFormInput = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

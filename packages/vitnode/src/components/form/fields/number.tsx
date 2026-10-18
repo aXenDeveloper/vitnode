@@ -38,6 +38,7 @@ export const AutoFormNumber = ({
   multiLang,
   otherProps: { isOptional },
   placeholder,
+  tip,
   unitLabel,
   ...props
 }: AutoFormNumberProps) => {
@@ -46,7 +47,11 @@ export const AutoFormNumber = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

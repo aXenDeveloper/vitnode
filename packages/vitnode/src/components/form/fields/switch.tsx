@@ -31,6 +31,7 @@ export const AutoFormSwitch = ({
   otherProps: { isOptional },
   className,
   description,
+  tip,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Switch>, "checked">) => {
@@ -64,6 +65,7 @@ export const AutoFormSwitch = ({
                 id={labelId}
                 isOptional={isOptional}
                 labelRight={labelRight}
+                tip={tip}
               >
                 {label}
               </AutoFormLabel>

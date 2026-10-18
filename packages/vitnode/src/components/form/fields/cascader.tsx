@@ -18,6 +18,7 @@ export const AutoFormCascader = ({
   label,
   labelRight,
   description,
+  tip,
   otherProps: { isOptional },
   field,
   options,
@@ -34,7 +35,7 @@ export const AutoFormCascader = ({
   Omit<CascaderProps, "defaultValue" | "value">) => (
   <>
     {!!label && (
-      <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+      <AutoFormLabel isOptional={isOptional} labelRight={labelRight} tip={tip}>
         {label}
       </AutoFormLabel>
     )}

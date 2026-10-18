@@ -34,6 +34,7 @@ export const AutoFormSelect = ({
   placeholder,
   labelRight,
   labels = [],
+  tip,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Select>, "value"> & {
@@ -54,7 +55,11 @@ export const AutoFormSelect = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}
