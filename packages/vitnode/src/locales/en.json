@@ -2207,6 +2207,7 @@
           "duplicate": "You already reported this, and that report is still open.",
           "not_found": "This content is no longer available to report.",
           "rate_limited": "You have sent a lot of reports recently. Try again later.",
+      "unauthenticated": "Your session has ended. Sign in again to send the report.",
           "validation": "Check the reason and the details, then try again.",
           "unknown": "Something went wrong. Try again in a moment."
         }

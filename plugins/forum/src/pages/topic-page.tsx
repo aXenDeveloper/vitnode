@@ -11,6 +11,7 @@ import {
 } from "@vitnode/core/components/ui/breadcrumb";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
+  contentTarget,
   richTextToPlainText,
   zodRichTextDocument,
 } from "@vitnode/core/content";
@@ -20,6 +21,7 @@ import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
+import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { PencilIcon } from "lucide-react";
@@ -202,8 +204,11 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
   },
 });
 
-/** Rendered in the browser from the session, so a cached page stays shared. */
-const TopicOwnerActions = ({
+/**
+ * Rendered in the browser from the session, so a cached page stays shared: the
+ * author gets Edit, everyone else gets Report.
+ */
+const TopicViewerActions = ({
   author,
   topicId,
 }: {
@@ -214,18 +219,24 @@ const TopicOwnerActions = ({
   const { data: session } = useSessionQuery();
   const userId = session?.user?.id;
 
-  if (userId === undefined || author === null || author.id !== userId) {
-    return null;
+  if (userId !== undefined && author !== null && author.id === userId) {
+    return (
+      <HrefLink
+        className={buttonVariants({ size: "sm", variant: "outline" })}
+        href={topicEditHref(topicId)}
+      >
+        <PencilIcon aria-hidden="true" />
+        {t("edit")}
+      </HrefLink>
+    );
   }
 
   return (
-    <HrefLink
-      className={buttonVariants({ size: "sm", variant: "outline" })}
-      href={topicEditHref(topicId)}
-    >
-      <PencilIcon aria-hidden="true" />
-      {t("edit")}
-    </HrefLink>
+    <ReportButton
+      className="text-muted-foreground"
+      target={contentTarget(manifest.id, topicContentType, topicId)}
+      typeLabel={t("report_type")}
+    />
   );
 };
 
@@ -328,7 +339,7 @@ const TopicPage = ({
             </div>
 
             <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
-              <TopicOwnerActions author={topic.author} topicId={topic.id} />
+              <TopicViewerActions author={topic.author} topicId={topic.id} />
               {forum ? (
                 <HrefLink
                   className={buttonVariants({ size: "sm", variant: "ghost" })}

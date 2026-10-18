@@ -641,6 +641,15 @@ Restart `pnpm dev` and sign in with a member account:
 
 {/* Image prompt: The /discussions/new page of the example plugin: "Start a discussion" heading, a Title input and a Message rich text editor, and a "Post discussion" button. Light theme, 1440x900. */}
 
+## Approvals and edit windows
+
+`example.discussion` publishes straight away. When a content type is filed in a container with [publishing policies](/docs/content-engine/container-policies), the same routes can answer differently:
+
+- A create or edit that needs a moderator still answers `201` or `200`, with `approval.status: "pending"`. Tell the author it is waiting instead of saying it is live. `GET /{id}/edit` returns the pending proposal in `approval.values`. See [Approvals](/docs/content-engine/approvals#what-the-author-sees).
+- A create in a container with `create: "moderators"` answers `403` with the `moderators_only` issue. An owner edit after `authorEdit` stopped allowing it answers `403` with `edit_window_closed`.
+
+The Forum plugin handles all of these in `topic-edit-page.tsx` and `comment-composer.tsx`.
+
 ## Ask for a captcha
 
 With `create.captcha: true`, every create needs a captcha token, as long as a [captcha provider](/docs/dev/captcha) is configured. Pass the deployment's captcha config to `AutoForm` and forward the token it hands to `onSubmit`:
@@ -680,7 +689,7 @@ The routes do not care how the form is built. Any form library, or none, works a
 2. On `400`, `401`, `403` or `404`, read the body with `parseContentPublicWriteRejection` from `@vitnode/core/content`. It takes the parsed JSON and returns the rejection, or `null` for any other shape.
 3. On `409`, check `code` for `CONTENT_VERSION_CONFLICT` or `CONTENT_UNIQUE_CONFLICT`.
 
-This plain React form turns a textarea into paragraphs and puts each issue under its field:
+For example, this plain React form, which you write yourself, turns a textarea into paragraphs and puts each issue under its field:
 
 ```tsx title="plugins/example/src/pages/quick-discussion-form.tsx"
 import {

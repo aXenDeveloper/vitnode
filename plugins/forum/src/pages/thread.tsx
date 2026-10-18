@@ -8,10 +8,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import { zodRichTextDocument } from "@vitnode/core/content";
+import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
+import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
@@ -33,7 +34,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { FORUM_COMMENT_MAX_DEPTH } from "@/content/comment";
+import { commentContentType, FORUM_COMMENT_MAX_DEPTH } from "@/content/comment";
 import { manifest } from "@/manifest.gen";
 
 import type { CommentComposerProps } from "./comment-composer";
@@ -144,6 +145,7 @@ const CommentBody = ({
     actions.currentUserId !== null &&
     comment.author?.id === actions.currentUserId;
   const canAnswer = actions.canComment && node.depth < FORUM_COMMENT_MAX_DEPTH;
+  const authorId = `${commentAnchorId(comment.slug)}-author`;
   const edited =
     comment.publishedAt !== null &&
     new Date(comment.updatedAt).getTime() -
@@ -154,7 +156,9 @@ const CommentBody = ({
     <div className="flex flex-col gap-2">
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
         <PersonAvatar person={comment.author} size={24} />
-        <PersonName person={comment.author} />
+        <span id={authorId}>
+          <PersonName person={comment.author} />
+        </span>
         <span aria-hidden="true" className="text-muted-foreground">
           ·
         </span>
@@ -227,7 +231,18 @@ const CommentBody = ({
               <PencilIcon aria-hidden="true" />
               {t("edit")}
             </Button>
-          ) : null}
+          ) : (
+            <ReportButton
+              className="text-muted-foreground"
+              describedBy={authorId}
+              target={contentTarget(
+                manifest.id,
+                commentContentType,
+                comment.id,
+              )}
+              typeLabel={t("report_type")}
+            />
+          )}
         </div>
       )}
 

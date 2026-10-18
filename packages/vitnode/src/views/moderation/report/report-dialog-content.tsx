@@ -78,6 +78,7 @@ export const ReportDialogContent = ({
         result.failure === "duplicate" ||
         result.failure === "not_found" ||
         result.failure === "rate_limited" ||
+        result.failure === "unauthenticated" ||
         result.failure === "validation"
           ? result.failure
           : "unknown";

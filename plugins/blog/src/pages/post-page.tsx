@@ -9,6 +9,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
+import { contentTarget } from "@vitnode/core/content";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import {
   contentDeliveryPage,
@@ -78,10 +79,12 @@ const BlogPostPage = ({
             <ReportButton
               className="text-muted-foreground"
               locale={metadata.locale}
-              pluginId={manifest.id}
               requestedLocale={metadata.requestedLocale}
-              targetId={metadata.itemId}
-              targetType={blogPostContentType.id}
+              target={contentTarget(
+                manifest.id,
+                blogPostContentType,
+                metadata.itemId,
+              )}
               typeLabel={t("report_type")}
             />
           ) : null}
