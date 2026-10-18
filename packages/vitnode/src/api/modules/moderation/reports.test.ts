@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { ModerationCaptureResult } from "@/api/moderation";
@@ -14,6 +14,7 @@ import {
 } from "@/database/moderation";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
+import { MODERATION_LIMITS } from "@/lib/moderation/const";
 import { createTestCache } from "@/tests/cache";
 import { createMemoryDb } from "@/tests/memory-db";
 import {
@@ -334,6 +335,62 @@ describe("filing a report", () => {
     expect(await res.json()).toEqual({ error: "duplicate" });
     expect(h.memory.rows(core_moderation_reports)).toHaveLength(1);
     expect(h.memory.rows(core_moderation_report_events)).toEqual([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("asks a guest to sign in", async () => {
+    const h = await harness();
+
+    const res = await h.report(0, "1");
+
+    expect(res.status).toBe(401);
+    expect(h.memory.rows(core_moderation_reports)).toEqual([]);
+  });
+
+  it.each([
+    [MODERATION_LIMITS.otherDescriptionMinLength - 1, 400],
+    [MODERATION_LIMITS.otherDescriptionMinLength, 201],
+  ])(
+    'needs a description of the problem for "other" (%i characters: %i)',
+    async (length, status) => {
+      const h = await harness();
+
+      const res = await h.report(REPORTER, "1", {
+        description: "x".repeat(length),
+        reason: "other",
+      });
+
+      expect(res.status).toBe(status);
+    },
+  );
+
+  it("limits reports per hour and lets the reporter go on once it passes", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-18T12:00:00.000Z"));
+    const h = await harness();
+    await h.memory.db.insert(core_moderation_reports).values(
+      Array.from({ length: MODERATION_LIMITS.reportsPerUserPerHour }, () => ({
+        openKey: null,
+        pluginId: FORUM,
+        reason: "spam" as const,
+        reporterId: REPORTER,
+        snapshot: {},
+        targetId: "2",
+        targetType: TYPE,
+      })),
+    );
+
+    const limited = await h.report(REPORTER, "1");
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBe("3600");
+    expect(await limited.json()).toEqual({ error: "rate_limited" });
+    expect((await h.report(SECOND_REPORTER, "1")).status).toBe(201);
+
+    vi.setSystemTime(new Date("2026-10-18T13:00:01.000Z"));
+    expect((await h.report(REPORTER, "1")).status).toBe(201);
   });
 
   it("answers 404 when the reporter cannot read the target", async () => {
