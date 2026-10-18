@@ -1116,6 +1116,13 @@ export interface ContentPublicApiConfig<
   fields: readonly [TField, ...TField[]];
   /** Equality filters the list route accepts. Defaults to none. */
   filterableFields?: readonly TField[];
+  /**
+   * The fields a list row carries - a subset of `fields`, checked at definition
+   * time. Defaults to `fields`. Lets a list skip a heavy `body` or a gallery the
+   * detail route still serves. The list row *type* stays the full projection,
+   * so a field left out here is simply absent at runtime.
+   */
+  listFields?: readonly [TField, ...TField[]];
   /** Columns `orderBy` accepts, besides `publishedAt`. Defaults to none. */
   orderableFields?: readonly TField[];
   /** One lowercase URL segment, e.g. `articles`. Never `admin`. */
@@ -1149,6 +1156,8 @@ export interface ResolvedContentPublicApiConfig<
   enabled: TEnabled;
   fields: TField[];
   filterableFields: string[];
+  /** What a list row carries. Absent means the same as `fields`. */
+  listFields?: TField[];
   orderableFields: string[];
   path: TPath;
   /** User fields published as a {@link ContentPublicPerson}. */
@@ -2307,9 +2316,9 @@ type ContentPublicLocaleColumn<TDefinition> = TDefinition extends {
 /**
  * A row in a public list.
  *
- * The same projection as the detail response today - there is no list-only or
- * detail-only field. Both names exist so a route signature says which one it
- * means, and so the two can diverge later without a rename.
+ * Typed as the detail projection. `publicApi.listFields` narrows what a list row
+ * carries at runtime only, so with it set, a field outside that list is absent
+ * from the row even though this type names it.
  */
 export type ContentPublicListRow<TDefinition> =
   ContentPublicSelect<TDefinition>;

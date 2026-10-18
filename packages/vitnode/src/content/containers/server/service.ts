@@ -25,6 +25,10 @@ import { core_content_containers } from "../../../database/content-containers";
 import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { contentContainerTag } from "../../cache";
 import { contentDefinitionOf } from "../../server/model";
+import {
+  bumpContentContainerGeneration,
+  rememberContentContainerTree,
+} from "../../server/public-cache";
 import { syncContentSearchContainerDependents } from "../../server/search-sync";
 import { slugify } from "../../slug";
 import {
@@ -215,6 +219,28 @@ export const createContentContainerService = <
       .from(core_content_containers)
       .where(eq(core_content_containers.definitionId, definitionId));
 
+  /**
+   * Only what a subtree walk needs, cached per collection: a public list filtered
+   * by container asks for this on every request, and the full rows carry every
+   * container's metadata JSON for nothing.
+   */
+  const readTree = async (): Promise<
+    { id: number; parentId: null | number }[]
+  > =>
+    await rememberContentContainerTree(
+      c,
+      definitionId,
+      async () =>
+        await c
+          .get("db")
+          .select({
+            id: core_content_containers.id,
+            parentId: core_content_containers.parentId,
+          })
+          .from(core_content_containers)
+          .where(eq(core_content_containers.definitionId, definitionId)),
+    );
+
   const lock = async (tx: ContentDatabase): Promise<void> => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${`core_content_containers:${definitionId}`}))`,
@@ -325,6 +351,7 @@ export const createContentContainerService = <
   };
 
   const expire = async (mode: "hard" | "soft"): Promise<void> => {
+    await bumpContentContainerGeneration(c, definitionId);
     await invalidatePageCacheTags([contentContainerTag(definitionId)], {
       mode,
     });
@@ -509,7 +536,7 @@ export const createContentContainerService = <
     },
 
     descendantIds: async id => {
-      const rows = await readAll(c.get("db"));
+      const rows = await readTree();
       if (!rows.some(row => row.id === id)) return null;
 
       return [...contentContainerSubtreeIds(rows, id)];

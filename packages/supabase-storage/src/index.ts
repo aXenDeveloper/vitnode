@@ -6,6 +6,47 @@ import type {
 
 import { StorageClient } from "@supabase/storage-js";
 
+// Streams the object and gives up as soon as it passes `maxBytes`, so an
+// oversized file is never buffered whole just to be thrown away.
+const readCapped = async (
+  stream: ReadableStream<unknown>,
+  maxBytes: number,
+): Promise<null | Uint8Array> => {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (
+        !(value instanceof Uint8Array) ||
+        total + value.byteLength > maxBytes
+      ) {
+        await reader.cancel();
+
+        return null;
+      }
+      total += value.byteLength;
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return bytes;
+};
+
 // Uses a Supabase secret key (`sb_secret_…`), the modern replacement for the
 // legacy `service_role` key. A still-valid legacy key works too - the value is
 // sent verbatim as the `apikey`/`Authorization` header.
@@ -38,10 +79,13 @@ export const SupabaseStorageAdapter = ({
 
   return {
     read: async (key: string, { maxBytes }: { maxBytes: number }) => {
-      const { data, error } = await getClient().from(bucket).download(key);
-      if (error || data.size > maxBytes) return null;
+      const { data, error } = await getClient()
+        .from(bucket)
+        .download(key)
+        .asStream();
+      if (error) return null;
 
-      return new Uint8Array(await data.arrayBuffer());
+      return await readCapped(data, maxBytes);
     },
     delete: async (key: string): Promise<void> => {
       const { error } = await getClient().from(bucket).remove([key]);

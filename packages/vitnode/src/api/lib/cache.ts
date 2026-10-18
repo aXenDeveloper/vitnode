@@ -1,6 +1,8 @@
 import type { Context } from "hono";
 import type { RedisClientOptions, RedisClientType } from "redis";
 
+import type { MemoryCacheStore } from "./cache-memory";
+
 /** Connection options accepted by `redis` - `url` plus any client option. */
 export type CacheConfig = RedisClientOptions;
 
@@ -10,14 +12,26 @@ export type CacheClient = RedisClientType;
 const CACHE_PREFIX = "vitnode:cache:";
 const SYSTEM_NAMESPACE = "__system__";
 
+/**
+ * Per-request cache facade. Backed by Redis when a client is configured; without
+ * one, by the process-wide {@link MemoryCacheStore} the global middleware passes
+ * in (short TTLs, single-instance only - see `MEMORY_CACHE_MAX_TTL_SECONDS`).
+ * With neither, every method is a no-op.
+ */
 export class CacheModel {
-  constructor(client: CacheClient | null, c: Context) {
+  constructor(
+    client: CacheClient | null,
+    c: Context,
+    memory: MemoryCacheStore | null = null,
+  ) {
     this.c = c;
     this.client = client;
+    this.memory = client ? null : memory;
   }
 
   protected readonly c: Context;
   protected readonly client: CacheClient | null;
+  protected readonly memory: MemoryCacheStore | null;
 
   private key(key: string): string {
     return `${this.prefix()}${key}`;
@@ -35,11 +49,31 @@ export class CacheModel {
     return pluginId ? `${CACHE_PREFIX}${pluginId}:` : CACHE_PREFIX;
   }
 
-  private async readKey<T>(fullKey: string): Promise<null | T> {
-    if (!this.client) return null;
+  private async putKey<T>(
+    fullKey: string,
+    value: T,
+    ttlSeconds?: number,
+  ): Promise<void> {
+    const raw = JSON.stringify(value);
+    if (!this.client) {
+      this.memory?.set(fullKey, raw, ttlSeconds);
 
+      return;
+    }
+    if (ttlSeconds && ttlSeconds > 0) {
+      await this.client.set(fullKey, raw, {
+        expiration: { type: "EX", value: ttlSeconds },
+      });
+    } else {
+      await this.client.set(fullKey, raw);
+    }
+  }
+
+  private async readKey<T>(fullKey: string): Promise<null | T> {
     try {
-      const raw = await this.client.get(fullKey);
+      const raw = this.client
+        ? await this.client.get(fullKey)
+        : (this.memory?.get(fullKey) ?? null);
 
       return raw === null ? null : (JSON.parse(raw) as T);
     } catch {
@@ -47,8 +81,28 @@ export class CacheModel {
     }
   }
 
+  private async readKeys<T>(fullKeys: string[]): Promise<(null | T)[]> {
+    if (fullKeys.length === 0) return [];
+
+    try {
+      const raws = this.client
+        ? await this.client.mGet(fullKeys)
+        : fullKeys.map(key => this.memory?.get(key) ?? null);
+
+      return raws.map(raw =>
+        typeof raw === "string" ? (JSON.parse(raw) as T) : null,
+      );
+    } catch {
+      return fullKeys.map(() => null);
+    }
+  }
+
   private async removeKeys(fullKeys: string[]): Promise<void> {
-    if (!this.client) return;
+    if (!this.client) {
+      this.memory?.delete(fullKeys);
+
+      return;
+    }
 
     try {
       if (fullKeys.length > 0) await this.client.del(fullKeys);
@@ -66,17 +120,8 @@ export class CacheModel {
     value: T,
     ttlSeconds?: number,
   ): Promise<void> {
-    if (!this.client) return;
-
     try {
-      const raw = JSON.stringify(value);
-      if (ttlSeconds && ttlSeconds > 0) {
-        await this.client.set(fullKey, raw, {
-          expiration: { type: "EX", value: ttlSeconds },
-        });
-      } else {
-        await this.client.set(fullKey, raw);
-      }
+      await this.putKey(fullKey, value, ttlSeconds);
     } catch {
       /* caching must never break the request */
     }
@@ -85,13 +130,22 @@ export class CacheModel {
   /**
    * Acquire a short-lived distributed lock (`SET key val NX EX ttl`) in the
    * system namespace. Returns `true` when the lock is held by this caller.
-   * **Without Redis it returns `true`** so cache-less / single-instance
-   * deployments still make progress - callers must guard correctness some other
-   * way (e.g. Postgres `FOR UPDATE SKIP LOCKED`). Returns `false` on a Redis
-   * error so a flaky connection skips rather than double-runs work.
+   * **Without Redis the lock is only process-wide** (and with no store at all
+   * it always returns `true`), so multi-instance deployments still make
+   * progress - callers must guard correctness some other way (e.g. Postgres
+   * `FOR UPDATE SKIP LOCKED`). Returns `false` on a Redis error so a flaky
+   * connection skips rather than double-runs work.
    */
   async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
-    if (!this.client) return true;
+    if (!this.client) {
+      return (
+        this.memory?.setIfAbsent(
+          this.systemKey(`lock:${key}`),
+          "1",
+          ttlSeconds,
+        ) ?? true
+      );
+    }
 
     try {
       const result = await this.client.set(this.systemKey(`lock:${key}`), "1", {
@@ -105,15 +159,15 @@ export class CacheModel {
     }
   }
 
-  /** Remove one or more keys. No-op without Redis. */
+  /** Remove one or more keys. */
   async delete(key: string | string[]): Promise<void> {
     const keys = (Array.isArray(key) ? key : [key]).map(k => this.key(k));
     await this.removeKeys(keys);
   }
 
   /**
-   * Remove one or more keys from the framework system namespace. No-op without
-   * Redis. See {@link SYSTEM_NAMESPACE}.
+   * Remove one or more keys from the framework system namespace. See
+   * {@link SYSTEM_NAMESPACE}.
    */
   async deleteSystem(key: string | string[]): Promise<void> {
     const keys = (Array.isArray(key) ? key : [key]).map(k => this.systemKey(k));
@@ -123,10 +177,14 @@ export class CacheModel {
   /**
    * Delete every cache key for the current plugin
    * (`vitnode:cache:{plugin_code}:*`). Other plugins' keys and unrelated Redis
-   * data are left untouched. No-op without Redis.
+   * data are left untouched.
    */
   async flush(): Promise<void> {
-    if (!this.client) return;
+    if (!this.client) {
+      this.memory?.deleteByPrefix(this.prefix());
+
+      return;
+    }
 
     try {
       // `scanIterator` yields a batch of keys per SCAN round-trip.
@@ -143,7 +201,7 @@ export class CacheModel {
     }
   }
 
-  /** Read a JSON value. Returns `null` on a miss, without Redis, or on error. */
+  /** Read a JSON value. Returns `null` on a miss, without a store, or on error. */
   async get<T>(key: string): Promise<null | T> {
     return this.readKey<T>(this.key(key));
   }
@@ -152,9 +210,17 @@ export class CacheModel {
     return this.readKey<T>(this.systemKey(key));
   }
 
-  /** Whether a key currently exists. `false` without Redis or on error. */
+  /**
+   * Reads several system-namespace keys in one round trip (`MGET`), in order.
+   * Each slot is `null` on a miss; every slot is `null` on error.
+   */
+  async getSystemMany<T>(keys: string[]): Promise<(null | T)[]> {
+    return this.readKeys<T>(keys.map(key => this.systemKey(key)));
+  }
+
+  /** Whether a key currently exists. `false` without a store or on error. */
   async has(key: string): Promise<boolean> {
-    if (!this.client) return false;
+    if (!this.client) return this.memory?.has(this.key(key)) ?? false;
 
     try {
       return (await this.client.exists(this.key(key))) === 1;
@@ -163,7 +229,7 @@ export class CacheModel {
     }
   }
 
-  /** Release a lock taken with {@link acquireLock}. No-op without Redis. */
+  /** Release a lock taken with {@link acquireLock}. */
   async releaseLock(key: string): Promise<void> {
     await this.removeKeys([this.systemKey(`lock:${key}`)]);
   }
@@ -186,12 +252,24 @@ export class CacheModel {
     await this.writeKey(this.key(key), value, ttlSeconds);
   }
 
+  /**
+   * `strict` rethrows a failed write instead of swallowing it - for an
+   * invalidation stamp, whose caller has to know it did not land so it can
+   * retry rather than leave readers on the old generation.
+   */
   async setSystem<T>(
     key: string,
     value: T,
     ttlSeconds?: number,
+    { strict = false }: { strict?: boolean } = {},
   ): Promise<void> {
-    await this.writeKey(this.systemKey(key), value, ttlSeconds);
+    const fullKey = this.systemKey(key);
+    if (strict) {
+      await this.putKey(fullKey, value, ttlSeconds);
+
+      return;
+    }
+    await this.writeKey(fullKey, value, ttlSeconds);
   }
 
   async status(): Promise<{ configured: boolean; connected: boolean }> {

@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -86,16 +86,31 @@ describe("a delete drops the record from the cache", () => {
     expect(isGone(queryClient, keysFor(TYPE, ITEM).history)).toBe(true);
   });
 
-  it("refreshes the list rather than emptying it", async () => {
+  it("refreshes the list on screen rather than emptying it", async () => {
     // Invalidating keeps the current rows on screen while the fresh ones
     // arrive, instead of blanking the table under the dialog still closing.
+    // A page nobody is looking at is dropped instead, so it is fetched fresh
+    // when opened rather than refetched now for nothing.
     const queryClient = seed();
     const keys = keysFor(TYPE, ITEM);
+    const offScreen = contentListQueryKey(TYPE, { first: 25, page: 2 });
+    queryClient.setQueryData(offScreen, { seeded: true });
+    let refetches = 0;
+    const unsubscribe = new QueryObserver(queryClient, {
+      queryFn: async () => {
+        refetches += 1;
+
+        return await Promise.resolve({ seeded: true });
+      },
+      queryKey: keys.list,
+    }).subscribe(() => undefined);
 
     await invalidateContentList(queryClient, TYPE);
+    unsubscribe();
 
     expect(isGone(queryClient, keys.list)).toBe(false);
-    expect(isStale(queryClient, keys.list)).toBe(true);
+    expect(refetches).toBe(1);
+    expect(isGone(queryClient, offScreen)).toBe(true);
   });
 
   it("leaves a sibling record alone", () => {

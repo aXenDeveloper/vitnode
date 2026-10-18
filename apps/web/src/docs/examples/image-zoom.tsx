@@ -11,15 +11,21 @@ export default function ImageZoomExample() {
       <ImageZoom
         alt="The VitNode AdminCP dashboard"
         className="dark:hidden"
+        height={433}
         imageClassName="w-full rounded-md border"
+        loading="lazy"
         src={adminDashboardLight}
+        width={800}
         zoomSrc={adminDashboardLightFull}
       />
       <ImageZoom
         alt="The VitNode AdminCP dashboard"
         className="hidden dark:block"
+        height={433}
         imageClassName="w-full rounded-md border"
+        loading="lazy"
         src={adminDashboardDark}
+        width={800}
         zoomSrc={adminDashboardDarkFull}
       />
       <figcaption className="text-muted-foreground text-center text-sm leading-relaxed">

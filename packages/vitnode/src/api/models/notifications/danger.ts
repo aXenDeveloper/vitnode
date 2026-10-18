@@ -16,6 +16,7 @@ import { applyUnreadDeltas, lockUserStates } from "./fanout";
 import { removeNotificationItems, UNREAD_SQL } from "./inbox";
 import { deleteUnreferencedEvents } from "./maintenance";
 import {
+  expireNotificationOverviewTotals,
   GLOBAL_SETTINGS_KEY,
   loadNotificationSettings,
   NOTIFICATIONS_PLUGIN_ID,
@@ -150,6 +151,7 @@ export const markEverythingRead = async (
     if (batch.count === 0) break;
   }
 
+  await expireNotificationOverviewTotals(c);
   await c.get("events").emit("notifications.read_all", { items, members });
 
   return { items, members };
@@ -160,6 +162,7 @@ export const deleteAllNotifications = async (
 ): Promise<{ events: number; items: number }> => {
   const items = await removeNotificationItems(c, { where: sql`true` });
   const events = await deleteUnreferencedEvents(c.get("db"));
+  await expireNotificationOverviewTotals(c);
 
   await c.get("events").emit("notifications.deleted_all", { items });
 
@@ -179,6 +182,7 @@ export const resetMemberNotificationPreferences = async (
     .where(sql`${core_notification_user_state.preferences} <> '{}'::jsonb`)
     .returning({ userId: core_notification_user_state.userId });
 
+  await expireNotificationOverviewTotals(c);
   await c
     .get("events")
     .emit("notifications.preferences_reset", { members: rows.length });

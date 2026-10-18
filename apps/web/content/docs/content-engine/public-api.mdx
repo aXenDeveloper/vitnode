@@ -4,10 +4,10 @@ description: Add drafts and publishing to a VitNode Content Engine content type,
 icon: Globe
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-import { ImgDocs } from "@/components/fumadocs/img";
-import publishRow from "./public-api-publish-row.webp";
-import publishConfirm from "./public-api-publish-confirm.webp";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { ImgDocs } from '@/components/fumadocs/img'
+import publishRow from './public-api-publish-row.webp'
+import publishConfirm from './public-api-publish-confirm.webp'
 
 A content type is private until you opt in. This guide follows `example.article` from the example plugin. It gets a draft and a published state, and its published records become readable by anyone at `/api/@vitnode/example/content/articles`. You list exactly which fields leave the server.
 
@@ -23,32 +23,32 @@ Add `publication` and `publicApi` to the definition. This excerpt leaves out the
 
 ```ts title="plugins/example/src/content/article.ts"
 export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+  id: 'example.article',
+  tableName: 'example_articles',
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    slug: field.slug({ source: "title" }),
+    slug: field.slug({ source: 'title' }),
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
     featured: field.boolean({ defaultValue: false }),
     author: field.user(),
     category: field.relation({
       required: true,
-      onDelete: "restrict",
+      onDelete: 'restrict',
       target: () => categoryContentType,
     }),
   },
   publication: true, // [!code ++]
   // [!code ++:9]
   publicApi: {
-    path: "articles",
-    fields: ["title", "slug", "excerpt", "featured", "category", "publishedAt"],
-    searchableFields: ["title", "excerpt"],
-    orderableFields: ["publishedAt", "title"],
-    filterableFields: ["category", "featured"],
-    defaultOrderBy: "publishedAt",
-    defaultOrder: "desc",
+    path: 'articles',
+    fields: ['title', 'slug', 'excerpt', 'featured', 'category', 'publishedAt'],
+    searchableFields: ['title', 'excerpt'],
+    orderableFields: ['publishedAt', 'title'],
+    filterableFields: ['category', 'featured'],
+    defaultOrderBy: 'publishedAt',
+    defaultOrder: 'desc',
   },
-});
+})
 ```
 
 - `publication` adds a `status` column (`draft` or `published`, default `draft`), a `publishedAt` timestamp, a `can_publish` staff permission and **Publish** / **Unpublish** actions in the AdminCP.
@@ -67,9 +67,9 @@ export const articleContentType = defineContentType({
 Add `buildContentPublicModule` to the plugin's API config. The example plugin passes all five content models; one without `publicApi` is skipped:
 
 ```ts title="plugins/example/src/config.api.ts"
-import { buildContentPublicModule } from "@/api/builders"; // [!code ++]
+import { buildContentPublicModule } from '@/api/builders' // [!code ++]
 
-import { articleContent } from "@/database/articles"; // [!code ++]
+import { articleContent } from '@/database/articles' // [!code ++]
 
 export const exampleApiPlugin = () =>
   buildApiPlugin({
@@ -81,7 +81,7 @@ export const exampleApiPlugin = () =>
         contentTypes: [articleContent],
       }),
     ],
-  });
+  })
 ```
 
 </Step>
@@ -206,33 +206,33 @@ Article not found.
 The [fetcher](/docs/dev/fetcher) types the routes from the plugin's API registry. The module is `content/` followed by `publicApi.path`. Put a helper like this anywhere in your plugin:
 
 ```ts title="featured-articles.ts"
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { z } from "zod";
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+import { z } from 'zod'
 
 const zodArticleCard = z.object({
   excerpt: z.string().nullable(),
   publishedAt: z.string().nullable(),
   slug: z.string(),
   title: z.string(),
-});
+})
 
 export const fetchFeaturedArticles = async () => {
   const response = await fetcher({
-    plugin: "@vitnode/example",
-    method: "get",
-    module: "content/articles",
-    path: "/",
+    plugin: '@vitnode/example',
+    method: 'get',
+    module: 'content/articles',
+    path: '/',
     args: { query: { featured: true, first: 5 } },
-  });
+  })
 
   if (response.status !== 200) {
-    throw new Error(`Loading articles answered ${response.status}.`);
+    throw new Error(`Loading articles answered ${response.status}.`)
   }
 
-  const { edges } = await response.json();
+  const { edges } = await response.json()
 
-  return z.array(zodArticleCard).parse(edges);
-};
+  return z.array(zodArticleCard).parse(edges)
+}
 ```
 
 The path, the query and `pageInfo` are typed. Each record is a `Record<string, unknown>`, so parse the fields you use with Zod, as the example's article page does. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
@@ -251,7 +251,7 @@ All routes are `GET` and live under `/api/{pluginId}/content/{publicApi.path}`.
 | `/delivery/sitemap`        | Sitemap entries, only with `delivery.sitemap`                                                             |
 | `/thread?root={id}`        | One page of a reply tree under a root record, only with [`thread`](/docs/content-engine/threads)          |
 
-The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A filterable [container field](/docs/content-engine/fields#container) also accepts `includeDescendants=true`, so `?board=4&includeDescendants=true` lists board 4 and every board below it; an unknown container answers `404`. See [Containers on the frontend](/docs/content-engine/container-frontend#add-the-board-page). A record is public only when its `status` is `published`, its `publishedAt` is set and not later than the database clock, and it is not [hidden](/docs/content-engine/content-visibility). Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
+The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A filterable [container field](/docs/content-engine/fields#container) also accepts `includeDescendants=true`, so `?board=4&includeDescendants=true` lists board 4 and every board below it; an unknown container answers `404`. See [Containers on the frontend](/docs/content-engine/container-frontend#add-the-board-page). A record is public only when its `status` is `published`, its `publishedAt` is set and not later than the database clock, and it is not [hidden](/docs/content-engine/content-visibility). List rows carry every field in `fields` unless you set `listFields` to a smaller set - handy when a `body` would make every page heavy. Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
 
 Next, give each article a web page with [Public pages](/docs/content-engine/public-pages), or see how these reads are cached in [Caching](/docs/content-engine/caching).
 

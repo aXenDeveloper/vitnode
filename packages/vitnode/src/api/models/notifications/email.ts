@@ -37,6 +37,7 @@ import {
   checkNotificationAccess,
   createTranslatorCache,
   loadActors,
+  notificationEventColumns,
   presentNotificationEmail,
   resolveEvent,
 } from "./render";
@@ -231,7 +232,7 @@ const deliverNotificationEmail = async (
     await db
       .select({
         createdAt: core_notification_receipts.createdAt,
-        event: core_notification_events,
+        event: notificationEventColumns,
         eventId: core_notification_receipts.eventId,
         notificationId: core_notification_receipts.notificationId,
         seq: core_notification_receipts.seq,
@@ -283,32 +284,40 @@ const deliverNotificationEmail = async (
   );
   const entries: (NotificationEmailEntry & { subject: string })[] = [];
 
-  for (const { event } of kept) {
-    const resolved = resolveEvent(c, event);
-    const allowed = resolved
-      ? await checkNotificationAccess({
-          c,
+  // Every entry's plugin `access` hook at once; `Promise.all` keeps the order.
+  const presentedEntries = await Promise.all(
+    kept.map(async ({ event }) => {
+      const resolved = resolveEvent(c, event);
+      if (!resolved) return { event, presented: null };
+
+      const allowed = await checkNotificationAccess({
+        c,
+        data: resolved.data,
+        event,
+        registered: resolved.registered,
+        userIds: [user.id],
+      });
+      if (!allowed.has(user.id)) return { event, presented: null };
+
+      const actor =
+        event.actorId === null ? undefined : actors.get(event.actorId);
+
+      return {
+        event,
+        presented: presentNotificationEmail(c, {
+          actors: { actorCount: actor ? 1 : 0, actors: actor ? [actor] : [] },
           data: resolved.data,
           event,
+          eventCount: 1,
+          locale,
           registered: resolved.registered,
-          userIds: [user.id],
-        })
-      : new Set<number>();
-    const actor =
-      event.actorId === null ? undefined : actors.get(event.actorId);
-    const presented =
-      resolved && allowed.has(user.id)
-        ? presentNotificationEmail(c, {
-            actors: { actorCount: actor ? 1 : 0, actors: actor ? [actor] : [] },
-            data: resolved.data,
-            event,
-            eventCount: 1,
-            locale,
-            registered: resolved.registered,
-            t,
-          })
-        : null;
+          t,
+        }),
+      };
+    }),
+  );
 
+  for (const { event, presented } of presentedEntries) {
     if (!presented) {
       dropped.push(event.id);
       continue;
@@ -592,7 +601,7 @@ export const planNotificationDigests = async (
       db
         .select({
           createdAt: core_notification_receipts.createdAt,
-          event: core_notification_events,
+          event: notificationEventColumns,
           userId: core_notification_receipts.userId,
         })
         .from(core_notification_receipts)

@@ -12,15 +12,25 @@ import {
   contentTranslationsQueryKey,
 } from "../content-query";
 
-/** Every page, sort, search and filter of one content type's list. */
+/**
+ * Every page, sort, search and filter of one content type's list. The page on
+ * screen refetches and keeps its rows meanwhile; the ones nobody is looking at
+ * are dropped rather than all refetched, and since loaders read with
+ * `staleTime: "static"` a dropped page is fetched fresh when it is next opened.
+ * A page still in flight is refetched, as it may predate the write.
+ */
 export const invalidateContentList = async (
   queryClient: QueryClient,
   contentTypeId: string,
 ): Promise<void> => {
-  await queryClient.invalidateQueries({
-    queryKey: contentListQueryRoot(contentTypeId),
-    refetchType: "all",
+  const queryKey = contentListQueryRoot(contentTypeId);
+
+  queryClient.removeQueries({
+    predicate: query => query.state.fetchStatus === "idle",
+    queryKey,
+    type: "inactive",
   });
+  await queryClient.invalidateQueries({ queryKey, refetchType: "all" });
 };
 
 export const invalidateContentItem = async (

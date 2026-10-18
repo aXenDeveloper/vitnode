@@ -1,6 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 
-import { useVisualEditor } from "../context";
+import { useVisualEditorPreview } from "../context";
 import { AREA_CATALOG_DRAGGABLE_ID, catalogDraggableId } from "./resolve-drop";
 
 export interface CatalogDraggable {
@@ -16,7 +16,7 @@ const useCatalogEntryDraggable = ({
   data: Record<string, unknown>;
   id: string;
 }): CatalogDraggable => {
-  const { preview } = useVisualEditor();
+  const preview = useVisualEditorPreview();
   const { attributes, isDragging, listeners, setNodeRef } = useDraggable({
     data,
     disabled: preview,

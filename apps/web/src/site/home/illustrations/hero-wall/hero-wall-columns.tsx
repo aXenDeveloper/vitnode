@@ -101,7 +101,7 @@ export const HeroWallColumns = () => {
     >
       {COLUMNS.map(({ key, screens }, columnIndex) => (
         <div
-          className="mk-wall-column flex flex-col gap-8 will-change-transform"
+          className="mk-wall-column flex flex-col gap-8"
           key={key}
           style={{ transform: slide(columnIndex) }}
         >

@@ -42,7 +42,14 @@ export default function ItemMediaExample() {
       </Item>
       <Item role="listitem" variant="outline">
         <ItemMedia className="bg-muted p-1" variant="image">
-          <img alt="" src="/logo_vitnode_icon.svg" />
+          <img
+            alt=""
+            decoding="async"
+            height={40}
+            loading="lazy"
+            src="/logo_vitnode_icon.svg"
+            width={40}
+          />
         </ItemMedia>
         <ItemContent>
           <ItemTitle>Release notes 2.0</ItemTitle>

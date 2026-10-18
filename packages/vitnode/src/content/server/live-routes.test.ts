@@ -549,9 +549,15 @@ describe("lifecycle", () => {
     await send("PUT", "/7/draft", {
       body: { locale: "pl", values: { title: "Cześć" } },
     });
-    vi.spyOn(guides, "service").mockReturnValue({
-      findRowById: async () => await Promise.resolve({ id: 7, version: 4 }),
-    } as never);
+    // The sweep reads versions straight off the tables, one query per type.
+    await memory.db.insert(guides.table).values({ id: 7, version: 4 });
+    await memory.db.insert(guides.translationTable as never).values({
+      itemId: 7,
+      languageId: 2,
+      slug: "czesc",
+      title: "Cześć",
+      version: 5,
+    });
     vi.setSystemTime(new Date("2026-11-20T12:00:00Z"));
 
     const swept = await cleanupStaleContentDrafts(context);

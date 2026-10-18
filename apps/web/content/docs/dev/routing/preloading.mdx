@@ -23,18 +23,18 @@ The app's router sets the defaults in `src/router.tsx`:
 ```tsx title="apps/web/src/router.tsx"
 const router = createTanStackRouter({
   defaultPreload: 'intent',
-  defaultPreloadDelay: 250,
+  defaultPreloadDelay: 75,
   defaultPreloadStaleTime: 0,
   // ...
 })
 ```
 
-| Visitor action                      | Result                                    |
-| ----------------------------------- | ----------------------------------------- |
-| Hover or focus a link for 250 ms    | The destination preloads once             |
-| Pass over a link in less than 250 ms | Nothing is loaded                         |
-| Touch a link on a phone             | The destination preloads at once          |
-| Click before 250 ms                 | The page loads normally, with no preload  |
+| Visitor action                      | Result                                   |
+| ----------------------------------- | ---------------------------------------- |
+| Hover or focus a link for 75 ms     | The destination preloads once            |
+| Pass over a link in less than 75 ms | Nothing is loaded                        |
+| Touch a link on a phone             | The destination preloads at once         |
+| Click before 75 ms                  | The page loads normally, with no preload |
 
 `defaultPreloadStaleTime: 0` hands freshness to TanStack Query instead of the router. The router reruns the loader for every preload and again on the click, and the loader answers from the query cache. That is why the next section matters.
 
@@ -84,11 +84,11 @@ export const routes = definePluginRoutes([
 
 A hover then skips the route's loader: its `load` and the loading of its `messages`. The click still runs everything.
 
-| Value     | Effect                                                                        |
-| --------- | ----------------------------------------------------------------------------- |
-| left out  | Uses the nearest parent `layout()` that sets it, otherwise the app's defaults |
-| `false`   | A preload skips this route's loader                                           |
-| `true`    | Turns preloading back on under a `layout()` that set `false`                  |
+| Value    | Effect                                                                        |
+| -------- | ----------------------------------------------------------------------------- |
+| left out | Uses the nearest parent `layout()` that sets it, otherwise the app's defaults |
+| `false`  | A preload skips this route's loader                                           |
+| `true`   | Turns preloading back on under a `layout()` that set `false`                  |
 
 <Callout type="info" title="The guard still runs">
   `preload: false` skips only the loader. A preload still downloads the route's

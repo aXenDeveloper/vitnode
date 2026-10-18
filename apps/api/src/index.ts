@@ -7,13 +7,44 @@ import { VitNodeAPI } from "@vitnode/core/api/config";
 import { storageStaticHeadersMiddleware } from "@vitnode/core/api/middlewares/storage-static.middleware";
 import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware";
 import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle";
+import { compress } from "hono/compress";
 import { mkdirSync } from "node:fs";
-import { WebSocketServer } from "ws";
+import { type WebSocket, WebSocketServer } from "ws";
 import "hono";
 
 import { vitNodeApiConfig } from "./vitnode.api.config.js";
 
 const app = new OpenAPIHono().basePath("/api");
+
+// gzip JSON and other text responses over 1 KB. Registered first so it wraps
+// every route below. Hono already leaves `text/event-stream`, the AI routes'
+// NDJSON streams and `Cache-Control: no-transform` responses alone; WebSocket
+// handshakes skip it outright.
+const compressResponses = compress();
+app.use(async (c, next) => {
+  if (c.req.header("upgrade")) {
+    await next();
+
+    return;
+  }
+
+  await compressResponses(c, async () => {
+    await next();
+
+    // Hono only applies its size threshold to a response that states its
+    // length, and `c.json()` does not - so a JSON body, always fully buffered
+    // anyway, gets one here and a tiny response is not gzipped bigger.
+    if (
+      c.res.headers.has("Content-Length") ||
+      !c.res.headers.get("Content-Type")?.startsWith("application/json")
+    ) {
+      return;
+    }
+    const body = await c.res.arrayBuffer();
+    c.res = new Response(body, c.res);
+    c.res.headers.set("Content-Length", String(body.byteLength));
+  });
+});
 
 // Serve locally stored uploads (Local storage adapter) before VitNodeAPI so the
 // request skips cors/csrf/rate-limiter/global middleware. No-op for cloud adapters.
@@ -54,6 +85,26 @@ VitNodeAPI({
 });
 
 const wss = new WebSocketServer({ noServer: true });
+
+// Heartbeat: a socket whose client vanished (sleeping laptop, dropped Wi-Fi)
+// never sends a close frame, so it would stay in the registry forever. Ping
+// every 30 s and terminate whatever did not answer the previous ping.
+const awaitingPong = new WeakSet<WebSocket>();
+wss.on("connection", ws => {
+  ws.on("pong", () => awaitingPong.delete(ws));
+});
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (awaitingPong.has(ws)) {
+      ws.terminate();
+      continue;
+    }
+    awaitingPong.add(ws);
+    ws.ping();
+  }
+}, 30_000);
+heartbeat.unref();
+wss.on("close", () => clearInterval(heartbeat));
 
 // The handshake is a cookie-authenticated GET, which Hono's `csrf()` does not
 // cover and the same-origin policy does not apply to. Without this any site

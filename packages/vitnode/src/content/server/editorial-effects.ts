@@ -127,92 +127,131 @@ export const contentEditorialEffects = async (
 ): Promise<ContentEditorialEffectsResult> => {
   if (!outcome.changed) return { event: null, search: null };
 
-  const event = await emitContentEvent(
-    c,
-    definition,
-    EVENT_ACTION[outcome.operation],
-    payloadFor(outcome, { scheduledBy, scheduleId }) as never,
-    // The plugin that owns the content type, not whichever module happens to be
-    // handling the request. Passed on every path, interactive and scheduled, so
-    // the envelope's owner is a property of the event rather than of how it was
-    // triggered.
-    { pluginId },
-  );
+  const action = EVENT_ACTION[outcome.operation];
 
-  // Logged here rather than left to each caller. The scheduled path additionally
-  // records the failure on the schedule row and retries; an interactive route
-  // does neither, and without this a dead listener on a clicked publish would be
-  // invisible everywhere. The write has committed either way, so the response
-  // stays a success - see `reportContentEventFailures`.
-  await reportContentEventFailures(c, {
-    action: EVENT_ACTION[outcome.operation],
-    contentTypeId: definition.id,
-    event,
-    itemId: idOf(definition, outcome.row),
-  });
+  // The announcements and the index are independent of each other, so they run
+  // side by side. Inside the announcements the order is kept: a URL moving and a
+  // field moving are two facts, and the delivery events follow the ordinary one,
+  // never replace it.
+  const announce = async (): Promise<{
+    delivery: ContentDeliveryEffectsResult | undefined;
+    event: EventEmitResult;
+  }> => {
+    const event = await emitContentEvent(
+      c,
+      definition,
+      action,
+      payloadFor(outcome, { scheduledBy, scheduleId }) as never,
+      // The plugin that owns the content type, not whichever module happens to
+      // be handling the request. Passed on every path, interactive and
+      // scheduled, so the envelope's owner is a property of the event rather
+      // than of how it was triggered.
+      { pluginId, publicState: outcome.publicState },
+    );
 
-  // After the ordinary event, never instead of it: a URL moving and a field moving
-  // are two facts, and a listener that mirrors content wants the first while one
-  // that warms a CDN wants the second.
-  const delivery = definition.delivery.enabled
-    ? await contentDeliveryEffects(c, definition, outcome.delivery, {
-        pluginId,
-      })
-    : undefined;
+    // Logged here rather than left to each caller. The scheduled path
+    // additionally records the failure on the schedule row and retries; an
+    // interactive route does neither, and without this a dead listener on a
+    // clicked publish would be invisible everywhere. The write has committed
+    // either way, so the response stays a success - see
+    // `reportContentEventFailures`.
+    await reportContentEventFailures(c, {
+      action,
+      contentTypeId: definition.id,
+      event,
+      itemId: idOf(definition, outcome.row),
+    });
+
+    const delivery = definition.delivery.enabled
+      ? await contentDeliveryEffects(c, definition, outcome.delivery, {
+          pluginId,
+        })
+      : undefined;
+
+    return { delivery, event };
+  };
 
   // A localized record is indexed once per published translation, and a mutation
   // of the *record* moves every one of them: its publication state gates them
   // all, and a shared field is in all of them.
   if (definition.localization.enabled && definition.search.enabled) {
+    const [{ delivery, event }, searchByLocale] = await settleAll(
+      announce(),
+      model
+        ? (async () =>
+            await syncContentLocalizedSearch(c, model, {
+              // A shared field moved, so **every** locale's document is
+              // rewritten - and each rewrite has to carry the shared collections
+              // too, or a title edit would drop the FAQ out of every language at
+              // once.
+              advanced: await contentSearchAdvancedValues(
+                c,
+                model,
+                idOf(definition, outcome.row),
+              ),
+              // The base row not moving is not the same as nothing moving. A
+              // record whose languages were still drafts publishes them without
+              // touching a base column, and those documents are exactly the ones
+              // that were missing from the index.
+              changed: outcome.changed || (outcome.movedTranslations ?? 0) > 0,
+              changedFields: outcome.changedFields,
+              operation: outcome.operation,
+              pluginId,
+              row: outcome.row,
+            }))()
+        : warnMissingModel(c, definition),
+    );
+
     return {
       ...(delivery === undefined ? {} : { delivery }),
       event,
       search: null,
-      searchByLocale: model
-        ? await syncContentLocalizedSearch(c, model, {
-            // A shared field moved, so **every** locale's document is rewritten
-            // - and each rewrite has to carry the shared collections too, or a
-            // title edit would drop the FAQ out of every language at once.
-            advanced: await contentSearchAdvancedValues(
+      searchByLocale,
+    };
+  }
+
+  const [{ delivery, event }, search] = await settleAll(
+    announce(),
+    (async () =>
+      await syncContentSearch(c, definition, {
+        // Read back only when a document is actually made of collection values,
+        // and only the collections it names. A content type that indexes none -
+        // which is every Stage 1-5 one - pays for nothing here.
+        advanced: model
+          ? await contentSearchAdvancedValues(
               c,
               model,
               idOf(definition, outcome.row),
-            ),
-            // The base row not moving is not the same as nothing moving. A
-            // record whose languages were still drafts publishes them without
-            // touching a base column, and those documents are exactly the ones
-            // that were missing from the index.
-            changed: outcome.changed || (outcome.movedTranslations ?? 0) > 0,
-            changedFields: outcome.changedFields,
-            operation: outcome.operation,
-            pluginId,
-            row: outcome.row,
-          })
-        : await warnMissingModel(c, definition),
-    };
-  }
+            )
+          : undefined,
+        changed: outcome.changed,
+        changedFields: outcome.changedFields,
+        operation: outcome.operation,
+        pluginId,
+        row: outcome.row,
+      }))(),
+  );
 
   return {
     ...(delivery === undefined ? {} : { delivery }),
     event,
-    search: await syncContentSearch(c, definition, {
-      // Read back only when a document is actually made of collection values,
-      // and only the collections it names. A content type that indexes none -
-      // which is every Stage 1-5 one - pays for nothing here.
-      advanced: model
-        ? await contentSearchAdvancedValues(
-            c,
-            model,
-            idOf(definition, outcome.row),
-          )
-        : undefined,
-      changed: outcome.changed,
-      changedFields: outcome.changedFields,
-      operation: outcome.operation,
-      pluginId,
-      row: outcome.row,
-    }),
+    search,
   };
+};
+
+/**
+ * `Promise.all` that lets every effect finish before reporting a failure, so a
+ * search outage cannot leave the event half-announced in the background.
+ */
+const settleAll = async <A, B>(
+  first: Promise<A>,
+  second: Promise<B>,
+): Promise<[A, B]> => {
+  const [a, b] = await Promise.allSettled([first, second]);
+  if (a.status === "rejected") throw a.reason;
+  if (b.status === "rejected") throw b.reason;
+
+  return [a.value, b.value];
 };
 
 const idOf = (definition: AnyContentTypeDefinition, row: object): ContentId =>

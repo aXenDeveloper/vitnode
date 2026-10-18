@@ -4,7 +4,7 @@ description: Cache VitNode Content Engine public reads with TanStack Query in th
 icon: Zap
 ---
 
-The Content Engine does not cache public reads. Every request to a [public API](/docs/content-engine/public-api) route queries Postgres, and the response carries no `Cache-Control` header:
+Without Redis, the Content Engine does not cache public reads. Every request to a [public API](/docs/content-engine/public-api) route queries Postgres, and the response carries no `Cache-Control` header:
 
 ```bash
 curl -si "http://localhost:3000/api/@vitnode/example/content/articles?first=1" | head -4
@@ -17,7 +17,11 @@ content-type: application/json
 cross-origin-opener-policy: same-origin
 ```
 
-So a published article shows up on the next request, with nothing to expire. Add caching where it pays off:
+So a published article shows up on the next request, with nothing to expire.
+
+With [Redis](/docs/dev/cache/api) (`REDIS_URL`), the server also keeps the public list and detail responses for up to 60 seconds. Each entry is keyed by the parsed query, the resolved locale and a generation number per content type, and every content write moves that generation - so a write still shows up on the next request, and nothing old is ever read again. A record whose future `publishedAt` simply comes due, with no write, can take up to that minute to appear. Only responses that look the same to every reader are kept: a [hidden](/docs/content-engine/content-visibility) record shown to a moderator, a preview link and the delivery routes always go to Postgres. The language list and the container tree behind `includeDescendants` are cached the same way. There is nothing to configure.
+
+Add caching where it pays off:
 
 | Where the content is read               | Cache with                              | Expire it with                                        |
 | --------------------------------------- | --------------------------------------- | ----------------------------------------------------- |
@@ -31,47 +35,47 @@ So a published article shows up on the next request, with nothing to expire. Add
 Wrap the fetcher call in `queryOptions` and warm it in the route loader, exactly as in [Cache app data](/docs/dev/cache/app). Use `defineRoute` from `@vitnode/core/tanstack/plugin-routes`, because its loader context has the `queryClient`:
 
 ```tsx title="latest-articles.tsx"
-import { queryOptions } from "@tanstack/react-query";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
-import { z } from "zod";
+import { queryOptions } from '@tanstack/react-query'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
+import { z } from 'zod'
 
 const zodArticleCard = z.object({
   excerpt: z.string().nullable(),
   slug: z.string(),
   title: z.string(),
-});
+})
 
 export const latestArticlesQuery = () =>
   queryOptions({
-    queryKey: ["@vitnode/example", "articles", "latest"],
+    queryKey: ['@vitnode/example', 'articles', 'latest'],
     queryFn: async () => {
       const response = await fetcher({
-        plugin: "@vitnode/example",
-        method: "get",
-        module: "content/articles",
-        path: "/",
+        plugin: '@vitnode/example',
+        method: 'get',
+        module: 'content/articles',
+        path: '/',
         args: { query: { first: 5 } },
-      });
+      })
 
       if (response.status !== 200) {
-        throw new Error(`Loading articles answered ${response.status}.`);
+        throw new Error(`Loading articles answered ${response.status}.`)
       }
 
-      const { edges } = await response.json();
+      const { edges } = await response.json()
 
-      return z.array(zodArticleCard).parse(edges);
+      return z.array(zodArticleCard).parse(edges)
     },
-  });
+  })
 
 export const route = defineRoute({
   load: async ({ context }) => {
     await context.queryClient.query({
       ...latestArticlesQuery(),
       staleTime: 60_000,
-    });
+    })
   },
-});
+})
 ```
 
 Each server render starts with an empty query client, so a full page load is always fresh. The `staleTime` only decides how long a visitor's open tab reuses the list during client-side navigation. `staleTime: "static"` keeps it until the tab reloads.
@@ -98,16 +102,16 @@ A locale goes after the kind, so a localized type's Polish list is `content:exam
 `contentInvalidationTags` turns a description of one write into the exact tags to expire. Publishing article `3` returns all six tags above:
 
 ```ts title="revalidate.ts"
-import { contentInvalidationTags } from "@vitnode/core/content";
+import { contentInvalidationTags } from '@vitnode/core/content'
 
 const tags = contentInvalidationTags({
-  contentTypeId: "example.article",
+  contentTypeId: 'example.article',
   id: 3,
-  slugs: ["hello-content-engine"],
+  slugs: ['hello-content-engine'],
   wasPublic: false,
   isPublic: true,
   delivery: { sitemap: { contentChanged: true, indexChanged: true } },
-});
+})
 ```
 
 A write to a record that was a draft before and after returns `[]`, because no public reader ever saw it. On a slug change, pass both slugs so the old URL stops resolving and the new one starts.
@@ -119,9 +123,9 @@ If another app renders your content and caches it, list its origin in the API co
 ```ts title="apps/api/src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
   content: {
-    revalidateOrigins: ["https://www.example.com"], // [!code ++]
+    revalidateOrigins: ['https://www.example.com'], // [!code ++]
   },
-});
+})
 ```
 
 VitNode then sends a `POST` to `{origin}/api/vitnode/content/revalidate` in these cases:
@@ -147,27 +151,25 @@ The secret travels with the request, so outside development each origin must use
 The endpoint lives in your front end, not in VitNode. Before you expire anything, check the bearer in constant time and refuse a timestamp more than 5 minutes off, so a captured request cannot be replayed later:
 
 ```ts title="is-trusted-revalidation.ts"
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from 'node:crypto'
 
-const MAX_SKEW_MS = 5 * 60 * 1000;
+const MAX_SKEW_MS = 5 * 60 * 1000
 
-const digest = (value: string) => createHash("sha256").update(value).digest();
+const digest = (value: string) => createHash('sha256').update(value).digest()
 
 export const isTrustedRevalidation = (request: Request): boolean => {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false
 
   const bearer = /^Bearer (.+)$/.exec(
-    request.headers.get("authorization") ?? "",
-  )?.[1];
-  if (!bearer || !timingSafeEqual(digest(bearer), digest(secret))) return false;
+    request.headers.get('authorization') ?? '',
+  )?.[1]
+  if (!bearer || !timingSafeEqual(digest(bearer), digest(secret))) return false
 
-  const sentAt = Number(request.headers.get("x-vitnode-timestamp"));
+  const sentAt = Number(request.headers.get('x-vitnode-timestamp'))
 
-  return (
-    Number.isFinite(sentAt) && Math.abs(Date.now() - sentAt) <= MAX_SKEW_MS
-  );
-};
+  return Number.isFinite(sentAt) && Math.abs(Date.now() - sentAt) <= MAX_SKEW_MS
+}
 ```
 
 Hashing both values first gives `timingSafeEqual` two buffers of the same length. Answer `403` when the check fails. Otherwise pass the body to `contentInvalidationTags`, expire those tags in your cache and answer with any `2xx`.

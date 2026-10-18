@@ -61,5 +61,6 @@ export const core_admin_sessions = camelCase.table.withRLS(
   t => [
     index("core_admin_sessions_user_id_idx").on(t.userId),
     index("core_admin_sessions_device_id_idx").on(t.deviceId),
+    index("core_admin_sessions_expires_at_idx").on(t.expiresAt),
   ],
 );

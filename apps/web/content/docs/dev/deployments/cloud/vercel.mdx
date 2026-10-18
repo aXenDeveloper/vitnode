@@ -75,10 +75,10 @@ the browser bundle and cannot be changed afterwards without building again.
 
 <Callout type="warn" title="Do not set VITNODE_API_URL on preview deployments">
   A preview gets a generated hostname, so no configured value can name it. Left
-  unset, the server takes the API origin off the request being rendered and the
-  browser falls back to the origin the page came from - which is right on every
-  deployment, including ones that did not exist when you configured the project.
-  Set it only when the API genuinely lives somewhere else.
+  unset, the server calls the API in its own process and the browser falls back
+  to the origin the page came from - which is right on every deployment,
+  including ones that did not exist when you configured the project. Set it only
+  when the API genuinely lives somewhere else.
 </Callout>
 
 </Step>

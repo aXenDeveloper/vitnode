@@ -34,6 +34,11 @@ export const core_queue = camelCase.table.withRLS(
   t => [
     index("core_queue_status_available_at_idx").on(t.status, t.availableAt),
     index("core_queue_created_at_id_idx").on(t.createdAt, t.id),
+    // Retention sweep. Only finished tasks carry `completedAt`, so the partial
+    // index stays a small slice of the table however long the queue gets.
+    index("core_queue_completed_at_idx")
+      .on(t.completedAt)
+      .where(sql`"completedAt" IS NOT NULL`),
     uniqueIndex("core_queue_dedupe_active_unique")
       .on(t.pluginId, t.dedupeKey)
       .where(

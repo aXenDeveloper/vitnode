@@ -35,6 +35,7 @@ import type {
   ContentDuplicateDependencies,
   ContentEditorialDuplicationMethods,
 } from "./duplicate";
+import type { ContentPublicState } from "./page-cache";
 import type { ContentRevisionsModel } from "./revisions-model";
 import type { ContentSchedulesModel } from "./schedules-model";
 import type { ContentDatabase } from "./service";
@@ -115,6 +116,11 @@ export interface ContentEditorialOutcome<TDefinition> {
   operation: ContentRevisionOperation;
   /** The slug the record answered to *before* this mutation, if it has one. */
   previousSlug: null | string;
+  /**
+   * Whether the record was public on either side of a write that moved it, so
+   * a draft's edit expires no cached page. Absent without `publication`.
+   */
+  publicState?: ContentPublicState;
   /** Set only by `restore`: the revision the values came from. */
   restoredFromRevisionId: null | number;
   /** `null` on a no-op, since no revision was written. */
@@ -391,6 +397,20 @@ export const createContentEditorialService = <
     return isContentBaseRowPublic(row);
   };
 
+  /** Spread into a changed outcome; see {@link ContentEditorialOutcome.publicState}. */
+  const publicStateOf = (
+    before: null | Record<string, unknown>,
+    after: null | Record<string, unknown>,
+  ): { publicState?: ContentPublicState } =>
+    publication
+      ? {
+          publicState: {
+            isPublic: publiclyVisible(after),
+            wasPublic: publiclyVisible(before),
+          },
+        }
+      : {};
+
   /**
    * The row as it stood *before* a publish or an unpublish.
    *
@@ -472,12 +492,14 @@ export const createContentEditorialService = <
   const readOne = async (
     id: ContentId,
     database: ContentDatabase,
+    { forUpdate = false }: { forUpdate?: boolean } = {},
   ): Promise<null | Record<string, unknown>> => {
-    const [row] = await database
+    const query = database
       .select(ownSelection())
       .from(table)
       .where(eq(primaryCursor, id))
       .limit(1);
+    const [row] = forUpdate ? await query.for("update") : await query;
 
     return row ?? null;
   };
@@ -549,20 +571,14 @@ export const createContentEditorialService = <
   };
 
   /**
-   * Takes the source row's write lock.
-   *
-   * Only for a content type with collections: an ordinary editorial update is
-   * already serialised by its guarded `UPDATE`, and a read-modify-write is not -
+   * Takes the source row's write lock, for a read-modify-write of a collection:
    * it reads the junction and child rows first, and that read has to be inside
    * the same lock as the write it feeds.
    */
   const lockRow = async (
     tx: ContentDatabase,
     id: ContentId,
-    { force = false }: { force?: boolean } = {},
   ): Promise<boolean> => {
-    if (!force && !store?.enabled) return true;
-
     const [row] = await tx
       .select({ id: primaryCursor })
       .from(table)
@@ -732,9 +748,10 @@ export const createContentEditorialService = <
       // is exactly when a slug earns its reservation. A publish reserves the current
       // slug; an unpublish leaves the history where it is, because the record is
       // coming back and its old URLs should redirect again when it does.
+      const before = invert(operation, row);
       const delivery = await applyDelivery(tx, {
         after: row,
-        before: invert(operation, row),
+        before,
         itemId: id,
       });
 
@@ -744,6 +761,7 @@ export const createContentEditorialService = <
         ...(delivery === undefined ? {} : { delivery }),
         ...(moved === 0 ? {} : { movedTranslations: moved }),
         operation,
+        ...publicStateOf(before, row),
         previousSlug: slugOf(row),
         restoredFromRevisionId: null,
         revisionId,
@@ -819,6 +837,7 @@ export const createContentEditorialService = <
         changedFields: [],
         ...(delivery === undefined ? {} : { delivery }),
         operation: action,
+        ...publicStateOf(current, row),
         previousSlug: slugOf(current),
         restoredFromRevisionId: null,
         revisionId,
@@ -869,7 +888,7 @@ export const createContentEditorialService = <
     const write = assertWriteOptions(field, options);
 
     return await transact(write, async tx => {
-      if (!(await lockRow(tx, itemId, { force: true }))) return null;
+      if (!(await lockRow(tx, itemId))) return null;
 
       const current = await store?.load(itemId, tx, [field]);
       const value = current?.[field];
@@ -1010,6 +1029,7 @@ export const createContentEditorialService = <
           changedFields: allPaths,
           ...(delivery === undefined ? {} : { delivery }),
           operation: "create",
+          ...publicStateOf(null, row),
           previousSlug: null,
           restoredFromRevisionId: null,
           revisionId,
@@ -1085,6 +1105,7 @@ export const createContentEditorialService = <
           changedFields: [],
           ...(delivery === undefined ? {} : { delivery }),
           operation: "delete",
+          ...publicStateOf(row, null),
           previousSlug: slugOf(row),
           restoredFromRevisionId: null,
           revisionId,
@@ -1245,6 +1266,7 @@ export const createContentEditorialService = <
           changedFields,
           ...(delivery === undefined ? {} : { delivery }),
           operation: "restore" as const,
+          ...publicStateOf(current, row),
           previousSlug: slugOf(current),
           restoredFromRevisionId: revisionId,
           revisionId: newRevisionId,
@@ -1283,10 +1305,11 @@ export const createContentEditorialService = <
         // derives its next state from the committed one. The version guard below
         // is still what decides the winner - the lock only makes the loser wait
         // long enough to be told it lost, instead of overwriting from a state it
-        // read before the winner existed.
-        if (!(await lockRow(tx, id))) return null;
-
-        const current = await readOne(id, tx);
+        // read before the winner existed. Without collections the guarded `UPDATE`
+        // alone serialises the write, so there is nothing to lock for.
+        const current = await readOne(id, tx, {
+          forUpdate: store?.enabled === true,
+        });
         if (!current) return null;
 
         const changedPaths = diffChangedPaths(fields, current, patch);
@@ -1375,6 +1398,7 @@ export const createContentEditorialService = <
           changedFields,
           ...(delivery === undefined ? {} : { delivery }),
           operation: "update" as const,
+          ...publicStateOf(current, row),
           previousSlug: slugOf(current),
           restoredFromRevisionId: null,
           revisionId,

@@ -117,9 +117,13 @@ import { schedule } from 'node-cron'
 export const NodeCronAdapter = (): CronAdapter => {
   return {
     schedule() {
-      schedule('*/1 * * * *', async () => {
-        await handleCronJobs()
-      })
+      schedule(
+        '*/1 * * * *',
+        async () => {
+          await handleCronJobs()
+        },
+        { noOverlap: true },
+      )
     },
   }
 }
@@ -130,6 +134,12 @@ export const NodeCronAdapter = (): CronAdapter => {
 `Authorization: Bearer $CRON_SECRET`. The adapter never touches the database and
 never calls a job handler; it only knocks on the door once a minute, and the
 [cron endpoint](/docs/dev/cron/rest-api) decides what is due.
+
+`noOverlap` skips a tick while the previous request is still waiting, and the
+request gives up after 55 seconds - the API keeps running the jobs, it just
+stops making the ticker wait. Running several API instances? Each one ticks,
+but every due job is claimed in `core_cron` first, so it runs on exactly one of
+them.
 
 Three consequences worth writing down:
 

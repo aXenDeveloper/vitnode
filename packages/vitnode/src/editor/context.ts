@@ -48,14 +48,42 @@ export interface VisualEditorContextValue {
 export const VisualEditorContext =
   createContext<null | VisualEditorContextValue>(null);
 
+/**
+ * The stable half of the editor: dispatchers that never change identity. A
+ * component that only acts on the editor reads this one, so a keystroke in the
+ * properties panel does not re-render every block on the page.
+ */
+export interface VisualEditorActions {
+  dispatch: VisualEditorContextValue["dispatch"];
+  setInsertTarget: VisualEditorContextValue["setInsertTarget"];
+  setPanel: VisualEditorContextValue["setPanel"];
+}
+
+export const VisualEditorActionsContext =
+  createContext<null | VisualEditorActions>(null);
+
+export const VisualEditorPreviewContext = createContext<boolean | null>(null);
+
+const OUTSIDE_RUNTIME =
+  "A visual editor component was rendered outside `<ContentEditorRuntime enabled />`. Editor UI only exists while edit mode is on - render it from inside the editor runtime, never from a public page.";
+
 export const useVisualEditor = (): VisualEditorContextValue => {
   const value = use(VisualEditorContext);
+  if (!value) throw new Error(OUTSIDE_RUNTIME);
 
-  if (!value) {
-    throw new Error(
-      "A visual editor component was rendered outside `<ContentEditorRuntime enabled />`. Editor UI only exists while edit mode is on - render it from inside the editor runtime, never from a public page.",
-    );
-  }
+  return value;
+};
+
+export const useVisualEditorActions = (): VisualEditorActions => {
+  const value = use(VisualEditorActionsContext);
+  if (!value) throw new Error(OUTSIDE_RUNTIME);
+
+  return value;
+};
+
+export const useVisualEditorPreview = (): boolean => {
+  const value = use(VisualEditorPreviewContext);
+  if (value === null) throw new Error(OUTSIDE_RUNTIME);
 
   return value;
 };

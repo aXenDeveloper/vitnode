@@ -6,8 +6,7 @@ import {
   useForm,
   useSelector,
 } from "@tanstack/react-form";
-import { animate, useReducedMotion } from "motion/react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import z from "zod";
 
@@ -22,7 +21,6 @@ import {
   type InputParams,
   isRequiredPath,
 } from "../../lib/helpers/auto-form";
-import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "../../lib/motion";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";
@@ -118,6 +116,21 @@ const usesFormValues = <T extends z.ZodObject<z.ZodRawShape>>(
   typeof item.hidden === "function" ||
   (item.children?.some(child => usesFormValues(child)) ?? false);
 
+// Joined into a string so the form re-renders only when visibility flips,
+// not on every keystroke.
+const hiddenIdsOf = <T extends z.ZodObject<z.ZodRawShape>>(
+  items: ItemAutoFormProps<T>[],
+  values: z.input<T>,
+): string =>
+  items
+    .flatMap(item => {
+      if (item.hidden?.(values)) return [item.id];
+      const nested = item.children ? hiddenIdsOf(item.children, values) : "";
+
+      return nested ? [nested] : [];
+    })
+    .join("\n");
+
 export const AutoFormFieldSlot = ({
   component,
   ...props
@@ -138,6 +151,17 @@ const focusTargetOf = (fieldElement: HTMLElement): HTMLElement | null =>
   fieldElement.querySelector<HTMLElement>(
     `[aria-invalid=true]:is(${FOCUSABLE_SELECTOR})`,
   ) ?? fieldElement.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+
+// Mirrors SHAKE_KEYFRAMES in lib/motion, run through WAAPI so the form does
+// not pull motion's animation engine into every bundle that renders it.
+const SHAKE_FRAMES: Keyframe[] = [0, -8, 8, -6, 6, -3, 3, 0].map(x => ({
+  easing: "ease-in-out",
+  transform: `translateX(${x}px)`,
+}));
+const SHAKE_DURATION_MS = 400;
+
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const belongsToField = (fieldName: string, itemId: string) =>
   fieldName === itemId ||
@@ -188,34 +212,29 @@ export type AutoFormOnSubmit<T extends z.ZodObject<z.ZodRawShape>> = (
   },
 ) => Promise<void> | void;
 
-const useRevealInvalidFields = (
-  formRef: React.RefObject<HTMLFormElement | null>,
+const revealInvalidFields = (
+  root: HTMLFormElement | null,
   onRevealTab: (tab: string) => void,
 ) => {
-  const shouldReduceMotion = useReducedMotion();
+  if (!root) return;
 
-  return () => {
-    const root = formRef.current;
-    if (!root) return;
+  const invalidFields = outermostInvalidFields(root);
+  const [firstInvalidField] = invalidFields;
+  if (!firstInvalidField) return;
 
-    const invalidFields = outermostInvalidFields(root);
-    const [firstInvalidField] = invalidFields;
-    if (!firstInvalidField) return;
+  const tabOfField = firstInvalidField.closest<HTMLElement>(
+    "[data-autoform-tab]",
+  )?.dataset.autoformTab;
+  if (tabOfField) onRevealTab(tabOfField);
 
-    const tabOfField = firstInvalidField.closest<HTMLElement>(
-      "[data-autoform-tab]",
-    )?.dataset.autoformTab;
-    if (tabOfField) onRevealTab(tabOfField);
+  requestAnimationFrame(() => {
+    focusTargetOf(firstInvalidField)?.focus();
+  });
 
-    requestAnimationFrame(() => {
-      focusTargetOf(firstInvalidField)?.focus();
-    });
-
-    if (shouldReduceMotion) return;
-    for (const field of invalidFields) {
-      void animate(field, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
-    }
-  };
+  if (prefersReducedMotion()) return;
+  for (const field of invalidFields) {
+    field.animate(SHAKE_FRAMES, SHAKE_DURATION_MS);
+  }
 };
 
 const invalidTabsOf = <T extends z.ZodObject<z.ZodRawShape>>({
@@ -316,14 +335,20 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   const t = useTranslations("core.global");
   const formRef = useRef<HTMLFormElement>(null);
   const [activeTab, setActiveTab] = useState(tabs?.[0]?.value);
-  const revealInvalidFields = useRevealInvalidFields(formRef, setActiveTab);
 
-  const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
-  const inputParams = getZodInputParams(jsonSchema);
+  const { defaultValues, inputParams, jsonSchema } = useMemo(() => {
+    const schema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
+
+    return {
+      defaultValues: getDefaults<T>(schema),
+      inputParams: getZodInputParams(schema),
+      jsonSchema: schema,
+    };
+  }, [formSchema]);
   const validator: AutoFormValidator<T> = formSchema;
   const form = useForm({
     canSubmitWhenInvalid: canSubmitWhenInvalid ?? true,
-    defaultValues: getDefaults<T>(jsonSchema),
+    defaultValues,
     onSubmit: async ({ formApi, meta, value }) => {
       const parsedValues = formSchema.safeParse(value);
       if (!parsedValues.success) return;
@@ -338,7 +363,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
       }
     },
     onSubmitInvalid: () => {
-      requestAnimationFrame(revealInvalidFields);
+      requestAnimationFrame(() => {
+        revealInvalidFields(formRef.current, setActiveTab);
+      });
     },
     onSubmitMeta: emptySubmitMeta,
     validators: {
@@ -349,9 +376,10 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   });
 
   const hasConditionalFields = fields.some(item => usesFormValues(item));
-  const watchedValues = useSelector(form.store, state =>
-    hasConditionalFields ? state.values : undefined,
+  const hiddenIds = useSelector(form.store, state =>
+    hasConditionalFields ? hiddenIdsOf(fields, state.values) : "",
   );
+  const hiddenIdSet = new Set(hiddenIds ? hiddenIds.split("\n") : []);
   const formMode = mode ?? "onTouched";
   const invalidTabs = useSelector(form.store, state =>
     invalidTabsOf({ fields, formMode, state, tabs }),
@@ -359,11 +387,8 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
   const invalidTabValues = new Set(invalidTabs.split("\n"));
   const isSubmitting = useSelector(form.store, state => state.isSubmitting);
 
-  const isFieldVisible = (item: ItemAutoFormProps<T>) => {
-    if (!item.hidden || !watchedValues) return true;
-
-    return !item.hidden(watchedValues);
-  };
+  const isFieldVisible = (item: ItemAutoFormProps<T>) =>
+    !hiddenIdSet.has(item.id);
 
   const renderField = (item: ItemAutoFormProps<T>) => {
     const params = getNestedParam(inputParams, item.id);

@@ -1,9 +1,12 @@
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { and, eq, gt, inArray, lt, lte, or, sql } from "drizzle-orm";
 
+import type { ContentId } from "../ids";
 import type { ContentDraft, ContentDrafts } from "../live/http";
 import type { ContentFieldLock, ContentLiveRoomRef } from "../live/protocol";
+import type { AnyContentModel } from "./model";
 import type { ContentDatabase } from "./service";
 
 import {
@@ -17,6 +20,7 @@ import {
   CONTENT_LIVE_SHARED_LOCALE,
   CONTENT_LIVE_STALE_DAYS,
 } from "../live/protocol";
+import { findContentLanguage } from "./language-resolver";
 import { broadcastContentLive } from "./live/broadcast";
 import { onContentLiveReset, onContentLiveUserLeft } from "./live/hooks";
 import { contentDefinitionOf, findContentModel } from "./model";
@@ -335,6 +339,56 @@ const deleteUserContentFieldLocks = async (
   return rows.length;
 };
 
+/**
+ * The current version of each `(record, locale)` translation among `itemIds`,
+ * keyed `"<id key>:<lowercased locale>"`. A pair with no translation is absent.
+ */
+const staleTranslationVersions = async (
+  c: Context,
+  db: ContentDatabase,
+  model: AnyContentModel,
+  { itemIds, locales }: { itemIds: ContentId[]; locales: string[] },
+): Promise<Map<string, number>> => {
+  const versions = new Map<string, number>();
+  const columns = model.translationColumns as null | Record<string, PgColumn>;
+  const table: null | PgTable = model.translationTable;
+  if (itemIds.length === 0 || !columns || !table) return versions;
+
+  const languageIds = new Map<number, string>();
+  for (const locale of new Set(
+    locales.map(code => code.trim().toLowerCase()),
+  )) {
+    const language = await findContentLanguage(c, locale);
+    if (language) languageIds.set(language.id, locale);
+  }
+  if (languageIds.size === 0) return versions;
+
+  const rows = await db
+    .select({
+      itemId: columns.itemId,
+      languageId: columns.languageId,
+      version: columns.version,
+    })
+    .from(table)
+    .where(
+      and(
+        inArray(columns.itemId, [...new Set(itemIds)]),
+        inArray(columns.languageId, [...languageIds.keys()]),
+      ),
+    );
+
+  for (const row of rows) {
+    const locale = languageIds.get(row.languageId as number);
+    if (locale === undefined || typeof row.version !== "number") continue;
+    versions.set(
+      `${contentIdKey(row.itemId as ContentId)}:${locale}`,
+      row.version,
+    );
+  }
+
+  return versions;
+};
+
 export const cleanupStaleContentDrafts = async (
   c: Context,
   now = new Date(),
@@ -365,45 +419,86 @@ export const cleanupStaleContentDrafts = async (
   const models = c.get("core")?.contentModels ?? [];
   const doomed: number[] = [];
 
+  const byType = new Map<string, typeof stale>();
   for (const draft of stale) {
-    const entry = findContentModel(models, draft.contentTypeId);
+    byType.set(draft.contentTypeId, [
+      ...(byType.get(draft.contentTypeId) ?? []),
+      draft,
+    ]);
+  }
+
+  // One read per content type for the records, and one for their translations,
+  // never one per draft: a cleanup that ran after a quiet month would otherwise
+  // cost a round trip for every abandoned editor.
+  for (const [contentTypeId, group] of byType) {
+    const entry = findContentModel(models, contentTypeId);
     if (!entry) {
-      doomed.push(draft.id);
+      doomed.push(...group.map(draft => draft.id));
       continue;
     }
 
-    const locale = localeOf(draft.language);
-    const itemId = contentIdFromKey(
-      contentDefinitionOf(entry.model).idStrategy,
-      draft.itemId,
+    const { model } = entry;
+    const { idStrategy } = contentDefinitionOf(model);
+    const parsed = group.flatMap(draft => {
+      const itemId = contentIdFromKey(idStrategy, draft.itemId);
+      if (itemId === null) {
+        doomed.push(draft.id);
+
+        return [];
+      }
+
+      return [{ draft, itemId, locale: localeOf(draft.language) }];
+    });
+    if (parsed.length === 0) continue;
+
+    const columns = model.columns as Record<string, PgColumn>;
+    const records = await db
+      .select({
+        id: columns.id,
+        ...(columns.version ? { version: columns.version } : {}),
+      })
+      .from(model.table)
+      .where(inArray(columns.id, [...new Set(parsed.map(row => row.itemId))]));
+    const versions = new Map(
+      records.map(record => [
+        contentIdKey(record.id as ContentId),
+        (record as { version?: unknown }).version,
+      ]),
     );
-    if (itemId === null) {
-      doomed.push(draft.id);
-      continue;
-    }
-    const record = await entry.model.service(c).findRowById(itemId);
-    if (!record) {
-      doomed.push(draft.id);
-      continue;
-    }
 
-    if (locale === null) {
-      const version: unknown = Reflect.get(record, "version");
-      if (typeof version === "number" && version > draft.baseVersion) {
+    const localized = parsed.flatMap(({ itemId, locale }) =>
+      locale === null ? [] : [{ itemId, locale }],
+    );
+    const translations = await staleTranslationVersions(c, db, model, {
+      itemIds: localized.map(row => row.itemId),
+      locales: localized.map(row => row.locale),
+    });
+
+    for (const { draft, itemId, locale } of parsed) {
+      const key = contentIdKey(itemId);
+      if (!versions.has(key)) {
+        doomed.push(draft.id);
+        continue;
+      }
+
+      if (locale === null) {
+        const version = versions.get(key);
+        if (typeof version === "number" && version > draft.baseVersion) {
+          doomed.push(draft.id);
+        }
+        continue;
+      }
+
+      const translation = translations.get(
+        `${key}:${locale.trim().toLowerCase()}`,
+      );
+      if (
+        translation === undefined
+          ? draft.baseVersion > 0
+          : translation > draft.baseVersion
+      ) {
         doomed.push(draft.id);
       }
-      continue;
-    }
-
-    const translation = await entry.model
-      .translationService?.(c)
-      .findByLocale(itemId, locale);
-    if (
-      translation
-        ? translation.version > draft.baseVersion
-        : draft.baseVersion > 0
-    ) {
-      doomed.push(draft.id);
     }
   }
 

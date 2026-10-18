@@ -153,6 +153,21 @@ export const createContentDeliveryService = <
   const buildPublic = model.publicService;
   if (!buildPublic) throw new ContentDeliveryNotEnabled({ contentTypeId });
 
+  // Everything `metadataFor` and `slugOf` read off a public row, and nothing
+  // else: a resolve never pays for a body, a gallery or a person it discards.
+  const { seo } = definition.delivery;
+  const metadataSelect = [
+    "id",
+    definition.publicApi.slugField,
+    seo.titleField,
+    seo.fallbackTitleField,
+    seo.descriptionField,
+    seo.fallbackDescriptionField,
+    seo.openGraph?.titleField ?? null,
+    seo.openGraph?.descriptionField ?? null,
+    seo.noIndexField,
+  ].filter((name): name is string => name !== null);
+
   const slugHistory = createContentSlugHistoryModel({
     c,
     definition,
@@ -243,6 +258,7 @@ export const createContentDeliveryService = <
       itemId as ContentIdOf<TDefinition>,
       {
         locale: locale ?? undefined,
+        select: [definition.publicApi.slugField],
       },
     );
     if (!row) return null;
@@ -288,6 +304,7 @@ export const createContentDeliveryService = <
     const row = await buildPublic(c).findBySlug(slug, {
       fallback: true,
       locale,
+      select: metadataSelect,
     });
     if (row) {
       const values = row as Record<string, unknown>;
@@ -404,7 +421,7 @@ export const createContentDeliveryService = <
     findById: async (itemId, { locale, origin } = {}) => {
       const row = await buildPublic(c).findById(
         itemId as ContentIdOf<TDefinition>,
-        { locale },
+        { locale, select: metadataSelect },
       );
       if (!row) return null;
 

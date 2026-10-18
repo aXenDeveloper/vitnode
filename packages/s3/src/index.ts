@@ -11,6 +11,15 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
+const discardBody = (body: unknown): void => {
+  if (typeof body !== "object" || body === null) return;
+  if ("destroy" in body && typeof body.destroy === "function") {
+    (body as { destroy: () => void }).destroy();
+  } else if ("cancel" in body && typeof body.cancel === "function") {
+    void (body as ReadableStream).cancel().catch(() => undefined);
+  }
+};
+
 export const S3StorageAdapter = ({
   accessKeyId = "",
   bucket = "",
@@ -43,6 +52,10 @@ export const S3StorageAdapter = ({
       endpoint,
       forcePathStyle: forcePathStyle ?? !!endpoint,
       credentials: { accessKeyId, secretAccessKey },
+      // Without these a stalled bucket holds a request (and its socket) open
+      // indefinitely. `requestTimeout` is socket inactivity, not total time,
+      // so large uploads that keep moving are unaffected.
+      requestHandler: { connectionTimeout: 5000, requestTimeout: 30_000 },
     });
 
     return client;
@@ -67,7 +80,12 @@ export const S3StorageAdapter = ({
         const object = await getClient().send(
           new GetObjectCommand({ Bucket: bucket, Key: key }),
         );
-        if ((object.ContentLength ?? 0) > maxBytes || !object.Body) {
+        if (!object.Body) return null;
+        if ((object.ContentLength ?? 0) > maxBytes) {
+          // Not reading the body would leave the socket busy until the whole
+          // object drains (or never), starving the client's connection pool.
+          discardBody(object.Body);
+
           return null;
         }
         const bytes = await object.Body.transformToByteArray();

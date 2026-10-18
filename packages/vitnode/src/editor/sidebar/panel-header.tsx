@@ -6,7 +6,7 @@ import { useTranslations } from "use-intl";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
-import { useVisualEditor } from "../context";
+import { useVisualEditorActions } from "../context";
 
 export const EditorPanelHeader = ({
   actions,
@@ -58,7 +58,7 @@ export const EditorPanelHeader = ({
 );
 
 export const EditorPanelBack = (): ReactElement => {
-  const { setPanel } = useVisualEditor();
+  const { setPanel } = useVisualEditorActions();
   const t = useTranslations("core.editor");
 
   return (

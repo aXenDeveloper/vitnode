@@ -8,15 +8,14 @@ import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import type { AnyBlockInstance } from "../../blocks/types";
-import type { EditorNodeRef } from "../state/types";
+import type { EditorNodeRef, EditorZoneState } from "../state/types";
 import type { EditableBlockIssue } from "./issue";
 
 import { getDefaultBlockRegistry } from "../../blocks/registry";
-import { useVisualEditor } from "../context";
+import { useVisualEditorActions, useVisualEditorPreview } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useSortableNode } from "../dnd/use-sortable-node";
 import { refusesRemoval, zoneCapacity } from "../state/bounds";
-import { sameNodeRef } from "../state/reducer";
 import { isRepairRemoval } from "../state/repair";
 import {
   DropIndicator,
@@ -34,23 +33,36 @@ const ISSUE_LABELS = {
   "unknown-variant": "block.issue.unknown_variant",
 } as const satisfies Record<EditableBlockIssue["kind"], string>;
 
+/**
+ * Everything the shell reads from editor state arrives as props, never from
+ * the whole-editor context: the zone memoizes each block on them, so a
+ * keystroke in one block leaves other zones alone and re-renders no other
+ * block's body.
+ */
 export interface EditableBlockShellProps {
   areaId: null | string;
+  arriving: boolean;
   children: ReactNode;
   index: number;
   instance: AnyBlockInstance;
+  selected: boolean;
+  zone: EditorZoneState | undefined;
   zoneId: string;
 }
 
 export const EditableBlockShell = ({
   areaId,
+  arriving,
   children,
   index,
   instance,
+  selected,
+  zone,
   zoneId,
 }: EditableBlockShellProps): ReactElement => {
   const t = useTranslations("core.editor");
-  const { arrivingNodeId, dispatch, preview, state } = useVisualEditor();
+  const { dispatch } = useVisualEditorActions();
+  const preview = useVisualEditorPreview();
   const { dropIndicator } = useEditorDnd();
   const nodeRef: EditorNodeRef = {
     areaId,
@@ -67,12 +79,10 @@ export const EditableBlockShell = ({
 
   if (preview) return <>{children}</>;
 
-  const zone = state.zones[zoneId];
   const entry = (zone?.registry ?? getDefaultBlockRegistry())?.get(
     instance.type,
   );
   const name = entry?.definition.name ?? instance.type;
-  const selected = sameNodeRef(state.selected, nodeRef);
   const issue = editableBlockIssue({
     allowedBlocks: zone?.allowedBlocks,
     dataCheck: "schema",
@@ -102,7 +112,7 @@ export const EditableBlockShell = ({
           : selected
             ? "ring-primary ring-2"
             : "hover:ring-primary/50 hover:ring-1",
-        arrivingNodeId === instance.id && NODE_ARRIVAL_CLASS,
+        arriving && NODE_ARRIVAL_CLASS,
       )}
       data-block-id={instance.id}
       data-block-type={instance.type}

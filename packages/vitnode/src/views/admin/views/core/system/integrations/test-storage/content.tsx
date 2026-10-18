@@ -101,7 +101,14 @@ export const ContentTestStorage = () => {
       <Attachment className="w-full" state={state}>
         <AttachmentMedia variant={upload.data ? "image" : "icon"}>
           {upload.data ? (
-            <img alt={fileName ?? t("upload.label")} src={upload.data.url} />
+            <img
+              alt={fileName ?? t("upload.label")}
+              decoding="async"
+              height={40}
+              loading="lazy"
+              src={upload.data.url}
+              width={40}
+            />
           ) : upload.isPending ? (
             <LoaderCircleIcon className="animate-spin" data-slot="spinner" />
           ) : (

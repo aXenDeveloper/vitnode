@@ -17,7 +17,11 @@ import type {
 import type { AnyContentTypeDefinition, ContentPublicSelect } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentLanguage } from "./language-resolver";
-import type { ContentPublicService } from "./public-service";
+import type {
+  ContentPublicItemReadOptions,
+  ContentPublicProjection,
+  ContentPublicService,
+} from "./public-service";
 
 import { withPagination } from "../../api/lib/with-pagination";
 import {
@@ -33,6 +37,9 @@ import { createContentPublicRowHydrator } from "./public-row-hydration";
 import {
   clampContentPublicPageSize,
   contentPublicCollectionFields,
+  contentPublicDetailProjection,
+  contentPublicListProjection,
+  contentPublicSelectProjection,
   createContentPublicProjector,
 } from "./public-service";
 import {
@@ -126,7 +133,6 @@ export const createContentLocalizedPublicService = <
 
   const primaryCursor = columns.id as PaginationCursorColumn;
   const orderable = publicOrderableColumns(definition);
-  const project = createContentPublicProjector(definition);
 
   const ownerOf = (name: string): string => {
     const path = splitContentFieldPath(name);
@@ -141,26 +147,11 @@ export const createContentLocalizedPublicService = <
 
     return !isContentReferenceCollection(fieldValue);
   };
-  const exposedColumns = publicApi.fields.filter(isColumnField);
-  const exposedShared = exposedColumns.filter(
-    name => !isLocalized(ownerOf(name)),
-  );
-  const exposedLocalized = exposedColumns.filter(name =>
-    isLocalized(ownerOf(name)),
-  );
-  const publicCollections = contentPublicCollectionFields(definition);
   const localizedColumnByPath = new Map(
     definition.advanced.leaves
       .filter(leaf => leaf.localized)
       .map(leaf => [leaf.path, leaf.columnName]),
   );
-
-  const withCollections = createContentPublicRowHydrator({
-    advanced,
-    c,
-    definition,
-    publicCollections,
-  });
 
   const sharedSearchable = publicApi.searchableFields.filter(
     name => !isLocalized(ownerOf(name)),
@@ -236,23 +227,63 @@ export const createContentLocalizedPublicService = <
       : requestedRows[column];
   };
 
-  const selection = (
-    withFallback: boolean,
-  ): Record<string, PgColumn | SQL> => ({
-    id: columns.id,
-    // Shared values off the base row - including `createdAt`, `updatedAt` and
-    // `publishedAt`, which on a public response mean "this published thing", not
-    // "this translation row". A reader has no notion of a translation to
-    // attribute a timestamp to.
-    ...Object.fromEntries(exposedShared.map(name => [name, columns[name]])),
-    ...Object.fromEntries(publicApi.people.map(name => [name, columns[name]])),
-    ...Object.fromEntries(
-      exposedLocalized.map(name => [name, localizedValue(name, withFallback)]),
-    ),
-    [LANGUAGE_KEY]: withFallback
-      ? sql<number>`case when ${requestedRows.itemId} is not null then ${requestedRows.languageId} else ${fallbackRows.languageId} end`
-      : requestedRows.languageId,
-  });
+  /**
+   * Everything one projection needs, built once: which exposed columns come off
+   * the base row and which off the translation, the hydrator and the projector.
+   */
+  const reader = (projection: ContentPublicProjection) => {
+    const exposedColumns = projection.fields.filter(isColumnField);
+    const exposedShared = exposedColumns.filter(
+      name => !isLocalized(ownerOf(name)),
+    );
+    const exposedLocalized = exposedColumns.filter(name =>
+      isLocalized(ownerOf(name)),
+    );
+
+    return {
+      hydrate: createContentPublicRowHydrator({
+        advanced,
+        c,
+        definition,
+        people: projection.people,
+        publicCollections: contentPublicCollectionFields(
+          definition,
+          projection.fields,
+        ),
+      }),
+      project: createContentPublicProjector(definition, projection),
+      selection: (withFallback: boolean): Record<string, PgColumn | SQL> => ({
+        id: columns.id,
+        // Shared values off the base row - including `createdAt`, `updatedAt`
+        // and `publishedAt`, which on a public response mean "this published
+        // thing", not "this translation row". A reader has no notion of a
+        // translation to attribute a timestamp to.
+        ...Object.fromEntries(exposedShared.map(name => [name, columns[name]])),
+        ...Object.fromEntries(
+          projection.people.map(name => [name, columns[name]]),
+        ),
+        ...Object.fromEntries(
+          exposedLocalized.map(name => [
+            name,
+            localizedValue(name, withFallback),
+          ]),
+        ),
+        [LANGUAGE_KEY]: withFallback
+          ? sql<number>`case when ${requestedRows.itemId} is not null then ${requestedRows.languageId} else ${fallbackRows.languageId} end`
+          : requestedRows.languageId,
+      }),
+    };
+  };
+  type Reader = ReturnType<typeof reader>;
+
+  const detail = reader(contentPublicDetailProjection(definition));
+  const list = publicApi.listFields
+    ? reader(contentPublicListProjection(definition))
+    : detail;
+  const readerFor = (options: ContentPublicItemReadOptions = {}): Reader =>
+    options.select
+      ? reader(contentPublicSelectProjection(definition, options.select))
+      : detail;
 
   /**
    * Turns a locale into the one or two languages this read touches.
@@ -292,6 +323,7 @@ export const createContentLocalizedPublicService = <
   };
 
   const projectRow = (
+    { project }: Reader,
     row: Record<string, unknown>,
     { fallbackTo, requested }: ResolvedLocale,
   ): ContentPublicSelect<TDefinition> => ({
@@ -317,6 +349,7 @@ export const createContentLocalizedPublicService = <
    * where neither matched.
    */
   const read = async (
+    { selection }: Reader,
     scope: ResolvedLocale,
     where: SQL | undefined,
     {
@@ -358,6 +391,7 @@ export const createContentLocalizedPublicService = <
   };
 
   const readOne = async (
+    projection: Reader,
     resolved: ResolvedLocale,
     condition: SQL | undefined,
     {
@@ -373,6 +407,7 @@ export const createContentLocalizedPublicService = <
       : resolved;
 
     const [row] = await read(
+      projection,
       scope,
       conditions(
         contentPublicReadCondition(basePublication, { hidden }),
@@ -384,9 +419,9 @@ export const createContentLocalizedPublicService = <
 
     if (!row) return null;
 
-    const [withAdvanced] = await withCollections([row]);
+    const [withAdvanced] = await projection.hydrate([row]);
 
-    return projectRow(withAdvanced, scope);
+    return projectRow(projection, withAdvanced, scope);
   };
 
   return {
@@ -394,7 +429,7 @@ export const createContentLocalizedPublicService = <
       const resolved = await resolveLocale(options?.locale);
       if (!resolved) return null;
 
-      return await readOne(resolved, eq(columns.id, id), {
+      return await readOne(readerFor(options), resolved, eq(columns.id, id), {
         hidden: options?.hidden,
       });
     },
@@ -415,15 +450,21 @@ export const createContentLocalizedPublicService = <
             )
           : eq(columns[slugField], slug);
 
-      const row = await readOne(resolved, slugIn(resolved.requested.id), {
-        hidden: options?.hidden,
-        strict: true,
-      });
+      const projection = readerFor(options);
+      const row = await readOne(
+        projection,
+        resolved,
+        slugIn(resolved.requested.id),
+        { hidden: options?.hidden, strict: true },
+      );
       if (row || !options?.fallback || !resolved.fallbackTo) return row;
 
-      return await readOne(resolved, slugIn(resolved.fallbackTo.id), {
-        hidden: options?.hidden,
-      });
+      return await readOne(
+        projection,
+        resolved,
+        slugIn(resolved.fallbackTo.id),
+        { hidden: options?.hidden },
+      );
     },
 
     findMany: async ({ filters = {}, locale, orderBy, query = {} } = {}) => {
@@ -518,7 +559,7 @@ export const createContentLocalizedPublicService = <
           orderBy: order,
           where: paged,
         }) =>
-          await read(resolved, paged, {
+          await read(list, resolved, paged, {
             cursorSelection,
             limit:
               typeof limit === "number"
@@ -530,8 +571,8 @@ export const createContentLocalizedPublicService = <
       });
 
       return {
-        edges: (await withCollections(data.edges)).map(row =>
-          projectRow(row, resolved),
+        edges: (await list.hydrate(data.edges)).map(row =>
+          projectRow(list, row, resolved),
         ),
         pageInfo: data.pageInfo,
       };

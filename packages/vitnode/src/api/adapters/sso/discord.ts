@@ -9,6 +9,9 @@ import { getRedirectUri } from "@/api/models/sso";
 
 import { DISCORD_ICON } from "./icons";
 
+// A provider that stops answering would otherwise hang the sign-in request.
+const PROVIDER_TIMEOUT_MS = 10_000;
+
 const DISCORD_AVATAR_HASH = /^(?:a_)?[\da-f]{16,64}$/i;
 
 const discordAvatarUrl = ({
@@ -65,6 +68,7 @@ export const DiscordSSOApiPlugin = ({
           client_id: clientId,
           client_secret: clientSecret,
         }),
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
 
       if (!res.ok) {
@@ -90,6 +94,7 @@ export const DiscordSSOApiPlugin = ({
         headers: {
           Authorization: `${token_type} ${access_token}`,
         },
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
       const { data, error } = userSchema.safeParse(await res.json());
       if (error || !data) {

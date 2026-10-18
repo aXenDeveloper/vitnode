@@ -202,7 +202,17 @@ export const myApprovalsRoute = buildRoute({
     path: "/approvals/mine",
     description:
       "The signed-in member's own submissions and what happened to them",
-    request: { query: z.object(pageQuery) },
+    request: {
+      query: z.object({
+        ...pageQuery,
+        pluginId: z
+          .string()
+          .min(1)
+          .max(255)
+          .optional()
+          .openapi({ example: "@vitnode/forum" }),
+      }),
+    },
     responses: {
       200: json(pageSchema, "One page of the member's submissions"),
       401: { description: "Sign in first" },

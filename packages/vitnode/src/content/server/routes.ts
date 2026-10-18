@@ -89,6 +89,7 @@ import { contentLocaleRouting } from "./locale-routing";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import { resolveContentLocalizedValues } from "./localized-display";
 import { contentDefinitionOf } from "./model";
+import { contentPublicStateOf } from "./page-cache";
 import {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -461,19 +462,24 @@ export const buildContentRoutes = <
         query: { cursor, first, last, page, search },
       });
 
-      const withTranslations = await withRowTranslations(c, data, raw.locale);
+      // One `WHERE id IN (...)` per enricher for the whole page, never one per
+      // row, each skipped by a content type with nothing for it. They read the
+      // base row and add keys of their own, so they run side by side and merge.
+      const [withTranslations, withFileValues, withReferences] =
+        await Promise.all([
+          withRowTranslations(c, data, raw.locale),
+          withFiles(c, data.edges),
+          withContentReferenceLists(c, model, data.edges),
+        ]);
 
-      // One `WHERE id IN (...)` for the whole page, never one per row - the same
-      // shape the translation join above uses, and skipped entirely by a content
-      // type with no file fields.
       return c.json(
         {
           ...withTranslations,
-          edges: await withContentReferenceLists(
-            c,
-            model,
-            await withFiles(c, withTranslations.edges),
-          ),
+          edges: withTranslations.edges.map((row, index) => ({
+            ...withFileValues[index],
+            ...withReferences[index],
+            ...row,
+          })),
         },
         200,
       );
@@ -916,7 +922,7 @@ export const buildContentRoutes = <
         definition,
         "created",
         { contentId: row.id },
-        { pluginId },
+        { pluginId, publicState: contentPublicStateOf(definition, null, row) },
       );
 
       // A new record is a draft, so this normally indexes a private document -
@@ -1174,7 +1180,15 @@ export const buildContentRoutes = <
             changedFields: result.changedFields,
             contentId: result.row.id,
           },
-          { pluginId },
+          {
+            pluginId,
+            // An edit cannot move publication, so the row after it says both.
+            publicState: contentPublicStateOf(
+              definition,
+              result.row,
+              result.row,
+            ),
+          },
         );
       }
 
@@ -1256,7 +1270,19 @@ export const buildContentRoutes = <
             action === "publish" && result.publishedAt
               ? { contentId: id, publishedAt: result.publishedAt }
               : { contentId: id },
-            { pluginId },
+            {
+              pluginId,
+              // The transition is guarded on the status it flips, so the row
+              // before it differs from the one after in that column alone.
+              publicState: contentPublicStateOf(
+                definition,
+                {
+                  ...result.row,
+                  status: action === "publish" ? "draft" : "published",
+                },
+                result.row,
+              ),
+            },
           );
         }
 
@@ -2028,7 +2054,7 @@ export const buildContentRoutes = <
         definition,
         "deleted",
         { contentId: row.id },
-        { pluginId },
+        { pluginId, publicState: contentPublicStateOf(definition, row, null) },
       );
 
       // Drafts are indexed as private documents, so every delete removes one - a

@@ -17,8 +17,10 @@ import { ImageZoom } from '@vitnode/core/components/ui/image-zoom'
 ```tsx
 <ImageZoom
   alt="The VitNode AdminCP dashboard"
+  height={433}
   imageClassName="w-full rounded-md border"
   src="/screenshots/dashboard.webp"
+  width={800}
 />
 ```
 
@@ -87,6 +89,19 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
     imageClassName: {
       description: 'Classes for the image on the page.',
       type: 'string',
+    },
+    width: {
+      description:
+        'Intrinsic width of `src`. With `height`, it reserves space so the page does not jump while the image loads.',
+      type: 'number',
+    },
+    height: {
+      description: 'Intrinsic height of `src`.',
+      type: 'number',
+    },
+    loading: {
+      description: 'Pass `"lazy"` for images below the fold.',
+      type: '"eager" | "lazy"',
     },
   }}
 />

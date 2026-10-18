@@ -30,7 +30,7 @@ import { storageUrlOf } from "@/api/lib/storage-url";
 import { contentIdFromKey, contentIdKey } from "@/content/ids";
 import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
-import { core_search_index } from "@/database/search";
+import { core_search_index, core_search_popularity } from "@/database/search";
 import { core_users } from "@/database/users";
 import { containsLikePattern } from "@/lib/api/like-pattern";
 import { parseImageDimensions } from "@/lib/api/upload";
@@ -39,6 +39,10 @@ import { stripHtml } from "@/lib/strip-html";
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
 
 const SEARCH_TOP_AUTHORS_TTL_SECONDS = 5 * 60;
+
+// Rows per multi-row upsert: 17 columns × 500 stays far below Postgres' 65,535
+// bind-parameter cap while still turning a rebuild page into one round trip.
+const BULK_UPSERT_CHUNK = 500;
 
 export interface SearchDocument {
   authorIds?: readonly number[];
@@ -335,6 +339,16 @@ export interface SearchProviderApiPlugin {
     itemId: ContentId,
     languageCode?: string,
   ): Promise<void>;
+  /**
+   * Removes many items of one type, in every language - what deleting a
+   * container means for its children. Optional: without it, {@link SearchModel}
+   * falls back to one `delete` per item.
+   */
+  deleteMany?: (
+    c: Context,
+    itemType: string,
+    itemIds: ContentId[],
+  ) => Promise<void>;
   index: (c: Context, doc: SearchDocument) => Promise<void>;
   name: string;
   ping?: (c: Context) => Promise<boolean>;
@@ -511,38 +525,53 @@ export class SearchModel {
     };
   }
 
-  private async upsertRow(doc: SearchDocument): Promise<void> {
-    const row = toRow(doc);
+  /**
+   * One multi-row upsert per chunk. A statement may not touch the same row
+   * twice, so a batch that names one `(itemType, itemId, languageCode)` more
+   * than once keeps the last copy - what writing them one by one would leave.
+   */
+  private async upsertRows(docs: SearchDocument[]): Promise<void> {
+    const byKey = new Map<string, ReturnType<typeof toRow>>();
+    for (const doc of docs) {
+      const row = toRow(doc);
+      const key = JSON.stringify([row.itemType, row.itemId, row.languageCode]);
+      byKey.delete(key);
+      byKey.set(key, row);
+    }
+    const rows = [...byKey.values()];
 
-    await this.c
-      .get("db")
-      .insert(core_search_index)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [
-          core_search_index.itemType,
-          core_search_index.itemId,
-          core_search_index.languageCode,
-        ],
-        set: {
-          // Included so a rebuild corrects the owner of a row written before the
-          // indexer declared one, rather than leaving the first writer's guess.
-          pluginId: row.pluginId,
-          authorIds: row.authorIds,
-          title: row.title,
-          content: row.content,
-          containerType: row.containerType,
-          containerId: row.containerId,
-          url: row.url,
-          isPublic: row.isPublic,
-          isHidden: row.isHidden,
-          imageId: row.imageId,
-          metadata: row.metadata,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-          indexedAt: row.indexedAt,
-        },
-      });
+    for (let start = 0; start < rows.length; start += BULK_UPSERT_CHUNK) {
+      await this.c
+        .get("db")
+        .insert(core_search_index)
+        .values(rows.slice(start, start + BULK_UPSERT_CHUNK))
+        .onConflictDoUpdate({
+          target: [
+            core_search_index.itemType,
+            core_search_index.itemId,
+            core_search_index.languageCode,
+          ],
+          set: {
+            // Included so a rebuild corrects the owner of a row written before
+            // the indexer declared one, rather than leaving the first writer's
+            // guess.
+            pluginId: sql`excluded."pluginId"`,
+            authorIds: sql`excluded."authorIds"`,
+            title: sql`excluded."title"`,
+            content: sql`excluded."content"`,
+            containerType: sql`excluded."containerType"`,
+            containerId: sql`excluded."containerId"`,
+            url: sql`excluded."url"`,
+            isPublic: sql`excluded."isPublic"`,
+            isHidden: sql`excluded."isHidden"`,
+            imageId: sql`excluded."imageId"`,
+            metadata: sql`excluded."metadata"`,
+            createdAt: sql`excluded."createdAt"`,
+            updatedAt: sql`excluded."updatedAt"`,
+            indexedAt: sql`excluded."indexedAt"`,
+          },
+        });
+    }
   }
 
   private withFallbacks(params: SearchQueryParams): SearchQueryParams {
@@ -671,10 +700,7 @@ export class SearchModel {
       this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),
     );
 
-    for (const doc of clean) {
-      await this.upsertRow(doc);
-    }
-
+    await this.upsertRows(clean);
     await this.provider().bulkIndex(this.c, clean);
   }
 
@@ -758,8 +784,8 @@ export class SearchModel {
     containerType: string;
     itemType: string;
   }): Promise<void> {
-    const rows = await this.c
-      .get("db")
+    const db = this.c.get("db");
+    const rows = await db
       .selectDistinct({ itemId: core_search_index.itemId })
       .from(core_search_index)
       .where(
@@ -769,14 +795,41 @@ export class SearchModel {
           eq(core_search_index.containerId, containerId),
         ),
       );
+    const itemKeys = rows.map(row => row.itemId);
+    if (itemKeys.length === 0) return;
 
+    // The provider first, the canonical rows last: if the provider call fails,
+    // the rows are still there for a retry to find what it has to delete.
     const contentTypes = this.c.get("core")?.contentTypes ?? [];
-    for (const { itemId } of rows) {
-      await this.delete(
-        itemType,
-        searchItemIdFromKey(contentTypes, itemType, itemId),
-      );
+    const itemIds = itemKeys.map(key =>
+      searchItemIdFromKey(contentTypes, itemType, key),
+    );
+    const provider = this.provider();
+    if (provider.deleteMany) {
+      await provider.deleteMany(this.c, itemType, itemIds);
+    } else {
+      for (const itemId of itemIds) {
+        await provider.delete(this.c, itemType, itemId);
+      }
     }
+
+    // Every language of every item, not only the rows filed under the container.
+    await db
+      .delete(core_search_index)
+      .where(
+        and(
+          eq(core_search_index.itemType, itemType),
+          inArray(core_search_index.itemId, itemKeys),
+        ),
+      );
+    await db
+      .delete(core_search_popularity)
+      .where(
+        and(
+          eq(core_search_popularity.itemType, itemType),
+          inArray(core_search_popularity.itemId, itemKeys),
+        ),
+      );
   }
 
   /** Canonical projection lives in `core_search_index`; the provider mirrors it. */
@@ -788,7 +841,7 @@ export class SearchModel {
 
     const commentParent = await this.newCommentParent(clean);
 
-    await this.upsertRow(clean);
+    await this.upsertRows([clean]);
     await this.provider().index(this.c, clean);
 
     if (commentParent) {

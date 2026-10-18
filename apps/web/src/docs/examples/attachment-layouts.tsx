@@ -46,7 +46,14 @@ export default function AttachmentLayoutsExample() {
               render={<a href={file.src} rel="noreferrer" target="_blank" />}
             />
             <AttachmentMedia variant="image">
-              <img alt="" src={file.src} />
+              <img
+                alt=""
+                decoding="async"
+                height={433}
+                loading="lazy"
+                src={file.src}
+                width={800}
+              />
             </AttachmentMedia>
             <AttachmentContent>
               <AttachmentTitle>{file.name}</AttachmentTitle>

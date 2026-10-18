@@ -13,12 +13,12 @@ import type { VisualEditorState } from "../state/types";
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
 import { field } from "../../content/fields";
-import { VisualEditorContext } from "../context";
 import {
   initialVisualEditorState,
   unsafeZoneIds,
   visualEditorReducer,
 } from "../state/reducer";
+import { VisualEditorProvider } from "../provider";
 import { EditableBlockShell } from "./block-shell";
 
 const fields = {
@@ -86,16 +86,19 @@ const Shell = ({
   } as unknown as VisualEditorContextValue;
 
   return (
-    <VisualEditorContext value={value}>
+    <VisualEditorProvider value={value}>
       <EditableBlockShell
         areaId={null}
+        arriving={false}
         index={0}
         instance={instance(data)}
+        selected={false}
+        zone={state.zones.main}
         zoneId="main"
       >
         {children}
       </EditableBlockShell>
-    </VisualEditorContext>
+    </VisualEditorProvider>
   );
 };
 

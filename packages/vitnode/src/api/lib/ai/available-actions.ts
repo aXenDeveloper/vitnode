@@ -39,34 +39,25 @@ export const availableAiActions = async (
       );
     }
   }
-  const [grantedByPermission, actionSettings] = await Promise.all([
-    Promise.all(
-      [...permissionDefaults].map(
-        async ([permissionKey, defaultGranted]) =>
-          [
-            permissionKey,
-            (
-              await ledger.resolveUserPolicy({
-                defaultGranted,
-                permissionKey,
-                userId,
-              })
-            ).granted,
-          ] as const,
+  const [policies, actionSettings] = await Promise.all([
+    ledger.resolveUserPolicies({
+      permissions: [...permissionDefaults].map(
+        ([permissionKey, defaultGranted]) => ({
+          defaultGranted,
+          permissionKey,
+        }),
       ),
-    ).then(entries => new Map(entries)),
-    Promise.all(
-      runnableActions.map(
-        async action => await ledger.loadActionSettings(action.key),
-      ),
-    ),
+      settings,
+      userId,
+    }),
+    ledger.loadActionSettingsMany(runnableActions.map(action => action.key)),
   ]);
 
   return runnableActions
     .filter(
-      (action, index) =>
-        actionSettings[index]?.enabled !== false &&
-        grantedByPermission.get(action.permissionKey) === true,
+      action =>
+        actionSettings.get(action.key)?.enabled !== false &&
+        policies.get(action.permissionKey)?.granted === true,
     )
     .map(action => action.key);
 };

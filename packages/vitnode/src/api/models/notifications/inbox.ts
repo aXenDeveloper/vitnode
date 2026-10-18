@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
@@ -22,6 +22,7 @@ import {
   checkNotificationAccess,
   createTranslatorCache,
   loadActorSummaries,
+  notificationEventColumns,
   presentNotification,
   resolveEvent,
 } from "./render";
@@ -56,7 +57,14 @@ export interface NotificationListPage {
   nextCursor: null | string;
 }
 
-const cursorSchema = z.object({ id: z.number().int(), t: z.number().int() });
+// `lastActivityAt` is a microsecond `timestamp`, so the cursor carries the
+// database's own `::text` of it: a millisecond `Date` would round the boundary
+// down and skip every row in the lost microseconds.
+const TIMESTAMP_TEXT = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?$/;
+const cursorSchema = z.object({
+  id: z.number().int(),
+  ts: z.string().regex(TIMESTAMP_TEXT),
+});
 
 const encodeCursor = (cursor: z.infer<typeof cursorSchema>): string =>
   Buffer.from(JSON.stringify(cursor)).toString("base64url");
@@ -75,7 +83,9 @@ const decodeCursor = (raw: string) => {
     throw new HTTPException(400, { message: "Invalid pagination cursor." });
   }
 
-  return { id: cursor.data.id, lastActivityAt: new Date(cursor.data.t) };
+  // A row comparison, unlike the equivalent `a < x OR (a = x AND id < y)`, is
+  // something Postgres can seek the `(userId, lastActivityAt, id)` index with.
+  return sql`(${core_notifications.lastActivityAt}, ${core_notifications.id}) < (${cursor.data.ts}::timestamp, ${cursor.data.id}::bigint)`;
 };
 
 export const getNotificationState = async (
@@ -114,13 +124,14 @@ export const listNotifications = async (
     userId: number;
   },
 ): Promise<NotificationListPage> => {
-  const after = cursor ? decodeCursor(cursor) : null;
+  const after = cursor ? decodeCursor(cursor) : undefined;
 
   const rows = await c
     .get("db")
     .select({
+      cursorAt: sql<string>`${core_notifications.lastActivityAt}::text`,
+      event: notificationEventColumns,
       item: core_notifications,
-      event: core_notification_events,
     })
     .from(core_notifications)
     .innerJoin(
@@ -134,15 +145,7 @@ export const listNotifications = async (
         unreadOnly ? UNREAD_SQL : undefined,
         category ? eq(core_notifications.category, category) : undefined,
         type ? eq(core_notifications.type, type) : undefined,
-        after
-          ? or(
-              lt(core_notifications.lastActivityAt, after.lastActivityAt),
-              and(
-                eq(core_notifications.lastActivityAt, after.lastActivityAt),
-                lt(core_notifications.id, after.id),
-              ),
-            )
-          : undefined,
+        after,
       ),
     )
     .orderBy(
@@ -233,10 +236,7 @@ export const listNotifications = async (
     items,
     nextCursor:
       rows.length > limit && last
-        ? encodeCursor({
-            id: last.item.id,
-            t: last.item.lastActivityAt.getTime(),
-          })
+        ? encodeCursor({ id: last.item.id, ts: last.cursorAt })
         : null,
   };
 };
@@ -244,7 +244,7 @@ export const listNotifications = async (
 type ItemRow = typeof core_notifications.$inferSelect;
 
 const USERS_PER_RECONCILE_BATCH = 200;
-const USERS_PER_REMOVE_BATCH = 50;
+const ITEMS_PER_REMOVE_BATCH = 500;
 
 const isCounted = (
   item: Pick<ItemRow, "activitySeq" | "archivedAt" | "readSeq">,
@@ -459,22 +459,36 @@ export const removeNotificationItems = async (
   let removed = 0;
 
   for (;;) {
+    // Item ids in `lastActivityAt` order, so the retention sweep walks the
+    // `last_activity` index a page at a time.
     const targets = await c
       .get("db")
-      .select({ userId: core_notifications.userId })
+      .select({ id: core_notifications.id, userId: core_notifications.userId })
       .from(core_notifications)
       .where(where)
-      .groupBy(core_notifications.userId)
-      .limit(USERS_PER_REMOVE_BATCH);
+      .orderBy(asc(core_notifications.lastActivityAt))
+      .limit(ITEMS_PER_REMOVE_BATCH);
     if (targets.length === 0) break;
 
-    const userIds = targets.map(row => row.userId);
     const batch = await c.get("db").transaction(async tx => {
-      await lockUserStates(tx, userIds);
+      await lockUserStates(
+        tx,
+        targets.map(row => row.userId),
+      );
 
+      // `where` again, under the lock: an item that gained activity since the
+      // read above may no longer match.
       const deleted = await tx
         .delete(core_notifications)
-        .where(and(where, inArray(core_notifications.userId, userIds)))
+        .where(
+          and(
+            where,
+            inArray(
+              core_notifications.id,
+              targets.map(row => row.id),
+            ),
+          ),
+        )
         .returning({
           activitySeq: core_notifications.activitySeq,
           archivedAt: core_notifications.archivedAt,
@@ -498,7 +512,7 @@ export const removeNotificationItems = async (
 
     sendNotificationStates(c, batch.updates);
     removed += batch.count;
-    if (batch.count === 0) break;
+    if (targets.length < ITEMS_PER_REMOVE_BATCH || batch.count === 0) break;
   }
 
   return removed;

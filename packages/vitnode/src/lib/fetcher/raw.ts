@@ -25,6 +25,12 @@ export interface RawApiFetchArgs {
   withPagination?: boolean;
 }
 
+/**
+ * Sends the built request somewhere other than the global `fetch` - the
+ * server-side fetcher uses it to call an API mounted in the same process.
+ */
+export type ApiTransport = (request: Request) => Promise<Response>;
+
 export const buildApiUrl = ({
   module,
   origin,
@@ -83,14 +89,17 @@ export const buildApiUrl = ({
  * Content Engine wraps it with content-type schemas - both get the same
  * request behaviour without a second implementation.
  */
-export const rawApiFetch = async ({
-  additionalHeaders = {},
-  body,
-  formData,
-  method,
-  options,
-  ...urlArgs
-}: RawApiFetchArgs): Promise<Response> => {
+export const rawApiFetch = async (
+  {
+    additionalHeaders = {},
+    body,
+    formData,
+    method,
+    options,
+    ...urlArgs
+  }: RawApiFetchArgs,
+  transport?: ApiTransport,
+): Promise<Response> => {
   const url = buildApiUrl(urlArgs);
 
   const headers = new Headers({
@@ -105,12 +114,15 @@ export const rawApiFetch = async ({
   // past the type - a `get` could leave as a `post`. `body` and `headers` were
   // already protected by the `Omit`; `method` is now too, and the order here is
   // what makes that true at runtime rather than only in the type.
-  const response = await fetch(url, {
+  const init: RequestInit = {
     ...options,
     method: method.toUpperCase(),
     headers,
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
-  });
+  };
+  const response = transport
+    ? await transport(new Request(url, init))
+    : await fetch(url, init);
 
   const loggedPath = url.pathname;
 

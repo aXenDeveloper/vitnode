@@ -6,7 +6,7 @@ icon: Signpost
 
 Inside the app, use TanStack Router's `Link`. It builds the href, applies the
 locale prefix, and preloads the destination once the pointer rests on it for
-250 ms. You write the logical path; the router writes the language.
+75 ms. You write the logical path; the router writes the language.
 [Preloading](/docs/dev/routing/preloading) covers what a preload costs and how
 to turn it off.
 
@@ -120,7 +120,7 @@ export const CatalogItemLink = ({ slug }: { slug: string }) => (
 ```
 
 The link navigates without a full page load, [preloads](/docs/dev/routing/preloading)
-after a 250 ms hover, and gets the visitor's locale prefix from the router.
+after a 75 ms hover, and gets the visitor's locale prefix from the router.
 Write the href without a locale prefix. An absolute URL such as
 `https://example.com` renders a plain `<a>`. `aria-current="page"` is set only
 when the href matches the current URL exactly, query and hash included.

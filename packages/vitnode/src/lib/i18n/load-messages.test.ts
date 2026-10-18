@@ -197,7 +197,7 @@ describe("loadMessages", () => {
     }
   });
 
-  it("re-reads on every call outside production, so edits show up live", async () => {
+  it("re-reads on every call in development and tests, so edits show up live", async () => {
     // vitest runs with NODE_ENV=test, i.e. the cache is off - the same path dev
     // takes. A second call must hit the loader again rather than a stale tree.
     const loader = vi.fn(

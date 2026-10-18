@@ -85,6 +85,14 @@ const PERSONAL_SHARED_DOCUMENT_CACHE_CONTROL = "private, no-cache";
 
 const LARGEST_PAGE_BYTES = 2 * 1024 * 1024;
 
+/**
+ * How long a visitor with cookies skips the shared render of a page whose last
+ * shared render could not be stored, and goes straight to their own. Short, so
+ * a page that becomes public again is shared again within a minute.
+ */
+const NOT_SHAREABLE_TTL_MS = 60_000;
+const NOT_SHAREABLE_MAX_KEYS = 1_000;
+
 export type PageCacheRender = (
   request: Request,
   ...rest: never[]
@@ -265,6 +273,26 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
     });
   };
 
+  // Per process on purpose: a stale or missing marker only costs one extra
+  // render, while reading a shared store would tax every cookie request.
+  const notShareableUntil = new Map<string, number>();
+  const isKnownNotShareable = (key: string): boolean => {
+    const until = notShareableUntil.get(key);
+    if (until === undefined) return false;
+    if (until > Date.now()) return true;
+    notShareableUntil.delete(key);
+
+    return false;
+  };
+  const markNotShareable = (key: string): void => {
+    notShareableUntil.delete(key);
+    if (notShareableUntil.size >= NOT_SHAREABLE_MAX_KEYS) {
+      const oldest = notShareableUntil.keys().next();
+      if (!oldest.done) notShareableUntil.delete(oldest.value);
+    }
+    notShareableUntil.set(key, Date.now() + NOT_SHAREABLE_TTL_MS);
+  };
+
   const pending = new WeakMap<HTTPEvent, never[]>();
   const handlers = new Map<string, CachedEventHandler>();
   const handlerFor = (maxAge: number, staleWhileRevalidate: number) => {
@@ -327,6 +355,13 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
       return await bypass();
     }
 
+    // The shared render would only be thrown away for this visitor's own, as
+    // it was moments ago, so skip straight to the render they would get.
+    const shareKey = `${request.method} ${cacheUrl.href}`;
+    if (request.headers.has("cookie") && isKnownNotShareable(shareKey)) {
+      return await bypass();
+    }
+
     const handler = handlerFor(
       route.policy.maxAge,
       route.policy.staleWhileRevalidate ?? 0,
@@ -386,6 +421,8 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
       response.status !== 200 ||
       response.headers.get(SHAREABLE_HEADER) !== "1"
     ) {
+      markNotShareable(shareKey);
+
       // Not something everybody may see. A visitor with cookies may be allowed
       // more than the public render showed - a moderator on a hidden article -
       // so they get a render of their own request. So does a page that sets a
@@ -406,6 +443,8 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
           headers.set("cache-control", DOCUMENT_CACHE_CONTROL);
       });
     }
+
+    notShareableUntil.delete(shareKey);
 
     return withHeaders(response, headers => {
       stripInternal(headers);

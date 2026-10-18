@@ -13,6 +13,7 @@ import {
   sql,
 } from "drizzle-orm";
 
+import type { QueueTaskConfig } from "@/api/lib/queue";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { QueueDeferError } from "@/api/lib/queue";
@@ -20,8 +21,10 @@ import { core_queue } from "@/database/queue";
 import { resolveQueueTaskOutcome } from "@/lib/api/resolve-queue-task-outcome";
 
 const QUEUE_BATCH_SIZE = 25;
+const QUEUE_CONCURRENCY = 5;
 const QUEUE_LOCK_KEY = "queue:process";
 const QUEUE_LOCK_TTL_SECONDS = 55;
+const QUEUE_DRAIN_BUDGET_MS = 45_000;
 const QUEUE_RETENTION_DAYS = 7;
 const DEFAULT_QUEUE_LEASE_SECONDS = 600;
 
@@ -29,7 +32,11 @@ const DEDICATED_QUEUES = ["ai"] as const;
 
 interface ProcessQueueOptions {
   batchSize?: number;
+  /** How many tasks of one batch run at the same time. */
+  concurrency?: number;
   lockKey?: string;
+  /** Stop after this many batches even when more tasks are waiting. */
+  maxBatches?: number;
   queues?: string[];
 }
 
@@ -136,64 +143,121 @@ const claimQueueTasks = async (
       .returning();
   });
 
+interface QueueTaskResult {
+  availableAt: Date;
+  completedAt: Date | null;
+  deferred: boolean;
+  lastError: null | string;
+  status: QueueRow["status"];
+}
+
+const runQueueTask = async (
+  c: Context<EnvVitNode>,
+  task: QueueRow,
+  handlerMap: Map<string, QueueTaskConfig>,
+): Promise<QueueTaskResult> => {
+  const key = `${task.pluginId}:${task.name}`;
+  const registered = handlerMap.get(key);
+  let error: null | string = null;
+
+  if (!registered) {
+    error = `No handler registered for queue task "${key}"`;
+    await c.get("log").warn(error);
+  } else {
+    try {
+      await registered.handler(c, task.payload);
+    } catch (err) {
+      if (err instanceof QueueDeferError) {
+        return {
+          availableAt: err.until,
+          completedAt: null,
+          deferred: true,
+          lastError: err.message,
+          status: "pending",
+        };
+      }
+      error = err instanceof Error ? err.message : String(err);
+      await c.get("log").error(`Queue task "${key}" failed: ${error}`);
+    }
+  }
+
+  const outcome = resolveQueueTaskOutcome({
+    attempts: task.attempts,
+    maxAttempts: task.maxAttempts,
+    error,
+  });
+
+  return {
+    availableAt: outcome.availableAt ?? task.availableAt,
+    completedAt: outcome.completedAt ?? null,
+    deferred: false,
+    lastError: outcome.lastError,
+    status: outcome.status,
+  };
+};
+
+// Saved as each task finishes, not once the batch is done: a finished task
+// waiting on a slow sibling could outlive its lease and be run again. Fenced
+// by the claim, so a task the recovery loop already reclaimed is left alone.
+const saveQueueTaskResult = async (
+  c: Context<EnvVitNode>,
+  task: QueueRow,
+  result: QueueTaskResult,
+): Promise<void> => {
+  await c
+    .get("db")
+    .update(core_queue)
+    .set({
+      attempts: result.deferred
+        ? sql`GREATEST(${core_queue.attempts} - 1, 0)`
+        : undefined,
+      availableAt: result.availableAt,
+      completedAt: result.completedAt,
+      lastError: result.lastError,
+      reservedAt: null,
+      status: result.status,
+    })
+    .where(
+      and(
+        eq(core_queue.id, task.id),
+        eq(core_queue.status, "processing"),
+        task.reservedAt
+          ? eq(core_queue.reservedAt, task.reservedAt)
+          : undefined,
+      ),
+    );
+};
+
 const runClaimedQueueTasks = async (
   c: Context<EnvVitNode>,
   claimed: QueueRow[],
+  concurrency = QUEUE_CONCURRENCY,
 ): Promise<void> => {
   if (claimed.length === 0) return;
 
-  const db = c.get("db");
   const handlerMap = new Map(
     c.get("core").queue.map(task => [`${task.pluginId}:${task.name}`, task]),
   );
-
-  for (const task of claimed) {
-    const key = `${task.pluginId}:${task.name}`;
-    const registered = handlerMap.get(key);
-    let error: null | string = null;
-
-    if (!registered) {
-      error = `No handler registered for queue task "${key}"`;
-      await c.get("log").warn(error);
-    } else {
-      try {
-        await registered.handler(c, task.payload);
-      } catch (err) {
-        if (err instanceof QueueDeferError) {
-          await db
-            .update(core_queue)
-            .set({
-              attempts: sql`GREATEST(${core_queue.attempts} - 1, 0)`,
-              availableAt: err.until,
-              lastError: err.message,
-              reservedAt: null,
-              status: "pending",
-            })
-            .where(eq(core_queue.id, task.id));
-          continue;
-        }
-        error = err instanceof Error ? err.message : String(err);
-        await c.get("log").error(`Queue task "${key}" failed: ${error}`);
-      }
+  let next = 0;
+  // `runQueueTask` never rejects for a handler failure, so a plain worker pool
+  // is enough: each worker pulls the next task until the batch is drained.
+  const worker = async () => {
+    while (next < claimed.length) {
+      const task = claimed[next++];
+      await saveQueueTaskResult(
+        c,
+        task,
+        await runQueueTask(c, task, handlerMap),
+      );
     }
+  };
 
-    const outcome = resolveQueueTaskOutcome({
-      attempts: task.attempts,
-      maxAttempts: task.maxAttempts,
-      error,
-    });
-
-    await db
-      .update(core_queue)
-      .set({
-        status: outcome.status,
-        lastError: outcome.lastError,
-        availableAt: outcome.availableAt ?? task.availableAt,
-        completedAt: outcome.completedAt ?? null,
-        reservedAt: null,
-      })
-      .where(eq(core_queue.id, task.id));
-  }
+  await Promise.all(
+    Array.from(
+      { length: Math.max(1, Math.min(concurrency, claimed.length)) },
+      worker,
+    ),
+  );
 };
 
 export const processQueueTasksByIds = async (
@@ -214,7 +278,9 @@ export const processQueueTasks = async (
   c: Context<EnvVitNode>,
   {
     batchSize = QUEUE_BATCH_SIZE,
+    concurrency = QUEUE_CONCURRENCY,
     lockKey = QUEUE_LOCK_KEY,
+    maxBatches = Number.POSITIVE_INFINITY,
     queues,
   }: ProcessQueueOptions = {},
 ): Promise<void> => {
@@ -222,33 +288,77 @@ export const processQueueTasks = async (
     .get("cache")
     .acquireLock(lockKey, QUEUE_LOCK_TTL_SECONDS);
   if (!gotLock) return;
+  const lockedAt = Date.now();
 
   try {
-    const db = c.get("db");
-    const now = new Date();
-
-    await recoverAbandonedQueueTasks(c, now);
+    await recoverAbandonedQueueTasks(c, new Date());
 
     const queueFilter = queues
       ? inArray(core_queue.queue, queues)
       : notInArray(core_queue.queue, [...DEDICATED_QUEUES]);
-    await runClaimedQueueTasks(
-      c,
-      await claimQueueTasks(c, queueFilter, now, batchSize),
-    );
 
-    const cutoff = new Date(
-      now.getTime() - QUEUE_RETENTION_DAYS * 24 * 60 * 60 * 1000,
-    );
-    await db
+    // Keep claiming until the queue is empty, but never start a batch after
+    // the drain budget: that leaves the rest of the lock TTL for the batch in
+    // flight, so the lock is still ours whenever we claim. A batch that runs
+    // past the TTL is still safe - claims use `FOR UPDATE SKIP LOCKED`.
+    for (
+      let batch = 0;
+      batch < maxBatches && Date.now() - lockedAt < QUEUE_DRAIN_BUDGET_MS;
+      batch++
+    ) {
+      const claimed = await claimQueueTasks(
+        c,
+        queueFilter,
+        new Date(),
+        batchSize,
+      );
+      if (claimed.length === 0) break;
+
+      await runClaimedQueueTasks(c, claimed, concurrency);
+    }
+  } finally {
+    // Past the TTL the key may already belong to another instance's run.
+    if (Date.now() - lockedAt < QUEUE_LOCK_TTL_SECONDS * 1000) {
+      await c.get("cache").releaseLock(lockKey);
+    }
+  }
+};
+
+const QUEUE_RETENTION_BATCH_SIZE = 1000;
+const QUEUE_RETENTION_MAX_BATCHES = 100;
+
+/**
+ * Remove finished tasks older than the retention window, a bounded batch at a
+ * time so one hourly run never holds a long lock on a large queue table.
+ */
+export const deleteExpiredQueueTasks = async (
+  c: Context<EnvVitNode>,
+): Promise<void> => {
+  const db = c.get("db");
+  const cutoff = new Date(
+    Date.now() - QUEUE_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  );
+
+  for (let batch = 0; batch < QUEUE_RETENTION_MAX_BATCHES; batch++) {
+    const rows = await db
       .delete(core_queue)
       .where(
-        and(
-          inArray(core_queue.status, ["completed", "failed"]),
-          lt(core_queue.completedAt, cutoff),
+        inArray(
+          core_queue.id,
+          db
+            .select({ id: core_queue.id })
+            .from(core_queue)
+            .where(
+              and(
+                inArray(core_queue.status, ["completed", "failed"]),
+                lt(core_queue.completedAt, cutoff),
+              ),
+            )
+            .limit(QUEUE_RETENTION_BATCH_SIZE),
         ),
-      );
-  } finally {
-    await c.get("cache").releaseLock(lockKey);
+      )
+      .returning({ id: core_queue.id });
+
+    if (rows.length < QUEUE_RETENTION_BATCH_SIZE) break;
   }
 };

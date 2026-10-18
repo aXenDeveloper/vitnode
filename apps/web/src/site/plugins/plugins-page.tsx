@@ -131,7 +131,7 @@ export const PluginsPage = () => (
       <div aria-hidden className="mk-grid absolute inset-0 -z-10" />
       <div
         aria-hidden
-        className="mk-anim-drift bg-primary/20 absolute top-0 left-1/2 -z-10 size-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+        className="mk-anim-drift from-primary/20 absolute top-0 left-1/2 -z-10 size-128 -translate-x-1/2 -translate-y-1/2 bg-radial from-25% to-transparent to-70%"
       />
       <div className="container mx-auto flex flex-col items-center gap-6 px-4 py-16 text-center sm:px-6 sm:py-24">
         <Eyebrow>Plugins</Eyebrow>

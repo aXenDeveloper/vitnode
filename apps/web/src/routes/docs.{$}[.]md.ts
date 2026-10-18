@@ -2,7 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { movedDocsPath } from '@/docs/redirects'
 import { decodeMarkdownUrl, encodeMarkdownUrl } from '@/docs/shared'
-import { getLLMText, source } from '@/docs/source.server'
+import {
+  DOCS_TEXT_CACHE_HEADERS,
+  getLLMText,
+  source,
+} from '@/docs/source.server'
 
 export const Route = createFileRoute('/docs/{$}.md')({
   server: {
@@ -23,7 +27,10 @@ export const Route = createFileRoute('/docs/{$}.md')({
         if (!page) return new Response('Not Found', { status: 404 })
 
         return new Response(await getLLMText(page), {
-          headers: { 'content-type': 'text/markdown; charset=utf-8' },
+          headers: {
+            ...DOCS_TEXT_CACHE_HEADERS,
+            'content-type': 'text/markdown; charset=utf-8',
+          },
         })
       },
     },

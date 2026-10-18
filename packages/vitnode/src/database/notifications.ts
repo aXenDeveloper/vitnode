@@ -196,6 +196,10 @@ export const core_notification_deliveries = camelCase.table.withRLS(
       .where(sql`status = 'pending'`),
     index("core_notification_deliveries_status_idx").on(t.status, t.id),
     index("core_notification_deliveries_user_idx").on(t.userId),
+    // Deleting an event nulls this column on every delivery that pointed at it.
+    index("core_notification_deliveries_event_idx")
+      .on(t.eventId)
+      .where(sql`"eventId" IS NOT NULL`),
   ],
 );
 

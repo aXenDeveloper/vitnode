@@ -32,6 +32,7 @@ import { emitContentEvent } from "./emit";
 import { contentFileFields } from "./files";
 import { withHttpErrors } from "./http-errors";
 import { commitContentDrafts } from "./live-store";
+import { contentPublicStateOf } from "./page-cache";
 import {
   contentIdentifier,
   jsonBody,
@@ -273,7 +274,15 @@ export const buildContentLocalizedAdminRoutes = <
       operation === "create"
         ? { contentId: id }
         : { changedFields: [...changedFields], contentId: id },
-      { pluginId },
+      {
+        pluginId,
+        // A create or an edit moves no publication state, so the row says both.
+        publicState: contentPublicStateOf(
+          definition,
+          operation === "create" ? null : row,
+          row,
+        ),
+      },
     );
     await syncContentSearch(c, definition, {
       advanced: await contentSearchAdvancedValues(c, model, id),

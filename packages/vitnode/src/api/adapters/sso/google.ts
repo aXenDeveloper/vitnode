@@ -9,6 +9,9 @@ import { getRedirectUri } from "@/api/models/sso";
 
 import { GOOGLE_ICON } from "./icons";
 
+// A provider that stops answering would otherwise hang the sign-in request.
+const PROVIDER_TIMEOUT_MS = 10_000;
+
 export const GoogleSSOApiPlugin = ({
   clientId,
   clientSecret,
@@ -55,6 +58,7 @@ export const GoogleSSOApiPlugin = ({
           client_id: clientId,
           client_secret: clientSecret,
         }),
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
 
       if (!res.ok) {
@@ -80,6 +84,7 @@ export const GoogleSSOApiPlugin = ({
         headers: {
           Authorization: `${token_type} ${access_token}`,
         },
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
       const dataFromRes = await res.json();
       const { data, error } = userSchema.safeParse(dataFromRes);

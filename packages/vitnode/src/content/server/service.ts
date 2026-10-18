@@ -18,6 +18,7 @@ import type {
   ContentChangedPath,
   ContentCreateInput,
   ContentDetail,
+  ContentFieldMap,
   ContentFieldsOf,
   ContentFilterInput,
   ContentInnerFieldsOf,
@@ -331,6 +332,125 @@ export interface ContentServiceBase<TDefinition> {
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
 
+/**
+ * Everything `createContentService` derives from the definition and the model's
+ * tables alone - field partitions, column maps, reference aliases, the slug
+ * normaliser.
+ *
+ * `model.service(c)` builds a service per call, several times per request, and
+ * none of this depends on the request. Cached on the column map, which a model
+ * creates once, and only reused when every input is the same object.
+ */
+interface ContentServiceShape {
+  advanced: ContentAdvancedStore | undefined;
+  collectionReferences: Record<string, ContentPickerTarget>;
+  definition: AnyContentTypeDefinition;
+  fields: ContentFieldMap;
+  filterableFields: ContentFieldMap;
+  generatedColumnNames: string[];
+  localizedReferences: [string, ContentPickerTarget][];
+  orderable: ReturnType<typeof orderableColumns>;
+  ownColumnNames: string[];
+  references: ReturnType<typeof resolveReferenceTargets>;
+  searchColumns: PgColumn[];
+  slugs: ReturnType<typeof createSlugNormalizer>;
+  table: PgTableWithColumns<TableConfig>;
+  translationColumns: Record<string, PgColumn> | undefined;
+  translationSearchColumns: PgColumn[];
+}
+
+const contentServiceShapes = new WeakMap<object, ContentServiceShape>();
+
+const contentServiceShape = ({
+  advanced,
+  columns,
+  definition,
+  table,
+  translationColumns,
+}: {
+  advanced: ContentAdvancedStore | undefined;
+  columns: Record<string, PgColumn>;
+  definition: AnyContentTypeDefinition;
+  table: PgTableWithColumns<TableConfig>;
+  translationColumns: Record<string, PgColumn> | undefined;
+}): ContentServiceShape => {
+  const cached = contentServiceShapes.get(columns);
+  if (
+    cached?.definition === definition &&
+    cached.table === table &&
+    cached.advanced === advanced &&
+    cached.translationColumns === translationColumns
+  ) {
+    return cached;
+  }
+
+  // Shared only, everywhere in this file: this service reads and writes the base
+  // table, and a localized field is not a column on it. The translation model
+  // owns the other half.
+  const { collectionFields, sharedFields } = partitionContentFields(
+    definition.fields,
+  );
+  const fields = sharedFields;
+  // Groups flattened, so every `SELECT`, `INSERT` and `UPDATE` below addresses
+  // real columns and nothing has to know what a group is.
+  const storageColumns = contentStorageColumns(fields);
+  const generatedColumnNames = [
+    ...CONTENT_SYSTEM_FIELDS,
+    ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
+    ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
+    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
+  ];
+  const references = resolveReferenceTargets(definition, table, columns);
+  // The to-many half of the same question. Kept in its own map because these
+  // targets are never joined into the list query - a to-many field has no
+  // column on this row to join through - and are only ever read by the picker.
+  const collectionReferences = resolveCollectionPickerTargets(
+    definition,
+    field => advanced?.targetTable(field) ?? null,
+  );
+  const isSharedField = (name: string): boolean =>
+    sharedFields[name] !== undefined;
+
+  const shape: ContentServiceShape = {
+    advanced,
+    collectionReferences,
+    definition,
+    fields,
+    filterableFields: { ...fields, ...collectionFields },
+    generatedColumnNames,
+    // The references whose label is not on the target's base table at all.
+    // Empty for every content type that points at a shared title, which is what
+    // keeps the language registry out of their query plan entirely.
+    //
+    // **Both** maps, and the to-many half is not optional: a picker whose target
+    // has a localized title has no label column to fall back on - the value is
+    // on the translation table and nowhere else - so leaving collections out of
+    // this is what makes such a field offer bare identifiers.
+    localizedReferences: [
+      ...Object.entries(references),
+      ...Object.entries(collectionReferences),
+    ].filter(([, target]) => target.localizedLabel !== undefined),
+    orderable: orderableColumns(definition),
+    ownColumnNames: [...generatedColumnNames, ...Object.keys(storageColumns)],
+    references,
+    searchColumns: definition.admin.list.searchableFields
+      .filter(isSharedField)
+      .map(name => columns[name]),
+    slugs: createSlugNormalizer(definition.id, fields),
+    table,
+    translationColumns,
+    translationSearchColumns: translationColumns
+      ? definition.admin.list.searchableFields
+          .filter(name => !isSharedField(name))
+          .map(name => translationColumns[name])
+      : [],
+  };
+
+  contentServiceShapes.set(columns, shape);
+
+  return shape;
+};
+
 export const createContentService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -354,62 +474,29 @@ export const createContentService = <
     table: PgTable;
   };
 }): ContentService<TDefinition> => {
-  // Shared only, everywhere in this file: this service reads and writes the base
-  // table, and a localized field is not a column on it. The translation model
-  // owns the other half.
-  const { collectionFields, sharedFields } = partitionContentFields(
-    definition.fields,
-  );
-  const fields = sharedFields;
-  // Groups flattened, so every `SELECT`, `INSERT` and `UPDATE` below addresses
-  // real columns and nothing has to know what a group is.
-  const storageColumns = contentStorageColumns(fields);
-  const filterableFields = { ...fields, ...collectionFields };
+  const {
+    collectionReferences,
+    fields,
+    filterableFields,
+    generatedColumnNames,
+    localizedReferences,
+    orderable,
+    ownColumnNames,
+    references,
+    searchColumns,
+    slugs: { withCreateSlugs, withUpdateSlugs },
+    translationSearchColumns,
+  } = contentServiceShape({
+    advanced,
+    columns,
+    definition,
+    table,
+    translationColumns: translation?.columns,
+  });
   const store = advanced;
   const contentTypeId = definition.id;
   const primaryCursor = columns.id as PaginationCursorColumn;
-  const orderable = orderableColumns(definition);
   const publication = definition.publication.enabled;
-  const generatedColumnNames = [
-    ...CONTENT_SYSTEM_FIELDS,
-    ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
-    ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
-    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
-  ];
-  const ownColumnNames = [
-    ...generatedColumnNames,
-    ...Object.keys(storageColumns),
-  ];
-  const references = resolveReferenceTargets(definition, table, columns);
-  // The to-many half of the same question. Kept in its own map because these
-  // targets are never joined into the list query - a to-many field has no
-  // column on this row to join through - and are only ever read by the picker.
-  const collectionReferences = resolveCollectionPickerTargets(
-    definition,
-    field => store?.targetTable(field) ?? null,
-  );
-  // The references whose label is not on the target's base table at all. Empty
-  // for every content type that points at a shared title, which is what keeps
-  // the language registry out of their query plan entirely.
-  //
-  // **Both** maps, and the to-many half is not optional: a picker whose target
-  // has a localized title has no label column to fall back on - the value is on
-  // the translation table and nowhere else - so leaving collections out of this
-  // is what makes such a field offer bare identifiers.
-  const localizedReferences = [
-    ...Object.entries(references),
-    ...Object.entries(collectionReferences),
-  ].filter(([, target]) => target.localizedLabel !== undefined);
-  const isSharedField = (name: string): boolean =>
-    sharedFields[name] !== undefined;
-  const searchColumns = definition.admin.list.searchableFields
-    .filter(isSharedField)
-    .map(name => columns[name]);
-  const translationSearchColumns = translation
-    ? definition.admin.list.searchableFields
-        .filter(name => !isSharedField(name))
-        .map(name => translation.columns[name])
-    : [];
 
   const searchCondition = (term: string | undefined): SQL | undefined => {
     const shared = buildSearchCondition(searchColumns, term);
@@ -424,11 +511,6 @@ export const createContentService = <
 
     return shared && localized ? or(shared, localized) : (shared ?? localized);
   };
-
-  const { withCreateSlugs, withUpdateSlugs } = createSlugNormalizer(
-    contentTypeId,
-    fields,
-  );
 
   const mutableRelations: Record<
     string,

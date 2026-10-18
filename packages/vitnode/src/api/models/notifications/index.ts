@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import type { NotificationSubject } from "@/lib/notifications/types";
 
+import { runAfterResponse } from "@/api/lib/after-response";
 import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
 import { core_notifications } from "@/database/notifications";
 
@@ -28,13 +29,16 @@ export class NotificationsModel {
     const ids = this.queued.splice(0);
     if (ids.length === 0) return;
 
-    void processQueueTasksByIds(this.c, ids).catch(async (error: unknown) => {
-      await this.c
-        .get("log")
-        .warn(
-          `[Notifications] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
-        );
-    });
+    runAfterResponse(
+      this.c,
+      processQueueTasksByIds(this.c, ids).catch(async (error: unknown) => {
+        await this.c
+          .get("log")
+          .warn(
+            `[Notifications] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
+          );
+      }),
+    );
   }
 
   async publish<TData>(

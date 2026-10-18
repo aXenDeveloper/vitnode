@@ -10,9 +10,9 @@ Exact options and behavior of the page cache. For a walkthrough, see [Cache serv
 
 Accepted by `page()` and `index()` from `@vitnode/core/routing`.
 
-| Name                   | Type     | Required | Default | Description                                                              |
-| ---------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------ |
-| `maxAge`               | `number` | Yes      | -       | Seconds a stored page is fresh. Whole number from 1 to 31536000.         |
+| Name                   | Type     | Required | Default | Description                                                                  |
+| ---------------------- | -------- | -------- | ------- | ---------------------------------------------------------------------------- |
+| `maxAge`               | `number` | Yes      | -       | Seconds a stored page is fresh. Whole number from 1 to 31536000.             |
 | `staleWhileRevalidate` | `number` | No       | `0`     | Extra seconds a stale page may be served while it re-renders. 0 to 31536000. |
 
 `cache: false` declares that the route is not cached, which is also the default. The build fails with `invalid-cache` for a layout, an unknown key or a duration outside these ranges. A policy on an AdminCP route, an `/api` path or a route with `requires` (its own or a parent layout's) fails the build too.
@@ -21,11 +21,11 @@ Accepted by `page()` and `index()` from `@vitnode/core/routing`.
 
 Set in `buildConfig()` in the host app's `src/vitnode.config.ts`.
 
-| Name      | Type                                         | Required | Default    | Description                                                                         |
-| --------- | -------------------------------------------- | -------- | ---------- | ----------------------------------------------------------------------------------- |
-| `enabled` | `boolean`                                    | No       | `true`     | `false` turns the cache off for every route. Development never caches either way.   |
-| `storage` | `"memory" \| "redis"`                        | No       | `"memory"` | `"redis"` reads `REDIS_URL` when the server starts.                                 |
-| `routes`  | `Record<string, PageCacheSetting>`           | No       | `{}`       | Per-route override, keyed by canonical path (`"/blog/:slug"`). `false` disables.    |
+| Name      | Type                               | Required | Default    | Description                                                                        |
+| --------- | ---------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------- |
+| `enabled` | `boolean`                          | No       | `true`     | `false` turns the cache off for every route. Development never caches either way.  |
+| `storage` | `"memory" \| "redis"`              | No       | `"memory"` | `"redis"` reads `REDIS_URL` (and `REDIS_PASSWORD`, if set) when the server starts. |
+| `routes`  | `Record<string, PageCacheSetting>` | No       | `{}`       | Per-route override, keyed by canonical path (`"/blog/:slug"`). `false` disables.   |
 
 An override wins over the route's own `cache`, and may opt in one of the app's own route files. A key that matches no page route fails the build.
 
@@ -33,21 +33,21 @@ An override wins over the route's own `cache`, and may opt in one of the app's o
 
 From `@vitnode/core/tanstack/page-cache/server`. Wraps a TanStack Start server entry and returns one with the same `fetch`.
 
-| Name      | Type                  | Required | Description                                   |
-| --------- | --------------------- | -------- | --------------------------------------------- |
+| Name      | Type                  | Required | Description                                     |
+| --------- | --------------------- | -------- | ----------------------------------------------- |
 | `buildId` | `string`              | Yes      | `pageCacheBuildId` from `src/page-cache.gen.ts` |
-| `config`  | `VitNodeConfig`       | Yes      | The app's `vitNodeConfig`                     |
+| `config`  | `VitNodeConfig`       | Yes      | The app's `vitNodeConfig`                       |
 | `routes`  | `PageCacheRouteTable` | Yes      | `pageCacheRoutes` from `src/page-cache.gen.ts`  |
 
 ## Response headers
 
-| Header             | Value                                          | Meaning                                                              |
-| ------------------ | ---------------------------------------------- | -------------------------------------------------------------------- |
-| `x-vitnode-cache`  | `HIT`, `STALE`, `MISS`, `REVALIDATED`          | Served from the cache, stale while refreshing, rendered and stored, or re-rendered after expiry |
-| `x-vitnode-cache`  | `BYPASS`                                       | The request skipped the cache, or the render could not be shared     |
-| `cache-control`    | `no-cache`                                     | A shared page: browsers and CDNs must revalidate with the `ETag`     |
-| `cache-control`    | `private, no-cache`                            | A shared page that also sets this visitor's locale cookie            |
-| `cache-control`    | `private, no-store`                            | A page rendered for one visitor                                      |
+| Header            | Value                                 | Meaning                                                                                         |
+| ----------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `x-vitnode-cache` | `HIT`, `STALE`, `MISS`, `REVALIDATED` | Served from the cache, stale while refreshing, rendered and stored, or re-rendered after expiry |
+| `x-vitnode-cache` | `BYPASS`                              | The request skipped the cache, or the render could not be shared                                |
+| `cache-control`   | `no-cache`                            | A shared page: browsers and CDNs must revalidate with the `ETag`                                |
+| `cache-control`   | `private, no-cache`                   | A shared page that also sets this visitor's locale cookie                                       |
+| `cache-control`   | `private, no-store`                   | A page rendered for one visitor                                                                 |
 
 Routes without a policy keep their usual headers and get no `x-vitnode-cache`.
 
@@ -66,10 +66,10 @@ Entries are keyed by the request origin (scheme, host and port), the path, the m
 
 From `@vitnode/core/api/lib/page-cache`, for data a cached page reads from your own Hono routes.
 
-| Function                                    | Returns                                   | Behavior                                                                                         |
-| ------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `setPageCacheTags(c, tags)`                 | `void`                                    | Labels the response. A cached page that reads it during its render is stored with these tags.  |
-| `invalidatePageCacheTags(tags, { mode })`   | `Promise<PageCacheInvalidationResult>`    | Invalidates every page stored with any of `tags`. `mode` is `"soft"` or `"hard"`.                |
+| Function                                  | Returns                                | Behavior                                                                                      |
+| ----------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `setPageCacheTags(c, tags)`               | `void`                                 | Labels the response. A cached page that reads it during its render is stored with these tags. |
+| `invalidatePageCacheTags(tags, { mode })` | `Promise<PageCacheInvalidationResult>` | Invalidates every page stored with any of `tags`. `mode` is `"soft"` or `"hard"`.             |
 
 ```ts title="plugins/events/src/api/modules/events/routes/list.route.ts"
 import { setPageCacheTags } from '@vitnode/core/api/lib/page-cache'
@@ -93,7 +93,7 @@ if (result.status === 'failed') {
 
 Only for an API that runs in its own process next to a web app using `storage: "redis"`.
 
-| Name          | Type      | Required | Default | Description                                                            |
-| ------------- | --------- | -------- | ------- | ---------------------------------------------------------------------- |
-| `storage`     | `"redis"` | Yes      | -       | Writes invalidations to the Redis at `REDIS_URL`.                      |
+| Name          | Type      | Required | Default | Description                                                              |
+| ------------- | --------- | -------- | ------- | ------------------------------------------------------------------------ |
+| `storage`     | `"redis"` | Yes      | -       | Writes invalidations through the API's `redis` client, or `REDIS_URL`.   |
 | `maxLifetime` | `number`  | No       | `86400` | Longest `maxAge + staleWhileRevalidate` of any cached route, in seconds. |

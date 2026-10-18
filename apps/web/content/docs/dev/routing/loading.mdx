@@ -28,13 +28,13 @@ export function getRouter() {
     // [!code ++:3]
     defaultPendingComponent: RoutePendingSpinner,
     defaultPendingMs: 150,
-    defaultPendingMinMs: 300,
+    defaultPendingMinMs: 200,
   })
 }
 ```
 
 - `defaultPendingMs: 150` — Prevents visual flickering on fast network responses by waiting 150ms before showing the spinner.
-- `defaultPendingMinMs: 300` — Ensures that once shown, the spinner remains visible for at least 300ms to avoid jarring flashes.
+- `defaultPendingMinMs: 200` — Ensures that once shown, the spinner remains visible for at least 200ms to avoid jarring flashes, without holding a page that is already loaded for long.
 
 {/* Image prompt: Minimal centered loading spinner in a clean dark UI shell with accessible aria-live indicator, 1440x900. */}
 

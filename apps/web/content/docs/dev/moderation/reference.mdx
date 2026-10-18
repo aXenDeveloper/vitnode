@@ -120,7 +120,7 @@ Also under `/api/@vitnode/core/moderation`, for [approvals](/docs/content-engine
 | -------------------------------- | ------------- | ------------------------------------------------------------------------- | ---------------------------------- |
 | `GET /approvals`                 | `can_approve` | Query `status` (default `pending`), `contentTypeId`, `containerId`, `page`, `pageSize` | `{ items, page, pageSize, total }` |
 | `GET /approvals/filters`         | `can_approve` |                                                                           | `{ contentTypes, containers }` the moderator may review |
-| `GET /approvals/mine`            | Signed in     | Query `page`, `pageSize`                                                  | The member's own pending, approved and rejected submissions, newest first |
+| `GET /approvals/mine`            | Signed in     | Query `page`, `pageSize`, `pluginId` (optional, one plugin's submissions only) | The member's own pending, approved and rejected submissions, newest first |
 | `GET /approvals/{id}`            | `can_approve` |                                                                           | The submission with `values`, `baseValues`, `current`, `fields`, `record` and `history` |
 | `POST /approvals/{id}/approve`   | `can_approve` |                                                                           | `{ id, status }`                   |
 | `POST /approvals/{id}/reject`    | `can_approve` | `{ reason? }`, up to 2000 characters                                      | `{ id, status }`                   |

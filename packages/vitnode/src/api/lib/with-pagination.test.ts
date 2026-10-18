@@ -79,7 +79,11 @@ const pageRequest = async ({
     table: rows,
   });
 
-  return { ...seen.mock.calls[0][0], pageInfo };
+  // A clamped page is read twice; the last read is the one that is served.
+  const lastCall = seen.mock.lastCall;
+  if (!lastCall) throw new Error("The page query never ran.");
+
+  return { ...lastCall[0], pageInfo };
 };
 
 const pageFor = async (args: {

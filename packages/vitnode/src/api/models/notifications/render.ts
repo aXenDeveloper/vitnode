@@ -25,7 +25,34 @@ import type { NotificationsContext } from "./shared";
 
 import { getNotificationRegistry } from "./shared";
 
-export type NotificationEventRow = typeof core_notification_events.$inferSelect;
+/**
+ * The event columns every read path needs. `recipientIds` is left out on
+ * purpose: it holds up to 100k ids (~400KB) and only fan-out reads it, one slice
+ * at a time. `lastError` is write-only bookkeeping.
+ */
+export const notificationEventColumns = {
+  actorId: core_notification_events.actorId,
+  allowSelf: core_notification_events.allowSelf,
+  completedAt: core_notification_events.completedAt,
+  createdAt: core_notification_events.createdAt,
+  data: core_notification_events.data,
+  deliveredCount: core_notification_events.deliveredCount,
+  groupKey: core_notification_events.groupKey,
+  id: core_notification_events.id,
+  idempotencyKey: core_notification_events.idempotencyKey,
+  pluginId: core_notification_events.pluginId,
+  recipientCursor: core_notification_events.recipientCursor,
+  schemaVersion: core_notification_events.schemaVersion,
+  status: core_notification_events.status,
+  subjectId: core_notification_events.subjectId,
+  subjectType: core_notification_events.subjectType,
+  type: core_notification_events.type,
+};
+
+export type NotificationEventRow = Omit<
+  typeof core_notification_events.$inferSelect,
+  "lastError" | "recipientIds"
+>;
 
 export interface NotificationActor {
   avatarColor: string;

@@ -23,8 +23,10 @@ export const Route = createFileRoute('/_docs/docs/$')({
     }
   },
   loader: async ({ params }) => {
-    const page = await getDocsPage({ data: params._splat ?? '' })
-    const { docs } = await import('@/docs/source')
+    const [page, { docs }] = await Promise.all([
+      getDocsPage({ data: params._splat ?? '' }),
+      import('@/docs/source'),
+    ])
 
     await docs.getPage(page.path)?.preload()
 

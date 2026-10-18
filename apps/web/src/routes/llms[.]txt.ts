@@ -1,14 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { llms } from 'fumadocs-core/source'
 
-import { source } from '@/docs/source.server'
+import {
+  DOCS_TEXT_CACHE_HEADERS,
+  memoizeDocsText,
+  source,
+} from '@/docs/source.server'
+
+const readIndex = memoizeDocsText(async () =>
+  Promise.resolve(llms(source).index()),
+)
 
 export const Route = createFileRoute('/llms.txt')({
   server: {
     handlers: {
-      GET: () =>
-        new Response(llms(source).index(), {
-          headers: { 'content-type': 'text/plain; charset=utf-8' },
+      GET: async () =>
+        new Response(await readIndex(), {
+          headers: {
+            ...DOCS_TEXT_CACHE_HEADERS,
+            'content-type': 'text/plain; charset=utf-8',
+          },
         }),
     },
   },

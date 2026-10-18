@@ -11,6 +11,13 @@ const COLUMNS = 8;
 const ROW_HEIGHT = 36;
 const OVERSCAN_ROWS = 4;
 
+// The grid only renders by whole rows, so a scroll that stays within the same
+// rows needs no re-render.
+const sameVisibleRows = (left: number, right: number, height: number) =>
+  Math.floor(left / ROW_HEIGHT) === Math.floor(right / ROW_HEIGHT) &&
+  Math.ceil((left + height) / ROW_HEIGHT) ===
+    Math.ceil((right + height) / ROW_HEIGHT);
+
 const matchesSearch = (name: string, terms: string[]) =>
   terms.every(term => name.includes(term));
 
@@ -156,9 +163,14 @@ const IconGrid = ({
         moveTo(next);
       }}
       onMouseLeave={() => onPreview(undefined)}
-      onScroll={event =>
-        setScroll({ search, top: event.currentTarget.scrollTop })
-      }
+      onScroll={event => {
+        const top = event.currentTarget.scrollTop;
+        setScroll(current =>
+          current.search === search && sameVisibleRows(current.top, top, height)
+            ? current
+            : { search, top },
+        );
+      }}
       ref={containerRef}
       style={{ height }}
     >

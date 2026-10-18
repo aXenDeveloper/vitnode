@@ -42,6 +42,14 @@ interface KnownDevice {
   publicId: string;
 }
 
+// One lookup per request: session and admin-session resolution both ask for
+// the device, and the answer cannot change mid-request (the cookie is the
+// request's own). Keyed by the context so it is dropped with the request.
+const existingDeviceByRequest = new WeakMap<
+  Context,
+  Promise<KnownDevice | null>
+>();
+
 export class DeviceModel {
   constructor(c: Context) {
     this.c = c;
@@ -79,6 +87,29 @@ export class DeviceModel {
 
   private getUserAgent() {
     return this.c.req.header("User-Agent") ?? "node";
+  }
+
+  private async lookupExistingDevice(): Promise<KnownDevice | null> {
+    const publicId = this.getDeviceCookie();
+    if (!publicId) return null;
+
+    const now = new Date();
+    const cached = await this.c
+      .get("cache")
+      .getSystem<CachedDevice>(deviceCacheKey(publicId));
+
+    if (
+      cached &&
+      !isDeviceTouchDue({
+        stored: { ...cached, lastSeen: new Date(cached.lastSeen) },
+        current: this.getFingerprint(),
+        now,
+      })
+    ) {
+      return { id: cached.id, publicId };
+    }
+
+    return await this.resolveDevice(publicId, now);
   }
 
   private async resolveDevice(
@@ -149,26 +180,16 @@ export class DeviceModel {
    * row per request, for as long as anybody cared to keep sending them.
    */
   async getExistingDeviceId(): Promise<KnownDevice | null> {
-    const publicId = this.getDeviceCookie();
-    if (!publicId) return null;
+    const remembered = existingDeviceByRequest.get(this.c);
+    if (remembered) return await remembered;
 
-    const now = new Date();
-    const cached = await this.c
-      .get("cache")
-      .getSystem<CachedDevice>(deviceCacheKey(publicId));
+    const lookup = this.lookupExistingDevice();
+    existingDeviceByRequest.set(this.c, lookup);
+    // A failed lookup is not remembered, so a retry in the same request can
+    // still succeed.
+    void lookup.catch(() => existingDeviceByRequest.delete(this.c));
 
-    if (
-      cached &&
-      !isDeviceTouchDue({
-        stored: { ...cached, lastSeen: new Date(cached.lastSeen) },
-        current: this.getFingerprint(),
-        now,
-      })
-    ) {
-      return { id: cached.id, publicId };
-    }
-
-    return await this.resolveDevice(publicId, now);
+    return await lookup;
   }
 
   /**
