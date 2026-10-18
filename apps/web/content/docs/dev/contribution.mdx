@@ -121,6 +121,46 @@ The documentation portal in `apps/web` speaks Markdown as well as HTML, so agent
 
 Requesting a docs page with an `Accept: text/markdown` header redirects to its `.md` twin, so a curious agent gets Markdown without asking twice. Every page also has a **Copy Markdown** button and an **Open in** menu for ChatGPT, Claude and friends.
 
+### Implementation prompts
+
+A guide that adds a feature to someone's project can also show **Copy implementation prompt**. One click copies a prompt for a coding agent: it links the guide and its Markdown, tells the agent to inspect the reader's project, ask a few questions, and then build the feature where the reader chose.
+
+Add it only to a how-to or tutorial that ends in working code inside a plugin or app. Overviews, references and UI component demos do not get one.
+
+Declare the `implementation` field in the guide's frontmatter:
+
+```yaml title="apps/web/content/docs/dev/notifications/publishing.mdx"
+---
+title: Publish notifications
+description: Send a notification from a VitNode plugin.
+implementation:
+  objective: Send an in-app notification when something happens in a plugin.
+  decisions:
+    - Which plugin sends it? Offer plugins in the project with an API part (`config.api.ts`).
+    - Which event triggers it? Offer write routes, actions, queue tasks or cron jobs found in the chosen plugin.
+    - Who receives it? Offer recipients the chosen event can resolve from existing data, such as the content author.
+    - Should members also get email by default? None (inbox only), immediately, or in a daily or weekly digest.
+  constraints:
+    - Publish with `c.get("notifications").publish()` inside the same transaction as the write.
+  related:
+    - title: Notification types
+      href: /docs/dev/notifications/notification-types
+---
+```
+
+| Field         | Required | What to write                                                                |
+| :------------ | :------- | :--------------------------------------------------------------------------- |
+| `objective`   | Yes      | One line saying what gets built, without the guide's example names           |
+| `decisions`   | Yes      | 1 to 6 questions the reader must answer, in dependency order                 |
+| `constraints` | No       | Up to 6 rules the agent must keep, such as the API to reuse                  |
+| `related`     | No       | Up to 4 other docs pages, as `/docs/...` paths, optionally with a `#heading` |
+
+Write each decision as a question in the reader's words, followed by where the agent finds the answers in the project: "Offer content types from the chosen plugin". The agent discovers the real choices by reading the reader's code, so never list the guide's example plugin, such as `@acme/forum`, as an answer. That plugin exists in the guide, not in the reader's project. When the feature supports a fixed set of options, list exactly those and nothing it cannot do.
+
+The shared workflow (inspect first, skip answered questions, ask dependent questions after their answer, work without a structured question tool, report the result) lives once in `apps/web/src/docs/implementation/prompt.ts`. Do not repeat it in a guide, and do not copy the tutorial into the metadata: the prompt links to it.
+
+To check your prompt, run `pnpm dev`, open the guide, click **Copy implementation prompt** and paste it into a text editor. Every link should open, and every decision should make sense for a project that has never heard of the guide's example plugin. A typo in the field, such as an unknown key or a link that is not a `/docs/` path, fails the docs build with the file name. YAML reads `key: value` inside a list item as an object, so wrap a line that contains `: ` in single quotes.
+
 ---
 
 ## Pull Request Guidelines

@@ -11,6 +11,12 @@ import {
 import { ChevronRight } from 'lucide-react'
 import { Fragment } from 'react'
 
+import { SITE_ORIGIN } from '@/site/marketing/links'
+
+import type { DocsImplementation } from './implementation/schema'
+
+import { buildImplementationPrompt } from './implementation/prompt'
+
 const markdownCache = new Map<string, string>()
 
 const loadMarkdown = async (markdownUrl: string) => {
@@ -55,13 +61,17 @@ const IconArtwork = ({ icon }: { icon: React.ReactNode }) => (
 export const DocsPageHeader = ({
   description,
   githubUrl,
+  implementation,
   markdownUrl,
   title,
+  url,
 }: {
   description?: string
   githubUrl: string
+  implementation?: DocsImplementation
   markdownUrl: string
   title: string
+  url: string
 }) => {
   const path = useTreePath()
   const icon = path.at(-1)?.icon
@@ -92,6 +102,23 @@ export const DocsPageHeader = ({
           {description}
         </DocsDescription>
         <div className="flex flex-wrap items-center gap-2 pt-1">
+          {implementation && (
+            <CopyButton
+              content={() =>
+                buildImplementationPrompt({
+                  implementation,
+                  markdownUrl,
+                  origin: SITE_ORIGIN,
+                  title,
+                  url,
+                })
+              }
+              size="sm"
+              variant="default"
+            >
+              Copy implementation prompt
+            </CopyButton>
+          )}
           <CopyButton
             content={async () => await loadMarkdown(markdownUrl)}
             size="sm"

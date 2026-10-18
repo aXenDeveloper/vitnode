@@ -12,7 +12,8 @@
     "check": "oxfmt --check .",
     "start": "vitnode start",
     "typecheck": "tsc --noEmit",
-    "lint:fix": "oxlint --type-aware --fix"
+    "lint:fix": "oxlint --type-aware --fix",
+    "test": "node --test src/tests/*.test.ts"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.6.3",

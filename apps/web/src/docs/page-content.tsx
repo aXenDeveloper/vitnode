@@ -24,6 +24,7 @@ export const DocsPageContent = ({
   githubUrl,
   markdownUrl,
   path,
+  url,
 }: DocsPageData) => {
   const pathname = usePathname()
   const page = docs.getPage(path)
@@ -45,8 +46,10 @@ export const DocsPageContent = ({
       <DocsPageHeader
         description={page.description}
         githubUrl={githubUrl}
+        implementation={page.implementation}
         markdownUrl={markdownUrl}
         title={page.title}
+        url={url}
       />
 
       <DocsBody className="pt-2">

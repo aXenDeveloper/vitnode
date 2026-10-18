@@ -31,6 +31,7 @@ export const getDocsPage = createServerFn({ method: 'GET' })
       markdownUrl: encodeMarkdownUrl(page.slugs),
       metaTitle: [page.data.title, ...ancestors].join(' - '),
       path: page.path,
+      url: page.url,
     }
   })
 

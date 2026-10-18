@@ -1,5 +1,7 @@
 import { defineDocs } from 'fumadocs-mdx/macro'
 
+import { docsPageSchema } from './implementation/schema'
+
 export const docs = defineDocs({
   dir: 'content/docs',
   docs: {
@@ -7,5 +9,6 @@ export const docs = defineDocs({
     postprocess: {
       includeProcessedMarkdown: true,
     },
+    schema: docsPageSchema,
   },
 })

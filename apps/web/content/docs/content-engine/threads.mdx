@@ -2,6 +2,26 @@
 title: Threaded replies
 description: Build nested replies with the VitNode Content Engine thread option - a to-one self relation for the parent, a root relation that also gives the reply its container, generated slugs, public author summaries and the GET /thread route.
 icon: MessagesSquare
+implementation:
+  objective: Add threaded replies, such as comments, under an existing content type.
+  decisions:
+    - Which plugin owns the replies? Offer plugins in the project that define Content Engine content types.
+    - Which items get replies? Offer content types from the chosen plugin by their user-facing names, such as "Topics" or "Articles". A root needs a public API; if the choice has none, say so and ask whether to add it.
+    - Who writes replies? Signed-in members from the public site (uses Public write), or only staff in the AdminCP.
+    - Where do replies appear? Offer the public pages that already show the chosen items, such as the detail page.
+    - How deep can replies nest? From 1 (a flat list) to 32 levels; recommend the guide's depth unless a flat list is wanted.
+  constraints:
+    - Use the content type `thread` option. Do not build a separate comments table, tree query or placement checks.
+    - 'The root relation is required, to-one and `container: true`; `parent` is a nullable to-one self relation. Both belong in `publicApi.fields` and neither in `publicWrite.update.fields`.'
+    - 'Read replies with the generated `GET /{publicApi.path}/thread` route through `fetcher`, and render tombstones (`removed: true`) so the tree keeps its shape.'
+    - Create the table with the project's build and migration scripts, not hand-written SQL.
+  related:
+    - title: Public write
+      href: /docs/content-engine/public-write
+    - title: Public write frontend
+      href: /docs/content-engine/public-write-frontend
+    - title: Thread reference
+      href: /docs/content-engine/reference#thread
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
