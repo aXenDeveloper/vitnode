@@ -1,3 +1,5 @@
+import type { ExecutionContext } from "hono";
+
 /** What the API's client-IP middleware reads off `c.env` for the socket address. */
 export interface InProcessApiEnv {
   clientAddress?: string;
@@ -6,6 +8,7 @@ export interface InProcessApiEnv {
 export type InProcessApiHandler = (
   request: Request,
   env?: InProcessApiEnv,
+  executionCtx?: ExecutionContext,
 ) => Promise<Response> | Response;
 
 const HANDLER_KEY = Symbol.for("vitnode.fetcher.in-process-api");

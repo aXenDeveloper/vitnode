@@ -16,6 +16,7 @@ import type {
   ResponseFor,
 } from "@/lib/fetcher/types";
 
+import { executionContextOf } from "@/api/lib/after-response";
 import { CONFIG } from "@/lib/config";
 import { coreFetcher } from "@/lib/fetcher/core";
 import {
@@ -88,8 +89,13 @@ const inProcessTransport = (
   // The socket address the `/api/*` route hands the API for a browser call,
   // so its client-IP fallback resolves the same visitor.
   const clientAddress = fromRequest(getRequestIP);
+  // Work the API starts after its response (queued emails) lives as long as
+  // the page request does.
+  const incoming = fromRequest(getRequest);
+  const executionCtx = incoming ? executionContextOf(incoming) : undefined;
 
-  return async request => await handler(request, { clientAddress });
+  return async request =>
+    await handler(request, { clientAddress }, executionCtx);
 };
 
 type FetchOptions = RawApiFetchArgs["options"];

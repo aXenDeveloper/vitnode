@@ -49,6 +49,26 @@ export class CacheModel {
     return pluginId ? `${CACHE_PREFIX}${pluginId}:` : CACHE_PREFIX;
   }
 
+  private async putKey<T>(
+    fullKey: string,
+    value: T,
+    ttlSeconds?: number,
+  ): Promise<void> {
+    const raw = JSON.stringify(value);
+    if (!this.client) {
+      this.memory?.set(fullKey, raw, ttlSeconds);
+
+      return;
+    }
+    if (ttlSeconds && ttlSeconds > 0) {
+      await this.client.set(fullKey, raw, {
+        expiration: { type: "EX", value: ttlSeconds },
+      });
+    } else {
+      await this.client.set(fullKey, raw);
+    }
+  }
+
   private async readKey<T>(fullKey: string): Promise<null | T> {
     try {
       const raw = this.client
@@ -101,19 +121,7 @@ export class CacheModel {
     ttlSeconds?: number,
   ): Promise<void> {
     try {
-      const raw = JSON.stringify(value);
-      if (!this.client) {
-        this.memory?.set(fullKey, raw, ttlSeconds);
-
-        return;
-      }
-      if (ttlSeconds && ttlSeconds > 0) {
-        await this.client.set(fullKey, raw, {
-          expiration: { type: "EX", value: ttlSeconds },
-        });
-      } else {
-        await this.client.set(fullKey, raw);
-      }
+      await this.putKey(fullKey, value, ttlSeconds);
     } catch {
       /* caching must never break the request */
     }
@@ -244,12 +252,24 @@ export class CacheModel {
     await this.writeKey(this.key(key), value, ttlSeconds);
   }
 
+  /**
+   * `strict` rethrows a failed write instead of swallowing it - for an
+   * invalidation stamp, whose caller has to know it did not land so it can
+   * retry rather than leave readers on the old generation.
+   */
   async setSystem<T>(
     key: string,
     value: T,
     ttlSeconds?: number,
+    { strict = false }: { strict?: boolean } = {},
   ): Promise<void> {
-    await this.writeKey(this.systemKey(key), value, ttlSeconds);
+    const fullKey = this.systemKey(key);
+    if (strict) {
+      await this.putKey(fullKey, value, ttlSeconds);
+
+      return;
+    }
+    await this.writeKey(fullKey, value, ttlSeconds);
   }
 
   async status(): Promise<{ configured: boolean; connected: boolean }> {

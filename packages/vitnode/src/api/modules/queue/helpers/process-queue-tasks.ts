@@ -147,7 +147,6 @@ interface QueueTaskResult {
   availableAt: Date;
   completedAt: Date | null;
   deferred: boolean;
-  id: number;
   lastError: null | string;
   status: QueueRow["status"];
 }
@@ -173,7 +172,6 @@ const runQueueTask = async (
           availableAt: err.until,
           completedAt: null,
           deferred: true,
-          id: task.id,
           lastError: err.message,
           status: "pending",
         };
@@ -193,42 +191,41 @@ const runQueueTask = async (
     availableAt: outcome.availableAt ?? task.availableAt,
     completedAt: outcome.completedAt ?? null,
     deferred: false,
-    id: task.id,
     lastError: outcome.lastError,
     status: outcome.status,
   };
 };
 
-const timestampParam = (value: Date | null): SQL =>
-  value ? sql`${value.toISOString()}::timestamp` : sql`NULL::timestamp`;
-
-// One statement for the whole batch. A deferred task gives back the attempt
-// its claim took.
-const saveQueueTaskResults = async (
+// Saved as each task finishes, not once the batch is done: a finished task
+// waiting on a slow sibling could outlive its lease and be run again. Fenced
+// by the claim, so a task the recovery loop already reclaimed is left alone.
+const saveQueueTaskResult = async (
   c: Context<EnvVitNode>,
-  results: QueueTaskResult[],
+  task: QueueRow,
+  result: QueueTaskResult,
 ): Promise<void> => {
-  if (results.length === 0) return;
-
-  await c.get("db").execute(sql`
-    UPDATE ${core_queue} AS q
-    SET
-      "status" = v.status,
-      "lastError" = v."lastError",
-      "availableAt" = v."availableAt",
-      "completedAt" = v."completedAt",
-      "reservedAt" = NULL,
-      "attempts" = CASE WHEN v.deferred THEN GREATEST(q."attempts" - 1, 0) ELSE q."attempts" END,
-      "updatedAt" = ${timestampParam(new Date())}
-    FROM (VALUES ${sql.join(
-      results.map(
-        result =>
-          sql`(${result.id}::integer, ${result.status}::varchar, ${result.lastError}::text, ${timestampParam(result.availableAt)}, ${timestampParam(result.completedAt)}, ${result.deferred}::boolean)`,
+  await c
+    .get("db")
+    .update(core_queue)
+    .set({
+      attempts: result.deferred
+        ? sql`GREATEST(${core_queue.attempts} - 1, 0)`
+        : undefined,
+      availableAt: result.availableAt,
+      completedAt: result.completedAt,
+      lastError: result.lastError,
+      reservedAt: null,
+      status: result.status,
+    })
+    .where(
+      and(
+        eq(core_queue.id, task.id),
+        eq(core_queue.status, "processing"),
+        task.reservedAt
+          ? eq(core_queue.reservedAt, task.reservedAt)
+          : undefined,
       ),
-      sql`, `,
-    )}) AS v(id, status, "lastError", "availableAt", "completedAt", deferred)
-    WHERE q."id" = v.id
-  `);
+    );
 };
 
 const runClaimedQueueTasks = async (
@@ -241,14 +238,17 @@ const runClaimedQueueTasks = async (
   const handlerMap = new Map(
     c.get("core").queue.map(task => [`${task.pluginId}:${task.name}`, task]),
   );
-  const results: QueueTaskResult[] = [];
   let next = 0;
   // `runQueueTask` never rejects for a handler failure, so a plain worker pool
   // is enough: each worker pulls the next task until the batch is drained.
   const worker = async () => {
     while (next < claimed.length) {
       const task = claimed[next++];
-      results.push(await runQueueTask(c, task, handlerMap));
+      await saveQueueTaskResult(
+        c,
+        task,
+        await runQueueTask(c, task, handlerMap),
+      );
     }
   };
 
@@ -258,7 +258,6 @@ const runClaimedQueueTasks = async (
       worker,
     ),
   );
-  await saveQueueTaskResults(c, results);
 };
 
 export const processQueueTasksByIds = async (

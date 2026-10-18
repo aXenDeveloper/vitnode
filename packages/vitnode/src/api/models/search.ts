@@ -785,32 +785,43 @@ export class SearchModel {
     itemType: string;
   }): Promise<void> {
     const db = this.c.get("db");
-    // Every language of every item filed under the container, in one statement.
-    const deleted = await db
+    const rows = await db
+      .selectDistinct({ itemId: core_search_index.itemId })
+      .from(core_search_index)
+      .where(
+        and(
+          eq(core_search_index.itemType, itemType),
+          eq(core_search_index.containerType, containerType),
+          eq(core_search_index.containerId, containerId),
+        ),
+      );
+    const itemKeys = rows.map(row => row.itemId);
+    if (itemKeys.length === 0) return;
+
+    // The provider first, the canonical rows last: if the provider call fails,
+    // the rows are still there for a retry to find what it has to delete.
+    const contentTypes = this.c.get("core")?.contentTypes ?? [];
+    const itemIds = itemKeys.map(key =>
+      searchItemIdFromKey(contentTypes, itemType, key),
+    );
+    const provider = this.provider();
+    if (provider.deleteMany) {
+      await provider.deleteMany(this.c, itemType, itemIds);
+    } else {
+      for (const itemId of itemIds) {
+        await provider.delete(this.c, itemType, itemId);
+      }
+    }
+
+    // Every language of every item, not only the rows filed under the container.
+    await db
       .delete(core_search_index)
       .where(
         and(
           eq(core_search_index.itemType, itemType),
-          inArray(
-            core_search_index.itemId,
-            db
-              .select({ itemId: core_search_index.itemId })
-              .from(core_search_index)
-              .where(
-                and(
-                  eq(core_search_index.itemType, itemType),
-                  eq(core_search_index.containerType, containerType),
-                  eq(core_search_index.containerId, containerId),
-                ),
-              ),
-          ),
+          inArray(core_search_index.itemId, itemKeys),
         ),
-      )
-      .returning({ itemId: core_search_index.itemId });
-
-    const itemKeys = [...new Set(deleted.map(row => row.itemId))];
-    if (itemKeys.length === 0) return;
-
+      );
     await db
       .delete(core_search_popularity)
       .where(
@@ -819,21 +830,6 @@ export class SearchModel {
           inArray(core_search_popularity.itemId, itemKeys),
         ),
       );
-
-    const contentTypes = this.c.get("core")?.contentTypes ?? [];
-    const itemIds = itemKeys.map(key =>
-      searchItemIdFromKey(contentTypes, itemType, key),
-    );
-    const provider = this.provider();
-    if (provider.deleteMany) {
-      await provider.deleteMany(this.c, itemType, itemIds);
-
-      return;
-    }
-
-    for (const itemId of itemIds) {
-      await provider.delete(this.c, itemType, itemId);
-    }
   }
 
   /** Canonical projection lives in `core_search_index`; the provider mirrors it. */

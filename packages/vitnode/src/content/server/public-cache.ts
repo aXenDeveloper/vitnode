@@ -40,9 +40,13 @@ const readGeneration = async (
  * two instances with skewed clocks could otherwise write a stamp that points
  * readers back at a generation whose entries are still alive.
  */
-const bumpGeneration = async (c: Context, key: string): Promise<void> => {
+const bumpGeneration = async (
+  c: Context,
+  key: string,
+  { strict }: { strict: boolean },
+): Promise<void> => {
   const cache: CacheModel | undefined = c.get("cache");
-  await cache?.setSystem(key, randomUUID());
+  await cache?.setSystem(key, randomUUID(), undefined, { strict });
 };
 
 const inflight = new Map<string, Promise<unknown>>();
@@ -113,7 +117,9 @@ export const bumpContentPublicGeneration = async (
   c: Context,
   contentTypeId: string,
 ): Promise<void> => {
-  await bumpGeneration(c, publicGenerationKey(contentTypeId));
+  // Strict: the page-cache invalidation retries a failure it can see, and a
+  // bump that failed silently would keep readers on the old generation.
+  await bumpGeneration(c, publicGenerationKey(contentTypeId), { strict: true });
 };
 
 /**
@@ -149,7 +155,11 @@ export const bumpContentContainerGeneration = async (
   c: Context,
   definitionId: string,
 ): Promise<void> => {
-  await bumpGeneration(c, containerGenerationKey(definitionId));
+  // Runs after the container write commits, with no retry behind it: a failed
+  // bump leaves the tree until its TTL rather than failing the request.
+  await bumpGeneration(c, containerGenerationKey(definitionId), {
+    strict: false,
+  });
 };
 
 /** One container collection's `{ id, parentId }` tree, cached per generation. */

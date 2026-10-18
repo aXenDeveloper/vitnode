@@ -28,7 +28,22 @@ app.use(async (c, next) => {
     return;
   }
 
-  await compressResponses(c, next);
+  await compressResponses(c, async () => {
+    await next();
+
+    // Hono only applies its size threshold to a response that states its
+    // length, and `c.json()` does not - so a JSON body, always fully buffered
+    // anyway, gets one here and a tiny response is not gzipped bigger.
+    if (
+      c.res.headers.has("Content-Length") ||
+      !c.res.headers.get("Content-Type")?.startsWith("application/json")
+    ) {
+      return;
+    }
+    const body = await c.res.arrayBuffer();
+    c.res = new Response(body, c.res);
+    c.res.headers.set("Content-Length", String(body.byteLength));
+  });
 });
 
 // Serve locally stored uploads (Local storage adapter) before VitNodeAPI so the

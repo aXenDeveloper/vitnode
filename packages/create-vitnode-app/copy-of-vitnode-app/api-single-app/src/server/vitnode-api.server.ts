@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { VitNodeAPI } from "@vitnode/core/api/config";
+import { configureInProcessApi } from "@vitnode/core/lib/fetcher/in-process-api.server";
 
 import { createApiBridge } from "@/server/api-bridge";
 import { vitNodeApiConfig } from "@/vitnode.api.config";
@@ -39,3 +40,8 @@ if (cache.__vitnodeApi?.plugins !== configuredPlugins) {
 export const vitNodeApi = cache.__vitnodeApi.app;
 
 export const apiBridge = createApiBridge(vitNodeApi);
+
+// Server-side fetches from loaders, middleware and server functions reach this
+// API directly instead of over HTTP to this same server - unless
+// `VITNODE_API_URL` points at a separate API.
+configureInProcessApi(apiBridge);

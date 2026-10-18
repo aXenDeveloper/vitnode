@@ -6,6 +6,7 @@ import { render, toPlainText } from "react-email";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
+import { runAfterResponse } from "@/api/lib/after-response";
 import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
 
 import type { DefaultTemplateEmailProps } from "../../emails/default-template";
@@ -175,14 +176,17 @@ export class EmailModel {
     const ids = this.queued.splice(0);
     if (ids.length === 0) return;
 
-    void processQueueTasksByIds(this.c as Context<EnvVitNode>, ids).catch(
-      async (error: unknown) => {
-        await this.c
-          .get("log")
-          .warn(
-            `[Email] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
-          );
-      },
+    runAfterResponse(
+      this.c,
+      processQueueTasksByIds(this.c as Context<EnvVitNode>, ids).catch(
+        async (error: unknown) => {
+          await this.c
+            .get("log")
+            .warn(
+              `[Email] Immediate delivery deferred to the queue: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        },
+      ),
     );
   }
 
