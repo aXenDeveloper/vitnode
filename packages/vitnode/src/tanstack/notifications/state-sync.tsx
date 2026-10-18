@@ -82,10 +82,6 @@ export const NotificationStateSync = ({
   });
 
   React.useEffect(() => {
-    if (readyState === SOCKET_OPEN) void refresh();
-  }, [readyState]);
-
-  React.useEffect(() => {
     if (readyState === SOCKET_OPEN || userId === null) return;
 
     const timer = setInterval(() => {
@@ -95,13 +91,19 @@ export const NotificationStateSync = ({
     return () => clearInterval(timer);
   }, [readyState, userId]);
 
+  const refreshWithoutSocket = React.useEffectEvent(() => {
+    if (readyState !== SOCKET_OPEN) void refresh();
+  });
+
   React.useEffect(() => {
     let hiddenAt: null | number = null;
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
         hiddenAt = Date.now();
       } else if (hiddenAt !== null) {
-        if (Date.now() - hiddenAt > STALE_AFTER_HIDDEN_MS) void refresh();
+        if (Date.now() - hiddenAt > STALE_AFTER_HIDDEN_MS) {
+          refreshWithoutSocket();
+        }
         hiddenAt = null;
       }
     };

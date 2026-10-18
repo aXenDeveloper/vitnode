@@ -1,11 +1,14 @@
 import type { Context } from "hono";
-import type { WSEvents } from "hono/ws";
+import type { WSContext, WSEvents } from "hono/ws";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
+import type { NotificationStateMessage } from "@/lib/notifications/types";
 import type { VitNodeWSMessage } from "@/ws/types";
 
+import { getNotificationState } from "@/api/models/notifications/inbox";
+import { notificationsStateChannel } from "@/ws/notifications";
 import { markWebSocketEnabled, wsRegistry } from "@/ws/registry";
-import { getWebSocketId } from "@/ws/types";
+import { getWebSocketId, WS_PING_ID, WS_PONG_ID } from "@/ws/types";
 
 const parseMessage = (raw: unknown): undefined | VitNodeWSMessage => {
   if (typeof raw !== "string") return undefined;
@@ -26,6 +29,20 @@ const parseMessage = (raw: unknown): undefined | VitNodeWSMessage => {
   }
 
   return undefined;
+};
+
+const sendNotificationState = async (
+  c: Context<EnvVitNode>,
+  ws: WSContext,
+  userId: number,
+): Promise<void> => {
+  const state = await getNotificationState(c.get("db"), userId);
+  ws.send(
+    JSON.stringify({
+      data: { ...state, reason: "reconciled" },
+      id: notificationsStateChannel.id,
+    } satisfies VitNodeWSMessage<NotificationStateMessage>),
+  );
 };
 
 /**
@@ -56,6 +73,12 @@ export function handleVitNodeWebSocket(
       onOpen: (event, ws) => {
         // Track the connection so the server can push messages to it.
         wsRegistry.add(ws, userId);
+        if (userId !== null) {
+          sendNotificationState(c, ws, userId).catch((error: unknown) => {
+            // oxlint-disable-next-line no-console
+            console.error("WebSocket notification state error:", error);
+          });
+        }
         inline?.onOpen?.(event, ws);
       },
       onClose: (event, ws) => {
@@ -65,6 +88,16 @@ export function handleVitNodeWebSocket(
       onError: inline?.onError,
       onMessage: (event, ws) => {
         const message = parseMessage(event.data);
+        if (message?.id === WS_PING_ID) {
+          ws.send(
+            JSON.stringify({
+              data: null,
+              id: WS_PONG_ID,
+            } satisfies VitNodeWSMessage),
+          );
+
+          return;
+        }
         const target = message
           ? registered.find(
               webSocket => getWebSocketId(webSocket) === message.id,

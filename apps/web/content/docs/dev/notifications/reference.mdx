@@ -174,7 +174,7 @@ The body of `PUT /types/{type}` accepts any of these keys:
 
 ## Realtime channel
 
-Every committed change to a member's inbox sends `notificationsStateChannel` from `@vitnode/core/ws/notifications` to that member's open tabs:
+Every committed change to a member's inbox sends `notificationsStateChannel` from `@vitnode/core/ws/notifications` to that member's open tabs. A signed-in socket also gets one message with `reason: 'reconciled'` right after it connects:
 
 ```ts
 interface NotificationStateMessage {

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -109,9 +109,11 @@ describe("NotificationStateSync", () => {
     expect(screen.getByRole("status").textContent).toBe("1@5");
 
     act(() => sockets[0]?.open());
-    await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toBe("2@6"),
+    act(() =>
+      sockets[0]?.push({ reason: "reconciled", revision: 6, unread: 2 }),
     );
+    expect(screen.getByRole("status").textContent).toBe("2@6");
+    expect(fetchState).not.toHaveBeenCalled();
 
     act(() => sockets[0]?.push({ reason: "created", revision: 8, unread: 4 }));
     act(() => sockets[0]?.push({ reason: "read", revision: 7, unread: 3 }));
@@ -123,31 +125,6 @@ describe("NotificationStateSync", () => {
       });
     });
     expect(screen.getByRole("status").textContent).toBe("4@8");
-  });
-
-  it("re-reads the count after a reconnect, since missed messages are not replayed", async () => {
-    const fetchState = vi
-      .fn<() => Promise<{ revision: number; unread: number }>>()
-      .mockResolvedValueOnce({ revision: 5, unread: 1 })
-      .mockResolvedValueOnce({ revision: 12, unread: 0 });
-    mount(fetchState);
-
-    act(() => sockets[0]?.open());
-    await waitFor(() => expect(fetchState).toHaveBeenCalledTimes(1));
-
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    act(() => sockets[0]?.drop());
-    act(() => {
-      vi.advanceTimersByTime(2_000);
-    });
-    vi.useRealTimers();
-    expect(sockets).toHaveLength(2);
-    act(() => sockets[1]?.open());
-
-    await waitFor(() =>
-      expect(screen.getByRole("status").textContent).toBe("0@12"),
-    );
-    expect(fetchState).toHaveBeenCalledTimes(2);
   });
 
   it("polls the count every minute when there is no socket to listen on", async () => {

@@ -1,5 +1,7 @@
 import type { VitNodeWSMessage } from "./types";
 
+import { WS_PING_ID, WS_PONG_ID } from "./types";
+
 /**
  * Messages exchanged between tabs of the same origin over the
  * {@link BroadcastChannel}.
@@ -9,12 +11,20 @@ type CrossTabMessage =
   | { payload: VitNodeWSMessage; type: "message" }
   | { payload: VitNodeWSMessage; type: "send" }
   | { type: "reconnect" }
-  | { type: "request-state" };
+  | { type: "request-state" }
+  | { type: "wake" };
 
 const LEADER_LOCK = "vitnode-ws-leader";
 const CHANNEL_NAME = "vitnode-ws";
 const RECONNECT_BASE_DELAY = 1000;
 const RECONNECT_MAX_DELAY = 30_000;
+const HEARTBEAT_INTERVAL = 25_000;
+const HEARTBEAT_TIMEOUT = 10_000;
+
+const isOffline = (): boolean =>
+  typeof navigator !== "undefined" &&
+  "onLine" in navigator &&
+  !navigator.onLine;
 
 // Exponential backoff with "equal jitter": after a server restart every tab of
 // every visitor would otherwise reconnect in the same instant, forever.
@@ -55,6 +65,8 @@ export const createWebSocketManager = ({
   let releaseLeadership: (() => void) | undefined;
   let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
   let reconnectAttempt = 0;
+  let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+  let pongTimeout: ReturnType<typeof setTimeout> | undefined;
   const outgoingQueue: VitNodeWSMessage[] = [];
 
   const channel =
@@ -72,6 +84,22 @@ export const createWebSocketManager = ({
     onReadyStateChange(state);
   };
 
+  const publishReadyState = (state: number) => {
+    setReadyState(state);
+    post({ payload: state, type: "ready-state" });
+  };
+
+  const clearPongTimeout = () => {
+    clearTimeout(pongTimeout);
+    pongTimeout = undefined;
+  };
+
+  const stopHeartbeat = () => {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = undefined;
+    clearPongTimeout();
+  };
+
   const sendOverSocket = (message: VitNodeWSMessage) => {
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message));
@@ -84,6 +112,7 @@ export const createWebSocketManager = ({
   // Detach handlers first so the socket's asynchronous close event can't fire
   // spurious reconnects or cross-tab posts after teardown.
   const closeSocket = () => {
+    stopHeartbeat();
     if (!socket) return;
     socket.onclose = null;
     socket.onerror = null;
@@ -93,6 +122,28 @@ export const createWebSocketManager = ({
     socket = null;
   };
 
+  const dropSocket = () => {
+    closeSocket();
+    publishReadyState(WebSocket.CLOSED);
+  };
+
+  const scheduleReconnect = () => {
+    if (isDestroyed || !isLeader || isOffline()) return;
+    reconnectTimeout = setTimeout(
+      openSocket,
+      reconnectDelay(reconnectAttempt++),
+    );
+  };
+
+  const probe = () => {
+    if (socket?.readyState !== WebSocket.OPEN || pongTimeout) return;
+    socket.send(JSON.stringify({ data: null, id: WS_PING_ID }));
+    pongTimeout = setTimeout(() => {
+      dropSocket();
+      scheduleReconnect();
+    }, HEARTBEAT_TIMEOUT);
+  };
+
   // --- Leader: owns the real socket ---------------------------------------
   const openSocket = () => {
     const ws = new WebSocket(url);
@@ -100,14 +151,15 @@ export const createWebSocketManager = ({
 
     ws.onopen = () => {
       reconnectAttempt = 0;
-      setReadyState(ws.readyState);
-      post({ payload: ws.readyState, type: "ready-state" });
+      publishReadyState(ws.readyState);
       outgoingQueue
         .splice(0)
         .forEach(message => ws.send(JSON.stringify(message)));
+      heartbeatInterval = setInterval(probe, HEARTBEAT_INTERVAL);
     };
 
     ws.onmessage = (event: MessageEvent) => {
+      clearPongTimeout();
       if (typeof event.data !== "string") return;
 
       let message: VitNodeWSMessage;
@@ -116,28 +168,60 @@ export const createWebSocketManager = ({
       } catch {
         return;
       }
+      if (message.id === WS_PONG_ID) return;
 
       onMessage(message); // this (leader) tab
       post({ payload: message, type: "message" }); // every other tab
     };
 
     ws.onclose = () => {
-      setReadyState(ws.readyState);
-      post({ payload: ws.readyState, type: "ready-state" });
+      stopHeartbeat();
+      publishReadyState(ws.readyState);
       socket = null;
-      if (!isDestroyed && isLeader) {
-        reconnectTimeout = setTimeout(
-          openSocket,
-          reconnectDelay(reconnectAttempt++),
-        );
-      }
+      scheduleReconnect();
     };
   };
 
   const becomeLeader = () => {
     if (isDestroyed) return;
     isLeader = true;
+    if (isOffline()) {
+      publishReadyState(WebSocket.CLOSED);
+
+      return;
+    }
     openSocket();
+  };
+
+  const wake = () => {
+    if (!isLeader || isDestroyed || isOffline()) return;
+    if (socket?.readyState === WebSocket.OPEN) {
+      probe();
+
+      return;
+    }
+    if (socket) return;
+    clearTimeout(reconnectTimeout);
+    reconnectAttempt = 0;
+    openSocket();
+  };
+
+  const goOffline = () => {
+    if (!isLeader || isDestroyed) return;
+    clearTimeout(reconnectTimeout);
+    dropSocket();
+  };
+
+  const requestWake = () => {
+    if (isLeader) {
+      wake();
+    } else {
+      post({ type: "wake" });
+    }
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") requestWake();
   };
 
   // Drop the current socket (without triggering its auto-reconnect) and open a
@@ -195,6 +279,9 @@ export const createWebSocketManager = ({
         case "send":
           if (isLeader) sendOverSocket(message.payload);
           break;
+        case "wake":
+          wake();
+          break;
       }
     };
   }
@@ -217,6 +304,14 @@ export const createWebSocketManager = ({
     }
   };
 
+  const hasWindow = typeof window !== "undefined";
+  if (hasWindow) {
+    window.addEventListener("online", wake);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("pageshow", requestWake);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+  }
+
   requestLeadership();
   // In case we joined while another tab already owns an open connection.
   post({ type: "request-state" });
@@ -224,6 +319,12 @@ export const createWebSocketManager = ({
   const destroy = () => {
     isDestroyed = true;
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    if (hasWindow) {
+      window.removeEventListener("online", wake);
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("pageshow", requestWake);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    }
     closeSocket();
     releaseLeadership?.();
     channel?.close();

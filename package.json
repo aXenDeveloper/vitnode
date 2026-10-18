@@ -11,7 +11,7 @@
     "build:plugins": "turbo build:plugins",
     "build": "turbo build",
     "start": "turbo start",
-    "dev": "pnpm build:scripts && turbo build:plugins && turbo db:prepare && turbo dev",
+    "dev": "pnpm build:scripts && turbo build:plugins && turbo dev",
     "lint": "turbo lint && pnpm format:check",
     "lint:fix": "turbo lint:fix && pnpm format",
     "format": "oxfmt \"**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}\"",

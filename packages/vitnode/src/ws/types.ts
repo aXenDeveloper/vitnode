@@ -4,6 +4,9 @@ export interface VitNodeWSMessage<TData = unknown> {
   id: string;
 }
 
+export const WS_PING_ID = "vitnode_ping";
+export const WS_PONG_ID = "vitnode_pong";
+
 /**
  * A socket's public id plus its message types: `Send` is what the browser
  * sends, `Receive` what the server pushes. Create one with

@@ -193,7 +193,9 @@ Without Redis, all of this works on a single instance with no extra setup: `toRo
 - **Single Connection**: Only one `/api/ws` socket is opened per client. All features share it via message multiplexing.
 - **Tab Leader Election**: When a user opens multiple tabs, a Web Lock elects one leader tab to hold the socket, distributing messages across tabs via `BroadcastChannel`.
 - **Automatic Reconnect**: A dropped connection retries after about a second, then backs off (with a little jitter) up to 30 seconds, so a restarted server is not stampeded by every open tab.
-- **Heartbeat**: The bundled API server pings every socket every 30 seconds and closes the ones that stopped answering, so vanished clients do not linger.
+- **Offline aware**: When the browser goes offline, the socket closes and stops retrying. It reconnects the moment the network comes back, or when a tab becomes visible again after sleep, without waiting for the backoff.
+- **Heartbeat, both ways**: The bundled API server pings every socket every 30 seconds and closes the ones that stopped answering, so vanished clients do not linger. The browser sends its own ping every 25 seconds and reconnects when no reply arrives within 10 seconds, so a half-dead connection after a Wi-Fi drop never pretends to be online.
+- **No replay**: Messages sent while a socket is down are not queued. A feature that must not miss updates sends its current state when the socket opens, like the notification count does.
 - **Multiple Instances**: With `REDIS_URL` set, `sendToUser`, `broadcast` and `toRoom` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
 
 ## Learn More
