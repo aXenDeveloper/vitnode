@@ -45,6 +45,11 @@
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
+  "@vitnode/core:report_reasons": "Report reasons",
+  "@vitnode/core:report_reasons:can_view": "View report reasons",
+  "@vitnode/core:report_reasons:can_create": "Create report reasons",
+  "@vitnode/core:report_reasons:can_edit": "Edit and reorder report reasons",
+  "@vitnode/core:report_reasons:can_delete": "Delete report reasons",
   "@vitnode/core:staff_moderators": "Staff: Moderators",
   "@vitnode/core:staff_moderators:can_view": "View moderators list",
   "@vitnode/core:staff_moderators:can_create": "Create moderators",
@@ -2163,18 +2168,7 @@
       "empty_desc": "When something needs your attention, it lands here."
     },
     "moderation": {
-      "reasons": {
-        "spam": "Spam",
-        "abusive": "Abusive content",
-        "rule_violation": "Rule violation",
-        "other": "Other"
-      },
-      "reason_descs": {
-        "spam": "Advertising, scams or repeated junk.",
-        "abusive": "Harassment, hate or threats.",
-        "rule_violation": "Breaks the community rules in another way.",
-        "other": "Something else - tell us what."
-      },
+      "reason_removed": "Removed reason",
       "statuses": {
         "new": "New",
         "in_progress": "In progress",
@@ -2193,24 +2187,36 @@
       "report": {
         "button": "Report",
         "title": "Report {type}",
-        "desc": "Tell the moderators what is wrong. They see what you saw, even if it changes later.",
-        "reason": "Reason",
-        "description": "Details",
-        "description_desc": "Optional, unless you chose Other. Moderators read this, the author does not.",
+        "pick_title": "What's wrong with this {type}?",
+        "review_title": "Ready to send?",
+        "sent_title": "Report sent",
+        "reasons_label": "Reason",
+        "change": "Change",
+        "change_label": "Change reason, currently {reason}",
+        "details_required_label": "What should moderators know?",
+        "details_optional_label": "Anything to add?",
+        "required": "Required",
+        "details_placeholder": "Links, timestamps or what exactly is wrong",
+        "details_note": "Only moderators read this, the author doesn't.",
+        "chars_left": "{count} left",
         "submit": "Send report",
-        "cancel": "Cancel",
+        "sent_stamp": "Sent to the moderators just now",
+        "sent_desc": "A moderator will look at the {type} as you saw it, even if it changes later. If it breaks the rules, they can hide it.",
+        "done": "Done",
         "signed_out": "Sign in to report content.",
         "sign_in": "Sign in",
-        "success": "Report sent",
-        "success_desc": "Thanks. A moderator will take a look.",
+        "load_error": "We couldn't load the reasons.",
+        "retry": "Try again",
         "errors": {
           "title": "Could not send the report",
           "duplicate": "You already reported this, and that report is still open.",
           "not_found": "This content is no longer available to report.",
           "rate_limited": "You have sent a lot of reports recently. Try again later.",
-      "unauthenticated": "Your session has ended. Sign in again to send the report.",
+          "unauthenticated": "Your session has ended. Sign in again to send the report.",
           "validation": "Check the reason and the details, then try again.",
-          "unknown": "Something went wrong. Try again in a moment."
+          "unknown": "Something went wrong. Try again in a moment.",
+          "details_required": "Tell the moderators a bit more - at least {min} characters.",
+          "reason_not_found": "That reason was just removed. Pick another one."
         }
       },
       "modcp": {
@@ -2733,6 +2739,10 @@
           "title": "Staff",
           "moderators": "Moderators",
           "admins": "Administrators"
+        },
+        "moderation": {
+          "title": "Moderation",
+          "report_reasons": "Report reasons"
         },
         "user_bar": {
           "home_page": "Home Page",
@@ -3368,6 +3378,60 @@
         "noResults": {
           "title": "No administrators found",
           "description": "Assign a role or user to grant administrator permissions."
+        }
+      }
+    },
+    "moderation": {
+      "report_reasons": {
+        "title": "Report reasons",
+        "desc": "The reasons members pick from when they report something, up to 10. Drag to change the order they appear in.",
+        "create": "Add reason",
+        "limit": "You can have up to {max} reasons. Delete one to add another.",
+        "columns": {
+          "reason": "Reason",
+          "details": "Details"
+        },
+        "details_required": "Required",
+        "details_optional": "Optional",
+        "actions": {
+          "label": "Actions for {reason}",
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "reorder": {
+          "success": "Order saved",
+          "success_desc": "Members see the reasons in the new order."
+        },
+        "form": {
+          "create_title": "Add report reason",
+          "edit_title": "Edit report reason",
+          "sheet_desc": "Members see the title and description in the report dialog, in their own language.",
+          "title": "Title",
+          "title_desc": "Short and specific, like “Spam” or “Harassment”.",
+          "description": "Description",
+          "description_desc": "One line that helps members tell this reason apart from the others.",
+          "requires_details": "Require details",
+          "requires_details_desc": "Members must explain what's wrong (at least {min} characters) before they can send the report.",
+          "submit_create": "Add reason",
+          "submit_edit": "Save changes",
+          "created": "Reason added",
+          "created_desc": "Members can pick “{reason}” when they report something.",
+          "updated": "Reason saved",
+          "updated_desc": "Existing reports show the new title too.",
+          "error": "Could not save the reason",
+          "error_desc": "Check the fields and try again.",
+          "limit_reached": "You can have up to {max} reasons. Delete one to add another."
+        },
+        "delete": {
+          "title": "Delete “{reason}”?",
+          "desc": "Members can't pick it anymore. Reports already filed with it stay, but show “Removed reason” instead of its title.",
+          "confirm": "Delete reason",
+          "cancel": "Cancel",
+          "success": "Reason deleted",
+          "success_desc": "“{reason}” is no longer in the report dialog.",
+          "error": "Could not delete the reason",
+          "last_reason": "Keep at least one reason - members need something to pick.",
+          "unknown": "Something went wrong. Try again in a moment."
         }
       }
     },

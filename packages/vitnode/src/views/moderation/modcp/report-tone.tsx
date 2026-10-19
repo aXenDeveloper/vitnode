@@ -1,8 +1,6 @@
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
-import type { ModerationReportReason } from "@/lib/moderation/const";
-
 import { Avatar } from "@/components/avatar";
 import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { UserFormat } from "@/components/user-format";
@@ -28,19 +26,9 @@ export const STATUS_TONE: Record<ReportStatus, ToneName> = {
   new: "muted",
 };
 
-export const REASON_TONE: Record<ModerationReportReason, ToneName> = {
-  abusive: "destructive",
-  other: "muted",
-  rule_violation: "warning",
-  spam: "warning",
-};
+export const REASON_TONE: ToneName = "warning";
 
-export const REASON_TEXT: Record<ModerationReportReason, string> = {
-  abusive: FEEDBACK_TONE_TEXT.destructive,
-  other: "text-muted-foreground",
-  rule_violation: FEEDBACK_TONE_TEXT.warning,
-  spam: FEEDBACK_TONE_TEXT.warning,
-};
+export const REASON_TEXT = FEEDBACK_TONE_TEXT.warning;
 
 export const Chip = ({
   children,

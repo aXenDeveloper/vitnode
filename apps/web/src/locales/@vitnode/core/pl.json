@@ -26,6 +26,11 @@
   "@vitnode/core:plugins:can_view": "Przeglądanie zainstalowanych wtyczek i ich wersji",
   "@vitnode/core:queue": "Zadania w kolejce",
   "@vitnode/core:queue:can_view": "Wyświetlanie zadań w kolejce",
+  "@vitnode/core:report_reasons": "Powody zgłoszeń",
+  "@vitnode/core:report_reasons:can_create": "Dodawanie powodów zgłoszeń",
+  "@vitnode/core:report_reasons:can_delete": "Usuwanie powodów zgłoszeń",
+  "@vitnode/core:report_reasons:can_edit": "Edycja i zmiana kolejności powodów zgłoszeń",
+  "@vitnode/core:report_reasons:can_view": "Podgląd powodów zgłoszeń",
   "@vitnode/core:roles": "Role",
   "@vitnode/core:roles:can_create": "Tworzenie ról",
   "@vitnode/core:roles:can_delete": "Usuwanie ról",
@@ -476,6 +481,10 @@
           "moderators": "Moderatorzy",
           "title": "Zespół"
         },
+        "moderation": {
+          "title": "Moderacja",
+          "report_reasons": "Powody zgłoszeń"
+        },
         "system": {
           "files": "Pliki",
           "integrations": "Integracje",
@@ -722,6 +731,60 @@
         "moderators": "Moderatorzy"
       },
       "title": "Zespół"
+    },
+    "moderation": {
+      "report_reasons": {
+        "title": "Powody zgłoszeń",
+        "desc": "Powody, spośród których członkowie wybierają, gdy coś zgłaszają - maksymalnie 10. Przeciągnij, aby zmienić ich kolejność.",
+        "create": "Dodaj powód",
+        "limit": "Możesz mieć maksymalnie {max} powodów. Usuń jeden, aby dodać kolejny.",
+        "columns": {
+          "reason": "Powód",
+          "details": "Szczegóły"
+        },
+        "details_required": "Wymagane",
+        "details_optional": "Opcjonalne",
+        "actions": {
+          "label": "Akcje dla: {reason}",
+          "edit": "Edytuj",
+          "delete": "Usuń"
+        },
+        "reorder": {
+          "success": "Kolejność zapisana",
+          "success_desc": "Członkowie widzą powody w nowej kolejności."
+        },
+        "form": {
+          "create_title": "Dodaj powód zgłoszenia",
+          "edit_title": "Edytuj powód zgłoszenia",
+          "sheet_desc": "Członkowie widzą tytuł i opis w oknie zgłoszenia, w swoim języku.",
+          "title": "Tytuł",
+          "title_desc": "Krótko i konkretnie, np. „Spam” albo „Nękanie”.",
+          "description": "Opis",
+          "description_desc": "Jedno zdanie, które pomaga odróżnić ten powód od pozostałych.",
+          "requires_details": "Wymagaj szczegółów",
+          "requires_details_desc": "Członkowie muszą opisać problem (co najmniej {min} znaków), zanim wyślą zgłoszenie.",
+          "submit_create": "Dodaj powód",
+          "submit_edit": "Zapisz zmiany",
+          "created": "Powód dodany",
+          "created_desc": "Członkowie mogą wybrać „{reason}”, gdy coś zgłaszają.",
+          "updated": "Powód zapisany",
+          "updated_desc": "Istniejące zgłoszenia też pokazują nowy tytuł.",
+          "error": "Nie udało się zapisać powodu",
+          "error_desc": "Sprawdź pola i spróbuj ponownie.",
+          "limit_reached": "Możesz mieć maksymalnie {max} powodów. Usuń jeden, aby dodać kolejny."
+        },
+        "delete": {
+          "title": "Usunąć „{reason}”?",
+          "desc": "Członkowie nie będą mogli go wybrać. Wysłane już zgłoszenia zostają, ale zamiast tytułu pokazują „Usunięty powód”.",
+          "confirm": "Usuń powód",
+          "cancel": "Anuluj",
+          "success": "Powód usunięty",
+          "success_desc": "„{reason}” nie pojawia się już w oknie zgłoszenia.",
+          "error": "Nie udało się usunąć powodu",
+          "last_reason": "Zostaw co najmniej jeden powód - członkowie muszą mieć z czego wybierać.",
+          "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+        }
+      }
     },
     "system": {
       "files": {

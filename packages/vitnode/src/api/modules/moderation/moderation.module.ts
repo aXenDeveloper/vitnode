@@ -14,6 +14,7 @@ import {
   deleteReportNoteRoute,
   editReportNoteRoute,
 } from "./routes/notes.routes";
+import { listReportReasonsRoute } from "./routes/reasons.route";
 import { showReportRoute } from "./routes/show.route";
 import {
   assignReportRoute,
@@ -28,6 +29,7 @@ import {
 export const moderationModule = buildModule({
   name: "moderation",
   routes: [
+    listReportReasonsRoute,
     createReportRoute,
     listReportsRoute,
     showReportRoute,

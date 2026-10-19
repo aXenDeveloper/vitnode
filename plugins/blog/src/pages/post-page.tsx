@@ -20,7 +20,7 @@ import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { EyeOffIcon } from "lucide-react";
-import { useTranslations } from "use-intl";
+import { useFormatter, useTranslations } from "use-intl";
 
 import { blogPostContentType } from "@/content/post";
 import { manifest } from "@/manifest.gen";
@@ -52,6 +52,7 @@ const BlogPostPage = ({
   loaderData: { item, metadata },
 }: PluginRoutePageProps<BlogPostPageData>) => {
   const t = useTranslations("@vitnode/blog.post");
+  const format = useFormatter();
   useRecordView({
     itemId: metadata.hidden ? null : metadata.itemId,
     itemType: blogPostContentType.id,
@@ -79,6 +80,15 @@ const BlogPostPage = ({
             <ReportButton
               className="text-muted-foreground"
               locale={metadata.locale}
+              preview={{
+                imageUrl: item.coverImage?.url ?? null,
+                meta: item.publishedAt
+                  ? format.dateTime(new Date(item.publishedAt), {
+                      dateStyle: "medium",
+                    })
+                  : null,
+                title: item.title,
+              }}
               requestedLocale={metadata.requestedLocale}
               target={contentTarget(
                 manifest.id,

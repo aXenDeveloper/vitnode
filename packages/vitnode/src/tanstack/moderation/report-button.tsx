@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { ContentTarget } from "@/content/target";
+import type { ReportPreview } from "@/views/moderation/report/report-dialog-content";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -29,6 +30,13 @@ export const REPORT_NAMESPACES = ["core.global", "core.moderation"] as const;
 interface ReportTargetProps {
   /** The locale the reported content was shown in, for moderators. */
   locale?: null | string;
+  /**
+   * What the reporter sees at the top of the dialog so they know what they are
+   * reporting: an already translated `title`, an optional `imageUrl` (shown as
+   * a small 16:9 thumbnail) and an optional `meta` line such as the author and
+   * date. Leave it out and the dialog shows only the reason.
+   */
+  preview?: ReportPreview;
   /** The locale the visitor asked for, when the content fell back to another. */
   requestedLocale?: null | string;
   /**
@@ -59,6 +67,7 @@ const ReportDialogInner = ({
   locale = null,
   onOpenChange,
   open,
+  preview,
   requestedLocale = null,
   target,
   typeLabel,
@@ -72,22 +81,14 @@ const ReportDialogInner = ({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-balance">
-            {t("title", { type: typeLabel })}
-          </DialogTitle>
-          <DialogDescription className="text-pretty">
-            {signedIn ? t("desc") : t("signed_out")}
-          </DialogDescription>
-        </DialogHeader>
-
+      <DialogContent className="gap-0 p-0 sm:max-w-md">
         {signedIn ? (
           <React.Suspense
             fallback={
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-5 p-6">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-24 w-full" />
               </div>
             }
           >
@@ -97,20 +98,32 @@ const ReportDialogInner = ({
                 onOpenChange(false);
               }}
               pluginId={target.pluginId}
+              preview={preview}
               requestedLocale={requestedLocale}
               targetId={target.id}
               targetType={target.type}
+              typeLabel={typeLabel}
             />
           </React.Suspense>
         ) : (
-          <div className="flex justify-end">
-            <Link
-              className={buttonVariants()}
-              search={{ returnTo }}
-              to={LOGIN_PATH}
-            >
-              {t("sign_in")}
-            </Link>
+          <div className="flex flex-col gap-4 p-6">
+            <DialogHeader>
+              <DialogTitle className="pe-10 text-balance">
+                {t("title", { type: typeLabel })}
+              </DialogTitle>
+              <DialogDescription className="text-pretty">
+                {t("signed_out")}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end">
+              <Link
+                className={buttonVariants()}
+                search={{ returnTo }}
+                to={LOGIN_PATH}
+              >
+                {t("sign_in")}
+              </Link>
+            </div>
           </div>
         )}
       </DialogContent>

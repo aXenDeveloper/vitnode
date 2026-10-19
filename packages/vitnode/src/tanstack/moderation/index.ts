@@ -6,3 +6,4 @@ export {
   ReportDialog,
   type ReportDialogProps,
 } from "./report-button";
+export type { ReportPreview } from "@/views/moderation/report/report-dialog-content";

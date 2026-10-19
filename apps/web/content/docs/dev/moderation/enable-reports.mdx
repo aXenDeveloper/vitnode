@@ -24,6 +24,7 @@ implementation:
 
 import { ImgDocs } from "@/components/fumadocs/img";
 import reportDialog from "./moderation-report-dialog.webp";
+import reportDetails from "./moderation-report-details.webp";
 
 Turn on reports for a content type so signed-in readers can flag a published record to your moderators. This guide follows the blog plugin, whose articles are reportable.
 
@@ -105,6 +106,13 @@ import { manifest } from "@/manifest.gen";
 {!metadata.hidden && metadata.itemId !== null ? (
   <ReportButton
     locale={metadata.locale}
+    preview={{
+      imageUrl: item.coverImage?.url ?? null,
+      meta: item.publishedAt
+        ? format.dateTime(new Date(item.publishedAt), { dateStyle: "medium" })
+        : null,
+      title: item.title,
+    }}
     requestedLocale={metadata.requestedLocale}
     target={contentTarget(manifest.id, blogPostContentType, metadata.itemId)}
     typeLabel={t("report_type")}
@@ -112,7 +120,11 @@ import { manifest } from "@/manifest.gen";
 ) : null}
 ```
 
-`contentTarget(pluginId, definition, id)` returns `{ pluginId, type, id }`: your plugin id, the content type id (`"blog.post"`) and the record id. Building it from the definition keeps the type id in sync with what the API registered. `typeLabel` is the item's name, already translated, for the **Report article** title, so add it to your plugin's locale file:
+`contentTarget(pluginId, definition, id)` returns `{ pluginId, type, id }`: your plugin id, the content type id (`"blog.post"`) and the record id. Building it from the definition keeps the type id in sync with what the API registered.
+
+`preview` is optional. It shows the reader what they are reporting at the top of the dialog: the `title`, a small `imageUrl` thumbnail and a `meta` line such as the date, all already translated. `format` comes from `useFormatter()` in `use-intl`.
+
+`typeLabel` is the item's name, already translated, for "What's wrong with this article?", so add it to your plugin's locale file:
 
 ```json title="plugins/blog/src/locales/en.json"
 {
@@ -162,20 +174,28 @@ Hiding the button from the author is a choice the forum makes, not a server rule
 
 ## Check the result
 
-Rebuild with `pnpm build:plugins`, restart `pnpm dev`, sign in as a regular user and open a published article. Click **Report**, pick a reason and send it:
+Rebuild with `pnpm build:plugins`, restart `pnpm dev`, sign in as a regular user and open a published article. Click **Report**. The dialog shows the article and the [report reasons](/docs/dev/moderation/manage-report-reasons):
 
 <ImgDocs
   src={reportDialog}
-  alt="Report article dialog with the reasons Spam, Abusive content, Rule violation and Other, Rule violation selected, a Details text box and Cancel and Send report buttons"
+  alt="Report dialog titled What's wrong with this article?, with the article's thumbnail, title and date above the reasons Spam, Abusive content, Rule violation and Other"
 />
 
-A toast says **Report sent**. Try sending it again and the toast tells you, politely, that you already did. A moderator with `can_view_reports` on the blog now sees the report in [the ModCP](/docs/dev/moderation/process-reports).
+Pick a reason. The dialog moves on by itself and keeps the article and your reason at the top, with **Change** to go back:
+
+<ImgDocs
+  src={reportDetails}
+  alt="Report dialog titled Ready to send?, with the article, the reason Other and a Change button, a What should moderators know? text box and a Send report button"
+/>
+
+Choose **Send report** and the dialog says **Report sent**. Try reporting the same article again and a toast tells you, politely, that you already did. A moderator with `can_view_reports` on the blog now sees the report in [the ModCP](/docs/dev/moderation/process-reports).
 
 ## What the server checks
 
 - The reporter must be signed in. A guest gets `401`, and a reader whose session ended mid-dialog sees a "sign in again" message.
 - The target must be readable by the reporter through the public API. Anything else is `404`, the same answer as a typo.
-- **Other** needs at least 10 characters of details. Details are at most 2000 characters.
+- The reason must exist. A reason deleted while the dialog was open answers `400 reason_not_found`, and the dialog asks the reader to pick another.
+- A reason with **Require details** needs at least 10 characters of details. Details are at most 2000 characters.
 - One reporter can hold one open report per target. Other reporters get their own reports.
 - A user can file at most 20 reports per hour, on top of the per-IP [rate limiter](/docs/dev/advanced/rate-limiter) every API route has.
 

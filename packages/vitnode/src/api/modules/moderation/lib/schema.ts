@@ -4,7 +4,6 @@ import { createRichTextDocumentSchema } from "@/content/rich-text/document";
 import {
   MODERATION_LIMITS,
   MODERATION_REPORT_EVENT_TYPES,
-  MODERATION_REPORT_REASONS,
   MODERATION_REPORT_RESOLUTIONS,
   MODERATION_REPORT_STATUSES,
 } from "@/lib/moderation/const";
@@ -51,7 +50,7 @@ export const reportStateSchema = z.object({
   version: z.number(),
 });
 
-export const reasonSchema = z.enum(MODERATION_REPORT_REASONS);
+export const reasonSchema = z.string().min(1).max(32);
 export const resolutionSchema = z.enum(MODERATION_REPORT_RESOLUTIONS);
 export const eventTypeSchema = z.enum(MODERATION_REPORT_EVENT_TYPES);
 

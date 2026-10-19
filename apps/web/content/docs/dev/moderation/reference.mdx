@@ -102,11 +102,12 @@ A ghost button labelled **Report** that opens the dialog. Its accessible name is
 | `describedBy`     | `string`         | No       |         | Id of the element naming the item, read after the label so list buttons differ |
 | `locale`          | `string \| null` | No       | `null`  | The locale the reader was served, for moderators                            |
 | `requestedLocale` | `string \| null` | No       | `null`  | The locale the reader asked for, when the content fell back to another      |
+| `preview`         | `ReportPreview`  | No       |         | What the reader is reporting, shown at the top of the dialog: `{ title, imageUrl?, meta? }`, already translated |
 | `className`       | `string`         | No       |         | Classes for the button                                                      |
 
 ### `ReportDialog`
 
-The same dialog, controlled by you. Use it for your own trigger, such as a menu item, or to share one dialog across a long list. It takes `target`, `typeLabel`, `locale` and `requestedLocale` like `ReportButton`, plus `open: boolean` and `onOpenChange(open: boolean)`.
+The same dialog, controlled by you. Use it for your own trigger, such as a menu item, or to share one dialog across a long list. It takes `target`, `typeLabel`, `locale`, `requestedLocale` and `preview` like `ReportButton`, plus `open: boolean` and `onOpenChange(open: boolean)`.
 
 ```tsx
 import type { ContentTarget } from "@vitnode/core/content";
@@ -127,7 +128,7 @@ const [reporting, setReporting] = useState<ContentTarget | null>(null);
 ) : null}
 ```
 
-The dialog shows a toast with a description after every outcome: sent, already reported (`409 duplicate`), no longer available (`404`), too many reports (`429`), session ended (`401`), invalid details (`400`) and anything else.
+The dialog has three screens: pick a reason, add details, and **Report sent**. Picking a reason with a click, tap, Space or Enter moves on; arrow keys only move the selection. A failure shows a toast with a description: already reported (`409 duplicate`), no longer available (`404`), too many reports (`429`), session ended (`401`), reason just removed (`400 reason_not_found`, back to the reasons), missing details (`400 details_required`) and anything else.
 
 ## Report lifecycle
 
@@ -137,7 +138,7 @@ The dialog shows a toast with a description after every outcome: sent, already r
 | `in_progress` | Taking or assigning a report, or reopening an assigned one |
 | `done`        | Resolving with `no_violation`, `action_taken` or `duplicate` |
 
-Reasons are `spam`, `abusive`, `rule_violation` and `other`; `other` needs details. Every change except a note needs `expectedVersion`. A stale version answers `409` with `{ error: "conflict", current }`, and taking a report someone else holds answers `409 already_claimed`.
+A report stores its reason's `code`. Admins manage the reasons in [Report reasons](/docs/dev/moderation/manage-report-reasons); the four starter codes are `spam`, `abusive`, `rule_violation` and `other`, and only a reason with `requiresDetails` needs details. Every change except a note needs `expectedVersion`. A stale version answers `409` with `{ error: "conflict", current }`, and taking a report someone else holds answers `409 already_claimed`.
 
 ## ModCP API routes
 
@@ -145,7 +146,8 @@ All under `/api/@vitnode/core/moderation`, using the user session. A guest gets 
 
 | Method and path                      | Permission           | Body                                         |
 | ------------------------------------ | -------------------- | -------------------------------------------- |
-| `POST /reports`                      | Signed in            | `{ pluginId, targetType, targetId, locale?, requestedLocale?, reason, description? }` |
+| `GET /reasons`                       | Anyone               | Returns `{ reasons }` in display order, each `{ id, code, requiresDetails, title, description }` with every translation as `{ languageCode, value }[]` |
+| `POST /reports`                      | Signed in            | `{ pluginId, targetType, targetId, locale?, requestedLocale?, reason, description? }`, where `reason` is a reason `code` |
 | `GET /reports`                       | `can_view_reports`   | Query `status`, `assigned`, `search`, `page`, `pageSize` |
 | `GET /reports/{id}`                  | `can_view_reports`   |                                              |
 | `POST /reports/{id}/claim`           | `can_manage_reports` | `{ expectedVersion }`                        |
@@ -157,6 +159,27 @@ All under `/api/@vitnode/core/moderation`, using the user session. A guest gets 
 | `POST /reports/{id}/reopen`          | `can_manage_reports` | `{ expectedVersion, reason }`                |
 | `POST /reports/{id}/actions/{action}` | `can_manage_reports` and the action's permission | `{ expectedVersion }` |
 | `GET /reports/{id}/assignees`        | `can_manage_reports` |                                              |
+
+## Report reasons
+
+The AdminCP routes behind [Report reasons](/docs/dev/moderation/manage-report-reasons), under `/api/@vitnode/core/admin/report-reasons`, using the AdminCP session. Each needs the matching `report_reasons` admin permission.
+
+| Method and path  | Permission   | Body                                              | Success            |
+| ---------------- | ------------ | ------------------------------------------------- | ------------------ |
+| `GET /`          | `can_view`   |                                                   | `{ reasons }` with `position` |
+| `POST /create`   | `can_create` | `{ title, description, requiresDetails }`          | `201 { id }`, added last |
+| `PATCH /{id}`    | `can_edit`   | Any of `{ title, description, requiresDetails }`   | `{ id }`           |
+| `PUT /reorder`   | `can_edit`   | `{ ids }`: every reason id once, in the new order  | `200`              |
+| `DELETE /{id}`   | `can_delete` |                                                   | `200`              |
+
+`title` and `description` are `{ languageCode, value }[]`. `title` needs at least one value. Empty values are dropped, and a missing language falls back to the default language in the dialog. A new reason gets a generated `code`.
+
+| `error`         | Status | When                                        |
+| --------------- | ------ | ------------------------------------------- |
+| `limit_reached` | `409`  | Creating an 11th reason                     |
+| `last_reason`   | `409`  | Deleting the only reason left               |
+| `mismatch`      | `400`  | `ids` misses, repeats or invents a reason   |
+| `not_found`     | `404`  | No reason with that id                      |
 
 ## Approval routes
 
@@ -196,6 +219,10 @@ Statuses are `pending`, `approved`, `rejected`, `superseded` (replaced by the au
 | `moderation.report.reopened`  | `{ reportId }`                                                |
 | `moderation.report.note_updated` | `{ reportId, noteId }`                                     |
 | `moderation.report.note_deleted` | `{ reportId, noteId }`                                     |
+| `moderation.report_reason.created` | `{ reasonId, code }`                                     |
+| `moderation.report_reason.updated` | `{ reasonId, code }`                                     |
+| `moderation.report_reason.deleted` | `{ reasonId, code }`                                     |
+| `moderation.report_reason.reordered` | `{ reasonIds }` in the new order                       |
 | `content.approval.submitted`  | `{ submissionId, replacedSubmissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId }` |
 | `content.approval.approved`   | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId }` |
 | `content.approval.rejected`   | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId, reason }` |
@@ -225,7 +252,8 @@ The snapshot is read in one read-only transaction, so its fields and `source` de
 
 | Limit                            | Value      |
 | -------------------------------- | ---------- |
-| Report details                   | 2000 characters, at least 10 for `other` |
+| Report details                   | 2000 characters, at least 10 when the reason requires details |
+| Report reasons                   | 1 to 10; titles up to 100 characters, descriptions up to 255 |
 | Plain-text notes, reopen reasons | 3 to 2000 characters |
 | Resolution explanations          | Optional, up to 2000 characters |
 | Rich-text notes                  | 64 KB, not empty |
@@ -243,5 +271,7 @@ File fields keep `{ id, name, mimeType, size, url }` only. The file's bytes are 
 ## Database
 
 The migration `20261011193321_add_moderation_reports` adds `core_moderation_reports` and `core_moderation_report_events`. Neither references the reported content, so deleting content keeps its reports. Reporter, assignee and resolver are `ON DELETE SET NULL`, so deleting an account keeps the evidence. The unique `openKey` column enforces one open report per reporter and target, even under concurrent submissions.
+
+The migration `20261019161102_add_moderation_report_reasons` adds `core_moderation_report_reasons` with a unique `code`, `requiresDetails` and `position`. Titles and descriptions live in `core_languages_words`. `core_moderation_reports.reason` holds the reason's `code` without a foreign key, so deleting a reason keeps its reports. `db:prepare` and `db:migrate` add the four starter reasons only while the table is empty.
 
 Approvals live in `core_content_submissions`, one row per submission. Rows are never deleted with the content, author and reviewer are `ON DELETE SET NULL`, and a partial unique index allows one `pending` submission per record. Container policy overrides are stored in `core_content_containers.policies`.

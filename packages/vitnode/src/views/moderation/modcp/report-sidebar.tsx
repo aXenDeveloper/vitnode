@@ -34,6 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ReportReasonLabel } from "@/views/moderation/report-reason-label";
 
 import type { ModcpReportDetail } from "./modcp-query";
 import type { ReportStatus } from "./report-tone";
@@ -585,8 +586,8 @@ export const ReportSidebar = ({
             </FieldRow>
           ) : null}
           <FieldRow label={t("modcp.detail.details.reason")}>
-            <Chip icon={FlagIcon} tone={REASON_TONE[report.reason]}>
-              {t(`reasons.${report.reason}`)}
+            <Chip icon={FlagIcon} tone={REASON_TONE}>
+              <ReportReasonLabel code={report.reason} />
             </Chip>
           </FieldRow>
           <FieldRow label={t("modcp.detail.details.visibility")}>

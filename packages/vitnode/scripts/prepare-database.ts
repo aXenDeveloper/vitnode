@@ -7,9 +7,11 @@ import postgres from "postgres";
 
 import { core_admin_permissions } from "@/database/admins.js";
 import { core_languages, core_languages_words } from "@/database/languages.js";
+import { core_moderation_report_reasons } from "@/database/moderation.js";
 import { core_moderators_permissions } from "@/database/moderators.js";
 import { core_roles } from "@/database/roles.js";
 import { SEARCH_TEXT_CONFIGS } from "@/database/search.js";
+import { MODERATION_DEFAULT_REPORT_REASONS } from "@/lib/moderation/const.js";
 
 import type { VitNodeApiI18nConfig } from "../src/lib/i18n/types.js";
 import type { VitNodeApiConfig } from "../src/vitnode.config.js";
@@ -641,6 +643,8 @@ export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
     .limit(1);
 
   const languages = languagesFromApiConfig(config.i18n);
+  const { code: defaultLanguageCode } =
+    languages.find(language => language.default) ?? languages[0];
 
   // Idempotent by `code`, which is what lets a locale be added to the config and
   // picked up by the next `db:prepare` without touching the rows already there.
@@ -695,9 +699,6 @@ export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
      * not serve English - which is reachable now that these rows come from the
      * app's own configuration rather than from a fallback that always said `en`.
      */
-    const { code: defaultLanguageCode } =
-      languages.find(language => language.default) ?? languages[0];
-
     await dbClient.insert(core_languages_words).values(
       [
         { role: roles[0].id, value: "Guest" },
@@ -733,6 +734,52 @@ export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
       unrestricted: true,
     });
   }
+
+  await seedReportReasons(dbClient, defaultLanguageCode);
+};
+
+const seedReportReasons = async (
+  dbClient: VitNodeApiConfig["dbProvider"],
+  languageCode: string,
+) => {
+  const [reasonCount] = await dbClient
+    .select({ count: count() })
+    .from(core_moderation_report_reasons)
+    .limit(1);
+  if (reasonCount.count > 0) return;
+
+  const reasons = await dbClient
+    .insert(core_moderation_report_reasons)
+    .values(
+      MODERATION_DEFAULT_REPORT_REASONS.map((reason, position) => ({
+        code: reason.code,
+        position,
+        requiresDetails: reason.requiresDetails,
+      })),
+    )
+    .onConflictDoNothing({ target: core_moderation_report_reasons.code })
+    .returning({
+      code: core_moderation_report_reasons.code,
+      id: core_moderation_report_reasons.id,
+    });
+
+  const words = reasons.flatMap(({ code, id }) => {
+    const reason = MODERATION_DEFAULT_REPORT_REASONS.find(
+      item => item.code === code,
+    );
+    if (!reason) return [];
+
+    return (["title", "description"] as const).map(variable => ({
+      itemId: id,
+      languageCode,
+      pluginCode: "core",
+      tableName: "core_moderation_report_reasons",
+      value: reason[variable],
+      variable,
+    }));
+  });
+  if (words.length > 0)
+    await dbClient.insert(core_languages_words).values(words);
 };
 
 /**

@@ -210,9 +210,11 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
  */
 const TopicViewerActions = ({
   author,
+  title,
   topicId,
 }: {
   author: ForumPerson;
+  title: string;
   topicId: number;
 }) => {
   const t = useTranslations("@vitnode/forum.topics.detail");
@@ -234,6 +236,7 @@ const TopicViewerActions = ({
   return (
     <ReportButton
       className="text-muted-foreground"
+      preview={{ meta: author?.name ?? null, title }}
       target={contentTarget(manifest.id, topicContentType, topicId)}
       typeLabel={t("report_type")}
     />
@@ -339,7 +342,11 @@ const TopicPage = ({
             </div>
 
             <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
-              <TopicViewerActions author={topic.author} topicId={topic.id} />
+              <TopicViewerActions
+                author={topic.author}
+                title={topic.title}
+                topicId={topic.id}
+              />
               {forum ? (
                 <HrefLink
                   className={buttonVariants({ size: "sm", variant: "ghost" })}

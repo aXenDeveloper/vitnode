@@ -7,14 +7,32 @@ export const MODERATION_PERMISSIONS = {
   hide: "can_hide",
 } as const;
 
-export const MODERATION_REPORT_REASONS = [
-  "spam",
-  "abusive",
-  "rule_violation",
-  "other",
+export const MODERATION_DEFAULT_REPORT_REASONS = [
+  {
+    code: "spam",
+    description: "Advertising, scams or repeated junk.",
+    requiresDetails: false,
+    title: "Spam",
+  },
+  {
+    code: "abusive",
+    description: "Harassment, hate or threats.",
+    requiresDetails: false,
+    title: "Abusive content",
+  },
+  {
+    code: "rule_violation",
+    description: "Breaks the community rules in another way.",
+    requiresDetails: false,
+    title: "Rule violation",
+  },
+  {
+    code: "other",
+    description: "Something else - tell us what.",
+    requiresDetails: true,
+    title: "Other",
+  },
 ] as const;
-
-export type ModerationReportReason = (typeof MODERATION_REPORT_REASONS)[number];
 
 export const MODERATION_REPORT_STATUSES = [
   "new",
@@ -56,7 +74,10 @@ export type ModerationTargetAction = (typeof MODERATION_TARGET_ACTIONS)[number];
 
 export const MODERATION_LIMITS = {
   descriptionMaxLength: 2000,
-  otherDescriptionMinLength: 10,
+  requiredDescriptionMinLength: 10,
+  reasonTitleMaxLength: 100,
+  reasonDescriptionMaxLength: 255,
+  maxReportReasons: 10,
   noteMaxLength: 2000,
   explanationMinLength: 3,
   richNoteMaxBytes: 64 * 1024,
