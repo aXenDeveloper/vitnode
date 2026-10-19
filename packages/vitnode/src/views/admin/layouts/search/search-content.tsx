@@ -32,10 +32,7 @@ const SearchAdminDialogSkeleton = () => {
   const t = useTranslations("admin.global");
 
   return (
-    <div
-      aria-busy
-      className="bg-popover flex flex-col overflow-hidden rounded-xl p-1"
-    >
+    <div aria-busy className="flex flex-col overflow-hidden rounded-xl p-1">
       <div className="p-1 pb-0">
         <InputGroup className="border-input/30 bg-input/30 h-8 rounded-lg shadow-none">
           <span className="text-muted-foreground flex-1 truncate ps-1.5 text-sm">
@@ -166,7 +163,7 @@ export const SearchAdminContent = ({
         open={open}
       >
         <DialogContent
-          className="top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 outline-none sm:max-h-[calc(66.667vh-5rem)]"
+          className="bg-popover/80 top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 backdrop-blur-sm outline-none sm:max-h-[calc(66.667vh-5rem)]"
           showCloseButton={false}
         >
           <DialogHeader className="sr-only">

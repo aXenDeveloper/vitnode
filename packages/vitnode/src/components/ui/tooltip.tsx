@@ -70,7 +70,7 @@ function TooltipContent({
       >
         <TooltipPrimitive.Popup
           className={cn(
-            "bg-foreground text-background ease-fluid z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-[opacity,scale] duration-150 has-data-[slot=kbd]:pe-1.5 data-ending-style:scale-90 data-ending-style:opacity-0 data-ending-style:duration-100 data-instant:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm motion-reduce:transition-none",
+            "bg-foreground/80 text-background ease-fluid z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs backdrop-blur-sm transition-[opacity,scale] duration-150 has-data-[slot=kbd]:pe-1.5 data-ending-style:scale-90 data-ending-style:opacity-0 data-ending-style:duration-100 data-instant:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm motion-reduce:transition-none",
             className,
           )}
           data-slot="tooltip-content"

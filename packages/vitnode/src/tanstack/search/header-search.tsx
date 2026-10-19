@@ -30,7 +30,7 @@ const HeaderSearchSkeleton = () => {
   return (
     <div
       aria-busy
-      className="bg-popover ring-foreground/10 flex h-14 items-center gap-3 rounded-2xl px-4 shadow-2xl ring-1 sm:h-16 sm:px-5"
+      className="bg-popover/80 ring-foreground/10 flex h-14 items-center gap-3 rounded-2xl px-4 shadow-2xl ring-1 backdrop-blur-sm sm:h-16 sm:px-5"
     >
       <SearchIcon
         aria-hidden
