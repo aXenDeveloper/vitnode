@@ -17,7 +17,7 @@ Exact names, types and behavior of the moderation APIs. For step-by-step guides,
 
 `reports: true` uses both defaults. It throws without `publicApi`, for an unknown option, for `reports.enabled`, and for a field that does not exist or cannot be snapshotted.
 
-The server-side model can scope reports with `createContentModel(definition, { moderationScope: { column, family } })`, where `column` is a base-table column holding the resource id.
+The server-side model can scope reports with `createContentModel(definition, { moderationScope: { column, family } })`, where `column` is a base-table column holding the resource id. A content type that reaches its container through a relation, such as a forum comment through its topic, has no such column, so its report permissions stay unscoped.
 
 ## Generated moderator permissions
 
@@ -82,6 +82,52 @@ Content Engine types register their target automatically. Anything else register
 | `actions`          | `{ hide?, unhide? }`                                                | No       | `{ permission, available(state), run(c, { actorUserId, targetId, tx }) }`    |
 
 `run` executes inside the report's transaction and returns `{ changed, effects }`. `effects` runs after the commit. When `run` throws, the transaction rolls back and no timeline entry is written.
+
+## Report UI
+
+Public pages report a target with the components from `@vitnode/core/tanstack/moderation`. Both load their own messages (`REPORT_NAMESPACES`) and lazy-load the form, and both show a **Sign in** link instead of the form to guests. For a walkthrough, see [Enable reports](/docs/dev/moderation/enable-reports).
+
+### `contentTarget`
+
+`contentTarget(pluginId, definition, id)` from `@vitnode/core/content` returns the `ContentTarget` of one record: `{ pluginId, type, id }`, where `type` is `definition.id` and `id` is the record id as a string. A custom report target uses the same shape with its own `type`.
+
+### `ReportButton`
+
+A ghost button labelled **Report** that opens the dialog. Its accessible name is "Report `typeLabel`".
+
+| Name              | Type             | Required | Default | Description                                                                 |
+| ----------------- | ---------------- | -------- | ------- | --------------------------------------------------------------------------- |
+| `target`          | `ContentTarget`  | Yes      |         | The reported record                                                         |
+| `typeLabel`       | `string`         | Yes      |         | What the item is called, already translated, for "Report `typeLabel`"      |
+| `describedBy`     | `string`         | No       |         | Id of the element naming the item, read after the label so list buttons differ |
+| `locale`          | `string \| null` | No       | `null`  | The locale the reader was served, for moderators                            |
+| `requestedLocale` | `string \| null` | No       | `null`  | The locale the reader asked for, when the content fell back to another      |
+| `className`       | `string`         | No       |         | Classes for the button                                                      |
+
+### `ReportDialog`
+
+The same dialog, controlled by you. Use it for your own trigger, such as a menu item, or to share one dialog across a long list. It takes `target`, `typeLabel`, `locale` and `requestedLocale` like `ReportButton`, plus `open: boolean` and `onOpenChange(open: boolean)`.
+
+```tsx
+import type { ContentTarget } from "@vitnode/core/content";
+
+import { ReportDialog } from "@vitnode/core/tanstack/moderation";
+
+const [reporting, setReporting] = useState<ContentTarget | null>(null);
+
+{reporting ? (
+  <ReportDialog
+    onOpenChange={open => {
+      if (!open) setReporting(null);
+    }}
+    open
+    target={reporting}
+    typeLabel={t("report_type")}
+  />
+) : null}
+```
+
+The dialog shows a toast with a description after every outcome: sent, already reported (`409 duplicate`), no longer available (`404`), too many reports (`429`), session ended (`401`), invalid details (`400`) and anything else.
 
 ## Report lifecycle
 

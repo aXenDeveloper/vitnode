@@ -66,7 +66,7 @@ For a proposal, `values` is still the live record and `approval.values` holds wh
 
 To list everything an author sent, call the core moderation module. It returns pending, approved and rejected submissions, newest first, for the signed-in member. Pass `pluginId` to keep only your plugin's submissions - the filter runs before the page is cut, so every page is full and `total` counts only yours:
 
-```ts title="plugins/forum/src/pages/my-submissions-data.ts"
+```ts
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 export const fetchMySubmissions = async (page: number) => {
@@ -83,7 +83,7 @@ export const fetchMySubmissions = async (page: number) => {
 };
 ```
 
-Each item has `kind`, `status`, `title`, `contentTypeId`, `itemId`, the container, `reason` and the dates. A guest gets `401`.
+Each item has `kind`, `status`, `title`, `contentTypeId`, `itemId`, the container, `reason` and the dates. A guest gets `401`. The Forum plugin's `pending-page.tsx` renders this list at `/forum/me/pending`.
 
 ## What a decision does
 

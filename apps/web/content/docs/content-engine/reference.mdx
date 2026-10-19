@@ -303,7 +303,7 @@ visibility: true,
 
 ## `reports`
 
-`reports: true` lets signed-in readers report a published record. It registers a report target, adds `can_view_reports` and `can_manage_reports` to the moderator catalog, plus `can_view_hidden` and `can_hide` with `visibility`, and needs no migration. Pass `{ titleField, snapshotFields }` to choose what the report's snapshot keeps. Guide: [Enable reports](/docs/dev/moderation/enable-reports). Options: [Moderation reference](/docs/dev/moderation/reference#reports-on-a-content-type).
+`reports: true` lets signed-in readers report a published record. It registers a report target, adds `can_view_reports` and `can_manage_reports` to the moderator catalog, plus `can_view_hidden` and `can_hide` with `visibility`, and needs no migration. Pass `{ titleField, snapshotFields }` to choose what the report's snapshot keeps. Render the public button with `ReportButton` and `contentTarget(manifest.id, definition, record.id)`. Guide: [Enable reports](/docs/dev/moderation/enable-reports). Options and components: [Moderation reference](/docs/dev/moderation/reference#reports-on-a-content-type).
 
 ```ts title="plugins/blog/src/content/post.ts"
 publicApi: { path: "blog", fields: ["id", "title", "friendlyUrl", "content"] },

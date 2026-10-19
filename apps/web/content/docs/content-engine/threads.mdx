@@ -134,21 +134,28 @@ import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { manifest } from "@/manifest.gen";
 
-export const fetchTopicThread = async (topicId: number, after?: string) => {
+export const fetchThreadPage = async ({
+  after,
+  topicId,
+}: {
+  after?: string;
+  topicId: number;
+}) => {
   const res = await fetcher({
     plugin: manifest.id,
     method: "get",
     module: "content/comments",
     path: "/thread",
-    args: { query: { root: String(topicId), first: 20, after } },
+    args: { query: { root: String(topicId), first: 20, ...(after ? { after } : {}) } },
   });
-  if (!res.ok) throw new Error("Could not load the comments.");
+  if (res.status === 404) return null;
+  if (res.status !== 200) throw new Error("Loading the comments failed.");
 
   return await res.json();
 };
 ```
 
-`items` is already flattened depth first, so render it as a list and indent each item by its `depth`. Pass `pageInfo.endCursor` as `after` to load the next page.
+`items` is already flattened depth first, so render it as a list and indent each item by its `depth`. Pass `pageInfo.endCursor` as `after` to load the next page. A `404` means the root record is missing or not public. The Forum plugin's `thread-data.ts` also validates the response with Zod, and `thread.tsx` renders it as a nested list.
 
 </Step>
 
@@ -174,7 +181,7 @@ export const fetchTopicThread = async (topicId: number, after?: string) => {
         "id": 17,
         "slug": "k3v9q2m7xa",
         "body": { "type": "doc", "content": [] },
-        "topic": 42,
+        "topic": { "id": 42 },
         "parent": null,
         "publishedAt": "2026-10-13T09:20:00.000Z",
         "createdAt": "2026-10-13T09:20:00.000Z",
@@ -189,7 +196,7 @@ export const fetchTopicThread = async (topicId: number, after?: string) => {
       }
     },
     { "depth": 2, "id": 18, "parentId": 17, "removed": true, "record": null },
-    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21, "parent": 18 } }
+    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21, "parent": { "id": 18 } } }
   ],
   "pageInfo": { "endCursor": "WyIyMDI2LTEwLTEzVDA5OjIwOjAwLjAwMFoiLDE3XQ", "hasNextPage": false, "totalCount": 1 },
   "replyCount": 2,
@@ -202,7 +209,9 @@ export const fetchTopicThread = async (topicId: number, after?: string) => {
 - **Limits.** One page carries at most 500 nodes and stops at `maxDepth`. `truncated: true` means some nested replies did not fit.
 - **The root must be public.** A missing, draft or hidden topic answers `404`.
 
-`record` has the same shape as a record from the public list, including `people` summaries. A person is `null` when the account was deleted.
+`record` has the same shape as a record from the public list, including `people` summaries. A to-one relation such as `topic` or `parent` comes back as `{ id }`, not a bare id. A person is `null` when the account was deleted.
+
+Readers can report a reply like any other record: turn on [`reports`](/docs/dev/moderation/enable-reports#report-items-in-a-list) for the reply type and render a `ReportButton` per reply.
 
 ## Placement rules
 

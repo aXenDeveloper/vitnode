@@ -19,6 +19,7 @@ const REPORTED_FAILURES = [
 ] as const;
 
 export type ModerationFailure =
+  | "unauthenticated"
   | "unknown"
   | "validation"
   | (typeof REPORTED_FAILURES)[number];
@@ -45,6 +46,7 @@ const failureOf = async (response: Response): Promise<ModerationFailure> => {
   const reported = await reportedFailureOf(response);
   if (reported) return reported;
   if (response.status === 400) return "validation";
+  if (response.status === 401) return "unauthenticated";
   if (response.status === 403) return "forbidden";
   if (response.status === 404) return "not_found";
 

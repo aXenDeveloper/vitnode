@@ -75,21 +75,35 @@ Enabling reports grants nothing. An administrator still has to give these permis
 
 ### Place the Report button
 
-A plugin's own pages place the button themselves. Pass the record's stable id and the language the reader was served:
+A plugin's own pages place the button themselves. Pass the record as a `target` built with `contentTarget`, plus the language the reader was served:
 
 ```tsx title="plugins/blog/src/pages/post-page.tsx"
+import { contentTarget } from "@vitnode/core/content";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
+
+import { blogPostContentType } from "@/content/post";
+import { manifest } from "@/manifest.gen";
 
 {!metadata.hidden && metadata.itemId !== null ? (
   <ReportButton
     locale={metadata.locale}
-    pluginId={manifest.id}
     requestedLocale={metadata.requestedLocale}
-    targetId={metadata.itemId}
-    targetType={blogPostContentType.id}
+    target={contentTarget(manifest.id, blogPostContentType, metadata.itemId)}
     typeLabel={t("report_type")}
   />
 ) : null}
+```
+
+`contentTarget(pluginId, definition, id)` returns `{ pluginId, type, id }`: your plugin id, the content type id (`"blog.post"`) and the record id. Building it from the definition keeps the type id in sync with what the API registered. `typeLabel` is the item's name, already translated, for the **Report article** title, so add it to your plugin's locale file:
+
+```json title="plugins/blog/src/locales/en.json"
+{
+  "@vitnode/blog": {
+    "post": {
+      "report_type": "article"
+    }
+  }
+}
 ```
 
 The blog reads `itemId`, `locale` and `requestedLocale` from the [delivery resolution](/docs/content-engine/public-pages), so the button reports the article in the language the reader actually saw, even after a fallback. The form loads only when the dialog opens. A signed-out reader gets a **Sign in** link instead of the form.
@@ -97,6 +111,36 @@ The blog reads `itemId`, `locale` and `requestedLocale` from the [delivery resol
 </Step>
 
 </Steps>
+
+## Report items in a list
+
+Comments, replies and other list items work the same way: the record id comes from the item you are rendering. The forum puts a button in each comment's action row, for everyone except the comment's author:
+
+```tsx title="plugins/forum/src/pages/thread.tsx"
+import { contentTarget } from "@vitnode/core/content";
+import { ReportButton } from "@vitnode/core/tanstack/moderation";
+
+import { commentContentType } from "@/content/comment";
+import { manifest } from "@/manifest.gen";
+
+const authorId = `${commentAnchorId(comment.slug)}-author`;
+
+<span id={authorId}>
+  <PersonName person={comment.author} />
+</span>
+
+{isOwner ? null : (
+  <ReportButton
+    describedBy={authorId}
+    target={contentTarget(manifest.id, commentContentType, comment.id)}
+    typeLabel={t("report_type")}
+  />
+)}
+```
+
+`comment.id` comes from the [thread](/docs/content-engine/threads) response. Comments are not localized, so the button needs no `locale`. `describedBy` points at the author's name, so a screen reader announces "Report comment, Jane" instead of 30 identical "Report comment" buttons.
+
+Hiding the button from the author is a choice the forum makes, not a server rule. Every button shares one request for its messages and loads the form only when its dialog opens. To open the dialog from your own trigger, such as a menu item, use [`ReportDialog`](/docs/dev/moderation/reference#reportdialog).
 
 ## Check the result
 
@@ -111,7 +155,7 @@ A toast says **Report sent**. Try sending it again and the toast tells you, poli
 
 ## What the server checks
 
-- The reporter must be signed in. A guest gets `401`.
+- The reporter must be signed in. A guest gets `401`, and a reader whose session ended mid-dialog sees a "sign in again" message.
 - The target must be readable by the reporter through the public API. Anything else is `404`, the same answer as a typo.
 - **Other** needs at least 10 characters of details. Details are at most 2000 characters.
 - One reporter can hold one open report per target. Other reporters get their own reports.
