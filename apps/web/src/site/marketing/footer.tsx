@@ -13,11 +13,12 @@ interface FooterLink {
 const COLUMNS: { links: FooterLink[]; title: string }[] = [
   {
     links: [
-      { href: '/', label: 'Overview' },
+      { href: '/why-vitnode', label: 'Why VitNode' },
+      { href: '/platform', label: 'Platform' },
       { href: '/solutions', label: 'Solutions' },
-      { href: '/plugins', label: 'Plugins' },
-      { href: '/docs/content-engine', label: 'Content Engine' },
-      { href: '/docs/dev/plugins/admin', label: 'Admin Control Panel' },
+      { href: '/integrations', label: 'Integrations' },
+      { href: '/extensions', label: 'Extension directory' },
+      { href: '/compare', label: 'Compare' },
     ],
     title: 'Product',
   },

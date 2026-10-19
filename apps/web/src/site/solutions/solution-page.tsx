@@ -16,6 +16,7 @@ import { SCREENS } from '@/site/marketing/screens'
 import {
   CanaryNotice,
   Eyebrow,
+  HeroShell,
   MarketingActions,
   MarketingSection,
   SectionHeading,
@@ -41,19 +42,6 @@ const SolutionIcon = ({
   className: string
   slug: string
 }) => renderIcon(SOLUTION_ICONS[slug] ?? Sparkles, className)
-
-const HeroShell = ({ children }: { children: React.ReactNode }) => (
-  <>
-    <div aria-hidden className="mk-grid absolute inset-0 -z-10" />
-    <div
-      aria-hidden
-      className="mk-anim-drift from-primary/20 absolute top-0 left-1/2 -z-10 size-128 -translate-x-1/2 -translate-y-1/2 bg-radial from-25% to-transparent to-70%"
-    />
-    <div className="container mx-auto flex flex-col items-center gap-6 px-4 py-16 text-center sm:px-6 sm:py-24">
-      {children}
-    </div>
-  </>
-)
 
 const STATUS: Record<
   Availability,
@@ -412,7 +400,11 @@ const FaqBlock = ({
 const featuresBefore = (sections: SolutionSection[], index: number) =>
   sections.slice(0, index).filter((item) => item.type === 'feature').length
 
-const SolutionSections = ({ sections }: { sections: SolutionSection[] }) => (
+export const SolutionSections = ({
+  sections,
+}: {
+  sections: SolutionSection[]
+}) => (
   <>
     {sections.map((section, index) => {
       switch (section.type) {

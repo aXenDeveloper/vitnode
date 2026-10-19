@@ -15,12 +15,19 @@ import { Route as MainRouteImport } from './routes/_main'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as MainExtensionsRouteImport } from './routes/_main/extensions'
+import { Route as MainIntegrationsRouteImport } from './routes/_main/integrations'
 import { Route as MainPluginsRouteImport } from './routes/_main/plugins'
+import { Route as MainWhyVitnodeRouteImport } from './routes/_main/why-vitnode'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs.{$}[.]md'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
 import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
+import { Route as MainCompareIndexRouteImport } from './routes/_main/compare/index'
+import { Route as MainCompareSlugRouteImport } from './routes/_main/compare/$slug'
+import { Route as MainPlatformIndexRouteImport } from './routes/_main/platform/index'
+import { Route as MainPlatformSlugRouteImport } from './routes/_main/platform/$slug'
 import { Route as MainSolutionsIndexRouteImport } from './routes/_main/solutions/index'
 import { Route as MainSolutionsSlugRouteImport } from './routes/_main/solutions/$slug'
 import { Route as AdminAdminCoreIndexRouteImport } from './routes/_admin/admin.core.index'
@@ -52,9 +59,24 @@ const MainIndexRoute = MainIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MainRoute,
 } as any)
+const MainExtensionsRoute = MainExtensionsRouteImport.update({
+  id: '/extensions',
+  path: '/extensions',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainIntegrationsRoute = MainIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainPluginsRoute = MainPluginsRouteImport.update({
   id: '/plugins',
   path: '/plugins',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainWhyVitnodeRoute = MainWhyVitnodeRouteImport.update({
+  id: '/why-vitnode',
+  path: '/why-vitnode',
   getParentRoute: () => MainRoute,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -82,6 +104,26 @@ const DocsDocsSplatRoute = DocsDocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => DocsRoute,
 } as any)
+const MainCompareIndexRoute = MainCompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainCompareSlugRoute = MainCompareSlugRouteImport.update({
+  id: '/compare/$slug',
+  path: '/compare/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainPlatformIndexRoute = MainPlatformIndexRouteImport.update({
+  id: '/platform/',
+  path: '/platform/',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainPlatformSlugRoute = MainPlatformSlugRouteImport.update({
+  id: '/platform/$slug',
+  path: '/platform/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainSolutionsIndexRoute = MainSolutionsIndexRouteImport.update({
   id: '/solutions/',
   path: '/solutions/',
@@ -102,13 +144,20 @@ export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/extensions': typeof MainExtensionsRoute
+  '/integrations': typeof MainIntegrationsRoute
   '/plugins': typeof MainPluginsRoute
+  '/why-vitnode': typeof MainWhyVitnodeRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/docs/$': typeof DocsDocsSplatRoute
+  '/compare/$slug': typeof MainCompareSlugRoute
+  '/platform/$slug': typeof MainPlatformSlugRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs/': typeof DocsDocsIndexRoute
+  '/compare/': typeof MainCompareIndexRoute
+  '/platform/': typeof MainPlatformIndexRoute
   '/solutions/': typeof MainSolutionsIndexRoute
   '/admin/core/': typeof AdminAdminCoreIndexRoute
 }
@@ -116,13 +165,20 @@ export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/extensions': typeof MainExtensionsRoute
+  '/integrations': typeof MainIntegrationsRoute
   '/plugins': typeof MainPluginsRoute
+  '/why-vitnode': typeof MainWhyVitnodeRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/docs/$': typeof DocsDocsSplatRoute
+  '/compare/$slug': typeof MainCompareSlugRoute
+  '/platform/$slug': typeof MainPlatformSlugRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs': typeof DocsDocsIndexRoute
+  '/compare': typeof MainCompareIndexRoute
+  '/platform': typeof MainPlatformIndexRoute
   '/solutions': typeof MainSolutionsIndexRoute
   '/admin/core': typeof AdminAdminCoreIndexRoute
 }
@@ -133,14 +189,21 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/_main/extensions': typeof MainExtensionsRoute
+  '/_main/integrations': typeof MainIntegrationsRoute
   '/_main/plugins': typeof MainPluginsRoute
+  '/_main/why-vitnode': typeof MainWhyVitnodeRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/_main/': typeof MainIndexRoute
   '/_docs/docs/$': typeof DocsDocsSplatRoute
+  '/_main/compare/$slug': typeof MainCompareSlugRoute
+  '/_main/platform/$slug': typeof MainPlatformSlugRoute
   '/_main/solutions/$slug': typeof MainSolutionsSlugRoute
   '/_docs/docs/': typeof DocsDocsIndexRoute
+  '/_main/compare/': typeof MainCompareIndexRoute
+  '/_main/platform/': typeof MainPlatformIndexRoute
   '/_main/solutions/': typeof MainSolutionsIndexRoute
   '/_admin/admin/core/': typeof AdminAdminCoreIndexRoute
 }
@@ -150,13 +213,20 @@ export interface FileRouteTypes {
     | '/'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/extensions'
+    | '/integrations'
     | '/plugins'
+    | '/why-vitnode'
     | '/api/$'
     | '/docs/search'
     | '/docs/{$}.md'
     | '/docs/$'
+    | '/compare/$slug'
+    | '/platform/$slug'
     | '/solutions/$slug'
     | '/docs/'
+    | '/compare/'
+    | '/platform/'
     | '/solutions/'
     | '/admin/core/'
   fileRoutesByTo: FileRoutesByTo
@@ -164,13 +234,20 @@ export interface FileRouteTypes {
     | '/'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/extensions'
+    | '/integrations'
     | '/plugins'
+    | '/why-vitnode'
     | '/api/$'
     | '/docs/search'
     | '/docs/{$}.md'
     | '/docs/$'
+    | '/compare/$slug'
+    | '/platform/$slug'
     | '/solutions/$slug'
     | '/docs'
+    | '/compare'
+    | '/platform'
     | '/solutions'
     | '/admin/core'
   id:
@@ -180,14 +257,21 @@ export interface FileRouteTypes {
     | '/_main'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/_main/extensions'
+    | '/_main/integrations'
     | '/_main/plugins'
+    | '/_main/why-vitnode'
     | '/api/$'
     | '/docs/search'
     | '/docs/{$}.md'
     | '/_main/'
     | '/_docs/docs/$'
+    | '/_main/compare/$slug'
+    | '/_main/platform/$slug'
     | '/_main/solutions/$slug'
     | '/_docs/docs/'
+    | '/_main/compare/'
+    | '/_main/platform/'
     | '/_main/solutions/'
     | '/_admin/admin/core/'
   fileRoutesById: FileRoutesById
@@ -247,11 +331,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/extensions': {
+      id: '/_main/extensions'
+      path: '/extensions'
+      fullPath: '/extensions'
+      preLoaderRoute: typeof MainExtensionsRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/integrations': {
+      id: '/_main/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof MainIntegrationsRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/plugins': {
       id: '/_main/plugins'
       path: '/plugins'
       fullPath: '/plugins'
       preLoaderRoute: typeof MainPluginsRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/why-vitnode': {
+      id: '/_main/why-vitnode'
+      path: '/why-vitnode'
+      fullPath: '/why-vitnode'
+      preLoaderRoute: typeof MainWhyVitnodeRouteImport
       parentRoute: typeof MainRoute
     }
     '/api/$': {
@@ -288,6 +393,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/$'
       preLoaderRoute: typeof DocsDocsSplatRouteImport
       parentRoute: typeof DocsRoute
+    }
+    '/_main/compare/': {
+      id: '/_main/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof MainCompareIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/compare/$slug': {
+      id: '/_main/compare/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof MainCompareSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/platform/': {
+      id: '/_main/platform/'
+      path: '/platform'
+      fullPath: '/platform/'
+      preLoaderRoute: typeof MainPlatformIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/platform/$slug': {
+      id: '/_main/platform/$slug'
+      path: '/platform/$slug'
+      fullPath: '/platform/$slug'
+      preLoaderRoute: typeof MainPlatformSlugRouteImport
+      parentRoute: typeof MainRoute
     }
     '/_main/solutions/': {
       id: '/_main/solutions/'
@@ -336,16 +469,30 @@ const DocsRouteChildren: DocsRouteChildren = {
 const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
 interface MainRouteChildren {
+  MainExtensionsRoute: typeof MainExtensionsRoute
+  MainIntegrationsRoute: typeof MainIntegrationsRoute
   MainPluginsRoute: typeof MainPluginsRoute
+  MainWhyVitnodeRoute: typeof MainWhyVitnodeRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainCompareSlugRoute: typeof MainCompareSlugRoute
+  MainPlatformSlugRoute: typeof MainPlatformSlugRoute
   MainSolutionsSlugRoute: typeof MainSolutionsSlugRoute
+  MainCompareIndexRoute: typeof MainCompareIndexRoute
+  MainPlatformIndexRoute: typeof MainPlatformIndexRoute
   MainSolutionsIndexRoute: typeof MainSolutionsIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
+  MainExtensionsRoute: MainExtensionsRoute,
+  MainIntegrationsRoute: MainIntegrationsRoute,
   MainPluginsRoute: MainPluginsRoute,
+  MainWhyVitnodeRoute: MainWhyVitnodeRoute,
   MainIndexRoute: MainIndexRoute,
+  MainCompareSlugRoute: MainCompareSlugRoute,
+  MainPlatformSlugRoute: MainPlatformSlugRoute,
   MainSolutionsSlugRoute: MainSolutionsSlugRoute,
+  MainCompareIndexRoute: MainCompareIndexRoute,
+  MainPlatformIndexRoute: MainPlatformIndexRoute,
   MainSolutionsIndexRoute: MainSolutionsIndexRoute,
 }
 

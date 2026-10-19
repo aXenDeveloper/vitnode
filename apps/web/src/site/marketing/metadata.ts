@@ -1,4 +1,4 @@
-import { pageHead } from '@vitnode/core/tanstack/metadata'
+import { localeAlternateLinks, pageHead } from '@vitnode/core/tanstack/metadata'
 
 import { HOME_DESCRIPTION, HOME_TITLE } from '@/site/home/metadata'
 
@@ -25,7 +25,35 @@ export interface MarketingPageMeta {
 }
 
 export const MARKETING_PAGES = {
+  compare: {
+    breadcrumbs: [{ name: 'Compare', path: '/compare' }],
+    description:
+      'VitNode compared with Invision Community, XenForo, Discourse, Flarum, NodeBB and WordPress with bbPress: licence, pricing, moderation, translations, AI and APIs, with sources.',
+    path: '/compare',
+    title: 'Compare - VitNode vs Invision, XenForo, Discourse and More',
+  },
+  extensions: {
+    breadcrumbs: [{ name: 'Extension directory', path: '/extensions' }],
+    description:
+      'Every official VitNode plugin, adapter and tool: blog, forum, Elasticsearch, S3 and R2, Supabase Storage, Resend, Nodemailer and more, with install commands.',
+    path: '/extensions',
+    title: 'Extension Directory - Official Plugins and Adapters',
+  },
   home: { description: HOME_DESCRIPTION, path: '/', title: HOME_TITLE },
+  integrations: {
+    breadcrumbs: [{ name: 'Integrations', path: '/integrations' }],
+    description:
+      'VitNode integrations for search, file storage, email, sign-in, captcha, AI models, background jobs and hosting, each linked to its setup guide.',
+    path: '/integrations',
+    title: 'Integrations - Search, Storage, Email, Sign-in and AI',
+  },
+  platform: {
+    breadcrumbs: [{ name: 'Platform', path: '/platform' }],
+    description:
+      'What every VitNode site starts with: the core, the AdminCP and the security layers, plus the reasons teams pick an open-source community platform.',
+    path: '/platform',
+    title: 'Platform - Core, AdminCP and Security',
+  },
   plugins: {
     breadcrumbs: [{ name: 'Plugins', path: '/plugins' }],
     description:
@@ -39,6 +67,13 @@ export const MARKETING_PAGES = {
       'Five solutions built with VitNode: a help center, a membership site, an open-source project hub, a gaming guild hub and a multilingual magazine, each with the flow, the roles and real screens.',
     path: '/solutions',
     title: 'Solutions - Five Sites Built with VitNode',
+  },
+  whyVitnode: {
+    breadcrumbs: [{ name: 'Why VitNode', path: '/why-vitnode' }],
+    description:
+      'Why VitNode: a forum, a blog, members, moderation and an AdminCP on one open-source TypeScript core you host, and an honest list of what is still to come.',
+    path: '/why-vitnode',
+    title: 'Why VitNode - One Open-Source Home for Your Community',
   },
 } satisfies Record<string, MarketingPageMeta>
 
@@ -69,13 +104,18 @@ const breadcrumbNode = (crumbs: MarketingCrumb[]) => ({
   ],
 })
 
-const structuredData = (page: MarketingPageMeta, url: string) => ({
+const structuredData = (
+  page: MarketingPageMeta,
+  url: string,
+  extraNodes: readonly object[],
+  language: string,
+) => ({
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@id': `${SITE_ORIGIN}/#website`,
       '@type': 'WebSite',
-      inLanguage: 'en',
+      inLanguage: language,
       name: 'VitNode',
       url: `${SITE_ORIGIN}/`,
     },
@@ -84,7 +124,7 @@ const structuredData = (page: MarketingPageMeta, url: string) => ({
       '@type': 'WebPage',
       about: { '@id': softwareNode['@id'] },
       description: page.description,
-      inLanguage: 'en',
+      inLanguage: language,
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
       name: `${page.title} - VitNode`,
       url,
@@ -103,12 +143,32 @@ const structuredData = (page: MarketingPageMeta, url: string) => ({
         ]
       : []),
     ...(page.breadcrumbs ? [breadcrumbNode(page.breadcrumbs)] : []),
+    ...extraNodes,
   ],
 })
 
-export const marketingHead = (page: MarketingPageMeta) => {
+const OG_LOCALES: Readonly<Record<string, string>> = {
+  en: 'en_US',
+  pl: 'pl_PL',
+}
+
+export interface MarketingHeadOptions {
+  extraNodes?: readonly object[]
+  locale?: string
+}
+
+export const marketingHead = (
+  page: MarketingPageMeta,
+  { extraNodes = [], locale }: MarketingHeadOptions = {},
+) => {
   const { description, path, title } = page
-  const url = new URL(path, SITE_ORIGIN).href
+  const alternates = locale
+    ? localeAlternateLinks({ internalPathname: path, locale })
+    : []
+  const url =
+    alternates.find(({ rel }) => rel === 'canonical')?.href ??
+    new URL(path, SITE_ORIGIN).href
+  const language = locale ?? 'en'
   const socialTitle = `${title} - VitNode`
   const head = pageHead({
     description,
@@ -118,23 +178,23 @@ export const marketingHead = (page: MarketingPageMeta) => {
   })
 
   return {
-    links: [{ href: url, rel: 'canonical' }],
+    links:
+      alternates.length > 0 ? alternates : [{ href: url, rel: 'canonical' }],
     meta: [
       ...head.meta,
       { content: BRAND_BLUE, name: 'theme-color' },
       { content: url, property: 'og:url' },
       { content: 'VitNode', property: 'og:site_name' },
-      { content: 'en_US', property: 'og:locale' },
+      { content: OG_LOCALES[language] ?? 'en_US', property: 'og:locale' },
       { content: 'summary_large_image', name: 'twitter:card' },
       { content: socialTitle, name: 'twitter:title' },
       { content: description, name: 'twitter:description' },
     ],
     scripts: [
       {
-        children: JSON.stringify(structuredData(page, url)).replaceAll(
-          '<',
-          '\\u003c',
-        ),
+        children: JSON.stringify(
+          structuredData(page, url, extraNodes, language),
+        ).replaceAll('<', '\\u003c'),
         type: 'application/ld+json',
       },
     ],

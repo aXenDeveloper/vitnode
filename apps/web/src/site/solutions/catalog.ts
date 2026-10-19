@@ -7,6 +7,26 @@ export interface SolutionEntry {
 }
 
 const SOLUTION_CATALOG = {
+  blog: {
+    metaDescription:
+      'Start a blog with VitNode: live co-editing, per-field translations, scheduled posts, revisions, an SEO checklist and AI helpers. Free and open source.',
+    name: 'Blog',
+  },
+  community: {
+    metaDescription:
+      'Build a community site with VitNode: blog, forum and profiles under one account, with ⌘K search, a Discover feed, notifications and a ModCP. Open source.',
+    name: 'Community site',
+  },
+  'e-commerce': {
+    metaDescription:
+      'Build a store on VitNode: a product catalog as content types, customer accounts, translations, search and a typed API. Payments are on the roadmap. Open source.',
+    name: 'E-commerce',
+  },
+  forum: {
+    metaDescription:
+      'Run a forum with VitNode: nested sections, topics and comments, approval rules per section, scoped moderators and a ModCP reports board. Free and open source.',
+    name: 'Forum',
+  },
   'gaming-guild': {
     metaDescription:
       'Build a guild or clan hub with VitNode: Discord sign-in, ranks as roles, announcements with real-time updates, events as a plugin and a multilingual roster. Free and open source.',
@@ -31,6 +51,11 @@ const SOLUTION_CATALOG = {
     metaDescription:
       'Build a home for your open-source project with VitNode: release notes and guides as content types, contributor roles, Discord and OAuth2 sign-in, real-time updates and agent-readable docs. Free and MIT-licensed.',
     name: 'Open-source hub',
+  },
+  saas: {
+    metaDescription:
+      'Build a SaaS app on VitNode: accounts, SSO, plans as roles, an AdminCP, AI budgets, notifications, cron and a typed API. Billing is on the roadmap. Open source.',
+    name: 'SaaS app',
   },
 } satisfies Record<string, Omit<SolutionEntry, 'slug'>>
 

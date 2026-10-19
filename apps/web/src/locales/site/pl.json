@@ -2,10 +2,12 @@
   "site": {
     "home": {
       "hero": {
-        "description": "Publikuj treści, łącz ludzi i twórz funkcje, których potrzebuje Twoja społeczność, na platformie open source, nad którą masz pełną kontrolę.",
+        "description": "Forum, wielojęzyczny blog i konta członków na jednej stronie, w Twojej domenie. Moderacja, wyszukiwarka i AI są wbudowane, a licencja kosztuje 0 zł.",
         "explore": "Odkryj, co możesz zbudować",
+        "meta_description": "VitNode to darmowa platforma open source dla społeczności. Forum, wielojęzyczny blog i konta członków w Twojej domenie, z moderacją, wyszukiwarką i AI.",
+        "meta_title": "Platforma open source dla społeczności: forum i blog",
         "see_product": "Zobacz produkt",
-        "title": "Dom dla <highlight>Twojej społeczności</highlight>, zbudowany wokół Twojego pomysłu.",
+        "title": "Platforma open source dla społeczności <highlight>Twoich ludzi</highlight>.",
         "trust": {
           "agents": "Stworzony dla agentów AI do kodowania",
           "license": "Licencja MIT",
@@ -123,7 +125,7 @@
             "layout": "Edycja układu",
             "layout_desc": "Zmiana menu i widżetów pulpitu",
             "members": "Moderowanie członków",
-            "members_desc": "Banowanie, ostrzeganie i edycja profili",
+            "members_desc": "Edycja profili i przegląd zgłoszeń",
             "roles": "Zarządzanie rolami",
             "roles_desc": "Zmiana ról i dostępu zespołu",
             "usage": "Podgląd użycia AI",
@@ -244,8 +246,8 @@
             "search": "Wyszukiwarka",
             "live": "Wspólna edycja",
             "comments": "Komentarze",
-            "reactions": "Reakcje",
-            "followers": "Obserwujący"
+            "approvals": "Zatwierdzanie",
+            "seo": "SEO i mapa strony"
           }
         },
         "notifications": {
@@ -304,21 +306,224 @@
             "library": "Sprzedam rower"
           }
         }
+      },
+      "build": {
+        "eyebrow": "Co możesz zbudować",
+        "title": "Jedna platforma, wiele rodzajów stron społeczności.",
+        "description": "Zacznij od pluginów forum i bloga albo od gotowego rozwiązania. Wszystko, co zbudujesz, korzysta z tych samych członków, ról, wyszukiwarki i AdminCP.",
+        "includes": "W zestawie",
+        "items": {
+          "forum": {
+            "title": "Forum dyskusyjne",
+            "description": "Działy, tematy i zagnieżdżone komentarze, z kolejką zatwierdzania dla każdego działu i moderatorami, którzy widzą tylko swoją część.",
+            "link": "Przeczytaj przewodnik po forum",
+            "includes": {
+              "first": "Plugin forum",
+              "second": "Tablica zgłoszeń ModCP",
+              "third": "Kolejka zatwierdzania"
+            }
+          },
+          "magazine": {
+            "title": "Blog lub magazyn online",
+            "description": "Artykuły z wersjami roboczymi, harmonogramem i historią zmian, pisane wspólnie w czasie rzeczywistym i publikowane w każdym potrzebnym języku.",
+            "link": "Zobacz rozwiązanie dla magazynu",
+            "includes": {
+              "first": "Plugin bloga",
+              "second": "Tłumaczenia pól",
+              "third": "Lista kontrolna SEO"
+            }
+          },
+          "help_center": {
+            "title": "Centrum pomocy i baza wiedzy",
+            "description": "Poradniki jako typy treści, wyszukiwarka z podpowiedziami na żywo i osobne role dla redaktorów i recenzentów.",
+            "link": "Zobacz rozwiązanie dla centrum pomocy",
+            "includes": {
+              "first": "Content Engine",
+              "second": "Wyszukiwarka na żywo",
+              "third": "Role redaktorów"
+            }
+          },
+          "membership": {
+            "title": "Serwis członkowski",
+            "description": "Treści tylko dla członków za rolami, logowanie przez Google, Discord lub Facebook i passkeys, a wszystko w Twojej domenie.",
+            "link": "Zobacz rozwiązanie dla serwisu członkowskiego",
+            "includes": {
+              "first": "Role jako poziomy",
+              "second": "Logowanie społecznościowe",
+              "third": "Passkeys"
+            }
+          },
+          "open_source": {
+            "title": "Strona projektu open source",
+            "description": "Informacje o wydaniach, poradniki i forum dla użytkowników, z logowaniem OAuth2 i dokumentacją czytelną dla agentów AI Twoich kontrybutorów.",
+            "link": "Zobacz rozwiązanie dla open source",
+            "includes": {
+              "first": "Informacje o wydaniach",
+              "second": "Logowanie OAuth2",
+              "third": "Forum"
+            }
+          },
+          "guild": {
+            "title": "Strona gildii lub klanu",
+            "description": "Logowanie przez Discord, rangi jako role z kolorami i prefiksami oraz ogłoszenia docierające do członków w czasie rzeczywistym.",
+            "link": "Zobacz rozwiązanie dla gildii",
+            "includes": {
+              "first": "Logowanie przez Discord",
+              "second": "Rangi jako role",
+              "third": "Powiadomienia na żywo"
+            }
+          },
+          "custom": {
+            "title": "Coś, czego nikt jeszcze nie zbudował",
+            "description": "Opisz typ treści raz, a dostaniesz tabelę w bazie, typowane API i ekrany w AdminCP. Napisz plugin sam albo przekaż dokumentację agentowi AI.",
+            "link": "Zbuduj swój pierwszy plugin",
+            "includes": {
+              "first": "Content Engine",
+              "second": "Typowane API",
+              "third": "Dokumentacja dla agentów AI"
+            }
+          }
+        }
+      },
+      "problems": {
+        "eyebrow": "Problemy, które rozwiązuje",
+        "title": "Problemy, które VitNode rozwiązuje na stronach społeczności.",
+        "description": "Sześć typowych bolączek prowadzenia strony społeczności i to, co VitNode z każdą z nich robi.",
+        "items": {
+          "two_systems": {
+            "problem": "Mój blog i forum działają na dwóch systemach z dwoma logowaniami.",
+            "answer": "W VitNode artykuły i tematy na forum żyją w jednej aplikacji z jednym kontem członka. Role, wyszukiwarka, powiadomienia i moderacja działają wszędzie tak samo, więc czytelnik, który skomentuje artykuł, dołączy do forum bez drugiej rejestracji.",
+            "link": "Zobacz pluginy"
+          },
+          "moderation": {
+            "problem": "Moderacja jest rozrzucona po pluginach, botach i arkuszach.",
+            "answer": "Zgłoszenia trafiają na jedną tablicę w ModCP, gdzie moderatorzy je przejmują, zostawiają notatki i zamykają. Każdy dział forum ma własne zasady zatwierdzania, a moderatora można ograniczyć do działów, którymi naprawdę się zajmuje.",
+            "link": "Jak działa moderacja"
+          },
+          "languages": {
+            "problem": "Moi czytelnicy mówią w więcej niż jednym języku.",
+            "answer": "Każde pole może mieć tłumaczenie, każdy język dostaje własny adres URL, a znaczniki hreflang i mapa strony powstają same. AI przygotowuje wersję roboczą tłumaczenia i oznacza te, które się zdezaktualizowały.",
+            "link": "Jak działają tłumaczenia"
+          },
+          "fees": {
+            "problem": "Opłaty licencyjne rosną razem ze społecznością.",
+            "answer": "VitNode ma licencję MIT i jest darmowy, bez płatnego planu i bez limitu członków. Płacisz tylko za serwer, a kod możesz zmieniać. Dla porównania licencja self-hosted Invision Community kosztuje 499 USD plus 199 USD rocznie.",
+            "link": "Porównaj koszty"
+          },
+          "plumbing": {
+            "problem": "Każdy nowy pomysł to budowanie od nowa logowania, ról i panelu admina.",
+            "answer": "Te części są w rdzeniu. Plugin dodaje tylko samą funkcję: jedna definicja typu treści daje tabelę w bazie, typowane API, ekrany w AdminCP, historię zmian i wyszukiwanie, w TypeScripcie od początku do końca.",
+            "link": "Poznaj Content Engine"
+          },
+          "not_developer": {
+            "problem": "Mam pomysł, ale nie jestem programistą.",
+            "answer": "Codzienna praca odbywa się w AdminCP i ModCP, bez kodu. Instalację i nowe pluginy możesz zlecić agentowi AI: każda strona dokumentacji ma wersję Markdown, a całość jest w jednym pliku /llms-full.txt.",
+            "link": "Przeczytaj przewodnik instalacji"
+          }
+        }
+      },
+      "alternatives": {
+        "eyebrow": "Porównania",
+        "title": "Przechodzisz z innej platformy?",
+        "description": "Porównania ze źródłami, wiersz po wierszu, z oprogramowaniem forum i społeczności, którego możesz dziś używać. Także tam, gdzie VitNode jeszcze nie dorównuje.",
+        "item": "VitNode vs {name}",
+        "all": "Zobacz wszystkie porównania"
+      },
+      "faq": {
+        "eyebrow": "Pytania",
+        "title": "Pytania o VitNode i odpowiedzi.",
+        "items": {
+          "what": {
+            "question": "Czym jest VitNode?",
+            "answer": "VitNode to darmowa platforma open source dla społeczności, napisana w TypeScripcie. Daje stronie członków, role, logowanie, AdminCP, ModCP, wyszukiwarkę, powiadomienia i AI, a pluginy dodają forum, bloga albo Twoje własne funkcje."
+          },
+          "free": {
+            "question": "Czy VitNode jest darmowy?",
+            "answer": "Tak. VitNode ma licencję MIT, bez płatnego planu i bez limitu członków. Płacisz tylko za hosting, na własnym serwerze albo na platformie takiej jak Vercel."
+          },
+          "forum_blog": {
+            "question": "Czy mogę mieć forum i bloga na jednej stronie?",
+            "answer": "Tak. Pluginy forum i bloga korzystają z jednego konta członka, jednego zestawu ról i jednej wyszukiwarki, więc artykuły i dyskusje są obok siebie w tej samej domenie."
+          },
+          "self_hosted": {
+            "question": "Czy VitNode jest self-hosted?",
+            "answer": "Tak. Działa na Node.js z PostgreSQL, na VPS, własnym serwerze albo na Vercelu. Twoi członkowie i treści zostają w bazie, którą kontrolujesz."
+          },
+          "developer": {
+            "question": "Czy muszę być programistą, żeby korzystać z VitNode?",
+            "answer": "Nie do codziennej pracy, która odbywa się w AdminCP i ModCP. Instalacja i dodawanie pluginów odbywają się w terminalu, a agent AI może zrobić te kroki z pomocą dokumentacji przygotowanej dla agentów."
+          },
+          "production": {
+            "question": "Czy VitNode jest gotowy na produkcję?",
+            "answer": "Jeszcze nie. VitNode 2.0 to wersja canary, więc spodziewaj się błędów i zmian łamiących kompatybilność między wydaniami. Dziś sprawdzi się w nowych projektach i prototypach."
+          },
+          "different": {
+            "question": "Czym VitNode różni się od Discourse albo XenForo?",
+            "answer": "VitNode traktuje artykuły i tematy na forum jako treści na jednym rdzeniu w TypeScripcie, z wbudowanymi tłumaczeniami pól i budżetami AI. Discourse i XenForo to dojrzałe produkty forumowe, które dziś mają więcej funkcji dyskusyjnych. Strony porównań omawiają to wiersz po wierszu."
+          }
+        }
+      },
+      "cta": {
+        "title": "Daj swoim ludziom własne miejsce.",
+        "description": "Postaw aplikację w kilka minut, dodaj forum i bloga, i zaproś pierwszych członków. Wypróbowanie nic nie kosztuje.",
+        "start": "Zacznij budować za darmo",
+        "github": "Daj gwiazdkę na GitHubie",
+        "solutions": "Zobacz wszystkie rozwiązania"
       }
     },
     "search": {
       "docs": "Dokumentacja"
     },
     "menu": {
-      "docs": "Dokumentacja",
-      "plugins": "Wtyczki",
-      "community": "Społeczność",
-      "forum": "Forum",
-      "discover": "Odkrywaj",
-      "discover_description": "Najnowsze wpisy z całej strony.",
+      "admincp": "AdminCP",
+      "admincp_description": "Członkowie, treści i stan systemu w jednym panelu.",
+      "api": "API",
+      "api_description": "Typowane moduły i trasy API dla pluginów.",
+      "architecture": "Architektura",
+      "architecture_description": "Jak rdzeń, pluginy i API do siebie pasują.",
+      "blogs": "Blogi",
+      "blogs_description": "Artykuły w każdym języku, pisane wspólnie.",
       "browse": "Przeglądaj",
       "browse_description": "Lista ze stronicowaniem z przykładowej wtyczki.",
-      "search": "Szukaj"
+      "build": "Zbuduj",
+      "communities": "Społeczności",
+      "communities_description": "Forum, blog i członkowie na jednym koncie.",
+      "community": "Społeczność",
+      "contributing": "Współtworzenie",
+      "contributing_description": "Pomóż VitNode dorosnąć.",
+      "core": "Rdzeń",
+      "core_description": "Członkowie, role, wyszukiwarka, AI i Content Engine.",
+      "developers": "Dla deweloperów",
+      "directory": "Katalog rozszerzeń",
+      "directory_description": "Wszystkie oficjalne pluginy i adaptery.",
+      "discover": "Odkrywaj",
+      "discover_description": "Najnowsze wpisy z całej strony.",
+      "docs": "Dokumentacja",
+      "documentation": "Dokumentacja",
+      "documentation_description": "Od instalacji po wdrożenie.",
+      "ecommerce": "E-commerce",
+      "ecommerce_description": "Katalog produktów dziś, płatności w planach.",
+      "explore": "Poznaj",
+      "extend": "Rozszerz",
+      "forum": "Forum",
+      "forum_description": "Tematy i dyskusje na tej stronie.",
+      "forums": "Fora",
+      "forums_description": "Działy, tematy i moderatorzy dla każdego działu.",
+      "github": "GitHub",
+      "github_description": "Kod źródłowy, zgłoszenia i wydania.",
+      "integrations": "Integracje",
+      "integrations_description": "Wyszukiwarka, pliki, e-mail, logowanie i AI.",
+      "memberships": "Członkostwa",
+      "memberships_description": "Treści tylko dla członków, za rolami.",
+      "plugins": "Wtyczki",
+      "plugins_description": "Jak pluginy dodają funkcje do strony.",
+      "saas": "Aplikacje SaaS",
+      "saas_description": "Konta, role i API. Rozliczenia w planach.",
+      "search": "Szukaj",
+      "security": "Bezpieczeństwo",
+      "security_description": "Passkeys, limity zapytań, ochrona CSRF i RLS.",
+      "why": "Dlaczego VitNode",
+      "why_description": "Jedno miejsce open source na treści i członków."
     }
   }
 }

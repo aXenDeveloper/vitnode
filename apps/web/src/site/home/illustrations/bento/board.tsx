@@ -5,14 +5,14 @@ import {
   Braces,
   CalendarClock,
   Database,
+  Globe,
   History,
   Languages,
   LayoutDashboard,
+  ListChecks,
   MessageCircle,
   Search,
   Send,
-  SmilePlus,
-  UserPlus,
   Users,
 } from 'lucide-react'
 import { useTranslations } from 'use-intl'
@@ -32,8 +32,8 @@ const FEATURES: readonly { Icon: LucideIcon; key: string }[] = [
   { Icon: Search, key: 'search' },
   { Icon: Users, key: 'live' },
   { Icon: MessageCircle, key: 'comments' },
-  { Icon: SmilePlus, key: 'reactions' },
-  { Icon: UserPlus, key: 'followers' },
+  { Icon: ListChecks, key: 'approvals' },
+  { Icon: Globe, key: 'seo' },
 ]
 
 const COLS = 4
