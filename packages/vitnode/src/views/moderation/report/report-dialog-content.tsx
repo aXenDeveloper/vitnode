@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
 
+import type { ModerationFailure } from "../moderation-mutations";
 import type { ReportReasonOption } from "../report-reasons-query";
 
 import { createReport } from "../moderation-mutations";
@@ -90,17 +91,17 @@ const fade = {
 const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
 
 const useElementHeight = () => {
-  const observerRef = React.useRef<ResizeObserver>(null);
   const [height, setHeight] = React.useState<"auto" | number>("auto");
 
-  const ref = React.useCallback((element: HTMLDivElement | null) => {
-    observerRef.current?.disconnect();
-    if (!element) return;
+  const ref = React.useCallback((element: HTMLDivElement) => {
     const observer = new ResizeObserver(([entry]) => {
       setHeight(entry.borderBoxSize[0].blockSize);
     });
     observer.observe(element);
-    observerRef.current = observer;
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   return [ref, height] as const;
@@ -239,6 +240,228 @@ const CharactersLeft = ({ value }: { value: unknown }) => {
   );
 };
 
+const toastedFailureKey = (failure: ModerationFailure) =>
+  failure === "details_required" ||
+  failure === "duplicate" ||
+  failure === "not_found" ||
+  failure === "rate_limited" ||
+  failure === "reason_not_found" ||
+  failure === "unauthenticated" ||
+  failure === "validation"
+    ? failure
+    : "unknown";
+
+const ReportReceipt = ({
+  onChangeReason,
+  preview,
+  reason,
+  step,
+}: {
+  onChangeReason: () => void;
+  preview?: ReportPreview;
+  reason: ReportReasonOption | undefined;
+  step: Step;
+}) => {
+  const t = useTranslations("core.moderation.report");
+  const locale = useLocale();
+
+  return (
+    <div className="bg-muted/50 flex flex-col rounded-lg">
+      {preview ? (
+        <div className="flex items-center gap-3 p-3">
+          {preview.imageUrl ? (
+            <img
+              alt=""
+              className="bg-muted aspect-video w-16 shrink-0 rounded-sm object-cover outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+              decoding="async"
+              height={36}
+              src={preview.imageUrl}
+              width={64}
+            />
+          ) : null}
+          <div className="flex min-w-0 flex-col">
+            <span className="line-clamp-2 text-sm leading-snug font-medium">
+              {preview.title}
+            </span>
+            {preview.meta ? (
+              <span className="text-muted-foreground truncate text-sm">
+                {preview.meta}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <AnimatePresence initial={false}>
+        {reason && step !== "reason" ? (
+          <ReceiptRow key="reason">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-col">
+                <span className="text-sm leading-snug font-medium text-pretty">
+                  {resolveReasonText(reason.title, locale)}
+                </span>
+                <span className="text-muted-foreground text-sm leading-relaxed text-pretty">
+                  {resolveReasonText(reason.description, locale)}
+                </span>
+              </div>
+              {step === "review" ? (
+                <Button
+                  aria-label={t("change_label", {
+                    reason: resolveReasonText(reason.title, locale),
+                  })}
+                  className="-my-1 -me-1"
+                  onClick={onChangeReason}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  {t("change")}
+                </Button>
+              ) : null}
+            </div>
+          </ReceiptRow>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {step === "sent" ? (
+          <ReceiptRow key="sent">
+            <p className="text-success text-sm font-medium">
+              {t("sent_stamp")}
+            </p>
+          </ReceiptRow>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const ReasonStep = (
+  props: Omit<React.ComponentProps<typeof ReasonList>, "reasons">,
+) => {
+  const t = useTranslations("core.moderation.report");
+  const reasonsQuery = useQuery(reportReasonsQueryOptions());
+
+  if (reasonsQuery.data) {
+    return <ReasonList {...props} reasons={reasonsQuery.data} />;
+  }
+  if (!reasonsQuery.isError) return <ReasonSkeleton />;
+
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <p className="text-muted-foreground text-sm leading-relaxed">
+        {t("load_error")}
+      </p>
+      <Button
+        onClick={async () => {
+          await reasonsQuery.refetch();
+        }}
+        size="sm"
+        variant="outline"
+      >
+        {t("retry")}
+      </Button>
+    </div>
+  );
+};
+
+const DetailsStep = ({
+  onSubmit,
+  reason,
+}: {
+  onSubmit: (description: null | string) => Promise<void>;
+  reason: ReportReasonOption;
+}) => {
+  const t = useTranslations("core.moderation.report");
+  const formSchema = z.object({
+    description: reason.requiresDetails
+      ? z
+          .string()
+          .trim()
+          .min(MODERATION_LIMITS.requiredDescriptionMinLength, {
+            message: t("errors.details_required", {
+              min: MODERATION_LIMITS.requiredDescriptionMinLength,
+            }),
+          })
+          .max(MODERATION_LIMITS.descriptionMaxLength)
+          .default("")
+      : z
+          .string()
+          .trim()
+          .max(MODERATION_LIMITS.descriptionMaxLength)
+          .optional()
+          .default(""),
+  });
+
+  const submit: AutoFormOnSubmit<typeof formSchema> = async values => {
+    await onSubmit(values.description || null);
+  };
+
+  return (
+    <AutoForm
+      className="flex flex-col gap-5"
+      fields={[
+        {
+          id: "description",
+          component: props => (
+            <AutoFormTextarea
+              {...props}
+              className="min-h-24"
+              description={t("details_note")}
+              label={
+                reason.requiresDetails
+                  ? t("details_required_label")
+                  : t("details_optional_label")
+              }
+              labelRight={<CharactersLeft value={props.field.value} />}
+              onKeyDown={event => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder={
+                reason.requiresDetails ? t("details_placeholder") : undefined
+              }
+            />
+          ),
+        },
+      ]}
+      formSchema={formSchema}
+      layout={rendered => (
+        <>
+          {rendered.description}
+          <AutoFormSubmitButton className="w-full">
+            {t("submit")}
+          </AutoFormSubmitButton>
+        </>
+      )}
+      onSubmit={submit}
+    />
+  );
+};
+
+const SentStep = ({
+  onClose,
+  typeLabel,
+}: {
+  onClose: () => void;
+  typeLabel: string;
+}) => {
+  const t = useTranslations("core.moderation.report");
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+        {t("sent_desc", { type: typeLabel })}
+      </p>
+      <Button className="w-full" onClick={onClose} variant="outline">
+        {t("done")}
+      </Button>
+    </div>
+  );
+};
+
 export const ReportDialogContent = ({
   locale,
   onClose,
@@ -250,10 +473,9 @@ export const ReportDialogContent = ({
   typeLabel,
 }: ReportDialogContentProps) => {
   const t = useTranslations("core.moderation.report");
-  const uiLocale = useLocale();
   const queryClient = useQueryClient();
   const { setIsDirty } = useDialog();
-  const reasonsQuery = useQuery(reportReasonsQueryOptions());
+  const { data: reasons } = useQuery(reportReasonsQueryOptions());
   const [step, setStep] = React.useState<Step>("reason");
   const [direction, setDirection] = React.useState(1);
   const [reasonCode, setReasonCode] = React.useState<string>();
@@ -263,7 +485,7 @@ export const ReportDialogContent = ({
   const headingRef = React.useRef<HTMLHeadingElement>(null);
   const advanceTimerRef =
     React.useRef<ReturnType<typeof setTimeout>>(undefined);
-  const reason = reasonsQuery.data?.find(item => item.code === reasonCode);
+  const reason = reasons?.find(item => item.code === reasonCode);
   const visibleHeight =
     typeof height === "number" && viewportCap
       ? Math.min(height, viewportCap)
@@ -298,35 +520,15 @@ export const ReportDialogContent = ({
     }, ADVANCE_DELAY_MS);
   };
 
-  const requiresDetails = reason?.requiresDetails ?? false;
-  const detailsRequiredMessage = t("errors.details_required", {
-    min: MODERATION_LIMITS.requiredDescriptionMinLength,
-  });
-  const formSchema = z.object({
-    description: requiresDetails
-      ? z
-          .string()
-          .trim()
-          .min(MODERATION_LIMITS.requiredDescriptionMinLength, {
-            message: detailsRequiredMessage,
-          })
-          .max(MODERATION_LIMITS.descriptionMaxLength)
-          .default("")
-      : z
-          .string()
-          .trim()
-          .max(MODERATION_LIMITS.descriptionMaxLength)
-          .optional()
-          .default(""),
-  });
-
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    if (!reason) return;
+  const submit = async (
+    pickedReason: ReportReasonOption,
+    description: null | string,
+  ) => {
     const result = await createReport({
-      description: values.description || null,
+      description,
       locale,
       pluginId,
-      reason: reason.code,
+      reason: pickedReason.code,
       requestedLocale,
       targetId,
       targetType,
@@ -339,16 +541,7 @@ export const ReportDialogContent = ({
       return;
     }
 
-    const key =
-      result.failure === "details_required" ||
-      result.failure === "duplicate" ||
-      result.failure === "not_found" ||
-      result.failure === "rate_limited" ||
-      result.failure === "reason_not_found" ||
-      result.failure === "unauthenticated" ||
-      result.failure === "validation"
-        ? result.failure
-        : "unknown";
+    const key = toastedFailureKey(result.failure);
     toast.error(t("errors.title"), {
       description: t(`errors.${key}`, {
         min: MODERATION_LIMITS.requiredDescriptionMinLength,
@@ -372,7 +565,6 @@ export const ReportDialogContent = ({
     review: t("review_title"),
     sent: t("sent_title"),
   };
-  const showReceipt = Boolean(preview) || step !== "reason";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -401,76 +593,15 @@ export const ReportDialogContent = ({
               </m.span>
             </DialogTitle>
 
-            {showReceipt ? (
-              <div className="bg-muted/50 flex flex-col rounded-lg">
-                {preview ? (
-                  <div className="flex items-center gap-3 p-3">
-                    {preview.imageUrl ? (
-                      <img
-                        alt=""
-                        className="bg-muted aspect-video w-16 shrink-0 rounded-sm object-cover outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-                        decoding="async"
-                        height={36}
-                        src={preview.imageUrl}
-                        width={64}
-                      />
-                    ) : null}
-                    <div className="flex min-w-0 flex-col">
-                      <span className="line-clamp-2 text-sm leading-snug font-medium">
-                        {preview.title}
-                      </span>
-                      {preview.meta ? (
-                        <span className="text-muted-foreground truncate text-sm">
-                          {preview.meta}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-
-                <AnimatePresence initial={false}>
-                  {reason && step !== "reason" ? (
-                    <ReceiptRow key="reason">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-sm leading-snug font-medium text-pretty">
-                            {resolveReasonText(reason.title, uiLocale)}
-                          </span>
-                          <span className="text-muted-foreground text-sm leading-relaxed text-pretty">
-                            {resolveReasonText(reason.description, uiLocale)}
-                          </span>
-                        </div>
-                        {step === "review" ? (
-                          <Button
-                            aria-label={t("change_label", {
-                              reason: resolveReasonText(reason.title, uiLocale),
-                            })}
-                            className="-my-1 -me-1"
-                            onClick={() => {
-                              goTo("reason");
-                            }}
-                            size="sm"
-                            type="button"
-                            variant="ghost"
-                          >
-                            {t("change")}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </ReceiptRow>
-                  ) : null}
-                </AnimatePresence>
-
-                <AnimatePresence initial={false}>
-                  {step === "sent" ? (
-                    <ReceiptRow key="sent">
-                      <p className="text-success text-sm font-medium">
-                        {t("sent_stamp")}
-                      </p>
-                    </ReceiptRow>
-                  ) : null}
-                </AnimatePresence>
-              </div>
+            {preview || step !== "reason" ? (
+              <ReportReceipt
+                onChangeReason={() => {
+                  goTo("reason");
+                }}
+                preview={preview}
+                reason={reason}
+                step={step}
+              />
             ) : null}
 
             <div className="relative">
@@ -481,7 +612,7 @@ export const ReportDialogContent = ({
               >
                 <m.div
                   animate="center"
-                  className="w-full will-change-transform"
+                  className="w-full"
                   custom={direction}
                   exit="exit"
                   initial="enter"
@@ -489,97 +620,25 @@ export const ReportDialogContent = ({
                   variants={slide}
                 >
                   {step === "reason" ? (
-                    reasonsQuery.data ? (
-                      <ReasonList
-                        onPick={pick}
-                        reasonCode={reasonCode}
-                        reasons={reasonsQuery.data}
-                        setReasonCode={setReasonCode}
-                      />
-                    ) : reasonsQuery.isError ? (
-                      <div className="flex flex-col items-start gap-3">
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                          {t("load_error")}
-                        </p>
-                        <Button
-                          onClick={async () => {
-                            await reasonsQuery.refetch();
-                          }}
-                          size="sm"
-                          variant="outline"
-                        >
-                          {t("retry")}
-                        </Button>
-                      </div>
-                    ) : (
-                      <ReasonSkeleton />
-                    )
+                    <ReasonStep
+                      onPick={pick}
+                      reasonCode={reasonCode}
+                      setReasonCode={setReasonCode}
+                    />
                   ) : null}
 
                   {step === "review" && reason ? (
-                    <AutoForm
-                      className="flex flex-col gap-5"
-                      fields={[
-                        {
-                          id: "description",
-                          component: props => (
-                            <AutoFormTextarea
-                              {...props}
-                              className="min-h-24"
-                              description={t("details_note")}
-                              label={
-                                reason.requiresDetails
-                                  ? t("details_required_label")
-                                  : t("details_optional_label")
-                              }
-                              labelRight={
-                                <CharactersLeft value={props.field.value} />
-                              }
-                              onKeyDown={event => {
-                                if (
-                                  (event.metaKey || event.ctrlKey) &&
-                                  event.key === "Enter"
-                                ) {
-                                  event.preventDefault();
-                                  event.currentTarget.form?.requestSubmit();
-                                }
-                              }}
-                              placeholder={
-                                reason.requiresDetails
-                                  ? t("details_placeholder")
-                                  : undefined
-                              }
-                            />
-                          ),
-                        },
-                      ]}
-                      formSchema={formSchema}
+                    <DetailsStep
                       key={reason.code}
-                      layout={rendered => (
-                        <>
-                          {rendered.description}
-                          <AutoFormSubmitButton className="w-full">
-                            {t("submit")}
-                          </AutoFormSubmitButton>
-                        </>
-                      )}
-                      onSubmit={onSubmit}
+                      onSubmit={async description => {
+                        await submit(reason, description);
+                      }}
+                      reason={reason}
                     />
                   ) : null}
 
                   {step === "sent" ? (
-                    <div className="flex flex-col gap-5">
-                      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-                        {t("sent_desc", { type: typeLabel })}
-                      </p>
-                      <Button
-                        className="w-full"
-                        onClick={onClose}
-                        variant="outline"
-                      >
-                        {t("done")}
-                      </Button>
-                    </div>
+                    <SentStep onClose={onClose} typeLabel={typeLabel} />
                   ) : null}
                 </m.div>
               </AnimatePresence>

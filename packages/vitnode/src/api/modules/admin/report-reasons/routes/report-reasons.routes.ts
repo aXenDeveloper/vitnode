@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import { and, count, eq, max } from "drizzle-orm";
+import { and, count, eq, inArray, max, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 import { buildRoute } from "@/api/builders";
@@ -45,6 +45,8 @@ const reasonBody = z.object({
 const idParams = z.object({
   id: z.coerce.number().int().positive().openapi({ example: 1 }),
 });
+
+const LOCK_REASONS = sql`lock table ${core_moderation_report_reasons} in share row exclusive mode`;
 
 const filledIn = (values: z.infer<typeof descriptionSchema>) =>
   values.filter(item => item.value.length > 0);
@@ -127,26 +129,29 @@ export const createReportReasonAdminRoute = buildRoute({
   },
   handler: async c => {
     const body = c.req.valid("json");
-    const db = c.get("db");
-    const [{ position: lastPosition, total }] = await db
-      .select({
-        position: max(core_moderation_report_reasons.position),
-        total: count(),
-      })
-      .from(core_moderation_report_reasons);
-    if (total >= MODERATION_LIMITS.maxReportReasons) {
-      return c.json({ error: "limit_reached" }, 409);
-    }
     const code = `reason_${randomBytes(6).toString("hex")}`;
+    const created = await c.get("db").transaction(async tx => {
+      await tx.execute(LOCK_REASONS);
+      const [{ position: lastPosition, total }] = await tx
+        .select({
+          position: max(core_moderation_report_reasons.position),
+          total: count(),
+        })
+        .from(core_moderation_report_reasons);
+      if (total >= MODERATION_LIMITS.maxReportReasons) return null;
 
-    const [created] = await db
-      .insert(core_moderation_report_reasons)
-      .values({
-        code,
-        position: (lastPosition ?? -1) + 1,
-        requiresDetails: body.requiresDetails,
-      })
-      .returning({ id: core_moderation_report_reasons.id });
+      const [row] = await tx
+        .insert(core_moderation_report_reasons)
+        .values({
+          code,
+          position: (lastPosition ?? -1) + 1,
+          requiresDetails: body.requiresDetails,
+        })
+        .returning({ id: core_moderation_report_reasons.id });
+
+      return row;
+    });
+    if (!created) return c.json({ error: "limit_reached" }, 409);
 
     await saveReasonWords(c, created.id, body);
     await c
@@ -217,16 +222,16 @@ export const deleteReportReasonAdminRoute = buildRoute({
   },
   handler: async c => {
     const { id } = c.req.valid("param");
-    const db = c.get("db");
     const row = await findReasonRow(c, id);
     if (!row) return c.json({ error: "not_found" }, 404);
 
-    const [{ total }] = await db
-      .select({ total: count() })
-      .from(core_moderation_report_reasons);
-    if (total <= 1) return c.json({ error: "last_reason" }, 409);
+    const deleted = await c.get("db").transaction(async tx => {
+      await tx.execute(LOCK_REASONS);
+      const [{ total }] = await tx
+        .select({ total: count() })
+        .from(core_moderation_report_reasons);
+      if (total <= 1) return false;
 
-    await db.transaction(async tx => {
       await tx
         .delete(core_languages_words)
         .where(
@@ -239,7 +244,11 @@ export const deleteReportReasonAdminRoute = buildRoute({
       await tx
         .delete(core_moderation_report_reasons)
         .where(eq(core_moderation_report_reasons.id, id));
+
+      return true;
     });
+    if (!deleted) return c.json({ error: "last_reason" }, 409);
+
     await c.get("events").emit("moderation.report_reason.deleted", {
       code: row.code,
       reasonId: id,
@@ -287,14 +296,17 @@ export const reorderReportReasonsAdminRoute = buildRoute({
       return c.json({ error: "mismatch" }, 400);
     }
 
-    await db.transaction(async tx => {
-      for (const [position, id] of ids.entries()) {
-        await tx
-          .update(core_moderation_report_reasons)
-          .set({ position })
-          .where(eq(core_moderation_report_reasons.id, id));
-      }
-    });
+    const positionById = sql.join(
+      ids.map(
+        (id, position) =>
+          sql`when ${core_moderation_report_reasons.id} = ${id} then ${position}::integer`,
+      ),
+      sql` `,
+    );
+    await db
+      .update(core_moderation_report_reasons)
+      .set({ position: sql`case ${positionById} end` })
+      .where(inArray(core_moderation_report_reasons.id, ids));
     await c
       .get("events")
       .emit("moderation.report_reason.reordered", { reasonIds: ids });

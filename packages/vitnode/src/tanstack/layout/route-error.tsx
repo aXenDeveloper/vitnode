@@ -10,6 +10,7 @@ const DevErrorOverlay = lazy(async () => ({
 const DevErrorDetails = ({ error }: { error: unknown }) => (
   <>
     <script
+      // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
       dangerouslySetInnerHTML={{
         __html: typeof window === "undefined" ? serverReportScript(error) : "",
       }}
