@@ -306,7 +306,7 @@ export const buildContentPublicRoutes = <
           content: {
             "application/json": {
               schema: z.object({
-                edges: z.array(schemas.publicListSelectObject),
+                edges: z.array(schemas.publicListSelect),
                 pageInfo: zodPaginationPageInfo,
               }),
             },
@@ -439,7 +439,7 @@ export const buildContentPublicRoutes = <
       responses: {
         200: {
           content: {
-            "application/json": { schema: schemas.publicSelectObject },
+            "application/json": { schema: schemas.publicSelect },
           },
           description: `${name} as the link's revision recorded it`,
         },
@@ -605,7 +605,7 @@ export const buildContentPublicRoutes = <
       responses: {
         200: {
           content: {
-            "application/json": { schema: schemas.publicSelectObject },
+            "application/json": { schema: schemas.publicSelect },
           },
           description: `${name} found`,
         },

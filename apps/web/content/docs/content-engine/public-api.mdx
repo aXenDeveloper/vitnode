@@ -207,14 +207,6 @@ The [fetcher](/docs/dev/fetcher) types the routes from the plugin's API registry
 
 ```ts title="featured-articles.ts"
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
-import { z } from 'zod'
-
-const zodArticleCard = z.object({
-  excerpt: z.string().nullable(),
-  publishedAt: z.string().nullable(),
-  slug: z.string(),
-  title: z.string(),
-})
 
 export const fetchFeaturedArticles = async () => {
   const response = await fetcher({
@@ -231,11 +223,11 @@ export const fetchFeaturedArticles = async () => {
 
   const { edges } = await response.json()
 
-  return z.array(zodArticleCard).parse(edges)
+  return edges
 }
 ```
 
-The path, the query and `pageInfo` are typed. Each record is a `Record<string, unknown>`, so parse the fields you use with Zod, as the example's article page does. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
+The path, the query, `pageInfo` and every record are typed. A record carries exactly the content type's `publicApi.fields` (or `listFields` on the list route), with dates as the ISO strings JSON delivers, so `edges[0].publishedAt` is `string | null`. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
 
 ## Public API routes
 

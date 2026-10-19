@@ -98,28 +98,14 @@ Each `orderBy` must be in `publicApi.orderableFields` or be `publishedAt`. The U
 `contentListQueryOptions` builds TanStack Query options keyed by the locale and the normalized URL state. Write the `fetcher` call inline in `fetch`, so its route stays typed:
 
 ```ts title="plugins/blog/src/pages/blog-queries.ts"
-import { zodContentFileDescriptor } from '@vitnode/core/content'
 import { contentListQueryOptions } from '@vitnode/core/tanstack/content'
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
-import { z } from 'zod'
 
 import { manifest } from '@/manifest.gen'
 
 import type { BlogListSearch } from './blog-list'
 
 import { blogPostList } from './blog-list'
-
-const zodBlogPostCard = z.object({
-  categoryId: z.array(z.number()),
-  coverImage: zodContentFileDescriptor.nullable(),
-  coverImageAlt: z.string().nullable(),
-  excerpt: z.string().nullable(),
-  friendlyUrl: z.string(),
-  id: z.number(),
-  locale: z.string(),
-  publishedAt: z.string().nullable(),
-  title: z.string(),
-})
 
 export const blogPostsQueryOptions = (request: {
   locale: string
@@ -146,14 +132,12 @@ export const blogPostsQueryOptions = (request: {
       })
       if (res.status !== 200) throw new Error('Loading the blog failed.')
 
-      const { edges, pageInfo } = await res.json()
-
-      return { edges: z.array(zodBlogPostCard).parse(edges), pageInfo }
+      return await res.json()
     },
   })
 ```
 
-`apiQuery` turns the state into `first`, `page`, `order`, `orderBy` and `search`. Route-specific filters are mapped here, so `?category=3` in the URL becomes `categoryId=3` for the API. Passing `locale` explicitly keeps the response, and its cache, tied to the page's language.
+The response is typed from the content type: each row carries exactly `listFields` plus `locale`, with `publishedAt` as `string | null`, so there is nothing to re-validate. `apiQuery` turns the state into `first`, `page`, `order`, `orderBy` and `search`. Route-specific filters are mapped here, so `?category=3` in the URL becomes `categoryId=3` for the API. Passing `locale` explicitly keeps the response, and its cache, tied to the page's language.
 
 </Step>
 

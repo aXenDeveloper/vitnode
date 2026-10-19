@@ -1,5 +1,6 @@
 import type { ResponseFormat } from "hono/types";
 import type { StatusCode, SuccessStatusCode } from "hono/utils/http-status";
+import type { JSONParsed } from "hono/utils/types";
 import type { z } from "zod";
 
 import type { ApiEndpoint, ApiModuleContract } from "./contract";
@@ -245,7 +246,12 @@ export type InferResponseType<RouteCfg> = RouteCfg extends {
           ? {
               [Fmt in keyof C]: ClientResponse<
                 C[Fmt] extends { schema: infer Schema }
-                  ? ExtractZodType<Schema>
+                  ? // A JSON body is what `JSON.stringify` made of the route's
+                    // value - a `Date` arrives as its ISO string - which is
+                    // exactly what Hono types `c.json()` as on the server.
+                    Fmt extends "application/json"
+                    ? JSONParsed<ExtractZodType<Schema>>
+                    : ExtractZodType<Schema>
                   : never,
                 InferStatusCode<K>,
                 Fmt extends string ? Fmt : string
@@ -299,7 +305,9 @@ export type RouteOf<
 
 /**
  * The typed `Response` of one call: a union with one member per status the
- * route declares, so narrowing on `status` or `ok` narrows `json()`.
+ * route declares, so narrowing on `status` or `ok` narrows `json()`. A JSON
+ * body is the schema's output after JSON serialization (Hono's `JSONParsed`),
+ * so a `Date` reads as `string`.
  */
 export type ResponseFor<
   P extends RegisteredPluginId,

@@ -20,7 +20,7 @@ const userFixture = (overrides: Partial<AuthUser> = {}): AuthUser => ({
   phone: null,
   birthday: null,
   coverUrl: null,
-  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  createdAt: "2026-01-01T00:00:00.000Z",
   email: "test@test.com",
   emailVerified: true,
   firstName: null,
