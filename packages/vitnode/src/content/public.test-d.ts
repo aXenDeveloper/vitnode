@@ -126,6 +126,32 @@ describe("publicApi types", () => {
         keyof ContentPublicSelect<Category>
       >().toEqualTypeOf<never>();
     });
+
+    it("narrows a list row to `listFields` and leaves the detail row whole", () => {
+      const listed = defineContentType({
+        id: "test.listed",
+        tableName: "test_listed",
+        fields: {
+          title: field.text({ required: true }),
+          slug: field.slug({ source: "title" }),
+          body: field.textarea({ nullable: true }),
+        },
+        publication: true,
+        publicApi: {
+          path: "listed",
+          fields: ["title", "slug", "body"],
+          listFields: ["title", "slug"],
+        },
+      });
+      type Listed = typeof listed;
+
+      expectTypeOf<keyof ContentPublicListRow<Listed>>().toEqualTypeOf<
+        "slug" | "title"
+      >();
+      expectTypeOf<keyof ContentPublicSelect<Listed>>().toEqualTypeOf<
+        "body" | "slug" | "title"
+      >();
+    });
   });
 
   describe("filters", () => {

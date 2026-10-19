@@ -12,6 +12,8 @@ import {
 } from "@/tests/content-fixtures";
 import { createMemoryDb } from "@/tests/memory-db";
 
+import { defineContentType } from "../define";
+import { field } from "../fields";
 import { createContentModel } from "./model";
 import { buildContentPublicModule } from "./public-module";
 import { buildContentPublicRoutes } from "./public-routes";
@@ -377,6 +379,57 @@ describe("generated surface", () => {
       // No post, put, patch or delete anywhere under the public prefix.
       expect(Object.keys(operations ?? {})).toEqual(["get"]);
     }
+  });
+
+  it("documents a list row with only `listFields`, and the detail with all", () => {
+    const listed = createContentModel(
+      defineContentType({
+        id: "test.listed",
+        tableName: "test_listed",
+        fields: {
+          title: field.text({ required: true }),
+          slug: field.slug({ source: "title" }),
+          body: field.textarea({ nullable: true }),
+        },
+        publication: true,
+        publicApi: {
+          path: "listed",
+          fields: ["title", "slug", "body"],
+          listFields: ["title", "slug"],
+        },
+      }),
+    );
+    const app = new OpenAPIHono();
+    for (const { handler, route } of buildContentPublicRoutes(listed, {
+      pluginId: PLUGIN_ID,
+    })) {
+      app.openapi(route, handler);
+    }
+
+    const { paths = {} } = app.getOpenAPI31Document({
+      info: { title: "test", version: "1" },
+      openapi: "3.1.0",
+    });
+    interface ObjectSchema {
+      properties: Record<string, ObjectSchema & { items: ObjectSchema }>;
+    }
+    const okSchema = (path: string): ObjectSchema => {
+      const response = paths[path]?.get?.responses?.["200"] as
+        | undefined
+        | { content: { "application/json": { schema: ObjectSchema } } };
+      if (!response) throw new Error(`${path} documents no 200 response.`);
+
+      return response.content["application/json"].schema;
+    };
+
+    expect(
+      Object.keys(okSchema("/").properties.edges.items.properties).sort(),
+    ).toEqual(["slug", "title"]);
+    expect(Object.keys(okSchema("/{slug}").properties).sort()).toEqual([
+      "body",
+      "slug",
+      "title",
+    ]);
   });
 
   it("installs no staff-permission guard", () => {
